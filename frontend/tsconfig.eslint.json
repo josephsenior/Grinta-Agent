@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "__tests__/**/*.ts",
+    "__tests__/**/*.tsx",
+    "**/__tests__/**/*.ts",
+    "**/__tests__/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "**/*.d.ts",
+    "vite.config.ts",
+    "playwright.config.ts",
+    "scripts/**/*.ts",
+    "scripts/**/*.js",
+    "test-utils.tsx",
+    "test-utils/**/*.ts",
+    "test-utils/**/*.tsx"
+  ]
+}

@@ -1,0 +1,28 @@
+from enum import Enum
+
+
+class AgentState(str, Enum):
+    LOADING = "loading"
+    "The agent is loading.\n    "
+    RUNNING = "running"
+    "The agent is running.\n    "
+    AWAITING_USER_INPUT = "awaiting_user_input"
+    "The agent is awaiting user input.\n    "
+    PAUSED = "paused"
+    "The agent is paused.\n    "
+    STOPPED = "stopped"
+    "The agent is stopped.\n    "
+    FINISHED = "finished"
+    "The agent is finished with the current task.\n    "
+    REJECTED = "rejected"
+    "The agent rejects the task.\n    "
+    ERROR = "error"
+    "An error occurred during the task.\n    "
+    AWAITING_USER_CONFIRMATION = "awaiting_user_confirmation"
+    "The agent is awaiting user confirmation.\n    "
+    USER_CONFIRMED = "user_confirmed"
+    "The user confirmed the agent's action.\n    "
+    USER_REJECTED = "user_rejected"
+    "The user rejected the agent's action.\n    "
+    RATE_LIMITED = "rate_limited"
+    "The agent is rate limited.\n    "

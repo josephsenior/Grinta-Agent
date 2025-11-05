@@ -1,0 +1,67 @@
+name: feature_delivery_full
+description: Complete feature delivery workflow with always-active UI Designer for production-grade quality
+steps:
+  - id: pm_spec
+    role: Product Manager
+    lock: read_only
+    priority: 10
+    task: Write detailed user stories, acceptance criteria, and identify UI requirements. Provide comprehensive feature specifications including user flows, edge cases, and success metrics.
+    outputs:
+      schema: pm_spec.schema.json
+
+  - id: ui_design
+    role: UI Designer
+    depends_on: [pm_spec]
+    lock: read_only
+    priority: 15
+    task: Design comprehensive UI/UX including layout plans, component hierarchy, design tokens, responsive breakpoints, and accessibility compliance (WCAG 2.1 AA). Create wireframes for all pages and document component states, interactions, and mobile considerations.
+    outputs:
+      schema: designer.schema.json
+
+  - id: arch_design
+    role: Architect
+    depends_on: [pm_spec, ui_design]
+    lock: read_only
+    priority: 20
+    task: Produce high-level system design, API specifications, database schema, and component architecture. Integrate UI Designer's layout plan and ensure backend supports all frontend requirements. Consider scalability, performance, and security.
+    outputs:
+      schema: architect.schema.json
+
+  - id: engineer_impl
+    role: Engineer
+    depends_on: [arch_design]
+    lock: write
+    priority: 30
+    task: Implement features following architecture and UI design specifications with full test coverage. Build reusable components, implement design tokens, ensure accessibility, and write comprehensive unit tests. Follow the exact component hierarchy and design system specified by UI Designer.
+    outputs:
+      schema: engineer.schema.json
+
+  - id: qa_verify
+    role: QA
+    depends_on: [engineer_impl]
+    lock: test
+    priority: 40
+    task: Run comprehensive tests including unit tests, integration tests, accessibility validation (WCAG 2.1 AA), performance benchmarks, security scanning, and visual regression testing. Verify all acceptance criteria are met and UI matches design specifications.
+    outputs:
+      schema: qa.schema.json
+
+  - id: engineer_fix
+    role: Engineer
+    condition: 'qa_verify.ok == false'
+    depends_on: [qa_verify]
+    lock: write
+    priority: 50
+    task: Fix all identified issues including bugs, accessibility violations, performance bottlenecks, and security vulnerabilities. Resubmit for validation with detailed fix descriptions.
+    outputs:
+      schema: engineer.schema.json
+
+  - id: pm_approve
+    role: Product Manager
+    depends_on: [qa_verify]
+    condition: 'qa_verify.ok == true and qa_verify.tests.failed == 0 and engineer_impl.tests_added == true'
+    lock: read_only
+    priority: 60
+    task: Final approval and sign-off. Verify all acceptance criteria are met, UI matches design specifications, tests are passing, and code is production-ready. Authorize deployment and document any post-launch monitoring requirements.
+    outputs:
+      schema: pm_approval.schema.json
+

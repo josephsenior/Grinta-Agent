@@ -1,0 +1,18 @@
+{
+	"devDependencies": {
+		"jsdom": "^27.0.0"
+	},
+	"name": "joseph",
+	"version": "1.0.0",
+	"main": "analyze_ts_complexity.js",
+	"directories": {
+		"test": "tests"
+	},
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"description": ""
+}

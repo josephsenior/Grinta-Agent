@@ -1,0 +1,47 @@
+import {
+  type RouteConfig,
+  layout,
+  index,
+  route,
+} from "@react-router/dev/routes";
+
+export default [
+  layout("routes/root-layout.tsx", [
+    index("routes/home.tsx"),
+    route("accept-tos", "routes/accept-tos.tsx"),
+    route("about", "routes/about.tsx"),
+    route("pricing", "routes/pricing.tsx"),
+    route("contact", "routes/contact.tsx"),
+    route("terms", "routes/terms.tsx"),
+    route("privacy", "routes/privacy.tsx"),
+    route("settings", "routes/settings.tsx", [
+      index("routes/llm-settings.tsx"),
+      route("mcp", "routes/mcp-settings.tsx"),
+      route("user", "routes/user-settings.tsx"),
+      route("integrations", "routes/git-settings.tsx"),
+      route("databases", "routes/database-settings.tsx"),
+      route("memory", "routes/memory-settings.tsx"),
+      route("analytics", "routes/analytics-settings.tsx"),
+      route("prompts", "routes/prompts-settings.tsx"),
+      route("snippets", "routes/snippets-settings.tsx"),
+      route("slack", "routes/slack-settings.tsx"),
+      route("backup", "routes/backup-settings.tsx"),
+      route("app", "routes/app-settings.tsx"),
+      route("billing", "routes/billing.tsx"),
+      route("secrets", "routes/secrets-settings.tsx"),
+      route("api-keys", "routes/api-keys.tsx"),
+    ]),
+    route("database-browser", "routes/database-browser.tsx"),
+    route("conversation", "routes/conversation-redirect.tsx"),
+    route("conversations", "routes/conversations-list.tsx"),
+    route("conversations/:conversationId", "routes/conversation.tsx", [
+      index("routes/workspace-tab.tsx"),
+      route("browser", "routes/browser-tab.tsx"),
+      route("jupyter", "routes/jupyter-tab.tsx"),
+      route("served", "routes/served-tab.tsx"),
+      route("terminal", "routes/terminal-tab.tsx"),
+      route("vscode", "routes/vscode-tab.tsx"),
+    ]),
+    route("microagent-management", "routes/microagent-management.tsx"),
+  ]),
+] satisfies RouteConfig;

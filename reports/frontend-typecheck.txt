@@ -1,0 +1,4 @@
+
+> openhands-frontend@0.55.0 typecheck
+> react-router typegen && tsc
+

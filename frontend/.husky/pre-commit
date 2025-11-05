@@ -1,0 +1,17 @@
+# Run frontend checks
+echo "Running frontend checks..."
+cd frontend
+npm run lint
+npm run check-translation-completeness
+npx lint-staged
+
+# Run backend pre-commit
+echo "Running backend pre-commit..."
+cd ..
+if command -v poetry >/dev/null 2>&1 && command -v pre-commit >/dev/null 2>&1; then
+	poetry run pre-commit run --all-files --show-diff-on-failure --config ./dev_config/python/.pre-commit-config.yaml
+else
+	echo "Skipping backend pre-commit: 'poetry' or 'pre-commit' not found in PATH."
+	echo "To run full backend checks locally, install Poetry and pre-commit, then run:"
+	echo "  poetry run pre-commit run --all-files --config ./dev_config/python/.pre-commit-config.yaml"
+fi

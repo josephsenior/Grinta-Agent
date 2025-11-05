@@ -1,0 +1,17 @@
+{
+  "AutoRunSuggestedCommands": true,
+  "AllowedCommandOrigins": ["assistant"],
+  "AllowedCategories": ["error-fix", "frontend", "backend", "tests", "docs"],
+  "DisallowedPatterns": [
+    "pip install -U pip",
+    "pip uninstall",
+    "rm -rf /",
+    "sudo",
+    "choco install",
+    "winget install",
+    "apt-get",
+    "brew",
+    "python -m pip install --user"
+  ],
+  "LastUpdated": "2025-09-20T12:45:00Z"
+}

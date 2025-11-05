@@ -1,0 +1,48 @@
+# Source files (we only want the built JS files)
+src/
+tsconfig.json
+
+# Development files
+.env*
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+test-package.sh
+examples.sh
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node modules (handled by package.json)
+node_modules/
+
+# Test files
+test/
+tests/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# Documentation that's not needed in package
+docs/
+CONTRIBUTING.md
+V4_MIGRATION_SUMMARY.md
+
+# Git files
+.git/
+.gitignore

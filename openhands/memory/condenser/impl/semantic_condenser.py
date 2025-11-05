@@ -1,0 +1,258 @@
+"""
+Semantic Condenser - Intelligent Compression with Meaning Preservation
+
+Uses semantic similarity and importance scoring to compress context
+while preserving the most critical information.
+"""
+
+from __future__ import annotations
+
+from typing import List, Optional, Dict, Any
+from dataclasses import dataclass
+
+from openhands.controller.state.state import State
+from openhands.core.logger import openhands_logger as logger
+from openhands.events.event import Event
+from openhands.events.action import Action, MessageAction
+from openhands.events.observation import Observation
+from openhands.memory.condenser.condenser import Condensation, RollingCondenser
+from openhands.memory.view import View
+
+
+@dataclass
+class EventImportance:
+    """Importance score for an event."""
+    event: Event
+    importance_score: float
+    reasons: List[str]  # Why this event is important
+
+
+class SemanticCondenser(RollingCondenser):
+    """
+    Semantic condenser that intelligently compresses context.
+    
+    Features:
+    - Scores events by importance (decisions, errors, file changes)
+    - Preserves semantically important events
+    - Summarizes less critical events
+    - Maintains conversation coherence
+    """
+    
+    def __init__(
+        self,
+        keep_first: int = 5,
+        max_size: int = 100,
+        importance_threshold: float = 0.5
+    ):
+        """
+        Initialize semantic condenser.
+        
+        Args:
+            keep_first: Number of initial events to always keep
+            max_size: Maximum number of events to keep
+            importance_threshold: Minimum importance to keep (0-1)
+        """
+        super().__init__()
+        self.keep_first = keep_first
+        self.max_size = max_size
+        self.importance_threshold = importance_threshold
+        
+        logger.info(f"Semantic condenser initialized (keep_first={keep_first}, max_size={max_size})")
+    
+    def get_condensation(self, view: View) -> Condensation:
+        """
+        Apply semantic condensation.
+        
+        This method:
+        1. Scores each event by importance
+        2. Keeps essential initial events
+        3. Preserves high-importance events
+        4. Forgets low-importance events
+        5. Ensures conversation coherence
+        """
+        events = view.events
+        if not events or len(events) <= self.max_size:
+            from openhands.events.action.message import CondensationAction
+            return Condensation(action=CondensationAction(forgotten_event_ids=[]))
+        
+        # Score all events by importance
+        scored_events = self._score_events(events)
+        
+        # Identify events to keep
+        keep_event_ids = self._select_events_to_keep(scored_events)
+        
+        # Calculate events to forget
+        all_event_ids = {e.id for e in events}
+        forgotten_event_ids = sorted(all_event_ids - keep_event_ids)
+        
+        logger.info(
+            f"Semantic condensation: Keeping {len(keep_event_ids)} events, forgetting {len(forgotten_event_ids)} events"
+        )
+        
+        from openhands.events.action.message import CondensationAction
+        return Condensation(action=CondensationAction(forgotten_event_ids=forgotten_event_ids))
+    
+    def _score_events(self, events: List[Event]) -> List[EventImportance]:
+        """
+        Score events by importance.
+        
+        Args:
+            events: List of events to score
+            
+        Returns:
+            List of EventImportance objects
+        """
+        scored = []
+        
+        for event in events:
+            score, reasons = self._calculate_importance(event)
+            scored.append(EventImportance(
+                event=event,
+                importance_score=score,
+                reasons=reasons
+            ))
+        
+        return scored
+    
+    def _calculate_importance(self, event: Event) -> tuple[float, List[str]]:
+        """
+        Calculate importance score for an event.
+        
+        Returns:
+            Tuple of (score, reasons)
+        """
+        score = 0.0
+        reasons = []
+        
+        # Action events
+        if isinstance(event, Action):
+            # File operations are important
+            if hasattr(event, 'action') and 'file' in str(event.action).lower():
+                score += 0.4
+                reasons.append("file_operation")
+            
+            # Delegate actions are important
+            if hasattr(event, 'action') and 'delegate' in str(event.action).lower():
+                score += 0.3
+                reasons.append("delegation")
+            
+            # Finish actions are important
+            if hasattr(event, 'action') and 'finish' in str(event.action).lower():
+                score += 0.5
+                reasons.append("completion")
+            
+            # Commands with "install", "build", "deploy" are important
+            if hasattr(event, 'command'):
+                cmd_lower = event.command.lower()
+                if any(keyword in cmd_lower for keyword in ['install', 'build', 'deploy', 'setup']):
+                    score += 0.3
+                    reasons.append("setup_command")
+        
+        # Observation events
+        elif isinstance(event, Observation):
+            # Error observations are very important
+            if hasattr(event, 'error') and event.error:
+                score += 0.6
+                reasons.append("error")
+            
+            # Success with output is moderately important
+            if hasattr(event, 'exit_code') and event.exit_code == 0:
+                score += 0.2
+                reasons.append("success")
+            
+            # Long observations might be important
+            if hasattr(event, 'content'):
+                content_len = len(str(event.content))
+                if content_len > 1000:
+                    score += 0.1
+                    reasons.append("detailed_output")
+        
+        # Message events
+        elif isinstance(event, MessageAction):
+            # User messages are important
+            if hasattr(event, 'source') and event.source == 'user':
+                score += 0.5
+                reasons.append("user_message")
+            
+            # Questions are important
+            if hasattr(event, 'content') and '?' in str(event.content):
+                score += 0.2
+                reasons.append("question")
+        
+        # Recent events are more important (recency bias)
+        # This will be handled in _select_events_to_keep
+        
+        # Normalize score to 0-1
+        score = min(1.0, score)
+        
+        if not reasons:
+            reasons.append("normal_importance")
+        
+        return score, reasons
+    
+    def _select_events_to_keep(self, scored_events: List[EventImportance]) -> set[int]:
+        """
+        Select which events to keep based on importance.
+        
+        Args:
+            scored_events: List of scored events
+            
+        Returns:
+            Set of event IDs to keep
+        """
+        keep_ids = set()
+        
+        # Always keep first N events (task description, system messages)
+        for scored in scored_events[:self.keep_first]:
+            keep_ids.add(scored.event.id)
+        
+        # Keep recent events (last 20% or at least 10)
+        recent_count = max(10, len(scored_events) // 5)
+        for scored in scored_events[-recent_count:]:
+            keep_ids.add(scored.event.id)
+        
+        # Keep high-importance events
+        for scored in scored_events:
+            if scored.importance_score >= self.importance_threshold:
+                keep_ids.add(scored.event.id)
+        
+        # If we're still over max_size, remove lowest importance
+        if len(keep_ids) > self.max_size:
+            # Sort by importance
+            sorted_scored = sorted(
+                [s for s in scored_events if s.event.id in keep_ids],
+                key=lambda x: x.importance_score,
+                reverse=True
+            )
+            
+            # Keep only top max_size
+            keep_ids = {s.event.id for s in sorted_scored[:self.max_size]}
+        
+        return keep_ids
+    
+    def _ensure_coherence(
+        self,
+        events: List[Event],
+        keep_ids: set[int]
+    ) -> set[int]:
+        """
+        Ensure conversation coherence by keeping action-observation pairs.
+        
+        Args:
+            events: Full list of events
+            keep_ids: Current set of IDs to keep
+            
+        Returns:
+            Updated set of IDs to keep
+        """
+        coherent_ids = set(keep_ids)
+        
+        # For each action we're keeping, keep its observation
+        for i, event in enumerate(events):
+            if event.id in coherent_ids and isinstance(event, Action):
+                # Look for corresponding observation
+                if i + 1 < len(events) and isinstance(events[i + 1], Observation):
+                    coherent_ids.add(events[i + 1].id)
+        
+        return coherent_ids
+

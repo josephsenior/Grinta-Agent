@@ -1,0 +1,18 @@
+{
+  "id": "3a738f47-b17b-4729-9068-8a5b74491aa2",
+  "title": "Updated Title",
+  "description": null,
+  "language": "python",
+  "category": "custom",
+  "code": "updated code",
+  "tags": [],
+  "is_favorite": false,
+  "usage_count": 0,
+  "created_at": "2025-10-08 21:05:30.187483",
+  "updated_at": "2025-10-08 21:05:30.332578",
+  "metadata": {},
+  "dependencies": [],
+  "related_snippets": [],
+  "source_url": null,
+  "license": null
+}

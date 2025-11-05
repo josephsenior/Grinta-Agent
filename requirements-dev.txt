@@ -1,0 +1,24 @@
+# Common development/test dependencies for quick pip installs
+pytest
+pytest-cov
+pytest-asyncio
+pytest-xdist
+pytest-timeout
+pytest-playwright
+pre-commit
+mypy
+ruff
+black
+isort
+poetry
+
+# Optional heavy deps (commented out by default)
+# torch
+# torchvision
+# torchaudio
+# datasets
+# transformers
+# py-tree-sitter
+# sentencepiece
+# fasttext
+# pyarrow

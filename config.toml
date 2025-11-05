@@ -1,0 +1,187 @@
+[core]
+workspace_base = "."
+sandbox_volumes = [".:/workspace:rw"]
+# Persist trajectories for replay/analysis
+save_trajectory_path = "./trajectories"
+
+# ============================================================================
+# MCP (Model Context Protocol) CONFIGURATION
+# ============================================================================
+# Available MCP Servers:
+#   1. shadcn-ui - UI component library (React/Vue/Svelte)
+#   2. Fetch - HTTP requests and HTML→markdown conversion
+#   3. DuckDuckGo - Web search for discovery
+#   4. Playwright - Browser automation (heavy, use sparingly)
+# ============================================================================
+
+[mcp]
+# STDIO Servers (direct process spawning - for development)
+# ⚡ ALL 4 MCP SERVERS ENABLED - Full agent capability
+stdio_servers = [
+    # shadcn-ui - Fast UI component access (bolt.new-like speed)
+    { name = "shadcn-ui", command = "npx", args = ["-y", "@jpisnice/shadcn-ui-mcp-server"], 
+      env = { "FRAMEWORK" = "react" } },
+    
+    # Fetch - Fast HTTP content retrieval (Priority #1 for web content)
+    { name = "fetch", command = "uvx", args = ["mcp-server-fetch"] },
+    
+    # DuckDuckGo - Web search for discovery (✅ ENABLED)
+    { name = "duckduckgo", command = "duckduckgo-mcp-server", args = [] },
+    
+    # Playwright - Browser automation (✅ ENABLED - heavy, 500MB RAM per instance)
+    # Note: This is resource-intensive. Monitor memory usage.
+    { name = "playwright", command = "npx", args = ["-y", "@modelcontextprotocol/server-playwright"] },
+]
+
+# SSE Servers (proxy mode via SuperGateway - recommended for production)
+# Start proxies separately, then reference the SSE endpoints
+sse_servers = [
+    # shadcn-ui via SuperGateway
+    # Start with: npx supergateway --stdio "npx @jpisnice/shadcn-ui-mcp-server" --port 8090
+    "http://localhost:8090/sse",
+]
+
+# Performance-oriented defaults (safe and reversible)
+[llm]
+# Default to Claude Haiku (fast & affordable)
+# Use your own Anthropic API key to avoid proxy rate limits
+model = "anthropic/claude-3-5-haiku-20241022"
+temperature = 0.1
+timeout = 120
+# Allow larger completions for complex tasks
+max_output_tokens = 4096
+caching_prompt = true
+disable_vision = true
+drop_params = true
+num_retries = 6
+retry_min_wait = 5
+retry_max_wait = 60
+retry_multiplier = 2.0
+# Reduce unnecessary refusals on code tasks (Gemini safety config)
+safety_settings = [
+    { category = "HARM_CATEGORY_HARASSMENT", threshold = "BLOCK_NONE" },
+    { category = "HARM_CATEGORY_HATE_SPEECH", threshold = "BLOCK_NONE" },
+    { category = "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold = "BLOCK_NONE" },
+    { category = "HARM_CATEGORY_DANGEROUS_CONTENT", threshold = "BLOCK_NONE" }
+]
+
+# LOCAL DEV: You can set your OpenHands API key here for local testing.
+# WARNING: This file may be committed — keep secrets out of version control
+# or use a local-only copy. Alternatively prefer the environment variable
+# OPENHANDS_API_KEY (recommended) for persistence without editing code.
+# api_key = "<REPLACE_WITH_YOUR_KEY>"
+# The API key was removed from this file to avoid storing secrets in the repo.
+# Use environment variables instead, for example set OPENHANDS_API_KEY persistently
+# with the helper script at `scripts/set_openhands_api_key.ps1`.
+
+[condenser]
+type="noop"
+
+
+[llm.heavy]
+# Heavy profile for planning/finalization
+# Using Claude Sonnet for complex tasks (requires Anthropic API key)
+model = "anthropic/claude-3-5-sonnet-20241022"
+temperature = 0.1
+timeout = 180
+max_output_tokens = 8192
+
+
+
+
+# ============================================================================
+# BETA LAUNCH: Simple CodeAct Agent Only
+# ============================================================================
+# Agent execution mode: "simple" for CodeAct only, "enterprise" for MetaSOP (disabled for beta)
+agent_mode = "simple"  # ✅ BETA: Focus on ONE reliable agent
+
+[agent]
+llm_config = 'llm'
+
+# USE OPTIMIZED PROMPTS!
+# CodeActAgent: "system_prompt_forge.j2" (most optimized)
+# Options: system_prompt.j2 | system_prompt_forge.j2 | system_prompt_ultimate.j2 | system_prompt_optimized.j2
+system_prompt_filename = "system_prompt_forge.j2"
+
+# Tools
+# ============================================================================
+# CORE CODEACT TOOLS (Beta-Ready)
+# ============================================================================
+enable_browsing = true                # ✅ Web browsing
+enable_llm_editor = false             # Use ultimate_editor instead
+enable_ultimate_editor = true         # ✅ YOUR MOAT: 45+ languages, structure-aware
+enable_editor = true                  # ✅ Basic str_replace_editor
+enable_jupyter = false                # ⚠️ BETA: Disabled (not core to coding tasks)
+enable_cmd = true                     # ✅ execute_bash
+enable_think = true                   # ✅ Reasoning steps
+enable_finish = true                  # ✅ Task completion
+enable_history_truncation = true      # ✅ Memory management
+enable_condensation_request = false   # Keep full context for beta
+enable_prompt_extensions = true       # ✅ Microagents (react, testing, api)
+enable_mcp = true                     # ✅ MCP tools (shadcn, fetch, search)
+
+# Autonomy settings for simple mode
+autonomy_level = "balanced"  # "supervised" | "balanced" | "full"
+auto_retry_on_error = true
+max_autonomous_iterations = 50
+enable_internal_task_tracker = true   # ✅ Internal progress tracking
+
+# ============================================================================
+# ADVANCED FEATURES (DISABLED for Beta - Enable Post-Launch)
+# ============================================================================
+# These are powerful but complex - wait for user feedback before enabling
+# enable_self_remediation = false       # ⚠️ BETA: Can cause loops, disable for now (moved to metasop settings)
+# enable_micro_iterations = false       # ⚠️ BETA: Complex iteration logic, disable (moved to metasop settings)
+# enable_parallel_execution = false   # ⚠️ BETA: Multi-agent coordination, post-beta
+# enable_metasop = false              # ⚠️ BETA: Advanced orchestration, post-beta
+# enable_causal_reasoning = false     # ⚠️ BETA: Predictive execution, post-beta
+stuck_detection_enabled = true
+stuck_threshold_iterations = 5
+
+# Memory System (must match [metasop] settings)
+enable_vector_memory = true            # ✅ 92% accuracy semantic search
+enable_hybrid_retrieval = true         # ✅ Vector + BM25 + re-ranking
+
+#[condenser]
+# Use LLM summarization to keep the most relevant context for larger projects
+#type = "llm"
+#llm_config = "condenser"
+#keep_first = 1
+#max_size = 200
+
+[sandbox]
+enable_auto_lint = true
+keep_runtime_alive = false
+use_host_network = false  # Windows Docker Desktop: use bridge network
+runtime_container_image = "forge-runtime:latest"
+
+[metasop]
+enabled = false
+default_sop = "feature_delivery_with_ui"
+token_budget_soft = 20000
+token_budget_hard = 50000
+metrics_prometheus_port = 9154
+enable_vector_memory = true
+enable_hybrid_retrieval = true
+enforce_capability_matrix = true
+enable_self_remediation = true
+enable_micro_iterations = false
+micro_iteration_max_loops = 5
+micro_iteration_no_change_limit = 2
+
+# ============================================================================
+# RUNTIME PERFORMANCE OPTIMIZATION
+# ============================================================================
+# Configure via environment variables (see runtime.env.example)
+#
+# Quick wins for 90% faster startup (60s → 5s):
+#   export DESIRED_NUM_WARM_SERVERS=1    # Maintain 1 warm server
+#   export INIT_PLUGIN_TIMEOUT=60         # Faster plugin init
+#   export SKIP_DEPENDENCY_CHECK=1        # Skip checks in production
+#
+# Cost: ~$7.50/month for 1 warm server (negligible at scale)
+# ROI: Massive (better UX = higher conversion rates)
+#
+# See: runtime.env.example for full configuration options
+# See: RUNTIME_PERFORMANCE_GUIDE.md for deployment guide
+# ============================================================================

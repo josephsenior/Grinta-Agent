@@ -1,0 +1,190 @@
+@import "tailwindcss";
+
+@plugin '../hero.ts';
+@config "../tailwind.config.js";
+@source '../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
+
+.button-base {
+  @apply bg-tertiary border border-neutral-600 rounded-xs;
+}
+
+.skeleton {
+  @apply bg-gray-400 rounded-md animate-pulse;
+}
+
+.skeleton-round {
+  @apply bg-gray-400 rounded-full animate-pulse;
+}
+
+.heading {
+  @apply text-[28px] leading-8 -tracking-[0.02em] font-bold text-content-2;
+}
+
+.loader {
+  background: #c9b974;
+  animation: l5 1s infinite linear alternate;
+}
+
+@keyframes l5 {
+  0% {
+    box-shadow:
+      20px 0 #c9b974,
+      -20px 0 rgba(201, 185, 116, 0.1);
+    background: #c9b974;
+  }
+  33% {
+    box-shadow:
+      20px 0 #c9b974,
+      -20px 0 rgba(201, 185, 116, 0.1);
+    background: rgba(201, 185, 116, 0.1);
+  }
+  66% {
+    box-shadow:
+      20px 0 rgba(201, 185, 116, 0.1),
+      -20px 0 #c9b974;
+    background: rgba(201, 185, 116, 0.1);
+  }
+  100% {
+    box-shadow:
+      20px 0 rgba(201, 185, 116, 0.1),
+      -20px 0 #c9b974;
+    background: #c9b974;
+  }
+}
+
+/* Custom Scrollbar Styles for Bolt-like UI */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(115, 115, 115, 0.3);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 158, 11, 0.3);
+}
+
+/* Slide-in animation for orchestration panel */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+/* Fade in animation for fullscreen */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Scale in animation for modals/menus */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out forwards;
+}
+
+/* Pulse animation for live indicators */
+@keyframes livePulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-live-pulse {
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+/* Node animations for orchestration steps */
+@keyframes nodePulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.node-running {
+  animation: nodePulse 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+}
+
+@keyframes successFlash {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px rgba(34, 197, 94, 0));
+  }
+  50% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 12px rgba(34, 197, 94, 0.8));
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.4));
+  }
+}
+
+.node-completed {
+  animation: successFlash 0.6s ease-out;
+}
+
+@keyframes errorShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+.node-failed {
+  animation: errorShake 0.4s ease-out;
+  filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.6));
+}
+
+/* Smooth transitions for all interactive elements */
+.transition-smooth {
+  transition: all 0.2s ease-in-out;
+}

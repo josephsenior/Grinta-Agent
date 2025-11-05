@@ -1,0 +1,667 @@
+"""Task completion validation framework.
+
+This module provides pluggable validators to ensure agents don't prematurely
+finish tasks. Validators check for test passage, meaningful changes, and
+requirement satisfaction.
+"""
+
+from __future__ import annotations
+
+import re
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from openhands.controller.state.state import State
+
+from openhands.core.logger import openhands_logger as logger
+from openhands.events.action import CmdRunAction
+from openhands.events.observation import CmdOutputObservation
+
+
+@dataclass
+class Task:
+    """Represents a task to be completed."""
+
+    description: str
+    requirements: list[str] = field(default_factory=list)
+    acceptance_criteria: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ValidationResult:
+    """Result of task completion validation."""
+
+    passed: bool
+    reason: str
+    confidence: float = 1.0  # 0.0 to 1.0
+    missing_items: list[str] = field(default_factory=list)
+    suggestions: list[str] = field(default_factory=list)
+
+
+class TaskValidator(ABC):
+    """Abstract base class for task completion validators."""
+
+    @abstractmethod
+    async def validate_completion(self, task: Task, state: State) -> ValidationResult:
+        """Validate if a task is complete.
+
+        Args:
+            task: The task being validated
+            state: Current agent state
+
+        Returns:
+            ValidationResult indicating if task is complete
+        """
+
+
+class TestPassingValidator(TaskValidator):
+    """Validates that tests are passing before task completion."""
+
+    async def validate_completion(self, task: Task, state: State) -> ValidationResult:
+        """Check if tests are passing.
+
+        Looks for test execution in recent history and checks exit codes.
+
+        Args:
+            task: The task being validated
+            state: Current agent state
+
+        Returns:
+            ValidationResult for test status
+        """
+        # Look for test execution in recent history
+        test_executions = self._find_test_executions(state)
+
+        if not test_executions:
+            return ValidationResult(
+                passed=False,
+                reason="No test execution found in recent history",
+                confidence=0.8,
+                missing_items=["Run test suite to verify changes"],
+                suggestions=["Run pytest, npm test, or appropriate test command"],
+            )
+
+        # Check if latest tests passed
+        latest_test = test_executions[-1]
+        if latest_test["exit_code"] != 0:
+            return ValidationResult(
+                passed=False,
+                reason=f"Latest test execution failed with exit code {
+                    latest_test['exit_code']}",
+                confidence=1.0,
+                missing_items=["Fix failing tests"],
+                suggestions=["Review test output and fix the failing tests"],
+            )
+
+        logger.info("Test validation passed: tests are passing")
+        return ValidationResult(
+            passed=True,
+            reason="Tests are passing",
+            confidence=1.0,
+        )
+
+    def _find_test_executions(self, state: State) -> list[dict]:
+        """Find test executions in history.
+
+        Args:
+            state: Current agent state
+
+        Returns:
+            List of test execution information
+        """
+        test_executions = []
+        recent_history = state.history[-50:]  # Look at last 50 events
+
+        test_commands = ["pytest", "npm test", "jest", "mocha", "cargo test", "go test", "python -m unittest"]
+
+        for i, event in enumerate(recent_history):
+            if isinstance(event, CmdRunAction):
+                if any(test_cmd in event.command.lower() for test_cmd in test_commands):
+                    # Look for corresponding observation
+                    for j in range(i + 1, min(i + 5, len(recent_history))):
+                        next_event = recent_history[j]
+                        if isinstance(next_event, CmdOutputObservation):
+                            test_executions.append(
+                                {
+                                    "command": event.command,
+                                    "exit_code": next_event.exit_code,
+                                    "output": next_event.content,
+                                },
+                            )
+                            break
+
+        return test_executions
+
+
+class GitDiffValidator(TaskValidator):
+    """Validates that meaningful changes were made."""
+
+    async def validate_completion(self, task: Task, state: State) -> ValidationResult:
+        """Check if meaningful git changes exist.
+
+        Args:
+            task: The task being validated
+            state: Current agent state
+
+        Returns:
+            ValidationResult for git diff
+        """
+        # Look for git diff in recent history
+        git_diff = self._get_git_diff(state)
+
+        if not git_diff:
+            return ValidationResult(
+                passed=False,
+                reason="No git changes detected",
+                confidence=0.9,
+                missing_items=["Make code changes to complete the task"],
+                suggestions=["Implement the required functionality"],
+            )
+
+        # Check if diff is substantial (not just whitespace/comments)
+        meaningful_changes = self._count_meaningful_changes(git_diff)
+
+        if meaningful_changes < 5:
+            return ValidationResult(
+                passed=False,
+                reason=f"Only {meaningful_changes} meaningful changes detected (expected at least 5)",
+                confidence=0.7,
+                missing_items=["Add more substantial changes"],
+                suggestions=["Ensure all requirements are implemented"],
+            )
+
+        logger.info(f"Git diff validation passed: {meaningful_changes} meaningful changes")
+        return ValidationResult(
+            passed=True,
+            reason=f"Meaningful changes detected ({meaningful_changes} lines)",
+            confidence=0.8,
+        )
+
+    def _get_git_diff(self, state: State) -> str | None:
+        """Get git diff from history.
+
+        Args:
+            state: Current agent state
+
+        Returns:
+            Git diff content or None
+        """
+        recent_history = state.history[-100:]
+
+        for i, event in enumerate(recent_history):
+            if isinstance(event, CmdRunAction):
+                if "git diff" in event.command.lower():
+                    # Look for corresponding observation
+                    for j in range(i + 1, min(i + 5, len(recent_history))):
+                        next_event = recent_history[j]
+                        if isinstance(next_event, CmdOutputObservation):
+                            return next_event.content
+
+        return None
+
+    def _count_meaningful_changes(self, diff: str) -> int:
+        """Count meaningful lines in diff (not whitespace/comments).
+
+        Args:
+            diff: Git diff content
+
+        Returns:
+            Count of meaningful changed lines
+        """
+        return sum(1 for line in diff.split("\n") if self._is_meaningful_change_line(line))
+
+    def _is_meaningful_change_line(self, line: str) -> bool:
+        """Check if line is a meaningful change.
+
+        Args:
+            line: Diff line
+
+        Returns:
+            True if meaningful change
+        """
+        # Skip diff metadata
+        if self._is_diff_metadata(line):
+            return False
+
+        # Check if added/removed line
+        if not (line.startswith(("+", "-"))):
+            return False
+
+        # Check if content is meaningful
+        content = line[1:].strip()
+        return content and not self._is_comment_line(content)
+
+    def _is_diff_metadata(self, line: str) -> bool:
+        """Check if line is diff metadata.
+
+        Args:
+            line: Diff line
+
+        Returns:
+            True if metadata
+        """
+        return line.startswith(("diff --git", "index ", "+++", "---"))
+
+    def _is_comment_line(self, content: str) -> bool:
+        """Check if content is a comment.
+
+        Args:
+            content: Line content
+
+        Returns:
+            True if comment
+        """
+        return content.startswith(("#", "//"))
+
+
+class FileExistsValidator(TaskValidator):
+    """Validates that expected output files exist."""
+
+    def __init__(self, expected_files: list[str] | None = None) -> None:
+        """Initialize validator.
+
+        Args:
+            expected_files: List of file paths that should exist
+        """
+        self.expected_files = expected_files or []
+
+    async def validate_completion(self, task: Task, state: State) -> ValidationResult:
+        """Check if expected files exist.
+
+        Args:
+            task: The task being validated
+            state: Current agent state
+
+        Returns:
+            ValidationResult for file existence
+        """
+        if not self.expected_files:
+            # Try to extract expected files from task description
+            self.expected_files = self._extract_expected_files(task.description)
+
+        if not self.expected_files:
+            # Can't validate without knowing expected files
+            logger.debug("FileExistsValidator: No expected files specified")
+            return ValidationResult(
+                passed=True,  # Don't block if we can't determine requirements
+                reason="No expected files specified",
+                confidence=0.5,
+            )
+
+        missing_files = []
+        for file_path in self.expected_files:
+            if not self._check_file_exists(state, file_path):
+                missing_files.append(file_path)
+
+        if missing_files:
+            return ValidationResult(
+                passed=False,
+                reason=f"Expected files not found: {
+                    ', '.join(missing_files)}",
+                confidence=0.9,
+                missing_items=[f"Create {file_path}" for file_path in missing_files],
+                suggestions=["Create the required output files"],
+            )
+
+        logger.info("File existence validation passed: all expected files exist")
+        return ValidationResult(
+            passed=True,
+            reason="All expected files exist",
+            confidence=0.9,
+        )
+
+    def _extract_expected_files(self, task_description: str) -> list[str]:
+        """Try to extract expected file names from task description.
+
+        Args:
+            task_description: Task description text
+
+        Returns:
+            List of potential file paths
+        """
+        # Look for common file patterns in task description
+        file_patterns = [
+            r'create\s+(?:a\s+)?(?:file\s+)?["\']?([a-zA-Z0-9_./\-]+\.[a-zA-Z0-9]+)["\']?',
+            r'output\s+(?:to\s+)?["\']?([a-zA-Z0-9_./\-]+\.[a-zA-Z0-9]+)["\']?',
+            r'save\s+(?:to\s+)?["\']?([a-zA-Z0-9_./\-]+\.[a-zA-Z0-9]+)["\']?',
+        ]
+
+        expected_files = []
+        for pattern in file_patterns:
+            matches = re.findall(pattern, task_description, re.IGNORECASE)
+            expected_files.extend(matches)
+
+        return list(set(expected_files))  # Remove duplicates
+
+    def _check_file_exists(self, state: State, file_path: str) -> bool:
+        """Check if file exists by looking at history.
+
+        Args:
+            state: Current agent state
+            file_path: Path to check
+
+        Returns:
+            True if file appears to exist
+        """
+        recent_history = state.history[-100:]
+
+        # Look for file operations on this path
+        for event in recent_history:
+            if isinstance(event, CmdRunAction):
+                if file_path in event.command and ("cat " in event.command or "ls " in event.command):
+                    # Look for successful output
+                    return True
+
+        # Could also check FileEditAction or FileWriteAction events
+        return False
+
+
+class LLMTaskEvaluator(TaskValidator):
+    """Uses LLM to evaluate if task requirements are met."""
+
+    def __init__(self, llm=None) -> None:
+        """Initialize evaluator.
+
+        Args:
+            llm: LLM instance for evaluation (optional)
+        """
+        self.llm = llm
+
+    async def validate_completion(self, task: Task, state: State) -> ValidationResult:
+        """Use LLM to evaluate task completion.
+
+        Args:
+            task: The task being validated
+            state: Current agent state
+
+        Returns:
+            ValidationResult from LLM evaluation
+        """
+        if not self.llm:
+            logger.debug("LLMTaskEvaluator: No LLM configured, skipping")
+            return ValidationResult(
+                passed=True,
+                reason="LLM evaluation not configured",
+                confidence=0.5,
+            )
+
+        # Create evaluation prompt
+        prompt = self._create_evaluation_prompt(task, state)
+
+        try:
+            # Get LLM evaluation
+            response = await self.llm.completion(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+            )
+
+            # Parse LLM response
+            return self._parse_llm_response(response)
+
+        except Exception as e:
+            logger.error(f"LLM evaluation failed: {e}")
+            return ValidationResult(
+                passed=True,  # Don't block on LLM errors
+                reason="LLM evaluation failed",
+                confidence=0.3,
+            )
+
+    def _create_evaluation_prompt(self, task: Task, state: State) -> str:
+        """Create prompt for LLM evaluation.
+
+        Args:
+            task: The task
+            state: Current state
+
+        Returns:
+            Evaluation prompt
+        """
+        recent_actions = self._get_recent_actions_summary(state)
+
+        return f"""Evaluate if the following task has been completed satisfactorily:
+
+TASK: {task.description}
+
+REQUIREMENTS:
+{chr(10).join(f'- {req}' for req in task.requirements) if task.requirements else 'None specified'}
+
+RECENT ACTIONS:
+{recent_actions}
+
+Has this task been completed? Respond in JSON format:
+{{
+    "completed": true/false,
+    "reason": "explanation",
+    "confidence": 0.0-1.0,
+    "missing_items": ["item1", "item2"]
+}}
+"""
+
+    def _get_recent_actions_summary(self, state: State) -> str:
+        """Summarize recent actions.
+
+        Args:
+            state: Current state
+
+        Returns:
+            Summary string
+        """
+        recent_history = state.history[-20:]
+        actions = [event for event in recent_history if isinstance(event, CmdRunAction)]
+
+        if not actions:
+            return "No recent actions"
+
+        return "\n".join(f"- {action.command[:100]}" for action in actions[:10])
+
+    def _parse_llm_response(self, response) -> ValidationResult:
+        """Parse LLM response into ValidationResult.
+
+        Args:
+            response: LLM response
+
+        Returns:
+            ValidationResult
+        """
+        import json
+
+        try:
+            # Extract JSON from response
+            content = response.choices[0].message.content
+            data = json.loads(content)
+
+            return ValidationResult(
+                passed=data.get("completed", False),
+                reason=data.get("reason", "LLM evaluation"),
+                confidence=data.get("confidence", 0.5),
+                missing_items=data.get("missing_items", []),
+            )
+        except Exception:
+            # Fallback if parsing fails
+            return ValidationResult(
+                passed=True,
+                reason="Could not parse LLM response",
+                confidence=0.3,
+            )
+
+
+class CompositeValidator(TaskValidator):
+    """Combines multiple validators with configurable thresholds."""
+
+    def __init__(
+        self,
+        validators: list[TaskValidator],
+        min_confidence: float = 0.7,
+        require_all_pass: bool = False,
+    ) -> None:
+        """Initialize composite validator.
+
+        Args:
+            validators: List of validators to run
+            min_confidence: Minimum confidence threshold to pass
+            require_all_pass: If True, all validators must pass
+        """
+        self.validators = validators
+        self.min_confidence = min_confidence
+        self.require_all_pass = require_all_pass
+
+    async def validate_completion(self, task: Task, state: State) -> ValidationResult:
+        """Run all validators and combine results.
+
+        Args:
+            task: The task being validated
+            state: Current agent state
+
+        Returns:
+            Combined ValidationResult
+        """
+        results = await self._run_all_validators(task, state)
+
+        if not results:
+            return ValidationResult(passed=True, reason="No validators ran successfully", confidence=0.0)
+
+        if self.require_all_pass:
+            return self._validate_all_must_pass(results)
+        return self._validate_weighted_vote(results)
+
+    async def _run_all_validators(self, task: Task, state: State) -> list[ValidationResult]:
+        """Run all validators and collect results.
+
+        Args:
+            task: Task to validate
+            state: Agent state
+
+        Returns:
+            List of validation results
+        """
+        results = []
+        for validator in self.validators:
+            try:
+                result = await validator.validate_completion(task, state)
+                results.append(result)
+            except Exception as e:
+                logger.error(
+                    f"Validator {
+                        validator.__class__.__name__} failed: {e}"
+                )
+        return results
+
+    def _validate_all_must_pass(self, results: list[ValidationResult]) -> ValidationResult:
+        """Validate with all-must-pass strategy.
+
+        Args:
+            results: List of validation results
+
+        Returns:
+            Combined validation result
+        """
+        all_passed = all(r.passed for r in results)
+        combined_confidence = min(r.confidence for r in results) if results else 0.0
+
+        if not all_passed:
+            return self._build_all_pass_failure(results, combined_confidence)
+
+        return ValidationResult(
+            passed=True,
+            reason=f"All validators passed: {len(results)} validators",
+            confidence=combined_confidence,
+        )
+
+    def _build_all_pass_failure(self, results: list[ValidationResult], confidence: float) -> ValidationResult:
+        """Build failure result for all-must-pass validation.
+
+        Args:
+            results: Validation results
+            confidence: Combined confidence
+
+        Returns:
+            Failure ValidationResult
+        """
+        failed_validators = [r for r in results if not r.passed]
+
+        return ValidationResult(
+            passed=False,
+            reason=f"{
+                len(failed_validators)} validator(s) failed",
+            confidence=confidence,
+            missing_items=[item for r in failed_validators for item in r.missing_items],
+            suggestions=[sug for r in failed_validators for sug in r.suggestions],
+        )
+
+    def _validate_weighted_vote(self, results: list[ValidationResult]) -> ValidationResult:
+        """Validate with weighted voting strategy.
+
+        Args:
+            results: List of validation results
+
+        Returns:
+            Combined validation result
+        """
+        passed_count, avg_confidence = self._calculate_vote_metrics(results)
+
+        if self._vote_passes(passed_count, len(results), avg_confidence):
+            return ValidationResult(
+                passed=True,
+                reason=f"All validators passed: {len(results)} validators",
+                confidence=avg_confidence,
+            )
+
+        return self._build_weighted_vote_failure(results, passed_count, avg_confidence)
+
+    def _calculate_vote_metrics(self, results: list[ValidationResult]) -> tuple[int, float]:
+        """Calculate voting metrics.
+
+        Args:
+            results: Validation results
+
+        Returns:
+            Tuple of (passed_count, avg_confidence)
+        """
+        passed_count = sum(1 for r in results if r.passed)
+        avg_confidence = sum(r.confidence for r in results) / len(results)
+        return passed_count, avg_confidence
+
+    def _vote_passes(self, passed_count: int, total_count: int, avg_confidence: float) -> bool:
+        """Check if weighted vote passes.
+
+        Args:
+            passed_count: Number of passed validators
+            total_count: Total number of validators
+            avg_confidence: Average confidence
+
+        Returns:
+            True if vote passes
+        """
+        majority_pass = (passed_count / total_count) >= 0.5
+        confidence_check = avg_confidence >= self.min_confidence
+        return majority_pass and confidence_check
+
+    def _build_weighted_vote_failure(
+        self,
+        results: list[ValidationResult],
+        passed_count: int,
+        avg_confidence: float,
+    ) -> ValidationResult:
+        """Build failure result for weighted vote validation.
+
+        Args:
+            results: Validation results
+            passed_count: Number passed
+            avg_confidence: Average confidence
+
+        Returns:
+            Failure ValidationResult
+        """
+        failed_validators = [r for r in results if not r.passed]
+
+        return ValidationResult(
+            passed=False,
+            reason=f"Task validation insufficient: {passed_count}/{
+                len(results)} passed, avg confidence: {
+                avg_confidence:.2f}",
+            confidence=avg_confidence,
+            missing_items=[item for r in failed_validators for item in r.missing_items],
+            suggestions=[sug for r in failed_validators for sug in r.suggestions],
+        )

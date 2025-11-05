@@ -1,0 +1,125 @@
+import os
+import subprocess
+import tempfile
+from openhands.core.logger import openhands_logger as logger
+from openhands.integrations.service_types import ProviderType
+from openhands.resolver.interfaces.issue import Issue
+from openhands.resolver.send_pull_request import make_commit, send_pull_request
+
+
+def test_commit_message_with_quotes():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        subprocess.run(["git", "init", temp_dir], check=True)
+        test_file = os.path.join(temp_dir, "test.txt")
+        with open(test_file, "w", encoding='utf-8') as f:
+            f.write("test content")
+        subprocess.run(["git", "-C", temp_dir, "add", "test.txt"], check=True)
+        issue = Issue(
+            owner="test-owner",
+            repo="test-repo",
+            number=123,
+            title="Issue with 'quotes' and \"double quotes\" and <class 'ValueError'>",
+            body="Test body",
+            labels=[],
+            assignees=[],
+            state="open",
+            created_at="2024-01-01T00:00:00Z",
+            updated_at="2024-01-01T00:00:00Z",
+            closed_at=None,
+            head_branch=None,
+            thread_ids=None,
+        )
+        make_commit(temp_dir, issue, "issue")
+        result = subprocess.run(
+            ["git", "-C", temp_dir, "log", "-1", "--pretty=%B"], capture_output=True, text=True, check=True
+        )
+        commit_msg = result.stdout.strip()
+        expected = "Fix issue #123: Issue with 'quotes' and \"double quotes\" and <class 'ValueError'>"
+        assert commit_msg == expected, f"Expected: {expected}\nGot: {commit_msg}"
+
+
+def test_pr_title_with_quotes(monkeypatch):
+
+    class MockResponse:
+
+        def __init__(self, status_code=201):
+            self.status_code = status_code
+            self.text = ""
+
+        def json(self):
+            return {"html_url": "https://github.com/test/test/pull/1"}
+
+        def raise_for_status(self):
+            pass
+
+    def mock_post(*args, **kwargs):
+        data = kwargs.get("json", {})
+        title = data.get("title", "")
+        expected = "Fix issue #123: Issue with 'quotes' and \"double quotes\" and <class 'ValueError'>"
+        assert title == expected, f"PR title was incorrectly escaped.\nExpected: {expected}\nGot: {title}"
+        return MockResponse()
+
+    class MockGetResponse:
+
+        def __init__(self, status_code=200):
+            self.status_code = status_code
+            self.text = ""
+
+        def json(self):
+            return {"default_branch": "main"}
+
+        def raise_for_status(self):
+            pass
+
+    monkeypatch.setattr("httpx.post", mock_post)
+    monkeypatch.setattr("httpx.get", lambda *args, **kwargs: MockGetResponse())
+    monkeypatch.setattr(
+        "openhands.resolver.interfaces.github.GithubIssueHandler.branch_exists", lambda *args, **kwargs: False
+    )
+    original_run = subprocess.run
+
+    def mock_run(*args, **kwargs):
+        logger.info("Running command: %s", args[0] if args else kwargs.get("args", []))
+        if isinstance(args[0], list) and args[0][0] == "git":
+            if "push" in args[0]:
+                return subprocess.CompletedProcess(args[0], returncode=0, stdout="", stderr="")
+            return original_run(*args, **kwargs)
+        return original_run(*args, **kwargs)
+
+    monkeypatch.setattr("subprocess.run", mock_run)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        logger.info("Initializing git repo...")
+        subprocess.run(["git", "init", temp_dir], check=True)
+        subprocess.run(["git", "-C", temp_dir, "config", "user.name", "Test User"], check=True)
+        subprocess.run(["git", "-C", temp_dir, "config", "user.email", "test@example.com"], check=True)
+        test_file = os.path.join(temp_dir, "test.txt")
+        with open(test_file, "w", encoding='utf-8') as f:
+            f.write("test content")
+        logger.info("Adding and committing test file...")
+        subprocess.run(["git", "-C", temp_dir, "add", "test.txt"], check=True)
+        subprocess.run(["git", "-C", temp_dir, "commit", "-m", "Initial commit"], check=True)
+        logger.info("Creating test issue...")
+        issue = Issue(
+            owner="test-owner",
+            repo="test-repo",
+            number=123,
+            title="Issue with 'quotes' and \"double quotes\" and <class 'ValueError'>",
+            body="Test body",
+            labels=[],
+            assignees=[],
+            state="open",
+            created_at="2024-01-01T00:00:00Z",
+            updated_at="2024-01-01T00:00:00Z",
+            closed_at=None,
+            head_branch=None,
+            thread_ids=None,
+        )
+        logger.info("Sending PR...")
+        send_pull_request(
+            issue=issue,
+            token="dummy-token",
+            username="test-user",
+            platform=ProviderType.GITHUB,
+            patch_dir=temp_dir,
+            pr_type="ready",
+        )

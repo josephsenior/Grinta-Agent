@@ -1,0 +1,166 @@
+from __future__ import annotations
+
+import base64
+import json
+from threading import Lock
+from typing import TYPE_CHECKING
+
+from openhands.core.logger import openhands_logger as logger
+from openhands.llm.metrics import Metrics
+from openhands.storage.locations import get_conversation_stats_filename
+
+if TYPE_CHECKING:
+    from openhands.llm.llm_registry import RegistryEvent
+    from openhands.storage.files import FileStore
+
+
+class ConversationStats:
+
+    def __init__(
+        self,
+        file_store: FileStore | None,
+        conversation_id: str,
+        user_id: str | None,
+    ) -> None:
+        self.metrics_path = get_conversation_stats_filename(conversation_id, user_id)
+        self.file_store = file_store
+        self.conversation_id = conversation_id
+        self.user_id = user_id
+        self._save_lock = Lock()
+        self.service_to_metrics: dict[str, Metrics] = {}
+        self.restored_metrics: dict[str, Metrics] = {}
+        self.maybe_restore_metrics()
+
+    def save_metrics(self) -> None:
+        if not self.file_store:
+            return
+        with self._save_lock:
+            if duplicate_services := (set(self.restored_metrics.keys()) & set(self.service_to_metrics.keys())):
+                logger.error(
+                    "Duplicate service IDs found between restored and service metrics: %s. This should not happen as registered services should be removed from restored_metrics. Proceeding by preferring service_to_metrics values for duplicates.",
+                    duplicate_services,
+                    extra={
+                        "conversation_id": self.conversation_id,
+                        "duplicate_services": list(duplicate_services),
+                    },
+                )
+            combined_metrics = self.restored_metrics.copy()
+            combined_metrics.update(self.service_to_metrics)
+            serializable: dict[str, dict] = {
+                sid: m.get() if hasattr(m, "get") else m for sid, m in combined_metrics.items()
+            }
+            # Use JSON instead of pickle for security
+            json_data = json.dumps(serializable)
+            serialized_metrics = base64.b64encode(json_data.encode("utf-8")).decode(
+                "utf-8",
+            )
+            self.file_store.write(self.metrics_path, serialized_metrics)
+            logger.info(
+                "Saved converation stats",
+                extra={"conversation_id": self.conversation_id},
+            )
+
+    def maybe_restore_metrics(self) -> None:
+        if not self.file_store or not self.conversation_id:
+            return
+        try:
+            encoded = self.file_store.read(self.metrics_path)
+            decoded = base64.b64decode(encoded)
+            # Try JSON first (new format)
+            try:
+                loaded = json.loads(decoded.decode("utf-8"))
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                # Fallback to pickle for legacy data
+                import pickle
+
+                logger.warning(
+                    f"Loading legacy pickle data for conversation {
+                        self.conversation_id}. Will be migrated on next save.",
+                )
+                loaded = pickle.loads(decoded)  # nosec B301 - legacy support only
+
+            normalized: dict[str, Metrics] = {}
+            from openhands.llm.metrics import Metrics
+
+            if isinstance(loaded, dict):
+                for sid, v in loaded.items():
+                    if isinstance(v, Metrics):
+                        normalized[sid] = v
+                    elif isinstance(v, dict):
+                        m = Metrics()
+                        m.__setstate__(v)
+                        normalized[sid] = m
+                    else:
+                        continue
+            else:
+                normalized = {}
+            self.restored_metrics = normalized
+            logger.info("restored metrics: %s", self.conversation_id)
+        except FileNotFoundError:
+            pass
+
+    def get_combined_metrics(self) -> Metrics:
+        total_metrics = Metrics()
+        for metrics in self.service_to_metrics.values():
+            total_metrics.merge(metrics)
+        return total_metrics
+
+    def get_metrics_for_service(self, service_id: str) -> Metrics:
+        if service_id not in self.service_to_metrics:
+            msg = f"LLM service does not exist {service_id}"
+            raise KeyError(msg)
+        return self.service_to_metrics[service_id]
+
+    def register_llm(self, event: RegistryEvent) -> None:
+        llm = event.llm
+        service_id = event.service_id
+        if service_id in self.restored_metrics:
+            llm.metrics = self.restored_metrics[service_id].copy()
+            del self.restored_metrics[service_id]
+        self.service_to_metrics[service_id] = llm.metrics
+
+    def merge_and_save(self, conversation_stats: ConversationStats) -> None:
+        """Merge restored metrics from another ConversationStats into this one.
+
+        Important:
+        - This method is intended to be used immediately after restoring metrics from
+          storage, before any LLM services are registered. In that state, only
+          `restored_metrics` should contain entries and `service_to_metrics` should
+          be empty. If either side has entries in `service_to_metrics`, we log an
+          error but continue execution.
+
+        Behavior:
+        - Drop entries with zero accumulated_cost from both `restored_metrics` dicts
+          (self and incoming) before merging.
+        - Merge only `restored_metrics`. For duplicate keys, the incoming
+          `conversation_stats.restored_metrics` overwrites existing entries.
+        - Do NOT merge `service_to_metrics` here.
+        - Persist results by calling save_metrics().
+        """
+        if self.service_to_metrics or conversation_stats.service_to_metrics:
+            logger.error(
+                "merge_and_save should be used only when service_to_metrics are empty; found active service metrics during merge. Proceeding anyway.",
+                extra={
+                    "conversation_id": self.conversation_id,
+                    "self_service_to_metrics_keys": list(
+                        self.service_to_metrics.keys(),
+                    ),
+                    "incoming_service_to_metrics_keys": list(
+                        conversation_stats.service_to_metrics.keys(),
+                    ),
+                },
+            )
+
+        def _drop_zero_cost(d: dict[str, Metrics]) -> None:
+            to_delete = [k for k, v in d.items() if getattr(v, "accumulated_cost", 0) == 0]
+            for k in to_delete:
+                del d[k]
+
+        _drop_zero_cost(self.restored_metrics)
+        _drop_zero_cost(conversation_stats.restored_metrics)
+        self.restored_metrics.update(conversation_stats.restored_metrics)
+        self.save_metrics()
+        logger.info(
+            "Merged conversation stats",
+            extra={"conversation_id": self.conversation_id},
+        )

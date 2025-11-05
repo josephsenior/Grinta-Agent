@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "lib": ["dom", "es2022"],
+    "allowJs": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["@testing-library/jest-dom", "vite/client"]
+  },
+  "include": [
+    "**/__tests__/**/*.ts",
+    "**/__tests__/**/*.tsx",
+    "__tests__/utils/no-console-warnings.test.tsx",
+    "./__tests__/utils/no-console-warnings.test.tsx",
+    // include legacy top-level tests folder used by some CI runs
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "test-utils.tsx",
+    "test-utils/**/*.ts",
+    "test-utils/**/*.tsx",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.ts",
+    "src/**/*.spec.tsx"
+  ]
+}

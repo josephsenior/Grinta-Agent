@@ -1,0 +1,42 @@
+{
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/.server/**/*.ts",
+    "**/.server/**/*.tsx",
+    "**/.client/**/*.ts",
+    "**/.client/**/*.tsx",
+    ".react-router/types/**/*"
+  ],
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "es2022"],
+    "target": "es2022",
+    "types": ["@react-router/node", "vite/client", "@testing-library/jest-dom", "vitest/globals", "jest"],
+    "rootDirs": [".", "./.react-router/types"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    "paths": {
+      "test-utils": ["./test-utils"],
+      "#/*": ["./src/*"],
+      "./+types/*": [
+        "./.react-router/types/src/routes/+types/*",
+        "./src/routes/+types/*"
+      ]
+    },
+    // Vite takes care of building everything, not tsc.
+    "noEmit": true
+  },
+  "exclude": ["frontend/**"]
+}

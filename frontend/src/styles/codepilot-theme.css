@@ -1,0 +1,295 @@
+/**
+ * CodePilot Pro - Modern Design System
+ * Production-grade AI coding assistant
+ */
+
+/* ============================================
+   CSS CUSTOM PROPERTIES
+   ============================================ */
+
+:root {
+  /* Colors - Pure black theme */
+  --color-background-primary: #000000;
+  --color-background-secondary: #000000;
+  --color-background-tertiary: #000000;
+  --color-foreground: #ffffff;
+  --color-foreground-secondary: #e0e0e0;
+  --color-border: #8b5cf6;
+  --color-border-hover: #a78bfa;
+  
+  /* Brand colors - Violet theme */
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #7c3aed;
+  --color-success-500: #10b981;
+  --color-accent-500: #8b5cf6;
+  --color-warning-500: #f59e0b;
+  --color-error-500: #ef4444;
+  
+  /* Card-specific */
+  --color-card: #000000;
+  --color-card-foreground: #ffffff;
+  --color-muted: #000000;
+  --color-muted-foreground: #a0a0a0;
+
+  /* Spacing */
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 0.75rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+
+  /* Border radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 300ms ease;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+/* Background colors */
+.bg-background-primary { background-color: var(--color-background-primary); }
+.bg-background-secondary { background-color: var(--color-background-secondary); }
+.bg-background-tertiary { background-color: var(--color-background-tertiary); }
+
+/* Text colors */
+.text-foreground { color: var(--color-foreground); }
+.text-foreground-secondary { color: var(--color-foreground-secondary); }
+
+/* Border colors */
+.border-border { border-color: var(--color-border); }
+.border-border-hover { border-color: var(--color-border-hover); }
+
+/* Brand colors */
+.text-brand-500 { color: var(--color-brand-500); }
+.bg-brand-500 { background-color: var(--color-brand-500); }
+.bg-brand-500\/10 { background-color: rgba(139, 92, 246, 0.1); }
+.bg-brand-500\/15 { background-color: rgba(139, 92, 246, 0.15); }
+.text-brand-500 { color: var(--color-brand-500); }
+.ring-brand-500\/20 { --tw-ring-color: rgba(139, 92, 246, 0.2); }
+
+.text-success-500 { color: var(--color-success-500); }
+.bg-success-500\/10 { background-color: rgba(16, 185, 129, 0.1); }
+.bg-success-500\/15 { background-color: rgba(16, 185, 129, 0.15); }
+.ring-success-500\/20 { --tw-ring-color: rgba(16, 185, 129, 0.2); }
+
+.text-accent-500 { color: var(--color-accent-500); }
+.bg-accent-500\/10 { background-color: rgba(139, 92, 246, 0.1); }
+.bg-accent-500\/15 { background-color: rgba(139, 92, 246, 0.15); }
+.ring-accent-500\/20 { --tw-ring-color: rgba(139, 92, 246, 0.2); }
+
+.text-warning-500 { color: var(--color-warning-500); }
+.bg-warning-500\/10 { background-color: rgba(245, 158, 11, 0.1); }
+.bg-warning-500\/15 { background-color: rgba(245, 158, 11, 0.15); }
+.ring-warning-500\/20 { --tw-ring-color: rgba(245, 158, 11, 0.2); }
+
+/* ============================================
+   COMPONENT PATTERNS
+   ============================================ */
+
+/* Modern card */
+.card-modern {
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  transition: all var(--transition-base);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--color-foreground);
+}
+
+.card-modern:hover {
+  border-color: var(--color-border-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Card text elements - force high visibility */
+.card-modern h1,
+.card-modern h2,
+.card-modern h3,
+.card-modern h4,
+.card-modern h5,
+.card-modern h6 {
+  color: var(--color-foreground) !important;
+  font-weight: 600;
+}
+
+.card-modern p,
+.card-modern span,
+.card-modern div {
+  color: var(--color-foreground) !important;
+}
+
+.card-modern [class*="text-muted"] {
+  color: var(--color-foreground-secondary) !important;
+  opacity: 0.9 !important;
+}
+
+/* Stats cards specific styling */
+.stats-card {
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-foreground);
+}
+
+.stats-card h3 {
+  color: var(--color-foreground) !important;
+  font-weight: bold;
+}
+
+.stats-card p {
+  color: var(--color-foreground) !important;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+/* Grid layouts */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Floating element */
+.floating {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Gradient text */
+.text-gradient-brand {
+  background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* CodePilot logo */
+.codepilot-logo {
+  background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));
+}
+
+/* Syntax highlighting */
+.syntax-highlight {
+  background: var(--color-background-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+}
+
+/* Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in var(--transition-base);
+}
+
+.animate-slide-up {
+  animation: slide-up var(--transition-base);
+}
+
+.animate-scale-in {
+  animation: scale-in var(--transition-base);
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1025px) {
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .features-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

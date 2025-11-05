@@ -1,0 +1,404 @@
+"""Cloud-ready vector store that works locally AND in production.
+
+This implementation automatically detects the environment and uses:
+- Local: ChromaDB embedded (for development on weak PCs)
+- Cloud: Qdrant Cloud / Weaviate (for production)
+
+No code changes needed - just set environment variables!
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+import time
+from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+
+class VectorBackend(ABC):
+    """Abstract base class for vector storage backends."""
+
+    @abstractmethod
+    def add(
+        self,
+        step_id: str,
+        role: str,
+        artifact_hash: str | None,
+        rationale: str | None,
+        content_text: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Add a document to the vector store."""
+
+    @abstractmethod
+    def search(self, query: str, k: int = 5, filter_metadata: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        """Search for similar documents."""
+
+    @abstractmethod
+    def stats(self) -> dict[str, Any]:
+        """Get statistics about the vector store."""
+
+
+class ChromaDBBackend(VectorBackend):
+    """Local ChromaDB backend - runs on weak PCs, good for development."""
+
+    def __init__(self, collection_name: str = "openhands_memory", persist_directory: Path | None = None) -> None:
+        try:
+            import chromadb
+            from chromadb.config import Settings
+            from sentence_transformers import SentenceTransformer
+        except ImportError as e:
+            msg = "ChromaDB backend requires: pip install chromadb sentence-transformers\n" f"Original error: {e}"
+            raise ImportError(
+                msg,
+            ) from e
+
+        if persist_directory is None:
+            persist_directory = Path.home() / ".openhands" / "memory" / "chroma"
+        persist_directory.mkdir(parents=True, exist_ok=True)
+
+        self.client = chromadb.PersistentClient(
+            path=str(persist_directory),
+            settings=Settings(anonymized_telemetry=False),
+        )
+
+        # Use lightweight model for local development
+        model_name = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+        logger.info(f"Loading local embedding model: {model_name}")
+        self.model = SentenceTransformer(model_name)
+
+        try:
+            self.collection = self.client.get_collection(name=collection_name)
+            logger.info(f"Loaded ChromaDB collection with {self.collection.count()} documents")
+        except Exception:
+            self.collection = self.client.create_collection(
+                name=collection_name,
+                metadata={"hnsw:space": "cosine"},
+            )
+            logger.info("Created new ChromaDB collection")
+
+    def add(
+        self,
+        step_id: str,
+        role: str,
+        artifact_hash: str | None,
+        rationale: str | None,
+        content_text: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        text = self._prepare_text(rationale, content_text)
+        embedding = self.model.encode(text, show_progress_bar=False).tolist()
+
+        doc_metadata = {
+            "step_id": step_id,
+            "role": role,
+            "timestamp": time.time(),
+            **(metadata or {}),
+        }
+        if artifact_hash:
+            doc_metadata["artifact_hash"] = artifact_hash
+
+        self.collection.add(
+            ids=[step_id],
+            embeddings=[embedding],
+            documents=[text[:2000]],
+            metadatas=[doc_metadata],
+        )
+
+    def search(self, query: str, k: int = 5, filter_metadata: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        if self.collection.count() == 0:
+            return []
+
+        query_embedding = self.model.encode(query, show_progress_bar=False).tolist()
+        results = self.collection.query(
+            query_embeddings=[query_embedding],
+            n_results=min(k, self.collection.count()),
+            where=filter_metadata,
+            include=["documents", "metadatas", "distances"],
+        )
+
+        return [
+            {
+                "step_id": results["ids"][0][i],
+                "score": 1.0 - results["distances"][0][i],
+                "excerpt": results["documents"][0][i],
+                **results["metadatas"][0][i],
+            }
+            for i in range(len(results["ids"][0]))
+        ]
+
+    def stats(self) -> dict[str, Any]:
+        return {
+            "backend": "ChromaDB (Local)",
+            "num_documents": self.collection.count(),
+            "embedding_dim": self.model.get_sentence_embedding_dimension(),
+        }
+
+    @staticmethod
+    def _prepare_text(rationale: str | None, content: str) -> str:
+        parts = []
+        if rationale:
+            parts.append(rationale)
+        if content:
+            parts.append(content[:2000])
+        return "\n".join(parts)
+
+
+class QdrantCloudBackend(VectorBackend):
+    """Qdrant Cloud backend - free tier available, production-ready."""
+
+    def __init__(self, collection_name: str = "openhands_memory") -> None:
+        try:
+            from qdrant_client import QdrantClient
+            from qdrant_client.http import models
+        except ImportError as e:
+            msg = "Qdrant backend requires: pip install qdrant-client\n" f"Original error: {e}"
+            raise ImportError(
+                msg,
+            ) from e
+
+        # Get credentials from environment
+        qdrant_url = os.getenv("QDRANT_URL")
+        qdrant_key = os.getenv("QDRANT_API_KEY")
+
+        if not qdrant_url or not qdrant_key:
+            msg = (
+                "Qdrant Cloud requires environment variables:\n"
+                "  QDRANT_URL=https://your-cluster.cloud.qdrant.io\n"
+                "  QDRANT_API_KEY=your_api_key\n"
+                "Sign up for free at: https://cloud.qdrant.io"
+            )
+            raise ValueError(
+                msg,
+            )
+
+        self.client = QdrantClient(url=qdrant_url, api_key=qdrant_key)
+        self.collection_name = collection_name
+        self.models = models
+
+        # Use HuggingFace Inference API for embeddings (free tier available)
+        self.hf_api_key = os.getenv("HF_API_KEY")
+        if not self.hf_api_key:
+            logger.warning("No HF_API_KEY found. Using Qdrant's built-in embeddings.")
+
+        # Check if collection exists, create if not
+        try:
+            self.client.get_collection(collection_name)
+            logger.info(f"Connected to Qdrant Cloud collection: {collection_name}")
+        except Exception:
+            # Create collection with proper vector configuration
+            self.client.create_collection(
+                collection_name=collection_name,
+                vectors_config=models.VectorParams(
+                    size=768,  # all-mpnet-base-v2 dimension
+                    distance=models.Distance.COSINE,
+                ),
+            )
+            logger.info(f"Created new Qdrant Cloud collection: {collection_name}")
+
+    def add(
+        self,
+        step_id: str,
+        role: str,
+        artifact_hash: str | None,
+        rationale: str | None,
+        content_text: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        text = self._prepare_text(rationale, content_text)
+        embedding = self._get_embedding(text)
+
+        payload = {
+            "step_id": step_id,
+            "role": role,
+            "text": text[:2000],
+            "timestamp": time.time(),
+            **(metadata or {}),
+        }
+        if artifact_hash:
+            payload["artifact_hash"] = artifact_hash
+
+        self.client.upsert(
+            collection_name=self.collection_name,
+            points=[
+                self.models.PointStruct(
+                    id=hash(step_id) & 0x7FFFFFFF,  # Convert to positive int
+                    vector=embedding,
+                    payload=payload,
+                ),
+            ],
+        )
+
+    def search(self, query: str, k: int = 5, filter_metadata: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        query_embedding = self._get_embedding(query)
+
+        # Build filter if provided
+        qdrant_filter = None
+        if filter_metadata:
+            qdrant_filter = self.models.Filter(
+                must=[
+                    self.models.FieldCondition(
+                        key=key,
+                        match=self.models.MatchValue(value=value),
+                    )
+                    for key, value in filter_metadata.items()
+                ],
+            )
+
+        results = self.client.search(
+            collection_name=self.collection_name,
+            query_vector=query_embedding,
+            limit=k,
+            query_filter=qdrant_filter,
+        )
+
+        return [
+            {
+                "step_id": hit.payload.get("step_id"),
+                "score": hit.score,
+                "excerpt": hit.payload.get("text", ""),
+                **{k: v for k, v in hit.payload.items() if k not in ["text"]},
+            }
+            for hit in results
+        ]
+
+    def stats(self) -> dict[str, Any]:
+        info = self.client.get_collection(self.collection_name)
+        return {
+            "backend": "Qdrant Cloud (Production)",
+            "num_documents": info.points_count,
+            "embedding_dim": 768,
+        }
+
+    def _get_embedding(self, text: str) -> list[float]:
+        """Get embedding using HuggingFace Inference API or fallback to local."""
+        if self.hf_api_key:
+            try:
+                import requests
+
+                api_url = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-mpnet-base-v2"
+                headers = {"Authorization": f"Bearer {self.hf_api_key}"}
+                response = requests.post(api_url, headers=headers, json={"inputs": text[:512]}, timeout=30)
+
+                if response.status_code == 200:
+                    return response.json()
+                logger.warning(f"HF API error: {response.status_code}, falling back to local")
+            except Exception as e:
+                logger.warning(f"HF API error: {e}, falling back to local")
+
+        # Fallback to local embeddings
+        from sentence_transformers import SentenceTransformer
+
+        if not hasattr(self, "_local_model"):
+            self._local_model = SentenceTransformer("all-mpnet-base-v2")
+        return self._local_model.encode(text[:512], show_progress_bar=False).tolist()
+
+    @staticmethod
+    def _prepare_text(rationale: str | None, content: str) -> str:
+        parts = []
+        if rationale:
+            parts.append(rationale)
+        if content:
+            parts.append(content[:2000])
+        return "\n".join(parts)
+
+
+class AdaptiveVectorStore:
+    """Adaptive vector store that automatically selects the best backend.
+
+    Priority (based on environment):
+    1. QDRANT_URL set → Qdrant Cloud (production)
+    2. Force local → ChromaDB (development)
+    3. Default → ChromaDB (safe fallback)
+
+    Usage:
+        # Development (local PC):
+        store = AdaptiveVectorStore()  # Uses ChromaDB automatically
+
+        # Production (with env vars):
+        # export QDRANT_URL=https://your-cluster.cloud.qdrant.io
+        # export QDRANT_API_KEY=your_key
+        store = AdaptiveVectorStore()  # Uses Qdrant Cloud automatically
+    """
+
+    def __init__(self, collection_name: str = "openhands_memory", force_backend: str | None = None) -> None:
+        """Initialize with automatic backend detection.
+
+        Args:
+            collection_name: Name of the collection/index
+            force_backend: Override detection ("chromadb", "qdrant")
+        """
+        self.collection_name = collection_name
+
+        # Determine backend
+        if force_backend:
+            backend_type = force_backend.lower()
+        elif os.getenv("QDRANT_URL"):
+            backend_type = "qdrant"
+        else:
+            backend_type = "chromadb"
+
+        # Initialize backend
+        if backend_type == "qdrant":
+            try:
+                self.backend = QdrantCloudBackend(collection_name)
+                logger.info("✅ Using Qdrant Cloud backend (production)")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Qdrant Cloud: {e}")
+                logger.info("Falling back to ChromaDB (local)")
+                self.backend = ChromaDBBackend(collection_name)
+        else:
+            self.backend = ChromaDBBackend(collection_name)
+            logger.info("✅ Using ChromaDB backend (development)")
+
+    def add(
+        self,
+        step_id: str,
+        role: str,
+        artifact_hash: str | None,
+        rationale: str | None,
+        content_text: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Add a document to the vector store."""
+        return self.backend.add(step_id, role, artifact_hash, rationale, content_text, metadata)
+
+    def search(self, query: str, k: int = 5, filter_metadata: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        """Search for similar documents."""
+        return self.backend.search(query, k, filter_metadata)
+
+    def stats(self) -> dict[str, Any]:
+        """Get statistics about the vector store."""
+        return self.backend.stats()
+
+
+# Backward compatibility wrapper for existing MetaSOP code
+class VectorMemoryStore:
+    """Backward compatible wrapper that uses adaptive cloud-ready backend."""
+
+    def __init__(self, dim: int = 256, max_records: int | None = 500) -> None:
+        logger.info(
+            "Initializing cloud-ready vector store (ignoring legacy params: dim=%d, max_records=%s)",
+            dim,
+            max_records,
+        )
+        self._store = AdaptiveVectorStore()
+
+    def add(self, step_id: str, role: str, artifact_hash: str | None, rationale: str | None, content_text: str) -> None:
+        """Add a record (backward compatible interface)."""
+        self._store.add(step_id, role, artifact_hash, rationale, content_text)
+
+    def search(self, query: str, k: int = 3) -> list[dict[str, Any]]:
+        """Search for similar records (backward compatible interface)."""
+        return self._store.search(query, k)
+
+    def stats(self) -> dict[str, Any]:
+        """Get statistics (backward compatible interface)."""
+        return self._store.stats()
+
+
+__all__ = ["AdaptiveVectorStore", "ChromaDBBackend", "QdrantCloudBackend", "VectorMemoryStore"]

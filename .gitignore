@@ -1,0 +1,21 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+# Node
+frontend/node_modules/
+dist/
+build/
+# Playwright traces and tmp
+frontend/.playwright-trace/
+frontend/tmp_trace_extract/
+# OS
+.DS_Store
+*.log
+# Backup files
+*.bak
+# Secrets
+.env
+
+# local venv created during snapshot work
+.venv2/

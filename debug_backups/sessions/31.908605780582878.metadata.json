@@ -1,0 +1,17 @@
+{
+  "conversation_id": "31.908605780582878",
+  "selected_repository": null,
+  "user_id": null,
+  "selected_branch": null,
+  "git_provider": null,
+  "title": "Conversation 31.90",
+  "last_updated_at": "2025-09-08T23:23:55.548670Z",
+  "trigger": null,
+  "pr_number": [],
+  "created_at": "2025-09-08T23:22:18.901361Z",
+  "llm_model": null,
+  "accumulated_cost": 0.0,
+  "prompt_tokens": 0,
+  "completion_tokens": 0,
+  "total_tokens": 0
+}

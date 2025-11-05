@@ -1,0 +1,406 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://forge.ai/schemas/metasop/qa.json",
+  "title": "QA Test Report Artifact",
+  "description": "Enhanced QA artifact schema with detailed test results, code coverage, security findings, and performance metrics",
+  "type": "object",
+  "required": ["ok", "tests"],
+  "properties": {
+    "ok": {
+      "type": "boolean",
+      "description": "Overall QA status - true if all tests passed and no critical issues found"
+    },
+    "tests": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/TestStats"
+        },
+        {
+          "type": "array",
+          "description": "Array of individual test results",
+          "items": {
+            "$ref": "#/definitions/TestResult"
+          }
+        }
+      ],
+      "description": "Test statistics or detailed test results"
+    },
+    "lint": {
+      "type": "object",
+      "description": "Linting results",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["clean", "warnings", "errors"],
+          "description": "Overall linting status"
+        },
+        "errors": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of linting errors"
+        },
+        "warnings": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of linting warnings"
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LintIssue"
+          }
+        }
+      }
+    },
+    "report": {
+      "type": "array",
+      "description": "Detailed test report",
+      "items": {
+        "$ref": "#/definitions/TestResult"
+      }
+    },
+    "test_results": {
+      "type": "array",
+      "description": "Alias for report - detailed test scenarios",
+      "items": {
+        "$ref": "#/definitions/TestResult"
+      }
+    },
+    "coverage": {
+      "oneOf": [
+        { "$ref": "#/definitions/CoverageMetrics" },
+        { "type": "null" }
+      ],
+      "description": "Code coverage metrics (optional)"
+    },
+    "coverage_delta": {
+      "oneOf": [
+        { "$ref": "#/definitions/CoverageDelta" },
+        { "type": "null" }
+      ],
+      "description": "Coverage change compared to baseline (optional)"
+    },
+    "security_findings": {
+      "type": "array",
+      "description": "Security vulnerabilities discovered during testing",
+      "items": {
+        "$ref": "#/definitions/SecurityFinding"
+      }
+    },
+    "performance_metrics": {
+      "$ref": "#/definitions/PerformanceMetrics",
+      "description": "Performance test results"
+    }
+  },
+  "definitions": {
+    "TestStats": {
+      "type": "object",
+      "required": ["passed", "failed"],
+      "properties": {
+        "passed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of tests that passed"
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of tests that failed"
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of tests"
+        },
+        "skipped": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of tests skipped"
+        }
+      }
+    },
+    "TestResult": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Test name"
+        },
+        "test": {
+          "type": "string",
+          "description": "Alias for name - test description"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["passed", "failed", "skipped"],
+          "description": "Test outcome"
+        },
+        "passed": {
+          "type": "boolean",
+          "description": "Whether the test passed"
+        },
+        "failed": {
+          "type": "boolean",
+          "description": "Whether the test failed"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed test description"
+        },
+        "duration": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Test execution time in milliseconds"
+        },
+        "error": {
+          "type": "string",
+          "description": "Error message if test failed"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["unit", "integration", "e2e", "performance", "security"],
+          "description": "Type of test"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["authentication", "api", "ui", "security", "performance", "database", "integration"],
+          "description": "Test category for organization"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "description": "Test priority level"
+        },
+        "failure_reason": {
+          "type": "string",
+          "description": "Detailed explanation of why the test failed"
+        }
+      }
+    },
+    "LintIssue": {
+      "type": "object",
+      "required": ["file", "line", "severity", "rule", "message"],
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "File path"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Line number"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["error", "warning", "info"],
+          "description": "Issue severity"
+        },
+        "rule": {
+          "type": "string",
+          "description": "Linting rule that was violated"
+        },
+        "message": {
+          "type": "string",
+          "description": "Issue description"
+        }
+      }
+    },
+    "CoverageMetrics": {
+      "type": "object",
+      "properties": {
+        "percentage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Overall coverage percentage"
+        },
+        "lines": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Line coverage percentage"
+        },
+        "statements": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Statement coverage percentage"
+        },
+        "functions": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Function coverage percentage"
+        },
+        "branches": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Branch coverage percentage"
+        }
+      }
+    },
+    "CoverageDelta": {
+      "type": "object",
+      "properties": {
+        "lines": {
+          "type": "string",
+          "pattern": "^[+-]?[0-9]+\\.?[0-9]*%$",
+          "description": "Line coverage change (e.g., '+5.2%', '-1.1%')"
+        },
+        "statements": {
+          "type": "string",
+          "pattern": "^[+-]?[0-9]+\\.?[0-9]*%$",
+          "description": "Statement coverage change"
+        },
+        "functions": {
+          "type": "string",
+          "pattern": "^[+-]?[0-9]+\\.?[0-9]*%$",
+          "description": "Function coverage change"
+        },
+        "branches": {
+          "type": "string",
+          "pattern": "^[+-]?[0-9]+\\.?[0-9]*%$",
+          "description": "Branch coverage change"
+        }
+      }
+    },
+    "SecurityFinding": {
+      "type": "object",
+      "required": ["severity", "vulnerability", "description"],
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low", "info"],
+          "description": "Severity level"
+        },
+        "vulnerability": {
+          "type": "string",
+          "description": "Type of vulnerability (e.g., 'SQL Injection', 'XSS')"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "description": "Detailed description of the security issue"
+        },
+        "affected_endpoints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "API endpoints or pages affected"
+        },
+        "remediation": {
+          "type": "string",
+          "description": "How to fix this security issue"
+        },
+        "cve": {
+          "type": "string",
+          "pattern": "^CVE-[0-9]{4}-[0-9]{4,}$",
+          "description": "CVE identifier if applicable"
+        }
+      }
+    },
+    "PerformanceMetrics": {
+      "type": "object",
+      "properties": {
+        "api_response_time_p95": {
+          "type": "string",
+          "description": "95th percentile API response time (e.g., '250ms')"
+        },
+        "page_load_time": {
+          "type": "string",
+          "description": "Average page load time (e.g., '1.5s')"
+        },
+        "database_query_time": {
+          "type": "string",
+          "description": "Average database query time (e.g., '50ms')"
+        },
+        "recommendations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Performance improvement recommendations"
+        },
+        "first_contentful_paint": {
+          "type": "string",
+          "description": "FCP metric (e.g., '0.8s')"
+        },
+        "time_to_interactive": {
+          "type": "string",
+          "description": "TTI metric (e.g., '2.1s')"
+        },
+        "largest_contentful_paint": {
+          "type": "string",
+          "description": "LCP metric (e.g., '1.2s')"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "ok": true,
+      "tests": {
+        "passed": 45,
+        "failed": 0,
+        "total": 45,
+        "skipped": 2
+      },
+      "lint": {
+        "status": "clean",
+        "errors": 0,
+        "warnings": 3
+      },
+      "test_results": [
+        {
+          "name": "User authentication flow",
+          "status": "passed",
+          "type": "integration",
+          "category": "authentication",
+          "priority": "critical",
+          "duration": 250
+        },
+        {
+          "name": "API endpoint /api/v1/users GET",
+          "status": "passed",
+          "type": "integration",
+          "category": "api",
+          "priority": "high",
+          "duration": 120
+        }
+      ],
+      "coverage": {
+        "percentage": 87.5,
+        "lines": 88.2,
+        "statements": 87.5,
+        "functions": 85.0,
+        "branches": 82.3
+      },
+      "coverage_delta": {
+        "lines": "+2.5%",
+        "statements": "+1.8%",
+        "functions": "+3.2%",
+        "branches": "+1.1%"
+      },
+      "security_findings": [
+        {
+          "severity": "low",
+          "vulnerability": "Missing rate limiting",
+          "description": "Login endpoint does not have rate limiting, could be vulnerable to brute force attacks",
+          "affected_endpoints": ["/api/v1/auth/login"],
+          "remediation": "Add rate limiting middleware (max 5 requests per minute per IP)"
+        }
+      ],
+      "performance_metrics": {
+        "api_response_time_p95": "185ms",
+        "page_load_time": "1.2s",
+        "database_query_time": "45ms",
+        "recommendations": [
+          "Add index on users.email for faster lookups",
+          "Implement Redis caching for frequently accessed data"
+        ]
+      }
+    }
+  ]
+}

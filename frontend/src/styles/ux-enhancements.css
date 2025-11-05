@@ -1,0 +1,834 @@
+/**
+ * UX ENHANCEMENTS - Cursor-Level Polish
+ * 
+ * 1. Optimal Chat Width (780px - Cursor's golden ratio)
+ * 2. Enhanced Spacing (+43% padding, +33% margins)
+ * 3. Readable Typography (15px base, 1.7 line-height)
+ * 4. Premium Code Blocks (darker bg, subtle glow, depth)
+ * 5. Smooth Animations (Cursor-style entrance)
+ * 6. Violet Brand System (#8b5cf6)
+ * 7. Pure Black OLED Backgrounds (#000000)
+ */
+
+/* ============================================ */
+/* 1. CHAT WIDTH - Cursor-Optimized 780px      */
+/* ============================================ */
+
+/* Chat messages container max-width (optimal readability) */
+.chat-messages-container {
+  max-width: 480px !important;  /* Mobile-friendly initial width */
+  margin: 0 auto;  /* Center align */
+  transition: max-width 0.3s ease;
+}
+
+/* Wider on larger screens - Cursor's golden ratio */
+@media (min-width: 768px) {
+  .chat-messages-container {
+    max-width: 680px !important;  /* Increased for tablets */
+  }
+}
+
+@media (min-width: 1024px) {
+  .chat-messages-container {
+    max-width: 780px !important;  /* Cursor's optimal reading width */
+  }
+}
+
+/* ============================================ */
+/* 2. VIOLET CHAT BUTTONS                      */
+/* ============================================ */
+
+/* All chat interface buttons */
+.chat-button {
+  background-color: rgba(139, 92, 246, 0.1) !important;
+  border-color: rgba(139, 92, 246, 0.3) !important;
+  color: #8b5cf6 !important;
+  transition: all 0.2s ease !important;
+}
+
+.chat-button:hover {
+  background-color: rgba(139, 92, 246, 0.2) !important;
+  border-color: rgba(139, 92, 246, 0.5) !important;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.3) !important;
+}
+
+.chat-button:active {
+  background-color: rgba(139, 92, 246, 0.3) !important;
+}
+
+/* Primary chat action buttons */
+.chat-button-primary {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+  border-color: #8b5cf6 !important;
+  color: #ffffff !important;
+}
+
+.chat-button-primary:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.5) !important;
+}
+
+/* Send button (violet) */
+button[type="submit"] {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+  border-color: #8b5cf6 !important;
+  color: #ffffff !important;
+  transition: all 0.2s ease !important;
+}
+
+button[type="submit"]:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.5) !important;
+  transform: translateY(-1px);
+}
+
+button[type="submit"]:active {
+  transform: translateY(0);
+}
+
+/* ============================================ */
+/* 3. REDUCED INPUT AREA                       */
+/* ============================================ */
+
+/* Input area container */
+.chat-input-container {
+  padding: 0.75rem !important; /* Reduced from 1rem */
+}
+
+/* Text input/textarea */
+.chat-input-textarea {
+  min-height: 2.5rem !important; /* Reduced from 3rem */
+  max-height: 8rem !important; /* Reduced max height */
+  padding: 0.5rem 0.75rem !important; /* Compact padding */
+  font-size: 0.9375rem !important; /* 15px */
+  line-height: 1.4 !important;
+}
+
+/* Input wrapper */
+.chat-input-wrapper {
+  gap: 0.5rem !important; /* Tighter spacing */
+}
+
+/* File upload button - compact */
+.chat-file-button {
+  padding: 0.5rem !important;
+  min-height: 2rem !important;
+}
+
+/* ============================================ */
+/* 4. ENHANCED CHAT BUBBLES                    */
+/* ============================================ */
+
+/* Base chat message bubble - Cursor-level spacing */
+.chat-bubble {
+  padding: 1.25rem 1.5rem !important;  /* +43% padding for breathing room */
+  border-radius: 1rem !important;
+  margin-bottom: 1rem !important;  /* +33% vertical spacing */
+  backdrop-filter: blur(10px) !important;
+  transition: all 0.2s ease !important;
+  font-size: 0.9375rem !important;  /* 15px - Cursor's base size */
+  line-height: 1.7 !important;  /* +13% for readability */
+}
+
+/* User message bubble (right-aligned, violet) */
+.chat-bubble-user {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(124, 58, 237, 0.1) 100%) !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+  border-radius: 1rem 1rem 0.25rem 1rem !important;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.1) !important;
+  margin-left: auto !important;
+  max-width: 85% !important;
+}
+
+.chat-bubble-user:hover {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.15) 100%) !important;
+  border-color: rgba(139, 92, 246, 0.4) !important;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2) !important;
+}
+
+/* Agent message bubble (left-aligned, dark) */
+.chat-bubble-agent {
+  background: linear-gradient(135deg, rgba(15, 15, 15, 0.95) 0%, rgba(20, 20, 20, 0.9) 100%) !important;
+  border: 1px solid rgba(139, 92, 246, 0.15) !important;
+  border-radius: 1rem 1rem 1rem 0.25rem !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  margin-right: auto !important;
+  max-width: 85% !important;
+}
+
+.chat-bubble-agent:hover {
+  background: linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(25, 25, 25, 0.9) 100%) !important;
+  border-color: rgba(139, 92, 246, 0.25) !important;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.1) !important;
+}
+
+/* Avatar indicators removed for cleaner design */
+
+/* Message text styling - Enhanced readability */
+.chat-bubble p {
+  margin: 0 !important;
+  line-height: 1.7 !important;  /* Cursor-level spacing */
+  color: var(--text-primary) !important;
+  font-size: 0.9375rem !important;  /* 15px */
+}
+
+.chat-bubble p + p {
+  margin-top: 0.75rem !important;  /* Paragraph spacing */
+}
+
+/* Code blocks inside bubbles - Cursor-level premium */
+.chat-bubble pre {
+  background: rgba(5, 5, 5, 0.8) !important;  /* Darker for contrast */
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+  border-radius: 0.875rem !important;  /* More rounded */
+  padding: 1.25rem 1.5rem !important;  /* +67% padding */
+  margin: 1rem 0 !important;  /* +100% vertical spacing */
+  overflow-x: auto !important;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(139, 92, 246, 0.1) !important;  /* Subtle depth + glow */
+  font-size: 0.875rem !important;  /* 14px for code */
+}
+
+.chat-bubble code {
+  background: rgba(139, 92, 246, 0.15) !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+  padding: 0.25rem 0.5rem !important;  /* +100% padding for better contrast */
+  border-radius: 0.375rem !important;  /* More rounded */
+  font-size: 0.875rem !important;  /* 14px for inline code */
+  font-weight: 500 !important;  /* Slightly bolder */
+  letter-spacing: -0.01em !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;  /* Subtle depth */
+}
+
+/* ============================================ */
+/* 5. PURE BLACK BACKGROUNDS                   */
+/* ============================================ */
+
+/* Chat interface background */
+.chat-interface {
+  background: #000000 !important;
+}
+
+/* Settings background */
+.settings-container {
+  background: #000000 !important;
+}
+
+/* Tabs background */
+.tabs-container {
+  background: #000000 !important;
+}
+
+/* Modal/Dialog backgrounds */
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.9) !important;
+}
+
+.modal-content {
+  background: #0a0a0a !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+}
+
+/* Card backgrounds */
+.card {
+  background: #0a0a0a !important;
+  border-color: rgba(139, 92, 246, 0.15) !important;
+}
+
+/* ============================================ */
+/* 6. SCROLLBAR STYLING                        */
+/* ============================================ */
+
+/* Violet-themed scrollbar - Ultra-smooth */
+.chat-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 6px rgba(139, 92, 246, 0.25);
+}
+
+/* ============================================ */
+/* 7. MOBILE RESPONSIVE                        */
+/* ============================================ */
+
+/* ============================================ */
+/* 11. MOBILE UX - Cursor-Level Polish         */
+/* ============================================ */
+
+@media (max-width: 640px) {
+  /* Chat container - full width on mobile */
+  .chat-messages-container {
+    max-width: 100% !important;
+    padding: 0 1rem !important;  /* More padding for mobile */
+    margin: 0 !important;
+  }
+
+  /* Message bubbles - slightly wider on mobile */
+  .chat-bubble-user,
+  .chat-bubble-agent {
+    max-width: 92% !important;  /* Slightly wider for readability */
+    padding: 1.125rem 1.25rem !important;  /* Optimized for mobile screens */
+  }
+
+  /* Mobile typography - prevent iOS zoom */
+  .chat-input-textarea {
+    font-size: 16px !important;  /* iOS won't zoom */
+    line-height: 1.5 !important;
+  }
+
+  /* All text inputs must be 16px+ on iOS */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* Message text - larger on mobile */
+  .chat-bubble {
+    font-size: 1rem !important;  /* 16px on mobile (larger than desktop 15px) */
+    line-height: 1.65 !important;  /* Slightly tighter for mobile */
+  }
+
+  .chat-bubble p {
+    font-size: 1rem !important;
+  }
+
+  /* Code blocks - optimized padding for mobile */
+  .chat-bubble pre {
+    padding: 1rem 1.25rem !important;  /* Reduced from desktop */
+    margin: 0.875rem 0 !important;
+    border-radius: 0.75rem !important;
+    font-size: 0.8125rem !important;  /* 13px - slightly smaller on mobile */
+  }
+
+  .chat-bubble code {
+    font-size: 0.8125rem !important;  /* 13px inline code */
+  }
+
+  /* Touch targets - iOS guidelines (44px minimum) */
+  button, .btn, .btn-icon {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+
+  /* Compact buttons still need 44px touch area */
+  .btn-sm {
+    min-height: 44px !important;
+    padding: 0.75rem 1rem !important;
+  }
+
+  /* Action buttons in messages */
+  .message-action-button {
+    min-height: 44px !important;
+    min-width: 44px !important;
+    padding: 0.75rem !important;
+  }
+
+  /* Event messages - more compact on mobile */
+  .event-message {
+    padding: 1rem 1.25rem !important;
+    margin-bottom: 1rem !important;
+    font-size: 0.9375rem !important;  /* 15px */
+  }
+
+  /* Safe area insets for notched devices */
+  .safe-area-top,
+  .chat-header {
+    padding-top: max(1rem, env(safe-area-inset-top)) !important;
+  }
+
+  .safe-area-bottom,
+  .chat-input-area {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+  }
+
+  .safe-area-left {
+    padding-left: max(1rem, env(safe-area-inset-left)) !important;
+  }
+
+  .safe-area-right {
+    padding-right: max(1rem, env(safe-area-inset-right)) !important;
+  }
+
+  /* Mobile-specific touch feedback */
+  button:active, .btn:active {
+    transform: scale(0.96) !important;  /* Tactile feedback */
+    transition: transform 0.1s ease-out !important;
+  }
+
+  /* Disable hover effects on mobile (tap-only) */
+  .chat-bubble:hover,
+  .event-message:hover {
+    transform: none !important;
+    box-shadow: inherit !important;
+  }
+
+  /* Reduce animation complexity on mobile */
+  .event-message {
+    animation-duration: 0.25s !important;  /* Faster on mobile */
+  }
+
+  .stagger-item {
+    animation-duration: 0.3s !important;
+  }
+}
+
+/* ============================================ */
+/* 12. MOBILE BUTTONS & INTERACTIONS           */
+/* ============================================ */
+
+/* Mobile-optimized buttons - 44px minimum everywhere */
+@media (max-width: 640px) {
+  /* Primary action buttons - larger on mobile */
+  .btn-primary, button[type="submit"] {
+    min-height: 48px !important;  /* Extra comfort */
+    padding: 0.875rem 1.5rem !important;
+    font-size: 1rem !important;  /* 16px */
+  }
+
+  /* Secondary buttons */
+  .btn-secondary {
+    min-height: 44px !important;
+    padding: 0.75rem 1.25rem !important;
+    font-size: 0.9375rem !important;  /* 15px */
+  }
+
+  /* Icon-only buttons */
+  .btn-icon, button[aria-label]:not([aria-label=""]) {
+    min-height: 48px !important;
+    min-width: 48px !important;
+    padding: 0.75rem !important;
+  }
+
+  /* Dropdown/menu items */
+  [role="menuitem"], [role="option"] {
+    min-height: 48px !important;
+    padding: 0.875rem 1.125rem !important;
+    font-size: 1rem !important;
+  }
+
+  /* Links and text buttons */
+  a {
+    min-height: 44px !important;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.625rem 0.75rem !important;
+  }
+
+  /* Navigation items */
+  .nav-link, .nav-item {
+    min-height: 48px !important;
+    padding: 0.875rem 1rem !important;
+  }
+
+  /* Tab buttons */
+  [role="tab"] {
+    min-height: 48px !important;
+    padding: 0.75rem 1.25rem !important;
+    font-size: 0.9375rem !important;
+  }
+
+  /* Mobile swipe gestures - smooth */
+  .swipeable {
+    touch-action: pan-y;  /* Allow vertical scroll, prevent horizontal */
+  }
+
+  /* Prevent double-tap zoom */
+  * {
+    touch-action: manipulation;
+  }
+}
+
+/* ============================================ */
+/* 13. MOBILE PERFORMANCE OPTIMIZATIONS        */
+/* ============================================ */
+
+@media (max-width: 640px) {
+  /* Reduce animation complexity on lower-end devices */
+  .gradient-shimmer,
+  .gradient-border-animated,
+  .morphing-icon,
+  .floating-icon {
+    animation: none !important;  /* Disable heavy animations */
+  }
+
+  /* Simplify shadows on mobile */
+  .shadow-lg, .shadow-xl, .shadow-2xl {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  /* Reduce backdrop blur for performance */
+  .backdrop-blur-md, .backdrop-blur-lg {
+    backdrop-filter: blur(8px) !important;  /* Reduced from 12-16px */
+  }
+
+  /* Keep essential animations smooth */
+  .animate-message-enter,
+  .bubble-slide-in {
+    animation-duration: 0.2s !important;  /* Faster */
+  }
+}
+
+/* ============================================ */
+/* 8. TERMINAL GLASSMORPHISM DESIGN            */
+/* ============================================ */
+
+/* Modern Terminal with Glassmorphism (Bolt.new-inspired) */
+.streaming-terminal {
+  background: linear-gradient(135deg,
+    rgba(10, 10, 10, 0.95) 0%,
+    rgba(15, 15, 15, 0.95) 50%,
+    rgba(10, 10, 10, 0.95) 100%) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(139, 92, 246, 0.15) !important;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(139, 92, 246, 0.08),
+    0 0 20px rgba(139, 92, 246, 0.05) !important;
+  border-radius: 12px !important;
+  transition: all 0.3s ease !important;
+}
+
+.streaming-terminal:hover {
+  border-color: rgba(139, 92, 246, 0.25) !important;
+  box-shadow:
+    0 25px 30px -5px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(139, 92, 246, 0.12),
+    0 0 30px rgba(139, 92, 246, 0.1) !important;
+}
+
+/* Terminal Header */
+.terminal-header {
+  background: rgba(15, 15, 15, 0.7) !important;
+  backdrop-filter: blur(12px) !important;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.1) !important;
+  padding: 0.625rem 1rem !important;
+}
+
+/* Terminal Content */
+.terminal-content {
+  background: transparent !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.3) transparent;
+}
+
+.terminal-content::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.terminal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.terminal-content::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.terminal-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 6px rgba(139, 92, 246, 0.25);
+}
+
+/* Terminal Status Indicators */
+.terminal-status-running {
+  color: #3b82f6 !important;
+  background: rgba(59, 130, 246, 0.1) !important;
+  border-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+.terminal-status-success {
+  color: #10b981 !important;
+  background: rgba(16, 185, 129, 0.1) !important;
+  border-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+.terminal-status-error {
+  color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.2) !important;
+}
+
+/* ============================================ */
+/* 9. CHAT MESSAGE COMPONENTS DESIGN           */
+/* ============================================ */
+
+/* Event Message Container - Cursor-level spacing */
+.event-message {
+  background: rgba(10, 10, 10, 0.6) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(139, 92, 246, 0.1) !important;
+  border-radius: 1rem !important;
+  padding: 1.25rem 1.5rem !important;  /* +25% padding */
+  margin-bottom: 1.25rem !important;  /* +25% spacing */
+  transition: all 0.2s ease !important;
+  font-size: 0.9375rem !important;  /* 15px */
+  line-height: 1.7 !important;
+}
+
+.event-message:hover {
+  background: rgba(15, 15, 15, 0.7) !important;
+  border-color: rgba(139, 92, 246, 0.2) !important;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.1) !important;
+  transform: translateY(-1px);  /* Subtle lift on hover */
+}
+
+/* Message Header */
+.message-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+/* Message Avatar/Icon */
+.message-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(124, 58, 237, 0.2));
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8b5cf6;
+}
+
+/* Streaming Thought Component */
+.streaming-thought {
+  background: linear-gradient(135deg,
+    rgba(139, 92, 246, 0.08),
+    rgba(124, 58, 237, 0.05));
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 0.75rem;
+  padding: 0.875rem 1rem;
+  margin: 0.75rem 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.streaming-thought::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(139, 92, 246, 0.5),
+    transparent);
+  background-size: 200% 100%;
+  animation: thought-shimmer 2s linear infinite;
+}
+
+@keyframes thought-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Streaming Code Artifact */
+.streaming-code-artifact {
+  background: rgba(10, 10, 10, 0.8);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  margin: 1rem 0;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.artifact-header {
+  background: rgba(15, 15, 15, 0.9);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Code Block Enhancements - Cursor-level premium */
+.code-block {
+  background: rgba(5, 5, 5, 0.95) !important;  /* Darker background */
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+  border-radius: 0.875rem !important;  /* More rounded */
+  overflow: hidden !important;
+  margin: 1rem 0 !important;  /* +33% spacing */
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(139, 92, 246, 0.08) !important;  /* Depth + glow */
+  transition: all 0.2s ease !important;
+}
+
+.code-block:hover {
+  border-color: rgba(139, 92, 246, 0.3) !important;
+  box-shadow: 
+    0 6px 16px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(139, 92, 246, 0.12) !important;
+}
+
+.code-block-header {
+  background: rgba(15, 15, 15, 0.9) !important;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.15) !important;
+  padding: 0.75rem 1.25rem !important;  /* More padding */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8125rem;  /* 13px - slightly larger */
+  font-weight: 500;
+}
+
+.code-block pre {
+  margin: 0 !important;
+  padding: 1.25rem 1.5rem !important;  /* +25% padding */
+  overflow-x: auto !important;
+  background: transparent !important;
+}
+
+.code-block code {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  font-family: 'IBM Plex Mono', 'JetBrains Mono', monospace !important;
+  font-size: 0.875rem !important;  /* 14px */
+  line-height: 1.6 !important;
+  color: var(--text-primary) !important;
+}
+
+/* ============================================ */
+/* 10. ANIMATIONS                              */
+/* ============================================ */
+
+/* Bubble entrance animation */
+@keyframes bubble-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-bubble {
+  animation: bubble-slide-in 0.3s ease-out;
+}
+
+/* Smooth event flow animation - Cursor-style entrance */
+@keyframes fade-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.event-message {
+  animation: fade-slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;  /* Smoother easing */
+  animation-fill-mode: both;
+}
+
+/* Stagger consecutive events for smoother flow (reduced delays) */
+.event-message:nth-child(1) { animation-delay: 0ms; }
+.event-message:nth-child(2) { animation-delay: 40ms; }
+.event-message:nth-child(3) { animation-delay: 80ms; }
+.event-message:nth-child(4) { animation-delay: 120ms; }
+.event-message:nth-child(5) { animation-delay: 160ms; }
+.event-message:nth-child(6) { animation-delay: 200ms; }
+.event-message:nth-child(7) { animation-delay: 240ms; }
+.event-message:nth-child(8) { animation-delay: 280ms; }
+
+/* Action summary compact display */
+.action-summary {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.03) 0%, rgba(124, 58, 237, 0.02) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.1);
+  border-radius: 0.75rem;
+  padding: 0.5rem;
+}
+
+.action-summary-item {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.action-summary-item:hover {
+  background: rgba(139, 92, 246, 0.1);
+  transform: translateX(2px);
+}
+
+/* Progressive disclosure - collapsible details */
+.technical-details-toggle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.technical-details-toggle:hover {
+  color: var(--text-secondary);
+}
+
+.technical-details-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.technical-details-content.expanded {
+  max-height: 1000px;
+}
+
+/* Button glow effect */
+@keyframes violet-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+  }
+}
+
+.chat-button-primary:hover {
+  animation: violet-glow 2s ease-in-out infinite;
+}
+
+/* Terminal pulse animation */
+@keyframes terminal-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.terminal-cursor {
+  animation: terminal-pulse 1s ease-in-out infinite;
+}
+
+/* Old message fade-in replaced with staggered fade-slide-up animation above */
+

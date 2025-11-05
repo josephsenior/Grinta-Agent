@@ -1,0 +1,49 @@
+Waiting for server at http://localhost:3002
+Visiting http://localhost:3002/
+Visiting http://localhost:3002/conversations
+Visiting http://localhost:3002/conversations/1
+Visiting http://localhost:3002/settings
+Visiting http://localhost:3002/about
+Done. Summary written to C:\Users\youse\Bureau\Joseph\OpenHands\frontend\tests\ui-screenshots\summary.json
+[
+  {
+    "route": "/",
+    "url": "http://localhost:3002/",
+    "hasSectionHeading": false,
+    "hasCtaPrimary": false,
+    "screenshot": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\landing.png",
+    "domJson": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\landing-dom.json"
+  },
+  {
+    "route": "/conversations",
+    "url": "http://localhost:3002/conversations",
+    "hasSectionHeading": false,
+    "hasCtaPrimary": false,
+    "screenshot": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\conversations-list.png",
+    "domJson": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\conversations-list-dom.json"
+  },
+  {
+    "route": "/conversations/1",
+    "url": "http://localhost:3002/conversations/1",
+    "hasSectionHeading": false,
+    "hasCtaPrimary": false,
+    "screenshot": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\chat-1.png",
+    "domJson": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\chat-1-dom.json"
+  },
+  {
+    "route": "/settings",
+    "url": "http://localhost:3002/settings",
+    "hasSectionHeading": false,
+    "hasCtaPrimary": false,
+    "screenshot": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\settings.png",
+    "domJson": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\settings-dom.json"
+  },
+  {
+    "route": "/about",
+    "url": "http://localhost:3002/about",
+    "hasSectionHeading": false,
+    "hasCtaPrimary": false,
+    "screenshot": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\about.png",
+    "domJson": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\about-dom.json"
+  }
+]

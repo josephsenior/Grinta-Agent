@@ -1,0 +1,27 @@
+name: Frontend contrast check
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/**'
+    types: [opened, synchronize, reopened]
+
+jobs:
+  contrast:
+    name: Contrast scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install root deps
+        run: npm ci
+
+      - name: Run contrast scan
+        working-directory: frontend
+        run: npm run check:contrast

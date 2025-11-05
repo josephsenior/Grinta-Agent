@@ -1,0 +1,262 @@
+"""Custom exceptions for the OpenHands agent framework.
+
+This module defines exception classes used throughout OpenHands for handling
+agent lifecycle errors, LLM interaction failures, runtime issues, and more.
+"""
+
+from __future__ import annotations
+
+
+class AgentError(Exception):
+    """Base class for all agent exceptions."""
+
+
+class AgentNoInstructionError(AgentError):
+    """Raised when an agent is invoked without required instructions.
+
+    Args:
+        message: Error message describing the missing instruction requirement.
+    """
+
+    def __init__(self, message: str = "Instruction must be provided") -> None:
+        super().__init__(message)
+
+
+class AgentEventTypeError(AgentError):
+    """Raised when an agent receives an event of invalid type.
+
+    Args:
+        message: Error message describing the type mismatch.
+    """
+
+    def __init__(self, message: str = "Event must be a dictionary") -> None:
+        super().__init__(message)
+
+
+class AgentAlreadyRegisteredError(AgentError):
+    """Raised when attempting to register an agent class that already exists.
+
+    Args:
+        name: Optional name of the agent class that's already registered.
+    """
+
+    def __init__(self, name: str | None = None) -> None:
+        if name is not None:
+            message = f"Agent class already registered under '{name}'"
+        else:
+            message = "Agent class already registered"
+        super().__init__(message)
+
+
+class AgentNotRegisteredError(AgentError):
+    """Raised when attempting to access an unregistered agent class.
+
+    Args:
+        name: Optional name of the agent class that's not found.
+    """
+
+    def __init__(self, name: str | None = None) -> None:
+        if name is not None:
+            message = f"No agent class registered under '{name}'"
+        else:
+            message = "No agent class registered"
+        super().__init__(message)
+
+
+class AgentStuckInLoopError(AgentError):
+    """Raised when an agent gets stuck in a repetitive action loop.
+
+    Args:
+        message: Error message describing the loop condition.
+    """
+
+    def __init__(self, message: str = "Agent got stuck in a loop") -> None:
+        super().__init__(message)
+
+
+class TaskInvalidStateError(Exception):
+    """Raised when a task enters an invalid or unexpected state.
+
+    Args:
+        state: Optional description of the invalid state.
+    """
+
+    def __init__(self, state: str | None = None) -> None:
+        message = f"Invalid state {state}" if state is not None else "Invalid state"
+        super().__init__(message)
+
+
+class LLMMalformedActionError(Exception):
+    """Raised when LLM returns a malformed action response.
+
+    Args:
+        message: Error message describing the malformed response.
+    """
+
+    def __init__(self, message: str = "Malformed response") -> None:
+        self.message = message
+        super().__init__(message)
+
+    def __str__(self) -> str:
+        return self.message
+
+
+class LLMNoActionError(Exception):
+    """Raised when LLM fails to return an action when one is required.
+
+    Args:
+        message: Error message describing the missing action.
+    """
+
+    def __init__(self, message: str = "Agent must return an action") -> None:
+        super().__init__(message)
+
+
+class LLMResponseError(Exception):
+    """Raised when unable to extract an action from LLM response.
+
+    Args:
+        message: Error message describing the extraction failure.
+    """
+
+    def __init__(self, message: str = "Failed to retrieve action from LLM response") -> None:
+        super().__init__(message)
+
+
+class LLMNoResponseError(Exception):
+    """Raised when LLM returns no response at all.
+
+    This is particularly seen with Gemini models in certain conditions.
+
+    Args:
+        message: Error message describing the missing response.
+    """
+
+    def __init__(
+        self,
+        message: str = "LLM did not return a response. This is only seen in Gemini models so far.",
+    ) -> None:
+        super().__init__(message)
+
+
+class UserCancelledError(Exception):
+    """Raised when a user explicitly cancels an operation.
+
+    Args:
+        message: Error message describing the cancellation.
+    """
+
+    def __init__(self, message: str = "User cancelled the request") -> None:
+        super().__init__(message)
+
+
+class OperationCancelled(Exception):
+    """Exception raised when an operation is cancelled (e.g. by a keyboard interrupt)."""
+
+    def __init__(self, message: str = "Operation was cancelled") -> None:
+        super().__init__(message)
+
+
+class LLMContextWindowExceedError(RuntimeError):
+    """Raised when conversation history exceeds LLM context window limit.
+
+    Args:
+        message: Error message with suggestion to enable history truncation.
+    """
+
+    def __init__(
+        self,
+        message: str = "Conversation history longer than LLM context window limit. Consider turning on enable_history_truncation config to avoid this error",
+    ) -> None:
+        super().__init__(message)
+
+
+class FunctionCallConversionError(Exception):
+    """Exception raised when FunctionCallingConverter failed to convert a non-function call message to a function call message.
+
+    This typically happens when there's a malformed message (e.g., missing <function=...> tags). But not due to LLM output.
+    """
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
+class FunctionCallValidationError(Exception):
+    """Exception raised when FunctionCallingConverter failed to validate a function call message.
+
+    This typically happens when the LLM outputs unrecognized function call / parameter names / values.
+    """
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
+class FunctionCallNotExistsError(Exception):
+    """Exception raised when an LLM call a tool that is not registered."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
+class AgentRuntimeError(Exception):
+    """Base class for all agent runtime exceptions."""
+
+
+class AgentRuntimeBuildError(AgentRuntimeError):
+    """Exception raised when an agent runtime build operation fails."""
+
+
+class AgentRuntimeTimeoutError(AgentRuntimeError):
+    """Exception raised when an agent runtime operation times out."""
+
+
+class AgentRuntimeUnavailableError(AgentRuntimeError):
+    """Exception raised when an agent runtime is unavailable."""
+
+
+class AgentRuntimeNotReadyError(AgentRuntimeUnavailableError):
+    """Exception raised when an agent runtime is not ready."""
+
+
+class AgentRuntimeDisconnectedError(AgentRuntimeUnavailableError):
+    """Exception raised when an agent runtime is disconnected."""
+
+
+class AgentRuntimeNotFoundError(AgentRuntimeUnavailableError):
+    """Exception raised when an agent runtime is not found."""
+
+
+class BrowserInitException(Exception):
+    """Raised when browser environment initialization fails.
+
+    Args:
+        message: Error message describing the initialization failure.
+    """
+
+    def __init__(self, message: str = "Failed to initialize browser environment") -> None:
+        super().__init__(message)
+
+
+class BrowserUnavailableException(Exception):
+    """Raised when browser environment is not available or not initialized.
+
+    Args:
+        message: Error message with instructions to check initialization.
+    """
+
+    def __init__(
+        self,
+        message: str = "Browser environment is not available, please check if has been initialized",
+    ) -> None:
+        super().__init__(message)
+
+
+class MicroagentError(Exception):
+    """Base exception for all microagent errors."""
+
+
+class MicroagentValidationError(MicroagentError):
+    """Raised when there's a validation error in microagent metadata."""
+
+    def __init__(self, message: str = "Microagent validation failed") -> None:
+        super().__init__(message)

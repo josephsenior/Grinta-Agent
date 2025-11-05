@@ -1,0 +1,10 @@
+# Ignore nested duplicate frontend folder that comes with the snapshot
+frontend/
+
+# Ignore generated react-router types and hand-made shims
+src/routes/+types/
+
+# Ignore any temporary declaration stubs
+.*/declaration.d.ts
+src/i18n/declaration.d.ts
+src/routes/+types/**

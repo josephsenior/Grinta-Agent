@@ -1,0 +1,10 @@
+{
+  "serverHtmlHasAttribute": false,
+  "hydratedDomHasAttribute": false,
+  "attributes": [],
+  "consoleLogs": [],
+  "errors": [],
+  "warningCount": 0,
+  "fetchError": "Error: apiRequestContext.get: connect ECONNREFUSED ::1:3001\nCall log:\n\u001b[2m  - → GET http://[::1]:3001/\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/140.0.7339.16 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n",
+  "exception": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3001/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:3001/\", waiting until \"load\"\u001b[22m\n"
+}

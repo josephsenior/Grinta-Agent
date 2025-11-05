@@ -1,0 +1,534 @@
+/**
+ * COMPONENT MICRO-INTERACTIONS - Cursor-Level Polish
+ * 
+ * Subtle, polished interactions that make the UI feel premium
+ */
+
+/* ============================================ */
+/* 1. RIPPLE EFFECT (Material Design)          */
+/* ============================================ */
+
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.ripple-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.4);
+  width: 20px;
+  height: 20px;
+  animation: ripple 0.6s ease-out;
+  pointer-events: none;
+}
+
+/* ============================================ */
+/* 2. BUTTON MICRO-INTERACTIONS                */
+/* ============================================ */
+
+/* Subtle lift on hover */
+.interactive-lift {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.interactive-lift:hover {
+  transform: translateY(-1px);
+}
+
+.interactive-lift:active {
+  transform: translateY(0);
+}
+
+/* Glow on hover */
+.interactive-glow:hover {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+  transition: box-shadow 0.3s ease;
+}
+
+/* Scale on press */
+.interactive-press:active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease-out;
+}
+
+/* Combined effect (recommended) */
+.interactive {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.interactive:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.interactive:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* ============================================ */
+/* 3. CARD MICRO-INTERACTIONS                  */
+/* ============================================ */
+
+.card-interactive {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.25);
+}
+
+.card-interactive:active {
+  transform: translateY(-1px);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(139, 92, 246, 0.1);
+}
+
+/* ============================================ */
+/* 4. INPUT MICRO-INTERACTIONS                 */
+/* ============================================ */
+
+/* Smooth focus transition */
+input, textarea, select {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+input:focus, textarea:focus, select:focus {
+  transform: scale(1.01);  /* Subtle grow */
+}
+
+/* Label float animation */
+@keyframes label-float {
+  from {
+    transform: translateY(0);
+    font-size: 1rem;
+  }
+  to {
+    transform: translateY(-1.5rem);
+    font-size: 0.75rem;
+  }
+}
+
+.floating-label {
+  animation: label-float 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* ============================================ */
+/* 5. LINK HOVER EFFECTS                       */
+/* ============================================ */
+
+/* Underline slide effect */
+.link-slide {
+  position: relative;
+  text-decoration: none;
+}
+
+.link-slide::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.link-slide:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* ============================================ */
+/* 6. ICON ANIMATIONS                          */
+/* ============================================ */
+
+/* Spin on hover */
+.icon-spin-hover {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.icon-spin-hover:hover {
+  transform: rotate(90deg);
+}
+
+/* Bounce on hover */
+.icon-bounce-hover {
+  transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.icon-bounce-hover:hover {
+  transform: scale(1.15);
+}
+
+/* Wiggle on hover */
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+.icon-wiggle-hover:hover {
+  animation: wiggle 0.3s ease-in-out 2;
+}
+
+/* ============================================ */
+/* 7. NOTIFICATION BADGES                      */
+/* ============================================ */
+
+/* Pulse animation */
+@keyframes badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.badge-pulse {
+  animation: badge-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Ping effect */
+@keyframes badge-ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.badge-ping::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  animation: badge-ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* ============================================ */
+/* 8. SKELETON LOADERS                         */
+/* ============================================ */
+
+/* Enhanced shimmer effect */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(15, 15, 15, 0.8) 25%,
+    rgba(25, 25, 25, 0.9) 50%,
+    rgba(15, 15, 15, 0.8) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+.skeleton-text {
+  height: 1rem;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(
+    90deg,
+    rgba(139, 92, 246, 0.05) 25%,
+    rgba(139, 92, 246, 0.1) 50%,
+    rgba(139, 92, 246, 0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 0.375rem;
+}
+
+.skeleton-avatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: linear-gradient(
+    90deg,
+    rgba(15, 15, 15, 0.8) 25%,
+    rgba(25, 25, 25, 0.9) 50%,
+    rgba(15, 15, 15, 0.8) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+.skeleton-button {
+  height: 2.5rem;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(139, 92, 246, 0.08) 25%,
+    rgba(139, 92, 246, 0.15) 50%,
+    rgba(139, 92, 246, 0.08) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+/* ============================================ */
+/* 9. TOOLTIP ANIMATIONS                       */
+/* ============================================ */
+
+@keyframes tooltip-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tooltip {
+  animation: tooltip-fade-in 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ============================================ */
+/* 10. TOGGLE SWITCH INTERACTIONS              */
+/* ============================================ */
+
+.toggle-switch {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toggle-switch:hover {
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.25);
+}
+
+.toggle-switch[data-state="checked"] {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.35);
+}
+
+.toggle-thumb {
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);  /* Bounce */
+}
+
+/* ============================================ */
+/* 11. FOCUS INDICATORS (Accessibility)        */
+/* ============================================ */
+
+/* Consistent focus ring */
+.focus-ring {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.focus-ring:focus-visible {
+  outline: none;
+  ring: 2px solid rgba(139, 92, 246, 0.5);
+  ring-offset: 2px;
+  ring-offset-color: black;
+}
+
+/* Animated focus ring */
+@keyframes focus-ring-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.2);
+  }
+}
+
+.focus-ring-animated:focus-visible {
+  animation: focus-ring-pulse 1.5s ease-in-out infinite;
+}
+
+/* ============================================ */
+/* 12. LOADING STATES                          */
+/* ============================================ */
+
+/* Spinner with glow */
+.spinner-glow {
+  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.4));
+}
+
+/* Progress bar shimmer */
+.progress-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(139, 92, 246, 0.3),
+    transparent
+  );
+  animation: shimmer-slide 2s ease-in-out infinite;
+}
+
+@keyframes shimmer-slide {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* ============================================ */
+/* 13. HOVER GLOW EFFECTS                      */
+/* ============================================ */
+
+.hover-glow-violet {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-glow-violet:hover {
+  box-shadow: 
+    0 0 20px rgba(139, 92, 246, 0.25),
+    0 4px 12px rgba(0, 0, 0, 0.3);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.hover-glow-success {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-glow-success:hover {
+  box-shadow: 
+    0 0 20px rgba(16, 185, 129, 0.25),
+    0 4px 12px rgba(0, 0, 0, 0.3);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+/* ============================================ */
+/* 14. SCROLL REVEAL ANIMATIONS                */
+/* ============================================ */
+
+@keyframes scroll-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.scroll-reveal {
+  animation: scroll-reveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Stagger delays for lists */
+.scroll-reveal:nth-child(1) { animation-delay: 0ms; }
+.scroll-reveal:nth-child(2) { animation-delay: 50ms; }
+.scroll-reveal:nth-child(3) { animation-delay: 100ms; }
+.scroll-reveal:nth-child(4) { animation-delay: 150ms; }
+.scroll-reveal:nth-child(5) { animation-delay: 200ms; }
+
+/* ============================================ */
+/* 15. CURSOR-SPECIFIC POLISH                  */
+/* ============================================ */
+
+/* Smooth border transitions */
+.border-interactive {
+  border-color: rgba(139, 92, 246, 0.1);
+  transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.border-interactive:hover {
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.border-interactive:focus-within {
+  border-color: rgba(139, 92, 246, 0.5);
+}
+
+/* Smooth background transitions */
+.bg-interactive {
+  background-color: rgba(15, 15, 15, 0.8);
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bg-interactive:hover {
+  background-color: rgba(20, 20, 20, 0.9);
+}
+
+/* Text color transitions */
+.text-interactive {
+  color: var(--text-secondary);
+  transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.text-interactive:hover {
+  color: var(--brand-500);
+}
+
+/* ============================================ */
+/* 16. PERFORMANCE OPTIMIZATIONS               */
+/* ============================================ */
+
+/* Will-change for smooth animations */
+.will-animate {
+  will-change: transform, opacity;
+}
+
+/* GPU acceleration */
+.gpu-accelerate {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Reduce motion support */
+@media (prefers-reduced-motion: reduce) {
+  .ripple-effect,
+  .interactive-lift,
+  .interactive-glow,
+  .interactive-press,
+  .interactive,
+  .card-interactive,
+  .scroll-reveal,
+  .skeleton,
+  .skeleton-text,
+  .spinner-glow,
+  .progress-shimmer,
+  .toggle-switch,
+  .icon-spin-hover,
+  .icon-bounce-hover,
+  .icon-wiggle-hover,
+  .badge-pulse,
+  .tooltip {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+

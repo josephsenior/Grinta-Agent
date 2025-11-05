@@ -1,0 +1,611 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from openhands.core.logger import openhands_logger as logger
+from openhands.events.action.action import Action
+from openhands.events.action.commands import CmdRunAction, IPythonRunCellAction
+from openhands.events.action.empty import NullAction
+from openhands.events.action.message import MessageAction
+from openhands.events.event import Event, EventSource
+from openhands.events.observation import CmdOutputObservation, IPythonRunCellObservation
+from openhands.events.observation.agent import AgentCondensationObservation
+from openhands.events.observation.empty import NullObservation
+from openhands.events.observation.error import ErrorObservation
+from openhands.events.observation.observation import Observation
+
+if TYPE_CHECKING:
+    from openhands.controller.state.state import State
+
+
+class StuckDetector:
+    """Detects when agent is stuck in unproductive loops or patterns.
+    
+    Analyzes agent's action history to identify syntax errors, semantic loops,
+    and repeated failures that indicate the agent needs intervention.
+    
+    Attributes:
+        SYNTAX_ERROR_MESSAGES: Common syntax error patterns to detect
+    """
+    SYNTAX_ERROR_MESSAGES = [
+        "SyntaxError: unterminated string literal (detected at line",
+        "SyntaxError: invalid syntax. Perhaps you forgot a comma?",
+        "SyntaxError: incomplete input",
+    ]
+
+    def __init__(self, state: State) -> None:
+        """Initialize stuck detector with agent state.
+        
+        Args:
+            state: Current agent state to monitor
+        """
+        self.state = state
+
+    def _get_history_to_check(self, headless_mode: bool) -> list[Event]:
+        """Get the appropriate history to check based on headless mode."""
+        if headless_mode:
+            return self.state.history
+        last_user_msg_idx = next(
+            (
+                len(self.state.history) - i - 1
+                for i, event in enumerate(reversed(self.state.history))
+                if isinstance(event, MessageAction) and event.source == EventSource.USER
+            ),
+            -1,
+        )
+        return self.state.history[last_user_msg_idx + 1:]
+
+    def _filter_relevant_history(self, history: list[Event]) -> list[Event]:
+        """Filter history to remove irrelevant events."""
+        return [
+            event
+            for event in history
+            if not (
+                (isinstance(event, MessageAction) and event.source == EventSource.USER)
+                or isinstance(event, (NullAction, NullObservation))
+            )
+        ]
+
+    def _collect_recent_events(self, filtered_history: list[Event]) -> tuple[list[Event], list[Event]]:
+        """Collect the last 4 actions and 4 observations from filtered history."""
+        last_actions: list[Event] = []
+        last_observations: list[Event] = []
+
+        for event in reversed(filtered_history):
+            if isinstance(event, Action) and len(last_actions) < 4:
+                last_actions.append(event)
+            elif isinstance(event, Observation) and len(last_observations) < 4:
+                last_observations.append(event)
+            if len(last_actions) == 4 and len(last_observations) == 4:
+                break
+
+        return last_actions, last_observations
+
+    def _check_basic_stuck_patterns(
+        self,
+        last_actions: list[Event],
+        last_observations: list[Event],
+        filtered_history: list[Event],
+    ) -> bool:
+        """Check for basic stuck patterns."""
+        if self._is_stuck_repeating_action_observation(last_actions, last_observations):
+            return True
+        if self._is_stuck_repeating_action_error(last_actions, last_observations):
+            return True
+        return bool(self._is_stuck_monologue(filtered_history))
+
+    def _check_advanced_stuck_patterns(self, filtered_history: list[Event]) -> bool:
+        """Check for advanced stuck patterns."""
+        if len(filtered_history) >= 6 and self._is_stuck_action_observation_pattern(filtered_history):
+            return True
+        return bool(len(filtered_history) >= 10 and self._is_stuck_context_window_error(filtered_history))
+
+    def is_stuck(self, headless_mode: bool = True) -> bool:
+        """Checks if the agent is stuck in a loop.
+
+        Args:
+            headless_mode: Matches AgentController's headless_mode.
+                          If True: Consider all history (automated/testing)
+                          If False: Consider only history after last user message (interactive)
+
+        Returns:
+            bool: True if the agent is stuck in a loop, False otherwise.
+        """
+        history_to_check = self._get_history_to_check(headless_mode)
+        filtered_history = self._filter_relevant_history(history_to_check)
+
+        if len(filtered_history) < 3:
+            return False
+
+        last_actions, last_observations = self._collect_recent_events(filtered_history)
+
+        # Check basic stuck patterns
+        if self._check_basic_stuck_patterns(last_actions, last_observations, filtered_history):
+            return True
+
+        # Check advanced stuck patterns
+        if self._check_advanced_stuck_patterns(filtered_history):
+            return True
+
+        # NEW: Check semantic stuck patterns (different actions, same no-progress result)
+        if len(filtered_history) >= 10:
+            if self._is_stuck_semantic_loop(filtered_history):
+                return True
+
+        return False
+
+    def _check_actions_equal(self, last_actions: list[Event]) -> bool:
+        """Check if all actions in the list are equal (ignoring PID)."""
+        return all(self._eq_no_pid(last_actions[0], action) for action in last_actions)
+
+    def _check_observations_equal(self, last_observations: list[Event]) -> bool:
+        """Check if all observations in the list are equal (ignoring PID)."""
+        return all(self._eq_no_pid(last_observations[0], observation) for observation in last_observations)
+
+    def _is_stuck_repeating_action_observation(self, last_actions: list[Event], last_observations: list[Event]) -> bool:
+        if len(last_actions) == 4 and len(last_observations) == 4:
+            actions_equal = self._check_actions_equal(last_actions)
+            observations_equal = self._check_observations_equal(last_observations)
+            if actions_equal and observations_equal:
+                logger.warning("Action, Observation loop detected")
+                return True
+        return False
+
+    def _is_stuck_repeating_action_error(self, last_actions: list[Event], last_observations: list[Event]) -> bool:
+        """Check if there's a stuck repeating action-error pattern."""
+        # Check if we have enough events to analyze
+        if not self._has_enough_events_for_error_analysis(last_actions, last_observations):
+            return False
+
+        # Check if actions are repeating
+        if not self._are_actions_repeating(last_actions):
+            return False
+
+        # Check for error observation patterns
+        return self._check_error_observation_patterns(last_observations)
+
+    def _has_enough_events_for_error_analysis(self, last_actions: list[Event], last_observations: list[Event]) -> bool:
+        """Check if we have enough events to analyze for error patterns."""
+        return len(last_actions) >= 3 and len(last_observations) >= 3
+
+    def _are_actions_repeating(self, last_actions: list[Event]) -> bool:
+        """Check if the last 3 actions are all the same."""
+        return all(self._eq_no_pid(last_actions[0], action) for action in last_actions[:3])
+
+    def _check_error_observation_patterns(self, last_observations: list[Event]) -> bool:
+        """Check for various error observation patterns."""
+        # Check for simple error observations
+        if self._check_simple_error_observations(last_observations):
+            return True
+
+        # Check for IPython run cell observations
+        return bool(self._check_ipython_error_observations(last_observations))
+
+    def _check_simple_error_observations(self, last_observations: list[Event]) -> bool:
+        """Check for simple error observation patterns."""
+        if all(isinstance(obs, ErrorObservation) for obs in last_observations[:3]):
+            logger.warning("Action, ErrorObservation loop detected")
+            return True
+        return False
+
+    def _check_ipython_error_observations(self, last_observations: list[Event]) -> bool:
+        """Check for IPython run cell error observation patterns."""
+        if not all(isinstance(obs, IPythonRunCellObservation) for obs in last_observations[:3]):
+            return False
+
+        warning = "Action, IPythonRunCellObservation loop detected"
+        ipython_observations = [obs for obs in last_observations[:3] if isinstance(obs, IPythonRunCellObservation)]
+
+        for error_message in self.SYNTAX_ERROR_MESSAGES:
+            if self._check_specific_error_pattern(ipython_observations, error_message):
+                logger.warning(warning)
+                return True
+
+        return False
+
+    def _check_specific_error_pattern(
+        self,
+        ipython_observations: list[IPythonRunCellObservation],
+        error_message: str,
+    ) -> bool:
+        """Check for specific error patterns in IPython observations."""
+        if error_message.startswith("SyntaxError: unterminated string literal (detected at line"):
+            return self._check_for_consistent_line_error(ipython_observations, error_message)
+        if error_message in {
+            "SyntaxError: invalid syntax. Perhaps you forgot a comma?",
+            "SyntaxError: incomplete input",
+        }:
+            return self._check_for_consistent_invalid_syntax(ipython_observations, error_message)
+        return False
+
+    def _check_for_consistent_invalid_syntax(
+        self,
+        observations: list[IPythonRunCellObservation],
+        error_message: str,
+    ) -> bool:
+        first_lines = []
+        valid_observations = []
+        for obs in observations:
+            content = obs.content
+            lines = content.strip().split("\n")
+            if len(lines) < 6:
+                return False
+            line1 = lines[0].strip()
+            if not line1.startswith("Cell In[1], line"):
+                return False
+            first_lines.append(line1)
+            if (
+                lines[-1].startswith("[Jupyter Python interpreter:")
+                and lines[-2].startswith("[Jupyter current working directory:")
+                and (error_message in lines[-3])
+            ):
+                valid_observations.append(obs)
+        return (
+            len(set(first_lines)) == 1
+            and len(valid_observations) == 3
+            and (len({obs.content.strip().split("\n")[:-2][-1] for obs in valid_observations}) == 1)
+        )
+
+    def _extract_error_line_from_observation(self, obs: IPythonRunCellObservation, error_message: str) -> str | None:
+        """Extract error line from observation if it matches the error message."""
+        content = obs.content
+        lines = content.strip().split("\n")
+        if len(lines) < 3:
+            return None
+
+        last_lines = lines[-3:]
+        if not (
+            last_lines[-2].startswith("[Jupyter current working directory:")
+            and last_lines[-1].startswith("[Jupyter Python interpreter:")
+        ):
+            return None
+
+        return last_lines[-3] if error_message in last_lines[-3] else None
+
+    def _check_for_consistent_line_error(
+        self,
+        observations: list[IPythonRunCellObservation],
+        error_message: str,
+    ) -> bool:
+        error_lines = []
+        for obs in observations:
+            error_line = self._extract_error_line_from_observation(obs, error_message)
+            if error_line is None:
+                return False
+            error_lines.append(error_line)
+
+        return len(error_lines) == 3 and len(set(error_lines)) == 1
+
+    def _is_stuck_monologue(self, filtered_history: list[Event]) -> bool:
+        agent_message_actions = [
+            (i, event)
+            for i, event in enumerate(filtered_history)
+            if isinstance(event, MessageAction) and event.source == EventSource.AGENT
+        ]
+        if len(agent_message_actions) >= 3:
+            last_agent_message_actions = agent_message_actions[-3:]
+            if all(last_agent_message_actions[0][1] == action[1] for action in last_agent_message_actions):
+                start_index = last_agent_message_actions[0][0]
+                end_index = last_agent_message_actions[-1][0]
+                has_observation_between = any(
+                    isinstance(event, Observation) for event in filtered_history[start_index + 1: end_index]
+                )
+                if not has_observation_between:
+                    logger.warning("Repeated MessageAction with source=AGENT detected")
+                    return True
+        return False
+
+    def _is_stuck_action_observation_pattern(self, filtered_history: list[Event]) -> bool:
+        """Check if there's a stuck action-observation pattern."""
+        # Collect last 6 actions and observations
+        last_six_actions, last_six_observations = self._collect_last_six_events(filtered_history)
+
+        # Check if we have enough events to analyze
+        if not self._has_enough_events_for_analysis(last_six_actions, last_six_observations):
+            return False
+
+        # Check for repeating patterns
+        if self._has_repeating_action_pattern(last_six_actions) and self._has_repeating_observation_pattern(
+            last_six_observations,
+        ):
+            logger.warning("Action, Observation pattern detected")
+            return True
+
+        return False
+
+    def _collect_last_six_events(self, filtered_history: list[Event]) -> tuple[list[Event], list[Event]]:
+        """Collect the last 6 actions and observations from filtered history."""
+        last_six_actions: list[Event] = []
+        last_six_observations: list[Event] = []
+
+        for event in reversed(filtered_history):
+            if isinstance(event, Action) and len(last_six_actions) < 6:
+                last_six_actions.append(event)
+            elif isinstance(event, Observation) and len(last_six_observations) < 6:
+                last_six_observations.append(event)
+
+            if len(last_six_actions) == 6 and len(last_six_observations) == 6:
+                break
+
+        return last_six_actions, last_six_observations
+
+    def _has_enough_events_for_analysis(
+        self,
+        last_six_actions: list[Event],
+        last_six_observations: list[Event],
+    ) -> bool:
+        """Check if we have enough events to analyze for patterns."""
+        return len(last_six_actions) == 6 and len(last_six_observations) == 6
+
+    def _has_repeating_action_pattern(self, last_six_actions: list[Event]) -> bool:
+        """Check if there's a repeating action pattern."""
+        return (
+            self._eq_no_pid(last_six_actions[0], last_six_actions[2])
+            and self._eq_no_pid(last_six_actions[0], last_six_actions[4])
+            and self._eq_no_pid(last_six_actions[1], last_six_actions[3])
+            and self._eq_no_pid(last_six_actions[1], last_six_actions[5])
+        )
+
+    def _has_repeating_observation_pattern(self, last_six_observations: list[Event]) -> bool:
+        """Check if there's a repeating observation pattern."""
+        return (
+            self._eq_no_pid(last_six_observations[0], last_six_observations[2])
+            and self._eq_no_pid(last_six_observations[0], last_six_observations[4])
+            and self._eq_no_pid(last_six_observations[1], last_six_observations[3])
+            and self._eq_no_pid(last_six_observations[1], last_six_observations[5])
+        )
+
+    def _get_condensation_events(self, filtered_history: list[Event]) -> list[tuple[int, Event]]:
+        """Get all condensation events with their indices."""
+        return [
+            (i, event) for i, event in enumerate(filtered_history) if isinstance(event, AgentCondensationObservation)
+        ]
+
+    def _check_consecutive_condensation_events(
+        self,
+        last_condensation_events: list[tuple[int, Event]],
+        filtered_history: list[Event],
+    ) -> bool:
+        """Check if there are consecutive condensation events without other events between them."""
+        for i in range(len(last_condensation_events) - 1):
+            start_idx = last_condensation_events[i][0]
+            end_idx = last_condensation_events[i + 1][0]
+            has_other_events = any(
+                not isinstance(event, AgentCondensationObservation)
+                for event in filtered_history[start_idx + 1: end_idx]
+            )
+            if not has_other_events:
+                logger.warning("Context window error loop detected - repeated condensation events")
+                return True
+        return False
+
+    def _is_stuck_context_window_error(self, filtered_history: list[Event]) -> bool:
+        """Detects if we're stuck in a loop of context window errors.
+
+        This happens when we repeatedly get context window errors and try to trim,
+        but the trimming doesn't work, causing us to get more context window errors.
+        The pattern is repeated AgentCondensationObservation events without any other
+        events between them.
+
+        Args:
+            filtered_history: List of filtered events to check
+
+        Returns:
+            bool: True if we detect a context window error loop
+        """
+        condensation_events = self._get_condensation_events(filtered_history)
+        if len(condensation_events) < 10:
+            return False
+
+        last_condensation_events = condensation_events[-10:]
+        return self._check_consecutive_condensation_events(last_condensation_events, filtered_history)
+
+    def _is_stuck_semantic_loop(self, filtered_history: list[Event]) -> bool:
+        """Detect semantic loops: different actions achieving same no-progress result.
+
+        This catches cases where the agent:
+        - Tries different commands but makes no progress
+        - Repeats similar intents with different syntax
+        - Gets same error in different ways
+
+        Args:
+            filtered_history: Filtered event history
+
+        Returns:
+            True if semantic loop detected
+        """
+        recent_window = filtered_history[-20:]
+        action_intents, observation_outcomes = self._extract_intents_and_outcomes(recent_window)
+
+        if len(action_intents) < 6 or len(observation_outcomes) < 6:
+            return False
+
+        intent_diversity = self._calculate_intent_diversity(action_intents)
+        failure_rate = self._calculate_failure_rate(observation_outcomes)
+
+        # Detect semantic loop: low diversity + high failure rate
+        if intent_diversity < 0.4 and failure_rate > 0.6:
+            logger.warning(
+                f"Semantic loop detected: intent_diversity={intent_diversity:.2f}, "
+                f"failure_rate={failure_rate:.2f}, unique_intents={len(set(action_intents))}/{len(action_intents)}",
+            )
+            return True
+
+        return False
+
+    def _extract_intents_and_outcomes(self, events: list[Event]) -> tuple[list[str], list[str]]:
+        """Extract action intents and observation outcomes from events.
+
+        Args:
+            events: List of events to analyze
+
+        Returns:
+            Tuple of (action_intents, observation_outcomes)
+        """
+        action_intents = []
+        observation_outcomes = []
+
+        for event in events:
+            if isinstance(event, Action) and not isinstance(event, (NullAction, MessageAction)):
+                intent = self._extract_action_intent(event)
+                if intent:
+                    action_intents.append(intent)
+            elif isinstance(event, Observation) and not isinstance(event, NullObservation):
+                outcome = self._extract_observation_outcome(event)
+                if outcome:
+                    observation_outcomes.append(outcome)
+
+        return action_intents, observation_outcomes
+
+    def _calculate_intent_diversity(self, action_intents: list[str]) -> float:
+        """Calculate diversity of action intents.
+
+        Args:
+            action_intents: List of action intent strings
+
+        Returns:
+            Diversity ratio (unique/total)
+        """
+        if not action_intents:
+            return 1.0
+
+        unique_intents = len(set(action_intents))
+        return unique_intents / len(action_intents)
+
+    def _calculate_failure_rate(self, observation_outcomes: list[str]) -> float:
+        """Calculate failure rate from observation outcomes.
+
+        Args:
+            observation_outcomes: List of outcome strings
+
+        Returns:
+            Failure rate ratio
+        """
+        if not observation_outcomes:
+            return 0.0
+
+        failures = sum(1 for outcome in observation_outcomes if outcome in ["error", "no_change", "not_found"])
+        return failures / len(observation_outcomes)
+
+    def _extract_action_intent(self, action: Action) -> str | None:
+        """Extract the intent/goal of an action.
+
+        Args:
+            action: Action to analyze
+
+        Returns:
+            Intent category string or None
+        """
+        if isinstance(action, CmdRunAction):
+            return self._categorize_cmd_action(action.command.lower())
+        if isinstance(action, IPythonRunCellAction):
+            return self._categorize_python_action(action.code.lower())
+        return "other_action"
+
+    def _categorize_cmd_action(self, command: str) -> str:
+        """Categorize command action by type.
+
+        Args:
+            command: Lowercased command string
+
+        Returns:
+            Category string
+        """
+        # Command categories with their patterns
+        categories = [
+            (["pytest", "npm test", "cargo test", "go test"], "run_test"),
+            (["cat", "ls", "pwd", "find"], "inspect_filesystem"),
+            (["git clone", "git pull", "git fetch"], "fetch_code"),
+            (["pip install", "npm install", "cargo build"], "install_dependency"),
+            (["mkdir", "touch", "echo >"], "create_file"),
+            (["rm", "rmdir"], "delete_file"),
+            (["python", "node", "cargo run"], "execute_code"),
+        ]
+
+        for patterns, category in categories:
+            if any(cmd in command for cmd in patterns):
+                return category
+
+        return "other_command"
+
+    def _categorize_python_action(self, code: str) -> str:
+        """Categorize Python action by type.
+
+        Args:
+            code: Lowercased Python code
+
+        Returns:
+            Category string
+        """
+        if "edit_file" in code or "write_file" in code:
+            return "edit_file"
+        if "read_file" in code or "open(" in code:
+            return "read_file"
+        if "import" in code:
+            return "import_module"
+        return "execute_python"
+
+    def _extract_observation_outcome(self, observation: Observation) -> str | None:
+        """Extract the outcome/result of an observation.
+
+        Args:
+            observation: Observation to analyze
+
+        Returns:
+            Outcome category string or None
+        """
+        if isinstance(observation, ErrorObservation):
+            return "error"
+        if isinstance(observation, CmdOutputObservation):
+            return self._categorize_cmd_output(observation)
+        if isinstance(observation, IPythonRunCellObservation):
+            return self._categorize_python_output(observation)
+        return "unknown"
+
+    def _categorize_cmd_output(self, observation: CmdOutputObservation) -> str:
+        """Categorize command output observation.
+
+        Args:
+            observation: Command output observation
+
+        Returns:
+            Outcome category string
+        """
+        if observation.exit_code != 0:
+            return "error"
+
+        content_lower = observation.content.lower()
+
+        if "no such file" in content_lower or "not found" in content_lower:
+            return "not_found"
+        if "permission denied" in content_lower:
+            return "permission_error"
+        if len(observation.content.strip()) == 0:
+            return "no_output"
+        return "success"
+
+    def _categorize_python_output(self, observation: IPythonRunCellObservation) -> str:
+        """Categorize Python cell output observation.
+
+        Args:
+            observation: Python cell observation
+
+        Returns:
+            Outcome category string
+        """
+        content_lower = observation.content.lower()
+
+        if "error" in content_lower or "exception" in content_lower:
+            return "error"
+        if "none" in content_lower or len(observation.content.strip()) < 10:
+            return "no_change"
+        return "success"
+
+    def _eq_no_pid(self, obj1: Event, obj2: Event) -> bool:
+        if isinstance(obj1, IPythonRunCellAction) and isinstance(obj2, IPythonRunCellAction):
+            if "edit_file_by_replace(" in obj1.code and "edit_file_by_replace(" in obj2.code:
+                return len(obj1.code.split("\n")) > 2 and obj1.code.split("\n")[:3] == obj2.code.split("\n")[:3]
+            return obj1 == obj2
+        if isinstance(obj1, CmdOutputObservation) and isinstance(obj2, CmdOutputObservation):
+            return obj1.command == obj2.command and obj1.exit_code == obj2.exit_code
+        return obj1 == obj2

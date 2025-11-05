@@ -1,0 +1,79 @@
+name: Publish OpenHands UI Package
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/npm-publish-ui.yml"
+
+# If triggered by a PR, it will be in the same group. However, each commit on main will be in its own unique group
+concurrency:
+  group: npm-publish-ui
+  cancel-in-progress: false
+
+jobs:
+  check-version:
+    name: Check if version has changed
+    runs-on: blacksmith-4vcpu-ubuntu-2204
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      should-publish: ${{ steps.version-check.outputs.should-publish }}
+      current-version: ${{ steps.version-check.outputs.current-version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # Need previous commit to compare
+
+      - name: Check if version changed
+        id: version-check
+        run: |
+          # Archived UI: package removed. Use a stable placeholder and skip publish.
+          echo "current-version=0.0.0-archived" >> $GITHUB_OUTPUT
+          echo "should-publish=false" >> $GITHUB_OUTPUT
+
+  publish:
+    name: Publish to npm
+    runs-on: blacksmith-4vcpu-ubuntu-2204
+    needs: check-version
+    if: needs.check-version.outputs.should-publish == 'true'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        # archived UI: no working-directory
+        run: |
+          echo "archived UI: skipping install"
+
+      - name: Build package
+        run: |
+          echo "archived UI: skipping build"
+
+      - name: Check if package already exists on npm
+        id: npm-check
+        run: |
+          # PACKAGE_NAME computation removed because package.json path removed
+          PACKAGE_NAME="@openhands/ui-archived"
+          VERSION="${{ needs.check-version.outputs.current-version }}"
+
+          # Check if this version already exists on npm
+          if npm view "$PACKAGE_NAME@$VERSION" version 2>/dev/null; then
+            echo "Version $VERSION already exists on npm, skipping publish"
+            echo "already-exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version $VERSION does not exist on npm, proceeding with publish"
+            echo "already-exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish to npm
+        run: |
+          echo "archived UI: skipping publish"

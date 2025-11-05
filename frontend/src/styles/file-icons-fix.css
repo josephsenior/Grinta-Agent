@@ -1,0 +1,63 @@
+/**
+ * FILE ICONS FIX - Ensure file-icons-js fonts load properly
+ * 
+ * The file-icons-js library uses custom icon fonts from /fonts/file-icons/
+ * Copied from node_modules to public/fonts/ for proper Vite serving
+ */
+
+/* Load custom icon fonts from public directory */
+@font-face {
+  font-family: 'Devopicons';
+  src: url('/fonts/file-icons/devopicons.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'file-icons';
+  src: url('/fonts/file-icons/file-icons.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'FontAwesome';
+  src: url('/fonts/file-icons/fontawesome.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MFixx';
+  src: url('/fonts/file-icons/mfixx.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Octicons';
+  src: url('/fonts/file-icons/octicons.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Ensure file-icon class displays properly */
+.file-icon i {
+  font-style: normal !important;
+  display: inline-block;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Fix any z-index issues */
+.file-icon {
+  z-index: 1;
+  position: relative;
+}
+

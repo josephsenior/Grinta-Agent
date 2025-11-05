@@ -1,0 +1,53 @@
+# Bandit Security Configuration for Forge
+# This file documents security exceptions for the codebase
+
+[bandit]
+# Exclude paths that are known to have acceptable security patterns
+exclude_dirs = [
+    '/tests/',
+    '/evaluation/',
+    '/.venv/',
+    '/.venv-wsl-backup/',
+    '/node_modules/',
+    '/.git/'
+]
+
+# Skip specific tests for evaluation and test code contexts
+[bandit.skips]
+# B615: HuggingFace dataset downloads without revision pinning
+#   - Acceptable in evaluation benchmarks (trusted datasets)
+#   - Not in production code
+#   - Evaluation scripts load known datasets for benchmarking
+B615 = evaluation/benchmarks/**/run_infer.py,evaluation/benchmarks/**/utils.py
+
+# B108: Hardcoded /tmp directory usage
+#   - Acceptable in test and evaluation contexts
+#   - Short-lived temporary files
+#   - No sensitive data handled
+#   - Isolated test environments
+B108 = evaluation/benchmarks/**/eval_infer.py,evaluation/benchmarks/**/run_infer.py,tests/**/*.py
+
+# B101: Assert statements
+#   - Acceptable in test files
+#   - Development-time validation
+#   - Not in production critical paths
+B101 = tests/**/*.py
+
+# B602/B603/B604/B607: Subprocess usage
+#   - Acceptable in test fixtures
+#   - Controlled test environments
+#   - Not handling user input
+B602 = tests/**/*.py,evaluation/**/*.py
+B603 = tests/**/*.py,evaluation/**/*.py
+B604 = tests/**/*.py,evaluation/**/*.py
+B607 = tests/**/*.py,evaluation/**/*.py
+
+[bandit.severity]
+# Only report Medium and High severity issues for production code
+# Low severity issues are informational only
+level = MEDIUM
+
+[bandit.confidence]
+# Report High and Medium confidence issues
+level = MEDIUM
+

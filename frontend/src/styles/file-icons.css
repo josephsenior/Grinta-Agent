@@ -1,0 +1,96 @@
+/* File Icons Styles */
+.file-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.file-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.file-icon i {
+  display: block;
+  font-style: normal;
+  line-height: 1;
+}
+
+/* File type specific colors */
+.file-icon[data-category="programming"] {
+  color: #3B82F6; /* Blue for programming files */
+}
+
+.file-icon[data-category="web"] {
+  color: #10B981; /* Green for web files */
+}
+
+.file-icon[data-category="config"] {
+  color: #F59E0B; /* Amber for config files */
+}
+
+.file-icon[data-category="documentation"] {
+  color: #8B5CF6; /* Purple for documentation */
+}
+
+.file-icon[data-category="data"] {
+  color: #06B6D4; /* Cyan for data files */
+}
+
+.file-icon[data-category="image"] {
+  color: #EC4899; /* Pink for images */
+}
+
+.file-icon[data-category="archive"] {
+  color: #F97316; /* Orange for archives */
+}
+
+/* Hover effects */
+.file-icon:hover {
+  transform: scale(1.05);
+  transition: transform 0.2s ease;
+}
+
+/* Status-specific styling */
+.file-icon[data-status="A"] {
+  filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.3));
+}
+
+.file-icon[data-status="M"] {
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.3));
+}
+
+.file-icon[data-status="D"] {
+  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.3));
+}
+
+.file-icon[data-status="R"] {
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.3));
+}
+
+/* Animation for file tree icons */
+.file-tree-icon {
+  transition: all 0.2s ease;
+}
+
+.file-tree-icon:hover {
+  transform: scale(1.1);
+  filter: brightness(1.2);
+}
+
+/* Folder icons with better styling */
+.folder-icon {
+  color: #F59E0B;
+  transition: all 0.2s ease;
+}
+
+.folder-icon:hover {
+  color: #FCD34D;
+  transform: scale(1.05);
+}
+
+.folder-icon.open {
+  color: #FCD34D;
+}

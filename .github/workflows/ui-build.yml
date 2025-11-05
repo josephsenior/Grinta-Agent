@@ -1,0 +1,28 @@
+name: Run UI Component Build
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      -  '.github/workflows/ui-build.yml'
+
+# If triggered by a PR, it will be in the same group. However, each commit on main will be in its own unique group
+concurrency:
+  group: ${{ github.workflow }}-${{ (github.head_ref && github.ref) || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  ui-build:
+  name: Build UI (archived)
+    runs-on: blacksmith-4vcpu-ubuntu-2204
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: |
+          echo "archived UI: skipping install"
+      - name: Build package
+        run: |
+          echo "archived UI: skipping build"

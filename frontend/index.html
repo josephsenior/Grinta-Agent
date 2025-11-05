@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
+    <script>
+      // Performance API polyfill for React scheduler - must run before any modules load
+      if (typeof performance === 'undefined') {
+        window.performance = {
+          now: function() { return Date.now(); }
+        };
+      }
+      // Defensive: provide a global lucide object if an external script/extension
+      // tries to register icons like lucide.Activity on the window.
+      // This prevents "Cannot set properties of undefined (setting 'Activity')" from
+      // third-party injections expecting a global registry.
+      window.lucide = window.lucide || {};
+    </script>
+    <link rel="icon" type="image/png" href="/forge-icon.png" />
+    <link rel="apple-touch-icon" href="/forge-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#8b5cf6" />
+    <title>Forge - AI Development Platform</title>
+    <meta name="description" content="Build software faster with Forge, the AI-powered development platform. Advanced agents, real-time collaboration, and intelligent code generation." />
+    <meta property="og:title" content="Forge - AI Development Platform" />
+    <meta property="og:description" content="Forge your software with AI - Code less, build more." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Forge - AI Development Platform" />
+    <meta name="twitter:description" content="Build software faster with Forge" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/entry.client.tsx"></script>
+  </body>
+</html>

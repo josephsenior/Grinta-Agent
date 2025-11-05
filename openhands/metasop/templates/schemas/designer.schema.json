@@ -1,0 +1,468 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://forge.ai/schemas/metasop/designer.json",
+  "title": "UI Designer Artifact",
+  "description": "Enhanced UI Designer artifact schema with page layouts, accessibility specifications, design tokens, mobile considerations, and performance budgets",
+  "type": "object",
+  "properties": {
+    "layout_plan": {
+      "type": "object",
+      "description": "Complete UI layout specification",
+      "properties": {
+        "pages": {
+          "type": "array",
+          "description": "Individual page layouts",
+          "items": {
+            "$ref": "#/definitions/PageLayout"
+          }
+        },
+        "component_hierarchy": {
+          "type": "object",
+          "description": "Component relationships and nesting"
+        }
+      }
+    },
+    "accessibility": {
+      "$ref": "#/definitions/AccessibilitySpec",
+      "description": "WCAG compliance and accessibility requirements"
+    },
+    "design_tokens": {
+      "$ref": "#/definitions/DesignTokens",
+      "description": "Design system tokens (colors, typography, spacing)"
+    },
+    "risks": {
+      "type": "array",
+      "description": "Design risks and challenges",
+      "items": {
+        "$ref": "#/definitions/DesignRisk"
+      }
+    },
+    "next_engineering_focus": {
+      "type": "array",
+      "description": "Engineering priorities from design perspective",
+      "items": {
+        "type": "string",
+        "minLength": 10
+      }
+    },
+    "reusable_components": {
+      "type": "array",
+      "description": "Components that can be reused across pages",
+      "items": {
+        "type": "string"
+      }
+    },
+    "new_components_needed": {
+      "type": "array",
+      "description": "New components to be built",
+      "items": {
+        "type": "object",
+        "required": ["name", "complexity", "description"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Component name"
+          },
+          "complexity": {
+            "type": "string",
+            "enum": ["high", "medium", "low"],
+            "description": "Implementation complexity"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Component purpose and behavior"
+          },
+          "library_recommendation": {
+            "type": "string",
+            "description": "Suggested library (e.g., 'Radix UI', 'Headless UI')"
+          }
+        }
+      }
+    },
+    "mobile_considerations": {
+      "$ref": "#/definitions/MobileConsiderations",
+      "description": "Mobile-specific design decisions"
+    },
+    "performance_budget": {
+      "$ref": "#/definitions/PerformanceBudget",
+      "description": "Performance targets and constraints"
+    }
+  },
+  "definitions": {
+    "PageLayout": {
+      "type": "object",
+      "required": ["name", "route", "description"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Page name (e.g., 'Dashboard', 'User Profile')"
+        },
+        "route": {
+          "type": "string",
+          "pattern": "^/.*",
+          "description": "URL route (e.g., '/dashboard', '/profile/:id')"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "description": "Purpose and content of the page"
+        },
+        "layout_type": {
+          "type": "string",
+          "enum": ["dashboard", "content", "form", "landing", "list", "detail"],
+          "description": "Page layout pattern"
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ComponentSpec"
+          },
+          "description": "Components used on this page"
+        },
+        "responsive_breakpoints": {
+          "type": "object",
+          "description": "Responsive behavior at different screen sizes",
+          "properties": {
+            "mobile": {
+              "type": "string",
+              "description": "Mobile layout (< 640px)"
+            },
+            "tablet": {
+              "type": "string",
+              "description": "Tablet layout (640px - 1024px)"
+            },
+            "desktop": {
+              "type": "string",
+              "description": "Desktop layout (> 1024px)"
+            }
+          }
+        }
+      }
+    },
+    "ComponentSpec": {
+      "type": "object",
+      "required": ["name", "type", "purpose"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Component name"
+        },
+        "type": {
+          "type": "string",
+          "description": "Component type (e.g., 'Button', 'Modal', 'Table')"
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 10,
+          "description": "Why this component is needed"
+        },
+        "states": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Component states (e.g., 'default', 'hover', 'disabled')"
+        },
+        "responsive_behavior": {
+          "type": "string",
+          "description": "How component adapts to different screen sizes"
+        },
+        "accessibility_notes": {
+          "type": "string",
+          "description": "Accessibility considerations for this component"
+        }
+      }
+    },
+    "AccessibilitySpec": {
+      "type": "object",
+      "properties": {
+        "wcag_level": {
+          "type": "string",
+          "enum": ["A", "AA", "AAA"],
+          "description": "Target WCAG conformance level",
+          "default": "AA"
+        },
+        "checklist": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WCAGCriterion"
+          },
+          "description": "WCAG criteria checklist"
+        },
+        "aria_requirements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Required ARIA attributes and roles"
+        },
+        "keyboard_navigation": {
+          "type": "object",
+          "properties": {
+            "tab_order": {
+              "type": "string",
+              "description": "Logical tab order flow"
+            },
+            "shortcuts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Keyboard shortcuts (e.g., 'Ctrl+K for search')"
+            },
+            "focus_indicators": {
+              "type": "string",
+              "description": "Focus state styling approach"
+            }
+          }
+        },
+        "screen_reader_support": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Screen reader compatibility notes"
+        }
+      }
+    },
+    "WCAGCriterion": {
+      "type": "object",
+      "required": ["criterion", "requirement", "implementation", "status"],
+      "properties": {
+        "criterion": {
+          "type": "string",
+          "description": "WCAG criterion number (e.g., '1.1.1', '2.4.7')"
+        },
+        "requirement": {
+          "type": "string",
+          "description": "What the criterion requires"
+        },
+        "implementation": {
+          "type": "string",
+          "description": "How we will implement this"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["required", "recommended", "optional"],
+          "description": "Implementation priority"
+        }
+      }
+    },
+    "DesignTokens": {
+      "type": "object",
+      "properties": {
+        "colors": {
+          "type": "object",
+          "description": "Color palette with semantic names",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$|^rgb\\(|^hsl\\("
+          }
+        },
+        "typography": {
+          "type": "object",
+          "description": "Font families, sizes, weights, line heights",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "spacing": {
+          "type": "object",
+          "description": "Spacing scale (e.g., '1': '0.25rem', '2': '0.5rem')",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "elevation": {
+          "type": "object",
+          "description": "Shadow definitions for depth",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "borders": {
+          "type": "object",
+          "description": "Border widths and radii",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "transitions": {
+          "type": "object",
+          "description": "Animation durations and easings",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "DesignRisk": {
+      "type": "object",
+      "required": ["component", "severity", "description"],
+      "properties": {
+        "component": {
+          "type": "string",
+          "description": "Affected component or page"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["high", "medium", "low"],
+          "description": "Risk severity level"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "description": "Description of the design risk"
+        },
+        "mitigation": {
+          "type": "string",
+          "description": "How to mitigate this risk"
+        },
+        "impact": {
+          "type": "string",
+          "description": "Potential impact if not addressed"
+        }
+      }
+    },
+    "MobileConsiderations": {
+      "type": "object",
+      "properties": {
+        "touch_targets": {
+          "type": "string",
+          "description": "Minimum touch target sizes (e.g., '44x44px minimum')"
+        },
+        "gestures": {
+          "type": "string",
+          "description": "Touch gestures supported (swipe, pinch, etc.)"
+        },
+        "viewport": {
+          "type": "string",
+          "description": "Viewport configuration and meta tags"
+        },
+        "responsive_images": {
+          "type": "string",
+          "description": "Image optimization strategy for mobile"
+        },
+        "hamburger_menu": {
+          "type": "string",
+          "description": "Mobile navigation approach"
+        },
+        "scroll_behavior": {
+          "type": "string",
+          "description": "Scroll interactions and performance"
+        }
+      }
+    },
+    "PerformanceBudget": {
+      "type": "object",
+      "properties": {
+        "first_contentful_paint": {
+          "type": "string",
+          "description": "Target FCP time (e.g., '< 1.0s')",
+          "pattern": "^< [0-9]+\\.?[0-9]*s$"
+        },
+        "time_to_interactive": {
+          "type": "string",
+          "description": "Target TTI time (e.g., '< 2.5s')",
+          "pattern": "^< [0-9]+\\.?[0-9]*s$"
+        },
+        "largest_contentful_paint": {
+          "type": "string",
+          "description": "Target LCP time (e.g., '< 1.5s')",
+          "pattern": "^< [0-9]+\\.?[0-9]*s$"
+        },
+        "cumulative_layout_shift": {
+          "type": "string",
+          "description": "Target CLS score (e.g., '< 0.1')",
+          "pattern": "^< [0-9]+\\.?[0-9]*$"
+        },
+        "first_input_delay": {
+          "type": "string",
+          "description": "Target FID time (e.g., '< 100ms')",
+          "pattern": "^< [0-9]+(ms|s)$"
+        },
+        "total_bundle_size": {
+          "type": "string",
+          "description": "Maximum JavaScript bundle size (e.g., '< 200KB')",
+          "pattern": "^< [0-9]+(KB|MB)$"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "layout_plan": {
+        "pages": [
+          {
+            "name": "Dashboard",
+            "route": "/dashboard",
+            "description": "Main user dashboard with task overview, recent activity, and quick actions",
+            "layout_type": "dashboard",
+            "components": [
+              {
+                "name": "TaskSummaryCard",
+                "type": "Card",
+                "purpose": "Display quick stats about user's tasks",
+                "states": ["default", "loading", "error"],
+                "accessibility_notes": "Use semantic HTML, ARIA labels for stats"
+              }
+            ],
+            "responsive_breakpoints": {
+              "mobile": "Single column, stacked cards",
+              "tablet": "2-column grid",
+              "desktop": "3-column grid with sidebar"
+            }
+          }
+        ]
+      },
+      "accessibility": {
+        "wcag_level": "AA",
+        "checklist": [
+          {
+            "criterion": "1.4.3",
+            "requirement": "Contrast (Minimum)",
+            "implementation": "4.5:1 contrast ratio for all text",
+            "status": "required"
+          }
+        ],
+        "keyboard_navigation": {
+          "tab_order": "Logo → Main Nav → Content → Footer",
+          "shortcuts": ["Ctrl+K for search", "Esc to close modals"],
+          "focus_indicators": "2px blue outline with 2px offset"
+        }
+      },
+      "design_tokens": {
+        "colors": {
+          "primary": "#3B82F6",
+          "secondary": "#8B5CF6",
+          "success": "#10B981",
+          "error": "#EF4444"
+        },
+        "typography": {
+          "font-family": "Inter, system-ui, sans-serif",
+          "font-size-base": "16px",
+          "line-height-base": "1.5"
+        },
+        "spacing": {
+          "1": "0.25rem",
+          "2": "0.5rem",
+          "3": "0.75rem",
+          "4": "1rem"
+        }
+      },
+      "mobile_considerations": {
+        "touch_targets": "Minimum 44x44px for all interactive elements",
+        "gestures": "Swipe to delete, pull-to-refresh",
+        "viewport": "viewport-fit=cover, initial-scale=1",
+        "hamburger_menu": "Slide-in drawer navigation"
+      },
+      "performance_budget": {
+        "first_contentful_paint": "< 1.0s",
+        "time_to_interactive": "< 2.5s",
+        "largest_contentful_paint": "< 1.5s",
+        "total_bundle_size": "< 200KB"
+      }
+    }
+  ]
+}
