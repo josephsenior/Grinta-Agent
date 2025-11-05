@@ -29,10 +29,10 @@ function HomeScreen() {
   return (
     <div
       data-testid="home-screen"
-      className="h-full w-full relative bg-black"
+      className="min-h-screen w-full relative bg-black"
     >
       {/* Animated background with violet theme */}
-      <div className="absolute inset-0 w-full h-full">
+      <div className="fixed inset-0 w-full h-full -z-10">
         <DarkVeil 
           hueShift={260}
           speed={0.3}
@@ -43,10 +43,10 @@ function HomeScreen() {
       </div>
       
       {/* Overlay gradient for better text readability */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
+      <div className="fixed inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60 -z-10" />
       
       {/* Content */}
-      <main className="relative z-10 flex flex-col items-center justify-center h-full px-6 py-20">
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 py-20">
         {/* Hero */}
         <div className="max-w-4xl mx-auto text-center space-y-8">
           {/* Logo */}
