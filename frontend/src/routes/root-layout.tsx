@@ -302,7 +302,7 @@ export default function MainApp() {
         {/* Pure black background */}
 
         {/* Main Layout Container with Sidebar Above Extensions */}
-        <div className="relative z-10 h-screen lg:min-w-[1024px] flex flex-col min-h-0">
+        <div className="relative z-10 h-screen lg:min-w-[1024px] flex flex-col overflow-hidden">
           {/* Header (template-wide) - Hidden on conversation pages */}
           {!isConversationPage && (
             <Suspense
@@ -353,22 +353,20 @@ export default function MainApp() {
               {/* Main Content Outlet with Enhanced Container */}
               <div
                 id="root-outlet"
-                className="flex-1 relative overflow-auto rounded-2xl bg-black h-full min-h-0 max-h-full"
+                className="flex-1 relative rounded-2xl bg-black h-full min-h-0"
               >
-                <div className="h-full min-h-0">
-                  <div className="h-full min-h-0 overflow-auto scrollbar-thin scrollbar-thumb-grey-700 scrollbar-track-transparent">
-                    <Suspense
-                      fallback={
-                        <div className="h-full bg-background-secondary animate-pulse" />
-                      }
-                    >
-                      <EmailVerificationGuard>
-                        <div className="h-full min-h-0 p-0 md:p-0 lg:p-0">
-                          <Outlet />
-                        </div>
-                      </EmailVerificationGuard>
-                    </Suspense>
-                  </div>
+                <div className="h-full min-h-0 overflow-auto scrollbar-thin scrollbar-thumb-grey-700 scrollbar-track-transparent">
+                  <Suspense
+                    fallback={
+                      <div className="h-full bg-background-secondary animate-pulse" />
+                    }
+                  >
+                    <EmailVerificationGuard>
+                      <div className="h-full min-h-0">
+                        <Outlet />
+                      </div>
+                    </EmailVerificationGuard>
+                  </Suspense>
                 </div>
               </div>
             </div>
