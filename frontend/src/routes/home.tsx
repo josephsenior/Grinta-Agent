@@ -29,16 +29,16 @@ function HomeScreen() {
   return (
     <div
       data-testid="home-screen"
-      className="min-h-screen relative overflow-x-hidden bg-black"
+      className="min-h-screen w-full relative overflow-x-hidden bg-black"
     >
       {/* Animated background with violet theme */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 w-full h-full">
         <DarkVeil 
-          hueShift={270}
+          hueShift={260}
           speed={0.3}
           noiseIntensity={0.02}
-          warpAmount={0.3}
-          resolutionScale={0.8}
+          warpAmount={0.4}
+          resolutionScale={1}
         />
       </div>
       
