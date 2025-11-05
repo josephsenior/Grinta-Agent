@@ -8,7 +8,7 @@ export function Footer() {
 
   return (
     <footer 
-      className="relative py-12 px-6 border-t border-border bg-background-secondary/50 safe-area-bottom safe-area-left safe-area-right"
+      className="relative z-10 py-12 px-6 border-t border-border bg-background-secondary/50 safe-area-bottom safe-area-left safe-area-right"
       style={{
         paddingBottom: 'max(3rem, env(safe-area-inset-bottom))',
         paddingLeft: 'max(1.5rem, env(safe-area-inset-left))',
