@@ -297,7 +297,7 @@ export default function MainApp() {
       <ToastProvider>
         <div
           data-testid="root-layout"
-          className="min-h-screen w-full bg-black font-outfit safe-area-top safe-area-bottom safe-area-left safe-area-right"
+          className="min-h-screen w-full bg-black font-sans safe-area-top safe-area-bottom safe-area-left safe-area-right"
         >
         {/* Pure black background */}
 

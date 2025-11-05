@@ -709,7 +709,7 @@ button[type="submit"]:active {
   background: transparent !important;
   border: none !important;
   padding: 0 !important;
-  font-family: 'IBM Plex Mono', 'JetBrains Mono', monospace !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
   font-size: 0.875rem !important;  /* 14px */
   line-height: 1.6 !important;
   color: var(--text-primary) !important;

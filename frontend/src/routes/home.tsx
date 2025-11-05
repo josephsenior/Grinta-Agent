@@ -34,7 +34,7 @@ function HomeScreen() {
       {/* Animated background with violet theme */}
       <div className="fixed inset-0 w-full h-full z-0">
         <DarkVeil 
-          hueShift={260}
+          hueShift={250}
           speed={0.3}
           noiseIntensity={0.02}
           warpAmount={0.4}

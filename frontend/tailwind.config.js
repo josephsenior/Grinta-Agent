@@ -20,8 +20,9 @@ export default {
           "0 0 0 2px rgba(0,0,0,0.9), 0 0 0 4px rgba(189,147,249,0.5)",
       },
       fontFamily: {
-        outfit: ["Outfit", "sans-serif"],
-        mono: ["IBM Plex Mono", "monospace"],
+        sans: ["Inter", "system-ui", "sans-serif"],
+        outfit: ["Inter", "sans-serif"], // Keep outfit alias for compatibility
+        mono: ["JetBrains Mono", "monospace"],
       },
       fontSize: {
         xxs: "0.75rem", // 12px
