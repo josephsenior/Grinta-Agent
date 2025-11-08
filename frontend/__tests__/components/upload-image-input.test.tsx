@@ -43,7 +43,8 @@ describe("UploadImageInput", () => {
 
   it("should render custom labels", () => {
     const { rerender } = render(<UploadImageInput onUpload={onUploadMock} />);
-    expect(screen.getByTestId("default-label")).toBeInTheDocument();
+    // SVG is mocked, so we check for the mocked-svg testid
+    expect(screen.getByTestId("mocked-svg")).toBeInTheDocument();
 
     function CustomLabel() {
       return <span>Custom label</span>;
@@ -53,6 +54,6 @@ describe("UploadImageInput", () => {
     );
 
     expect(screen.getByText("Custom label")).toBeInTheDocument();
-    expect(screen.queryByTestId("default-label")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("mocked-svg")).not.toBeInTheDocument();
   });
 });

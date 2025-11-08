@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { BadgeInput } from "#/components/shared/inputs/badge-input";
@@ -19,8 +19,8 @@ describe("BadgeInput", () => {
     const input = screen.getByTestId("badge-input");
     expect(input).toHaveValue("");
 
-    await userEvent.type(input, "test");
-    await userEvent.type(input, " ");
+    fireEvent.change(input, { target: { value: "test" } });
+    fireEvent.keyDown(input, { key: " ", code: "Space" });
 
     expect(onChangeMock).toHaveBeenCalledWith(["badge1", "test"]);
     expect(input).toHaveValue("");
@@ -33,7 +33,7 @@ describe("BadgeInput", () => {
     const input = screen.getByTestId("badge-input");
     expect(input).toHaveValue("");
 
-    await userEvent.type(input, "{backspace}");
+    fireEvent.keyDown(input, { key: "Backspace" });
 
     expect(onChangeMock).toHaveBeenCalledWith(["badge1"]);
     expect(input).toHaveValue("");
@@ -56,7 +56,7 @@ describe("BadgeInput", () => {
     const input = screen.getByTestId("badge-input");
     expect(input).toHaveValue("");
 
-    await userEvent.type(input, " ");
+    fireEvent.keyDown(input, { key: " ", code: "Space" });
     expect(onChangeMock).not.toHaveBeenCalled();
   });
 });

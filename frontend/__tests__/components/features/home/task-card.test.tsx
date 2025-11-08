@@ -1,14 +1,26 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
-import { createRoutesStub } from "react-router-dom";
-import { setupStore } from "test-utils";
+import { MemoryRouter } from "react-router-dom";
+import { setupStore } from "../../../../test-utils";
 import { SuggestedTask } from "#/components/features/home/tasks/task.types";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { TaskCard } from "#/components/features/home/tasks/task-card";
 import { GitRepository } from "#/types/git";
+
+const navigateMock = vi.fn();
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>(
+    "react-router-dom",
+  );
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
 
 const MOCK_TASK_1: SuggestedTask = {
   issue_number: 123,
@@ -25,30 +37,22 @@ const MOCK_RESPOSITORIES: GitRepository[] = [
   { id: "4", full_name: "repo4", git_provider: "gitlab", is_public: true },
 ];
 
-const renderTaskCard = (task = MOCK_TASK_1) => {
-  const RouterStub = createRoutesStub([
-    {
-      Component: () => <TaskCard task={task} />,
-      path: "/",
-    },
-    {
-      Component: () => <div data-testid="conversation-screen" />,
-      path: "/conversations/:conversationId",
-    },
-  ]);
-
-  return render(<RouterStub />, {
-    wrapper: ({ children }) => (
-      <Provider store={setupStore()}>
-        <QueryClientProvider client={new QueryClient()}>
-          {children}
-        </QueryClientProvider>
-      </Provider>
-    ),
-  });
-};
+const renderTaskCard = (task = MOCK_TASK_1) =>
+  render(
+    <Provider store={setupStore()}>
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <TaskCard task={task} />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </Provider>,
+  );
 
 describe("TaskCard", () => {
+  beforeEach(() => {
+    navigateMock.mockClear();
+  });
+
   it("format the issue id", async () => {
     renderTaskCard();
 
@@ -57,7 +61,7 @@ describe("TaskCard", () => {
   });
 
   it("should call createConversation when clicking the launch button", async () => {
-    const createConversationSpy = vi.spyOn(OpenHands, "createConversation");
+    const createConversationSpy = vi.spyOn(Forge, "createConversation");
 
     renderTaskCard();
 
@@ -70,7 +74,7 @@ describe("TaskCard", () => {
   describe("creating suggested task conversation", () => {
     beforeEach(() => {
       const retrieveUserGitRepositoriesSpy = vi.spyOn(
-        OpenHands,
+        Forge,
         "retrieveUserGitRepositories",
       );
       retrieveUserGitRepositoriesSpy.mockResolvedValue({
@@ -80,7 +84,7 @@ describe("TaskCard", () => {
     });
 
     it("should call create conversation with suggest task trigger and selected suggested task", async () => {
-      const createConversationSpy = vi.spyOn(OpenHands, "createConversation");
+      const createConversationSpy = vi.spyOn(Forge, "createConversation");
 
       renderTaskCard(MOCK_TASK_1);
 
@@ -116,7 +120,7 @@ describe("TaskCard", () => {
   });
 
   it("should navigate to the conversation page after creating a conversation", async () => {
-    const createConversationSpy = vi.spyOn(OpenHands, "createConversation");
+    const createConversationSpy = vi.spyOn(Forge, "createConversation");
     createConversationSpy.mockResolvedValue({
       conversation_id: "test-conversation-id",
       title: "Test Conversation",
@@ -136,7 +140,10 @@ describe("TaskCard", () => {
     const launchButton = screen.getByTestId("task-launch-button");
     await userEvent.click(launchButton);
 
-    // Wait for navigation to the conversation page
-    await screen.findByTestId("conversation-screen");
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith(
+        "/conversations/test-conversation-id",
+      );
+    });
   });
 });

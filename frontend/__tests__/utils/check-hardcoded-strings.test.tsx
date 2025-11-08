@@ -2,16 +2,23 @@ import { render, screen } from "@testing-library/react";
 import { test, expect, describe, vi } from "vitest";
 import { InteractiveChatBox } from "#/components/features/chat/interactive-chat-box";
 import { ChatInput } from "#/components/features/chat/chat-input";
+import { renderWithProviders } from "../../test-utils";
 
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
+vi.mock("react-i18next", async () => {
+  const actual = await vi.importActual<typeof import("react-i18next")>(
+    "react-i18next",
+  );
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string) => key,
+    }),
+  };
+});
 
 describe("Check for hardcoded English strings", () => {
   test("InteractiveChatBox should not have hardcoded English strings", () => {
-    const { container } = render(
+    const { container } = renderWithProviders(
       <InteractiveChatBox onSubmit={() => {}} onStop={() => {}} />,
     );
 

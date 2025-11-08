@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
-import { renderWithProviders } from "test-utils";
+import { fireEvent, screen } from "@testing-library/react";
+import { renderWithProviders } from "../../test-utils";
 import { EventMessage } from "#/components/features/chat/event-message";
+import { AgentState } from "#/types/agent-state";
 
 vi.mock("#/hooks/query/use-config", () => ({
   useConfig: () => ({
@@ -14,6 +15,10 @@ vi.mock("#/hooks/query/use-feedback-exists", () => ({
     data: { exists: false },
     isLoading: false,
   }),
+}));
+
+vi.mock("#/context/ws-client-provider", () => ({
+  useWsClient: () => ({ hydratedEventIds: new Set<string>() }),
 }));
 
 describe("EventMessage", () => {
@@ -188,5 +193,127 @@ describe("EventMessage", () => {
 
     expect(screen.queryByLabelText("Rate 1 stars")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Rate 5 stars")).not.toBeInTheDocument();
+  });
+
+  it("renders error observation details when expanded", () => {
+    const errorEvent = {
+      id: 321,
+      source: "agent" as const,
+      observation: "error" as const,
+      content: "Detailed failure message",
+      extras: {
+        error_id: "CHAT_INTERFACE$AGENT_ERROR_MESSAGE",
+      },
+      message: "Detailed failure message",
+      timestamp: new Date().toISOString(),
+    };
+
+    renderWithProviders(
+      <EventMessage
+        event={errorEvent}
+        hasObservationPair={false}
+        isAwaitingUserConfirmation={false}
+        isLastMessage
+        isInLast10Actions
+      />,
+    );
+
+    const toggle = screen.getByRole("button");
+    fireEvent.click(toggle);
+    expect(screen.getByText("Detailed failure message")).toBeInTheDocument();
+  });
+
+  it("renders streaming chunk agent message", () => {
+    const streamingEvent = {
+      id: 654,
+      source: "agent" as const,
+      action: "streaming_chunk" as const,
+      args: {
+        accumulated: "Partial response...",
+      },
+      message: "",
+      timestamp: new Date().toISOString(),
+    };
+
+    renderWithProviders(
+      <EventMessage
+        event={streamingEvent}
+        hasObservationPair={false}
+        isAwaitingUserConfirmation={false}
+        isLastMessage
+        isInLast10Actions
+      />,
+      {
+        preloadedState: {
+          agent: { curAgentState: AgentState.LOADING },
+        },
+      },
+    );
+
+    expect(screen.getByText("Partial response...")).toBeInTheDocument();
+  });
+
+  it("renders file write action using CodeArtifact", () => {
+    const fileWriteEvent = {
+      id: 777,
+      source: "agent" as const,
+      action: "write" as const,
+      args: {
+        path: "src/new-file.ts",
+        content: "console.log('hello world');",
+      },
+      message: "",
+      timestamp: new Date().toISOString(),
+    };
+
+    renderWithProviders(
+      <EventMessage
+        event={fileWriteEvent}
+        hasObservationPair={false}
+        isAwaitingUserConfirmation={false}
+        isLastMessage
+        isInLast10Actions
+      />,
+      {
+        preloadedState: {
+          agent: { curAgentState: AgentState.LOADING },
+        },
+      },
+    );
+
+    expect(screen.getByText("src/new-file.ts")).toBeInTheDocument();
+    expect(screen.getByText("Created")).toBeInTheDocument();
+  });
+
+  it("renders file edit action with modified badge", () => {
+    const fileEditEvent = {
+      id: 778,
+      source: "agent" as const,
+      action: "edit" as const,
+      args: {
+        path: "src/existing-file.ts",
+        content: "export const value = 42;",
+      },
+      message: "",
+      timestamp: new Date().toISOString(),
+    };
+
+    renderWithProviders(
+      <EventMessage
+        event={fileEditEvent}
+        hasObservationPair={false}
+        isAwaitingUserConfirmation={false}
+        isLastMessage
+        isInLast10Actions
+      />,
+      {
+        preloadedState: {
+          agent: { curAgentState: AgentState.LOADING },
+        },
+      },
+    );
+
+    expect(screen.getByText("src/existing-file.ts")).toBeInTheDocument();
+    expect(screen.getByText("Modified")).toBeInTheDocument();
   });
 });

@@ -1,5 +1,5 @@
 import { act, screen } from "@testing-library/react";
-import { renderWithProviders } from "test-utils";
+import { renderWithProviders } from "../../../test-utils";
 import { vi, describe, afterEach, it, expect } from "vitest";
 import { Command, appendInput, appendOutput } from "#/state/command-slice";
 import Terminal from "#/components/features/terminal/terminal";
@@ -108,14 +108,14 @@ describe.skip("Terminal", () => {
       {
         type: "output",
         content:
-          "Hello\r\n\r\n[Python Interpreter: /openhands/poetry/openhands-5O4_aCHf-py3.12/bin/python]\nopenhands@659478cb008c:/workspace $ ",
+          "Hello\r\n\r\n[Python Interpreter: /Forge/poetry/Forge-5O4_aCHf-py3.12/bin/python]\nForge@659478cb008c:/workspace $ ",
       },
     ]);
 
     expect(mockTerminal.writeln).toHaveBeenNthCalledWith(1, "echo Hello");
     expect(mockTerminal.writeln).toHaveBeenNthCalledWith(2, "Hello");
     expect(mockTerminal.write).toHaveBeenCalledWith(
-      "\nopenhands@659478cb008c:/workspace $ ",
+      "\nForge@659478cb008c:/workspace $ ",
     );
   });
 

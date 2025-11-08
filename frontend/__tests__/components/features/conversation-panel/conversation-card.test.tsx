@@ -10,7 +10,7 @@ import {
   vi,
 } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { renderWithProviders } from "test-utils";
+import { renderWithProviders } from "../../../../test-utils";
 import { formatTimeDelta } from "#/utils/format-time-delta";
 import { ConversationCard } from "#/components/features/conversation-panel/conversation-card";
 import { clickOnEditButton } from "./utils";

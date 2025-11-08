@@ -23,7 +23,7 @@ vi.mock("react-i18next", async () => {
       if (i18nKey === "SETTINGS$API_KEYS_DESCRIPTION") {
         return (
           <span>
-            API keys allow you to authenticate with the OpenHands API
+            API keys allow you to authenticate with the Forge API
             programmatically. Keep your API keys secure; anyone with your API
             key can access your account. For more information on how to use the
             API, see our {components.a}

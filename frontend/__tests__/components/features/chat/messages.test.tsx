@@ -1,15 +1,16 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { Messages } from "#/components/features/chat/messages";
 import {
   AssistantMessageAction,
-  OpenHandsAction,
+  ForgeAction,
   UserMessageAction,
 } from "#/types/core/actions";
-import { OpenHandsObservation } from "#/types/core/observations";
-import OpenHands from "#/api/open-hands";
-import { Conversation } from "#/api/open-hands.types";
+import { ForgeObservation } from "#/types/core/observations";
+import Forge from "#/api/forge";
+import { Conversation } from "#/api/forge.types";
+import { renderWithProviders } from "../../../../test-utils";
 
 vi.mock("react-router", () => ({
   useParams: () => ({ conversationId: "123" }),
@@ -32,21 +33,17 @@ let queryClient: QueryClient;
 const renderMessages = ({
   messages,
 }: {
-  messages: (OpenHandsAction | OpenHandsObservation)[];
+  messages: (ForgeAction | ForgeObservation)[];
 }) => {
-  const { rerender, ...rest } = render(
+  const { rerender, ...rest } = renderWithProviders(
     <Messages messages={messages} isAwaitingUserConfirmation={false} />,
     {
-      wrapper: ({ children }) => (
-        <QueryClientProvider client={queryClient!}>
-          {children}
-        </QueryClientProvider>
-      ),
+      queryClient,
     },
   );
 
   const rerenderMessages = (
-    newMessages: (OpenHandsAction | OpenHandsObservation)[],
+    newMessages: (ForgeAction | ForgeObservation)[],
   ) => {
     rerender(
       <Messages messages={newMessages} isAwaitingUserConfirmation={false} />,
@@ -70,7 +67,7 @@ describe("Messages", () => {
     args: {
       image_urls: [],
       file_urls: [],
-      thought: "",
+    thought: "Hello, Assistant!",
       wait_for_response: false,
     },
   };
@@ -92,7 +89,7 @@ describe("Messages", () => {
   });
 
   it("should render a launch to microagent action button on chat messages only if it is a user message", () => {
-    const getConversationSpy = vi.spyOn(OpenHands, "getConversation");
+    const getConversationSpy = vi.spyOn(Forge, "getConversation");
     const mockConversation: Conversation = {
       conversation_id: "123",
       title: "Test Conversation",

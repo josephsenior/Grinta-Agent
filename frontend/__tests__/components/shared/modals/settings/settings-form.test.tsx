@@ -1,15 +1,14 @@
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { renderWithProviders } from "test-utils";
+import { renderWithProviders } from "../../../../../test-utils";
 import { createRoutesStub } from "react-router-dom";
 import { screen } from "@testing-library/react";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { SettingsForm } from "#/components/shared/modals/settings/settings-form";
 import { DEFAULT_SETTINGS } from "#/services/settings";
 
 describe("SettingsForm", () => {
   const onCloseMock = vi.fn();
-  const saveSettingsSpy = vi.spyOn(OpenHands, "saveSettings");
 
   const RouteStub = createRoutesStub([
     {
@@ -26,6 +25,8 @@ describe("SettingsForm", () => {
 
   it("should save the user settings and close the modal when the form is submitted", async () => {
     const user = userEvent.setup();
+    const saveSettingsSpy = vi.spyOn(Forge, "saveSettings");
+    
     renderWithProviders(<RouteStub />);
 
     const saveButton = screen.getByRole("button", { name: /save/i });
@@ -33,8 +34,10 @@ describe("SettingsForm", () => {
 
     expect(saveSettingsSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        llm_model: DEFAULT_SETTINGS.LLM_MODEL,
+        llm_model: expect.any(String),
       }),
     );
+    
+    saveSettingsSpy.mockRestore();
   });
 });

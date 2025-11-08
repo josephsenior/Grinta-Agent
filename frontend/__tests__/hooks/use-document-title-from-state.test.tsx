@@ -28,7 +28,7 @@ describe("useDocumentTitleFromState", () => {
 
     renderHook(() => useDocumentTitleFromState());
 
-    expect(document.title).toBe("OpenHands");
+    expect(document.title).toBe("Forge");
   });
 
   it("should set document title to custom suffix when no conversation", () => {
@@ -52,7 +52,7 @@ describe("useDocumentTitleFromState", () => {
 
     renderHook(() => useDocumentTitleFromState());
 
-    expect(document.title).toBe("My Conversation | OpenHands");
+    expect(document.title).toBe("My Conversation | Forge");
   });
 
   it("should update document title when conversation title changes", () => {
@@ -62,7 +62,7 @@ describe("useDocumentTitleFromState", () => {
     } as any);
 
     const { rerender } = renderHook(() => useDocumentTitleFromState());
-    expect(document.title).toBe("OpenHands");
+    expect(document.title).toBe("Forge");
 
     // Conversation with initial title
     mockUseActiveConversation.mockReturnValue({
@@ -73,7 +73,7 @@ describe("useDocumentTitleFromState", () => {
       },
     } as any);
     rerender();
-    expect(document.title).toBe("Conversation 65e29 | OpenHands");
+    expect(document.title).toBe("Conversation 65e29 | Forge");
 
     // Conversation title updated to human-readable title
     mockUseActiveConversation.mockReturnValue({
@@ -84,7 +84,7 @@ describe("useDocumentTitleFromState", () => {
       },
     } as any);
     rerender();
-    expect(document.title).toBe("Help me build a React app | OpenHands");
+    expect(document.title).toBe("Help me build a React app | Forge");
   });
 
   it("should handle conversation without title", () => {
@@ -98,7 +98,7 @@ describe("useDocumentTitleFromState", () => {
 
     renderHook(() => useDocumentTitleFromState());
 
-    expect(document.title).toBe("OpenHands");
+    expect(document.title).toBe("Forge");
   });
 
   it("should handle empty conversation title", () => {
@@ -112,7 +112,7 @@ describe("useDocumentTitleFromState", () => {
 
     renderHook(() => useDocumentTitleFromState());
 
-    expect(document.title).toBe("OpenHands");
+    expect(document.title).toBe("Forge");
   });
 
   it("should reset document title on cleanup", () => {
@@ -126,10 +126,10 @@ describe("useDocumentTitleFromState", () => {
 
     const { unmount } = renderHook(() => useDocumentTitleFromState());
 
-    expect(document.title).toBe("My Conversation | OpenHands");
+    expect(document.title).toBe("My Conversation | Forge");
 
     unmount();
 
-    expect(document.title).toBe("OpenHands");
+    expect(document.title).toBe("Forge");
   });
 });

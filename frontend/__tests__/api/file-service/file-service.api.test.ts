@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import {
   FILE_VARIANTS_1,
   FILE_VARIANTS_2,
@@ -10,20 +10,20 @@ import {
  * You can find the mock handlers in `frontend/src/mocks/file-service-handlers.ts`.
  */
 
-describe("OpenHands File API", () => {
+describe("Forge File API", () => {
   it("should get a list of files", async () => {
-    await expect(OpenHands.getFiles("test-conversation-id")).resolves.toEqual(
+    await expect(Forge.getFiles("test-conversation-id")).resolves.toEqual(
       FILE_VARIANTS_1,
     );
 
-    await expect(OpenHands.getFiles("test-conversation-id-2")).resolves.toEqual(
+    await expect(Forge.getFiles("test-conversation-id-2")).resolves.toEqual(
       FILE_VARIANTS_2,
     );
   });
 
   it("should get content of a file", async () => {
     await expect(
-      OpenHands.getFile("test-conversation-id", "file1.txt"),
+      Forge.getFile("test-conversation-id", "file1.txt"),
     ).resolves.toEqual("Content of file1.txt");
   });
 });

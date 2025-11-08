@@ -1,16 +1,29 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { createRoutesStub, MemoryRouter, Routes, Route } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Provider } from "react-redux";
-import { createAxiosNotFoundErrorObject, setupStore } from "test-utils";
+import {
+  createAxiosNotFoundErrorObject,
+  renderWithProviders,
+  setupStore,
+} from "../../test-utils";
 import { SettingsModal } from "#/components/shared/modals/settings/settings-modal";
 import HomeScreen from "#/routes/home";
 import { GitRepository } from "#/types/git";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import MainApp from "#/routes/root-layout";
 import { MOCK_DEFAULT_USER_SETTINGS } from "#/mocks/handlers";
+
+vi.mock("#/components/features/payment/setup-payment-modal", () => ({
+  __esModule: true,
+  SetupPaymentModal: () => (
+    <div data-testid="setup-payment-modal-mock">
+      <button data-testid="proceed-to-stripe-button">Proceed to Stripe</button>
+    </div>
+  ),
+}));
 
 // Hoisted mutable mocks for hooks so tests can adjust return values deterministically.
 let __mockUseIsAuthedReturn: any = { data: true };
@@ -51,16 +64,19 @@ const RouterStub = createRoutesStub([
   },
 ]);
 
-const renderHomeScreen = () =>
-  render(<RouterStub />, {
-    wrapper: ({ children }) => (
-      <Provider store={setupStore()}>
-        <QueryClientProvider client={new QueryClient()}>
-          {children}
-        </QueryClientProvider>
-      </Provider>
-    ),
-  });
+const resetHoistedMocks = () => {
+  __mockUseSettingsReturn = null;
+  __mockUseIsAuthedReturn = { data: true };
+  __mockUseConfigReturn = {
+    data: { APP_MODE: "oss", FEATURE_FLAGS: {} },
+  };
+};
+
+const renderHomeScreen = () => renderWithProviders(<RouterStub />);
+
+const waitForHomeScreen = async () => {
+  return screen.findByTestId("home-screen", undefined, { timeout: 3000 });
+};
 
 const MOCK_RESPOSITORIES: GitRepository[] = [
   {
@@ -81,38 +97,42 @@ const MOCK_RESPOSITORIES: GitRepository[] = [
 
 describe("HomeScreen", () => {
   beforeEach(() => {
-    const getSettingsSpy = vi.spyOn(OpenHands, "getSettings");
+    resetHoistedMocks();
+    const getSettingsSpy = vi.spyOn(Forge, "getSettings");
     getSettingsSpy.mockResolvedValue({
       ...MOCK_DEFAULT_USER_SETTINGS,
       provider_tokens_set: { github: null, gitlab: null },
     });
   });
 
-  it("should render", () => {
+  it("should render", async () => {
     renderHomeScreen();
-    screen.getByTestId("home-screen");
+    await waitForHomeScreen();
   });
 
-  it("should not render the suggested tasks section (removed)", () => {
-    renderHomeScreen();
+  it("should not render the suggested tasks section (removed)", async () => {
+    await renderHomeScreen();
+    await waitForHomeScreen();
     expect(screen.queryByTestId("task-suggestions")).toBeNull();
     expect(screen.queryByTestId("repo-connector")).toBeNull();
   });
 
   it("should have responsive layout for mobile and desktop screens", async () => {
     renderHomeScreen();
-    const mainContainer = screen
-      .getByTestId("home-screen")
-      .querySelector("main");
+    const homeScreen = await waitForHomeScreen();
+    const mainContainer = homeScreen.querySelector("main");
     expect(mainContainer).toHaveClass("flex", "flex-col");
   });
 
   describe("launch buttons", () => {
     const setupLaunchButtons = async () => {
+      await waitForHomeScreen();
       // Header and landing header both render a launch button in the DOM
       // in the test environment; pick the first one to avoid getByTestId
       // throwing when multiple elements match.
-      const headerLaunchButtons = screen.getAllByTestId("header-launch-button");
+      const headerLaunchButtons = await screen.findAllByTestId(
+        "header-launch-button",
+      );
       const headerLaunchButton = headerLaunchButtons[0];
       const tasksLaunchButtons = screen.queryAllByTestId("task-launch-button");
       await waitFor(() => expect(headerLaunchButton).not.toBeDisabled());
@@ -121,7 +141,7 @@ describe("HomeScreen", () => {
 
     beforeEach(() => {
       const retrieveUserGitRepositoriesSpy = vi.spyOn(
-        OpenHands,
+        Forge,
         "retrieveUserGitRepositories",
       );
       retrieveUserGitRepositoriesSpy.mockResolvedValue({
@@ -163,17 +183,22 @@ describe("HomeScreen", () => {
 
   it("should hide the suggested tasks section if not authed with git(hub|lab)", async () => {
     renderHomeScreen();
+    await waitForHomeScreen();
     expect(screen.queryByTestId("task-suggestions")).not.toBeInTheDocument();
     expect(screen.queryByTestId("repo-connector")).not.toBeInTheDocument();
   });
 });
 
 describe("Settings 404", () => {
-  beforeEach(() => vi.resetAllMocks());
-  const getConfigSpy = vi.spyOn(OpenHands, "getConfig");
-  const getSettingsSpy = vi.spyOn(OpenHands, "getSettings");
+  let getConfigSpy: ReturnType<typeof vi.spyOn>;
+  let getSettingsSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
-    // @ts-expect-error - tests only need APP_MODE here
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+    resetHoistedMocks();
+    getConfigSpy = vi.spyOn(Forge, "getConfig");
+    getSettingsSpy = vi.spyOn(Forge, "getSettings");
     getConfigSpy.mockResolvedValue({
       APP_MODE: "oss",
       FEATURE_FLAGS: {
@@ -184,7 +209,7 @@ describe("Settings 404", () => {
         ENABLE_LINEAR: false,
       },
     });
-    // Mirror the OpenHands.getConfig spy on the hoisted useConfig mock so
+    // Mirror the Forge.getConfig spy on the hoisted useConfig mock so
     // Sidebar sees the correct APP_MODE during the test.
     __mockUseConfigReturn = {
       data: {
@@ -275,7 +300,6 @@ describe("Settings 404", () => {
   });
 
   it("should not open the settings modal if GET /settings fails but is SaaS mode", async () => {
-    // @ts-expect-error - we only need APP_MODE for this test
     getConfigSpy.mockResolvedValue({
       APP_MODE: "saas",
       FEATURE_FLAGS: {
@@ -285,7 +309,7 @@ describe("Settings 404", () => {
         ENABLE_JIRA_DC: false,
         ENABLE_LINEAR: false,
       },
-    });
+    } as any);
     __mockUseConfigReturn = {
       data: {
         APP_MODE: "saas",
@@ -307,15 +331,16 @@ describe("Settings 404", () => {
       isFetching: false,
     };
     renderHomeScreen();
+    await waitForHomeScreen();
     expect(screen.queryByTestId("ai-config-modal")).not.toBeInTheDocument();
   });
 });
 
 describe("Setup Payment modal", () => {
-  const getConfigSpy = vi.spyOn(OpenHands, "getConfig");
-  const getSettingsSpy = vi.spyOn(OpenHands, "getSettings");
+  const getConfigSpy = vi.spyOn(Forge, "getConfig");
+  const getSettingsSpy = vi.spyOn(Forge, "getSettings");
   it("should only render if SaaS mode and is new user", async () => {
-    // @ts-expect-error - we only need the APP_MODE for this test
+    resetHoistedMocks();
     getConfigSpy.mockResolvedValue({
       APP_MODE: "saas",
       FEATURE_FLAGS: {
@@ -325,7 +350,7 @@ describe("Setup Payment modal", () => {
         ENABLE_JIRA_DC: false,
         ENABLE_LINEAR: false,
       },
-    });
+    } as any);
     __mockUseConfigReturn = {
       data: {
         APP_MODE: "saas",
@@ -348,8 +373,11 @@ describe("Setup Payment modal", () => {
       error: null,
     };
     renderHomeScreen();
+    await waitForHomeScreen();
     const setupPaymentModal = await screen.findByTestId(
       "proceed-to-stripe-button",
+      undefined,
+      { timeout: 3000 },
     );
     expect(setupPaymentModal).toBeInTheDocument();
   });

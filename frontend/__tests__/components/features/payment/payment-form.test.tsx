@@ -2,13 +2,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { PaymentForm } from "#/components/features/payment/payment-form";
 
 describe("PaymentForm", () => {
-  const getBalanceSpy = vi.spyOn(OpenHands, "getBalance");
-  const createCheckoutSessionSpy = vi.spyOn(OpenHands, "createCheckoutSession");
-  const getConfigSpy = vi.spyOn(OpenHands, "getConfig");
+  const getBalanceSpy = vi.spyOn(Forge, "getBalance");
+  const createCheckoutSessionSpy = vi.spyOn(Forge, "createCheckoutSession");
+  const getConfigSpy = vi.spyOn(Forge, "getConfig");
 
   const renderPaymentForm = () =>
     render(<PaymentForm />, {
@@ -69,7 +69,9 @@ describe("PaymentForm", () => {
     const topUpButton = screen.getByText("PAYMENT$ADD_CREDIT");
     await user.click(topUpButton);
 
-    expect(createCheckoutSessionSpy).toHaveBeenCalledWith(50);
+    await waitFor(() => {
+      expect(createCheckoutSessionSpy).toHaveBeenCalledWith(50);
+    });
   });
 
   it("should only accept integer values", async () => {
@@ -82,7 +84,9 @@ describe("PaymentForm", () => {
     const topUpButton = screen.getByText("PAYMENT$ADD_CREDIT");
     await user.click(topUpButton);
 
-    expect(createCheckoutSessionSpy).toHaveBeenCalledWith(50);
+    await waitFor(() => {
+      expect(createCheckoutSessionSpy).toHaveBeenCalledWith(50);
+    });
   });
 
   it("should disable the top-up button if the user enters an invalid amount", async () => {
@@ -108,7 +112,9 @@ describe("PaymentForm", () => {
     const topUpButton = screen.getByText("PAYMENT$ADD_CREDIT");
     await user.click(topUpButton);
 
-    expect(topUpButton).toBeDisabled();
+    await waitFor(() => {
+      expect(topUpButton).toBeDisabled();
+    });
   });
 
   describe("prevent submission if", () => {

@@ -4,12 +4,12 @@ import { screen, waitFor, within } from "@testing-library/react";
 import {
   createAxiosNotFoundErrorObject,
   renderWithProviders,
-} from "test-utils";
+} from "../../test-utils";
 import userEvent from "@testing-library/user-event";
 import MainApp from "#/routes/root-layout";
 import i18n from "#/i18n";
 import * as CaptureConsent from "#/utils/handle-capture-consent";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import * as ToastHandlers from "#/utils/custom-toast-handlers";
 
 describe("frontend/routes/_oh", () => {
@@ -62,8 +62,8 @@ describe("frontend/routes/_oh", () => {
   // FIXME: This test fails when it shouldn't be, please investigate
   it.skip("should render and capture the user's consent if oss mode", async () => {
     const user = userEvent.setup();
-    const getConfigSpy = vi.spyOn(OpenHands, "getConfig");
-    const getSettingsSpy = vi.spyOn(OpenHands, "getSettings");
+    const getConfigSpy = vi.spyOn(Forge, "getConfig");
+    const getSettingsSpy = vi.spyOn(Forge, "getSettings");
     const handleCaptureConsentSpy = vi.spyOn(
       CaptureConsent,
       "handleCaptureConsent",
@@ -82,10 +82,9 @@ describe("frontend/routes/_oh", () => {
       },
     });
 
-    // @ts-expect-error - We only care about the user_consents_to_analytics field
     getSettingsSpy.mockResolvedValue({
       user_consents_to_analytics: null,
-    });
+    } as any);
 
     renderWithProviders(<RouteStub />);
 
@@ -106,7 +105,7 @@ describe("frontend/routes/_oh", () => {
   });
 
   it("should not render the user consent form if saas mode", async () => {
-    const getConfigSpy = vi.spyOn(OpenHands, "getConfig");
+    const getConfigSpy = vi.spyOn(Forge, "getConfig");
     getConfigSpy.mockResolvedValue({
       APP_MODE: "saas",
       GITHUB_CLIENT_ID: "test-id",
@@ -184,8 +183,8 @@ describe("frontend/routes/_oh", () => {
   });
 
   it("should render a you're in toast if it is a new user and in saas mode", async () => {
-    const getConfigSpy = vi.spyOn(OpenHands, "getConfig");
-    const getSettingsSpy = vi.spyOn(OpenHands, "getSettings");
+    const getConfigSpy = vi.spyOn(Forge, "getConfig");
+    const getSettingsSpy = vi.spyOn(Forge, "getSettings");
     const displaySuccessToastSpy = vi.spyOn(
       ToastHandlers,
       "displaySuccessToast",

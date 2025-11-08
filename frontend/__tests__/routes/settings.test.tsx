@@ -1,9 +1,9 @@
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { createRoutesStub } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { QueryClientProvider } from "@tanstack/react-query";
 import SettingsScreen, { clientLoader } from "#/routes/settings";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
+import { renderWithProviders } from "../../test-utils";
 
 // Mock the i18next hook
 vi.mock("react-i18next", async () => {
@@ -52,9 +52,8 @@ describe("Settings Screen", () => {
 
   const RouterStub = createRoutesStub([
     {
-      Component: SettingsScreen,
-      // @ts-expect-error - custom loader
-      clientLoader,
+          Component: SettingsScreen,
+          loader: clientLoader as any,
       path: "/settings",
       children: [
         {
@@ -70,6 +69,10 @@ describe("Settings Screen", () => {
           path: "/settings/app",
         },
         {
+          Component: () => <div data-testid="user-settings-screen" />,
+          path: "/settings/user",
+        },
+        {
           Component: () => <div data-testid="billing-settings-screen" />,
           path: "/settings/billing",
         },
@@ -82,19 +85,14 @@ describe("Settings Screen", () => {
   ]);
 
   const renderSettingsScreen = (path = "/settings") =>
-    render(<RouterStub initialEntries={[path]} />, {
-      wrapper: ({ children }) => (
-        <QueryClientProvider client={mockQueryClient}>
-          {children}
-        </QueryClientProvider>
-      ),
+    renderWithProviders(<RouterStub initialEntries={[path]} />, {
+      queryClient: mockQueryClient,
     });
 
   it("should render the navbar", async () => {
     const sectionsToInclude = ["llm", "integrations", "application", "secrets"];
     const sectionsToExclude = ["api keys", "credits", "billing"];
-    const getConfigSpy = vi.spyOn(OpenHands, "getConfig");
-    // @ts-expect-error - only return app mode
+    const getConfigSpy = vi.spyOn(Forge, "getConfig");
     getConfigSpy.mockResolvedValue({
       APP_MODE: "oss",
     });
@@ -122,42 +120,42 @@ describe("Settings Screen", () => {
   });
 
   it("should render the saas navbar", async () => {
-    const saasConfig = { APP_MODE: "saas" };
+    const saasConfig = {
+      APP_MODE: "saas",
+      FEATURE_FLAGS: {
+        ENABLE_BILLING: true,
+      },
+    };
 
     // Clear any existing query data and set the config
     mockQueryClient.clear();
     mockQueryClient.setQueryData(["config"], saasConfig);
+    const getConfigSpy = vi.spyOn(Forge, "getConfig");
+    getConfigSpy.mockResolvedValue(saasConfig);
 
-    const sectionsToInclude = [
-      "user",
-      "integrations",
-      "application",
-      "credits", // The nav item shows "credits" text but routes to /billing
-      "secrets",
-      "api keys",
+    const expectedLinks = [
+      "/settings/user",
+      "/settings/integrations",
+      "/settings/app",
+      "/settings/billing",
+      "/settings/secrets",
+      "/settings/api-keys",
     ];
-    const sectionsToExclude = ["llm"];
 
     renderSettingsScreen();
 
     const navbar = await screen.findByRole("navigation");
-    sectionsToInclude.forEach((section) => {
-      const sectionElement = within(navbar).getByText(section, {
-        exact: false, // case insensitive
-      });
-      expect(sectionElement).toBeInTheDocument();
+    expectedLinks.forEach((href) => {
+      expect(navbar.querySelector(`a[href="${href}"]`)).not.toBeNull();
     });
-    sectionsToExclude.forEach((section) => {
-      const sectionElement = within(navbar).queryByText(section, {
-        exact: false, // case insensitive
-      });
-      expect(sectionElement).not.toBeInTheDocument();
-    });
+
+    expect(navbar.querySelector('a[href="/settings"]')).toBeNull();
+
+    getConfigSpy.mockRestore();
   });
 
   it("should not be able to access saas-only routes in oss mode", async () => {
-    const getConfigSpy = vi.spyOn(OpenHands, "getConfig");
-    // @ts-expect-error - only return app mode
+    const getConfigSpy = vi.spyOn(Forge, "getConfig");
     getConfigSpy.mockResolvedValue({
       APP_MODE: "oss",
     });

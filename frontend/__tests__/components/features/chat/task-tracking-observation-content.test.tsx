@@ -1,20 +1,13 @@
-import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { render } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TaskTrackingObservationContent } from "#/components/features/chat/task-tracking-observation-content";
 import { TaskTrackingObservation } from "#/types/core/observations";
 
-// Mock the translation hook
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        TASK_TRACKING_OBSERVATION$TASK_LIST: "Task List",
-        TASK_TRACKING_OBSERVATION$TASK_ID: "ID",
-        TASK_TRACKING_OBSERVATION$TASK_NOTES: "Notes",
-        TASK_TRACKING_OBSERVATION$RESULT: "Result",
-      };
-      return translations[key] || key;
-    },
+const updateTasksMock = vi.fn();
+
+vi.mock("#/context/task-context", () => ({
+  useTasks: () => ({
+    updateTasks: updateTasksMock,
   }),
 }));
 
@@ -51,54 +44,29 @@ describe("TaskTrackingObservationContent", () => {
     },
   };
 
-  it("does not render command section", () => {
-    render(<TaskTrackingObservationContent event={mockEvent} />);
-
-    expect(screen.queryByText("Command")).not.toBeInTheDocument();
-    expect(screen.queryByText("plan")).not.toBeInTheDocument();
+  beforeEach(() => {
+    updateTasksMock.mockClear();
   });
 
-  it("renders task list when command is 'plan' and tasks exist", () => {
-    render(<TaskTrackingObservationContent event={mockEvent} />);
+  it("renders nothing", () => {
+    const { container } = render(
+      <TaskTrackingObservationContent event={mockEvent} />,
+    );
 
-    expect(screen.getByText("Task List (3 items)")).toBeInTheDocument();
-    expect(screen.getByText("Implement feature A")).toBeInTheDocument();
-    expect(screen.getByText("Fix bug B")).toBeInTheDocument();
-    expect(screen.getByText("Deploy to production")).toBeInTheDocument();
+    expect(container.firstChild).toBeNull();
   });
 
-  it("displays correct status icons and badges", () => {
+  it("updates tasks when command is 'plan' and tasks exist", () => {
     render(<TaskTrackingObservationContent event={mockEvent} />);
 
-    // Check for status text (the icons are emojis)
-    expect(screen.getByText("todo")).toBeInTheDocument();
-    expect(screen.getByText("in progress")).toBeInTheDocument();
-    expect(screen.getByText("done")).toBeInTheDocument();
+    expect(updateTasksMock).toHaveBeenCalledWith([
+      { id: "task-1", title: "Implement feature A", status: "todo" },
+      { id: "task-2", title: "Fix bug B", status: "in_progress" },
+      { id: "task-3", title: "Deploy to production", status: "done" },
+    ]);
   });
 
-  it("displays task IDs and notes", () => {
-    render(<TaskTrackingObservationContent event={mockEvent} />);
-
-    expect(screen.getByText("ID: task-1")).toBeInTheDocument();
-    expect(screen.getByText("ID: task-2")).toBeInTheDocument();
-    expect(screen.getByText("ID: task-3")).toBeInTheDocument();
-
-    expect(screen.getByText("Notes: This is a test task")).toBeInTheDocument();
-    expect(
-      screen.getByText("Notes: Completed successfully"),
-    ).toBeInTheDocument();
-  });
-
-  it("renders result section when content exists", () => {
-    render(<TaskTrackingObservationContent event={mockEvent} />);
-
-    expect(screen.getByText("Result")).toBeInTheDocument();
-    expect(
-      screen.getByText("Task tracking operation completed successfully"),
-    ).toBeInTheDocument();
-  });
-
-  it("does not render task list when command is not 'plan'", () => {
+  it("does not update tasks when command is not 'plan'", () => {
     const eventWithoutPlan = {
       ...mockEvent,
       extras: {
@@ -109,10 +77,10 @@ describe("TaskTrackingObservationContent", () => {
 
     render(<TaskTrackingObservationContent event={eventWithoutPlan} />);
 
-    expect(screen.queryByText("Task List")).not.toBeInTheDocument();
+    expect(updateTasksMock).not.toHaveBeenCalled();
   });
 
-  it("does not render task list when task list is empty", () => {
+  it("does not update tasks when task list is empty", () => {
     const eventWithEmptyTasks = {
       ...mockEvent,
       extras: {
@@ -123,17 +91,26 @@ describe("TaskTrackingObservationContent", () => {
 
     render(<TaskTrackingObservationContent event={eventWithEmptyTasks} />);
 
-    expect(screen.queryByText("Task List")).not.toBeInTheDocument();
+    expect(updateTasksMock).not.toHaveBeenCalled();
   });
 
-  it("does not render result section when content is empty", () => {
-    const eventWithoutContent = {
+  it("sanitizes malformed task entries", () => {
+    const malformedEvent = {
       ...mockEvent,
-      content: "",
-    };
+      extras: {
+        ...mockEvent.extras,
+        task_list: [
+          null,
+          { id: 123, title: 456, status: "unknown" },
+        ],
+      },
+    } as TaskTrackingObservation;
 
-    render(<TaskTrackingObservationContent event={eventWithoutContent} />);
+    render(<TaskTrackingObservationContent event={malformedEvent} />);
 
-    expect(screen.queryByText("Result")).not.toBeInTheDocument();
+    expect(updateTasksMock).toHaveBeenCalledWith([
+      { id: "", title: "", status: "todo" },
+      { id: "123", title: "456", status: "todo" },
+    ]);
   });
 });

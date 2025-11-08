@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
-import { renderWithProviders } from "test-utils";
+import { renderWithProviders } from "../../../test-utils";
 import { createRoutesStub } from "react-router-dom";
 import { ExpandableMessage } from "#/components/features/chat/expandable-message";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 
 vi.mock("react-i18next", async () => {
   const actual = await vi.importActual("react-i18next");
@@ -28,7 +28,13 @@ describe("ExpandableMessage", () => {
       "div.flex.gap-2.items-center.justify-start",
     );
     expect(container).toHaveClass("border-neutral-300");
-    expect(screen.queryByTestId("status-icon")).not.toBeInTheDocument();
+    const statusIcon = screen
+      .queryAllByTestId("mocked-svg")
+      .find((el) =>
+        el.classList.contains("fill-success") ||
+        el.classList.contains("fill-danger"),
+      );
+    expect(statusIcon).toBeUndefined();
   });
 
   it("should render with neutral border for error messages", () => {
@@ -40,7 +46,13 @@ describe("ExpandableMessage", () => {
       "div.flex.gap-2.items-center.justify-start",
     );
     expect(container).toHaveClass("border-danger");
-    expect(screen.queryByTestId("status-icon")).not.toBeInTheDocument();
+    const statusIcon = screen
+      .queryAllByTestId("mocked-svg")
+      .find((el) =>
+        el.classList.contains("fill-success") ||
+        el.classList.contains("fill-danger"),
+      );
+    expect(statusIcon).toBeUndefined();
   });
 
   it("should render with success icon for successful action messages", () => {
@@ -57,8 +69,10 @@ describe("ExpandableMessage", () => {
       "div.flex.gap-2.items-center.justify-start",
     );
     expect(container).toHaveClass("border-neutral-300");
-    const icon = screen.getByTestId("status-icon");
-    expect(icon).toHaveClass("fill-success");
+    const icon = screen
+      .getAllByTestId("mocked-svg")
+      .find((el) => el.classList.contains("fill-success"));
+    expect(icon).toBeDefined();
   });
 
   it("should render with error icon for failed action messages", () => {
@@ -75,8 +89,10 @@ describe("ExpandableMessage", () => {
       "div.flex.gap-2.items-center.justify-start",
     );
     expect(container).toHaveClass("border-neutral-300");
-    const icon = screen.getByTestId("status-icon");
-    expect(icon).toHaveClass("fill-danger");
+    const icon = screen
+      .getAllByTestId("mocked-svg")
+      .find((el) => el.classList.contains("fill-danger"));
+    expect(icon).toBeDefined();
   });
 
   it("should render with neutral border and no icon for action messages without success prop", () => {
@@ -92,7 +108,13 @@ describe("ExpandableMessage", () => {
       "div.flex.gap-2.items-center.justify-start",
     );
     expect(container).toHaveClass("border-neutral-300");
-    expect(screen.queryByTestId("status-icon")).not.toBeInTheDocument();
+    const statusIcon = screen
+      .queryAllByTestId("mocked-svg")
+      .find((el) =>
+        el.classList.contains("fill-success") ||
+        el.classList.contains("fill-danger"),
+      );
+    expect(statusIcon).toBeUndefined();
   });
 
   it("should render with neutral border and no icon for action messages with undefined success (timeout case)", () => {
@@ -109,12 +131,17 @@ describe("ExpandableMessage", () => {
       "div.flex.gap-2.items-center.justify-start",
     );
     expect(container).toHaveClass("border-neutral-300");
-    expect(screen.queryByTestId("status-icon")).not.toBeInTheDocument();
+    const statusIcon = screen
+      .queryAllByTestId("mocked-svg")
+      .find((el) =>
+        el.classList.contains("fill-success") ||
+        el.classList.contains("fill-danger"),
+      );
+    expect(statusIcon).toBeUndefined();
   });
 
   it("should render the out of credits message when the user is out of credits", async () => {
-    const getConfigSpy = vi.spyOn(OpenHands, "getConfig");
-    // @ts-expect-error - We only care about the APP_MODE and FEATURE_FLAGS fields
+    const getConfigSpy = vi.spyOn(Forge, "getConfig");
     getConfigSpy.mockResolvedValue({
       APP_MODE: "saas",
       FEATURE_FLAGS: {

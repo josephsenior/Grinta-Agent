@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ActionSuggestions } from "#/components/features/chat/action-suggestions";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { MOCK_DEFAULT_USER_SETTINGS } from "#/mocks/handlers";
 
 // Mock dependencies
@@ -57,7 +57,7 @@ describe("ActionSuggestions", () => {
   // Setup mocks for each test
   beforeEach(() => {
     vi.clearAllMocks();
-    const getSettingsSpy = vi.spyOn(OpenHands, "getSettings");
+    const getSettingsSpy = vi.spyOn(Forge, "getSettings");
     getSettingsSpy.mockResolvedValue({
       ...MOCK_DEFAULT_USER_SETTINGS,
       provider_tokens_set: {
@@ -71,9 +71,11 @@ describe("ActionSuggestions", () => {
   });
 
   it("should render both GitHub buttons when GitHub token is set and repository is selected", async () => {
-    const getConversationSpy = vi.spyOn(OpenHands, "getConversation");
-    // @ts-expect-error - only required for testing
+    const getConversationSpy = vi.spyOn(Forge, "getConversation");
     getConversationSpy.mockResolvedValue({
+      conversation_id: "test-conv-1",
+      title: "Test Conversation",
+      last_updated_at: new Date().toISOString(),
       selected_repository: "test-repo",
     });
     renderActionSuggestions();
@@ -132,7 +134,7 @@ describe("ActionSuggestions", () => {
 
   it("should use correct provider name based on conversation git_provider, not user authenticated providers", async () => {
     // Test case for GitHub repository
-    const getConversationSpy = vi.spyOn(OpenHands, "getConversation");
+    const getConversationSpy = vi.spyOn(Forge, "getConversation");
     getConversationSpy.mockResolvedValue({
       conversation_id: "test-github",
       title: "GitHub Test",
@@ -148,7 +150,7 @@ describe("ActionSuggestions", () => {
     });
 
     // Mock user having both GitHub and Bitbucket tokens
-    const getSettingsSpy = vi.spyOn(OpenHands, "getSettings");
+    const getSettingsSpy = vi.spyOn(Forge, "getSettings");
     getSettingsSpy.mockResolvedValue({
       ...MOCK_DEFAULT_USER_SETTINGS,
       provider_tokens_set: {
@@ -187,7 +189,7 @@ describe("ActionSuggestions", () => {
   });
 
   it("should use GitLab terminology when git_provider is gitlab", async () => {
-    const getConversationSpy = vi.spyOn(OpenHands, "getConversation");
+    const getConversationSpy = vi.spyOn(Forge, "getConversation");
     getConversationSpy.mockResolvedValue({
       conversation_id: "test-gitlab",
       title: "GitLab Test",
@@ -202,7 +204,7 @@ describe("ActionSuggestions", () => {
       session_api_key: null,
     });
 
-    const getSettingsSpy = vi.spyOn(OpenHands, "getSettings");
+    const getSettingsSpy = vi.spyOn(Forge, "getSettings");
     getSettingsSpy.mockResolvedValue({
       ...MOCK_DEFAULT_USER_SETTINGS,
       provider_tokens_set: {
@@ -238,7 +240,7 @@ describe("ActionSuggestions", () => {
   });
 
   it("should use Bitbucket terminology when git_provider is bitbucket", async () => {
-    const getConversationSpy = vi.spyOn(OpenHands, "getConversation");
+    const getConversationSpy = vi.spyOn(Forge, "getConversation");
     getConversationSpy.mockResolvedValue({
       conversation_id: "test-bitbucket",
       title: "Bitbucket Test",
@@ -253,7 +255,7 @@ describe("ActionSuggestions", () => {
       session_api_key: null,
     });
 
-    const getSettingsSpy = vi.spyOn(OpenHands, "getSettings");
+    const getSettingsSpy = vi.spyOn(Forge, "getSettings");
     getSettingsSpy.mockResolvedValue({
       ...MOCK_DEFAULT_USER_SETTINGS,
       provider_tokens_set: {

@@ -3,7 +3,7 @@ import { describe, expect, vi, beforeEach, it } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { RepositorySelectionForm } from "../../../../src/components/features/home/repo-selection-form";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { GitRepository } from "#/types/git";
 
 // Create mock functions
@@ -196,7 +196,7 @@ describe("RepositorySelectionForm", () => {
       },
     ];
 
-    const searchGitReposSpy = vi.spyOn(OpenHands, "searchGitRepositories");
+    const searchGitReposSpy = vi.spyOn(Forge, "searchGitRepositories");
     searchGitReposSpy.mockResolvedValue(MOCK_SEARCH_REPOS);
 
     mockUseGitRepositories.mockReturnValue({
@@ -247,7 +247,7 @@ describe("RepositorySelectionForm", () => {
       },
     ];
 
-    const searchGitReposSpy = vi.spyOn(OpenHands, "searchGitRepositories");
+    const searchGitReposSpy = vi.spyOn(Forge, "searchGitRepositories");
     searchGitReposSpy.mockResolvedValue(MOCK_SEARCH_REPOS);
 
     mockUseGitRepositories.mockReturnValue({

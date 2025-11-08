@@ -4,13 +4,13 @@ import { QueryClientConfig } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { createRoutesStub } from "react-router-dom";
 import React from "react";
-import { renderWithProviders } from "test-utils";
+import { renderWithProviders } from "../../../../test-utils";
 import MicroagentManagement from "#/routes/microagent-management";
 import { MicroagentManagementMain } from "#/components/features/microagent-management/microagent-management-main";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { GitRepository } from "#/types/git";
 import { RepositoryMicroagent } from "#/types/microagent-management";
-import { Conversation } from "#/api/open-hands.types";
+import { Conversation } from "#/api/forge.types";
 
 // Mock hooks
 const mockUseUserProviders = vi.fn();
@@ -95,7 +95,7 @@ describe("MicroagentManagement", () => {
     },
     {
       id: "2",
-      full_name: "user/repo2/.openhands",
+      full_name: "user/repo2/.Forge",
       git_provider: "github",
       is_public: true,
       owner_type: "user",
@@ -103,7 +103,7 @@ describe("MicroagentManagement", () => {
     },
     {
       id: "3",
-      full_name: "org/repo3/.openhands",
+      full_name: "org/repo3/.Forge",
       git_provider: "github",
       is_public: true,
       owner_type: "organization",
@@ -140,13 +140,13 @@ describe("MicroagentManagement", () => {
       name: "test-microagent-1",
       created_at: "2021-10-01T12:00:00Z",
       git_provider: "github",
-      path: ".openhands/microagents/test-microagent-1",
+      path: ".Forge/microagents/test-microagent-1",
     },
     {
       name: "test-microagent-2",
       created_at: "2021-10-02T12:00:00Z",
       git_provider: "github",
-      path: ".openhands/microagents/test-microagent-2",
+      path: ".Forge/microagents/test-microagent-2",
     },
   ];
 
@@ -154,7 +154,7 @@ describe("MicroagentManagement", () => {
     {
       conversation_id: "conv-1",
       title: "Test Conversation 1",
-      selected_repository: "user/repo2/.openhands",
+      selected_repository: "user/repo2/.Forge",
       selected_branch: "main",
       git_provider: "github",
       last_updated_at: "2021-10-01T12:00:00Z",
@@ -168,7 +168,7 @@ describe("MicroagentManagement", () => {
     {
       conversation_id: "conv-2",
       title: "Test Conversation 2",
-      selected_repository: "user/repo2/.openhands",
+      selected_repository: "user/repo2/.Forge",
       selected_branch: "main",
       git_provider: "github",
       last_updated_at: "2021-10-02T12:00:00Z",
@@ -231,22 +231,22 @@ describe("MicroagentManagement", () => {
     });
 
     // Setup default mock for retrieveUserGitRepositories
-    vi.spyOn(OpenHands, "retrieveUserGitRepositories").mockResolvedValue({
+    vi.spyOn(Forge, "retrieveUserGitRepositories").mockResolvedValue({
       data: [...mockRepositories],
       nextPage: null,
     });
     // Setup default mock for getRepositoryMicroagents
-    vi.spyOn(OpenHands, "getRepositoryMicroagents").mockResolvedValue([
+    vi.spyOn(Forge, "getRepositoryMicroagents").mockResolvedValue([
       ...mockMicroagents,
     ]);
     // Setup default mock for searchConversations
-    vi.spyOn(OpenHands, "searchConversations").mockResolvedValue([
+    vi.spyOn(Forge, "searchConversations").mockResolvedValue([
       ...mockConversations,
     ]);
     // Setup default mock for getRepositoryMicroagentContent
-    vi.spyOn(OpenHands, "getRepositoryMicroagentContent").mockResolvedValue({
+    vi.spyOn(Forge, "getRepositoryMicroagentContent").mockResolvedValue({
       content: "Original microagent content for testing updates",
-      path: ".openhands/microagents/update-test-microagent",
+      path: ".Forge/microagents/update-test-microagent",
       git_provider: "github",
       triggers: ["test", "update"],
     });
@@ -325,7 +325,7 @@ describe("MicroagentManagement", () => {
     // Check that repository names are displayed
     const repo1 = screen.getByTestId("repository-name-tooltip");
     expect(repo1).toBeInTheDocument();
-    expect(repo1).toHaveTextContent("user/repo2/.openhands");
+    expect(repo1).toHaveTextContent("user/repo2/.Forge");
   });
 
   it("should expand repository accordion and show microagents", async () => {
@@ -458,10 +458,10 @@ describe("MicroagentManagement", () => {
 
     // Check that microagent file paths are displayed
     const filePath1 = screen.getByText(
-      ".openhands/microagents/test-microagent-1",
+      ".Forge/microagents/test-microagent-1",
     );
     const filePath2 = screen.getByText(
-      ".openhands/microagents/test-microagent-2",
+      ".Forge/microagents/test-microagent-2",
     );
 
     expect(filePath1).toBeInTheDocument();
@@ -598,7 +598,7 @@ describe("MicroagentManagement", () => {
       "MICROAGENT_MANAGEMENT$READY_TO_ADD_MICROAGENT",
     );
     const descriptionMessage = screen.getByText(
-      "MICROAGENT_MANAGEMENT$OPENHANDS_CAN_LEARN_ABOUT_REPOSITORIES",
+      "MICROAGENT_MANAGEMENT$Forge_CAN_LEARN_ABOUT_REPOSITORIES",
     );
 
     expect(readyMessage).toBeInTheDocument();
@@ -637,7 +637,7 @@ describe("MicroagentManagement", () => {
         expect(mockUseGitRepositories).toHaveBeenCalled();
       });
 
-      // Initially only repositories with .openhands should be visible
+      // Initially only repositories with .Forge should be visible
       expect(screen.getByTestId("repository-name-tooltip")).toBeInTheDocument();
       expect(screen.queryByText("user/repo1")).not.toBeInTheDocument();
       expect(screen.queryByText("user/repo4")).not.toBeInTheDocument();
@@ -652,7 +652,7 @@ describe("MicroagentManagement", () => {
       expect(screen.getByTestId("repository-name-tooltip")).toBeInTheDocument();
       expect(screen.queryByText("user/repo1")).not.toBeInTheDocument();
       expect(
-        screen.queryByText("org/repo3/.openhands"),
+        screen.queryByText("org/repo3/.Forge"),
       ).not.toBeInTheDocument();
       expect(screen.queryByText("user/repo4")).not.toBeInTheDocument();
       expect(screen.queryByText("user/TestRepository")).not.toBeInTheDocument();
@@ -678,7 +678,7 @@ describe("MicroagentManagement", () => {
       expect(screen.getByTestId("repository-name-tooltip")).toBeInTheDocument();
       expect(screen.queryByText("user/repo1")).not.toBeInTheDocument();
       expect(
-        screen.queryByText("org/repo3/.openhands"),
+        screen.queryByText("org/repo3/.Forge"),
       ).not.toBeInTheDocument();
     });
 
@@ -701,7 +701,7 @@ describe("MicroagentManagement", () => {
       expect(screen.getByTestId("repository-name-tooltip")).toBeInTheDocument();
       expect(screen.queryByText("user/repo1")).not.toBeInTheDocument();
       expect(
-        screen.queryByText("org/repo3/.openhands"),
+        screen.queryByText("org/repo3/.Forge"),
       ).not.toBeInTheDocument();
       expect(screen.queryByText("user/repo4")).not.toBeInTheDocument();
       expect(screen.queryByText("user/TestRepository")).not.toBeInTheDocument();
@@ -730,11 +730,11 @@ describe("MicroagentManagement", () => {
       // Clear the search input
       await user.clear(searchInput);
 
-      // All repositories should be visible again (only those with .openhands)
+      // All repositories should be visible again (only those with .Forge)
       expect(screen.getByTestId("repository-name-tooltip")).toBeInTheDocument();
       expect(screen.queryByText("user/repo1")).not.toBeInTheDocument();
       expect(
-        screen.queryByText("org/repo3/.openhands"),
+        screen.queryByText("org/repo3/.Forge"),
       ).not.toBeInTheDocument();
       expect(screen.queryByText("user/repo4")).not.toBeInTheDocument();
       expect(screen.queryByText("user/TestRepository")).not.toBeInTheDocument();
@@ -763,10 +763,10 @@ describe("MicroagentManagement", () => {
       await waitFor(() => {
         expect(screen.queryByText("user/repo1")).not.toBeInTheDocument();
         expect(
-          screen.queryByText("user/repo2/.openhands"),
+          screen.queryByText("user/repo2/.Forge"),
         ).not.toBeInTheDocument();
         expect(
-          screen.queryByText("org/repo3/.openhands"),
+          screen.queryByText("org/repo3/.Forge"),
         ).not.toBeInTheDocument();
         expect(screen.queryByText("user/repo4")).not.toBeInTheDocument();
         expect(
@@ -789,9 +789,9 @@ describe("MicroagentManagement", () => {
       const searchInput = screen.getByRole("textbox", {
         name: "COMMON$SEARCH_REPOSITORIES",
       });
-      await user.type(searchInput, ".openhands");
+      await user.type(searchInput, ".Forge");
 
-      // Only repositories with .openhands should be visible
+      // Only repositories with .Forge should be visible
       expect(screen.getByTestId("repository-name-tooltip")).toBeInTheDocument();
       expect(screen.queryByText("user/repo1")).not.toBeInTheDocument();
       expect(screen.queryByText("user/repo4")).not.toBeInTheDocument();
@@ -1009,10 +1009,10 @@ describe("MicroagentManagement", () => {
 
       // Check that microagent file paths are displayed for microagents
       const microagentFilePath1 = screen.getByText(
-        ".openhands/microagents/test-microagent-1",
+        ".Forge/microagents/test-microagent-1",
       );
       const microagentFilePath2 = screen.getByText(
-        ".openhands/microagents/test-microagent-2",
+        ".Forge/microagents/test-microagent-2",
       );
 
       expect(microagentFilePath1).toBeInTheDocument();
@@ -1020,10 +1020,10 @@ describe("MicroagentManagement", () => {
 
       // Check that microagent file paths are NOT displayed for conversations
       expect(
-        screen.queryByText(".openhands/microagents/Test Conversation 1"),
+        screen.queryByText(".Forge/microagents/Test Conversation 1"),
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByText(".openhands/microagents/Test Conversation 2"),
+        screen.queryByText(".Forge/microagents/Test Conversation 2"),
       ).not.toBeInTheDocument();
     });
 
@@ -1292,7 +1292,7 @@ describe("MicroagentManagement", () => {
   // Add microagent integration tests
   describe("Add microagent functionality", () => {
     beforeEach(() => {
-      vi.spyOn(OpenHands, "getRepositoryBranches").mockResolvedValue({
+      vi.spyOn(Forge, "getRepositoryBranches").mockResolvedValue({
         branches: [{ name: "main", commit_sha: "abc123", protected: false }],
         has_next_page: false,
         current_page: 1,
@@ -1593,13 +1593,13 @@ describe("MicroagentManagement", () => {
       name: "test-microagent",
       created_at: "2021-10-01T12:00:00Z",
       git_provider: "github",
-      path: ".openhands/microagents/test-microagent",
+      path: ".Forge/microagents/test-microagent",
     };
 
     const mockConversationWithPr: Conversation = {
       conversation_id: "conv-with-pr",
       title: "Test Conversation with PR",
-      selected_repository: "user/repo2/.openhands",
+      selected_repository: "user/repo2/.Forge",
       selected_branch: "main",
       git_provider: "github",
       last_updated_at: "2021-10-01T12:00:00Z",
@@ -1615,7 +1615,7 @@ describe("MicroagentManagement", () => {
     const mockConversationWithoutPr: Conversation = {
       conversation_id: "conv-without-pr",
       title: "Test Conversation without PR",
-      selected_repository: "user/repo2/.openhands",
+      selected_repository: "user/repo2/.Forge",
       selected_branch: "main",
       git_provider: "github",
       last_updated_at: "2021-10-01T12:00:00Z",
@@ -1631,7 +1631,7 @@ describe("MicroagentManagement", () => {
     const mockConversationWithNullPr: Conversation = {
       conversation_id: "conv-null-pr",
       title: "Test Conversation with null PR",
-      selected_repository: "user/repo2/.openhands",
+      selected_repository: "user/repo2/.Forge",
       selected_branch: "main",
       git_provider: "github",
       last_updated_at: "2021-10-01T12:00:00Z",
@@ -1679,7 +1679,7 @@ describe("MicroagentManagement", () => {
       await screen.findByText("MICROAGENT_MANAGEMENT$READY_TO_ADD_MICROAGENT");
       expect(
         screen.getByText(
-          "MICROAGENT_MANAGEMENT$OPENHANDS_CAN_LEARN_ABOUT_REPOSITORIES",
+          "MICROAGENT_MANAGEMENT$Forge_CAN_LEARN_ABOUT_REPOSITORIES",
         ),
       ).toBeInTheDocument();
     });
@@ -1691,7 +1691,7 @@ describe("MicroagentManagement", () => {
       await screen.findByText("MICROAGENT_MANAGEMENT$READY_TO_ADD_MICROAGENT");
       expect(
         screen.getByText(
-          "MICROAGENT_MANAGEMENT$OPENHANDS_CAN_LEARN_ABOUT_REPOSITORIES",
+          "MICROAGENT_MANAGEMENT$Forge_CAN_LEARN_ABOUT_REPOSITORIES",
         ),
       ).toBeInTheDocument();
     });
@@ -1705,7 +1705,7 @@ describe("MicroagentManagement", () => {
       // Check that the microagent view component is rendered
       await screen.findByText("test-microagent");
       expect(
-        screen.getByText(".openhands/microagents/test-microagent"),
+        screen.getByText(".Forge/microagents/test-microagent"),
       ).toBeInTheDocument();
     });
 
@@ -1767,7 +1767,7 @@ describe("MicroagentManagement", () => {
       // Should render the microagent view, not the conversation view
       await screen.findByText("test-microagent");
       expect(
-        screen.getByText(".openhands/microagents/test-microagent"),
+        screen.getByText(".Forge/microagents/test-microagent"),
       ).toBeInTheDocument();
 
       // Should NOT render the review PR component
@@ -1878,7 +1878,7 @@ describe("MicroagentManagement", () => {
       await screen.findByText("MICROAGENT_MANAGEMENT$READY_TO_ADD_MICROAGENT");
       expect(
         screen.getByText(
-          "MICROAGENT_MANAGEMENT$OPENHANDS_CAN_LEARN_ABOUT_REPOSITORIES",
+          "MICROAGENT_MANAGEMENT$Forge_CAN_LEARN_ABOUT_REPOSITORIES",
         ),
       ).toBeInTheDocument();
     });
@@ -1890,7 +1890,7 @@ describe("MicroagentManagement", () => {
       await screen.findByText("MICROAGENT_MANAGEMENT$READY_TO_ADD_MICROAGENT");
       expect(
         screen.getByText(
-          "MICROAGENT_MANAGEMENT$OPENHANDS_CAN_LEARN_ABOUT_REPOSITORIES",
+          "MICROAGENT_MANAGEMENT$Forge_CAN_LEARN_ABOUT_REPOSITORIES",
         ),
       ).toBeInTheDocument();
     });
@@ -1899,7 +1899,7 @@ describe("MicroagentManagement", () => {
       const conversationWithoutPrNumber = {
         conversation_id: "conv-no-pr-number",
         title: "Test Conversation without PR number property",
-        selected_repository: "user/repo2/.openhands",
+        selected_repository: "user/repo2/.Forge",
         selected_branch: "main",
         git_provider: "github",
         last_updated_at: "2021-10-01T12:00:00Z",
@@ -1932,7 +1932,7 @@ describe("MicroagentManagement", () => {
         name: "complete-microagent",
         created_at: "2021-10-01T12:00:00Z",
         git_provider: "github",
-        path: ".openhands/microagents/complete-microagent",
+        path: ".Forge/microagents/complete-microagent",
       };
 
       renderMicroagentManagementMain({
@@ -1943,7 +1943,7 @@ describe("MicroagentManagement", () => {
       // Check that the microagent view component is rendered with complete data
       await screen.findByText("complete-microagent");
       expect(
-        screen.getByText(".openhands/microagents/complete-microagent"),
+        screen.getByText(".Forge/microagents/complete-microagent"),
       ).toBeInTheDocument();
     });
 
@@ -1951,7 +1951,7 @@ describe("MicroagentManagement", () => {
       const completeConversation: Conversation = {
         conversation_id: "complete-conversation",
         title: "Complete Conversation",
-        selected_repository: "user/complete-repo/.openhands",
+        selected_repository: "user/complete-repo/.Forge",
         selected_branch: "main",
         git_provider: "github",
         last_updated_at: "2021-10-01T12:00:00Z",
@@ -1981,11 +1981,11 @@ describe("MicroagentManagement", () => {
       name: "update-test-microagent",
       created_at: "2021-10-01T12:00:00Z",
       git_provider: "github",
-      path: ".openhands/microagents/update-test-microagent",
+      path: ".Forge/microagents/update-test-microagent",
     };
 
     beforeEach(() => {
-      vi.spyOn(OpenHands, "getRepositoryBranches").mockResolvedValue({
+      vi.spyOn(Forge, "getRepositoryBranches").mockResolvedValue({
         branches: [{ name: "main", commit_sha: "abc123", protected: false }],
         has_next_page: false,
         current_page: 1,
@@ -2316,9 +2316,9 @@ describe("MicroagentManagement", () => {
       const user = userEvent.setup();
 
       // Mock the content API to return empty content for this test
-      vi.spyOn(OpenHands, "getRepositoryMicroagentContent").mockResolvedValue({
+      vi.spyOn(Forge, "getRepositoryMicroagentContent").mockResolvedValue({
         content: "",
-        path: ".openhands/microagents/update-test-microagent",
+        path: ".Forge/microagents/update-test-microagent",
         git_provider: "github",
         triggers: [],
       });
@@ -2365,9 +2365,9 @@ describe("MicroagentManagement", () => {
       const user = userEvent.setup();
 
       // Mock the content API to return content without triggers for this test
-      vi.spyOn(OpenHands, "getRepositoryMicroagentContent").mockResolvedValue({
+      vi.spyOn(Forge, "getRepositoryMicroagentContent").mockResolvedValue({
         content: "Original microagent content for testing updates",
-        path: ".openhands/microagents/update-test-microagent",
+        path: ".Forge/microagents/update-test-microagent",
         git_provider: "github",
         triggers: [],
       });
@@ -2516,7 +2516,7 @@ describe("MicroagentManagement", () => {
             name: "test-microagent",
             created_at: "2021-10-01",
             git_provider: "github",
-            path: ".openhands/microagents/test",
+            path: ".Forge/microagents/test",
           },
         ],
         isLoading: false,
@@ -2555,7 +2555,7 @@ describe("MicroagentManagement", () => {
       name: "learn-test-microagent",
       created_at: "2021-10-01T12:00:00Z",
       git_provider: "github",
-      path: ".openhands/microagents/learn-test-microagent",
+      path: ".Forge/microagents/learn-test-microagent",
     };
 
     it("should render learn something new button in microagent view", async () => {
@@ -2649,9 +2649,9 @@ describe("MicroagentManagement", () => {
       const user = userEvent.setup();
 
       // Mock the content API to return the expected content for this test
-      vi.spyOn(OpenHands, "getRepositoryMicroagentContent").mockResolvedValue({
+      vi.spyOn(Forge, "getRepositoryMicroagentContent").mockResolvedValue({
         content: "Test microagent content for learn functionality",
-        path: ".openhands/microagents/learn-test-microagent",
+        path: ".Forge/microagents/learn-test-microagent",
         git_provider: "github",
         triggers: ["learn", "test"],
       });
@@ -2709,9 +2709,9 @@ describe("MicroagentManagement", () => {
       const user = userEvent.setup();
 
       // Mock the content API to return empty content for this test
-      vi.spyOn(OpenHands, "getRepositoryMicroagentContent").mockResolvedValue({
+      vi.spyOn(Forge, "getRepositoryMicroagentContent").mockResolvedValue({
         content: "",
-        path: ".openhands/microagents/learn-test-microagent",
+        path: ".Forge/microagents/learn-test-microagent",
         git_provider: "github",
         triggers: [],
       });
@@ -2767,9 +2767,9 @@ describe("MicroagentManagement", () => {
       const user = userEvent.setup();
 
       // Mock the content API to return content without triggers for this test
-      vi.spyOn(OpenHands, "getRepositoryMicroagentContent").mockResolvedValue({
+      vi.spyOn(Forge, "getRepositoryMicroagentContent").mockResolvedValue({
         content: "Test microagent content for learn functionality",
-        path: ".openhands/microagents/learn-test-microagent",
+        path: ".Forge/microagents/learn-test-microagent",
         git_provider: "github",
         triggers: [],
       });

@@ -1,6 +1,7 @@
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { renderWithProviders } from "../../test-utils";
 import { InteractiveChatBox } from "#/components/features/chat/interactive-chat-box";
 
 describe("InteractiveChatBox", () => {
@@ -11,14 +12,33 @@ describe("InteractiveChatBox", () => {
     global.URL.createObjectURL = vi
       .fn()
       .mockReturnValue("blob:http://example.com");
+    global.URL.revokeObjectURL = vi.fn();
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
+const getUser = () => userEvent.setup();
+
+const confirmFileUpload = async (
+  user: ReturnType<typeof userEvent.setup>,
+  options: { optional?: boolean } = {},
+) => {
+  const { optional = false } = options;
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const confirmButton = screen.queryByRole("button", { name: /upload/i });
+  if (!confirmButton) {
+    if (optional) {
+      return;
+    }
+    throw new Error("Expected upload confirmation modal to be visible");
+  }
+  await user.click(confirmButton);
+};
+
   it("should render", () => {
-    render(<InteractiveChatBox onSubmit={onSubmitMock} onStop={onStopMock} />);
+    renderWithProviders(<InteractiveChatBox onSubmit={onSubmitMock} onStop={onStopMock} />);
 
     const chatBox = screen.getByTestId("interactive-chat-box");
     within(chatBox).getByTestId("chat-input");
@@ -26,7 +46,7 @@ describe("InteractiveChatBox", () => {
   });
 
   it.fails("should set custom values", () => {
-    render(
+    renderWithProviders(
       <InteractiveChatBox
         onSubmit={onSubmitMock}
         onStop={onStopMock}
@@ -41,8 +61,8 @@ describe("InteractiveChatBox", () => {
   });
 
   it("should display the image previews when images are uploaded", async () => {
-    const user = userEvent.setup();
-    render(<InteractiveChatBox onSubmit={onSubmitMock} onStop={onStopMock} />);
+    const user = getUser();
+    renderWithProviders(<InteractiveChatBox onSubmit={onSubmitMock} onStop={onStopMock} />);
 
     const file = new File(["(⌐□_□)"], "chucknorris.png", { type: "image/png" });
     const input = screen.getByTestId("upload-image-input");
@@ -50,6 +70,7 @@ describe("InteractiveChatBox", () => {
     expect(screen.queryAllByTestId("image-preview")).toHaveLength(0);
 
     await user.upload(input, file);
+    await confirmFileUpload(user, { optional: true });
     expect(screen.queryAllByTestId("image-preview")).toHaveLength(1);
 
     const files = [
@@ -58,17 +79,19 @@ describe("InteractiveChatBox", () => {
     ];
 
     await user.upload(input, files);
+    await confirmFileUpload(user);
     expect(screen.queryAllByTestId("image-preview")).toHaveLength(3);
   });
 
   it("should remove the image preview when the close button is clicked", async () => {
-    const user = userEvent.setup();
-    render(<InteractiveChatBox onSubmit={onSubmitMock} onStop={onStopMock} />);
+    const user = getUser();
+    renderWithProviders(<InteractiveChatBox onSubmit={onSubmitMock} onStop={onStopMock} />);
 
     const file = new File(["(⌐□_□)"], "chucknorris.png", { type: "image/png" });
     const input = screen.getByTestId("upload-image-input");
 
     await user.upload(input, file);
+    await confirmFileUpload(user);
     expect(screen.queryAllByTestId("image-preview")).toHaveLength(1);
 
     const imagePreview = screen.getByTestId("image-preview");
@@ -79,8 +102,8 @@ describe("InteractiveChatBox", () => {
   });
 
   it("should call onSubmit with the message and images", async () => {
-    const user = userEvent.setup();
-    render(<InteractiveChatBox onSubmit={onSubmitMock} onStop={onStopMock} />);
+    const user = getUser();
+    renderWithProviders(<InteractiveChatBox onSubmit={onSubmitMock} onStop={onStopMock} />);
 
     const textarea = within(screen.getByTestId("chat-input")).getByRole(
       "textbox",
@@ -89,6 +112,7 @@ describe("InteractiveChatBox", () => {
     const file = new File(["(⌐□_□)"], "chucknorris.png", { type: "image/png" });
 
     await user.upload(input, file);
+    await confirmFileUpload(user);
     await user.type(textarea, "Hello, world!");
     await user.keyboard("{Enter}");
 
@@ -99,8 +123,8 @@ describe("InteractiveChatBox", () => {
   });
 
   it("should disable the submit button", async () => {
-    const user = userEvent.setup();
-    render(
+    const user = getUser();
+    renderWithProviders(
       <InteractiveChatBox
         isDisabled
         onSubmit={onSubmitMock}
@@ -108,7 +132,7 @@ describe("InteractiveChatBox", () => {
       />,
     );
 
-    const button = screen.getByRole("button");
+    const button = screen.getByRole("button", { name: "BUTTON$SEND" });
     expect(button).toBeDisabled();
 
     await user.click(button);
@@ -116,8 +140,8 @@ describe("InteractiveChatBox", () => {
   });
 
   it("should display the stop button if set and call onStop when clicked", async () => {
-    const user = userEvent.setup();
-    render(
+    const user = getUser();
+    renderWithProviders(
       <InteractiveChatBox
         mode="stop"
         onSubmit={onSubmitMock}
@@ -133,12 +157,12 @@ describe("InteractiveChatBox", () => {
   });
 
   it("should handle image upload and message submission correctly", async () => {
-    const user = userEvent.setup();
+    const user = getUser();
     const onSubmit = vi.fn();
     const onStop = vi.fn();
     const onChange = vi.fn();
 
-    const { rerender } = render(
+    const { rerender } = renderWithProviders(
       <InteractiveChatBox
         onSubmit={onSubmit}
         onStop={onStop}
@@ -151,6 +175,7 @@ describe("InteractiveChatBox", () => {
     const file = new File(["dummy content"], "test.png", { type: "image/png" });
     const input = screen.getByTestId("upload-image-input");
     await user.upload(input, file);
+    await confirmFileUpload(user);
 
     // Verify text input was not cleared
     expect(screen.getByRole("textbox")).toHaveValue("test message");
@@ -166,7 +191,7 @@ describe("InteractiveChatBox", () => {
     // Verify onChange was called to clear the text input
     expect(onChange).toHaveBeenCalledWith("");
 
-    // Simulate parent component updating the value prop
+    // Simulate parent component updating the value prop after the change callback
     rerender(
       <InteractiveChatBox
         onSubmit={onSubmit}
@@ -176,12 +201,14 @@ describe("InteractiveChatBox", () => {
       />,
     );
 
-    // Verify the text input was cleared
+    // Verify the text input was cleared in the controlled scenario
     expect(screen.getByRole("textbox")).toHaveValue("");
 
     // Upload another image - this should NOT clear the text input
     onChange.mockClear();
-    await user.upload(input, file);
+    const updatedInput = screen.getByTestId("upload-image-input");
+    await user.upload(updatedInput, file);
+    await confirmFileUpload(user, { optional: true });
 
     // Verify text input is still empty and onChange was not called
     expect(screen.getByRole("textbox")).toHaveValue("");

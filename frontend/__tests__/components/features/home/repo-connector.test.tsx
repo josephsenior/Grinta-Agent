@@ -2,10 +2,10 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import { setupStore } from "test-utils";
+import { setupStore } from "../../../../test-utils";
 import { Provider } from "react-redux";
 import { createRoutesStub, Outlet } from "react-router-dom";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { GitRepository } from "#/types/git";
 import { RepoConnector } from "#/components/features/home/repo-connector";
 import { MOCK_DEFAULT_USER_SETTINGS } from "#/mocks/handlers";
@@ -58,7 +58,7 @@ const MOCK_RESPOSITORIES: GitRepository[] = [
   },
   {
     id: "2",
-    full_name: "All-Hands-AI/OpenHands",
+    full_name: "All-Hands-AI/Forge",
     git_provider: "github",
     is_public: true,
     main_branch: "main",
@@ -66,7 +66,7 @@ const MOCK_RESPOSITORIES: GitRepository[] = [
 ];
 
 beforeEach(() => {
-  const getSettingsSpy = vi.spyOn(OpenHands, "getSettings");
+  const getSettingsSpy = vi.spyOn(Forge, "getSettings");
   getSettingsSpy.mockResolvedValue({
     ...MOCK_DEFAULT_USER_SETTINGS,
     provider_tokens_set: {
@@ -84,7 +84,7 @@ describe("RepoConnector", () => {
 
   it("should render the available repositories in the dropdown", async () => {
     const retrieveUserGitRepositoriesSpy = vi.spyOn(
-      OpenHands,
+      Forge,
       "retrieveUserGitRepositories",
     );
     retrieveUserGitRepositoriesSpy.mockResolvedValue({
@@ -93,7 +93,7 @@ describe("RepoConnector", () => {
     });
 
     // Mock the search function that's used by the dropdown
-    vi.spyOn(OpenHands, "searchGitRepositories").mockResolvedValue(
+    vi.spyOn(Forge, "searchGitRepositories").mockResolvedValue(
       MOCK_RESPOSITORIES,
     );
 
@@ -115,13 +115,13 @@ describe("RepoConnector", () => {
     // Wait for the options to be loaded and displayed
     await waitFor(() => {
       expect(screen.getByText("rbren/polaris")).toBeInTheDocument();
-      expect(screen.getByText("All-Hands-AI/OpenHands")).toBeInTheDocument();
+      expect(screen.getByText("All-Hands-AI/Forge")).toBeInTheDocument();
     });
   });
 
   it("should only enable the launch button if a repo is selected", async () => {
     const retrieveUserGitRepositoriesSpy = vi.spyOn(
-      OpenHands,
+      Forge,
       "retrieveUserGitRepositories",
     );
     retrieveUserGitRepositoriesSpy.mockResolvedValue({
@@ -135,7 +135,7 @@ describe("RepoConnector", () => {
     expect(launchButton).toBeDisabled();
 
     // Mock the repository branches API call
-    vi.spyOn(OpenHands, "getRepositoryBranches").mockResolvedValue({
+    vi.spyOn(Forge, "getRepositoryBranches").mockResolvedValue({
       branches: [
         { name: "main", commit_sha: "123", protected: false },
         { name: "develop", commit_sha: "456", protected: false },
@@ -176,13 +176,12 @@ describe("RepoConnector", () => {
   });
 
   it("should render the 'add github repos' link if saas mode and github provider is set", async () => {
-    const getConfiSpy = vi.spyOn(OpenHands, "getConfig");
-    // @ts-expect-error - only return the APP_MODE
+    const getConfiSpy = vi.spyOn(Forge, "getConfig");
     getConfiSpy.mockResolvedValue({
       APP_MODE: "saas",
     });
 
-    const getSettingsSpy = vi.spyOn(OpenHands, "getSettings");
+    const getSettingsSpy = vi.spyOn(Forge, "getSettings");
     getSettingsSpy.mockResolvedValue({
       ...MOCK_DEFAULT_USER_SETTINGS,
       provider_tokens_set: {
@@ -197,13 +196,12 @@ describe("RepoConnector", () => {
   });
 
   it("should not render the 'add github repos' link if github provider is not set", async () => {
-    const getConfiSpy = vi.spyOn(OpenHands, "getConfig");
-    // @ts-expect-error - only return the APP_MODE
+    const getConfiSpy = vi.spyOn(Forge, "getConfig");
     getConfiSpy.mockResolvedValue({
       APP_MODE: "saas",
     });
 
-    const getSettingsSpy = vi.spyOn(OpenHands, "getSettings");
+    const getSettingsSpy = vi.spyOn(Forge, "getSettings");
     getSettingsSpy.mockResolvedValue({
       ...MOCK_DEFAULT_USER_SETTINGS,
       provider_tokens_set: {
@@ -218,8 +216,7 @@ describe("RepoConnector", () => {
   });
 
   it("should not render the 'add git(hub|lab) repos' links if oss mode", async () => {
-    const getConfiSpy = vi.spyOn(OpenHands, "getConfig");
-    // @ts-expect-error - only return the APP_MODE
+    const getConfiSpy = vi.spyOn(Forge, "getConfig");
     getConfiSpy.mockResolvedValue({
       APP_MODE: "oss",
     });
@@ -231,7 +228,7 @@ describe("RepoConnector", () => {
   });
 
   it("should create a conversation and redirect with the selected repo when pressing the launch button", async () => {
-    const createConversationSpy = vi.spyOn(OpenHands, "createConversation");
+    const createConversationSpy = vi.spyOn(Forge, "createConversation");
     createConversationSpy.mockResolvedValue({
       conversation_id: "mock-conversation-id",
       title: "Test Conversation",
@@ -246,7 +243,7 @@ describe("RepoConnector", () => {
       session_api_key: null,
     });
     const retrieveUserGitRepositoriesSpy = vi.spyOn(
-      OpenHands,
+      Forge,
       "retrieveUserGitRepositories",
     );
     retrieveUserGitRepositoriesSpy.mockResolvedValue({
@@ -265,7 +262,7 @@ describe("RepoConnector", () => {
     expect(createConversationSpy).not.toHaveBeenCalled();
 
     // Mock the repository branches API call
-    vi.spyOn(OpenHands, "getRepositoryBranches").mockResolvedValue({
+    vi.spyOn(Forge, "getRepositoryBranches").mockResolvedValue({
       branches: [
         { name: "main", commit_sha: "123", protected: false },
         { name: "develop", commit_sha: "456", protected: false },
@@ -316,10 +313,10 @@ describe("RepoConnector", () => {
   });
 
   it("should change the launch button text to 'Loading...' when creating a conversation", async () => {
-    const createConversationSpy = vi.spyOn(OpenHands, "createConversation");
+    const createConversationSpy = vi.spyOn(Forge, "createConversation");
     createConversationSpy.mockImplementation(() => new Promise(() => {})); // Never resolves to keep loading state
     const retrieveUserGitRepositoriesSpy = vi.spyOn(
-      OpenHands,
+      Forge,
       "retrieveUserGitRepositories",
     );
     retrieveUserGitRepositoriesSpy.mockResolvedValue({
@@ -328,7 +325,7 @@ describe("RepoConnector", () => {
     });
 
     // Mock the repository branches API call
-    vi.spyOn(OpenHands, "getRepositoryBranches").mockResolvedValue({
+    vi.spyOn(Forge, "getRepositoryBranches").mockResolvedValue({
       branches: [
         { name: "main", commit_sha: "123", protected: false },
         { name: "develop", commit_sha: "456", protected: false },
@@ -385,7 +382,7 @@ describe("RepoConnector", () => {
   });
 
   it("should display a button to settings if the user needs to sign in with their git provider", async () => {
-    const getSettingsSpy = vi.spyOn(OpenHands, "getSettings");
+    const getSettingsSpy = vi.spyOn(Forge, "getSettings");
     getSettingsSpy.mockResolvedValue({
       ...MOCK_DEFAULT_USER_SETTINGS,
       provider_tokens_set: {},

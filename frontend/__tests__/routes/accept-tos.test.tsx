@@ -2,28 +2,14 @@ import { render, screen } from "@testing-library/react";
 import { it, describe, expect, vi, beforeEach, afterEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter } from "react-router-dom";
 import AcceptTOS from "#/routes/accept-tos";
 import * as CaptureConsent from "#/utils/handle-capture-consent";
-import { openHands } from "#/api/open-hands-axios";
-
-// Mock the react-router hooks
-vi.mock("react-router", () => ({
-  useNavigate: () => vi.fn(),
-  useSearchParams: () => [
-    {
-      get: (param: string) => {
-        if (param === "redirect_url") {
-          return "/dashboard";
-        }
-        return null;
-      },
-    },
-  ],
-}));
+import { Forge } from "#/api/forge-axios";
 
 // Mock the axios instance
-vi.mock("#/api/open-hands-axios", () => ({
-  openHands: {
+vi.mock("#/api/forge-axios", () => ({
+  Forge: {
     post: vi.fn(),
   },
 }));
@@ -33,7 +19,7 @@ vi.mock("#/utils/custom-toast-handlers", () => ({
   displayErrorToast: vi.fn(),
 }));
 
-// Create a wrapper with QueryClientProvider
+// Create a wrapper with QueryClientProvider and BrowserRouter
 const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -45,7 +31,11 @@ const createWrapper = () => {
 
   return function ({ children }: { children: React.ReactNode }) {
     return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          {children}
+        </BrowserRouter>
+      </QueryClientProvider>
     );
   };
 };
@@ -91,8 +81,8 @@ describe("AcceptTOS", () => {
     );
 
     // Mock the API response
-    vi.mocked(openHands.post).mockResolvedValue({
-      data: { redirect_url: "/dashboard" },
+    vi.mocked(Forge.post).mockResolvedValue({
+      data: { redirect_url: "/" },
     });
 
     const user = userEvent.setup();
@@ -108,15 +98,15 @@ describe("AcceptTOS", () => {
     await new Promise(process.nextTick);
 
     expect(handleCaptureConsentSpy).toHaveBeenCalledWith(true);
-    expect(openHands.post).toHaveBeenCalledWith("/api/accept_tos", {
-      redirect_url: "/dashboard",
+    expect(Forge.post).toHaveBeenCalledWith("/api/accept_tos", {
+      redirect_url: "/",
     });
   });
 
   it("should handle external redirect URLs", async () => {
     // Mock the API response with an external URL
     const externalUrl = "https://example.com/callback";
-    vi.mocked(openHands.post).mockResolvedValue({
+    vi.mocked(Forge.post).mockResolvedValue({
       data: { redirect_url: externalUrl },
     });
 

@@ -1,9 +1,9 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderWithProviders } from "test-utils";
+import { renderWithProviders } from "../../../../test-utils";
 import { MicroagentsModal } from "#/components/features/conversation-panel/microagents-modal";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { AgentState } from "#/types/agent-state";
 
 vi.mock("react-redux", async () => {
@@ -48,7 +48,7 @@ describe("MicroagentsModal - Refresh Button", () => {
     vi.clearAllMocks();
 
     // Setup default mock for getUserConversations
-    vi.spyOn(OpenHands, "getMicroagents").mockResolvedValue({
+    vi.spyOn(Forge, "getMicroagents").mockResolvedValue({
       microagents: mockMicroagents,
     });
   });
@@ -73,7 +73,7 @@ describe("MicroagentsModal - Refresh Button", () => {
 
       renderWithProviders(<MicroagentsModal {...defaultProps} />);
 
-      const refreshSpy = vi.spyOn(OpenHands, "getMicroagents");
+      const refreshSpy = vi.spyOn(Forge, "getMicroagents");
 
       const refreshButton = screen.getByTestId("refresh-microagents");
       await user.click(refreshButton);

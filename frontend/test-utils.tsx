@@ -10,6 +10,8 @@ import i18n from "i18next";
 import { MemoryRouter } from "react-router-dom";
 import { AxiosError } from "axios";
 import { AppStore, RootState, rootReducer } from "./src/store";
+import { ToastProvider } from "#/components/shared/notifications/toast";
+import { TaskProvider } from "#/context/task-context";
 // `vi` is a Vitest global used by unit tests. We use the ambient `vi`
 // declaration and guard it at runtime with `typeof vi !== 'undefined'` so
 // Playwright/dev servers don't attempt to use Vitest internals.
@@ -21,11 +23,11 @@ export const setPlaywrightFlag = (value: boolean): void => {
   try {
     // Use the typed global/window flag when available
     try {
-      globalThis.__OPENHANDS_PLAYWRIGHT = value;
+      globalThis.__Forge_PLAYWRIGHT = value;
     } catch (e) {
       // fallback to window if globalThis assignment fails
       if (typeof window !== "undefined") {
-        window.__OPENHANDS_PLAYWRIGHT = value;
+        window.__Forge_PLAYWRIGHT = value;
       }
     }
   } catch (e) {
@@ -146,9 +148,19 @@ export const setupStore = (preloadedState?: Partial<RootState>): AppStore =>
 
 // This type interface extends the default options for render from RTL, as well
 // as allows the user to specify other things such as initialState, store.
+type MemoryRouterProps = React.ComponentProps<typeof MemoryRouter>;
+
+interface RenderRouterOptions {
+  initialEntries?: MemoryRouterProps["initialEntries"];
+  initialIndex?: MemoryRouterProps["initialIndex"];
+}
+
 interface ExtendedRenderOptions extends Omit<RenderOptions, "queries"> {
   preloadedState?: Partial<RootState>;
   store?: AppStore;
+  queryClient?: QueryClient;
+  route?: string;
+  router?: RenderRouterOptions;
 }
 
 // Export our own customized renderWithProviders function that creates a new Redux store and renders a <Provider>
@@ -159,20 +171,50 @@ export function renderWithProviders(
     preloadedState = {},
     // Automatically create a store instance if no store was passed in
     store = setupStore(preloadedState),
+    queryClient: providedQueryClient,
+    route,
+    router,
     ...renderOptions
   }: ExtendedRenderOptions = {},
 ) {
+  const queryClient =
+    providedQueryClient ??
+    new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+  const routerConfig: RenderRouterOptions | undefined = (() => {
+    if (router) {
+      return router;
+    }
+    if (route) {
+      return { initialEntries: [route] };
+    }
+    return undefined;
+  })();
+
   function Wrapper({ children }: PropsWithChildren) {
+    const content = routerConfig ? (
+      <MemoryRouter
+        initialEntries={routerConfig.initialEntries ?? ["/"]}
+        initialIndex={routerConfig.initialIndex}
+      >
+        {children}
+      </MemoryRouter>
+    ) : (
+      children
+    );
+
     return (
       <Provider store={store}>
-        <QueryClientProvider
-          client={
-            new QueryClient({
-              defaultOptions: { queries: { retry: false } },
-            })
-          }
-        >
-          <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+        <QueryClientProvider client={queryClient}>
+          <I18nextProvider i18n={i18n}>
+            <ToastProvider>
+              <TaskProvider>
+                {content}
+              </TaskProvider>
+            </ToastProvider>
+          </I18nextProvider>
         </QueryClientProvider>
       </Provider>
     );
@@ -200,14 +242,55 @@ export const createAxiosNotFoundErrorObject = () =>
 // (and components like Sidebar) check via `error?.status === 404`.
 export const create404Error = () => ({ status: 404 });
 
+
+
 // Render helper that wraps a UI with the standard providers plus a
 // MemoryRouter, useful for components that depend on react-router.
 export function renderWithRouter(
   ui: React.ReactElement,
-  { initialEntries = ["/"], ...renderOptions }: any = {},
+  {
+    initialEntries,
+    initialIndex,
+    route,
+    router,
+    ...renderOptions
+  }: ExtendedRenderOptions & {
+    initialEntries?: MemoryRouterProps["initialEntries"];
+    initialIndex?: MemoryRouterProps["initialIndex"];
+  } = {},
 ) {
   return renderWithProviders(
-    <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>,
-    renderOptions,
+    ui,
+    {
+      route,
+      router: {
+        initialEntries:
+          initialEntries ?? router?.initialEntries ?? [route ?? "/"],
+        initialIndex: initialIndex ?? router?.initialIndex,
+      },
+      ...renderOptions,
+    },
   );
 }
+
+export function renderWithAllProviders(
+  ui: React.ReactElement,
+  options: ExtendedRenderOptions = {},
+) {
+  const { route = "/", router, ...rest } = options;
+  return renderWithProviders(ui, {
+    route,
+    router: router ?? { initialEntries: [route] },
+    ...rest,
+  });
+}
+
+// Helper for flexible text matching when emoji or text might be split across elements
+export const createTextMatcher = (partial: string) => (content: string) =>
+  content.toLowerCase().includes(partial.toLowerCase());
+
+// Helper for finding elements by flexible text that might be split
+export const getByFlexibleText = (screen: any, text: string) => {
+  return screen.getByText(createTextMatcher(text));
+};
+
