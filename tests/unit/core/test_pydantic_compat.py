@@ -1,11 +1,11 @@
-"""Unit tests for openhands.core.pydantic_compat.
+"""Unit tests for forge.core.pydantic_compat.
 
 These tests avoid importing Pydantic itself and instead emulate the
 relevant attributes/methods so they run the same under pydantic v1, v2,
 or neither installed.
 """
 
-from openhands.core.pydantic_compat import get_model_field_names, model_to_dict
+from forge.core.pydantic_compat import get_model_field_names, model_to_dict
 
 
 def test_model_to_dict_prefers_model_dump():

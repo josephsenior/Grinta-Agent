@@ -90,7 +90,7 @@ const [showOrchestrationPanel, setShowOrchestrationPanel] = React.useState(false
 
 const [showTechnicalDetails, setShowTechnicalDetails] = React.useState<boolean>(() => {
   try {
-    return localStorage.getItem("openhands.showTechnicalDetails") === "true";
+    return localStorage.getItem("Forge.showTechnicalDetails") === "true";
   } catch {
     return false;
   }
@@ -98,7 +98,7 @@ const [showTechnicalDetails, setShowTechnicalDetails] = React.useState<boolean>(
 
 React.useEffect(() => {
   try {
-    localStorage.setItem("openhands.showTechnicalDetails", showTechnicalDetails ? "true" : "false");
+    localStorage.setItem("Forge.showTechnicalDetails", showTechnicalDetails ? "true" : "false");
   } catch {
     /* ignore */
   }
@@ -330,7 +330,7 @@ After re-enabling, test:
 
 ## Error Handling and Recovery
 
-OpenHands implements sophisticated error handling mechanisms to ensure reliable operation across complex multi-agent scenarios.
+Forge implements sophisticated error handling mechanisms to ensure reliable operation across complex multi-agent scenarios.
 
 ### Retry Policies
 
@@ -500,7 +500,7 @@ ACE enhances multiple components:
 ```toml
 [metasop.ace]
 enabled = true
-playbook_persistence_path = "~/.openhands/ace_playbooks"
+playbook_persistence_path = "~/.Forge/ace_playbooks"
 learning_rate = 0.1
 max_playbook_size = 1000
 context_window = 50

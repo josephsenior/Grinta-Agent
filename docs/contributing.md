@@ -8,13 +8,13 @@ To understand the codebase, please refer to the README in each module:
 
 - [frontend](./frontend/README.md)
 - [evaluation](./evaluation/README.md)
-- [openhands](./openhands/README.md)
-  - [agenthub](./openhands/agenthub/README.md)
-  - [server](./openhands/server/README.md)
+- [Forge](./Forge/README.md)
+  - [agenthub](./Forge/agenthub/README.md)
+  - [server](./Forge/server/README.md)
 
 ## Setting up Your Development Environment
 
-We have a separate doc [Development.md](https://github.com/All-Hands-AI/OpenHands/blob/main/Development.md) that tells you how to set up a development workflow.
+We have a separate doc [Development.md](https://github.com/All-Hands-AI/Forge/blob/main/Development.md) that tells you how to set up a development workflow.
 
 ### Frontend recommended dev flow
 
@@ -48,7 +48,7 @@ to gather consensus from our design team first.
 
 #### Improving the agent
 
-Our main agent is the CodeAct agent. You can [see its prompts here](https://github.com/All-Hands-AI/Forge/tree/main/openhands/agenthub/codeact_agent).
+Our main agent is the CodeAct agent. You can [see its prompts here](https://github.com/All-Hands-AI/Forge/tree/main/Forge/agenthub/codeact_agent).
 
 Changes to these prompts, and to the underlying behavior in Python, can have a huge impact on user experience.
 You can try modifying the prompts to see how they change the behavior of the agent as you use the app
@@ -60,16 +60,16 @@ channel in Slack to learn more.
 
 #### Adding a new agent
 
-You may want to experiment with building new types of agents. You can add an agent to [`openhands/agenthub`](./openhands/agenthub)
-to help expand the capabilities of OpenHands.
+You may want to experiment with building new types of agents. You can add an agent to [`Forge/agenthub`](./Forge/agenthub)
+to help expand the capabilities of Forge.
 
 #### Adding a new runtime
 
-The agent needs a place to run code and commands. When you run OpenHands on your laptop, it uses a Docker container
+The agent needs a place to run code and commands. When you run Forge on your laptop, it uses a Docker container
 to do this by default. But there are other ways of creating a sandbox for the agent.
 
 If you work for a company that provides a cloud-based runtime, you could help us add support for that runtime
-by implementing the [interface specified here](https://github.com/All-Hands-AI/Forge/blob/main/openhands/runtime/base.py).
+by implementing the [interface specified here](https://github.com/All-Hands-AI/Forge/blob/main/Forge/runtime/base.py).
 
 #### Testing
 

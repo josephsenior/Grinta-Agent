@@ -14,7 +14,7 @@
 ANTHROPIC_API_KEY=sk-ant-your-key-here
 
 # Restart backend
-poetry run python -m openhands.server.listen
+poetry run python -m Forge.server.listen
 ```
 
 **Verify:**
@@ -159,13 +159,13 @@ docker-compose up -d
 **Solution:**
 ```bash
 # Check DATABASE_URL in .env
-DATABASE_URL=postgresql://user:pass@localhost:5432/openhands
+DATABASE_URL=postgresql://user:pass@localhost:5432/Forge
 
 # Test connection
 psql $DATABASE_URL
 
 # Or use SQLite for development
-DATABASE_URL=sqlite:///./openhands.db
+DATABASE_URL=sqlite:///./Forge.db
 ```
 
 #### "Migration pending"
@@ -231,7 +231,7 @@ Click [Stop] button in UI
 POST /api/conversations/{id}/stop
 
 # Check stuck detection logs
-tail -f logs/openhands.log | grep "stuck"
+tail -f logs/Forge.log | grep "stuck"
 ```
 
 **Prevention:**
@@ -331,7 +331,7 @@ VITE_WS_URL=ws://localhost:3000
 # http://localhost:3001/grafana
 
 # Check if rate limited
-tail -f logs/openhands.log | grep "rate"
+tail -f logs/Forge.log | grep "rate"
 ```
 
 **Solutions:**
@@ -403,7 +403,7 @@ LOG_LEVEL=DEBUG
 LOG_JSON=true
 
 # View logs
-tail -f logs/openhands.log
+tail -f logs/Forge.log
 ```
 
 ### Check Agent State
@@ -413,7 +413,7 @@ tail -f logs/openhands.log
 curl http://localhost:3000/api/conversations/{id}/state
 
 # In logs
-grep "agent_state" logs/openhands.log
+grep "agent_state" logs/Forge.log
 ```
 
 ### Check Metrics
@@ -430,7 +430,7 @@ open http://localhost:3001/grafana
 
 ```bash
 # All logs include request_id for tracing
-tail -f logs/openhands.log | grep "request_id=abc123"
+tail -f logs/Forge.log | grep "request_id=abc123"
 
 # Follow full request lifecycle:
 # 1. Request received (request_id logged)
@@ -444,7 +444,7 @@ tail -f logs/openhands.log | grep "request_id=abc123"
 
 ### Before Asking for Help
 
-1. **Check logs:** `logs/openhands.log`
+1. **Check logs:** `logs/Forge.log`
 2. **Check Grafana:** `http://localhost:3001/grafana`
 3. **Search existing issues:** GitHub Issues
 4. **Check this guide:** You're here! ✅
@@ -494,13 +494,13 @@ error: SyntaxError: invalid syntax
 
 ```bash
 # Check agent controller state
-grep "AgentController" logs/openhands.log
+grep "AgentController" logs/Forge.log
 
 # Check for deadlock
-grep "waiting" logs/openhands.log
+grep "waiting" logs/Forge.log
 
 # Check circuit breaker
-grep "circuit_breaker" logs/openhands.log
+grep "circuit_breaker" logs/Forge.log
 ```
 
 ### Memory Leaks

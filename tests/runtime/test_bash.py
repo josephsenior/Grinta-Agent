@@ -6,12 +6,12 @@ import time
 from pathlib import Path
 import pytest
 from conftest import _close_test_runtime, _load_runtime
-from openhands.core.logger import openhands_logger as logger
-from openhands.events.action import CmdRunAction
-from openhands.events.observation import CmdOutputObservation, ErrorObservation
-from openhands.runtime.impl.cli.cli_runtime import CLIRuntime
-from openhands.runtime.impl.local.local_runtime import LocalRuntime
-from openhands.runtime.utils.bash_constants import TIMEOUT_MESSAGE_TEMPLATE
+from forge.core.logger import forge_logger as logger
+from forge.events.action import CmdRunAction
+from forge.events.observation import CmdOutputObservation, ErrorObservation
+from forge.runtime.impl.cli.cli_runtime import CLIRuntime
+from forge.runtime.impl.local.local_runtime import LocalRuntime
+from forge.runtime.utils.bash_constants import TIMEOUT_MESSAGE_TEMPLATE
 
 
 def get_timeout_suffix(timeout_seconds):
@@ -91,8 +91,8 @@ def _test_post_interrupt_verification(runtime, runtime_cls, config):
     return obs
 
 
-def test_bash_server(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_bash_server(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         # Test HTTP server startup
         _test_http_server_startup(runtime, runtime_cls)
@@ -109,8 +109,8 @@ def test_bash_server(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_bash_background_server(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_bash_background_server(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     server_port = 8081
     try:
         action = CmdRunAction(f"python3 -m http.server {server_port} &")
@@ -177,9 +177,9 @@ def test_multiline_commands(temp_dir, runtime_cls):
 
 
 @pytest.mark.skipif(is_windows(), reason="Test relies on Linux bash-specific complex commands")
-def test_complex_commands(temp_dir, runtime_cls, run_as_openhands):
+def test_complex_commands(temp_dir, runtime_cls, run_as_Forge):
     cmd = 'count=0; tries=0; while [ $count -lt 3 ]; do result=$(echo "Heads"); tries=$((tries+1)); echo "Flip $tries: $result"; if [ "$result" = "Heads" ]; then count=$((count+1)); else count=0; fi; done; echo "Got 3 heads in a row after $tries flips!";'
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         obs = _run_cmd_action(runtime, cmd)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
@@ -189,9 +189,9 @@ def test_complex_commands(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_no_ps2_in_output(temp_dir, runtime_cls, run_as_openhands):
+def test_no_ps2_in_output(temp_dir, runtime_cls, run_as_Forge):
     """Test that the PS2 sign is not added to the output of a multiline command."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         if is_windows():
             obs = _run_cmd_action(runtime, 'Write-Output "hello`nworld"')
@@ -224,7 +224,7 @@ def test_multiline_command_loop(temp_dir, runtime_cls):
     os.getenv("TEST_RUNTIME") == "cli",
     reason="CLIRuntime uses bash -c which handles newline-separated commands. This test expects rejection. See test_cliruntime_multiple_newline_commands.",
 )
-def test_multiple_multiline_commands(temp_dir, runtime_cls, run_as_openhands):
+def test_multiple_multiline_commands(temp_dir, runtime_cls, run_as_Forge):
     if is_windows():
         cmds = [
             "Get-ChildItem",
@@ -246,7 +246,7 @@ def test_multiple_multiline_commands(temp_dir, runtime_cls, run_as_openhands):
             "echo -e 'hello\nworld \"'",
         ]
     joined_cmds = "\n".join(cmds)
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         obs = _run_cmd_action(runtime, joined_cmds)
         assert isinstance(obs, ErrorObservation)
@@ -269,7 +269,7 @@ def test_multiple_multiline_commands(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_cliruntime_multiple_newline_commands(temp_dir, run_as_openhands):
+def test_cliruntime_multiple_newline_commands(temp_dir, run_as_Forge):
     runtime_cls = CLIRuntime
     if is_windows():
         pytest.skip("CLIRuntime newline command test primarily for non-Windows bash behavior")
@@ -277,7 +277,7 @@ def test_cliruntime_multiple_newline_commands(temp_dir, run_as_openhands):
         cmds = ['echo "hello"', 'echo -e "hello\nworld"', 'echo -e "hello it\'s me"']
         expected_outputs = ["hello", "hello\nworld", "hello it's me"]
     joined_cmds = "\n".join(cmds)
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         obs = _run_cmd_action(runtime, joined_cmds)
         assert isinstance(obs, CmdOutputObservation)
@@ -313,7 +313,7 @@ def _test_windows_commands(runtime, config):
     _run_cmd_action(runtime, "Remove-Item -Recurse -Force test")
 
 
-def _test_unix_commands(runtime, config, runtime_cls, run_as_openhands):
+def _test_unix_commands(runtime, config, runtime_cls, run_as_Forge):
     """Test Unix/Linux commands."""
     obs = _run_cmd_action(runtime, f"ls -l {config.workspace_mount_path_in_sandbox}")
     assert obs.exit_code == 0
@@ -329,8 +329,8 @@ def _test_unix_commands(runtime, config, runtime_cls, run_as_openhands):
     assert obs.exit_code == 0
 
     # Check user context based on runtime type
-    if run_as_openhands and runtime_cls != CLIRuntime and (runtime_cls != LocalRuntime):
-        assert "openhands" in obs.content
+    if run_as_Forge and runtime_cls != CLIRuntime and (runtime_cls != LocalRuntime):
+        assert "forge" in obs.content
     elif runtime_cls not in [LocalRuntime, CLIRuntime]:
         assert "root" in obs.content
 
@@ -346,14 +346,14 @@ def _test_unix_commands(runtime, config, runtime_cls, run_as_openhands):
     _run_cmd_action(runtime, "rm -rf test")
 
 
-def test_cmd_run(temp_dir, runtime_cls, run_as_openhands):
+def test_cmd_run(temp_dir, runtime_cls, run_as_Forge):
     """Test command execution in the runtime environment."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         if is_windows():
             _test_windows_commands(runtime, config)
         else:
-            _test_unix_commands(runtime, config, runtime_cls, run_as_openhands)
+            _test_unix_commands(runtime, config, runtime_cls, run_as_Forge)
 
         # Final assertion
         obs = _run_cmd_action(runtime, "ls -l" if not is_windows() else "Get-ChildItem")
@@ -366,8 +366,8 @@ def test_cmd_run(temp_dir, runtime_cls, run_as_openhands):
     sys.platform != "win32" and os.getenv("TEST_RUNTIME") == "cli",
     reason="CLIRuntime runs as the host user, so ~ is the host home. This test assumes a sandboxed user.",
 )
-def test_run_as_user_correct_home_dir(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_run_as_user_correct_home_dir(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         if is_windows():
             obs = _run_cmd_action(runtime, "cd $HOME && Get-Location")
@@ -379,8 +379,8 @@ def test_run_as_user_correct_home_dir(temp_dir, runtime_cls, run_as_openhands):
             assert obs.exit_code == 0
             if runtime_cls == LocalRuntime:
                 assert os.getenv("HOME") in obs.content
-            elif run_as_openhands:
-                assert "/home/openhands" in obs.content
+            elif run_as_Forge:
+                assert "/home/Forge" in obs.content
             else:
                 assert "/root" in obs.content
     finally:
@@ -688,7 +688,7 @@ def test_copy_from_directory(temp_dir, runtime_cls):
 def _setup_git_permissions(runtime, runtime_cls):
     """Setup proper permissions for git operations."""
     if runtime_cls not in [LocalRuntime, CLIRuntime]:
-        obs = _run_cmd_action(runtime, "sudo chown -R openhands:root .")
+        obs = _run_cmd_action(runtime, "sudo chown -R Forge:root .")
         assert obs.exit_code == 0
     return obs
 
@@ -702,9 +702,9 @@ def _verify_directory_permissions(runtime, runtime_cls):
             continue
         if " .." in line:
             assert "root" in line
-            assert "openhands" not in line
+            assert "forge" not in line
         elif " ." in line:
-            assert "openhands" in line
+            assert "forge" in line
             assert "root" in line
     return obs
 
@@ -723,7 +723,7 @@ def _configure_git_user(runtime, runtime_cls):
     if runtime_cls in [LocalRuntime, CLIRuntime]:
         logger.info("Setting git config author")
         obs = _run_cmd_action(
-            runtime, 'git config user.name "openhands" && git config user.email "openhands@all-hands.dev"'
+            runtime, 'git config user.name "forge" && git config user.email "Forge@all-hands.dev"'
         )
         assert obs.exit_code == 0
         obs = _run_cmd_action(runtime, "git config --list")
@@ -747,7 +747,7 @@ def _perform_git_operations(runtime):
 
 def test_git_operation(temp_dir, runtime_cls):
     runtime, config = _load_runtime(
-        temp_dir=temp_dir, use_workspace=False, runtime_cls=runtime_cls, run_as_openhands=True
+        temp_dir=temp_dir, use_workspace=False, runtime_cls=runtime_cls, run_as_Forge=True
     )
     try:
         # Setup permissions
@@ -768,8 +768,8 @@ def test_git_operation(temp_dir, runtime_cls):
         _close_test_runtime(runtime)
 
 
-def test_python_version(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_python_version(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         obs = runtime.run_action(CmdRunAction(command="python --version"))
         assert isinstance(obs, CmdOutputObservation), "The observation should be a CmdOutputObservation."
@@ -779,8 +779,8 @@ def test_python_version(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_pwd_property(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_pwd_property(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         obs = _run_cmd_action(runtime, "mkdir -p random_dir")
         assert obs.exit_code == 0
@@ -791,8 +791,8 @@ def test_pwd_property(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_basic_command(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_basic_command(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         if is_windows():
             obs = _run_cmd_action(runtime, "Write-Output 'hello world'")
@@ -828,9 +828,9 @@ def test_basic_command(temp_dir, runtime_cls, run_as_openhands):
 @pytest.mark.skipif(
     os.getenv("TEST_RUNTIME") == "cli", reason="CLIRuntime does not support interactive commands from the agent."
 )
-def test_interactive_command(temp_dir, runtime_cls, run_as_openhands):
+def test_interactive_command(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(
-        temp_dir, runtime_cls, run_as_openhands, runtime_startup_env_vars={"NO_CHANGE_TIMEOUT_SECONDS": "1"}
+        temp_dir, runtime_cls, run_as_Forge, runtime_startup_env_vars={"NO_CHANGE_TIMEOUT_SECONDS": "1"}
     )
     try:
         action = CmdRunAction('read -p "Enter name: " name && echo "Hello $name"')
@@ -854,8 +854,8 @@ def test_interactive_command(temp_dir, runtime_cls, run_as_openhands):
 
 
 @pytest.mark.skipif(is_windows(), reason="Test relies on Linux-specific commands like seq and bash for loops")
-def test_long_output(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_long_output(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         action = CmdRunAction('for i in $(seq 1 5000); do echo "Line $i"; done')
         action.set_hard_timeout(10)
@@ -869,8 +869,8 @@ def test_long_output(temp_dir, runtime_cls, run_as_openhands):
 
 @pytest.mark.skipif(is_windows(), reason="Test relies on Linux-specific commands like seq and bash for loops")
 @pytest.mark.skipif(os.getenv("TEST_RUNTIME") == "cli", reason="CLIRuntime does not truncate command output.")
-def test_long_output_exceed_history_limit(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_long_output_exceed_history_limit(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         action = CmdRunAction('for i in $(seq 1 50000); do echo "Line $i"; done')
         action.set_hard_timeout(30)
@@ -885,8 +885,8 @@ def test_long_output_exceed_history_limit(temp_dir, runtime_cls, run_as_openhand
 
 
 @pytest.mark.skipif(is_windows(), reason="Test uses Linux-specific temp directory and bash for loops")
-def test_long_output_from_nested_directories(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_long_output_from_nested_directories(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         setup_cmd = 'mkdir -p /tmp/test_dir && cd /tmp/test_dir && for i in $(seq 1 100); do mkdir -p "folder_$i"; for j in $(seq 1 100); do touch "folder_$i/file_$j.txt"; done; done'
         setup_action = CmdRunAction(setup_cmd.strip())
@@ -906,8 +906,8 @@ def test_long_output_from_nested_directories(temp_dir, runtime_cls, run_as_openh
 
 
 @pytest.mark.skipif(is_windows(), reason="Test uses Linux-specific commands like find and grep with complex syntax")
-def test_command_backslash(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_command_backslash(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         action = CmdRunAction('mkdir -p /tmp/test_dir && echo "implemented_function" > /tmp/test_dir/file_1.txt')
         obs = runtime.run_action(action)
@@ -926,11 +926,11 @@ def test_command_backslash(temp_dir, runtime_cls, run_as_openhands):
 @pytest.mark.skipif(
     os.getenv("TEST_RUNTIME") == "cli", reason="CLIRuntime does not support interactive commands from the agent."
 )
-def test_stress_long_output_with_soft_and_hard_timeout(temp_dir, runtime_cls, run_as_openhands):
+def test_stress_long_output_with_soft_and_hard_timeout(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(
         temp_dir,
         runtime_cls,
-        run_as_openhands,
+        run_as_Forge,
         runtime_startup_env_vars={"NO_CHANGE_TIMEOUT_SECONDS": "1"},
         docker_runtime_kwargs={"cpu_period": 100000, "cpu_quota": 100000, "mem_limit": "4G"},
     )
@@ -944,7 +944,7 @@ def test_stress_long_output_with_soft_and_hard_timeout(temp_dir, runtime_cls, ru
             assert mem_obs.exit_code == 0
             logger.info("Tmux memory usage (iteration %s): %s KB", i, mem_obs.content.strip())
             mem_action = CmdRunAction(
-                'ps aux | awk \'{printf "%8.1f KB  %s\\n", $6, $0}\' | sort -nr | grep "action_execution_server" | grep "/openhands/poetry" | grep -v grep | awk \'{print $1}\''
+                'ps aux | awk \'{printf "%8.1f KB  %s\\n", $6, $0}\' | sort -nr | grep "action_execution_server" | grep "/Forge/poetry" | grep -v grep | awk \'{print $1}\''
             )
             mem_obs = runtime.run_action(mem_action)
             assert mem_obs.exit_code == 0
@@ -985,8 +985,8 @@ def test_stress_long_output_with_soft_and_hard_timeout(temp_dir, runtime_cls, ru
     os.getenv("TEST_RUNTIME") == "cli",
     reason="FIXME: CLIRuntime does not watch previously timed-out commands except for getting full output a short time after timeout.",
 )
-def test_command_output_continuation(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_command_output_continuation(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         if is_windows():
             action = CmdRunAction("1..5 | ForEach-Object { Write-Output $_; Start-Sleep 3 }")
@@ -1020,8 +1020,8 @@ def test_command_output_continuation(temp_dir, runtime_cls, run_as_openhands):
 @pytest.mark.skipif(
     os.getenv("TEST_RUNTIME") == "cli", reason="FIXME: CLIRuntime does not implement empty command behavior."
 )
-def test_long_running_command_follow_by_execute(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_long_running_command_follow_by_execute(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         if is_windows():
             action = CmdRunAction("1..3 | ForEach-Object { Write-Output $_; sleep 3 }")
@@ -1060,8 +1060,8 @@ def test_long_running_command_follow_by_execute(temp_dir, runtime_cls, run_as_op
 @pytest.mark.skipif(
     os.getenv("TEST_RUNTIME") == "cli", reason="FIXME: CLIRuntime does not implement empty command behavior."
 )
-def test_empty_command_errors(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_empty_command_errors(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         obs = runtime.run_action(CmdRunAction(""))
         assert isinstance(obs, CmdOutputObservation)
@@ -1074,8 +1074,8 @@ def test_empty_command_errors(temp_dir, runtime_cls, run_as_openhands):
 @pytest.mark.skipif(
     os.getenv("TEST_RUNTIME") == "cli", reason="CLIRuntime does not support interactive commands from the agent."
 )
-def test_python_interactive_input(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_python_interactive_input(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         python_script = "name = input('Enter your name: '); age = input('Enter your age: '); print(f'Hello {name}, you are {age} years old')"
         obs = runtime.run_action(CmdRunAction(f'python -c "{python_script}"'))
@@ -1099,8 +1099,8 @@ def test_python_interactive_input(temp_dir, runtime_cls, run_as_openhands):
 @pytest.mark.skipif(
     os.getenv("TEST_RUNTIME") == "cli", reason="CLIRuntime does not support interactive commands from the agent."
 )
-def test_python_interactive_input_without_set_input(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_python_interactive_input_without_set_input(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         python_script = "name = input('Enter your name: '); age = input('Enter your age: '); print(f'Hello {name}, you are {age} years old')"
         obs = runtime.run_action(CmdRunAction(f'python -c "{python_script}"'))
@@ -1125,15 +1125,15 @@ def test_python_interactive_input_without_set_input(temp_dir, runtime_cls, run_a
         _close_test_runtime(runtime)
 
 
-def test_bash_remove_prefix(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_bash_remove_prefix(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
-        action = CmdRunAction("git init && git remote add origin https://github.com/All-Hands-AI/OpenHands")
+        action = CmdRunAction("git init && git remote add origin https://github.com/All-Hands-AI/Forge")
         obs = runtime.run_action(action)
         assert obs.metadata.exit_code == 0
         obs = runtime.run_action(CmdRunAction("git remote -v"))
         assert obs.metadata.exit_code == 0
-        assert "https://github.com/All-Hands-AI/OpenHands" in obs.content
+        assert "https://github.com/All-Hands-AI/Forge" in obs.content
         assert "git remote -v" not in obs.content
     finally:
         _close_test_runtime(runtime)

@@ -1,17 +1,17 @@
-from openhands.core.schema.observation import ObservationType
-from openhands.events.action.files import FileEditSource
-from openhands.events.event import RecallType
-from openhands.events.observation import (
+from forge.core.schema.observation import ObservationType
+from forge.events.action.files import FileEditSource
+from forge.events.event import RecallType
+from forge.events.observation import (
     CmdOutputMetadata,
     CmdOutputObservation,
     FileEditObservation,
     Observation,
     RecallObservation,
 )
-from openhands.events.observation.agent import MicroagentKnowledge
-from openhands.events.observation.commands import MAX_CMD_OUTPUT_SIZE
-from openhands.events.serialization import event_from_dict, event_to_dict, event_to_trajectory
-from openhands.events.serialization.observation import observation_from_dict
+from forge.events.observation.agent import MicroagentKnowledge
+from forge.events.observation.commands import MAX_CMD_OUTPUT_SIZE
+from forge.events.serialization import event_from_dict, event_to_dict, event_to_trajectory
+from forge.events.serialization.observation import observation_from_dict
 
 
 def serialization_deserialization(original_observation_dict, cls, max_message_chars: int = 10000):
@@ -312,8 +312,8 @@ def test_microagent_observation_environment_serialization():
     original = RecallObservation(
         content="Environment information",
         recall_type=RecallType.WORKSPACE_CONTEXT,
-        repo_name="OpenHands",
-        repo_directory="/workspace/openhands",
+        repo_name="forge",
+        repo_directory="/workspace/Forge",
         repo_branch="main",
         repo_instructions="Follow the project's coding style guide.",
         runtime_hosts={"127.0.0.1": 8080, "localhost": 5000},
@@ -323,7 +323,7 @@ def test_microagent_observation_environment_serialization():
     assert serialized["observation"] == ObservationType.RECALL
     assert serialized["content"] == "Environment information"
     assert serialized["extras"]["recall_type"] == RecallType.WORKSPACE_CONTEXT.value
-    assert serialized["extras"]["repo_name"] == "OpenHands"
+    assert serialized["extras"]["repo_name"] == "forge"
     assert serialized["extras"]["runtime_hosts"] == {"127.0.0.1": 8080, "localhost": 5000}
     assert serialized["extras"]["additional_agent_instructions"] == "You know it all about this runtime"
     deserialized = observation_from_dict(serialized)
@@ -341,8 +341,8 @@ def test_microagent_observation_combined_serialization():
     original = RecallObservation(
         content="Combined information",
         recall_type=RecallType.WORKSPACE_CONTEXT,
-        repo_name="OpenHands",
-        repo_directory="/workspace/openhands",
+        repo_name="forge",
+        repo_directory="/workspace/Forge",
         repo_branch="main",
         repo_instructions="Follow the project's coding style guide.",
         runtime_hosts={"127.0.0.1": 8080},
@@ -357,7 +357,7 @@ def test_microagent_observation_combined_serialization():
     )
     serialized = event_to_dict(original)
     assert serialized["extras"]["recall_type"] == RecallType.WORKSPACE_CONTEXT.value
-    assert serialized["extras"]["repo_name"] == "OpenHands"
+    assert serialized["extras"]["repo_name"] == "forge"
     assert serialized["extras"]["microagent_knowledge"][0]["name"] == "python_best_practices"
     assert serialized["extras"]["additional_agent_instructions"] == "You know it all about this runtime"
     deserialized = observation_from_dict(serialized)

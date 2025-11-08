@@ -1,10 +1,10 @@
 from types import MappingProxyType
 import pytest
 from pydantic import SecretStr, ValidationError
-from openhands.events.action.commands import CmdRunAction
-from openhands.integrations.provider import ProviderHandler, ProviderToken, ProviderType
-from openhands.storage.data_models.settings import Settings
-from openhands.storage.data_models.user_secrets import UserSecrets
+from forge.events.action.commands import CmdRunAction
+from forge.integrations.provider import ProviderHandler, ProviderToken, ProviderType
+from forge.storage.data_models.settings import Settings
+from forge.storage.data_models.user_secrets import UserSecrets
 
 
 def test_provider_token_immutability():
@@ -181,7 +181,7 @@ def test_check_cmd_action_for_provider_token_ref():
     cmd = CmdRunAction(command='echo "Hello"')
     providers = ProviderHandler.check_cmd_action_for_provider_token_ref(cmd)
     assert len(providers) == 0
-    from openhands.events.action import MessageAction
+    from forge.events.action import MessageAction
 
     msg = MessageAction(content="test")
     providers = ProviderHandler.check_cmd_action_for_provider_token_ref(msg)

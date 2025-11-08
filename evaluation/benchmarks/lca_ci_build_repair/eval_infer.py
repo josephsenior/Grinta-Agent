@@ -14,29 +14,29 @@ import ruamel.yaml
 from evaluation.utils.shared import (
     EvalMetadata,
     get_default_sandbox_config_for_eval,
-    get_openhands_config_for_eval,
+    get_FORGE_config_for_eval,
     make_metadata,
 )
-from openhands.core.config import LLMConfig, OpenHandsConfig, get_evaluation_parser, load_openhands_config
-from openhands.core.logger import openhands_logger as logger
-from openhands.core.main import create_runtime
-from openhands.events.action import CmdRunAction
-from openhands.events.observation import CmdOutputObservation
-from openhands.runtime.base import Runtime
-from openhands.utils.async_utils import call_async_from_sync
+from forge.core.config import LLMConfig, ForgeConfig, get_evaluation_parser, load_FORGE_config
+from forge.core.logger import forge_logger as logger
+from forge.core.main import create_runtime
+from forge.events.action import CmdRunAction
+from forge.events.observation import CmdOutputObservation
+from forge.runtime.base import Runtime
+from forge.utils.async_utils import call_async_from_sync
 
 
-def get_config(metadata: EvalMetadata) -> OpenHandsConfig:
+def get_config(metadata: EvalMetadata) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = "python:3.12-bookworm"
-    config = get_openhands_config_for_eval(metadata=metadata, runtime="docker", sandbox_config=sandbox_config)
+    config = get_FORGE_config_for_eval(metadata=metadata, runtime="docker", sandbox_config=sandbox_config)
     config.set_llm_config(metadata.llm_config)
     agent_config = config.get_agent_config(metadata.agent_class)
     agent_config.enable_prompt_extensions = False
     return config
 
 
-config = load_openhands_config()
+config = load_FORGE_config()
 
 
 def load_bench_config():

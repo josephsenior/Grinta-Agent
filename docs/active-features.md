@@ -103,7 +103,7 @@ Current production configuration for Forge.
 
 ### System Prompt
 **Active:** `system_prompt_forge.j2` (166 lines, optimized)  
-**Location:** `openhands/agenthub/codeact_agent/prompts/`
+**Location:** `Forge/agenthub/codeact_agent/prompts/`
 
 ---
 
@@ -195,7 +195,7 @@ Current production configuration for Forge.
 **These exist in code but are not active in production:**
 
 ### Prompt Optimization System
-**Location:** `openhands/prompt_optimization/`  
+**Location:** `Forge/prompt_optimization/`  
 **Status:** Unclear if used  
 **Purpose:** Real-time prompt evolution and tool optimization  
 **Files:** 29 Python files with advanced optimization
@@ -206,7 +206,7 @@ Current production configuration for Forge.
 - Should it be documented or removed?
 
 ### Multiple Memory Implementations
-**Location:** `openhands/memory/`  
+**Location:** `Forge/memory/`  
 **Files:**
 - `memory.py` (base)
 - `conversation_memory.py` (active)
@@ -219,7 +219,7 @@ Current production configuration for Forge.
 - Are others experimental or alternatives?
 
 ### ACE Framework
-**Location:** `openhands/agenthub/codeact_agent/codeact_agent.py`  
+**Location:** `Forge/agenthub/codeact_agent/codeact_agent.py`  
 **Status:** Initialized if enabled  
 **Config:** Not in config.toml (unclear if active)  
 **Purpose:** Self-improving playbook system

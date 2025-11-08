@@ -12,12 +12,12 @@ class TestEnhancedMemoryCore:
 
     def test_vector_memory_store_imports(self):
         """Test that VectorMemoryStore can be imported."""
-        from openhands.metasop.vector_memory import VectorMemoryStore
+        from forge.metasop.vector_memory import VectorMemoryStore
         assert VectorMemoryStore is not None
 
     def test_vector_memory_store_initialization(self):
         """Test that VectorMemoryStore initializes correctly."""
-        from openhands.metasop.vector_memory import VectorMemoryStore
+        from forge.metasop.vector_memory import VectorMemoryStore
 
         store = VectorMemoryStore(dim=256, max_records=500)
         assert store is not None
@@ -29,7 +29,7 @@ class TestEnhancedMemoryCore:
 
     def test_enhanced_backend_detection(self):
         """Test that enhanced backend is detected properly."""
-        from openhands.metasop.vector_memory import VectorMemoryStore
+        from forge.metasop.vector_memory import VectorMemoryStore
 
         store = VectorMemoryStore()
         stats = store.stats()
@@ -53,7 +53,7 @@ class TestEnhancedMemoryCore:
 
     def test_add_and_search_basic(self):
         """Test basic add and search functionality."""
-        from openhands.metasop.vector_memory import VectorMemoryStore
+        from forge.metasop.vector_memory import VectorMemoryStore
 
         store = VectorMemoryStore()
 
@@ -79,7 +79,7 @@ class TestEnhancedMemoryCore:
 
     def test_multiple_memories_accuracy(self):
         """Test accuracy with multiple distinct memories."""
-        from openhands.metasop.vector_memory import VectorMemoryStore
+        from forge.metasop.vector_memory import VectorMemoryStore
 
         store = VectorMemoryStore()
 
@@ -128,7 +128,7 @@ class TestEnhancedMemoryCore:
 
     def test_stats_structure(self):
         """Test that stats return proper structure."""
-        from openhands.metasop.vector_memory import VectorMemoryStore
+        from forge.metasop.vector_memory import VectorMemoryStore
 
         store = VectorMemoryStore()
         stats = store.stats()
@@ -144,7 +144,7 @@ class TestEnhancedMemoryCore:
 
     def test_caching_if_available(self):
         """Test caching functionality if enhanced mode is available."""
-        from openhands.metasop.vector_memory import VectorMemoryStore
+        from forge.metasop.vector_memory import VectorMemoryStore
 
         store = VectorMemoryStore()
         stats = store.stats()
@@ -181,8 +181,8 @@ class TestVectorOrLexicalStoreWrapper:
     def test_wrapper_initialization(self):
         """Test VectorOrLexicalMemoryStore initialization."""
         # Import only what we need
-        from openhands.metasop.memory import MemoryIndex
-        from openhands.metasop.vector_memory import VectorMemoryStore
+        from forge.metasop.memory import MemoryIndex
+        from forge.metasop.vector_memory import VectorMemoryStore
 
         # Test creating vector store
         vector_store = VectorMemoryStore()
@@ -195,7 +195,7 @@ class TestVectorOrLexicalStoreWrapper:
     def test_wrapper_with_vector_enabled(self):
         """Test wrapper when vector mode is enabled."""
         try:
-            from openhands.metasop.strategies import VectorOrLexicalMemoryStore
+            from forge.metasop.strategies import VectorOrLexicalMemoryStore
 
             store = VectorOrLexicalMemoryStore(
                 vector_enabled=True,

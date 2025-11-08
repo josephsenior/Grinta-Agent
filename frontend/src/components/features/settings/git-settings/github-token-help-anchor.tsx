@@ -12,7 +12,7 @@ export function GitHubTokenHelpAnchor() {
           <a
             key="github-token-help-anchor-link"
             aria-label={t(I18nKey.GIT$GITHUB_TOKEN_HELP_LINK)}
-            href="https://github.com/settings/tokens/new?description=openhands-app&scopes=repo,user,workflow"
+            href="https://github.com/settings/tokens/new?description=Forge-app&scopes=repo,user,workflow"
             target="_blank"
             className="underline underline-offset-2"
             rel="noopener noreferrer"

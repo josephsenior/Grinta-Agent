@@ -4,10 +4,10 @@ import re
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Union
-from openhands.core.logger import openhands_logger as logger
-from openhands.events.action import BrowseInteractiveAction
-from openhands.events.observation import BrowserOutputObservation
-from openhands.runtime.base import Runtime
+from forge.core.logger import forge_logger as logger
+from forge.events.action import BrowseInteractiveAction
+from forge.events.observation import BrowserOutputObservation
+from forge.runtime.base import Runtime
 
 
 class ActionType(Enum):
@@ -142,7 +142,7 @@ def resolve_action(action: BrowserAction, content: str) -> BrowserAction:
 def pre_login(runtime: Runtime, services: list[str], save_screenshots=True, screenshots_dir="screenshots"):
     """Logs in to all the websites that are needed for the evaluation.
 
-    Once logged in, the sessions would be cached in the browser, so OpenHands
+    Once logged in, the sessions would be cached in the browser, so Forge
     agent doesn't need to log in to these websites again.
     """
     owncloud_login_actions = [

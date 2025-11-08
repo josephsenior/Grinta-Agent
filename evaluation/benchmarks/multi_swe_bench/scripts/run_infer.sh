@@ -86,10 +86,10 @@ echo "RUN_WITH_BROWSING: $RUN_WITH_BROWSING"
 export LANGUAGE=$LANGUAGE
 echo "LANGUAGE: $LANGUAGE"
 
-get_openhands_version
+get_FORGE_version
 
 echo "AGENT: $AGENT"
-echo "OPENHANDS_VERSION: $OPENHANDS_VERSION"
+echo "FORGE_VERSION: $FORGE_VERSION"
 echo "MODEL_CONFIG: $MODEL_CONFIG"
 echo "DATASET: $DATASET"
 echo "SPLIT: $SPLIT"
@@ -99,7 +99,7 @@ if [ -z "$USE_HINT_TEXT" ]; then
   export USE_HINT_TEXT=false
 fi
 echo "USE_HINT_TEXT: $USE_HINT_TEXT"
-EVAL_NOTE="$OPENHANDS_VERSION"
+EVAL_NOTE="$FORGE_VERSION"
 # if not using Hint, add -no-hint to the eval note
 if [ "$USE_HINT_TEXT" = false ]; then
   EVAL_NOTE="$EVAL_NOTE-no-hint"

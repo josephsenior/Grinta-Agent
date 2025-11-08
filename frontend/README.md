@@ -1,4 +1,4 @@
-# OpenHands Frontend
+# Forge Frontend
 
 ## Overview
 
@@ -429,10 +429,10 @@ npm run build
 
 ```bash
 # Staging
-VITE_API_URL=https://staging-api.openhands.dev npm run build
+VITE_API_URL=https://staging-api.Forge.dev npm run build
 
 # Production
-VITE_API_URL=https://api.openhands.dev npm run build
+VITE_API_URL=https://api.Forge.dev npm run build
 ```
 
 ## Contributing

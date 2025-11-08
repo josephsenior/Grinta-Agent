@@ -40,7 +40,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ~/.forge:/.forge
-      - ~/.openhands:/.openhands  # Legacy support for migration
+      - ~/.Forge:/.Forge  # Legacy support for migration
       - ${WORKSPACE_BASE:-$PWD/workspace}:/opt/workspace_base
       - ./config.toml:/app/config.toml:ro
     depends_on:

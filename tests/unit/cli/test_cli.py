@@ -2,11 +2,11 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import pytest_asyncio
-from openhands.cli import main as cli
-from openhands.controller.state.state import State
-from openhands.core.config.llm_config import LLMConfig
-from openhands.events import EventSource
-from openhands.events.action import MessageAction
+from forge.cli import main as cli
+from forge.controller.state.state import State
+from forge.core.config.llm_config import LLMConfig
+from forge.events import EventSource
+from forge.events.action import MessageAction
 
 
 @pytest_asyncio.fixture
@@ -80,7 +80,7 @@ async def test_cleanup_session_handles_exceptions(mock_agent, mock_runtime, mock
     """Test that cleanup_session handles exceptions during cleanup gracefully."""
     loop = asyncio.get_running_loop()
     mock_controller.close.side_effect = Exception("Test cleanup error")
-    with patch("openhands.cli.main.logger.error") as mock_log_error:
+    with patch("forge.cli.main.logger.error") as mock_log_error:
         await cli.cleanup_session(loop, mock_agent, mock_runtime, mock_controller)
         mock_agent.reset.assert_called_once()
         mock_runtime.close.assert_called_once()
@@ -110,16 +110,16 @@ def mock_settings_store():
 
 
 @pytest.mark.asyncio
-@patch("openhands.cli.main.display_runtime_initialization_message")
-@patch("openhands.cli.main.display_initialization_animation")
-@patch("openhands.cli.main.create_agent")
-@patch("openhands.cli.main.add_mcp_tools_to_agent")
-@patch("openhands.cli.main.create_runtime")
-@patch("openhands.cli.main.create_controller")
-@patch("openhands.cli.main.create_memory")
-@patch("openhands.cli.main.run_agent_until_done")
-@patch("openhands.cli.main.cleanup_session")
-@patch("openhands.cli.main.initialize_repository_for_runtime")
+@patch("forge.cli.main.display_runtime_initialization_message")
+@patch("forge.cli.main.display_initialization_animation")
+@patch("forge.cli.main.create_agent")
+@patch("forge.cli.main.add_mcp_tools_to_agent")
+@patch("forge.cli.main.create_runtime")
+@patch("forge.cli.main.create_controller")
+@patch("forge.cli.main.create_memory")
+@patch("forge.cli.main.run_agent_until_done")
+@patch("forge.cli.main.cleanup_session")
+@patch("forge.cli.main.initialize_repository_for_runtime")
 async def test_run_session_without_initial_action(
     mock_initialize_repo,
     mock_cleanup_session,
@@ -147,9 +147,9 @@ async def test_run_session_without_initial_action(
     mock_create_controller.return_value = (mock_controller, mock_controller_task)
     mock_memory = MagicMock()
     mock_create_memory.return_value = mock_memory
-    with patch("openhands.cli.main.read_prompt_input", new_callable=AsyncMock) as mock_read_prompt:
+    with patch("forge.cli.main.read_prompt_input", new_callable=AsyncMock) as mock_read_prompt:
         mock_read_prompt.return_value = "/exit"
-        with patch("openhands.cli.main.handle_commands", new_callable=AsyncMock) as mock_handle_commands:
+        with patch("forge.cli.main.handle_commands", new_callable=AsyncMock) as mock_handle_commands:
             mock_handle_commands.return_value = (True, False, False)
             result = await cli.run_session(loop, mock_config, mock_settings_store, "/test/dir")
     mock_display_runtime_init.assert_called_once_with("local")
@@ -166,16 +166,16 @@ async def test_run_session_without_initial_action(
 
 
 @pytest.mark.asyncio
-@patch("openhands.cli.main.display_runtime_initialization_message")
-@patch("openhands.cli.main.display_initialization_animation")
-@patch("openhands.cli.main.create_agent")
-@patch("openhands.cli.main.add_mcp_tools_to_agent")
-@patch("openhands.cli.main.create_runtime")
-@patch("openhands.cli.main.create_controller")
-@patch("openhands.cli.main.create_memory", new_callable=AsyncMock)
-@patch("openhands.cli.main.run_agent_until_done")
-@patch("openhands.cli.main.cleanup_session")
-@patch("openhands.cli.main.initialize_repository_for_runtime")
+@patch("forge.cli.main.display_runtime_initialization_message")
+@patch("forge.cli.main.display_initialization_animation")
+@patch("forge.cli.main.create_agent")
+@patch("forge.cli.main.add_mcp_tools_to_agent")
+@patch("forge.cli.main.create_runtime")
+@patch("forge.cli.main.create_controller")
+@patch("forge.cli.main.create_memory", new_callable=AsyncMock)
+@patch("forge.cli.main.run_agent_until_done")
+@patch("forge.cli.main.cleanup_session")
+@patch("forge.cli.main.initialize_repository_for_runtime")
 async def test_run_session_with_initial_action(
     mock_initialize_repo,
     mock_cleanup_session,
@@ -203,9 +203,9 @@ async def test_run_session_with_initial_action(
     mock_memory = AsyncMock()
     mock_create_memory.return_value = mock_memory
     initial_action_content = "Test initial message"
-    with patch("openhands.cli.main.read_prompt_input", new_callable=AsyncMock) as mock_read_prompt:
+    with patch("forge.cli.main.read_prompt_input", new_callable=AsyncMock) as mock_read_prompt:
         mock_read_prompt.return_value = "/exit"
-        with patch("openhands.cli.main.handle_commands", new_callable=AsyncMock) as mock_handle_commands:
+        with patch("forge.cli.main.handle_commands", new_callable=AsyncMock) as mock_handle_commands:
             mock_handle_commands.return_value = (True, False, False)
             result = await cli.run_session(loop, mock_config, mock_settings_store, "/test/dir", initial_action_content)
     mock_runtime.event_stream.add_event.assert_called_once()
@@ -219,15 +219,15 @@ async def test_run_session_with_initial_action(
 
 
 @pytest.mark.asyncio
-@patch("openhands.cli.main.setup_config_from_args")
-@patch("openhands.cli.main.FileSettingsStore.get_instance")
-@patch("openhands.cli.main.check_folder_security_agreement")
-@patch("openhands.cli.main.read_task")
-@patch("openhands.cli.main.run_session")
-@patch("openhands.cli.main.LLMSummarizingCondenserConfig")
-@patch("openhands.cli.main.NoOpCondenserConfig")
-@patch("openhands.cli.main.finalize_config")
-@patch("openhands.cli.main.aliases_exist_in_shell_config")
+@patch("forge.cli.main.setup_config_from_args")
+@patch("forge.cli.main.FileSettingsStore.get_instance")
+@patch("forge.cli.main.check_folder_security_agreement")
+@patch("forge.cli.main.read_task")
+@patch("forge.cli.main.run_session")
+@patch("forge.cli.main.LLMSummarizingCondenserConfig")
+@patch("forge.cli.main.NoOpCondenserConfig")
+@patch("forge.cli.main.finalize_config")
+@patch("forge.cli.main.aliases_exist_in_shell_config")
 async def test_main_without_task(
     mock_aliases_exist,
     mock_finalize_config,
@@ -289,15 +289,15 @@ async def test_main_without_task(
 
 
 @pytest.mark.asyncio
-@patch("openhands.cli.main.setup_config_from_args")
-@patch("openhands.cli.main.FileSettingsStore.get_instance")
-@patch("openhands.cli.main.check_folder_security_agreement")
-@patch("openhands.cli.main.read_task")
-@patch("openhands.cli.main.run_session")
-@patch("openhands.cli.main.LLMSummarizingCondenserConfig")
-@patch("openhands.cli.main.NoOpCondenserConfig")
-@patch("openhands.cli.main.finalize_config")
-@patch("openhands.cli.main.aliases_exist_in_shell_config")
+@patch("forge.cli.main.setup_config_from_args")
+@patch("forge.cli.main.FileSettingsStore.get_instance")
+@patch("forge.cli.main.check_folder_security_agreement")
+@patch("forge.cli.main.read_task")
+@patch("forge.cli.main.run_session")
+@patch("forge.cli.main.LLMSummarizingCondenserConfig")
+@patch("forge.cli.main.NoOpCondenserConfig")
+@patch("forge.cli.main.finalize_config")
+@patch("forge.cli.main.aliases_exist_in_shell_config")
 async def test_main_with_task(
     mock_aliases_exist,
     mock_finalize_config,
@@ -364,15 +364,15 @@ async def test_main_with_task(
 
 
 @pytest.mark.asyncio
-@patch("openhands.cli.main.setup_config_from_args")
-@patch("openhands.cli.main.FileSettingsStore.get_instance")
-@patch("openhands.cli.main.check_folder_security_agreement")
-@patch("openhands.cli.main.read_task")
-@patch("openhands.cli.main.run_session")
-@patch("openhands.cli.main.LLMSummarizingCondenserConfig")
-@patch("openhands.cli.main.NoOpCondenserConfig")
-@patch("openhands.cli.main.finalize_config")
-@patch("openhands.cli.main.aliases_exist_in_shell_config")
+@patch("forge.cli.main.setup_config_from_args")
+@patch("forge.cli.main.FileSettingsStore.get_instance")
+@patch("forge.cli.main.check_folder_security_agreement")
+@patch("forge.cli.main.read_task")
+@patch("forge.cli.main.run_session")
+@patch("forge.cli.main.LLMSummarizingCondenserConfig")
+@patch("forge.cli.main.NoOpCondenserConfig")
+@patch("forge.cli.main.finalize_config")
+@patch("forge.cli.main.aliases_exist_in_shell_config")
 async def test_main_with_session_name_passes_name_to_run_session(
     mock_aliases_exist,
     mock_finalize_config,
@@ -435,22 +435,22 @@ async def test_main_with_session_name_passes_name_to_run_session(
 
 
 @pytest.mark.asyncio
-@patch("openhands.cli.main.generate_sid")
-@patch("openhands.cli.main.create_agent")
-@patch("openhands.cli.main.create_runtime")
-@patch("openhands.cli.main.create_memory")
-@patch("openhands.cli.main.add_mcp_tools_to_agent")
-@patch("openhands.cli.main.run_agent_until_done")
-@patch("openhands.cli.main.cleanup_session")
-@patch("openhands.cli.main.read_prompt_input", new_callable=AsyncMock)
-@patch("openhands.cli.main.handle_commands", new_callable=AsyncMock)
-@patch("openhands.core.setup.State.restore_from_session")
-@patch("openhands.controller.AgentController.__init__")
-@patch("openhands.cli.main.display_runtime_initialization_message")
-@patch("openhands.cli.main.display_initialization_animation")
-@patch("openhands.cli.main.initialize_repository_for_runtime")
-@patch("openhands.cli.main.display_initial_user_prompt")
-@patch("openhands.cli.main.finalize_config")
+@patch("forge.cli.main.generate_sid")
+@patch("forge.cli.main.create_agent")
+@patch("forge.cli.main.create_runtime")
+@patch("forge.cli.main.create_memory")
+@patch("forge.cli.main.add_mcp_tools_to_agent")
+@patch("forge.cli.main.run_agent_until_done")
+@patch("forge.cli.main.cleanup_session")
+@patch("forge.cli.main.read_prompt_input", new_callable=AsyncMock)
+@patch("forge.cli.main.handle_commands", new_callable=AsyncMock)
+@patch("forge.core.setup.State.restore_from_session")
+@patch("forge.controller.AgentController.__init__")
+@patch("forge.cli.main.display_runtime_initialization_message")
+@patch("forge.cli.main.display_initialization_animation")
+@patch("forge.cli.main.initialize_repository_for_runtime")
+@patch("forge.cli.main.display_initial_user_prompt")
+@patch("forge.cli.main.finalize_config")
 async def test_run_session_with_name_attempts_state_restore(
     mock_finalize_config,
     mock_display_initial_user_prompt,
@@ -501,15 +501,15 @@ async def test_run_session_with_name_attempts_state_restore(
 
 
 @pytest.mark.asyncio
-@patch("openhands.cli.main.setup_config_from_args")
-@patch("openhands.cli.main.FileSettingsStore.get_instance")
-@patch("openhands.cli.main.check_folder_security_agreement")
-@patch("openhands.cli.main.read_task")
-@patch("openhands.cli.main.run_session")
-@patch("openhands.cli.main.LLMSummarizingCondenserConfig")
-@patch("openhands.cli.main.NoOpCondenserConfig")
-@patch("openhands.cli.main.finalize_config")
-@patch("openhands.cli.main.aliases_exist_in_shell_config")
+@patch("forge.cli.main.setup_config_from_args")
+@patch("forge.cli.main.FileSettingsStore.get_instance")
+@patch("forge.cli.main.check_folder_security_agreement")
+@patch("forge.cli.main.read_task")
+@patch("forge.cli.main.run_session")
+@patch("forge.cli.main.LLMSummarizingCondenserConfig")
+@patch("forge.cli.main.NoOpCondenserConfig")
+@patch("forge.cli.main.finalize_config")
+@patch("forge.cli.main.aliases_exist_in_shell_config")
 async def test_main_security_check_fails(
     mock_aliases_exist,
     mock_finalize_config,
@@ -552,15 +552,15 @@ async def test_main_security_check_fails(
 
 
 @pytest.mark.asyncio
-@patch("openhands.cli.main.setup_config_from_args")
-@patch("openhands.cli.main.FileSettingsStore.get_instance")
-@patch("openhands.cli.main.check_folder_security_agreement")
-@patch("openhands.cli.main.read_task")
-@patch("openhands.cli.main.run_session")
-@patch("openhands.cli.main.LLMSummarizingCondenserConfig")
-@patch("openhands.cli.main.NoOpCondenserConfig")
-@patch("openhands.cli.main.finalize_config")
-@patch("openhands.cli.main.aliases_exist_in_shell_config")
+@patch("forge.cli.main.setup_config_from_args")
+@patch("forge.cli.main.FileSettingsStore.get_instance")
+@patch("forge.cli.main.check_folder_security_agreement")
+@patch("forge.cli.main.read_task")
+@patch("forge.cli.main.run_session")
+@patch("forge.cli.main.LLMSummarizingCondenserConfig")
+@patch("forge.cli.main.NoOpCondenserConfig")
+@patch("forge.cli.main.finalize_config")
+@patch("forge.cli.main.aliases_exist_in_shell_config")
 async def test_config_loading_order(
     mock_aliases_exist,
     mock_finalize_config,
@@ -634,15 +634,15 @@ async def test_config_loading_order(
 
 
 @pytest.mark.asyncio
-@patch("openhands.cli.main.setup_config_from_args")
-@patch("openhands.cli.main.FileSettingsStore.get_instance")
-@patch("openhands.cli.main.check_folder_security_agreement")
-@patch("openhands.cli.main.read_task")
-@patch("openhands.cli.main.run_session")
-@patch("openhands.cli.main.LLMSummarizingCondenserConfig")
-@patch("openhands.cli.main.NoOpCondenserConfig")
-@patch("openhands.cli.main.finalize_config")
-@patch("openhands.cli.main.aliases_exist_in_shell_config")
+@patch("forge.cli.main.setup_config_from_args")
+@patch("forge.cli.main.FileSettingsStore.get_instance")
+@patch("forge.cli.main.check_folder_security_agreement")
+@patch("forge.cli.main.read_task")
+@patch("forge.cli.main.run_session")
+@patch("forge.cli.main.LLMSummarizingCondenserConfig")
+@patch("forge.cli.main.NoOpCondenserConfig")
+@patch("forge.cli.main.finalize_config")
+@patch("forge.cli.main.aliases_exist_in_shell_config")
 @patch("builtins.open", new_callable=MagicMock)
 async def test_main_with_file_option(
     mock_open,

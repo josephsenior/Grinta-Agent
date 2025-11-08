@@ -182,7 +182,7 @@ VERIFY: <execute_bash command="ls -la /workspace/auth.py && head -10 /workspace/
 
 The ultimate prompt is now the **default** CodeAct system prompt.
 
-**Location:** `OpenHands/openhands/agenthub/codeact_agent/prompts/system_prompt.j2`
+**Location:** `Forge/Forge/agenthub/codeact_agent/prompts/system_prompt.j2`
 
 **Backup:** `system_prompt_backup_original.j2` (414 lines, original version)
 
@@ -256,8 +256,8 @@ Using task_tracker to organize:
 | **Anthropic Default** | ~300 | Low | Implicit | 7/10 |
 | **Cursor Composer** | ~150 | High | Limited | 8/10 |
 | **Aider AI** | ~250 | Medium | Good | 8/10 |
-| **OpenHands Original** | ~720 | Very Low | None | 7/10 |
-| **OpenHands Ultimate** | ~513 | High | **Explicit ReAct** | **9/10** |
+| **Forge Original** | ~720 | Very Low | None | 7/10 |
+| **Forge Ultimate** | ~513 | High | **Explicit ReAct** | **9/10** |
 
 ---
 
@@ -300,7 +300,7 @@ The ultimate prompt includes hooks for ACE (Agentic Context Engineering) playboo
 ```toml
 [metasop]
 enable_ace = true
-ace_playbook_persistence_path = "~/.openhands/ace_playbooks/"
+ace_playbook_persistence_path = "~/.Forge/ace_playbooks/"
 ```
 
 ---

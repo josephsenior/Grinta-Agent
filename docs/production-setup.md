@@ -19,7 +19,7 @@ Startup validation runs automatically on agent init.
 
 **Manual test:**
 ```bash
-python openhands/agenthub/codeact_agent/tools/health_check.py
+python Forge/agenthub/codeact_agent/tools/health_check.py
 ```
 
 **Expected output:**
@@ -51,7 +51,7 @@ docker-compose build
 ### 3. Verify
 ```bash
 # Test health check
-python openhands/agenthub/codeact_agent/tools/health_check.py
+python Forge/agenthub/codeact_agent/tools/health_check.py
 
 # Check Tree-sitter
 docker exec <container> python -c "import tree_sitter; print('OK')"
@@ -64,7 +64,7 @@ docker-compose up -d
 
 ## Health Check Integration
 
-**File:** `openhands/agenthub/codeact_agent/codeact_agent.py`
+**File:** `Forge/agenthub/codeact_agent/codeact_agent.py`
 
 ```python
 def _run_production_health_check(self):
@@ -97,7 +97,7 @@ Permanent fix: Ensure pyproject.toml has tree_sitter in main dependencies
 ### GitHub Actions
 ```yaml
 - name: Validate Dependencies
-  run: python openhands/agenthub/codeact_agent/tools/health_check.py
+  run: python Forge/agenthub/codeact_agent/tools/health_check.py
 ```
 
 ### Kubernetes Readiness Probe
@@ -107,7 +107,7 @@ readinessProbe:
     command:
     - python
     - -m
-    - openhands.agenthub.codeact_agent.tools.health_check
+    - Forge.agenthub.codeact_agent.tools.health_check
   initialDelaySeconds: 10
   periodSeconds: 30
 ```
@@ -115,7 +115,7 @@ readinessProbe:
 ### Docker Healthcheck
 ```dockerfile
 HEALTHCHECK --interval=30s --timeout=3s \
-  CMD python -c "from openhands.agenthub.codeact_agent.tools.health_check import run_production_health_check; run_production_health_check()"
+  CMD python -c "from forge.agenthub.codeact_agent.tools.health_check import run_production_health_check; run_production_health_check()"
 ```
 
 ## Files Modified
@@ -124,11 +124,11 @@ HEALTHCHECK --interval=30s --timeout=3s \
 - `pyproject.toml` - Tree-sitter required
 
 **Health Check:**
-- `openhands/agenthub/codeact_agent/tools/health_check.py` - NEW validation
-- `openhands/agenthub/codeact_agent/codeact_agent.py` - Integration
+- `Forge/agenthub/codeact_agent/tools/health_check.py` - NEW validation
+- `Forge/agenthub/codeact_agent/codeact_agent.py` - Integration
 
 **Error Messages:**
-- `openhands/agenthub/codeact_agent/tools/universal_editor.py` - Better errors
+- `Forge/agenthub/codeact_agent/tools/universal_editor.py` - Better errors
 
 ## Troubleshooting
 

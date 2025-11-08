@@ -1,6 +1,6 @@
 import React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { useConversationId } from "#/hooks/use-conversation-id";
 import { useConfig } from "#/hooks/query/use-config";
 import { useRuntimeIsReady } from "#/hooks/use-runtime-is-ready";
@@ -30,7 +30,7 @@ export const useBatchFeedback = () => {
 
   const query = useQuery({
     queryKey: getFeedbackQueryKey(conversationId),
-    queryFn: () => OpenHands.getBatchFeedback(conversationId!),
+    queryFn: () => Forge.getBatchFeedback(conversationId!),
     enabled: runtimeIsReady && !!conversationId && config?.APP_MODE === "saas",
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 15, // 15 minutes

@@ -1,6 +1,6 @@
 ---
 title: Jira Data Center Integration
-description: Complete guide for setting up Jira Data Center integration with OpenHands Cloud, including service account creation, personal access token generation, webhook configuration, and workspace integration setup.
+description: Complete guide for setting up Jira Data Center integration with Forge Cloud, including service account creation, personal access token generation, webhook configuration, and workspace integration setup.
 ---
 
 # Jira Data Center Integration
@@ -15,9 +15,9 @@ description: Complete guide for setting up Jira Data Center integration with Ope
 
 2. **Create User**
    - Click **Create User**
-   - Username: `openhands-agent`
-   - Full Name: `OpenHands Agent`
-   - Email: `openhands@yourcompany.com` (replace with your preferred service account email)
+   - Username: `Forge-agent`
+   - Full Name: `Forge Agent`
+   - Email: `Forge@yourcompany.com` (replace with your preferred service account email)
    - Password: Set a secure password
    - Click **Create**
 
@@ -32,7 +32,7 @@ description: Complete guide for setting up Jira Data Center integration with Ope
    - Log in as the service account
    - Go to **Profile** > **Personal Access Tokens**
    - Click **Create token**
-   - Name: `OpenHands Cloud Integration`
+   - Name: `Forge Cloud Integration`
    - Expiry: Set appropriate expiration (recommend 1 year)
    - Click **Create**
    - **Important**: Copy and store the token securely
@@ -42,7 +42,7 @@ description: Complete guide for setting up Jira Data Center integration with Ope
 1. **Create Webhook**
    - Go to **Administration** > **System** > **WebHooks**
    - Click **Create a WebHook**
-   - **Name**: `OpenHands Cloud Integration`
+   - **Name**: `Forge Cloud Integration`
    - **URL**: `https://app.all-hands.dev/integration/jira-dc/events`
    - Set a suitable webhook secret
    - **Issue related events**: Select the following:
@@ -56,12 +56,12 @@ description: Complete guide for setting up Jira Data Center integration with Ope
 
 ## Workspace Integration
 
-### Step 1: Log in to OpenHands Cloud
+### Step 1: Log in to Forge Cloud
 
 1. **Navigate and Authenticate**
-   - Go to [OpenHands Cloud](https://app.all-hands.dev/)
+   - Go to [Forge Cloud](https://app.all-hands.dev/)
    - Sign in with your Git provider (GitHub, GitLab, or BitBucket)
-   - **Important:** Make sure you're signing in with the same Git provider account that contains the repositories you want the OpenHands agent to work on.
+   - **Important:** Make sure you're signing in with the same Git provider account that contains the repositories you want the Forge agent to work on.
 
 ### Step 2: Configure Jira Data Center Integration
 
@@ -89,7 +89,7 @@ Here the workspace name is **jira.all-hands.dev**.
 3. **Complete OAuth Flow**
    - You'll be redirected to Jira Data Center to complete OAuth verification
    - Grant the necessary permissions to verify your workspace access. If you have access to multiple workspaces, select the correct one that you initially provided
-   - If successful, you will be redirected back to the **Integrations** settings in the OpenHands Cloud UI
+   - If successful, you will be redirected back to the **Integrations** settings in the Forge Cloud UI
 
 ### Managing Your Integration
 

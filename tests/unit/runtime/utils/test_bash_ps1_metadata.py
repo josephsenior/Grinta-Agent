@@ -1,5 +1,5 @@
 import json
-from openhands.events.observation.commands import (
+from forge.events.observation.commands import (
     CMD_OUTPUT_METADATA_PS1_REGEX,
     CMD_OUTPUT_PS1_BEGIN,
     CMD_OUTPUT_PS1_END,
@@ -63,17 +63,17 @@ def test_ps1_metadata_parsing_string():
 
 def test_ps1_metadata_parsing_string_real_example():
     """Test parsing PS1 output into CmdOutputMetadata."""
-    ps1_str = '\n###PS1JSON###\n{\n  "pid": "",\n  "exit_code": "0",\n  "username": "runner",\n  "hostname": "fv-az1055-610",\n  "working_dir": "/home/runner/work/OpenHands/OpenHands",\n  "py_interpreter_path": "/home/runner/.cache/pypoetry/virtualenvs/openhands-ai-ULPBlkAi-py3.12/bin/python"\n}\n###PS1END###\n'
+    ps1_str = '\n###PS1JSON###\n{\n  "pid": "",\n  "exit_code": "0",\n  "username": "runner",\n  "hostname": "fv-az1055-610",\n  "working_dir": "/home/runner/work/Forge/Forge",\n  "py_interpreter_path": "/home/runner/.cache/pypoetry/virtualenvs/Forge-ai-ULPBlkAi-py3.12/bin/python"\n}\n###PS1END###\n'
     matches = CmdOutputMetadata.matches_ps1_metadata(ps1_str)
     assert len(matches) == 1
     metadata = CmdOutputMetadata.from_ps1_match(matches[0])
     assert metadata.exit_code == 0
     assert metadata.username == "runner"
     assert metadata.hostname == "fv-az1055-610"
-    assert metadata.working_dir == "/home/runner/work/OpenHands/OpenHands"
+    assert metadata.working_dir == "/home/runner/work/Forge/Forge"
     assert (
         metadata.py_interpreter_path
-        == "/home/runner/.cache/pypoetry/virtualenvs/openhands-ai-ULPBlkAi-py3.12/bin/python"
+        == "/home/runner/.cache/pypoetry/virtualenvs/Forge-ai-ULPBlkAi-py3.12/bin/python"
     )
 
 

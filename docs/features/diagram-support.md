@@ -6,7 +6,7 @@
 
 ## 📖 **Overview**
 
-OpenHands agents can now generate **interactive Mermaid diagrams** during conversations, making complex explanations visual and easy to understand.
+Forge agents can now generate **interactive Mermaid diagrams** during conversations, making complex explanations visual and easy to understand.
 
 ### **Key Features**
 
@@ -217,7 +217,7 @@ The CodeAct agent automatically uses diagrams when:
 ### **Frontend Changes**
 
 ```typescript
-// OpenHands/frontend/src/components/features/markdown/code.tsx
+// Forge/frontend/src/components/features/markdown/code.tsx
 
 // Detect Mermaid language
 if (language === "mermaid") {
@@ -235,7 +235,7 @@ if (language === "mermaid") {
 ### **Prompt Guidance**
 
 ```jinja2
-{# OpenHands/openhands/agenthub/codeact_agent/prompts/system_prompt.j2 #}
+{# Forge/Forge/agenthub/codeact_agent/prompts/system_prompt.j2 #}
 
 <VISUAL_EXPLANATIONS>
 When explaining complex concepts, use Mermaid diagrams:
@@ -302,7 +302,7 @@ Agent: [Shows Gantt chart with milestones]
 
 ## 💎 **Competitive Advantage**
 
-| Feature | OpenHands | Cursor | GitHub Copilot |
+| Feature | Forge | Cursor | GitHub Copilot |
 |---------|-----------|--------|----------------|
 | Mermaid support | ✅ | ✅ | ❌ |
 | Interactive diagrams | ✅ | ❌ | ❌ |
@@ -313,7 +313,7 @@ Agent: [Shows Gantt chart with milestones]
 | 6 diagram types | ✅ | ✅ | ❌ |
 | Agent-guided | ✅ | ✅ | ❌ |
 
-**OpenHands has the BEST diagram support!** 🏆
+**Forge has the BEST diagram support!** 🏆
 
 ---
 

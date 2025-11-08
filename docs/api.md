@@ -1,6 +1,6 @@
 # API Documentation
 
-OpenHands provides comprehensive APIs for integrating with the platform programmatically.
+Forge provides comprehensive APIs for integrating with the platform programmatically.
 
 ## REST API
 
@@ -30,7 +30,7 @@ Real-time communication via WebSocket for live updates:
 
 ### Python SDK
 
-Programmatic access to OpenHands from Python applications.
+Programmatic access to Forge from Python applications.
 
 [View Python SDK Documentation](api/python-sdk.md)
 

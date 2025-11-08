@@ -4,13 +4,13 @@ import os
 from unittest.mock import patch
 import pytest
 from conftest import _close_test_runtime, _load_runtime
-from openhands.events.action import CmdRunAction
-from openhands.events.observation import CmdOutputObservation
+from forge.events.action import CmdRunAction
+from forge.events.observation import CmdOutputObservation
 
 
-def test_env_vars_os_environ(temp_dir, runtime_cls, run_as_openhands):
+def test_env_vars_os_environ(temp_dir, runtime_cls, run_as_Forge):
     with patch.dict(os.environ, {"SANDBOX_ENV_FOOBAR": "BAZ"}):
-        runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+        runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
         obs: CmdOutputObservation = runtime.run_action(CmdRunAction(command="env"))
         print(obs)
         obs: CmdOutputObservation = runtime.run_action(CmdRunAction(command="echo $FOOBAR"))
@@ -50,7 +50,7 @@ def test_env_vars_added_by_config(temp_dir, runtime_cls):
     reason="This test is specific to DockerRuntime and its pause/resume persistence",
 )
 def test_docker_runtime_env_vars_persist_after_restart(temp_dir):
-    from openhands.runtime.impl.docker.docker_runtime import DockerRuntime
+    from forge.runtime.impl.docker.docker_runtime import DockerRuntime
 
     runtime, config = _load_runtime(temp_dir, DockerRuntime)
     runtime.add_env_vars({"GITHUB_TOKEN": "test_token"})

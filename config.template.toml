@@ -1,4 +1,4 @@
-###################### OpenHands Configuration Example ######################
+###################### Forge Configuration Example ######################
 #
 # All settings have default values, so you only need to uncomment and
 # modify what you want to change
@@ -64,8 +64,8 @@
 # Path to rewrite the workspace mount path to
 #workspace_mount_rewrite = ""
 
-# Run as openhands
-#run_as_openhands = true
+# Run as Forge
+#run_as_Forge = true
 
 # Runtime environment
 #runtime = "docker"
@@ -189,7 +189,7 @@ model = "gpt-4o"
 # Whether to use native tool calling if supported by the model. Can be true, false, or None by default, which chooses the model's default behavior based on the evaluation.
 # ATTENTION: Based on evaluation, enabling native function calling may lead to worse results
 # in some scenarios. Use with caution and consider testing with your specific use case.
-# https://github.com/All-Hands-AI/OpenHands/pull/4711
+# https://github.com/All-Hands-AI/Forge/pull/4711
 #native_tool_calling = None
 
 
@@ -351,7 +351,7 @@ default_sop = "feature_delivery"
 #docker_runtime_kwargs = {}
 
 # Specific port to use for VSCode. If not set, a random port will be chosen.
-# Useful when deploying OpenHands in a remote machine where you need to expose a specific port.
+# Useful when deploying Forge in a remote machine where you need to expose a specific port.
 #vscode_port = 41234
 
 # Volume mounts in the format 'host_path:container_path[:mode]'
@@ -451,7 +451,7 @@ type = "noop"
 # Kubernetes configuration when using the Kubernetes runtime
 ##############################################################################
 [kubernetes]
-# The Kubernetes namespace to use for OpenHands resources
+# The Kubernetes namespace to use for Forge resources
 #namespace = "default"
 
 # Domain for ingress resources

@@ -137,10 +137,10 @@
 - **Status:** ⚠️ Partially mitigated
 - **Current Version:** `2.12.4` (from `2.6.1`)
 - **Target Version:** `2.13.0+` (requires `cachetools >=6.0.0`)
-- **Blocker:** Dependency conflict with `openhands-aci (0.3.2)` which requires `cachetools <6.0.0`
+- **Blocker:** Dependency conflict with `Forge-aci (0.3.2)` which requires `cachetools <6.0.0`
 - **Recommendation:** 
   - ✅ **Immediate:** Using `2.12.4` provides some security improvements
-  - 🔄 **Short-term:** Monitor `openhands-aci` for updates that support `cachetools 6.x`
+  - 🔄 **Short-term:** Monitor `Forge-aci` for updates that support `cachetools 6.x`
   - 🛡️ **Mitigation:** Ensure input validation and XSS protection layers are active
 
 ### 2. **PrismJS DOM Clobbering** ⚠️ BREAKING CHANGE
@@ -221,7 +221,7 @@ poetry install
 poetry check
 
 # Restart services
-docker-compose restart openhands-backend
+docker-compose restart Forge-backend
 ```
 
 ### Frontend Updates
@@ -252,7 +252,7 @@ npm install
 - [x] Deploy updates to staging
 
 ### Short-term (Next Sprint)
-- [ ] Monitor `openhands-aci` for `cachetools 6.x` support
+- [ ] Monitor `Forge-aci` for `cachetools 6.x` support
 - [ ] Upgrade `fastmcp` to 2.13.0+ when blocker resolved
 - [ ] Plan `react-syntax-highlighter` upgrade (breaking change)
 - [ ] Test code highlighting after upgrade

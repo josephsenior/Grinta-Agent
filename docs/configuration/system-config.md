@@ -1,6 +1,6 @@
 # ⚙️ **System Configuration**
 
-> **Comprehensive configuration guide for the OpenHands platform, covering all components and advanced settings.**
+> **Comprehensive configuration guide for the Forge platform, covering all components and advanced settings.**
 
 ---
 
@@ -22,7 +22,7 @@
 
 ## 🌟 **Overview**
 
-The OpenHands platform uses a comprehensive configuration system that allows fine-tuning of all components. Configuration is managed through TOML files, environment variables, and runtime settings.
+The Forge platform uses a comprehensive configuration system that allows fine-tuning of all components. Configuration is managed through TOML files, environment variables, and runtime settings.
 
 ### **Configuration Sources**
 1. **Default Configuration**: Built-in defaults
@@ -49,7 +49,7 @@ Default Configuration (lowest priority)
 ```toml
 # config.toml - Main configuration file
 [system]
-name = "OpenHands"
+name = "Forge"
 version = "2.2.0"
 environment = "development"
 debug = false
@@ -57,7 +57,7 @@ debug = false
 [logging]
 level = "INFO"
 format = "json"
-file = "logs/openhands.log"
+file = "logs/Forge.log"
 max_size = "100MB"
 backup_count = 5
 
@@ -69,7 +69,7 @@ timeout = 30
 max_connections = 1000
 
 [database]
-url = "sqlite:///openhands.db"
+url = "sqlite:///Forge.db"
 pool_size = 10
 max_overflow = 20
 echo = false
@@ -91,7 +91,7 @@ debug = false
 
 [logging]
 level = "WARNING"
-file = "/var/log/openhands/app.log"
+file = "/var/log/Forge/app.log"
 
 [server]
 host = "0.0.0.0"
@@ -99,7 +99,7 @@ port = 8000
 workers = 8
 
 [database]
-url = "postgresql://user:pass@localhost/openhands"
+url = "postgresql://user:pass@localhost/Forge"
 pool_size = 20
 max_overflow = 40
 
@@ -117,7 +117,7 @@ temperature = 0.1
 ```toml
 [system]
 # Basic system settings
-name = "OpenHands"
+name = "Forge"
 version = "2.2.0"
 environment = "development"  # development, staging, production
 debug = false
@@ -131,7 +131,7 @@ cpu_limit = "80%"
 
 # Security settings
 enable_cors = true
-cors_origins = ["http://localhost:3000", "https://app.openhands.ai"]
+cors_origins = ["http://localhost:3000", "https://app.Forge.ai"]
 enable_rate_limiting = true
 rate_limit_requests = 100
 rate_limit_window = 60
@@ -178,9 +178,9 @@ websocket_ping_timeout = 10
 ```toml
 [database]
 # Database connection
-url = "sqlite:///openhands.db"
-# For PostgreSQL: "postgresql://user:pass@localhost/openhands"
-# For MySQL: "mysql://user:pass@localhost/openhands"
+url = "sqlite:///Forge.db"
+# For PostgreSQL: "postgresql://user:pass@localhost/Forge"
+# For MySQL: "mysql://user:pass@localhost/Forge"
 
 # Connection pool settings
 pool_size = 10
@@ -739,7 +739,7 @@ rate_limit_strategy = "sliding_window"
 
 # CORS
 enable_cors = true
-cors_origins = ["http://localhost:3000", "https://app.openhands.ai"]
+cors_origins = ["http://localhost:3000", "https://app.Forge.ai"]
 cors_methods = ["GET", "POST", "PUT", "DELETE"]
 cors_headers = ["Content-Type", "Authorization"]
 ```
@@ -762,7 +762,7 @@ max_cache_size = "1GB"
 cache_eviction_policy = "lru"
 
 # Cache keys
-key_prefix = "openhands:"
+key_prefix = "Forge:"
 key_separator = ":"
 key_encoding = "utf-8"
 
@@ -779,74 +779,74 @@ warmup_batch_size = 100
 ### **Core Environment Variables**
 ```bash
 # System settings
-OPENHANDS_ENVIRONMENT=development
-OPENHANDS_DEBUG=false
-OPENHANDS_LOG_LEVEL=INFO
+FORGE_ENVIRONMENT=development
+FORGE_DEBUG=false
+FORGE_LOG_LEVEL=INFO
 
 # Server settings
-OPENHANDS_HOST=localhost
-OPENHANDS_PORT=8000
-OPENHANDS_WORKERS=4
+FORGE_HOST=localhost
+FORGE_PORT=8000
+FORGE_WORKERS=4
 
 # Database settings
-OPENHANDS_DATABASE_URL=sqlite:///openhands.db
-OPENHANDS_DATABASE_POOL_SIZE=10
+FORGE_DATABASE_URL=sqlite:///Forge.db
+FORGE_DATABASE_POOL_SIZE=10
 
 # LLM settings
-OPENHANDS_LLM_PROVIDER=openai
-OPENHANDS_LLM_MODEL=gpt-4
-OPENHANDS_LLM_API_KEY=your-api-key
-OPENHANDS_LLM_TEMPERATURE=0.1
-OPENHANDS_LLM_MAX_TOKENS=4000
+FORGE_LLM_PROVIDER=openai
+FORGE_LLM_MODEL=gpt-4
+FORGE_LLM_API_KEY=your-api-key
+FORGE_LLM_TEMPERATURE=0.1
+FORGE_LLM_MAX_TOKENS=4000
 
 # Memory settings
-OPENHANDS_MEMORY_ENABLED=true
-OPENHANDS_MEMORY_MAX_CONVERSATIONS=1000
-OPENHANDS_MEMORY_RETENTION_DAYS=30
+FORGE_MEMORY_ENABLED=true
+FORGE_MEMORY_MAX_CONVERSATIONS=1000
+FORGE_MEMORY_RETENTION_DAYS=30
 
 # Optimization settings
-OPENHANDS_OPTIMIZATION_ENABLED=true
-OPENHANDS_OPTIMIZATION_AB_SPLIT=0.1
-OPENHANDS_OPTIMIZATION_MIN_SAMPLES=10
-OPENHANDS_OPTIMIZATION_CONFIDENCE_THRESHOLD=0.8
+FORGE_OPTIMIZATION_ENABLED=true
+FORGE_OPTIMIZATION_AB_SPLIT=0.1
+FORGE_OPTIMIZATION_MIN_SAMPLES=10
+FORGE_OPTIMIZATION_CONFIDENCE_THRESHOLD=0.8
 
 # Real-time optimization
-OPENHANDS_REAL_TIME_OPTIMIZATION_ENABLED=true
-OPENHANDS_REAL_TIME_OPTIMIZATION_THRESHOLD=0.05
-OPENHANDS_REAL_TIME_OPTIMIZATION_CONFIDENCE_THRESHOLD=0.8
+FORGE_REAL_TIME_OPTIMIZATION_ENABLED=true
+FORGE_REAL_TIME_OPTIMIZATION_THRESHOLD=0.05
+FORGE_REAL_TIME_OPTIMIZATION_CONFIDENCE_THRESHOLD=0.8
 
 # Monitoring
-OPENHANDS_MONITORING_ENABLED=true
-OPENHANDS_MONITORING_LOG_LEVEL=INFO
-OPENHANDS_MONITORING_METRICS_ENABLED=true
+FORGE_MONITORING_ENABLED=true
+FORGE_MONITORING_LOG_LEVEL=INFO
+FORGE_MONITORING_METRICS_ENABLED=true
 ```
 
 ### **Feature-Specific Environment Variables**
 ```bash
 # MetaSOP
-OPENHANDS_METASOP_ENABLED=true
-OPENHANDS_METASOP_MAX_CONCURRENT_AGENTS=5
-OPENHANDS_METASOP_AGENT_TIMEOUT=300
+FORGE_METASOP_ENABLED=true
+FORGE_METASOP_MAX_CONCURRENT_AGENTS=5
+FORGE_METASOP_AGENT_TIMEOUT=300
 
 # CodeAct
-OPENHANDS_CODEACT_ENABLED=true
-OPENHANDS_CODEACT_MAX_ITERATIONS=10
-OPENHANDS_CODEACT_TIMEOUT=300
+FORGE_CODEACT_ENABLED=true
+FORGE_CODEACT_MAX_ITERATIONS=10
+FORGE_CODEACT_TIMEOUT=300
 
 # ACE Framework
-OPENHANDS_ACE_ENABLED=true
-OPENHANDS_ACE_MAX_BULLETS=1000
-OPENHANDS_ACE_SIMILARITY_THRESHOLD=0.7
+FORGE_ACE_ENABLED=true
+FORGE_ACE_MAX_BULLETS=1000
+FORGE_ACE_SIMILARITY_THRESHOLD=0.7
 
 # Tool Integration
-OPENHANDS_TOOL_INTEGRATION_ENABLED=true
-OPENHANDS_TOOL_OPTIMIZATION_ENABLED=true
-OPENHANDS_TOOL_OPTIMIZATION_AB_SPLIT=0.1
+FORGE_TOOL_INTEGRATION_ENABLED=true
+FORGE_TOOL_OPTIMIZATION_ENABLED=true
+FORGE_TOOL_OPTIMIZATION_AB_SPLIT=0.1
 
 # WebSocket
-OPENHANDS_WEBSOCKET_ENABLED=true
-OPENHANDS_WEBSOCKET_PORT=8001
-OPENHANDS_WEBSOCKET_MAX_CONNECTIONS=500
+FORGE_WEBSOCKET_ENABLED=true
+FORGE_WEBSOCKET_PORT=8001
+FORGE_WEBSOCKET_MAX_CONNECTIONS=500
 ```
 
 ---
@@ -861,10 +861,10 @@ OPENHANDS_WEBSOCKET_MAX_CONNECTIONS=500
 toml validate config.toml
 
 # Check environment variables
-env | grep OPENHANDS
+env | grep Forge
 
 # Check configuration loading
-python -c "from openhands.core.config import load_config; print(load_config())"
+python -c "from forge.core.config import load_config; print(load_config())"
 ```
 
 #### **Feature Not Working**
@@ -873,7 +873,7 @@ python -c "from openhands.core.config import load_config; print(load_config())"
 grep -r "enable_" config.toml
 
 # Check environment variables
-env | grep OPENHANDS_.*_ENABLED
+env | grep FORGE_.*_ENABLED
 
 # Check runtime configuration
 curl http://localhost:8000/api/config/status
@@ -888,14 +888,14 @@ grep -r "max_\|limit" config.toml
 curl http://localhost:8000/api/monitoring/metrics
 
 # Check logs
-tail -f logs/openhands.log
+tail -f logs/Forge.log
 ```
 
 ### **Configuration Validation**
 
 #### **Validate Configuration**
 ```python
-from openhands.core.config import validate_config
+from forge.core.config import validate_config
 
 # Validate configuration
 validation_result = validate_config("config.toml")
@@ -907,7 +907,7 @@ else:
 
 #### **Check Configuration Status**
 ```python
-from openhands.core.config import get_config_status
+from forge.core.config import get_config_status
 
 # Get configuration status
 status = get_config_status()
@@ -940,4 +940,4 @@ print(f"Warnings: {status['warnings']}")
 
 ---
 
-**System Configuration - The foundation of OpenHands platform.** ⚙️
+**System Configuration - The foundation of Forge platform.** ⚙️

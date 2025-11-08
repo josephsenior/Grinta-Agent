@@ -1,6 +1,6 @@
 // Handle file-icons-js with fallback for environments where it's not available
-let fileIcons: any = null;
-let fileIconsPromise: Promise<any> | null = null;
+let fileIcons: unknown = null;
+let fileIconsPromise: Promise<unknown> | null = null;
 
 // Async loader for file-icons-js
 const loadFileIcons = async (): Promise<any> => {
@@ -63,8 +63,12 @@ export function getFileIconClass(filename: string): string {
     return "default-icon";
   }
   try {
-    const iconClass = fileIcons.getClass(filename);
-    return iconClass || "default-icon";
+    if (typeof fileIcons === "object" && fileIcons !== null && "getClass" in (fileIcons as Record<string, unknown>)) {
+      const ic = fileIcons as Record<string, unknown> & { getClass?: (n: string) => string };
+      const iconClass = ic.getClass ? ic.getClass(filename) : undefined;
+      return iconClass || "default-icon";
+    }
+    return "default-icon";
   } catch (error) {
     console.error("[file-icons] Error getting class for", filename, error);
     return "default-icon";
@@ -80,8 +84,12 @@ export async function getFileIconClassAsync(filename: string): Promise<string> {
     return "default-icon";
   }
   try {
-    const iconClass = icons.getClass(filename);
-    return iconClass || "default-icon";
+    if (typeof icons === "object" && icons !== null && "getClass" in (icons as Record<string, unknown>)) {
+      const ic = icons as Record<string, unknown> & { getClass?: (n: string) => string };
+      const iconClass = ic.getClass ? ic.getClass(filename) : undefined;
+      return iconClass || "default-icon";
+    }
+    return "default-icon";
   } catch (error) {
     console.error("[file-icons] Error getting class for", filename, error);
     return "default-icon";
@@ -96,8 +104,12 @@ export function getFileIconClassWithColor(filename: string): string {
     return "default-icon";
   }
   try {
-    const iconClassWithColor = fileIcons.getClassWithColor(filename);
-    return iconClassWithColor || "default-icon";
+    if (typeof fileIcons === "object" && fileIcons !== null && "getClassWithColor" in (fileIcons as Record<string, unknown>)) {
+      const ic = fileIcons as Record<string, unknown> & { getClassWithColor?: (n: string) => string };
+      const iconClassWithColor = ic.getClassWithColor ? ic.getClassWithColor(filename) : undefined;
+      return iconClassWithColor || "default-icon";
+    }
+    return "default-icon";
   } catch (error) {
     console.error(
       "[file-icons] Error getting class with color for",
@@ -116,8 +128,12 @@ export function hasFileIcon(filename: string): boolean {
     return false;
   }
   try {
-    const iconClass = fileIcons.getClass(filename);
-    return iconClass && iconClass !== "default-icon";
+    if (typeof fileIcons === "object" && fileIcons !== null && "getClass" in (fileIcons as Record<string, unknown>)) {
+      const ic = fileIcons as Record<string, unknown> & { getClass?: (n: string) => string };
+      const iconClass = ic.getClass ? ic.getClass(filename) : undefined;
+      return !!iconClass && iconClass !== "default-icon";
+    }
+    return false;
   } catch (error) {
     // Silently handle error and return false
     return false;

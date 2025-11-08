@@ -40,7 +40,7 @@ After comprehensive analysis of the entire codebase, here's the **honest truth**
 
 **What you need:**
 ```python
-# openhands/monitoring/metrics.py
+# Forge/monitoring/metrics.py
 from prometheus_client import Counter, Histogram
 
 tool_calls = Counter('agent_tool_calls_total', 'Total tool calls', ['tool_name', 'status'])
@@ -65,7 +65,7 @@ hallucinations = Counter('agent_hallucinations_prevented', 'Hallucinations preve
 
 **Missing:**
 ```python
-# openhands/core/retry.py
+# Forge/core/retry.py
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 @retry(
@@ -95,7 +95,7 @@ def call_llm_with_retry(params):
 
 **What you need:**
 ```python
-# openhands/server/middleware/rate_limit.py
+# Forge/server/middleware/rate_limit.py
 from slowapi import Limiter
 
 limiter = Limiter(key_func=get_user_id)
@@ -154,9 +154,9 @@ async def consistent_method():
 ```
 
 **Files to audit:**
-- `openhands/agenthub/codeact_agent/`
-- `openhands/metasop/`
-- `openhands/server/`
+- `Forge/agenthub/codeact_agent/`
+- `Forge/metasop/`
+- `Forge/server/`
 
 **Effort:** 2-3 days
 
@@ -205,7 +205,7 @@ async def consistent_method():
 ---
 
 #### **8. Prompt Optimization System (Unclear if Used)**
-**Why:** 29 Python files in `openhands/prompt_optimization/`, unclear if active.
+**Why:** 29 Python files in `Forge/prompt_optimization/`, unclear if active.
 
 **Questions:**
 - Is this used in production?
@@ -214,7 +214,7 @@ async def consistent_method():
 
 **Files:**
 ```
-openhands/prompt_optimization/
+Forge/prompt_optimization/
 ├─ optimizer.py
 ├─ evolver.py
 ├─ tracker.py
@@ -237,9 +237,9 @@ openhands/prompt_optimization/
 
 **Large files:**
 ```
-openhands/agenthub/codeact_agent/codeact_agent.py  (1063 lines)
-openhands/metasop/orchestrator.py                   (~800 lines)
-openhands/server/listen.py                          (~600 lines)
+Forge/agenthub/codeact_agent/codeact_agent.py  (1063 lines)
+Forge/metasop/orchestrator.py                   (~800 lines)
+Forge/server/listen.py                          (~600 lines)
 ```
 
 **But:**
@@ -256,7 +256,7 @@ openhands/server/listen.py                          (~600 lines)
 #### **10. Backend Runtime TODOs (Minor)**
 **Only 2 TODOs found:**
 ```python
-# openhands/runtime/base.py
+# Forge/runtime/base.py
 # TODO: Re-implement using PID tracking instead of pkill
 # TODO: Re-enable when ProcessManager uses PID tracking
 ```
@@ -453,7 +453,7 @@ Most projects have 10-20% TODO rate. You have <1%.
 ## 🏗️ **Architecture Clarity Issues**
 
 ### **Prompt Optimization System (Unclear)**
-**Location:** `openhands/prompt_optimization/` (29 files)
+**Location:** `Forge/prompt_optimization/` (29 files)
 
 **Questions:**
 - ❓ Is this used in production?

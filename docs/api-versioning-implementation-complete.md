@@ -16,8 +16,8 @@ You now have **enterprise-level API versioning** that allows safe evolution with
 
 **Files Created:**
 ```python
-openhands/server/versioning.py       # 200+ lines - Complete versioning system
-openhands/server/constants.py        # Version constants and config
+Forge/server/versioning.py       # 200+ lines - Complete versioning system
+Forge/server/constants.py        # Version constants and config
 ```
 
 **Features:**
@@ -54,16 +54,16 @@ frontend/src/config/api-config.ts    # 100+ lines - API versioning config
 
 **Files Modified:**
 ```typescript
-frontend/src/api/open-hands.ts       # Updated all 15+ API calls
+frontend/src/api/forge.ts       # Updated all 15+ API calls
 ```
 
 **Changes:**
 ```typescript
 // Before:
-const { data } = await openHands.get("/api/settings");
+const { data } = await Forge.get("/api/settings");
 
 // After:
-const { data } = await openHands.get(`${this.getBase()}/settings`);
+const { data } = await Forge.get(`${this.getBase()}/settings`);
 
 // Now respects versioning configuration! ✅
 ```
@@ -85,7 +85,7 @@ const { data } = await openHands.get(`${this.getBase()}/settings`);
 
 **Files Modified:**
 ```python
-openhands/server/app.py              # Added versioning middleware
+Forge/server/app.py              # Added versioning middleware
 ```
 
 **Integration:**
@@ -157,7 +157,7 @@ docs/api-versioning-implementation-complete.md  # This file
 
 ### **Backend:**
 ```python
-# openhands/server/constants.py
+# Forge/server/constants.py
 ENFORCE_API_VERSIONING = False  # ← Beta mode (flexible)
 
 # After launch, set to True:
@@ -280,7 +280,7 @@ async def my_new_endpoint():
 **Future (v2):**
 ```python
 # Create new v2 router
-from openhands.server.versioning import create_versioned_router, APIVersion
+from forge.server.versioning import create_versioned_router, APIVersion
 
 router = create_versioned_router("/my-feature", version=APIVersion.V2)
 
@@ -321,7 +321,7 @@ curl http://localhost:3000/api/v99/settings
 **4. Frontend Integration:**
 ```typescript
 // Should use correct base
-const settings = await OpenHands.getSettings();
+const settings = await Forge.getSettings();
 // Calls: /api/settings (beta) or /api/v1/settings (production)
 ```
 

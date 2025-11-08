@@ -13,12 +13,12 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/All-Hands-AI/Forge"
 packages = [
-  { include = "openhands/**/*" },
-  { include = "pyproject.toml", to = "openhands" },
-  { include = "poetry.lock", to = "openhands" },
+  { include = "forge/**/*" },
+  { include = "pyproject.toml", to = "forge" },
+  { include = "poetry.lock", to = "forge" },
 ]
 include = [
-  "openhands/integrations/vscode/openhands-vscode-0.0.1.vsix",
+  "forge/integrations/vscode/forge-vscode-0.0.1.vsix",
   "microagents/**/*",
 ]
 build = "build_vscode.py" # Build VSCode extension during Poetry build
@@ -62,7 +62,7 @@ opentelemetry-exporter-otlp-proto-grpc = "^1.33.1"
 libtmux = ">=0.37,<0.40"
 pygithub = "^2.5.0"
 joblib = "*"
-openhands-aci = { version = ">=0.3.2", python = "^3.12,<3.14" }  # Updated to allow compatibility with fastmcp security fixes
+openhands-aci = { version = ">=0.3.2", python = "^3.12,<3.14" }
 python-socketio = "^5.14.0"  # Security fix: CVE-2025-61765 (Deserialization vulnerability)
 sse-starlette = "^2.1.3"
 psutil = "*"
@@ -71,7 +71,7 @@ prompt-toolkit = "^3.0.50"
 # removed poetry runtime dependency to avoid Poetry self-management on Windows
 anyio = "4.9.0"
 pythonnet = "*"
-fastmcp = "^2.12.0"  # Partial security fix - full fix (2.13.0) blocked by openhands-aci cachetools <6.0 constraint
+fastmcp = "^2.12.0"  # Partial security fix - full fix (2.13.0) blocked by Forge-aci cachetools <6.0 constraint
 python-frontmatter = "^1.1.0"
 shellingham = "^1.5.4"
 # TODO: Should these go into the runtime group?
@@ -210,8 +210,8 @@ joblib = "*"
 swebench = { git = "https://github.com/ryanhoangt/SWE-bench.git", rev = "fix-modal-patch-eval" }
 
 [tool.poetry.scripts]
-forge = "openhands.cli.entry:main"
-openhands = "openhands.cli.entry:main"  # Kept for backward compatibility
+forge = "forge.cli.entry:main"
+Forge = "forge.cli.entry:main"  # Kept for backward compatibility
 
 [tool.poetry.group.testgeneval.dependencies]
 fuzzywuzzy = "^0.18.0"
@@ -238,4 +238,20 @@ lint.ignore = [ "D1" ]
 lint.pydocstyle.convention = "google"
 
 [tool.coverage.run]
-concurrency = [ "gevent" ]
+source = [
+  "forge.metasop.ace",
+  "forge.metasop.context_hash",
+  "forge.metasop.diff_utils",
+  "forge.resolver",
+]
+
+[tool.coverage.report]
+include = [
+  "forge/metasop/ace/*",
+  "forge/metasop/context_hash.py",
+  "forge/metasop/diff_utils.py",
+]
+omit = [
+  "forge/metasop/ace/examples/*",
+  "forge/metasop/ace/prompts.py",
+]

@@ -6,13 +6,13 @@ import socket
 import time
 import docker
 import pytest
-import openhands
+import forge
 from conftest import _load_runtime
-from openhands.core.config import MCPConfig
-from openhands.core.config.mcp_config import MCPSSEServerConfig, MCPStdioServerConfig
-from openhands.core.logger import openhands_logger as logger
-from openhands.events.action import CmdRunAction, MCPAction
-from openhands.events.observation import CmdOutputObservation, MCPObservation
+from forge.core.config import MCPConfig
+from forge.core.config.mcp_config import MCPSSEServerConfig, MCPStdioServerConfig
+from forge.core.logger import forge_logger as logger
+from forge.events.action import CmdRunAction, MCPAction
+from forge.events.observation import CmdOutputObservation, MCPObservation
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("TEST_RUNTIME") == "cli", reason="CLIRuntime does not support MCP actions"
@@ -38,7 +38,7 @@ def sse_mcp_docker_server():
     client = docker.from_env()
     container = None
     log_streamer = None
-    from openhands.runtime.utils.log_streamer import LogStreamer
+    from forge.runtime.utils.log_streamer import LogStreamer
 
     try:
         logger.info(
@@ -82,7 +82,7 @@ def sse_mcp_docker_server():
 
 
 def test_default_activated_tools():
-    project_root = os.path.dirname(openhands.__file__)
+    project_root = os.path.dirname(forge.__file__)
     mcp_config_path = os.path.join(project_root, "runtime", "mcp", "config.json")
     assert os.path.exists(mcp_config_path), f"MCP config file not found at {mcp_config_path}"
     with open(mcp_config_path, "r", encoding='utf-8') as f:
@@ -94,11 +94,11 @@ def test_default_activated_tools():
 
 
 @pytest.mark.asyncio
-async def test_fetch_mcp_via_stdio(temp_dir, runtime_cls, run_as_openhands):
+async def test_fetch_mcp_via_stdio(temp_dir, runtime_cls, run_as_Forge):
     mcp_stdio_server_config = MCPStdioServerConfig(name="fetch", command="uvx", args=["mcp-server-fetch"])
     override_mcp_config = MCPConfig(stdio_servers=[mcp_stdio_server_config])
     runtime, config = _load_runtime(
-        temp_dir, runtime_cls, run_as_openhands, override_mcp_config=override_mcp_config, enable_browser=True
+        temp_dir, runtime_cls, run_as_Forge, override_mcp_config=override_mcp_config, enable_browser=True
     )
     action_cmd = CmdRunAction(command="python3 -m http.server 8000 > server.log 2>&1 &")
     logger.info(action_cmd, extra={"msg_type": "ACTION"})
@@ -128,7 +128,7 @@ async def test_fetch_mcp_via_stdio(temp_dir, runtime_cls, run_as_openhands):
 
 
 @pytest.mark.asyncio
-async def test_filesystem_mcp_via_sse(temp_dir, runtime_cls, run_as_openhands, sse_mcp_docker_server):
+async def test_filesystem_mcp_via_sse(temp_dir, runtime_cls, run_as_Forge, sse_mcp_docker_server):
     sse_server_info = sse_mcp_docker_server
     sse_url = sse_server_info["url"]
     runtime = None
@@ -136,7 +136,7 @@ async def test_filesystem_mcp_via_sse(temp_dir, runtime_cls, run_as_openhands, s
         mcp_sse_server_config = MCPSSEServerConfig(url=sse_url)
         override_mcp_config = MCPConfig(sse_servers=[mcp_sse_server_config])
         runtime, config = _load_runtime(
-            temp_dir, runtime_cls, run_as_openhands, override_mcp_config=override_mcp_config
+            temp_dir, runtime_cls, run_as_Forge, override_mcp_config=override_mcp_config
         )
         mcp_action = MCPAction(name="list_directory", arguments={"path": "."})
         obs = await runtime.call_tool_mcp(mcp_action)
@@ -149,7 +149,7 @@ async def test_filesystem_mcp_via_sse(temp_dir, runtime_cls, run_as_openhands, s
 
 
 @pytest.mark.asyncio
-async def test_both_stdio_and_sse_mcp(temp_dir, runtime_cls, run_as_openhands, sse_mcp_docker_server):
+async def test_both_stdio_and_sse_mcp(temp_dir, runtime_cls, run_as_Forge, sse_mcp_docker_server):
     sse_server_info = sse_mcp_docker_server
     sse_url = sse_server_info["url"]
     runtime = None
@@ -158,7 +158,7 @@ async def test_both_stdio_and_sse_mcp(temp_dir, runtime_cls, run_as_openhands, s
         mcp_stdio_server_config = MCPStdioServerConfig(name="fetch", command="uvx", args=["mcp-server-fetch"])
         override_mcp_config = MCPConfig(sse_servers=[mcp_sse_server_config], stdio_servers=[mcp_stdio_server_config])
         runtime, config = _load_runtime(
-            temp_dir, runtime_cls, run_as_openhands, override_mcp_config=override_mcp_config, enable_browser=True
+            temp_dir, runtime_cls, run_as_Forge, override_mcp_config=override_mcp_config, enable_browser=True
         )
         mcp_action_sse = MCPAction(name="list_directory", arguments={"path": "."})
         obs_sse = await runtime.call_tool_mcp(mcp_action_sse)
@@ -195,7 +195,7 @@ async def test_both_stdio_and_sse_mcp(temp_dir, runtime_cls, run_as_openhands, s
 
 
 @pytest.mark.asyncio
-async def test_microagent_and_one_stdio_mcp_in_config(temp_dir, runtime_cls, run_as_openhands):
+async def test_microagent_and_one_stdio_mcp_in_config(temp_dir, runtime_cls, run_as_Forge):
     runtime = None
     try:
         filesystem_config = MCPStdioServerConfig(
@@ -203,7 +203,7 @@ async def test_microagent_and_one_stdio_mcp_in_config(temp_dir, runtime_cls, run
         )
         override_mcp_config = MCPConfig(stdio_servers=[filesystem_config])
         runtime, config = _load_runtime(
-            temp_dir, runtime_cls, run_as_openhands, override_mcp_config=override_mcp_config, enable_browser=True
+            temp_dir, runtime_cls, run_as_Forge, override_mcp_config=override_mcp_config, enable_browser=True
         )
         fetch_config = MCPStdioServerConfig(name="fetch", command="uvx", args=["mcp-server-fetch"])
         updated_config = runtime.get_mcp_config([fetch_config])

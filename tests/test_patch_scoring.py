@@ -1,6 +1,6 @@
 import types
-from openhands.metasop.models import SopStep, SopTemplate, StepOutputSpec
-from openhands.metasop.orchestrator import MetaSOPOrchestrator
+from forge.metasop.models import SopStep, SopTemplate, StepOutputSpec
+from forge.metasop.orchestrator import MetaSOPOrchestrator
 
 
 class RotatingExecutor:
@@ -60,7 +60,7 @@ def test_patch_scoring_multi_candidate():
     score event per candidate (n=3).
 
     """
-    from openhands.metasop.models import Artifact, StepResult
+    from forge.metasop.models import Artifact, StepResult
 
     class MultiCandidateExecutor:
 

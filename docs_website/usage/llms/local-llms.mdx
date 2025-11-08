@@ -1,21 +1,21 @@
 ---
 title: Local LLMs
-description: When using a Local LLM, OpenHands may have limited functionality. It is highly recommended that you use GPUs to serve local models for optimal experience.
+description: When using a Local LLM, Forge may have limited functionality. It is highly recommended that you use GPUs to serve local models for optimal experience.
 ---
 
 ## News
 
 - 2025/05/21: We collaborated with Mistral AI and released [Devstral Small](https://mistral.ai/news/devstral) that achieves [46.8% on SWE-Bench Verified](https://github.com/SWE-bench/experiments/pull/228)!
-- 2025/03/31: We released an open model OpenHands LM 32B v0.1 that achieves 37.1% on SWE-Bench Verified
-([blog](https://www.all-hands.dev/blog/introducing-openhands-lm-32b----a-strong-open-coding-agent-model), [model](https://huggingface.co/all-hands/openhands-lm-32b-v0.1)).
+- 2025/03/31: We released an open model Forge LM 32B v0.1 that achieves 37.1% on SWE-Bench Verified
+([blog](https://www.all-hands.dev/blog/introducing-Forge-lm-32b----a-strong-open-coding-agent-model), [model](https://huggingface.co/all-hands/Forge-lm-32b-v0.1)).
 
-## Quickstart: Running OpenHands with a Local LLM using LM Studio
+## Quickstart: Running Forge with a Local LLM using LM Studio
 
-This guide explains how to serve a local Devstral LLM using [LM Studio](https://lmstudio.ai/) and have OpenHands connect to it.
+This guide explains how to serve a local Devstral LLM using [LM Studio](https://lmstudio.ai/) and have Forge connect to it.
 
 We recommend:
 - **LM Studio** as the local model server, which handles metadata downloads automatically and offers a simple, user-friendly interface for configuration.
-- **Devstral Small 2505** as the LLM for software development, trained on real GitHub issues and optimized for agent-style workflows like OpenHands.
+- **Devstral Small 2505** as the LLM for software development, trained on real GitHub issues and optimized for agent-style workflows like Forge.
 
 ### Hardware Requirements
 
@@ -63,9 +63,9 @@ Download and install the LM Studio desktop app from [lmstudio.ai](https://lmstud
 
 ![image](./screenshots/06_lm_studio_start_server.png)
 
-### 5. Start OpenHands
+### 5. Start Forge
 
-1. Check [the installation guide](/usage/local-setup) and ensure all prerequisites are met before running OpenHands, then run:
+1. Check [the installation guide](/usage/local-setup) and ensure all prerequisites are met before running Forge, then run:
 
 ```bash
 docker pull docker.all-hands.dev/all-hands-ai/runtime:0.55-nikolaik
@@ -74,20 +74,20 @@ docker run -it --rm --pull=always \
     -e SANDBOX_RUNTIME_CONTAINER_IMAGE=docker.all-hands.dev/all-hands-ai/runtime:0.55-nikolaik \
     -e LOG_ALL_EVENTS=true \
     -v /var/run/docker.sock:/var/run/docker.sock \
-    -v ~/.openhands:/.openhands \
+    -v ~/.Forge:/.Forge \
     -p 3000:3000 \
     --add-host host.docker.internal:host-gateway \
-    --name openhands-app \
-    docker.all-hands.dev/all-hands-ai/openhands:0.55
+    --name Forge-app \
+    docker.all-hands.dev/all-hands-ai/Forge:0.55
 ```
 
 2. Wait until the server is running (see log below):
 ```
 Digest: sha256:e72f9baecb458aedb9afc2cd5bc935118d1868719e55d50da73190d3a85c674f
-Status: Image is up to date for docker.all-hands.dev/all-hands-ai/openhands:0.55
-Starting OpenHands...
-Running OpenHands as root
-14:22:13 - openhands:INFO: server_config.py:50 - Using config class None
+Status: Image is up to date for docker.all-hands.dev/all-hands-ai/Forge:0.55
+Starting Forge...
+Running Forge as root
+14:22:13 - Forge:INFO: server_config.py:50 - Using config class None
 INFO:     Started server process [8]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
@@ -96,15 +96,15 @@ INFO:     Uvicorn running on http://0.0.0.0:3000 (Press CTRL+C to quit)
 
 3. Visit `http://localhost:3000` in your browser.
 
-### 6. Configure OpenHands to use the LLM server
+### 6. Configure Forge to use the LLM server
 
-Once you open OpenHands in your browser, you'll need to configure it to use the local LLM server you just started.
+Once you open Forge in your browser, you'll need to configure it to use the local LLM server you just started.
 
-When started for the first time, OpenHands will prompt you to set up the LLM provider.
+When started for the first time, Forge will prompt you to set up the LLM provider.
 
 1. Click "see advanced settings" to open the LLM Settings page.
 
-![image](./screenshots/07_openhands_open_advanced_settings.png)
+![image](./screenshots/07_Forge_open_advanced_settings.png)
 
 2. Enable the "Advanced" switch at the top of the page to show all the available settings.
 
@@ -115,15 +115,15 @@ When started for the first time, OpenHands will prompt you to set up the LLM pro
 
 4. Click "Save Settings" to save the configuration.
 
-![image](./screenshots/08_openhands_configure_local_llm_parameters.png)
+![image](./screenshots/08_Forge_configure_local_llm_parameters.png)
 
-That's it! You can now start using OpenHands with the local LLM server.
+That's it! You can now start using Forge with the local LLM server.
 
-If you encounter any issues, let us know on [Slack](https://join.slack.com/t/openhands-ai/shared_invite/zt-3847of6xi-xuYJIPa6YIPg4ElbDWbtSA) or [Discord](https://discord.gg/ESHStjSjD4).
+If you encounter any issues, let us know on [Slack](https://join.slack.com/t/Forge-ai/shared_invite/zt-3847of6xi-xuYJIPa6YIPg4ElbDWbtSA) or [Discord](https://discord.gg/ESHStjSjD4).
 
 ## Advanced: Alternative LLM Backends
 
-This section describes how to run local LLMs with OpenHands using alternative backends like Ollama, SGLang, or vLLM — without relying on LM Studio.
+This section describes how to run local LLMs with Forge using alternative backends like Ollama, SGLang, or vLLM — without relying on LM Studio.
 
 ### Create an OpenAI-Compatible Endpoint with Ollama
 
@@ -131,7 +131,7 @@ This section describes how to run local LLMs with OpenHands using alternative ba
 - Example launch command for Devstral Small 2505:
 
 ```bash
-# ⚠️ WARNING: OpenHands requires a large context size to work properly.
+# ⚠️ WARNING: Forge requires a large context size to work properly.
 # When using Ollama, set OLLAMA_CONTEXT_LENGTH to at least 32768.
 # The default (4096) is way too small — not even the system prompt will fit, and the agent will not behave correctly.
 OLLAMA_CONTEXT_LENGTH=32768 OLLAMA_HOST=0.0.0.0:11434 OLLAMA_KEEP_ALIVE=-1 nohup ollama serve &
@@ -196,21 +196,21 @@ vllm serve mistralai/Devstral-Small-2505 \
     --speculative-config '{"method": "suffix"}'
 ```
 
-### Run OpenHands (Alternative Backends)
+### Run Forge (Alternative Backends)
 
 #### Using Docker
 
-Run OpenHands using [the official docker run command](../installation#start-the-app).
+Run Forge using [the official docker run command](../installation#start-the-app).
 
 #### Using Development Mode
 
-Use the instructions in [Development.md](https://github.com/All-Hands-AI/OpenHands/blob/main/Development.md) to build OpenHands.
+Use the instructions in [Development.md](https://github.com/All-Hands-AI/Forge/blob/main/Development.md) to build Forge.
 
-Start OpenHands using `make run`.
+Start Forge using `make run`.
 
-### Configure OpenHands (Alternative Backends)
+### Configure Forge (Alternative Backends)
 
-Once OpenHands is running, open the Settings page in the UI and go to the `LLM` tab.
+Once Forge is running, open the Settings page in the UI and go to the `LLM` tab.
 
 1. Click **"see advanced settings"** to access the full configuration panel.
 2. Enable the **Advanced** toggle at the top of the page.

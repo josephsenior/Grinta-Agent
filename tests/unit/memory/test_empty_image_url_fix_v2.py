@@ -1,10 +1,10 @@
 """Test for fixing empty image URL issue in multimodal browsing."""
 
-from openhands.core.config.agent_config import AgentConfig
-from openhands.core.message import ImageContent
-from openhands.events.observation.browse import BrowserOutputObservation
-from openhands.memory.conversation_memory import ConversationMemory
-from openhands.utils.prompt import PromptManager
+from forge.core.config.agent_config import AgentConfig
+from forge.core.message import ImageContent
+from forge.events.observation.browse import BrowserOutputObservation
+from forge.memory.conversation_memory import ConversationMemory
+from forge.utils.prompt import PromptManager
 
 
 def test_empty_image_url_handling():
@@ -17,7 +17,7 @@ def test_empty_image_url_handling():
         content="Some webpage content",
     )
     agent_config = AgentConfig(enable_som_visual_browsing=True)
-    prompt_manager = PromptManager(prompt_dir="openhands/agenthub/codeact_agent/prompts")
+    prompt_manager = PromptManager(prompt_dir="Forge/agenthub/codeact_agent/prompts")
     conv_memory = ConversationMemory(agent_config, prompt_manager)
     messages = conv_memory._process_observation(
         obs=browser_obs,
@@ -57,7 +57,7 @@ def test_valid_image_url_handling():
         content="Some webpage content",
     )
     agent_config = AgentConfig(enable_som_visual_browsing=True)
-    prompt_manager = PromptManager(prompt_dir="openhands/agenthub/codeact_agent/prompts")
+    prompt_manager = PromptManager(prompt_dir="Forge/agenthub/codeact_agent/prompts")
     conv_memory = ConversationMemory(agent_config, prompt_manager)
     messages = conv_memory._process_observation(
         obs=browser_obs,
@@ -91,7 +91,7 @@ def test_mixed_image_url_handling():
         content="Some webpage content",
     )
     agent_config = AgentConfig(enable_som_visual_browsing=True)
-    prompt_manager = PromptManager(prompt_dir="openhands/agenthub/codeact_agent/prompts")
+    prompt_manager = PromptManager(prompt_dir="Forge/agenthub/codeact_agent/prompts")
     conv_memory = ConversationMemory(agent_config, prompt_manager)
     messages = conv_memory._process_observation(
         obs=browser_obs,
@@ -115,11 +115,11 @@ def test_mixed_image_url_handling():
 
 def test_ipython_empty_image_url_handling():
     """Test that empty image URLs in IPython observations are properly filtered with notification text."""
-    from openhands.events.observation.commands import IPythonRunCellObservation
+    from forge.events.observation.commands import IPythonRunCellObservation
 
     ipython_obs = IPythonRunCellObservation(content="Some output", code='print("hello")', image_urls=["", None, ""])
     agent_config = AgentConfig(enable_som_visual_browsing=True)
-    prompt_manager = PromptManager(prompt_dir="openhands/agenthub/codeact_agent/prompts")
+    prompt_manager = PromptManager(prompt_dir="Forge/agenthub/codeact_agent/prompts")
     conv_memory = ConversationMemory(agent_config, prompt_manager)
     messages = conv_memory._process_observation(
         obs=ipython_obs,
@@ -145,14 +145,14 @@ def test_ipython_empty_image_url_handling():
 
 def test_ipython_mixed_image_url_handling():
     """Test handling of mixed valid and invalid image URLs in IPython observations."""
-    from openhands.events.observation.commands import IPythonRunCellObservation
+    from forge.events.observation.commands import IPythonRunCellObservation
 
     valid_base64_image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
     ipython_obs = IPythonRunCellObservation(
         content="Some output", code='print("hello")', image_urls=["", valid_base64_image, None]
     )
     agent_config = AgentConfig(enable_som_visual_browsing=True)
-    prompt_manager = PromptManager(prompt_dir="openhands/agenthub/codeact_agent/prompts")
+    prompt_manager = PromptManager(prompt_dir="Forge/agenthub/codeact_agent/prompts")
     conv_memory = ConversationMemory(agent_config, prompt_manager)
     messages = conv_memory._process_observation(
         obs=ipython_obs,

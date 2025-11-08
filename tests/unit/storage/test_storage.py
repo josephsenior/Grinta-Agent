@@ -9,11 +9,11 @@ from unittest import TestCase
 from unittest.mock import patch
 import botocore.exceptions
 from google.api_core.exceptions import NotFound
-from openhands.storage.files import FileStore
-from openhands.storage.google_cloud import GoogleCloudFileStore
-from openhands.storage.local import LocalFileStore
-from openhands.storage.memory import InMemoryFileStore
-from openhands.storage.s3 import S3FileStore
+from forge.storage.files import FileStore
+from forge.storage.google_cloud import GoogleCloudFileStore
+from forge.storage.local import LocalFileStore
+from forge.storage.memory import InMemoryFileStore
+from forge.storage.s3 import S3FileStore
 
 
 class _StorageTest(ABC):
@@ -91,7 +91,7 @@ class _StorageTest(ABC):
 class TestLocalFileStore(TestCase, _StorageTest):
 
     def setUp(self):
-        self.temp_dir = tempfile.mkdtemp(prefix="openhands_test_")
+        self.temp_dir = tempfile.mkdtemp(prefix="FORGE_test_")
         self.store = LocalFileStore(self.temp_dir)
 
     def tearDown(self):

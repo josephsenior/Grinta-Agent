@@ -64,7 +64,7 @@ walk(root, (file) => {
       return;
     } // keep
     if (
-      !file.includes(path.join("OpenHands", "frontend")) &&
+      !file.includes(path.join("Forge", "frontend")) &&
       !file.includes(path.join("frontend"))
     ) {
       // skip files outside frontend

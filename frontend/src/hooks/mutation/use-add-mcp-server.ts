@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSettings } from "#/hooks/query/use-settings";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { MCPSSEServer, MCPStdioServer, MCPSHTTPServer } from "#/types/settings";
 
 type MCPServerType = "sse" | "stdio" | "shttp";
@@ -59,7 +59,7 @@ export function useAddMcpServer() {
         mcp_config: newConfig,
       };
 
-      await OpenHands.saveSettings(apiSettings);
+      await Forge.saveSettings(apiSettings);
     },
     onSuccess: () => {
       // Invalidate the settings query to trigger a refetch

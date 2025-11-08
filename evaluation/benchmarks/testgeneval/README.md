@@ -26,7 +26,7 @@ To generate tests using your model, run the following command:
 Parameters:
 
 - `model_config`: The config group name for your LLM settings (e.g., `eval_gpt4_1106_preview`)
-- `git-version`: The git commit hash or release tag of OpenHands to evaluate (e.g., `HEAD` or `0.6.2`)
+- `git-version`: The git commit hash or release tag of Forge to evaluate (e.g., `HEAD` or `0.6.2`)
 - `agent`: The name of the agent for benchmarks (default: `CodeActAgent`)
 - `eval_limit`: Limit the evaluation to the first N instances (optional)
 - `max_iter`: Maximum number of iterations for the agent to run (default: 30)
@@ -70,14 +70,14 @@ The TestGenEval benchmark evaluates generated tests based on the following metri
 
 To contribute your evaluation results:
 
-1. Fork [our HuggingFace evaluation outputs](https://huggingface.co/spaces/OpenHands/evaluation).
+1. Fork [our HuggingFace evaluation outputs](https://huggingface.co/spaces/Forge/evaluation).
 2. Add your results to the forked repository.
 3. Submit a Pull Request with your evaluation results following the guide [here](https://huggingface.co/docs/hub/en/repositories-pull-requests-discussions#pull-requests-and-discussions).
 
 ## Additional Resources
 
 - [TestGenEval Paper](https://arxiv.org/abs/2410.00752)
-- [OpenHands Documentation](https://github.com/All-Hands-AI/OpenHands)
+- [Forge Documentation](https://github.com/All-Hands-AI/Forge)
 - [HuggingFace Datasets](https://huggingface.co/datasets)
 
-For any questions or issues, please open an issue in the [OpenHands repository](https://github.com/All-Hands-AI/OpenHands/issues).
+For any questions or issues, please open an issue in the [Forge repository](https://github.com/All-Hands-AI/Forge/issues).

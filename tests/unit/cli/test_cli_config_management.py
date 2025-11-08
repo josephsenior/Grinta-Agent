@@ -2,9 +2,9 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-from openhands.cli.commands import display_mcp_servers, remove_mcp_server
-from openhands.core.config import OpenHandsConfig
-from openhands.core.config.mcp_config import MCPConfig, MCPSSEServerConfig, MCPStdioServerConfig
+from forge.cli.commands import display_mcp_servers, remove_mcp_server
+from forge.core.config import ForgeConfig
+from forge.core.config.mcp_config import MCPConfig, MCPSSEServerConfig, MCPStdioServerConfig
 
 
 class TestMCPServerManagement:
@@ -12,11 +12,11 @@ class TestMCPServerManagement:
 
     def setup_method(self):
         """Set up test fixtures."""
-        self.config = MagicMock(spec=OpenHandsConfig)
+        self.config = MagicMock(spec=ForgeConfig)
         self.config.cli = MagicMock()
         self.config.cli.vi_mode = False
 
-    @patch("openhands.cli.commands.print_formatted_text")
+    @patch("forge.cli.commands.print_formatted_text")
     def test_display_mcp_servers_no_servers(self, mock_print):
         """Test displaying MCP servers when none are configured."""
         self.config.mcp = MCPConfig()
@@ -25,7 +25,7 @@ class TestMCPServerManagement:
         call_args = mock_print.call_args[0][0]
         assert "No custom MCP servers configured" in call_args
 
-    @patch("openhands.cli.commands.print_formatted_text")
+    @patch("forge.cli.commands.print_formatted_text")
     def test_display_mcp_servers_with_servers(self, mock_print):
         """Test displaying MCP servers when some are configured."""
         self.config.mcp = MCPConfig(
@@ -40,8 +40,8 @@ class TestMCPServerManagement:
         assert "Stdio servers: 1" in first_call
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.cli_confirm")
-    @patch("openhands.cli.commands.print_formatted_text")
+    @patch("forge.cli.commands.cli_confirm")
+    @patch("forge.cli.commands.print_formatted_text")
     async def test_remove_mcp_server_no_servers(self, mock_print, mock_cli_confirm):
         """Test removing MCP server when none are configured."""
         self.config.mcp = MCPConfig()
@@ -50,11 +50,11 @@ class TestMCPServerManagement:
         mock_cli_confirm.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.prompt_for_restart", new_callable=AsyncMock)
-    @patch("openhands.cli.commands.cli_confirm")
-    @patch("openhands.cli.commands.load_config_file")
-    @patch("openhands.cli.commands.save_config_file")
-    @patch("openhands.cli.commands.print_formatted_text")
+    @patch("forge.cli.commands.prompt_for_restart", new_callable=AsyncMock)
+    @patch("forge.cli.commands.cli_confirm")
+    @patch("forge.cli.commands.load_config_file")
+    @patch("forge.cli.commands.save_config_file")
+    @patch("forge.cli.commands.print_formatted_text")
     async def test_remove_mcp_server_success(
         self, mock_print, mock_save, mock_load, mock_cli_confirm, mock_prompt_restart
     ):

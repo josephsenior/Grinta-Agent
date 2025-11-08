@@ -16,46 +16,7 @@ export function MemoryFormModal({
   onClose,
   isLoading = false,
 }: MemoryFormModalProps) {
-  const [title, setTitle] = useState(memory?.title || "");
-  const [content, setContent] = useState(memory?.content || "");
-  const [category, setCategory] = useState<MemoryCategory>(
-    memory?.category || "technical",
-  );
-  const [importance, setImportance] = useState<MemoryImportance>(
-    memory?.importance || "medium",
-  );
-  const [tagInput, setTagInput] = useState("");
-  const [tags, setTags] = useState<string[]>(memory?.tags || []);
-
-  const handleAddTag = () => {
-    const tag = tagInput.trim().toLowerCase();
-    if (tag && !tags.includes(tag)) {
-      setTags([...tags, tag]);
-      setTagInput("");
-    }
-  };
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter((t) => t !== tagToRemove));
-  };
-
-  const handleSubmit = () => {
-    if (!title.trim() || !content.trim()) return;
-
-    onSave({
-      title: title.trim(),
-      content: content.trim(),
-      category,
-      tags,
-      importance,
-    });
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      onClose();
-    }
-  };
+  const controller = useMemoryFormController({ memory, onSave, onClose });
 
   return (
     <>
@@ -68,7 +29,7 @@ export function MemoryFormModal({
         <div
           className="bg-background-secondary border border-border rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
-          onKeyDown={handleKeyDown}
+          onKeyDown={controller.handleKeyDown}
         >
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-border">
@@ -96,8 +57,8 @@ export function MemoryFormModal({
               </label>
               <input
                 type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                value={controller.title}
+                onChange={controller.handleTitleChange}
                 placeholder="e.g., Uses TypeScript for all projects"
                 className="w-full px-3 py-2 bg-background-primary border border-border rounded-md text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 autoFocus
@@ -110,8 +71,8 @@ export function MemoryFormModal({
                 Content *
               </label>
               <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
+                value={controller.content}
+                onChange={controller.handleContentChange}
                 placeholder="Detailed description of what to remember..."
                 rows={6}
                 className="w-full px-3 py-2 bg-background-primary border border-border rounded-md text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none"
@@ -125,8 +86,8 @@ export function MemoryFormModal({
                   Category *
                 </label>
                 <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as MemoryCategory)}
+                  value={controller.category}
+                  onChange={controller.handleCategoryChange}
                   className="w-full px-3 py-2 bg-background-primary border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 >
                   <option value="technical">💡 Technical</option>
@@ -141,10 +102,8 @@ export function MemoryFormModal({
                   Importance
                 </label>
                 <select
-                  value={importance}
-                  onChange={(e) =>
-                    setImportance(e.target.value as MemoryImportance)
-                  }
+                  value={controller.importance}
+                  onChange={controller.handleImportanceChange}
                   className="w-full px-3 py-2 bg-background-primary border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 >
                   <option value="low">Low</option>
@@ -162,12 +121,12 @@ export function MemoryFormModal({
               <div className="flex gap-2 mb-2">
                 <input
                   type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
+                  value={controller.tagInput}
+                  onChange={controller.handleTagInputChange}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      handleAddTag();
+                      controller.handleAddTag();
                     }
                   }}
                   placeholder="Add tag and press Enter"
@@ -175,17 +134,17 @@ export function MemoryFormModal({
                 />
                 <BrandButton
                   variant="secondary"
-                  onClick={handleAddTag}
+                  onClick={controller.handleAddTag}
                   type="button"
                   testId="add-tag"
-                  isDisabled={!tagInput.trim()}
+                  isDisabled={!controller.tagInput.trim()}
                 >
                   Add
                 </BrandButton>
               </div>
-              {tags.length > 0 && (
+              {controller.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
+                  {controller.tags.map((tag) => (
                     <span
                       key={tag}
                       className="px-2 py-1 text-xs bg-background-tertiary border border-border rounded text-foreground flex items-center gap-1"
@@ -194,7 +153,7 @@ export function MemoryFormModal({
                       {tag}
                       <button
                         type="button"
-                        onClick={() => handleRemoveTag(tag)}
+                        onClick={() => controller.handleRemoveTag(tag)}
                         className="ml-1 text-foreground-secondary hover:text-error-500 transition-colors"
                       >
                         ×
@@ -218,17 +177,87 @@ export function MemoryFormModal({
             </BrandButton>
             <BrandButton
               variant="primary"
-              onClick={handleSubmit}
-              isDisabled={isLoading || !title.trim() || !content.trim()}
+              onClick={controller.handleSubmit}
               type="button"
               testId="save-memory"
+              isDisabled={controller.isSaveDisabled || isLoading}
             >
-              {memory ? "Update" : "Create"} Memory
+              {memory ? "Update memory" : "Save memory"}
             </BrandButton>
           </div>
         </div>
       </div>
     </>
   );
+}
+
+function useMemoryFormController({
+  memory,
+  onSave,
+  onClose,
+}: MemoryFormModalProps) {
+  const [title, setTitle] = useState(memory?.title || "");
+  const [content, setContent] = useState(memory?.content || "");
+  const [category, setCategory] = useState<MemoryCategory>(
+    memory?.category || "technical",
+  );
+  const [importance, setImportance] = useState<MemoryImportance>(
+    memory?.importance || "medium",
+  );
+  const [tagInput, setTagInput] = useState("");
+  const [tags, setTags] = useState<string[]>(memory?.tags || []);
+
+  const handleAddTag = () => {
+    const tag = tagInput.trim().toLowerCase();
+    if (tag && !tags.includes(tag)) {
+      setTags((prev) => [...prev, tag]);
+      setTagInput("");
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags((prev) => prev.filter((tag) => tag !== tagToRemove));
+  };
+
+  const handleSubmit = () => {
+    if (!title.trim() || !content.trim()) {
+      return;
+    }
+
+    onSave({
+      title: title.trim(),
+      content: content.trim(),
+      category,
+      tags,
+      importance,
+    });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      onClose();
+    }
+  };
+
+  return {
+    title,
+    content,
+    category,
+    importance,
+    tagInput,
+    tags,
+    isSaveDisabled: !title.trim() || !content.trim(),
+    handleTitleChange: (event: React.ChangeEvent<HTMLInputElement>) => setTitle(event.target.value),
+    handleContentChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => setContent(event.target.value),
+    handleCategoryChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
+      setCategory(event.target.value as MemoryCategory),
+    handleImportanceChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
+      setImportance(event.target.value as MemoryImportance),
+    handleTagInputChange: (event: React.ChangeEvent<HTMLInputElement>) => setTagInput(event.target.value),
+    handleAddTag,
+    handleRemoveTag,
+    handleSubmit,
+    handleKeyDown,
+  };
 }
 

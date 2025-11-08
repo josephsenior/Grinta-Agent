@@ -8,98 +8,10 @@ export default function CommandConsole() {
   const { parsedEvents } = useWsClient();
   const [open, setOpen] = React.useState(true);
 
-  const looksLikeShell = (s: string) => {
-    if (!s) {
-      return false;
-    }
-    const shellTokens = [
-      "rm -",
-      "&&",
-      "||",
-      "npm ",
-      "yarn ",
-      "docker ",
-      "kubectl ",
-      "/workspace/",
-      "cd ",
-      "git ",
-      "ls ",
-      "pwd",
-      "echo ",
-    ];
-    if (s.startsWith("Ran ") || s.startsWith("ran ")) {
-      return true;
-    }
-    for (const tk of shellTokens)
-      if (s.includes(tk)) {
-        return true;
-      }
-    if (/\/[A-Za-z0-9_.~-]/.test(s)) {
-      return true;
-    }
-    return false;
-  };
-
-  const commands = React.useMemo(() => {
-    const out: { id: string; commandText: string; timestamp: string }[] = [];
-    for (const ev of parsedEvents) {
-      try {
-        type ParsedEvent = {
-          id?: string;
-          args?: unknown;
-          content?: unknown;
-          message?: unknown;
-          action?: string;
-          timestamp?: string;
-        };
-
-        const pev = ev as unknown as ParsedEvent;
-
-        const getProp = (obj: unknown, key: string): unknown => {
-          if (obj && typeof obj === "object") {
-            return (obj as Record<string, unknown>)[key];
-          }
-          return undefined;
-        };
-
-        const args = pev?.args;
-
-        const candidatesRaw = [
-          getProp(args, "command"),
-          getProp(args, "cmd"),
-          getProp(args, "shell_command"),
-          pev?.content,
-          pev?.message,
-          getProp(args, "message"),
-          typeof args === "string" ? args : undefined,
-        ].filter(Boolean) as unknown[];
-
-        const candidates = candidatesRaw.map((x) => String(x));
-        const text = candidates.join(" ").trim();
-
-        if (text && (pev?.action === "run" || looksLikeShell(text))) {
-          const id = pev?.id
-            ? String(pev.id)
-            : typeof crypto !== "undefined" &&
-                typeof (crypto as any).randomUUID === "function"
-              ? (crypto as any).randomUUID()
-              : Math.random().toString(36).slice(2, 9);
-          out.push({
-            id,
-            commandText: text,
-            timestamp: pev?.timestamp ?? "",
-          });
-        }
-      } catch (err) {
-        // Keep a minimal diagnostic so the error isn't silently swallowed
-        // which avoids ESLint no-empty and helps debugging.
-        // eslint-disable-next-line no-console
-        console.warn("command-console: failed to parse event", err);
-      }
-    }
-
-    return out.slice(-10).reverse();
-  }, [parsedEvents]);
+  const commands = React.useMemo(
+    () => buildCommandHistory(parsedEvents),
+    [parsedEvents],
+  );
 
   const copy = async (text: string) => {
     try {
@@ -214,4 +126,118 @@ export default function CommandConsole() {
       )}
     </div>
   );
+}
+
+function buildCommandHistory(events: unknown[]) {
+  const commands: { id: string; commandText: string; timestamp: string }[] = [];
+
+  for (const event of events) {
+    const parsed = parseCommandEvent(event);
+    if (parsed) {
+      commands.push(parsed);
+    }
+  }
+
+  return commands.slice(-10).reverse();
+}
+
+function parseCommandEvent(event: unknown) {
+  try {
+    const normalized = event as {
+      id?: string;
+      args?: unknown;
+      content?: unknown;
+      message?: unknown;
+      action?: string;
+      timestamp?: string;
+    };
+
+    const text = extractCommandText(normalized);
+    if (!text) {
+      return null;
+    }
+
+    const shouldRecord =
+      normalized.action === "run" || looksLikeShellCommand(text);
+    if (!shouldRecord) {
+      return null;
+    }
+
+    return {
+      id: normalized.id ? String(normalized.id) : generateCommandId(),
+      commandText: text,
+      timestamp: normalized.timestamp ?? "",
+    };
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn("command-console: failed to parse event", error);
+    return null;
+  }
+}
+
+function extractCommandText(event: {
+  args?: unknown;
+  content?: unknown;
+  message?: unknown;
+}) {
+  const props = ["command", "cmd", "shell_command", "message"];
+  const args = event.args;
+
+  const directCandidates = props
+    .map((key) => getNestedProperty(args, key))
+    .filter(Boolean);
+
+  const additional = [event.content, event.message, typeof args === "string" ? args : undefined]
+    .filter(Boolean)
+    .map((value) => String(value));
+
+  const candidates = [...directCandidates.map(String), ...additional];
+  const text = candidates.join(" ").trim();
+  return text || null;
+}
+
+function getNestedProperty(source: unknown, key: string) {
+  if (source && typeof source === "object") {
+    return (source as Record<string, unknown>)[key];
+  }
+  return undefined;
+}
+
+function looksLikeShellCommand(value: string) {
+  if (!value) {
+    return false;
+  }
+
+  if (value.startsWith("Ran ") || value.startsWith("ran ")) {
+    return true;
+  }
+
+  const shellTokens = [
+    "rm -",
+    "&&",
+    "||",
+    "npm ",
+    "yarn ",
+    "docker ",
+    "kubectl ",
+    "/workspace/",
+    "cd ",
+    "git ",
+    "ls ",
+    "pwd",
+    "echo ",
+  ];
+
+  if (shellTokens.some((token) => value.includes(token))) {
+    return true;
+  }
+
+  return /\/[A-Za-z0-9_.~-]/.test(value);
+}
+
+function generateCommandId() {
+  if (typeof crypto !== "undefined" && typeof (crypto as any).randomUUID === "function") {
+    return (crypto as any).randomUUID();
+  }
+  return Math.random().toString(36).slice(2, 9);
 }

@@ -7,22 +7,22 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from openhands.core.config import AppConfig
-from openhands.server.routes.slack import app
-from openhands.storage.data_models.slack_integration import (
+from forge.core.config import AppConfig
+from forge.server.routes.slack import app
+from forge.storage.data_models.slack_integration import (
     SlackConversationLink,
     SlackOAuthState,
     SlackUserLink,
     SlackWorkspace,
 )
-from openhands.storage.slack_store import SlackStore
+from forge.storage.slack_store import SlackStore
 
 
 @pytest.fixture
 def test_client(tmp_path):
     """Create test client with temporary storage."""
     # Mock config
-    with patch("openhands.server.routes.slack.openhands_config") as mock_config:
+    with patch("forge.server.routes.slack.FORGE_config") as mock_config:
         mock_config.SLACK_CLIENT_ID = "test-client-id"
         mock_config.SLACK_CLIENT_SECRET = MagicMock(get_secret_value=lambda: "test-client-secret")
         mock_config.SLACK_SIGNING_SECRET = MagicMock(get_secret_value=lambda: "test-signing-secret")
@@ -35,7 +35,7 @@ def test_client(tmp_path):
         mock_app_config = AppConfig()
         mock_app_config.workspace_base = str(workspace_dir)
 
-        with patch("openhands.server.routes.slack.get_slack_store") as mock_get_store:
+        with patch("forge.server.routes.slack.get_slack_store") as mock_get_store:
             slack_store = SlackStore(mock_app_config)
             mock_get_store.return_value = slack_store
 
@@ -58,7 +58,7 @@ def test_slack_install_url_generation(test_client):
 
 def test_slack_install_without_config():
     """Test Slack install fails without configuration."""
-    with patch("openhands.server.routes.slack.openhands_config") as mock_config:
+    with patch("forge.server.routes.slack.FORGE_config") as mock_config:
         mock_config.SLACK_CLIENT_ID = None
 
         client = TestClient(app)
@@ -88,7 +88,7 @@ def test_slack_oauth_callback_with_error(test_client):
     assert "access_denied" in response.text
 
 
-@patch("openhands.server.routes.slack.SLACK_SDK_AVAILABLE", False)
+@patch("forge.server.routes.slack.SLACK_SDK_AVAILABLE", False)
 def test_slack_oauth_callback_without_sdk(test_client):
     """Test OAuth callback without Slack SDK installed."""
     client, slack_store = test_client
@@ -235,13 +235,13 @@ def test_slack_store_operations(tmp_path):
     user_link = SlackUserLink(
         slack_user_id="U456",
         slack_workspace_id="T123",
-        openhands_user_id="user1",
+        FORGE_user_id="user1",
     )
     slack_store.save_user_link(user_link)
 
     retrieved_link = slack_store.get_user_link("T123", "U456")
     assert retrieved_link is not None
-    assert retrieved_link.openhands_user_id == "user1"
+    assert retrieved_link.FORGE_user_id == "user1"
 
     # Test conversation link operations
     conv_link = SlackConversationLink(

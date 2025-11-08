@@ -1,5 +1,4 @@
-"""
-End-to-End tests for autonomous system with real-world app building scenarios.
+"""End-to-End tests for autonomous system with real-world app building scenarios.
 
 Tests the full autonomous workflow including:
 - Safety validation
@@ -17,16 +16,16 @@ from pathlib import Path
 
 import pytest
 
-from openhands.core.config import OpenHandsConfig
-from openhands.core.config.llm_config import LLMConfig
-from openhands.core.config.agent_config import AgentConfig
-from openhands.security.safety_config import SafetyConfig
+from forge.core.config import ForgeConfig
+from forge.core.config.llm_config import LLMConfig
+from forge.core.config.agent_config import AgentConfig
+from forge.security.safety_config import SafetyConfig
 
 
 @pytest.fixture
 def safety_enabled_config():
     """Create a config with all safety features enabled."""
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     
     # Enable safety features
     config.agent = AgentConfig(
@@ -75,10 +74,10 @@ class TestRealWorldAutonomousScenarios:
     @pytest.mark.e2e
     async def test_build_simple_todo_app(self, safety_enabled_config, temp_workspace):
         """Test building a simple TODO app from scratch."""
-        from openhands.controller.agent_controller import AgentController
-        from openhands.core.setup import create_agent, create_runtime
-        from openhands.events.action import MessageAction
-        from openhands.events.observation import AgentStateChangedObservation
+        from forge.controller.agent_controller import AgentController
+        from forge.core.setup import create_agent, create_runtime
+        from forge.events.action import MessageAction
+        from forge.events.observation import AgentStateChangedObservation
         
         # Create runtime and agent
         runtime = await create_runtime(safety_enabled_config, workspace_base=str(temp_workspace))
@@ -143,10 +142,10 @@ class TestRealWorldAutonomousScenarios:
     @pytest.mark.e2e
     async def test_dangerous_command_blocked(self, safety_enabled_config, temp_workspace):
         """Test that dangerous commands are blocked by safety validator."""
-        from openhands.controller.agent_controller import AgentController
-        from openhands.core.setup import create_agent, create_runtime
-        from openhands.events.action import MessageAction, CmdRunAction
-        from openhands.events.observation import ErrorObservation
+        from forge.controller.agent_controller import AgentController
+        from forge.core.setup import create_agent, create_runtime
+        from forge.events.action import MessageAction, CmdRunAction
+        from forge.events.observation import ErrorObservation
         
         runtime = await create_runtime(safety_enabled_config, workspace_base=str(temp_workspace))
         agent = create_agent(safety_enabled_config)
@@ -184,9 +183,9 @@ class TestRealWorldAutonomousScenarios:
     @pytest.mark.e2e
     async def test_error_recovery_and_retry(self, safety_enabled_config, temp_workspace):
         """Test that agent recovers from errors and retries intelligently."""
-        from openhands.controller.agent_controller import AgentController
-        from openhands.core.setup import create_agent, create_runtime
-        from openhands.events.action import MessageAction
+        from forge.controller.agent_controller import AgentController
+        from forge.core.setup import create_agent, create_runtime
+        from forge.events.action import MessageAction
         
         runtime = await create_runtime(safety_enabled_config, workspace_base=str(temp_workspace))
         agent = create_agent(safety_enabled_config)
@@ -233,9 +232,9 @@ class TestRealWorldAutonomousScenarios:
     @pytest.mark.e2e
     async def test_circuit_breaker_trips_on_repeated_errors(self, safety_enabled_config, temp_workspace):
         """Test that circuit breaker stops execution after too many errors."""
-        from openhands.controller.agent_controller import AgentController
-        from openhands.core.setup import create_agent, create_runtime
-        from openhands.events.action import MessageAction
+        from forge.controller.agent_controller import AgentController
+        from forge.core.setup import create_agent, create_runtime
+        from forge.events.action import MessageAction
         
         # Lower error threshold for testing
         safety_enabled_config.agent.max_consecutive_errors = 3
@@ -279,9 +278,9 @@ class TestRealWorldAutonomousScenarios:
     @pytest.mark.e2e
     async def test_build_calculator_with_tests(self, safety_enabled_config, temp_workspace):
         """Test building a calculator with automated tests."""
-        from openhands.controller.agent_controller import AgentController
-        from openhands.core.setup import create_agent, create_runtime
-        from openhands.events.action import MessageAction
+        from forge.controller.agent_controller import AgentController
+        from forge.core.setup import create_agent, create_runtime
+        from forge.events.action import MessageAction
         
         runtime = await create_runtime(safety_enabled_config, workspace_base=str(temp_workspace))
         agent = create_agent(safety_enabled_config)
@@ -334,9 +333,9 @@ class TestRealWorldAutonomousScenarios:
     @pytest.mark.e2e
     async def test_task_validation_prevents_premature_completion(self, safety_enabled_config, temp_workspace):
         """Test that task validator prevents agent from finishing without completing task."""
-        from openhands.controller.agent_controller import AgentController
-        from openhands.core.setup import create_agent, create_runtime
-        from openhands.events.action import MessageAction, AgentFinishAction
+        from forge.controller.agent_controller import AgentController
+        from forge.core.setup import create_agent, create_runtime
+        from forge.events.action import MessageAction, AgentFinishAction
         
         runtime = await create_runtime(safety_enabled_config, workspace_base=str(temp_workspace))
         agent = create_agent(safety_enabled_config)
@@ -386,9 +385,9 @@ class TestRealWorldAutonomousScenarios:
     @pytest.mark.e2e
     async def test_audit_logging_captures_actions(self, safety_enabled_config, temp_workspace):
         """Test that audit logger captures all agent actions."""
-        from openhands.controller.agent_controller import AgentController
-        from openhands.core.setup import create_agent, create_runtime
-        from openhands.events.action import MessageAction
+        from forge.controller.agent_controller import AgentController
+        from forge.core.setup import create_agent, create_runtime
+        from forge.events.action import MessageAction
         
         runtime = await create_runtime(safety_enabled_config, workspace_base=str(temp_workspace))
         agent = create_agent(safety_enabled_config)
@@ -439,8 +438,8 @@ class TestAutonomousWithPlaywright:
     @pytest.mark.asyncio
     async def test_ui_build_app_workflow(self, page):
         """Test building an app through the UI."""
-        # This requires OpenHands server to be running
-        # Navigate to OpenHands UI
+        # This requires Forge server to be running
+        # Navigate to Forge UI
         await page.goto('http://localhost:3000')
         
         # Wait for UI to load

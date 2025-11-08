@@ -1,8 +1,15 @@
-# OpenHands Architecture
+# Forge Architecture
 
 ## Overview
 
-OpenHands is a production-grade AI coding agent system built on a 5-layer architecture, currently optimized for the CodeAct agent (beta launch focus).
+Forge is a production-grade AI coding agent system built on a 5-layer architecture, currently optimized for the CodeAct agent (beta launch focus).
+
+### Code Quality
+- **125,186 total lines** (81,934 source lines of code)
+- **5,931 functions/methods**
+- **Average complexity: 3.13** (A-rated)
+- **0% high-complexity functions** (industry-leading)
+- See [CODE_QUALITY.md](CODE_QUALITY.md) for detailed metrics
 
 ## System Architecture
 
@@ -53,7 +60,7 @@ OpenHands is a production-grade AI coding agent system built on a 5-layer archit
 ```
 User sends message via WebSocket
    ↓
-Message received by server (openhands/server/listen.py)
+Message received by server (Forge/server/listen.py)
    ↓
 Event published to EventStream
    ↓
@@ -117,17 +124,17 @@ Response + cost tracking + metrics
 | Ollama | Local models | - | Privacy, offline use |
 
 **Key Files:**
-- `openhands/core/config/api_key_manager.py` - Secure key management, provider detection
-- `openhands/core/config/provider_config.py` - 30 provider configurations with validation rules
-- `openhands/llm/model_features.py` - Feature detection (function calling, caching, vision)
-- `openhands/llm/llm.py` - Main LLM class with retry logic, cost tracking
+- `Forge/core/config/api_key_manager.py` - Secure key management, provider detection
+- `Forge/core/config/provider_config.py` - 30 provider configurations with validation rules
+- `Forge/llm/model_features.py` - Feature detection (function calling, caching, vision)
+- `Forge/llm/llm.py` - Main LLM class with retry logic, cost tracking
 
 ### 2. Event-Driven Architecture
 
 **EventStream (Central Pub/Sub Hub):**
 
 ```python
-# File: openhands/events/event_stream.py
+# File: Forge/events/event_stream.py
 
 # Publishing events
 event_stream.add_event(MessageAction(content="Hello"))
@@ -173,7 +180,7 @@ FINISHED
 **CodeAct Agent Loop:**
 
 ```python
-# File: openhands/agenthub/codeact_agent/codeact_agent.py
+# File: Forge/agenthub/codeact_agent/codeact_agent.py
 
 def step(state: State) -> Action:
     # 1. Analyze current state
@@ -219,7 +226,7 @@ Result returned safely
 ```
 
 **Security Layers:**
-1. **Risk Assessment** - AI-powered analysis of commands (`openhands/security/analyzer.py`)
+1. **Risk Assessment** - AI-powered analysis of commands (`Forge/security/analyzer.py`)
 2. **Sandbox Execution** - Docker container isolation
 3. **Input Validation** - Command injection prevention
 4. **Rate Limiting** - Prevent abuse (1000 req/hour)
@@ -238,7 +245,7 @@ Result returned safely
 **Prometheus Metrics (30+):**
 
 ```
-# Sample metrics from openhands/metasop/metrics.py
+# Sample metrics from forge/metasop/metrics.py
 
 metasop_steps_executed          # Total steps executed
 metasop_steps_failed            # Failed steps
@@ -268,7 +275,7 @@ metasop_retry_attempts          # Retry patterns
 
 ### 6. HTTP Caching (Already Implemented)
 
-**File:** `openhands/server/middleware/compression.py`
+**File:** `Forge/server/middleware/compression.py`
 
 **Features:**
 - ETag generation for cache validation
@@ -375,8 +382,8 @@ See [Configuration Guide](./configuration.md) for complete reference.
 ## Component Details
 
 For deep dives into specific components:
-- **LLM System:** See `openhands/llm/README.md`
-- **CodeAct Agent:** See `openhands/agenthub/codeact_agent/README.md`
-- **Security:** See `openhands/security/README.md`
+- **LLM System:** See `Forge/llm/README.md`
+- **CodeAct Agent:** See `Forge/agenthub/codeact_agent/README.md`
+- **Security:** See `Forge/security/README.md`
 - **Frontend:** See `frontend/README.md`
 

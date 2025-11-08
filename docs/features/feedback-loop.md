@@ -117,7 +117,7 @@ def learn_from_predictions(predictions, actual_results):
 enable_learning = true
 
 # Learning storage path
-learning_persistence_path = "~/.openhands/learning/"
+learning_persistence_path = "~/.Forge/learning/"
 
 # Learning parameters
 learning_min_samples = 5
@@ -149,7 +149,7 @@ backup_learning_data = true
 
 ### **Automatic Learning**
 ```python
-from openhands.metasop import MetaSOPOrchestrator
+from forge.metasop import MetaSOPOrchestrator
 
 # Initialize with learning enabled
 orchestrator = MetaSOPOrchestrator("learning_delivery")
@@ -180,7 +180,7 @@ print(f"Average speedup: {summary['avg_speedup']:.2f}x")
 ### **Learning Data Analysis**
 ```python
 # Analyze learning progress over time
-from openhands.metasop.learning_storage import LearningStorage
+from forge.metasop.learning_storage import LearningStorage
 
 storage = LearningStorage()
 

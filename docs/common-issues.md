@@ -23,7 +23,7 @@ npm cache clean --force
 npm install
 ```
 
-### ❌ "ModuleNotFoundError: No module named 'openhands'"
+### ❌ "ModuleNotFoundError: No module named 'Forge'"
 
 **Fix:**
 ```bash
@@ -126,9 +126,9 @@ docker ps
 
 **Fix:**
 ```bash
-# Fix ~/.openhands permissions
-sudo chown -R $USER:$USER ~/.openhands
-chmod 755 ~/.openhands
+# Fix ~/.Forge permissions
+sudo chown -R $USER:$USER ~/.Forge
+chmod 755 ~/.Forge
 ```
 
 ## Still Stuck?

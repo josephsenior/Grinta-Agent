@@ -13,22 +13,22 @@ import pytest
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from openhands.controller.agent_controller import AgentController
-from openhands.controller.autonomy import AutonomyLevel
-from openhands.controller.error_recovery import ErrorRecoveryStrategy, ErrorType
-from openhands.controller.safety_validator import SafetyValidator, ExecutionContext
-from openhands.controller.circuit_breaker import CircuitBreaker, CircuitBreakerConfig
-from openhands.events.action import CmdRunAction, ActionSecurityRisk, AgentFinishAction
-from openhands.security.command_analyzer import CommandAnalyzer
-from openhands.security.safety_config import SafetyConfig
-from openhands.validation.task_validator import (
+from forge.controller.agent_controller import AgentController
+from forge.controller.autonomy import AutonomyLevel
+from forge.controller.error_recovery import ErrorRecoveryStrategy, ErrorType
+from forge.controller.safety_validator import SafetyValidator, ExecutionContext
+from forge.controller.circuit_breaker import CircuitBreaker, CircuitBreakerConfig
+from forge.events.action import CmdRunAction, ActionSecurityRisk, AgentFinishAction
+from forge.security.command_analyzer import CommandAnalyzer
+from forge.security.safety_config import SafetyConfig
+from forge.validation.task_validator import (
     Task,
     TestPassingValidator,
     GitDiffValidator,
     CompositeValidator,
 )
-from openhands.core.config import AgentConfig
-from openhands.controller.state.state import State
+from forge.core.config import AgentConfig
+from forge.controller.state.state import State
 
 
 class TestCommandRiskDetection:
@@ -328,7 +328,7 @@ class TestSemanticStuckDetection:
     
     def test_detects_low_diversity_high_failure(self):
         """Test detection of semantic loops."""
-        from openhands.controller.stuck import StuckDetector
+        from forge.controller.stuck import StuckDetector
         
         # Create mock state with semantic loop
         state = MagicMock()
@@ -361,7 +361,7 @@ class TestAutonomousSafetyUI:
     @pytest.mark.asyncio
     async def test_dangerous_command_shows_blocked_message(self, page):
         """Test that dangerous commands show blocked message in UI."""
-        # Navigate to OpenHands
+        # Navigate to Forge
         await page.goto("http://localhost:3000")
         
         # Set full autonomy mode

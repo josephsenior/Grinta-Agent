@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, vi, expect } from "vitest";
 import { ModalBackdrop } from "../modal-backdrop";
@@ -54,7 +54,9 @@ describe("ModalBackdrop", () => {
     const second = screen.getByRole("button", { name: /second/i });
 
     // initial focus should land on first
-    expect(document.activeElement).toBe(first);
+    await waitFor(() => {
+      expect(document.activeElement).toBe(first);
+    });
 
     await user.tab();
     expect(document.activeElement).toBe(second);

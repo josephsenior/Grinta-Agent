@@ -58,6 +58,7 @@ export function InteractiveChatBox({
   const [pendingFiles, setPendingFiles] = React.useState<File[]>([]);
   const [showFilePreview, setShowFilePreview] = React.useState(false);
   const [isDraggingOverContainer, setIsDraggingOverContainer] = React.useState(false); // For drag-drop overlay
+  const hiddenFileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Helper to safely extract HTTP status from various error shapes.
   const extractResponseStatus = (err: unknown): number | undefined => {
@@ -156,6 +157,22 @@ export function InteractiveChatBox({
     }
   };
 
+  const handleHiddenInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      const selectedFiles = Array.from(event.target.files);
+      handleUpload(selectedFiles);
+      // Allow selecting the same file repeatedly by resetting the value
+      event.target.value = "";
+    }
+  };
+
+  const handleUploadButtonClick = () => {
+    if (!showFileUpload) {
+      hiddenFileInputRef.current?.click();
+    }
+    setShowFileUpload((prev) => !prev);
+  };
+
   return (
     <div
       data-testid="interactive-chat-box"
@@ -164,6 +181,14 @@ export function InteractiveChatBox({
       onDragLeave={handleContainerDragLeave}
       onDrop={handleContainerDrop}
     >
+      <input
+        ref={hiddenFileInputRef}
+        data-testid="upload-image-input"
+        type="file"
+        multiple
+        className="hidden"
+        onChange={handleHiddenInputChange}
+      />
       {/* Drag-and-drop overlay (bolt.diy style) */}
       {isDraggingOverContainer && (
         <div className="absolute inset-0 z-50 bg-violet-500/10 backdrop-blur-sm border-2 border-dashed border-violet-500 rounded-xl flex items-center justify-center animate-fade-in">
@@ -200,7 +225,10 @@ export function InteractiveChatBox({
 
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1">
-                <UploadImageInput onUpload={handleUpload} />
+                <UploadImageInput
+                  onUpload={handleUpload}
+                  inputTestId="upload-image-input-visible"
+                />
               </div>
 
               <div className="flex items-center gap-2 text-xs text-text-foreground-secondary">
@@ -283,7 +311,7 @@ export function InteractiveChatBox({
             type="button"
             variant="ghost"
             size="icon"
-            onClick={() => setShowFileUpload(!showFileUpload)}
+            onClick={handleUploadButtonClick}
             className={cn(
               "flex-shrink-0 h-10 w-10 rounded-full transition-all duration-200",
               "text-violet-400 hover:text-violet-300 hover:bg-violet-500/10",

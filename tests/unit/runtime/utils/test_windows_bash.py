@@ -5,10 +5,10 @@ import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import pytest
-from openhands.events.action import CmdRunAction
-from openhands.events.observation import ErrorObservation
-from openhands.events.observation.commands import CmdOutputObservation
-from openhands.runtime.utils.bash_constants import TIMEOUT_MESSAGE_TEMPLATE
+from forge.events.action import CmdRunAction
+from forge.events.observation import ErrorObservation
+from forge.events.observation.commands import CmdOutputObservation
+from forge.runtime.utils.bash_constants import TIMEOUT_MESSAGE_TEMPLATE
 
 
 def get_timeout_suffix(timeout_seconds):
@@ -39,7 +39,7 @@ def windows_bash_session(temp_work_dir):
 
 
 if sys.platform == "win32":
-    from openhands.runtime.utils.windows_bash import WindowsPowershellSession
+    from forge.runtime.utils.windows_bash import WindowsPowershellSession
 
 
 def test_command_execution(windows_bash_session):
@@ -243,7 +243,7 @@ def test_empty_command(windows_bash_session):
 
 def test_exception_during_execution(windows_bash_session):
     """Test handling of exceptions during command execution."""
-    patch_target = "openhands.runtime.utils.windows_bash.PowerShell"
+    patch_target = "forge.runtime.utils.windows_bash.PowerShell"
     mock_powershell_class = MagicMock()
     mock_powershell_class.Create.side_effect = Exception("Test exception from mocked Create")
     with patch(patch_target, mock_powershell_class):

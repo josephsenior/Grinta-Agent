@@ -18,7 +18,7 @@ Microagents are contextual prompts activated by trigger words for specific tasks
 
 ## Quick Template
 
-Create `.openhands/microagents/yourname.md`:
+Create `.Forge/microagents/yourname.md`:
 
 ```markdown
 ---

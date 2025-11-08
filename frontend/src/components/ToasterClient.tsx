@@ -13,8 +13,13 @@ export default function ToasterClient(): React.ReactElement | null {
     let mounted = true;
 
     // If the safe wrapper has already loaded the real library, use it.
-    type RawHolder = { raw?: unknown };
-    const { raw } = safeToast as unknown as RawHolder;
+    const holder = safeToast as unknown;
+    const raw =
+      typeof holder === "object" && holder !== null &&
+      "raw" in (holder as Record<string, unknown>)
+        ? (holder as Record<string, unknown>).raw
+        : undefined;
+
     if (raw) {
       const m = raw as Record<string, unknown>;
       const { Toaster: ToasterComp, default: defaultExport } = m;
@@ -34,7 +39,12 @@ export default function ToasterClient(): React.ReactElement | null {
     // Poll for a short time for the safe wrapper to populate `raw` so
     // that we can render the real Toaster when available.
     const interval = window.setInterval(() => {
-      const m = (safeToast as unknown as RawHolder).raw;
+      const holder = safeToast as unknown;
+      const m =
+        typeof holder === "object" && holder !== null &&
+        "raw" in (holder as Record<string, unknown>)
+          ? (holder as Record<string, unknown>).raw
+          : undefined;
       if (m) {
         const mRec = m as Record<string, unknown>;
         const { Toaster: ToasterComp, default: defaultExport } = mRec;

@@ -1,15 +1,15 @@
 from unittest.mock import AsyncMock, patch
 import pytest
-from openhands.integrations.service_types import GitService
-from openhands.server.routes.mcp import get_conversation_link
-from openhands.server.types import AppMode
+from forge.integrations.service_types import GitService
+from forge.server.routes.mcp import get_conversation_link
+from forge.server.types import AppMode
 
 
 @pytest.mark.asyncio
 async def test_get_conversation_link_non_saas_mode():
     """Test get_conversation_link in non-SAAS mode."""
     mock_service = AsyncMock(spec=GitService)
-    with patch("openhands.server.routes.mcp.server_config") as mock_config:
+    with patch("forge.server.routes.mcp.server_config") as mock_config:
         mock_config.app_mode = AppMode.OSS
         result = await get_conversation_link(
             service=mock_service, conversation_id="test-convo-id", body="Original body"
@@ -25,8 +25,8 @@ async def test_get_conversation_link_saas_mode():
     mock_user = AsyncMock()
     mock_user.login = "testuser"
     mock_service.get_user.return_value = mock_user
-    with patch("openhands.server.routes.mcp.server_config") as mock_config, patch(
-        "openhands.server.routes.mcp.CONVERSATION_URL", "https://test.example.com/conversations/{}"
+    with patch("forge.server.routes.mcp.server_config") as mock_config, patch(
+        "forge.server.routes.mcp.CONVERSATION_URL", "https://test.example.com/conversations/{}"
     ):
         mock_config.app_mode = AppMode.SAAS
         result = await get_conversation_link(
@@ -44,8 +44,8 @@ async def test_get_conversation_link_empty_body():
     mock_user = AsyncMock()
     mock_user.login = "testuser"
     mock_service.get_user.return_value = mock_user
-    with patch("openhands.server.routes.mcp.server_config") as mock_config, patch(
-        "openhands.server.routes.mcp.CONVERSATION_URL", "https://test.example.com/conversations/{}"
+    with patch("forge.server.routes.mcp.server_config") as mock_config, patch(
+        "forge.server.routes.mcp.CONVERSATION_URL", "https://test.example.com/conversations/{}"
     ):
         mock_config.app_mode = AppMode.SAAS
         result = await get_conversation_link(service=mock_service, conversation_id="test-convo-id", body="")

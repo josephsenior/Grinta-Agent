@@ -1,7 +1,7 @@
 """Small probe to exercise the structural wrapper."""
 
 import logging
-from openhands.structural import available, semantic_diff_counts
+from forge.structural import available, semantic_diff_counts
 
 logger = logging.getLogger(__name__)
 A = "\ndef add(a, b):\n    return a + b\n\nclass C:\n    def m(self, x):\n        return x * 2\n"

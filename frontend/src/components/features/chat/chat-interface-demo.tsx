@@ -102,8 +102,8 @@ export function ChatInterfaceDemo() {
   const handleShareChat = () => {
     if (navigator.share) {
       navigator.share({
-        title: "OpenHands AI Chat",
-        text: "Check out this conversation with OpenHands AI",
+        title: "Forge AI Chat",
+        text: "Check out this conversation with Forge AI",
         url: window.location.href,
       });
     } else {
@@ -125,7 +125,7 @@ export function ChatInterfaceDemo() {
             </h1>
           </div>
           <p className="text-xl text-text-secondary max-w-2xl mx-auto">
-            Experience the new OpenHands AI interface with glass morphism,
+            Experience the new Forge AI interface with glass morphism,
             smooth animations, and modern design patterns that harmonize
             perfectly with your Dracula theme.
           </p>
@@ -234,7 +234,7 @@ export function ChatInterfaceDemo() {
                 onExportChat={handleExportChat}
                 onShareChat={handleShareChat}
                 showQuickActions
-                title="OpenHands AI"
+                title="Forge AI"
                 subtitle="Your intelligent coding assistant"
               />
             </div>

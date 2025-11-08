@@ -28,7 +28,7 @@ export function Sidebar() {
     React.useState(false);
 
   interface WindowWithE2E extends Window {
-    __OPENHANDS_PLAYWRIGHT?: boolean;
+    __Forge_PLAYWRIGHT?: boolean;
   }
 
   const win =
@@ -36,7 +36,7 @@ export function Sidebar() {
       ? (window as unknown as WindowWithE2E)
       : undefined;
 
-  const isPlaywrightRun = win?.__OPENHANDS_PLAYWRIGHT === true;
+  const isPlaywrightRun = win?.__Forge_PLAYWRIGHT === true;
 
   // TODO: Remove HIDE_LLM_SETTINGS check once released
   const shouldHideLlmSettings =
@@ -45,17 +45,17 @@ export function Sidebar() {
   React.useEffect(() => {
     // Open conversation panel when an external trigger requests it
     const openHandler = () => setConversationPanelIsOpen(true);
-    window.addEventListener("openhands:open-conversation-panel", openHandler);
+    window.addEventListener("Forge:open-conversation-panel", openHandler);
 
     // If Playwright is running, open immediately to guard against the
     // event being dispatched before this listener attaches.
-    if (win?.__OPENHANDS_PLAYWRIGHT === true) {
+    if (win?.__Forge_PLAYWRIGHT === true) {
       openHandler();
     }
 
     return () => {
       window.removeEventListener(
-        "openhands:open-conversation-panel",
+        "Forge:open-conversation-panel",
         openHandler,
       );
     };

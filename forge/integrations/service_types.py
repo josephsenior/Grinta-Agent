@@ -1,0 +1,583 @@
+"""Shared type definitions and abstract services for Forge Git integrations."""
+
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Protocol
+
+from jinja2 import Environment, FileSystemLoader
+from pydantic import BaseModel, SecretStr
+
+from forge.core.logger import forge_logger as logger
+from forge.microagent.microagent import BaseMicroagent
+from forge.microagent.types import MicroagentContentResponse, MicroagentResponse
+
+if TYPE_CHECKING:
+    from forge.server.types import AppMode
+
+
+class TokenResponse(BaseModel):
+    """Response model for authentication token."""
+    token: str
+
+
+class ProviderType(Enum):
+    """Git provider type enumeration."""
+    GITHUB = "github"
+    GITLAB = "gitlab"
+    BITBUCKET = "bitbucket"
+    ENTERPRISE_SSO = "enterprise_sso"
+
+
+class TaskType(str, Enum):
+    """Task type enumeration for suggested tasks."""
+    MERGE_CONFLICTS = "MERGE_CONFLICTS"
+    FAILING_CHECKS = "FAILING_CHECKS"
+    UNRESOLVED_COMMENTS = "UNRESOLVED_COMMENTS"
+    OPEN_ISSUE = "OPEN_ISSUE"
+    OPEN_PR = "OPEN_PR"
+    CREATE_MICROAGENT = "CREATE_MICROAGENT"
+
+
+class OwnerType(str, Enum):
+    """Owner type enumeration for repositories."""
+    USER = "user"
+    ORGANIZATION = "organization"
+
+
+class SuggestedTask(BaseModel):
+    """Model representing a suggested task from a git provider."""
+    git_provider: ProviderType
+    task_type: TaskType
+    repo: str
+    issue_number: int
+    title: str
+
+    def get_provider_terms(self) -> dict:
+        """Get provider-specific terminology dictionary.
+        
+        Returns:
+            Dictionary with provider-specific terms (PR/MR, API names, etc.)
+            
+        Raises:
+            ValueError: If provider type is not supported
+
+        """
+        if self.git_provider == ProviderType.GITHUB:
+            return {
+                "requestType": "Pull Request",
+                "requestTypeShort": "PR",
+                "apiName": "GitHub API",
+                "tokenEnvVar": "GITHUB_TOKEN",
+                "ciSystem": "GitHub Actions",
+                "ciProvider": "GitHub",
+                "requestVerb": "pull request",
+            }
+        if self.git_provider == ProviderType.GITLAB:
+            return {
+                "requestType": "Merge Request",
+                "requestTypeShort": "MR",
+                "apiName": "GitLab API",
+                "tokenEnvVar": "GITLAB_TOKEN",
+                "ciSystem": "CI pipelines",
+                "ciProvider": "GitLab",
+                "requestVerb": "merge request",
+            }
+        if self.git_provider == ProviderType.BITBUCKET:
+            return {
+                "requestType": "Pull Request",
+                "requestTypeShort": "PR",
+                "apiName": "Bitbucket API",
+                "tokenEnvVar": "BITBUCKET_TOKEN",
+                "ciSystem": "Bitbucket Pipelines",
+                "ciProvider": "Bitbucket",
+                "requestVerb": "pull request",
+            }
+        msg = f"Provider {self.git_provider} for suggested task prompts"
+        raise ValueError(msg)
+
+    def get_prompt_for_task(self) -> str:
+        """Generate prompt text for the suggested task.
+        
+        Renders Jinja2 template based on task type with provider-specific terms.
+        
+        Returns:
+            Rendered prompt string for the task
+            
+        Raises:
+            ValueError: If task type is not supported
+
+        """
+        task_type = self.task_type
+        issue_number = self.issue_number
+        repo = self.repo
+        # nosec B701 - Template rendering for prompts (not HTML), autoescape enabled
+        env = Environment(
+            loader=FileSystemLoader("Forge/integrations/templates/suggested_task"),
+            autoescape=True,
+        )
+        template = None
+        if task_type == TaskType.MERGE_CONFLICTS:
+            template = env.get_template("merge_conflict_prompt.j2")
+        elif task_type == TaskType.FAILING_CHECKS:
+            template = env.get_template("failing_checks_prompt.j2")
+        elif task_type == TaskType.UNRESOLVED_COMMENTS:
+            template = env.get_template("unresolved_comments_prompt.j2")
+        elif task_type == TaskType.OPEN_ISSUE:
+            template = env.get_template("open_issue_prompt.j2")
+        else:
+            msg = f"Unsupported task type: {task_type}"
+            raise ValueError(msg)
+        terms = self.get_provider_terms()
+        return template.render(issue_number=issue_number, repo=repo, **terms)
+
+
+class CreateMicroagent(BaseModel):
+    """Model for creating a new microagent."""
+    repo: str
+    git_provider: ProviderType | None = None
+    title: str | None = None
+
+
+class User(BaseModel):
+    """Model representing a user from a git provider."""
+    id: str
+    login: str
+    avatar_url: str
+    company: str | None = None
+    name: str | None = None
+    email: str | None = None
+
+
+class Branch(BaseModel):
+    """Model representing a git branch."""
+    name: str
+    commit_sha: str
+    protected: bool
+    last_push_date: str | None = None
+
+
+class PaginatedBranchesResponse(BaseModel):
+    """Response model for paginated branch list."""
+    branches: list[Branch]
+    has_next_page: bool
+    current_page: int
+    per_page: int
+    total_count: int | None = None
+
+
+class Repository(BaseModel):
+    """Model representing a git repository."""
+    id: str
+    full_name: str
+    git_provider: ProviderType
+    is_public: bool
+    stargazers_count: int | None = None
+    link_header: str | None = None
+    pushed_at: str | None = None
+    owner_type: OwnerType | None = None
+    main_branch: str | None = None
+
+
+class Comment(BaseModel):
+    """Model representing a comment on an issue or PR."""
+    id: str
+    body: str
+    author: str
+    created_at: datetime
+    updated_at: datetime
+    system: bool = False
+
+
+class AuthenticationError(ValueError):
+    """Raised when there is an issue with GitHub authentication."""
+
+
+class UnknownException(ValueError):
+    """Raised when there is an issue with GitHub communcation."""
+
+
+class RateLimitError(ValueError):
+    """Raised when the git provider's API rate limits are exceeded."""
+
+
+class ResourceNotFoundError(ValueError):
+    """Raised when a requested resource (file, directory, etc.) is not found."""
+
+
+class MicroagentParseError(ValueError):
+    """Raised when there is an error parsing a microagent file."""
+
+
+class RequestMethod(Enum):
+    """HTTP request method enumeration."""
+    POST = "post"
+    GET = "get"
+
+
+class BaseGitService(ABC):
+    """Abstract base class describing provider-specific git service implementations."""
+
+    @property
+    def provider(self) -> str:
+        """Return underlying provider identifier (e.g., github, gitlab)."""
+        msg = "Subclasses must implement the provider property"
+        raise NotImplementedError(msg)
+
+    @abstractmethod
+    async def _make_request(
+        self,
+        url: str,
+        params: dict | None = None,
+        method: RequestMethod = RequestMethod.GET,
+    ) -> tuple[Any, dict]: ...
+
+    @abstractmethod
+    async def _get_cursorrules_url(self, repository: str) -> str:
+        """Get the URL for checking .cursorrules file."""
+        ...
+
+    @abstractmethod
+    async def _get_microagents_directory_url(
+        self,
+        repository: str,
+        microagents_path: str,
+    ) -> str:
+        """Get the URL for checking microagents directory."""
+        ...
+
+    @abstractmethod
+    def _get_microagents_directory_params(self, microagents_path: str) -> dict | None:
+        """Get parameters for the microagents directory request. Return None if no parameters needed."""
+        ...
+
+    @abstractmethod
+    def _is_valid_microagent_file(self, item: dict) -> bool:
+        """Check if an item represents a valid microagent file."""
+        ...
+
+    @abstractmethod
+    def _get_file_name_from_item(self, item: dict) -> str:
+        """Extract file name from directory item."""
+        ...
+
+    @abstractmethod
+    def _get_file_path_from_item(self, item: dict, microagents_path: str) -> str:
+        """Extract file path from directory item."""
+        ...
+
+    def _determine_microagents_path(self, repository_name: str) -> str:
+        """Determine the microagents directory path based on repository name."""
+        actual_repo_name = repository_name.split("/")[-1]
+        if actual_repo_name in [".Forge", "Forge-config"]:
+            return "microagents"
+        return ".Forge/microagents"
+
+    def _create_microagent_response(
+        self,
+        file_name: str,
+        path: str,
+    ) -> MicroagentResponse:
+        """Create a microagent response from basic file information."""
+        name = file_name.replace(".md", "").replace(".cursorrules", "cursorrules")
+        return MicroagentResponse(name=name, path=path, created_at=datetime.now())
+
+    def _parse_microagent_content(
+        self,
+        content: str,
+        file_path: str,
+    ) -> MicroagentContentResponse:
+        """Parse microagent content and extract triggers using BaseMicroagent.load.
+
+        Args:
+            content: Raw microagent file content
+            file_path: Path to the file (used for microagent loading)
+
+        Returns:
+            MicroagentContentResponse with parsed content and triggers
+
+        Raises:
+            MicroagentParseError: If the microagent file cannot be parsed
+
+        """
+        try:
+            temp_path = Path(file_path)
+            microagent = BaseMicroagent.load(path=temp_path, file_content=content)
+            triggers = microagent.metadata.triggers
+            return MicroagentContentResponse(
+                content=microagent.content,
+                path=file_path,
+                triggers=triggers,
+                git_provider=self.provider,
+            )
+        except Exception as e:
+            logger.error(
+                "Error parsing microagent content for %s: %s",
+                file_path,
+                str(e),
+            )
+            msg = f"Failed to parse microagent file {file_path}: {e!s}"
+            raise MicroagentParseError(
+                msg,
+            ) from e
+
+    async def _fetch_cursorrules_content(self, repository: str) -> Any | None:
+        """Fetch .cursorrules file content from the repository via API.
+
+        Args:
+            repository: Repository name in format specific to the provider
+
+        Returns:
+            Raw API response content if .cursorrules file exists, None otherwise
+
+        """
+        cursorrules_url = await self._get_cursorrules_url(repository)
+        cursorrules_response, _ = await self._make_request(cursorrules_url)
+        return cursorrules_response
+
+    async def _check_cursorrules_file(
+        self,
+        repository: str,
+    ) -> MicroagentResponse | None:
+        """Check for .cursorrules file in the repository and return microagent response if found.
+
+        Args:
+            repository: Repository name in format specific to the provider
+
+        Returns:
+            MicroagentResponse for .cursorrules file if found, None otherwise
+
+        """
+        try:
+            cursorrules_content = await self._fetch_cursorrules_content(repository)
+            if cursorrules_content:
+                return self._create_microagent_response(".cursorrules", ".cursorrules")
+        except ResourceNotFoundError:
+            logger.debug("No .cursorrules file found in %s", repository)
+        except Exception as e:
+            logger.warning("Error checking .cursorrules file in %s: %s", repository, e)
+        return None
+
+    async def _process_microagents_directory(
+        self,
+        repository: str,
+        microagents_path: str,
+    ) -> list[MicroagentResponse]:
+        """Process microagents directory and return list of microagent responses.
+
+        Args:
+            repository: Repository name in format specific to the provider
+            microagents_path: Path to the microagents directory
+
+        Returns:
+            List of MicroagentResponse objects found in the directory
+
+        """
+        microagents = []
+        try:
+            directory_url = await self._get_microagents_directory_url(
+                repository,
+                microagents_path,
+            )
+            directory_params = self._get_microagents_directory_params(microagents_path)
+            response, _ = await self._make_request(directory_url, directory_params)
+            items = response
+            if isinstance(response, dict) and "values" in response:
+                items = response["values"]
+            elif isinstance(response, dict) and "nodes" in response:
+                items = response["nodes"]
+            for item in items:
+                if self._is_valid_microagent_file(item):
+                    try:
+                        file_name = self._get_file_name_from_item(item)
+                        file_path = self._get_file_path_from_item(
+                            item,
+                            microagents_path,
+                        )
+                        microagents.append(
+                            self._create_microagent_response(file_name, file_path),
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            "Error processing microagent %s: %s",
+                            item.get("name", "unknown"),
+                            str(e),
+                        )
+        except ResourceNotFoundError:
+            logger.info(
+                "No microagents directory found in %s at %s",
+                repository,
+                microagents_path,
+            )
+        except Exception as e:
+            logger.warning("Error fetching microagents directory: %s", str(e))
+        return microagents
+
+    async def get_microagents(self, repository: str) -> list[MicroagentResponse]:
+        """Generic implementation of get_microagents that works across all providers.
+
+        Args:
+            repository: Repository name in format specific to the provider
+
+        Returns:
+            List of microagents found in the repository (without content for performance)
+
+        """
+        microagents_path = self._determine_microagents_path(repository)
+        microagents = []
+        cursorrules_microagent = await self._check_cursorrules_file(repository)
+        if cursorrules_microagent:
+            microagents.append(cursorrules_microagent)
+        directory_microagents = await self._process_microagents_directory(
+            repository,
+            microagents_path,
+        )
+        microagents.extend(directory_microagents)
+        return microagents
+
+    def _truncate_comment(
+        self,
+        comment_body: str,
+        max_comment_length: int = 500,
+    ) -> str:
+        """Truncate comment body to a maximum length."""
+        if len(comment_body) > max_comment_length:
+            return f"{comment_body[:max_comment_length]}..."
+        return comment_body
+
+
+class InstallationsService(Protocol):
+    """Protocol for provider clients exposing installation/workspace listing."""
+
+    async def get_installations(self) -> list[str]:
+        """Get installations for the service; repos live underneath these installations."""
+        ...
+
+
+class GitService(Protocol):
+    """Protocol defining the interface for Git service providers."""
+
+    def __init__(
+        self,
+        user_id: str | None = None,
+        token: SecretStr | None = None,
+        external_auth_id: str | None = None,
+        external_auth_token: SecretStr | None = None,
+        external_token_manager: bool = False,
+        base_domain: str | None = None,
+    ) -> None:
+        """Initialize the service with authentication details."""
+        ...
+
+    async def get_latest_token(self) -> SecretStr | None:
+        """Get latest working token of the user."""
+        ...
+
+    async def get_user(self) -> User:
+        """Get the authenticated user's information."""
+        ...
+
+    async def search_repositories(
+        self,
+        query: str,
+        per_page: int,
+        sort: str,
+        order: str,
+        public: bool,
+    ) -> list[Repository]:
+        """Search for public repositories."""
+        ...
+
+    async def get_all_repositories(
+        self,
+        sort: str,
+        app_mode: AppMode,
+    ) -> list[Repository]:
+        """Get repositories for the authenticated user."""
+        ...
+
+    async def get_paginated_repos(
+        self,
+        page: int,
+        per_page: int,
+        sort: str,
+        installation_id: str | None,
+        query: str | None = None,
+    ) -> list[Repository]:
+        """Get a page of repositories for the authenticated user."""
+        ...
+
+    async def get_suggested_tasks(self) -> list[SuggestedTask]:
+        """Get suggested tasks for the authenticated user across all repositories."""
+        ...
+
+    async def get_repository_details_from_repo_name(
+        self,
+        repository: str,
+    ) -> Repository:
+        """Gets all repository details from repository name."""
+
+    async def get_branches(self, repository: str) -> list[Branch]:
+        """Get branches for a repository."""
+
+    async def get_paginated_branches(
+        self,
+        repository: str,
+        page: int = 1,
+        per_page: int = 30,
+    ) -> PaginatedBranchesResponse:
+        """Get branches for a repository with pagination."""
+
+    async def search_branches(
+        self,
+        repository: str,
+        query: str,
+        per_page: int = 30,
+    ) -> list[Branch]:
+        """Search for branches within a repository."""
+
+    async def get_microagents(self, repository: str) -> list[MicroagentResponse]:
+        """Get microagents from a repository."""
+        ...
+
+    async def get_microagent_content(
+        self,
+        repository: str,
+        file_path: str,
+    ) -> MicroagentContentResponse:
+        """Get content of a specific microagent file.
+
+        Returns:
+            MicroagentContentResponse with parsed content and triggers
+
+        """
+        ...
+
+    async def get_pr_details(self, repository: str, pr_number: int) -> dict:
+        """Get detailed information about a specific pull request/merge request.
+
+        Args:
+            repository: Repository name in format specific to the provider
+            pr_number: The pull request/merge request number
+
+        Returns:
+            Raw API response from the git provider
+
+        """
+        ...
+
+    async def is_pr_open(self, repository: str, pr_number: int) -> bool:
+        """Check if a PR is still active (not closed/merged).
+
+        Args:
+            repository: Repository name in format 'owner/repo'
+            pr_number: The PR number to check
+
+        Returns:
+            True if PR is active (open), False if closed/merged
+
+        """
+        ...

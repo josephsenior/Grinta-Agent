@@ -1,11 +1,11 @@
 from unittest.mock import patch
-from openhands.core.config import OpenHandsConfig
-from openhands.io import read_input
+from forge.core.config import ForgeConfig
+from forge.io import read_input
 
 
 def test_single_line_input():
     """Test that single line input works when cli_multiline_input is False."""
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     config.cli_multiline_input = False
     with patch("builtins.input", return_value="hello world"):
         result = read_input(config.cli_multiline_input)
@@ -14,7 +14,7 @@ def test_single_line_input():
 
 def test_multiline_input():
     """Test that multiline input works when cli_multiline_input is True."""
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     config.cli_multiline_input = True
     mock_inputs = ["line 1", "line 2", "line 3", "/exit"]
     with patch("builtins.input", side_effect=mock_inputs):

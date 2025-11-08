@@ -20,7 +20,7 @@
 
 ## 🌟 **Overview**
 
-OpenHands features a revolutionary terminal interface inspired by modern development tools like Bolt.new. The terminal provides a premium, glassmorphism-based design with advanced interactive features, real-time streaming, and comprehensive accessibility support.
+Forge features a revolutionary terminal interface inspired by modern development tools like Bolt.new. The terminal provides a premium, glassmorphism-based design with advanced interactive features, real-time streaming, and comprehensive accessibility support.
 
 ### **Key Features**
 - **Glassmorphism Design**: Modern translucent interface with depth

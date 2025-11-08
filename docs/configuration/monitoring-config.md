@@ -1,6 +1,6 @@
 # 📊 **Monitoring Configuration**
 
-> **Configure logging, metrics, dashboards, and alerting for OpenHands**
+> **Configure logging, metrics, dashboards, and alerting for Forge**
 
 ---
 
@@ -32,7 +32,7 @@ output = ["console", "file"]
 
 # File logging
 [logging.file]
-path = "./logs/openhands.log"
+path = "./logs/Forge.log"
 max_size_mb = 100
 max_files = 10
 rotation = "daily"  # or "size"
@@ -93,7 +93,7 @@ port = 9090
 endpoint = "/metrics"
 
 # Metric prefixes
-prefix = "openhands_"
+prefix = "FORGE_"
 
 # Additional labels
 [monitoring.prometheus.labels]
@@ -210,7 +210,7 @@ recipients = ["admin@example.com", "ops@example.com"]
 [monitoring.alerts.slack]
 enabled = true
 webhook_url_env = "SLACK_WEBHOOK_URL"
-channel = "#openhands-alerts"
+channel = "#Forge-alerts"
 mention_on_critical = "@here"
 
 # PagerDuty integration
@@ -255,7 +255,7 @@ flush_interval_seconds = 60
 # Logs
 [monitoring.datadog.logs]
 enabled = true
-source = "openhands"
+source = "Forge"
 ```
 
 ### **Grafana**
@@ -268,7 +268,7 @@ api_key_env = "GRAFANA_API_KEY"
 
 # Dashboard IDs
 dashboards = [
-    "openhands-overview",
+    "Forge-overview",
     "agent-performance",
     "optimization-metrics"
 ]
@@ -280,7 +280,7 @@ dashboards = [
 [monitoring.newrelic]
 enabled = false
 license_key_env = "NEW_RELIC_LICENSE_KEY"
-app_name = "OpenHands"
+app_name = "Forge"
 
 # Distributed tracing
 distributed_tracing = true
@@ -469,12 +469,12 @@ logger.info(
 
 Follow naming conventions:
 ```
-openhands_<component>_<metric_name>_<unit>
+FORGE_<component>_<metric_name>_<unit>
 
 Examples:
-- openhands_agent_execution_time_seconds
-- openhands_api_requests_total
-- openhands_optimization_success_rate
+- FORGE_agent_execution_time_seconds
+- FORGE_api_requests_total
+- FORGE_optimization_success_rate
 ```
 
 ### **3. Alert Fatigue Prevention**

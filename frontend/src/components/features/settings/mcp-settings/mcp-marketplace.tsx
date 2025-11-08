@@ -1,4 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  Dispatch,
+  SetStateAction,
+} from "react";
 import { Search, Filter, X, Sparkles, TrendingUp, RefreshCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type {
@@ -32,21 +39,39 @@ const CATEGORIES: { value: MCPCategory; label: string; icon: string }[] = [
   { value: "other", label: "Other", icon: "📦" },
 ];
 
-export function MCPMarketplace({
+interface MarketplaceControllerParams {
+  installedServers: string[];
+}
+
+interface MarketplaceController {
+  filters: MCPMarketplaceFilters;
+  searchInput: string;
+  setSearchInput: (value: string) => void;
+  showFilters: boolean;
+  toggleFilters: () => void;
+  activeFiltersCount: number;
+  data: Awaited<ReturnType<typeof fetchMarketplaceMCPs>> | undefined;
+  isLoading: boolean;
+  error: unknown;
+  refetch: () => Promise<unknown>;
+  handleCategoryFilter: (category: MCPCategory) => void;
+  handleTypeFilter: (type: "sse" | "stdio" | "shttp" | "all") => void;
+  handleFeaturedFilter: () => void;
+  handlePopularFilter: () => void;
+  clearFilters: () => void;
+  selectedMCP: MCPMarketplaceItem | null;
+  setSelectedMCP: Dispatch<SetStateAction<MCPMarketplaceItem | null>>;
+  isInstalled: (mcp: MCPMarketplaceItem) => boolean;
+}
+
+function useMarketplaceController({
   installedServers,
-  onInstall,
-}: MCPMarketplaceProps) {
+}: MarketplaceControllerParams): MarketplaceController {
   const [filters, setFilters] = useState<MCPMarketplaceFilters>({});
   const [searchInput, setSearchInput] = useState("");
-  const [selectedMCP, setSelectedMCP] = useState<MCPMarketplaceItem | null>(
-    null,
-  );
+  const [selectedMCP, setSelectedMCP] = useState<MCPMarketplaceItem | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [smitheryApiKey, setSmitheryApiKey] = useState(
-    localStorage.getItem('smithery-api-key') || ''
-  );
 
-  // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
       setFilters((prev) => ({ ...prev, search: searchInput || undefined }));
@@ -54,61 +79,94 @@ export function MCPMarketplace({
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // Fetch marketplace data
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["mcp-marketplace", filters],
     queryFn: () => fetchMarketplaceMCPs(filters),
   });
 
-  const handleCategoryFilter = (category: MCPCategory) => {
+  const handleCategoryFilter = useCallback((category: MCPCategory) => {
     setFilters((prev) => ({
       ...prev,
       category: prev.category === category ? undefined : category,
     }));
-  };
+  }, []);
 
-  const handleTypeFilter = (type: "sse" | "stdio" | "shttp" | "all") => {
+  const handleTypeFilter = useCallback((type: "sse" | "stdio" | "shttp" | "all") => {
     setFilters((prev) => ({
       ...prev,
       type: type === "all" ? undefined : type,
     }));
-  };
+  }, []);
 
-  const handleFeaturedFilter = () => {
+  const handleFeaturedFilter = useCallback(() => {
     setFilters((prev) => ({
       ...prev,
       featured: !prev.featured,
     }));
-  };
+  }, []);
 
-  const handlePopularFilter = () => {
+  const handlePopularFilter = useCallback(() => {
     setFilters((prev) => ({
       ...prev,
       popular: !prev.popular,
     }));
-  };
+  }, []);
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setFilters({});
     setSearchInput("");
-  };
+  }, []);
 
-  const isInstalled = (mcp: MCPMarketplaceItem) => {
-    return installedServers.some(
-      (name) => name.toLowerCase() === mcp.name.toLowerCase(),
-    );
-  };
+  const isInstalled = useCallback(
+    (mcp: MCPMarketplaceItem) =>
+      installedServers.some(
+        (name) => name.toLowerCase() === mcp.name.toLowerCase(),
+      ),
+    [installedServers],
+  );
 
   const activeFiltersCount = useMemo(() => {
     let count = 0;
-    if (filters.category) count++;
-    if (filters.type) count++;
-    if (filters.featured) count++;
-    if (filters.popular) count++;
+    if (filters.category) count += 1;
+    if (filters.type) count += 1;
+    if (filters.featured) count += 1;
+    if (filters.popular) count += 1;
     return count;
   }, [filters]);
 
-  if (error) {
+  const toggleFilters = useCallback(() => {
+    setShowFilters((prev) => !prev);
+  }, []);
+
+  return {
+    filters,
+    searchInput,
+    setSearchInput,
+    showFilters,
+    toggleFilters,
+    activeFiltersCount,
+    data,
+    isLoading,
+    error,
+    refetch,
+    handleCategoryFilter,
+    handleTypeFilter,
+    handleFeaturedFilter,
+    handlePopularFilter,
+    clearFilters,
+    selectedMCP,
+    setSelectedMCP,
+    isInstalled,
+  };
+}
+
+export function MCPMarketplace({
+  installedServers,
+  onInstall,
+}: MCPMarketplaceProps) {
+  const controller = useMarketplaceController({ installedServers });
+
+  if (controller.error) {
     return (
       <div className="p-8 text-center">
         <p className="text-error-500 text-sm">
@@ -120,212 +178,361 @@ export function MCPMarketplace({
 
   return (
     <div className="space-y-6">
-      {/* Stats Banner */}
-      {data && (
-        <MCPMarketplaceStats
-          totalServers={data.total}
-          onRefresh={() => refetch()}
+      <MarketplaceStatsBanner data={controller.data} onRefresh={controller.refetch} />
+      <MarketplaceSearchBar
+        searchInput={controller.searchInput}
+        setSearchInput={controller.setSearchInput}
+        showFilters={controller.showFilters}
+        toggleFilters={controller.toggleFilters}
+        activeFiltersCount={controller.activeFiltersCount}
+      />
+      <MarketplaceFilterPanel controller={controller} />
+      <MarketplaceResultsSection controller={controller} onInstall={onInstall} />
+      <MarketplaceDetailsModalWrapper controller={controller} onInstall={onInstall} />
+    </div>
+  );
+}
+
+function MarketplaceStatsBanner({
+  data,
+  onRefresh,
+}: {
+  data: Awaited<ReturnType<typeof fetchMarketplaceMCPs>> | undefined;
+  onRefresh: () => Promise<unknown>;
+}) {
+  if (!data) {
+    return null;
+  }
+
+  return (
+    <MCPMarketplaceStats totalServers={data.total} onRefresh={onRefresh} />
+  );
+}
+
+interface MarketplaceSearchBarProps {
+  searchInput: string;
+  setSearchInput: (value: string) => void;
+  showFilters: boolean;
+  toggleFilters: () => void;
+  activeFiltersCount: number;
+}
+
+function MarketplaceSearchBar({
+  searchInput,
+  setSearchInput,
+  showFilters,
+  toggleFilters,
+  activeFiltersCount,
+}: MarketplaceSearchBarProps) {
+  return (
+    <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex-1 relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-secondary pointer-events-none" />
+        <input
+          type="text"
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
+          placeholder="Search MCPs..."
+          className="w-full pl-10 pr-10 py-2.5 bg-background-tertiary border border-border rounded-lg text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:border-brand-500 transition-colors"
         />
-      )}
+        {searchInput && (
+          <button
+            type="button"
+            onClick={() => setSearchInput("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-secondary hover:text-foreground transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
 
-      {/* Search and Filter Bar */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        {/* Search */}
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-secondary pointer-events-none" />
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search MCPs..."
-            className="w-full pl-10 pr-10 py-2.5 bg-background-tertiary border border-border rounded-lg text-sm text-foreground placeholder:text-foreground-secondary focus:outline-none focus:border-brand-500 transition-colors"
-          />
-          {searchInput && (
-            <button
-              type="button"
-              onClick={() => setSearchInput("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-secondary hover:text-foreground transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+      <button
+        type="button"
+        onClick={toggleFilters}
+        className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-colors ${
+          showFilters || activeFiltersCount > 0
+            ? "bg-brand-500/10 border-brand-500/30 text-brand-400"
+            : "bg-background-tertiary border-border text-foreground-secondary hover:border-brand-500/50"
+        }`}
+      >
+        <Filter className="w-4 h-4" />
+        <span className="text-sm font-medium">Filters</span>
+        {activeFiltersCount > 0 && (
+          <span className="px-1.5 py-0.5 text-xs bg-brand-500 text-white rounded-full">
+            {activeFiltersCount}
+          </span>
+        )}
+      </button>
+    </div>
+  );
+}
 
-        {/* Filter Toggle */}
+function MarketplaceFilterPanel({
+  controller,
+}: {
+  controller: MarketplaceController;
+}) {
+  if (!controller.showFilters) {
+    return null;
+  }
+
+  return (
+    <div className="bg-background-secondary border border-border rounded-lg p-4 space-y-4">
+      <MarketplaceQuickFilters
+        featured={controller.filters.featured ?? false}
+        popular={controller.filters.popular ?? false}
+        onToggleFeatured={controller.handleFeaturedFilter}
+        onTogglePopular={controller.handlePopularFilter}
+      />
+      <MarketplaceTypeFilter
+        selectedType={controller.filters.type}
+        onSelectType={controller.handleTypeFilter}
+      />
+      <MarketplaceCategoryFilter
+        selectedCategory={controller.filters.category}
+        onSelectCategory={controller.handleCategoryFilter}
+      />
+      {controller.activeFiltersCount > 0 && (
         <button
           type="button"
-          onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-colors ${
-            showFilters || activeFiltersCount > 0
-              ? "bg-brand-500/10 border-brand-500/30 text-brand-400"
+          onClick={controller.clearFilters}
+          className="text-sm text-brand-400 hover:text-brand-300 transition-colors"
+        >
+          Clear all filters
+        </button>
+      )}
+    </div>
+  );
+}
+
+function MarketplaceQuickFilters({
+  featured,
+  popular,
+  onToggleFeatured,
+  onTogglePopular,
+}: {
+  featured: boolean;
+  popular: boolean;
+  onToggleFeatured: () => void;
+  onTogglePopular: () => void;
+}) {
+  return (
+    <div>
+      <h4 className="text-sm font-medium text-foreground mb-2">Quick Filters</h4>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onToggleFeatured}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
+            featured
+              ? "bg-brand-500/20 border-brand-500/30 text-brand-400"
               : "bg-background-tertiary border-border text-foreground-secondary hover:border-brand-500/50"
           }`}
         >
-          <Filter className="w-4 h-4" />
-          <span className="text-sm font-medium">Filters</span>
-          {activeFiltersCount > 0 && (
-            <span className="px-1.5 py-0.5 text-xs bg-brand-500 text-white rounded-full">
-              {activeFiltersCount}
-            </span>
-          )}
+          <Sparkles className="w-3 h-3 inline mr-1" />
+          Featured
+        </button>
+        <button
+          type="button"
+          onClick={onTogglePopular}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
+            popular
+              ? "bg-accent-500/20 border-accent-500/30 text-accent-400"
+              : "bg-background-tertiary border-border text-foreground-secondary hover:border-accent-500/50"
+          }`}
+        >
+          <TrendingUp className="w-3 h-3 inline mr-1" />
+          Popular
         </button>
       </div>
-
-      {/* Filter Panel */}
-      {showFilters && (
-        <div className="bg-background-secondary border border-border rounded-lg p-4 space-y-4">
-          {/* Quick Filters */}
-          <div>
-            <h4 className="text-sm font-medium text-foreground mb-2">
-              Quick Filters
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={handleFeaturedFilter}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
-                  filters.featured
-                    ? "bg-brand-500/20 border-brand-500/30 text-brand-400"
-                    : "bg-background-tertiary border-border text-foreground-secondary hover:border-brand-500/50"
-                }`}
-              >
-                <Sparkles className="w-3 h-3 inline mr-1" />
-                Featured
-              </button>
-              <button
-                type="button"
-                onClick={handlePopularFilter}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
-                  filters.popular
-                    ? "bg-accent-500/20 border-accent-500/30 text-accent-400"
-                    : "bg-background-tertiary border-border text-foreground-secondary hover:border-accent-500/50"
-                }`}
-              >
-                <TrendingUp className="w-3 h-3 inline mr-1" />
-                Popular
-              </button>
-            </div>
-          </div>
-
-          {/* Type Filter */}
-          <div>
-            <h4 className="text-sm font-medium text-foreground mb-2">Type</h4>
-            <div className="flex flex-wrap gap-2">
-              {(["all", "stdio", "sse", "shttp"] as const).map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => handleTypeFilter(type)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
-                    (type === "all" && !filters.type) || filters.type === type
-                      ? "bg-brand-500/20 border-brand-500/30 text-brand-400"
-                      : "bg-background-tertiary border-border text-foreground-secondary hover:border-brand-500/50"
-                  }`}
-                >
-                  {type === "all" ? "All Types" : type.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Category Filter */}
-          <div>
-            <h4 className="text-sm font-medium text-foreground mb-2">
-              Category
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat.value}
-                  type="button"
-                  onClick={() => handleCategoryFilter(cat.value)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
-                    filters.category === cat.value
-                      ? "bg-brand-500/20 border-brand-500/30 text-brand-400"
-                      : "bg-background-tertiary border-border text-foreground-secondary hover:border-brand-500/50"
-                  }`}
-                >
-                  <span className="mr-1">{cat.icon}</span>
-                  {cat.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Clear Filters */}
-          {activeFiltersCount > 0 && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="text-sm text-brand-400 hover:text-brand-300 transition-colors"
-            >
-              Clear all filters
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Results Count */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-foreground-secondary">
-          {isLoading ? (
-            "Loading..."
-          ) : (
-            <>
-              {data?.total || 0} MCP{data?.total !== 1 ? "s" : ""} available
-              {activeFiltersCount > 0 && " (filtered)"}
-            </>
-          )}
-        </p>
-      </div>
-
-      {/* MCP Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className="h-72 bg-background-secondary border border-border rounded-lg animate-pulse"
-            />
-          ))}
-        </div>
-      ) : data && data.items.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {data.items.map((mcp) => (
-            <MCPMarketplaceCard
-              key={mcp.id}
-              mcp={mcp}
-              isInstalled={isInstalled(mcp)}
-              onInstall={onInstall}
-              onViewDetails={setSelectedMCP}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="py-16 text-center">
-          <p className="text-foreground-secondary text-sm mb-2">
-            No MCPs found
-          </p>
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="text-sm text-brand-400 hover:text-brand-300 transition-colors"
-          >
-            Clear filters
-          </button>
-        </div>
-      )}
-
-      {/* Details Modal */}
-      {selectedMCP && (
-        <MCPMarketplaceDetailsModal
-          mcp={selectedMCP}
-          isInstalled={isInstalled(selectedMCP)}
-          onInstall={onInstall}
-          onClose={() => setSelectedMCP(null)}
-        />
-      )}
     </div>
+  );
+}
+
+function MarketplaceTypeFilter({
+  selectedType,
+  onSelectType,
+}: {
+  selectedType: MCPMarketplaceFilters["type"];
+  onSelectType: (type: "sse" | "stdio" | "shttp" | "all") => void;
+}) {
+  const options = ["all", "stdio", "sse", "shttp"] as const;
+
+  return (
+    <div>
+      <h4 className="text-sm font-medium text-foreground mb-2">Type</h4>
+      <div className="flex flex-wrap gap-2">
+        {options.map((type) => {
+          const isSelected =
+            (type === "all" && !selectedType) || selectedType === type;
+          return (
+            <button
+              key={type}
+              type="button"
+              onClick={() => onSelectType(type)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
+                isSelected
+                  ? "bg-brand-500/20 border-brand-500/30 text-brand-400"
+                  : "bg-background-tertiary border-border text-foreground-secondary hover:border-brand-500/50"
+              }`}
+            >
+              {type === "all" ? "All Types" : type.toUpperCase()}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MarketplaceCategoryFilter({
+  selectedCategory,
+  onSelectCategory,
+}: {
+  selectedCategory: MCPMarketplaceFilters["category"];
+  onSelectCategory: (category: MCPCategory) => void;
+}) {
+  return (
+    <div>
+      <h4 className="text-sm font-medium text-foreground mb-2">Category</h4>
+      <div className="flex flex-wrap gap-2">
+        {CATEGORIES.map((cat) => {
+          const isSelected = selectedCategory === cat.value;
+          return (
+            <button
+              key={cat.value}
+              type="button"
+              onClick={() => onSelectCategory(cat.value)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
+                isSelected
+                  ? "bg-brand-500/20 border-brand-500/30 text-brand-400"
+                  : "bg-background-tertiary border-border text-foreground-secondary hover-border-brand-500/50"
+              }`}
+            >
+              <span className="mr-1">{cat.icon}</span>
+              {cat.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MarketplaceResultsSection({
+  controller,
+  onInstall,
+}: {
+  controller: MarketplaceController;
+  onInstall: (mcp: MCPMarketplaceItem) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <MarketplaceResultsSummary
+        isLoading={controller.isLoading}
+        total={controller.data?.total ?? 0}
+        activeFiltersCount={controller.activeFiltersCount}
+      />
+      <MarketplaceResultsGrid controller={controller} onInstall={onInstall} />
+    </div>
+  );
+}
+
+function MarketplaceResultsSummary({
+  isLoading,
+  total,
+  activeFiltersCount,
+}: {
+  isLoading: boolean;
+  total: number;
+  activeFiltersCount: number;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <p className="text-sm text-foreground-secondary">
+        {isLoading ? (
+          "Loading..."
+        ) : (
+          <>
+            {total || 0} MCP
+            {total !== 1 ? "s" : ""} available
+            {activeFiltersCount > 0 && " (filtered)"}
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
+function MarketplaceResultsGrid({
+  controller,
+  onInstall,
+}: {
+  controller: MarketplaceController;
+  onInstall: (mcp: MCPMarketplaceItem) => void;
+}) {
+  if (controller.isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[...Array(6)].map((_, index) => (
+          <div
+            key={index}
+            className="h-72 bg-background-secondary border border-border rounded-lg animate-pulse"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (!controller.data || controller.data.items.length === 0) {
+    return (
+      <div className="py-16 text-center">
+        <p className="text-foreground-secondary text-sm mb-2">No MCPs found</p>
+        <button
+          type="button"
+          onClick={controller.clearFilters}
+          className="text-sm text-brand-400 hover:text-brand-300 transition-colors"
+        >
+          Clear filters
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {controller.data.items.map((mcp) => (
+        <MCPMarketplaceCard
+          key={mcp.id}
+          mcp={mcp}
+          isInstalled={controller.isInstalled(mcp)}
+          onInstall={onInstall}
+          onViewDetails={controller.setSelectedMCP}
+        />
+      ))}
+    </div>
+  );
+}
+
+function MarketplaceDetailsModalWrapper({
+  controller,
+  onInstall,
+}: {
+  controller: MarketplaceController;
+  onInstall: (mcp: MCPMarketplaceItem) => void;
+}) {
+  const selected = controller.selectedMCP;
+  if (!selected) {
+    return null;
+  }
+
+  return (
+    <MCPMarketplaceDetailsModal
+      mcp={selected}
+      isInstalled={controller.isInstalled(selected)}
+      onInstall={onInstall}
+      onClose={() => controller.setSelectedMCP(null)}
+    />
   );
 }
 

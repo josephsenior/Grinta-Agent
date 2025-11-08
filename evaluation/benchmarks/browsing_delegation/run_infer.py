@@ -10,27 +10,27 @@ from evaluation.utils.shared import (
     compatibility_for_eval_history_pairs,
     get_default_sandbox_config_for_eval,
     get_metrics,
-    get_openhands_config_for_eval,
+    get_FORGE_config_for_eval,
     make_metadata,
     prepare_dataset,
     reset_logger_for_multiprocessing,
     run_evaluation,
 )
-from openhands.controller.state.state import State
-from openhands.core.config import OpenHandsConfig, get_llm_config_arg, parse_arguments
-from openhands.core.logger import openhands_logger as logger
-from openhands.core.main import create_runtime, run_controller
-from openhands.events.action import MessageAction
-from openhands.utils.async_utils import call_async_from_sync
+from forge.controller.state.state import State
+from forge.core.config import ForgeConfig, get_llm_config_arg, parse_arguments
+from forge.core.logger import forge_logger as logger
+from forge.core.main import create_runtime, run_controller
+from forge.events.action import MessageAction
+from forge.utils.async_utils import call_async_from_sync
 
 SUPPORTED_AGENT_CLS = {"CodeActAgent"}
 
 
-def get_config(metadata: EvalMetadata) -> OpenHandsConfig:
+def get_config(metadata: EvalMetadata) -> ForgeConfig:
     assert metadata.max_iterations == 1, "max_iterations must be 1 for browsing delegation evaluation."
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = "python:3.12-bookworm"
-    config = get_openhands_config_for_eval(metadata=metadata, runtime="docker", sandbox_config=sandbox_config)
+    config = get_FORGE_config_for_eval(metadata=metadata, runtime="docker", sandbox_config=sandbox_config)
     config.set_llm_config(metadata.llm_config)
     agent_config = config.get_agent_config(metadata.agent_class)
     agent_config.enable_prompt_extensions = False
@@ -80,7 +80,7 @@ NOTE: You should copy the "query" as is into the <execute_browse> tag. DO NOT ch
 
 if __name__ == "__main__":
     args = parse_arguments()
-    dataset = load_dataset("OpenHands/eval-browsing-instructions")  # nosec B615 - Safe: evaluation benchmark dataset
+    dataset = load_dataset("Forge/eval-browsing-instructions")  # nosec B615 - Safe: evaluation benchmark dataset
     dataset = dataset["train"].to_pandas()
     assert dataset.columns.tolist() == ["instance_id", "instruction"]
     llm_config = None

@@ -4,7 +4,7 @@ This guide covers the testing framework and practices for Forge.
 
 ## Test Structure
 
-OpenHands uses pytest for testing with the following test categories:
+Forge uses pytest for testing with the following test categories:
 
 - **Unit tests** (`tests/unit/`): Test individual components in isolation
 - **Integration tests** (`tests/integration/`): Test component interactions
@@ -23,7 +23,7 @@ poetry run pytest tests/unit/
 poetry run pytest tests/unit/test_agent.py
 
 # Run with coverage
-poetry run pytest --cov=openhands tests/unit/
+poetry run pytest --cov=Forge tests/unit/
 ```
 
 ### Integration Tests
@@ -87,7 +87,7 @@ pytest -m "not docker"
 ### Unit Test Example
 ```python
 import pytest
-from openhands.agenthub.codeact_agent import CodeActAgent
+from forge.agenthub.codeact_agent import CodeActAgent
 
 def test_agent_initialization():
     agent = CodeActAgent()
@@ -103,7 +103,7 @@ def test_agent_action():
 ### Integration Test Example
 ```python
 import pytest
-from openhands.runtime.local import LocalRuntime
+from forge.runtime.local import LocalRuntime
 
 @pytest.mark.integration
 def test_runtime_execution():
@@ -118,7 +118,7 @@ def test_runtime_execution():
 from unittest.mock import Mock, patch
 
 def test_with_mock():
-    with patch('openhands.llm.LLMClient') as mock_llm:
+    with patch('Forge.llm.LLMClient') as mock_llm:
         mock_llm.generate.return_value = "mock response"
         agent = CodeActAgent()
         response = agent.think("test prompt")

@@ -29,111 +29,16 @@ export function SecretForm({
   const { mutate: createSecret } = useCreateSecret();
   const { mutate: updateSecret } = useUpdateSecret();
 
-  // error state removed; individual field errors are tracked separately
-  const [nameError, setNameError] = React.useState<string | null>(null);
-  const [valueError, setValueError] = React.useState<string | null>(null);
-
-  const secretDescription =
-    (mode === "edit" &&
-      selectedSecret &&
-      secrets
-        ?.find((secret) => secret.name === selectedSecret)
-        ?.description?.trim()) ||
-    "";
-
-  const handleCreateSecret = (
-    name: string,
-    value: string,
-    description?: string,
-  ) => {
-    createSecret(
-      { name, value, description },
-      {
-        onSettled: onCancel,
-        onSuccess: async () => {
-          await queryClient.invalidateQueries({ queryKey: ["secrets"] });
-        },
-      },
-    );
-  };
-
-  const updateSecretOptimistically = (
-    oldName: string,
-    name: string,
-    description?: string,
-  ) => {
-    queryClient.setQueryData<GetSecretsResponse["custom_secrets"]>(
-      ["secrets"],
-      (oldSecrets) => {
-        if (!oldSecrets) {
-          return [];
-        }
-        return oldSecrets.map((secret) => {
-          if (secret.name === oldName) {
-            return {
-              ...secret,
-              name,
-              description,
-            };
-          }
-          return secret;
-        });
-      },
-    );
-  };
-
-  const revertOptimisticUpdate = () => {
-    queryClient.invalidateQueries({ queryKey: ["secrets"] });
-  };
-
-  const handleEditSecret = (
-    secretToEdit: string,
-    name: string,
-    description?: string,
-  ) => {
-    updateSecretOptimistically(secretToEdit, name, description);
-    updateSecret(
-      { secretToEdit, name, description },
-      {
-        onSettled: onCancel,
-        onError: revertOptimisticUpdate,
-      },
-    );
-  };
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const formData = new FormData(event.currentTarget);
-    const name = formData.get("secret-name")?.toString();
-    const value = formData.get("secret-value")?.toString().trim();
-    const description = formData.get("secret-description")?.toString();
-
-    // clear previous errors
-    setNameError(null);
-    setValueError(null);
-
-    if (name) {
-      const isNameAlreadyUsed = secrets?.some(
-        (secret) => secret.name === name && secret.name !== selectedSecret,
-      );
-      if (isNameAlreadyUsed) {
-        setNameError(t("SECRETS$SECRET_ALREADY_EXISTS"));
-        return;
-      }
-
-      if (mode === "add") {
-        if (!value) {
-          setValueError(t("SECRETS$SECRET_VALUE_REQUIRED"));
-          return;
-        }
-
-        handleCreateSecret(name, value, description || undefined);
-      } else if (mode === "edit" && selectedSecret) {
-        handleEditSecret(selectedSecret, name, description || undefined);
-      }
-    }
-  };
+  const { secretDescription, nameError, valueError, handleSubmit } = useSecretFormState({
+    mode,
+    selectedSecret,
+    onCancel,
+    secrets,
+    createSecret,
+    updateSecret,
+    queryClient,
+    t,
+  });
 
   const formTestId = mode === "add" ? "add-secret-form" : "edit-secret-form";
 
@@ -218,4 +123,142 @@ export function SecretForm({
       </div>
     </form>
   );
+}
+
+function useSecretFormState({
+  mode,
+  selectedSecret,
+  onCancel,
+  secrets,
+  createSecret,
+  updateSecret,
+  queryClient,
+  t,
+}: {
+  mode: SecretFormProps["mode"];
+  selectedSecret: SecretFormProps["selectedSecret"];
+  onCancel: SecretFormProps["onCancel"];
+  secrets: GetSecretsResponse["custom_secrets"] | undefined;
+  createSecret: ReturnType<typeof useCreateSecret>["mutate"];
+  updateSecret: ReturnType<typeof useUpdateSecret>["mutate"];
+  queryClient: ReturnType<typeof useQueryClient>;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  const [nameError, setNameError] = React.useState<string | null>(null);
+  const [valueError, setValueError] = React.useState<string | null>(null);
+
+  const secretDescription = React.useMemo(() => {
+    if (mode !== "edit" || !selectedSecret || !secrets) {
+      return "";
+    }
+
+    return secrets.find((secret) => secret.name === selectedSecret)?.description?.trim() ?? "";
+  }, [mode, secrets, selectedSecret]);
+
+  const handleCreateSecret = React.useCallback(
+    (name: string, value: string, description?: string) => {
+      createSecret(
+        { name, value, description },
+        {
+          onSettled: onCancel,
+          onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: ["secrets"] });
+          },
+        },
+      );
+    },
+    [createSecret, onCancel, queryClient],
+  );
+
+  const updateSecretOptimistically = React.useCallback(
+    (oldName: string, name: string, description?: string) => {
+      queryClient.setQueryData<GetSecretsResponse["custom_secrets"]>(
+        ["secrets"],
+        (oldSecrets) => {
+          if (!oldSecrets) {
+            return [];
+          }
+          return oldSecrets.map((secret) => {
+            if (secret.name === oldName) {
+              return {
+                ...secret,
+                name,
+                description,
+              };
+            }
+            return secret;
+          });
+        },
+      );
+    },
+    [queryClient],
+  );
+
+  const revertOptimisticUpdate = React.useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["secrets"] });
+  }, [queryClient]);
+
+  const handleEditSecret = React.useCallback(
+    (secretToEdit: string, name: string, description?: string) => {
+      updateSecretOptimistically(secretToEdit, name, description);
+      updateSecret(
+        { secretToEdit, name, description },
+        {
+          onSettled: onCancel,
+          onError: revertOptimisticUpdate,
+        },
+      );
+    },
+    [onCancel, revertOptimisticUpdate, updateSecret, updateSecretOptimistically],
+  );
+
+  const handleSubmit = React.useCallback(
+    (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+
+      const formData = new FormData(event.currentTarget);
+      const name = formData.get("secret-name")?.toString();
+      const value = formData.get("secret-value")?.toString().trim();
+      const description = formData.get("secret-description")?.toString();
+
+      setNameError(null);
+      setValueError(null);
+
+      const isNameAlreadyUsed = secrets?.some(
+        (secret) => secret.name === name && secret.name !== selectedSecret,
+      );
+      if (isNameAlreadyUsed) {
+        setNameError(t("SECRETS$SECRET_ALREADY_EXISTS"));
+        return;
+      }
+
+      if (mode === "add") {
+        if (!value) {
+          setValueError(t("SECRETS$SECRET_VALUE_REQUIRED"));
+          return;
+        }
+        handleCreateSecret(name, value, description || undefined);
+        return;
+      }
+
+      if (mode === "edit" && selectedSecret) {
+        handleEditSecret(selectedSecret, name, description || undefined);
+      }
+    },
+    [
+      handleCreateSecret,
+      handleEditSecret,
+      mode,
+      secrets,
+      selectedSecret,
+      t,
+    ],
+  );
+
+  return {
+    secretDescription,
+    nameError,
+    valueError,
+    handleSubmit,
+  };
 }

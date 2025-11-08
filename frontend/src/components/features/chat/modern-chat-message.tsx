@@ -1,28 +1,19 @@
 import React from "react";
-import {
-  Bot,
-  User,
-  Sparkles,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  Copy,
-  ThumbsUp,
-  ThumbsDown,
-  MoreHorizontal,
-} from "lucide-react";
+import { Clock, CheckCircle2, AlertCircle, Copy, ThumbsUp, ThumbsDown, MoreHorizontal } from "lucide-react";
 import { cn } from "#/utils/utils";
 import { Card, CardContent } from "#/components/ui/card";
-import { Avatar, AvatarFallback } from "#/components/ui/avatar";
 import { Button } from "#/components/ui/button";
 import ClientFormattedDate from "#/components/shared/ClientFormattedDate";
+
+type SenderType = "user" | "assistant" | "system";
+type MessageStatus = "sending" | "sent" | "delivered" | "error";
 
 interface ModernChatMessageProps {
   id: string;
   content: string;
-  sender: "user" | "assistant" | "system";
+  sender: SenderType;
   timestamp?: Date;
-  status?: "sending" | "sent" | "delivered" | "error";
+  status?: MessageStatus;
   isTyping?: boolean;
   onCopy?: (content: string) => void;
   onLike?: (id: string) => void;
@@ -30,6 +21,64 @@ interface ModernChatMessageProps {
   className?: string;
   showActions?: boolean;
 }
+
+const STATUS_ICON_CONFIG: Record<
+  MessageStatus,
+  { Icon: typeof Clock; className: string } | undefined
+> = {
+  sending: { Icon: Clock, className: "text-text-foreground-secondary animate-pulse" },
+  sent: { Icon: CheckCircle2, className: "text-success-500" },
+  delivered: { Icon: CheckCircle2, className: "text-success-500" },
+  error: { Icon: AlertCircle, className: "text-danger-500" },
+};
+
+const SENDER_CONFIG: Record<
+  SenderType,
+  {
+    label: string;
+    typingEmoji: string;
+    avatarEmoji: string;
+    bubbleClassName: string;
+    hoverGradientClassName: string;
+    enableFeedback: boolean;
+  }
+> = {
+  user: {
+    label: "You",
+    typingEmoji: "👤",
+    avatarEmoji: "👤",
+    bubbleClassName: "ml-auto max-w-[80%] bg-gradient-to-br from-accent-cyan/20 to-accent-green/20",
+    hoverGradientClassName: "bg-gradient-to-r from-accent-cyan/5 to-accent-green/5",
+    enableFeedback: false,
+  },
+  assistant: {
+    label: "Forge AI",
+    typingEmoji: "🤖",
+    avatarEmoji: "🤖",
+    bubbleClassName: "bg-gradient-to-br from-primary-500/10 to-primary-600/10",
+    hoverGradientClassName: "bg-gradient-to-r from-primary-500/5 to-primary-600/5",
+    enableFeedback: true,
+  },
+  system: {
+    label: "System",
+    typingEmoji: "⚙️",
+    avatarEmoji: "⚙️",
+    bubbleClassName: "bg-gradient-to-br from-accent-pink/10 to-accent-purple/10",
+    hoverGradientClassName: "bg-gradient-to-r from-accent-pink/5 to-accent-purple/5",
+    enableFeedback: false,
+  },
+};
+
+const renderStatusIcon = (status: MessageStatus) => {
+  const config = STATUS_ICON_CONFIG[status];
+  if (!config) {
+    return null;
+  }
+
+  const { Icon, className } = config;
+
+  return <Icon className={cn("h-3 w-3", className)} />;
+};
 
 export function ModernChatMessage({
   id,
@@ -44,64 +93,26 @@ export function ModernChatMessage({
   className,
   showActions = true,
 }: ModernChatMessageProps) {
-  const isUser = sender === "user";
-  const isAssistant = sender === "assistant";
-  const isSystem = sender === "system";
+  const senderConfig = SENDER_CONFIG[sender];
+  const statusIcon = renderStatusIcon(status);
+  const copyContent =
+    onCopy ?? ((text: string) => navigator.clipboard.writeText(text));
 
-  const getStatusIcon = () => {
-    switch (status) {
-      case "sending":
-        return <Clock className="h-3 w-3 text-text-foreground-secondary animate-pulse" />;
-      case "sent":
-        return <CheckCircle2 className="h-3 w-3 text-success-500" />;
-      case "delivered":
-        return <CheckCircle2 className="h-3 w-3 text-success-500" />;
-      case "error":
-        return <AlertCircle className="h-3 w-3 text-danger-500" />;
-      default:
-        return null;
-    }
-  };
-
-  const getSenderIcon = () => {
-    if (isUser) return <User className="h-4 w-4" />;
-    if (isAssistant) return <Bot className="h-4 w-4" />;
-    return <Sparkles className="h-4 w-4" />;
-  };
-
-  const getSenderName = () => {
-    if (isUser) return "You";
-    if (isAssistant) return "OpenHands AI";
-    return "System";
-  };
-
-  const getSenderInitials = () => {
-    if (isUser) return "U";
-    if (isAssistant) return "AI";
-    return "S";
-  };
-
-  const handleCopy = () => {
-    if (onCopy) {
-      onCopy(content);
-    } else {
-      navigator.clipboard.writeText(content);
-    }
-  };
+  const handleCopy = () => copyContent(content);
 
   if (isTyping) {
     return (
       <div className={cn("flex items-start gap-3 animate-fade-in", className)}>
         <div className="h-8 w-8 flex items-center justify-center">
           <div className="w-8 h-8 text-primary-500">
-            {isUser ? "👤" : "🤖"}
+            {senderConfig.typingEmoji}
           </div>
         </div>
         <Card className="bg-background-glass backdrop-blur-xl border border-border-glass shadow-lg">
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-sm font-medium text-text-primary">
-                {getSenderName()}
+                {senderConfig.label}
               </span>
               <div className="flex items-center gap-1">
                 <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
@@ -120,7 +131,7 @@ export function ModernChatMessage({
       {/* Avatar */}
       <div className="h-8 w-8 flex items-center justify-center flex-shrink-0">
         <div className="w-8 h-8 text-primary-500">
-          {isUser ? "👤" : isAssistant ? "🤖" : "⚙️"}
+          {senderConfig.avatarEmoji}
         </div>
       </div>
 
@@ -129,7 +140,7 @@ export function ModernChatMessage({
         {/* Sender Info */}
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-text-primary">
-            {getSenderName()}
+            {senderConfig.label}
           </span>
           {timestamp && (
             <span className="text-xs text-text-foreground-secondary">
@@ -139,7 +150,7 @@ export function ModernChatMessage({
               />
             </span>
           )}
-          {getStatusIcon()}
+          {statusIcon}
         </div>
 
         {/* Message Bubble */}
@@ -148,12 +159,7 @@ export function ModernChatMessage({
             "group relative overflow-hidden transition-all duration-300",
             "bg-background-glass backdrop-blur-xl border border-border-glass",
             "shadow-lg hover:shadow-xl",
-            isUser &&
-              "ml-auto max-w-[80%] bg-gradient-to-br from-accent-cyan/20 to-accent-green/20",
-            isAssistant &&
-              "bg-gradient-to-br from-primary-500/10 to-primary-600/10",
-            isSystem &&
-              "bg-gradient-to-br from-accent-pink/10 to-accent-purple/10",
+            senderConfig.bubbleClassName,
           )}
         >
           {/* Animated Background */}
@@ -161,12 +167,7 @@ export function ModernChatMessage({
             <div
               className={cn(
                 "absolute inset-0",
-                isUser &&
-                  "bg-gradient-to-r from-accent-cyan/5 to-accent-green/5",
-                isAssistant &&
-                  "bg-gradient-to-r from-primary-500/5 to-primary-600/5",
-                isSystem &&
-                  "bg-gradient-to-r from-accent-pink/5 to-accent-purple/5",
+                senderConfig.hoverGradientClassName,
               )}
             />
           </div>
@@ -192,7 +193,7 @@ export function ModernChatMessage({
                     <Copy className="h-3 w-3" />
                   </Button>
 
-                  {isAssistant && (
+                  {senderConfig.enableFeedback && (
                     <>
                       <Button
                         variant="ghost"

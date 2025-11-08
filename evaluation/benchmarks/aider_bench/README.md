@@ -21,7 +21,7 @@ development environment and LLM.
 
 - `model_config`, e.g. `eval_gpt4_1106_preview`, is the config group name for
   your LLM settings, as defined in your `config.toml`.
-- `git-version`, e.g. `HEAD`, is the git commit hash of the OpenHands version
+- `git-version`, e.g. `HEAD`, is the git commit hash of the Forge version
   you would like to evaluate. It could also be a release tag like `0.9.0`.
 - `agent`, e.g. `CodeActAgent`, is the name of the agent for benchmarks,
   defaulting to `CodeActAgent`.

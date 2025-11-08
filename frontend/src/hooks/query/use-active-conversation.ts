@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useConversationId } from "#/hooks/use-conversation-id";
 import { useUserConversation } from "./use-user-conversation";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 
 const FIVE_MINUTES = 1000 * 60 * 5;
 
@@ -16,7 +16,7 @@ export const useActiveConversation = () => {
 
   useEffect(() => {
     const conversation = userConversation.data;
-    OpenHands.setCurrentConversation(conversation || null);
+    Forge.setCurrentConversation(conversation || null);
   }, [
     conversationId,
     userConversation.isFetched,

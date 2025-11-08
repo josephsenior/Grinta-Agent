@@ -1,6 +1,6 @@
 import React from "react";
 import { useWsClient } from "#/context/ws-client-provider";
-import { OpenHandsAction, OpenHandsObservation } from "#/types/core";
+import { ForgeAction, ForgeObservation } from "#/types/core";
 import { isStreamingChunkAction, isFileWriteAction, isFileEditAction } from "#/types/core/guards";
 
 export function useWsEvents() {

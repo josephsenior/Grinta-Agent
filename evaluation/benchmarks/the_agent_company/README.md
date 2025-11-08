@@ -1,10 +1,10 @@
-# The Agent Company Evaluation with OpenHands
+# The Agent Company Evaluation with Forge
 
 This folder contains the evaluation harness that we built on top of the original [The Agent Company](https://github.com/TheAgentCompany/TheAgentCompany/tree/main/evaluation) ([paper](https://arxiv.org/abs/2412.14161)).
 
 The evaluation consists of three steps:
 
-1. Environment setup: [install python environment](../../README.md#development-environment), [configure LLM config](../../README.md#configure-openhands-and-your-llm), [launch services](https://github.com/TheAgentCompany/TheAgentCompany/blob/main/docs/SETUP.md).
+1. Environment setup: [install python environment](../../README.md#development-environment), [configure LLM config](../../README.md#configure-Forge-and-your-llm), [launch services](https://github.com/TheAgentCompany/TheAgentCompany/blob/main/docs/SETUP.md).
 2. [Run Evaluation](#run-inference-on-the-agent-company-tasks): Run all tasks and get the evaluation results.
 
 ## Setup Environment and LLM Configuration
@@ -13,7 +13,7 @@ Please follow instruction [here](../../README.md#setup) to setup your local deve
 
 ## Run Inference on The Agent Company Tasks
 
-When the `run_infer.sh` script is started, it will automatically pull all task images. Every task image will be used to create an OpenHands runtime image where the agent will operate on.
+When the `run_infer.sh` script is started, it will automatically pull all task images. Every task image will be used to create an Forge runtime image where the agent will operate on.
 
 ```bash
 ./evaluation/benchmarks/the_agent_company/scripts/run_infer.sh \
@@ -49,4 +49,4 @@ The script is idempotent. If you run it again, it will resume from the last chec
 To speed up evaluation, you can use `start-percentile` and `end-percentile` to split the tasks for higher parallelism,
 provided concurrent runs are **targeting different servers**.
 
-Note: the script will automatically skip a task if it encounters an error. This usually happens when the OpenHands runtime dies due to some unexpected errors. This means even if the script finishes, it might not have evaluated all tasks. You can manually resume the evaluation by running the script again.
+Note: the script will automatically skip a task if it encounters an error. This usually happens when the Forge runtime dies due to some unexpected errors. This means even if the script finishes, it might not have evaluated all tasks. You can manually resume the evaluation by running the script again.

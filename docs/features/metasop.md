@@ -361,8 +361,8 @@ sop: Create a modern todo application with React and TypeScript
 
 ### **Python API**
 ```python
-from openhands.metasop import MetaSOPOrchestrator
-from openhands.metasop.models import Task, AgentConfig
+from forge.metasop import MetaSOPOrchestrator
+from forge.metasop.models import Task, AgentConfig
 
 # Initialize orchestrator
 orchestrator = MetaSOPOrchestrator("feature_delivery")
@@ -495,7 +495,7 @@ const artifact = parseArtifact(rawData, 'product_manager');
 
 ```python
 # Backend: Structured event emission
-from openhands.metasop.event_emitter import MetaSOPEventEmitter
+from forge.metasop.event_emitter import MetaSOPEventEmitter
 
 emitter = MetaSOPEventEmitter(callback=emit_to_frontend)
 emitter.emit_step_complete(
@@ -509,7 +509,7 @@ emitter.emit_step_complete(
 #### **Testing the Visualization System**
 ```bash
 # 1. Start backend and frontend
-python -m openhands.server --port 3001
+python -m Forge.server --port 3001
 cd frontend && npm run dev
 
 # 2. Open http://localhost:3001
@@ -559,7 +559,7 @@ orchestrator.enable_auto_scaling(
 
 ### **Custom Agent Creation**
 ```python
-from openhands.metasop.agents import BaseAgent
+from forge.metasop.agents import BaseAgent
 
 class CustomAgent(BaseAgent):
     def __init__(self, name, specialization):
@@ -605,12 +605,12 @@ orchestrator.set_shared_context(context)
 
 #### **Methods**
 
-##### `__init__(sop_name: str, config: OpenHandsConfig = None)`
+##### `__init__(sop_name: str, config: ForgeConfig = None)`
 Initialize the MetaSOP orchestrator.
 
 **Parameters:**
 - `sop_name`: Name of the standard operating procedure
-- `config`: OpenHands configuration object
+- `config`: Forge configuration object
 
 ##### `execute_task(task: Task) -> TaskResult`
 Execute a task using the MetaSOP system.
@@ -673,8 +673,8 @@ Get agent performance metrics.
 
 ### **Example 1: Simple Feature Development**
 ```python
-from openhands.metasop import MetaSOPOrchestrator
-from openhands.metasop.models import Task
+from forge.metasop import MetaSOPOrchestrator
+from forge.metasop.models import Task
 
 # Initialize orchestrator
 orchestrator = MetaSOPOrchestrator("feature_delivery")

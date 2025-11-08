@@ -1,9 +1,9 @@
 import os
 import tempfile
 from evaluation.integration_tests.tests.base import BaseIntegrationTest, TestResult
-from openhands.events.action import CmdRunAction
-from openhands.events.event import Event
-from openhands.runtime.base import Runtime
+from forge.events.action import CmdRunAction
+from forge.events.event import Event
+from forge.runtime.base import Runtime
 
 
 class Test(BaseIntegrationTest):

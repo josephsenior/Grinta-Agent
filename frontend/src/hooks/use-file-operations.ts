@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import toast from "#/utils/toast";
 
 interface UseFileOperationsProps {
@@ -20,7 +20,7 @@ export function useFileOperations({ conversationId, onFilesChanged }: UseFileOpe
       }
       
       setLoading(true);
-      const response = await OpenHands.getFile(conversationId, filePath);
+      const response = await Forge.getFile(conversationId, filePath);
       if (typeof response === "string") return response;
       // Some backends return an object with `code` or `content`
       if (response && typeof response === "object") {
@@ -43,7 +43,7 @@ export function useFileOperations({ conversationId, onFilesChanged }: UseFileOpe
   const deleteFile = useCallback(async (filePath: string) => {
     try {
       setLoading(true);
-      // Note: The OpenHands API doesn't have a delete file method yet
+      // Note: The Forge API doesn't have a delete file method yet
       // This would need to be implemented on the backend
       // For now, we'll show a success message
       toast.info(`File ${filePath} would be deleted`);
@@ -60,7 +60,7 @@ export function useFileOperations({ conversationId, onFilesChanged }: UseFileOpe
   const renameFile = useCallback(async (oldPath: string, newPath: string) => {
     try {
       setLoading(true);
-      // Note: The OpenHands API doesn't have a rename file method yet
+      // Note: The Forge API doesn't have a rename file method yet
       // This would need to be implemented on the backend
       // For now, we'll show a success message
       toast.info(`File renamed from ${oldPath} to ${newPath}`);
@@ -77,7 +77,7 @@ export function useFileOperations({ conversationId, onFilesChanged }: UseFileOpe
   const createFolder = useCallback(async (folderPath: string) => {
     try {
       setLoading(true);
-      // Note: The OpenHands API doesn't have a create folder method yet
+      // Note: The Forge API doesn't have a create folder method yet
       // This would need to be implemented on the backend
       // For now, we'll show a success message
       toast.info(`Folder ${folderPath} would be created`);

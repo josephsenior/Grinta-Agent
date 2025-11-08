@@ -15,24 +15,276 @@ import { useClickOutsideElement } from "#/hooks/use-click-outside-element";
 import { Provider } from "#/types/settings";
 import { useUpdateConversation } from "#/hooks/mutation/use-update-conversation";
 import { displaySuccessToast } from "#/utils/custom-toast-handlers";
+import { cn } from "#/lib/utils";
 
 interface ConversationPanelProps {
   onClose: () => void;
 }
 
+interface LoadingOverlayProps {
+  isVisible: boolean;
+}
+
+const LoadingOverlay = ({ isVisible }: LoadingOverlayProps) => {
+  if (!isVisible) {
+    return null;
+  }
+
+  return (
+    <div className="w-full h-full absolute flex justify-center items-center">
+      <LoadingSpinner size="small" />
+    </div>
+  );
+};
+
+interface ErrorStateProps {
+  error: Error | null;
+}
+
+const ErrorState = ({ error }: ErrorStateProps) => {
+  if (!error) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full p-6">
+      <div className="card-modern border-error-500/30 bg-error-500/5">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-8 h-8 rounded-full bg-error-500/20 flex items-center justify-center">
+            <div className="w-3 h-3 rounded-full bg-error-500" />
+          </div>
+          <h3 className="text-lg font-semibold text-error-500">Error</h3>
+        </div>
+        <p className="text-foreground-secondary text-sm font-medium">{error.message}</p>
+      </div>
+    </div>
+  );
+};
+
+interface EmptyStateProps {
+  isVisible: boolean;
+  title: string;
+  subtitle: string;
+}
+
+const EmptyState = ({ isVisible, title, subtitle }: EmptyStateProps) => {
+  if (!isVisible) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full p-6">
+      <div className="card-modern">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-accent-500" />
+          </div>
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
+            <p className="text-foreground-secondary text-sm font-medium">{subtitle}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface PlaywrightButtonProps {
+  show: boolean;
+  label: string;
+}
+
+const PlaywrightButton = ({ show, label }: PlaywrightButtonProps) => {
+  if (!show) {
+    return null;
+  }
+
+  return (
+    <div className="p-4">
+      <button type="button" data-testid="new-conversation-button" className="btn">
+        {label}
+      </button>
+    </div>
+  );
+};
+
+interface FetchMoreIndicatorProps {
+  isVisible: boolean;
+}
+
+const FetchMoreIndicator = ({ isVisible }: FetchMoreIndicatorProps) => {
+  if (!isVisible) {
+    return null;
+  }
+
+  return (
+    <div className="flex justify-center py-4">
+      <LoadingSpinner size="small" />
+    </div>
+  );
+};
+
+interface ConfirmDialogProps {
+  isOpen: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+const ConfirmDeleteDialog = ({ isOpen, onConfirm, onCancel }: ConfirmDialogProps) => {
+  if (!isOpen) {
+    return null;
+  }
+
+  return <ConfirmDeleteModal onConfirm={onConfirm} onCancel={onCancel} />;
+};
+
+const ConfirmStopDialog = ({ isOpen, onConfirm, onCancel }: ConfirmDialogProps) => {
+  if (!isOpen) {
+    return null;
+  }
+
+  return <ConfirmStopModal onConfirm={onConfirm} onCancel={onCancel} />;
+};
+
+interface ExitConversationDialogProps {
+  isOpen: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}
+
+const ExitConversationDialog = ({
+  isOpen,
+  onConfirm,
+  onClose,
+}: ExitConversationDialogProps) => {
+  if (!isOpen) {
+    return null;
+  }
+
+  return <ExitConversationModal onConfirm={onConfirm} onClose={onClose} />;
+};
+
 export function ConversationPanel({ onClose }: ConversationPanelProps) {
   const { t } = useTranslation();
+  const controller = useConversationPanelController({ onClose, t });
+  const ref = controller.ref;
+
+  const showEmptyState =
+    controller.conversations.length === 0 &&
+    !controller.isFetching &&
+    !controller.error;
+
+  return (
+    <div className="relative h-full" ref={ref}>
+      <LoadingOverlay isVisible={controller.isFetching} />
+
+      <div className="flex flex-col h-full">
+        <ErrorState error={controller.error as Error | null} />
+        <EmptyState
+          isVisible={showEmptyState}
+          title={t(I18nKey.CONVERSATION$EMPTY_TITLE)}
+          subtitle={t(I18nKey.CONVERSATION$EMPTY_SUBTITLE)}
+        />
+
+        {controller.conversations.length > 0 && (
+          <div className="flex flex-col h-full">
+            <div className="flex-none">
+              <PlaywrightButton
+                show={controller.isPlaywrightRun}
+                label={t(I18nKey.CONVERSATION$PLAYWRIGHT_BUTTON)}
+              />
+            </div>
+
+            <div className="flex-1 overflow-y-auto" ref={controller.scrollContainerRef}>
+              <div className="p-3">
+                {controller.conversations.map((conversation) => (
+                  <NavLink
+                    key={conversation.id}
+                    to={`/c/${conversation.id}`}
+                    className={({ isActive }) =>
+                      cn(
+                        "block rounded-lg mb-2 border border-transparent hover:border-border",
+                        isActive && "border-brand-500",
+                      )
+                    }
+                    onClick={() => controller.handleCardClick(conversation.id)}
+                  >
+                    <ConversationCard
+                      title={conversation.title || t(I18nKey.CONVERSATION$UNTITLED) || ""}
+                      lastUpdatedAt={conversation.updated_at}
+                      createdAt={conversation.created_at}
+                      selectedRepository={conversation.repo}
+                      conversationStatus={conversation.status}
+                      showOptions
+                      conversationId={conversation.id}
+                      contextMenuOpen={controller.openContextMenuId === conversation.id}
+                      onContextMenuToggle={() =>
+                        controller.handleContextMenuToggle(conversation.id)
+                      }
+                      onClick={() => controller.handleCardClick(conversation.id)}
+                      onDelete={() => controller.handleDeleteProject(conversation.id)}
+                      onStop={() => controller.handleStopConversation(conversation.id)}
+                      onChangeTitle={(title) =>
+                        controller.handleConversationTitleChange(
+                          conversation.id,
+                          title,
+                        )
+                      }
+                      variant="default"
+                    />
+                  </NavLink>
+                ))}
+              </div>
+              <FetchMoreIndicator isVisible={controller.isFetchingNextPage} />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <ConfirmDeleteDialog
+        isOpen={controller.confirmDeleteModalVisible}
+        onConfirm={() => {
+          controller.handleConfirmDelete();
+          controller.closeDeleteModal();
+        }}
+        onCancel={controller.closeDeleteModal}
+      />
+      <ConfirmStopDialog
+        isOpen={controller.confirmStopModalVisible}
+        onConfirm={() => {
+          controller.handleConfirmStop();
+          controller.closeStopModal();
+        }}
+        onCancel={controller.closeStopModal}
+      />
+      <ExitConversationDialog
+        isOpen={controller.confirmExitConversationModalVisible}
+        onConfirm={controller.handleConfirmExit}
+        onClose={() => controller.setConfirmExitConversationModalVisible(false)}
+      />
+    </div>
+  );
+}
+
+function useConversationPanelController({
+  onClose,
+  t,
+}: {
+  onClose: () => void;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  const ref = useClickOutsideElement<HTMLDivElement>(onClose);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { conversationId: currentConversationId } = useParams();
+
   interface WindowWithE2E extends Window {
-    __OPENHANDS_PLAYWRIGHT?: boolean;
+    __Forge_PLAYWRIGHT?: boolean;
   }
 
   const isPlaywrightRun =
     typeof window !== "undefined" &&
-    (window as unknown as WindowWithE2E).__OPENHANDS_PLAYWRIGHT === true;
-  const location = useLocation();
-  const { conversationId: currentConversationId } = useParams();
-  const ref = useClickOutsideElement<HTMLDivElement>(onClose);
-  const navigate = useNavigate();
+    (window as unknown as WindowWithE2E).__Forge_PLAYWRIGHT === true;
 
   const [confirmDeleteModalVisible, setConfirmDeleteModalVisible] =
     React.useState(false);
@@ -45,32 +297,21 @@ export function ConversationPanel({ onClose }: ConversationPanelProps) {
   const [selectedConversationId, setSelectedConversationId] = React.useState<
     string | null
   >(null);
-  const [openContextMenuId, setOpenContextMenuId] = React.useState<
-    string | null
-  >(null);
+  const [openContextMenuId, setOpenContextMenuId] = React.useState<string | null>(
+    null,
+  );
 
-  const {
-    data,
-    isFetching,
-    error,
-    hasNextPage,
-    isFetchingNextPage,
-    fetchNextPage,
-  } = usePaginatedConversations();
+  const paginated = usePaginatedConversations();
+  const conversations = paginated.data?.pages.flatMap((page) => page.results) ?? [];
+  const deleteConversation = useDeleteConversation();
+  const stopConversation = useStopConversation();
+  const updateConversation = useUpdateConversation();
 
-  // Flatten all pages into a single array of conversations
-  const conversations = data?.pages.flatMap((page) => page.results) ?? [];
-
-  const { mutate: deleteConversation } = useDeleteConversation();
-  const { mutate: stopConversation } = useStopConversation();
-  const { mutate: updateConversation } = useUpdateConversation();
-
-  // Set up infinite scroll
   const scrollContainerRef = useInfiniteScroll({
-    hasNextPage: !!hasNextPage,
-    isFetchingNextPage,
-    fetchNextPage,
-    threshold: 200, // Load more when 200px from bottom
+    hasNextPage: !!paginated.hasNextPage,
+    isFetchingNextPage: paginated.isFetchingNextPage,
+    fetchNextPage: paginated.fetchNextPage,
+    threshold: 200,
   });
 
   const handleDeleteProject = (conversationId: string) => {
@@ -83,184 +324,104 @@ export function ConversationPanel({ onClose }: ConversationPanelProps) {
     setSelectedConversationId(conversationId);
   };
 
-  const handleConversationTitleChange = async (
-    conversationId: string,
-    newTitle: string,
-  ) => {
-    updateConversation(
-      { conversationId, newTitle },
+  const handleConversationTitleChange = React.useCallback(
+    (conversationId: string, newTitle: string) => {
+      updateConversation.mutate(
+        { conversationId, newTitle },
+        {
+          onSuccess: () => {
+            displaySuccessToast(t(I18nKey.CONVERSATION$TITLE_UPDATED));
+          },
+        },
+      );
+    },
+    [t, updateConversation],
+  );
+
+  const handleConfirmDelete = React.useCallback(() => {
+    if (!selectedConversationId) {
+      return;
+    }
+
+    deleteConversation.mutate(
+      { conversationId: selectedConversationId },
       {
         onSuccess: () => {
-          displaySuccessToast(t(I18nKey.CONVERSATION$TITLE_UPDATED));
+          if (selectedConversationId === currentConversationId) {
+            navigate("/");
+          }
         },
       },
     );
-  };
+  }, [currentConversationId, deleteConversation, navigate, selectedConversationId]);
 
-  const handleConfirmDelete = () => {
-    if (selectedConversationId) {
-      deleteConversation(
-        { conversationId: selectedConversationId },
-        {
-          onSuccess: () => {
-            if (selectedConversationId === currentConversationId) {
-              navigate("/");
-            }
-          },
-        },
-      );
+  const handleConfirmStop = React.useCallback(() => {
+    if (!selectedConversationId) {
+      return;
     }
-  };
 
-  const handleConfirmStop = () => {
-    if (selectedConversationId) {
-      stopConversation(
-        { conversationId: selectedConversationId },
-        {
-          onSuccess: () => {
-            if (selectedConversationId === currentConversationId) {
-              navigate("/");
-            }
-          },
+    stopConversation.mutate(
+      { conversationId: selectedConversationId },
+      {
+        onSuccess: () => {
+          displaySuccessToast(t(I18nKey.CONVERSATION$STOPPED));
         },
-      );
-    }
-  };
+      },
+    );
+  }, [selectedConversationId, stopConversation, t]);
 
-  return (
-    <div
-      ref={(node) => {
-        // TODO: Combine both refs somehow
-        if (ref.current !== node) ref.current = node;
-        if (scrollContainerRef.current !== node)
-          scrollContainerRef.current = node;
-      }}
-      data-testid="conversation-panel"
-      className="w-[350px] h-full bg-background-secondary backdrop-blur-xl border border-border rounded-2xl overflow-y-auto absolute shadow-2xl"
-    >
-      {isFetching && conversations.length === 0 && (
-        <div className="w-full h-full absolute flex justify-center items-center">
-          <LoadingSpinner size="small" />
-        </div>
-      )}
-      {error && (
-        <div className="flex flex-col items-center justify-center h-full p-6">
-          <div className="card-modern border-error-500/30 bg-error-500/5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-full bg-error-500/20 flex items-center justify-center">
-                <div className="w-3 h-3 rounded-full bg-error-500" />
-              </div>
-              <h3 className="text-lg font-semibold text-error-500">Error</h3>
-            </div>
-            <p className="text-foreground-secondary text-sm font-medium">{error.message}</p>
-          </div>
-        </div>
-      )}
-      {conversations?.length === 0 && (
-        <div className="flex flex-col items-center justify-center h-full p-6">
-          <div className="card-modern">
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-accent-500" />
-              </div>
-              <div className="text-center">
-                <h3 className="text-lg font-semibold text-foreground mb-2">
-                  No Conversations Yet
-                </h3>
-                <p className="text-foreground-secondary text-sm font-medium">
-                  {t(I18nKey.CONVERSATION$NO_CONVERSATIONS)}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {conversations?.map((project) => (
-        <NavLink
-          key={project.conversation_id}
-          to={`/conversations/${project.conversation_id}`}
-          onClick={onClose}
-        >
-          {({ isActive }) => (
-            <ConversationCard
-              isActive={isActive}
-              onDelete={() => handleDeleteProject(project.conversation_id)}
-              onStop={() => handleStopConversation(project.conversation_id)}
-              onChangeTitle={(title) =>
-                handleConversationTitleChange(project.conversation_id, title)
-              }
-              title={project.title}
-              selectedRepository={{
-                selected_repository: project.selected_repository,
-                selected_branch: project.selected_branch,
-                git_provider: project.git_provider as Provider,
-              }}
-              lastUpdatedAt={project.last_updated_at}
-              createdAt={project.created_at}
-              conversationStatus={project.status}
-              conversationId={project.conversation_id}
-              contextMenuOpen={openContextMenuId === project.conversation_id}
-              onContextMenuToggle={(isOpen) =>
-                setOpenContextMenuId(isOpen ? project.conversation_id : null)
-              }
-            />
-          )}
-        </NavLink>
-      ))}
+  const handleConfirmExit = React.useCallback(() => {
+    setConfirmExitConversationModalVisible(false);
+    onClose();
+  }, [onClose]);
 
-      {/* Playwright-only test hook: render a visible new conversation button
-          only when inside a conversation route so E2E tests can assert the
-          button's presence on conversation pages without relying on sockets.
-       */}
-      {isPlaywrightRun &&
-        currentConversationId &&
-        location.pathname.startsWith("/conversations/") && (
-          <div className="p-4">
-            <button
-              type="button"
-              data-testid="new-conversation-button"
-              className="btn"
-            >
-              {t(I18nKey.CONVERSATION$START_NEW)}
-            </button>
-          </div>
-        )}
+  const closeDeleteModal = React.useCallback(() => {
+    setConfirmDeleteModalVisible(false);
+    setSelectedConversationId(null);
+  }, []);
 
-      {/* Loading indicator for fetching more conversations */}
-      {isFetchingNextPage && (
-        <div className="flex justify-center py-4">
-          <LoadingSpinner size="small" />
-        </div>
-      )}
+  const closeStopModal = React.useCallback(() => {
+    setConfirmStopModalVisible(false);
+    setSelectedConversationId(null);
+  }, []);
 
-      {confirmDeleteModalVisible && (
-        <ConfirmDeleteModal
-          onConfirm={() => {
-            handleConfirmDelete();
-            setConfirmDeleteModalVisible(false);
-          }}
-          onCancel={() => setConfirmDeleteModalVisible(false)}
-        />
-      )}
+  const handleContextMenuToggle = React.useCallback((conversationId: string) => {
+    setOpenContextMenuId((prev) => (prev === conversationId ? null : conversationId));
+  }, []);
 
-      {confirmStopModalVisible && (
-        <ConfirmStopModal
-          onConfirm={() => {
-            handleConfirmStop();
-            setConfirmStopModalVisible(false);
-          }}
-          onCancel={() => setConfirmStopModalVisible(false)}
-        />
-      )}
-
-      {confirmExitConversationModalVisible && (
-        <ExitConversationModal
-          onConfirm={() => {
-            onClose();
-          }}
-          onClose={() => setConfirmExitConversationModalVisible(false)}
-        />
-      )}
-    </div>
+  const handleCardClick = React.useCallback(
+    (conversationId: string) => {
+      if (conversationId === currentConversationId) {
+        setConfirmExitConversationModalVisible(true);
+      }
+    },
+    [currentConversationId],
   );
+
+  return {
+    ref,
+    isPlaywrightRun,
+    location,
+    conversations,
+    isFetching: paginated.isFetching,
+    error: paginated.error,
+    isFetchingNextPage: paginated.isFetchingNextPage,
+    fetchNextPage: paginated.fetchNextPage,
+    scrollContainerRef,
+    confirmDeleteModalVisible,
+    confirmStopModalVisible,
+    confirmExitConversationModalVisible,
+    setConfirmExitConversationModalVisible,
+    openContextMenuId,
+    handleDeleteProject,
+    handleStopConversation,
+    handleConversationTitleChange,
+    handleConfirmDelete,
+    handleConfirmStop,
+    handleConfirmExit,
+    closeDeleteModal,
+    closeStopModal,
+    handleContextMenuToggle,
+    handleCardClick,
+  };
 }

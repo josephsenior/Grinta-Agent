@@ -4,7 +4,7 @@ import os
 import sys
 import docx
 import pytest
-from openhands.runtime.plugins.agent_skills.file_ops.file_ops import (
+from forge.runtime.plugins.agent_skills.file_ops.file_ops import (
     WINDOW,
     _print_window,
     find_file,
@@ -15,7 +15,7 @@ from openhands.runtime.plugins.agent_skills.file_ops.file_ops import (
     search_dir,
     search_file,
 )
-from openhands.runtime.plugins.agent_skills.file_reader.file_readers import (
+from forge.runtime.plugins.agent_skills.file_reader.file_readers import (
     parse_docx,
     parse_latex,
     parse_pdf,
@@ -25,7 +25,7 @@ from openhands.runtime.plugins.agent_skills.file_reader.file_readers import (
 
 @pytest.fixture(autouse=True)
 def reset_current_file():
-    from openhands.runtime.plugins.agent_skills import agentskills
+    from forge.runtime.plugins.agent_skills import agentskills
 
     agentskills.CURRENT_FILE = None
 

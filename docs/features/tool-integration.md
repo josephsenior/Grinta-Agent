@@ -83,7 +83,7 @@ Dynamic tool description and parameter optimization system.
 
 **Usage:**
 ```python
-from openhands.prompt_optimization.tool_optimizer import ToolOptimizer
+from forge.prompt_optimization.tool_optimizer import ToolOptimizer
 
 # Initialize tool optimizer
 tool_optimizer = ToolOptimizer(
@@ -127,7 +127,7 @@ Advanced tool selection and execution framework.
 
 **Function Calling:**
 ```python
-from openhands.agenthub.codeact_agent.function_calling import FunctionCalling
+from forge.agenthub.codeact_agent.function_calling import FunctionCalling
 
 # Initialize function calling
 function_calling = FunctionCalling(
@@ -162,7 +162,7 @@ Centralized tool management and discovery system.
 
 **Tool Registry:**
 ```python
-from openhands.tools.registry import ToolRegistry
+from forge.tools.registry import ToolRegistry
 
 # Initialize tool registry
 registry = ToolRegistry()
@@ -204,7 +204,7 @@ Comprehensive tool usage analytics and monitoring.
 
 **Performance Tracking:**
 ```python
-from openhands.tools.tracker import ToolPerformanceTracker
+from forge.tools.tracker import ToolPerformanceTracker
 
 # Initialize performance tracker
 tracker = ToolPerformanceTracker()
@@ -238,7 +238,7 @@ Sophisticated error handling and recovery mechanisms.
 
 **Error Recovery:**
 ```python
-from openhands.tools.recovery import ErrorRecoverySystem
+from forge.tools.recovery import ErrorRecoverySystem
 
 # Initialize error recovery
 recovery = ErrorRecoverySystem(
@@ -364,8 +364,8 @@ safe_mode = true
 
 ### **Python API**
 ```python
-from openhands.tools import ToolIntegrationSystem
-from openhands.tools.models import ToolExecution, ToolResult
+from forge.tools import ToolIntegrationSystem
+from forge.tools.models import ToolExecution, ToolResult
 
 # Initialize tool integration system
 tool_system = ToolIntegrationSystem(
@@ -500,7 +500,7 @@ print(f"Recovery success rate: {error_analysis['recovery_success_rate']:.3f}")
 
 ### **Custom Tool Creation**
 ```python
-from openhands.tools.base import BaseTool
+from forge.tools.base import BaseTool
 
 class CustomTool(BaseTool):
     def __init__(self):
@@ -684,8 +684,8 @@ Get tool-specific metrics.
 ### **Example 1: Basic Tool Execution**
 ```python
 import asyncio
-from openhands.tools import ToolIntegrationSystem
-from openhands.tools.models import ToolExecution
+from forge.tools import ToolIntegrationSystem
+from forge.tools.models import ToolExecution
 
 async def basic_tool_execution():
     # Initialize tool system

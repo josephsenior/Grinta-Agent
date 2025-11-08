@@ -1,12 +1,12 @@
 import json
 from unittest.mock import MagicMock, patch
 import pytest
-from openhands.core.config import LLMConfig
-from openhands.events.action.message import MessageAction
-from openhands.llm.llm import LLM
-from openhands.resolver.interfaces.gitlab import GitlabPRHandler
-from openhands.resolver.interfaces.issue import Issue, ReviewThread
-from openhands.resolver.interfaces.issue_definitions import ServiceContextPR
+from forge.core.config import LLMConfig
+from forge.events.action.message import MessageAction
+from forge.llm.llm import LLM
+from forge.resolver.interfaces.gitlab import GitlabPRHandler
+from forge.resolver.interfaces.issue import Issue, ReviewThread
+from forge.resolver.interfaces.issue_definitions import ServiceContextPR
 
 
 @pytest.fixture

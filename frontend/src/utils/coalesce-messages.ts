@@ -1,9 +1,10 @@
-import type { OpenHandsEvent } from "#/types/core/base";
+import type { ForgeEvent } from "#/types/core/base";
+import type { ForgeAction, ForgeObservation } from "#/types/core";
 import {
   isAssistantMessage,
   isStreamingChunkAction,
-  isOpenHandsAction,
-  isOpenHandsObservation,
+  isForgeAction,
+  isForgeObservation,
 } from "#/types/core/guards";
 
 /**
@@ -13,7 +14,7 @@ import {
  * Before: ["Let me help", "I'll do this", "And this"]
  * After:  ["Let me help\n\nI'll do this\n\nAnd this"]
  */
-export function coalesceMessages(events: OpenHandsEvent[]): OpenHandsEvent[] {
+export function coalesceMessages(events: ForgeEvent[]): ForgeEvent[] {
   // 🚫 DISABLED: Coalescing prevents real-time streaming
   // For ChatGPT-style character-by-character streaming, we need EVERY message
   // to appear immediately without batching
@@ -28,8 +29,8 @@ export function coalesceMessages(events: OpenHandsEvent[]): OpenHandsEvent[] {
  * for a smoother, more cohesive visual flow
  */
 export function getEventSpacing(
-  currentEvent: OpenHandsEvent,
-  nextEvent?: OpenHandsEvent,
+  currentEvent: ForgeEvent,
+  nextEvent?: ForgeEvent,
 ): string {
   if (!nextEvent) return "mb-0"; // Last event has no margin
 
@@ -39,8 +40,8 @@ export function getEventSpacing(
   }
 
   // Technical events (actions/observations) → moderate spacing
-  const isTechnical = (e: OpenHandsEvent) =>
-    isOpenHandsAction(e) && !isAssistantMessage(e) && !isStreamingChunkAction(e);
+  const isTechnical = (e: ForgeEvent) =>
+    isForgeAction(e) && !isAssistantMessage(e) && !isStreamingChunkAction(e);
 
   if (isTechnical(currentEvent) && isTechnical(nextEvent)) {
     return "mb-1.5"; // 6px - related but distinct
@@ -55,7 +56,7 @@ export function getEventSpacing(
  * (important events shown, routine events collapsed)
  */
 export function shouldAutoExpand(
-  event: OpenHandsEvent,
+  event: ForgeEvent,
   isLastInTurn: boolean,
   isError: boolean,
 ): boolean {
@@ -75,55 +76,127 @@ export function shouldAutoExpand(
 /**
  * Extracts a summary label from an event for compact display
  */
-export function getEventSummary(event: OpenHandsEvent): string {
-  // Action summaries (narrow before property access)
-  if (isOpenHandsAction(event)) {
-    const action = event.action;
-
-    if (action === "run") {
-      const cmd = (event.args as any)?.command || "";
-      return cmd.length > 40 ? `${cmd.slice(0, 40)}...` : cmd;
-    }
-
-    if (action === "write" || action === "edit") {
-      const path = (event.args as any)?.path || (event.args as any)?.file_path || "";
-      const filename = path.split("/").pop() || path;
-      return `${action === "write" ? "Created" : "Edited"} ${filename}`;
-    }
-
-    if (action === "browse") {
-      const url = (event.args as any)?.url || "";
-      return `Opened ${url}`;
-    }
-
-    if (action === "finish") {
-      return "Task completed";
-    }
+export function getEventSummary(event: ForgeEvent): string {
+  if (isForgeAction(event)) {
+    const summary = summarizeActionEvent(event);
+    return summary ?? event.action ?? "Event";
   }
 
-  // Observation summaries
-  if (isOpenHandsObservation(event)) {
-    const observation = event.observation;
-
-    if (observation === "run") {
-      const exitCode = (event.extras as any)?.exit_code ?? (event as any).exit_code;
-      return exitCode === 0 ? "Command succeeded" : `Command failed (exit ${exitCode})`;
-    }
-
-    if (observation === "read") {
-      const path = (event.extras as any)?.path || "";
-      const filename = path.split("/").pop() || path;
-      return `Read ${filename}`;
-    }
-
-    if (observation === "browse") {
-      return "Page loaded";
-    }
+  if (isForgeObservation(event)) {
+    const summary = summarizeObservationEvent(event);
+    return summary ?? event.observation ?? "Event";
   }
 
-  // Default: use action/observation type or fallback label
-  if (isOpenHandsAction(event)) return event.action || "Event";
-  if (isOpenHandsObservation(event)) return event.observation || "Event";
   return "Event";
+}
+
+type ActionSummaryHandler = (event: ForgeAction) => string | null;
+type ObservationSummaryHandler = (event: ForgeObservation) => string | null;
+
+const ACTION_SUMMARIZERS: Record<string, ActionSummaryHandler> = {
+  run: summarizeRunAction,
+  write: (event) => summarizeWriteOrEditAction("Created", event),
+  edit: (event) => summarizeWriteOrEditAction("Edited", event),
+  browse: summarizeBrowseAction,
+  finish: () => "Task completed",
+};
+
+const OBSERVATION_SUMMARIZERS: Record<string, ObservationSummaryHandler> = {
+  run: summarizeRunObservation,
+  read: summarizeReadObservation,
+  browse: () => "Page loaded",
+};
+
+function summarizeActionEvent(event: ForgeAction): string | null {
+  const actionKey = typeof event.action === "string" ? event.action : "";
+  const handler = ACTION_SUMMARIZERS[actionKey];
+  return handler ? handler(event) : null;
+}
+
+function summarizeObservationEvent(event: ForgeObservation): string | null {
+  const observationKey =
+    typeof event.observation === "string" ? event.observation : "";
+  const handler = OBSERVATION_SUMMARIZERS[observationKey];
+  return handler ? handler(event) : null;
+}
+
+function summarizeRunAction(event: ForgeAction): string | null {
+  const args = toRecord(event.args);
+  const command = typeof args?.command === "string" ? args.command.trim() : "";
+  if (!command) {
+    return "Command executed";
+  }
+  return command.length > 40 ? `${command.slice(0, 40)}...` : command;
+}
+
+function summarizeWriteOrEditAction(
+  verb: "Created" | "Edited",
+  event: ForgeAction,
+): string | null {
+  const args = toRecord(event.args);
+  const path =
+    (typeof args?.path === "string" && args.path) ||
+    (typeof args?.file_path === "string" && args.file_path) ||
+    "";
+  const filename = extractFilename(path);
+  if (!filename) {
+    return `${verb} file`;
+  }
+  return `${verb} ${filename}`;
+}
+
+function summarizeBrowseAction(event: ForgeAction): string | null {
+  const args = toRecord(event.args);
+  const url = typeof args?.url === "string" ? args.url : "";
+  return url ? `Opened ${url}` : "Browsed page";
+}
+
+function summarizeRunObservation(event: ForgeObservation): string | null {
+  const extras = toRecord(event.extras);
+  const eventRecord = toRecord(event);
+  const exitCodeFromExtras = extras?.exit_code;
+  const exitCodeFromEvent = eventRecord?.exit_code;
+
+  const exitCode =
+    typeof exitCodeFromExtras === "number"
+      ? exitCodeFromExtras
+      : typeof exitCodeFromEvent === "number"
+        ? exitCodeFromEvent
+        : undefined;
+
+  if (exitCode === 0) {
+    return "Command succeeded";
+  }
+
+  if (typeof exitCode === "number") {
+    return `Command failed (exit ${exitCode})`;
+  }
+
+  return "Command finished";
+}
+
+function summarizeReadObservation(event: ForgeObservation): string | null {
+  const extras = toRecord(event.extras);
+  const path = typeof extras?.path === "string" ? extras.path : "";
+  const filename = extractFilename(path);
+  if (!filename) {
+    return "Read file";
+  }
+  return `Read ${filename}`;
+}
+
+function toRecord(value: unknown): Record<string, unknown> | undefined {
+  if (typeof value === "object" && value !== null) {
+    return value as Record<string, unknown>;
+  }
+  return undefined;
+}
+
+function extractFilename(path: string): string {
+  if (!path) {
+    return "";
+  }
+  const parts = path.split("/");
+  return parts[parts.length - 1] || path;
 }
 

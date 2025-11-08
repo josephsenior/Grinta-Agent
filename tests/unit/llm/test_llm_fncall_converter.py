@@ -4,7 +4,7 @@ import copy
 import json
 import pytest
 from litellm import ChatCompletionToolParam
-from openhands.llm.fn_call_converter import (
+from forge.llm.fn_call_converter import (
     IN_CONTEXT_LEARNING_EXAMPLE_PREFIX,
     IN_CONTEXT_LEARNING_EXAMPLE_SUFFIX,
     TOOL_EXAMPLES,
@@ -123,7 +123,7 @@ def test_malformed_parameter_parsing_recovery():
 
     This simulates a tool call to str_replace_editor where the 'command' parameter is malformed.
     """
-    from openhands.llm.fn_call_converter import convert_non_fncall_messages_to_fncall_messages
+    from forge.llm.fn_call_converter import convert_non_fncall_messages_to_fncall_messages
 
     assistant_message = {
         "role": "assistant",
@@ -373,7 +373,7 @@ FNCALL_MESSAGES = [
         "content": [
             {
                 "type": "text",
-                "text": "ls -la /workspace/astropy__astropy__5.1\r\nls: /workspace/astropy__astropy__5.1: Bad file descriptor\r\nlrwxrwxrwx 1 root root 8 Oct 28 21:58 /workspace/astropy__astropy__5.1 -> /testbed[Python Interpreter: /opt/miniconda3/envs/testbed/bin/python]\nroot@openhands-workspace:/workspace/astropy__astropy__5.1 # \n[Command finished with exit code 0]",
+                "text": "ls -la /workspace/astropy__astropy__5.1\r\nls: /workspace/astropy__astropy__5.1: Bad file descriptor\r\nlrwxrwxrwx 1 root root 8 Oct 28 21:58 /workspace/astropy__astropy__5.1 -> /testbed[Python Interpreter: /opt/miniconda3/envs/testbed/bin/python]\nroot@Forge-workspace:/workspace/astropy__astropy__5.1 # \n[Command finished with exit code 0]",
             }
         ],
         "role": "tool",
@@ -461,7 +461,7 @@ NON_FNCALL_MESSAGES = [
         "content": [
             {
                 "type": "text",
-                "text": "EXECUTION RESULT of [execute_bash]:\nls -la /workspace/astropy__astropy__5.1\r\nls: /workspace/astropy__astropy__5.1: Bad file descriptor\r\nlrwxrwxrwx 1 root root 8 Oct 28 21:58 /workspace/astropy__astropy__5.1 -> /testbed[Python Interpreter: /opt/miniconda3/envs/testbed/bin/python]\nroot@openhands-workspace:/workspace/astropy__astropy__5.1 # \n[Command finished with exit code 0]",
+                "text": "EXECUTION RESULT of [execute_bash]:\nls -la /workspace/astropy__astropy__5.1\r\nls: /workspace/astropy__astropy__5.1: Bad file descriptor\r\nlrwxrwxrwx 1 root root 8 Oct 28 21:58 /workspace/astropy__astropy__5.1 -> /testbed[Python Interpreter: /opt/miniconda3/envs/testbed/bin/python]\nroot@Forge-workspace:/workspace/astropy__astropy__5.1 # \n[Command finished with exit code 0]",
             }
         ],
     },

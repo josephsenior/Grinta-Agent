@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import React from "react";
 import { useConversationId } from "#/hooks/use-conversation-id";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { useRuntimeIsReady } from "../use-runtime-is-ready";
 
 export const useConversationConfig = () => {
@@ -14,7 +14,7 @@ export const useConversationConfig = () => {
       if (!conversationId) {
         throw new Error("No conversation ID");
       }
-      return OpenHands.getRuntimeId(conversationId);
+      return Forge.getRuntimeId(conversationId);
     },
     enabled: runtimeIsReady && !!conversationId,
     staleTime: 1000 * 60 * 5, // 5 minutes

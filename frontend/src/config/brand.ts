@@ -23,7 +23,7 @@ export const BRAND = {
     support: 'mailto:support@forge.dev', // Update with actual email
   },
   
-  // Features that differentiate from OpenHands
+  // Features that differentiate from Forge
   features: {
     memory: {
       title: 'Enterprise Memory',
@@ -47,7 +47,7 @@ export const BRAND = {
     },
   },
   
-  // Theme colors (matching codepilot-theme.css)
+  // Theme colors (matching Forge-theme.css)
   colors: {
     primary: '#0066FF',
     accent: '#00E5FF',

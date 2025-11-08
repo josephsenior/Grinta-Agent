@@ -2,7 +2,7 @@
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
-import { openHands } from "#/api/open-hands-axios";
+import { Forge } from "#/api/forge-axios";
 import { I18nKey } from "#/i18n/declaration";
 import { displayErrorToast } from "#/utils/custom-toast-handlers";
 import { retrieveAxiosErrorMessage } from "#/utils/retrieve-axios-error-message";
@@ -22,7 +22,7 @@ export function useValidateIntegration(
   return useMutation({
     mutationFn: (workspace?: string) => {
       const workspaceParam = workspace ? `/${workspace}` : "";
-      return openHands.get(
+      return Forge.get(
         `/integration/${platform}/workspaces/validate${workspaceParam}`,
       );
     },

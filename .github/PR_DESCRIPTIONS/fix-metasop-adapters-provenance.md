@@ -6,11 +6,11 @@ metasop: honor n_candidates and preserve provenance; add adapter tests
 
 This PR fixes a small but important robustness issue in the MetaSOP adapters and adds deterministic unit tests:
 
-- Patch `openhands/metasop/adapters/openhands.py`:
+- Patch `Forge/metasop/adapters/Forge.py`:
   - Preserve the last LLM `response` object when the adapter collects multiple completions so downstream metadata extraction (model/usage) is reliable.
   - Normalize multi-candidate output into `artifact.content['candidates']` and tag each candidate `meta['source'] = 'agent'` so orchestrator can distinguish agent-origin artifacts from orchestrator-emitted StepEvents.
 
-- Confirmed `openhands/metasop/adapters/engineer_codeact.py` already honors `ctx.extra['n_candidates::<step.id>']` and normalizes candidate metadata; no changes required.
+- Confirmed `Forge/metasop/adapters/engineer_codeact.py` already honors `ctx.extra['n_candidates::<step.id>']` and normalizes candidate metadata; no changes required.
 
 - Add tests:
   - `tests/unit/metasop/test_adapters_n_candidates.py` — validates adapters honor `n_candidates` hints and that candidate `meta['source']=='agent'`. Tests use dummy LLMs and monkeypatches to avoid starting Docker/agent runtimes.
@@ -33,11 +33,11 @@ Focused tests ran locally on Windows (no push performed):
 
 Summary
 
-Fixes a robustness issue in the `openhands` metasop adapter when collecting multiple LLM completions which could leave the LLM response object unavailable for metadata extraction. The adapter now preserves the last response and normalizes multi-candidate outputs, tagging candidate meta with `source: 'agent'`.
+Fixes a robustness issue in the `Forge` metasop adapter when collecting multiple LLM completions which could leave the LLM response object unavailable for metadata extraction. The adapter now preserves the last response and normalizes multi-candidate outputs, tagging candidate meta with `source: 'agent'`.
 
 Files changed (high level)
 
-- `openhands/metasop/adapters/openhands.py` — fix and normalization
+- `Forge/metasop/adapters/Forge.py` — fix and normalization
 - `tests/unit/metasop/test_adapters_n_candidates.py` — new
 - `tests/unit/metasop/test_provenance_enrichment.py` — new
 

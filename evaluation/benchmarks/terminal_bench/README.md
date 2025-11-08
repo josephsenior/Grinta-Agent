@@ -1,9 +1,9 @@
-# Terminal-Bench Evaluation on OpenHands
+# Terminal-Bench Evaluation on Forge
 
-Terminal-Bench has its own evaluation harness that is very different from OpenHands'. We
-implemented [OpenHands agent](https://github.com/laude-institute/terminal-bench/tree/main/terminal_bench/agents/installed_agents/openhands) using OpenHands local runtime
+Terminal-Bench has its own evaluation harness that is very different from forge'. We
+implemented [Forge agent](https://github.com/laude-institute/terminal-bench/tree/main/terminal_bench/agents/installed_agents/Forge) using Forge local runtime
 inside terminal-bench framework. Hereby we introduce how to use the terminal-bench
-harness to evaluate OpenHands.
+harness to evaluate Forge.
 
 ## Installation
 
@@ -23,7 +23,7 @@ export LLM_API_KEY=<llm key>
 tb run \
     --dataset-name terminal-bench-core \
     --dataset-version 0.1.1 \
-    --agent openhands \
+    --agent Forge \
     --model <model> \
     --cleanup
 ```

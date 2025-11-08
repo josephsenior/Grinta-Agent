@@ -1,6 +1,6 @@
 // Local storage keys
 export const LOCAL_STORAGE_KEYS = {
-  LOGIN_METHOD: "openhands_login_method",
+  LOGIN_METHOD: "Forge_login_method",
 };
 
 // Login methods

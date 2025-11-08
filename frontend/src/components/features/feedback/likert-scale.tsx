@@ -22,8 +22,54 @@ export function LikertScale({
   initialRating,
   initialReason,
 }: LikertScaleProps) {
-  const { t } = useTranslation();
+  const controller = useLikertController({
+    eventId,
+    initiallySubmitted,
+    initialRating,
+    initialReason,
+  });
+  const { t } = controller;
 
+  return (
+    <div className="mt-3 flex flex-col gap-1">
+      <div className="text-sm text-foreground-secondary mb-1">
+        {controller.isSubmitted
+          ? t(I18nKey.FEEDBACK$THANK_YOU_FOR_FEEDBACK)
+          : t(I18nKey.FEEDBACK$RATE_RESPONSE)}
+      </div>
+      <div className="flex items-center gap-2">
+        {[1, 2, 3, 4, 5].map((rating) => (
+          <button
+            key={rating}
+            type="button"
+            className={cn(
+              "transition-colors",
+              getButtonClass({
+                rating,
+                isSubmitted: controller.isSubmitted,
+                selectedRating: controller.selectedRating,
+              }),
+            )}
+            onClick={() => controller.handleRatingClick(rating)}
+            disabled={controller.isSubmitted}
+          >
+            <FaStar className="w-5 h-5" />
+          </button>
+        ))}
+      </div>
+
+      <LikertReasons controller={controller} />
+    </div>
+  );
+}
+
+function useLikertController({
+  eventId,
+  initiallySubmitted,
+  initialRating,
+  initialReason,
+}: LikertScaleProps) {
+  const { t } = useTranslation();
   const [selectedRating, setSelectedRating] = useState<number | null>(
     initialRating || null,
   );
@@ -36,12 +82,102 @@ export function LikertScale({
   );
   const [isSubmitted, setIsSubmitted] = useState(initiallySubmitted);
   const [countdown, setCountdown] = useState<number>(0);
-
-  // Get scroll context
   const scrollContext = useContext(ScrollContext);
+  const submitConversationFeedback = useSubmitConversationFeedback();
 
-  // Define feedback reasons using the translation hook
-  const FEEDBACK_REASONS = [
+  useEffect(() => setIsSubmitted(initiallySubmitted), [initiallySubmitted]);
+  useEffect(() => {
+    if (initialRating) {
+      setSelectedRating(initialRating);
+    }
+  }, [initialRating]);
+  useEffect(() => {
+    if (initialReason) {
+      setSelectedReason(initialReason);
+    }
+  }, [initialReason]);
+
+  const submitFeedback = React.useCallback(
+    (rating: number, reason?: string) => {
+      submitConversationFeedback.mutate(
+        {
+          rating,
+          eventId,
+          reason,
+        },
+        {
+          onSuccess: () => {
+            setSelectedReason(reason || null);
+            setShowReasons(false);
+            setIsSubmitted(true);
+          },
+        },
+      );
+    },
+    [eventId, submitConversationFeedback],
+  );
+
+  const handleRatingClick = React.useCallback(
+    (rating: number) => {
+      if (isSubmitted) {
+        return;
+      }
+
+      setSelectedRating(rating);
+
+      if (rating <= 3) {
+        startReasonFlow({
+          rating,
+          setShowReasons,
+          setCountdown,
+          setReasonTimeout,
+          submitFeedback,
+          scrollContext,
+        });
+      } else {
+        setShowReasons(false);
+        submitFeedback(rating);
+      }
+    },
+    [isSubmitted, scrollContext, submitFeedback],
+  );
+
+  const handleReasonClick = React.useCallback(
+    (reason: string) => {
+      if (selectedRating && reasonTimeout && !isSubmitted) {
+        clearTimeout(reasonTimeout);
+        setCountdown(0);
+        submitFeedback(selectedRating, reason);
+      }
+    },
+    [isSubmitted, reasonTimeout, selectedRating, submitFeedback],
+  );
+
+  useCountdownEffect({ countdown, showReasons, isSubmitted, setCountdown });
+  useCleanupTimeout(reasonTimeout);
+  useAutoScrollOnMount({ scrollContext, isSubmitted });
+  useAutoScrollOnReasons({ scrollContext, showReasons });
+
+  const feedbackReasons = React.useMemo(
+    () => buildFeedbackReasons(t),
+    [t],
+  );
+
+  return {
+    t,
+    selectedRating,
+    selectedReason,
+    showReasons,
+    isSubmitted,
+    countdown,
+    feedbackReasons,
+    handleRatingClick,
+    handleReasonClick,
+  };
+}
+
+function buildFeedbackReasons(t: ReturnType<typeof useTranslation>["t"]) {
+  return [
     t(I18nKey.FEEDBACK$REASON_MISUNDERSTOOD_INSTRUCTION),
     t(I18nKey.FEEDBACK$REASON_FORGOT_CONTEXT),
     t(I18nKey.FEEDBACK$REASON_UNNECESSARY_CHANGES),
@@ -49,209 +185,156 @@ export function LikertScale({
     t(I18nKey.FEEDBACK$REASON_DIDNT_FINISH_JOB),
     t(I18nKey.FEEDBACK$REASON_OTHER),
   ];
+}
 
-  // If scrollContext is undefined, we're not inside a ScrollProvider
+function startReasonFlow({
+  rating,
+  setShowReasons,
+  setCountdown,
+  setReasonTimeout,
+  submitFeedback,
+  scrollContext,
+}: {
+  rating: number;
+  setShowReasons: React.Dispatch<React.SetStateAction<boolean>>;
+  setCountdown: React.Dispatch<React.SetStateAction<number>>;
+  setReasonTimeout: React.Dispatch<React.SetStateAction<NodeJS.Timeout | null>>;
+  submitFeedback: (rating: number, reason?: string) => void;
+  scrollContext?: ScrollContext;
+}) {
+  setShowReasons(true);
+  setCountdown(Math.ceil(AUTO_SUBMIT_TIMEOUT / 1000));
+
+  const timeout = setTimeout(() => {
+    submitFeedback(rating);
+  }, AUTO_SUBMIT_TIMEOUT);
+
+  setReasonTimeout(timeout);
+  attemptScroll({ scrollContext });
+}
+
+function attemptScroll({ scrollContext }: { scrollContext?: ScrollContext }) {
   const scrollToBottom = scrollContext?.scrollDomToBottom;
-  const autoScroll = scrollContext?.autoScroll;
+  if (scrollToBottom && scrollContext?.autoScroll) {
+    setTimeout(() => scrollToBottom(), 100);
+  }
+}
 
-  // Use our mutation hook
-  const { mutate: submitConversationFeedback } =
-    useSubmitConversationFeedback();
-
-  // Update isSubmitted if initiallySubmitted changes
-  useEffect(() => {
-    setIsSubmitted(initiallySubmitted);
-  }, [initiallySubmitted]);
-
-  // Update selectedRating if initialRating changes
-  useEffect(() => {
-    if (initialRating) {
-      setSelectedRating(initialRating);
-    }
-  }, [initialRating]);
-
-  // Update selectedReason if initialReason changes
-  useEffect(() => {
-    if (initialReason) {
-      setSelectedReason(initialReason);
-    }
-  }, [initialReason]);
-
-  // Submit feedback and disable the component
-  const submitFeedback = (rating: number, reason?: string) => {
-    submitConversationFeedback(
-      {
-        rating,
-        eventId,
-        reason,
-      },
-      {
-        onSuccess: () => {
-          setSelectedReason(reason || null);
-          setShowReasons(false);
-          setIsSubmitted(true);
-        },
-      },
-    );
-  };
-
-  // Handle star rating selection
-  const handleRatingClick = (rating: number) => {
-    if (isSubmitted) {
-      return;
-    } // Prevent changes after submission
-
-    setSelectedRating(rating);
-
-    // Only show reasons if rating is 3 or less (1, 2, or 3 stars)
-    // For ratings > 3 (4 or 5 stars), submit immediately without showing reasons
-    if (rating <= 3) {
-      setShowReasons(true);
-      setCountdown(Math.ceil(AUTO_SUBMIT_TIMEOUT / 1000));
-
-      // Set a timeout to auto-submit if no reason is selected
-      const timeout = setTimeout(() => {
-        submitFeedback(rating);
-      }, AUTO_SUBMIT_TIMEOUT);
-
-      setReasonTimeout(timeout);
-
-      // Only scroll to bottom if the user is already at the bottom (autoScroll is true)
-      if (scrollToBottom && autoScroll) {
-        // Small delay to ensure the reasons are fully rendered
-        setTimeout(() => {
-          scrollToBottom();
-        }, 100);
-      }
-    } else {
-      // For ratings > 3 (4 or 5 stars), submit immediately without showing reasons
-      setShowReasons(false);
-      submitFeedback(rating);
-    }
-  };
-
-  // Handle reason selection
-  const handleReasonClick = (reason: string) => {
-    if (selectedRating && reasonTimeout && !isSubmitted) {
-      clearTimeout(reasonTimeout);
-      setCountdown(0);
-      submitFeedback(selectedRating, reason);
-    }
-  };
-
-  // Countdown effect
+function useCountdownEffect({
+  countdown,
+  showReasons,
+  isSubmitted,
+  setCountdown,
+}: {
+  countdown: number;
+  showReasons: boolean;
+  isSubmitted: boolean;
+  setCountdown: React.Dispatch<React.SetStateAction<number>>;
+}) {
   useEffect(() => {
     if (countdown > 0 && showReasons && !isSubmitted) {
       const timer = setTimeout(() => {
-        setCountdown(countdown - 1);
+        setCountdown((value) => value - 1);
       }, 1000);
       return () => clearTimeout(timer);
     }
     return () => {};
-  }, [countdown, showReasons, isSubmitted]);
+  }, [countdown, showReasons, isSubmitted, setCountdown]);
+}
 
-  // Clean up timeout on unmount
-  useEffect(
-    () => () => {
+function useCleanupTimeout(reasonTimeout: NodeJS.Timeout | null) {
+  useEffect(() => {
+    return () => {
       if (reasonTimeout) {
         clearTimeout(reasonTimeout);
       }
-    },
-    [reasonTimeout],
-  );
+    };
+  }, [reasonTimeout]);
+}
 
-  // Scroll to bottom when component mounts, but only if user is already at the bottom
+function useAutoScrollOnMount({
+  scrollContext,
+  isSubmitted,
+}: {
+  scrollContext?: ScrollContext;
+  isSubmitted: boolean;
+}) {
   useEffect(() => {
-    if (scrollToBottom && autoScroll && !isSubmitted) {
-      // Small delay to ensure the component is fully rendered
+    if (scrollContext?.scrollDomToBottom && scrollContext.autoScroll && !isSubmitted) {
       setTimeout(() => {
-        scrollToBottom();
+        scrollContext.scrollDomToBottom?.();
       }, 100);
     }
-  }, [scrollToBottom, autoScroll, isSubmitted]);
+  }, [isSubmitted, scrollContext]);
+}
 
-  // Scroll to bottom when reasons are shown, but only if user is already at the bottom
+function useAutoScrollOnReasons({
+  scrollContext,
+  showReasons,
+}: {
+  scrollContext?: ScrollContext;
+  showReasons: boolean;
+}) {
   useEffect(() => {
-    if (scrollToBottom && autoScroll && showReasons) {
-      // Small delay to ensure the reasons are fully rendered
+    if (scrollContext?.scrollDomToBottom && scrollContext.autoScroll && showReasons) {
       setTimeout(() => {
-        scrollToBottom();
+        scrollContext.scrollDomToBottom?.();
       }, 100);
     }
-  }, [scrollToBottom, autoScroll, showReasons]);
+  }, [scrollContext, showReasons]);
+}
 
-  // Helper function to get button class based on state
-  const getButtonClass = (rating: number) => {
-    if (isSubmitted) {
-      return selectedRating && selectedRating >= rating
-        ? "text-yellow-400 cursor-not-allowed"
-        : "text-foreground-secondary opacity-50 cursor-not-allowed";
-    }
-
+function getButtonClass({
+  rating,
+  isSubmitted,
+  selectedRating,
+}: {
+  rating: number;
+  isSubmitted: boolean;
+  selectedRating: number | null;
+}) {
+  if (isSubmitted) {
     return selectedRating && selectedRating >= rating
-      ? "text-yellow-400"
-      : "text-foreground-secondary hover:text-yellow-200";
-  };
+      ? "text-yellow-400 cursor-not-allowed"
+      : "text-foreground-secondary opacity-50 cursor-not-allowed";
+  }
+
+  return selectedRating && selectedRating >= rating
+    ? "text-yellow-400"
+    : "text-foreground-secondary hover:text-yellow-200";
+}
+
+function LikertReasons({
+  controller,
+}: {
+  controller: ReturnType<typeof useLikertController>;
+}) {
+  if (!controller.showReasons || controller.isSubmitted) {
+    return null;
+  }
 
   return (
-    <div className="mt-3 flex flex-col gap-1">
-      <div className="text-sm text-foreground-secondary mb-1">
-        {isSubmitted
-          ? t(I18nKey.FEEDBACK$THANK_YOU_FOR_FEEDBACK)
-          : t(I18nKey.FEEDBACK$RATE_AGENT_PERFORMANCE)}
+    <div className="mt-2 space-y-2">
+      <div className="text-xs text-foreground-secondary">
+        {controller.t(I18nKey.FEEDBACK$WHY_RATING)}
+        {controller.countdown > 0 && (
+          <span className="ml-2 text-foreground">
+            {controller.t(I18nKey.FEEDBACK$AUTO_SUBMIT, { seconds: controller.countdown })}
+          </span>
+        )}
       </div>
-      <div className="flex flex-col gap-1">
-        <span className="flex gap-2 items-center flex-wrap">
-          {[1, 2, 3, 4, 5].map((rating) => (
-            <button
-              type="button"
-              key={rating}
-              onClick={() => handleRatingClick(rating)}
-              disabled={isSubmitted}
-              className={cn("text-xl transition-all", getButtonClass(rating))}
-              aria-label={`Rate ${rating} stars`}
-            >
-              <FaStar />
-            </button>
-          ))}
-          {/* Show selected reason inline with stars when submitted (only for ratings <= 3) */}
-          {isSubmitted &&
-            selectedReason &&
-            selectedRating &&
-            selectedRating <= 3 && (
-              <span className="text-sm text-foreground-secondary italic">
-                {selectedReason}
-              </span>
-            )}
-        </span>
+      <div className="flex flex-wrap gap-2">
+        {controller.feedbackReasons.map((reason) => (
+          <button
+            key={reason}
+            type="button"
+            className="px-3 py-1 text-xs border border-border rounded-full hover:bg-background-secondary"
+            onClick={() => controller.handleReasonClick(reason)}
+          >
+            {reason}
+          </button>
+        ))}
       </div>
-
-      {showReasons && !isSubmitted && (
-        <div className="mt-1 flex flex-col gap-1">
-          <div className="text-xs text-foreground-secondary mb-1">
-            {t(I18nKey.FEEDBACK$SELECT_REASON)}
-          </div>
-          {countdown > 0 && (
-            <div className="text-xs text-foreground-secondary mb-1 italic">
-              {t(I18nKey.FEEDBACK$SELECT_REASON_COUNTDOWN, {
-                countdown,
-              })}
-            </div>
-          )}
-          <div className="flex flex-col gap-0.5">
-            {FEEDBACK_REASONS.map((reason) => (
-              <button
-                type="button"
-                key={reason}
-                onClick={() => handleReasonClick(reason)}
-                className="text-sm text-left py-1 px-2 rounded hover:bg-background-tertiary/70 transition-colors"
-              >
-                {reason}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import React from "react";
 import posthog from "posthog-js";
 import { useConfig } from "./use-config";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { useShouldShowUserFeatures } from "#/hooks/use-should-show-user-features";
 
 export const useGitUser = () => {
@@ -13,7 +13,7 @@ export const useGitUser = () => {
 
   const user = useQuery({
     queryKey: ["user"],
-    queryFn: OpenHands.getGitUser,
+    queryFn: Forge.getGitUser,
     enabled: shouldFetchUser,
     retry: false,
     staleTime: 1000 * 60 * 5, // 5 minutes

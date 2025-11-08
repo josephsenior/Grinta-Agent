@@ -11,22 +11,22 @@ from evaluation.utils.shared import (
     compatibility_for_eval_history_pairs,
     get_default_sandbox_config_for_eval,
     get_metrics,
-    get_openhands_config_for_eval,
+    get_FORGE_config_for_eval,
     make_metadata,
     prepare_dataset,
     reset_logger_for_multiprocessing,
     run_evaluation,
     update_llm_config_for_completions_logging,
 )
-from openhands.controller.state.state import State
-from openhands.core.config import OpenHandsConfig, get_llm_config_arg, parse_arguments
-from openhands.core.logger import openhands_logger as logger
-from openhands.core.main import create_runtime, run_controller
-from openhands.events.action import BrowseInteractiveAction, CmdRunAction, MessageAction
-from openhands.events.observation import BrowserOutputObservation, CmdOutputObservation
-from openhands.runtime.base import Runtime
-from openhands.runtime.browser.browser_env import BROWSER_EVAL_GET_GOAL_ACTION, BROWSER_EVAL_GET_REWARDS_ACTION
-from openhands.utils.async_utils import call_async_from_sync
+from forge.controller.state.state import State
+from forge.core.config import ForgeConfig, get_llm_config_arg, parse_arguments
+from forge.core.logger import forge_logger as logger
+from forge.core.main import create_runtime, run_controller
+from forge.events.action import BrowseInteractiveAction, CmdRunAction, MessageAction
+from forge.events.observation import BrowserOutputObservation, CmdOutputObservation
+from forge.runtime.base import Runtime
+from forge.runtime.browser.browser_env import BROWSER_EVAL_GET_GOAL_ACTION, BROWSER_EVAL_GET_REWARDS_ACTION
+from forge.utils.async_utils import call_async_from_sync
 
 SUPPORTED_AGENT_CLS = {"BrowsingAgent", "CodeActAgent"}
 AGENT_CLS_TO_FAKE_USER_RESPONSE_FN = {
@@ -35,10 +35,10 @@ AGENT_CLS_TO_FAKE_USER_RESPONSE_FN = {
 }
 
 
-def get_config(metadata: EvalMetadata, env_id: str) -> OpenHandsConfig:
+def get_config(metadata: EvalMetadata, env_id: str) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = "xingyaoww/od-eval-miniwob:v1.0"
-    config = get_openhands_config_for_eval(
+    config = get_FORGE_config_for_eval(
         metadata=metadata, runtime=os.environ.get("RUNTIME", "docker"), sandbox_config=sandbox_config
     )
     config.set_llm_config(

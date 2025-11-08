@@ -3,9 +3,9 @@
 import os
 import pytest
 from conftest import TEST_IN_CI, _close_test_runtime, _load_runtime
-from openhands.core.logger import openhands_logger as logger
-from openhands.events.action import CmdRunAction, FileReadAction, FileWriteAction, IPythonRunCellAction
-from openhands.events.observation import (
+from forge.core.logger import forge_logger as logger
+from forge.events.action import CmdRunAction, FileReadAction, FileWriteAction, IPythonRunCellAction
+from forge.events.observation import (
     CmdOutputObservation,
     ErrorObservation,
     FileReadObservation,
@@ -18,8 +18,8 @@ from openhands.events.observation import (
     os.environ.get("TEST_RUNTIME") == "cli",
     reason="CLIRuntime does not support full IPython/Jupyter kernel features or return IPythonRunCellObservation",
 )
-def test_simple_cmd_ipython_and_fileop(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_simple_cmd_ipython_and_fileop(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     action_cmd = CmdRunAction(command="ls -l")
     logger.info(action_cmd, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_cmd)
@@ -35,7 +35,7 @@ def test_simple_cmd_ipython_and_fileop(temp_dir, runtime_cls, run_as_openhands):
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert (
         obs.content.strip()
-        == "Hello, `World`!\n[Jupyter current working directory: /workspace]\n[Jupyter Python interpreter: /openhands/poetry/openhands-ai-5O4_aCHf-py3.12/bin/python]"
+        == "Hello, `World`!\n[Jupyter current working directory: /workspace]\n[Jupyter Python interpreter: /Forge/poetry/Forge-ai-5O4_aCHf-py3.12/bin/python]"
     )
     action_read = FileReadAction(path="hello.sh")
     logger.info(action_read, extra={"msg_type": "ACTION"})
@@ -70,16 +70,16 @@ def test_simple_cmd_ipython_and_fileop(temp_dir, runtime_cls, run_as_openhands):
     os.environ.get("TEST_RUNTIME") == "cli",
     reason="CLIRuntime does not support full IPython/Jupyter kernel features or return IPythonRunCellObservation",
 )
-def test_ipython_multi_user(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_ipython_multi_user(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     test_code = "import os; print(os.environ['USER'])"
     action_ipython = IPythonRunCellAction(code=test_code)
     logger.info(action_ipython, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_ipython)
     assert isinstance(obs, IPythonRunCellObservation)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    if run_as_openhands:
-        assert "openhands" in obs.content
+    if run_as_Forge:
+        assert "forge" in obs.content
     else:
         assert "root" in obs.content
     test_code = "import os; print(os.getcwd())"
@@ -90,7 +90,7 @@ def test_ipython_multi_user(temp_dir, runtime_cls, run_as_openhands):
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert (
         obs.content.strip()
-        == "/workspace\n[Jupyter current working directory: /workspace]\n[Jupyter Python interpreter: /openhands/poetry/openhands-ai-5O4_aCHf-py3.12/bin/python]".strip()
+        == "/workspace\n[Jupyter current working directory: /workspace]\n[Jupyter Python interpreter: /Forge/poetry/Forge-ai-5O4_aCHf-py3.12/bin/python]".strip()
     )
     test_code = "with open('test.txt', 'w') as f: f.write('Hello, world!')"
     action_ipython = IPythonRunCellAction(code=test_code)
@@ -100,15 +100,15 @@ def test_ipython_multi_user(temp_dir, runtime_cls, run_as_openhands):
     assert isinstance(obs, IPythonRunCellObservation)
     assert (
         obs.content.strip()
-        == "[Code executed successfully with no output]\n[Jupyter current working directory: /workspace]\n[Jupyter Python interpreter: /openhands/poetry/openhands-ai-5O4_aCHf-py3.12/bin/python]".strip()
+        == "[Code executed successfully with no output]\n[Jupyter current working directory: /workspace]\n[Jupyter Python interpreter: /Forge/poetry/Forge-ai-5O4_aCHf-py3.12/bin/python]".strip()
     )
     action = CmdRunAction(command="ls -alh test.txt")
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert obs.exit_code == 0
-    if run_as_openhands:
-        assert "openhands" in obs.content.split("\r\n")[0]
+    if run_as_Forge:
+        assert "forge" in obs.content.split("\r\n")[0]
     else:
         assert "root" in obs.content.split("\r\n")[0]
     action = CmdRunAction(command="rm -rf test")
@@ -133,7 +133,7 @@ def test_ipython_simple(temp_dir, runtime_cls):
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert (
         obs.content.strip()
-        == "1\n[Jupyter current working directory: /workspace]\n[Jupyter Python interpreter: /openhands/poetry/openhands-ai-5O4_aCHf-py3.12/bin/python]".strip()
+        == "1\n[Jupyter current working directory: /workspace]\n[Jupyter Python interpreter: /Forge/poetry/Forge-ai-5O4_aCHf-py3.12/bin/python]".strip()
     )
     _close_test_runtime(runtime)
 
@@ -174,9 +174,9 @@ def test_ipython_chdir(temp_dir, runtime_cls):
     os.environ.get("TEST_RUNTIME") == "cli",
     reason="CLIRuntime does not support IPython magics like %pip or return IPythonRunCellObservation",
 )
-def test_ipython_package_install(temp_dir, runtime_cls, run_as_openhands):
+def test_ipython_package_install(temp_dir, runtime_cls, run_as_Forge):
     """Make sure that cd in bash also update the current working directory in ipython."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     action = IPythonRunCellAction(code="import pymsgbox")
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
@@ -193,7 +193,7 @@ def test_ipython_package_install(temp_dir, runtime_cls, run_as_openhands):
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert (
         obs.content.strip()
-        == "[Code executed successfully with no output]\n[Jupyter current working directory: /workspace]\n[Jupyter Python interpreter: /openhands/poetry/openhands-ai-5O4_aCHf-py3.12/bin/python]"
+        == "[Code executed successfully with no output]\n[Jupyter current working directory: /workspace]\n[Jupyter Python interpreter: /Forge/poetry/Forge-ai-5O4_aCHf-py3.12/bin/python]"
     )
     _close_test_runtime(runtime)
 
@@ -202,9 +202,9 @@ def test_ipython_package_install(temp_dir, runtime_cls, run_as_openhands):
     os.environ.get("TEST_RUNTIME") == "cli",
     reason="CLIRuntime does not support sudo with password prompts if the user has not enabled passwordless sudo",
 )
-def test_ipython_file_editor_permissions_as_openhands(temp_dir, runtime_cls):
+def test_ipython_file_editor_permissions_as_Forge(temp_dir, runtime_cls):
     """Test file editor permission behavior when running as different users."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands=True)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge=True)
     action = CmdRunAction(command="sudo touch /root/test.txt && sudo chmod 600 /root/test.txt")
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)

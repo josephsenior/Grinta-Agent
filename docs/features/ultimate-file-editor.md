@@ -167,7 +167,7 @@ result = editor.commit_refactoring(transaction)
 ### Edit a Function by Name
 
 ```python
-from openhands.agenthub.codeact_agent.tools.ultimate_editor import UltimateEditor
+from forge.agenthub.codeact_agent.tools.ultimate_editor import UltimateEditor
 
 editor = UltimateEditor()
 
@@ -437,7 +437,7 @@ result = editor.commit_refactoring(transaction)
 location = editor.find_symbol("file.py", "my_function")
 if not location:
     # Get all symbols in file for debugging:
-    from openhands.agenthub.codeact_agent.tools.ultimate_editor import UltimateEditor
+    from forge.agenthub.codeact_agent.tools.ultimate_editor import UltimateEditor
     symbols = editor._get_available_symbols("file.py")
     print(f"Available symbols: {symbols}")
 ```

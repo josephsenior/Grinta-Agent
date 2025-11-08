@@ -1,4 +1,4 @@
-from openhands.events.observation.commands import CmdOutputMetadata, CmdOutputObservation, IPythonRunCellObservation
+from forge.events.observation.commands import CmdOutputMetadata, CmdOutputObservation, IPythonRunCellObservation
 
 
 def test_cmd_output_success():

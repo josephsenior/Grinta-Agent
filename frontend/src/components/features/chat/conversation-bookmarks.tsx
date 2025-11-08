@@ -176,7 +176,7 @@ export function ConversationBookmarks({
 export function useConversationBookmarks() {
   const [bookmarks, setBookmarks] = React.useState<BookmarkedMessage[]>(() => {
     try {
-      const saved = localStorage.getItem("openhands.bookmarks");
+      const saved = localStorage.getItem("Forge.bookmarks");
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -187,7 +187,7 @@ export function useConversationBookmarks() {
   // Save to localStorage whenever bookmarks change
   React.useEffect(() => {
     try {
-      localStorage.setItem("openhands.bookmarks", JSON.stringify(bookmarks));
+      localStorage.setItem("Forge.bookmarks", JSON.stringify(bookmarks));
     } catch (e) {
       console.error("Failed to save bookmarks:", e);
     }

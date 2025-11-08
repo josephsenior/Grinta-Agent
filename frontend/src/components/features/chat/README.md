@@ -67,7 +67,7 @@ Renders the conversation messages with turn-based grouping.
 **Props:**
 ```tsx
 interface MessagesProps {
-  messages: (OpenHandsAction | OpenHandsObservation)[];
+  messages: (ForgeAction | ForgeObservation)[];
   isAwaitingUserConfirmation: boolean;
   showTechnicalDetails?: boolean;
   onAskAboutCode?: (code: string) => void;

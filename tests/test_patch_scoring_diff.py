@@ -1,4 +1,4 @@
-from openhands.metasop import patch_scoring
+from forge.metasop import patch_scoring
 import sys
 from pathlib import Path
 

@@ -1,8 +1,8 @@
 import asyncio
 from unittest import mock
 import pytest
-from openhands.core.config.mcp_config import MCPConfig, MCPSSEServerConfig
-from openhands.mcp_client import MCPClient, create_mcp_clients, fetch_mcp_tools_from_config
+from forge.core.config.mcp_config import MCPConfig, MCPSSEServerConfig
+from forge.mcp_client import MCPClient, create_mcp_clients, fetch_mcp_tools_from_config
 
 
 @pytest.mark.asyncio
@@ -17,7 +17,7 @@ async def test_sse_connection_timeout():
     mock_client.connect_http = mock.AsyncMock(side_effect=mock_connect_http)
     mock_client.disconnect = mock.AsyncMock()
     with mock.patch("sys.platform", "linux"):
-        with mock.patch("openhands.mcp.utils.MCPClient", return_value=mock_client):
+        with mock.patch("forge.mcp_client.utils.MCPClient", return_value=mock_client):
             servers = [MCPSSEServerConfig(url="http://server1:8080"), MCPSSEServerConfig(url="http://server2:8080")]
             clients = await create_mcp_clients(sse_servers=servers, shttp_servers=[])
             assert len(clients) == 0
@@ -30,7 +30,7 @@ async def test_fetch_mcp_tools_with_timeout():
     mock_config = mock.MagicMock(spec=MCPConfig)
     mock_config.sse_servers = ["http://server1:8080"]
     mock_config.shttp_servers = []
-    with mock.patch("openhands.mcp.utils.create_mcp_clients", return_value=[]):
+    with mock.patch("forge.mcp_client.utils.create_mcp_clients", return_value=[]):
         tools = await fetch_mcp_tools_from_config(mock_config, None)
         assert tools == []
 
@@ -50,7 +50,7 @@ async def test_mixed_connection_results():
     }
     successful_client.tools = [mock_tool]
     with mock.patch("sys.platform", "linux"):
-        with mock.patch("openhands.mcp.utils.create_mcp_clients", return_value=[successful_client]):
+        with mock.patch("forge.mcp_client.utils.create_mcp_clients", return_value=[successful_client]):
             tools = await fetch_mcp_tools_from_config(mock_config, None)
             assert len(tools) > 0
             assert tools[0]["function"]["name"] == "mock_tool"

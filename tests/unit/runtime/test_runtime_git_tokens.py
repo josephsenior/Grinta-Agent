@@ -2,17 +2,17 @@ from types import MappingProxyType
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import SecretStr
-from openhands.core.config import OpenHandsConfig
-from openhands.core.config.mcp_config import MCPConfig, MCPStdioServerConfig
-from openhands.events.action import Action
-from openhands.events.action.commands import CmdRunAction
-from openhands.events.observation import NullObservation, Observation
-from openhands.events.stream import EventStream
-from openhands.integrations.provider import ProviderHandler, ProviderToken, ProviderType
-from openhands.integrations.service_types import AuthenticationError, Repository
-from openhands.llm.llm_registry import LLMRegistry
-from openhands.runtime.base import Runtime
-from openhands.storage import get_file_store
+from forge.core.config import ForgeConfig
+from forge.core.config.mcp_config import MCPConfig, MCPStdioServerConfig
+from forge.events.action import Action
+from forge.events.action.commands import CmdRunAction
+from forge.events.observation import NullObservation, Observation
+from forge.events.stream import EventStream
+from forge.integrations.provider import ProviderHandler, ProviderToken, ProviderType
+from forge.integrations.service_types import AuthenticationError, Repository
+from forge.llm.llm_registry import LLMRegistry
+from forge.runtime.base import Runtime
+from forge.storage import get_file_store
 
 
 class MockRuntime(Runtime):
@@ -20,7 +20,7 @@ class MockRuntime(Runtime):
 
     def __init__(self, *args, **kwargs):
         if "llm_registry" not in kwargs and len(args) < 3:
-            config = kwargs.get("config") if "config" in kwargs else args[0] if args else OpenHandsConfig()
+            config = kwargs.get("config") if "config" in kwargs else args[0] if args else ForgeConfig()
             kwargs["llm_registry"] = LLMRegistry(config=config)
         super().__init__(*args, **kwargs)
         self.run_action_calls = []
@@ -81,7 +81,7 @@ def temp_dir(tmp_path_factory: pytest.TempPathFactory) -> str:
 @pytest.fixture
 def runtime(temp_dir):
     """Fixture for runtime testing."""
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     git_provider_tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=SecretStr("test_token"))})
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
@@ -109,7 +109,7 @@ def mock_repo_and_patch(monkeypatch, provider=ProviderType.GITHUB, is_public=Tru
 @pytest.mark.asyncio
 async def test_export_latest_git_provider_tokens_no_user_id(temp_dir):
     """Test that no token export happens when user_id is not set."""
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
     runtime = MockRuntime(config=config, event_stream=event_stream, sid="test")
@@ -121,7 +121,7 @@ async def test_export_latest_git_provider_tokens_no_user_id(temp_dir):
 @pytest.mark.asyncio
 async def test_export_latest_git_provider_tokens_no_token_ref(temp_dir):
     """Test that no token export happens when command doesn't reference tokens."""
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
     runtime = MockRuntime(config=config, event_stream=event_stream, sid="test", user_id="test_user")
@@ -141,7 +141,7 @@ async def test_export_latest_git_provider_tokens_success(runtime):
 @pytest.mark.asyncio
 async def test_export_latest_git_provider_tokens_multiple_refs(temp_dir):
     """Test token export with multiple token references."""
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     git_provider_tokens = MappingProxyType(
         {
             ProviderType.GITHUB: ProviderToken(token=SecretStr("github_token")),
@@ -177,7 +177,7 @@ async def test_export_latest_git_provider_tokens_token_update(runtime, monkeypat
 @pytest.mark.asyncio
 async def test_clone_or_init_repo_no_repo_init_git_in_empty_workspace(temp_dir):
     """Test that git init is run when no repository is selected and init_git_in_empty_workspace."""
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     config.init_git_in_empty_workspace = True
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
@@ -196,7 +196,7 @@ async def test_clone_or_init_repo_no_repo_init_git_in_empty_workspace(temp_dir):
 @pytest.mark.asyncio
 async def test_clone_or_init_repo_no_repo_no_user_id_with_workspace_base(temp_dir):
     """Test that git init is not run when no repository is selected, no user_id, but workspace_base is set."""
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     config.workspace_base = "/some/path"
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
@@ -209,7 +209,7 @@ async def test_clone_or_init_repo_no_repo_no_user_id_with_workspace_base(temp_di
 @pytest.mark.asyncio
 async def test_clone_or_init_repo_auth_error(temp_dir):
     """Test that RuntimeError is raised when authentication fails."""
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
     runtime = MockRuntime(config=config, event_stream=event_stream, sid="test", user_id="test_user")
@@ -221,7 +221,7 @@ async def test_clone_or_init_repo_auth_error(temp_dir):
 
 @pytest.mark.asyncio
 async def test_clone_or_init_repo_github_with_token(temp_dir, monkeypatch):
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
     github_token = "github_test_token"
@@ -242,14 +242,14 @@ async def test_clone_or_init_repo_github_with_token(temp_dir, monkeypatch):
     assert f"git clone https://{github_token}@github.com/owner/repo.git repo" in clone_cmd
     checkout_cmd = runtime.run_action_calls[1].command
     assert "cd repo" in checkout_cmd
-    assert "git checkout -b openhands-workspace-" in checkout_cmd
+    assert "git checkout -b Forge-workspace-" in checkout_cmd
     assert result == "repo"
 
 
 @pytest.mark.asyncio
 async def test_clone_or_init_repo_github_no_token(temp_dir, monkeypatch):
     """Test cloning a GitHub repository without a token."""
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
     runtime = MockRuntime(config=config, event_stream=event_stream, sid="test", user_id="test_user")
@@ -262,13 +262,13 @@ async def test_clone_or_init_repo_github_no_token(temp_dir, monkeypatch):
     assert "git clone https://github.com/owner/repo.git repo" in clone_cmd
     checkout_cmd = runtime.run_action_calls[1].command
     assert "cd repo" in checkout_cmd
-    assert "git checkout -b openhands-workspace-" in checkout_cmd
+    assert "git checkout -b Forge-workspace-" in checkout_cmd
     assert result == "repo"
 
 
 @pytest.mark.asyncio
 async def test_clone_or_init_repo_gitlab_with_token(temp_dir, monkeypatch):
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
     gitlab_token = "gitlab_test_token"
@@ -289,14 +289,14 @@ async def test_clone_or_init_repo_gitlab_with_token(temp_dir, monkeypatch):
     assert f"git clone https://oauth2:{gitlab_token}@gitlab.com/owner/repo.git repo" in clone_cmd
     checkout_cmd = runtime.run_action_calls[1].command
     assert "cd repo" in checkout_cmd
-    assert "git checkout -b openhands-workspace-" in checkout_cmd
+    assert "git checkout -b Forge-workspace-" in checkout_cmd
     assert result == "repo"
 
 
 @pytest.mark.asyncio
 async def test_clone_or_init_repo_with_branch(temp_dir, monkeypatch):
     """Test cloning a repository with a specified branch."""
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
     runtime = MockRuntime(config=config, event_stream=event_stream, sid="test", user_id="test_user")

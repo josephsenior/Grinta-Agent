@@ -20,10 +20,10 @@ if [ -z "$AGENT" ]; then
   AGENT="CodeActAgent"
 fi
 
-get_openhands_version
+get_FORGE_version
 
 echo "AGENT: $AGENT"
-echo "OPENHANDS_VERSION: $OPENHANDS_VERSION"
+echo "FORGE_VERSION: $FORGE_VERSION"
 echo "MODEL_CONFIG: $MODEL_CONFIG"
 
 COMMAND="poetry run python evaluation/benchmarks/bird/run_infer.py \
@@ -31,7 +31,7 @@ COMMAND="poetry run python evaluation/benchmarks/bird/run_infer.py \
   --llm-config $MODEL_CONFIG \
   --max-iterations 5 \
   --eval-num-workers $NUM_WORKERS \
-  --eval-note $OPENHANDS_VERSION" \
+  --eval-note $FORGE_VERSION" \
 
 if [ -n "$EVAL_LIMIT" ]; then
   echo "EVAL_LIMIT: $EVAL_LIMIT"

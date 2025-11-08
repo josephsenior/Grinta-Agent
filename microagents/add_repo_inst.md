@@ -1,7 +1,7 @@
 ---
 name: add_repo_inst
 version: 1.0.0
-author: openhands
+author: Forge
 agent: CodeActAgent
 triggers:
   - /add_repo_inst
@@ -12,7 +12,7 @@ inputs:
 
 Please browse the current repository under /workspace/{{ REPO_FOLDER_NAME }}, look at the documentation and relevant code, and understand the purpose of this repository.
 
-Specifically, I want you to create a `.openhands/microagents/repo.md` file. This file should contain succinct information that summarizes (1) the purpose of this repository, (2) the general setup of this repo, and (3) a brief description of the structure of this repo.
+Specifically, I want you to create a `.Forge/microagents/repo.md` file. This file should contain succinct information that summarizes (1) the purpose of this repository, (2) the general setup of this repo, and (3) a brief description of the structure of this repo.
 
 Here's an example:
 
@@ -23,8 +23,8 @@ type: repo
 agent: CodeActAgent
 ---
 
-This repository contains the code for OpenHands, an automated AI software engineer. It has a Python backend
-(in the `openhands` directory) and React frontend (in the `frontend` directory).
+This repository contains the code for Forge, an automated AI software engineer. It has a Python backend
+(in the `Forge` directory) and React frontend (in the `frontend` directory).
 
 ## General Setup:
 
@@ -43,7 +43,7 @@ then re-run the command to ensure it passes.
 
 Backend:
 
-- Located in the `openhands` directory
+- Located in the `Forge` directory
 - Testing:
   - All tests are in `tests/unit/test_*.py`
   - To test new code, run `poetry run pytest tests/unit/test_xxx.py` where `xxx` is the appropriate file for the current functionality

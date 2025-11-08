@@ -1,0 +1,4 @@
+This is a Python repo for Forge-resolver, a library that attempts to resolve GitHub issues with the AI agent Forge.
+
+- Setup: `poetry install --with test --with dev`
+- Testing: `poetry run pytest tests/test_*.py`

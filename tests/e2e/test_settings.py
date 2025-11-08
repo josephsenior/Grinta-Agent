@@ -1,6 +1,6 @@
 """E2E: Settings configuration test (GitHub token).
 
-This test navigates to OpenHands, configures the LLM API key if prompted,
+This test navigates to Forge, configures the LLM API key if prompted,
 then ensures the GitHub token is set in Settings → Integrations and that the
 home screen shows the repository selector.
 """
@@ -18,8 +18,8 @@ def _setup_test_environment(base_url: str) -> str:
 
 
 def _navigate_to_application(page: Page, base_url: str) -> None:
-    """Navigate to the OpenHands application."""
-    print(f"Step 1: Navigating to OpenHands application at {base_url}...")
+    """Navigate to the Forge application."""
+    print(f"Step 1: Navigating to Forge application at {base_url}...")
     page.goto(base_url)
     page.wait_for_load_state("networkidle", timeout=30000)
     page.screenshot(path="test-results/token_01_initial_load.png")
@@ -197,7 +197,7 @@ def _verify_repository_selection(page: Page) -> None:
 def test_github_token_configuration(page: Page, base_url: str):
     """Test the GitHub token configuration flow.
 
-    1. Navigate to OpenHands
+    1. Navigate to Forge
     2. Configure LLM API key if needed
     3. Check if GitHub token is already configured
     4. If not, navigate to settings and configure it

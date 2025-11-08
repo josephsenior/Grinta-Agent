@@ -18,7 +18,7 @@ export default function Footer(): React.ReactElement {
                 <div className="absolute inset-0 bg-brand-500/20 rounded-full blur-md" />
               </div>
               <span className="text-2xl font-bold bg-gradient-to-r from-brand-500 to-accent-500 bg-clip-text text-transparent">
-                {t(I18nKey.APP$TITLE, { defaultValue: "CodePilot Pro" })}
+                {t(I18nKey.APP$TITLE, { defaultValue: "Forge Pro" })}
               </span>
             </div>
             <p className="text-foreground-secondary leading-relaxed">
@@ -155,7 +155,7 @@ export default function Footer(): React.ReactElement {
           <div className="text-foreground-secondary mb-4 md:mb-0">
             {t("COPYRIGHT", {
               defaultValue: t(I18nKey.COMMON$FOR_EXAMPLE, {
-                defaultValue: "© 2025 CodePilot Pro. All rights reserved.",
+                defaultValue: "© 2025 Forge Pro. All rights reserved.",
               }),
             })}
           </div>

@@ -130,24 +130,26 @@ export function generateUserStoryFlow(pmJson: {
     return "";
   }
 
-  let mermaid = "graph LR\n";
-  mermaid += "  start((Start))\n";
+  const sanitizedStories = pmJson.user_stories.map((story, index) => ({
+    nodeId: `story${index}`,
+    label: story.substring(0, 50).replace(/"/g, "'"),
+  }));
 
-  pmJson.user_stories.forEach((story, index) => {
-    const nodeId = `story${index}`;
-    const label = story.substring(0, 50).replace(/"/g, "'");
-    mermaid += `  ${nodeId}["${label}"]\n`;
+  const lines: string[] = ["graph LR", "  start((Start))"];
 
-    if (index === 0) {
-      mermaid += `  start --> ${nodeId}\n`;
-    } else {
-      mermaid += `  story${index - 1} --> ${nodeId}\n`;
-    }
+  sanitizedStories.forEach(({ nodeId, label }) => {
+    lines.push(`  ${nodeId}["${label}"]`);
   });
 
-  mermaid += `  story${pmJson.user_stories.length - 1} --> done((Done))\n`;
+  sanitizedStories.forEach(({ nodeId }, index) => {
+    const previousNodeId = index === 0 ? "start" : sanitizedStories[index - 1].nodeId;
+    lines.push(`  ${previousNodeId} --> ${nodeId}`);
+  });
 
-  return mermaid;
+  const lastNodeId = sanitizedStories[sanitizedStories.length - 1].nodeId;
+  lines.push(`  ${lastNodeId} --> done((Done))`);
+
+  return `${lines.join("\n")}\n`;
 }
 
 // Full Orchestration Flow Diagram
@@ -260,49 +262,61 @@ export function generateGanttChart(timelineJson: {
     return "";
   }
 
-  let mermaid = "gantt\n";
-  mermaid += "  title Project Timeline\n";
-  mermaid += "  dateFormat YYYY-MM-DD\n\n";
+  const lines = [
+    "gantt",
+    "  title Project Timeline",
+    "  dateFormat YYYY-MM-DD",
+    "",
+  ];
 
-  // Group by status
-  const sections = {
-    Planning: timelineJson.tasks.filter((t) => t.status === "pending"),
-    "In Progress": timelineJson.tasks.filter((t) => t.status === "active"),
-    Completed: timelineJson.tasks.filter((t) => t.status === "done"),
-    Critical: timelineJson.tasks.filter((t) => t.status === "crit"),
-  };
-
-  Object.entries(sections).forEach(([sectionName, tasks]) => {
-    if (tasks.length > 0) {
-      mermaid += `  section ${sectionName}\n`;
-      tasks.forEach((task) => {
-        const name = task.name.substring(0, 40);
-        const status =
-          task.status === "done"
-            ? "done"
-            : task.status === "active"
-              ? "active"
-              : task.status === "crit"
-                ? "crit"
-                : "";
-        const depends =
-          task.depends_on && task.depends_on.length > 0
-            ? `, after ${task.depends_on[0]}`
-            : "";
-
-        if (task.start_date && task.end_date) {
-          mermaid += `  ${name} :${status ? `${status}, ` : ""}${task.id}, ${task.start_date}, ${task.end_date}\n`;
-        } else if (task.duration) {
-          mermaid += `  ${name} :${status ? `${status}, ` : ""}${task.id}${depends}, ${task.duration}d\n`;
-        } else {
-          mermaid += `  ${name} :${status ? `${status}, ` : ""}${task.id}${depends}, 1d\n`;
-        }
-      });
-    }
+  buildGanttSections(timelineJson.tasks).forEach(({ label, tasks }) => {
+    lines.push(`  section ${label}`);
+    tasks.forEach(task => {
+      lines.push(formatGanttTask(task));
+    });
   });
 
-  return mermaid;
+  return `${lines.join("\n")}\n`;
 }
+
+type TimelineTask = NonNullable<
+  NonNullable<Parameters<typeof generateGanttChart>[0]["tasks"]>
+>[number];
+
+const GANTT_SECTION_DEFINITIONS: Array<{
+  label: string;
+  status: TimelineTask["status"];
+}> = [
+  { label: "Planning", status: "pending" },
+  { label: "In Progress", status: "active" },
+  { label: "Completed", status: "done" },
+  { label: "Critical", status: "crit" },
+];
+
+const buildGanttSections = (tasks: TimelineTask[]) =>
+  GANTT_SECTION_DEFINITIONS.map(({ label, status }) => ({
+    label,
+    tasks: tasks.filter(task => task.status === status),
+  })).filter(section => section.tasks.length > 0);
+
+const formatGanttTask = (task: TimelineTask): string => {
+  const name = task.name.substring(0, 40).replace(/"/g, "'");
+  const statusSegment =
+    task.status && ["done", "active", "crit"].includes(task.status)
+      ? `${task.status}, `
+      : "";
+  const depends =
+    task.depends_on && task.depends_on.length > 0
+      ? `, after ${task.depends_on[0]}`
+      : "";
+
+  if (task.start_date && task.end_date) {
+    return `  ${name} :${statusSegment}${task.id}, ${task.start_date}, ${task.end_date}`;
+  }
+
+  const duration = task.duration ? `${task.duration}d` : "1d";
+  return `  ${name} :${statusSegment}${task.id}${depends}, ${duration}`;
+};
 
 // Generate Class Diagram from code structure
 export function generateClassDiagram(codeStructure: {
@@ -377,62 +391,88 @@ export function generateClassDiagram(codeStructure: {
 }
 
 // Auto-detect diagram type and generate appropriate diagram
+type MermaidDiagram = { type: string; mermaid: string };
+
+type DiagramStrategy = {
+  type: string;
+  matches: (context: {
+    role: string;
+    artifactContent: any;
+  }) => boolean;
+  generate: (artifactContent: any) => string;
+};
+
+const ROLE_STRATEGIES: DiagramStrategy[] = [
+  {
+    type: "architecture",
+    matches: ({ role }) => role.includes("architect"),
+    generate: generateArchitectureDiagram,
+  },
+  {
+    type: "ui-components",
+    matches: ({ role }) =>
+      role.includes("designer") || role.includes("ui"),
+    generate: generateUiComponentDiagram,
+  },
+  {
+    type: "user-stories",
+    matches: ({ role }) =>
+      role.includes("product") || role.includes("pm"),
+    generate: generateUserStoryFlow,
+  },
+  {
+    type: "er-diagram",
+    matches: ({ role }) =>
+      role.includes("database") || role.includes("dba"),
+    generate: generateERDiagram,
+  },
+];
+
+const CONTENT_STRATEGIES: DiagramStrategy[] = [
+  {
+    type: "gantt-chart",
+    matches: ({ artifactContent }) =>
+      Array.isArray(artifactContent?.tasks),
+    generate: generateGanttChart,
+  },
+  {
+    type: "class-diagram",
+    matches: ({ artifactContent }) =>
+      Array.isArray(artifactContent?.classes),
+    generate: generateClassDiagram,
+  },
+];
+
+const runStrategies = (
+  strategies: DiagramStrategy[],
+  context: { role: string; artifactContent: any },
+): MermaidDiagram | null => {
+  for (const strategy of strategies) {
+    if (strategy.matches(context)) {
+      return {
+        type: strategy.type,
+        mermaid: strategy.generate(context.artifactContent),
+      };
+    }
+  }
+
+  return null;
+};
+
 export function autoGenerateDiagram(
   stepId: string,
   role: string,
   artifactContent: any,
-): { type: string; mermaid: string } | null {
-  if (!artifactContent) return null;
-
-  const roleNormalized = role.toLowerCase().trim();
-
-  // Architect → Architecture + API diagrams
-  if (roleNormalized.includes("architect")) {
-    return {
-      type: "architecture",
-      mermaid: generateArchitectureDiagram(artifactContent),
-    };
+): MermaidDiagram | null {
+  if (!artifactContent) {
+    return null;
   }
 
-  // UI Designer → Component tree
-  if (roleNormalized.includes("designer") || roleNormalized.includes("ui")) {
-    return {
-      type: "ui-components",
-      mermaid: generateUiComponentDiagram(artifactContent),
-    };
-  }
+  const normalizedRole = role.toLowerCase().trim();
+  const context = { role: normalizedRole, artifactContent };
 
-  // Product Manager → User story flow
-  if (roleNormalized.includes("product") || roleNormalized.includes("pm")) {
-    return {
-      type: "user-stories",
-      mermaid: generateUserStoryFlow(artifactContent),
-    };
-  }
-
-  // Database Designer / DBA → ER Diagram
-  if (roleNormalized.includes("database") || roleNormalized.includes("dba")) {
-    return {
-      type: "er-diagram",
-      mermaid: generateERDiagram(artifactContent),
-    };
-  }
-
-  // Project Manager / Timeline → Gantt Chart
-  if (artifactContent.tasks && Array.isArray(artifactContent.tasks)) {
-    return {
-      type: "gantt-chart",
-      mermaid: generateGanttChart(artifactContent),
-    };
-  }
-
-  // Engineer / Code Structure → Class Diagram
-  if (artifactContent.classes && Array.isArray(artifactContent.classes)) {
-    return {
-      type: "class-diagram",
-      mermaid: generateClassDiagram(artifactContent),
-    };
-  }
-
-  return null;
+  return (
+    runStrategies(ROLE_STRATEGIES, context) ??
+    runStrategies(CONTENT_STRATEGIES, context)
+  );
 }

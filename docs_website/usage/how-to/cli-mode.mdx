@@ -1,6 +1,6 @@
 ---
 title: CLI
-description: The Command-Line Interface (CLI) provides a powerful interface that lets you engage with OpenHands
+description: The Command-Line Interface (CLI) provides a powerful interface that lets you engage with Forge
   directly from your terminal.
 ---
 
@@ -10,7 +10,7 @@ for scripting.
 <iframe
   className="w-full aspect-video"
   src="https://www.youtube.com/embed/PfvIx4y8h7w"
-  title="OpenHands CLI Tutorial"
+  title="Forge CLI Tutorial"
   frameBorder="0"
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
   allowFullScreen>
@@ -20,19 +20,19 @@ for scripting.
 
 ### Running with Python
 
-**Note** - OpenHands requires Python version 3.12 or higher (Python 3.14 is not currently supported) and `uv` for the default `fetch` MCP server (more details below).
+**Note** - Forge requires Python version 3.12 or higher (Python 3.14 is not currently supported) and `uv` for the default `fetch` MCP server (more details below).
 
 #### Recommended: Using uv
 
-We recommend using [uv](https://docs.astral.sh/uv/) for the best OpenHands experience. uv provides better isolation from your current project's virtual environment and is required for OpenHands' default MCP servers.
+We recommend using [uv](https://docs.astral.sh/uv/) for the best Forge experience. uv provides better isolation from your current project's virtual environment and is required for Forge' default MCP servers.
 
 1. **Install uv** (if you haven't already):
 
    See the [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/) for the latest installation instructions for your platform.
 
-2. **Launch OpenHands CLI**:
+2. **Launch Forge CLI**:
 ```bash
-uvx --python 3.12 --from openhands-ai openhands
+uvx --python 3.12 --from Forge-ai Forge
 ```
 
 <AccordionGroup>
@@ -42,8 +42,8 @@ uvx --python 3.12 --from openhands-ai openhands
 If you prefer to use pip:
 
 ```bash
-# Install OpenHands
-pip install openhands-ai
+# Install Forge
+pip install Forge-ai
 ```
 
 Note that you'll still need `uv` installed for the default MCP servers to work properly.
@@ -55,29 +55,29 @@ Note that you'll still need `uv` installed for the default MCP servers to work p
 Add the following to your shell configuration file (`.bashrc`, `.zshrc`, etc.):
 
 ```bash
-# Add OpenHands aliases (recommended)
-alias openhands="uvx --python 3.12 --from openhands-ai openhands"
-alias oh="uvx --python 3.12 --from openhands-ai openhands"
+# Add Forge aliases (recommended)
+alias Forge="uvx --python 3.12 --from Forge-ai Forge"
+alias oh="uvx --python 3.12 --from Forge-ai Forge"
 ```
 
 After adding these lines, reload your shell configuration with `source ~/.bashrc` or `source ~/.zshrc` (depending on your shell).
 
 </Accordion>
 
-<Accordion title="Install OpenHands in home directory without global installation">
+<Accordion title="Install Forge in home directory without global installation">
 
-You can install OpenHands in a virtual environment in your home directory using `uv`:
+You can install Forge in a virtual environment in your home directory using `uv`:
 
 ```bash
 # Create a virtual environment in your home directory
 cd ~
-uv venv .openhands-venv --python 3.12
+uv venv .Forge-venv --python 3.12
 
-# Install OpenHands in the virtual environment
-uv pip install -t ~/.openhands-venv/lib/python3.12/site-packages openhands-ai
+# Install Forge in the virtual environment
+uv pip install -t ~/.Forge-venv/lib/python3.12/site-packages Forge-ai
 
 # Add the bin directory to your PATH in your shell configuration file
-echo 'export PATH="$PATH:$HOME/.openhands-venv/bin"' >> ~/.bashrc  # or ~/.zshrc
+echo 'export PATH="$PATH:$HOME/.Forge-venv/bin"' >> ~/.bashrc  # or ~/.zshrc
 
 # Reload your shell configuration
 source ~/.bashrc  # or source ~/.zshrc
@@ -90,21 +90,21 @@ source ~/.bashrc  # or source ~/.zshrc
 <Note>
   If you have cloned the repository, you can also run the CLI directly using Poetry:
 
-  poetry run openhands
+  poetry run Forge
 </Note>
 
 3. Set your model, API key, and other preferences using the UI (or alternatively environment variables, below).
 
-This command opens an interactive prompt where you can type tasks or commands and get responses from OpenHands.
+This command opens an interactive prompt where you can type tasks or commands and get responses from Forge.
 The first time you run the CLI, it will take you through configuring the required LLM
 settings. These will be saved for future sessions.
 
-The conversation history will be saved in `~/.openhands/sessions`.
+The conversation history will be saved in `~/.Forge/sessions`.
 
 ### Running with Docker
 
 1. Set the following environment variables in your terminal:
-   - `SANDBOX_VOLUMES` to specify the directory you want OpenHands to access ([See using SANDBOX_VOLUMES for more info](../runtimes/docker#using-sandbox_volumes))
+   - `SANDBOX_VOLUMES` to specify the directory you want Forge to access ([See using SANDBOX_VOLUMES for more info](../runtimes/docker#using-sandbox_volumes))
    - `LLM_MODEL` - the LLM model to use (e.g. `export LLM_MODEL="anthropic/claude-sonnet-4-20250514"`)
    - `LLM_API_KEY` - your API key (e.g. `export LLM_API_KEY="sk_test_12345"`)
 
@@ -119,30 +119,30 @@ docker run -it \
     -e LLM_API_KEY=$LLM_API_KEY \
     -e LLM_MODEL=$LLM_MODEL \
     -v /var/run/docker.sock:/var/run/docker.sock \
-    -v ~/.openhands:/.openhands \
+    -v ~/.Forge:/.Forge \
     --add-host host.docker.internal:host-gateway \
-    --name openhands-app-$(date +%Y%m%d%H%M%S) \
-    docker.all-hands.dev/all-hands-ai/openhands:0.55 \
-    python -m openhands.cli.entry --override-cli-mode true
+    --name Forge-app-$(date +%Y%m%d%H%M%S) \
+    docker.all-hands.dev/all-hands-ai/Forge:0.55 \
+    python -m Forge.cli.entry --override-cli-mode true
 ```
 
 <Note>
-  If you used OpenHands before version 0.44, you may want to run `mv ~/.openhands-state ~/.openhands` to migrate your
+  If you used Forge before version 0.44, you may want to run `mv ~/.Forge-state ~/.Forge` to migrate your
   conversation history to the new location.
 </Note>
 
-This launches the CLI in Docker, allowing you to interact with OpenHands.
+This launches the CLI in Docker, allowing you to interact with Forge.
 
 The `-e SANDBOX_USER_ID=$(id -u)` is passed to the Docker command to ensure the sandbox user matches the host user’s
 permissions. This prevents the agent from creating root-owned files in the mounted workspace.
 
-The conversation history will be saved in `~/.openhands/sessions`.
+The conversation history will be saved in `~/.Forge/sessions`.
 
 ## Interactive CLI Overview
 
 ### What is CLI Mode?
 
-CLI mode enables real-time interaction with OpenHands agents. You can type natural language tasks, use interactive
+CLI mode enables real-time interaction with Forge agents. You can type natural language tasks, use interactive
 commands, and receive instant feedback—all inside your terminal.
 
 ### Starting a Conversation
@@ -173,11 +173,11 @@ follow the prompts:
 - **Basic settings**: Choose a model/provider and enter your API key.
 - **Advanced settings**: Set custom endpoints, enable or disable confirmation mode, and configure memory condensation.
 
-Settings can also be managed via the `config.toml` file in the current directory or `~/.openhands/config.toml`.
+Settings can also be managed via the `config.toml` file in the current directory or `~/.Forge/config.toml`.
 
 #### Repository Initialization
 
-The `/init` command helps the agent understand your project by creating a `.openhands/microagents/repo.md` file with
+The `/init` command helps the agent understand your project by creating a `.Forge/microagents/repo.md` file with
 project details and structure. Use this when onboarding the agent to a new codebase.
 
 #### Agent Pause/Resume Feature
@@ -194,9 +194,9 @@ To configure Model Context Protocol (MCP) servers, you can refer to the document
 - **Remove server**: Remove an existing MCP server from your configuration
 - **View errors**: Display any connection errors that occurred during MCP server startup
 
-This command modifies your `~/.openhands/config.toml` file and will prompt you to restart OpenHands for changes to take effect.
+This command modifies your `~/.Forge/config.toml` file and will prompt you to restart Forge for changes to take effect.
 
-By default, the [Fetch MCP server](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) will be automatically configured for OpenHands. You can also [enable search engine](../search-engine-setup) via the [Tavily MCP server](https://github.com/tavily-ai/tavily-mcp) by setting the `search_api_key` under the `[core]` section in the `~/.openhands/config.toml` file.
+By default, the [Fetch MCP server](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) will be automatically configured for Forge. You can also [enable search engine](../search-engine-setup) via the [Tavily MCP server](https://github.com/tavily-ai/tavily-mcp) by setting the `search_api_key` under the `[core]` section in the `~/.Forge/config.toml` file.
 
 ##### Example of the `config.toml` file with MCP server configuration:
 

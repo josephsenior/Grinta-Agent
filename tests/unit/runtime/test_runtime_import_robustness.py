@@ -2,7 +2,7 @@
 
 This test specifically addresses the issue where broken third-party runtime dependencies
 (like runloop-api-client with incompatible httpx_aiohttp versions) would break the entire
-OpenHands CLI and system.
+Forge CLI and system.
 """
 
 import logging
@@ -12,7 +12,7 @@ import pytest
 
 def test_cli_import_with_broken_third_party_runtime():
     """Test that CLI can be imported even with broken third-party runtime dependencies."""
-    modules_to_clear = [k for k in sys.modules.keys() if "openhands" in k or "third_party" in k]
+    modules_to_clear = [k for k in sys.modules.keys() if "forge" in k or "third_party" in k]
     for module in modules_to_clear:
         del sys.modules[module]
     try:
@@ -23,7 +23,7 @@ def test_cli_import_with_broken_third_party_runtime():
 
 def test_runtime_import_robustness():
     """Test that runtime import system is robust against broken dependencies."""
-    modules_to_clear = [k for k in sys.modules.keys() if "openhands.runtime" in k]
+    modules_to_clear = [k for k in sys.modules.keys() if "forge.runtime" in k]
     for module in modules_to_clear:
         del sys.modules[module]
     try:
@@ -34,28 +34,28 @@ def test_runtime_import_robustness():
 
 def test_get_runtime_cls_works():
     """Test that get_runtime_cls works even when third-party runtimes are broken."""
-    import openhands.runtime
+    import forge.runtime
 
-    docker_runtime = openhands.runtime.get_runtime_cls("docker")
+    docker_runtime = forge.runtime.get_runtime_cls("docker")
     assert docker_runtime is not None
-    local_runtime = openhands.runtime.get_runtime_cls("local")
+    local_runtime = forge.runtime.get_runtime_cls("local")
     assert local_runtime is not None
     with pytest.raises(ValueError, match="Runtime nonexistent not supported"):
-        openhands.runtime.get_runtime_cls("nonexistent")
+        forge.runtime.get_runtime_cls("nonexistent")
 
 
 def test_runtime_exception_handling():
     """Test that the runtime discovery code properly handles exceptions."""
-    import openhands.runtime
+    import forge.runtime
 
-    assert hasattr(openhands.runtime, "get_runtime_cls")
-    assert hasattr(openhands.runtime, "_THIRD_PARTY_RUNTIME_CLASSES")
+    assert hasattr(forge.runtime, "get_runtime_cls")
+    assert hasattr(forge.runtime, "_THIRD_PARTY_RUNTIME_CLASSES")
 
 
 def test_runtime_import_exception_handling_behavior():
     """Test that runtime import handles ImportError silently but logs other exceptions."""
     from io import StringIO
-    from openhands.core.logger import openhands_logger as logger
+    from forge.core.logger import forge_logger as logger
 
     log_capture = StringIO()
     handler = logging.StreamHandler(log_capture)
@@ -87,7 +87,7 @@ def test_runtime_import_exception_handling_behavior():
 
 def test_import_error_handled_silently(caplog):
     """Test that ImportError is handled silently (no logging) as it means library is not installed."""
-    logging.getLogger("openhands.runtime")
+    logging.getLogger("forge.runtime")
     with caplog.at_level(logging.WARNING):
         try:
             raise ImportError("No module named 'optional_runtime_library'")

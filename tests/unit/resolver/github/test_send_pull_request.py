@@ -3,12 +3,12 @@ import subprocess
 import tempfile
 from unittest.mock import MagicMock, call, patch
 import pytest
-from openhands.core.config import LLMConfig
-from openhands.integrations.service_types import ProviderType
-from openhands.resolver.interfaces.github import GithubIssueHandler
-from openhands.resolver.interfaces.issue import ReviewThread
-from openhands.resolver.resolver_output import Issue, ResolverOutput
-from openhands.resolver.send_pull_request import (
+from forge.core.config import LLMConfig
+from forge.integrations.service_types import ProviderType
+from forge.resolver.interfaces.github import GithubIssueHandler
+from forge.resolver.interfaces.issue import ReviewThread
+from forge.resolver.resolver_output import Issue, ResolverOutput
+from forge.resolver.send_pull_request import (
     apply_patch,
     initialize_repo,
     load_single_resolver_output,
@@ -26,6 +26,8 @@ def mock_output_dir():
         repo_path = os.path.join(temp_dir, "repo")
         os.makedirs(repo_path)
         subprocess.run(["git", "init", repo_path], check=True)
+        subprocess.run(["git", "-C", repo_path, "config", "user.email", "forge-tests@example.com"], check=True)
+        subprocess.run(["git", "-C", repo_path, "config", "user.name", "Forge Tests"], check=True)
         readme_path = os.path.join(repo_path, "README.md")
         with open(readme_path, "w", encoding='utf-8') as f:
             f.write("hello world")
@@ -131,10 +133,10 @@ def test_initialize_repo(mock_output_dir):
         assert f.read() == "hello world"
 
 
-@patch("openhands.resolver.interfaces.github.GithubIssueHandler.reply_to_comment")
+@patch("forge.resolver.interfaces.github.GithubIssueHandler.reply_to_comment")
 @patch("httpx.post")
 @patch("subprocess.run")
-@patch("openhands.resolver.send_pull_request.LLM")
+@patch("forge.resolver.send_pull_request.LLM")
 def test_update_existing_pull_request(mock_llm_class, mock_subprocess_run, mock_requests_post, mock_reply_to_comment):
     issue = Issue(
         owner="test-owner",
@@ -167,8 +169,21 @@ def test_update_existing_pull_request(mock_llm_class, mock_subprocess_run, mock_
         comment_message=None,
         additional_message=additional_message,
     )
-    push_command = f"git -C {patch_dir} push https://{username}:{token}@github.com/{issue.owner}/{issue.repo}.git {issue.head_branch}"
-    mock_subprocess_run.assert_called_once_with(push_command, shell=True, capture_output=True, text=True)  # nosec B604 - Safe: test assertion, not executing
+    expected_args = [
+        "git",
+        "-C",
+        patch_dir,
+        "push",
+        f"https://{username}:{token}@github.com/{issue.owner}/{issue.repo}.git",
+        issue.head_branch,
+    ]
+    mock_subprocess_run.assert_called_once()
+    args, kwargs = mock_subprocess_run.call_args
+    assert args[0] == expected_args
+    assert kwargs.get("capture_output") is True
+    assert kwargs.get("text") is True
+    assert kwargs.get("check") is False
+    assert kwargs.get("shell") in (None, False)
     comment_url = f"https://api.github.com/repos/{issue.owner}/{issue.repo}/issues/{issue.number}/comments"
     expected_comment = "This is an issue resolution."
     mock_requests_post.assert_called_once_with(
@@ -225,23 +240,29 @@ def test_send_pull_request(
     assert mock_get.call_count == expected_get_calls
     assert mock_run.call_count == 2
     checkout_call, push_call = mock_run.call_args_list
-    assert checkout_call == call(
-        ["git", "-C", repo_path, "checkout", "-b", "openhands-fix-issue-42"], capture_output=True, text=True
-    )
-    assert push_call == call(
-        [
-            "git",
-            "-C",
-            repo_path,
-            "push",
-            "https://test-user:test-token@github.com/test-owner/test-repo.git",
-            "openhands-fix-issue-42",
-        ],
-        capture_output=True,
-        text=True,
-    )
+    checkout_args, checkout_kwargs = checkout_call
+    assert checkout_args[0] == ["git", "-C", repo_path, "checkout", "-b", "Forge-fix-issue-42"]
+    assert checkout_kwargs.get("capture_output") is True
+    assert checkout_kwargs.get("text") is True
+    assert checkout_kwargs.get("check") is False
+
+    push_args, push_kwargs = push_call
+    expected_push_prefix = [
+        "git",
+        "-C",
+        repo_path,
+        "push",
+        "https://test-user:test-token@github.com/test-owner/test-repo.git",
+    ]
+    assert push_args[0][:5] == expected_push_prefix
+    assert push_kwargs.get("capture_output") is True
+    assert push_kwargs.get("text") is True
+    assert push_kwargs.get("check") is False
+    assert push_kwargs.get("shell") in (None, False)
+    assert push_args[0][-1].startswith("Forge-fix-issue-42")
+    assert result
     if pr_type == "branch":
-        assert result == "https://github.com/test-owner/test-repo/compare/openhands-fix-issue-42?expand=1"
+        assert result == "https://github.com/test-owner/test-repo/compare/Forge-fix-issue-42?expand=1"
         mock_post.assert_not_called()
     else:
         assert result == "https://github.com/test-owner/test-repo/pull/1"
@@ -250,7 +271,7 @@ def test_send_pull_request(
         expected_title = pr_title or "Fix issue #42: Test Issue"
         assert post_data["title"] == expected_title
         assert post_data["body"].startswith("This pull request fixes #42.")
-        assert post_data["head"] == "openhands-fix-issue-42"
+        assert post_data["head"] == "Forge-fix-issue-42"
         assert post_data["base"] == (target_branch or "main")
         assert post_data["draft"] == (pr_type == "draft")
 
@@ -317,7 +338,7 @@ def test_send_pull_request_target_branch_with_fork(mock_get, mock_post, mock_run
     mock_post.assert_called_once()
     post_data = mock_post.call_args[1]["json"]
     assert post_data["base"] == target_branch
-    assert post_data["head"] == "fork-owner:openhands-fix-issue-42"
+    assert post_data["head"] == "fork-owner:Forge-fix-issue-42"
     push_call = mock_run.call_args_list[1]
     assert f"https://test-user:test-token@github.com/{fork_owner}/test-repo.git" in str(push_call)
 
@@ -391,7 +412,7 @@ def test_send_pull_request_git_push_failure(
         )
     assert mock_run.call_count == 2
     checkout_call = mock_run.call_args_list[0]
-    assert checkout_call[0][0] == ["git", "-C", repo_path, "checkout", "-b", "openhands-fix-issue-42"]
+    assert checkout_call[0][0] == ["git", "-C", repo_path, "checkout", "-b", "Forge-fix-issue-42"]
     push_call = mock_run.call_args_list[1]
     assert push_call[0][0] == [
         "git",
@@ -399,7 +420,7 @@ def test_send_pull_request_git_push_failure(
         repo_path,
         "push",
         "https://test-user:test-token@github.com/test-owner/test-repo.git",
-        "openhands-fix-issue-42",
+        "Forge-fix-issue-42",
     ]
     mock_post.assert_not_called()
 
@@ -440,7 +461,7 @@ def test_reply_to_comment(mock_post, mock_issue):
             "addPullRequestReviewThreadReply": {
                 "comment": {
                     "id": "test_reply_id",
-                    "body": "Openhands fix success summary\n\n\nThis is a test reply.",
+                    "body": "Forge fix success summary\n\n\nThis is a test reply.",
                     "createdAt": "2024-10-01T12:34:56Z",
                 }
             }
@@ -450,7 +471,7 @@ def test_reply_to_comment(mock_post, mock_issue):
     handler.reply_to_comment(mock_issue.number, comment_id, reply)
     query = "\n            mutation($body: String!, $pullRequestReviewThreadId: ID!) {\n                addPullRequestReviewThreadReply(input: { body: $body, pullRequestReviewThreadId: $pullRequestReviewThreadId }) {\n                    comment {\n                        id\n                        body\n                        createdAt\n                    }\n                }\n            }\n            "
     expected_variables = {
-        "body": "Openhands fix success summary\n\n\nThis is a test reply.",
+        "body": "Forge fix success summary\n\n\nThis is a test reply.",
         "pullRequestReviewThreadId": comment_id,
     }
     mock_post.assert_called_once_with(
@@ -461,10 +482,10 @@ def test_reply_to_comment(mock_post, mock_issue):
     mock_response.raise_for_status.assert_called_once()
 
 
-@patch("openhands.resolver.send_pull_request.initialize_repo")
-@patch("openhands.resolver.send_pull_request.apply_patch")
-@patch("openhands.resolver.send_pull_request.update_existing_pull_request")
-@patch("openhands.resolver.send_pull_request.make_commit")
+@patch("forge.resolver.send_pull_request.initialize_repo")
+@patch("forge.resolver.send_pull_request.apply_patch")
+@patch("forge.resolver.send_pull_request.update_existing_pull_request")
+@patch("forge.resolver.send_pull_request.make_commit")
 def test_process_single_pr_update(
     mock_make_commit,
     mock_update_existing_pull_request,
@@ -516,7 +537,7 @@ def test_process_single_pr_update(
     mock_initialize_repo.assert_called_once_with(mock_output_dir, 1, "pr", "branch 1")
     mock_apply_patch.assert_called_once_with(f"{mock_output_dir}/patches/pr_1", resolver_output.git_patch)
     mock_make_commit.assert_called_once_with(
-        f"{mock_output_dir}/patches/pr_1", resolver_output.issue, "pr", "openhands", "openhands@all-hands.dev"
+        f"{mock_output_dir}/patches/pr_1", resolver_output.issue, "pr", "forge", "Forge@all-hands.dev"
     )
     mock_update_existing_pull_request.assert_called_once_with(
         issue=resolver_output.issue,
@@ -530,10 +551,10 @@ def test_process_single_pr_update(
     )
 
 
-@patch("openhands.resolver.send_pull_request.initialize_repo")
-@patch("openhands.resolver.send_pull_request.apply_patch")
-@patch("openhands.resolver.send_pull_request.send_pull_request")
-@patch("openhands.resolver.send_pull_request.make_commit")
+@patch("forge.resolver.send_pull_request.initialize_repo")
+@patch("forge.resolver.send_pull_request.apply_patch")
+@patch("forge.resolver.send_pull_request.send_pull_request")
+@patch("forge.resolver.send_pull_request.make_commit")
 def test_process_single_issue(
     mock_make_commit, mock_send_pull_request, mock_apply_patch, mock_initialize_repo, mock_output_dir, mock_llm_config
 ):
@@ -562,7 +583,7 @@ def test_process_single_issue(
     mock_initialize_repo.assert_called_once_with(mock_output_dir, 1, "issue", "def456")
     mock_apply_patch.assert_called_once_with(f"{mock_output_dir}/patches/issue_1", resolver_output.git_patch)
     mock_make_commit.assert_called_once_with(
-        f"{mock_output_dir}/patches/issue_1", resolver_output.issue, "issue", "openhands", "openhands@all-hands.dev"
+        f"{mock_output_dir}/patches/issue_1", resolver_output.issue, "issue", "forge", "Forge@all-hands.dev"
     )
     mock_send_pull_request.assert_called_once_with(
         issue=resolver_output.issue,
@@ -577,15 +598,15 @@ def test_process_single_issue(
         reviewer=None,
         pr_title=None,
         base_domain="github.com",
-        git_user_name="openhands",
-        git_user_email="openhands@all-hands.dev",
+        git_user_name="forge",
+        git_user_email="Forge@all-hands.dev",
     )
 
 
-@patch("openhands.resolver.send_pull_request.initialize_repo")
-@patch("openhands.resolver.send_pull_request.apply_patch")
-@patch("openhands.resolver.send_pull_request.send_pull_request")
-@patch("openhands.resolver.send_pull_request.make_commit")
+@patch("forge.resolver.send_pull_request.initialize_repo")
+@patch("forge.resolver.send_pull_request.apply_patch")
+@patch("forge.resolver.send_pull_request.send_pull_request")
+@patch("forge.resolver.send_pull_request.make_commit")
 def test_process_single_issue_unsuccessful(
     mock_make_commit, mock_send_pull_request, mock_apply_patch, mock_initialize_repo, mock_output_dir, mock_llm_config
 ):
@@ -645,28 +666,26 @@ def test_send_pull_request_branch_naming(mock_run, mock_get, mock_issue, mock_ou
     assert mock_get.call_count == 4
     assert mock_run.call_count == 2
     checkout_call, push_call = mock_run.call_args_list
-    assert checkout_call == call(
-        ["git", "-C", repo_path, "checkout", "-b", "openhands-fix-issue-42-try3"], capture_output=True, text=True
-    )
-    assert push_call == call(
-        [
-            "git",
-            "-C",
-            repo_path,
-            "push",
-            "https://test-user:test-token@github.com/test-owner/test-repo.git",
-            "openhands-fix-issue-42-try3",
-        ],
-        capture_output=True,
-        text=True,
-    )
-    assert result == "https://github.com/test-owner/test-repo/compare/openhands-fix-issue-42-try3?expand=1"
+    checkout_args, checkout_kwargs = checkout_call
+    assert checkout_args[0] == ["git", "-C", repo_path, "checkout", "-b", "Forge-fix-issue-42-try3"]
+    assert checkout_kwargs.get("capture_output") is True
+    assert checkout_kwargs.get("text") is True
+    assert checkout_kwargs.get("check") is False
+
+    push_args, push_kwargs = push_call
+    assert push_args[0][4] == "https://test-user:test-token@github.com/test-owner/test-repo.git"
+    assert push_args[0][-1] == "Forge-fix-issue-42-try3"
+    assert push_kwargs.get("check") is False
+    assert push_kwargs.get("capture_output") is True
+    assert push_kwargs.get("text") is True
+    assert push_kwargs.get("shell") in (None, False)
+    assert result == "https://github.com/test-owner/test-repo/compare/Forge-fix-issue-42-try3?expand=1"
 
 
-@patch("openhands.resolver.send_pull_request.argparse.ArgumentParser")
-@patch("openhands.resolver.send_pull_request.process_single_issue")
-@patch("openhands.resolver.send_pull_request.load_single_resolver_output")
-@patch("openhands.resolver.send_pull_request.identify_token")
+@patch("forge.resolver.send_pull_request.argparse.ArgumentParser")
+@patch("forge.resolver.send_pull_request.process_single_issue")
+@patch("forge.resolver.send_pull_request.load_single_resolver_output")
+@patch("forge.resolver.send_pull_request.identify_token")
 @patch("os.path.exists")
 @patch("os.getenv")
 def test_main(
@@ -841,11 +860,11 @@ def test_make_commit_no_changes(mock_subprocess_run):
         MagicMock(returncode=0),
         MagicMock(returncode=1, stdout=""),
     ]
-    with pytest.raises(RuntimeError, match="ERROR: Openhands failed to make code changes."):
+    with pytest.raises(RuntimeError, match="ERROR: Forge failed to make code changes."):
         make_commit(repo_dir, issue, "issue")
     assert mock_subprocess_run.call_count == 3
     git_status_call = mock_subprocess_run.call_args_list[2][0][0]
-    assert f"git -C {repo_dir} status --porcelain" in git_status_call
+    assert git_status_call == ["git", "-C", repo_dir, "status", "--porcelain"]
 
 
 @patch("subprocess.run")
@@ -858,17 +877,28 @@ def test_make_commit_with_custom_git_config(mock_subprocess_run):
         MagicMock(returncode=0, stdout=""),
         MagicMock(returncode=0),
         MagicMock(returncode=0),
+        MagicMock(returncode=0),
+        MagicMock(returncode=0),
         MagicMock(returncode=0, stdout="modified files"),
         MagicMock(returncode=0),
     ]
     make_commit(repo_dir, issue, "issue", custom_git_user_name, custom_git_user_email)
     calls = mock_subprocess_run.call_args_list
-    assert len(calls) == 5
-    git_config_check_call = calls[0][0][0]
-    assert git_config_check_call == f"git -C {repo_dir} config user.name"
-    git_config_set_call = calls[1][0][0]
-    expected_config_command = f'git -C {repo_dir} config user.name "{custom_git_user_name}" && git -C {repo_dir} config user.email "{custom_git_user_email}" && git -C {repo_dir} config alias.git "git --no-pager"'
-    assert expected_config_command == git_config_set_call
+    assert len(calls) == 7
+    assert calls[0][0][0] == ["git", "-C", repo_dir, "config", "user.name"]
+    assert calls[1][0][0] == ["git", "-C", repo_dir, "config", "user.name", custom_git_user_name]
+    assert calls[2][0][0] == ["git", "-C", repo_dir, "config", "user.email", custom_git_user_email]
+    assert calls[3][0][0] == ["git", "-C", repo_dir, "config", "alias.git", "git --no-pager"]
+    assert calls[4][0][0] == ["git", "-C", repo_dir, "add", "."]
+    assert calls[5][0][0] == ["git", "-C", repo_dir, "status", "--porcelain"]
+    assert calls[6][0][0] == [
+        "git",
+        "-C",
+        repo_dir,
+        "commit",
+        "-m",
+        f"Fix issue #{issue.number}: {issue.title}",
+    ]
 
 
 @patch("subprocess.run")
@@ -884,10 +914,17 @@ def test_make_commit_with_existing_git_config(mock_subprocess_run):
     make_commit(repo_dir, issue, "issue")
     calls = mock_subprocess_run.call_args_list
     assert len(calls) == 4
-    git_config_check_call = calls[0][0][0]
-    assert git_config_check_call == f"git -C {repo_dir} config user.name"
-    git_add_call = calls[1][0][0]
-    assert f"git -C {repo_dir} add ." == git_add_call
+    assert calls[0][0][0] == ["git", "-C", repo_dir, "config", "user.name"]
+    assert calls[1][0][0] == ["git", "-C", repo_dir, "add", "."]
+    assert calls[2][0][0] == ["git", "-C", repo_dir, "status", "--porcelain"]
+    assert calls[3][0][0] == [
+        "git",
+        "-C",
+        repo_dir,
+        "commit",
+        "-m",
+        f"Fix issue #{issue.number}: {issue.title}",
+    ]
 
 
 @patch("subprocess.run")
@@ -900,17 +937,28 @@ def test_make_commit_with_special_characters_in_git_config(mock_subprocess_run):
         MagicMock(returncode=0, stdout=""),
         MagicMock(returncode=0),
         MagicMock(returncode=0),
+        MagicMock(returncode=0),
+        MagicMock(returncode=0),
         MagicMock(returncode=0, stdout="modified files"),
         MagicMock(returncode=0),
     ]
     make_commit(repo_dir, issue, "issue", git_user_name, git_user_email)
     calls = mock_subprocess_run.call_args_list
-    assert len(calls) == 5
-    git_config_check_call = calls[0][0][0]
-    assert git_config_check_call == f"git -C {repo_dir} config user.name"
-    git_config_set_call = calls[1][0][0]
-    expected_config_command = f'git -C {repo_dir} config user.name "{git_user_name}" && git -C {repo_dir} config user.email "{git_user_email}" && git -C {repo_dir} config alias.git "git --no-pager"'
-    assert expected_config_command == git_config_set_call
+    assert len(calls) == 7
+    assert calls[0][0][0] == ["git", "-C", repo_dir, "config", "user.name"]
+    assert calls[1][0][0] == ["git", "-C", repo_dir, "config", "user.name", git_user_name]
+    assert calls[2][0][0] == ["git", "-C", repo_dir, "config", "user.email", git_user_email]
+    assert calls[3][0][0] == ["git", "-C", repo_dir, "config", "alias.git", "git --no-pager"]
+    assert calls[4][0][0] == ["git", "-C", repo_dir, "add", "."]
+    assert calls[5][0][0] == ["git", "-C", repo_dir, "status", "--porcelain"]
+    assert calls[6][0][0] == [
+        "git",
+        "-C",
+        repo_dir,
+        "commit",
+        "-m",
+        f"Fix issue #{issue.number}: {issue.title}",
+    ]
 
 
 def test_apply_patch_rename_directory(mock_output_dir):

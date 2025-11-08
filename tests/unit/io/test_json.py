@@ -1,6 +1,6 @@
 from datetime import datetime
-from openhands.events.action import MessageAction
-from openhands.io import json
+from forge.events.action import MessageAction
+from forge.io import json
 
 
 def test_event_serialization_deserialization():

@@ -8,7 +8,7 @@ global:
 
 # Scrape configs
 scrape_configs:
-  # MetaSOP Prometheus metrics (from openhands/metasop/metrics.py)
+  # MetaSOP Prometheus metrics (from forge/metasop/metrics.py)
   - job_name: 'forge-metasop'
     static_configs:
       - targets: ['host.docker.internal:9091']  # Adjust port if needed

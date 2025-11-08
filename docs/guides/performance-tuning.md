@@ -1,6 +1,6 @@
 # ⚡ **Performance Tuning Guide**
 
-> **Optimization tips and techniques for maximum OpenHands performance**
+> **Optimization tips and techniques for maximum Forge performance**
 
 ---
 
@@ -22,10 +22,10 @@
 **Use Production-Grade Server:**
 ```bash
 # Development (single worker)
-uvicorn openhands.server:app
+uvicorn Forge.server:app
 
 # Production (multiple workers)
-gunicorn openhands.server:app \
+gunicorn Forge.server:app \
   --workers 4 \
   --worker-class uvicorn.workers.UvicornWorker \
   --bind 0.0.0.0:8000

@@ -1,7 +1,7 @@
 import json
 import pathlib
 import sys
-from openhands.llm.fn_call_converter import convert_fncall_messages_to_non_fncall_messages
+from forge.llm.fn_call_converter import convert_fncall_messages_to_non_fncall_messages
 
 test_file = pathlib.Path(__file__).parents[1] / "tests" / "unit" / "llm" / "test_llm_fncall_converter.py"
 ns = {}

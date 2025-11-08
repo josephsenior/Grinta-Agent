@@ -15,7 +15,7 @@ Planned Workstreams
    - Use `third_party/third_party_fetch.ps1` to fetch Tree-sitter, py-tree-sitter,
      language grammar(s), and an ANN library (Annoy) for memory compaction.
 2. Tree-sitter integration
-   - Add a small `openhands/structural` package that wraps py-tree-sitter and
+   - Add a small `Forge/structural` package that wraps py-tree-sitter and
      provides AST extraction, AST-diff, and small semantic classifiers.
    - Start with `tree-sitter-python` grammar for Python projects.
 3. Memory improvements
@@ -28,7 +28,7 @@ Planned Workstreams
 Next actions (I can take them now)
 
 - Run the fetch script to clone required OSS into `third_party/`.
-- Create scaffolding `openhands/structural` with minimal Tree-sitter wrappers and unit tests.
+- Create scaffolding `Forge/structural` with minimal Tree-sitter wrappers and unit tests.
 - Implement a MemoryIndex scoring prototype and compaction API.
 
 If you want me to proceed, I'll run the fetch script next (PowerShell). If you'd prefer I clone different tags or add other OSS, tell me which tags or repos to include.

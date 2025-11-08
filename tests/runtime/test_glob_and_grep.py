@@ -3,10 +3,10 @@
 import os
 import pytest
 from conftest import _close_test_runtime, _load_runtime
-from openhands.agenthub.readonly_agent.function_calling import glob_to_cmdrun, grep_to_cmdrun
-from openhands.core.logger import openhands_logger as logger
-from openhands.events.action import CmdRunAction
-from openhands.events.observation import CmdOutputObservation, ErrorObservation
+from forge.agenthub.readonly_agent.function_calling import glob_to_cmdrun, grep_to_cmdrun
+from forge.core.logger import forge_logger as logger
+from forge.events.action import CmdRunAction
+from forge.events.observation import CmdOutputObservation, ErrorObservation
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("TEST_RUNTIME") == "cli",
@@ -43,9 +43,9 @@ def test_grep_to_cmdrun_basic():
     assert "Below are the execution results" in cmd
 
 
-def test_grep_to_cmdrun_quotes(temp_dir, runtime_cls, run_as_openhands):
+def test_grep_to_cmdrun_quotes(temp_dir, runtime_cls, run_as_Forge):
     """Test patterns with different types of quotes."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         cmd = grep_to_cmdrun('const message = "Hello"', "/workspace")
         assert "rg -li" in cmd
@@ -120,9 +120,9 @@ def _verify_pattern_results(pattern, obs):
         assert "comment.txt" in obs.content
 
 
-def test_grep_to_cmdrun_special_chars(runtime_cls, run_as_openhands, temp_dir):
+def test_grep_to_cmdrun_special_chars(runtime_cls, run_as_Forge, temp_dir):
     """Test patterns with special shell characters."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         # Setup test files
         _setup_special_patterns_test_files(runtime)
@@ -136,9 +136,9 @@ def test_grep_to_cmdrun_special_chars(runtime_cls, run_as_openhands, temp_dir):
         _close_test_runtime(runtime)
 
 
-def test_grep_to_cmdrun_paths_with_spaces(runtime_cls, run_as_openhands, temp_dir):
+def test_grep_to_cmdrun_paths_with_spaces(runtime_cls, run_as_Forge, temp_dir):
     """Test paths with spaces and special characters."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         setup_cmd = '\n        mkdir -p "src/my project" "test files/unit tests" "src/special$chars" "path with spaces and $pecial ch@rs" &&         echo "function searchablePattern() { return true; }" > "src/my project/test.js" &&         echo "function testFunction() { return 42; }" > "test files/unit tests/test.js" &&         echo "function specialFunction() { return null; }" > "src/special$chars/test.js" &&         echo "function weirdFunction() { return []; }" > "path with spaces and $pecial ch@rs/test.js"\n        '
         obs = _run_cmd_action(runtime, setup_cmd)
@@ -245,9 +245,9 @@ def _verify_wildcard_files_pattern(obs):
     assert "temp2.js" in obs.content
 
 
-def test_glob_to_cmdrun_special_patterns(runtime_cls, run_as_openhands, temp_dir):
+def test_glob_to_cmdrun_special_patterns(runtime_cls, run_as_Forge, temp_dir):
     """Test glob patterns with special characters."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         # Setup test files
         _setup_glob_special_patterns_test_files(runtime)
@@ -261,9 +261,9 @@ def test_glob_to_cmdrun_special_patterns(runtime_cls, run_as_openhands, temp_dir
         _close_test_runtime(runtime)
 
 
-def test_glob_to_cmdrun_paths_with_spaces(runtime_cls, run_as_openhands, temp_dir):
+def test_glob_to_cmdrun_paths_with_spaces(runtime_cls, run_as_Forge, temp_dir):
     """Test paths with spaces and special characters for glob command."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         setup_cmd = '\n        mkdir -p "project files/src" "test results/unit tests" "weird$path/code" "path with spaces and $pecial ch@rs" &&         touch "project files/src/file1.js" "project files/src/file2.js" &&         touch "test results/unit tests/test1.js" "test results/unit tests/test2.js" &&         touch "weird$path/code/weird1.js" "weird$path/code/weird2.js" &&         touch "path with spaces and $pecial ch@rs/special1.js" "path with spaces and $pecial ch@rs/special2.js"\n        '
         obs = _run_cmd_action(runtime, setup_cmd)

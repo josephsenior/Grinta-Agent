@@ -5,12 +5,12 @@ source "evaluation/utils/version_control.sh"
 
 MODEL_CONFIG=$1
 
-get_openhands_version
+get_FORGE_version
 
-echo "OPENHANDS_VERSION: $OPENHANDS_VERSION"
+echo "FORGE_VERSION: $FORGE_VERSION"
 echo "MODEL_CONFIG: $MODEL_CONFIG"
 
-EVAL_NOTE="$OPENHANDS_VERSION"
+EVAL_NOTE="$FORGE_VERSION"
 if [ -n "$EXP_NAME" ]; then
   EVAL_NOTE="$EVAL_NOTE-$EXP_NAME"
 fi

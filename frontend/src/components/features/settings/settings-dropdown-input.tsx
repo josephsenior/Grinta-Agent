@@ -46,6 +46,37 @@ export function SettingsDropdownInput({
   defaultFilter,
 }: SettingsDropdownInputProps) {
   const { t } = useTranslation();
+  const [currentKey, setCurrentKey] = React.useState(
+    (selectedKey ?? defaultSelectedKey ?? "") as string,
+  );
+
+  React.useEffect(() => {
+    if (typeof selectedKey === "string") {
+      setCurrentKey(selectedKey);
+    }
+  }, [selectedKey]);
+
+  React.useEffect(() => {
+    if (selectedKey === undefined && typeof defaultSelectedKey === "string") {
+      setCurrentKey(defaultSelectedKey);
+    }
+  }, [defaultSelectedKey, selectedKey]);
+
+  const handleSelectionChange = (key: React.Key | null) => {
+    if (typeof key === "string") {
+      setCurrentKey(key);
+    }
+    onSelectionChange?.(key);
+  };
+
+  const handleInputChange = (value: string) => {
+    if (!allowsCustomValue) {
+      setCurrentKey(value);
+    }
+    onInputChange?.(value);
+  };
+
+  const dropdownValue = allowsCustomValue ? undefined : currentKey;
 
   return (
     <label className={cn("flex flex-col gap-2.5", wrapperClassName)}>
@@ -58,11 +89,13 @@ export function SettingsDropdownInput({
       <CustomDropdown
         aria-label={typeof label === "string" ? label : name}
         data-testid={testId}
+        name={name}
+        value={dropdownValue}
+        defaultValue={defaultSelectedKey as string | undefined}
         placeholder={isLoading ? t("HOME$LOADING") : placeholder}
         disabled={isDisabled || isLoading}
-        value={selectedKey as string}
-        onSelectionChange={(key) => onSelectionChange?.(key)}
-        onInputChange={onInputChange}
+        onSelectionChange={handleSelectionChange}
+        onInputChange={handleInputChange}
         isClearable={isClearable}
         allowsCustomValue={allowsCustomValue}
         isLoading={isLoading}

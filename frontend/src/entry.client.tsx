@@ -21,12 +21,12 @@ import "./i18n";
 // Import CSS files
 import "./tailwind.css";
 import "./index.css";
-import "./styles/codepilot-theme.css";
+import "./styles/Forge-theme.css";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "./context/theme-context";
 import store from "./store";
 // ...existing imports
-import OpenHands from "./api/open-hands";
+import Forge from "./api/forge";
 import { displayErrorToast } from "./utils/custom-toast-handlers";
 import { queryClient } from "./query-client-config";
 import { performanceMonitor } from "./utils/performanceMonitor";
@@ -38,10 +38,10 @@ const fileIconsJS = import("file-icons-js");
 const ToasterClient = lazy(() => import("./components/ToasterClient"));
 
 type WindowWithE2E = Window & {
-  __OPENHANDS_PLAYWRIGHT?: boolean;
-  __OPENHANDS_E2E_MARK?: ((name: string, meta?: unknown) => void) | undefined;
-  __OPENHANDS_E2E_GET?: (() => unknown[]) | undefined;
-  __OPENHANDS_E2E_APPLIED_RUNTIME_READY?: boolean;
+  __Forge_PLAYWRIGHT?: boolean;
+  __Forge_E2E_MARK?: ((name: string, meta?: unknown) => void) | undefined;
+  __Forge_E2E_GET?: (() => unknown[]) | undefined;
+  __Forge_E2E_APPLIED_RUNTIME_READY?: boolean;
 };
 
 const getWin = (): WindowWithE2E | undefined =>
@@ -121,7 +121,7 @@ function PosthogInit() {
   React.useEffect(() => {
     (async () => {
       try {
-        const config = await OpenHands.getConfig();
+        const config = await Forge.getConfig();
         setPosthogClientKey(config.POSTHOG_CLIENT_KEY);
       } catch (error) {
         displayErrorToast("Error fetching PostHog client key");
@@ -246,7 +246,7 @@ function LoadingFallback() {
                 margin: "0 auto 16px",
               }}
             />
-            Loading OpenHands...
+            Loading Forge...
           </div>
           <style
             dangerouslySetInnerHTML={{
@@ -511,13 +511,13 @@ prepareApp().then(async () => {
 // runtime as ready in a narrowly-scoped way. This helps tests that need the
 // UI to render file lists without performing a broad sweep of curAgentState
 // usages. Only activate when the Playwright init script sets the global
-// test flag `window.__OPENHANDS_PLAYWRIGHT === true` so production behavior
+// test flag `window.__Forge_PLAYWRIGHT === true` so production behavior
 // is unchanged.
 try {
   const w = getWin();
-  if (w && w.__OPENHANDS_PLAYWRIGHT === true) {
-    const orig = w.__OPENHANDS_E2E_MARK;
-    w.__OPENHANDS_E2E_MARK = function e2eMark(name: string, meta?: unknown) {
+  if (w && w.__Forge_PLAYWRIGHT === true) {
+    const orig = w.__Forge_E2E_MARK;
+    w.__Forge_E2E_MARK = function e2eMark(name: string, meta?: unknown) {
       try {
         // preserve original logging behavior if present
         if (typeof orig === "function") {
@@ -562,7 +562,7 @@ try {
             // Test-only diagnostic: mark that the runtime-ready dispatch was attempted
             try {
               if (w) {
-                w.__OPENHANDS_E2E_APPLIED_RUNTIME_READY = true;
+                w.__Forge_E2E_APPLIED_RUNTIME_READY = true;
               }
             } catch (e) {
               // swallow
@@ -583,9 +583,9 @@ try {
 // recorded mark now and apply the same runtime-ready dispatch immediately.
 try {
   const w = getWin();
-  if (w && w.__OPENHANDS_PLAYWRIGHT === true) {
+  if (w && w.__Forge_PLAYWRIGHT === true) {
     try {
-      const getMarks = w.__OPENHANDS_E2E_GET;
+      const getMarks = w.__Forge_E2E_GET;
       if (typeof getMarks === "function") {
         try {
           const marks = getMarks();
@@ -613,7 +613,7 @@ try {
                 // mark applied flag for tests
                 try {
                   if (w) {
-                    w.__OPENHANDS_E2E_APPLIED_RUNTIME_READY = true;
+                    w.__Forge_E2E_APPLIED_RUNTIME_READY = true;
                   }
                 } catch (e) {
                   /* ignore */

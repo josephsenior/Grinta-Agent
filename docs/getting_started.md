@@ -1,4 +1,4 @@
-# Getting Started with OpenHands
+# Getting Started with Forge
 
 ## Quick Start (5 Minutes)
 
@@ -13,8 +13,8 @@
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/yourusername/openhands.git
-cd openhands
+git clone https://github.com/yourusername/Forge.git
+cd Forge
 ```
 
 2. **Install backend dependencies:**
@@ -72,7 +72,7 @@ OPENAI_API_KEY=sk-your-key-here
 
 1. **Start backend:**
 ```bash
-poetry run python -m openhands.server.listen
+poetry run python -m Forge.server.listen
 ```
 
 Backend will start on `http://localhost:3000`
@@ -300,13 +300,13 @@ For more issues, see [Troubleshooting Guide](./TROUBLESHOOTING.md)
 - **Read:** [Architecture Guide](./ARCHITECTURE.md) - Understand the system
 - **Explore:** [API Reference](./API_REFERENCE.md) - Build integrations
 - **Monitor:** [Monitoring Guide](./MONITORING.md) - Track performance
-- **Contribute:** [Contributing Guide](./CONTRIBUTING.md) - Help improve OpenHands
+- **Contribute:** [Contributing Guide](./CONTRIBUTING.md) - Help improve Forge
 
 ## Getting Help
 
 - **Documentation:** Check other guides in `docs/`
-- **Issues:** [GitHub Issues](https://github.com/yourusername/openhands/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/yourusername/openhands/discussions)
+- **Issues:** [GitHub Issues](https://github.com/yourusername/Forge/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/yourusername/Forge/discussions)
 - **Discord:** Join our community (link TBD)
 
 ## Advanced Topics

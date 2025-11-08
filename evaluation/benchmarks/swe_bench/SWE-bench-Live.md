@@ -8,7 +8,7 @@
 <a href="https://SWE-bench-Live.github.io" >📊 Leaderboard</a>
 </p>
 
-SWE-bench-Live is a live benchmark for issue resolving, providing a dataset that contains the latest issue tasks. This document explains how to run the evaluation of OpenHands on SWE-bench-Live.
+SWE-bench-Live is a live benchmark for issue resolving, providing a dataset that contains the latest issue tasks. This document explains how to run the evaluation of Forge on SWE-bench-Live.
 
 Since SWE-bench-Live has an almost identical setting to SWE-bench, you only need to simply change the dataset name to `SWE-bench-Live/SWE-bench-Live`, the other parts are basically the same as running on SWE-bench.
 
@@ -32,7 +32,7 @@ In the original SWE-bench-Live paper, max_iterations is set to 100.
 
 ## Evaluating Results
 
-After OpenHands generates patch results for each issue, we evaluate the results using the [SWE-bench-Live evaluation harness](https://github.com/microsoft/SWE-bench-Live).
+After Forge generates patch results for each issue, we evaluate the results using the [SWE-bench-Live evaluation harness](https://github.com/microsoft/SWE-bench-Live).
 
 Convert to the format of predictions for SWE benchmarks:
 
@@ -50,7 +50,7 @@ python -m swebench.harness.run_evaluation \
     --namespace starryzhang \
     --predictions_path preds.jsonl \
     --max_workers 10 \
-    --run_id openhands
+    --run_id Forge
 ```
 
 ## Citation

@@ -1,9 +1,9 @@
 from unittest.mock import MagicMock, Mock
 import httpx
 import pytest
-from openhands.core.exceptions import AgentRuntimeDisconnectedError, AgentRuntimeTimeoutError
-from openhands.events.action import CmdRunAction
-from openhands.runtime.base import Runtime
+from forge.core.exceptions import AgentRuntimeDisconnectedError, AgentRuntimeTimeoutError
+from forge.events.action import CmdRunAction
+from forge.runtime.base import Runtime
 
 
 @pytest.fixture

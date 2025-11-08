@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSettings } from "#/hooks/query/use-settings";
-import { openHands } from "#/api/open-hands-axios";
+import { Forge } from "#/api/forge-axios";
 import { displaySuccessToast } from "#/utils/custom-toast-handlers";
 import { ThemeToggle } from "#/components/ui/theme-toggle";
 
@@ -175,7 +175,7 @@ function UserSettingsScreen() {
     }
     try {
       setIsSaving(true);
-      await openHands.post("/api/email", { email }, { withCredentials: true });
+      await Forge.post("/api/email", { email }, { withCredentials: true });
       setOriginalEmail(email);
       // Display toast notification instead of setting state
       displaySuccessToast(t("SETTINGS$EMAIL_SAVED_SUCCESSFULLY"));
@@ -191,7 +191,7 @@ function UserSettingsScreen() {
   const handleResendVerification = async () => {
     try {
       setIsResendingVerification(true);
-      await openHands.put("/api/email/verify", {}, { withCredentials: true });
+      await Forge.put("/api/email/verify", {}, { withCredentials: true });
       // Display toast notification instead of setting state
       displaySuccessToast(t("SETTINGS$VERIFICATION_EMAIL_SENT"));
     } catch (error) {

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 
 export const useMicroagentManagementConversations = (
   selectedRepository: string,
@@ -16,7 +16,7 @@ export const useMicroagentManagementConversations = (
       selectedRepository,
     ],
     queryFn: () =>
-      OpenHands.getMicroagentManagementConversations(
+      Forge.getMicroagentManagementConversations(
         selectedRepository,
         pageId,
         limit,

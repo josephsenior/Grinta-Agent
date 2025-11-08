@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { I18nKey } from "#/i18n/declaration";
 import { RepositoryMicroagent } from "#/types/microagent-management";
-import { Conversation } from "#/api/open-hands.types";
+import { Conversation } from "#/api/forge.types";
 import {
   setSelectedMicroagentItem,
   setSelectedRepository,

@@ -1,5 +1,5 @@
 LCA_PATH: path #where to clone lca-ci rep
-model_name: OpenHands
+model_name: Forge
 benchmark_owner: ICML-25-BenchName-builds-repair
 token_gh: your_token
 #for lca-ci-repo

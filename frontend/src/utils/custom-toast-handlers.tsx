@@ -22,6 +22,29 @@ export const TOAST_OPTIONS: ToastOptions = {
  * Display error toast with user-friendly formatting
  */
 export const displayErrorToast = (error: unknown) => {
+  const showSimpleToast = (text: string, baseDuration = 4000) => {
+    const normalized = normalizeToastMessage(text);
+    const duration = calculateToastDuration(normalized, baseDuration);
+    safeToast.error(normalized, {
+      ...TOAST_OPTIONS,
+      duration,
+    });
+  };
+
+  if (error === null || typeof error === "undefined") {
+    showSimpleToast("An unexpected error occurred");
+    return;
+  }
+
+  if (
+    typeof error === "string" ||
+    typeof error === "number" ||
+    typeof error === "boolean"
+  ) {
+    showSimpleToast(String(error));
+    return;
+  }
+
   // Try to extract user-friendly error from backend
   const userFriendlyError = extractUserFriendlyError(error);
   
@@ -38,14 +61,12 @@ export const displayErrorToast = (error: unknown) => {
   } else {
     // Fallback to client-side formatting
     const formatted = formatClientError(error);
-    const message = `${formatted.icon} ${formatted.title}\n${formatted.suggestion || ""}`;
-    const duration = calculateToastDuration(message, 4000);
-    
-    safeToast.error(message, {
-      ...TOAST_OPTIONS,
-      duration,
-      icon: formatted.icon,
-    });
+    const fallbackMessage = formatted.message || formatted.title;
+    const iconPrefix = formatted.icon ? `${formatted.icon} ` : "";
+    const suffix = formatted.suggestion ? `\n${formatted.suggestion}` : "";
+    const composedMessage = `${iconPrefix}${fallbackMessage}${suffix}`.trim();
+
+    showSimpleToast(composedMessage, 4000);
   }
 };
 

@@ -158,12 +158,8 @@ describe("PromptCard", () => {
   it("should copy to clipboard when copy is clicked", async () => {
     const user = userEvent.setup();
     
-    // Mock clipboard API
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: vi.fn(),
-      },
-    });
+    // Mock clipboard API - use vi.spyOn since clipboard is already defined in vitest.setup
+    const writeTextSpy = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
 
     render(<PromptCard {...defaultProps} />);
 
@@ -173,7 +169,7 @@ describe("PromptCard", () => {
     const copyButton = await screen.findByText("PROMPTS$COPY");
     await user.click(copyButton);
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(mockPrompt.content);
+    expect(writeTextSpy).toHaveBeenCalledWith(mockPrompt.content);
   });
 
   it("should close menu when clicking outside", async () => {

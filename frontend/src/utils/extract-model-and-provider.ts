@@ -59,5 +59,7 @@ export const extractModelAndProvider = (model: string) => {
     return { provider: "", model, separator: "" };
   }
   const [provider, ...modelId] = split;
-  return { provider, model: modelId.join(separator), separator };
+  const lower = provider.toLowerCase();
+  const normalizedProvider = lower === "forge" || lower === "openhands" ? "openhands" : provider;
+  return { provider: normalizedProvider, model: modelId.join(separator), separator };
 };

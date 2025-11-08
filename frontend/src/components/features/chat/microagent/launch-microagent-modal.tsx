@@ -35,7 +35,7 @@ export function LaunchMicroagentModal({
     useMicroagentPrompt(eventId);
 
   const { data: microagents, isLoading: microagentsIsLoading } =
-    useGetMicroagents(`${selectedRepo}/.openhands/microagents`);
+    useGetMicroagents(`${selectedRepo}/.Forge/microagents`);
 
   const [triggers, setTriggers] = React.useState<string[]>([]);
 
@@ -116,7 +116,7 @@ export function LaunchMicroagentModal({
               allowsCustomValue
               isLoading={microagentsIsLoading}
               items={
-                microagents?.map((item) => ({
+                microagents?.map((item: any) => ({
                   key: item,
                   label: item,
                 })) || []

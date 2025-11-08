@@ -8,4 +8,4 @@ git config --global --add safe.directory "$(realpath .)"
 sudo apt update && sudo apt install netcat -y
 
 # Do common setup tasks
-source .openhands/setup.sh
+source .Forge/setup.sh

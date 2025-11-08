@@ -2,7 +2,7 @@
  * API client for database connections
  */
 
-import { openHands } from "./open-hands-axios";
+import { Forge } from "./forge-axios";
 import type {
   DatabaseConnection,
   TestConnectionRequest,
@@ -16,7 +16,7 @@ import type {
  * List all database connections for the current user
  */
 export async function listDatabaseConnections(): Promise<DatabaseConnection[]> {
-  const response = await openHands.get("/api/database-connections");
+  const response = await Forge.get("/api/database-connections");
   return response.data;
 }
 
@@ -26,7 +26,7 @@ export async function listDatabaseConnections(): Promise<DatabaseConnection[]> {
 export async function createDatabaseConnection(
   connection: Omit<DatabaseConnection, "id" | "createdAt" | "updatedAt">,
 ): Promise<DatabaseConnection> {
-  const response = await openHands.post("/api/database-connections", connection);
+  const response = await Forge.post("/api/database-connections", connection);
   return response.data.connection;
 }
 
@@ -37,7 +37,7 @@ export async function updateDatabaseConnection(
   connectionId: string,
   updates: Partial<DatabaseConnection>,
 ): Promise<DatabaseConnection> {
-  const response = await openHands.patch(
+  const response = await Forge.patch(
     `/api/database-connections/${connectionId}`,
     updates,
   );
@@ -50,7 +50,7 @@ export async function updateDatabaseConnection(
 export async function deleteDatabaseConnection(
   connectionId: string,
 ): Promise<void> {
-  await openHands.delete(`/api/database-connections/${connectionId}`);
+  await Forge.delete(`/api/database-connections/${connectionId}`);
 }
 
 /**
@@ -59,7 +59,7 @@ export async function deleteDatabaseConnection(
 export async function getDatabaseSchema(
   connectionId: string,
 ): Promise<any> {
-  const response = await openHands.get(
+  const response = await Forge.get(
     `/api/database-connections/${connectionId}/schema`,
   );
   return response.data;
@@ -74,7 +74,7 @@ export async function executeQuery(
   limit?: number,
   timeout?: number,
 ): Promise<any> {
-  const response = await openHands.post(
+  const response = await Forge.post(
     `/api/database-connections/${connectionId}/query`,
     {
       query,
@@ -91,7 +91,7 @@ export async function executeQuery(
 export async function testDatabaseConnection(
   request: TestConnectionRequest,
 ): Promise<TestConnectionResponse> {
-  const response = await openHands.post(
+  const response = await Forge.post(
     "/api/database-connections/test",
     request,
   );

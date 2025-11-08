@@ -9,7 +9,7 @@ import pandas as pd
 import toml
 from datasets import load_dataset
 from jinja2 import Environment, FileSystemLoader
-import openhands.agenthub
+import forge.agenthub
 from evaluation.benchmarks.nocode_bench.binary_patch_utils import remove_binary_diffs, remove_binary_files_from_git
 from evaluation.benchmarks.nocode_bench.consistants import MAP_REPO_TO_CONFIG
 from evaluation.benchmarks.nocode_bench.resource.mapping import get_instance_resource_factor
@@ -22,26 +22,26 @@ from evaluation.utils.shared import (
     codeact_user_response,
     get_default_sandbox_config_for_eval,
     get_metrics,
-    get_openhands_config_for_eval,
+    get_FORGE_config_for_eval,
     is_fatal_evaluation_error,
     make_metadata,
     prepare_dataset,
     reset_logger_for_multiprocessing,
     update_llm_config_for_completions_logging,
 )
-from openhands.controller.state.state import State
-from openhands.core.config import AgentConfig, OpenHandsConfig, get_evaluation_parser, get_llm_config_arg
-from openhands.core.config.condenser_config import NoOpCondenserConfig
-from openhands.core.config.utils import get_condenser_config_arg
-from openhands.core.logger import openhands_logger as logger
-from openhands.core.main import create_runtime, run_controller
-from openhands.critic import AgentFinishedCritic
-from openhands.events.action import CmdRunAction, FileReadAction, MessageAction
-from openhands.events.observation import CmdOutputObservation, ErrorObservation, FileReadObservation
-from openhands.events.serialization.event import event_from_dict, event_to_dict
-from openhands.runtime.base import Runtime
-from openhands.utils.async_utils import call_async_from_sync
-from openhands.utils.shutdown_listener import sleep_if_should_continue
+from forge.controller.state.state import State
+from forge.core.config import AgentConfig, ForgeConfig, get_evaluation_parser, get_llm_config_arg
+from forge.core.config.condenser_config import NoOpCondenserConfig
+from forge.core.config.utils import get_condenser_config_arg
+from forge.core.logger import forge_logger as logger
+from forge.core.main import create_runtime, run_controller
+from forge.critic import AgentFinishedCritic
+from forge.events.action import CmdRunAction, FileReadAction, MessageAction
+from forge.events.observation import CmdOutputObservation, ErrorObservation, FileReadObservation
+from forge.events.serialization.event import event_from_dict, event_to_dict
+from forge.runtime.base import Runtime
+from forge.utils.async_utils import call_async_from_sync
+from forge.utils.shutdown_listener import sleep_if_should_continue
 
 USE_HINT_TEXT = os.environ.get("USE_HINT_TEXT", "false").lower() == "true"
 RUN_WITH_BROWSING = os.environ.get("RUN_WITH_BROWSING", "false").lower() == "true"
@@ -101,13 +101,13 @@ def get_instance_docker_image(instance_id: str, swebench_official_image: bool = 
         raise
 
 
-def get_config(instance: pd.Series, metadata: EvalMetadata) -> OpenHandsConfig:
+def get_config(instance: pd.Series, metadata: EvalMetadata) -> ForgeConfig:
     use_swebench_official_image = True
     base_container_image = get_instance_docker_image(
         instance["instance_id"], swebench_official_image=use_swebench_official_image
     )
     logger.info(
-        "Using instance container image: %s. Please make sure this image exists. Submit an issue on https://github.com/All-Hands-AI/OpenHands if you run into any issues.",
+        "Using instance container image: %s. Please make sure this image exists. Submit an issue on https://github.com/All-Hands-AI/Forge if you run into any issues.",
         base_container_image,
     )
     sandbox_config = get_default_sandbox_config_for_eval()
@@ -118,7 +118,7 @@ def get_config(instance: pd.Series, metadata: EvalMetadata) -> OpenHandsConfig:
     sandbox_config.remote_runtime_resource_factor = get_instance_resource_factor(
         dataset_name=metadata.dataset, instance_id=instance["instance_id"]
     )
-    config = get_openhands_config_for_eval(
+    config = get_FORGE_config_for_eval(
         metadata=metadata, runtime=os.environ.get("RUNTIME", "docker"), sandbox_config=sandbox_config
     )
     config.set_llm_config(
@@ -559,7 +559,7 @@ if __name__ == "__main__":
         condenser_config = NoOpCondenserConfig()
         logger.debug("No Condenser config provided via EVAL_CONDENSER, using NoOpCondenser.")
     details = {"mode": args.mode}
-    _agent_cls = openhands.agenthub.Agent.get_cls(args.agent_cls)
+    _agent_cls = forge.agenthub.Agent.get_cls(args.agent_cls)
     dataset_descrption = args.dataset.replace("/", "__") + "-" + args.split.replace("/", "__")
     metadata = make_metadata(
         llm_config,

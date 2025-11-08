@@ -1,4 +1,4 @@
-// Here are the list of verified models and providers that we know work well with OpenHands.
+// Here are the list of verified models and providers that we know work well with Forge.
 export const VERIFIED_PROVIDERS = [
   "openhands",
   "anthropic",
@@ -63,8 +63,8 @@ export const VERIFIED_MISTRAL_MODELS = [
   "devstral-small-2505",
 ];
 
-// LiteLLM does not return the compatible OpenHands models with the provider, so we list them here to set them ourselves
-// (e.g., they return `claude-sonnet-4-20250514` instead of `openhands/claude-sonnet-4-20250514`)
+// LiteLLM does not return the compatible Openhands models with the provider, so we list them here to set them ourselves
+// (e.g., they return `claude-sonnet-4-20250514` instead of `Openhands/claude-sonnet-4-20250514`)
 export const VERIFIED_OPENHANDS_MODELS = [
   "claude-sonnet-4-20250514",
   "gpt-5-2025-08-07",
@@ -81,5 +81,5 @@ export const VERIFIED_OPENHANDS_MODELS = [
   "qwen3-coder-480b",
 ];
 
-// Default model for OpenHands provider
-export const DEFAULT_OPENHANDS_MODEL = "openhands/claude-sonnet-4-20250514";
+// Default model for Openhands provider (supports legacy Forge-prefixed identifiers)
+export const DEFAULT_OPENHANDS_MODEL = "Openhands/claude-sonnet-4-20250514";

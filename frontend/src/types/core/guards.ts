@@ -1,8 +1,8 @@
-import { OpenHandsParsedEvent, OpenHandsEvent } from ".";
+import { ForgeParsedEvent, ForgeEvent } from ".";
 import {
   UserMessageAction,
   AssistantMessageAction,
-  OpenHandsAction,
+  ForgeAction,
   SystemMessageAction,
   CommandAction,
   FinishAction,
@@ -16,14 +16,14 @@ import {
   CommandObservation,
   ErrorObservation,
   MCPObservation,
-  OpenHandsObservation,
+  ForgeObservation,
   TaskTrackingObservation,
 } from "./observations";
 import { StatusUpdate } from "./variances";
 
-export const isOpenHandsEvent = (
+export const isForgeEvent = (
   event: unknown,
-): event is OpenHandsParsedEvent =>
+): event is ForgeParsedEvent =>
   typeof event === "object" &&
   event !== null &&
   "id" in event &&
@@ -31,17 +31,17 @@ export const isOpenHandsEvent = (
   "message" in event &&
   "timestamp" in event;
 
-export const isOpenHandsAction = (
+export const isForgeAction = (
   event: unknown,
-): event is OpenHandsAction =>
+): event is ForgeAction =>
   typeof event === "object" &&
   event !== null &&
   "action" in event &&
   typeof (event as any).action === "string";
 
-export const isOpenHandsObservation = (
+export const isForgeObservation = (
   event: unknown,
-): event is OpenHandsObservation =>
+): event is ForgeObservation =>
   typeof event === "object" &&
   event !== null &&
   "observation" in event &&
@@ -50,80 +50,80 @@ export const isOpenHandsObservation = (
 export const isUserMessage = (
   event: unknown,
 ): event is UserMessageAction =>
-  isOpenHandsAction(event) &&
+  isForgeAction(event) &&
   event.source === "user" &&
   event.action === "message";
 
 export const isAssistantMessage = (
   event: unknown,
 ): event is AssistantMessageAction =>
-  isOpenHandsAction(event) &&
+  isForgeAction(event) &&
   event.source === "agent" &&
   (event.action === "message" || event.action === "finish");
 
 export const isErrorObservation = (
   event: unknown,
 ): event is ErrorObservation =>
-  isOpenHandsObservation(event) && event.observation === "error";
+  isForgeObservation(event) && event.observation === "error";
 
 export const isCommandAction = (
   event: unknown,
-): event is CommandAction => isOpenHandsAction(event) && event.action === "run";
+): event is CommandAction => isForgeAction(event) && event.action === "run";
 
 export const isAgentStateChangeObservation = (
   event: unknown,
 ): event is AgentStateChangeObservation =>
-  isOpenHandsObservation(event) && event.observation === "agent_state_changed";
+  isForgeObservation(event) && event.observation === "agent_state_changed";
 
 export const isCommandObservation = (
   event: unknown,
 ): event is CommandObservation =>
-  isOpenHandsObservation(event) && event.observation === "run";
+  isForgeObservation(event) && event.observation === "run";
 
 export const isFinishAction = (
   event: unknown,
 ): event is FinishAction =>
-  isOpenHandsAction(event) && event.action === "finish";
+  isForgeAction(event) && event.action === "finish";
 
 export const isSystemMessage = (
   event: unknown,
 ): event is SystemMessageAction =>
-  isOpenHandsAction(event) && event.action === "system";
+  isForgeAction(event) && event.action === "system";
 
 export const isRejectObservation = (
   event: unknown,
-): event is OpenHandsObservation =>
-  isOpenHandsObservation(event) && event.observation === "user_rejected";
+): event is ForgeObservation =>
+  isForgeObservation(event) && event.observation === "user_rejected";
 
 export const isMcpObservation = (
   event: unknown,
 ): event is MCPObservation =>
-  isOpenHandsObservation(event) && event.observation === "mcp";
+  isForgeObservation(event) && event.observation === "mcp";
 
 export const isTaskTrackingAction = (
   event: unknown,
 ): event is TaskTrackingAction =>
-  isOpenHandsAction(event) && event.action === "task_tracking";
+  isForgeAction(event) && event.action === "task_tracking";
 
 export const isTaskTrackingObservation = (
   event: unknown,
 ): event is TaskTrackingObservation =>
-  isOpenHandsObservation(event) && event.observation === "task_tracking";
+  isForgeObservation(event) && event.observation === "task_tracking";
 
 export const isFileWriteAction = (
   event: unknown,
 ): event is FileWriteAction =>
-  isOpenHandsAction(event) && event.action === "write";
+  isForgeAction(event) && event.action === "write";
 
 export const isFileEditAction = (
   event: unknown,
 ): event is FileEditAction =>
-  isOpenHandsAction(event) && event.action === "edit";
+  isForgeAction(event) && event.action === "edit";
 
 export const isStreamingChunkAction = (
   event: unknown,
 ): event is StreamingChunkAction =>
-  isOpenHandsAction(event) && event.action === "streaming_chunk";
+  isForgeAction(event) && event.action === "streaming_chunk";
 
 export const isStatusUpdate = (event: unknown): event is StatusUpdate =>
   typeof event === "object" &&
@@ -135,24 +135,24 @@ export const isStatusUpdate = (event: unknown): event is StatusUpdate =>
 // Helpers to check that action/observation containers include runtime payloads
 export const hasArgs = (
   event: unknown,
-): event is OpenHandsAction & { args: Record<string, unknown> } =>
-  isOpenHandsAction(event) &&
+): event is ForgeAction & { args: Record<string, unknown> } =>
+  isForgeAction(event) &&
   typeof (event as any).args === "object" &&
   (event as any).args !== null;
 
 export const hasExtras = (
   event: unknown,
-): event is OpenHandsObservation & { extras: Record<string, unknown> } =>
-  isOpenHandsObservation(event) &&
+): event is ForgeObservation & { extras: Record<string, unknown> } =>
+  isForgeObservation(event) &&
   typeof (event as any).extras === "object" &&
   (event as any).extras !== null;
 
 // Dynamic name checks (useful for safe runtime branching)
-export const isActionNamed = (event: unknown, name: string): event is OpenHandsAction =>
-  isOpenHandsAction(event) && (event as any).action === name;
+export const isActionNamed = (event: unknown, name: string): event is ForgeAction =>
+  isForgeAction(event) && (event as any).action === name;
 
 export const isObservationNamed = (
   event: unknown,
   name: string,
-): event is OpenHandsObservation =>
-  isOpenHandsObservation(event) && (event as any).observation === name;
+): event is ForgeObservation =>
+  isForgeObservation(event) && (event as any).observation === name;

@@ -83,7 +83,7 @@ Advanced conversation storage and retrieval system.
 
 **Usage:**
 ```python
-from openhands.memory import ConversationMemory
+from forge.memory import ConversationMemory
 
 # Initialize conversation memory
 memory = ConversationMemory(
@@ -120,7 +120,7 @@ Intelligent context summarization and compression.
 
 **Condensation Process:**
 ```python
-from openhands.memory.condenser import Condenser
+from forge.memory.condenser import Condenser
 
 # Initialize condenser
 condenser = Condenser(
@@ -153,7 +153,7 @@ Advanced search capabilities with vector and lexical search.
 
 **Search Operations:**
 ```python
-from openhands.memory.indexing import MemoryIndex
+from forge.memory.indexing import MemoryIndex
 
 # Initialize memory index
 index = MemoryIndex(
@@ -195,7 +195,7 @@ Self-improving context management system.
 
 **Evolution Process:**
 ```python
-from openhands.memory.evolution import ContextEvolver
+from forge.memory.evolution import ContextEvolver
 
 # Initialize context evolver
 evolver = ContextEvolver(
@@ -231,7 +231,7 @@ Memory system performance monitoring and analytics.
 
 **Performance Monitoring:**
 ```python
-from openhands.memory.tracker import MemoryTracker
+from forge.memory.tracker import MemoryTracker
 
 # Initialize memory tracker
 tracker = MemoryTracker(
@@ -347,8 +347,8 @@ fuzzy_threshold = 0.8
 
 ### **Python API**
 ```python
-from openhands.memory import MemorySystem
-from openhands.memory.models import Conversation, Context
+from forge.memory import MemorySystem
+from forge.memory.models import Conversation, Context
 
 # Initialize memory system
 memory_system = MemorySystem(
@@ -485,7 +485,7 @@ print(f"Search volume trend: {trends['search_volume_trend']:.3f}")
 
 ### **Custom Memory Backends**
 ```python
-from openhands.memory.backends import BaseMemoryBackend
+from forge.memory.backends import BaseMemoryBackend
 
 class CustomMemoryBackend(BaseMemoryBackend):
     def __init__(self, config):
@@ -665,8 +665,8 @@ Condense context to target length.
 ### **Example 1: Basic Memory Operations**
 ```python
 import asyncio
-from openhands.memory import MemorySystem
-from openhands.memory.models import Conversation
+from forge.memory import MemorySystem
+from forge.memory.models import Conversation
 
 async def basic_memory_operations():
     # Initialize memory system

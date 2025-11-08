@@ -52,7 +52,7 @@ export function useAutoNavigateToApp() {
         // Wait for browser tab to load, then navigate to the URL
         setTimeout(() => {
           window.dispatchEvent(
-            new CustomEvent('openhands:load-server-url', {
+            new CustomEvent('Forge:load-server-url', {
               detail: { url },
             })
           );
@@ -60,7 +60,7 @@ export function useAutoNavigateToApp() {
       } else {
         // Already on browser tab, just load the URL
         window.dispatchEvent(
-          new CustomEvent('openhands:load-server-url', {
+          new CustomEvent('Forge:load-server-url', {
             detail: { url },
           })
         );
@@ -69,13 +69,13 @@ export function useAutoNavigateToApp() {
 
     // Listen for server-ready events from the backend
     window.addEventListener(
-      'openhands:server-ready',
+      'Forge:server-ready',
       handleServerReady as EventListener
     );
 
     return () => {
       window.removeEventListener(
-        'openhands:server-ready',
+        'Forge:server-ready',
         handleServerReady as EventListener
       );
     };

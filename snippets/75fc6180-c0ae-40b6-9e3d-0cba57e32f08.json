@@ -1,0 +1,18 @@
+{
+  "id": "75fc6180-c0ae-40b6-9e3d-0cba57e32f08",
+  "title": "Export 1",
+  "description": null,
+  "language": "python",
+  "category": "custom",
+  "code": "code1",
+  "tags": [],
+  "is_favorite": false,
+  "usage_count": 0,
+  "created_at": "2025-11-07 22:31:40.256585",
+  "updated_at": "2025-11-08 12:04:14.689743",
+  "metadata": {},
+  "dependencies": [],
+  "related_snippets": [],
+  "source_url": null,
+  "license": null
+}

@@ -1,7 +1,7 @@
 """Tests for FileEditObservation class."""
 
-from openhands.events.event import FileEditSource
-from openhands.events.observation.files import FileEditObservation
+from forge.events.event import FileEditSource
+from forge.events.observation.files import FileEditObservation
 
 
 def test_file_edit_observation_basic():

@@ -1,13 +1,13 @@
 from unittest.mock import ANY, AsyncMock, patch
 import pytest
 from litellm.exceptions import RateLimitError
-from openhands.core.config.llm_config import LLMConfig
-from openhands.core.config.openhands_config import OpenHandsConfig
-from openhands.llm.llm_registry import LLMRegistry
-from openhands.runtime.runtime_status import RuntimeStatus
-from openhands.server.services.conversation_stats import ConversationStats
-from openhands.server.session.session import Session
-from openhands.storage.memory import InMemoryFileStore
+from forge.core.config.llm_config import LLMConfig
+from forge.core.config.forge_config import ForgeConfig
+from forge.llm.llm_registry import LLMRegistry
+from forge.runtime.runtime_status import RuntimeStatus
+from forge.server.services.conversation_stats import ConversationStats
+from forge.server.session.session import Session
+from forge.storage.memory import InMemoryFileStore
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def default_llm_config():
 
 @pytest.fixture
 def llm_registry():
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     return LLMRegistry(config=config)
 
 
@@ -38,11 +38,11 @@ def conversation_stats():
 
 
 @pytest.mark.asyncio
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 async def test_notify_on_llm_retry(
     mock_litellm_completion, mock_sio, default_llm_config, llm_registry, conversation_stats
 ):
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     config.set_llm_config(default_llm_config)
     session = Session(
         sid="..sid..",

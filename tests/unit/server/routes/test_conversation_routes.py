@@ -4,13 +4,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi import status
 from fastapi.responses import JSONResponse
-from openhands.microagent.microagent import KnowledgeMicroagent, RepoMicroagent
-from openhands.microagent.types import MicroagentMetadata, MicroagentType
-from openhands.server.routes.conversation import get_microagents
-from openhands.server.routes.manage_conversations import UpdateConversationRequest, update_conversation
-from openhands.server.session.conversation import ServerConversation
-from openhands.storage.conversation.conversation_store import ConversationStore
-from openhands.storage.data_models.conversation_metadata import ConversationMetadata
+from forge.microagent.microagent import KnowledgeMicroagent, RepoMicroagent
+from forge.microagent.types import MicroagentMetadata, MicroagentType
+from forge.server.routes.conversation import get_microagents
+from forge.server.routes.manage_conversations import UpdateConversationRequest, update_conversation
+from forge.server.session.conversation import ServerConversation
+from forge.storage.conversation.conversation_store import ConversationStore
+from forge.storage.data_models.conversation_metadata import ConversationMetadata
 
 
 @pytest.mark.asyncio
@@ -26,7 +26,7 @@ async def test_get_microagents():
     mock_conversation = _setup_mock_conversation()
 
     # Execute test
-    with patch("openhands.server.routes.conversation.conversation_manager") as mock_manager:
+    with patch("forge.server.routes.conversation.conversation_manager") as mock_manager:
         mock_manager.get_agent_session.return_value = mock_agent_session
         response = await get_microagents(conversation=mock_conversation)
 
@@ -40,7 +40,7 @@ async def test_get_microagents():
 
 def _create_test_repo_microagent():
     """Create a test repo microagent."""
-    from openhands.core.config.mcp_config import MCPConfig, MCPStdioServerConfig
+    from forge.core.config.mcp_config import MCPConfig, MCPStdioServerConfig
 
     return RepoMicroagent(
         name="test_repo",
@@ -63,7 +63,7 @@ def _create_test_repo_microagent():
 
 def _create_test_knowledge_microagent():
     """Create a test knowledge microagent."""
-    from openhands.core.config.mcp_config import MCPConfig, MCPStdioServerConfig
+    from forge.core.config.mcp_config import MCPConfig, MCPStdioServerConfig
 
     return KnowledgeMicroagent(
         name="test_knowledge",
@@ -150,7 +150,7 @@ async def test_get_microagents_no_agent_session():
     """Test the get_microagents function when no agent session is found."""
     mock_conversation = MagicMock(spec=ServerConversation)
     mock_conversation.sid = "test_sid"
-    with patch("openhands.server.routes.conversation.conversation_manager") as mock_manager:
+    with patch("forge.server.routes.conversation.conversation_manager") as mock_manager:
         mock_manager.get_agent_session.return_value = None
         response = await get_microagents(conversation=mock_conversation)
         assert isinstance(response, JSONResponse)
@@ -165,7 +165,7 @@ async def test_get_microagents_exception():
     """Test the get_microagents function when an exception occurs."""
     mock_conversation = MagicMock(spec=ServerConversation)
     mock_conversation.sid = "test_sid"
-    with patch("openhands.server.routes.conversation.conversation_manager") as mock_manager:
+    with patch("forge.server.routes.conversation.conversation_manager") as mock_manager:
         mock_manager.get_agent_session.side_effect = Exception("Test exception")
         response = await get_microagents(conversation=mock_conversation)
         assert isinstance(response, JSONResponse)
@@ -195,7 +195,7 @@ async def test_update_conversation_success():
     mock_conversation_store.save_metadata = AsyncMock()
     update_request = UpdateConversationRequest(title=new_title)
     mock_sio = AsyncMock()
-    with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+    with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
         mock_manager.sio = mock_sio
         result = await update_conversation(
             conversation_id=conversation_id,
@@ -316,7 +316,7 @@ async def test_update_conversation_socket_emission_error():
     update_request = UpdateConversationRequest(title=new_title)
     mock_sio = AsyncMock()
     mock_sio.emit.side_effect = Exception("Socket error")
-    with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+    with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
         mock_manager.sio = mock_sio
         result = await update_conversation(
             conversation_id=conversation_id,
@@ -371,7 +371,7 @@ async def test_update_conversation_title_whitespace_trimming():
     mock_conversation_store.save_metadata = AsyncMock()
     update_request = UpdateConversationRequest(title=title_with_whitespace)
     mock_sio = AsyncMock()
-    with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+    with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
         mock_manager.sio = mock_sio
         result = await update_conversation(
             conversation_id=conversation_id,
@@ -404,7 +404,7 @@ async def test_update_conversation_user_owns_conversation():
     mock_conversation_store.save_metadata = AsyncMock()
     update_request = UpdateConversationRequest(title=new_title)
     mock_sio = AsyncMock()
-    with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+    with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
         mock_manager.sio = mock_sio
         result = await update_conversation(
             conversation_id=conversation_id,
@@ -436,7 +436,7 @@ async def test_update_conversation_last_updated_at_set():
     mock_conversation_store.save_metadata = AsyncMock()
     update_request = UpdateConversationRequest(title=new_title)
     mock_sio = AsyncMock()
-    with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+    with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
         mock_manager.sio = mock_sio
         result = await update_conversation(
             conversation_id=conversation_id,
@@ -469,7 +469,7 @@ async def test_update_conversation_no_user_id_no_metadata_user_id():
     mock_conversation_store.save_metadata = AsyncMock()
     update_request = UpdateConversationRequest(title=new_title)
     mock_sio = AsyncMock()
-    with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+    with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
         mock_manager.sio = mock_sio
         result = await update_conversation(
             conversation_id=conversation_id,

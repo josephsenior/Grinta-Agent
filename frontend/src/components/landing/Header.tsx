@@ -60,7 +60,7 @@ export default function Header(): React.ReactElement {
 
   const handleOpenMessages = () => {
     // Request opening the conversation overlay panel via a custom event
-    const event = new CustomEvent("openhands:open-conversation-panel");
+    const event = new CustomEvent("Forge:open-conversation-panel");
     window.dispatchEvent(event);
   };
 
@@ -69,11 +69,11 @@ export default function Header(): React.ReactElement {
   // detect Playwright runs (test init script sets this flag)
   const { t } = useTranslation();
 
-  // Detect Playwright test runs; test harness sets __OPENHANDS_PLAYWRIGHT on window
-  type WindowWithE2E = Window & { __OPENHANDS_PLAYWRIGHT?: boolean };
+  // Detect Playwright test runs; test harness sets __Forge_PLAYWRIGHT on window
+  type WindowWithE2E = Window & { __Forge_PLAYWRIGHT?: boolean };
   const isPlaywrightRun =
     typeof window !== "undefined" &&
-    (window as unknown as WindowWithE2E).__OPENHANDS_PLAYWRIGHT === true;
+    (window as unknown as WindowWithE2E).__Forge_PLAYWRIGHT === true;
 
   return (
     <header
@@ -202,14 +202,14 @@ export default function Header(): React.ReactElement {
                   type="button"
                   onClick={handleOpenAppSettings}
                   aria-label={t(I18nKey.USER$ACCOUNT_SETTINGS, {
-                    defaultValue: "CodePilot Pro settings",
+                    defaultValue: "Forge Pro settings",
                   })}
                   className="relative p-2.5 rounded-lg text-foreground-secondary hover:text-violet-500 hover:bg-violet-500/10 transition-all duration-300 interactive-scale gpu-accelerated"
                 >
                   <Settings className="w-5 h-5" />
                   <span className="sr-only">
                     {t(I18nKey.USER$ACCOUNT_SETTINGS, {
-                      defaultValue: "CodePilot Pro settings",
+                      defaultValue: "Forge Pro settings",
                     })}
                   </span>
                 </button>

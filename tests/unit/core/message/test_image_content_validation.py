@@ -5,7 +5,7 @@ not at the ImageContent serialization level. These tests verify that
 ImageContent correctly serializes whatever URLs it's given.
 """
 
-from openhands.core.message import ImageContent
+from forge.core.message import ImageContent
 
 
 def test_image_content_serializes_all_urls():

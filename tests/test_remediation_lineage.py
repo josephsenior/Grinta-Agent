@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from openhands.metasop.lineage import append_lineage
+from forge.metasop.lineage import append_lineage
 
 
 def test_append_lineage_in_memory():

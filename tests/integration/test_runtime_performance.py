@@ -9,9 +9,9 @@ import time
 import pytest
 from unittest.mock import patch
 
-from openhands.core.config import OpenHandsConfig, load_from_toml
-from openhands.runtime.impl.local.local_runtime import LocalRuntime, _WARM_SERVERS
-from openhands.events.stream import EventStream
+from forge.core.config import ForgeConfig, load_from_toml
+from forge.runtime.impl.local.local_runtime import LocalRuntime, _WARM_SERVERS
+from forge.events.stream import EventStream
 
 
 @pytest.mark.integration
@@ -72,7 +72,7 @@ class TestWarmServerPerformance:
             config.workspace_base = str(temp_dir)
             
             # Pre-create warm server
-            from openhands.runtime.impl.local.local_runtime import (
+            from forge.runtime.impl.local.local_runtime import (
                 _create_warm_server,
                 _get_plugins,
             )
@@ -124,7 +124,7 @@ class TestWarmServerPerformance:
             config.workspace_base = str(temp_dir)
             
             # Pre-create warm servers
-            from openhands.runtime.impl.local.local_runtime import (
+            from forge.runtime.impl.local.local_runtime import (
                 _create_warm_server,
                 _get_plugins,
             )
@@ -180,7 +180,7 @@ class TestWarmServerPerformance:
             config.workspace_base = str(temp_dir)
             
             # Pre-create warm server
-            from openhands.runtime.impl.local.local_runtime import (
+            from forge.runtime.impl.local.local_runtime import (
                 _create_warm_server,
                 _get_plugins,
             )

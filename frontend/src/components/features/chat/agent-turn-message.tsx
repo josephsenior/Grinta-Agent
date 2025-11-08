@@ -1,10 +1,10 @@
 import React from "react";
 import { cn } from "#/utils/utils";
 import { EventMessage } from "./event-message";
-import type { OpenHandsEvent } from "#/types/core/base";
+import type { ForgeEvent } from "#/types/core/base";
 
 interface AgentTurnMessageProps {
-  events: (import("#/types/core").OpenHandsAction | import("#/types/core").OpenHandsObservation)[];
+  events: (import("#/types/core").ForgeAction | import("#/types/core").ForgeObservation)[];
   isLastTurn: boolean;
   isAwaitingUserConfirmation: boolean;
   showTechnicalDetails: boolean;

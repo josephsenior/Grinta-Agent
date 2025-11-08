@@ -18,7 +18,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const STORAGE_KEY = "codepilot-theme-preference";
+const STORAGE_KEY = "Forge-theme-preference";
 
 /**
  * Get system preference for dark mode

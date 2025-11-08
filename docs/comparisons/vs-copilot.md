@@ -1,8 +1,8 @@
-# OpenHands vs GitHub Copilot
+# Forge vs GitHub Copilot
 
 ## Quick Comparison
 
-| | OpenHands | GitHub Copilot |
+| | Forge | GitHub Copilot |
 |---|-----------|----------------|
 | **Type** | Autonomous coding agent | Code completion |
 | **Interaction** | Chat-based | Inline suggestions |
@@ -17,30 +17,30 @@
 ### Code Completion
 
 **Copilot:** ✅ Excellent inline completions
-**OpenHands:** ❌ No autocomplete
+**Forge:** ❌ No autocomplete
 
 **Winner:** Copilot
 
 ### Autonomous Coding
 
 **Copilot:** ❌ Suggests one line at a time, requires human to drive
-**OpenHands:** ✅ Fully autonomous (give task, it completes it)
+**Forge:** ✅ Fully autonomous (give task, it completes it)
 
-**Winner:** OpenHands
+**Winner:** Forge
 
 ### Code Execution
 
 **Copilot:** ❌ Only suggests, doesn't execute
-**OpenHands:** ✅ Executes in Docker sandbox (can run tests, debug, etc.)
+**Forge:** ✅ Executes in Docker sandbox (can run tests, debug, etc.)
 
-**Winner:** OpenHands
+**Winner:** Forge
 
 ### Model Choice
 
 **Copilot:** ❌ GPT-4 only, no choice
-**OpenHands:** ✅ 200+ models from 30+ providers
+**Forge:** ✅ 200+ models from 30+ providers
 
-**Winner:** OpenHands
+**Winner:** Forge
 
 ## Use Cases
 
@@ -61,7 +61,7 @@
    - Learn API usage
    - Discover libraries
 
-### OpenHands Best For:
+### Forge Best For:
 
 1. **Full feature implementation**
    - "Build authentication system"
@@ -95,7 +95,7 @@ Includes:
 - Pull request summaries
 ```
 
-### OpenHands
+### Forge
 
 ```
 Free: $0 (bring your own API key)
@@ -112,24 +112,24 @@ Includes:
 ```
 
 **For light users:** Copilot cheaper ($10 vs $15)
-**For heavy users:** OpenHands better value (autonomous saves time)
+**For heavy users:** Forge better value (autonomous saves time)
 
 ## Can You Use Both?
 
 **Yes! Many users do:**
 
 - **Copilot:** For inline autocomplete while typing
-- **OpenHands:** For autonomous multi-step tasks
+- **Forge:** For autonomous multi-step tasks
 
 **Example workflow:**
 1. Use Copilot for quick edits
 2. Hit a complex task ("add auth")
-3. Switch to OpenHands for autonomous implementation
+3. Switch to Forge for autonomous implementation
 4. Back to Copilot for tweaks
 
 ## Migration
 
-### From Copilot to OpenHands
+### From Copilot to Forge
 
 **What transfers:**
 - Your GitHub repositories (can connect same repos)
@@ -159,7 +159,7 @@ def calculate_fibonacci(n: int) -> int:
 # You accept suggestion
 ```
 
-**OpenHands:**
+**Forge:**
 ```
 You: "Create a fibonacci function with type hints, docstring, and tests"
 
@@ -187,7 +187,7 @@ You: Manually run tests
 Time: 30-60 minutes (lots of manual work)
 ```
 
-**OpenHands:**
+**Forge:**
 ```
 You: "Add user authentication with password hashing and session management"
 
@@ -202,14 +202,14 @@ Agent:
 Time: 2-3 minutes (automated)
 ```
 
-**Better for this task:** OpenHands (autonomous)
+**Better for this task:** Forge (autonomous)
 
 ## Bottom Line
 
 **Copilot:** Best IDE-integrated autocomplete tool ($10/month)
-**OpenHands:** Best autonomous coding agent ($15-25/month)
+**Forge:** Best autonomous coding agent ($15-25/month)
 
 **Not competitors, complementary!**
 
-Try OpenHands: https://openhands.dev
+Try Forge: https://Forge.dev
 

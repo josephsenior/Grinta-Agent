@@ -27,7 +27,7 @@ This guide covers deploying Forge in production environments.
    ```bash
    export FORGE_API_KEY="your-api-key"
    export FORGE_ENVIRONMENT="production"
-   # Legacy: OPENHANDS_API_KEY and OPENHANDS_ENVIRONMENT also supported
+   # Legacy: FORGE_API_KEY and FORGE_ENVIRONMENT also supported
    ```
 
 4. **Build and run:**

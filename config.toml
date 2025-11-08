@@ -65,14 +65,14 @@ safety_settings = [
     { category = "HARM_CATEGORY_DANGEROUS_CONTENT", threshold = "BLOCK_NONE" }
 ]
 
-# LOCAL DEV: You can set your OpenHands API key here for local testing.
+# LOCAL DEV: You can set your Forge API key here for local testing.
 # WARNING: This file may be committed — keep secrets out of version control
 # or use a local-only copy. Alternatively prefer the environment variable
-# OPENHANDS_API_KEY (recommended) for persistence without editing code.
+# FORGE_API_KEY (recommended) for persistence without editing code.
 # api_key = "<REPLACE_WITH_YOUR_KEY>"
 # The API key was removed from this file to avoid storing secrets in the repo.
-# Use environment variables instead, for example set OPENHANDS_API_KEY persistently
-# with the helper script at `scripts/set_openhands_api_key.ps1`.
+# Use environment variables instead, for example set FORGE_API_KEY persistently
+# with the helper script at `scripts/set_FORGE_api_key.ps1`.
 
 [condenser]
 type="noop"

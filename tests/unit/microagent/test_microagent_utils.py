@@ -3,7 +3,7 @@
 import tempfile
 from pathlib import Path
 import pytest
-from openhands.microagent import (
+from forge.microagent import (
     BaseMicroagent,
     KnowledgeMicroagent,
     MicroagentMetadata,
@@ -17,7 +17,7 @@ CONTENT = "# dummy header\ndummy content\n## dummy subheader\ndummy subcontent\n
 
 def test_legacy_micro_agent_load(tmp_path):
     """Test loading of legacy microagents."""
-    legacy_file = tmp_path / ".openhands_instructions"
+    legacy_file = tmp_path / ".FORGE_instructions"
     legacy_file.write_text(CONTENT)
     micro_agent = BaseMicroagent.load(legacy_file, tmp_path)
     assert isinstance(micro_agent, RepoMicroagent)
@@ -100,7 +100,7 @@ def test_invalid_microagent_type(temp_microagents_dir):
     invalid_agent = "---\nname: invalid_type_agent\ntype: invalid_type\nversion: 1.0.0\nagent: CodeActAgent\ntriggers:\n  - test\n---\n\n# Invalid Type Test\n\nThis microagent has an invalid type.\n"
     invalid_file = temp_microagents_dir / "invalid_type.md"
     invalid_file.write_text(invalid_agent)
-    from openhands.core.exceptions import MicroagentValidationError
+    from forge.core.exceptions import MicroagentValidationError
 
     with pytest.raises(MicroagentValidationError) as excinfo:
         load_microagents_from_dir(temp_microagents_dir)
@@ -171,7 +171,7 @@ def temp_microagents_dir_with_cursorrules():
     """Create a temporary directory with test microagents and .cursorrules file."""
     with tempfile.TemporaryDirectory() as temp_dir:
         root = Path(temp_dir)
-        microagents_dir = root / ".openhands" / "microagents"
+        microagents_dir = root / ".Forge" / "microagents"
         microagents_dir.mkdir(parents=True, exist_ok=True)
         cursorrules_content = "Always use TypeScript for new files.\nFollow the existing code style."
         (root / ".cursorrules").write_text(cursorrules_content)
@@ -182,7 +182,7 @@ def temp_microagents_dir_with_cursorrules():
 
 def test_load_microagents_with_cursorrules(temp_microagents_dir_with_cursorrules):
     """Test loading microagents when .cursorrules file exists."""
-    microagents_dir = temp_microagents_dir_with_cursorrules / ".openhands" / "microagents"
+    microagents_dir = temp_microagents_dir_with_cursorrules / ".Forge" / "microagents"
     repo_agents, knowledge_agents = load_microagents_from_dir(microagents_dir)
     assert len(repo_agents) == 2
     assert "repo" in repo_agents
@@ -196,7 +196,7 @@ def test_load_microagents_with_cursorrules(temp_microagents_dir_with_cursorrules
 
 @pytest.fixture
 def temp_dir_with_cursorrules_only():
-    """Create a temporary directory with only .cursorrules file (no .openhands/microagents directory)."""
+    """Create a temporary directory with only .cursorrules file (no .Forge/microagents directory)."""
     with tempfile.TemporaryDirectory() as temp_dir:
         root = Path(temp_dir)
         cursorrules_content = "Always use Python for new files.\nFollow PEP 8 style guidelines."
@@ -205,12 +205,12 @@ def temp_dir_with_cursorrules_only():
 
 
 def test_load_cursorrules_without_microagents_dir(temp_dir_with_cursorrules_only):
-    """Test loading .cursorrules file when .openhands/microagents directory doesn't exist.
+    """Test loading .cursorrules file when .Forge/microagents directory doesn't exist.
 
     This test reproduces the bug where .cursorrules is only loaded when
-    .openhands/microagents directory exists.
+    .Forge/microagents directory exists.
     """
-    microagents_dir = temp_dir_with_cursorrules_only / ".openhands" / "microagents"
+    microagents_dir = temp_dir_with_cursorrules_only / ".Forge" / "microagents"
     repo_agents, knowledge_agents = load_microagents_from_dir(microagents_dir)
     assert len(repo_agents) == 1
     assert "cursorrules" in repo_agents
@@ -252,7 +252,7 @@ def test_agents_md_case_insensitive():
 
 @pytest.fixture
 def temp_dir_with_agents_md_only():
-    """Create a temporary directory with only AGENTS.md file (no .openhands/microagents directory)."""
+    """Create a temporary directory with only AGENTS.md file (no .Forge/microagents directory)."""
     with tempfile.TemporaryDirectory() as temp_dir:
         root = Path(temp_dir)
         agents_content = "# Development Guide\n\n## Setup commands\n\n- Install deps: `poetry install`\n- Start dev server: `poetry run python app.py`\n- Run tests: `poetry run pytest`\n\n## Code style\n\n- Python 3.12+\n- Follow PEP 8 guidelines\n- Use type hints everywhere"
@@ -261,8 +261,8 @@ def temp_dir_with_agents_md_only():
 
 
 def test_load_agents_md_without_microagents_dir(temp_dir_with_agents_md_only):
-    """Test loading AGENTS.md file when .openhands/microagents directory doesn't exist."""
-    microagents_dir = temp_dir_with_agents_md_only / ".openhands" / "microagents"
+    """Test loading AGENTS.md file when .Forge/microagents directory doesn't exist."""
+    microagents_dir = temp_dir_with_agents_md_only / ".Forge" / "microagents"
     repo_agents, knowledge_agents = load_microagents_from_dir(microagents_dir)
     assert len(repo_agents) == 1
     assert "agents" in repo_agents
@@ -287,8 +287,8 @@ def temp_dir_with_both_cursorrules_and_agents():
 
 
 def test_load_both_cursorrules_and_agents_md(temp_dir_with_both_cursorrules_and_agents):
-    """Test loading both .cursorrules and AGENTS.md files when .openhands/microagents doesn't exist."""
-    microagents_dir = temp_dir_with_both_cursorrules_and_agents / ".openhands" / "microagents"
+    """Test loading both .cursorrules and AGENTS.md files when .Forge/microagents doesn't exist."""
+    microagents_dir = temp_dir_with_both_cursorrules_and_agents / ".Forge" / "microagents"
     repo_agents, knowledge_agents = load_microagents_from_dir(microagents_dir)
     assert len(repo_agents) == 2
     assert "cursorrules" in repo_agents

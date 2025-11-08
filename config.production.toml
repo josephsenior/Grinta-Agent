@@ -116,7 +116,7 @@ safety_settings = [
 ]
 
 # API key management (use environment variable for security)
-# api_key set via OPENHANDS_API_KEY environment variable
+# api_key set via FORGE_API_KEY environment variable
 
 # ============================================================================
 # CONDENSER CONFIGURATION (PRODUCTION)

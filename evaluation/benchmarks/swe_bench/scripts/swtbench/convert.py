@@ -48,7 +48,7 @@ def _should_delete_file(file, relevant_files: list[str]) -> bool:
 
 
 def main(prediction_file: str):
-    """Main function to extract the model patches from the OpenHands prediction file and turn them into the expected SWT-Bench format."""
+    """Main function to extract the model patches from the Forge prediction file and turn them into the expected SWT-Bench format."""
     with open(prediction_file, encoding='utf-8') as f:
         for line in f:
             pred = json.loads(line)

@@ -27,7 +27,7 @@
 
 **Why Not Fixed:**
 - Requires `cachetools >=6.0.0`
-- `openhands-aci@0.3.2` constrains `cachetools <6.0.0`
+- `Forge-aci@0.3.2` constrains `cachetools <6.0.0`
 - Poetry doesn't support dependency overrides
 
 **Mitigations Active:**
@@ -37,7 +37,7 @@
 - ✅ Security monitoring enabled
 
 **Action Plan:**
-- Monitor `openhands-aci` for updates monthly
+- Monitor `Forge-aci` for updates monthly
 - Upgrade to fastmcp 2.13.0 when dependency resolved
 - Target: Q1 2026
 
@@ -47,27 +47,27 @@
 
 **Package:** `pypdf2` (deprecated)  
 **Vulnerability:** CVE-2023-36464 (DoS) - MEDIUM  
-**Source:** Transitive from `openhands-aci@0.3.2`
+**Source:** Transitive from `Forge-aci@0.3.2`
 
 **Why Not Fixed:**
-- Required by `openhands-aci` package
+- Required by `Forge-aci` package
 - Package is deprecated (replaced by `pypdf`)
 
 **Impact Assessment:**
 - ✅ **Your code uses `pypdf@6.1.3`** (secure, modern)
-- ✅ PyPDF2 only used internally by openhands-aci
+- ✅ PyPDF2 only used internally by Forge-aci
 - ✅ Limited to file processing operations
 - ✅ Risk: MINIMAL
 
 **Action Plan:**
-- Wait for openhands-aci to migrate to `pypdf`
+- Wait for Forge-aci to migrate to `pypdf`
 - Monitor upstream releases monthly
 
 ---
 
 ## Alternative Solutions Considered
 
-### Fork openhands-aci
+### Fork Forge-aci
 **Status:** Deferred until post-beta  
 **Reason:** Current mitigations sufficient for launch
 
@@ -100,7 +100,7 @@
 **Next Review:** December 4, 2025
 
 **Trigger Immediate Update If:**
-- openhands-aci releases version with updated dependencies
+- Forge-aci releases version with updated dependencies
 - New CVE discovered in current versions
 - Enterprise customer requires 100% clean scan
 

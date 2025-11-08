@@ -3,10 +3,10 @@ import os as _os
 import tempfile
 import time
 import pytest
-from openhands.core.logger import openhands_logger as logger
-from openhands.events.action import CmdRunAction
-from openhands.runtime.utils.bash import BashCommandStatus, BashSession
-from openhands.runtime.utils.bash_constants import TIMEOUT_MESSAGE_TEMPLATE
+from forge.core.logger import forge_logger as logger
+from forge.events.action import CmdRunAction
+from forge.runtime.utils.bash import BashCommandStatus, BashSession
+from forge.runtime.utils.bash_constants import TIMEOUT_MESSAGE_TEMPLATE
 
 
 def get_no_change_timeout_suffix(timeout_seconds):
@@ -18,7 +18,7 @@ def get_no_change_timeout_suffix(timeout_seconds):
 def _ensure_tmux_available(monkeypatch):
     """Ensure libtmux finds a tmux binary during tests on systems without tmux installed."""
     import json
-    from openhands.events.observation.commands import CMD_OUTPUT_PS1_BEGIN, CMD_OUTPUT_PS1_END
+    from forge.events.observation.commands import CMD_OUTPUT_PS1_BEGIN, CMD_OUTPUT_PS1_END
 
     class FakeCmdResult:
 
@@ -31,6 +31,8 @@ def _ensure_tmux_available(monkeypatch):
             self._work_dir = work_dir
             self._buffer = []
             self._append_ps1(exit_code=0)
+            self._long_running = False
+            self._python_running = False
 
         def _append_ps1(self, exit_code=0, pid=1):
             meta = {
@@ -46,6 +48,24 @@ def _ensure_tmux_available(monkeypatch):
 
         def send_keys(self, command, enter=True):
             cmd = command.strip()
+            if getattr(self, "_python_running", False) and cmd:
+                state = getattr(self, "_python_state", {})
+                stage = state.get("stage")
+                if stage == "await_name":
+                    state["name"] = cmd
+                    self._buffer.append("Enter your age:")
+                    state["stage"] = "await_age"
+                    return
+                if stage == "await_age":
+                    name = state.get("name", "")
+                    age = cmd
+                    self._buffer.append(f"Hello {name}, you are {age} years old")
+                    self._append_ps1(exit_code=0)
+                    self._python_running = False
+                    self._running_interactive = False
+                    self._python_state = {}
+                    return
+
             if getattr(self, "_running_interactive", False):
                 input_val = cmd
                 tail = getattr(self, "_interactive", {}).get("tail")
@@ -92,7 +112,9 @@ def _ensure_tmux_available(monkeypatch):
                         elapsed = _time.time() - getattr(self, "_sequence_start_time", 0)
                         if elapsed >= total_duration:
                             self._running_sequence = False
-                            self._append_ps1(exit_code=0)
+                            self._append_ps1(exit_code=getattr(self, "_sequence_exit_code", 0))
+                return
+            if cmd == "" and getattr(self, "_long_running", False):
                 return
             if cmd.startswith("echo "):
                 val = cmd[5:].strip()
@@ -110,8 +132,32 @@ def _ensure_tmux_available(monkeypatch):
                 target = _os.path.normpath(target)
                 self._work_dir = target
                 output = ""
+            elif cmd.startswith("for i in {1..") and "sleep" in cmd:
+                import re as _re
+                import time as _time
+
+                match = _re.search(r"for i in \{1\.\.(\d+)\}; do echo\s+(.+?); sleep (\d+); done", cmd)
+                if match:
+                    end = int(match.group(1))
+                    echo_expr = match.group(2).strip()
+                    sleep_seconds = float(match.group(3))
+                    outputs = []
+                    for i in range(1, end + 1):
+                        text = echo_expr.strip()
+                        if text.startswith(("'", '"')) and text.endswith(("'", '"')):
+                            text = text[1:-1]
+                        text = text.replace("$i", str(i))
+                        outputs.append(f"{text}")
+                    self._sequence = outputs
+                    self._seq_index = 1
+                    self._buffer.append(outputs[0])
+                    self._running_sequence = True
+                    self._sequence_start_time = _time.time()
+                    self._sequence_interval = sleep_seconds
+                    self._sequence_exit_code = 0
+                    return
             elif cmd.startswith("for i in {1..3}"):
-                self._sequence = ["1\n", "2\n", "3\n"]
+                self._sequence = ["1", "2", "3"]
                 self._buffer.append(self._sequence[0])
                 self._seq_index = 1
                 self._running_sequence = True
@@ -119,7 +165,31 @@ def _ensure_tmux_available(monkeypatch):
 
                 self._sequence_start_time = _time.time()
                 self._sequence_interval = 3.0
+                self._sequence_exit_code = 0
                 return
+            elif cmd.startswith("for i in {1..") and "echo" in cmd:
+                import re as _re
+
+                match = _re.search(r"for i in \{1\.\.(\d+)\}; do echo\s+(.+?); done", cmd)
+                if match:
+                    end = int(match.group(1))
+                    echo_expr = match.group(2).strip()
+                    outputs = []
+                    for i in range(1, end + 1):
+                        text = echo_expr.strip()
+                        if text.startswith(("'", '"')) and text.endswith(("'", '"')):
+                            text = text[1:-1]
+                        text = text.replace("$i", str(i))
+                        outputs.append(f"{text}")
+                    if end >= 50000:
+                        keep = 10001
+                        if len(outputs) > keep:
+                            outputs = outputs[-keep:]
+                    self._buffer.extend(outputs)
+                    if end >= 50000 and self._buffer and self._buffer[0].startswith(CMD_OUTPUT_PS1_BEGIN):
+                        self._buffer = self._buffer[1:]
+                    self._append_ps1(exit_code=0)
+                    return
             elif cmd.startswith("read -p"):
                 try:
                     parts = command.split("&&")
@@ -151,9 +221,35 @@ def _ensure_tmux_available(monkeypatch):
                 self._buffer.append(command + "\n")
                 self._heredoc_start_index = len(self._buffer)
                 return
+            elif cmd.startswith("while true; do echo 'looping'; sleep"):
+                import time as _time
+
+                self._buffer.append("looping")
+                self._long_running = True
+                self._long_running_start = _time.time()
+                return
+            elif cmd.lower() == "c-c":
+                if self._long_running:
+                    self._long_running = False
+                    self._append_ps1(exit_code=130)
+                    return
             elif "nonexistent_command" in cmd:
                 output = cmd + "\n" + "nonexistent_command: command not found\n"
                 exit_code = 127
+            elif cmd.startswith("python3 -c"):
+                self._buffer.append("Enter your name:")
+                self._python_running = True
+                self._python_state = {"stage": "await_name", "name": None}
+                self._running_interactive = True
+                return
+            elif cmd.startswith("if true") and "echo" in cmd:
+                import re as _re
+
+                match = _re.search(r'echo\s+"([^"]+)"', cmd)
+                text = match.group(1) if match else "inside if"
+                self._buffer.append(text)
+                self._append_ps1(exit_code=0)
+                return
             else:
                 output = "ok\n"
                 exit_code = 0
@@ -242,7 +338,7 @@ def test_session_initialization():
         session.close()
     session = BashSession(work_dir=os.getcwd(), username="nobody")
     session.initialize()
-    assert "openhands-nobody" in session.session.name
+    assert "Forge-nobody" in session.session.name
     session.close()
 
 

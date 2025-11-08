@@ -6,7 +6,7 @@
 
 ## 📖 **Overview**
 
-OpenHands is designed with a mobile-first approach, providing native-like experiences on smartphones and tablets with touch gestures, responsive layouts, and optimized performance.
+Forge is designed with a mobile-first approach, providing native-like experiences on smartphones and tablets with touch gestures, responsive layouts, and optimized performance.
 
 ---
 

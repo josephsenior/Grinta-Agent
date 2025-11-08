@@ -1,7 +1,7 @@
 """Tests for MCP Error Collector functionality."""
 
 import time
-from openhands.mcp_client.error_collector import MCPError, MCPErrorCollector, mcp_error_collector
+from forge.mcp_client.error_collector import MCPError, MCPErrorCollector, mcp_error_collector
 
 
 class TestMCPError:

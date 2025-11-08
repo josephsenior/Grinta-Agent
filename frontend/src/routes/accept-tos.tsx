@@ -7,7 +7,7 @@ import logo from "#/assets/branding/logo1.png";
 import { TOSCheckbox } from "#/components/features/waitlist/tos-checkbox";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { handleCaptureConsent } from "#/utils/handle-capture-consent";
-import { openHands } from "#/api/open-hands-axios";
+import { Forge } from "#/api/forge-axios";
 
 export default function AcceptTOS() {
   const { t } = useTranslation();
@@ -25,7 +25,7 @@ export default function AcceptTOS() {
       handleCaptureConsent(true);
 
       // Call the API to record TOS acceptance in the database
-      return openHands.post("/api/accept_tos", {
+      return Forge.post("/api/accept_tos", {
         redirect_url: redirectUrl,
       });
     },
@@ -61,7 +61,7 @@ export default function AcceptTOS() {
       <div className="border border-border p-8 rounded-lg max-w-md w-full flex flex-col gap-6 items-center bg-background-secondary">
         <img
           src={logo}
-          alt="CodePilot Pro Logo"
+          alt="Forge Pro Logo"
           className="h-12 w-auto select-none drop-shadow-[0_0_4px_rgba(59,130,246,0.35)]"
           draggable={false}
         />

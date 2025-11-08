@@ -1,9 +1,9 @@
 from unittest.mock import MagicMock, patch
 import pytest
-from openhands.core.config import (
+from forge.core.config import (
     OH_DEFAULT_AGENT,
     OH_MAX_ITERATIONS,
-    OpenHandsConfig,
+    ForgeConfig,
     get_llm_config_arg,
     setup_config_from_args,
 )
@@ -11,14 +11,14 @@ from openhands.core.config import (
 
 @pytest.fixture
 def default_config():
-    """Fixture to provide a default OpenHandsConfig instance."""
-    yield OpenHandsConfig()
+    """Fixture to provide a default ForgeConfig instance."""
+    yield ForgeConfig()
 
 
 @pytest.fixture
 def temp_config_files(tmp_path):
     """Create temporary config files for testing precedence."""
-    user_config_dir = tmp_path / "home" / ".openhands"
+    user_config_dir = tmp_path / "home" / ".Forge"
     user_config_dir.mkdir(parents=True, exist_ok=True)
     user_config_toml = user_config_dir / "config.toml"
     user_config_toml.write_text(
@@ -42,7 +42,7 @@ def temp_config_files(tmp_path):
     }
 
 
-@patch("openhands.core.config.utils.os.path.expanduser")
+@patch("forge.core.config.utils.os.path.expanduser")
 def test_llm_config_precedence_cli_highest(mock_expanduser, temp_config_files):
     """Test that CLI parameters have the highest precedence."""
     mock_expanduser.side_effect = lambda path: path.replace("~", temp_config_files["home_dir"])
@@ -59,9 +59,9 @@ def test_llm_config_precedence_cli_highest(mock_expanduser, temp_config_files):
     assert config.get_llm_config().api_key.get_secret_value() == "current-dir-specific-api-key"
 
 
-@patch("openhands.core.config.utils.os.path.expanduser")
+@patch("forge.core.config.utils.os.path.expanduser")
 def test_current_dir_toml_precedence_over_user_config(mock_expanduser, temp_config_files):
-    """Test that config.toml in current directory has precedence over ~/.openhands/config.toml."""
+    """Test that config.toml in current directory has precedence over ~/.Forge/config.toml."""
     mock_expanduser.side_effect = lambda path: path.replace("~", temp_config_files["home_dir"])
     mock_args = MagicMock()
     mock_args.config_file = temp_config_files["current_dir_toml"]
@@ -76,7 +76,7 @@ def test_current_dir_toml_precedence_over_user_config(mock_expanduser, temp_conf
     assert config.get_llm_config().api_key.get_secret_value() == "current-dir-api-key"
 
 
-@patch("openhands.core.config.utils.os.path.expanduser")
+@patch("forge.core.config.utils.os.path.expanduser")
 def test_get_llm_config_arg_precedence(mock_expanduser, temp_config_files):
     """Test that get_llm_config_arg prioritizes the specified config file."""
     mock_expanduser.side_effect = lambda path: path.replace("~", temp_config_files["home_dir"])
@@ -89,12 +89,12 @@ def test_get_llm_config_arg_precedence(mock_expanduser, temp_config_files):
     assert llm_config is None
 
 
-@patch("openhands.core.config.utils.os.path.expanduser")
-@patch("openhands.cli.main.FileSettingsStore.get_instance")
-@patch("openhands.cli.main.FileSettingsStore.load")
+@patch("forge.core.config.utils.os.path.expanduser")
+@patch("forge.cli.main.FileSettingsStore.get_instance")
+@patch("forge.cli.main.FileSettingsStore.load")
 def test_cli_main_settings_precedence(mock_load, mock_get_instance, mock_expanduser, temp_config_files):
     """Test that the CLI main.py correctly applies settings precedence."""
-    from openhands.cli.main import setup_config_from_args
+    from forge.cli.main import setup_config_from_args
 
     mock_expanduser.side_effect = lambda path: path.replace("~", temp_config_files["home_dir"])
     mock_settings = MagicMock()
@@ -119,12 +119,12 @@ def test_cli_main_settings_precedence(mock_load, mock_get_instance, mock_expandu
     assert config.get_llm_config().api_key.get_secret_value() == "current-dir-api-key"
 
 
-@patch("openhands.core.config.utils.os.path.expanduser")
-@patch("openhands.cli.main.FileSettingsStore.get_instance")
-@patch("openhands.cli.main.FileSettingsStore.load")
+@patch("forge.core.config.utils.os.path.expanduser")
+@patch("forge.cli.main.FileSettingsStore.get_instance")
+@patch("forge.cli.main.FileSettingsStore.load")
 def test_cli_with_l_parameter_precedence(mock_load, mock_get_instance, mock_expanduser, temp_config_files):
     """Test that CLI -l parameter has highest precedence in CLI mode."""
-    from openhands.cli.main import setup_config_from_args
+    from forge.cli.main import setup_config_from_args
 
     mock_expanduser.side_effect = lambda path: path.replace("~", temp_config_files["home_dir"])
     mock_settings = MagicMock()
@@ -149,18 +149,18 @@ def test_cli_with_l_parameter_precedence(mock_load, mock_get_instance, mock_expa
     assert config.get_llm_config().api_key.get_secret_value() == "current-dir-specific-api-key"
 
 
-@patch("openhands.core.config.utils.os.path.expanduser")
-@patch("openhands.cli.main.FileSettingsStore.get_instance")
-@patch("openhands.cli.main.FileSettingsStore.load")
+@patch("forge.core.config.utils.os.path.expanduser")
+@patch("forge.cli.main.FileSettingsStore.get_instance")
+@patch("forge.cli.main.FileSettingsStore.load")
 def test_cli_settings_json_not_override_config_toml(mock_load, mock_get_instance, mock_expanduser, temp_config_files):
     """Test that settings.json doesn't override config.toml in CLI mode."""
     import importlib
     import sys
     from unittest.mock import patch
 
-    if "openhands.cli.main" in sys.modules:
-        importlib.reload(sys.modules["openhands.cli.main"])
-    from openhands.cli.main import setup_config_from_args
+    if "forge.cli.main" in sys.modules:
+        importlib.reload(sys.modules["forge.cli.main"])
+    from forge.cli.main import setup_config_from_args
 
     mock_expanduser.side_effect = lambda path: path.replace("~", temp_config_files["home_dir"])
     mock_settings = MagicMock()
@@ -181,7 +181,7 @@ def test_cli_settings_json_not_override_config_toml(mock_load, mock_get_instance
     mock_args.selected_repo = None
     with patch("os.path.exists", return_value=True):
         setup_config_from_args(mock_args)
-    test_config = OpenHandsConfig()
+    test_config = ForgeConfig()
     test_llm_config = test_config.get_llm_config()
     test_llm_config.model = "config-toml-model"
     test_llm_config.api_key = "config-toml-api-key"
@@ -199,7 +199,7 @@ def test_default_values_applied_when_none():
     mock_args.llm_config = None
     mock_args.agent_cls = None
     mock_args.max_iterations = None
-    with patch("openhands.core.config.utils.load_openhands_config", return_value=OpenHandsConfig()):
+    with patch("forge.core.config.utils.load_FORGE_config", return_value=ForgeConfig()):
         config = setup_config_from_args(mock_args)
     assert config.default_agent == OH_DEFAULT_AGENT
     assert config.max_iterations == OH_MAX_ITERATIONS
@@ -212,7 +212,7 @@ def test_cli_args_override_defaults():
     mock_args.llm_config = None
     mock_args.agent_cls = "CustomAgent"
     mock_args.max_iterations = 50
-    with patch("openhands.core.config.utils.load_openhands_config", return_value=OpenHandsConfig()):
+    with patch("forge.core.config.utils.load_FORGE_config", return_value=ForgeConfig()):
         config = setup_config_from_args(mock_args)
     assert config.default_agent == "CustomAgent"
     assert config.max_iterations == 50
@@ -225,10 +225,10 @@ def test_cli_args_none_uses_config_toml_values():
     mock_args.llm_config = None
     mock_args.agent_cls = None
     mock_args.max_iterations = None
-    config_from_toml = OpenHandsConfig()
+    config_from_toml = ForgeConfig()
     config_from_toml.default_agent = "ConfigTomlAgent"
     config_from_toml.max_iterations = 100
-    with patch("openhands.core.config.utils.load_openhands_config", return_value=config_from_toml):
+    with patch("forge.core.config.utils.load_FORGE_config", return_value=config_from_toml):
         config = setup_config_from_args(mock_args)
     assert config.default_agent == "ConfigTomlAgent"
     assert config.max_iterations == 100

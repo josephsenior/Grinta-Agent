@@ -1,19 +1,19 @@
-This repository contains the code for OpenHands, an automated AI software engineer. It has a Python backend
-(in the `openhands` directory) and React frontend (in the `frontend` directory).
+This repository contains the code for Forge, an automated AI software engineer. It has a Python backend
+(in the `Forge` directory) and React frontend (in the `frontend` directory).
 
 ## General Setup:
 
 To set up the entire repo, including frontend and backend, run `make build`.
 You don't need to do this unless the user asks you to, or if you're trying to run the entire application.
 
-## Running OpenHands with OpenHands:
+## Running Forge with Forge:
 
 To run the full application to debug issues:
 
 ```bash
 export INSTALL_DOCKER=0
 export RUNTIME=local
-make build && make run FRONTEND_PORT=12000 FRONTEND_HOST=0.0.0.0 BACKEND_HOST=0.0.0.0 &> /tmp/openhands-log.txt &
+make build && make run FRONTEND_PORT=12000 FRONTEND_HOST=0.0.0.0 BACKEND_HOST=0.0.0.0 &> /tmp/Forge-log.txt &
 ```
 
 IMPORTANT: Before making any changes to the codebase, ALWAYS run `make install-pre-commit-hooks` to ensure pre-commit hooks are properly installed.
@@ -22,7 +22,7 @@ Before pushing any changes, you MUST ensure that any lint errors or simple test 
 
 - If you've made changes to the backend, you should run `pre-commit run --config ./dev_config/python/.pre-commit-config.yaml` (this will run on staged files).
 - If you've made changes to the frontend, you should run `cd frontend && npm run lint:fix && npm run build ; cd ..`
-- If you've made changes to the VSCode extension, you should run `cd openhands/integrations/vscode && npm run lint:fix && npm run compile ; cd ../../..`
+- If you've made changes to the VSCode extension, you should run `cd Forge/integrations/vscode && npm run lint:fix && npm run compile ; cd ../../..`
 
 The pre-commit hooks MUST pass successfully before pushing any changes to the repository. This is a mandatory requirement to maintain code quality and consistency.
 
@@ -44,7 +44,7 @@ then re-run the command to ensure it passes. Common issues include:
 
 Backend:
 
-- Located in the `openhands` directory
+- Located in the `Forge` directory
 - Testing:
   - All tests are in `tests/unit/test_*.py`
   - To test new code, run `poetry run pytest tests/unit/test_xxx.py` where `xxx` is the appropriate file for the current functionality
@@ -76,7 +76,7 @@ Frontend:
 
 VSCode Extension:
 
-- Located in the `openhands/integrations/vscode` directory
+- Located in the `Forge/integrations/vscode` directory
 - Setup: Run `npm install` in the extension directory
 - Linting:
   - Run linting with fixes: `npm run lint:fix`
@@ -103,12 +103,12 @@ These details may or may not be useful for your current task.
 
 ### Microagents
 
-Microagents are specialized prompts that enhance OpenHands with domain-specific knowledge and task-specific workflows. They are Markdown files that can include frontmatter for configuration.
+Microagents are specialized prompts that enhance Forge with domain-specific knowledge and task-specific workflows. They are Markdown files that can include frontmatter for configuration.
 
 #### Types:
 
 - **Public Microagents**: Located in `microagents/`, available to all users
-- **Repository Microagents**: Located in `.openhands/microagents/`, specific to this repository
+- **Repository Microagents**: Located in `.Forge/microagents/`, specific to this repository
 
 #### Loading Behavior:
 
@@ -143,7 +143,7 @@ Your specialized knowledge and instructions here...
 
 #### Adding User Settings:
 
-- To add a new user setting to OpenHands, follow these steps:
+- To add a new user setting to Forge, follow these steps:
   1. Add the setting to the frontend:
      - Add the setting to the `Settings` type in `frontend/src/types/settings.ts`
      - Add the setting to the `ApiSettings` type in the same file
@@ -154,12 +154,12 @@ Your specialized knowledge and instructions here...
      - Add i18n translations for the setting name and any tooltips in `frontend/src/i18n/translation.json`
      - Add the translation key to `frontend/src/i18n/declaration.ts`
   2. Add the setting to the backend:
-     - Add the setting to the `Settings` model in `openhands/storage/data_models/settings.py`
+     - Add the setting to the `Settings` model in `Forge/storage/data_models/settings.py`
      - Update any relevant backend code to apply the setting (e.g., in session creation)
 
 #### Settings UI Patterns:
 
-There are two main patterns for saving settings in the OpenHands frontend:
+There are two main patterns for saving settings in the Forge frontend:
 
 **Pattern 1: Entity-based Resources (Immediate Save)**
 
@@ -191,7 +191,7 @@ There are two main patterns for saving settings in the OpenHands frontend:
 
 ### Adding New LLM Models
 
-To add a new LLM model to OpenHands, you need to update multiple files across both frontend and backend:
+To add a new LLM model to Forge, you need to update multiple files across both frontend and backend:
 
 #### Model Configuration Procedure:
 
@@ -201,18 +201,18 @@ To add a new LLM model to OpenHands, you need to update multiple files across bo
      - `VERIFIED_OPENAI_MODELS` for OpenAI models
      - `VERIFIED_ANTHROPIC_MODELS` for Anthropic models
      - `VERIFIED_MISTRAL_MODELS` for Mistral models
-     - `VERIFIED_OPENHANDS_MODELS` for models available through OpenHands provider
+     - `VERIFIED_FORGE_MODELS` for models available through Forge provider
 
-2. **Backend CLI Integration** (`openhands/cli/utils.py`):
+2. **Backend CLI Integration** (`Forge/cli/utils.py`):
    - Add the model to the appropriate `VERIFIED_*_MODELS` arrays
    - This ensures the model appears in CLI model selection
 
-3. **Backend Model List** (`openhands/utils/llm.py`):
-   - **CRITICAL**: Add the model to the `openhands_models` list (lines 57-66) if using OpenHands provider
+3. **Backend Model List** (`Forge/utils/llm.py`):
+   - **CRITICAL**: Add the model to the `FORGE_models` list (lines 57-66) if using Forge provider
    - This is required for the model to appear in the frontend model selector
-   - Format: `'openhands/model-name'` (e.g., `'openhands/o3'`)
+   - Format: `'Forge/model-name'` (e.g., `'Forge/o3'`)
 
-4. **Backend LLM Configuration** (`openhands/llm/llm.py`):
+4. **Backend LLM Configuration** (`Forge/llm/llm.py`):
    - Add to feature-specific arrays based on model capabilities:
      - `FUNCTION_CALLING_SUPPORTED_MODELS` if the model supports function calling
      - `REASONING_EFFORT_SUPPORTED_MODELS` if the model supports reasoning effort parameters
@@ -230,7 +230,7 @@ To add a new LLM model to OpenHands, you need to update multiple files across bo
 - **VERIFIED_OPENAI_MODELS**: OpenAI models (LiteLLM doesn't return provider prefix)
 - **VERIFIED_ANTHROPIC_MODELS**: Anthropic models (LiteLLM doesn't return provider prefix)
 - **VERIFIED_MISTRAL_MODELS**: Mistral models (LiteLLM doesn't return provider prefix)
-- **VERIFIED_OPENHANDS_MODELS**: Models available through OpenHands managed provider
+- **VERIFIED_FORGE_MODELS**: Models available through Forge managed provider
 
 #### Model Feature Support Arrays:
 

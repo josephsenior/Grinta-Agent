@@ -1,9 +1,9 @@
 import os
 import subprocess
 import tempfile
-from openhands.integrations.service_types import ProviderType
-from openhands.resolver.interfaces.issue import Issue
-from openhands.resolver.send_pull_request import make_commit
+from forge.integrations.service_types import ProviderType
+from forge.resolver.interfaces.issue import Issue
+from forge.resolver.send_pull_request import make_commit
 
 
 def test_commit_message_with_quotes():
@@ -73,7 +73,7 @@ def test_pr_title_with_quotes(monkeypatch):
     monkeypatch.setattr("httpx.post", mock_post)
     monkeypatch.setattr("httpx.get", lambda *args, **kwargs: MockGetResponse())
     monkeypatch.setattr(
-        "openhands.resolver.interfaces.github.GithubIssueHandler.branch_exists", lambda *args, **kwargs: False
+        "forge.resolver.interfaces.github.GithubIssueHandler.branch_exists", lambda *args, **kwargs: False
     )
     original_run = subprocess.run
 
@@ -114,7 +114,7 @@ def test_pr_title_with_quotes(monkeypatch):
             thread_ids=None,
         )
         print("Sending PR...")
-        from openhands.resolver.send_pull_request import send_pull_request
+        from forge.resolver.send_pull_request import send_pull_request
 
         send_pull_request(
             issue=issue,

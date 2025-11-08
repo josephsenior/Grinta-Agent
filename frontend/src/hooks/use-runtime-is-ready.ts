@@ -14,13 +14,13 @@ export const useRuntimeIsReady = (): boolean => {
 
   // Test-only: if running under Playwright, consider the runtime ready to
   // avoid flaky waits for socket-driven startup events. This flag is set by
-  // the test harness via `page.addInitScript(() => window.__OPENHANDS_PLAYWRIGHT = true)`
+  // the test harness via `page.addInitScript(() => window.__Forge_PLAYWRIGHT = true)`
   // or via Vite env/process env when running E2E.
   // Narrowly-typed guards to avoid `any` casts in tests/runtime detection.
   type MaybeProcess = { env?: Record<string, string> } | undefined;
   type MaybeImportMeta = { env?: Record<string, unknown> } | undefined;
   interface WindowWithE2E extends Window {
-    __OPENHANDS_PLAYWRIGHT?: boolean;
+    __Forge_PLAYWRIGHT?: boolean;
   }
 
   const proc =
@@ -36,7 +36,7 @@ export const useRuntimeIsReady = (): boolean => {
   const isPlaywrightRun =
     proc?.env?.PLAYWRIGHT === "1" ||
     Boolean(importMeta?.env?.VITE_PLAYWRIGHT_STUB) ||
-    win?.__OPENHANDS_PLAYWRIGHT === true;
+    win?.__Forge_PLAYWRIGHT === true;
 
   if (isPlaywrightRun) {
     return true;

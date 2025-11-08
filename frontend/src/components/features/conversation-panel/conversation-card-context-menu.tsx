@@ -8,6 +8,7 @@ import {
   Bot,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useMemo } from "react";
 import { useClickOutsideElement } from "#/hooks/use-click-outside-element";
 import { cn } from "#/utils/utils";
 import { ContextMenu } from "../context-menu/context-menu";
@@ -28,6 +29,15 @@ interface ConversationCardContextMenuProps {
   position?: "top" | "bottom";
 }
 
+type MenuItemConfig = {
+  testId: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  i18nKey: I18nKey;
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+};
+
+type MenuSection = MenuItemConfig[];
+
 export function ConversationCardContextMenu({
   onClose,
   onDelete,
@@ -42,11 +52,27 @@ export function ConversationCardContextMenu({
   const { t } = useTranslation();
   const ref = useClickOutsideElement<HTMLUListElement>(onClose);
 
-  const hasEdit = Boolean(onEdit);
-  const hasDownload = Boolean(onDownloadViaVSCode);
-  const hasTools = Boolean(onShowAgentTools || onShowMicroagents);
-  const hasInfo = Boolean(onDisplayCost);
-  const hasControl = Boolean(onStop || onDelete);
+  const sections = useMemo<MenuSection[]>(
+    () =>
+      buildMenuSections({
+        onEdit,
+        onDownloadViaVSCode,
+        onShowAgentTools,
+        onShowMicroagents,
+        onDisplayCost,
+        onStop,
+        onDelete,
+      }),
+    [
+      onEdit,
+      onDownloadViaVSCode,
+      onShowAgentTools,
+      onShowMicroagents,
+      onDisplayCost,
+      onStop,
+      onDelete,
+    ],
+  );
 
   return (
     <ContextMenu
@@ -58,86 +84,131 @@ export function ConversationCardContextMenu({
         position === "bottom" && "top-full",
       )}
     >
-      {onEdit && (
-        <ContextMenuListItem testId="edit-button" onClick={onEdit}>
-          <ContextMenuIconText
-            icon={Pencil}
-            text={t(I18nKey.BUTTON$EDIT_TITLE)}
-          />
-        </ContextMenuListItem>
-      )}
-
-      {hasEdit && (hasDownload || hasTools || hasInfo || hasControl) && (
-        <ContextMenuSeparator />
-      )}
-
-      {onDownloadViaVSCode && (
-        <ContextMenuListItem
-          testId="download-vscode-button"
-          onClick={onDownloadViaVSCode}
-        >
-          <ContextMenuIconText
-            icon={Download}
-            text={t(I18nKey.BUTTON$DOWNLOAD_VIA_VSCODE)}
-          />
-        </ContextMenuListItem>
-      )}
-
-      {hasDownload && (hasTools || hasInfo || hasControl) && (
-        <ContextMenuSeparator />
-      )}
-
-      {onShowAgentTools && (
-        <ContextMenuListItem
-          testId="show-agent-tools-button"
-          onClick={onShowAgentTools}
-        >
-          <ContextMenuIconText
-            icon={Wrench}
-            text={t(I18nKey.BUTTON$SHOW_AGENT_TOOLS_AND_METADATA)}
-          />
-        </ContextMenuListItem>
-      )}
-
-      {onShowMicroagents && (
-        <ContextMenuListItem
-          testId="show-microagents-button"
-          onClick={onShowMicroagents}
-        >
-          <ContextMenuIconText
-            icon={Bot}
-            text={t(I18nKey.CONVERSATION$SHOW_MICROAGENTS)}
-          />
-        </ContextMenuListItem>
-      )}
-
-      {hasTools && (hasInfo || hasControl) && <ContextMenuSeparator />}
-
-      {onDisplayCost && (
-        <ContextMenuListItem
-          testId="display-cost-button"
-          onClick={onDisplayCost}
-        >
-          <ContextMenuIconText
-            icon={Wallet}
-            text={t(I18nKey.BUTTON$DISPLAY_COST)}
-          />
-        </ContextMenuListItem>
-      )}
-
-      {hasInfo && hasControl && <ContextMenuSeparator />}
-
-      {onStop && (
-        <ContextMenuListItem testId="stop-button" onClick={onStop}>
-          <ContextMenuIconText icon={Power} text={t(I18nKey.BUTTON$PAUSE)} />
-        </ContextMenuListItem>
-      )}
-
-      {onDelete && (
-        <ContextMenuListItem testId="delete-button" onClick={onDelete}>
-          <ContextMenuIconText icon={Trash} text={t(I18nKey.BUTTON$DELETE)} />
-        </ContextMenuListItem>
-      )}
+      {sections.map((section, sectionIndex) => (
+        <MenuSectionRenderer
+          key={getSectionKey(section, sectionIndex)}
+          section={section}
+          sectionIndex={sectionIndex}
+          translator={t}
+        />
+      ))}
     </ContextMenu>
   );
+}
+
+function MenuSectionRenderer({
+  section,
+  sectionIndex,
+  translator,
+}: {
+  section: MenuSection;
+  sectionIndex: number;
+  translator: ReturnType<typeof useTranslation>["t"];
+}) {
+  if (section.length === 0) {
+    return null;
+  }
+
+  return (
+    <>
+      {sectionIndex > 0 && <ContextMenuSeparator />}
+      {section.map((item) => (
+        <ContextMenuListItem key={item.testId} testId={item.testId} onClick={item.onClick}>
+          <ContextMenuIconText icon={item.icon} text={translator(item.i18nKey)} />
+        </ContextMenuListItem>
+      ))}
+    </>
+  );
+}
+
+function buildMenuSections(handlers: {
+  onEdit?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onDownloadViaVSCode?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onShowAgentTools?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onShowMicroagents?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onDisplayCost?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onStop?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onDelete?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+}): MenuSection[] {
+  const sections: MenuSection[] = [];
+
+  sections.push(
+    createMenuSection([
+      handlers.onEdit && {
+        testId: "edit-button",
+        icon: Pencil,
+        i18nKey: I18nKey.BUTTON$EDIT_TITLE,
+        onClick: handlers.onEdit,
+      },
+    ]),
+  );
+
+  sections.push(
+    createMenuSection([
+      handlers.onDownloadViaVSCode && {
+        testId: "download-vscode-button",
+        icon: Download,
+        i18nKey: I18nKey.BUTTON$DOWNLOAD_VIA_VSCODE,
+        onClick: handlers.onDownloadViaVSCode,
+      },
+    ]),
+  );
+
+  sections.push(
+    createMenuSection([
+      handlers.onShowAgentTools && {
+        testId: "show-agent-tools-button",
+        icon: Wrench,
+        i18nKey: I18nKey.BUTTON$SHOW_AGENT_TOOLS_AND_METADATA,
+        onClick: handlers.onShowAgentTools,
+      },
+      handlers.onShowMicroagents && {
+        testId: "show-microagents-button",
+        icon: Bot,
+        i18nKey: I18nKey.CONVERSATION$SHOW_MICROAGENTS,
+        onClick: handlers.onShowMicroagents,
+      },
+    ]),
+  );
+
+  sections.push(
+    createMenuSection([
+      handlers.onDisplayCost && {
+        testId: "display-cost-button",
+        icon: Wallet,
+        i18nKey: I18nKey.BUTTON$DISPLAY_COST,
+        onClick: handlers.onDisplayCost,
+      },
+    ]),
+  );
+
+  sections.push(
+    createMenuSection([
+      handlers.onStop && {
+        testId: "stop-button",
+        icon: Power,
+        i18nKey: I18nKey.BUTTON$PAUSE,
+        onClick: handlers.onStop,
+      },
+      handlers.onDelete && {
+        testId: "delete-button",
+        icon: Trash,
+        i18nKey: I18nKey.BUTTON$DELETE,
+        onClick: handlers.onDelete,
+      },
+    ]),
+  );
+
+  return sections.filter((section) => section.length > 0);
+}
+
+function createMenuSection(items: Array<MenuItemConfig | false | undefined>): MenuSection {
+  return items.filter(Boolean) as MenuSection;
+}
+
+function getSectionKey(section: MenuSection, index: number) {
+  if (section.length === 0) {
+    return `section-empty-${index}`;
+  }
+  return section.map((item) => item.testId).join(":");
 }

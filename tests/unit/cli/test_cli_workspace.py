@@ -3,10 +3,10 @@
 import os
 import tempfile
 import pytest
-from openhands.core.config import OpenHandsConfig
-from openhands.events import EventStream
-from openhands.runtime.impl.cli.cli_runtime import CLIRuntime
-from openhands.storage import get_file_store
+from forge.core.config import ForgeConfig
+from forge.events import EventStream
+from forge.runtime.impl.cli.cli_runtime import CLIRuntime
+from forge.storage import get_file_store
 
 
 class MockLLMRegistry:
@@ -27,7 +27,7 @@ def cli_runtime(temp_dir):
     """Create a CLIRuntime instance for testing."""
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("test", file_store)
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     config.workspace_base = temp_dir
     llm_registry = MockLLMRegistry(config)
     runtime = CLIRuntime(config, event_stream, llm_registry)

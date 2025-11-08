@@ -1,6 +1,6 @@
 # 📚 **Best Practices Guide**
 
-> **Development guidelines and recommended patterns for OpenHands**
+> **Development guidelines and recommended patterns for Forge**
 
 ---
 

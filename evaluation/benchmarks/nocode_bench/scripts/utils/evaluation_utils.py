@@ -6,7 +6,7 @@ import pandas as pd
 from pydantic import SecretStr
 from tqdm import tqdm
 from evaluation.utils.shared import EvalMetadata, EvalOutput, _process_instance_wrapper, _process_instance_wrapper_mp
-from openhands.core.logger import openhands_logger as logger
+from forge.core.logger import forge_logger as logger
 
 
 def update_progress_nc(result: EvalOutput, pbar: tqdm, output_fp: TextIO):

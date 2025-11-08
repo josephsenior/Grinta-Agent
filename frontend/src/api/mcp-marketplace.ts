@@ -2,6 +2,7 @@ import type {
   MCPMarketplaceItem,
   MCPMarketplaceResponse,
   MCPMarketplaceFilters,
+  MCPCategory,
 } from "#/types/mcp-marketplace";
 
 /**
@@ -986,39 +987,133 @@ async function fetchFromOfficialRegistry(): Promise<MCPMarketplaceItem[]> {
 function transformSmitheryData(data: any): MCPMarketplaceItem[] {
   if (!data || !Array.isArray(data.servers)) return [];
 
-  return data.servers.map((server: any, index: number) => {
-    const categories = inferCategory(server.name || server.qualifiedName, server.description, server.tags || []);
-    
-    return {
-      id: server.id || `smithery-${index}`,
-      name: server.name || server.qualifiedName || "Unknown Server",
-      slug: (server.slug || server.qualifiedName || "").toLowerCase().replace(/[^a-z0-9]/g, "-"),
-      description: server.description || "No description available",
-      longDescription: server.longDescription || server.description,
-      author: server.author || server.publisher || "Smithery",
-      icon: server.icon || getIconForCategory(categories[0]),
-      category: categories[0] || "other",
-      type: server.transport || "shttp", // Smithery uses HTTP transport
-      featured: server.featured || server.popular || false,
-      popular: server.popular || server.installCount > 1000,
-      installCount: server.installCount || server.downloads || 0,
-      rating: server.rating ? (typeof server.rating === 'number' ? server.rating : parseFloat(server.rating)) : (server.stars ? Math.min(5, server.stars / 20) : undefined),
-      version: server.version || "latest",
-      homepage: server.homepage || server.url,
-      repository: server.repository || server.repo,
-      documentation: server.documentation || server.homepage,
-      config: {
-        command: server.config?.command,
-        args: server.config?.args,
-        env: server.config?.env,
-        url: server.config?.url || `https://server.smithery.ai/${server.qualifiedName}/mcp`,
-        requiresApiKey: true, // Smithery requires API key
-        apiKeyDescription: "Smithery API key required",
-      },
-      tags: server.tags || [],
-      requirements: server.requirements,
-    };
-  });
+  return data.servers.map((server: any, index: number) =>
+    normalizeSmitheryServer(server, index),
+  );
+}
+
+function normalizeSmitheryServer(server: any, index: number): MCPMarketplaceItem {
+  const name = getSmitheryName(server);
+  const description = getSmitheryDescription(server);
+  const longDescription = getSmitheryLongDescription(server, description);
+  const author = getSmitheryAuthor(server);
+  const category = getSmitheryCategory(server, name, description);
+  const icon = getSmitheryIcon(server, category);
+  const installCount = getSmitheryInstallCount(server);
+  const stars = typeof server?.stars === "number" ? server.stars : undefined;
+
+  return {
+    id: getSmitheryId(server, index),
+    name,
+    slug: getSmitherySlug(server),
+    description,
+    longDescription,
+    author,
+    icon,
+    category,
+    type: getSmitheryTransport(server),
+    featured: isSmitheryFeatured(server),
+    popular: isSmitheryPopular(server, installCount),
+    installCount,
+    rating: resolveRating(server?.rating, stars),
+    version: server?.version ?? "latest",
+    homepage: server?.homepage ?? server?.url,
+    repository: server?.repository ?? server?.repo,
+    documentation: server?.documentation ?? server?.homepage,
+    config: buildSmitheryConfig(server),
+    tags: server?.tags ?? [],
+    requirements: server?.requirements,
+  };
+}
+
+function getSmitheryName(server: any): string {
+  return server?.name ?? server?.qualifiedName ?? "Unknown Server";
+}
+
+function getSmitheryDescription(server: any): string {
+  return server?.description ?? "No description available";
+}
+
+function getSmitheryLongDescription(server: any, fallback: string): string {
+  return server?.longDescription ?? fallback;
+}
+
+function getSmitheryAuthor(server: any): string {
+  return server?.author ?? server?.publisher ?? "Smithery";
+}
+
+function getSmitheryCategory(
+  server: any,
+  name: string,
+  description: string,
+): MCPCategory {
+  const categories = inferCategory(name, description, server?.tags ?? []);
+  return (categories[0] as MCPCategory | undefined) ?? "other";
+}
+
+function getSmitheryIcon(server: any, category: MCPCategory): string {
+  return server?.icon ?? getIconForCategory(category);
+}
+
+function getSmitheryInstallCount(server: any): number {
+  const downloads = server?.downloads ?? 0;
+  return server?.installCount ?? downloads;
+}
+
+function getSmitheryId(server: any, index: number): string {
+  return server?.id ?? `smithery-${index}`;
+}
+
+function getSmitherySlug(server: any): string {
+  const slugSource = server?.slug ?? server?.qualifiedName ?? "";
+  return slugSource.toLowerCase().replace(/[^a-z0-9]/g, "-");
+}
+
+function getSmitheryTransport(server: any): "sse" | "stdio" | "shttp" {
+  return server?.transport ?? "shttp";
+}
+
+function isSmitheryFeatured(server: any): boolean {
+  return Boolean(server?.featured ?? server?.popular);
+}
+
+function isSmitheryPopular(server: any, installCount: number): boolean {
+  if (typeof server?.popular === "boolean") {
+    return server.popular;
+  }
+  return installCount > 1000;
+}
+
+function buildSmitheryConfig(server: any) {
+  return {
+    command: server?.config?.command,
+    args: server?.config?.args,
+    env: server?.config?.env,
+    url:
+      server?.config?.url ??
+      (server?.qualifiedName
+        ? `https://server.smithery.ai/${server.qualifiedName}/mcp`
+        : undefined),
+    requiresApiKey: true,
+    apiKeyDescription: "Smithery API key required",
+  };
+}
+
+function resolveRating(rating: unknown, stars?: number): number | undefined {
+  if (typeof rating === "number") {
+    return rating;
+  }
+
+  if (typeof rating === "string") {
+    const parsed = Number.parseFloat(rating);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }
+
+  if (typeof stars === "number") {
+    return Math.min(5, stars / 20);
+  }
+
+  return undefined;
 }
 
 /**
@@ -1027,39 +1122,112 @@ function transformSmitheryData(data: any): MCPMarketplaceItem[] {
 function transformNPMData(data: any): MCPMarketplaceItem[] {
   if (!data || !Array.isArray(data.objects)) return [];
 
-  return data.objects.map((pkg: any, index: number) => {
-    const packageInfo = pkg.package;
-    const categories = inferCategory(packageInfo.name, packageInfo.description, []);
-    
-    return {
-      id: `npm-${index}`,
-      name: packageInfo.name.replace('@modelcontextprotocol/', ''),
-      slug: packageInfo.name.toLowerCase().replace(/[@\/]/g, "-"),
-      description: packageInfo.description || "No description available",
-      longDescription: packageInfo.description,
-      author: packageInfo.author?.name || packageInfo.maintainers?.[0]?.name || "Community",
-      icon: getIconForCategory(categories[0]),
-      category: categories[0] || "other",
-      type: "stdio",
-      featured: packageInfo.name.includes('server-'),
-      popular: pkg.score?.final > 0.5,
-      installCount: Math.floor(pkg.score?.final * 10000) || 0,
-      rating: pkg.score?.final ? (pkg.score.final * 5) : undefined,
-      version: packageInfo.version,
-      homepage: packageInfo.homepage,
-      repository: packageInfo.repository?.url || `https://github.com/modelcontextprotocol/${packageInfo.name.replace('@modelcontextprotocol/', '')}`,
-      documentation: packageInfo.homepage,
-      config: {
-        command: "npx",
-        args: ["-y", packageInfo.name],
-        requiresApiKey: false,
-      },
-      tags: [packageInfo.name.split('-').pop() || "mcp"],
-      requirements: {
-        node: ">=18.0.0",
-      },
-    };
-  });
+  return data.objects.map((pkg: any, index: number) =>
+    normalizeNpmPackage(pkg, index),
+  );
+}
+
+function normalizeNpmPackage(pkg: any, index: number): MCPMarketplaceItem {
+  const packageInfo = pkg?.package ?? {};
+  const names = deriveNpmNames(packageInfo, index);
+  const metadata = deriveNpmMetadata(pkg, packageInfo, names);
+
+  return {
+    id: names.id,
+    name: names.displayName,
+    slug: names.slug,
+    description: metadata.description,
+    longDescription: metadata.description,
+    author: metadata.author,
+    icon: metadata.icon,
+    category: metadata.category,
+    type: "stdio",
+    featured: metadata.featured,
+    popular: metadata.popular,
+    installCount: metadata.installCount,
+    rating: metadata.rating,
+    version: packageInfo.version,
+    homepage: metadata.homepage,
+    repository: metadata.repository,
+    documentation: metadata.homepage,
+    config: buildNpmConfig(names.rawName),
+    tags: metadata.tags,
+    requirements: {
+      node: ">=18.0.0",
+    },
+  };
+}
+
+function deriveNpmNames(packageInfo: any, index: number) {
+  const rawName = typeof packageInfo?.name === "string" ? packageInfo.name : `unknown-${index}`;
+  const displayName = rawName.replace("@modelcontextprotocol/", "");
+
+  return {
+    id: `npm-${index}`,
+    rawName,
+    displayName,
+    slug: rawName.toLowerCase().replace(/[@\/]/g, "-"),
+  } as const;
+}
+
+function deriveNpmMetadata(pkg: any, packageInfo: any, names: ReturnType<typeof deriveNpmNames>) {
+  const description = packageInfo?.description ?? "No description available";
+  const category = derivePrimaryCategory(names.rawName, description);
+  const popularityScore = pkg?.score?.final ?? 0;
+
+  return {
+    description,
+    category,
+    icon: getIconForCategory(category),
+    homepage: packageInfo?.homepage,
+    repository: resolveNpmRepository(packageInfo, names.displayName),
+    author: resolveNpmAuthor(packageInfo),
+    featured: names.rawName.includes("server-"),
+    popular: popularityScore > 0.5,
+    installCount: Math.floor(popularityScore * 10000) || 0,
+    rating: popularityScore ? popularityScore * 5 : undefined,
+    tags: buildNpmTags(names.displayName),
+  } as const;
+}
+
+function derivePrimaryCategory(name: string, description: string, tags: string[] = []): MCPCategory {
+  const categories = inferCategory(name, description, tags);
+  return (categories[0] as MCPCategory | undefined) ?? "other";
+}
+
+function resolveNpmRepository(packageInfo: any, displayName: string): string {
+  const repositoryUrl = packageInfo?.repository?.url;
+  if (typeof repositoryUrl === "string" && repositoryUrl.length > 0) {
+    return repositoryUrl;
+  }
+  return `https://github.com/modelcontextprotocol/${displayName}`;
+}
+
+function resolveNpmAuthor(packageInfo: any): string {
+  const authorName = packageInfo?.author?.name;
+  if (typeof authorName === "string" && authorName.trim().length > 0) {
+    return authorName;
+  }
+
+  const maintainerName = packageInfo?.maintainers?.[0]?.name;
+  if (typeof maintainerName === "string" && maintainerName.trim().length > 0) {
+    return maintainerName;
+  }
+
+  return "Community";
+}
+
+function buildNpmTags(displayName: string): string[] {
+  const suffix = displayName.split("-").pop();
+  return suffix ? [suffix] : ["mcp"];
+}
+
+function buildNpmConfig(rawName: string) {
+  return {
+    command: "npx",
+    args: ["-y", rawName],
+    requiresApiKey: false,
+  } as const;
 }
 
 /**
@@ -1068,38 +1236,52 @@ function transformNPMData(data: any): MCPMarketplaceItem[] {
 function transformGitHubData(data: any): MCPMarketplaceItem[] {
   if (!data || !Array.isArray(data.items)) return [];
 
-  return data.items.map((repo: any, index: number) => {
-    const categories = inferCategory(repo.name, repo.description, repo.topics);
-    
-    return {
-      id: `github-${index}`,
-      name: repo.name,
-      slug: repo.name.toLowerCase().replace(/\s+/g, "-"),
-      description: repo.description || "No description available",
-      longDescription: repo.description,
-      author: repo.owner?.login || "Community",
-      icon: getIconForCategory(categories[0]),
-      category: categories[0] || "other",
-      type: "stdio",
-      featured: repo.stargazers_count > 100,
-      popular: repo.stargazers_count > 50,
-      installCount: repo.stargazers_count || 0,
-      rating: repo.stargazers_count ? Math.min(5, (repo.stargazers_count / 100)) : undefined,
-      version: "latest",
-      homepage: repo.homepage,
-      repository: repo.html_url,
-      documentation: repo.homepage || repo.html_url,
-      config: {
-        command: "npx",
-        args: ["-y", repo.full_name],
-        requiresApiKey: false,
-      },
-      tags: repo.topics || [],
-      requirements: {
-        node: ">=18.0.0",
-      },
-    };
-  });
+  return data.items.map((repo: any, index: number) =>
+    normalizeGitHubRepo(repo, index),
+  );
+}
+
+function normalizeGitHubRepo(repo: any, index: number): MCPMarketplaceItem {
+  const name = repo?.name ?? `github-${index}`;
+  const description = repo?.description ?? "No description available";
+  const topics = repo?.topics ?? [];
+  const categories = inferCategory(name, description, topics);
+  const category = (categories[0] as MCPCategory | undefined) ?? "other";
+  const icon = getIconForCategory(category);
+  const stars = repo?.stargazers_count ?? 0;
+  const rating = stars ? Math.min(5, stars / 100) : undefined;
+  const homepage = repo?.homepage;
+  const repository = repo?.html_url;
+  const documentation = homepage ?? repository;
+
+  return {
+    id: `github-${index}`,
+    name,
+    slug: name.toLowerCase().replace(/\s+/g, "-"),
+    description,
+    longDescription: description,
+    author: repo?.owner?.login ?? "Community",
+    icon,
+    category,
+    type: "stdio",
+    featured: stars > 100,
+    popular: stars > 50,
+    installCount: stars,
+    rating,
+    version: "latest",
+    homepage,
+    repository,
+    documentation,
+    config: {
+      command: "npx",
+      args: ["-y", repo?.full_name ?? name],
+      requiresApiKey: false,
+    },
+    tags: topics,
+    requirements: {
+      node: ">=18.0.0",
+    },
+  };
 }
 
 /**
@@ -1108,32 +1290,75 @@ function transformGitHubData(data: any): MCPMarketplaceItem[] {
 function transformOfficialRegistryData(data: any): MCPMarketplaceItem[] {
   if (!data || !Array.isArray(data.servers)) return [];
 
-  return data.servers.map((server: any, index: number) => {
-    const categories = inferCategory(server.name, server.description, server.tags);
-    
-    return {
-      id: server.id || `official-${index}`,
-      name: server.name || "Unknown Server",
-      slug: (server.slug || server.name || "").toLowerCase().replace(/\s+/g, "-"),
-      description: server.description || "No description available",
-      author: "Anthropic",
-      icon: getIconForCategory(categories[0]),
-      category: categories[0] || "other",
-      type: server.type || "stdio",
-      featured: true,
-      popular: true,
-      homepage: server.homepage,
-      repository: server.repository,
-      documentation: server.documentation || "https://docs.all-hands.dev/usage/mcp",
-      config: {
-        command: server.command,
-        args: server.args,
-        env: server.env,
-        url: server.url,
-      },
-      tags: server.tags || [],
-    };
-  });
+  return data.servers.map((server: any, index: number) =>
+    normalizeOfficialRegistryServer(server, index),
+  );
+}
+
+function normalizeOfficialRegistryServer(
+  server: any,
+  index: number,
+): MCPMarketplaceItem {
+  const metadata = deriveOfficialServerMetadata(server, index);
+
+  return {
+    id: metadata.id,
+    name: metadata.name,
+    slug: metadata.slug,
+    description: metadata.description,
+    author: "Anthropic",
+    icon: metadata.icon,
+    category: metadata.category,
+    type: metadata.type,
+    featured: true,
+    popular: true,
+    homepage: metadata.homepage,
+    repository: metadata.repository,
+    documentation: metadata.documentation,
+    config: buildOfficialServerConfig(server),
+    tags: Array.isArray(server?.tags) ? server.tags : [],
+  };
+}
+
+function deriveOfficialServerMetadata(server: any, index: number) {
+  const name = typeof server?.name === "string" ? server.name : "Unknown Server";
+  const description = server?.description ?? "No description available";
+  const category = derivePrimaryCategory(name, description, server?.tags ?? []);
+  const slugSource = typeof server?.slug === "string" ? server.slug : name;
+
+  return {
+    id: server?.id ?? `official-${index}`,
+    name,
+    description,
+    category,
+    icon: getIconForCategory(category),
+    slug: slugSource.toLowerCase().replace(/\s+/g, "-"),
+    type: server?.type ?? "stdio",
+    homepage: typeof server?.homepage === "string" ? server.homepage : undefined,
+    repository: typeof server?.repository === "string" ? server.repository : undefined,
+    documentation:
+      typeof server?.documentation === "string"
+        ? server.documentation
+        : "https://docs.all-hands.dev/usage/mcp",
+  } as const;
+}
+
+function resolvePrimaryCategory(
+  name: string,
+  description: string,
+  tags?: string[],
+): MCPCategory {
+  const categories = inferCategory(name, description, tags ?? []);
+  return (categories[0] as MCPCategory | undefined) ?? "other";
+}
+
+function buildOfficialServerConfig(server: any) {
+  return {
+    command: server?.command,
+    args: Array.isArray(server?.args) ? server.args : undefined,
+    env: server?.env,
+    url: typeof server?.url === "string" ? server.url : undefined,
+  };
 }
 
 /**
@@ -1141,23 +1366,31 @@ function transformOfficialRegistryData(data: any): MCPMarketplaceItem[] {
  */
 function inferCategory(name: string, description?: string, tags?: string[]): string[] {
   const text = `${name} ${description || ""} ${(tags || []).join(" ")}`.toLowerCase();
-  const categories: string[] = [];
+  const categories = new Set<string>();
 
-  if (text.match(/browser|playwright|puppeteer|chrome|selenium/)) categories.push("browser");
-  if (text.match(/database|postgres|mysql|sqlite|mongo|redis/)) categories.push("database");
-  if (text.match(/cloud|aws|azure|gcp|s3|lambda/)) categories.push("cloud");
-  if (text.match(/ai|llm|gpt|claude|model/)) categories.push("ai-tools");
-  if (text.match(/git|github|gitlab|code|dev|vscode/)) categories.push("development");
-  if (text.match(/file|filesystem|drive|storage/)) categories.push("file-system");
-  if (text.match(/api|rest|graphql|http/)) categories.push("api-integration");
-  if (text.match(/test|jest|mocha|cypress/)) categories.push("testing");
-  if (text.match(/monitor|observability|sentry|logging/)) categories.push("monitoring");
-  if (text.match(/security|auth|vault|secret/)) categories.push("security");
-  if (text.match(/slack|discord|email|communication/)) categories.push("communication");
-  if (text.match(/memory|context|knowledge/)) categories.push("productivity");
+  for (const rule of CATEGORY_RULES) {
+    if (rule.pattern.test(text)) {
+      categories.add(rule.category);
+    }
+  }
 
-  return categories.length > 0 ? categories : ["other"];
+  return categories.size > 0 ? Array.from(categories) : ["other"];
 }
+
+const CATEGORY_RULES: Array<{ pattern: RegExp; category: string }> = [
+  { pattern: /browser|playwright|puppeteer|chrome|selenium/, category: "browser" },
+  { pattern: /database|postgres|mysql|sqlite|mongo|redis/, category: "database" },
+  { pattern: /cloud|aws|azure|gcp|s3|lambda/, category: "cloud" },
+  { pattern: /ai|llm|gpt|claude|model/, category: "ai-tools" },
+  { pattern: /git|github|gitlab|code|dev|vscode/, category: "development" },
+  { pattern: /file|filesystem|drive|storage/, category: "file-system" },
+  { pattern: /api|rest|graphql|http/, category: "api-integration" },
+  { pattern: /test|jest|mocha|cypress/, category: "testing" },
+  { pattern: /monitor|observability|sentry|logging/, category: "monitoring" },
+  { pattern: /security|auth|vault|secret/, category: "security" },
+  { pattern: /slack|discord|email|communication/, category: "communication" },
+  { pattern: /memory|context|knowledge/, category: "productivity" },
+];
 
 /**
  * Get icon emoji for category
@@ -1201,6 +1434,93 @@ function mergeAndDeduplicateMCPs(sources: MCPMarketplaceItem[][]): MCPMarketplac
   }
 
   return merged;
+}
+
+async function loadMarketplaceInventory(): Promise<MCPMarketplaceItem[]> {
+  const cached = getCachedData();
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const liveData = await fetchLiveMCPs();
+    setCachedData(liveData);
+    return liveData;
+  } catch (error) {
+    console.error("Error fetching marketplace data:", error);
+    return CURATED_MCPS;
+  }
+}
+
+function filterMarketplaceItems(
+  items: MCPMarketplaceItem[],
+  filters?: MCPMarketplaceFilters,
+): MCPMarketplaceItem[] {
+  if (!filters) {
+    return [...items];
+  }
+
+  const searchQuery = filters.search?.toLowerCase();
+
+  return items.filter((item) =>
+    matchesMarketplaceFilters(item, filters, searchQuery),
+  );
+}
+
+function matchesMarketplaceFilters(
+  item: MCPMarketplaceItem,
+  filters: MCPMarketplaceFilters,
+  searchQuery?: string,
+): boolean {
+  const attributeChecks = [
+    !filters.category || item.category === filters.category,
+    !filters.type || filters.type === "all" || item.type === filters.type,
+    !filters.featured || item.featured,
+    !filters.popular || item.popular,
+  ];
+
+  if (attributeChecks.some((check) => !check)) {
+    return false;
+  }
+
+  return searchQuery ? matchesSearchQuery(item, searchQuery) : true;
+}
+
+function matchesSearchQuery(item: MCPMarketplaceItem, searchQuery: string): boolean {
+  const nameMatches = item.name.toLowerCase().includes(searchQuery);
+  const descriptionMatches = item.description
+    .toLowerCase()
+    .includes(searchQuery);
+  const tagMatches = item.tags?.some((tag) =>
+    tag.toLowerCase().includes(searchQuery),
+  );
+
+  return Boolean(nameMatches || descriptionMatches || tagMatches);
+}
+
+function extractFeaturedItems(items: MCPMarketplaceItem[]): MCPMarketplaceItem[] {
+  return items.filter((item) => item.featured);
+}
+
+function extractPopularItems(items: MCPMarketplaceItem[]): MCPMarketplaceItem[] {
+  return items.filter((item) => item.popular);
+}
+
+function buildCategoryStats(items: MCPMarketplaceItem[]): Array<{
+  category: MCPCategory;
+  count: number;
+}> {
+  const counts = new Map<MCPCategory, number>();
+
+  items.forEach((item) => {
+    const current = counts.get(item.category) ?? 0;
+    counts.set(item.category, current + 1);
+  });
+
+  return Array.from(counts.entries()).map(([category, count]) => ({
+    category,
+    count,
+  }));
 }
 
 /**
@@ -1267,82 +1587,15 @@ async function fetchLiveMCPs(): Promise<MCPMarketplaceItem[]> {
 export async function fetchMarketplaceMCPs(
   filters?: MCPMarketplaceFilters,
 ): Promise<MCPMarketplaceResponse> {
-  // Try to get from cache first
-  let allMCPs = getCachedData();
-
-  // If no cache, fetch live data
-  if (!allMCPs) {
-    try {
-      allMCPs = await fetchLiveMCPs();
-      // Cache the results
-      setCachedData(allMCPs);
-    } catch (error) {
-      console.error("Error fetching marketplace data:", error);
-      // Use static fallback
-      allMCPs = CURATED_MCPS;
-    }
-  } else {
-    // Using cached marketplace data
-  }
-
-  let filteredItems = [...allMCPs];
-
-  // Apply filters
-  if (filters?.category) {
-    filteredItems = filteredItems.filter(
-      (item) => item.category === filters.category,
-    );
-  }
-
-  if (filters?.type && filters.type !== "all") {
-    filteredItems = filteredItems.filter((item) => item.type === filters.type);
-  }
-
-  if (filters?.featured) {
-    filteredItems = filteredItems.filter((item) => item.featured);
-  }
-
-  if (filters?.popular) {
-    filteredItems = filteredItems.filter((item) => item.popular);
-  }
-
-  if (filters?.search) {
-    const searchLower = filters.search.toLowerCase();
-    filteredItems = filteredItems.filter(
-      (item) =>
-        item.name.toLowerCase().includes(searchLower) ||
-        item.description.toLowerCase().includes(searchLower) ||
-        item.tags?.some((tag) => tag.toLowerCase().includes(searchLower)),
-    );
-  }
-
-  // Get featured and popular from all MCPs
-  const featured = allMCPs.filter((item) => item.featured);
-  const popular = allMCPs.filter((item) => item.popular);
-
-  // Calculate category counts from all MCPs
-  const categoryCounts = allMCPs.reduce(
-    (acc, item) => {
-      const existing = acc.find((c) => c.category === item.category);
-      if (existing) {
-        existing.count += 1;
-      } else {
-        acc.push({ category: item.category, count: 1 });
-      }
-      return acc;
-    },
-    [] as { category: string; count: number }[],
-  );
+  const allMCPs = await loadMarketplaceInventory();
+  const filteredItems = filterMarketplaceItems(allMCPs, filters);
 
   return {
     items: filteredItems,
     total: filteredItems.length,
-    featured,
-    popular,
-    categories: categoryCounts.map((c) => ({
-      category: c.category as any,
-      count: c.count,
-    })),
+    featured: extractFeaturedItems(allMCPs),
+    popular: extractPopularItems(allMCPs),
+    categories: buildCategoryStats(allMCPs),
   };
 }
 
@@ -1352,20 +1605,7 @@ export async function fetchMarketplaceMCPs(
 export async function fetchMarketplaceMCP(
   id: string,
 ): Promise<MCPMarketplaceItem | null> {
-  // Try to get from cache first
-  let allMCPs = getCachedData();
-
-  // If no cache, fetch live data
-  if (!allMCPs) {
-    try {
-      allMCPs = await fetchLiveMCPs();
-      setCachedData(allMCPs);
-    } catch (error) {
-      console.error("Error fetching marketplace data:", error);
-      allMCPs = CURATED_MCPS;
-    }
-  }
-
+  const allMCPs = await loadMarketplaceInventory();
   return allMCPs.find((item) => item.id === id) || null;
 }
 

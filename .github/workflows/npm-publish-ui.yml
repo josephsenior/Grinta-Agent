@@ -1,4 +1,4 @@
-name: Publish OpenHands UI Package
+name: Publish Forge UI Package
 on:
   push:
     branches:
@@ -62,7 +62,7 @@ jobs:
         id: npm-check
         run: |
           # PACKAGE_NAME computation removed because package.json path removed
-          PACKAGE_NAME="@openhands/ui-archived"
+          PACKAGE_NAME="@Forge/ui-archived"
           VERSION="${{ needs.check-version.outputs.current-version }}"
 
           # Check if this version already exists on npm

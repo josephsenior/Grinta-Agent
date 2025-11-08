@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { useIsOnTosPage } from "#/hooks/use-is-on-tos-page";
 
 const DEFAULT_FEATURE_FLAGS = {
@@ -16,7 +16,7 @@ export const useConfig = () => {
   return useQuery({
     queryKey: ["config"],
     queryFn: async () => {
-      const data = await OpenHands.getConfig();
+      const data = await Forge.getConfig();
       // Ensure FEATURE_FLAGS exists with sensible defaults so consumers
       // can safely read properties without defensive chaining everywhere.
       return {

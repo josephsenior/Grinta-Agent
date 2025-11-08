@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Simple demonstration of autonomous system with safety features.
+"""Simple demonstration of autonomous system with safety features.
 
 This script demonstrates:
 1. Building a simple app autonomously
@@ -16,10 +15,10 @@ import os
 import tempfile
 from pathlib import Path
 
-from openhands.core.config import OpenHandsConfig
-from openhands.core.config.agent_config import AgentConfig
-from openhands.core.config.llm_config import LLMConfig
-from openhands.security.safety_config import SafetyConfig
+from forge.core.config import ForgeConfig
+from forge.core.config.agent_config import AgentConfig
+from forge.core.config.llm_config import LLMConfig
+from forge.security.safety_config import SafetyConfig
 
 
 async def demo_safety_validation():
@@ -28,8 +27,8 @@ async def demo_safety_validation():
     print("DEMO 1: Safety Validator Blocks Dangerous Commands")
     print("=" * 80 + "\n")
     
-    from openhands.controller.safety_validator import SafetyValidator, ExecutionContext
-    from openhands.events.action import CmdRunAction
+    from forge.controller.safety_validator import SafetyValidator, ExecutionContext
+    from forge.events.action import CmdRunAction
     
     # Create safety validator
     config = SafetyConfig(
@@ -82,12 +81,12 @@ async def demo_simple_task():
         print("   Set your API key to run autonomous tasks")
         return
     
-    from openhands.controller.agent_controller import AgentController
-    from openhands.core.setup import create_agent, create_runtime
-    from openhands.events.action import MessageAction
+    from forge.controller.agent_controller import AgentController
+    from forge.core.setup import create_agent, create_runtime
+    from forge.events.action import MessageAction
     
     # Create config with safety enabled
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     config.agent = AgentConfig(
         safety=SafetyConfig(
             enabled=True,
@@ -163,7 +162,7 @@ async def demo_error_recovery():
     print("DEMO 3: Error Recovery and Retry Logic")
     print("=" * 80 + "\n")
     
-    from openhands.controller.error_recovery import ErrorRecoveryStrategy
+    from forge.controller.error_recovery import ErrorRecoveryStrategy
     
     # Test error classification
     test_errors = [

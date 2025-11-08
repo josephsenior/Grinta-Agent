@@ -1,7 +1,7 @@
 import asyncio
 import concurrent.futures
 import pytest
-from openhands.utils.async_utils import (
+from forge.utils.async_utils import (
     AsyncException,
     call_async_from_sync,
     call_sync_from_async,

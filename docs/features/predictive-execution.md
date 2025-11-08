@@ -123,7 +123,7 @@ max_reordering_distance = 10
 
 ### **Automatic Predictive Planning**
 ```python
-from openhands.metasop import MetaSOPOrchestrator
+from forge.metasop import MetaSOPOrchestrator
 
 # Initialize with predictive planning enabled
 orchestrator = MetaSOPOrchestrator("feature_delivery")
@@ -137,7 +137,7 @@ result = await orchestrator.run_async(task_context)
 ### **Manual Execution Plan Analysis**
 ```python
 # Get execution plan before running
-from openhands.metasop.predictive_execution import PredictiveExecutionPlanner
+from forge.metasop.predictive_execution import PredictiveExecutionPlanner
 
 planner = PredictiveExecutionPlanner()
 

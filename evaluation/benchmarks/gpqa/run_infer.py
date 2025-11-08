@@ -30,27 +30,27 @@ from evaluation.utils.shared import (
     compatibility_for_eval_history_pairs,
     get_default_sandbox_config_for_eval,
     get_metrics,
-    get_openhands_config_for_eval,
+    get_FORGE_config_for_eval,
     make_metadata,
     prepare_dataset,
     reset_logger_for_multiprocessing,
     run_evaluation,
 )
-from openhands.controller.state.state import State
-from openhands.core.config import OpenHandsConfig, get_evaluation_parser, get_llm_config_arg
-from openhands.core.logger import openhands_logger as logger
-from openhands.core.main import create_runtime, run_controller
-from openhands.events.action import Action, AgentFinishAction, MessageAction
-from openhands.events.observation import Observation
-from openhands.utils.async_utils import call_async_from_sync
+from forge.controller.state.state import State
+from forge.core.config import ForgeConfig, get_evaluation_parser, get_llm_config_arg
+from forge.core.logger import forge_logger as logger
+from forge.core.main import create_runtime, run_controller
+from forge.events.action import Action, AgentFinishAction, MessageAction
+from forge.events.observation import Observation
+from forge.utils.async_utils import call_async_from_sync
 
 ACTION_FORMAT = "\n<<FINAL_ANSWER||\n<insert correct answer here, must be one of A, B, C, D> (Please dont use any additional characters. Just the letter of the correct answer (A/B/C/D).)\n||FINAL_ANSWER>>\n".strip()
 
 
-def get_config(metadata: EvalMetadata) -> OpenHandsConfig:
+def get_config(metadata: EvalMetadata) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = "python:3.12-bookworm"
-    config = get_openhands_config_for_eval(metadata=metadata, runtime="docker", sandbox_config=sandbox_config)
+    config = get_FORGE_config_for_eval(metadata=metadata, runtime="docker", sandbox_config=sandbox_config)
     config.set_llm_config(metadata.llm_config)
     agent_config = config.get_agent_config(metadata.agent_class)
     agent_config.enable_prompt_extensions = False

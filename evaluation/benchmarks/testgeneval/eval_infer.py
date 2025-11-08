@@ -21,23 +21,23 @@ from evaluation.benchmarks.testgeneval.utils import load_testgeneval_dataset
 from evaluation.utils.shared import (
     EvalMetadata,
     EvalOutput,
-    get_openhands_config_for_eval,
+    get_FORGE_config_for_eval,
     prepare_dataset,
     reset_logger_for_multiprocessing,
     run_evaluation,
 )
-from openhands.core.config import OpenHandsConfig, SandboxConfig, get_evaluation_parser
-from openhands.core.logger import openhands_logger as logger
-from openhands.core.main import create_runtime
-from openhands.events.action import CmdRunAction
-from openhands.events.observation import CmdOutputObservation
-from openhands.utils.async_utils import call_async_from_sync
+from forge.core.config import ForgeConfig, SandboxConfig, get_evaluation_parser
+from forge.core.logger import forge_logger as logger
+from forge.core.main import create_runtime
+from forge.events.action import CmdRunAction
+from forge.events.observation import CmdOutputObservation
+from forge.utils.async_utils import call_async_from_sync
 
 DOCKER_IMAGE_PREFIX = os.environ.get("EVAL_DOCKER_IMAGE_PREFIX", "docker.io/kdjain/")
 logger.info("Using docker image prefix: %s", DOCKER_IMAGE_PREFIX)
 
 
-def get_config(instance: pd.Series) -> OpenHandsConfig:
+def get_config(instance: pd.Series) -> ForgeConfig:
     base_container_image = get_instance_docker_image(instance["instance_id_swebench"])
     assert base_container_image, f"Invalid container image for instance {instance['instance_id_swebench']}."
     logger.info("Using instance container image: %s.", base_container_image)
@@ -48,7 +48,7 @@ def get_config(instance: pd.Series) -> OpenHandsConfig:
         api_key=os.environ.get("ALLHANDS_API_KEY"),
         remote_runtime_api_url=os.environ.get("SANDBOX_REMOTE_RUNTIME_API_URL", "http://localhost:8000"),
     )
-    return get_openhands_config_for_eval(sandbox_config=sandbox_config, runtime=os.environ.get("RUNTIME", "docker"))
+    return get_FORGE_config_for_eval(sandbox_config=sandbox_config, runtime=os.environ.get("RUNTIME", "docker"))
 
 
 def compute_lexical_metrics(pred_suite, gold_suite):

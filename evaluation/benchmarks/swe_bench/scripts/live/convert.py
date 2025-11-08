@@ -1,9 +1,9 @@
 import argparse
 import json
 import logging
-from openhands.core.io import print_json_stdout
+from forge.core.io import print_json_stdout
 
-logger = logging.getLogger("openhands.eval.swe_bench.live.convert")
+logger = logging.getLogger("forge.eval.swe_bench.live.convert")
 
 
 def main(output_jsonl: str):

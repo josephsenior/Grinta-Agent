@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
-from openhands.events.event import Event
-from openhands.runtime.base import Runtime
+from forge.events.event import Event
+from forge.runtime.base import Runtime
 
 
 class TestResult(BaseModel):

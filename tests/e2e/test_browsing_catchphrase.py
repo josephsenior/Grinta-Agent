@@ -30,17 +30,17 @@ def _wait_for_home_and_repo_selection(page: Page) -> None:
     page.wait_for_timeout(1000)
     try:
         page.keyboard.press("Control+a")
-        page.keyboard.type("openhands-agent/OpenHands")
+        page.keyboard.type("Forge-agent/Forge")
     except Exception:
         pass
     page.wait_for_timeout(2000)
     option_selectors = [
-        '[data-testid="repo-dropdown"] [role="option"]:has-text("openhands-agent/OpenHands")',
-        '[data-testid="repo-dropdown"] [role="option"]:has-text("OpenHands")',
-        '[role="option"]:has-text("openhands-agent/OpenHands")',
-        '[role="option"]:has-text("OpenHands")',
-        'div:has-text("openhands-agent/OpenHands"):not([id="aria-results"])',
-        'div:has-text("OpenHands"):not([id="aria-results"])',
+        '[data-testid="repo-dropdown"] [role="option"]:has-text("Forge-agent/Forge")',
+        '[data-testid="repo-dropdown"] [role="option"]:has-text("forge")',
+        '[role="option"]:has-text("Forge-agent/Forge")',
+        '[role="option"]:has-text("forge")',
+        'div:has-text("Forge-agent/Forge"):not([id="aria-results"])',
+        'div:has-text("forge"):not([id="aria-results"])',
     ]
     for selector in option_selectors:
         try:

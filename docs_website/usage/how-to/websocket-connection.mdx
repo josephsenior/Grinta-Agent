@@ -2,11 +2,11 @@
 title: WebSocket Connection
 ---
 
-This guide explains how to connect to the OpenHands WebSocket API to receive real-time events and send actions to the agent.
+This guide explains how to connect to the Forge WebSocket API to receive real-time events and send actions to the agent.
 
 ## Overview
 
-OpenHands uses [Socket.IO](https://socket.io/) for WebSocket communication between the client and server. The WebSocket connection allows you to:
+Forge uses [Socket.IO](https://socket.io/) for WebSocket communication between the client and server. The WebSocket connection allows you to:
 
 1. Receive real-time events from the agent
 2. Send user actions to the agent
@@ -39,7 +39,7 @@ const socket = io("http://localhost:3000", {
 });
 
 socket.on("connect", () => {
-  console.log("Connected to OpenHands WebSocket");
+  console.log("Connected to Forge WebSocket");
 });
 
 socket.on("oh_event", (event) => {
@@ -141,7 +141,7 @@ websocat "ws://localhost:3000/socket.io/?EIO=4&transport=websocket&conversation_
 Events sent and received through the WebSocket follow a specific structure:
 
 ```typescript
-interface OpenHandsEvent {
+interface ForgeEvent {
   id: string;           // Unique event ID
   source: string;       // "user" or "agent"
   timestamp: string;    // ISO timestamp
@@ -164,7 +164,7 @@ interface OpenHandsEvent {
 
 ### Connection Issues
 
-- Verify that the OpenHands server is running and accessible
+- Verify that the Forge server is running and accessible
 - Check that you're providing the correct conversation ID
 - Ensure your WebSocket URL is correctly formatted
 

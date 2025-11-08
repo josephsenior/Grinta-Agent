@@ -2,10 +2,10 @@
 
 from unittest.mock import AsyncMock, patch
 import pytest
-from openhands.core.config.mcp_config import MCPConfig, MCPSSEServerConfig
-from openhands.server.user_auth.default_user_auth import DefaultUserAuth
-from openhands.storage.data_models.settings import Settings
-from openhands.storage.settings.file_settings_store import FileSettingsStore
+from forge.core.config.mcp_config import MCPConfig, MCPSSEServerConfig
+from forge.server.user_auth.default_user_auth import DefaultUserAuth
+from forge.storage.data_models.settings import Settings
+from forge.storage.settings.file_settings_store import FileSettingsStore
 
 
 @pytest.mark.asyncio

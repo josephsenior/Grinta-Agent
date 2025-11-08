@@ -1,6 +1,6 @@
-from openhands.metasop.adapters.engineer_codeact import run_engineer_with_codeact
-from openhands.metasop.adapters.openhands import run_step_with_openhands
-from openhands.metasop.models import OrchestrationContext, SopStep
+from forge.metasop.adapters.engineer_codeact import run_engineer_with_codeact
+from forge.metasop.adapters.Forge import run_step_with_Forge
+from forge.metasop.models import OrchestrationContext, SopStep
 
 
 def _dummy_role_profile():
@@ -46,7 +46,7 @@ class _DummyLLMRegistry:
         return self._llm
 
 
-def test_openhands_adapter_honors_n_candidates(monkeypatch, tmp_path):
+def test_FORGE_adapter_honors_n_candidates(monkeypatch, tmp_path):
     step = SopStep(id="s1", role="Engineer", task="do", outputs={"schema": ""})
     ctx = OrchestrationContext(run_id="r1", user_request="u", repo_root=str(tmp_path))
     ctx.extra[f"n_candidates::{step.id}"] = 3
@@ -55,13 +55,13 @@ def test_openhands_adapter_honors_n_candidates(monkeypatch, tmp_path):
     def dummy_registry_factory(config=None):
         return _DummyLLMRegistry(dummy_llm)
 
-    monkeypatch.setattr("openhands.metasop.adapters.openhands.LLMRegistry", dummy_registry_factory)
+    monkeypatch.setattr("forge.metasop.adapters.forge.LLMRegistry", dummy_registry_factory)
     try:
-        monkeypatch.setattr("openhands.llm.llm_registry.LLMRegistry", dummy_registry_factory)
+        monkeypatch.setattr("forge.llm.llm_registry.LLMRegistry", dummy_registry_factory)
     except Exception:
         pass
-    monkeypatch.setattr("openhands.metasop.adapters.openhands.load_schema", lambda s: {})
-    res = run_step_with_openhands(
+    monkeypatch.setattr("forge.metasop.adapters.forge.load_schema", lambda s: {})
+    res = run_step_with_Forge(
         step, ctx, _dummy_role_profile(), config=None, llm_registry=_DummyLLMRegistry(dummy_llm)
     )
     assert res.ok
@@ -88,11 +88,11 @@ def test_engineer_codeact_adaptor_respects_candidates(monkeypatch, tmp_path):
     }
     summary_path.write_text(__import__("json").dumps(parsed), encoding="utf-8")
     monkeypatch.setattr(
-        "openhands.metasop.adapters.engineer_codeact.call_async_from_sync", lambda func, **kwargs: {"fake": "state"}
+        "forge.metasop.adapters.engineer_codeact.call_async_from_sync", lambda func, **kwargs: {"fake": "state"}
     )
     try:
         monkeypatch.setattr(
-            "openhands.metasop.adapters.engineer_codeact.run_controller", lambda *a, **k: {"fake": "state"}
+            "forge.metasop.adapters.engineer_codeact.run_controller", lambda *a, **k: {"fake": "state"}
         )
     except Exception:
         pass

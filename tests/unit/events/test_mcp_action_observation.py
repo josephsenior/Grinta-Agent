@@ -1,8 +1,8 @@
 import json
-from openhands.core.schema import ActionType, ObservationType
-from openhands.events.action.action import ActionSecurityRisk
-from openhands.events.action.mcp import MCPAction
-from openhands.events.observation.mcp import MCPObservation
+from forge.core.schema import ActionType, ObservationType
+from forge.events.action.action import ActionSecurityRisk
+from forge.events.action.mcp import MCPAction
+from forge.events.observation.mcp import MCPObservation
 
 
 def test_mcp_action_creation():
@@ -104,7 +104,7 @@ def test_mcp_observation_with_arguments():
     assert observation.arguments == complex_args
     assert observation.arguments["nested_arg"]["inner_key"] == "inner_value"
     assert observation.arguments["list_arg"] == ["a", "b", "c"]
-    from openhands.events.serialization import event_to_dict
+    from forge.events.serialization import event_to_dict
 
     serialized = event_to_dict(observation)
     assert serialized["observation"] == ObservationType.MCP

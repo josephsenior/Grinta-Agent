@@ -2,11 +2,12 @@ import React from "react";
 import { Check, Circle, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "#/utils/utils";
 import { TooltipButton } from "#/components/shared/buttons/tooltip-button";
-import { OpenHandsEvent } from "#/types/core/base";
+import { ForgeEvent } from "#/types/core/base";
+import type { ForgeAction, ForgeObservation } from "#/types/core";
 import { isErrorObservation } from "#/types/core/guards";
 
 interface ActionSummaryProps {
-  events: OpenHandsEvent[];
+  events: ForgeEvent[];
   onEventClick?: (eventId: number | string) => void;
 }
 
@@ -88,59 +89,98 @@ export const ActionSummary: React.FC<ActionSummaryProps> = ({
 /**
  * Extracts human-readable summary from an event
  */
-function getEventSummaryText(event: OpenHandsEvent): string | null {
-  // Type guard to check if it's an action or observation
-  const action = "action" in event ? event.action : undefined;
-  const observation = "observation" in event ? event.observation : undefined;
-
-  // Actions
-  if (action === "run" && "args" in event) {
-    const cmd = (event.args as { command?: string })?.command || "";
-    // Extract key command parts (npm install, git clone, etc.)
-    const parts = cmd.split(/\s+/);
-    const primary = parts.slice(0, 2).join(" ");
-    return primary.length > 0 ? `Run: ${primary}` : "Execute command";
-  }
-
-  if (action === "write" && "args" in event) {
-    const path = (event.args?.path as string) || "";
-    const filename = path.split("/").pop() || "file";
-    return `Create ${filename}`;
-  }
-
-  if (action === "edit" && "args" in event) {
-    const path = ((event.args?.path || event.args?.file_path) as string) || "";
-    const filename = path.split("/").pop() || "file";
-    return `Edit ${filename}`;
-  }
-
-  if (action === "browse" && "args" in event) {
-    const url = (event.args?.url as string) || "";
-    // Extract domain from URL
-    try {
-      const domain = new URL(url).hostname.replace("www.", "");
-      return `Open ${domain}`;
-    } catch {
-      return "Open browser";
+function getEventSummaryText(event: ForgeEvent): string | null {
+  if (isActionEvent(event)) {
+    const key = typeof event.action === "string" ? event.action : undefined;
+    const handler = key ? ACTION_SUMMARIZERS[key] : undefined;
+    if (handler) {
+      return handler(event);
     }
   }
 
-  if (action === "finish") {
-    return "Complete task";
+  if (isObservationEvent(event)) {
+    return summarizeObservation(event);
   }
 
-  if (action === "read" && "args" in event) {
-    const path = (event.args?.path as string) || "";
-    const filename = path.split("/").pop() || "file";
-    return `Read ${filename}`;
+  return null;
+}
+
+type ActionSummaryHandler = (event: ForgeAction) => string | null;
+
+const ACTION_SUMMARIZERS: Record<string, ActionSummaryHandler> = {
+  run: summarizeRunAction,
+  write: (event) => summarizeFileAction({ event, verb: "Create" }),
+  edit: (event) => summarizeFileAction({ event, verb: "Edit" }),
+  browse: summarizeBrowseAction,
+  finish: () => "Complete task",
+  read: (event) => summarizeFileAction({ event, verb: "Read" }),
+};
+
+function summarizeRunAction(event: ForgeAction): string | null {
+  const command = getEventArg(event, "command");
+  if (typeof command !== "string" || command.trim().length === 0) {
+    return "Execute command";
   }
 
-  // Observations (usually don't show unless error)
-  if (observation && isErrorObservation(event)) {
+  const primary = command.split(/\s+/).slice(0, 2).join(" ");
+  return primary.length > 0 ? `Run: ${primary}` : "Execute command";
+}
+
+function summarizeFileAction({
+  event,
+  verb,
+}: {
+  event: ForgeAction;
+  verb: string;
+}): string | null {
+  const path = getEventArg(event, "path") ?? getEventArg(event, "file_path");
+  if (typeof path !== "string" || path.length === 0) {
+    return `${verb} file`;
+  }
+
+  return `${verb} ${extractFilename(path)}`;
+}
+
+function summarizeBrowseAction(event: ForgeAction): string | null {
+  const url = getEventArg(event, "url");
+  if (typeof url !== "string" || url.length === 0) {
+    return "Open browser";
+  }
+
+  try {
+    const domain = new URL(url).hostname.replace("www.", "");
+    return domain ? `Open ${domain}` : "Open browser";
+  } catch {
+    return "Open browser";
+  }
+}
+
+function summarizeObservation(event: ForgeObservation): string | null {
+  if (isErrorObservation(event)) {
     return "Error occurred";
   }
 
-  // Skip most observations (they're implementation details)
   return null;
+}
+
+function isActionEvent(event: ForgeEvent): event is ForgeAction {
+  return typeof (event as ForgeAction).action === "string";
+}
+
+function isObservationEvent(event: ForgeEvent): event is ForgeObservation {
+  return typeof (event as ForgeObservation).observation === "string";
+}
+
+function getEventArg(event: ForgeAction, key: string) {
+  const args = (event as unknown as { args?: Record<string, unknown> }).args;
+  if (!args || typeof args !== "object") {
+    return undefined;
+  }
+
+  return (args as Record<string, unknown>)[key];
+}
+
+function extractFilename(path: string): string {
+  return path.split("/").pop() || path;
 }
 

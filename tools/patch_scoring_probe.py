@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 repo_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(repo_root))
 try:
-    from openhands.metasop import patch_scoring
+    from forge.metasop import patch_scoring
 
     class S:
         patch_score_weight_complexity = 0.25
@@ -25,7 +25,7 @@ try:
     res = patch_scoring.score_candidates([c1, c2], S())
     out = [{"composite": r.composite, "features": r.features, "raw": r.raw} for r in res]
     try:
-        from openhands.core.io import print_json_stdout
+        from forge.core.io import print_json_stdout
     except Exception:
         try:
             logger.info(json.dumps(out, indent=2, ensure_ascii=False, default=str))

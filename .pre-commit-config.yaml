@@ -42,7 +42,7 @@ repos:
   #   rev: 1.7.5
   #   hooks:
   #     - id: bandit
-  #     args: ["-c", "pyproject.toml", "-r", "openhands/"]
+  #     args: ["-c", "pyproject.toml", "-r", "Forge/"]
   #     exclude: ^tests/
 
   # - repo: https://github.com/Lucas-C/pre-commit-hooks-safety

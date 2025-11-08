@@ -28,10 +28,10 @@ if [ -z "$DATASET" ]; then
   DATASET="ProofWriter"
 fi
 
-get_openhands_version
+get_FORGE_version
 
 echo "AGENT: $AGENT"
-echo "OPENHANDS_VERSION: $OPENHANDS_VERSION"
+echo "FORGE_VERSION: $FORGE_VERSION"
 echo "MODEL_CONFIG: $MODEL_CONFIG"
 
 COMMAND="poetry run python evaluation/benchmarks/logic_reasoning/run_infer.py \
@@ -40,7 +40,7 @@ COMMAND="poetry run python evaluation/benchmarks/logic_reasoning/run_infer.py \
   --dataset $DATASET \
   --max-iterations 10 \
   --eval-num-workers $NUM_WORKERS \
-  --eval-note $OPENHANDS_VERSION"
+  --eval-note $FORGE_VERSION"
 
 if [ -n "$EVAL_LIMIT" ]; then
   echo "EVAL_LIMIT: $EVAL_LIMIT"

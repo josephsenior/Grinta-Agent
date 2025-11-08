@@ -2,13 +2,13 @@ import asyncio
 from contextlib import contextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-from openhands.core.config import load_openhands_config
-from openhands.core.exceptions import UserCancelledError
-from openhands.llm.async_llm import AsyncLLM
-from openhands.llm.llm import LLM
-from openhands.llm.streaming_llm import StreamingLLM
+from forge.core.config import load_FORGE_config
+from forge.core.exceptions import UserCancelledError
+from forge.llm.async_llm import AsyncLLM
+from forge.llm.llm import LLM
+from forge.llm.streaming_llm import StreamingLLM
 
-config = load_openhands_config()
+config = load_FORGE_config()
 
 
 @pytest.fixture
@@ -44,7 +44,7 @@ def mock_response():
 
 @contextmanager
 def _patch_http():
-    with patch("openhands.llm.llm.httpx.get", MagicMock()) as mock_http:
+    with patch("forge.llm.llm.httpx.get", MagicMock()) as mock_http:
         mock_http.json.return_value = {"data": [{"model_name": "some_model"}, {"model_name": "another_model"}]}
         yield
 

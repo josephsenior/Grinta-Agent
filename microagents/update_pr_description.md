@@ -1,7 +1,7 @@
 ---
 name: update_pr_description
 version: 1.0.0
-author: openhands
+author: Forge
 agent: CodeActAgent
 triggers:
   - /update_pr_description

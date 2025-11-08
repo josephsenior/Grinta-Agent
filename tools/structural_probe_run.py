@@ -1,5 +1,5 @@
 import logging
-from openhands.structural import available, semantic_diff_counts
+from forge.structural import available, semantic_diff_counts
 
 logger = logging.getLogger(__name__)
 logger.info("available() %s", available())

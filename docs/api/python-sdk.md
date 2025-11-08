@@ -1,6 +1,6 @@
 # 🐍 **Python SDK**
 
-> **Python library for programmatic access to OpenHands functionality**
+> **Python library for programmatic access to Forge functionality**
 
 ---
 
@@ -19,14 +19,14 @@
 ### **Install from PyPI**
 
 ```bash
-pip install openhands-sdk
+pip install Forge-sdk
 ```
 
 ### **Install from Source**
 
 ```bash
-git clone https://github.com/your-org/openhands.git
-cd openhands
+git clone https://github.com/your-org/Forge.git
+cd Forge
 pip install -e .
 ```
 
@@ -37,10 +37,10 @@ pip install -e .
 ### **Basic Usage**
 
 ```python
-from openhands import OpenHands
+from forge import forge
 
 # Initialize client
-client = OpenHands(
+client = Forge(
     base_url="http://localhost:8000",
     api_key="your-api-key"  # Optional
 )
@@ -61,34 +61,34 @@ print(response.content)
 
 ```bash
 # Set environment variables
-export OPENHANDS_BASE_URL=http://localhost:8000
-export OPENHANDS_API_KEY=your-api-key
+export FORGE_BASE_URL=http://localhost:8000
+export FORGE_API_KEY=your-api-key
 ```
 
 ```python
-from openhands import OpenHands
+from forge import forge
 
 # Client automatically reads from environment
-client = OpenHands()
+client = Forge()
 ```
 
 ---
 
 ## 🏗️ **Core Classes**
 
-### **`OpenHands`**
+### **`Forge`**
 
 Main client class.
 
 ```python
-class OpenHands:
+class Forge:
     def __init__(
         self,
         base_url: str = "http://localhost:8000",
         api_key: Optional[str] = None,
         timeout: int = 30,
     ):
-        """Initialize OpenHands client."""
+        """Initialize Forge client."""
         
     @property
     def conversations(self) -> ConversationsAPI:
@@ -248,11 +248,11 @@ print(f"Performance: {variant.success_rate}")
 ### **Example 1: Complete Workflow**
 
 ```python
-from openhands import OpenHands
+from forge import forge
 import time
 
 # Initialize
-client = OpenHands(base_url="http://localhost:8000")
+client = Forge(base_url="http://localhost:8000")
 
 # Create conversation
 conv = client.conversations.create()
@@ -316,11 +316,11 @@ if engineer:
 
 ```python
 import asyncio
-from openhands import AsyncOpenHands
+from forge import AsyncForge
 
 async def main():
     # Async client
-    client = AsyncOpenHands(base_url="http://localhost:8000")
+    client = AsyncForge(base_url="http://localhost:8000")
     
     # Create conversation
     conv = await client.conversations.create()
@@ -342,9 +342,9 @@ asyncio.run(main())
 ### **Example 3: Streaming Responses**
 
 ```python
-from openhands import OpenHands
+from forge import forge
 
-client = OpenHands()
+client = Forge()
 conv = client.conversations.create()
 
 # Stream response
@@ -360,15 +360,15 @@ for chunk in client.conversations.send_message_stream(
 ### **Example 4: Error Handling**
 
 ```python
-from openhands import OpenHands
-from openhands.exceptions import (
-    OpenHandsException,
+from forge import forge
+from forge.exceptions import (
+    ForgeException,
     ConversationNotFound,
     RateLimitError,
     APIError
 )
 
-client = OpenHands()
+client = Forge()
 
 try:
     conv = client.conversations.get("invalid-id")
@@ -378,7 +378,7 @@ except RateLimitError as e:
     print(f"Rate limited. Retry after {e.retry_after}s")
 except APIError as e:
     print(f"API error: {e.message}")
-except OpenHandsException as e:
+except ForgeException as e:
     print(f"General error: {e}")
 ```
 
@@ -448,7 +448,7 @@ class Variant:
 #### **Timeouts**
 
 ```python
-client = OpenHands(
+client = Forge(
     base_url="http://localhost:8000",
     timeout=60,  # Request timeout in seconds
 )
@@ -457,9 +457,9 @@ client = OpenHands(
 #### **Retry Logic**
 
 ```python
-from openhands import OpenHands, RetryConfig
+from forge import forge, RetryConfig
 
-client = OpenHands(
+client = Forge(
     retry_config=RetryConfig(
         max_retries=3,
         initial_delay=1.0,
@@ -472,7 +472,7 @@ client = OpenHands(
 #### **Custom Headers**
 
 ```python
-client = OpenHands(
+client = Forge(
     base_url="http://localhost:8000",
     headers={
         "X-Custom-Header": "value",
@@ -488,7 +488,7 @@ client = OpenHands(
 
 ```python
 import httpx
-from openhands import OpenHands
+from forge import forge
 
 # Custom HTTP client
 http_client = httpx.Client(
@@ -496,7 +496,7 @@ http_client = httpx.Client(
     limits=httpx.Limits(max_connections=100),
 )
 
-client = OpenHands(
+client = Forge(
     base_url="http://localhost:8000",
     http_client=http_client,
 )
@@ -505,11 +505,11 @@ client = OpenHands(
 ### **WebSocket Support**
 
 ```python
-from openhands import OpenHands
+from forge import forge
 import asyncio
 
 async def listen_to_events(conversation_id: str):
-    client = OpenHands()
+    client = Forge()
     
     async for event in client.stream_events(conversation_id):
         if event.type == 'metasop_step_complete':
@@ -526,10 +526,10 @@ asyncio.run(listen_to_events("conv-123"))
 ### **Mock Client**
 
 ```python
-from openhands.testing import MockOpenHands
+from forge.testing import MockForge
 
 # Create mock client
-mock_client = MockOpenHands()
+mock_client = MockForge()
 
 # Set mock responses
 mock_client.conversations.create.return_value = Conversation(
@@ -549,7 +549,7 @@ assert conv.id == "test-123"
 ## 📖 **Complete Example: Build Full App**
 
 ```python
-from openhands import OpenHands
+from forge import forge
 import json
 import time
 
@@ -557,7 +557,7 @@ def build_app(requirements: str):
     """Complete workflow to build an app."""
     
     # Initialize
-    client = OpenHands(base_url="http://localhost:8000")
+    client = Forge(base_url="http://localhost:8000")
     
     # Create conversation
     conv = client.conversations.create()
@@ -629,5 +629,5 @@ if __name__ == "__main__":
 
 ---
 
-**The Python SDK provides a powerful, Pythonic interface to all OpenHands functionality!**
+**The Python SDK provides a powerful, Pythonic interface to all Forge functionality!**
 

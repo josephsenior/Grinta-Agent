@@ -1,6 +1,6 @@
 # 🎨 **UI/UX Enhancements Documentation**
 
-> **Comprehensive guide to OpenHands' premium user experience features and design system.**
+> **Comprehensive guide to Forge' premium user experience features and design system.**
 
 ---
 
@@ -21,7 +21,7 @@
 
 ## 🌟 **Overview**
 
-OpenHands features a **world-class user interface** that matches its revolutionary technical capabilities. The platform combines **premium design aesthetics** with **cutting-edge functionality** to deliver an unparalleled user experience.
+Forge features a **world-class user interface** that matches its revolutionary technical capabilities. The platform combines **premium design aesthetics** with **cutting-edge functionality** to deliver an unparalleled user experience.
 
 ### **Key Principles**
 - **User-Centric Design**: Every interaction is designed for maximum efficiency and delight

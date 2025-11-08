@@ -1,4 +1,7 @@
-from openhands.events.action import (
+import pytest
+
+from forge.core.exceptions import LLMMalformedActionError
+from forge.events.action import (
     Action,
     AgentFinishAction,
     AgentRejectAction,
@@ -8,12 +11,14 @@ from openhands.events.action import (
     FileEditAction,
     FileReadAction,
     FileWriteAction,
+    IPythonRunCellAction,
     MessageAction,
     RecallAction,
 )
-from openhands.events.action.action import ActionConfirmationStatus
-from openhands.events.action.files import FileEditSource, FileReadSource
-from openhands.events.serialization import event_from_dict, event_to_dict
+from forge.events.action.action import ActionConfirmationStatus, ActionSecurityRisk
+from forge.events.action.files import FileEditSource, FileReadSource
+from forge.events.serialization import event_from_dict, event_to_dict
+from forge.events.serialization.action import action_from_dict, handle_action_deprecated_args
 
 
 def serialization_deserialization(original_action_dict, cls, max_message_chars: int = 10000):
@@ -399,3 +404,105 @@ def test_file_read_action_legacy_serialization():
     assert event_dict["args"]["thought"] == "Reading the file contents"
     assert event_dict["args"]["start"] == 0
     assert event_dict["args"]["end"] == -1
+
+
+def test_handle_action_deprecated_args_translates_ipython() -> None:
+    args = {
+        "keep_prompt": True,
+        "task_completed": False,
+        "translated_ipython_code": 'print(file_editor(**{"command": "view", "path": "notebook.ipynb"}))',
+        "images_urls": ["https://legacy/img.png"],
+    }
+
+    cleaned = handle_action_deprecated_args(args.copy())
+
+    assert "keep_prompt" not in cleaned
+    assert "task_completed" not in cleaned
+    assert cleaned["path"] == "notebook.ipynb"
+    assert "command" not in cleaned  # removed when command=view
+
+
+def test_action_from_dict_normalizes_images_and_timestamp() -> None:
+    action_dict = {
+        "action": "message",
+        "args": {
+            "content": "hello",
+            "images_urls": ["legacy-image"],
+            "timestamp": "2024-01-02T03:04:05",
+            "security_risk": ActionSecurityRisk.MEDIUM.value,
+        },
+    }
+
+    action = action_from_dict(action_dict)
+
+    assert isinstance(action, MessageAction)
+    assert action.image_urls == ["legacy-image"]
+    assert action.timestamp == "2024-01-02T03:04:05"
+    assert action.security_risk == ActionSecurityRisk.MEDIUM
+
+
+def test_action_from_dict_sets_confirmation_state_and_timeout() -> None:
+    action_dict = {
+        "action": "run",
+        "timeout": 1.5,
+        "args": {
+            "command": "ls",
+            "is_confirmed": ActionConfirmationStatus.AWAITING_CONFIRMATION,
+            "security_risk": ActionSecurityRisk.LOW.value,
+        },
+    }
+
+    action = action_from_dict(action_dict)
+
+    assert isinstance(action, CmdRunAction)
+    assert action.confirmation_state == ActionConfirmationStatus.AWAITING_CONFIRMATION
+    assert action.timeout == 1.5
+    assert action.security_risk == ActionSecurityRisk.LOW
+
+
+def test_action_from_dict_invalid_security_risk_is_ignored() -> None:
+    action_dict = {
+        "action": "run",
+        "args": {"command": "pwd", "security_risk": "not-a-risk"},
+    }
+
+    action = action_from_dict(action_dict)
+
+    assert isinstance(action, CmdRunAction)
+    assert action.security_risk == ActionSecurityRisk.UNKNOWN
+
+
+def test_action_from_dict_raises_on_invalid_inputs() -> None:
+    with pytest.raises(LLMMalformedActionError):
+        action_from_dict("not a dict")  # type: ignore[arg-type]
+
+    with pytest.raises(LLMMalformedActionError):
+        action_from_dict({})
+
+    with pytest.raises(LLMMalformedActionError):
+        action_from_dict({"action": "unknown"})
+
+    with pytest.raises(LLMMalformedActionError):
+        action_from_dict({"action": "message", "args": {"unexpected": "value"}})
+
+
+def test_cmd_run_action_string_representation() -> None:
+    action = CmdRunAction(
+        command="ls -la",
+        thought="Listing files",
+        is_input=True,
+        hidden=True,
+        cwd="/tmp",
+    )
+
+    description = str(action)
+    assert "**CmdRunAction" in description
+    assert "THOUGHT: Listing files" in description
+    assert "COMMAND:\nls -la" in description
+    assert action.message == "Running command: ls -la"
+
+
+def test_ipython_run_cell_action_message() -> None:
+    action = IPythonRunCellAction(code="print('hello')", thought="Quick check")
+    assert "Running Python code interactively" in action.message
+    assert "CODE:\nprint('hello')" in str(action)

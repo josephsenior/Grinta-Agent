@@ -1,6 +1,6 @@
 # 📘 **TypeScript SDK**
 
-> **Type-safe TypeScript library for OpenHands frontend integration**
+> **Type-safe TypeScript library for Forge frontend integration**
 
 ---
 
@@ -19,19 +19,19 @@
 ### **npm**
 
 ```bash
-npm install @openhands/sdk
+npm install @Forge/sdk
 ```
 
 ### **yarn**
 
 ```bash
-yarn add @openhands/sdk
+yarn add @Forge/sdk
 ```
 
 ### **pnpm**
 
 ```bash
-pnpm add @openhands/sdk
+pnpm add @Forge/sdk
 ```
 
 ---
@@ -41,12 +41,12 @@ pnpm add @openhands/sdk
 ### **Initialize Client**
 
 ```typescript
-import { OpenHandsClient } from '@openhands/sdk';
+import { ForgeClient } from '@Forge/sdk';
 
 // Create client
-const client = new OpenHandsClient({
+const client = new ForgeClient({
   baseUrl: 'http://localhost:8000',
-  apiKey: process.env.OPENHANDS_API_KEY,
+  apiKey: process.env.FORGE_API_KEY,
 });
 
 // Create conversation
@@ -65,15 +65,15 @@ console.log(response.content);
 
 ## ⚛️ **React Hooks**
 
-### **`useOpenHands`**
+### **`useForge`**
 
-Main hook for OpenHands integration.
+Main hook for Forge integration.
 
 ```typescript
-import { useOpenHands } from '@openhands/sdk/react';
+import { useForge } from '@Forge/sdk/react';
 
 function MyComponent() {
-  const { client, conversation, messages, sendMessage, loading } = useOpenHands({
+  const { client, conversation, messages, sendMessage, loading } = useForge({
     baseUrl: 'http://localhost:8000',
   });
 
@@ -101,7 +101,7 @@ function MyComponent() {
 Manage a single conversation.
 
 ```typescript
-import { useConversation } from '@openhands/sdk/react';
+import { useConversation } from '@Forge/sdk/react';
 
 function Chat() {
   const {
@@ -137,7 +137,7 @@ function Chat() {
 MetaSOP orchestration hook.
 
 ```typescript
-import { useMetaSOP } from '@openhands/sdk/react';
+import { useMetaSOP } from '@Forge/sdk/react';
 
 function MetaSOPPanel() {
   const {
@@ -182,7 +182,7 @@ function MetaSOPPanel() {
 WebSocket connection hook.
 
 ```typescript
-import { useWebSocket } from '@openhands/sdk/react';
+import { useWebSocket } from '@Forge/sdk/react';
 
 function LiveUpdates() {
   const { events, connected, error } = useWebSocket({
@@ -208,12 +208,12 @@ function LiveUpdates() {
 
 ## 🏗️ **Core API**
 
-### **`OpenHandsClient`**
+### **`ForgeClient`**
 
 Main client class.
 
 ```typescript
-class OpenHandsClient {
+class ForgeClient {
   constructor(config: ClientConfig);
   
   // API namespaces
@@ -374,10 +374,10 @@ class OptimizationAPI {
 ### **Example 1: Basic Chat**
 
 ```typescript
-import { OpenHandsClient } from '@openhands/sdk';
+import { ForgeClient } from '@Forge/sdk';
 
 async function basicChat() {
-  const client = new OpenHandsClient({
+  const client = new ForgeClient({
     baseUrl: 'http://localhost:8000',
   });
 
@@ -400,10 +400,10 @@ async function basicChat() {
 ### **Example 2: Streaming Response**
 
 ```typescript
-import { OpenHandsClient } from '@openhands/sdk';
+import { ForgeClient } from '@Forge/sdk';
 
 async function streamingChat() {
-  const client = new OpenHandsClient({
+  const client = new ForgeClient({
     baseUrl: 'http://localhost:8000',
   });
 
@@ -426,10 +426,10 @@ async function streamingChat() {
 ### **Example 3: MetaSOP Orchestration**
 
 ```typescript
-import { OpenHandsClient } from '@openhands/sdk';
+import { ForgeClient } from '@Forge/sdk';
 
 async function runMetaSOP() {
-  const client = new OpenHandsClient({
+  const client = new ForgeClient({
     baseUrl: 'http://localhost:8000',
   });
 
@@ -465,7 +465,7 @@ async function runMetaSOP() {
 ### **Example 4: React Component**
 
 ```tsx
-import { useOpenHands } from '@openhands/sdk/react';
+import { useForge } from '@Forge/sdk/react';
 import { useState } from 'react';
 
 export function ChatInterface() {
@@ -475,8 +475,8 @@ export function ChatInterface() {
     sendMessage,
     loading,
     error,
-  } = useOpenHands({
-    baseUrl: process.env.REACT_APP_OPENHANDS_URL!,
+  } = useForge({
+    baseUrl: process.env.REACT_APP_FORGE_URL!,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -527,17 +527,17 @@ export function ChatInterface() {
 ### **Example 5: Error Handling**
 
 ```typescript
-import { OpenHandsClient, OpenHandsError } from '@openhands/sdk';
+import { ForgeClient, ForgeError } from '@Forge/sdk';
 
 async function handleErrors() {
-  const client = new OpenHandsClient({
+  const client = new ForgeClient({
     baseUrl: 'http://localhost:8000',
   });
 
   try {
     const conv = await client.conversations.get('invalid-id');
   } catch (error) {
-    if (error instanceof OpenHandsError) {
+    if (error instanceof ForgeError) {
       switch (error.code) {
         case 'NOT_FOUND':
           console.error('Conversation not found');
@@ -560,19 +560,19 @@ async function handleErrors() {
 
 ## 🎨 **React Hook API Reference**
 
-### **`useOpenHands`**
+### **`useForge`**
 
 ```typescript
-function useOpenHands(config: UseOpenHandsConfig): UseOpenHandsReturn;
+function useForge(config: UseForgeConfig): UseForgeReturn;
 
-interface UseOpenHandsConfig {
+interface UseForgeConfig {
   baseUrl: string;
   apiKey?: string;
   autoConnect?: boolean;
 }
 
-interface UseOpenHandsReturn {
-  client: OpenHandsClient;
+interface UseForgeReturn {
+  client: ForgeClient;
   conversation: Conversation | null;
   messages: Message[];
   sendMessage: (message: string) => Promise<void>;
@@ -608,7 +608,7 @@ interface UseMetaSOPReturn {
 ### **Mock Client**
 
 ```typescript
-import { createMockClient } from '@openhands/sdk/testing';
+import { createMockClient } from '@Forge/sdk/testing';
 
 // Create mock
 const mockClient = createMockClient({
@@ -631,16 +631,16 @@ expect(conv.id).toBe('test-123');
 
 ```typescript
 import { render, screen } from '@testing-library/react';
-import { OpenHandsProvider } from '@openhands/sdk/react';
-import { createMockClient } from '@openhands/sdk/testing';
+import { ForgeProvider } from '@Forge/sdk/react';
+import { createMockClient } from '@Forge/sdk/testing';
 
 test('renders chat interface', () => {
   const mockClient = createMockClient();
 
   render(
-    <OpenHandsProvider client={mockClient}>
+    <ForgeProvider client={mockClient}>
       <ChatInterface />
-    </OpenHandsProvider>
+    </ForgeProvider>
   );
 
   expect(screen.getByPlaceholderText('Ask anything...')).toBeInTheDocument();
@@ -658,5 +658,5 @@ test('renders chat interface', () => {
 
 ---
 
-**The TypeScript SDK provides a fully type-safe, modern interface for building OpenHands-powered applications!**
+**The TypeScript SDK provides a fully type-safe, modern interface for building Forge-powered applications!**
 

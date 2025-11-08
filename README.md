@@ -52,6 +52,7 @@ All documentation is now consolidated in the `docs/` directory:
 - **[Documentation Index](docs/index.md)** - Start here
 - **[Getting Started](docs/getting_started.md)** - Quick setup guide  
 - **[Features](docs/features.md)** - Complete feature overview
+- **[Code Quality](docs/CODE_QUALITY.md)** - ⭐ Code quality metrics and standards
 - **[Configuration](docs/configuration.md)** - LLM setup and runtime configuration
 - **[Production Deployment](docs/production_deployment.md)** - Scaling and deployment
 - **[Development Guide](docs/development.md)** - For contributors
@@ -75,10 +76,13 @@ Forge is **production-ready** with enterprise-grade infrastructure:
 | Feature | Rating | Status |
 |---------|--------|--------|
 | **Error Handling** | 9.5/10 | Tenacity + Circuit Breaker ✅ |
+| **Code Quality** | 10/10 | Avg complexity 3.13, 0% high-complexity ✅ |
 | **Monitoring** | 8.5/10 | Prometheus + Grafana ✅ |
 | **Rate Limiting** | 9.0/10 | Redis + Cost Quotas ✅ |
 | **UX/UI** | 9.3/10 | Cursor-level Polish ✅ |
 | **Tests** | 8.5/10 | 3,461 test cases ✅ |
+
+**Code Quality Achievement:** 🏆 **125K+ lines, 5,931 functions, ZERO high-complexity functions**
 
 **See:** `docs/honest-reassessment-corrected.md` for full assessment
 
@@ -93,7 +97,7 @@ Forge is **production-ready** with enterprise-grade infrastructure:
 
 **Features:**
 - [Ultimate Editor Guide](docs/ultimate-editor.md)
-- [Cost Quotas](openhands/server/middleware/cost_quota.py)
+- [Cost Quotas](Forge/server/middleware/cost_quota.py)
 - [Monitoring Stack](monitoring/README.md)
 
 **Development:**

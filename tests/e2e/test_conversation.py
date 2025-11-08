@@ -28,9 +28,9 @@ def get_readme_line_count():
         return 0
 
 
-def _navigate_to_openhands(page: Page, base_url: str) -> None:
-    """Navigate to OpenHands application and take initial screenshot."""
-    print(f"Step 1: Navigating to OpenHands application at {base_url}...")
+def _navigate_to_Forge(page: Page, base_url: str) -> None:
+    """Navigate to Forge application and take initial screenshot."""
+    print(f"Step 1: Navigating to Forge application at {base_url}...")
     page.goto(base_url)
     page.wait_for_load_state("networkidle", timeout=30000)
     page.screenshot(path="test-results/conv_01_initial_load.png")
@@ -38,8 +38,8 @@ def _navigate_to_openhands(page: Page, base_url: str) -> None:
 
 
 def _select_repository(page: Page) -> None:
-    """Select the OpenHands repository from dropdown."""
-    print("Step 2: Selecting openhands-agent/OpenHands repository...")
+    """Select the Forge repository from dropdown."""
+    print("Step 2: Selecting Forge-agent/Forge repository...")
     home_screen = page.locator('[data-testid="home-screen"]')
     expect(home_screen).to_be_visible(timeout=15000)
     print("Home screen is visible")
@@ -52,7 +52,7 @@ def _select_repository(page: Page) -> None:
 
     try:
         page.keyboard.press("Control+a")
-        page.keyboard.type("openhands-agent/OpenHands")
+        page.keyboard.type("Forge-agent/Forge")
         print("Used keyboard.type() for React Select component")
     except Exception as e:
         print(f"Keyboard input failed: {e}")
@@ -66,14 +66,14 @@ def _select_repository(page: Page) -> None:
 def _select_repository_option(page: Page) -> None:
     """Select repository option from dropdown with fallback strategies."""
     option_selectors = [
-        '[data-testid="repo-dropdown"] [role="option"]:has-text("openhands-agent/OpenHands")',
-        '[data-testid="repo-dropdown"] [role="option"]:has-text("OpenHands")',
-        '[data-testid="repo-dropdown"] div[id*="option"]:has-text("openhands-agent/OpenHands")',
-        '[data-testid="repo-dropdown"] div[id*="option"]:has-text("OpenHands")',
-        '[role="option"]:has-text("openhands-agent/OpenHands")',
-        '[role="option"]:has-text("OpenHands")',
-        'div:has-text("openhands-agent/OpenHands"):not([id="aria-results"])',
-        'div:has-text("OpenHands"):not([id="aria-results"])',
+        '[data-testid="repo-dropdown"] [role="option"]:has-text("Forge-agent/Forge")',
+        '[data-testid="repo-dropdown"] [role="option"]:has-text("forge")',
+        '[data-testid="repo-dropdown"] div[id*="option"]:has-text("Forge-agent/Forge")',
+        '[data-testid="repo-dropdown"] div[id*="option"]:has-text("forge")',
+        '[role="option"]:has-text("Forge-agent/Forge")',
+        '[role="option"]:has-text("forge")',
+        'div:has-text("Forge-agent/Forge"):not([id="aria-results"])',
+        'div:has-text("forge"):not([id="aria-results"])',
     ]
 
     option_found = False
@@ -591,10 +591,10 @@ def _check_readme_response(content: str, expected_line_count: int) -> bool:
 
 
 def test_conversation_start(page: Page, base_url: str):
-    """Test starting a conversation with the OpenHands agent.
+    """Test starting a conversation with the Forge agent.
 
-    1. Navigate to OpenHands (assumes GitHub token is already configured)
-    2. Select the OpenHands repository
+    1. Navigate to Forge (assumes GitHub token is already configured)
+    2. Select the Forge repository
     3. Click Launch
     4. Wait for the agent to initialize
     5. Ask a question about the README.md file
@@ -607,7 +607,7 @@ def test_conversation_start(page: Page, base_url: str):
     expected_line_count = get_readme_line_count()
     print(f"Expected README.md line count: {expected_line_count}")
 
-    _navigate_to_openhands(page, base_url)
+    _navigate_to_Forge(page, base_url)
     _select_repository(page)
     _click_launch_button(page)
     _wait_for_conversation_interface(page)

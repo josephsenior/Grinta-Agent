@@ -6,7 +6,7 @@ from typing import Any
 import pandas as pd
 import toml
 from datasets import load_dataset
-import openhands.agenthub
+import forge.agenthub
 from evaluation.benchmarks.swe_bench.resource.mapping import get_instance_resource_factor
 from evaluation.utils.shared import (
     EvalException,
@@ -16,7 +16,7 @@ from evaluation.utils.shared import (
     codeact_user_response,
     get_default_sandbox_config_for_eval,
     get_metrics,
-    get_openhands_config_for_eval,
+    get_FORGE_config_for_eval,
     is_fatal_evaluation_error,
     make_metadata,
     prepare_dataset,
@@ -24,16 +24,16 @@ from evaluation.utils.shared import (
     run_evaluation,
     update_llm_config_for_completions_logging,
 )
-from openhands.controller.state.state import State
-from openhands.core.config import AgentConfig, OpenHandsConfig, get_evaluation_parser, get_llm_config_arg
-from openhands.core.logger import openhands_logger as logger
-from openhands.core.main import create_runtime, run_controller
-from openhands.events.action import CmdRunAction, MessageAction
-from openhands.events.observation import CmdOutputObservation, ErrorObservation
-from openhands.events.serialization.event import event_to_dict
-from openhands.runtime.base import Runtime
-from openhands.utils.async_utils import call_async_from_sync
-from openhands.utils.shutdown_listener import sleep_if_should_continue
+from forge.controller.state.state import State
+from forge.core.config import AgentConfig, ForgeConfig, get_evaluation_parser, get_llm_config_arg
+from forge.core.logger import forge_logger as logger
+from forge.core.main import create_runtime, run_controller
+from forge.events.action import CmdRunAction, MessageAction
+from forge.events.observation import CmdOutputObservation, ErrorObservation
+from forge.events.serialization.event import event_to_dict
+from forge.runtime.base import Runtime
+from forge.utils.async_utils import call_async_from_sync
+from forge.utils.shutdown_listener import sleep_if_should_continue
 
 USE_HINT_TEXT = os.environ.get("USE_HINT_TEXT", "false").lower() == "true"
 RUN_WITH_BROWSING = os.environ.get("RUN_WITH_BROWSING", "false").lower() == "true"
@@ -90,11 +90,11 @@ def get_instance_docker_image(instance_id: str, official_image: bool = False) ->
     return (DOCKER_IMAGE_PREFIX.rstrip("/") + "/" + image_name).lower()
 
 
-def get_config(instance: pd.Series, metadata: EvalMetadata) -> OpenHandsConfig:
+def get_config(instance: pd.Series, metadata: EvalMetadata) -> ForgeConfig:
     use_official_image = "verified" in metadata.dataset.lower() or "lite" in metadata.dataset.lower()
     base_container_image = get_instance_docker_image(instance["instance_id"], use_official_image)
     logger.info(
-        "Using instance container image: %s. Please make sure this image exists. Submit an issue on https://github.com/All-Hands-AI/OpenHands if you run into any issues.",
+        "Using instance container image: %s. Please make sure this image exists. Submit an issue on https://github.com/All-Hands-AI/Forge if you run into any issues.",
         base_container_image,
     )
     sandbox_config = get_default_sandbox_config_for_eval()
@@ -105,7 +105,7 @@ def get_config(instance: pd.Series, metadata: EvalMetadata) -> OpenHandsConfig:
     sandbox_config.remote_runtime_resource_factor = get_instance_resource_factor(
         dataset_name=metadata.dataset, instance_id=instance["instance_id"]
     )
-    config = get_openhands_config_for_eval(
+    config = get_FORGE_config_for_eval(
         metadata=metadata,
         enable_browser=RUN_WITH_BROWSING,
         runtime=os.environ.get("RUNTIME", "docker"),
@@ -341,7 +341,7 @@ def complete_runtime(runtime: Runtime, instance: pd.Series) -> dict[str, Any]:
 
 def _setup_logging_and_config(
     instance: pd.Series, metadata: EvalMetadata, reset_logger: bool, runtime_failure_count: int
-) -> tuple[OpenHandsConfig, Runtime]:
+) -> tuple[ForgeConfig, Runtime]:
     """Set up logging and configuration for the instance."""
     config = get_config(instance, metadata)
 
@@ -368,7 +368,7 @@ def _setup_logging_and_config(
 
 
 def _run_agent_controller(
-    config: OpenHandsConfig, instance: pd.Series, metadata: EvalMetadata, runtime: Runtime
+    config: ForgeConfig, instance: pd.Series, metadata: EvalMetadata, runtime: Runtime
 ) -> State:
     """Run the agent controller and return the state."""
     initialize_runtime(runtime, instance)
@@ -484,7 +484,7 @@ if __name__ == "__main__":
     if llm_config is None:
         raise ValueError(f"Could not find LLM config: --llm_config {args.llm_config}")
     details = {}
-    _agent_cls = openhands.agenthub.Agent.get_cls(args.agent_cls)
+    _agent_cls = forge.agenthub.Agent.get_cls(args.agent_cls)
     dataset_descrption = args.dataset.replace("/", "__") + "-" + args.split.replace("/", "__")
     metadata = make_metadata(
         llm_config,

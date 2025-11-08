@@ -50,7 +50,7 @@ function SlackSettingsScreen() {
             Slack Integration
           </h1>
           <p className="text-foreground-secondary mt-1">
-            Connect your Slack workspace to use OpenHands from Slack threads
+            Connect your Slack workspace to use Forge from Slack threads
           </p>
         </div>
 
@@ -77,7 +77,7 @@ function SlackSettingsScreen() {
               1
             </div>
             <div>
-              <p className="font-medium text-foreground">Install the OpenHands app to your Slack workspace</p>
+              <p className="font-medium text-foreground">Install the Forge app to your Slack workspace</p>
               <p>Click "Add to Slack" above to start the OAuth flow</p>
             </div>
           </div>
@@ -87,8 +87,8 @@ function SlackSettingsScreen() {
               2
             </div>
             <div>
-              <p className="font-medium text-foreground">Mention @OpenHands in any channel or thread</p>
-              <p>The bot will start a new OpenHands conversation</p>
+              <p className="font-medium text-foreground">Mention @Forge in any channel or thread</p>
+              <p>The bot will start a new Forge conversation</p>
             </div>
           </div>
           
@@ -219,7 +219,7 @@ function SlackSettingsScreen() {
         <ul className="space-y-2 text-sm text-foreground-secondary">
           <li className="flex items-start gap-2">
             <CheckCircle className="w-4 h-4 text-success-500 flex-shrink-0 mt-0.5" />
-            <span>Start conversations with @OpenHands mentions</span>
+            <span>Start conversations with @Forge mentions</span>
           </li>
           <li className="flex items-start gap-2">
             <CheckCircle className="w-4 h-4 text-success-500 flex-shrink-0 mt-0.5" />

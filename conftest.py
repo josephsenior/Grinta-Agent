@@ -85,14 +85,14 @@ def pytest_collection_modifyitems(config, items):
     # Apply conditional skips
     docker_ok = _docker_available()
     is_windows = sys.platform.startswith("win")
-    run_tty_tests = os.environ.get("OPENHANDS_RUN_TTY_TESTS", "0") == "1"
+    run_tty_tests = os.environ.get("FORGE_RUN_TTY_TESTS", "0") == "1"
     for item in items:
         if "docker" in item.keywords and (not docker_ok):
             item.add_marker(pytest.mark.skip(reason="docker not available"))
         if "windows" in item.keywords and (not is_windows):
             item.add_marker(pytest.mark.skip(reason="windows-specific test (not running on non-windows host)"))
         if "tty" in item.keywords and (not run_tty_tests):
-            item.add_marker(pytest.mark.skip(reason="tty tests disabled; set OPENHANDS_RUN_TTY_TESTS=1 to enable"))
+            item.add_marker(pytest.mark.skip(reason="tty tests disabled; set FORGE_RUN_TTY_TESTS=1 to enable"))
 
 
 @pytest.fixture(autouse=True)
@@ -100,7 +100,7 @@ def use_repo_root_cwd(tmp_path, monkeypatch):
     """Autouse fixture that sets CWD to repository root for the test run.
 
     It uses the location of this conftest.py as a hint: repo root is the parent
-    directory of the `OpenHands` package directory. This is intentionally
+    directory of the `Forge` package directory. This is intentionally
     conservative and only changes cwd for the duration of each test.
     """
     repo_root = pathlib.Path(__file__).resolve().parent

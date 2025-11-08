@@ -1,9 +1,9 @@
 import hashlib
 from evaluation.integration_tests.tests.base import BaseIntegrationTest, TestResult
-from openhands.events.action import AgentFinishAction, FileWriteAction, MessageAction
-from openhands.events.event import Event
-from openhands.events.observation import AgentDelegateObservation
-from openhands.runtime.base import Runtime
+from forge.events.action import AgentFinishAction, FileWriteAction, MessageAction
+from forge.events.event import Event
+from forge.events.observation import AgentDelegateObservation
+from forge.runtime.base import Runtime
 
 
 class Test(BaseIntegrationTest):
@@ -12,7 +12,7 @@ class Test(BaseIntegrationTest):
 
     @classmethod
     def initialize_runtime(cls, runtime: Runtime) -> None:
-        from openhands.core.logger import openhands_logger as logger
+        from forge.core.logger import forge_logger as logger
 
         action = FileWriteAction(
             path="/workspace/python_script.py",
@@ -24,7 +24,7 @@ class Test(BaseIntegrationTest):
 
     @classmethod
     def verify_result(cls, runtime: Runtime, histories: list[Event]) -> TestResult:
-        from openhands.core.logger import openhands_logger as logger
+        from forge.core.logger import forge_logger as logger
 
         message_actions = [
             event

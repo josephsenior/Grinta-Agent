@@ -1,8 +1,8 @@
 from unittest.mock import patch
 import pytest
 from pydantic import SecretStr
-from openhands.integrations.bitbucket.bitbucket_service import BitBucketService
-from openhands.integrations.service_types import Branch, PaginatedBranchesResponse
+from forge.integrations.bitbucket.bitbucket_service import BitBucketService
+from forge.integrations.service_types import Branch, PaginatedBranchesResponse
 
 
 @pytest.mark.asyncio

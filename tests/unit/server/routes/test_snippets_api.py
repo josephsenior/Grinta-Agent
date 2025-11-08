@@ -6,14 +6,14 @@ import pytest
 from fastapi import Request
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
-from openhands.integrations.provider import ProviderToken, ProviderType
-from openhands.server.app import app
-from openhands.server.user_auth.user_auth import UserAuth
-from openhands.storage.data_models.user_secrets import UserSecrets
-from openhands.storage.memory import InMemoryFileStore
-from openhands.storage.secrets.secrets_store import SecretsStore
-from openhands.storage.settings.file_settings_store import FileSettingsStore
-from openhands.storage.settings.settings_store import SettingsStore
+from forge.integrations.provider import ProviderToken, ProviderType
+from forge.server.app import app
+from forge.server.user_auth.user_auth import UserAuth
+from forge.storage.data_models.user_secrets import UserSecrets
+from forge.storage.memory import InMemoryFileStore
+from forge.storage.secrets.secrets_store import SecretsStore
+from forge.storage.settings.file_settings_store import FileSettingsStore
+from forge.storage.settings.settings_store import SettingsStore
 
 
 class MockUserAuth(UserAuth):
@@ -58,15 +58,15 @@ def test_client(tmp_path):
     os.makedirs(workspace_dir, exist_ok=True)
     
     with patch.dict(os.environ, {"SESSION_API_KEY": ""}, clear=False), patch(
-        "openhands.server.dependencies._SESSION_API_KEY", None
+        "forge.server.dependencies._SESSION_API_KEY", None
     ), patch(
-        "openhands.server.user_auth.user_auth.UserAuth.get_instance",
+        "forge.server.user_auth.user_auth.UserAuth.get_instance",
         return_value=MockUserAuth(),
     ), patch(
-        "openhands.storage.settings.file_settings_store.FileSettingsStore.get_instance",
+        "forge.storage.settings.file_settings_store.FileSettingsStore.get_instance",
         AsyncMock(return_value=FileSettingsStore(InMemoryFileStore())),
     ), patch(
-        "openhands.core.config.AppConfig.workspace_base", workspace_dir
+        "forge.core.config.AppConfig.workspace_base", workspace_dir
     ):
         yield TestClient(app)
 

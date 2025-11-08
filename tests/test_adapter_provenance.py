@@ -1,10 +1,10 @@
-from openhands.core.config import OpenHandsConfig
-from openhands.metasop.models import Artifact, SopStep
-from openhands.metasop.orchestrator import MetaSOPOrchestrator
+from forge.core.config import ForgeConfig
+from forge.metasop.models import Artifact, SopStep
+from forge.metasop.orchestrator import MetaSOPOrchestrator
 
 
 def _make_orch():
-    cfg = OpenHandsConfig()
+    cfg = ForgeConfig()
     return MetaSOPOrchestrator("example_sop", config=cfg)
 
 

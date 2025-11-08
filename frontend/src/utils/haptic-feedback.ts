@@ -43,13 +43,14 @@ export function triggerHaptic(style: HapticStyle = "light"): void {
  * @param hapticStyle - Type of haptic feedback
  * @returns Enhanced click handler with haptic feedback
  */
-export function withHaptic<T extends (...args: any[]) => any>(
+export function withHaptic<T extends (...args: unknown[]) => unknown>(
   handler: T,
   hapticStyle: HapticStyle = "light",
 ): T {
-  return ((...args: any[]) => {
+  return ((...args: Parameters<T>) => {
     triggerHaptic(hapticStyle);
-    return handler(...args);
+    // forward args to the original handler and return its value
+    return handler(...(args as unknown as Parameters<T>));
   }) as T;
 }
 

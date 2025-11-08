@@ -355,9 +355,9 @@ critical = 0.2
 
 ### **Python API**
 ```python
-from openhands.prompt_optimization.realtime import RealTimeOptimizationSystem
-from openhands.prompt_optimization.advanced import AdvancedStrategyManager
-from openhands.prompt_optimization.optimizer import PromptOptimizer
+from forge.prompt_optimization.realtime import RealTimeOptimizationSystem
+from forge.prompt_optimization.advanced import AdvancedStrategyManager
+from forge.prompt_optimization.optimizer import PromptOptimizer
 
 # Initialize components
 strategy_manager = AdvancedStrategyManager()
@@ -510,7 +510,7 @@ rt_system.clear_alert("alert_id")
 
 ### **Multi-Objective Optimization**
 ```python
-from openhands.prompt_optimization.advanced import MultiObjectiveOptimizer, StrategyType
+from forge.prompt_optimization.advanced import MultiObjectiveOptimizer, StrategyType
 
 # Initialize multi-objective optimizer
 optimizer = MultiObjectiveOptimizer(StrategyType.BALANCED)
@@ -529,7 +529,7 @@ print(f"Objectives: {objectives}")
 
 ### **Context-Aware Optimization**
 ```python
-from openhands.prompt_optimization.advanced import ContextAwareOptimizer
+from forge.prompt_optimization.advanced import ContextAwareOptimizer
 
 # Initialize context-aware optimizer
 context_optimizer = ContextAwareOptimizer()
@@ -547,7 +547,7 @@ print(f"Selected strategy: {strategy}")
 
 ### **Hierarchical Optimization**
 ```python
-from openhands.prompt_optimization.advanced import HierarchicalOptimizer
+from forge.prompt_optimization.advanced import HierarchicalOptimizer
 
 # Initialize hierarchical optimizer
 hierarchical_optimizer = HierarchicalOptimizer()
@@ -693,7 +693,7 @@ Get swap history for a prompt or all prompts.
 ### **Example 1: Basic Real-Time Optimization**
 ```python
 import asyncio
-from openhands.prompt_optimization.realtime import RealTimeOptimizationSystem
+from forge.prompt_optimization.realtime import RealTimeOptimizationSystem
 
 async def main():
     # Initialize system

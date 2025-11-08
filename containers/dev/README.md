@@ -12,11 +12,11 @@ cd ./containers/dev
 ./dev.sh
 ```
 
-It could take some time if you are running for the first time as Docker will pull all the tools required for building OpenHands. The next time you run again, it should be instant.
+It could take some time if you are running for the first time as Docker will pull all the tools required for building Forge. The next time you run again, it should be instant.
 
 ## Build and run
 
-If everything goes well, you should be inside a container after Docker finishes building the `openhands:dev` image similar to the following:
+If everything goes well, you should be inside a container after Docker finishes building the `Forge:dev` image similar to the following:
 
 ```bash
 Build and run in Docker ...
@@ -42,7 +42,7 @@ The following are also mapped as readonly from your host:
 
 Alternatively, if you use VSCode, you could also [attach to the running container](https://code.visualstudio.com/docs/devcontainers/attach-container).
 
-See details for [developing in docker](https://code.visualstudio.com/docs/devcontainers/containers) or simply ask `OpenHands` ;-)
+See details for [developing in docker](https://code.visualstudio.com/docs/devcontainers/containers) or simply ask `Forge` ;-)
 
 ## Rebuild dev image
 

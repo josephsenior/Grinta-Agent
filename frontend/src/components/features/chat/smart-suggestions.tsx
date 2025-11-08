@@ -19,8 +19,8 @@ import {
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { cn } from "#/utils/utils";
-import { OpenHandsEvent } from "#/types/core/base";
-import { isOpenHandsAction } from "#/types/core/guards";
+import { ForgeEvent } from "#/types/core/base";
+import { isForgeAction } from "#/types/core/guards";
 
 interface Suggestion {
   id: string;
@@ -39,7 +39,7 @@ interface SmartSuggestionsProps {
     recentTopics?: string[];
   };
   className?: string;
-  lastEvent?: OpenHandsEvent; // For context-aware suggestions (bolt.diy style)
+  lastEvent?: ForgeEvent; // For context-aware suggestions (bolt.diy style)
 }
 
 const GENERAL_SUGGESTIONS: Suggestion[] = [
@@ -153,8 +153,8 @@ const EMPTY_STATE_SUGGESTIONS: Suggestion[] = [
 ];
 
 // Context-aware suggestions based on last agent action (bolt.diy inspired)
-const getContextAwareSuggestions = (lastEvent?: OpenHandsEvent): Suggestion[] => {
-  if (!lastEvent || !isOpenHandsAction(lastEvent)) {
+const getContextAwareSuggestions = (lastEvent?: ForgeEvent): Suggestion[] => {
+  if (!lastEvent || !isForgeAction(lastEvent)) {
     return [];
   }
 

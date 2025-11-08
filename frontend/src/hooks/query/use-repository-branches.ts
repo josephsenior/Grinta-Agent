@@ -1,5 +1,5 @@
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { Branch, PaginatedBranchesResponse } from "#/types/git";
 
 export const useRepositoryBranches = (repository: string | null) =>
@@ -9,7 +9,7 @@ export const useRepositoryBranches = (repository: string | null) =>
       if (!repository) {
         return [];
       }
-      const response = await OpenHands.getRepositoryBranches(repository);
+      const response = await Forge.getRepositoryBranches(repository);
       // Ensure we return an array even if the response is malformed
       return Array.isArray(response.branches) ? response.branches : [];
     },
@@ -33,7 +33,7 @@ export const useRepositoryBranchesPaginated = (
           total_count: 0,
         };
       }
-      return OpenHands.getRepositoryBranches(
+      return Forge.getRepositoryBranches(
         repository,
         pageParam as number,
         perPage,

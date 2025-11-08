@@ -35,6 +35,7 @@ Forge is an AI-powered development platform that helps developers build software
 ## Development
 
 - [Development Guide](development.md) - Setting up for contributors
+- [Code Quality](CODE_QUALITY.md) - ⭐ Code quality metrics and refactoring guide
 - [Contributing](contributing.md) - How to contribute
 - [Testing](testing.md) - Running and writing tests
 - [Security](security.md) - Security considerations

@@ -7,8 +7,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 import pytest
-from openhands.runtime.utils import git_changes, git_diff, git_handler
-from openhands.runtime.utils.git_handler import CommandResult, GitHandler
+from forge.runtime.utils import git_changes, git_diff, git_handler
+from forge.runtime.utils.git_handler import CommandResult, GitHandler
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Windows is not supported")
@@ -210,7 +210,7 @@ class TestGitHandler(unittest.TestCase):
 
     def test_get_git_changes_fallback(self):
         """Test that get_git_changes falls back to creating a script file when needed."""
-        with patch("openhands.runtime.utils.git_handler.GIT_CHANGES_CMD", "non-existant-command"):
+        with patch("forge.runtime.utils.git_handler.GIT_CHANGES_CMD", "non-existant-command"):
             self.git_handler.git_changes_cmd = git_handler.GIT_CHANGES_CMD
             changes = self.git_handler.get_git_changes()
             expected_changes = [
@@ -228,7 +228,7 @@ class TestGitHandler(unittest.TestCase):
 
     def test_get_git_diff_fallback(self):
         """Test that get_git_diff delegates to the git_diff module."""
-        with patch("openhands.runtime.utils.git_handler.GIT_DIFF_CMD", "non-existant-command"):
+        with patch("forge.runtime.utils.git_handler.GIT_DIFF_CMD", "non-existant-command"):
             self.git_handler.git_diff_cmd = git_handler.GIT_DIFF_CMD
             diff = self.git_handler.get_git_diff("unchanged.txt")
             expected_diff = {

@@ -1,4 +1,4 @@
-# Multi-swe-bench Evaluation with OpenHands
+# Multi-swe-bench Evaluation with Forge
 
 ## LLM Setup
 
@@ -29,7 +29,7 @@ Script variable explanation:
 
 - `models`, e.g. `llm.eval_gpt4_1106_preview`, is the config group name for your
   LLM settings, as defined in your `config.toml`.
-- `git-version`, e.g. `HEAD`, is the git commit hash of the OpenHands version you would
+- `git-version`, e.g. `HEAD`, is the git commit hash of the Forge version you would
   like to evaluate. It could also be a release tag like `0.6.2`.
 - `agent`, e.g. `CodeActAgent`, is the name of the agent for benchmarks, defaulting to `CodeActAgent`.
 - `eval_limit`, e.g. `10`, limits the evaluation to the first `eval_limit` instances. By

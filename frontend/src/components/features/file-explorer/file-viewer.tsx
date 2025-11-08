@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { 
-  X, 
-  Copy, 
-  Download, 
-  Edit3, 
-  Save, 
+import {
+  X,
+  Copy,
+  Download,
+  Edit3,
+  Save,
   Eye,
   EyeOff,
   Maximize2,
   Minimize2,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
@@ -28,69 +28,191 @@ interface FileViewerProps {
   maxHeight?: string;
 }
 
-// Detect file language for syntax highlighting
-const getLanguageFromPath = (filePath: string): string => {
-  const ext = filePath.split('.').pop()?.toLowerCase();
-  
-  const languageMap: Record<string, string> = {
-    'js': 'javascript',
-    'jsx': 'javascript',
-    'ts': 'typescript',
-    'tsx': 'typescript',
-    'py': 'python',
-    'java': 'java',
-    'cpp': 'cpp',
-    'c': 'c',
-    'cs': 'csharp',
-    'php': 'php',
-    'rb': 'ruby',
-    'go': 'go',
-    'rs': 'rust',
-    'swift': 'swift',
-    'kt': 'kotlin',
-    'scala': 'scala',
-    'html': 'html',
-    'css': 'css',
-    'scss': 'scss',
-    'sass': 'sass',
-    'less': 'less',
-    'json': 'json',
-    'xml': 'xml',
-    'yaml': 'yaml',
-    'yml': 'yaml',
-    'toml': 'toml',
-    'ini': 'ini',
-    'env': 'bash',
-    'sh': 'bash',
-    'bash': 'bash',
-    'zsh': 'bash',
-    'fish': 'bash',
-    'ps1': 'powershell',
-    'bat': 'batch',
-    'cmd': 'batch',
-    'md': 'markdown',
-    'txt': 'plaintext',
-    'sql': 'sql',
-    'dockerfile': 'dockerfile',
-    'gitignore': 'gitignore',
-    'gitattributes': 'gitattributes',
-  };
-  
-  return languageMap[ext || ''] || 'plaintext';
+const LANGUAGE_MAP: Record<string, string> = {
+  js: "javascript",
+  jsx: "javascript",
+  ts: "typescript",
+  tsx: "typescript",
+  py: "python",
+  java: "java",
+  cpp: "cpp",
+  c: "c",
+  cs: "csharp",
+  php: "php",
+  rb: "ruby",
+  go: "go",
+  rs: "rust",
+  swift: "swift",
+  kt: "kotlin",
+  scala: "scala",
+  html: "html",
+  css: "css",
+  scss: "scss",
+  sass: "sass",
+  less: "less",
+  json: "json",
+  xml: "xml",
+  yaml: "yaml",
+  yml: "yaml",
+  toml: "toml",
+  ini: "ini",
+  env: "bash",
+  sh: "bash",
+  bash: "bash",
+  zsh: "bash",
+  fish: "bash",
+  ps1: "powershell",
+  bat: "batch",
+  cmd: "batch",
+  md: "markdown",
+  txt: "plaintext",
+  sql: "sql",
+  dockerfile: "dockerfile",
+  gitignore: "gitignore",
+  gitattributes: "gitattributes",
 };
 
-// Check if file is binary (image, video, audio, etc.)
+const BINARY_EXTENSIONS = new Set([
+  "jpg",
+  "jpeg",
+  "png",
+  "gif",
+  "svg",
+  "webp",
+  "ico",
+  "bmp",
+  "tiff",
+  "mp4",
+  "avi",
+  "mov",
+  "wmv",
+  "flv",
+  "webm",
+  "mkv",
+  "mpg",
+  "mpeg",
+  "mp3",
+  "wav",
+  "flac",
+  "aac",
+  "ogg",
+  "wma",
+  "pdf",
+  "doc",
+  "docx",
+  "xls",
+  "xlsx",
+  "ppt",
+  "pptx",
+  "zip",
+  "rar",
+  "7z",
+  "tar",
+  "gz",
+  "bz2",
+  "exe",
+  "dll",
+  "so",
+  "dylib",
+  "bin",
+]);
+
+const getFileExtension = (filePath: string) =>
+  filePath.split(".").pop()?.toLowerCase() ?? "";
+
+const getLanguageFromPath = (filePath: string): string => {
+  const ext = getFileExtension(filePath);
+  return LANGUAGE_MAP[ext] ?? "plaintext";
+};
+
 const isBinaryFile = (filePath: string): boolean => {
-  const ext = filePath.split('.').pop()?.toLowerCase();
-  const binaryExtensions = [
-    'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'ico', 'bmp', 'tiff',
-    'mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv', 'mpg', 'mpeg',
-    'mp3', 'wav', 'flac', 'aac', 'ogg', 'wma',
-    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
-    'zip', 'rar', '7z', 'tar', 'gz', 'bz2',
-    'exe', 'dll', 'so', 'dylib', 'bin'
-  ];
-  return binaryExtensions.includes(ext || '');
+  const ext = getFileExtension(filePath);
+  return BINARY_EXTENSIONS.has(ext);
+};
+
+const renderBinaryPlaceholder = () => (
+  <div className="flex items-center justify-center h-full p-8">
+    <div className="text-center">
+      <EyeOff className="w-12 h-12 text-text-secondary mx-auto mb-3 opacity-50" />
+      <p className="text-text-secondary">Binary file - cannot display content</p>
+      <p className="text-xs text-text-tertiary mt-1">Use download to access this file</p>
+    </div>
+  </div>
+);
+
+const renderLoadingSpinner = () => (
+  <div className="flex items-center justify-center h-full">
+    <RefreshCw className="w-5 h-5 animate-spin text-text-secondary" />
+  </div>
+);
+
+const renderSkeletonContainer = (className?: string) => (
+  <div
+    className={cn(
+      "flex flex-col h-full bg-background-primary border border-border rounded-lg overflow-hidden",
+      className,
+    )}
+  >
+    <div className="flex items-center justify-center h-32">
+      <div className="text-text-secondary">Loading...</div>
+    </div>
+  </div>
+);
+
+const renderMonaco = ({
+  value,
+  language,
+}: {
+  value: string;
+  language: string;
+}) => (
+  <LazyMonaco
+    value={value}
+    language={language}
+    height="100%"
+    options={{
+      readOnly: true,
+      minimap: { enabled: false },
+      scrollBeyondLastLine: false,
+      fontSize: 13,
+      lineNumbers: "on",
+      glyphMargin: false,
+      folding: true,
+      lineDecorationsWidth: 0,
+      lineNumbersMinChars: 3,
+      renderLineHighlight: "none",
+      scrollbar: {
+        vertical: "auto",
+        horizontal: "auto",
+        useShadows: false,
+      },
+      padding: { top: 12, bottom: 12 },
+    }}
+  />
+);
+
+const getViewerState = ({
+  isLoading,
+  isBinary,
+  editing,
+}: {
+  isLoading: boolean;
+  isBinary: boolean;
+  editing: boolean;
+}) => {
+  if (isLoading) {
+    return "loading" as const;
+  }
+
+  if (isBinary) {
+    return "binary" as const;
+  }
+
+  if (editing) {
+    return "editing" as const;
+  }
+
+  return "preview" as const;
 };
 
 export function FileViewer({
@@ -100,7 +222,7 @@ export function FileViewer({
   onFileEdit,
   className,
   editable = false,
-  maxHeight = "400px"
+  maxHeight = "400px",
 }: FileViewerProps) {
   const [content, setContent] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -114,7 +236,7 @@ export function FileViewer({
   useEffect(() => {
     setIsClient(true);
   }, []);
-  
+
   const { getFileContent } = useFileOperations({ conversationId });
 
   // Load file content when filePath changes
@@ -133,7 +255,7 @@ export function FileViewer({
           setEditContent(fileContent);
         }
       } catch (error) {
-        console.error('Failed to load file:', error);
+        console.error("Failed to load file:", error);
         setContent("");
       } finally {
         setLoading(false);
@@ -150,7 +272,7 @@ export function FileViewer({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to copy:', error);
+      console.error("Failed to copy:", error);
     }
   };
 
@@ -172,12 +294,12 @@ export function FileViewer({
   // Handle download
   const handleDownload = () => {
     if (!content) return;
-    
-    const blob = new Blob([content], { type: 'text/plain' });
+
+    const blob = new Blob([content], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = filePath?.split('/').pop() || 'file';
+    a.download = filePath?.split("/").pop() || "file";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -190,28 +312,50 @@ export function FileViewer({
 
   // Don't render on server side to prevent hydration issues
   if (!isClient) {
-    return (
-      <div className={cn(
-        "flex flex-col h-full bg-background-primary border border-border rounded-lg overflow-hidden",
-        className
-      )}>
-        <div className="flex items-center justify-center h-32">
-          <div className="text-text-secondary">Loading...</div>
-        </div>
-      </div>
-    );
+    return renderSkeletonContainer(className);
   }
 
   const language = getLanguageFromPath(filePath);
   const isBinary = isBinaryFile(filePath);
-  const fileName = filePath.split('/').pop() || filePath;
+  const fileName = filePath.split("/").pop() || filePath;
+  const viewerState = getViewerState({ isLoading: loading, isBinary, editing });
+  const toggleFullscreen = () => setIsFullscreen(prev => !prev);
+
+  const renderContent = () => {
+    switch (viewerState) {
+      case "loading":
+        return renderLoadingSpinner();
+      case "binary":
+        return renderBinaryPlaceholder();
+      case "editing":
+        return (
+          <div className="h-full flex flex-col">
+            <div className="flex-1 p-4">
+              <Textarea
+                value={editContent}
+                onChange={event => setEditContent(event.target.value)}
+                className="h-full resize-none font-mono text-sm"
+                placeholder="Edit file content..."
+              />
+            </div>
+          </div>
+        );
+      case "preview":
+        return <div className="h-full">{renderMonaco({ value: content, language })}</div>;
+      default:
+        return null;
+    }
+  };
 
   return (
-    <div className={cn(
-      "flex flex-col bg-background-primary border border-border rounded-lg overflow-hidden",
-      isFullscreen ? "fixed inset-4 z-50" : "",
-      className
-    )}>
+    <div
+      className={cn(
+        "flex flex-col bg-background-primary border border-border rounded-lg overflow-hidden",
+        isFullscreen ? "fixed inset-4 z-50" : "",
+        className,
+      )}
+      style={isFullscreen ? undefined : { maxHeight }}
+    >
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-border bg-background-secondary">
         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -302,7 +446,7 @@ export function FileViewer({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsFullscreen(!isFullscreen)}
+            onClick={toggleFullscreen}
             className="h-7 w-7 p-0"
           >
             {isFullscreen ? (
@@ -328,56 +472,7 @@ export function FileViewer({
       
       {/* Content */}
       <div className="flex-1 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <RefreshCw className="w-5 h-5 animate-spin text-text-secondary" />
-          </div>
-        ) : isBinary ? (
-          <div className="flex items-center justify-center h-full p-8">
-            <div className="text-center">
-              <EyeOff className="w-12 h-12 text-text-secondary mx-auto mb-3 opacity-50" />
-              <p className="text-text-secondary">Binary file - cannot display content</p>
-              <p className="text-xs text-text-tertiary mt-1">Use download to access this file</p>
-            </div>
-          </div>
-        ) : editing ? (
-          <div className="h-full flex flex-col">
-            <div className="flex-1 p-4">
-              <Textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="h-full resize-none font-mono text-sm"
-                placeholder="Edit file content..."
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="h-full">
-            <LazyMonaco
-              value={content}
-              language={language}
-              height="100%"
-              options={{
-                readOnly: true,
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                fontSize: 13,
-                lineNumbers: "on",
-                glyphMargin: false,
-                folding: true,
-                lineDecorationsWidth: 0,
-                lineNumbersMinChars: 3,
-                renderLineHighlight: "none",
-                scrollbar: {
-                  vertical: "auto",
-                  horizontal: "auto",
-                  useShadows: false,
-                },
-                padding: { top: 12, bottom: 12 },
-              }}
-            />
-          </div>
-        )}
+        {renderContent()}
       </div>
     </div>
   );

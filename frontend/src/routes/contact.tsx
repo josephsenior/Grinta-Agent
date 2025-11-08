@@ -33,10 +33,10 @@ export default function Contact(): React.ReactElement {
               {t("EMAIL", { defaultValue: "Email:" })}
             </p>
             <a
-              href="mailto:hello@codepilot.pro"
+              href="mailto:hello@Forge.pro"
               className="text-brand-500 hover:text-brand-400 transition-colors duration-200 font-medium"
             >
-              hello@codepilot.pro
+              hello@Forge.pro
             </a>
           </div>
           
@@ -53,10 +53,10 @@ export default function Contact(): React.ReactElement {
               {t("EMAIL", { defaultValue: "Email:" })}
             </p>
             <a
-              href="mailto:support@codepilot.pro"
+              href="mailto:support@Forge.pro"
               className="text-brand-500 hover:text-brand-400 transition-colors duration-200 font-medium"
             >
-              support@codepilot.pro
+              support@Forge.pro
             </a>
           </div>
           
@@ -73,10 +73,10 @@ export default function Contact(): React.ReactElement {
               {t("EMAIL", { defaultValue: "Email:" })}
             </p>
             <a
-              href="mailto:security@codepilot.pro"
+              href="mailto:security@Forge.pro"
               className="text-brand-500 hover:text-brand-400 transition-colors duration-200 font-medium"
             >
-              security@codepilot.pro
+              security@Forge.pro
             </a>
           </div>
         </div>

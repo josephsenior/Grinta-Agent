@@ -3,11 +3,11 @@ import json
 from dataclasses import dataclass
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-from openhands.core.config.openhands_config import OpenHandsConfig
-from openhands.server.conversation_manager.standalone_conversation_manager import StandaloneConversationManager
-from openhands.server.monitoring import MonitoringListener
-from openhands.server.session.conversation_init_data import ConversationInitData
-from openhands.storage.memory import InMemoryFileStore
+from forge.core.config.forge_config import ForgeConfig
+from forge.server.conversation_manager.standalone_conversation_manager import StandaloneConversationManager
+from forge.server.monitoring import MonitoringListener
+from forge.server.session.conversation_init_data import ConversationInitData
+from forge.storage.memory import InMemoryFileStore
 
 
 @dataclass
@@ -43,16 +43,16 @@ async def test_init_new_local_session():
     get_running_agent_loops_mock.return_value = set()
     is_agent_loop_running_mock = AsyncMock()
     is_agent_loop_running_mock.return_value = True
-    with patch("openhands.server.conversation_manager.standalone_conversation_manager.Session", mock_session), patch(
-        "openhands.server.conversation_manager.standalone_conversation_manager.StandaloneConversationManager.get_running_agent_loops",
+    with patch("forge.server.conversation_manager.standalone_conversation_manager.Session", mock_session), patch(
+        "forge.server.conversation_manager.standalone_conversation_manager.StandaloneConversationManager.get_running_agent_loops",
         get_running_agent_loops_mock,
     ):
         async with StandaloneConversationManager(
-            sio, OpenHandsConfig(), InMemoryFileStore(), MonitoringListener()
+            sio, ForgeConfig(), InMemoryFileStore(), MonitoringListener()
         ) as conversation_manager:
             await conversation_manager.maybe_start_agent_loop("new-session-id", ConversationInitData(), 1)
             with patch(
-                "openhands.server.conversation_manager.standalone_conversation_manager.StandaloneConversationManager.is_agent_loop_running",
+                "forge.server.conversation_manager.standalone_conversation_manager.StandaloneConversationManager.is_agent_loop_running",
                 is_agent_loop_running_mock,
             ):
                 await conversation_manager.join_conversation(
@@ -74,16 +74,16 @@ async def test_join_local_session():
     get_running_agent_loops_mock.return_value = set()
     is_agent_loop_running_mock = AsyncMock()
     is_agent_loop_running_mock.return_value = True
-    with patch("openhands.server.conversation_manager.standalone_conversation_manager.Session", mock_session), patch(
-        "openhands.server.conversation_manager.standalone_conversation_manager.StandaloneConversationManager.get_running_agent_loops",
+    with patch("forge.server.conversation_manager.standalone_conversation_manager.Session", mock_session), patch(
+        "forge.server.conversation_manager.standalone_conversation_manager.StandaloneConversationManager.get_running_agent_loops",
         get_running_agent_loops_mock,
     ):
         async with StandaloneConversationManager(
-            sio, OpenHandsConfig(), InMemoryFileStore(), MonitoringListener()
+            sio, ForgeConfig(), InMemoryFileStore(), MonitoringListener()
         ) as conversation_manager:
             await conversation_manager.maybe_start_agent_loop("new-session-id", ConversationInitData(), None)
             with patch(
-                "openhands.server.conversation_manager.standalone_conversation_manager.StandaloneConversationManager.is_agent_loop_running",
+                "forge.server.conversation_manager.standalone_conversation_manager.StandaloneConversationManager.is_agent_loop_running",
                 is_agent_loop_running_mock,
             ):
                 await conversation_manager.join_conversation(
@@ -106,12 +106,12 @@ async def test_add_to_local_event_stream():
     sio = get_mock_sio()
     get_running_agent_loops_mock = AsyncMock()
     get_running_agent_loops_mock.return_value = set()
-    with patch("openhands.server.conversation_manager.standalone_conversation_manager.Session", mock_session), patch(
-        "openhands.server.conversation_manager.standalone_conversation_manager.StandaloneConversationManager.get_running_agent_loops",
+    with patch("forge.server.conversation_manager.standalone_conversation_manager.Session", mock_session), patch(
+        "forge.server.conversation_manager.standalone_conversation_manager.StandaloneConversationManager.get_running_agent_loops",
         get_running_agent_loops_mock,
     ):
         async with StandaloneConversationManager(
-            sio, OpenHandsConfig(), InMemoryFileStore(), MonitoringListener()
+            sio, ForgeConfig(), InMemoryFileStore(), MonitoringListener()
         ) as conversation_manager:
             await conversation_manager.maybe_start_agent_loop("new-session-id", ConversationInitData(), 1)
             await conversation_manager.join_conversation("new-session-id", "connection-id", ConversationInitData(), 1)
@@ -124,7 +124,7 @@ async def test_cleanup_session_connections():
     sio = get_mock_sio()
     sio.disconnect = AsyncMock()
     async with StandaloneConversationManager(
-        sio, OpenHandsConfig(), InMemoryFileStore(), MonitoringListener()
+        sio, ForgeConfig(), InMemoryFileStore(), MonitoringListener()
     ) as conversation_manager:
         conversation_manager._local_connection_id_to_session_id.update(
             {"conn1": "session1", "conn2": "session1", "conn3": "session2", "conn4": "session2"}

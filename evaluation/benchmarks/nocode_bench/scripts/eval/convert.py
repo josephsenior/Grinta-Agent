@@ -1,7 +1,7 @@
 import argparse
 import json
 import logging
-from openhands.core.io import print_json_stdout
+from forge.core.io import print_json_stdout
 
 logger = logging.getLogger(__name__)
 

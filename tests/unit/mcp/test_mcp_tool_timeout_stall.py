@@ -5,19 +5,19 @@ import json
 from unittest import mock
 import pytest
 from mcp import McpError
-from openhands.controller.agent import Agent
-from openhands.controller.agent_controller import AgentController
-from openhands.core.schema import AgentState
-from openhands.events.action.mcp import MCPAction
-from openhands.events.action.message import SystemMessageAction
-from openhands.events.event import EventSource
-from openhands.events.observation.mcp import MCPObservation
-from openhands.events.stream import EventStream
-from openhands.mcp_client.client import MCPClient
-from openhands.mcp_client.tool import MCPClientTool
-from openhands.mcp_client.utils import call_tool_mcp
-from openhands.server.services.conversation_stats import ConversationStats
-from openhands.storage.memory import InMemoryFileStore
+from forge.controller.agent import Agent
+from forge.controller.agent_controller import AgentController
+from forge.core.schema import AgentState
+from forge.events.action.mcp import MCPAction
+from forge.events.action.message import SystemMessageAction
+from forge.events.event import EventSource
+from forge.events.observation.mcp import MCPObservation
+from forge.events.stream import EventStream
+from forge.mcp_client.client import MCPClient
+from forge.mcp_client.tool import MCPClientTool
+from forge.mcp_client.utils import call_tool_mcp
+from forge.server.services.conversation_stats import ConversationStats
+from forge.storage.memory import InMemoryFileStore
 
 
 class MockConfig:
@@ -149,7 +149,7 @@ async def test_mcp_tool_timeout_agent_continuation(conversation_stats):
             setattr(observation, "_cause", action.id)
             return observation
 
-    with mock.patch("openhands.mcp.utils.call_tool_mcp", side_effect=fixed_call_tool_mcp):
+    with mock.patch("forge.mcp_client.utils.call_tool_mcp", side_effect=fixed_call_tool_mcp):
         result = await fixed_call_tool_mcp([mock_client], mcp_action)
         assert isinstance(result, MCPObservation)
         content = json.loads(result.content)

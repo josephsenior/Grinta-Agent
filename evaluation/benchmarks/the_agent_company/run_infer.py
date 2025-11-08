@@ -6,22 +6,22 @@ import shutil
 import tempfile
 import yaml
 from browsing import pre_login
-from evaluation.utils.shared import get_default_sandbox_config_for_eval, get_openhands_config_for_eval
-from openhands.controller.state.state import State
-from openhands.core.config import (
+from evaluation.utils.shared import get_default_sandbox_config_for_eval, get_FORGE_config_for_eval
+from forge.controller.state.state import State
+from forge.core.config import (
     LLMConfig,
-    OpenHandsConfig,
+    ForgeConfig,
     get_agent_config_arg,
     get_evaluation_parser,
     get_llm_config_arg,
 )
-from openhands.core.config.agent_config import AgentConfig
-from openhands.core.logger import openhands_logger as logger
-from openhands.core.main import create_runtime, run_controller
-from openhands.events.action import CmdRunAction, MessageAction
-from openhands.events.observation import BrowserOutputObservation, CmdOutputObservation
-from openhands.runtime.base import Runtime
-from openhands.utils.async_utils import call_async_from_sync
+from forge.core.config.agent_config import AgentConfig
+from forge.core.logger import forge_logger as logger
+from forge.core.main import create_runtime, run_controller
+from forge.events.action import CmdRunAction, MessageAction
+from forge.events.observation import BrowserOutputObservation, CmdOutputObservation
+from forge.runtime.base import Runtime
+from forge.utils.async_utils import call_async_from_sync
 
 
 def get_config(
@@ -30,12 +30,12 @@ def get_config(
     mount_path_on_host: str,
     llm_config: LLMConfig,
     agent_config: AgentConfig | None,
-) -> OpenHandsConfig:
+) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = base_container_image
     sandbox_config.enable_auto_lint = True
     sandbox_config.use_host_network = True
-    config = get_openhands_config_for_eval(
+    config = get_FORGE_config_for_eval(
         max_iterations=100, sandbox_config=sandbox_config, workspace_mount_path=mount_path_on_host
     )
     config.save_trajectory_path = os.path.join(mount_path_on_host, f"traj_{task_short_name}.json")
@@ -91,7 +91,7 @@ def codeact_user_response(state: State) -> str:
 def run_solver(
     runtime: Runtime,
     task_name: str,
-    config: OpenHandsConfig,
+    config: ForgeConfig,
     dependencies: list[str],
     save_final_state: bool,
     state_dir: str,
@@ -191,7 +191,7 @@ if __name__ == "__main__":
         temp_dir = os.path.abspath(os.getenv("TMPDIR"))
     else:
         temp_dir = tempfile.mkdtemp()
-    config: OpenHandsConfig = get_config(
+    config: ForgeConfig = get_config(
         args.task_image_name, task_short_name, temp_dir, agent_llm_config, agent_config
     )
     runtime: Runtime = create_runtime(config)

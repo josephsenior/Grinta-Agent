@@ -49,7 +49,7 @@ export function Header() {
   };
 
   const handleOpenMessages = () => {
-    const event = new CustomEvent("openhands:open-conversation-panel");
+    const event = new CustomEvent("Forge:open-conversation-panel");
     window.dispatchEvent(event);
   };
 
@@ -58,13 +58,13 @@ export function Header() {
 
   const isPlaywrightRun = (() => {
     interface WindowWithE2E extends Window {
-      __OPENHANDS_PLAYWRIGHT?: boolean;
+      __Forge_PLAYWRIGHT?: boolean;
     }
     const win =
       typeof window !== "undefined"
         ? (window as unknown as WindowWithE2E)
         : undefined;
-    return win?.__OPENHANDS_PLAYWRIGHT === true;
+    return win?.__Forge_PLAYWRIGHT === true;
   })();
 
   return (
@@ -82,7 +82,7 @@ export function Header() {
           <div className="flex items-center gap-3 select-none min-w-0">
             <img
               src={logoImage}
-              alt="CodePilot Pro Logo"
+              alt="Forge Pro Logo"
               className="w-8 h-8 object-contain"
             />
             <span className="text-xl font-bold text-gradient-brand tracking-tight truncate">
@@ -172,7 +172,7 @@ export function Header() {
                 <button
                   type="button"
                   onClick={handleOpenAppSettings}
-                  aria-label="CodePilot Pro settings"
+                  aria-label="Forge Pro settings"
                   title="App Settings"
                   className="text-foreground-secondary hover:text-foreground transition-colors h-10 px-3 flex items-center gap-2 rounded-lg hover:bg-background-tertiary text-sm font-medium"
                 >

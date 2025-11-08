@@ -8,7 +8,7 @@ const STEPS = [
     icon: MessageSquare,
     title: "1. Describe What You Want",
     description:
-      "Just tell OpenHands what you want to build in plain English. No need to write detailed specs.",
+      "Just tell Forge what you want to build in plain English. No need to write detailed specs.",
     color: "text-violet-500",
     bgGradient: "from-brand-500 to-accent-500",
   },
@@ -24,7 +24,7 @@ const STEPS = [
     icon: Rocket,
     title: "3. Review & Deploy",
     description:
-      "Review the code, request changes, and deploy. OpenHands handles testing and deployment preparation.",
+      "Review the code, request changes, and deploy. Forge handles testing and deployment preparation.",
     color: "text-accent-emerald",
     bgGradient: "from-accent-emerald to-success-500",
   },

@@ -1,5 +1,5 @@
 // Service Worker for performance optimization
-const CACHE_NAME = 'openhands-v1';
+const CACHE_NAME = 'Forge-v1';
 const STATIC_ASSETS = [
   '/',
   // Add static assets you want precached here. Removed missing logo/manifest entries that caused 404s during dev.

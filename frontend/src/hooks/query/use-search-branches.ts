@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { Branch } from "#/types/git";
 import { Provider } from "#/types/settings";
 
@@ -23,7 +23,7 @@ export function useSearchBranches(
       if (!repository || !query) {
         return [];
       }
-      return OpenHands.searchRepositoryBranches(
+      return Forge.searchRepositoryBranches(
         repository,
         query,
         perPage,

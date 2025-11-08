@@ -61,7 +61,7 @@ export function FinalCTA() {
                 </a>
                 <a
                   ref={secondaryButtonRef}
-                  href="https://github.com/All-Hands-AI/OpenHands"
+                  href="https://github.com/All-Hands-AI/Forge"
                   target="_blank"
                   rel="noopener noreferrer"
                   onMouseEnter={() => soundEffects.hover()}

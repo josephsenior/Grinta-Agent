@@ -4,26 +4,26 @@ import shutil
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-from openhands.controller.agent import Agent
-from openhands.controller.agent_controller import AgentController
-from openhands.core.config import OpenHandsConfig
-from openhands.core.main import run_controller
-from openhands.core.schema.agent import AgentState
-from openhands.events.action.agent import RecallAction
-from openhands.events.action.message import MessageAction, SystemMessageAction
-from openhands.events.event import EventSource
-from openhands.events.observation.agent import RecallObservation, RecallType
-from openhands.events.serialization.observation import observation_from_dict
-from openhands.events.stream import EventStream
-from openhands.llm import LLM
-from openhands.llm.llm_registry import LLMRegistry
-from openhands.llm.metrics import Metrics
-from openhands.memory.memory import Memory
-from openhands.runtime.impl.action_execution.action_execution_client import ActionExecutionClient
-from openhands.server.services.conversation_stats import ConversationStats
-from openhands.server.session.agent_session import AgentSession
-from openhands.storage.memory import InMemoryFileStore
-from openhands.utils.prompt import ConversationInstructions, PromptManager, RepositoryInfo, RuntimeInfo
+from forge.controller.agent import Agent
+from forge.controller.agent_controller import AgentController
+from forge.core.config import ForgeConfig
+from forge.core.main import run_controller
+from forge.core.schema.agent import AgentState
+from forge.events.action.agent import RecallAction
+from forge.events.action.message import MessageAction, SystemMessageAction
+from forge.events.event import EventSource
+from forge.events.observation.agent import RecallObservation, RecallType
+from forge.events.serialization.observation import observation_from_dict
+from forge.events.stream import EventStream
+from forge.llm import LLM
+from forge.llm.llm_registry import LLMRegistry
+from forge.llm.metrics import Metrics
+from forge.memory.memory import Memory
+from forge.runtime.impl.action_execution.action_execution_client import ActionExecutionClient
+from forge.server.services.conversation_stats import ConversationStats
+from forge.server.session.agent_session import AgentSession
+from forge.storage.memory import InMemoryFileStore
+from forge.utils.prompt import ConversationInstructions, PromptManager, RepositoryInfo, RuntimeInfo
 
 
 @pytest.fixture
@@ -55,7 +55,7 @@ def memory(event_stream):
 
 @pytest.fixture
 def prompt_dir(tmp_path):
-    shutil.copytree("openhands/agenthub/codeact_agent/prompts", tmp_path, dirs_exist_ok=True)
+    shutil.copytree("Forge/agenthub/codeact_agent/prompts", tmp_path, dirs_exist_ok=True)
     return tmp_path
 
 
@@ -64,7 +64,7 @@ def mock_agent():
     agent = MagicMock(spec=Agent)
     agent.llm = MagicMock(spec=LLM)
     agent.llm.metrics = Metrics()
-    agent.llm.config = OpenHandsConfig().get_llm_config()
+    agent.llm.config = ForgeConfig().get_llm_config()
     system_message = SystemMessageAction(content="Test system message")
     system_message._source = EventSource.AGENT
     system_message._id = -1
@@ -80,10 +80,10 @@ async def test_memory_on_event_exception_handling(memory, event_stream, mock_age
     runtime = MagicMock(spec=ActionExecutionClient)
     runtime.event_stream = event_stream
     with patch.object(memory, "_on_workspace_context_recall", side_effect=Exception("Test error")), patch(
-        "openhands.core.main.create_agent", return_value=mock_agent
+        "forge.core.main.create_agent", return_value=mock_agent
     ):
         state = await run_controller(
-            config=OpenHandsConfig(),
+            config=ForgeConfig(),
             initial_user_action=MessageAction(content="Test message"),
             runtime=runtime,
             sid="test",
@@ -102,9 +102,9 @@ async def test_memory_on_workspace_context_recall_exception_handling(memory, eve
     runtime.event_stream = event_stream
     with patch.object(
         memory, "_find_microagent_knowledge", side_effect=Exception("Test error from _find_microagent_knowledge")
-    ), patch("openhands.core.main.create_agent", return_value=mock_agent):
+    ), patch("forge.core.main.create_agent", return_value=mock_agent):
         state = await run_controller(
-            config=OpenHandsConfig(),
+            config=ForgeConfig(),
             initial_user_action=MessageAction(content="Test message"),
             runtime=runtime,
             sid="test",
@@ -166,7 +166,7 @@ def test_memory_repository_info(prompt_dir, file_store):
     with open(os.path.join(prompt_dir, "micro", f"{repo_microagent_name}.md"), "w") as f:
         f.write(repo_microagent_content)
     test_microagents_dir = os.path.join(prompt_dir, "micro")
-    with patch("openhands.memory.memory.GLOBAL_MICROAGENTS_DIR", test_microagents_dir):
+    with patch("forge.memory.memory.GLOBAL_MICROAGENTS_DIR", test_microagents_dir):
         memory = Memory(event_stream=event_stream, sid="test-session")
         memory.set_repository_info("owner/repo", "/workspace/repo")
         user_message = MessageAction(content="First user message")
@@ -328,7 +328,7 @@ def test_memory_multiple_repo_microagents(prompt_dir, file_store):
     with open(os.path.join(prompt_dir, "micro", f"{repo_microagent2_name}.md"), "w") as f:
         f.write(repo_microagent2_content)
     test_microagents_dir = os.path.join(prompt_dir, "micro")
-    with patch("openhands.memory.memory.GLOBAL_MICROAGENTS_DIR", test_microagents_dir):
+    with patch("forge.memory.memory.GLOBAL_MICROAGENTS_DIR", test_microagents_dir):
         memory = Memory(event_stream=event_stream, sid="test-session")
         memory.set_repository_info("owner/repo", "/workspace/repo")
         user_message = MessageAction(content="First user message")
@@ -376,10 +376,10 @@ async def test_conversation_instructions_plumbed_to_memory(mock_agent, event_str
             self.test_initial_state = state
             super().set_initial_state(*args, state=state, **kwargs)
 
-    with patch("openhands.server.session.agent_session.AgentController", SpyAgentController):
+    with patch("forge.server.session.agent_session.AgentController", SpyAgentController):
         await session.start(
             runtime_name="test-runtime",
-            config=OpenHandsConfig(),
+            config=ForgeConfig(),
             agent=mock_agent,
             max_iterations=10,
             conversation_instructions="instructions for conversation",

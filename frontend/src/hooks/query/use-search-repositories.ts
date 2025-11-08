@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { Provider } from "#/types/settings";
 
 export function useSearchRepositories(
@@ -10,7 +10,7 @@ export function useSearchRepositories(
   return useQuery({
     queryKey: ["repositories", "search", query, selectedProvider, pageSize],
     queryFn: () =>
-      OpenHands.searchGitRepositories(
+      Forge.searchGitRepositories(
         query,
         pageSize,
         selectedProvider || undefined,

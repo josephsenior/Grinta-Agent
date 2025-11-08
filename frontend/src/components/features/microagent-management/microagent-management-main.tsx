@@ -12,41 +12,60 @@ export function MicroagentManagementMain() {
     (state: RootState) => state.microagentManagement,
   );
 
-  const { microagent, conversation } = selectedMicroagentItem ?? {};
+  return resolveMicroagentContent(selectedMicroagentItem);
+}
 
-  if (microagent) {
-    return <MicroagentManagementViewMicroagent />;
-  }
-
-  if (conversation) {
-    if (conversation.pr_number && conversation.pr_number.length > 0) {
-      return <MicroagentManagementReviewPr />;
-    }
-
-    const isConversationStarting =
-      conversation.status === "STARTING" ||
-      conversation.runtime_status === "STATUS$STARTING_RUNTIME";
-    const isConversationOpeningPr =
-      conversation.status === "RUNNING" &&
-      conversation.runtime_status === "STATUS$READY";
-
-    if (isConversationStarting || isConversationOpeningPr) {
-      return <MicroagentManagementOpeningPr />;
-    }
-
-    if (conversation.runtime_status === "STATUS$ERROR") {
-      return <MicroagentManagementError />;
-    }
-
-    if (
-      conversation.status === "STOPPED" ||
-      conversation.runtime_status === "STATUS$STOPPED"
-    ) {
-      return <MicroagentManagementConversationStopped />;
-    }
-
+const resolveMicroagentContent = (
+  selectedMicroagentItem: RootState["microagentManagement"]["selectedMicroagentItem"],
+) => {
+  if (!selectedMicroagentItem) {
     return <MicroagentManagementDefault />;
   }
 
+  if (selectedMicroagentItem.microagent) {
+    return <MicroagentManagementViewMicroagent />;
+  }
+
+  const conversation = selectedMicroagentItem.conversation;
+  if (!conversation) {
+    return <MicroagentManagementDefault />;
+  }
+
+  if (conversation.pr_number && conversation.pr_number.length > 0) {
+    return <MicroagentManagementReviewPr />;
+  }
+
+  if (isConversationOpeningPr(conversation)) {
+    return <MicroagentManagementOpeningPr />;
+  }
+
+  if (conversation.runtime_status === "STATUS$ERROR") {
+    return <MicroagentManagementError />;
+  }
+
+  if (isConversationStopped(conversation)) {
+    return <MicroagentManagementConversationStopped />;
+  }
+
   return <MicroagentManagementDefault />;
-}
+};
+
+const isConversationOpeningPr = (conversation: NonNullable<
+  RootState["microagentManagement"]["selectedMicroagentItem"]
+>["conversation"]) => {
+  const isStarting =
+    conversation.status === "STARTING" ||
+    conversation.runtime_status === "STATUS$STARTING_RUNTIME";
+
+  const isOpeningPr =
+    conversation.status === "RUNNING" &&
+    conversation.runtime_status === "STATUS$READY";
+
+  return isStarting || isOpeningPr;
+};
+
+const isConversationStopped = (conversation: NonNullable<
+  RootState["microagentManagement"]["selectedMicroagentItem"]
+>["conversation"]) =>
+  conversation.status === "STOPPED" ||
+  conversation.runtime_status === "STATUS$STOPPED";

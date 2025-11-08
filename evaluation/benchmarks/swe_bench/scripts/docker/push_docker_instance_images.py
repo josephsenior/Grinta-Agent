@@ -22,7 +22,7 @@ import argparse
 import docker
 from datasets import load_dataset
 from tqdm import tqdm
-from openhands.core.logger import openhands_logger as logger
+from forge.core.logger import forge_logger as logger
 
 logger.setLevel("ERROR")
 parser = argparse.ArgumentParser()

@@ -4,14 +4,14 @@ import { I18nKey } from "#/i18n/declaration";
 import logo from "#/assets/branding/logo1.png";
 import { ModalBackdrop } from "#/components/shared/modals/modal-backdrop";
 import { ModalBody } from "#/components/shared/modals/modal-body";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { BrandButton } from "../settings/brand-button";
 import { displayErrorToast } from "#/utils/custom-toast-handlers";
 
 export function SetupPaymentModal() {
   const { t } = useTranslation();
   const { mutate, isPending } = useMutation({
-    mutationFn: OpenHands.createBillingSessionResponse,
+    mutationFn: Forge.createBillingSessionResponse,
     onSuccess: (data) => {
       window.location.href = data;
     },
@@ -25,7 +25,7 @@ export function SetupPaymentModal() {
       <ModalBody className="border border-border">
         <img
           src={logo}
-          alt="CodePilot Pro Logo"
+          alt="Forge Pro Logo"
           className="h-12 w-auto select-none drop-shadow-[0_0_4px_rgba(255,200,80,0.35)]"
           draggable={false}
         />

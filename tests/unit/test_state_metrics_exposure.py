@@ -1,9 +1,9 @@
 import asyncio
 from unittest.mock import patch
 import pytest
-from openhands.core.config import OpenHandsConfig
-from openhands.events.action import MessageAction
-from openhands.llm.metrics import Metrics
+from forge.core.config import ForgeConfig
+from forge.events.action import MessageAction
+from forge.llm.metrics import Metrics
 
 
 class FakeEventStream:
@@ -75,9 +75,9 @@ def test_state_tracker_save_state_consolidates_metrics(tmp_path):
 
     Eval scripts should read from state.conversation_stats via evaluation.utils.shared.get_metrics.
     """
-    from openhands.controller.state.state_tracker import StateTracker
-    from openhands.server.services.conversation_stats import ConversationStats
-    from openhands.storage.memory import InMemoryFileStore
+    from forge.controller.state.state_tracker import StateTracker
+    from forge.server.services.conversation_stats import ConversationStats
+    from forge.storage.memory import InMemoryFileStore
 
     store = InMemoryFileStore({})
     conv_stats = ConversationStats(file_store=store, conversation_id="cid", user_id=None)
@@ -101,9 +101,9 @@ def test_state_tracker_save_state_consolidates_metrics(tmp_path):
 def test_run_controller_exposes_aggregated_metrics_in_state():
     """Ensure get_metrics(state) reads from ConversationStats when available."""
     from evaluation.utils.shared import get_metrics
-    from openhands.core.main import run_controller
+    from forge.core.main import run_controller
 
-    cfg = OpenHandsConfig()
+    cfg = ForgeConfig()
     cfg.file_store = "memory"
     fake_conv_stats = FakeConversationStats(cost=2.5)
 
@@ -148,16 +148,16 @@ def test_run_controller_exposes_aggregated_metrics_in_state():
         return (FakeController(state), None)
 
     with patch(
-        "openhands.core.main.create_registry_and_conversation_stats",
+        "forge.core.main.create_registry_and_conversation_stats",
         side_effect=fake_create_registry_and_conversation_stats,
-    ), patch("openhands.core.main.create_agent", side_effect=fake_create_agent), patch(
-        "openhands.core.main.create_runtime", side_effect=fake_create_runtime
+    ), patch("forge.core.main.create_agent", side_effect=fake_create_agent), patch(
+        "forge.core.main.create_runtime", side_effect=fake_create_runtime
     ), patch(
-        "openhands.core.main.create_memory", side_effect=fake_create_memory
+        "forge.core.main.create_memory", side_effect=fake_create_memory
     ), patch(
-        "openhands.core.main.create_controller", side_effect=fake_create_controller
+        "forge.core.main.create_controller", side_effect=fake_create_controller
     ), patch(
-        "openhands.core.main.run_agent_until_done", side_effect=lambda *args, **kwargs: None
+        "forge.core.main.run_agent_until_done", side_effect=lambda *args, **kwargs: None
     ):
         state = asyncio.run(
             run_controller(

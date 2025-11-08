@@ -1,9 +1,9 @@
-import type { OpenHandsEvent } from "#/types/core/base";
+import type { ForgeEvent } from "#/types/core/base";
 import {
   isUserMessage,
   isErrorObservation,
   isAssistantMessage,
-  isOpenHandsObservation,
+  isForgeObservation,
   isFinishAction,
   isRejectObservation,
   isMcpObservation,
@@ -11,7 +11,7 @@ import {
   isFileWriteAction,
   isFileEditAction,
   isStreamingChunkAction,
-  isOpenHandsAction,
+  isForgeAction,
 } from "#/types/core/guards";
 
 // Detect important commands that should be shown even when technical details are hidden
@@ -41,72 +41,48 @@ const hasThoughtProperty = (
   return "thought" in args && typeof args.thought === "string";
 };
 
-/**
- * Determines if an event should be rendered based on technical details visibility
- */
+type RenderPredicate = (event: ForgeEvent) => boolean;
+
+const ALWAYS_RENDER_PREDICATES: RenderPredicate[] = [
+  (event) => isUserMessage(event) || isAssistantMessage(event),
+  (event) => isStreamingChunkAction(event),
+  (event) => isErrorObservation(event),
+  (event) => isFileWriteAction(event) || isFileEditAction(event),
+  eventHasImportantCommand,
+  eventContainsAgentThought,
+  (event) => isFinishAction(event),
+  (event) => isRejectObservation(event),
+  (event) => isMcpObservation(event) || isTaskTrackingObservation(event),
+];
+
 export function shouldRenderEvent(
-  event: OpenHandsEvent,
+  event: ForgeEvent,
   showTechnicalDetails: boolean,
 ): boolean {
-  // Show everything when technical details are enabled
   if (showTechnicalDetails) {
     return true;
   }
 
-  // Always show user and assistant messages
-  if (isUserMessage(event) || isAssistantMessage(event)) {
-    return true;
+  return ALWAYS_RENDER_PREDICATES.some((predicate) => predicate(event));
+}
+
+function eventHasImportantCommand(event: ForgeEvent): boolean {
+  if (!isForgeObservation(event)) {
+    return false;
   }
 
-  // Always show streaming chunks (real-time LLM responses)
-  if (isStreamingChunkAction(event)) {
-    return true;
+  if (event.observation !== "run") {
+    return false;
   }
 
-  // Always show errors
-  if (isErrorObservation(event)) {
-    return true;
+  return isImportantCommand(event.extras?.command);
+}
+
+function eventContainsAgentThought(event: ForgeEvent): boolean {
+  if (!isForgeAction(event)) {
+    return false;
   }
 
-  // Always show file write/edit actions (code artifacts)
-  if (isFileWriteAction(event) || isFileEditAction(event)) {
-    return true;
-  }
-
-  // Show important commands via terminal
-  if (
-    isOpenHandsObservation(event) &&
-    event.observation === "run" &&
-    isImportantCommand(event.extras?.command)
-  ) {
-    return true;
-  }
-
-  // Show agent thoughts
-  if (
-    isOpenHandsAction(event) &&
-    hasThoughtProperty(event.args) &&
-    event.action !== "think"
-  ) {
-    return true;
-  }
-
-  // Show finish actions
-  if (isFinishAction(event)) {
-    return true;
-  }
-
-  // Show reject observations
-  if (isRejectObservation(event)) {
-    return true;
-  }
-
-  // Show MCP and task tracking observations
-  if (isMcpObservation(event) || isTaskTrackingObservation(event)) {
-    return true;
-  }
-
-  // Hide everything else (verbose technical events)
-  return false;
+  return event.action !== "think" && hasThoughtProperty(event.args);
 }
 

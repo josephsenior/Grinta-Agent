@@ -4,20 +4,20 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import pytest
-from openhands.core.config import OpenHandsConfig, SandboxConfig
-from openhands.events import EventStream
-from openhands.integrations.service_types import ProviderType, Repository
-from openhands.llm.llm_registry import LLMRegistry
-from openhands.microagent.microagent import RepoMicroagent
-from openhands.runtime.base import Runtime
-from openhands.storage import get_file_store
+from forge.core.config import ForgeConfig, SandboxConfig
+from forge.events import EventStream
+from forge.integrations.service_types import ProviderType, Repository
+from forge.llm.llm_registry import LLMRegistry
+from forge.microagent.microagent import RepoMicroagent
+from forge.runtime.base import Runtime
+from forge.storage import get_file_store
 
 
 class MockRuntime(Runtime):
     """Mock runtime for testing."""
 
     def __init__(self, workspace_root: Path):
-        config = OpenHandsConfig()
+        config = ForgeConfig()
         config.workspace_mount_path_in_sandbox = str(workspace_root)
         config.sandbox = SandboxConfig()
         file_store = get_file_store("local", str(workspace_root))
@@ -41,13 +41,14 @@ class MockRuntime(Runtime):
 
     def run_action(self, action):
         """Mock run_action method."""
-        from openhands.events.observation import CmdOutputObservation
+        from forge.events.observation import CmdOutputObservation
 
-        return CmdOutputObservation(content="", exit_code=0)
+        command = getattr(action, "command", "")
+        return CmdOutputObservation(content="", exit_code=0, command=command)
 
     def read(self, action):
         """Mock read method."""
-        from openhands.events.observation import ErrorObservation
+        from forge.events.observation import ErrorObservation
 
         return ErrorObservation("File not found")
 
@@ -59,7 +60,7 @@ class MockRuntime(Runtime):
         for md_file in directory.rglob("*.md"):
             if md_file.name == "README.md":
                 continue
-            from openhands.microagent.types import MicroagentMetadata, MicroagentType
+            from forge.microagent.types import MicroagentMetadata, MicroagentType
 
             agent = RepoMicroagent(
                 name=f"mock_{
@@ -79,32 +80,32 @@ class MockRuntime(Runtime):
         pass
 
     def run(self, action):
-        from openhands.events.observation import CmdOutputObservation
+        from forge.events.observation import CmdOutputObservation
 
         return CmdOutputObservation(content="", exit_code=0)
 
     def run_ipython(self, action):
-        from openhands.events.observation import IPythonRunCellObservation
+        from forge.events.observation import IPythonRunCellObservation
 
         return IPythonRunCellObservation(content="", code="")
 
     def edit(self, action):
-        from openhands.events.observation import FileEditObservation
+        from forge.events.observation import FileEditObservation
 
         return FileEditObservation(content="", path="")
 
     def browse(self, action):
-        from openhands.events.observation import BrowserObservation
+        from forge.events.observation import BrowserObservation
 
         return BrowserObservation(content="", url="", screenshot="")
 
     def browse_interactive(self, action):
-        from openhands.events.observation import BrowserObservation
+        from forge.events.observation import BrowserObservation
 
         return BrowserObservation(content="", url="", screenshot="")
 
     def write(self, action):
-        from openhands.events.observation import FileWriteObservation
+        from forge.events.observation import FileWriteObservation
 
         return FileWriteObservation(content="", path="")
 
@@ -118,17 +119,17 @@ class MockRuntime(Runtime):
         return []
 
     def get_mcp_config(self, extra_stdio_servers=None):
-        from openhands.core.config.mcp_config import MCPConfig
+        from forge.core.config.mcp_config import MCPConfig
 
         return MCPConfig()
 
     def call_tool_mcp(self, action):
-        from openhands.events.observation import MCPObservation
+        from forge.events.observation import MCPObservation
 
         return MCPObservation(content="", tool="", result="")
 
 
-def create_test_microagents(base_dir: Path, config_dir_name: str = ".openhands"):
+def create_test_microagents(base_dir: Path, config_dir_name: str = ".Forge"):
     """Create test microagent files in the specified directory."""
     microagents_dir = base_dir / config_dir_name / "microagents"
     microagents_dir.mkdir(parents=True, exist_ok=True)
@@ -148,10 +149,10 @@ def test_is_gitlab_repository_github(temp_workspace):
     """Test that GitHub repositories are correctly identified as non-GitLab."""
     runtime = MockRuntime(temp_workspace)
     mock_repo = Repository(id="123", full_name="owner/repo", git_provider=ProviderType.GITHUB, is_public=True)
-    with patch("openhands.runtime.base.ProviderHandler") as mock_handler_class:
+    with patch("forge.runtime.base.ProviderHandler") as mock_handler_class:
         mock_handler = MagicMock()
         mock_handler_class.return_value = mock_handler
-        with patch("openhands.runtime.base.call_async_from_sync") as mock_async:
+        with patch("forge.runtime.base.call_async_from_sync") as mock_async:
             mock_async.return_value = mock_repo
             result = runtime._is_gitlab_repository("github.com/owner/repo")
             assert result is False
@@ -161,10 +162,10 @@ def test_is_gitlab_repository_gitlab(temp_workspace):
     """Test that GitLab repositories are correctly identified."""
     runtime = MockRuntime(temp_workspace)
     mock_repo = Repository(id="456", full_name="owner/repo", git_provider=ProviderType.GITLAB, is_public=True)
-    with patch("openhands.runtime.base.ProviderHandler") as mock_handler_class:
+    with patch("forge.runtime.base.ProviderHandler") as mock_handler_class:
         mock_handler = MagicMock()
         mock_handler_class.return_value = mock_handler
-        with patch("openhands.runtime.base.call_async_from_sync") as mock_async:
+        with patch("forge.runtime.base.call_async_from_sync") as mock_async:
             mock_async.return_value = mock_repo
             result = runtime._is_gitlab_repository("gitlab.com/owner/repo")
             assert result is True
@@ -173,17 +174,17 @@ def test_is_gitlab_repository_gitlab(temp_workspace):
 def test_is_gitlab_repository_exception(temp_workspace):
     """Test that exceptions in provider detection return False."""
     runtime = MockRuntime(temp_workspace)
-    with patch("openhands.runtime.base.ProviderHandler") as mock_handler_class:
+    with patch("forge.runtime.base.ProviderHandler") as mock_handler_class:
         mock_handler_class.side_effect = Exception("Provider error")
         result = runtime._is_gitlab_repository("unknown.com/owner/repo")
         assert result is False
 
 
 def test_get_microagents_from_org_or_user_github(temp_workspace):
-    """Test that GitHub repositories only try .openhands directory."""
+    """Test that GitHub repositories only try .Forge directory."""
     runtime = MockRuntime(temp_workspace)
     with patch.object(runtime, "_is_gitlab_repository", return_value=False):
-        with patch("openhands.runtime.base.call_async_from_sync") as mock_async:
+        with patch("forge.runtime.base.call_async_from_sync") as mock_async:
             mock_async.side_effect = Exception("Repository not found")
             result = runtime.get_microagents_from_org_or_user("github.com/owner/repo")
             assert len(result) == 0
@@ -191,48 +192,48 @@ def test_get_microagents_from_org_or_user_github(temp_workspace):
 
 
 def test_get_microagents_from_org_or_user_gitlab_success_with_config(temp_workspace):
-    """Test that GitLab repositories use openhands-config and succeed."""
+    """Test that GitLab repositories use Forge-config and succeed."""
     runtime = MockRuntime(temp_workspace)
-    org_dir = temp_workspace / "org_openhands_owner"
+    org_dir = temp_workspace / "org_FORGE_owner"
     create_test_microagents(org_dir, ".")
     with patch.object(runtime, "_is_gitlab_repository", return_value=True):
-        with patch("openhands.runtime.base.call_async_from_sync") as mock_async:
-            mock_async.return_value = "https://gitlab.com/owner/openhands-config.git"
+        with patch("forge.runtime.base.call_async_from_sync") as mock_async:
+            mock_async.return_value = "https://gitlab.com/owner/Forge-config.git"
             result = runtime.get_microagents_from_org_or_user("gitlab.com/owner/repo")
             assert len(result) >= 0
             assert mock_async.call_count == 1
 
 
 def test_get_microagents_from_org_or_user_gitlab_failure(temp_workspace):
-    """Test that GitLab repositories handle failure gracefully when openhands-config doesn't exist."""
+    """Test that GitLab repositories handle failure gracefully when Forge-config doesn't exist."""
     runtime = MockRuntime(temp_workspace)
     with patch.object(runtime, "_is_gitlab_repository", return_value=True):
-        with patch("openhands.runtime.base.call_async_from_sync") as mock_async:
-            mock_async.side_effect = Exception("openhands-config not found")
+        with patch("forge.runtime.base.call_async_from_sync") as mock_async:
+            mock_async.side_effect = Exception("Forge-config not found")
             result = runtime.get_microagents_from_org_or_user("gitlab.com/owner/repo")
             assert len(result) == 0
             assert mock_async.call_count == 1
 
 
-def test_get_microagents_from_selected_repo_gitlab_uses_openhands(temp_workspace):
-    """Test that GitLab repositories use .openhands directory for repository-specific microagents."""
+def test_get_microagents_from_selected_repo_gitlab_uses_Forge(temp_workspace):
+    """Test that GitLab repositories use .Forge directory for repository-specific microagents."""
     runtime = MockRuntime(temp_workspace)
     repo_dir = temp_workspace / "repo"
     repo_dir.mkdir()
-    create_test_microagents(repo_dir, ".openhands")
+    create_test_microagents(repo_dir, ".Forge")
     with patch.object(runtime, "_is_gitlab_repository", return_value=True):
         with patch.object(runtime, "get_microagents_from_org_or_user", return_value=[]):
             result = runtime.get_microagents_from_selected_repo("gitlab.com/owner/repo")
             assert isinstance(result, list)
 
 
-def test_get_microagents_from_selected_repo_github_only_openhands(temp_workspace):
-    """Test that GitHub repositories only check .openhands directory."""
+def test_get_microagents_from_selected_repo_github_only_Forge(temp_workspace):
+    """Test that GitHub repositories only check .Forge directory."""
     runtime = MockRuntime(temp_workspace)
     repo_dir = temp_workspace / "repo"
     repo_dir.mkdir()
-    create_test_microagents(repo_dir, "openhands-config")
-    create_test_microagents(repo_dir, ".openhands")
+    create_test_microagents(repo_dir, "Forge-config")
+    create_test_microagents(repo_dir, ".Forge")
     with patch.object(runtime, "_is_gitlab_repository", return_value=False):
         with patch.object(runtime, "get_microagents_from_org_or_user", return_value=[]):
             result = runtime.get_microagents_from_selected_repo("github.com/owner/repo")

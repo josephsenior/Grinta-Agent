@@ -1,10 +1,10 @@
 import asyncio
 import logging
-from openhands.core.config import OpenHandsConfig
-from openhands.llm.llm_registry import LLMRegistry
-from openhands.server.services.conversation_stats import ConversationStats
-from openhands.server.session.session import Session
-from openhands.storage.local import LocalFileStore
+from forge.core.config import ForgeConfig
+from forge.llm.llm_registry import LLMRegistry
+from forge.server.services.conversation_stats import ConversationStats
+from forge.server.session.session import Session
+from forge.storage.local import LocalFileStore
 
 
 class DummySIO:
@@ -15,7 +15,7 @@ class DummySIO:
 
 
 async def run_test():
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     llm_registry = LLMRegistry(config)
     fs = LocalFileStore("logs")
     stats = ConversationStats(fs, "test-sid", "user1")

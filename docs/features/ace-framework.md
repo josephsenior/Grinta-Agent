@@ -396,8 +396,8 @@ organization_strategy = "semantic_clustering"
 
 ### **Python API**
 ```python
-from openhands.metasop.ace import ACEFramework
-from openhands.metasop.ace.models import ContextPlaybook, Query
+from forge.metasop.ace import ACEFramework
+from forge.metasop.ace.models import ContextPlaybook, Query
 
 # Initialize ACE framework
 ace_framework = ACEFramework(
@@ -429,7 +429,7 @@ else:
 
 ### **MetaSOP Integration**
 ```python
-from openhands.metasop import MetaSOPOrchestrator
+from forge.metasop import MetaSOPOrchestrator
 
 # Initialize MetaSOP with ACE
 orchestrator = MetaSOPOrchestrator("feature_delivery")
@@ -451,7 +451,7 @@ print(f"Context updated: {result.ace_result.context_updated}")
 
 ### **CodeAct Integration**
 ```python
-from openhands.agenthub.codeact_agent import CodeActAgent
+from forge.agenthub.codeact_agent import CodeActAgent
 
 # Initialize CodeAct with ACE
 agent = CodeActAgent(
@@ -560,7 +560,7 @@ print(f"Quality improvement: {evolution_stats['quality_improvement']:.3f}")
 
 ### **Custom Insight Types**
 ```python
-from openhands.metasop.ace.models import Insight, InsightType
+from forge.metasop.ace.models import Insight, InsightType
 
 # Create custom insight type
 class CustomInsight(Insight):
@@ -666,8 +666,8 @@ Create playbook from dictionary.
 ### **Example 1: Basic ACE Usage**
 ```python
 import asyncio
-from openhands.metasop.ace import ACEFramework
-from openhands.metasop.ace.models import Query, ContextPlaybook
+from forge.metasop.ace import ACEFramework
+from forge.metasop.ace.models import Query, ContextPlaybook
 
 async def basic_ace_example():
     # Initialize ACE framework
@@ -744,8 +744,8 @@ async def advanced_context_example():
 ### **Example 3: Integration with MetaSOP**
 ```python
 async def metasop_integration_example():
-    from openhands.metasop import MetaSOPOrchestrator
-    from openhands.metasop.models import Task
+    from forge.metasop import MetaSOPOrchestrator
+    from forge.metasop.models import Task
     
     # Initialize MetaSOP with ACE
     orchestrator = MetaSOPOrchestrator("feature_delivery")

@@ -4,8 +4,8 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 
-from openhands.server.app import app
-from openhands.storage.data_models.slack_integration import SlackWorkspace, SlackUserLink
+from forge.server.app import app
+from forge.storage.data_models.slack_integration import SlackWorkspace, SlackUserLink
 
 
 class TestSlackIntegration:
@@ -32,7 +32,7 @@ class TestSlackIntegration:
 
     def test_install_endpoint_requires_client_id(self, test_client):
         """Test that install endpoint requires SLACK_CLIENT_ID."""
-        with patch("openhands.server.routes.slack.config") as mock_config:
+        with patch("forge.server.routes.slack.config") as mock_config:
             mock_config.SLACK_CLIENT_ID = None
             
             response = test_client.get("/api/slack/install?user_id=test-user")
@@ -42,8 +42,8 @@ class TestSlackIntegration:
 
     def test_install_endpoint_returns_oauth_url(self, test_client, mock_slack_store):
         """Test that install endpoint returns valid OAuth URL."""
-        with patch("openhands.server.routes.slack.config") as mock_config, \
-             patch("openhands.server.routes.slack.get_slack_store", return_value=mock_slack_store):
+        with patch("forge.server.routes.slack.config") as mock_config, \
+             patch("forge.server.routes.slack.get_slack_store", return_value=mock_slack_store):
             
             mock_config.SLACK_CLIENT_ID = "test-client-id"
             
@@ -59,7 +59,7 @@ class TestSlackIntegration:
         """Test that OAuth callback validates state."""
         mock_slack_store.get_oauth_state = MagicMock(return_value=None)
         
-        with patch("openhands.server.routes.slack.get_slack_store", return_value=mock_slack_store):
+        with patch("forge.server.routes.slack.get_slack_store", return_value=mock_slack_store):
             response = test_client.get("/api/slack/callback?code=test-code&state=invalid-state")
             
             assert response.status_code == 400
@@ -87,7 +87,7 @@ class TestSlackIntegration:
         ]
         mock_slack_store.list_workspaces = MagicMock(return_value=mock_workspaces)
         
-        with patch("openhands.server.routes.slack.get_slack_store", return_value=mock_slack_store):
+        with patch("forge.server.routes.slack.get_slack_store", return_value=mock_slack_store):
             response = test_client.get("/api/slack/workspaces?user_id=user-1")
             
             assert response.status_code == 200
@@ -108,7 +108,7 @@ class TestSlackIntegration:
         )
         mock_slack_store.get_workspace = MagicMock(return_value=mock_workspace)
         
-        with patch("openhands.server.routes.slack.get_slack_store", return_value=mock_slack_store):
+        with patch("forge.server.routes.slack.get_slack_store", return_value=mock_slack_store):
             response = test_client.delete("/api/slack/workspaces/T1?user_id=different-user")
             
             assert response.status_code == 404
@@ -125,7 +125,7 @@ class TestSlackIntegration:
         )
         mock_slack_store.get_workspace = MagicMock(return_value=mock_workspace)
         
-        with patch("openhands.server.routes.slack.get_slack_store", return_value=mock_slack_store):
+        with patch("forge.server.routes.slack.get_slack_store", return_value=mock_slack_store):
             response = test_client.delete("/api/slack/workspaces/T1?user_id=owner-user")
             
             assert response.status_code == 200
@@ -151,8 +151,8 @@ class TestSlackIntegration:
             "event": {"type": "app_mention", "text": "test"},
         }
         
-        with patch("openhands.server.routes.slack.get_slack_store", return_value=mock_slack_store), \
-             patch("openhands.server.routes.slack.verify_slack_signature", return_value=False):
+        with patch("forge.server.routes.slack.get_slack_store", return_value=mock_slack_store), \
+             patch("forge.server.routes.slack.verify_slack_signature", return_value=False):
             
             response = test_client.post("/api/slack/events", json=event_body)
             
@@ -160,7 +160,7 @@ class TestSlackIntegration:
 
     def test_cleanup_endpoint_removes_listener(self, test_client):
         """Test that cleanup endpoint removes event listener."""
-        from openhands.server.routes.slack import _slack_event_listeners
+        from forge.server.routes.slack import _slack_event_listeners
         
         # Add a test listener
         _slack_event_listeners["test-conv-id"] = (MagicMock(), "C123", "123.456")

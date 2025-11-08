@@ -8,7 +8,7 @@ import { useRuntimeIsReady } from "#/hooks/use-runtime-is-ready";
 import { TabContent } from "#/components/layout/tab-content";
 import { transformVSCodeUrl } from "#/utils/vscode-url-helper";
 import { useConversationId } from "#/hooks/use-conversation-id";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 
 export function ConversationTabs() {
   const runtimeIsReady = useRuntimeIsReady();

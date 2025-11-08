@@ -1,6 +1,6 @@
-from openhands.metasop.models import Artifact, RoleProfile, SopStep, SopTemplate, StepOutputSpec, StepResult, StepTrace
-from openhands.metasop.orchestrator import MetaSOPOrchestrator
-from openhands.metasop.settings import RetrySettings
+from forge.metasop.models import Artifact, RoleProfile, SopStep, SopTemplate, StepOutputSpec, StepResult, StepTrace
+from forge.metasop.orchestrator import MetaSOPOrchestrator
+from forge.metasop.settings import RetrySettings
 
 
 class FakeExecutor:

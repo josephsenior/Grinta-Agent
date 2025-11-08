@@ -19,7 +19,7 @@ export default function About(): React.ReactElement {
         
         <div className="prose prose-invert max-w-none">
           <p className="text-foreground-secondary leading-relaxed text-lg">
-            {t(I18nKey.HOME$OPENHANDS_DESCRIPTION)}
+            {t(I18nKey.HOME$Forge_DESCRIPTION)}
           </p>
           
           <div className="mt-8">

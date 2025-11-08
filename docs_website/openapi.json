@@ -1,8 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "OpenHands",
-    "description": "OpenHands: Code Less, Make More",
+    "title": "forge",
+    "description": "Forge: Code Less, Make More",
     "version": "0.53.0"
   },
   "paths": {
@@ -1975,7 +1975,7 @@
     "/api/user/repository/{repository_name}/microagents": {
       "get": {
         "summary": "Get Repository Microagents",
-        "description": "Scan the microagents directory of a repository and return the list of microagents.\n\nThe microagents directory location depends on the git provider and actual repository name:\n- If git provider is not GitLab and actual repository name is \".openhands\": scans \"microagents\" folder\n- If git provider is GitLab and actual repository name is \"openhands-config\": scans \"microagents\" folder\n- Otherwise: scans \".openhands/microagents\" folder",
+        "description": "Scan the microagents directory of a repository and return the list of microagents.\n\nThe microagents directory location depends on the git provider and actual repository name:\n- If git provider is not GitLab and actual repository name is \".Forge\": scans \"microagents\" folder\n- If git provider is GitLab and actual repository name is \"Forge-config\": scans \"microagents\" folder\n- Otherwise: scans \".Forge/microagents\" folder",
         "operationId": "get_repository_microagents_api_user_repository__repository_name__microagents_get",
         "security": [
           {
@@ -2396,7 +2396,7 @@
           "resolver",
           "gui",
           "suggested_task",
-          "openhands_api",
+          "Forge_api",
           "slack",
           "microagent_management",
           "jira",
@@ -3665,7 +3665,7 @@
         },
         "type": "object",
         "title": "Settings",
-        "description": "Persisted settings for OpenHands sessions"
+        "description": "Persisted settings for Forge sessions"
       },
       "SuggestedTask": {
         "properties": {

@@ -1,6 +1,6 @@
-"""This script compares gold patches with OpenHands-generated patches and check whether.
+"""This script compares gold patches with Forge-generated patches and check whether.
 
-OpenHands found the right (set of) files to modify.
+Forge found the right (set of) files to modify.
 """
 
 import argparse

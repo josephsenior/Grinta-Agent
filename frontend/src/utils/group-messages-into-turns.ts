@@ -1,13 +1,13 @@
-import type { OpenHandsEvent } from "#/types/core/base";
+import type { ForgeEvent } from "#/types/core/base";
 import {
   isUserMessage,
   isStreamingChunkAction,
-  isOpenHandsAction,
+  isForgeAction,
 } from "#/types/core/guards";
 
 export interface MessageTurn {
   type: "user" | "agent";
-  events: OpenHandsEvent[];
+  events: ForgeEvent[];
   startIndex: number;
   endIndex: number;
 }
@@ -27,74 +27,25 @@ export interface MessageTurn {
  * - Multiple streaming chunks update THE SAME turn (not create new turns)
  * - This gives real-time token-by-token updates within one message
  */
-export function groupMessagesIntoTurns(messages: OpenHandsEvent[]): MessageTurn[] {
+export function groupMessagesIntoTurns(messages: ForgeEvent[]): MessageTurn[] {
   const turns: MessageTurn[] = [];
   let currentTurn: MessageTurn | null = null;
 
   messages.forEach((event, index) => {
-    // User messages are always their own turn
     if (isUserMessage(event)) {
-      // Save previous turn if exists
-      if (currentTurn) {
-        turns.push(currentTurn);
-        currentTurn = null;
-      }
-      
-      // Create new user turn (single event)
-      turns.push({
-        type: "user",
-        events: [event],
-        startIndex: index,
-        endIndex: index,
-      });
+      currentTurn = finalizeCurrentTurn(turns, currentTurn);
+      pushUserTurn(turns, event, index);
       return;
     }
 
-    // Agent events get grouped together
-    // This includes: assistant messages, actions, observations, streaming chunks
-    
-    // If we're already in an agent turn, add to it
-    if (currentTurn && currentTurn.type === "agent") {
-      currentTurn.events.push(event);
-      currentTurn.endIndex = index;
-      
-      // Special case: If this is a streaming chunk, we might want to
-      // update the previous assistant message instead of adding a new event
-      if (isStreamingChunkAction(event)) {
-        // Find the last assistant message in this turn and update it
-        const lastAssistantIndex = currentTurn.events.findLastIndex((e) =>
-          isOpenHandsAction(e) && e.source === "agent" && e.action === "message",
-        );
-        
-        if (lastAssistantIndex !== -1) {
-          // Update the last assistant message with accumulated content
-          const lastAssistant = currentTurn.events[lastAssistantIndex];
-          if (isOpenHandsAction(lastAssistant) && lastAssistant.action === "message") {
-            // Update the content with accumulated streaming text
-            (lastAssistant.args as any) = {
-              ...(lastAssistant.args as any),
-              content: (event as any).args.accumulated,
-            };
-          }
-          // Don't add the streaming chunk as a separate event
-          currentTurn.events.pop();
-        }
-      }
-    } else {
-      // Start a new agent turn
-      currentTurn = {
-        type: "agent",
-        events: [event],
-        startIndex: index,
-        endIndex: index,
-      };
-    }
+    currentTurn = appendAgentEvent({
+      currentTurn,
+      event,
+      index,
+    });
   });
 
-  // Don't forget the last turn
-  if (currentTurn) {
-    turns.push(currentTurn);
-  }
+  finalizeCurrentTurn(turns, currentTurn);
 
   return turns;
 }
@@ -114,6 +65,113 @@ export function getTurnStreamingContent(turn: MessageTurn): string | null {
   if (streamingEvents.length === 0) return null;
   
   const lastStreaming = streamingEvents[streamingEvents.length - 1];
-  return lastStreaming.args?.accumulated || null;
+    if (typeof lastStreaming === "object" && lastStreaming !== null) {
+    const ls = lastStreaming as unknown as Record<string, unknown>;
+    const args = ls.args as Record<string, unknown> | undefined;
+    return (args?.accumulated as string) || null;
+  }
+  return null;
+}
+
+function finalizeCurrentTurn(turns: MessageTurn[], currentTurn: MessageTurn | null) {
+  if (currentTurn) {
+    turns.push(currentTurn);
+  }
+  return null;
+}
+
+function pushUserTurn(turns: MessageTurn[], event: ForgeEvent, index: number) {
+  turns.push({
+    type: "user",
+    events: [event],
+    startIndex: index,
+    endIndex: index,
+  });
+}
+
+function appendAgentEvent({
+  currentTurn,
+  event,
+  index,
+}: {
+  currentTurn: MessageTurn | null;
+  event: ForgeEvent;
+  index: number;
+}) {
+  if (!currentTurn || currentTurn.type !== "agent") {
+    return createAgentTurn(event, index);
+  }
+
+  currentTurn.events.push(event);
+  currentTurn.endIndex = index;
+
+  if (isStreamingChunkAction(event)) {
+    mergeStreamingChunkIntoTurn(currentTurn, event);
+  }
+
+  return currentTurn;
+}
+
+function createAgentTurn(event: ForgeEvent, index: number): MessageTurn {
+  const turn: MessageTurn = {
+    type: "agent",
+    events: [event],
+    startIndex: index,
+    endIndex: index,
+  };
+
+  if (isStreamingChunkAction(event)) {
+    mergeStreamingChunkIntoTurn(turn, event);
+  }
+
+  return turn;
+}
+
+function mergeStreamingChunkIntoTurn(turn: MessageTurn, streamingEvent: ForgeEvent) {
+  const lastAssistantIndex = findLastAssistantMessage(turn.events);
+  if (lastAssistantIndex === -1) {
+    return;
+  }
+
+  const lastAssistant = turn.events[lastAssistantIndex];
+  if (!isForgeAction(lastAssistant) || lastAssistant.action !== "message") {
+    return;
+  }
+
+  const newArgs = mergeStreamingArgs(lastAssistant.args, streamingEvent);
+  try {
+    const laRec = lastAssistant as unknown as Record<string, unknown>;
+    laRec.args = newArgs;
+    turn.events.pop();
+  } catch {
+    // ignore assignment failures
+  }
+}
+
+function findLastAssistantMessage(events: ForgeEvent[]) {
+  for (let i = events.length - 1; i >= 0; i -= 1) {
+    const candidate = events[i];
+    if (isForgeAction(candidate) && candidate.source === "agent" && candidate.action === "message") {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function mergeStreamingArgs(previousArgs: unknown, streamingEvent: ForgeEvent) {
+  const prevRecord = toRecord(previousArgs);
+  const streamingRecord = toRecord(streamingEvent as unknown);
+  const streamingArgs = streamingRecord?.args as Record<string, unknown> | undefined;
+
+  return {
+    ...prevRecord,
+    content: (streamingArgs?.accumulated as string) || (prevRecord?.content as string | undefined),
+  };
+}
+
+function toRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : undefined;
 }
 

@@ -127,7 +127,10 @@ describe("SlackSettingsScreen", () => {
     await user.click(uninstallButton);
 
     await waitFor(() => {
-      expect(slackApi.uninstallSlackWorkspace).toHaveBeenCalledWith("T123");
+      expect(slackApi.uninstallSlackWorkspace).toHaveBeenCalledWith(
+        "T123",
+        expect.anything(),
+      );
     });
   });
 
@@ -150,8 +153,8 @@ describe("SlackSettingsScreen", () => {
 
     await waitFor(() => {
       expect(screen.getByText("How Slack Integration Works")).toBeInTheDocument();
-      expect(screen.getByText(/Install the OpenHands app/)).toBeInTheDocument();
-      expect(screen.getByText(/Mention @OpenHands/)).toBeInTheDocument();
+      expect(screen.getByText(/Install the Forge app/)).toBeInTheDocument();
+      expect(screen.getByText(/Mention @Forge/)).toBeInTheDocument();
     });
   });
 

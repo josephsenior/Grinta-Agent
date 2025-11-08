@@ -38,10 +38,10 @@ if [ -z "$WOLFRAM_APPID" ]; then
   echo "WOLFRAM_APPID not specified"
 fi
 
-get_openhands_version
+get_FORGE_version
 
 echo "AGENT: $AGENT"
-echo "OPENHANDS_VERSION: $OPENHANDS_VERSION"
+echo "FORGE_VERSION: $FORGE_VERSION"
 echo "MODEL_CONFIG: $MODEL_CONFIG"
 echo "DATASET: $DATASET"
 echo "HARDNESS: $HARDNESS"
@@ -56,7 +56,7 @@ COMMAND="poetry run python evaluation/benchmarks/toolqa/run_infer.py \
   --wolfram-alpha-appid $WOLFRAM_APPID\
   --data-split validation \
   --eval-num-workers $NUM_WORKERS \
-  --eval-note ${OPENHANDS_VERSION}_${LEVELS}"
+  --eval-note ${FORGE_VERSION}_${LEVELS}"
 
 if [ -n "$EVAL_LIMIT" ]; then
   echo "EVAL_LIMIT: $EVAL_LIMIT"

@@ -1,5 +1,5 @@
 import { FaBitbucket, FaGithub, FaGitlab } from "react-icons/fa6";
-import { RepositorySelection } from "#/api/open-hands.types";
+import { RepositorySelection } from "#/api/forge.types";
 
 interface ConversationRepoLinkProps {
   selectedRepository: RepositorySelection;

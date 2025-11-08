@@ -15,7 +15,7 @@ The codebase is regularly scanned using:
 
 ## Current Security Status
 
-### Production Code (openhands/)
+### Production Code (Forge/)
 
 - **HIGH Severity Issues:** 0 ✅
 - **MEDIUM Severity Issues:** 0 ✅
@@ -140,7 +140,7 @@ The codebase is regularly scanned using:
 
 ```bash
 # Run security scan
-bandit -r OpenHands/openhands --severity-level medium
+bandit -r Forge/Forge --severity-level medium
 
 # Expected result: 0 MEDIUM or HIGH issues in production code
 ```

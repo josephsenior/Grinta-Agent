@@ -1,10 +1,10 @@
 import pytest
 from litellm import ModelResponse
-from openhands.agenthub.codeact_agent.codeact_agent import CodeActAgent
-from openhands.core.config import AgentConfig, LLMConfig
-from openhands.core.config.openhands_config import OpenHandsConfig
-from openhands.events.action import MessageAction
-from openhands.llm.llm_registry import LLMRegistry
+from forge.agenthub.codeact_agent.codeact_agent import CodeActAgent
+from forge.core.config import AgentConfig, LLMConfig
+from forge.core.config.forge_config import ForgeConfig
+from forge.events.action import MessageAction
+from forge.llm.llm_registry import LLMRegistry
 
 
 @pytest.fixture
@@ -14,7 +14,7 @@ def llm_config():
 
 @pytest.fixture
 def llm_registry():
-    return LLMRegistry(config=OpenHandsConfig())
+    return LLMRegistry(config=ForgeConfig())
 
 
 @pytest.fixture
@@ -97,5 +97,5 @@ def test_get_messages_prompt_caching(codeact_agent: CodeActAgent):
     messages = codeact_agent._get_messages(history, initial_user_message)
     cached_user_messages = [msg for msg in messages if msg.role in ("user", "system") and msg.content[0].cache_prompt]
     assert len(cached_user_messages) == 2
-    assert cached_user_messages[0].content[0].text.startswith("You are OpenHands agent")
+    assert cached_user_messages[0].content[0].text.startswith("You are Forge agent")
     assert cached_user_messages[1].content[0].text.startswith("User message 14")

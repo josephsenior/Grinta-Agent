@@ -6,11 +6,11 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
-from openhands.integrations.provider import CustomSecret, ProviderToken, ProviderType
-from openhands.server.routes.secrets import app as secrets_app
-from openhands.storage import get_file_store
-from openhands.storage.data_models.user_secrets import UserSecrets
-from openhands.storage.secrets.file_secrets_store import FileSecretsStore
+from forge.integrations.provider import CustomSecret, ProviderToken, ProviderType
+from forge.server.routes.secrets import app as secrets_app
+from forge.storage import get_file_store
+from forge.storage.data_models.user_secrets import UserSecrets
+from forge.storage.secrets.file_secrets_store import FileSecretsStore
 
 
 @pytest.fixture
@@ -19,7 +19,7 @@ def test_client():
     app = FastAPI()
     app.include_router(secrets_app)
     with patch.dict(os.environ, {"SESSION_API_KEY": ""}, clear=False):
-        with patch("openhands.server.dependencies._SESSION_API_KEY", None):
+        with patch("forge.server.dependencies._SESSION_API_KEY", None):
             yield TestClient(app)
 
 
@@ -33,7 +33,7 @@ def file_secrets_store(temp_dir):
     file_store = get_file_store("local", temp_dir)
     store = FileSecretsStore(file_store)
     with patch(
-        "openhands.storage.secrets.file_secrets_store.FileSecretsStore.get_instance", AsyncMock(return_value=store)
+        "forge.storage.secrets.file_secrets_store.FileSecretsStore.get_instance", AsyncMock(return_value=store)
     ):
         yield store
 
@@ -180,7 +180,7 @@ async def test_add_git_providers_with_host(test_client, file_secrets_store):
     provider_tokens = {ProviderType.GITHUB: ProviderToken(token=SecretStr("github-token"))}
     user_secrets = UserSecrets(provider_tokens=provider_tokens)
     await file_secrets_store.store(user_secrets)
-    with patch("openhands.server.routes.secrets.check_provider_tokens", AsyncMock(return_value="")):
+    with patch("forge.server.routes.secrets.check_provider_tokens", AsyncMock(return_value="")):
         add_provider_data = {
             "provider_tokens": {"github": {"token": "new-github-token", "host": "github.enterprise.com"}}
         }
@@ -198,7 +198,7 @@ async def test_add_git_providers_update_host_only(test_client, file_secrets_stor
     provider_tokens = {ProviderType.GITHUB: ProviderToken(token=SecretStr("github-token"), host="github.com")}
     user_secrets = UserSecrets(provider_tokens=provider_tokens)
     await file_secrets_store.store(user_secrets)
-    with patch("openhands.server.routes.secrets.check_provider_tokens", AsyncMock(return_value="")):
+    with patch("forge.server.routes.secrets.check_provider_tokens", AsyncMock(return_value="")):
         update_host_data = {"provider_tokens": {"github": {"token": "", "host": "github.enterprise.com"}}}
         response = test_client.post("/api/add-git-providers", json=update_host_data)
         assert response.status_code == 200
@@ -213,7 +213,7 @@ async def test_add_git_providers_invalid_token_with_host(test_client, file_secre
     """Test adding an invalid token with a host."""
     user_secrets = UserSecrets()
     await file_secrets_store.store(user_secrets)
-    with patch("openhands.integrations.utils.validate_provider_token", AsyncMock(return_value=None)):
+    with patch("forge.integrations.utils.validate_provider_token", AsyncMock(return_value=None)):
         add_provider_data = {"provider_tokens": {"github": {"token": "invalid-token", "host": "github.enterprise.com"}}}
         response = test_client.post("/api/add-git-providers", json=add_provider_data)
         assert response.status_code == 401
@@ -225,7 +225,7 @@ async def test_add_multiple_git_providers_with_hosts(test_client, file_secrets_s
     """Test adding multiple git providers with different hosts."""
     user_secrets = UserSecrets()
     await file_secrets_store.store(user_secrets)
-    with patch("openhands.server.routes.secrets.check_provider_tokens", AsyncMock(return_value="")):
+    with patch("forge.server.routes.secrets.check_provider_tokens", AsyncMock(return_value="")):
         add_providers_data = {
             "provider_tokens": {
                 "github": {"token": "github-token", "host": "github.enterprise.com"},

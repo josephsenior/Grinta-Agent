@@ -1,6 +1,6 @@
 import { PayloadAction } from "@reduxjs/toolkit";
-import { OpenHandsObservation } from "./types/core/observations";
-import { OpenHandsAction } from "./types/core/actions";
+import { ForgeObservation } from "./types/core/observations";
+import { ForgeAction } from "./types/core/actions";
 
 export type Message = {
   sender: "user" | "assistant";
@@ -12,6 +12,6 @@ export type Message = {
   pending?: boolean;
   translationID?: string;
   eventID?: number;
-  observation?: PayloadAction<OpenHandsObservation>;
-  action?: PayloadAction<OpenHandsAction>;
+  observation?: PayloadAction<ForgeObservation>;
+  action?: PayloadAction<ForgeAction>;
 };

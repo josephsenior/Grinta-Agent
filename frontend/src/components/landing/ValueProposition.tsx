@@ -48,7 +48,7 @@ export default function ValueProposition(): React.ReactElement {
     { item: "Bug fixes & maintenance", cost: "$50k+/year" },
   ];
 
-  const withCodePilot = [
+  const withForge = [
     { item: "AI-powered full team", cost: "Included" },
     { item: "Instant availability", cost: "0 seconds" },
     { item: "24/7 productivity", cost: "168 hrs/week" },
@@ -103,7 +103,7 @@ export default function ValueProposition(): React.ReactElement {
 
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold">
             <span className="text-foreground block mb-2">
-              Why Choose CodePilot Pro?
+              Why Choose Forge Pro?
             </span>
             <span className="text-gradient-brand">
               The Smart Alternative
@@ -173,7 +173,7 @@ export default function ValueProposition(): React.ReactElement {
             </CardContent>
           </Card>
 
-          {/* With CodePilot Pro */}
+          {/* With Forge Pro */}
           <Card className="relative overflow-hidden border-2 border-success-500/30 bg-success-500/5 shadow-xl">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-500 via-success-500 to-accent-500" />
             <CardHeader>
@@ -182,7 +182,7 @@ export default function ValueProposition(): React.ReactElement {
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-brand-500/20 to-success-500/20 flex items-center justify-center">
                     <Star className="w-6 h-6 text-violet-500" />
                   </div>
-                  With CodePilot Pro
+                  With Forge Pro
                 </CardTitle>
                 <Badge
                   variant="outline"
@@ -193,7 +193,7 @@ export default function ValueProposition(): React.ReactElement {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {withCodePilot.map((item, index) => (
+              {withForge.map((item, index) => (
                 <div
                   key={index}
                   className="flex items-start gap-3 p-4 rounded-lg bg-gradient-to-r from-success-500/5 to-brand-500/5 border border-success-500/20"
@@ -298,7 +298,7 @@ export default function ValueProposition(): React.ReactElement {
 
               <p className="text-lg text-foreground-secondary mb-8">
                 Join 50,000+ developers who are building faster, smarter, and
-                better with CodePilot Pro
+                better with Forge Pro
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center">

@@ -10,7 +10,7 @@ specify a `model`, provider `base_url`, and an `api_key`.
 
 ```
 [llm]
-model = "openhands/gpt-5-mini-2025-08-07"
+model = "Forge/gpt-5-mini-2025-08-07"
 api_key = "sk_live_..."   # local dev only; avoid committing secrets
 ```
 
@@ -37,13 +37,13 @@ llm_config = 'openrouter_grok'  # or 'llm' for the default profile
 For local development it's safer to set API keys via environment variables instead of
 saving them in `config.toml`. Common env vars consumed by the codebase:
 
-- `OPENHANDS_API_KEY` — used by OpenHands provider and by the config loader as a fallback
+- `FORGE_API_KEY` — used by Forge provider and by the config loader as a fallback
 - `OPENROUTER_API_KEY` — used by OpenRouter-backed profiles (litellm/OpenRouter)
 
 PowerShell example (temporary session):
 
 ```powershell
-$env:OPENHANDS_API_KEY = "sk_live_..."
+$env:FORGE_API_KEY = "sk_live_..."
 $env:OPENROUTER_API_KEY = "sk_live_..."
 python .\scripts\debug_inproc_verbose.py
 ```

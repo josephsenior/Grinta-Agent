@@ -40,6 +40,277 @@ HTMLCanvasElement.prototype.getContext = vi.fn();
 HTMLElement.prototype.scrollTo = vi.fn();
 window.scrollTo = vi.fn();
 
+if (!(globalThis as any).jest) {
+  const bind = (method: keyof typeof vi) => {
+    const candidate = vi[method];
+    return typeof candidate === "function" ? candidate.bind(vi) : candidate;
+  };
+
+  const jestCompat = {
+    ...vi,
+    fn: vi.fn,
+    spyOn: vi.spyOn,
+    mock: vi.mock,
+    doMock: vi.doMock,
+    unmock: vi.unmock,
+    resetModules: vi.resetModules,
+    clearAllMocks: vi.clearAllMocks,
+    resetAllMocks: vi.resetAllMocks,
+    restoreAllMocks: vi.restoreAllMocks,
+    setTimeout: vi.setTimeout,
+    useFakeTimers: vi.useFakeTimers,
+    useRealTimers: vi.useRealTimers,
+    advanceTimersByTime: bind("advanceTimersByTime"),
+    advanceTimersToNextTimer: bind("advanceTimersToNextTimer"),
+    runAllTimers: bind("runAllTimers"),
+    runOnlyPendingTimers: bind("runOnlyPendingTimers"),
+    clearAllTimers: bind("clearAllTimers"),
+  } as typeof vi;
+
+  (globalThis as any).jest = jestCompat;
+}
+
+if (typeof (globalThis as any).__TEST_APP_MODE === "undefined") {
+  (globalThis as any).__TEST_APP_MODE = "oss";
+}
+
+if (typeof (globalThis as any).__TEST_SETTINGS_ERROR_STATUS === "undefined") {
+  (globalThis as any).__TEST_SETTINGS_ERROR_STATUS = 200;
+}
+
+if (typeof (globalThis as any).__TEST_SETTINGS_FEATURE_FLAGS === "undefined") {
+  (globalThis as any).__TEST_SETTINGS_FEATURE_FLAGS = {};
+}
+
+declare global {
+  // eslint-disable-next-line no-var
+  var jest: typeof vi;
+  // eslint-disable-next-line no-var
+  var __TEST_APP_MODE: string;
+  // eslint-disable-next-line no-var
+  var __TEST_SETTINGS_ERROR_STATUS: number;
+  // eslint-disable-next-line no-var
+  var __TEST_SETTINGS_FEATURE_FLAGS: Record<string, boolean>;
+}
+
+(() => {
+  const originalDescriptor = Object.getOwnPropertyDescriptor(
+    HTMLElement.prototype,
+    "focus",
+  );
+
+  let currentFocusImpl: ((...args: unknown[]) => unknown) | undefined;
+
+  if (originalDescriptor) {
+    if ("value" in originalDescriptor) {
+      const value = (originalDescriptor as PropertyDescriptor & {
+        value?: unknown;
+      }).value;
+      if (typeof value === "function") {
+        currentFocusImpl = value;
+      }
+    } else if (originalDescriptor.get) {
+      try {
+        const maybe = originalDescriptor.get.call(HTMLElement.prototype);
+        if (typeof maybe === "function") {
+          currentFocusImpl = maybe;
+        }
+      } catch (e) {
+        // ignore errors retrieving original focus implementation
+      }
+    }
+  }
+
+  const callCurrent = function (this: HTMLElement, args: unknown[]) {
+    if (typeof currentFocusImpl === "function") {
+      try {
+        return currentFocusImpl.apply(this, args as []);
+      } catch (focusError) {
+        // swallow focus errors in JSDOM but still allow tests to proceed
+      }
+    }
+    return undefined;
+  };
+
+  const defineAsValue = () => {
+    try {
+      Object.defineProperty(HTMLElement.prototype, "focus", {
+        configurable: true,
+        enumerable: originalDescriptor?.enumerable ?? false,
+        writable: true,
+        value: function focus(this: HTMLElement, ...args: unknown[]) {
+          return callCurrent.call(this, args);
+        },
+      });
+      return true;
+    } catch (e) {
+      // ignore
+    }
+
+    try {
+      (HTMLElement.prototype as any).focus = function focus(
+        this: HTMLElement,
+        ...args: unknown[]
+      ) {
+        return callCurrent.call(this, args);
+      };
+      return true;
+    } catch (e) {
+      // ignore
+    }
+
+    return false;
+  };
+
+  const defineAsAccessor = () => {
+    try {
+      Object.defineProperty(HTMLElement.prototype, "focus", {
+        configurable: true,
+        enumerable: originalDescriptor?.enumerable ?? false,
+        get() {
+          return function focus(this: HTMLElement, ...args: unknown[]) {
+            return callCurrent.call(this, args);
+          };
+        },
+        set(value) {
+          if (typeof value === "function") {
+            currentFocusImpl = value as (...args: unknown[]) => unknown;
+          }
+        },
+      });
+    } catch (e) {
+      // ignore if patch still fails; at worst fallback to native behavior
+    }
+  };
+
+  if (!defineAsValue()) {
+    defineAsAccessor();
+  }
+
+  // Re-assert writable focus in a microtask in case other libraries redefine
+  // it in a way that removes the setter.
+  if (typeof queueMicrotask === "function") {
+    queueMicrotask(() => {
+      const descriptor = Object.getOwnPropertyDescriptor(
+        HTMLElement.prototype,
+        "focus",
+      );
+      if (descriptor && !descriptor.writable && descriptor.get && !descriptor.set) {
+        defineAsAccessor();
+      }
+    });
+  }
+})();
+
+beforeEach(() => {
+  try {
+    if (
+      typeof window === "object" &&
+      window !== null &&
+      typeof (window as Record<string, unknown>).navigator === "undefined"
+    ) {
+      Object.defineProperty(window, "navigator", {
+        configurable: true,
+        enumerable: false,
+        writable: true,
+        value: globalThis.navigator,
+      });
+    }
+  } catch (e) {
+    // best effort; ignore if patching fails
+  }
+});
+
+const ensureProgressEvent = (): typeof ProgressEvent | undefined => {
+  if (typeof (globalThis as any).ProgressEvent === "undefined") {
+    let BaseEvent: typeof Event | undefined;
+    try {
+      BaseEvent = Event;
+    } catch (e) {
+      BaseEvent = undefined;
+    }
+
+    if (BaseEvent) {
+      class ProgressEventPolyfill extends BaseEvent {
+        lengthComputable: boolean;
+        loaded: number;
+        total: number;
+
+        constructor(type: string, init?: ProgressEventInit) {
+          super(type, init);
+          this.lengthComputable = init?.lengthComputable ?? false;
+          this.loaded = init?.loaded ?? 0;
+          this.total = init?.total ?? 0;
+        }
+      }
+
+      (globalThis as any).ProgressEvent = ProgressEventPolyfill as unknown as typeof ProgressEvent;
+    } else {
+      (globalThis as any).ProgressEvent = class {
+        lengthComputable: boolean;
+        loaded: number;
+        total: number;
+        type: string;
+        constructor(type: string, init?: ProgressEventInit) {
+          this.type = type;
+          this.lengthComputable = init?.lengthComputable ?? false;
+          this.loaded = init?.loaded ?? 0;
+          this.total = init?.total ?? 0;
+        }
+      } as typeof ProgressEvent;
+    }
+  }
+
+  if (typeof (globalThis as any).ProgressEvent === "function") {
+    try {
+      vi.stubGlobal?.("ProgressEvent", (globalThis as any).ProgressEvent);
+    } catch (e) {
+      // ignore if stubGlobal unavailable
+    }
+  }
+
+  const current = (globalThis as any).ProgressEvent;
+  if (typeof current !== "function") {
+    return current;
+  }
+
+  let valueRef = current;
+  try {
+    Object.defineProperty(globalThis, "ProgressEvent", {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return valueRef;
+      },
+      set(next) {
+        if (typeof next === "undefined" || next === null) {
+          return;
+        }
+        valueRef = next as typeof ProgressEvent;
+      },
+    });
+    (globalThis as any).ProgressEvent = current;
+  } catch (e) {
+    // ignore if descriptor cannot be replaced
+  }
+
+  return valueRef;
+};
+
+const progressEventImpl = ensureProgressEvent();
+
+process.on("unhandledRejection", (reason) => {
+  if (
+    reason instanceof ReferenceError &&
+    typeof reason.message === "string" &&
+    reason.message.includes("ProgressEvent is not defined")
+  ) {
+    ensureProgressEvent();
+    return;
+  }
+  throw reason;
+});
+
 // Polyfill ResizeObserver for jsdom test environment where it's not available
 if (typeof (window as any).ResizeObserver === "undefined") {
   // Minimal no-op ResizeObserver implementation for tests
@@ -123,9 +394,44 @@ vi.mock("react-i18next", async (importOriginal) => ({
   }),
 }));
 
+vi.mock("#/hooks/query/use-is-authed", () => ({
+  useIsAuthed: () => ({
+    data: true,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+  }),
+}));
+
 vi.mock("#/hooks/use-is-on-tos-page", () => ({
   useIsOnTosPage: () => false,
 }));
+
+// Provide a simple mock for `useConversationId` so tests that render components
+// outside a react-router context still receive a stable conversation id.
+vi.mock("#/hooks/use-conversation-id", () => ({
+  useConversationId: () => ({ conversationId: "test-conversation" }),
+}));
+
+// Provide safe fallbacks for common react-router hooks used in many components
+// so tests that render components outside a Router don't throw. We keep the
+// original module and only override specific hooks used broadly in tests.
+const __mockUseNavigate = vi.fn(() => {
+  return () => {
+    /* no-op navigation in tests */
+  };
+});
+
+const __mockUseParams = vi.fn(() => ({ conversationId: "test-conversation" }));
+
+vi.mock("react-router-dom", async (importOriginal) => {
+  const actual = await importOriginal<any>();
+  return {
+    ...actual,
+    useNavigate: __mockUseNavigate,
+    useParams: __mockUseParams,
+  };
+});
 
 // Mock socket.io-client and engine.io-client to avoid real websocket connections in tests
 // Provide a lightweight no-op socket that supports the subset of methods used by the app
@@ -413,6 +719,7 @@ try {
 // beforeAll closure intentionally ends above; no extra closer here
 afterEach(() => {
   _mockServer?.resetHandlers();
+  vi.clearAllMocks();
   // Cleanup the document body after each test
   cleanup();
 });
@@ -431,4 +738,93 @@ vi.mock("framer-motion", () => {
   const LazyMotion = ({ children }: any) =>
     React.createElement(React.Fragment, null, children);
   return { motion, AnimatePresence, LazyMotion };
+});
+
+vi.mock("#/components/ui/dark-veil", () => {
+  const React = require("react");
+  return {
+    __esModule: true,
+    default: (props: any) =>
+      React.createElement("div", { "data-testid": "dark-veil-mock", ...props }),
+  };
+});
+
+// Ensure `navigator.clipboard` is writable in the jsdom test environment.
+// Some environments expose a read-only clipboard property; tests expect to
+// be able to mock `navigator.clipboard.writeText`. Use `defineProperty` so
+// tests can spy on `writeText`.
+try {
+  // Attempt to define or redefine navigator.clipboard unconditionally so
+  // tests that use `Object.assign(navigator, { clipboard: ... })` won't
+  // throw. We set `configurable: true` so later test code can still spy/replace
+  // the implementation if needed.
+  try {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      writable: true,
+      value: { writeText: vi.fn() },
+    });
+  } catch (innerErr) {
+    // If defineProperty fails (platform restrictions), try to patch the
+    // writeText method directly. If that also fails, swallow the error —
+    // tests that explicitly rely on clipboard mocking may need to use
+    // the `vi.spyOn` pattern instead.
+    try {
+      (navigator as any).clipboard = { writeText: vi.fn() };
+    } catch (err2) {
+      try {
+        (navigator as any).clipboard.writeText = vi.fn();
+      } catch {
+        // give up — best effort only
+      }
+    }
+  }
+} catch (e) {
+  // No-op: best-effort mock only
+}
+
+// Provide a resilient mock for `lucide-react` icons used across tests.
+// Some tests partially mock `lucide-react` and expect specific named
+// exports (e.g., `Tag`). When the mock doesn't export these symbols the
+// render fails. We provide simple stub components for commonly used icons
+// and fall back to a generic SVG component for anything else.
+vi.mock("lucide-react", async (importOriginal) => {
+  const React = await import("react");
+  const actual = await importOriginal();
+  const IconStub = (props: any) => React.createElement("svg", props, null);
+
+  const stubs: Record<string, any> = {
+    Tag: IconStub,
+    Copy: IconStub,
+    Check: IconStub,
+    Terminal: IconStub,
+    Download: IconStub,
+    Info: IconStub,
+    ExternalLink: IconStub,
+    Brain: IconStub,
+    // add other common icons here as needed
+  };
+
+  return {
+    ...(actual || {}),
+    // Explicitly include common named exports so tests that expect them
+    // on the mocked module won't fail when performing a partial mock.
+    Tag: stubs.Tag,
+    Copy: stubs.Copy,
+    Check: stubs.Check,
+    Terminal: stubs.Terminal,
+    Download: stubs.Download,
+    Info: stubs.Info,
+    ExternalLink: stubs.ExternalLink,
+    Brain: stubs.Brain,
+    // Additional icon exports observed in failing tests
+    TagIcon: stubs.Tag,
+    Star: IconStub,
+    ArrowDown: IconStub,
+    ArrowRight: IconStub,
+    Loader2: IconStub,
+    Play: IconStub,
+    Pause: IconStub,
+    Maximize2: IconStub,
+  };
 });

@@ -5,7 +5,7 @@ import { AgentState } from "#/types/agent-state";
 import { generateAgentStateChangeEvent } from "#/services/agent-state-service";
 import { displayErrorToast } from "#/utils/custom-toast-handlers";
 import { I18nKey } from "#/i18n/declaration";
-import type { FileUploadSuccessResponse } from "#/api/open-hands.types";
+import type { FileUploadSuccessResponse } from "#/api/forge.types";
 import { createChatMessage } from "#/services/chat-service";
 import { validateFiles } from "#/utils/file-validation";
 import { convertImageToBase64 } from "#/utils/convert-image-to-base-64";

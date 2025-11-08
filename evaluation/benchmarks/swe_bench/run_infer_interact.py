@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pandas as pd
 from datasets import load_dataset
 from litellm import completion as litellm_completion
-import openhands.agenthub
+import forge.agenthub
 from evaluation.benchmarks.swe_bench.run_infer import (
     AgentFinishedCritic,
     complete_runtime,
@@ -24,19 +24,19 @@ from evaluation.utils.shared import (
     reset_logger_for_multiprocessing,
     run_evaluation,
 )
-from openhands.controller.state.state import State
-from openhands.core.config import get_evaluation_parser, get_llm_config_arg
-from openhands.core.config.condenser_config import NoOpCondenserConfig
-from openhands.core.config.utils import get_condenser_config_arg
-from openhands.core.logger import openhands_logger as logger
+from forge.controller.state.state import State
+from forge.core.config import get_evaluation_parser, get_llm_config_arg
+from forge.core.config.condenser_config import NoOpCondenserConfig
+from forge.core.config.utils import get_condenser_config_arg
+from forge.core.logger import forge_logger as logger
 
 if TYPE_CHECKING:
-    from openhands.core.config import OpenHandsConfig
-    from openhands.runtime.base import Runtime
-from openhands.core.main import create_runtime, run_controller
-from openhands.events.action import MessageAction
-from openhands.events.serialization.event import event_from_dict, event_to_dict
-from openhands.utils.async_utils import call_async_from_sync
+    from forge.core.config import ForgeConfig
+    from forge.runtime.base import Runtime
+from forge.core.main import create_runtime, run_controller
+from forge.events.action import MessageAction
+from forge.events.serialization.event import event_from_dict, event_to_dict
+from forge.utils.async_utils import call_async_from_sync
 
 USE_HINT_TEXT = os.environ.get("USE_HINT_TEXT", "false").lower() == "true"
 USE_INSTANCE_IMAGE = os.environ.get("USE_INSTANCE_IMAGE", "false").lower() == "true"
@@ -129,7 +129,7 @@ def _setup_logging(instance: pd.Series, metadata: EvalMetadata, reset_logger: bo
 
 
 def _run_agent_controller(
-    config: OpenHandsConfig, message_action: MessageAction, runtime: Runtime, metadata: EvalMetadata
+    config: ForgeConfig, message_action: MessageAction, runtime: Runtime, metadata: EvalMetadata
 ) -> State | None:
     """Run the agent controller and return the state."""
     return asyncio.run(
@@ -209,7 +209,7 @@ if __name__ == "__main__":
         condenser_config = NoOpCondenserConfig()
         logger.debug("No Condenser config provided via EVAL_CONDENSER, using NoOpCondenser.")
     details = {"mode": "interact"}
-    _agent_cls = openhands.agenthub.Agent.get_cls(args.agent_cls)
+    _agent_cls = forge.agenthub.Agent.get_cls(args.agent_cls)
     dataset_descrption = args.dataset.replace("/", "__") + "-" + args.split.replace("/", "__")
     metadata = make_metadata(
         llm_config,

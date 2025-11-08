@@ -1,4 +1,4 @@
-from openhands.metasop.context_hash import compute_context_hash
+from forge.metasop.context_hash import compute_context_hash
 
 
 def test_context_hash_stable():

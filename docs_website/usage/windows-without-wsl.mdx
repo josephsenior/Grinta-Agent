@@ -1,11 +1,11 @@
 ---
 title: Windows Without WSL
-description: Running OpenHands GUI on Windows without using WSL or Docker
+description: Running Forge GUI on Windows without using WSL or Docker
 ---
 
-# Running OpenHands GUI on Windows Without WSL
+# Running Forge GUI on Windows Without WSL
 
-This guide provides step-by-step instructions for running OpenHands on a Windows machine without using WSL or Docker.
+This guide provides step-by-step instructions for running Forge on a Windows machine without using WSL or Docker.
 
 ## Prerequisites
 
@@ -43,7 +43,7 @@ This guide provides step-by-step instructions for running OpenHands on a Windows
      ```powershell
      dotnet --info
      ```
-   - This step is required for the PowerShell integration via pythonnet. Without it, OpenHands will fall back to a more limited PowerShell implementation.
+   - This step is required for the PowerShell integration via pythonnet. Without it, Forge will fall back to a more limited PowerShell implementation.
 
 4. **Install Git**
    - Download Git from [git-scm.com](https://git-scm.com/download/win)
@@ -76,12 +76,12 @@ This guide provides step-by-step instructions for running OpenHands on a Windows
      poetry --version
      ```
 
-## Step 2: Clone and Set Up OpenHands
+## Step 2: Clone and Set Up Forge
 
 1. **Clone the Repository**
    ```powershell
-   git clone https://github.com/All-Hands-AI/OpenHands.git
-   cd OpenHands
+   git clone https://github.com/All-Hands-AI/Forge.git
+   cd Forge
    ```
 
 2. **Install Dependencies**
@@ -91,9 +91,9 @@ This guide provides step-by-step instructions for running OpenHands on a Windows
 
    This will install all required dependencies, including:
    - pythonnet - Required for Windows PowerShell integration
-   - All other OpenHands dependencies
+   - All other Forge dependencies
 
-## Step 3: Run OpenHands
+## Step 3: Run Forge
 
 1. **Build the Frontend**
    ```powershell
@@ -109,10 +109,10 @@ This guide provides step-by-step instructions for running OpenHands on a Windows
    ```powershell
    # Make sure to use PowerShell 7 (pwsh) instead of Windows PowerShell
    pwsh
-   $env:RUNTIME="local"; poetry run uvicorn openhands.server.listen:app --host 0.0.0.0 --port 3000 --reload --reload-exclude "./workspace"
+   $env:RUNTIME="local"; poetry run uvicorn Forge.server.listen:app --host 0.0.0.0 --port 3000 --reload --reload-exclude "./workspace"
    ```
 
-   This will start the OpenHands app using the local runtime with PowerShell integration, available at `localhost:3000`.
+   This will start the Forge app using the local runtime with PowerShell integration, available at `localhost:3000`.
 
    > **Note**: If you encounter a `RuntimeError: Directory './frontend/build' does not exist` error, make sure you've built the frontend first using the command above.
 
@@ -124,7 +124,7 @@ This guide provides step-by-step instructions for running OpenHands on a Windows
    npm run dev
    ```
 
-4. **Access the OpenHands GUI**
+4. **Access the Forge GUI**
 
    Open your browser and navigate to:
    ```
@@ -135,7 +135,7 @@ This guide provides step-by-step instructions for running OpenHands on a Windows
 
 ## Installing and Running the CLI
 
-To install and run the OpenHands CLI on Windows without WSL, follow these steps:
+To install and run the Forge CLI on Windows without WSL, follow these steps:
 
 ### 1. Install uv (Python Package Manager)
 
@@ -147,7 +147,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 
 ### 2. Install .NET SDK (Required)
 
-The OpenHands CLI **requires** the .NET Core runtime for PowerShell integration. Without it, the CLI will fail to start with a `coreclr` error. Install the .NET SDK which includes the runtime:
+The Forge CLI **requires** the .NET Core runtime for PowerShell integration. Without it, the CLI will fail to start with a `coreclr` error. Install the .NET SDK which includes the runtime:
 
 ```powershell
 winget install Microsoft.DotNet.SDK.8
@@ -157,19 +157,19 @@ Alternatively, you can download and install the .NET SDK from the [official Micr
 
 After installation, restart your PowerShell session to ensure the environment variables are updated.
 
-### 3. Install and Run OpenHands
+### 3. Install and Run Forge
 
-After installing the prerequisites, you can install and run OpenHands with:
+After installing the prerequisites, you can install and run Forge with:
 
 ```powershell
-uvx --python 3.12 --from openhands-ai openhands
+uvx --python 3.12 --from Forge-ai Forge
 ```
 
 ### Troubleshooting CLI Issues
 
 #### CoreCLR Error
 
-If you encounter an error like `Failed to load CoreCLR` or `pythonnet.load('coreclr')` when running OpenHands CLI, this indicates that the .NET Core runtime is missing or not properly configured. To fix this:
+If you encounter an error like `Failed to load CoreCLR` or `pythonnet.load('coreclr')` when running Forge CLI, this indicates that the .NET Core runtime is missing or not properly configured. To fix this:
 
 1. Install the .NET SDK as described in step 2 above
 2. Verify that your system PATH includes the .NET SDK directories
@@ -188,7 +188,7 @@ If the issue persists after installing the .NET SDK, try installing the specific
 
 ## Limitations on Windows
 
-When running OpenHands on Windows without WSL or Docker, be aware of the following limitations:
+When running Forge on Windows without WSL or Docker, be aware of the following limitations:
 
 1. **Browser Tool Not Supported**: The browser tool is not currently supported on Windows.
 
@@ -226,11 +226,11 @@ To resolve this issue:
 
    You should see output indicating PowerShell 7.x.x
 
-4. **Run OpenHands using PowerShell 7** instead of Windows PowerShell:
+4. **Run Forge using PowerShell 7** instead of Windows PowerShell:
    ```powershell
    pwsh
-   cd path\to\openhands
-   $env:RUNTIME="local"; poetry run uvicorn openhands.server.listen:app --host 0.0.0.0 --port 3000 --reload --reload-exclude "./workspace"
+   cd path\to\Forge
+   $env:RUNTIME="local"; poetry run uvicorn Forge.server.listen:app --host 0.0.0.0 --port 3000 --reload --reload-exclude "./workspace"
    ```
 
    > **Note**: Make sure you're explicitly using `pwsh` (PowerShell 7) and not `powershell` (Windows PowerShell). The command prompt or terminal title should say "PowerShell 7" rather than just "Windows PowerShell".
@@ -243,11 +243,11 @@ To resolve this issue:
      dotnet --info
      ```
    - Restart your computer after installation
-   - Try running OpenHands again
+   - Try running Forge again
 
 6. **Ensure that the .NET Framework is properly installed** on your system:
    - Go to Control Panel > Programs > Programs and Features > Turn Windows features on or off
    - Make sure ".NET Framework 4.8 Advanced Services" is enabled
    - Click OK and restart if prompted
 
-This error occurs because OpenHands uses the pythonnet package to interact with PowerShell, which requires the System.Management.Automation assembly from the .NET framework. A minimal PowerShell installation or older Windows PowerShell (rather than PowerShell 7+) might not include all the necessary components for this integration.
+This error occurs because Forge uses the pythonnet package to interact with PowerShell, which requires the System.Management.Automation assembly from the .NET framework. A minimal PowerShell installation or older Windows PowerShell (rather than PowerShell 7+) might not include all the necessary components for this integration.

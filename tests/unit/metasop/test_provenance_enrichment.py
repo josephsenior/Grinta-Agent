@@ -1,5 +1,5 @@
-from openhands.metasop.models import Artifact
-from openhands.metasop.orchestrator import MetaSOPOrchestrator
+from forge.metasop.models import Artifact
+from forge.metasop.orchestrator import MetaSOPOrchestrator
 
 
 class DummySettings:

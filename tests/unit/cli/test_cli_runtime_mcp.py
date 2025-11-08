@@ -2,13 +2,13 @@
 
 from unittest.mock import MagicMock, patch
 import pytest
-from openhands.core.config import OpenHandsConfig
-from openhands.core.config.mcp_config import MCPConfig, MCPSSEServerConfig, MCPStdioServerConfig
-from openhands.events.action.mcp import MCPAction
-from openhands.events.observation import ErrorObservation
-from openhands.events.observation.mcp import MCPObservation
-from openhands.llm.llm_registry import LLMRegistry
-from openhands.runtime.impl.cli.cli_runtime import CLIRuntime
+from forge.core.config import ForgeConfig
+from forge.core.config.mcp_config import MCPConfig, MCPSSEServerConfig, MCPStdioServerConfig
+from forge.events.action.mcp import MCPAction
+from forge.events.observation import ErrorObservation
+from forge.events.observation.mcp import MCPObservation
+from forge.llm.llm_registry import LLMRegistry
+from forge.runtime.impl.cli.cli_runtime import CLIRuntime
 
 
 class TestCLIRuntimeMCP:
@@ -16,9 +16,9 @@ class TestCLIRuntimeMCP:
 
     def setup_method(self):
         """Set up test fixtures."""
-        self.config = OpenHandsConfig()
+        self.config = ForgeConfig()
         self.event_stream = MagicMock()
-        llm_registry = LLMRegistry(config=OpenHandsConfig())
+        llm_registry = LLMRegistry(config=ForgeConfig())
         self.runtime = CLIRuntime(
             config=self.config, event_stream=self.event_stream, sid="test-session", llm_registry=llm_registry
         )
@@ -34,7 +34,7 @@ class TestCLIRuntimeMCP:
         assert "No MCP servers configured" in result.content
 
     @pytest.mark.asyncio
-    @patch("openhands.mcp.utils.create_mcp_clients")
+    @patch("forge.mcp.utils.create_mcp_clients")
     async def test_call_tool_mcp_no_clients_created(self, mock_create_clients):
         """Test MCP call when no clients can be created."""
         self.runtime.config.mcp = MCPConfig(sse_servers=[MCPSSEServerConfig(url="http://test.com")])
@@ -47,8 +47,8 @@ class TestCLIRuntimeMCP:
         mock_create_clients.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("openhands.mcp.utils.create_mcp_clients")
-    @patch("openhands.mcp.utils.call_tool_mcp")
+    @patch("forge.mcp.utils.create_mcp_clients")
+    @patch("forge.mcp.utils.call_tool_mcp")
     async def test_call_tool_mcp_success(self, mock_call_tool, mock_create_clients):
         """Test successful MCP tool call."""
         self.runtime.config.mcp = MCPConfig(
@@ -74,7 +74,7 @@ class TestCLIRuntimeMCP:
         mock_call_tool.assert_called_once_with([mock_client], action)
 
     @pytest.mark.asyncio
-    @patch("openhands.mcp.utils.create_mcp_clients")
+    @patch("forge.mcp.utils.create_mcp_clients")
     async def test_call_tool_mcp_exception_handling(self, mock_create_clients):
         """Test exception handling in MCP tool call."""
         self.runtime.config.mcp = MCPConfig(sse_servers=[MCPSSEServerConfig(url="http://test.com")])

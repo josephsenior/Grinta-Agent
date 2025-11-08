@@ -1,4 +1,4 @@
-# Evaluating GPQA (A Graduate-Level Google-Proof Q&A Benchmark) with OpenHands
+# Evaluating GPQA (A Graduate-Level Google-Proof Q&A Benchmark) with Forge
 
 Implements the evaluation of agents on the GPQA benchmark introduced in [GPQA: A Graduate-Level Google-Proof Q&A Benchmark](https://arxiv.org/abs/2308.07124).
 
@@ -24,7 +24,7 @@ Please follow instruction [here](../../README.md#setup) to setup your local deve
 ## Run Inference on GPQA Benchmark
 
 'gpqa_main', 'gqpa_diamond', 'gpqa_experts', 'gpqa_extended' -- data split options
-From the root of the OpenHands repo, run the following command:
+From the root of the Forge repo, run the following command:
 
 ```bash
 ./evaluation/benchmarks/gpqa/scripts/run_infer.sh [model_config_name] [git-version] [num_samples_eval] [data_split] [AgentClass]
@@ -33,7 +33,7 @@ From the root of the OpenHands repo, run the following command:
 You can replace `model_config_name` with any model you set up in `config.toml`.
 
 - `model_config_name`: The model configuration name from `config.toml` that you want to evaluate.
-- `git-version`, e.g. `HEAD`, is the git commit hash of the OpenHands version you would
+- `git-version`, e.g. `HEAD`, is the git commit hash of the Forge version you would
   like to evaluate. It could also be a release tag like `0.6.2`.
 - `num_samples_eval`: Number of samples to evaluate (useful for testing and debugging).
 - `data_split`: The data split to evaluate on. Must be one of `gpqa_main`, `gqpa_diamond`, `gpqa_experts`, `gpqa_extended`. Defaults to `gpqa_diamond` as done in the paper.

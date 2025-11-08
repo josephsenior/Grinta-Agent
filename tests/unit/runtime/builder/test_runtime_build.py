@@ -9,11 +9,11 @@ import docker
 import pytest
 import toml
 from pytest import TempPathFactory
-import openhands
-from openhands import __version__ as oh_version
-from openhands.core.logger import openhands_logger as logger
-from openhands.runtime.builder.docker import DockerRuntimeBuilder
-from openhands.runtime.utils.runtime_build import (
+import forge
+from forge import __version__ as oh_version
+from forge.core.logger import forge_logger as logger
+from forge.runtime.builder.docker import DockerRuntimeBuilder
+from forge.runtime.utils.runtime_build import (
     BuildFromImageType,
     _generate_dockerfile,
     build_runtime_image,
@@ -120,13 +120,13 @@ def _check_source_code_in_dir(temp_dir):
     assert os.path.exists(code_dir)
     assert os.path.isdir(code_dir)
     assert os.path.exists(os.path.join(code_dir, "pyproject.toml"))
-    assert set(os.listdir(code_dir)) == {"openhands", "pyproject.toml", "poetry.lock"}
-    assert os.path.exists(os.path.join(code_dir, "openhands"))
-    assert os.path.isdir(os.path.join(code_dir, "openhands"))
+    assert set(os.listdir(code_dir)) == {"forge", "pyproject.toml", "poetry.lock"}
+    assert os.path.exists(os.path.join(code_dir, "forge"))
+    assert os.path.isdir(os.path.join(code_dir, "forge"))
     with open(os.path.join(code_dir, "pyproject.toml"), "r") as f:
         pyproject = toml.load(f)
     _pyproject_version = pyproject["tool"]["poetry"]["version"]
-    assert _pyproject_version == version("openhands-ai")
+    assert _pyproject_version == version("Forge-ai")
 
 
 def test_prep_build_folder(temp_dir):
@@ -179,7 +179,7 @@ def test_get_hash_for_source_files():
         result = get_hash_for_source_files()
         assert result == truncate_hash(dirhash_mock.return_value)
         dirhash_mock.assert_called_once_with(
-            Path(openhands.__file__).parent, "md5", ignore=[".*/", "__pycache__/", "*.pyc"]
+            Path(forge.__file__).parent, "md5", ignore=[".*/", "__pycache__/", "*.pyc"]
         )
 
 
@@ -191,8 +191,8 @@ def test_generate_dockerfile_build_from_scratch():
     assert "wget curl" in dockerfile_content
     assert "poetry" in dockerfile_content and "-c conda-forge" in dockerfile_content
     assert "python=3.12" in dockerfile_content
-    assert "COPY --chown=openhands:openhands ./code/openhands /openhands/code/openhands" in dockerfile_content
-    assert "/openhands/micromamba/bin/micromamba run -n openhands poetry install" in dockerfile_content
+    assert "COPY --chown=Forge:Forge ./code/Forge /Forge/code/Forge" in dockerfile_content
+    assert "/Forge/micromamba/bin/micromamba run -n Forge poetry install" in dockerfile_content
 
 
 def test_generate_dockerfile_build_from_lock():
@@ -203,7 +203,7 @@ def test_generate_dockerfile_build_from_lock():
     assert "python=3.12" not in dockerfile_content
     assert "https://micro.mamba.pm/install.sh" not in dockerfile_content
     assert "poetry install" not in dockerfile_content
-    assert "COPY --chown=openhands:openhands ./code/openhands /openhands/code/openhands" in dockerfile_content
+    assert "COPY --chown=Forge:Forge ./code/Forge /Forge/code/Forge" in dockerfile_content
 
 
 def test_generate_dockerfile_build_from_versioned():
@@ -214,7 +214,7 @@ def test_generate_dockerfile_build_from_versioned():
     assert "python=3.12" not in dockerfile_content
     assert "https://micro.mamba.pm/install.sh" not in dockerfile_content
     assert "poetry install" in dockerfile_content
-    assert "COPY --chown=openhands:openhands ./code/openhands /openhands/code/openhands" in dockerfile_content
+    assert "COPY --chown=Forge:Forge ./code/Forge /Forge/code/Forge" in dockerfile_content
 
 
 def test_get_runtime_image_repo_and_tag_eventstream():
@@ -392,7 +392,7 @@ def live_docker_image():
     client = docker.from_env()
     unique_id = str(uuid.uuid4())[:8]
     unique_prefix = f"test_image_{unique_id}"
-    dockerfile_content = f'\n    # syntax=docker/dockerfile:1.4\n    FROM {DEFAULT_BASE_IMAGE} AS base\n    RUN apt-get update && apt-get install -y wget curl sudo apt-utils\n\n    FROM base AS intermediate\n    RUN mkdir -p /openhands\n\n    FROM intermediate AS final\n    RUN echo "Hello, OpenHands!" > /openhands/hello.txt\n    '
+    dockerfile_content = f'\n    # syntax=docker/dockerfile:1.4\n    FROM {DEFAULT_BASE_IMAGE} AS base\n    RUN apt-get update && apt-get install -y wget curl sudo apt-utils\n\n    FROM base AS intermediate\n    RUN mkdir -p /Forge\n\n    FROM intermediate AS final\n    RUN echo "Hello, Forge!" > /Forge/hello.txt\n    '
     with tempfile.TemporaryDirectory() as temp_dir:
         dockerfile_path = os.path.join(temp_dir, "Dockerfile")
         with open(dockerfile_path, "w", encoding='utf-8') as f:

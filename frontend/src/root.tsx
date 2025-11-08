@@ -8,7 +8,7 @@ import {
 } from "react-router-dom";
 import "./tailwind.css";
 import "./index.css";
-import "./styles/codepilot-theme.css";
+import "./styles/Forge-theme.css";
 import React, { useEffect } from "react";
 import ToasterClient from "./components/ToasterClient";
 import { ThemeProvider } from "./context/theme-context";
@@ -27,15 +27,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export const meta: MetaFunction = () => [
-  { title: "CodePilot Pro - Production-Grade AI Coding Assistant" },
+  { title: "Forge Pro - Production-Grade AI Coding Assistant" },
   {
     name: "description",
     content:
-      "CodePilot Pro: Built on open-source foundations, enhanced for production with enterprise-grade memory, world-class code quality (9.04/10), and performance optimizations.",
+      "Forge Pro: Built on open-source foundations, enhanced for production with enterprise-grade memory, world-class code quality (9.04/10), and performance optimizations.",
   },
   {
     property: "og:title",
-    content: "CodePilot Pro - Production-Grade AI Coding Assistant",
+    content: "Forge Pro - Production-Grade AI Coding Assistant",
   },
   {
     property: "og:description",
@@ -51,7 +51,7 @@ export const meta: MetaFunction = () => [
   },
   {
     name: "twitter:title",
-    content: "CodePilot Pro - Production-Grade AI Coding Assistant",
+    content: "Forge Pro - Production-Grade AI Coding Assistant",
   },
   {
     name: "twitter:description",
@@ -84,7 +84,7 @@ export function HydrateFallback() {
             margin: "0 auto 24px",
           }}
         />
-        <div style={{ fontSize: "16px", fontWeight: 500 }}>Loading CodePilot Pro...</div>
+        <div style={{ fontSize: "16px", fontWeight: 500 }}>Loading Forge Pro...</div>
       </div>
       <style
         dangerouslySetInnerHTML={{

@@ -18,20 +18,20 @@ from evaluation.utils.shared import (
     compatibility_for_eval_history_pairs,
     get_default_sandbox_config_for_eval,
     get_metrics,
-    get_openhands_config_for_eval,
+    get_FORGE_config_for_eval,
     make_metadata,
     prepare_dataset,
     reset_logger_for_multiprocessing,
     run_evaluation,
 )
-from openhands.controller.state.state import State
-from openhands.core.config import OpenHandsConfig, get_evaluation_parser, get_llm_config_arg, load_from_toml
-from openhands.core.config.utils import get_agent_config_arg
-from openhands.core.logger import openhands_logger as logger
-from openhands.core.main import create_runtime, run_controller
-from openhands.events.action import AgentFinishAction, CmdRunAction, MessageAction
-from openhands.runtime.base import Runtime
-from openhands.utils.async_utils import call_async_from_sync
+from forge.controller.state.state import State
+from forge.core.config import ForgeConfig, get_evaluation_parser, get_llm_config_arg, load_from_toml
+from forge.core.config.utils import get_agent_config_arg
+from forge.core.logger import forge_logger as logger
+from forge.core.main import create_runtime, run_controller
+from forge.events.action import AgentFinishAction, CmdRunAction, MessageAction
+from forge.runtime.base import Runtime
+from forge.utils.async_utils import call_async_from_sync
 
 DATASET_CACHE_DIR = os.path.join(os.path.dirname(__file__), "data")
 AGENT_CLS_TO_FAKE_USER_RESPONSE_FN = {
@@ -42,10 +42,10 @@ AGENT_CLS_TO_INST_SUFFIX = {
 }
 
 
-def get_config(metadata: EvalMetadata) -> OpenHandsConfig:
+def get_config(metadata: EvalMetadata) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = "nikolaik/python-nodejs:python3.12-nodejs22"
-    config = get_openhands_config_for_eval(metadata=metadata, sandbox_config=sandbox_config, runtime="docker")
+    config = get_FORGE_config_for_eval(metadata=metadata, sandbox_config=sandbox_config, runtime="docker")
     config.set_llm_config(metadata.llm_config)
     if metadata.agent_config:
         config.set_agent_config(metadata.agent_config, metadata.agent_class)
@@ -321,7 +321,7 @@ if __name__ == "__main__":
         llm_config.modify_params = False
     if llm_config is None:
         raise ValueError(f"Could not find LLM config: --llm_config {args.llm_config}")
-    toml_config = OpenHandsConfig()
+    toml_config = ForgeConfig()
     load_from_toml(toml_config)
     metadata = make_metadata(
         llm_config=llm_config,

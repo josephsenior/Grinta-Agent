@@ -1,17 +1,17 @@
 import os
 import shutil
 import pytest
-from openhands.controller.state.control_flags import IterationControlFlag
-from openhands.controller.state.state import State
-from openhands.core.message import Message, TextContent
-from openhands.events.observation.agent import MicroagentKnowledge
-from openhands.microagent import BaseMicroagent
-from openhands.utils.prompt import ConversationInstructions, PromptManager, RepositoryInfo, RuntimeInfo
+from forge.controller.state.control_flags import IterationControlFlag
+from forge.controller.state.state import State
+from forge.core.message import Message, TextContent
+from forge.events.observation.agent import MicroagentKnowledge
+from forge.microagent import BaseMicroagent
+from forge.utils.prompt import ConversationInstructions, PromptManager, RepositoryInfo, RuntimeInfo
 
 
 @pytest.fixture
 def prompt_dir(tmp_path):
-    shutil.copytree("openhands/agenthub/codeact_agent/prompts", tmp_path, dirs_exist_ok=True)
+    shutil.copytree("Forge/agenthub/codeact_agent/prompts", tmp_path, dirs_exist_ok=True)
     return tmp_path
 
 
@@ -163,7 +163,7 @@ def test_jinja2_template_inheritance(prompt_dir):
     """
     with open(os.path.join(prompt_dir, "system_prompt.j2"), "w") as f:
         f.write(
-            "You are OpenHands agent, a helpful AI assistant that can interact with a computer to solve tasks.\n\n<ROLE>\nYour primary role is to assist users by executing commands, modifying code, and solving technical problems effectively.\n</ROLE>\n"
+            "You are Forge agent, a helpful AI assistant that can interact with a computer to solve tasks.\n\n<ROLE>\nYour primary role is to assist users by executing commands, modifying code, and solving technical problems effectively.\n</ROLE>\n"
         )
     with open(os.path.join(prompt_dir, "system_prompt_interactive.j2"), "w") as f:
         f.write(
@@ -176,14 +176,14 @@ def test_jinja2_template_inheritance(prompt_dir):
     base_manager = PromptManager(prompt_dir=prompt_dir)
     base_template = base_manager._load_template("system_prompt.j2")
     base_msg = base_template.render().strip()
-    assert "You are OpenHands agent" in base_msg
+    assert "You are Forge agent" in base_msg
     assert "<ROLE>" in base_msg
     assert "<INTERACTION_RULES>" not in base_msg
     assert "<TASK_MANAGEMENT>" not in base_msg
     interactive_manager = PromptManager(prompt_dir=prompt_dir, system_prompt_filename="system_prompt_interactive.j2")
     interactive_template = interactive_manager._load_template("system_prompt_interactive.j2")
     interactive_msg = interactive_template.render().strip()
-    assert "You are OpenHands agent" in interactive_msg
+    assert "You are Forge agent" in interactive_msg
     assert "<ROLE>" in interactive_msg
     assert "<INTERACTION_RULES>" in interactive_msg
     assert "Ask clarifying questions when needed" in interactive_msg
@@ -191,7 +191,7 @@ def test_jinja2_template_inheritance(prompt_dir):
     long_horizon_manager = PromptManager(prompt_dir=prompt_dir, system_prompt_filename="system_prompt_long_horizon.j2")
     long_horizon_template = long_horizon_manager._load_template("system_prompt_long_horizon.j2")
     long_horizon_msg = long_horizon_template.render().strip()
-    assert "You are OpenHands agent" in long_horizon_msg
+    assert "You are Forge agent" in long_horizon_msg
     assert "<ROLE>" in long_horizon_msg
     assert "<INTERACTION_RULES>" not in long_horizon_msg
     assert "<TASK_MANAGEMENT>" in long_horizon_msg
@@ -203,7 +203,7 @@ def test_jinja2_template_inheritance(prompt_dir):
 
 def _create_test_prompt_template(prompt_dir):
     """Create test prompt template file."""
-    template_content = """You are OpenHands agent.
+    template_content = """You are Forge agent.
 
 {% if cli_mode %}
 <CLI_MODE>
@@ -227,7 +227,7 @@ Always be helpful and follow user instructions.
 
 def _validate_cli_message(cli_message):
     """Validate CLI mode message content."""
-    assert "You are OpenHands agent" in cli_message
+    assert "You are Forge agent" in cli_message
     assert "<CLI_MODE>" in cli_message
     assert "CLI mode" in cli_message
     assert "Direct file system access" in cli_message
@@ -238,7 +238,7 @@ def _validate_cli_message(cli_message):
 
 def _validate_sandbox_message(sandbox_message):
     """Validate sandbox mode message content."""
-    assert "You are OpenHands agent" in sandbox_message
+    assert "You are Forge agent" in sandbox_message
     assert "<SANDBOX_MODE>" in sandbox_message
     assert "inside sandbox" in sandbox_message
     assert "Container-scoped operations" in sandbox_message
@@ -249,7 +249,7 @@ def _validate_sandbox_message(sandbox_message):
 
 def _validate_default_message(default_message):
     """Validate default message content."""
-    assert "You are OpenHands agent" in default_message
+    assert "You are Forge agent" in default_message
     assert "<COMMON_INSTRUCTIONS>" in default_message
     assert "<SANDBOX_MODE>" in default_message
     assert "<CLI_MODE>" not in default_message

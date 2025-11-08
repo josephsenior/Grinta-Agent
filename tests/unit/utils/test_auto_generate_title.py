@@ -3,16 +3,16 @@
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-from openhands.core.config.openhands_config import OpenHandsConfig
-from openhands.events.action import MessageAction
-from openhands.events.event import EventSource
-from openhands.events.event_store import EventStore
-from openhands.llm.llm_registry import LLMRegistry
-from openhands.server.conversation_manager.standalone_conversation_manager import StandaloneConversationManager
-from openhands.server.monitoring import MonitoringListener
-from openhands.storage.data_models.settings import Settings
-from openhands.storage.memory import InMemoryFileStore
-from openhands.utils.conversation_summary import auto_generate_title
+from forge.core.config.forge_config import ForgeConfig
+from forge.events.action import MessageAction
+from forge.events.event import EventSource
+from forge.events.event_store import EventStore
+from forge.llm.llm_registry import LLMRegistry
+from forge.server.conversation_manager.standalone_conversation_manager import StandaloneConversationManager
+from forge.server.monitoring import MonitoringListener
+from forge.storage.data_models.settings import Settings
+from forge.storage.memory import InMemoryFileStore
+from forge.utils.conversation_summary import auto_generate_title
 
 
 @pytest.mark.asyncio
@@ -26,7 +26,7 @@ async def test_auto_generate_title_with_llm():
     user_message._source = EventSource.USER
     user_message._id = 1
     user_message._timestamp = datetime.now(timezone.utc).isoformat()
-    with patch("openhands.utils.conversation_summary.EventStore") as mock_event_store_cls:
+    with patch("forge.utils.conversation_summary.EventStore") as mock_event_store_cls:
         mock_event_store = MagicMock(spec=EventStore)
         mock_event_store.search_events.return_value = [user_message]
         mock_event_store_cls.return_value = mock_event_store
@@ -50,7 +50,7 @@ async def test_auto_generate_title_fallback():
     user_message._source = EventSource.USER
     user_message._id = 1
     user_message._timestamp = datetime.now(timezone.utc).isoformat()
-    with patch("openhands.utils.conversation_summary.EventStore") as mock_event_store_cls:
+    with patch("forge.utils.conversation_summary.EventStore") as mock_event_store_cls:
         mock_event_store = MagicMock(spec=EventStore)
         mock_event_store.search_events.return_value = [user_message]
         mock_event_store_cls.return_value = mock_event_store
@@ -69,7 +69,7 @@ async def test_auto_generate_title_no_messages():
     llm_registry = MagicMock(spec=LLMRegistry)
     conversation_id = "test-conversation"
     user_id = "test-user"
-    with patch("openhands.utils.conversation_summary.EventStore") as mock_event_store_cls:
+    with patch("forge.utils.conversation_summary.EventStore") as mock_event_store_cls:
         mock_event_store = MagicMock(spec=EventStore)
         mock_event_store.search_events.return_value = []
         mock_event_store_cls.return_value = mock_event_store
@@ -96,14 +96,14 @@ async def test_update_conversation_with_title():
     mock_conversation_store.get_metadata.return_value = mock_metadata
     manager = StandaloneConversationManager(
         sio=sio,
-        config=OpenHandsConfig(),
+        config=ForgeConfig(),
         file_store=file_store,
         server_config=server_config,
         monitoring_listener=MonitoringListener(),
     )
     manager._get_conversation_store = AsyncMock(return_value=mock_conversation_store)
     with patch(
-        "openhands.server.conversation_manager.standalone_conversation_manager.auto_generate_title",
+        "forge.server.conversation_manager.standalone_conversation_manager.auto_generate_title",
         AsyncMock(return_value="Generated Title"),
     ):
         await manager._update_conversation_for_event(user_id, conversation_id, settings, llm_registry)

@@ -171,7 +171,7 @@ context_short_term_window = 5        # Short-term memory size
 context_working_size = 50            # Working memory size
 context_long_term_size = 200         # Long-term memory size
 context_contradiction_threshold = 0.7 # Contradiction detection threshold
-context_persistence_path = "./.openhands/context_state.json"
+context_persistence_path = "./.Forge/context_state.json"
 
 [condenser]
 # Semantic condenser for intelligent compression
@@ -197,7 +197,7 @@ The system is automatically integrated into CodeAct agent. When enabled, it:
 ### **Manual Usage (Advanced)**
 
 ```python
-from openhands.memory.enhanced_context_manager import (
+from forge.memory.enhanced_context_manager import (
     EnhancedContextManager,
     DecisionType
 )
@@ -246,10 +246,10 @@ context = manager.get_relevant_context(
 )
 
 # Save state (persists across sessions)
-manager.save_to_file("./.openhands/context_state.json")
+manager.save_to_file("./.Forge/context_state.json")
 
 # Load state
-manager.load_from_file("./.openhands/context_state.json")
+manager.load_from_file("./.Forge/context_state.json")
 
 # Get statistics
 stats = manager.get_stats()
@@ -389,7 +389,7 @@ enable_enhanced_context = true
 **Solution:** Check persistence path is writable
 
 ```toml
-context_persistence_path = "./.openhands/context_state.json"
+context_persistence_path = "./.Forge/context_state.json"
 ```
 
 ### **Issue: Too Many Contradictions Detected**

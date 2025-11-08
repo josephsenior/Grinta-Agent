@@ -3,15 +3,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
-from openhands.integrations.provider import ProviderToken
-from openhands.integrations.service_types import ProviderType
-from openhands.server.routes.secrets import app, check_provider_tokens
-from openhands.server.routes.settings import store_llm_settings
-from openhands.server.settings import POSTProviderModel
-from openhands.storage import get_file_store
-from openhands.storage.data_models.settings import Settings
-from openhands.storage.data_models.user_secrets import UserSecrets
-from openhands.storage.secrets.file_secrets_store import FileSecretsStore
+from forge.integrations.provider import ProviderToken
+from forge.integrations.service_types import ProviderType
+from forge.server.routes.secrets import app, check_provider_tokens
+from forge.server.routes.settings import store_llm_settings
+from forge.server.settings import POSTProviderModel
+from forge.storage import get_file_store
+from forge.storage.data_models.settings import Settings
+from forge.storage.data_models.user_secrets import UserSecrets
+from forge.storage.secrets.file_secrets_store import FileSecretsStore
 
 
 async def get_settings_store(request):
@@ -22,8 +22,8 @@ async def get_settings_store(request):
 @pytest.fixture
 def test_client():
     with patch.dict(os.environ, {"SESSION_API_KEY": ""}, clear=False), patch(
-        "openhands.server.dependencies._SESSION_API_KEY", None
-    ), patch("openhands.server.routes.secrets.check_provider_tokens", AsyncMock(return_value="")):
+        "forge.server.dependencies._SESSION_API_KEY", None
+    ), patch("forge.server.routes.secrets.check_provider_tokens", AsyncMock(return_value="")):
         yield TestClient(app)
 
 
@@ -37,7 +37,7 @@ def file_secrets_store(temp_dir):
     file_store = get_file_store("local", temp_dir)
     store = FileSecretsStore(file_store)
     with patch(
-        "openhands.storage.secrets.file_secrets_store.FileSecretsStore.get_instance", AsyncMock(return_value=store)
+        "forge.storage.secrets.file_secrets_store.FileSecretsStore.get_instance", AsyncMock(return_value=store)
     ):
         yield store
 
@@ -48,7 +48,7 @@ async def test_check_provider_tokens_valid():
     provider_token = ProviderToken(token=SecretStr("valid-token"))
     providers = POSTProviderModel(provider_tokens={ProviderType.GITHUB: provider_token})
     existing_provider_tokens = {}
-    with patch("openhands.server.routes.secrets.validate_provider_token") as mock_validate:
+    with patch("forge.server.routes.secrets.validate_provider_token") as mock_validate:
         mock_validate.return_value = ProviderType.GITHUB
         result = await check_provider_tokens(providers, existing_provider_tokens)
         assert result == ""
@@ -61,7 +61,7 @@ async def test_check_provider_tokens_invalid():
     provider_token = ProviderToken(token=SecretStr("invalid-token"))
     providers = POSTProviderModel(provider_tokens={ProviderType.GITHUB: provider_token})
     existing_provider_tokens = {}
-    with patch("openhands.server.routes.secrets.validate_provider_token") as mock_validate:
+    with patch("forge.server.routes.secrets.validate_provider_token") as mock_validate:
         mock_validate.return_value = None
         result = await check_provider_tokens(providers, existing_provider_tokens)
         assert "Invalid token" in result

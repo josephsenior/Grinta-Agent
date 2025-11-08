@@ -6,8 +6,8 @@ import { useCreateConversation } from "./mutation/use-create-conversation";
 import { useUserProviders } from "./use-user-providers";
 import { useConversationSubscriptions } from "#/context/conversation-subscriptions-provider";
 import { Provider } from "#/types/settings";
-import { CreateMicroagent, Conversation } from "#/api/open-hands.types";
-import OpenHands from "#/api/open-hands";
+import { CreateMicroagent, Conversation } from "#/api/forge.types";
+import Forge from "#/api/forge";
 import { renderConversationStartingToast } from "#/components/features/chat/microagent/microagent-status-toast";
 
 interface ConversationData {
@@ -45,7 +45,7 @@ export const useCreateConversationAndSubscribeMultiple = () => {
   const conversationQueries = useQueries({
     queries: conversationIdsToWatch.map((conversationId) => ({
       queryKey: ["conversation-ready-poll", conversationId],
-      queryFn: () => OpenHands.getConversation(conversationId),
+      queryFn: () => Forge.getConversation(conversationId),
       enabled: !!conversationId,
       refetchInterval: (query: Query<Conversation | null, AxiosError>) => {
         const status = query.state.data?.status;
@@ -72,7 +72,7 @@ export const useCreateConversationAndSubscribeMultiple = () => {
         return;
       }
 
-      const { status, url, session_api_key: sessionApiKey } = query.data;
+      const { status, url, session_api_key: sessionApiKey = null } = query.data ?? {};
 
       let { baseUrl } = conversationData;
       if (url && !url.startsWith("/")) {
@@ -174,12 +174,12 @@ export const useCreateConversationAndSubscribeMultiple = () => {
             setCreatedConversations((prev) => ({
               ...prev,
               [data.conversation_id]: {
-                conversationId: data.conversation_id,
-                sessionApiKey: data.session_api_key,
-                baseUrl,
-                socketPath,
-                onEventCallback,
-              },
+                  conversationId: data.conversation_id,
+                  sessionApiKey: data.session_api_key ?? null,
+                  baseUrl,
+                  socketPath,
+                  onEventCallback,
+                },
             }));
           },
         },

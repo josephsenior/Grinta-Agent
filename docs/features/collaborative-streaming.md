@@ -169,7 +169,7 @@ role_requirements = {
 
 ### **Automatic Context-Aware Streaming**
 ```python
-from openhands.metasop import MetaSOPOrchestrator
+from forge.metasop import MetaSOPOrchestrator
 
 # Initialize with collaborative streaming enabled
 orchestrator = MetaSOPOrchestrator("collaborative_delivery")
@@ -181,7 +181,7 @@ result = await orchestrator.run_async(task_context)
 
 ### **Manual Stream Validation**
 ```python
-from openhands.metasop.collaborative_streaming import ContextAwareStreamingEngine
+from forge.metasop.collaborative_streaming import ContextAwareStreamingEngine
 
 streaming_engine = ContextAwareStreamingEngine(
     context_completeness_threshold=0.8,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 import pytest
-from openhands.metasop.models import Artifact, SopStep, StepOutputSpec
-from openhands.metasop.orchestrator import MetaSOPOrchestrator
+from forge.metasop.models import Artifact, SopStep, StepOutputSpec
+from forge.metasop.orchestrator import MetaSOPOrchestrator
 
 
 class DummyConfig:
@@ -12,9 +12,9 @@ class DummyConfig:
 
 @pytest.fixture
 def orch():
-    from openhands.core.config import OpenHandsConfig
+    from forge.core.config import ForgeConfig
 
-    cfg = OpenHandsConfig()
+    cfg = ForgeConfig()
     setattr(cfg, "extended", type("E", (), {"metasop": {"enabled": True}})())
     return MetaSOPOrchestrator("feature_delivery", cfg)
 

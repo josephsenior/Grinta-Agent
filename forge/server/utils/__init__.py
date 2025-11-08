@@ -1,0 +1,137 @@
+"""Server utility package exports."""
+
+from __future__ import annotations
+
+import uuid
+from typing import TYPE_CHECKING
+
+from fastapi import Depends, HTTPException, Path, Request, status
+
+from forge.core.logger import forge_logger as logger
+from forge.server.shared import ConversationStoreImpl, config, conversation_manager
+from forge.server.user_auth import get_user_id
+
+from .error_formatter import safe_format_error  # noqa: F401
+
+if TYPE_CHECKING:
+    from forge.storage.conversation.conversation_store import ConversationStore
+    from forge.storage.data_models.conversation_metadata import ConversationMetadata
+
+
+def validate_conversation_id(conversation_id: str) -> str:
+    """Validate conversation ID format and length.
+
+    Args:
+        conversation_id: The conversation ID to validate
+
+    Returns:
+        The validated conversation ID
+
+    Raises:
+        HTTPException: If the conversation ID is invalid
+
+    """
+    if len(conversation_id) > 100:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Conversation ID is too long")
+    if "\x00" in conversation_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Conversation ID contains invalid characters",
+        )
+    if ".." in conversation_id or "/" in conversation_id or "\\" in conversation_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Conversation ID contains invalid path characters",
+        )
+    if any(ord(c) < 32 for c in conversation_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Conversation ID contains control characters",
+        )
+    return conversation_id
+
+
+async def get_conversation_store(request: Request | None = None) -> ConversationStore | None:
+    """Get or create ConversationStore instance for request.
+
+    Caches instance in request state for reuse.
+
+    Args:
+        request: HTTP request
+
+    Returns:
+        ConversationStore instance or None
+
+    """
+    if request is None:
+        return await ConversationStoreImpl.get_instance(config, None)
+
+    conversation_store: ConversationStore | None = getattr(request.state, "conversation_store", None)
+    if conversation_store:
+        return conversation_store
+    user_id = await get_user_id(request)
+    conversation_store = await ConversationStoreImpl.get_instance(config, user_id)
+    request.state.conversation_store = conversation_store
+    return conversation_store
+
+
+async def generate_unique_conversation_id(conversation_store: ConversationStore) -> str:
+    """Generate a unique conversation ID that doesn't exist in store.
+
+    Repeatedly generates UUIDs until finding one not already in use.
+
+    Args:
+        conversation_store: Conversation storage
+
+    Returns:
+        Unique conversation ID as hex string
+
+    """
+    conversation_id = uuid.uuid4().hex
+    while await conversation_store.exists(conversation_id):
+        conversation_id = uuid.uuid4().hex
+    return conversation_id
+
+
+async def get_conversation_metadata(
+    conversation_id: str,
+    conversation_store: ConversationStore = Depends(get_conversation_store),
+) -> ConversationMetadata:
+    """Get conversation metadata and validate user access without requiring an active conversation."""
+    try:
+        return await conversation_store.get_metadata(conversation_id)
+    except FileNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Conversation {conversation_id} not found",
+        ) from e
+
+
+async def get_conversation(conversation_id: str, user_id: str | None = Depends(get_user_id)):
+    """Grabs conversation id set by middleware. Adds the conversation_id to the openapi schema."""
+    logger.info(f"get_conversation called with conversation_id={conversation_id}, user_id={user_id}")
+
+    # First check if conversation exists in conversation store
+    conversation_store = await ConversationStoreImpl.get_instance(config, user_id)
+    conversation_metadata = await conversation_store.get_metadata(conversation_id)
+    if not conversation_metadata:
+        logger.warning(
+            "get_conversation: conversation %s not found in conversation store",
+            conversation_id,
+            extra={"session_id": conversation_id, "user_id": user_id},
+        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Conversation {conversation_id} not found")
+
+    # Get the ServerConversation from conversation manager
+    conversation = await conversation_manager.attach_to_conversation(conversation_id, user_id)
+    if not conversation:
+        logger.warning(
+            "get_conversation: conversation %s not found, attach_to_conversation returned None",
+            conversation_id,
+            extra={"session_id": conversation_id, "user_id": user_id},
+        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Conversation {conversation_id} not found")
+    try:
+        yield conversation
+    finally:
+        await conversation_manager.detach_from_conversation(conversation)

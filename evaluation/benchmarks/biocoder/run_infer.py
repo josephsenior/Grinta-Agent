@@ -14,20 +14,20 @@ from evaluation.utils.shared import (
     compatibility_for_eval_history_pairs,
     get_default_sandbox_config_for_eval,
     get_metrics,
-    get_openhands_config_for_eval,
+    get_FORGE_config_for_eval,
     make_metadata,
     prepare_dataset,
     reset_logger_for_multiprocessing,
     run_evaluation,
 )
-from openhands.controller.state.state import State
-from openhands.core.config import OpenHandsConfig, get_llm_config_arg, parse_arguments
-from openhands.core.logger import openhands_logger as logger
-from openhands.core.main import create_runtime, run_controller
-from openhands.events.action import CmdRunAction, MessageAction
-from openhands.events.observation import CmdOutputObservation
-from openhands.runtime.base import Runtime
-from openhands.utils.async_utils import call_async_from_sync
+from forge.controller.state.state import State
+from forge.core.config import ForgeConfig, get_llm_config_arg, parse_arguments
+from forge.core.logger import forge_logger as logger
+from forge.core.main import create_runtime, run_controller
+from forge.events.action import CmdRunAction, MessageAction
+from forge.events.observation import CmdOutputObservation
+from forge.runtime.base import Runtime
+from forge.utils.async_utils import call_async_from_sync
 
 AGENT_CLS_TO_FAKE_USER_RESPONSE_FN = {
     "CodeActAgent": functools.partial(codeact_user_response, encapsulate_solution=True, try_parse=None)
@@ -38,11 +38,11 @@ AGENT_CLS_TO_INST_SUFFIX = {
 FILE_EXT_MAP = {"python": "py", "java": "java", "c": "c", "cpp": "cpp", "javascript": "js", "typescript": "ts"}
 
 
-def get_config(metadata: EvalMetadata) -> OpenHandsConfig:
+def get_config(metadata: EvalMetadata) -> ForgeConfig:
     BIOCODER_BENCH_CONTAINER_IMAGE = "public.ecr.aws/i5g0m1f6/eval_biocoder:v1.0"
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = BIOCODER_BENCH_CONTAINER_IMAGE
-    config = get_openhands_config_for_eval(metadata=metadata, runtime="docker", sandbox_config=sandbox_config)
+    config = get_FORGE_config_for_eval(metadata=metadata, runtime="docker", sandbox_config=sandbox_config)
     config.set_llm_config(metadata.llm_config)
     agent_config = config.get_agent_config(metadata.agent_class)
     agent_config.enable_prompt_extensions = False
@@ -148,7 +148,7 @@ def complete_runtime(runtime: Runtime, instance: pd.Series) -> dict[str, Any]:
     obs = runtime.run_action(action)
     assert obs.exit_code == 0
     action = CmdRunAction(
-        command="/home/openhands/mambaforge/bin/mamba run -n test python3 /testing/start_test_openhands.py"
+        command="/home/Forge/mambaforge/bin/mamba run -n test python3 /testing/start_test_forge.py"
     )
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)

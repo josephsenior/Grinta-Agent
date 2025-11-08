@@ -1,14 +1,14 @@
 import React from "react";
 import { shouldRenderEvent } from "../event-content-helpers/should-render-event";
-import type { OpenHandsAction } from "#/types/core/actions";
-import type { OpenHandsObservation } from "#/types/core/observations";
+import type { ForgeAction } from "#/types/core/actions";
+import type { ForgeObservation } from "#/types/core/observations";
 
 /**
  * Custom hook to filter events based on technical details setting
  * Separates event filtering logic from UI components
  */
 export function useFilteredEvents(
-  parsedEvents: (OpenHandsAction | OpenHandsObservation)[],
+  parsedEvents: (ForgeAction | ForgeObservation)[],
   showTechnicalDetails: boolean
 ) {
   return React.useMemo(() => {

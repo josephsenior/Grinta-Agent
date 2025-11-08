@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import posthog from "posthog-js";
 import { DEFAULT_SETTINGS } from "#/services/settings";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { PostSettings, PostApiSettings } from "#/types/settings";
 import { useSettings } from "../query/use-settings";
 
@@ -51,7 +51,7 @@ const saveSettingsMutationFn = async (settings: Partial<PostSettings>) => {
 
   console.log("[useSaveSettings] Sending to backend:", apiSettings);
   console.log("[useSaveSettings] autonomy_level specifically:", apiSettings.autonomy_level);
-  await OpenHands.saveSettings(apiSettings);
+  await Forge.saveSettings(apiSettings);
 };
 
 export const useSaveSettings = () => {
@@ -80,41 +80,8 @@ export const useSaveSettings = () => {
         });
       }
 
-      // Retry logic with exponential backoff
-      let retries = 0;
-      const maxRetries = 3;
-      const baseDelay = 1000;
-
-      while (retries <= maxRetries) {
-        try {
-          await saveSettingsMutationFn(newSettings);
-          
-          // Success - track if we had to retry
-          if (retries > 0) {
-            posthog.capture("settings_save_retry_success", {
-              retries,
-            });
-          }
-          
-          return newSettings; // Return the new settings for optimistic update
-        } catch (error) {
-          retries++;
-          
-          // If we've exhausted retries, throw the error
-          if (retries > maxRetries) {
-            posthog.capture("settings_save_failed", {
-              retries,
-              error: error instanceof Error ? error.message : "Unknown error",
-            });
-            throw error;
-          }
-          
-          // Wait before retrying (exponential backoff)
-          const delay = baseDelay * Math.pow(2, retries - 1);
-          console.warn(`[useSaveSettings] Retry ${retries}/${maxRetries} after ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
+      await saveSettingsWithRetry(newSettings);
+      return newSettings;
     },
     onMutate: async (settings: Partial<PostSettings>) => {
       // Cancel any outgoing refetches to avoid overwriting our optimistic update
@@ -149,3 +116,32 @@ export const useSaveSettings = () => {
     },
   });
 };
+
+async function saveSettingsWithRetry(settings: Partial<PostSettings>) {
+  const maxRetries = process.env.NODE_ENV === "test" ? 0 : 3;
+  const baseDelay = 1000;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    try {
+      await saveSettingsMutationFn(settings);
+      if (attempt > 0) {
+        posthog.capture("settings_save_retry_success", { retries: attempt });
+      }
+      return;
+    } catch (error) {
+      if (attempt >= maxRetries) {
+        posthog.capture("settings_save_failed", {
+          retries: attempt,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+        throw error;
+      }
+
+      const delay = baseDelay * Math.pow(2, attempt);
+      console.warn(
+        `[useSaveSettings] Retry ${attempt + 1}/${maxRetries} after ${delay}ms...`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+}

@@ -28,9 +28,9 @@
           "usage/key-features",
           "usage/faqs",
           {
-            "group": "OpenHands Cloud",
+            "group": "Forge Cloud",
             "pages": [
-              "usage/cloud/openhands-cloud",
+              "usage/cloud/Forge-cloud",
               {
                 "group": "Integrations",
                 "pages": [
@@ -54,7 +54,7 @@
             ]
           },
           {
-            "group": "Run OpenHands on Your Own",
+            "group": "Run Forge on Your Own",
             "pages": [
               "usage/local-setup",
               "usage/how-to/gui-mode",
@@ -71,7 +71,7 @@
                       {
                         "group": "Providers",
                         "pages": [
-                          "usage/llms/openhands-llms",
+                          "usage/llms/Forge-llms",
                           "usage/llms/azure-llms",
                           "usage/llms/google-llms",
                           "usage/llms/groq",
@@ -141,7 +141,7 @@
             "pages": ["usage/troubleshooting/troubleshooting", "usage/feedback"]
           },
           {
-            "group": "OpenHands Developers",
+            "group": "Forge Developers",
             "pages": [
               "usage/how-to/development-overview",
               {
@@ -177,7 +177,7 @@
           "icon": "newspaper"
         },
         {
-          "anchor": "OpenHands Cloud",
+          "anchor": "Forge Cloud",
           "href": "https://app.all-hands.dev",
           "icon": "cloud"
         }
@@ -192,13 +192,13 @@
     "links": [],
     "primary": {
       "type": "github",
-      "href": "https://github.com/All-Hands-AI/OpenHands"
+      "href": "https://github.com/All-Hands-AI/Forge"
     }
   },
   "footer": {
     "socials": {
-      "slack": "https://join.slack.com/t/openhands-ai/shared_invite/zt-3847of6xi-xuYJIPa6YIPg4ElbDWbtSA",
-      "github": "https://github.com/All-Hands-AI/OpenHands",
+      "slack": "https://join.slack.com/t/Forge-ai/shared_invite/zt-3847of6xi-xuYJIPa6YIPg4ElbDWbtSA",
+      "github": "https://github.com/All-Hands-AI/Forge",
       "discord": "https://discord.gg/ESHStjSjD4"
     }
   },

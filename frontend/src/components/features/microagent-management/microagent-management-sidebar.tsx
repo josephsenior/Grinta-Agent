@@ -109,14 +109,14 @@ export function MicroagentManagementSidebar({
     const otherRepos: GitRepository[] = [];
 
     filteredRepositories.forEach((repo: GitRepository) => {
-      const hasOpenHandsSuffix =
+      const hasForgeSuffix =
         selectedProvider === "gitlab"
-          ? repo.full_name.endsWith("/openhands-config")
-          : repo.full_name.endsWith("/.openhands");
+          ? repo.full_name.endsWith("/Forge-config")
+          : repo.full_name.endsWith("/.Forge");
 
-      if (repo.owner_type === "user" && hasOpenHandsSuffix) {
+      if (repo.owner_type === "user" && hasForgeSuffix) {
         personalRepos.push(repo);
-      } else if (repo.owner_type === "organization" && hasOpenHandsSuffix) {
+      } else if (repo.owner_type === "organization" && hasForgeSuffix) {
         organizationRepos.push(repo);
       } else {
         otherRepos.push(repo);

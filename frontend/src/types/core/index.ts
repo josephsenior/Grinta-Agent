@@ -1,17 +1,17 @@
-import { OpenHandsAction } from "./actions";
-import { OpenHandsObservation } from "./observations";
-import { OpenHandsVariance } from "./variances";
+import { ForgeAction } from "./actions";
+import { ForgeObservation } from "./observations";
+import { ForgeVariance } from "./variances";
 
 /**
  * Parsed events are the normal runtime events that come from the server
  * (actions and observations). Variances are non-standard payloads and are
  * exported separately.
  */
-export type OpenHandsParsedEvent = OpenHandsAction | OpenHandsObservation;
+export type ForgeParsedEvent = ForgeAction | ForgeObservation;
 
-export type { OpenHandsVariance };
+export type { ForgeVariance };
 
 // Re-export main types for convenience
-export type { OpenHandsAction } from "./actions";
-export type { OpenHandsObservation } from "./observations";
-export type { OpenHandsEvent } from "./base";
+export type { ForgeAction } from "./actions";
+export type { ForgeObservation } from "./observations";
+export type { ForgeEvent } from "./base";

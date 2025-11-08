@@ -1,0 +1,51 @@
+name: feature_delivery
+steps:
+  - id: pm_spec
+    role: Product Manager
+    lock: read_only
+    priority: 10
+    task: Write user stories & acceptance criteria.
+    outputs:
+      schema: pm_spec.schema.json
+  - id: arch_design
+    role: Architect
+    depends_on: [pm_spec]
+    lock: read_only
+    priority: 20
+    task: Produce high-level design + API spec.
+    outputs:
+      schema: architect.schema.json
+  - id: engineer_impl
+    role: Engineer
+    depends_on: [arch_design]
+    lock: write
+    priority: 30
+    task: Create skeleton + implement unit tests.
+    outputs:
+      schema: engineer.schema.json
+  - id: qa_verify
+    role: QA
+    depends_on: [engineer_impl]
+    lock: test
+    priority: 40
+    task: Run tests + static analysis; produce buglist.
+    outputs:
+      schema: qa.schema.json
+  - id: engineer_fix
+    role: Engineer
+    condition: 'qa_verify.ok == false'
+    depends_on: [qa_verify]
+    lock: write
+    priority: 50
+    task: Fix and resubmit.
+    outputs:
+      schema: engineer.schema.json
+  - id: pm_approve
+    role: Product Manager
+    depends_on: [qa_verify]
+    condition: 'qa_verify.ok == true and qa_verify.tests.failed == 0 and engineer_impl.tests_added == true'
+    lock: read_only
+    priority: 60
+    task: Final approval & merge.
+    outputs:
+      schema: pm_approval.schema.json

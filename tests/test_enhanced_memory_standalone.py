@@ -10,8 +10,8 @@ import io
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
-# Add OpenHands to path
-sys.path.insert(0, str(Path(__file__).parent / "OpenHands"))
+# Add Forge to path
+sys.path.insert(0, str(Path(__file__).parent / "forge"))
 
 
 def test_enhanced_integration():
@@ -24,7 +24,7 @@ def test_enhanced_integration():
     # Test 1: Import and initialize
     print("Test 1: Import and initialize...")
     try:
-        from openhands.metasop.vector_memory import VectorMemoryStore
+        from forge.metasop.vector_memory import VectorMemoryStore
         store = VectorMemoryStore()
         print(f"✅ Initialized: {store.stats()}")
         print()

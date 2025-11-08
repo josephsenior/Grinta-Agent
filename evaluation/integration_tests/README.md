@@ -1,8 +1,8 @@
 # Integration tests
 
-This directory implements integration tests that [was running in CI](https://github.com/All-Hands-AI/OpenHands/tree/23d3becf1d6f5d07e592f7345750c314a826b4e9/tests/integration).
+This directory implements integration tests that [was running in CI](https://github.com/All-Hands-AI/Forge/tree/23d3becf1d6f5d07e592f7345750c314a826b4e9/tests/integration).
 
-[PR 3985](https://github.com/All-Hands-AI/OpenHands/pull/3985) introduce LLM-based editing, which requires access to LLM to perform edit. Hence, we remove integration tests from CI and intend to run them as nightly evaluation to ensure the quality of OpenHands softwares.
+[PR 3985](https://github.com/All-Hands-AI/Forge/pull/3985) introduce LLM-based editing, which requires access to LLM to perform edit. Hence, we remove integration tests from CI and intend to run them as nightly evaluation to ensure the quality of Forge softwares.
 
 ## To add new tests
 
@@ -51,7 +51,7 @@ development environment and LLM.
 
 - `model_config`, e.g. `eval_gpt4_1106_preview`, is the config group name for
   your LLM settings, as defined in your `config.toml`.
-- `git-version`, e.g. `HEAD`, is the git commit hash of the OpenHands version
+- `git-version`, e.g. `HEAD`, is the git commit hash of the Forge version
   you would like to evaluate. It could also be a release tag like `0.9.0`.
 - `agent`, e.g. `CodeActAgent`, is the name of the agent for benchmarks,
   defaulting to `CodeActAgent`.

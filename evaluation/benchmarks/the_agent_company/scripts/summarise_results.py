@@ -5,7 +5,7 @@ import os
 import re
 import sys
 
-logger = logging.getLogger("openhands.eval.the_agent_company.summarise_results")
+logger = logging.getLogger("forge.eval.the_agent_company.summarise_results")
 
 
 def calculate_cost(model: str, prompt_tokens: int, completion_tokens: int) -> float:

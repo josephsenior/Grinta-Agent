@@ -1,8 +1,8 @@
 import os
 import pytest
-from openhands.core.config.extended_config import ExtendedConfig
-from openhands.core.config.openhands_config import OpenHandsConfig
-from openhands.core.config.utils import load_from_toml
+from forge.core.config.extended_config import ExtendedConfig
+from forge.core.config.forge_config import ForgeConfig
+from forge.core.config.utils import load_from_toml
 
 
 def test_extended_config_from_dict():
@@ -67,13 +67,13 @@ def test_extended_config_invalid_key():
 def test_app_config_extended_from_toml(tmp_path: os.PathLike) -> None:
     """Test that the [extended] section in a TOML file is correctly loaded.
 
-    This test verifies that the [extended] section is loaded into OpenHandsConfig.extended
+    This test verifies that the [extended] section is loaded into ForgeConfig.extended
     and that it accepts arbitrary keys.
     """
     config_content = '\n[core]\nworkspace_base = "/tmp/workspace"\n\n[llm]\nmodel = "test-model"\napi_key = "toml-api-key"\n\n[extended]\ncustom1 = "custom_value"\ncustom2 = 42\nllm = "overridden"  # even a key like \'llm\' is accepted in extended\n\n[agent]\nenable_prompt_extensions = true\n'
     config_file = tmp_path / "config.toml"
     config_file.write_text(config_content)
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     load_from_toml(config, str(config_file))
     assert config.extended.custom1 == "custom_value"
     assert config.extended.custom2 == 42
@@ -84,12 +84,12 @@ def test_app_config_extended_default(tmp_path: os.PathLike) -> None:
     """Test default behavior when no [extended] section exists.
 
     This test verifies that if there is no [extended] section in the TOML file,
-    OpenHandsConfig.extended remains its default (empty) ExtendedConfig.
+    ForgeConfig.extended remains its default (empty) ExtendedConfig.
     """
     config_content = '\n[core]\nworkspace_base = "/tmp/workspace"\n\n[llm]\nmodel = "test-model"\napi_key = "toml-api-key"\n\n[agent]\nenable_prompt_extensions = true\n'
     config_file = tmp_path / "config.toml"
     config_file.write_text(config_content)
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     load_from_toml(config, str(config_file))
     assert config.extended.root == {}
 
@@ -105,7 +105,7 @@ def test_app_config_extended_random_keys(tmp_path: os.PathLike) -> None:
     )
     config_file = tmp_path / "config.toml"
     config_file.write_text(config_content)
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     load_from_toml(config, str(config_file))
     assert config.extended.random_key == "random_value"
     assert config.extended.another_key == 3.14

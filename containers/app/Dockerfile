@@ -1,4 +1,4 @@
-ARG OPENHANDS_BUILD_VERSION=dev
+ARG FORGE_BUILD_VERSION=dev
 FROM node:24.3.0-bookworm-slim AS frontend-builder
 
 WORKDIR /app
@@ -33,23 +33,23 @@ COPY pyproject.toml poetry.lock ./
 RUN touch README.md
 RUN export POETRY_CACHE_DIR && poetry install --no-root && rm -rf $POETRY_CACHE_DIR
 
-FROM base AS openhands-app
+FROM base AS Forge-app
 
 WORKDIR /app
 
 # re-declare for this section
-ARG OPENHANDS_BUILD_VERSION
+ARG FORGE_BUILD_VERSION
 
-ENV RUN_AS_OPENHANDS=true
+ENV RUN_AS_Forge=true
 # A random number--we need this to be different from the user's UID on the host machine
-ENV OPENHANDS_USER_ID=42420
+ENV FORGE_USER_ID=42420
 ENV SANDBOX_LOCAL_RUNTIME_URL=http://host.docker.internal
 ENV USE_HOST_NETWORK=false
 ENV WORKSPACE_BASE=/opt/workspace_base
-ENV OPENHANDS_BUILD_VERSION=$OPENHANDS_BUILD_VERSION
+ENV FORGE_BUILD_VERSION=$FORGE_BUILD_VERSION
 ENV SANDBOX_USER_ID=0
 ENV FILE_STORE=local
-ENV FILE_STORE_PATH=/.openhands
+ENV FILE_STORE_PATH=/.Forge
 ENV INIT_GIT_IN_EMPTY_WORKSPACE=1
 RUN mkdir -p $FILE_STORE_PATH
 RUN mkdir -p $WORKSPACE_BASE
@@ -68,33 +68,33 @@ RUN sed -i 's/^UID_MIN.*/UID_MIN 499/' /etc/login.defs
 # Default is 60000, but we've seen up to 200000
 RUN sed -i 's/^UID_MAX.*/UID_MAX 1000000/' /etc/login.defs
 
-RUN groupadd --gid $OPENHANDS_USER_ID openhands
-RUN useradd -l -m -u $OPENHANDS_USER_ID --gid $OPENHANDS_USER_ID -s /bin/bash openhands && \
-    usermod -aG openhands openhands
-RUN chown -R openhands:openhands /app && chmod -R 770 /app
-RUN chown -R openhands:openhands $WORKSPACE_BASE && chmod -R 770 $WORKSPACE_BASE
-# USER openhands - Commented out: entrypoint.sh must run as root to create enduser and set permissions
+RUN groupadd --gid $FORGE_USER_ID Forge
+RUN useradd -l -m -u $FORGE_USER_ID --gid $FORGE_USER_ID -s /bin/bash Forge && \
+    usermod -aG Forge Forge
+RUN chown -R Forge:Forge /app && chmod -R 770 /app
+RUN chown -R Forge:Forge $WORKSPACE_BASE && chmod -R 770 $WORKSPACE_BASE
+# USER Forge - Commented out: entrypoint.sh must run as root to create enduser and set permissions
 
 ENV VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:/root/.local/bin:$PATH" \
     PYTHONPATH='/app' \
     UV_TOOL_BIN_DIR=/root/.local/bin
 
-COPY --chown=openhands:openhands --chmod=770 --from=backend-builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
+COPY --chown=Forge:Forge --chmod=770 --from=backend-builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 
-COPY --chown=openhands:openhands --chmod=770 ./microagents ./microagents
-COPY --chown=openhands:openhands --chmod=770 ./openhands ./openhands
-COPY --chown=openhands:openhands --chmod=777 ./openhands/runtime/plugins ./openhands/runtime/plugins
-COPY --chown=openhands:openhands pyproject.toml poetry.lock README.md MANIFEST.in LICENSE ./
+COPY --chown=Forge:Forge --chmod=770 ./microagents ./microagents
+COPY --chown=Forge:Forge --chmod=770 ./Forge ./Forge
+COPY --chown=Forge:Forge --chmod=777 ./Forge/runtime/plugins ./Forge/runtime/plugins
+COPY --chown=Forge:Forge pyproject.toml poetry.lock README.md MANIFEST.in LICENSE ./
 
-# This is run as "openhands" user, and will create __pycache__ with openhands:openhands ownership
-RUN python openhands/core/download.py # No-op to download assets
+# This is run as "Forge" user, and will create __pycache__ with Forge:Forge ownership
+RUN python Forge/core/download.py # No-op to download assets
 # Add this line to set group ownership of all files/directories not already in "app" group
-# openhands:openhands -> openhands:openhands
-RUN find /app \! -group openhands -exec chgrp openhands {} +
+# Forge:Forge -> Forge:Forge
+RUN find /app \! -group Forge -exec chgrp Forge {} +
 
-COPY --chown=openhands:openhands --chmod=770 --from=frontend-builder /app/build ./frontend/build
-COPY --chown=openhands:openhands --chmod=770 ./containers/app/entrypoint.sh /app/entrypoint.sh
+COPY --chown=Forge:Forge --chmod=770 --from=frontend-builder /app/build ./frontend/build
+COPY --chown=Forge:Forge --chmod=770 ./containers/app/entrypoint.sh /app/entrypoint.sh
 
 # Add health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
@@ -103,4 +103,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 WORKDIR /app
 
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["uvicorn", "openhands.server.listen:app", "--host", "0.0.0.0", "--port", "3000"]
+CMD ["uvicorn", "Forge.server.listen:app", "--host", "0.0.0.0", "--port", "3000"]

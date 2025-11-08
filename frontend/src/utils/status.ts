@@ -37,33 +37,68 @@ export const AGENT_STATUS_MAP: {
   [AgentState.RATE_LIMITED]: I18nKey.CHAT_INTERFACE$AGENT_RATE_LIMITED_MESSAGE,
 };
 
+const TRANSITION_AGENT_STATES = new Set([
+  AgentState.LOADING,
+  AgentState.PAUSED,
+  AgentState.REJECTED,
+  AgentState.RATE_LIMITED,
+]);
+
+type IndicatorContext = {
+  webSocketStatus: WebSocketStatus;
+  conversationStatus: ConversationStatus | null;
+  runtimeStatus: RuntimeStatus | null;
+  agentState: AgentState | null;
+};
+
+function isStoppedIndicatorState({
+  webSocketStatus,
+  conversationStatus,
+  runtimeStatus,
+  agentState,
+}: IndicatorContext) {
+  return (
+    webSocketStatus === "DISCONNECTED" ||
+    conversationStatus === "STOPPED" ||
+    runtimeStatus === "STATUS$STOPPED" ||
+    agentState === AgentState.STOPPED ||
+    agentState === AgentState.ERROR
+  );
+}
+
+function isTransitionIndicatorState({
+  conversationStatus,
+  runtimeStatus,
+  agentState,
+}: IndicatorContext) {
+  const runtimeIsBusy = Boolean(
+    runtimeStatus && runtimeStatus !== "STATUS$READY",
+  );
+  const agentIsTransitioning = Boolean(
+    agentState != null && TRANSITION_AGENT_STATES.has(agentState),
+  );
+
+  return conversationStatus === "STARTING" || runtimeIsBusy || agentIsTransitioning;
+}
+
 export function getIndicatorColor(
   webSocketStatus: WebSocketStatus,
   conversationStatus: ConversationStatus | null,
   runtimeStatus: RuntimeStatus | null,
   agentState: AgentState | null,
 ) {
-  if (
-    webSocketStatus === "DISCONNECTED" ||
-    conversationStatus === "STOPPED" ||
-    runtimeStatus === "STATUS$STOPPED" ||
-    agentState === AgentState.STOPPED ||
-    agentState === AgentState.ERROR
-  ) {
+  const context: IndicatorContext = {
+    webSocketStatus,
+    conversationStatus,
+    runtimeStatus,
+    agentState,
+  };
+
+  if (isStoppedIndicatorState(context)) {
     return IndicatorColor.RED;
   }
   // Display a yellow working icon while the runtime is starting
-  if (
-    conversationStatus === "STARTING" ||
-    !["STATUS$READY", null].includes(runtimeStatus) ||
-    (agentState != null &&
-      [
-        AgentState.LOADING,
-        AgentState.PAUSED,
-        AgentState.REJECTED,
-        AgentState.RATE_LIMITED,
-      ].includes(agentState))
-  ) {
+  if (isTransitionIndicatorState(context)) {
     return IndicatorColor.YELLOW;
   }
 
@@ -86,41 +121,68 @@ export function getStatusCode(
   runtimeStatus: RuntimeStatus | null,
   agentState: AgentState | null,
 ) {
-  if (conversationStatus === "STOPPED" || runtimeStatus === "STATUS$STOPPED") {
-    return I18nKey.CHAT_INTERFACE$STOPPED;
-  }
-  if (
-    runtimeStatus &&
-    !["STATUS$READY", "STATUS$RUNTIME_STARTED"].includes(runtimeStatus)
-  ) {
-    const result = (I18nKey as { [key: string]: string })[runtimeStatus];
+  const context: StatusContext = {
+    statusMessage,
+    webSocketStatus,
+    conversationStatus,
+    runtimeStatus,
+    agentState,
+  };
+
+  for (const resolver of STATUS_RESOLVERS) {
+    const result = resolver(context);
     if (result) {
       return result;
     }
-    return runtimeStatus;
-  }
-  if (webSocketStatus === "DISCONNECTED") {
-    return I18nKey.CHAT_INTERFACE$DISCONNECTED;
-  }
-  if (webSocketStatus === "CONNECTING") {
-    return I18nKey.CHAT_INTERFACE$CONNECTING;
-  }
-
-  if (
-    agentState === AgentState.LOADING &&
-    statusMessage?.id &&
-    statusMessage.id !== "STATUS$READY"
-  ) {
-    return statusMessage.id;
-  }
-
-  if (agentState) {
-    return AGENT_STATUS_MAP[agentState];
-  }
-
-  if (runtimeStatus && runtimeStatus !== "STATUS$READY" && !agentState) {
-    return runtimeStatus;
   }
 
   return I18nKey.CHAT_INTERFACE$AGENT_ERROR_MESSAGE;
+}
+
+type StatusContext = {
+  statusMessage: StatusMessage;
+  webSocketStatus: WebSocketStatus;
+  conversationStatus: ConversationStatus | null;
+  runtimeStatus: RuntimeStatus | null;
+  agentState: AgentState | null;
+};
+
+type StatusResolver = (context: StatusContext) => string | null | undefined;
+
+const STATUS_RESOLVERS: StatusResolver[] = [
+  ({ conversationStatus, runtimeStatus }) =>
+    conversationStatus === "STOPPED" || runtimeStatus === "STATUS$STOPPED"
+      ? I18nKey.CHAT_INTERFACE$STOPPED
+      : null,
+  ({ runtimeStatus }) => resolveRuntimeStatus(runtimeStatus),
+  ({ webSocketStatus }) =>
+    webSocketStatus === "DISCONNECTED"
+      ? I18nKey.CHAT_INTERFACE$DISCONNECTED
+      : null,
+  ({ webSocketStatus }) =>
+    webSocketStatus === "CONNECTING"
+      ? I18nKey.CHAT_INTERFACE$CONNECTING
+      : null,
+  ({ agentState, statusMessage }) =>
+    agentState === AgentState.LOADING &&
+    statusMessage?.id &&
+    statusMessage.id !== "STATUS$READY"
+      ? statusMessage.id
+      : null,
+  ({ agentState }) => (agentState ? AGENT_STATUS_MAP[agentState] : null),
+  ({ runtimeStatus, agentState }) =>
+    runtimeStatus && runtimeStatus !== "STATUS$READY" && !agentState
+      ? runtimeStatus
+      : null,
+];
+
+function resolveRuntimeStatus(runtimeStatus: RuntimeStatus | null) {
+  if (!runtimeStatus) {
+    return null;
+  }
+  if (["STATUS$READY", "STATUS$RUNTIME_STARTED"].includes(runtimeStatus)) {
+    return null;
+  }
+  const mapped = (I18nKey as { [key: string]: string })[runtimeStatus];
+  return mapped ?? runtimeStatus;
 }

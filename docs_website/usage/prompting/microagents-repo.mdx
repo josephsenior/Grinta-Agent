@@ -1,6 +1,6 @@
 ---
 title: General Microagents
-description: General guidelines for OpenHands to work more effectively with the repository.
+description: General guidelines for Forge to work more effectively with the repository.
 ---
 
 ## Usage
@@ -19,12 +19,12 @@ Frontmatter should be enclosed in triple dashes (---) and may include the follow
 
 ## Creating a Comprehensive Repository Agent
 
-To create an effective repository agent, you can ask OpenHands to analyze your repository with a prompt like:
+To create an effective repository agent, you can ask Forge to analyze your repository with a prompt like:
 
 ```
 Please browse the repository, look at the documentation and relevant code, and understand the purpose of this repository.
 
-Specifically, I want you to create a `.openhands/microagents/repo.md` file. This file should contain succinct information that summarizes:
+Specifically, I want you to create a `.Forge/microagents/repo.md` file. This file should contain succinct information that summarizes:
 1. The purpose of this repository
 2. The general setup of this repo
 3. A brief description of the structure of this repo
@@ -32,11 +32,11 @@ Specifically, I want you to create a `.openhands/microagents/repo.md` file. This
 Read all the GitHub workflows under .github/ of the repository (if this folder exists) to understand the CI checks (e.g., linter, pre-commit), and include those in the repo.md file.
 ```
 
-This approach helps OpenHands capture repository context efficiently, reducing the need for repeated searches during conversations and ensuring more accurate solutions.
+This approach helps Forge capture repository context efficiently, reducing the need for repeated searches during conversations and ensuring more accurate solutions.
 
 ## Example Content
 
-A comprehensive repository agent file (`.openhands/microagents/repo.md`) should include:
+A comprehensive repository agent file (`.Forge/microagents/repo.md`) should include:
 
 ```
 # Repository Purpose
@@ -59,4 +59,4 @@ To set it up, you can run `npm run build`.
 Always make sure the tests are passing before committing changes. You can run the tests by running `npm run test`.
 ```
 
-[See more examples of general microagents here.](https://github.com/All-Hands-AI/OpenHands/tree/main/.openhands/microagents)
+[See more examples of general microagents here.](https://github.com/All-Hands-AI/Forge/tree/main/.Forge/microagents)

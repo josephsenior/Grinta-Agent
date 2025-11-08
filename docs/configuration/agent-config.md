@@ -107,7 +107,7 @@ supported_languages = ["python", "typescript", "javascript", "java"]
 ### **Profile Locations**
 
 ```
-OpenHands/openhands/agentic_behavior/
+Forge/Forge/agentic_behavior/
 ├── agent_profiles/
 │   ├── product_manager.yaml
 │   ├── architect.yaml

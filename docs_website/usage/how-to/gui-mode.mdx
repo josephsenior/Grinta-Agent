@@ -1,54 +1,54 @@
 ---
 title: GUI
-description: High level overview of the Graphical User Interface (GUI) in OpenHands.
+description: High level overview of the Graphical User Interface (GUI) in Forge.
 ---
 
 ## Prerequisites
 
-- [OpenHands is running](/usage/local-setup)
+- [Forge is running](/usage/local-setup)
 
 ## Launching the GUI Server
 
 ### Using the CLI Command
 
-You can launch the OpenHands GUI server directly from the command line using the `serve` command:
+You can launch the Forge GUI server directly from the command line using the `serve` command:
 
 <Callout type="info">
-**Prerequisites**: You need to have the [OpenHands CLI installed](/usage/how-to/cli-mode) first, OR have `uv` installed and run `uvx --python 3.12 --from openhands-ai openhands serve`. Otherwise, you'll need to use Docker directly (see the [Docker section](#using-docker-directly) below).
+**Prerequisites**: You need to have the [Forge CLI installed](/usage/how-to/cli-mode) first, OR have `uv` installed and run `uvx --python 3.12 --from Forge-ai Forge serve`. Otherwise, you'll need to use Docker directly (see the [Docker section](#using-docker-directly) below).
 </Callout>
 
 ```bash
-openhands serve
+Forge serve
 ```
 
 This command will:
 - Check that Docker is installed and running
 - Pull the required Docker images
-- Launch the OpenHands GUI server at http://localhost:3000
-- Use the same configuration directory (`~/.openhands`) as the CLI mode
+- Launch the Forge GUI server at http://localhost:3000
+- Use the same configuration directory (`~/.Forge`) as the CLI mode
 
 #### Mounting Your Current Directory
 
 To mount your current working directory into the GUI server container, use the `--mount-cwd` flag:
 
 ```bash
-openhands serve --mount-cwd
+Forge serve --mount-cwd
 ```
 
 This is useful when you want to work on files in your current directory through the GUI. The directory will be mounted at `/workspace` inside the container.
 
 #### Using GPU Support
 
-If you have NVIDIA GPUs and want to make them available to the OpenHands container, use the `--gpu` flag:
+If you have NVIDIA GPUs and want to make them available to the Forge container, use the `--gpu` flag:
 
 ```bash
-openhands serve --gpu
+Forge serve --gpu
 ```
 
 This will enable GPU support via nvidia-docker, mounting all available GPUs into the container. You can combine this with other flags:
 
 ```bash
-openhands serve --gpu --mount-cwd
+Forge serve --gpu --mount-cwd
 ```
 
 **Prerequisites for GPU support:**
@@ -57,7 +57,7 @@ openhands serve --gpu --mount-cwd
 
 #### Requirements
 
-Before using the `openhands serve` command, ensure that:
+Before using the `Forge serve` command, ensure that:
 - Docker is installed and running on your system
 - You have internet access to pull the required Docker images
 - Port 3000 is available on your system
@@ -83,7 +83,7 @@ Alternatively, you can run the GUI server using Docker directly. See the [local 
 
 You can use the Settings page at any time to:
 
-- Setup the LLM provider and model for OpenHands.
+- Setup the LLM provider and model for Forge.
 - [Setup the search engine](/usage/search-engine-setup).
 - [Configure MCP servers](/usage/mcp).
 - [Connect to GitHub](/usage/how-to/gui-mode#github-setup), [connect to GitLab](/usage/how-to/gui-mode#gitlab-setup)
@@ -93,7 +93,7 @@ You can use the Settings page at any time to:
 
 #### GitHub Setup
 
-OpenHands automatically exports a `GITHUB_TOKEN` to the shell environment if provided:
+Forge automatically exports a `GITHUB_TOKEN` to the shell environment if provided:
 
 <AccordionGroup>
 <Accordion title="Setting Up a GitHub Token">
@@ -106,7 +106,7 @@ OpenHands automatically exports a `GITHUB_TOKEN` to the shell environment if pro
    - **Fine-Grained Tokens**
      - All Repositories (You can select specific repositories, but this will impact what returns in repo search)
      - Minimal Permissions (Select `Meta Data = Read-only` read for search, `Pull Requests = Read and Write` and `Content = Read and Write` for branch creation)
-  2. **Enter Token in OpenHands**:
+  2. **Enter Token in Forge**:
    - In the Settings page, navigate to the `Integrations` tab.
    - Paste your token in the `GitHub Token` field.
    - Click `Save Changes` to apply the changes.
@@ -146,7 +146,7 @@ OpenHands automatically exports a `GITHUB_TOKEN` to the shell environment if pro
 
 #### GitLab Setup
 
-OpenHands automatically exports a `GITLAB_TOKEN` to the shell environment if provided:
+Forge automatically exports a `GITLAB_TOKEN` to the shell environment if provided:
 
 <AccordionGroup>
 <Accordion title="Setting Up a GitLab Token">
@@ -158,7 +158,7 @@ OpenHands automatically exports a `GITLAB_TOKEN` to the shell environment if pro
      - `read_repository` (Read repository)
      - `write_repository` (Write repository)
    - Set an expiration date or leave it blank for a non-expiring token.
-  2. **Enter Token in OpenHands**:
+  2. **Enter Token in Forge**:
    - In the Settings page, navigate to the `Integrations` tab.
    - Paste your token in the `GitLab Token` field.
    - Click `Save Changes` to apply the changes.
@@ -166,7 +166,7 @@ OpenHands automatically exports a `GITLAB_TOKEN` to the shell environment if pro
   3. **(Optional): Restrict agent permissions**
    - Create another PAT using Step 1 and exclude `api` scope .
    - In the Settings page, in the `Secrets` tab, create a new secret `GITLAB_TOKEN` and paste your lower scope token.
-   - OpenHands will use the higher scope token, and the agent will use the lower scope token
+   - Forge will use the higher scope token, and the agent will use the lower scope token
 </Accordion>
 
 <Accordion title="Troubleshooting">
@@ -194,8 +194,8 @@ OpenHands automatically exports a `GITLAB_TOKEN` to the shell environment if pro
      - `repository: write`
      - `pull requests: write`
      - `issues: write`
-   - App passwords are non-expiring token. OpenHands will migrate to using API tokens in the future.
-  2. **Enter Token in OpenHands**:
+   - App passwords are non-expiring token. Forge will migrate to using API tokens in the future.
+  2. **Enter Token in Forge**:
    - In the Settings page, navigate to the `Integrations` tab.
    - Paste your token in the `BitBucket Token` field.
    - Click `Save Changes` to apply the changes.
@@ -225,7 +225,7 @@ toggle `Advanced` options to access additional settings.
 - Custom Model: Use the `Custom Model` text box to manually enter a model. Make sure to use the correct prefix based on litellm docs.
 - Base URL: Specify a `Base URL` if required by your LLM provider.
 - Memory Condensation: The memory condenser manages the LLM's context by ensuring only the most important and relevant information is presented.
-- Confirmation Mode: Enabling this mode will cause OpenHands to confirm an action with the user before performing it.
+- Confirmation Mode: Enabling this mode will cause Forge to confirm an action with the user before performing it.
 
 ### Key Features
 
@@ -251,7 +251,7 @@ is loaded. Typically these include:
 - Be specific in your requests to get the most accurate and helpful responses, as described in the [prompting best practices](../prompting/prompting-best-practices).
 - Use one of the recommended models, as described in the [LLMs section](/usage/llms/llms).
 
-## Other Ways to Run Openhands
-- [Run OpenHands in a scriptable headless mode.](/usage/how-to/headless-mode)
-- [Run OpenHands with a friendly CLI.](/usage/how-to/cli-mode)
-- [Run OpenHands on GitHub issues with a GitHub action.](/usage/how-to/github-action)
+## Other Ways to Run Forge
+- [Run Forge in a scriptable headless mode.](/usage/how-to/headless-mode)
+- [Run Forge with a friendly CLI.](/usage/how-to/cli-mode)
+- [Run Forge on GitHub issues with a GitHub action.](/usage/how-to/github-action)

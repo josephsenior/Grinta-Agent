@@ -7,9 +7,9 @@ The script writes a persisted run summary to logs/metasop_last_run_mock.json.
 import json
 import logging
 from pathlib import Path
-from openhands.core.config.utils import load_openhands_config
-from openhands.metasop.models import Artifact, StepResult, StepTrace
-from openhands.metasop.orchestrator import MetaSOPOrchestrator
+from forge.core.config.utils import load_FORGE_config
+from forge.metasop.models import Artifact, StepResult, StepTrace
+from forge.metasop.orchestrator import MetaSOPOrchestrator
 
 
 class MockStepExecutor:
@@ -49,7 +49,7 @@ class MockStepExecutor:
 
 def main():
     logging.basicConfig(level=logging.DEBUG)
-    cfg = load_openhands_config(set_logging_levels=False)
+    cfg = load_FORGE_config(set_logging_levels=False)
     try:
         ext = (
             cfg.extended.model_dump()

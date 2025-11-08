@@ -97,7 +97,7 @@ export interface SchemaInfo {
   collections?: Array<{
     name: string;
     documentCount?: number;
-    sampleDocument?: Record<string, any>;
+    sampleDocument?: Record<string, unknown>;
   }>;
   
   // For Redis
@@ -116,7 +116,7 @@ export interface QueryRequest {
 
 export interface QueryResponse {
   success: boolean;
-  data?: any[];
+  data?: unknown[];
   affectedRows?: number;
   executionTime?: number;
   error?: string;

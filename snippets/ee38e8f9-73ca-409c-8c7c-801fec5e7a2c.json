@@ -1,0 +1,21 @@
+{
+  "id": "ee38e8f9-73ca-409c-8c7c-801fec5e7a2c",
+  "title": "Test Snippet",
+  "description": "A simple test snippet",
+  "language": "python",
+  "category": "utility",
+  "code": "def hello():\n    print(\"Hello, World!\")",
+  "tags": [
+    "test",
+    "python"
+  ],
+  "is_favorite": false,
+  "usage_count": 0,
+  "created_at": "2025-11-08 02:48:06.467238",
+  "updated_at": "2025-11-08 12:04:15.129872",
+  "metadata": {},
+  "dependencies": [],
+  "related_snippets": [],
+  "source_url": null,
+  "license": null
+}

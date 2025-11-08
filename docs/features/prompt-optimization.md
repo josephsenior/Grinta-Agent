@@ -22,7 +22,7 @@
 
 ## 🌟 **Overview**
 
-OpenHands features the most advanced prompt optimization system ever created, with capabilities that are **2-3 years ahead** of any competitor. This system enables AI agents to continuously improve their performance through intelligent prompt evolution, A/B testing, and real-time adaptation.
+Forge features the most advanced prompt optimization system ever created, with capabilities that are **2-3 years ahead** of any competitor. This system enables AI agents to continuously improve their performance through intelligent prompt evolution, A/B testing, and real-time adaptation.
 
 ### **Key Capabilities**
 - **Real-Time Optimization**: Live prompt adaptation with zero downtime
@@ -83,7 +83,7 @@ OpenHands features the most advanced prompt optimization system ever created, wi
 The central optimization engine that manages A/B testing and variant selection.
 
 ```python
-from openhands.prompt_optimization import PromptOptimizer
+from forge.prompt_optimization import PromptOptimizer
 
 # Initialize optimizer
 optimizer = PromptOptimizer(
@@ -117,7 +117,7 @@ optimizer.track_performance(
 Comprehensive metrics collection and analysis system.
 
 ```python
-from openhands.prompt_optimization import PerformanceTracker
+from forge.prompt_optimization import PerformanceTracker
 
 tracker = PerformanceTracker()
 
@@ -148,7 +148,7 @@ print(f"Confidence: {analysis.confidence}")
 LLM-powered prompt generation and improvement.
 
 ```python
-from openhands.prompt_optimization import PromptEvolver
+from forge.prompt_optimization import PromptEvolver
 
 evolver = PromptEvolver(
     llm_provider="openai",
@@ -179,7 +179,7 @@ for variant in new_variants:
 Enables hot-swapping and real-time prompt adaptation.
 
 ```python
-from openhands.prompt_optimization import LiveOptimizer
+from forge.prompt_optimization import LiveOptimizer
 
 live_optimizer = LiveOptimizer(
     optimization_threshold=0.05,  # 5% improvement threshold
@@ -201,7 +201,7 @@ await live_optimizer.start()
 ML-based performance forecasting.
 
 ```python
-from openhands.prompt_optimization import PerformancePredictor
+from forge.prompt_optimization import PerformancePredictor
 
 predictor = PerformancePredictor(
     model_type="ensemble",  # ensemble, neural_network, or linear
@@ -231,7 +231,7 @@ print(f"Confidence: {prediction.confidence}")
 Balances multiple performance criteria using Pareto optimization.
 
 ```python
-from openhands.prompt_optimization.advanced import MultiObjectiveOptimizer
+from forge.prompt_optimization.advanced import MultiObjectiveOptimizer
 
 multi_optimizer = MultiObjectiveOptimizer(
     objectives={
@@ -255,7 +255,7 @@ optimization_result = multi_optimizer.optimize(
 Intelligent context analysis for dynamic strategy selection.
 
 ```python
-from openhands.prompt_optimization.advanced import ContextAwareOptimizer
+from forge.prompt_optimization.advanced import ContextAwareOptimizer
 
 context_optimizer = ContextAwareOptimizer(
     context_analyzer="llm_based",  # or "rule_based"
@@ -285,7 +285,7 @@ optimized_prompt = await context_optimizer.optimize_for_context(
 Multi-level optimization across system, role, and tool levels.
 
 ```python
-from openhands.prompt_optimization.advanced import HierarchicalOptimizer
+from forge.prompt_optimization.advanced import HierarchicalOptimizer
 
 hierarchical_optimizer = HierarchicalOptimizer(
     levels=["system", "role", "tool"],
@@ -312,11 +312,11 @@ results = await hierarchical_optimizer.execute_optimization(optimization_plan)
 Hybrid storage system with local cache and central synchronization.
 
 ```python
-from openhands.prompt_optimization import PromptStorage
+from forge.prompt_optimization import PromptStorage
 
 storage = PromptStorage(
     local_cache_dir="./prompt_cache",
-    remote_url="https://api.openhands.ai/prompts",
+    remote_url="https://api.Forge.ai/prompts",
     sync_interval=300,  # 5 minutes
     auto_backup=True
 )
@@ -342,7 +342,7 @@ await storage.sync_all()
 ### **Data Models**
 
 ```python
-from openhands.prompt_optimization.models import (
+from forge.prompt_optimization.models import (
     PromptVariant, PromptMetrics, PromptPerformance,
     OptimizationConfig, PromptCategory
 )
@@ -392,7 +392,7 @@ config = OptimizationConfig(
 Live monitoring of optimization performance.
 
 ```python
-from openhands.prompt_optimization.analytics import AnalyticsDashboard
+from forge.prompt_optimization.analytics import AnalyticsDashboard
 
 dashboard = AnalyticsDashboard()
 
@@ -447,7 +447,7 @@ POST /api/v1/prompt-optimization/prompts/{prompt_id}/optimize
 Automatic optimization for multi-agent orchestration.
 
 ```python
-from openhands.metasop.orchestrator import MetaSOPOrchestrator
+from forge.metasop.orchestrator import MetaSOPOrchestrator
 
 orchestrator = MetaSOPOrchestrator(
     llm=llm,
@@ -474,7 +474,7 @@ orchestrator.settings.role_optimization = {
 System prompt optimization for the CodeAct agent.
 
 ```python
-from openhands.agenthub.codeact_agent import CodeActAgent
+from forge.agenthub.codeact_agent import CodeActAgent
 
 agent = CodeActAgent(
     llm=llm,
@@ -499,7 +499,7 @@ agent.config.prompt_opt_error_weight = 0.1
 Individual tool prompt optimization.
 
 ```python
-from openhands.prompt_optimization.tools import ToolOptimizer
+from forge.prompt_optimization.tools import ToolOptimizer
 
 tool_optimizer = ToolOptimizer()
 
@@ -615,7 +615,7 @@ class PerformanceTracker:
 
 1. **Initialize the optimization system**
 ```python
-from openhands.prompt_optimization import PromptOptimizer, PerformanceTracker
+from forge.prompt_optimization import PromptOptimizer, PerformanceTracker
 
 # Create optimizer for system prompts
 optimizer = PromptOptimizer(
@@ -662,7 +662,7 @@ optimizer.track_performance(
 
 1. **Enable real-time optimization**
 ```python
-from openhands.prompt_optimization import LiveOptimizer
+from forge.prompt_optimization import LiveOptimizer
 
 live_optimizer = LiveOptimizer()
 await live_optimizer.start()
@@ -672,7 +672,7 @@ await live_optimizer.start()
 
 2. **Use advanced strategies**
 ```python
-from openhands.prompt_optimization.advanced import MultiObjectiveOptimizer
+from forge.prompt_optimization.advanced import MultiObjectiveOptimizer
 
 multi_optimizer = MultiObjectiveOptimizer(
     objectives={
@@ -701,21 +701,21 @@ agent.config.enable_prompt_optimization = True
 
 ```bash
 # Prompt optimization settings
-OPENHANDS_ENABLE_PROMPT_OPTIMIZATION=true
-OPENHANDS_PROMPT_OPT_STORAGE_PATH=./prompt_data
-OPENHANDS_PROMPT_OPT_AB_SPLIT=0.2
-OPENHANDS_PROMPT_OPT_MIN_SAMPLES=50
-OPENHANDS_PROMPT_OPT_CONFIDENCE_THRESHOLD=0.95
+FORGE_ENABLE_PROMPT_OPTIMIZATION=true
+FORGE_PROMPT_OPT_STORAGE_PATH=./prompt_data
+FORGE_PROMPT_OPT_AB_SPLIT=0.2
+FORGE_PROMPT_OPT_MIN_SAMPLES=50
+FORGE_PROMPT_OPT_CONFIDENCE_THRESHOLD=0.95
 
 # Real-time optimization
-OPENHANDS_ENABLE_REAL_TIME_OPTIMIZATION=true
-OPENHANDS_OPTIMIZATION_THRESHOLD=0.05
-OPENHANDS_CONFIDENCE_THRESHOLD=0.8
+FORGE_ENABLE_REAL_TIME_OPTIMIZATION=true
+FORGE_OPTIMIZATION_THRESHOLD=0.05
+FORGE_CONFIDENCE_THRESHOLD=0.8
 
 # Advanced strategies
-OPENHANDS_ENABLE_MULTI_OBJECTIVE=true
-OPENHANDS_ENABLE_CONTEXT_AWARE=true
-OPENHANDS_ENABLE_HIERARCHICAL=true
+FORGE_ENABLE_MULTI_OBJECTIVE=true
+FORGE_ENABLE_CONTEXT_AWARE=true
+FORGE_ENABLE_HIERARCHICAL=true
 ```
 
 ### **Configuration Files**

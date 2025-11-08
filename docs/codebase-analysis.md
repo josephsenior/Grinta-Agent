@@ -15,7 +15,7 @@ Honest assessment of Forge's code structure, organization, and technical debt.
 
 **Structure:**
 ```
-openhands/
+Forge/
 ├── agenthub/        # All agents (codeact, browsing, readonly, etc.)
 ├── runtime/         # Sandbox execution environment
 ├── server/          # FastAPI backend + WebSocket
@@ -90,12 +90,12 @@ This is genuinely advanced - no competitor has this.
 
 **Examples:**
 ```
-openhands/cli/commands.py.dref2.bak
-openhands/cli/commands.py.dref3.bak
-openhands/cli/commands.py.pre_d_dref.bak
-openhands/cli/commands.py.pre_d_refactor.bak
-openhands/runtime/builder/docker.py.dref2.bak
-openhands/runtime/builder/docker.py.dref3.bak
+Forge/cli/commands.py.dref2.bak
+Forge/cli/commands.py.dref3.bak
+Forge/cli/commands.py.pre_d_dref.bak
+Forge/cli/commands.py.pre_d_refactor.bak
+Forge/runtime/builder/docker.py.dref2.bak
+Forge/runtime/builder/docker.py.dref3.bak
 ... (15 more)
 ```
 
@@ -151,12 +151,12 @@ ace_system_prompt.j2                # ACE framework
 name = "forge-ai"  # Package name
 
 # But codebase is:
-openhands/  # Directory name
+Forge/  # Directory name
 ```
 
 **Impact:**
-- ⚠️ Confusion: Is it Forge or OpenHands?
-- ⚠️ Imports use `openhands.*` but brand is Forge
+- ⚠️ Confusion: Is it Forge or Forge?
+- ⚠️ Imports use `Forge.*` but brand is Forge
 - ⚠️ Legacy naming from fork/rebrand?
 
 **This is actually OK for now** (rebranding mid-project is risky), but worth noting for future refactor.
@@ -169,7 +169,7 @@ openhands/  # Directory name
 
 **Memory Systems:**
 ```
-openhands/memory/
+Forge/memory/
 ├── memory.py                    # Base memory
 ├── conversation_memory.py       # Conversation-specific
 ├── enhanced_vector_store.py     # Enhanced version
@@ -182,7 +182,7 @@ openhands/memory/
 
 **Prompt Optimization:**
 ```
-openhands/prompt_optimization/
+Forge/prompt_optimization/
 ├── optimizer.py
 ├── evolver.py
 ├── tool_optimizer.py
@@ -230,7 +230,7 @@ tests/
 
 **Minor issues:**
 - Some overlap in memory implementations
-- Naming inconsistency (openhands vs forge)
+- Naming inconsistency (Forge vs forge)
 
 ---
 
@@ -305,7 +305,7 @@ tests/
 
 ### Medium Priority:
 7. **Simplify memory system** (6 implementations → maybe 3?)
-8. **Consider future rename** (openhands → forge) for consistency
+8. **Consider future rename** (Forge → forge) for consistency
 
 ---
 

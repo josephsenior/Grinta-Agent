@@ -56,18 +56,18 @@ test.beforeEach(async ({ page }) => {
     try {
       // Use the ambient Playwright flag and E2E helpers declared in types
       (
-        window as unknown as Window & { __OPENHANDS_PLAYWRIGHT?: boolean }
-      ).__OPENHANDS_PLAYWRIGHT = true;
+        window as unknown as Window & { __Forge_PLAYWRIGHT?: boolean }
+      ).__Forge_PLAYWRIGHT = true;
       const w = window as unknown as Window & {
-        __OPENHANDS_E2E_TIMINGS?: Array<Record<string, unknown>>;
-        __OPENHANDS_E2E_LOG?: (name: string, meta?: unknown) => void;
-        __OPENHANDS_E2E_GET?: () => Array<Record<string, unknown>>;
-        __OPENHANDS_E2E_MARK?: (name: string, meta?: unknown) => void;
+        __Forge_E2E_TIMINGS?: Array<Record<string, unknown>>;
+        __Forge_E2E_LOG?: (name: string, meta?: unknown) => void;
+        __Forge_E2E_GET?: () => Array<Record<string, unknown>>;
+        __Forge_E2E_MARK?: (name: string, meta?: unknown) => void;
       };
-      w.__OPENHANDS_E2E_TIMINGS = w.__OPENHANDS_E2E_TIMINGS || [];
-      w.__OPENHANDS_E2E_LOG = (name: string, meta?: unknown) => {
+      w.__Forge_E2E_TIMINGS = w.__Forge_E2E_TIMINGS || [];
+      w.__Forge_E2E_LOG = (name: string, meta?: unknown) => {
         try {
-          w.__OPENHANDS_E2E_TIMINGS!.push({
+          w.__Forge_E2E_TIMINGS!.push({
             ts: Date.now(),
             event: name,
             meta: meta ?? null,
@@ -76,9 +76,9 @@ test.beforeEach(async ({ page }) => {
           // swallow
         }
       };
-      w.__OPENHANDS_E2E_GET = () => w.__OPENHANDS_E2E_TIMINGS || [];
-      w.__OPENHANDS_E2E_MARK = (name: string, meta?: unknown) =>
-        w.__OPENHANDS_E2E_LOG?.(name, meta);
+      w.__Forge_E2E_GET = () => w.__Forge_E2E_TIMINGS || [];
+      w.__Forge_E2E_MARK = (name: string, meta?: unknown) =>
+        w.__Forge_E2E_LOG?.(name, meta);
     } catch {
       // ignore
     }
@@ -200,7 +200,7 @@ test("redirect to /conversation with the session id as a path param when clickin
     const timings = await page.evaluate(() =>
       // runtime-only in-page helper; use global directly inside page context
       // @ts-ignore - declared in ambient testing.d.ts for tests
-      typeof __OPENHANDS_E2E_GET === "function" ? __OPENHANDS_E2E_GET() : [],
+      typeof __Forge_E2E_GET === "function" ? __Forge_E2E_GET() : [],
     );
     if (timings && timings.length) {
       try {

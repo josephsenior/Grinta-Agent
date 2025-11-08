@@ -9,7 +9,7 @@ from tqdm import tqdm
 from evaluation.benchmarks.swe_bench.loc_eval.loc_utils import LocMeta
 from evaluation.benchmarks.swe_bench.run_infer import filter_dataset
 from evaluation.utils.shared import prepare_dataset
-from openhands.core.logger import openhands_logger as logger
+from forge.core.logger import forge_logger as logger
 
 
 class LocEvaluator:

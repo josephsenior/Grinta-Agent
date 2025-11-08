@@ -1,30 +1,30 @@
-import { OpenHandsAction } from "#/types/core/actions";
-import { OpenHandsEventType } from "#/types/core/base";
+import { ForgeAction } from "#/types/core/actions";
+import { ForgeEventType } from "#/types/core/base";
 import {
   isCommandAction,
   isCommandObservation,
-  isOpenHandsAction,
-  isOpenHandsObservation,
+  isForgeAction,
+  isForgeObservation,
 } from "#/types/core/guards";
-import { OpenHandsObservation } from "#/types/core/observations";
+import { ForgeObservation } from "#/types/core/observations";
 
-const COMMON_NO_RENDER_LIST: OpenHandsEventType[] = [
+const COMMON_NO_RENDER_LIST: ForgeEventType[] = [
   "system",
   "agent_state_changed",
   "change_agent_state",
 ];
 
-const ACTION_NO_RENDER_LIST: OpenHandsEventType[] = ["recall"];
+const ACTION_NO_RENDER_LIST: ForgeEventType[] = ["recall"];
 
-const OBSERVATION_NO_RENDER_LIST: OpenHandsEventType[] = ["think"];
+const OBSERVATION_NO_RENDER_LIST: ForgeEventType[] = ["think"];
 
 // Streaming chunks should always be rendered for real-time display
-const ALWAYS_RENDER_ACTIONS: OpenHandsEventType[] = ["streaming_chunk"];
+const ALWAYS_RENDER_ACTIONS: ForgeEventType[] = ["streaming_chunk"];
 
 export const shouldRenderEvent = (
-  event: OpenHandsAction | OpenHandsObservation,
+  event: ForgeAction | ForgeObservation,
 ) => {
-  if (isOpenHandsAction(event)) {
+  if (isForgeAction(event)) {
     // Always render streaming chunks
     if (ALWAYS_RENDER_ACTIONS.includes(event.action)) {
       return true;
@@ -39,7 +39,7 @@ export const shouldRenderEvent = (
     return !noRenderList.includes(event.action);
   }
 
-  if (isOpenHandsObservation(event)) {
+  if (isForgeObservation(event)) {
     if (isCommandObservation(event) && event.source === "user") {
       // For user commands, we always hide them from the chat interface
       return false;

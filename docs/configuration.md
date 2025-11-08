@@ -1,6 +1,6 @@
 # Configuration
 
-OpenHands uses TOML configuration files and environment variables. All settings have defaults, so you only need to configure what you want to change.
+Forge uses TOML configuration files and environment variables. All settings have defaults, so you only need to configure what you want to change.
 
 ## Configuration Files
 
@@ -16,7 +16,7 @@ OpenHands uses TOML configuration files and environment variables. All settings 
 # Model to use
 model = "gpt-4o"
 
-# API key (set via environment variable OPENHANDS_API_KEY)
+# API key (set via environment variable FORGE_API_KEY)
 api_key = ""
 
 # Temperature for response randomness
@@ -70,9 +70,9 @@ default_sop = "feature_delivery"
 
 Common environment variables:
 
-- `OPENHANDS_API_KEY` - LLM API key
-- `OPENHANDS_LLM_MODEL` - Model name
-- `OPENHANDS_RUNTIME` - Runtime environment (docker, local)
+- `FORGE_API_KEY` - LLM API key
+- `FORGE_LLM_MODEL` - Model name
+- `FORGE_RUNTIME` - Runtime environment (docker, local)
 - `DEBUG` - Enable debug logging
 
 ## Production Deployment
@@ -143,7 +143,7 @@ llm_config = "gpt4o-mini"
 
 ```toml
 [kubernetes]
-namespace = "openhands"
+namespace = "Forge"
 resource_cpu_request = "1"
 resource_memory_request = "1Gi"
 ```</content>

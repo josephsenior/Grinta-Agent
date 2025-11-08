@@ -59,10 +59,19 @@ export async function exportDiagramAsPNG(
   return new Promise((resolve, reject) => {
     try {
       // Get SVG dimensions
-      const svgGraphics = svgElement as unknown as SVGGraphicsElement;
-      const bbox = svgGraphics.getBBox();
-      const { width } = bbox;
-      const { height } = bbox;
+      let width = 0;
+      let height = 0;
+      if (svgElement && "getBBox" in svgElement && typeof (svgElement as SVGGraphicsElement).getBBox === "function") {
+        const svgGraphics = svgElement as SVGGraphicsElement;
+        const bbox = svgGraphics.getBBox();
+        width = bbox.width;
+        height = bbox.height;
+      } else {
+        // Fallback: estimate from bounding client rect
+        const rect = (svgElement as Element)?.getBoundingClientRect?.();
+        width = rect?.width ?? 0;
+        height = rect?.height ?? 0;
+      }
 
       // Create canvas
       const canvas = document.createElement("canvas");

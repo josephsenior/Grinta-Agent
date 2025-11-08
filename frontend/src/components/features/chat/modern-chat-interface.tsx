@@ -41,7 +41,7 @@ export function ModernChatInterface({
   className,
   showQuickActions = true,
   showHeader = true,
-  title = "CodePilot Pro AI",
+  title = "Forge Pro AI",
   subtitle = "Your intelligent coding assistant",
 }: ModernChatInterfaceProps) {
   const { t } = useTranslation();
@@ -169,7 +169,7 @@ export function ModernChatInterface({
                   <Sparkles className="h-8 w-8 text-primary-500" />
                 </div>
                 <h3 className="text-xl font-semibold text-text-primary mb-2">
-                  Welcome to OpenHands AI
+                  Welcome to Forge AI
                 </h3>
                 <p className="text-text-secondary max-w-md">
                   Start a conversation by typing a message below. I can help you

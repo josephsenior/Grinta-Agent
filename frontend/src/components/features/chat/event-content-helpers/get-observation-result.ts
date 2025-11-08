@@ -1,42 +1,63 @@
-import { OpenHandsObservation } from "#/types/core/observations";
+import { ForgeObservation } from "#/types/core/observations";
 
 export type ObservationResultStatus = "success" | "error" | "timeout";
 
-export const getObservationResult = (event: OpenHandsObservation) => {
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const getExitCodeFromExtras = (extras: ForgeObservation["extras"]): number | undefined => {
+  if (!isRecord(extras)) {
+    return undefined;
+  }
+
+  const metadata = (extras as Record<string, unknown>)["metadata"];
+
+  if (!isRecord(metadata)) {
+    return undefined;
+  }
+
+  const exitCode = (metadata as Record<string, unknown>)["exit_code"];
+
+  return typeof exitCode === "number" ? exitCode : undefined;
+};
+
+const getRunObservationStatus = (event: ForgeObservation, hasContent: boolean) => {
+  const exitCode = getExitCodeFromExtras(event.extras);
+
+  if (exitCode === -1) {
+    return "timeout";
+  }
+
+  if (exitCode === 0) {
+    return "success";
+  }
+
+  return typeof exitCode === "number" ? "error" : hasContent ? "success" : "error";
+};
+
+const isContentError = (event: ForgeObservation, hasContent: boolean) => {
+  if (!hasContent) {
+    return true;
+  }
+
+  if (typeof event.content !== "string") {
+    return false;
+  }
+
+  return event.content.toLowerCase().includes("error:");
+};
+
+export const getObservationResult = (event: ForgeObservation) => {
   const hasContent = typeof event.content === "string" && event.content.length > 0;
-  const contentIncludesError =
-    typeof event.content === "string" && event.content.toLowerCase().includes("error:");
 
   switch (event.observation) {
-    case "run": {
-      const exitCode = ((): number | undefined => {
-        try {
-          const extras = event.extras as Record<string, unknown> | undefined;
-          const meta = extras?.metadata as Record<string, unknown> | undefined;
-          return typeof meta?.exit_code === "number" ? (meta.exit_code as number) : undefined;
-        } catch {
-          return undefined;
-        }
-      })();
-
-      if (exitCode === -1) {
-        return "timeout";
-      } // Command timed out
-      if (exitCode === 0) {
-        return "success";
-      } // Command executed successfully
-      // If we couldn't determine an exit code, treat as success when there
-      // is content; otherwise mark as error.
-      return typeof exitCode === "number" ? "error" : hasContent ? "success" : "error";
-    }
+    case "run":
+      return getRunObservationStatus(event, hasContent);
     case "run_ipython":
     case "read":
     case "edit":
     case "mcp":
-      if (!hasContent || contentIncludesError) {
-        return "error";
-      }
-      return "success"; // Content is valid
+      return isContentError(event, hasContent) ? "error" : "success";
     default:
       return "success";
   }

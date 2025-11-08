@@ -2,18 +2,18 @@
 
 import os
 import pytest
-from openhands_aci.utils.diff import get_diff
+from forge_aci.utils.diff import get_diff
 from conftest import TEST_IN_CI, _close_test_runtime, _load_runtime
-from openhands.core.logger import openhands_logger as logger
-from openhands.events.action import FileEditAction, FileReadAction
-from openhands.events.observation import FileEditObservation
+from forge.core.logger import forge_logger as logger
+from forge.events.action import FileEditAction, FileReadAction
+from forge.events.observation import FileEditObservation
 
 ORGINAL = "from flask import Flask\napp = Flask(__name__)\n\n@app.route('/')\ndef index():\n    numbers = list(range(1, 11))\n    return str(numbers)\n\nif __name__ == '__main__':\n    app.run(port=5000)\n"
 
 
 @pytest.mark.skipif(TEST_IN_CI != "True", reason="This test requires LLM to run.")
-def test_edit_from_scratch(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_edit_from_scratch(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         action = FileEditAction(content=ORGINAL, start=-1, path=os.path.join("/workspace", "app.py"))
         logger.info(action, extra={"msg_type": "ACTION"})
@@ -32,8 +32,8 @@ EDIT = "# above stays the same\n@app.route('/')\ndef index():\n    numbers = lis
 
 
 @pytest.mark.skipif(TEST_IN_CI != "True", reason="This test requires LLM to run.")
-def test_edit(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_edit(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         action = FileEditAction(content=ORGINAL, path=os.path.join("/workspace", "app.py"))
         logger.info(action, extra={"msg_type": "ACTION"})
@@ -60,8 +60,8 @@ EDIT_LONG = "\nThis is line 100 + 10\nThis is line 101 + 10\n"
 
 
 @pytest.mark.skipif(TEST_IN_CI != "True", reason="This test requires LLM to run.")
-def test_edit_long_file(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_edit_long_file(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         action = FileEditAction(content=ORIGINAL_LONG, path=os.path.join("/workspace", "app.py"), start=-1)
         logger.info(action, extra={"msg_type": "ACTION"})

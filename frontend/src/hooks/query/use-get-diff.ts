@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import OpenHands from "#/api/open-hands";
-import { GitChangeStatus } from "#/api/open-hands.types";
+import Forge from "#/api/forge";
+import { GitChangeStatus } from "#/api/forge.types";
 import { useConversationId } from "#/hooks/use-conversation-id";
 
 type UseGetDiffConfig = {
@@ -14,7 +14,7 @@ export const useGitDiff = (config: UseGetDiffConfig) => {
 
   return useQuery({
     queryKey: ["file_diff", conversationId, config.filePath, config.type],
-    queryFn: () => OpenHands.getGitChangeDiff(conversationId, config.filePath),
+    queryFn: () => Forge.getGitChangeDiff(conversationId, config.filePath),
     enabled: config.enabled,
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 15, // 15 minutes

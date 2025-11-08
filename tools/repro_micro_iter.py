@@ -1,8 +1,8 @@
 import json
 import logging
 import types
-from openhands.metasop.models import SopStep, SopTemplate, StepOutputSpec
-from openhands.metasop.orchestrator import MetaSOPOrchestrator
+from forge.metasop.models import SopStep, SopTemplate, StepOutputSpec
+from forge.metasop.orchestrator import MetaSOPOrchestrator
 
 
 class RotatingExecutor:
@@ -50,7 +50,7 @@ def main():
     try:
         inv = getattr(orch._emitter, "invalid_events", None)
         try:
-            from openhands.core.io import print_json_stdout
+            from forge.core.io import print_json_stdout
         except Exception:
             try:
                 logger.info(json.dumps(inv, default=str, indent=2, ensure_ascii=False))
@@ -66,7 +66,7 @@ def main():
     logger.info("\n--- Emitted step events ---")
     try:
         try:
-            from openhands.core.io import print_json_stdout
+            from forge.core.io import print_json_stdout
         except Exception:
             try:
                 logger.info(json.dumps(orch.step_events, default=str, indent=2, ensure_ascii=False))

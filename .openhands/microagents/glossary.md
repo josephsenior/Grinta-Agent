@@ -1,8 +1,8 @@
-# OpenHands Glossary
+# Forge Glossary
 
 ### Agent
 
-The core AI entity in OpenHands that can perform software development tasks by interacting with tools, browsing the web, and modifying code.
+The core AI entity in Forge that can perform software development tasks by interacting with tools, browsing the web, and modifying code.
 
 #### Agent Controller
 
@@ -26,7 +26,7 @@ The current context and status of an agent, including its memory, active tools, 
 
 #### CodeAct Agent
 
-[A generalist agent in OpenHands](https://arxiv.org/abs/2407.16741) designed to perform tasks by editing and executing code.
+[A generalist agent in Forge](https://arxiv.org/abs/2407.16741) designed to perform tasks by editing and executing code.
 
 ### Browser
 
@@ -59,7 +59,7 @@ Settings that define an agent's behavior, capabilities, and limitations, includi
 
 #### Configuration Options
 
-Settings that control various aspects of OpenHands behavior, including runtime, security, and agent settings.
+Settings that control various aspects of Forge behavior, including runtime, security, and agent settings.
 
 #### LLM Config
 
@@ -121,19 +121,19 @@ The response or result returned by a tool after an agent's action, providing fee
 
 ### Interface
 
-Different ways to interact with OpenHands.
+Different ways to interact with Forge.
 
 #### CLI Mode
 
-A command-line interface mode for interacting with OpenHands agents without a graphical interface.
+A command-line interface mode for interacting with Forge agents without a graphical interface.
 
 #### GUI Mode
 
-A graphical user interface mode for interacting with OpenHands agents through a web interface.
+A graphical user interface mode for interacting with Forge agents through a web interface.
 
 #### Headless Mode
 
-A mode of operation where OpenHands runs without a user interface, suitable for automation and scripting.
+A mode of operation where Forge runs without a user interface, suitable for automation and scripting.
 
 ### Agent Memory
 
@@ -153,7 +153,7 @@ A very simple Condenser strategy. Reduces conversation history or content to sta
 
 ### Microagent
 
-A specialized prompt that enhances OpenHands with domain-specific knowledge, repository-specific context, and task-specific workflows.
+A specialized prompt that enhances Forge with domain-specific knowledge, repository-specific context, and task-specific workflows.
 
 #### Microagent Registry
 
@@ -161,11 +161,11 @@ A central repository of available microagents and their configurations.
 
 #### Public Microagent
 
-A general-purpose microagent available to all OpenHands users, triggered by specific keywords. Located in `microagents/`.
+A general-purpose microagent available to all Forge users, triggered by specific keywords. Located in `microagents/`.
 
 #### Repository Microagent
 
-A type of microagent that provides repository-specific context and guidelines, stored in the `.openhands/microagents/` directory.
+A type of microagent that provides repository-specific context and guidelines, stored in the `.Forge/microagents/` directory.
 
 ### Prompt
 

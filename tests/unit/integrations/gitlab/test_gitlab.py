@@ -3,9 +3,9 @@
 from unittest.mock import patch
 import pytest
 from pydantic import SecretStr
-from openhands.integrations.gitlab.gitlab_service import GitLabService
-from openhands.integrations.service_types import OwnerType, ProviderType, Repository
-from openhands.server.types import AppMode
+from forge.integrations.gitlab.gitlab_service import GitLabService
+from forge.integrations.service_types import OwnerType, ProviderType, Repository
+from forge.server.types import AppMode
 
 
 @pytest.mark.asyncio

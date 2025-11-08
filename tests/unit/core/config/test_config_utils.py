@@ -1,7 +1,7 @@
 import pytest
-from openhands.core.config.agent_config import AgentConfig
-from openhands.core.config.openhands_config import OpenHandsConfig
-from openhands.core.config.utils import finalize_config
+from forge.core.config.agent_config import AgentConfig
+from forge.core.config.forge_config import ForgeConfig
+from forge.core.config.utils import finalize_config
 
 DEFAULT_AGENT_NAME = "CodeActAgent"
 
@@ -12,7 +12,7 @@ def test_finalize_config_cli_disables_jupyter_and_browsing_when_true():
     When runtime is 'cli' and they were initially True.
 
     """
-    app_config = OpenHandsConfig()
+    app_config = ForgeConfig()
     app_config.runtime = "cli"
     agent_config = AgentConfig(enable_jupyter=True, enable_browsing=True)
     app_config.agents[DEFAULT_AGENT_NAME] = agent_config
@@ -31,7 +31,7 @@ def test_finalize_config_cli_keeps_jupyter_and_browsing_false_when_false():
     When runtime is 'cli' and they were initially False.
 
     """
-    app_config = OpenHandsConfig()
+    app_config = ForgeConfig()
     app_config.runtime = "cli"
     agent_config = AgentConfig(enable_jupyter=False, enable_browsing=False)
     app_config.agents[DEFAULT_AGENT_NAME] = agent_config
@@ -44,23 +44,23 @@ def test_finalize_config_cli_keeps_jupyter_and_browsing_false_when_false():
     ].enable_browsing, "enable_browsing should remain False when runtime is 'cli' and initially False"
 
 
-def test_finalize_config_other_runtime_keeps_jupyter_and_browsing_true_by_default():
-    """Test that finalize_config keeps enable_jupyter and enable_browsing as True (default).
+def test_finalize_config_other_runtime_keeps_jupyter_and_browsing_false_by_default():
+    """Test that finalize_config keeps enable_jupyter and enable_browsing as False (new default).
 
-    When runtime is not 'cli'.
+    When runtime is not 'cli'. The defaults were changed to False for better resource management.
 
     """
-    app_config = OpenHandsConfig()
+    app_config = ForgeConfig()
     app_config.runtime = "docker"
     agent_config = AgentConfig()
     app_config.agents[DEFAULT_AGENT_NAME] = agent_config
     finalize_config(app_config)
-    assert app_config.agents[
+    assert not app_config.agents[
         DEFAULT_AGENT_NAME
-    ].enable_jupyter, "enable_jupyter should remain True by default for non-cli runtimes"
-    assert app_config.agents[
+    ].enable_jupyter, "enable_jupyter should remain False by default (new default)"
+    assert not app_config.agents[
         DEFAULT_AGENT_NAME
-    ].enable_browsing, "enable_browsing should remain True by default for non-cli runtimes"
+    ].enable_browsing, "enable_browsing should remain False by default (new default)"
 
 
 def test_finalize_config_other_runtime_keeps_jupyter_and_browsing_false_if_set():
@@ -69,7 +69,7 @@ def test_finalize_config_other_runtime_keeps_jupyter_and_browsing_false_if_set()
     When runtime is not 'cli' but they were explicitly set to False.
 
     """
-    app_config = OpenHandsConfig()
+    app_config = ForgeConfig()
     app_config.runtime = "docker"
     agent_config = AgentConfig(enable_jupyter=False, enable_browsing=False)
     app_config.agents[DEFAULT_AGENT_NAME] = agent_config
@@ -88,7 +88,7 @@ def test_finalize_config_no_agents_defined():
     Even when runtime is 'cli'.
 
     """
-    app_config = OpenHandsConfig()
+    app_config = ForgeConfig()
     app_config.runtime = "cli"
     try:
         finalize_config(app_config)
@@ -102,7 +102,7 @@ def test_finalize_config_multiple_agents_cli_runtime():
     When runtime is 'cli'.
 
     """
-    app_config = OpenHandsConfig()
+    app_config = ForgeConfig()
     app_config.runtime = "cli"
     agent_config1 = AgentConfig(enable_jupyter=True, enable_browsing=True)
     agent_config2 = AgentConfig(enable_jupyter=True, enable_browsing=True)
@@ -121,7 +121,7 @@ def test_finalize_config_multiple_agents_other_runtime():
     For multiple agents when runtime is not 'cli'.
 
     """
-    app_config = OpenHandsConfig()
+    app_config = ForgeConfig()
     app_config.runtime = "docker"
     agent_config1 = AgentConfig(enable_jupyter=True, enable_browsing=True)
     agent_config2 = AgentConfig(enable_jupyter=False, enable_browsing=False)

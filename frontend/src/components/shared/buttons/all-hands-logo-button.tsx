@@ -6,10 +6,10 @@ export function AllHandsLogoButton() {
 
   return (
     <TooltipButton
-      tooltip={t("tooltip.codepilot_pro_ai_engineer", {
-        defaultValue: "CodePilot Pro AI Engineer",
+      tooltip={t("tooltip.Forge_pro_ai_engineer", {
+        defaultValue: "Forge Pro AI Engineer",
       })}
-      ariaLabel={t("app.name", { defaultValue: `CodePilot Pro AI Logo` })}
+      ariaLabel={t("app.name", { defaultValue: `Forge Pro AI Logo` })}
       navLinkTo="/"
     >
       {/* Inline SVG placeholder to avoid resolving static assets in tests */}

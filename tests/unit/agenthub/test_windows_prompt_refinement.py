@@ -1,11 +1,11 @@
 import sys
 from unittest.mock import patch
 import pytest
-from openhands.agenthub.codeact_agent.codeact_agent import CodeActAgent
-from openhands.core.config import AgentConfig, LLMConfig
-from openhands.core.config.openhands_config import OpenHandsConfig
-from openhands.llm.llm import LLM
-from openhands.llm.llm_registry import LLMRegistry
+from forge.agenthub.codeact_agent.codeact_agent import CodeActAgent
+from forge.core.config import AgentConfig, LLMConfig
+from forge.core.config.forge_config import ForgeConfig
+from forge.llm.llm import LLM
+from forge.llm.llm_registry import LLMRegistry
 
 pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="Windows prompt refinement tests require Windows")
 
@@ -25,7 +25,7 @@ def agent_config():
 
 def test_codeact_agent_system_prompt_no_bash_on_windows(mock_llm, agent_config):
     """Test that CodeActAgent's system prompt doesn't contain 'bash' on Windows."""
-    oh_config = OpenHandsConfig()
+    oh_config = ForgeConfig()
     oh_config.set_llm_config(LLMConfig())
     llm_registry = LLMRegistry(config=oh_config)
     agent = CodeActAgent(config=agent_config, llm_registry=llm_registry)
@@ -41,7 +41,7 @@ def test_codeact_agent_system_prompt_no_bash_on_windows(mock_llm, agent_config):
 
 def test_codeact_agent_tool_descriptions_no_bash_on_windows(mock_llm, agent_config):
     """Test that CodeActAgent's tool descriptions don't contain 'bash' on Windows."""
-    oh_config = OpenHandsConfig()
+    oh_config = ForgeConfig()
     oh_config.set_llm_config(LLMConfig())
     llm_registry = LLMRegistry(config=oh_config)
     agent = CodeActAgent(config=agent_config, llm_registry=llm_registry)
@@ -67,10 +67,10 @@ def test_codeact_agent_tool_descriptions_no_bash_on_windows(mock_llm, agent_conf
 
 def test_in_context_learning_example_no_bash_on_windows():
     """Test that in-context learning examples don't contain 'bash' on Windows."""
-    from openhands.agenthub.codeact_agent.tools.bash import create_cmd_run_tool
-    from openhands.agenthub.codeact_agent.tools.finish import FinishTool
-    from openhands.agenthub.codeact_agent.tools.str_replace_editor import create_str_replace_editor_tool
-    from openhands.llm.fn_call_converter import get_example_for_tools
+    from forge.agenthub.codeact_agent.tools.bash import create_cmd_run_tool
+    from forge.agenthub.codeact_agent.tools.finish import FinishTool
+    from forge.agenthub.codeact_agent.tools.str_replace_editor import create_str_replace_editor_tool
+    from forge.llm.fn_call_converter import get_example_for_tools
 
     tools = [create_cmd_run_tool(), create_str_replace_editor_tool(), FinishTool]
     example = get_example_for_tools(tools)
@@ -85,7 +85,7 @@ def test_in_context_learning_example_no_bash_on_windows():
 
 def test_refine_prompt_function_works():
     """Test that the refine_prompt function correctly replaces 'bash' with 'powershell'."""
-    from openhands.agenthub.codeact_agent.tools.bash import refine_prompt
+    from forge.agenthub.codeact_agent.tools.bash import refine_prompt
 
     test_prompt = "Execute a bash command to list files"
     refined_prompt = refine_prompt(test_prompt)
@@ -114,9 +114,9 @@ def test_refine_prompt_function_works():
 
 def test_refine_prompt_function_on_non_windows():
     """Test that the refine_prompt function doesn't change anything on non-Windows platforms."""
-    from openhands.agenthub.codeact_agent.tools.bash import refine_prompt
+    from forge.agenthub.codeact_agent.tools.bash import refine_prompt
 
-    with patch("openhands.agenthub.codeact_agent.tools.prompt.sys.platform", "linux"):
+    with patch("forge.agenthub.codeact_agent.tools.prompt.sys.platform", "linux"):
         test_prompt = "Execute a bash command to list files"
         refined_prompt = refine_prompt(test_prompt)
         assert refined_prompt == test_prompt

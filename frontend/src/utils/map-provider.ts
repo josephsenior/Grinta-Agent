@@ -23,8 +23,9 @@ export const MAP_PROVIDER = {
   replicate: "Replicate",
   voyage: "Voyage AI",
   openrouter: "OpenRouter",
-  forge: "Forge",
-  openhands: "Forge",  // Legacy alias
+  openhands: "Openhands",
+  forge: "Openhands", // Legacy alias
+  Forge: "Openhands",  // Legacy alias
 };
 
 export const mapProvider = (provider: string) =>
@@ -33,6 +34,12 @@ export const mapProvider = (provider: string) =>
     : provider;
 
 export const getProviderId = (displayName: string): string => {
+  const exactMatch = Object.entries(MAP_PROVIDER).find(
+    ([key, value]) => value === displayName && key === displayName,
+  );
+  if (exactMatch) {
+    return exactMatch[0];
+  }
   const entry = Object.entries(MAP_PROVIDER).find(
     ([, value]) => value === displayName,
   );

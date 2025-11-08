@@ -2,10 +2,10 @@ import pathlib
 import tempfile
 from unittest.mock import MagicMock, patch
 import pytest
-from openhands.core.config import LLMConfig
-from openhands.core.schema.action import ActionType
-from openhands.core.schema.agent import AgentState
-from openhands.events.action import (
+from forge.core.config import LLMConfig
+from forge.core.schema.action import ActionType
+from forge.core.schema.agent import AgentState
+from forge.events.action import (
     AgentDelegateAction,
     AgentFinishAction,
     BrowseInteractiveAction,
@@ -16,9 +16,9 @@ from openhands.events.action import (
     MessageAction,
     NullAction,
 )
-from openhands.events.action.action import ActionConfirmationStatus, ActionSecurityRisk
-from openhands.events.event import Event
-from openhands.events.observation import (
+from forge.events.action.action import ActionConfirmationStatus, ActionSecurityRisk
+from forge.events.event import Event
+from forge.events.observation import (
     AgentDelegateObservation,
     AgentStateChangedObservation,
     BrowserOutputObservation,
@@ -26,12 +26,12 @@ from openhands.events.observation import (
     IPythonRunCellObservation,
     NullObservation,
 )
-from openhands.events.stream import EventSource, EventStream
-from openhands.security.invariant import InvariantAnalyzer
-from openhands.security.invariant.client import InvariantClient
-from openhands.security.invariant.nodes import Function, Message, ToolCall, ToolOutput
-from openhands.security.invariant.parser import parse_action, parse_observation
-from openhands.storage import get_file_store
+from forge.events.stream import EventSource, EventStream
+from forge.security.invariant import InvariantAnalyzer
+from forge.security.invariant.client import InvariantClient
+from forge.security.invariant.nodes import Function, Message, ToolCall, ToolOutput
+from forge.security.invariant.parser import parse_action, parse_observation
+from forge.storage import get_file_store
 
 
 @pytest.fixture

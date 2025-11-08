@@ -52,29 +52,10 @@ function MCPSettingsScreen() {
     shttp_servers: [],
   };
 
-  // Convert servers to a unified format for display
-  const allServers: MCPServerConfig[] = [
-    ...mcpConfig.sse_servers.map((server, index) => ({
-      id: `sse-${index}`,
-      type: "sse" as const,
-      url: typeof server === "string" ? server : server.url,
-      api_key: typeof server === "object" ? server.api_key : undefined,
-    })),
-    ...mcpConfig.stdio_servers.map((server, index) => ({
-      id: `stdio-${index}`,
-      type: "stdio" as const,
-      name: server.name,
-      command: server.command,
-      args: server.args,
-      env: server.env,
-    })),
-    ...mcpConfig.shttp_servers.map((server, index) => ({
-      id: `shttp-${index}`,
-      type: "shttp" as const,
-      url: typeof server === "string" ? server : server.url,
-      api_key: typeof server === "object" ? server.api_key : undefined,
-    })),
-  ];
+  const allServers = React.useMemo(
+    () => buildServerList(mcpConfig),
+    [mcpConfig],
+  );
 
   const handleAddServer = (serverConfig: MCPServerConfig) => {
     addMcpServer(serverConfig, {
@@ -117,10 +98,11 @@ function MCPSettingsScreen() {
   };
 
   const handleConfirmDelete = () => {
-    if (serverToDelete) {
-      handleDeleteServer(serverToDelete);
-      setServerToDelete(null);
-    }
+    confirmServerDeletion({
+      serverToDelete,
+      handleDeleteServer,
+      setServerToDelete,
+    });
   };
 
   const handleCancelDelete = () => {
@@ -148,123 +130,287 @@ function MCPSettingsScreen() {
   };
 
   // Get installed server names for marketplace
-  const installedServerNames = allServers.map((server) => server.name || "");
+  const installedServerNames = React.useMemo(
+    () => allServers.map((server) => server.name || ""),
+    [allServers],
+  );
 
   if (isLoading) {
-    return (
-      <div className="px-11 py-9 flex flex-col gap-5">
-        <div className="animate-pulse">
-          <div className="h-6 bg-black rounded w-1/4 mb-4" />
-          <div className="h-4 bg-black rounded w-1/2 mb-8" />
-          <div className="h-10 bg-black rounded w-32" />
-        </div>
-      </div>
-    );
+    return <McpSettingsSkeleton />;
   }
+
+  const tabNavigation = (
+    <TabNavigation
+      activeTab={activeTab}
+      totalServers={allServers.length}
+      isLoading={isLoading}
+      onChange={(tab) => handleTabChange({ tab, setActiveTab, setView })}
+    />
+  );
+
+  const content = renderMcpContent({
+    activeTab,
+    view,
+    allServers,
+    isLoading,
+    editingServer,
+    t,
+    handleEditClick,
+    handleDeleteClick,
+    handleAddServer,
+    handleEditServer,
+    setView,
+    setEditingServer,
+    installedServerNames,
+    handleInstallFromMarketplace,
+  });
+
+  const confirmationModal = confirmationModalIsVisible ? (
+    <ConfirmationModal
+      text={t(I18nKey.SETTINGS$MCP_CONFIRM_DELETE)}
+      onConfirm={handleConfirmDelete}
+      onCancel={handleCancelDelete}
+    />
+  ) : null;
 
   return (
     <div className="px-11 py-9 flex flex-col gap-5">
-      {/* Tab Navigation */}
-      <div className="flex items-center gap-1 p-1 bg-black border border-violet-500/20 rounded-lg w-fit">
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab("my-servers");
-            setView("list");
-          }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-            activeTab === "my-servers"
-              ? "bg-brand-500 text-white shadow-sm"
-              : "text-foreground-secondary hover:text-foreground hover:bg-black"
-          }`}
-        >
-          <Store className="w-4 h-4" />
-          My Servers
-          {allServers.length > 0 && (
-            <span
-              className={`px-1.5 py-0.5 text-xs rounded-full ${
-                activeTab === "my-servers"
-                  ? "bg-white/20 text-white"
-                  : "bg-black text-foreground-secondary"
-              }`}
-            >
-              {allServers.length}
-            </span>
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("marketplace")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-            activeTab === "marketplace"
-              ? "bg-brand-500 text-white shadow-sm"
-              : "text-foreground-secondary hover:text-foreground hover:bg-black"
-          }`}
-        >
-          <ShoppingBag className="w-4 h-4" />
-          Marketplace
-        </button>
-      </div>
-
-      {/* Content */}
-      {activeTab === "my-servers" && view === "list" && (
-        <>
-          <BrandButton
-            testId="add-mcp-server-button"
-            type="button"
-            variant="primary"
-            onClick={() => setView("add")}
-            isDisabled={isLoading}
-          >
-            {t(I18nKey.SETTINGS$MCP_ADD_SERVER)}
-          </BrandButton>
-
-          <MCPServerList
-            servers={allServers}
-            onEdit={handleEditClick}
-            onDelete={handleDeleteClick}
-          />
-        </>
-      )}
-
-      {activeTab === "my-servers" && view === "add" && (
-        <MCPServerForm
-          mode="add"
-          existingServers={allServers}
-          onSubmit={handleAddServer}
-          onCancel={() => setView("list")}
-        />
-      )}
-
-      {activeTab === "my-servers" && view === "edit" && editingServer && (
-        <MCPServerForm
-          mode="edit"
-          server={editingServer}
-          existingServers={allServers}
-          onSubmit={handleEditServer}
-          onCancel={() => {
-            setView("list");
-            setEditingServer(null);
-          }}
-        />
-      )}
-
-      {activeTab === "marketplace" && (
-        <MCPMarketplace
-          installedServers={installedServerNames}
-          onInstall={handleInstallFromMarketplace}
-        />
-      )}
-
-      {confirmationModalIsVisible && (
-        <ConfirmationModal
-          text={t(I18nKey.SETTINGS$MCP_CONFIRM_DELETE)}
-          onConfirm={handleConfirmDelete}
-          onCancel={handleCancelDelete}
-        />
-      )}
+      {tabNavigation}
+      {content}
+      {confirmationModal}
     </div>
   );
 }
 
 export default MCPSettingsScreen;
+
+function buildServerList(mcpConfig: MCPConfig): MCPServerConfig[] {
+  const sseServers = mcpConfig.sse_servers.map((server, index) => ({
+    id: `sse-${index}`,
+    type: "sse" as const,
+    url: typeof server === "string" ? server : server.url,
+    api_key: typeof server === "object" ? server.api_key : undefined,
+  }));
+
+  const stdioServers = mcpConfig.stdio_servers.map((server, index) => ({
+    id: `stdio-${index}`,
+    type: "stdio" as const,
+    name: server.name,
+    command: server.command,
+    args: server.args,
+    env: server.env,
+  }));
+
+  const shttpServers = mcpConfig.shttp_servers.map((server, index) => ({
+    id: `shttp-${index}`,
+    type: "shttp" as const,
+    url: typeof server === "string" ? server : server.url,
+    api_key: typeof server === "object" ? server.api_key : undefined,
+  }));
+
+  return [...sseServers, ...stdioServers, ...shttpServers];
+}
+
+function confirmServerDeletion({
+  serverToDelete,
+  handleDeleteServer,
+  setServerToDelete,
+}: {
+  serverToDelete: string | null;
+  handleDeleteServer: (serverId: string) => void;
+  setServerToDelete: React.Dispatch<React.SetStateAction<string | null>>;
+}) {
+  if (!serverToDelete) {
+    return;
+  }
+  handleDeleteServer(serverToDelete);
+  setServerToDelete(null);
+}
+
+function handleTabChange({
+  tab,
+  setActiveTab,
+  setView,
+}: {
+  tab: TabType;
+  setActiveTab: React.Dispatch<React.SetStateAction<TabType>>;
+  setView?: React.Dispatch<React.SetStateAction<"list" | "add" | "edit">>;
+}) {
+  setActiveTab(tab);
+  if (tab === "my-servers" && setView) {
+    setView("list");
+  }
+}
+
+function McpSettingsSkeleton() {
+  return (
+    <div className="px-11 py-9 flex flex-col gap-5">
+      <div className="animate-pulse">
+        <div className="h-6 bg-black rounded w-1/4 mb-4" />
+        <div className="h-4 bg-black rounded w-1/2 mb-8" />
+        <div className="h-10 bg-black rounded w-32" />
+      </div>
+    </div>
+  );
+}
+
+function TabNavigation({
+  activeTab,
+  totalServers,
+  isLoading,
+  onChange,
+}: {
+  activeTab: TabType;
+  totalServers: number;
+  isLoading: boolean;
+  onChange: (tab: TabType) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1 p-1 bg-black border border-violet-500/20 rounded-lg w-fit">
+      <TabButton
+        isActive={activeTab === "my-servers"}
+        label="My Servers"
+        icon={<Store className="w-4 h-4" />}
+        badge={totalServers > 0 ? totalServers : undefined}
+        onClick={() => {
+          onChange("my-servers");
+        }}
+      />
+      <TabButton
+        isActive={activeTab === "marketplace"}
+        label="Marketplace"
+        icon={<ShoppingBag className="w-4 h-4" />}
+        disabled={isLoading}
+        onClick={() => onChange("marketplace")}
+      />
+    </div>
+  );
+}
+
+function TabButton({
+  isActive,
+  label,
+  icon,
+  badge,
+  onClick,
+  disabled,
+}: {
+  isActive: boolean;
+  label: string;
+  icon: React.ReactNode;
+  badge?: number;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+        isActive
+          ? "bg-brand-500 text-white shadow-sm"
+          : "text-foreground-secondary hover:text-foreground hover:bg-black"
+      } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
+    >
+      {icon}
+      {label}
+      {typeof badge === "number" && (
+        <span
+          className={`px-1.5 py-0.5 text-xs rounded-full ${
+            isActive ? "bg-white/20 text-white" : "bg-black text-foreground-secondary"
+          }`}
+        >
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function renderMcpContent({
+  activeTab,
+  view,
+  allServers,
+  isLoading,
+  editingServer,
+  t,
+  handleEditClick,
+  handleDeleteClick,
+  handleAddServer,
+  handleEditServer,
+  setView,
+  setEditingServer,
+  installedServerNames,
+  handleInstallFromMarketplace,
+}: {
+  activeTab: TabType;
+  view: "list" | "add" | "edit";
+  allServers: MCPServerConfig[];
+  isLoading: boolean;
+  editingServer: MCPServerConfig | null;
+  t: ReturnType<typeof useTranslation>["t"];
+  handleEditClick: (server: MCPServerConfig) => void;
+  handleDeleteClick: (serverId: string) => void;
+  handleAddServer: (server: MCPServerConfig) => void;
+  handleEditServer: (server: MCPServerConfig) => void;
+  setView: React.Dispatch<React.SetStateAction<"list" | "add" | "edit">>;
+  setEditingServer: React.Dispatch<React.SetStateAction<MCPServerConfig | null>>;
+  installedServerNames: string[];
+  handleInstallFromMarketplace: (mcp: MCPMarketplaceItem) => void;
+}) {
+  if (activeTab === "marketplace") {
+    return (
+      <MCPMarketplace
+        installedServers={installedServerNames}
+        onInstall={handleInstallFromMarketplace}
+      />
+    );
+  }
+
+  if (view === "add") {
+    return (
+      <MCPServerForm
+        mode="add"
+        existingServers={allServers}
+        onSubmit={handleAddServer}
+        onCancel={() => setView("list")}
+      />
+    );
+  }
+
+  if (view === "edit" && editingServer) {
+    return (
+      <MCPServerForm
+        mode="edit"
+        server={editingServer}
+        existingServers={allServers}
+        onSubmit={handleEditServer}
+        onCancel={() => {
+          setView("list");
+          setEditingServer(null);
+        }}
+      />
+    );
+  }
+
+  return (
+    <>
+      <BrandButton
+        testId="add-mcp-server-button"
+        type="button"
+        variant="primary"
+        onClick={() => setView("add")}
+        isDisabled={isLoading}
+      >
+        {t(I18nKey.SETTINGS$MCP_ADD_SERVER)}
+      </BrandButton>
+
+      <MCPServerList
+        servers={allServers}
+        onEdit={handleEditClick}
+        onDelete={handleDeleteClick}
+      />
+    </>
+  );
+}

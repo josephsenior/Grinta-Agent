@@ -1,7 +1,7 @@
 from pathlib import Path
 import ast
 
-p = Path("C:/Users/youse/Bureau/Joseph/OpenHands/evaluation/benchmarks/versicode/metric/compute_migration_cdc_score.py")
+p = Path("C:/Users/youse/Bureau/Joseph/Forge/evaluation/benchmarks/versicode/metric/compute_migration_cdc_score.py")
 s = p.read_text(encoding="utf-8")
 mod = ast.parse(s)
 for node in mod.body:

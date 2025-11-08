@@ -1,44 +1,72 @@
 import type {
-  OpenHandsAction,
-  OpenHandsObservation,
+  ForgeAction,
+  ForgeObservation,
 } from "#/types/core";
-import { hasArgs, isOpenHandsObservation } from "#/types/core/guards";
+import { hasArgs, isForgeObservation } from "#/types/core/guards";
 
 /**
  * Extract a friendly title/details pair from an event for rendering.
  * This is deliberately defensive and accepts both action and observation shapes.
  */
 export function getEventContent(
-  event: OpenHandsAction | OpenHandsObservation,
+  event: ForgeAction | ForgeObservation,
 ): { title: string; details: string } {
-  // Observation-style content (prefer explicit title/details/content)
-  if (isOpenHandsObservation(event)) {
-    let title = "";
-    let details = "";
-    if ("title" in event && typeof (event as any).title === "string") {
-      title = (event as any).title;
-    }
-    if ("content" in event && typeof (event as any).content === "string") {
-      details = (event as any).content;
-    } else if ("details" in event && typeof (event as any).details === "string") {
-      details = (event as any).details;
-    }
-    return { title: String(title || ""), details: String(details || "") };
+  if (isForgeObservation(event)) {
+    return extractObservationContent(event);
   }
 
-  // Action-style content (args.message, args.content, args.thought, message)
-  const action = event as OpenHandsAction;
-  const args = hasArgs(action) ? action.args : undefined;
-  const a = args && typeof args === "object" ? (args as Record<string, unknown>) : ({} as Record<string, unknown>);
+  return extractActionContent(event as ForgeAction);
+}
+
+function extractObservationContent(event: ForgeObservation): {
+  title: string;
+  details: string;
+} {
+  const record = toRecord(event);
+  const title = getStringField(record, ["title"], "");
+  const details =
+    getStringField(record, ["content", "details"], "") ?? "";
+
+  return { title, details };
+}
+
+function extractActionContent(action: ForgeAction): {
+  title: string;
+  details: string;
+} {
+  const args = hasArgs(action) ? toRecord(action.args) : undefined;
 
   const candidate =
-    (typeof a.content === "string" ? a.content : undefined) ??
-    (typeof a.message === "string" ? a.message : undefined) ??
-    (typeof a.thought === "string" ? a.thought : undefined) ??
-    (typeof action.message === "string" ? action.message : undefined) ??
-    "";
+    getStringField(args, ["content", "message", "thought"], undefined) ??
+    (typeof action.message === "string" ? action.message : "");
 
-  return { title: "", details: String(candidate || "") };
+  return { title: "", details: candidate ?? "" };
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  if (typeof value === "object" && value !== null) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+function getStringField(
+  record: Record<string, unknown> | undefined,
+  keys: string[],
+  fallback: string | undefined,
+): string | undefined {
+  if (!record) {
+    return fallback;
+  }
+
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.length > 0) {
+      return value;
+    }
+  }
+
+  return fallback;
 }
 
 export default getEventContent;

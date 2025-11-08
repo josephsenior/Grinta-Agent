@@ -2,19 +2,19 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 from litellm.exceptions import RateLimitError
-from openhands.core.config import LLMConfig
-from openhands.events.action.message import MessageAction
-from openhands.llm.llm import LLM
-from openhands.resolver.interfaces.github import GithubIssueHandler, GithubPRHandler
-from openhands.resolver.interfaces.issue import Issue
-from openhands.resolver.interfaces.issue_definitions import ServiceContextIssue, ServiceContextPR
+from forge.core.config import LLMConfig
+from forge.events.action.message import MessageAction
+from forge.llm.llm import LLM
+from forge.resolver.interfaces.github import GithubIssueHandler, GithubPRHandler
+from forge.resolver.interfaces.issue import Issue
+from forge.resolver.interfaces.issue_definitions import ServiceContextIssue, ServiceContextPR
 
 
 @pytest.fixture(autouse=True)
 def mock_logger(monkeypatch):
     mock_logger = MagicMock()
-    monkeypatch.setattr("openhands.llm.debug_mixin.llm_prompt_logger", mock_logger)
-    monkeypatch.setattr("openhands.llm.debug_mixin.llm_response_logger", mock_logger)
+    monkeypatch.setattr("forge.llm.debug_mixin.llm_prompt_logger", mock_logger)
+    monkeypatch.setattr("forge.llm.debug_mixin.llm_response_logger", mock_logger)
     return mock_logger
 
 
@@ -134,7 +134,7 @@ class DotDict(dict):
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_guess_success_rate_limit_wait_time(mock_litellm_completion, default_config):
     """Test that the retry mechanism in guess_success respects wait time between retries."""
     with patch("time.sleep") as mock_sleep:
@@ -167,7 +167,7 @@ def test_guess_success_rate_limit_wait_time(mock_litellm_completion, default_con
             default_config.retry_max_wait} seconds, but got {wait_time}"
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_guess_success_exhausts_retries(mock_completion, default_config):
     """Test the retry mechanism in guess_success exhausts retries and raises an error."""
     mock_completion.side_effect = RateLimitError(

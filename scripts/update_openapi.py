@@ -1,4 +1,4 @@
-"""Update OpenHands OpenAPI documentation.
+"""Update Forge OpenAPI documentation.
 
 Generates the OpenAPI specification from the FastAPI application and writes it
 to docs/openapi.json.
@@ -7,10 +7,10 @@ Usage:
     python scripts/update_openapi.py
 
 Behavior:
-- Uses openhands.server.app.app.openapi() to build the spec.
+- Uses forge.server.app.app.openapi() to build the spec.
 - Preserves existing "servers" from docs/openapi.json if present; otherwise
   writes sensible defaults.
-- Sets info.version to openhands.__version__.
+- Sets info.version to forge.__version__.
 - Sanitizes endpoint descriptions to remove code blocks and internal-only sections.
 - Excludes operational/UI-only convenience endpoints:
   - /server_info
@@ -31,15 +31,15 @@ from pathlib import Path
 
 logging.getLogger().setLevel(logging.CRITICAL)
 warnings.filterwarnings("ignore")
-os.environ["OPENHANDS_LOG_LEVEL"] = "CRITICAL"
+os.environ["FORGE_LOG_LEVEL"] = "CRITICAL"
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 try:
-    from openhands import __version__
-    from openhands.server.app import app
+    from forge import __version__
+    from forge.server.app import app
 except ImportError as e:
     logger = logging.getLogger(__name__)
-    logger.exception("Error importing OpenHands modules: %s", e)
+    logger.exception("Error importing Forge modules: %s", e)
     logger.error("Make sure you're running this script from the project root and dependencies are installed.")
     sys.exit(1)
 

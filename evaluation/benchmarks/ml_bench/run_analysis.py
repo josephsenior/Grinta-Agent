@@ -2,11 +2,11 @@ import json
 import os
 import pprint
 import tqdm
-from openhands.core.config import get_evaluation_parser, get_llm_config_arg, load_openhands_config
-from openhands.core.logger import openhands_logger as logger
-from openhands.llm.llm import LLM
+from forge.core.config import get_evaluation_parser, get_llm_config_arg, load_FORGE_config
+from forge.core.logger import forge_logger as logger
+from forge.llm.llm import LLM
 
-config = load_openhands_config()
+config = load_FORGE_config()
 
 
 def extract_test_results(res_file_path: str) -> tuple[list[str], list[str]]:

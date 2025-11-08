@@ -2,8 +2,8 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import Any
 from pydantic import SecretStr
-from openhands.integrations.provider import CustomSecret, ProviderToken, ProviderType
-from openhands.storage.data_models.user_secrets import UserSecrets
+from forge.integrations.provider import CustomSecret, ProviderToken, ProviderType
+from forge.storage.data_models.user_secrets import UserSecrets
 
 
 class TestUserSecrets:

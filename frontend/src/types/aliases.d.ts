@@ -9,9 +9,7 @@ declare module "test-utils" {
   export type RenderWithProvidersResult = RenderResult & { store: AppStore };
 
   export function renderWithProviders(
-    ui: Parameters<
-      (props: any) => ReturnType<typeof import("react").createElement>
-    >[0],
+    ui: import("react").ReactElement,
     options?: RenderOptions & {
       preloadedState?: Partial<RootState>;
       store?: AppStore;

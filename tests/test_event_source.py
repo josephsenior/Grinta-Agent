@@ -1,6 +1,6 @@
 import types
-from openhands.metasop.events import EventEmitter, EventSource, StepEvent
-from openhands.metasop.orchestrator import MetaSOPOrchestrator
+from forge.metasop.events import EventEmitter, EventSource, StepEvent
+from forge.metasop.orchestrator import MetaSOPOrchestrator
 
 
 def test_step_event_default_source():

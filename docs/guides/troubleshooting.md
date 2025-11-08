@@ -1,6 +1,6 @@
 # 🔧 **Troubleshooting Guide**
 
-> **Common issues, solutions, and debugging techniques for OpenHands**
+> **Common issues, solutions, and debugging techniques for Forge**
 
 ---
 
@@ -83,18 +83,18 @@ npm ERR! permission denied
 
 **Symptoms:**
 ```bash
-ModuleNotFoundError: No module named 'openhands'
+ModuleNotFoundError: No module named 'Forge'
 ```
 
 **Solutions:**
 1. Ensure you're in the correct directory:
    ```bash
-   cd openhands
+   cd Forge
    ```
 
 2. Verify installation:
    ```bash
-   pip list | grep openhands
+   pip list | grep Forge
    ```
 
 3. Reinstall in development mode:
@@ -131,7 +131,7 @@ ModuleNotFoundError: No module named 'openhands'
 
 4. Reset database if needed:
    ```bash
-   python -m openhands.db.reset
+   python -m Forge.db.reset
    ```
 
 ---
@@ -147,7 +147,7 @@ sqlalchemy.exc.OperationalError: unable to open database file
 1. Check database path in config:
    ```toml
    [database]
-   url = "sqlite:///./openhands.db"
+   url = "sqlite:///./Forge.db"
    ```
 
 2. Ensure directory permissions:
@@ -269,7 +269,7 @@ Hydration failed because the server rendered HTML didn't match the client
 
 3. Test MetaSOP directly:
    ```bash
-   python -m openhands.metasop.test
+   python -m Forge.metasop.test
    ```
 
 ---
@@ -344,8 +344,8 @@ Hydration failed because the server rendered HTML didn't match the client
 2. Try a different LLM provider:
    ```bash
    # In .env
-   OPENHANDS_LLM_PROVIDER=anthropic
-   OPENHANDS_LLM_MODEL=claude-3-sonnet
+   FORGE_LLM_PROVIDER=anthropic
+   FORGE_LLM_MODEL=claude-3-sonnet
    ```
 
 3. Reduce max_tokens:
@@ -380,10 +380,10 @@ Hydration failed because the server rendered HTML didn't match the client
 3. Restart backend:
    ```bash
    # Kill process
-   pkill -f openhands.server
+   pkill -f Forge.server
    
    # Restart
-   python -m openhands.server
+   python -m Forge.server
    ```
 
 ---
@@ -474,7 +474,7 @@ Include:
 ### **4. Community Support:**
 - GitHub Discussions
 - Discord server
-- Stack Overflow (tag: openhands)
+- Stack Overflow (tag: Forge)
 
 ---
 

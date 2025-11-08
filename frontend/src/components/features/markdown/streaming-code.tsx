@@ -196,6 +196,54 @@ export function StreamingCode({
   streamingSpeed = 3,
   streamingInterval = 50,
 }: StreamingCodeProps) {
+  const streamingState = useStreamingCodeState({
+    code,
+    isStreaming,
+    streamingSpeed,
+    streamingInterval,
+  });
+
+  const mode = getStreamingMode({ code, language });
+
+  if (mode === "inline") {
+    return renderInlineCode({
+      displayedCode: streamingState.displayedCode,
+      isComplete: streamingState.isComplete,
+    });
+  }
+
+  if (mode === "plainBlock") {
+    return renderPlainBlock({
+      displayedCode: streamingState.displayedCode,
+      isComplete: streamingState.isComplete,
+      language,
+      onAskAbout,
+      onRun,
+    });
+  }
+
+  return renderSyntaxHighlightedBlock({
+    displayedCode: streamingState.displayedCode,
+    isComplete: streamingState.isComplete,
+    language,
+    onAskAbout,
+    onRun,
+  });
+}
+
+type StreamingCodeMode = "inline" | "plainBlock" | "syntax";
+
+function useStreamingCodeState({
+  code,
+  isStreaming,
+  streamingSpeed,
+  streamingInterval,
+}: {
+  code: string;
+  isStreaming: boolean;
+  streamingSpeed: number;
+  streamingInterval: number;
+}) {
   const [displayedCode, setDisplayedCode] = React.useState("");
   const [isComplete, setIsComplete] = React.useState(!isStreaming);
   const intervalRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -204,119 +252,152 @@ export function StreamingCode({
     if (!isStreaming) {
       setDisplayedCode(code);
       setIsComplete(true);
-      return;
+      return undefined;
     }
 
-    if (displayedCode.length >= code.length) {
-      setIsComplete(true);
-      return;
-    }
+    setDisplayedCode("");
+    setIsComplete(false);
 
-    intervalRef.current = setInterval(() => {
-      setDisplayedCode((prev) => {
-        const nextLength = Math.min(prev.length + streamingSpeed, code.length);
+    const interval = setInterval(() => {
+      setDisplayedCode((previous) => {
+        const nextLength = Math.min(previous.length + streamingSpeed, code.length);
         const nextCode = code.slice(0, nextLength);
 
         if (nextLength >= code.length) {
           setIsComplete(true);
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-          }
+          clearInterval(interval);
         }
 
         return nextCode;
       });
     }, streamingInterval);
 
+    intervalRef.current = interval;
+
+    return () => clearInterval(interval);
+  }, [code, isStreaming, streamingInterval, streamingSpeed]);
+
+  React.useEffect(() => {
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [
-    code,
-    isStreaming,
-    streamingSpeed,
-    streamingInterval,
-    displayedCode.length,
-  ]);
+  }, []);
 
-  // Handle language detection for syntax highlighting
-  const match = language ? [null, language] : /language-(\w+)/.exec("");
+  return { displayedCode, isComplete } as const;
+}
 
-  if (!match) {
-    const isMultiline = displayedCode.includes("\n");
-
-    if (!isMultiline) {
-      return (
-        <code
-          style={{
-            backgroundColor: "#2a3038",
-            padding: "0.2em 0.4em",
-            borderRadius: "4px",
-            color: "#e6edf3",
-            border: "1px solid #30363d",
-          }}
-        >
-          {displayedCode}
-          {!isComplete && <TypingCursor />}
-        </code>
-      );
-    }
-
-    return (
-      <div className="relative group">
-        {isComplete && (
-          <StreamingCodeActions
-            code={displayedCode}
-            language={language}
-            onAskAbout={onAskAbout}
-            onRun={onRun}
-          />
-        )}
-        <pre
-          style={{
-            backgroundColor: "#2a3038",
-            padding: "1em",
-            paddingTop: isComplete ? "2.5em" : "1em", // Space for action buttons when complete
-            borderRadius: "4px",
-            color: "#e6edf3",
-            border: "1px solid #30363d",
-            overflow: "auto",
-          }}
-        >
-          <code>
-            {displayedCode}
-            {!isComplete && <TypingCursor />}
-          </code>
-        </pre>
-      </div>
-    );
+const getStreamingMode = ({
+  code,
+  language,
+}: {
+  code: string;
+  language?: string;
+}): StreamingCodeMode => {
+  if (language) {
+    return "syntax";
   }
 
-  return (
-    <div className="relative group">
-      {isComplete && (
-        <StreamingCodeActions
-          code={displayedCode}
-          language={(language ?? match[1]) as string | undefined}
-          onAskAbout={onAskAbout}
-          onRun={onRun}
-        />
-      )}
-      <div style={{ paddingTop: isComplete ? "0.5em" : "0" }}>
-        <SyntaxHighlighter
-          className="rounded-lg"
-          style={vscDarkPlus}
-          language={(language ?? match[1]) as string | undefined}
-          PreTag="div"
-        >
-          {displayedCode + (!isComplete ? "█" : "")}
-        </SyntaxHighlighter>
-      </div>
+  return code.includes("\n") ? "plainBlock" : "inline";
+};
+
+const renderInlineCode = ({
+  displayedCode,
+  isComplete,
+}: {
+  displayedCode: string;
+  isComplete: boolean;
+}) => (
+  <code
+    style={{
+      backgroundColor: "#2a3038",
+      padding: "0.2em 0.4em",
+      borderRadius: "4px",
+      color: "#e6edf3",
+      border: "1px solid #30363d",
+    }}
+  >
+    {displayedCode}
+    {!isComplete && <TypingCursor />}
+  </code>
+);
+
+const renderPlainBlock = ({
+  displayedCode,
+  isComplete,
+  language,
+  onAskAbout,
+  onRun,
+}: {
+  displayedCode: string;
+  isComplete: boolean;
+  language?: string;
+  onAskAbout?: (code: string) => void;
+  onRun?: (code: string, language: string) => void;
+}) => (
+  <div className="relative group">
+    {isComplete && (
+      <StreamingCodeActions
+        code={displayedCode}
+        language={language}
+        onAskAbout={onAskAbout}
+        onRun={onRun}
+      />
+    )}
+    <pre
+      style={{
+        backgroundColor: "#2a3038",
+        padding: "1em",
+        paddingTop: isComplete ? "2.5em" : "1em",
+        borderRadius: "4px",
+        color: "#e6edf3",
+        border: "1px solid #30363d",
+        overflow: "auto",
+      }}
+    >
+      <code>
+        {displayedCode}
+        {!isComplete && <TypingCursor />}
+      </code>
+    </pre>
+  </div>
+);
+
+const renderSyntaxHighlightedBlock = ({
+  displayedCode,
+  isComplete,
+  language,
+  onAskAbout,
+  onRun,
+}: {
+  displayedCode: string;
+  isComplete: boolean;
+  language?: string;
+  onAskAbout?: (code: string) => void;
+  onRun?: (code: string, language: string) => void;
+}) => (
+  <div className="relative group">
+    {isComplete && (
+      <StreamingCodeActions
+        code={displayedCode}
+        language={language}
+        onAskAbout={onAskAbout}
+        onRun={onRun}
+      />
+    )}
+    <div style={{ paddingTop: isComplete ? "0.5em" : "0" }}>
+      <SyntaxHighlighter
+        className="rounded-lg"
+        style={vscDarkPlus}
+        language={language}
+        PreTag="div"
+      >
+        {displayedCode + (!isComplete ? "█" : "")}
+      </SyntaxHighlighter>
     </div>
-  );
-}
+  </div>
+);
 
 // Enhanced streaming component for markdown integration
 export function streamingCode(

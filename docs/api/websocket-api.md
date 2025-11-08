@@ -529,5 +529,5 @@ useEffect(() => {
 
 ---
 
-**WebSocket provides the real-time backbone of OpenHands, enabling live updates and responsive user experiences!**
+**WebSocket provides the real-time backbone of Forge, enabling live updates and responsive user experiences!**
 

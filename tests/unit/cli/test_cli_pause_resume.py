@@ -3,18 +3,18 @@ from unittest.mock import MagicMock, call, patch
 import pytest
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.keys import Keys
-from openhands.cli.tui import process_agent_pause
-from openhands.core.schema import AgentState
-from openhands.events import EventSource
-from openhands.events.action import ChangeAgentStateAction
-from openhands.events.observation import AgentStateChangedObservation
+from forge.cli.tui import process_agent_pause
+from forge.core.schema import AgentState
+from forge.events import EventSource
+from forge.events.action import ChangeAgentStateAction
+from forge.events.observation import AgentStateChangedObservation
 
 
 class TestProcessAgentPause:
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.tui.create_input")
-    @patch("openhands.cli.tui.print_formatted_text")
+    @patch("forge.cli.tui.create_input")
+    @patch("forge.cli.tui.print_formatted_text")
     async def test_process_agent_pause_ctrl_p(self, mock_print, mock_create_input):
         """Test that process_agent_pause sets the done event when Ctrl+P is pressed."""
         done = asyncio.Event()
@@ -66,8 +66,8 @@ class TestCliPauseResumeInRunSession:
         is_paused = asyncio.Event()
         reload_microagents = False
         config = MagicMock()
-        with patch("openhands.cli.main.display_event") as mock_display_event, patch(
-            "openhands.cli.main.update_usage_metrics"
+        with patch("forge.cli.main.display_event") as mock_display_event, patch(
+            "forge.cli.main.update_usage_metrics"
         ) as mock_update_metrics:
 
             async def test_func():
@@ -152,10 +152,10 @@ class TestCliPauseResumeInRunSession:
 class TestCliCommandsPauseResume:
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.handle_resume_command")
+    @patch("forge.cli.commands.handle_resume_command")
     async def test_handle_commands_resume(self, mock_handle_resume):
         """Test that the handle_commands function properly calls handle_resume_command."""
-        from openhands.cli.commands import handle_commands
+        from forge.cli.commands import handle_commands
 
         message = "/resume"
         event_stream = MagicMock()
@@ -178,8 +178,8 @@ class TestCliCommandsPauseResume:
 class TestAgentStatePauseResume:
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.main.display_agent_running_message")
-    @patch("openhands.cli.tui.process_agent_pause")
+    @patch("forge.cli.main.display_agent_running_message")
+    @patch("forge.cli.tui.process_agent_pause")
     async def test_agent_running_enables_pause(self, mock_process_agent_pause, mock_display_message):
         """Test that when the agent is running, pause functionality is enabled."""
         event = MagicMock()
@@ -207,8 +207,8 @@ class TestAgentStatePauseResume:
         await test_func()
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.main.display_event")
-    @patch("openhands.cli.main.update_usage_metrics")
+    @patch("forge.cli.main.display_event")
+    @patch("forge.cli.main.update_usage_metrics")
     async def test_pause_event_changes_agent_state(self, mock_update_metrics, mock_display_event):
         """Test that when is_paused is set, a PAUSED state change event is added to the stream."""
         event = MagicMock()

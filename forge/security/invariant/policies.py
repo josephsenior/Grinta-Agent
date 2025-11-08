@@ -1,0 +1,3 @@
+"""Default policy definitions used by the Invariant security analyzer."""
+
+DEFAULT_INVARIANT_POLICY = 'from invariant.detectors import semgrep, secrets, CodeIssue\n\nraise "Disallow secrets in bash commands [risk=medium]" if:\n    (call: ToolCall)\n    call is tool:cmd_run\n    any(secrets(call.function.arguments.command))\n\nraise "Vulnerability in python code [risk=medium]" if:\n    (call: ToolCall)\n    call is tool:ipython_run_cell\n    semgrep_res := semgrep(call.function.arguments.code, lang="python")\n    any(semgrep_res)\n\nraise "Vulnerability in bash command [risk=medium]" if:\n    (call: ToolCall)\n    call is tool:cmd_run\n    semgrep_res := semgrep(call.function.arguments.command, lang="bash")\n    any(semgrep_res)\n'

@@ -16,7 +16,7 @@ You now have **world-class error handling** that makes users feel supported inst
 
 **File Created:**
 ```python
-openhands/server/utils/error_formatter.py  # 400+ lines - Complete error system
+Forge/server/utils/error_formatter.py  # 400+ lines - Complete error system
 ```
 
 **Features:**
@@ -62,7 +62,7 @@ frontend/src/hooks/use-error-action-handler.ts                 # Action handlers
 
 **File Modified:**
 ```python
-openhands/server/app.py  # Added 7 exception handlers
+Forge/server/app.py  # Added 7 exception handlers
 ```
 
 **Handlers Added:**
@@ -104,7 +104,7 @@ frontend/src/components/features/chat/error-message-banner.tsx # Error banners
 
 **File Modified:**
 ```python
-openhands/server/listen.py  # Removed debug prints
+Forge/server/listen.py  # Removed debug prints
 ```
 
 **Changes:**
@@ -709,9 +709,9 @@ Conversion: +30% improvement
 ## 📊 **FILES CREATED/MODIFIED**
 
 ### **Backend (3 files):**
-1. ✅ `openhands/server/utils/error_formatter.py` - **NEW** (400+ lines)
-2. ✅ `openhands/server/app.py` - Modified (added 8 exception handlers)
-3. ✅ `openhands/server/listen.py` - Modified (removed debug prints)
+1. ✅ `Forge/server/utils/error_formatter.py` - **NEW** (400+ lines)
+2. ✅ `Forge/server/app.py` - Modified (added 8 exception handlers)
+3. ✅ `Forge/server/listen.py` - Modified (removed debug prints)
 
 ### **Frontend (6 files):**
 4. ✅ `frontend/src/components/shared/error/user-friendly-error.tsx` - **NEW** (300+ lines)

@@ -1,20 +1,8 @@
-/**
- * Modern Flow Diagram
- * 
- * Custom node-based visualization for MetaSOP orchestration flow
- * Shows real-time agent collaboration and progress
- */
-
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  User,
-  Settings,
-  Code,
-  TestTube,
   CheckCircle,
   Clock,
-  AlertTriangle,
   ArrowDown,
   ArrowRight,
   Loader2,
@@ -23,7 +11,15 @@ import {
   RotateCw,
   Maximize2,
 } from "lucide-react";
-import type { OrchestrationStep, AgentRole } from "#/types/metasop-artifacts";
+import type { OrchestrationStep } from "#/types/metasop-artifacts";
+import {
+  formatStepDateTime,
+  formatStepTimestamp,
+  getRoleMeta,
+  getStatusMeta,
+  normalizeProgress,
+  normalizeStatus,
+} from "./modern-flow-utils";
 
 // ============================================================================
 // TYPES
@@ -39,13 +35,6 @@ interface ModernFlowDiagramProps {
   showControls?: boolean;
 }
 
-interface FlowNode {
-  id: string;
-  step: OrchestrationStep;
-  position: { x: number; y: number };
-  size: { width: number; height: number };
-}
-
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -59,129 +48,274 @@ export function ModernFlowDiagram({
   animated = true,
   showControls = true,
 }: ModernFlowDiagramProps) {
-  const [selectedStep, setSelectedStep] = useState<string | null>(null);
-  const [isPaused, setIsPaused] = useState(false);
-  const [zoom, setZoom] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const hasSteps = steps && steps.length > 0;
+  const handleRefresh = useCallback(() => window.location.reload(), []);
+  const {
+    hasSteps,
+    statusMeta,
+    totalSteps,
+    selectedStep,
+    selectedStepId,
+    handleStepSelect,
+    clearSelection,
+    isPaused,
+    togglePause,
+    zoom,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    animatedState,
+  } = useModernFlowDiagramState({ steps, status, onStepClick, animated });
 
   if (!hasSteps) {
-    return (
-      <div className={`modern-flow-empty ${className}`}>
-        <div className="text-center py-12">
-          <Loader2 className="w-12 h-12 text-brand-400 animate-spin mx-auto mb-3" />
-          <p className="text-sm text-neutral-400">Waiting for orchestration to start...</p>
-        </div>
-      </div>
-    );
+    return <ModernFlowEmpty className={className} />;
   }
-
-  const isRunning = status === "running" || status === "in_progress";
-  const isComplete = status === "complete" || status === "completed";
-  const hasError = status === "error" || status === "failed";
 
   return (
     <div className={`modern-flow-diagram ${className}`} ref={containerRef}>
-      {/* Controls */}
       {showControls && (
-        <div className="flow-controls">
-          <button
-            onClick={() => setIsPaused(!isPaused)}
-            className="flow-control-btn"
-            title={isPaused ? "Resume" : "Pause"}
-          >
-            {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-          </button>
-          <button
-            onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-            className="flow-control-btn"
-            title="Zoom Out"
-          >
-            -
-          </button>
-          <span className="text-xs text-neutral-400 mx-2">{Math.round(zoom * 100)}%</span>
-          <button
-            onClick={() => setZoom(Math.min(2, zoom + 0.1))}
-            className="flow-control-btn"
-            title="Zoom In"
-          >
-            +
-          </button>
-          <button
-            onClick={() => setZoom(1)}
-            className="flow-control-btn"
-            title="Reset Zoom"
-          >
-            <Maximize2 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => window.location.reload()}
-            className="flow-control-btn"
-            title="Refresh"
-          >
-            <RotateCw className="w-4 h-4" />
-          </button>
-        </div>
+        <FlowControls
+          isPaused={isPaused}
+          onTogglePause={togglePause}
+          zoom={zoom}
+          onZoomOut={zoomOut}
+          onZoomIn={zoomIn}
+          onResetZoom={resetZoom}
+          onRefresh={handleRefresh}
+        />
       )}
 
-      {/* Status Banner */}
-      <div className={`flow-status-banner ${getStatusClass(status)}`}>
-        {isRunning && <Loader2 className="w-4 h-4 animate-spin" />}
-        {isComplete && <CheckCircle className="w-4 h-4" />}
-        {hasError && <AlertTriangle className="w-4 h-4" />}
-        <span className="text-sm font-medium">
-          {isRunning && "Orchestration in Progress"}
-          {isComplete && "Orchestration Complete"}
-          {hasError && "Orchestration Failed"}
-          {!isRunning && !isComplete && !hasError && `Status: ${status}`}
-        </span>
-        <span className="text-xs text-neutral-400 ml-2">
-          {steps.length} {steps.length === 1 ? "step" : "steps"}
-        </span>
-      </div>
+      <FlowStatusBanner statusMeta={statusMeta} totalSteps={totalSteps} />
 
-      {/* Flow Canvas */}
-      <div
-        className="flow-canvas"
-        style={{
-          transform: `scale(${zoom})`,
-          transformOrigin: "top center",
-        }}
-      >
-        {layout === "vertical" ? (
-          <VerticalFlow
-            steps={steps}
-            selectedStep={selectedStep}
-            onStepClick={(step) => {
-              setSelectedStep(step.id);
-              onStepClick?.(step);
-            }}
-            animated={animated && !isPaused}
-          />
-        ) : (
-          <HorizontalFlow
-            steps={steps}
-            selectedStep={selectedStep}
-            onStepClick={(step) => {
-              setSelectedStep(step.id);
-              onStepClick?.(step);
-            }}
-            animated={animated && !isPaused}
-          />
-        )}
-      </div>
+      <FlowCanvas
+        layout={layout}
+        steps={steps}
+        zoom={zoom}
+        selectedStepId={selectedStepId}
+        animated={animatedState}
+        onStepSelect={handleStepSelect}
+      />
 
-      {/* Step Details Panel */}
-      <AnimatePresence>
-        {selectedStep && (
-          <StepDetailsPanel
-            step={steps.find((s) => s.id === selectedStep)!}
-            onClose={() => setSelectedStep(null)}
-          />
-        )}
-      </AnimatePresence>
+      <StepDetailsSection selectedStep={selectedStep} onClose={clearSelection} />
     </div>
+  );
+}
+
+function useModernFlowDiagramState({
+  steps,
+  status,
+  onStepClick,
+  animated,
+}: {
+  steps: OrchestrationStep[];
+  status: string;
+  onStepClick?: (step: OrchestrationStep) => void;
+  animated: boolean;
+}) {
+  const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [zoom, setZoom] = useState(1);
+
+  const hasSteps = steps.length > 0;
+  const statusMeta = useMemo(() => getStatusMeta(status), [status]);
+  const totalSteps = steps.length;
+
+  const selectedStep = useMemo(
+    () => steps.find((step) => step.id === selectedStepId) ?? null,
+    [selectedStepId, steps],
+  );
+
+  const handleStepSelect = useCallback(
+    (step: OrchestrationStep) => {
+      setSelectedStepId(step.id);
+      onStepClick?.(step);
+    },
+    [onStepClick],
+  );
+
+  const clearSelection = useCallback(() => setSelectedStepId(null), []);
+  const togglePause = useCallback(() => setIsPaused((prev) => !prev), []);
+
+  const zoomIn = useCallback(
+    () => setZoom((value) => Math.min(2, Math.round((value + 0.1) * 100) / 100)),
+    [],
+  );
+
+  const zoomOut = useCallback(
+    () => setZoom((value) => Math.max(0.5, Math.round((value - 0.1) * 100) / 100)),
+    [],
+  );
+
+  const resetZoom = useCallback(() => setZoom(1), []);
+
+  const animatedState = animated && !isPaused;
+
+  return {
+    hasSteps,
+    statusMeta,
+    totalSteps,
+    selectedStep,
+    selectedStepId,
+    handleStepSelect,
+    clearSelection,
+    isPaused,
+    togglePause,
+    zoom,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    animatedState,
+  };
+}
+
+function ModernFlowEmpty({ className }: { className: string }) {
+  return (
+    <div className={`modern-flow-empty ${className}`}>
+      <div className="text-center py-12">
+        <Loader2 className="w-12 h-12 text-brand-400 animate-spin mx-auto mb-3" />
+        <p className="text-sm text-neutral-400">Waiting for orchestration to start...</p>
+      </div>
+    </div>
+  );
+}
+
+function FlowControls({
+  isPaused,
+  onTogglePause,
+  zoom,
+  onZoomOut,
+  onZoomIn,
+  onResetZoom,
+  onRefresh,
+}: {
+  isPaused: boolean;
+  onTogglePause: () => void;
+  zoom: number;
+  onZoomOut: () => void;
+  onZoomIn: () => void;
+  onResetZoom: () => void;
+  onRefresh: () => void;
+}) {
+  const zoomPercentage = Math.round(zoom * 100);
+
+  return (
+    <div className="flow-controls">
+      <button
+        onClick={onTogglePause}
+        className="flow-control-btn"
+        title={isPaused ? "Resume" : "Pause"}
+      >
+        {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+      </button>
+      <button onClick={onZoomOut} className="flow-control-btn" title="Zoom Out">
+        -
+      </button>
+      <span className="text-xs text-neutral-400 mx-2">{zoomPercentage}%</span>
+      <button onClick={onZoomIn} className="flow-control-btn" title="Zoom In">
+        +
+      </button>
+      <button onClick={onResetZoom} className="flow-control-btn" title="Reset Zoom">
+        <Maximize2 className="w-4 h-4" />
+      </button>
+      <button onClick={onRefresh} className="flow-control-btn" title="Refresh">
+        <RotateCw className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
+function FlowStatusBanner({
+  statusMeta,
+  totalSteps,
+}: {
+  statusMeta: ReturnType<typeof getStatusMeta>;
+  totalSteps: number;
+}) {
+  const StatusIcon = statusMeta.icon;
+  const message = getStatusBannerLabel(statusMeta);
+
+  return (
+    <div className={`flow-status-banner ${statusMeta.bannerClass}`}>
+      <StatusIcon
+        className={`w-4 h-4 ${statusMeta.isInProgress ? "animate-spin" : ""}`}
+      />
+      <span className="text-sm font-medium">{message}</span>
+      <span className="text-xs text-neutral-400 ml-2">
+        {totalSteps} {totalSteps === 1 ? "step" : "steps"}
+      </span>
+    </div>
+  );
+}
+
+function getStatusBannerLabel(meta: ReturnType<typeof getStatusMeta>): string {
+  if (meta.isInProgress) {
+    return "Orchestration in Progress";
+  }
+
+  if (meta.isComplete) {
+    return "Orchestration Complete";
+  }
+
+  if (meta.isBlocked) {
+    return "Orchestration Failed";
+  }
+
+  return `Status: ${meta.label}`;
+}
+
+function FlowCanvas({
+  layout,
+  steps,
+  selectedStepId,
+  animated,
+  zoom,
+  onStepSelect,
+}: {
+  layout: "vertical" | "horizontal";
+  steps: OrchestrationStep[];
+  selectedStepId: string | null;
+  animated: boolean;
+  zoom: number;
+  onStepSelect: (step: OrchestrationStep) => void;
+}) {
+  return (
+    <div
+      className="flow-canvas"
+      style={{
+        transform: `scale(${zoom})`,
+        transformOrigin: "top center",
+      }}
+    >
+      {layout === "vertical" ? (
+        <VerticalFlow
+          steps={steps}
+          selectedStepId={selectedStepId}
+          onStepClick={onStepSelect}
+          animated={animated}
+        />
+      ) : (
+        <HorizontalFlow
+          steps={steps}
+          selectedStepId={selectedStepId}
+          onStepClick={onStepSelect}
+          animated={animated}
+        />
+      )}
+    </div>
+  );
+}
+
+function StepDetailsSection({
+  selectedStep,
+  onClose,
+}: {
+  selectedStep: OrchestrationStep | null;
+  onClose: () => void;
+}) {
+  return (
+    <AnimatePresence>
+      {selectedStep && <StepDetailsPanel step={selectedStep} onClose={onClose} />}
+    </AnimatePresence>
   );
 }
 
@@ -191,12 +325,12 @@ export function ModernFlowDiagram({
 
 function VerticalFlow({
   steps,
-  selectedStep,
+  selectedStepId,
   onStepClick,
   animated,
 }: {
   steps: OrchestrationStep[];
-  selectedStep: string | null;
+  selectedStepId: string | null;
   onStepClick: (step: OrchestrationStep) => void;
   animated: boolean;
 }) {
@@ -207,7 +341,7 @@ function VerticalFlow({
           <FlowStepNode
             step={step}
             index={index}
-            isSelected={selectedStep === step.id}
+            isSelected={selectedStepId === step.id}
             onClick={() => onStepClick(step)}
             animated={animated}
           />
@@ -231,12 +365,12 @@ function VerticalFlow({
 
 function HorizontalFlow({
   steps,
-  selectedStep,
+  selectedStepId,
   onStepClick,
   animated,
 }: {
   steps: OrchestrationStep[];
-  selectedStep: string | null;
+  selectedStepId: string | null;
   onStepClick: (step: OrchestrationStep) => void;
   animated: boolean;
 }) {
@@ -247,7 +381,7 @@ function HorizontalFlow({
           <FlowStepNode
             step={step}
             index={index}
-            isSelected={selectedStep === step.id}
+            isSelected={selectedStepId === step.id}
             onClick={() => onStepClick(step)}
             animated={animated}
           />
@@ -282,54 +416,25 @@ function FlowStepNode({
   onClick: () => void;
   animated: boolean;
 }) {
-  const statusColors = {
-    pending: "bg-neutral-500/10 border-neutral-500/30 text-neutral-400",
-    in_progress: "bg-brand-500/20 border-brand-500/50 text-brand-300",
-    complete: "bg-green-500/20 border-green-500/50 text-green-300",
-    blocked: "bg-red-500/20 border-red-500/50 text-red-300",
-  };
-
-  const roleIcons = {
-    product_manager: User,
-    architect: Settings,
-    engineer: Code,
-    qa: TestTube,
-  };
-
-  const roleColors = {
-    product_manager: "text-purple-400 bg-purple-500/20",
-    architect: "text-blue-400 bg-blue-500/20",
-    engineer: "text-green-400 bg-green-500/20",
-    qa: "text-orange-400 bg-orange-500/20",
-  };
-
-  const RoleIcon = roleIcons[step.role];
-  const statusColor = statusColors[step.status] || statusColors.pending;
-  const roleColor = roleColors[step.role];
-
-  const isPending = step.status === "pending";
-  const isInProgress = step.status === "in_progress";
-  const isComplete = step.status === "complete";
-  const isBlocked = step.status === "blocked";
+  const meta = React.useMemo(() => createFlowStepMeta(step), [step]);
+  const RoleIcon = meta.role.icon;
+  const StatusIcon = meta.status.icon;
 
   return (
     <motion.div
       initial={animated ? { opacity: 0, scale: 0.8, y: 20 } : undefined}
       animate={animated ? { opacity: 1, scale: 1, y: 0 } : undefined}
       transition={{ delay: index * 0.1, type: "spring", stiffness: 200, damping: 20 }}
-      className={`flow-step-node ${statusColor} ${isSelected ? "flow-step-selected" : ""}`}
+      className={`flow-step-node ${meta.status.nodeClass} ${isSelected ? "flow-step-selected" : ""}`}
       onClick={onClick}
     >
       {/* Status Indicator */}
       <div className="flow-step-status">
-        {isPending && <Clock className="w-4 h-4 text-neutral-400" />}
-        {isInProgress && <Loader2 className="w-4 h-4 animate-spin text-brand-400" />}
-        {isComplete && <CheckCircle className="w-4 h-4 text-green-400" />}
-        {isBlocked && <AlertTriangle className="w-4 h-4 text-red-400" />}
+        <StatusIcon className={meta.status.iconClass} />
       </div>
 
       {/* Role Icon */}
-      <div className={`flow-step-icon ${roleColor}`}>
+      <div className={`flow-step-icon ${meta.role.badgeClass}`}>
         <RoleIcon className="w-5 h-5" />
       </div>
 
@@ -340,7 +445,7 @@ function FlowStepNode({
             Step {index + 1}
           </span>
           <span className="text-xs px-2 py-0.5 rounded bg-black/30 capitalize">
-            {step.role.replace("_", " ")}
+            {meta.role.label}
           </span>
         </div>
         <h4 className="text-sm font-medium text-white mb-1">{step.title}</h4>
@@ -348,63 +453,139 @@ function FlowStepNode({
           <p className="text-xs text-neutral-400 line-clamp-2">{step.description}</p>
         )}
 
-        {/* Progress Bar */}
-        {isInProgress && step.progress !== undefined && (
-          <div className="mt-2">
-            <div className="w-full bg-neutral-800 rounded-full h-1.5">
-              <motion.div
-                className="bg-brand-500 h-1.5 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${step.progress}%` }}
-                transition={{ duration: 0.5 }}
-              />
-            </div>
-            <p className="text-xs text-neutral-500 mt-1">{step.progress}% complete</p>
-          </div>
-        )}
-
-        {/* Timestamps */}
-        <div className="flex items-center gap-3 mt-2 text-xs text-neutral-500">
-          {step.started_at && (
-            <span>Started: {new Date(step.started_at).toLocaleTimeString()}</span>
-          )}
-          {step.completed_at && (
-            <span>Completed: {new Date(step.completed_at).toLocaleTimeString()}</span>
-          )}
-        </div>
-
-        {/* Error Message */}
-        {step.error && (
-          <div className="mt-2 bg-red-500/10 border border-red-500/20 rounded p-2">
-            <p className="text-xs text-red-300">{step.error}</p>
-          </div>
-        )}
+        <FlowStepProgress progress={meta.progress} isActive={meta.status.isInProgress} />
+        <FlowStepTimestamps startedAt={meta.startedAt} completedAt={meta.completedAt} />
+        <FlowStepError error={step.error} />
       </div>
 
-      {/* Artifact Indicator */}
-      {step.artifact && (
-        <div className="flow-step-artifact-badge">
-          <CheckCircle className="w-3 h-3 text-green-400" />
-          <span className="text-xs">Artifact</span>
-        </div>
-      )}
+      <FlowStepArtifactBadge hasArtifact={Boolean(step.artifact)} />
 
       {/* Glow Effect for Active Step */}
-      {isInProgress && (
-        <motion.div
-          className="flow-step-glow"
-          animate={{
-            opacity: [0.3, 0.6, 0.3],
-            scale: [1, 1.05, 1],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-      )}
+      <FlowStepGlow isActive={meta.status.isInProgress} />
     </motion.div>
+  );
+}
+
+function createFlowStepMeta(step: OrchestrationStep) {
+  const status = getStatusMeta(step.status);
+  const role = getRoleMeta(step.role);
+  const progress = normalizeProgress((step as Record<string, unknown>).progress);
+  const startedAt = formatStepTimestamp(step.started_at);
+  const completedAt = formatStepTimestamp(step.completed_at);
+
+  return {
+    status: {
+      ...status,
+      iconClass: getStatusIconClass(status),
+    },
+    role,
+    progress,
+    startedAt,
+    completedAt,
+  } as const;
+}
+
+function getStatusIconClass(statusMeta: ReturnType<typeof getStatusMeta>) {
+  if (statusMeta.isInProgress) {
+    return "w-4 h-4 text-brand-400 animate-spin";
+  }
+  if (statusMeta.isComplete) {
+    return "w-4 h-4 text-green-400";
+  }
+  if (statusMeta.isBlocked) {
+    return "w-4 h-4 text-red-400";
+  }
+  return "w-4 h-4 text-neutral-400";
+}
+
+function FlowStepProgress({
+  progress,
+  isActive,
+}: {
+  progress: number | undefined;
+  isActive: boolean;
+}) {
+  if (!isActive || progress === undefined) {
+    return null;
+  }
+
+  return (
+    <div className="mt-2">
+      <div className="w-full bg-neutral-800 rounded-full h-1.5">
+        <motion.div
+          className="bg-brand-500 h-1.5 rounded-full"
+          initial={{ width: 0 }}
+          animate={{ width: `${progress}%` }}
+          transition={{ duration: 0.5 }}
+        />
+      </div>
+      <p className="text-xs text-neutral-500 mt-1">{progress}% complete</p>
+    </div>
+  );
+}
+
+function FlowStepTimestamps({
+  startedAt,
+  completedAt,
+}: {
+  startedAt?: string | null;
+  completedAt?: string | null;
+}) {
+  if (!startedAt && !completedAt) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center gap-3 mt-2 text-xs text-neutral-500">
+      {startedAt && <span>Started: {startedAt}</span>}
+      {completedAt && <span>Completed: {completedAt}</span>}
+    </div>
+  );
+}
+
+function FlowStepError({ error }: { error?: string | null }) {
+  if (!error) {
+    return null;
+  }
+
+  return (
+    <div className="mt-2 bg-red-500/10 border border-red-500/20 rounded p-2">
+      <p className="text-xs text-red-300">{error}</p>
+    </div>
+  );
+}
+
+function FlowStepArtifactBadge({ hasArtifact }: { hasArtifact: boolean }) {
+  if (!hasArtifact) {
+    return null;
+  }
+
+  return (
+    <div className="flow-step-artifact-badge">
+      <CheckCircle className="w-3 h-3 text-green-400" />
+      <span className="text-xs">Artifact</span>
+    </div>
+  );
+}
+
+function FlowStepGlow({ isActive }: { isActive: boolean }) {
+  if (!isActive) {
+    return null;
+  }
+
+  return (
+    <motion.div
+      className="flow-step-glow"
+      animate={{
+        opacity: [0.3, 0.6, 0.3],
+        scale: [1, 1.05, 1],
+      }}
+      transition={{
+        duration: 2,
+        repeat: Infinity,
+        ease: "easeInOut",
+      }}
+    />
   );
 }
 
@@ -423,8 +604,10 @@ function FlowConnector({
   toStep: OrchestrationStep;
   animated: boolean;
 }) {
-  const isActive = fromStep.status === "complete" && toStep.status !== "pending";
-  const isAnimated = fromStep.status === "in_progress" || toStep.status === "in_progress";
+  const fromStatus = normalizeStatus(fromStep.status);
+  const toStatus = normalizeStatus(toStep.status);
+  const isActive = fromStatus === "complete" && toStatus !== "pending";
+  const isAnimated = fromStatus === "in_progress" || toStatus === "in_progress";
 
   return (
     <div className={`flow-connector flow-connector-${type}`}>
@@ -466,14 +649,11 @@ function StepDetailsPanel({
   step: OrchestrationStep;
   onClose: () => void;
 }) {
-  const roleColors = {
-    product_manager: "bg-purple-500/10 border-purple-500/20",
-    architect: "bg-blue-500/10 border-blue-500/20",
-    engineer: "bg-green-500/10 border-green-500/20",
-    qa: "bg-orange-500/10 border-orange-500/20",
-  };
-
-  const roleColor = roleColors[step.role];
+  const roleMeta = getRoleMeta(step.role);
+  const statusMeta = getStatusMeta(step.status);
+  const progress = normalizeProgress((step as Record<string, unknown>).progress);
+  const startedAt = formatStepDateTime(step.started_at);
+  const completedAt = formatStepDateTime(step.completed_at);
 
   return (
     <motion.div
@@ -487,7 +667,7 @@ function StepDetailsPanel({
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 20 }}
-        className={`flow-details-panel ${roleColor}`}
+        className={`flow-details-panel ${roleMeta.panelClass}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -495,7 +675,7 @@ function StepDetailsPanel({
           <div>
             <h3 className="text-lg font-semibold text-white">{step.title}</h3>
             <p className="text-sm text-neutral-400 capitalize">
-              {step.role.replace("_", " ")} • {step.status}
+              {roleMeta.label} • {statusMeta.label}
             </p>
           </div>
           <button
@@ -517,35 +697,31 @@ function StepDetailsPanel({
 
           {/* Timestamps */}
           <div className="grid grid-cols-2 gap-3 mb-4">
-            {step.started_at && (
+            {startedAt && (
               <div>
                 <p className="text-xs text-neutral-500 mb-1">Started</p>
-                <p className="text-sm text-neutral-300">
-                  {new Date(step.started_at).toLocaleString()}
-                </p>
+                <p className="text-sm text-neutral-300">{startedAt}</p>
               </div>
             )}
-            {step.completed_at && (
+            {completedAt && (
               <div>
                 <p className="text-xs text-neutral-500 mb-1">Completed</p>
-                <p className="text-sm text-neutral-300">
-                  {new Date(step.completed_at).toLocaleString()}
-                </p>
+                <p className="text-sm text-neutral-300">{completedAt}</p>
               </div>
             )}
           </div>
 
           {/* Progress */}
-          {step.progress !== undefined && (
+          {progress !== undefined && (
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-sm font-medium text-neutral-300">Progress</h4>
-                <span className="text-sm text-brand-400">{step.progress}%</span>
+                <span className="text-sm text-brand-400">{progress}%</span>
               </div>
               <div className="w-full bg-neutral-800 rounded-full h-2">
                 <div
                   className="bg-brand-500 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${step.progress}%` }}
+                  style={{ width: `${progress}%` }}
                 />
               </div>
             </div>
@@ -588,23 +764,6 @@ function StepDetailsPanel({
 }
 
 // ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-function getStatusClass(status: string): string {
-  const classes: Record<string, string> = {
-    running: "bg-brand-500/20 border-brand-500/30 text-brand-300",
-    in_progress: "bg-brand-500/20 border-brand-500/30 text-brand-300",
-    complete: "bg-green-500/20 border-green-500/30 text-green-300",
-    completed: "bg-green-500/20 border-green-500/30 text-green-300",
-    error: "bg-red-500/20 border-red-500/30 text-red-300",
-    failed: "bg-red-500/20 border-red-500/30 text-red-300",
-    idle: "bg-neutral-500/20 border-neutral-500/30 text-neutral-300",
-  };
-  return classes[status] || "bg-neutral-500/20 border-neutral-500/30 text-neutral-300";
-}
-
-// ============================================================================
 // COMPACT FLOW VIEW (for smaller spaces)
 // ============================================================================
 
@@ -620,6 +779,8 @@ export function CompactFlowView({
   className?: string;
 }) {
   const hasSteps = steps && steps.length > 0;
+  const statusMeta = useMemo(() => getStatusMeta(status), [status]);
+  const StatusIcon = statusMeta.icon;
 
   if (!hasSteps) {
     return (
@@ -642,8 +803,11 @@ export function CompactFlowView({
           />
         ))}
       </div>
-      <div className={`compact-flow-status ${getStatusClass(status)}`}>
-        <span className="text-xs font-medium capitalize">{status}</span>
+      <div className={`compact-flow-status ${statusMeta.bannerClass}`}>
+        <StatusIcon
+          className={`w-3 h-3 ${statusMeta.isInProgress ? "animate-spin" : ""}`}
+        />
+        <span className="text-xs font-medium ml-1">{statusMeta.label}</span>
       </div>
     </div>
   );
@@ -660,25 +824,11 @@ function CompactStepBadge({
   total: number;
   onClick: () => void;
 }) {
-  const roleIcons = {
-    product_manager: User,
-    architect: Settings,
-    engineer: Code,
-    qa: TestTube,
-  };
-
-  const RoleIcon = roleIcons[step.role];
-
-  const statusColors = {
-    pending: "bg-neutral-500/10 border-neutral-500/30",
-    in_progress: "bg-brand-500/20 border-brand-500/50",
-    complete: "bg-green-500/20 border-green-500/50",
-    blocked: "bg-red-500/20 border-red-500/50",
-  };
-
-  const statusColor = statusColors[step.status] || statusColors.pending;
-  const isActive = step.status === "in_progress";
-  const isComplete = step.status === "complete";
+  const roleMeta = getRoleMeta(step.role);
+  const RoleIcon = roleMeta.icon;
+  const statusMeta = getStatusMeta(step.status);
+  const isActive = statusMeta.isInProgress;
+  const isComplete = statusMeta.isComplete;
 
   return (
     <div className="compact-step-wrapper">
@@ -686,9 +836,9 @@ function CompactStepBadge({
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: index * 0.05 }}
-        className={`compact-step-badge ${statusColor}`}
+        className={`compact-step-badge ${statusMeta.nodeClass}`}
         onClick={onClick}
-        title={`${step.title} (${step.status})`}
+        title={`${step.title} (${statusMeta.label})`}
       >
         <RoleIcon className="w-4 h-4" />
         {isActive && (
@@ -767,16 +917,9 @@ function TimelineItem({
   isLast: boolean;
   onClick: () => void;
 }) {
-  const roleColors = {
-    product_manager: "bg-purple-500/20 border-purple-500/50",
-    architect: "bg-blue-500/20 border-blue-500/50",
-    engineer: "bg-green-500/20 border-green-500/50",
-    qa: "bg-orange-500/20 border-orange-500/50",
-  };
-
-  const roleColor = roleColors[step.role];
-  const isComplete = step.status === "complete";
-  const isActive = step.status === "in_progress";
+  const roleMeta = getRoleMeta(step.role);
+  const statusMeta = getStatusMeta(step.status);
+  const startedAt = formatStepDateTime(step.started_at);
 
   return (
     <motion.div
@@ -787,30 +930,32 @@ function TimelineItem({
       onClick={onClick}
     >
       <div className="timeline-marker">
-        <div className={`timeline-dot ${roleColor}`}>
-          {isComplete && <CheckCircle className="w-3 h-3 text-green-400" />}
-          {isActive && <Loader2 className="w-3 h-3 text-brand-400 animate-spin" />}
-          {!isComplete && !isActive && <Clock className="w-3 h-3 text-neutral-400" />}
+        <div className={`timeline-dot ${roleMeta.badgeClass}`}>
+          {statusMeta.isComplete && <CheckCircle className="w-3 h-3 text-green-400" />}
+          {statusMeta.isInProgress && (
+            <Loader2 className="w-3 h-3 text-brand-400 animate-spin" />
+          )}
+          {!statusMeta.isComplete && !statusMeta.isInProgress && (
+            <Clock className="w-3 h-3 text-neutral-400" />
+          )}
         </div>
         {!isLast && <div className="timeline-line" />}
       </div>
       <div className="timeline-content">
         <div className="timeline-header">
           <span className="text-xs text-neutral-500">
-            Step {index + 1} • {step.role.replace("_", " ")}
+            Step {index + 1} • {roleMeta.label}
           </span>
-          <span className={`text-xs px-2 py-0.5 rounded ${roleColor} capitalize`}>
-            {step.status}
+          <span className={`text-xs px-2 py-0.5 rounded ${roleMeta.badgeClass}`}>
+            {statusMeta.label}
           </span>
         </div>
         <h4 className="text-sm font-medium text-white mb-1">{step.title}</h4>
         {step.description && (
           <p className="text-xs text-neutral-400">{step.description}</p>
         )}
-        {step.started_at && (
-          <p className="text-xs text-neutral-500 mt-1">
-            {new Date(step.started_at).toLocaleString()}
-          </p>
+        {startedAt && (
+          <p className="text-xs text-neutral-500 mt-1">{startedAt}</p>
         )}
       </div>
     </motion.div>

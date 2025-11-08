@@ -117,7 +117,7 @@ min_samples = 5
 
 ### **Python API**
 ```python
-from openhands.metasop import MetaSOPOrchestrator
+from forge.metasop import MetaSOPOrchestrator
 
 # Initialize with causal reasoning enabled
 orchestrator = MetaSOPOrchestrator("feature_delivery")
@@ -129,7 +129,7 @@ result = await orchestrator.run_async(task_context)
 
 ### **Step Configuration**
 ```python
-from openhands.metasop.models import SopStep
+from forge.metasop.models import SopStep
 
 # Steps with potential conflicts are automatically detected
 step = SopStep(

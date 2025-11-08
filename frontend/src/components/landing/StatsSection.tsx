@@ -14,7 +14,7 @@ export default function StatsSection(): React.ReactElement {
         defaultValue: "Projects Completed",
       }),
       description: t("LANDING$STATS_PROJECTS_DESC", {
-        defaultValue: "Successfully delivered by CodePilot Pro",
+        defaultValue: "Successfully delivered by Forge Pro",
       }),
     },
     {
@@ -22,7 +22,7 @@ export default function StatsSection(): React.ReactElement {
       value: t("LANDING$STATS_LOC_VALUE", { defaultValue: "500K+" }),
       label: t("LANDING$STATS_LOC_LABEL", { defaultValue: "Lines of Code" }),
       description: t("LANDING$STATS_LOC_DESC", {
-        defaultValue: "Written and optimized by CodePilot Pro",
+        defaultValue: "Written and optimized by Forge Pro",
       }),
     },
     {
@@ -32,7 +32,7 @@ export default function StatsSection(): React.ReactElement {
         defaultValue: "Always Available",
       }),
       description: t("LANDING$STATS_AVAILABLE_DESC", {
-        defaultValue: "CodePilot Pro never sleeps or takes breaks",
+        defaultValue: "Forge Pro never sleeps or takes breaks",
       }),
     },
     {

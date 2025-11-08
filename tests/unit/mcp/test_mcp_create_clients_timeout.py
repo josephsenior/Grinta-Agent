@@ -1,8 +1,8 @@
 import asyncio
 import pytest
-from openhands.core.config.mcp_config import MCPSSEServerConfig
-from openhands.mcp_client.client import MCPClient
-from openhands.mcp_client.utils import create_mcp_clients
+from forge.core.config.mcp_config import MCPSSEServerConfig
+from forge.mcp_client.client import MCPClient
+from forge.mcp_client.utils import create_mcp_clients
 
 
 @pytest.mark.asyncio

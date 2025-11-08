@@ -4,7 +4,7 @@
 
 Most AI coding tools are just fancy autocomplete. We built something different: an autonomous agent that can read, edit, test, and debug code like a senior developer.
 
-This post explains how we architected CodeAct, OpenHands' flagship coding agent.
+This post explains how we architected CodeAct, Forge' flagship coding agent.
 
 ## The Problem with Current AI Coding Tools
 
@@ -193,9 +193,9 @@ Users want predictability. We show costs in real-time.
 ## Open Source
 
 CodeAct is open source. Check it out:
-- GitHub: https://github.com/yourusername/openhands
-- Docs: https://docs.openhands.dev
-- Try it: https://openhands.dev
+- GitHub: https://github.com/yourusername/Forge
+- Docs: https://docs.Forge.dev
+- Try it: https://Forge.dev
 
 ## Conclusion
 

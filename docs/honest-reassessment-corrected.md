@@ -26,7 +26,7 @@
 ### **What You Actually Have:**
 
 #### **A) Retry Logic with Exponential Backoff**
-**File:** `openhands/llm/retry_mixin.py`
+**File:** `Forge/llm/retry_mixin.py`
 
 ```python
 from tenacity import (
@@ -69,7 +69,7 @@ retry_decorator: Callable = retry(
 ---
 
 #### **B) Circuit Breaker (FULL IMPLEMENTATION!)**
-**File:** `openhands/controller/circuit_breaker.py` (231 lines)
+**File:** `Forge/controller/circuit_breaker.py` (231 lines)
 
 ```python
 class CircuitBreaker:
@@ -107,7 +107,7 @@ class CircuitBreaker:
 ---
 
 #### **C) Auto-Recovery with Retry**
-**File:** `openhands/controller/agent_controller.py`
+**File:** `Forge/controller/agent_controller.py`
 
 ```python
 async def _attempt_recovery_and_retry(self, e: Exception) -> None:
@@ -161,7 +161,7 @@ async def _attempt_recovery_and_retry(self, e: Exception) -> None:
 ### **What You Actually Have:**
 
 #### **A) Prometheus Metrics Endpoint**
-**File:** `openhands/metasop/metrics.py` (564 lines!)
+**File:** `Forge/metasop/metrics.py` (564 lines!)
 
 ```python
 # Prometheus text format at /metrics
@@ -190,7 +190,7 @@ GET http://localhost:<port>/metrics
 ---
 
 #### **B) REST Monitoring API**
-**File:** `openhands/server/routes/monitoring.py` (246 lines)
+**File:** `Forge/server/routes/monitoring.py` (246 lines)
 
 ```python
 # API Endpoints:
@@ -215,7 +215,7 @@ GET /api/monitoring/parallel/stats   # Parallel execution
 ---
 
 #### **C) LLM Metrics Tracking**
-**File:** `openhands/llm/metrics.py`
+**File:** `Forge/llm/metrics.py`
 
 ```python
 class Metrics:
@@ -235,7 +235,7 @@ class Metrics:
 ---
 
 #### **D) Memory Monitor**
-**File:** `openhands/runtime/utils/memory_monitor.py`
+**File:** `Forge/runtime/utils/memory_monitor.py`
 
 ```python
 class MemoryMonitor:
@@ -277,7 +277,7 @@ class MemoryMonitor:
 ### **What You Actually Have:**
 
 #### **A) Redis-Backed Rate Limiter**
-**File:** `openhands/server/middleware/rate_limiter.py` (400 lines!)
+**File:** `Forge/server/middleware/rate_limiter.py` (400 lines!)
 
 ```python
 class RedisRateLimiter(RateLimiter):

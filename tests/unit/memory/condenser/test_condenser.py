@@ -2,8 +2,8 @@ from datetime import datetime
 from typing import Any, Callable, Iterable
 from unittest.mock import MagicMock
 import pytest
-from openhands.controller.state.state import State
-from openhands.core.config.condenser_config import (
+from forge.controller.state.state import State
+from forge.core.config.condenser_config import (
     AmortizedForgettingCondenserConfig,
     BrowserOutputCondenserConfig,
     CondenserPipelineConfig,
@@ -14,19 +14,19 @@ from openhands.core.config.condenser_config import (
     RecentEventsCondenserConfig,
     StructuredSummaryCondenserConfig,
 )
-from openhands.core.config.llm_config import LLMConfig
-from openhands.core.config.openhands_config import OpenHandsConfig
-from openhands.core.message import Message, TextContent
-from openhands.core.schema.action import ActionType
-from openhands.events.event import Event, EventSource
-from openhands.events.observation import BrowserOutputObservation
-from openhands.events.observation.agent import AgentCondensationObservation
-from openhands.events.observation.observation import Observation
-from openhands.llm import LLM
-from openhands.llm.llm_registry import LLMRegistry
-from openhands.memory.condenser import Condenser
-from openhands.memory.condenser.condenser import Condensation, RollingCondenser, View
-from openhands.memory.condenser.impl import (
+from forge.core.config.llm_config import LLMConfig
+from forge.core.config.forge_config import ForgeConfig
+from forge.core.message import Message, TextContent
+from forge.core.schema.action import ActionType
+from forge.events.event import Event, EventSource
+from forge.events.observation import BrowserOutputObservation
+from forge.events.observation.agent import AgentCondensationObservation
+from forge.events.observation.observation import Observation
+from forge.llm import LLM
+from forge.llm.llm_registry import LLMRegistry
+from forge.memory.condenser import Condenser
+from forge.memory.condenser.condenser import Condensation, RollingCondenser, View
+from forge.memory.condenser.impl import (
     AmortizedForgettingCondenser,
     BrowserOutputCondenser,
     ImportantEventSelection,
@@ -37,8 +37,8 @@ from openhands.memory.condenser.impl import (
     RecentEventsCondenser,
     StructuredSummaryCondenser,
 )
-from openhands.memory.condenser.impl.pipeline import CondenserPipeline
-from openhands.server.services.conversation_stats import ConversationStats
+from forge.memory.condenser.impl.pipeline import CondenserPipeline
+from forge.server.services.conversation_stats import ConversationStats
 
 
 def create_test_event(message: str, timestamp: datetime | None = None, id: int | None = None) -> Event:
@@ -88,7 +88,7 @@ def mock_conversation_stats() -> ConversationStats:
 @pytest.fixture
 def mock_llm_registry(mock_llm, mock_conversation_stats) -> LLMRegistry:
     """Creates an actual LLMRegistry that returns real LLMs."""
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     return LLMRegistry(config=config, agent_cls=None, retry_listener=None)
 
 

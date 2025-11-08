@@ -55,52 +55,92 @@ const IS_PROD_BUILD =
   (import.meta as MaybeImportMeta).env &&
   (import.meta as MaybeImportMeta).env?.PROD === true;
 
+function isPlaywrightEnvironment(): boolean {
+  try {
+    return (
+      typeof window !== "undefined" &&
+      (window as Window & { __Forge_PLAYWRIGHT?: boolean }).__Forge_PLAYWRIGHT ===
+        true
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isProductionRuntime(): boolean {
+  try {
+    const isProdMeta =
+      typeof import.meta !== "undefined" &&
+      (import.meta as MaybeImportMeta).env &&
+      (import.meta as MaybeImportMeta).env?.PROD === true;
+    const isProdNode =
+      typeof process !== "undefined" &&
+      process.env &&
+      process.env.NODE_ENV === "production";
+    return isProdMeta || isProdNode;
+  } catch {
+    return true;
+  }
+}
+
+function hasAllowImportFlag(): boolean {
+  try {
+    return (
+      typeof window !== "undefined" &&
+      (window as Window & { __ALLOW_TOAST_IMPORTS__?: boolean })
+        .__ALLOW_TOAST_IMPORTS__ === true
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isDevRuntime(): boolean {
+  try {
+    const isViteDev =
+      typeof import.meta !== "undefined" &&
+      (import.meta as MaybeImportMeta).env &&
+      (import.meta as MaybeImportMeta).env?.DEV === true;
+    const isNodeDev =
+      typeof process !== "undefined" &&
+      process.env &&
+      process.env.NODE_ENV === "development";
+    return Boolean(isViteDev || isNodeDev);
+  } catch {
+    return false;
+  }
+}
+
+function flushQueuedCalls() {
+  while (queue.length) {
+    const queuedCall = queue.shift()!;
+    try {
+      const rt = realToast;
+      if (!rt) {
+        continue;
+      }
+      const fn = rt[queuedCall.method];
+      if (typeof fn === "function") {
+        (fn as (...args: unknown[]) => unknown)(...queuedCall.args);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn("safe-hot-toast shim queued call failed", error);
+    }
+  }
+}
+
 function scheduleImport() {
   if (importScheduled) {
     return;
   }
-  // In Playwright E2E runs we don't want to attempt dynamic imports that
-  // can be flaky in the headful test environment. Respect the test flag
-  // that tests set on window so we keep a stable noop fallback in tests.
-  try {
-    if (
-      typeof window !== "undefined" &&
-      (window as Window & { __OPENHANDS_PLAYWRIGHT?: boolean })
-        .__OPENHANDS_PLAYWRIGHT === true
-    ) {
-      // Do not schedule or attempt dynamic imports in Playwright runs.
-      return;
-    }
-  } catch (e) {
-    // ignore
-  }
-  // Bail immediately in production builds — do not schedule or import.
-  try {
-    const isProd =
-      (typeof import.meta !== "undefined" &&
-        (import.meta as MaybeImportMeta).env &&
-        (import.meta as MaybeImportMeta).env?.PROD === true) ||
-      (typeof process !== "undefined" &&
-        process.env &&
-        process.env.NODE_ENV === "production");
-    if (isProd) {
-      return;
-    }
-  } catch (_) {
-    // If we can't evaluate env flags, be conservative and bail.
+  if (isPlaywrightEnvironment()) {
     return;
   }
-
-  // Quick allow-flag check: if the client root didn't opt-in, exit silently.
-  try {
-    const allowFlag =
-      typeof window !== "undefined" &&
-      (window as Window & { __ALLOW_TOAST_IMPORTS__?: boolean })
-        .__ALLOW_TOAST_IMPORTS__ === true;
-    if (!allowFlag) {
-      return;
-    }
-  } catch (_) {
+  if (isProductionRuntime()) {
+    return;
+  }
+  if (!hasAllowImportFlag()) {
     return;
   }
   importScheduled = true;
@@ -109,24 +149,9 @@ function scheduleImport() {
   console.warn("safe-hot-toast: scheduling dynamic import of react-hot-toast");
 
   setTimeout(() => {
-    // Only attempt dynamic import in development builds. In production
-    // we keep the noop fallback active to avoid import-time crashes.
-    try {
-      const isViteDev =
-        typeof import.meta !== "undefined" &&
-        (import.meta as MaybeImportMeta).env &&
-        (import.meta as MaybeImportMeta).env?.DEV === true;
-      const isNodeDev =
-        typeof process !== "undefined" &&
-        process.env &&
-        process.env.NODE_ENV === "development";
-      if (!isViteDev && !isNodeDev) {
-        // eslint-disable-next-line no-console
-        console.warn("safe-hot-toast: skipping dynamic import outside of dev");
-        importScheduled = false;
-        return;
-      }
-    } catch (_) {
+    if (!isDevRuntime()) {
+      // eslint-disable-next-line no-console
+      console.warn("safe-hot-toast: skipping dynamic import outside of dev");
       importScheduled = false;
       return;
     }
@@ -138,23 +163,7 @@ function scheduleImport() {
         const imported = m as Record<string, unknown>;
         realToast = (imported.default ?? imported) as RealToastLike;
         isNoopFallback = false;
-        while (queue.length) {
-          const c = queue.shift()!;
-          try {
-            const rt = realToast as RealToastLike | null;
-            if (rt) {
-              const fn = rt[c.method];
-              if (typeof fn === "function") {
-                // All queued calls were originally pushed with known argument shapes
-                (fn as (...args: unknown[]) => unknown)(...c.args);
-              }
-            }
-          } catch (e) {
-            // ignore
-            // eslint-disable-next-line no-console
-            console.warn("safe-hot-toast shim queued call failed", e);
-          }
-        }
+        flushQueuedCalls();
       })
       .catch((err) => {
         // eslint-disable-next-line no-console

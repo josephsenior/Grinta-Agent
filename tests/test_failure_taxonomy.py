@@ -1,4 +1,4 @@
-from openhands.metasop.failure_taxonomy import classify_failure
+from forge.metasop.failure_taxonomy import classify_failure
 
 
 def test_json_parse_detection():

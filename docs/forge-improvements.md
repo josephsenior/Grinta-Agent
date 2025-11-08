@@ -12,7 +12,7 @@
 - **Before:** 26 languages
 - **After:** 45+ languages
 - **Added:** Lua, Dart, Haskell, Elixir, Zig, Nim, Vue, Svelte, F#, Perl, R, GraphQL, and more
-- **File:** `openhands/agenthub/codeact_agent/tools/universal_editor.py`
+- **File:** `Forge/agenthub/codeact_agent/tools/universal_editor.py`
 
 ### 3. Production Deployment Fixes
 - **Tree-sitter:** Now required (was optional)
@@ -36,10 +36,10 @@
 
 **Backend:**
 - `pyproject.toml` - Dependencies
-- `openhands/agenthub/codeact_agent/tools/universal_editor.py` - Language support
-- `openhands/agenthub/codeact_agent/tools/health_check.py` - NEW startup validation
-- `openhands/agenthub/codeact_agent/codeact_agent.py` - Health check integration
-- `openhands/agenthub/codeact_agent/prompts/system_prompt_forge.j2` - Optimized prompt
+- `Forge/agenthub/codeact_agent/tools/universal_editor.py` - Language support
+- `Forge/agenthub/codeact_agent/tools/health_check.py` - NEW startup validation
+- `Forge/agenthub/codeact_agent/codeact_agent.py` - Health check integration
+- `Forge/agenthub/codeact_agent/prompts/system_prompt_forge.j2` - Optimized prompt
 
 **Frontend:**
 - `frontend/src/utils/coalesce-messages.ts` - Disabled batching for real-time streaming
@@ -53,7 +53,7 @@
 
 Run health check:
 ```bash
-python openhands/agenthub/codeact_agent/tools/health_check.py
+python Forge/agenthub/codeact_agent/tools/health_check.py
 ```
 
 Expected output:

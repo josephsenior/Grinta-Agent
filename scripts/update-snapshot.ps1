@@ -1,16 +1,16 @@
 <#
 update-snapshot.ps1
-Usage: .\scripts\update-snapshot.ps1 -SourcePath <path-to-openhands-root> -SnapshotPath <path-to-snapshot-root>
+Usage: .\scripts\update-snapshot.ps1 -SourcePath <path-to-Forge-root> -SnapshotPath <path-to-snapshot-root>
 
 This script copies the main repo into the cleaned snapshot folder, applies cleanup rules
 (remove nested .git, remove node_modules, remove vendor folders), updates .gitignore,
 creates a commit on the current branch and pushes it upstream.
 
 Default behavior assumes you run it from inside the snapshot repo and provide the source path
-(e.g. the parent folder where the real OpenHands repo lives).
+(e.g. the parent folder where the real Forge repo lives).
 #>
 param(
-    [string]$SourcePath = "..\OpenHands",
+    [string]$SourcePath = "..\Forge",
     [string]$SnapshotPath = ".",
     [switch]$DryRun
 )

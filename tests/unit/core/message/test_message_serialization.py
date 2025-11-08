@@ -1,5 +1,5 @@
 from litellm import ChatCompletionMessageToolCall
-from openhands.core.message import ImageContent, Message, TextContent
+from forge.core.message import ImageContent, Message, TextContent
 
 
 def test_message_with_vision_enabled():

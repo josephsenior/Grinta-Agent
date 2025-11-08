@@ -3,33 +3,33 @@ from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import AsyncMock, MagicMock, Mock
 from uuid import uuid4
 import pytest
-from openhands.controller.agent import Agent
-from openhands.controller.agent_controller import AgentController
-from openhands.controller.state.control_flags import BudgetControlFlag, IterationControlFlag
-from openhands.controller.state.state import State
-from openhands.core.config import OpenHandsConfig
-from openhands.core.config.agent_config import AgentConfig
-from openhands.core.config.llm_config import LLMConfig
-from openhands.core.schema import AgentState
-from openhands.events import EventSource, EventStream
-from openhands.events.action import AgentDelegateAction, AgentFinishAction, MessageAction
-from openhands.events.action.agent import RecallAction
-from openhands.events.action.commands import CmdRunAction
-from openhands.events.action.message import SystemMessageAction
-from openhands.events.event import Event, RecallType
-from openhands.events.observation.agent import RecallObservation
-from openhands.events.stream import EventStreamSubscriber
-from openhands.llm.llm import LLM
-from openhands.llm.llm_registry import LLMRegistry
-from openhands.llm.metrics import Metrics
-from openhands.memory.memory import Memory
-from openhands.server.services.conversation_stats import ConversationStats
-from openhands.storage.memory import InMemoryFileStore
+from forge.controller.agent import Agent
+from forge.controller.agent_controller import AgentController
+from forge.controller.state.control_flags import BudgetControlFlag, IterationControlFlag
+from forge.controller.state.state import State
+from forge.core.config import ForgeConfig
+from forge.core.config.agent_config import AgentConfig
+from forge.core.config.llm_config import LLMConfig
+from forge.core.schema import AgentState
+from forge.events import EventSource, EventStream
+from forge.events.action import AgentDelegateAction, AgentFinishAction, MessageAction
+from forge.events.action.agent import RecallAction
+from forge.events.action.commands import CmdRunAction
+from forge.events.action.message import SystemMessageAction
+from forge.events.event import Event, RecallType
+from forge.events.observation.agent import RecallObservation
+from forge.events.stream import EventStreamSubscriber
+from forge.llm.llm import LLM
+from forge.llm.llm_registry import LLMRegistry
+from forge.llm.metrics import Metrics
+from forge.memory.memory import Memory
+from forge.server.services.conversation_stats import ConversationStats
+from forge.storage.memory import InMemoryFileStore
 
 
 @pytest.fixture
 def llm_registry():
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     return LLMRegistry(config=config)
 
 

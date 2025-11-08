@@ -6,11 +6,11 @@ These tests simulate real agent scenarios to verify the complete safety workflow
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from openhands.core.config import AgentConfig
-from openhands.controller.safety_validator import SafetyValidator, ExecutionContext
-from openhands.events.action import CmdRunAction, ActionSecurityRisk
-from openhands.security.command_analyzer import CommandAnalyzer
-from openhands.security.safety_config import SafetyConfig
+from forge.core.config import AgentConfig
+from forge.controller.safety_validator import SafetyValidator, ExecutionContext
+from forge.events.action import CmdRunAction, ActionSecurityRisk
+from forge.security.command_analyzer import CommandAnalyzer
+from forge.security.safety_config import SafetyConfig
 
 
 class TestSafetyIntegrationE2E:
@@ -227,7 +227,7 @@ class TestComprehensiveSafetyScenarios:
     
     def test_python_code_safety(self):
         """Test Python code safety analysis."""
-        from openhands.events.action import IPythonRunCellAction
+        from forge.events.action import IPythonRunCellAction
         
         analyzer = CommandAnalyzer()
         

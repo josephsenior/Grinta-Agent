@@ -25,7 +25,7 @@ response = openai.ChatCompletion.create(
 We support **200+ models** from **30+ providers** through a unified interface.
 
 ```python
-# OpenHands approach (works with ANY provider)
+# Forge approach (works with ANY provider)
 import litellm
 
 response = litellm.completion(
@@ -274,7 +274,7 @@ else:
 
 ## Try It Yourself
 
-OpenHands supports 200+ models out of the box:
+Forge supports 200+ models out of the box:
 
 ```bash
 # See all available models
@@ -289,9 +289,9 @@ LLM_MODEL=openrouter/x-ai/grok-4-fast
 ## Open Source
 
 The full provider system is open source:
-- GitHub: https://github.com/yourusername/openhands
-- Provider configs: `openhands/core/config/provider_config.py`
-- API key manager: `openhands/core/config/api_key_manager.py`
+- GitHub: https://github.com/yourusername/Forge
+- Provider configs: `Forge/core/config/provider_config.py`
+- API key manager: `Forge/core/config/api_key_manager.py`
 
 ## Conclusion
 

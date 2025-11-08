@@ -1,7 +1,7 @@
 import pathlib
 import pytest
-from openhands.core.config import OpenHandsConfig
-from openhands.core.config.utils import load_from_toml
+from forge.core.config import ForgeConfig
+from forge.core.config.utils import load_from_toml
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def test_no_draft_editor_in_config(config_toml_without_draft_editor):
     Previously, we tested fallback behavior. Now, it's simplified to not exist at all.
     This docstring remains to illustrate that the old fallback logic is removed.
     """
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     load_from_toml(config, config_toml_without_draft_editor)
     assert "draft_editor" not in config.llms
 
@@ -44,7 +44,7 @@ def test_draft_editor_as_named_llm(config_toml_with_draft_editor):
 
     This docstring references the simpler approach: if it exists, it's just another named LLM.
     """
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     load_from_toml(config, config_toml_with_draft_editor)
     assert "draft_editor" in config.llms
     draft_llm = config.get_llm_config("draft_editor")
@@ -60,7 +60,7 @@ def test_draft_editor_fallback(config_toml_with_draft_editor):
 
     We expect the 'draft_editor' LLM to behave just like any custom LLM would.
     """
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     load_from_toml(config, config_toml_with_draft_editor)
     draft_editor_config = config.get_llm_config("draft_editor")
     assert draft_editor_config.num_retries == 7

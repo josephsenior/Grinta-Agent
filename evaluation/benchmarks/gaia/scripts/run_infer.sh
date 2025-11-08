@@ -22,17 +22,17 @@ if [ -z "$AGENT" ]; then
   AGENT="CodeActAgent"
 fi
 
-get_openhands_version
+get_FORGE_version
 
 if [ -z "$LEVELS" ]; then
   LEVELS="2023_level1"
   echo "Levels not specified, use default $LEVELS"
 fi
 
-get_openhands_version
+get_FORGE_version
 
 echo "AGENT: $AGENT"
-echo "OPENHANDS_VERSION: $OPENHANDS_VERSION"
+echo "FORGE_VERSION: $FORGE_VERSION"
 echo "MODEL_CONFIG: $MODEL_CONFIG"
 echo "LEVELS: $LEVELS"
 
@@ -43,7 +43,7 @@ COMMAND="poetry run python ./evaluation/benchmarks/gaia/run_infer.py \
   --level $LEVELS \
   --data-split validation \
   --eval-num-workers $NUM_WORKERS \
-  --eval-note ${OPENHANDS_VERSION}_${LEVELS}"
+  --eval-note ${FORGE_VERSION}_${LEVELS}"
 
 if [ -n "$EVAL_LIMIT" ]; then
   echo "EVAL_LIMIT: $EVAL_LIMIT"

@@ -1,13 +1,16 @@
 import base64
+import json
 import pickle
 from unittest.mock import patch
+
 import pytest
-from openhands.core.config import LLMConfig, OpenHandsConfig
-from openhands.llm.llm import LLM
-from openhands.llm.llm_registry import LLMRegistry, RegistryEvent
-from openhands.llm.metrics import Metrics
-from openhands.server.services.conversation_stats import ConversationStats
-from openhands.storage.memory import InMemoryFileStore
+
+from forge.core.config import LLMConfig, ForgeConfig
+from forge.llm.llm import LLM
+from forge.llm.llm_registry import LLMRegistry, RegistryEvent
+from forge.llm.metrics import Metrics
+from forge.server.services.conversation_stats import ConversationStats
+from forge.storage.memory import InMemoryFileStore
 
 
 @pytest.fixture
@@ -25,7 +28,7 @@ def conversation_stats(mock_file_store):
 @pytest.fixture
 def mock_llm_registry():
     """Create a mock LLM registry that properly simulates LLM registration."""
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     return LLMRegistry(config=config, agent_cls=None, retry_listener=None)
 
 
@@ -53,14 +56,11 @@ def test_save_metrics(conversation_stats, mock_file_store):
     conversation_stats.save_metrics()
     try:
         encoded = mock_file_store.read(conversation_stats.metrics_path)
-        pickled = base64.b64decode(encoded)
-        restored = pickle.loads(pickled)  # nosec B301 - Safe: test code
-        if isinstance(restored.get(service_id), dict):
-            m = Metrics()
-            m.__setstate__(restored[service_id])
-        else:
-            m = restored[service_id]
+        decoded = base64.b64decode(encoded).decode("utf-8")
+        restored = json.loads(decoded)
         assert service_id in restored
+        m = Metrics()
+        m.__setstate__(restored[service_id])
         assert m.accumulated_cost == 0.05
     except FileNotFoundError:
         pytest.fail(f"File not found: {conversation_stats.metrics_path}")
@@ -76,7 +76,7 @@ def test_maybe_restore_metrics(mock_file_store):
     serialized_metrics = base64.b64encode(pickled).decode("utf-8")
     conversation_id = "test-conversation-id"
     user_id = "test-user-id"
-    from openhands.storage.locations import get_conversation_stats_filename
+    from forge.storage.locations import get_conversation_stats_filename
 
     metrics_path = get_conversation_stats_filename(conversation_id, user_id)
     mock_file_store.write(metrics_path, serialized_metrics)
@@ -134,7 +134,7 @@ def test_get_metrics_for_service(conversation_stats):
 def test_register_llm_with_new_service(conversation_stats):
     """Test registering a new LLM service."""
     llm_config = LLMConfig(model="gpt-4o", api_key="test_key", num_retries=2, retry_min_wait=1, retry_max_wait=2)
-    with patch("openhands.llm.llm.litellm_completion"):
+    with patch("forge.llm.llm.litellm_completion"):
         llm = LLM(service_id="new-service", config=llm_config)
         service_id = "new-service"
         event = RegistryEvent(llm=llm, service_id=service_id)
@@ -150,7 +150,7 @@ def test_register_llm_with_restored_metrics(conversation_stats):
     restored_metrics.add_cost(0.1)
     conversation_stats.restored_metrics = {service_id: restored_metrics}
     llm_config = LLMConfig(model="gpt-4o", api_key="test_key", num_retries=2, retry_min_wait=1, retry_max_wait=2)
-    with patch("openhands.llm.llm.litellm_completion"):
+    with patch("forge.llm.llm.litellm_completion"):
         llm = LLM(service_id=service_id, config=llm_config)
         event = RegistryEvent(llm=llm, service_id=service_id)
         conversation_stats.register_llm(event)
@@ -240,7 +240,7 @@ def test_register_llm_with_multiple_restored_services_bug(conversation_stats):
     llm_config_2 = LLMConfig(
         model="gpt-3.5-turbo", api_key="test_key", num_retries=2, retry_min_wait=1, retry_max_wait=2
     )
-    with patch("openhands.llm.llm.litellm_completion"):
+    with patch("forge.llm.llm.litellm_completion"):
         llm_1 = LLM(service_id=service_id_1, config=llm_config_1)
         event_1 = RegistryEvent(llm=llm_1, service_id=service_id_1)
         conversation_stats.register_llm(event_1)
@@ -279,7 +279,7 @@ def test_save_and_restore_workflow(mock_file_store):
     assert stats2.restored_metrics[service_id].accumulated_token_usage.prompt_tokens == 100
     assert stats2.restored_metrics[service_id].accumulated_token_usage.completion_tokens == 50
     llm_config = LLMConfig(model="gpt-4o", api_key="test_key", num_retries=2, retry_min_wait=1, retry_max_wait=2)
-    with patch("openhands.llm.llm.litellm_completion"):
+    with patch("forge.llm.llm.litellm_completion"):
         llm = LLM(service_id=service_id, config=llm_config)
         event = RegistryEvent(llm=llm, service_id=service_id)
         stats2.register_llm(event)
@@ -315,8 +315,7 @@ def test_merge_conversation_stats_success_non_overlapping(mock_file_store):
     assert stats_a.restored_metrics["a-restored"] is m_a_restored
     assert stats_a.restored_metrics["b-restored"] is m_b_restored
     encoded = mock_file_store.read(stats_a.metrics_path)
-    pickled = base64.b64decode(encoded)
-    restored_dict = pickle.loads(pickled)  # nosec B301 - Safe: test code
+    restored_dict = json.loads(base64.b64decode(encoded).decode("utf-8"))
     assert set(restored_dict.keys()) == {"a-active", "a-restored", "b-restored"}
 
 
@@ -389,7 +388,7 @@ def _verify_restored_metrics(stats, service_a, service_b, service_c):
 def _register_llm_service(stats, service_a):
     """Register an LLM service and verify the transition."""
     llm_config = LLMConfig(model="gpt-4o", api_key="test_key", num_retries=2, retry_min_wait=1, retry_max_wait=2)
-    with patch("openhands.llm.llm.litellm_completion"):
+    with patch("forge.llm.llm.litellm_completion"):
         llm_a = LLM(service_id=service_a, config=llm_config)
         event_a = RegistryEvent(llm=llm_a, service_id=service_a)
         stats.register_llm(event_a)
@@ -443,13 +442,9 @@ def test_save_metrics_throws_error_on_duplicate_service_ids(mock_file_store):
     stats.service_to_metrics[service_id] = service_metrics
     stats.save_metrics()
     encoded = mock_file_store.read(stats.metrics_path)
-    pickled = base64.b64decode(encoded)
-    restored = pickle.loads(pickled)  # nosec B301 - Safe: test code
+    restored = json.loads(base64.b64decode(encoded).decode("utf-8"))
     val = restored[service_id]
-    if isinstance(val, dict):
-        m = Metrics()
-        m.__setstate__(val)
-    else:
-        m = val
+    m = Metrics()
+    m.__setstate__(val)
     assert service_id in restored
     assert m.accumulated_cost == 0.05

@@ -1,0 +1,139 @@
+"""Post-action verification to prevent hallucinations and ensure tool execution success.
+
+This module provides reliability mechanisms used by industry-leading AI tools like Devin,
+Cursor, and OpenAI Code Interpreter to verify that claimed actions actually succeeded.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from forge.core.logger import forge_logger as logger
+from forge.events.action import CmdRunAction, FileEditAction
+from forge.events.observation import CmdOutputObservation, ErrorObservation
+
+if TYPE_CHECKING:
+    from forge.events.action import Action
+    from forge.events.observation import Observation
+    from forge.runtime.base import Runtime
+
+
+class ActionVerifier:
+    """Verifies that actions actually succeeded.
+    
+    This prevents hallucinations where the agent claims to have done something
+    but didn't actually execute the tool.
+    
+    Used by industry leaders:
+    - Devin: Verifies every file operation
+    - Cursor: Validates tool execution results
+    - OpenAI: Checks sandbox state changes
+    """
+    
+    def __init__(self, runtime: Runtime):
+        """Initialize the action verifier.
+        
+        Args:
+            runtime: The runtime environment to verify actions in
+
+        """
+        self.runtime = runtime
+        self.verification_enabled = True
+    
+    async def verify_action(self, action: Action) -> tuple[bool, str, Observation | None]:
+        """Verify an action actually succeeded.
+        
+        Args:
+            action: The action that was executed
+            
+        Returns:
+            Tuple of (success: bool, message: str, verification_observation: Observation | None)
+
+        """
+        if not self.verification_enabled:
+            return True, "Verification disabled", None
+        
+        # Route to appropriate verification method
+        if isinstance(action, FileEditAction):
+            return await self._verify_file_edit_action(action)
+        
+        # No verification needed for other action types
+        return True, "No verification needed", None
+    
+    async def _verify_file_edit_action(self, action: FileEditAction) -> tuple[bool, str, Observation | None]:
+        """Verify a file was actually created/edited.
+        
+        Args:
+            action: The FileEditAction to verify
+            
+        Returns:
+            Tuple of (success, message, observation)
+
+        """
+        try:
+            file_path = action.path
+            
+            # Verify file exists
+            verify_cmd = CmdRunAction(
+                command=f"test -f {file_path} && echo 'FILE_EXISTS' || echo 'FILE_MISSING'",
+                thought="Verifying file was created/edited"
+            )
+            verify_obs = await self.runtime.run_action(verify_cmd)
+            
+            if not isinstance(verify_obs, CmdOutputObservation):
+                return False, f"❌ Verification failed: unexpected observation type", verify_obs
+            
+            if "FILE_MISSING" in verify_obs.content:
+                logger.error(f"File verification failed: {file_path} does not exist despite tool call")
+                return False, f"❌ CRITICAL: File {file_path} was NOT created despite edit_file tool call", verify_obs
+            
+            # Verify file has content (not empty)
+            content_cmd = CmdRunAction(
+                command=f"wc -l {file_path} && ls -lh {file_path}",
+                thought="Verifying file content"
+            )
+            content_obs = await self.runtime.run_action(content_cmd)
+            
+            if not isinstance(content_obs, CmdOutputObservation):
+                return True, f"✅ File {file_path} exists (content check skipped)", content_obs
+            
+            # Extract line count
+            lines = 0
+            try:
+                first_line = content_obs.content.split('\n')[0]
+                lines = int(first_line.strip().split()[0])
+            except (ValueError, IndexError):
+                pass
+            
+            if lines == 0:
+                logger.warning(f"File {file_path} exists but is empty")
+                return True, f"⚠️ File {file_path} created but is empty (0 lines)", content_obs
+            
+            logger.info(f"✅ File verification successful: {file_path} ({lines} lines)")
+            return True, f"✅ Verified: {file_path} created successfully ({lines} lines)", content_obs
+            
+        except Exception as e:
+            logger.error(f"Verification error for {action.path}: {e}")
+            error_obs = ErrorObservation(content=f"Verification failed: {str(e)}")
+            return False, f"❌ Verification error: {str(e)}", error_obs
+    
+    def should_verify(self, action: Action) -> bool:
+        """Determine if an action should be verified.
+        
+        Args:
+            action: The action to check
+            
+        Returns:
+            True if this action type should be verified
+
+        """
+        # File operations should always be verified
+        if isinstance(action, FileEditAction):
+            return True
+        
+        # Future: add more action types to verify
+        # - CmdRunAction for critical commands
+        # - IPythonRunCellAction for code execution
+        
+        return False
+

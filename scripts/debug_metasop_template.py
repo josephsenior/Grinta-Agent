@@ -9,14 +9,14 @@ Prints: template step order, role profiles loaded, and for each step:
 """
 
 import logging
-from openhands.core.config.utils import load_openhands_config
-from openhands.metasop.orchestrator import MetaSOPOrchestrator
+from forge.core.config.utils import load_FORGE_config
+from forge.metasop.orchestrator import MetaSOPOrchestrator
 
 logger = logging.getLogger(__name__)
 
 
 def main():
-    cfg = load_openhands_config(set_logging_levels=False)
+    cfg = load_FORGE_config(set_logging_levels=False)
     orch = MetaSOPOrchestrator(sop_name="feature_delivery_with_ui", config=cfg)
     logger.info("Loaded role profiles:")
     logger.info("%s", list(orch.profiles.keys()))

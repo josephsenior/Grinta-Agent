@@ -1,15 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { useConversationId } from "../use-conversation-id";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 
 export const useGetMicroagents = (microagentDirectory: string) => {
   const { conversationId } = useConversationId();
 
   return useQuery({
     queryKey: ["files", "microagents", conversationId, microagentDirectory],
-    queryFn: () => OpenHands.getFiles(conversationId!, microagentDirectory),
+    queryFn: () => Forge.getFiles(conversationId!, microagentDirectory),
     enabled: !!conversationId,
     select: (data) =>
-      data.map((fileName) => fileName.replace(microagentDirectory, "")),
+      (data || []).map((fileName: any) => {
+        const name = typeof fileName === "string" ? fileName : fileName?.path ?? "";
+        return name.replace(microagentDirectory, "");
+      }),
   });
 };

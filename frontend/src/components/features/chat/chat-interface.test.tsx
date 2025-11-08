@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { useParams } from "react-router-dom";
 import { vi, describe, test, expect, beforeEach } from "vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { ChatInterface } from "./chat-interface";
 import { useWsClient } from "#/context/ws-client-provider";
 import { useOptimisticUserMessage } from "#/hooks/use-optimistic-user-message";
@@ -9,7 +9,8 @@ import { useWSErrorMessage } from "#/hooks/use-ws-error-message";
 import { useConfig } from "#/hooks/query/use-config";
 import { useGetTrajectory } from "#/hooks/mutation/use-get-trajectory";
 import { useUploadFiles } from "#/hooks/mutation/use-upload-files";
-import { OpenHandsAction } from "#/types/core/actions";
+import { ForgeAction } from "#/types/core/actions";
+import { renderWithProviders } from "../../../../test-utils";
 
 // Mock the hooks
 vi.mock("#/context/ws-client-provider");
@@ -19,13 +20,20 @@ vi.mock("react-router");
 vi.mock("#/hooks/query/use-config");
 vi.mock("#/hooks/mutation/use-get-trajectory");
 vi.mock("#/hooks/mutation/use-upload-files");
-vi.mock("react-redux", () => ({
-  useSelector: vi.fn(() => ({
-    curAgentState: "AWAITING_USER_INPUT",
-    selectedRepository: null,
-    replayJson: null,
-  })),
-}));
+vi.mock("react-redux", async () => {
+  const actual = await vi.importActual<typeof import("react-redux")>(
+    "react-redux",
+  );
+  return {
+    ...actual,
+    useSelector: vi.fn(() => ({
+      curAgentState: "AWAITING_USER_INPUT",
+      selectedRepository: null,
+      replayJson: null,
+    })),
+    useDispatch: vi.fn(() => vi.fn()),
+  };
+});
 
 describe("ChatInterface", () => {
   // Helper to cast imported mocks to vitest mock objects for easier stubbing
@@ -79,10 +87,8 @@ describe("ChatInterface", () => {
   });
 
   // Helper function to render with QueryClientProvider
-  const renderWithQueryClient = (ui: React.ReactElement) =>
-    render(
-      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
-    );
+  const renderChatInterface = (ui: React.ReactElement) =>
+    renderWithProviders(ui, { queryClient });
 
   test("should show chat suggestions when there are no events", () => {
     asViMock(useWsClient).mockReturnValue({
@@ -92,7 +98,7 @@ describe("ChatInterface", () => {
       hydratedEventIds: new Set(),
     });
 
-    renderWithQueryClient(<ChatInterface />);
+    renderChatInterface(<ChatInterface />);
 
     // ChatSuggestions were removed from the ChatInterface UI. Ensure no suggestions
     // container is present to match the current component behavior.
@@ -100,14 +106,14 @@ describe("ChatInterface", () => {
   });
 
   test("should show chat suggestions when there are only environment events", () => {
-    const environmentEvent: OpenHandsAction = {
+    const environmentEvent: ForgeAction = {
       id: 1,
       source: "environment",
       action: "system",
       args: {
-        content: "source .openhands/setup.sh",
+        content: "source .Forge/setup.sh",
         tools: null,
-        openhands_version: null,
+        Forge_version: null,
         agent_class: null,
       },
       message: "Running setup script",
@@ -121,7 +127,7 @@ describe("ChatInterface", () => {
       hydratedEventIds: new Set(),
     });
 
-    renderWithQueryClient(<ChatInterface />);
+    renderChatInterface(<ChatInterface />);
 
     // ChatSuggestions were removed from the ChatInterface UI. Ensure no suggestions
     // container is present to match the current component behavior.
@@ -129,7 +135,7 @@ describe("ChatInterface", () => {
   });
 
   test("should hide chat suggestions when there is a user message", () => {
-    const userEvent: OpenHandsAction = {
+    const userEvent: ForgeAction = {
       id: 1,
       source: "user",
       action: "message",
@@ -149,7 +155,7 @@ describe("ChatInterface", () => {
       hydratedEventIds: new Set(),
     });
 
-    renderWithQueryClient(<ChatInterface />);
+    renderChatInterface(<ChatInterface />);
 
     // Check if ChatSuggestions is not rendered with user events
     expect(screen.queryByTestId("chat-suggestions")).not.toBeInTheDocument();
@@ -161,7 +167,7 @@ describe("ChatInterface", () => {
       getOptimisticUserMessage: vi.fn(() => "Optimistic message"),
     });
 
-    renderWithQueryClient(<ChatInterface />);
+    renderChatInterface(<ChatInterface />);
 
     // Check if ChatSuggestions is not rendered with optimistic user message
     expect(screen.queryByTestId("chat-suggestions")).not.toBeInTheDocument();

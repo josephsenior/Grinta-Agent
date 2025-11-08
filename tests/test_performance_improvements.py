@@ -1,8 +1,8 @@
 import time
 import types
-from openhands.metasop.cache import StepCacheEntry
-from openhands.metasop.models import Artifact
-from openhands.metasop.orchestrator import MetaSOPOrchestrator
+from forge.metasop.cache import StepCacheEntry
+from forge.metasop.models import Artifact
+from forge.metasop.orchestrator import MetaSOPOrchestrator
 
 
 class DummyQAExecutor:
@@ -53,7 +53,7 @@ def test_qa_cache_short_circuits(tmp_path):
     orch.settings.enabled = True
     orch.step_cache = orch.step_cache or None
     if orch.step_cache is None:
-        from openhands.metasop.cache import StepCache
+        from forge.metasop.cache import StepCache
 
         orch.step_cache = StepCache(max_entries=10)
     step = StepStub("qa1", "qa")

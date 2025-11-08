@@ -22,7 +22,7 @@ export function Footer() {
             <div className="flex items-center gap-3 mb-4">
               <img
                 src={logoImage}
-                alt="CodePilot Pro Logo"
+                alt="Forge Pro Logo"
                 className="w-10 h-10 object-contain"
               />
               <div>
@@ -48,12 +48,12 @@ export function Footer() {
                 </span>
               </p>
               <a
-                href="https://github.com/All-Hands-AI/OpenHands"
+                href="https://github.com/All-Hands-AI/Forge"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-accent-500 hover:text-accent-400 transition-colors inline-flex items-center gap-1 mt-1"
               >
-                View OpenHands on GitHub →
+                View Forge on GitHub →
               </a>
             </div>
           </div>

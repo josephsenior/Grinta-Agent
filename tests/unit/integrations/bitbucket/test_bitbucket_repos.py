@@ -3,9 +3,9 @@
 from unittest.mock import patch
 import pytest
 from pydantic import SecretStr
-from openhands.integrations.bitbucket.bitbucket_service import BitBucketService
-from openhands.integrations.service_types import OwnerType, Repository
-from openhands.integrations.service_types import ProviderType as ServiceProviderType
+from forge.integrations.bitbucket.bitbucket_service import BitBucketService
+from forge.integrations.service_types import OwnerType, Repository
+from forge.integrations.service_types import ProviderType as ServiceProviderType
 
 
 @pytest.fixture

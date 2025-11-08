@@ -16,17 +16,17 @@ from evaluation.utils.shared import (
     EvalMetadata,
     EvalOutput,
     get_default_sandbox_config_for_eval,
-    get_openhands_config_for_eval,
+    get_FORGE_config_for_eval,
     prepare_dataset,
     reset_logger_for_multiprocessing,
     run_evaluation,
 )
-from openhands.core.config import LLMConfig, OpenHandsConfig, get_evaluation_parser
-from openhands.core.logger import openhands_logger as logger
-from openhands.core.main import create_runtime
-from openhands.events.action import CmdRunAction
-from openhands.events.observation import CmdOutputObservation
-from openhands.utils.async_utils import call_async_from_sync
+from forge.core.config import LLMConfig, ForgeConfig, get_evaluation_parser
+from forge.core.logger import forge_logger as logger
+from forge.core.main import create_runtime
+from forge.events.action import CmdRunAction
+from forge.events.observation import CmdOutputObservation
+from forge.utils.async_utils import call_async_from_sync
 
 DOCKER_IMAGE_PREFIX = os.environ.get("EVAL_DOCKER_IMAGE_PREFIX", "docker.io/xingyaoww/")
 logger.info("Using docker image prefix: %s", DOCKER_IMAGE_PREFIX)
@@ -47,10 +47,10 @@ def process_git_patch(patch):
     return patch
 
 
-def get_config(metadata: EvalMetadata, instance: pd.Series) -> OpenHandsConfig:
+def get_config(metadata: EvalMetadata, instance: pd.Series) -> ForgeConfig:
     base_container_image = get_instance_docker_image(instance["instance_id"])
     logger.info(
-        "Using instance container image: %s. Please make sure this image exists. Submit an issue on https://github.com/All-Hands-AI/OpenHands if you run into any issues.",
+        "Using instance container image: %s. Please make sure this image exists. Submit an issue on https://github.com/All-Hands-AI/Forge if you run into any issues.",
         base_container_image,
     )
     sandbox_config = get_default_sandbox_config_for_eval()
@@ -58,12 +58,12 @@ def get_config(metadata: EvalMetadata, instance: pd.Series) -> OpenHandsConfig:
     sandbox_config.remote_runtime_resource_factor = get_instance_resource_factor(
         dataset_name=metadata.dataset, instance_id=instance["instance_id"]
     )
-    return get_openhands_config_for_eval(runtime=os.environ.get("RUNTIME", "docker"), sandbox_config=sandbox_config)
+    return get_FORGE_config_for_eval(runtime=os.environ.get("RUNTIME", "docker"), sandbox_config=sandbox_config)
 
 
 def _setup_logging_and_config(
     instance: pd.Series, metadata: EvalMetadata, reset_logger: bool, log_dir: str | None
-) -> tuple[OpenHandsConfig, str, str, TestSpec]:
+) -> tuple[ForgeConfig, str, str, TestSpec]:
     """Setup logging and get configuration."""
     if reset_logger:
         assert log_dir is not None, "Can't reset logger without a provided log directory."
@@ -100,7 +100,7 @@ def _handle_empty_patch(instance: pd.Series, instance_id: str, metadata: EvalMet
     return EvalOutput(instance_id=instance_id, test_result=instance["test_result"], metadata=metadata)
 
 
-def _adjust_runtime_config(config: OpenHandsConfig, runtime_failure_count: int, instance_id: str) -> None:
+def _adjust_runtime_config(config: ForgeConfig, runtime_failure_count: int, instance_id: str) -> None:
     """Adjust runtime configuration based on failure count."""
     if runtime_failure_count > 0:
         config.sandbox.remote_runtime_resource_factor = min(

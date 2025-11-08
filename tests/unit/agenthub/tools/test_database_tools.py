@@ -2,7 +2,7 @@
 
 import pytest
 
-from openhands.agenthub.codeact_agent.tools.database import (
+from forge.agenthub.codeact_agent.tools.database import (
     get_database_tools,
     DatabaseConnectTool,
     DatabaseSchemaTool,

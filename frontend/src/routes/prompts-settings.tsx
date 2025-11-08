@@ -34,53 +34,145 @@ import { PromptCategory, PROMPT_CATEGORY_LABELS } from "#/types/prompt";
 import { useDebounce } from "#/hooks/use-debounce";
 
 function PromptsSettingsScreen() {
+  const controller = usePromptsSettingsController();
+  const {
+    t,
+    stats,
+    isLoading,
+    filteredPrompts,
+    searchQuery,
+    setSearchQuery,
+    selectedCategory,
+    setSelectedCategory,
+    showFavoritesOnly,
+    toggleFavoritesOnly,
+    handleExport,
+    handleImport,
+    handleCreatePrompt,
+    handleEditPrompt,
+    handleDeletePrompt,
+    handleUsePrompt,
+    handleToggleFavorite,
+    isModalOpen,
+    openCreateModal,
+    closeModal,
+    editingPrompt,
+    toast,
+    exportIsPending,
+    importIsPending,
+  } = controller;
+
+  return (
+    <div className="px-11 py-9 flex flex-col gap-6">
+      <PromptsHeader
+        t={t}
+        onExport={handleExport}
+        onImport={handleImport}
+        onCreate={openCreateModal}
+        exportDisabled={exportIsPending}
+        importDisabled={importIsPending}
+      />
+
+      {stats && <PromptsStatsSection stats={stats} t={t} />}
+
+      <PromptsFilters
+        t={t}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        selectedCategory={selectedCategory}
+        onCategoryChange={setSelectedCategory}
+        showFavoritesOnly={showFavoritesOnly}
+        toggleFavoritesOnly={toggleFavoritesOnly}
+      />
+
+      <PromptsGridSection
+        isLoading={isLoading}
+        filteredPrompts={filteredPrompts}
+        searchQuery={searchQuery}
+        showFavoritesOnly={showFavoritesOnly}
+        selectedCategory={selectedCategory}
+        onCreate={openCreateModal}
+        onEdit={handleEditPrompt}
+        onDelete={handleDeletePrompt}
+        onUse={handleUsePrompt}
+        onToggleFavorite={handleToggleFavorite}
+        t={t}
+      />
+
+      <PromptFormModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onSubmit={editingPrompt ? handleUpdatePrompt : handleCreatePrompt}
+        initialData={editingPrompt}
+      />
+
+      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
+    </div>
+  );
+}
+
+export default PromptsSettingsScreen;
+
+function usePromptsSettingsController() {
   const { t } = useTranslation();
   const toast = useToast();
-
-  // State
   const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [editingPrompt, setEditingPrompt] = React.useState<
-    PromptTemplate | undefined
-  >();
-  const [selectedCategory, setSelectedCategory] = React.useState<
-    PromptCategory | "all"
-  >("all");
+  const [editingPrompt, setEditingPrompt] = React.useState<PromptTemplate | undefined>();
+  const [selectedCategory, setSelectedCategory] = React.useState<PromptCategory | "all">("all");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [showFavoritesOnly, setShowFavoritesOnly] = React.useState(false);
 
-  // Debounce search query for performance (waits 300ms after user stops typing)
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  // Queries
-  const { data: prompts, isLoading } = usePrompts({
-    category:
-      selectedCategory !== "all" ? selectedCategory : undefined,
+  const promptsQuery = usePrompts({
+    category: selectedCategory !== "all" ? selectedCategory : undefined,
     is_favorite: showFavoritesOnly || undefined,
   });
-  const { data: stats } = usePromptStats();
+  const statsQuery = usePromptStats();
 
-  // Mutations
   const createMutation = useCreatePrompt();
   const updateMutation = useUpdatePrompt();
   const deleteMutation = useDeletePrompt();
   const exportMutation = useExportPrompts();
   const importMutation = useImportPrompts();
 
-  // Handlers
-  const handleCreate = (data: CreatePromptRequest) => {
-    createMutation.mutate(data, {
-      onSuccess: () => toast.success("Prompt created successfully!"),
-      onError: () => toast.error("Failed to create prompt"),
-    });
-  };
+  const filteredPrompts = React.useMemo(() => {
+    const prompts = promptsQuery.data;
+    if (!prompts || !Array.isArray(prompts)) {
+      return [];
+    }
+    if (!debouncedSearchQuery.trim()) {
+      return prompts;
+    }
+    const query = debouncedSearchQuery.toLowerCase();
+    return prompts.filter((prompt) =>
+      prompt.title.toLowerCase().includes(query) ||
+      prompt.description?.toLowerCase().includes(query) ||
+      prompt.content.toLowerCase().includes(query) ||
+      prompt.tags.some((tag) => tag.toLowerCase().includes(query)),
+    );
+  }, [promptsQuery.data, debouncedSearchQuery]);
 
-  const handleEdit = (prompt: PromptTemplate) => {
+  const handleCreatePrompt = React.useCallback(
+    (data: CreatePromptRequest) => {
+      createMutation.mutate(data, {
+        onSuccess: () => toast.success("Prompt created successfully!"),
+        onError: () => toast.error("Failed to create prompt"),
+      });
+    },
+    [createMutation, toast],
+  );
+
+  const handleEditPrompt = React.useCallback((prompt: PromptTemplate) => {
     setEditingPrompt(prompt);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleUpdate = (data: CreatePromptRequest) => {
-    if (editingPrompt) {
+  const handleUpdatePrompt = React.useCallback(
+    (data: CreatePromptRequest) => {
+      if (!editingPrompt) {
+        return;
+      }
       updateMutation.mutate(
         {
           promptId: editingPrompt.id,
@@ -91,31 +183,42 @@ function PromptsSettingsScreen() {
           onError: () => toast.error("Failed to update prompt"),
         },
       );
-    }
-  };
+    },
+    [editingPrompt, toast, updateMutation],
+  );
 
-  const handleDelete = (promptId: string) => {
-    if (confirm(t("PROMPTS$DELETE_CONFIRM"))) {
+  const handleDeletePrompt = React.useCallback(
+    (promptId: string) => {
+      if (!confirm(t("PROMPTS$DELETE_CONFIRM"))) {
+        return;
+      }
       deleteMutation.mutate(promptId, {
         onSuccess: () => toast.success("Prompt deleted"),
         onError: () => toast.error("Failed to delete prompt"),
       });
-    }
-  };
+    },
+    [deleteMutation, toast, t],
+  );
 
-  const handleUse = (prompt: PromptTemplate) => {
-    navigator.clipboard.writeText(prompt.content);
-    toast.success(t("PROMPTS$COPIED_TO_CLIPBOARD"));
-  };
+  const handleUsePrompt = React.useCallback(
+    (prompt: PromptTemplate) => {
+      navigator.clipboard.writeText(prompt.content);
+      toast.success(t("PROMPTS$COPIED_TO_CLIPBOARD"));
+    },
+    [toast, t],
+  );
 
-  const handleToggleFavorite = (promptId: string, isFavorite: boolean) => {
-    updateMutation.mutate({
-      promptId,
-      data: { is_favorite: isFavorite },
-    });
-  };
+  const handleToggleFavorite = React.useCallback(
+    (promptId: string, isFavorite: boolean) => {
+      updateMutation.mutate({
+        promptId,
+        data: { is_favorite: isFavorite },
+      });
+    },
+    [updateMutation],
+  );
 
-  const handleExport = async () => {
+  const handleExport = React.useCallback(async () => {
     try {
       const result = await exportMutation.mutateAsync({
         category: selectedCategory !== "all" ? selectedCategory : undefined,
@@ -133,20 +236,22 @@ function PromptsSettingsScreen() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       toast.success(`Exported ${result.prompts.length} prompts!`);
     } catch (error) {
       toast.error("Failed to export prompts");
     }
-  };
+  }, [exportMutation, selectedCategory, showFavoritesOnly, toast]);
 
-  const handleImport = () => {
+  const handleImport = React.useCallback(() => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".json";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
+    input.onchange = async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (!file) {
+        return;
+      }
 
       try {
         const text = await file.text();
@@ -164,221 +269,284 @@ function PromptsSettingsScreen() {
       }
     };
     input.click();
-  };
+  }, [importMutation, t, toast]);
 
-  const handleCloseModal = () => {
+  const openCreateModal = React.useCallback(() => {
+    setEditingPrompt(undefined);
+    setIsModalOpen(true);
+  }, []);
+
+  const closeModal = React.useCallback(() => {
     setIsModalOpen(false);
     setEditingPrompt(undefined);
-  };
+  }, []);
 
-  // Filter prompts by search query
-  // Use debounced search query for filtering (performance optimization)
-  const filteredPrompts = React.useMemo(() => {
-    if (!prompts || !Array.isArray(prompts)) return [];
+  const toggleFavoritesOnly = React.useCallback(() => {
+    setShowFavoritesOnly((prev) => !prev);
+  }, []);
 
-    if (!debouncedSearchQuery.trim()) return prompts;
+  return {
+    t,
+    stats: statsQuery.data,
+    isLoading: promptsQuery.isLoading,
+    filteredPrompts,
+    searchQuery,
+    setSearchQuery,
+    selectedCategory,
+    setSelectedCategory,
+    showFavoritesOnly,
+    toggleFavoritesOnly,
+    handleExport,
+    handleImport,
+    handleCreatePrompt,
+    handleUpdatePrompt,
+    handleEditPrompt,
+    handleDeletePrompt,
+    handleUsePrompt,
+    handleToggleFavorite,
+    isModalOpen,
+    openCreateModal,
+    closeModal,
+    editingPrompt,
+    toast,
+    exportIsPending: exportMutation.isPending,
+    importIsPending: importMutation.isPending,
+  } as const;
+}
 
-    const query = debouncedSearchQuery.toLowerCase();
-    return prompts.filter(
-      (p) =>
-        p.title.toLowerCase().includes(query) ||
-        p.description?.toLowerCase().includes(query) ||
-        p.content.toLowerCase().includes(query) ||
-        p.tags.some((tag) => tag.toLowerCase().includes(query)),
-    );
-  }, [prompts, debouncedSearchQuery]);
-
+function PromptsHeader({
+  t,
+  onExport,
+  onImport,
+  onCreate,
+  exportDisabled,
+  importDisabled,
+}: {
+  t: ReturnType<typeof useTranslation>["t"];
+  onExport: () => void;
+  onImport: () => void;
+  onCreate: () => void;
+  exportDisabled: boolean;
+  importDisabled: boolean;
+}) {
   return (
-    <div className="px-11 py-9 flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">
-            {t("PROMPTS$TITLE")}
-          </h1>
-          <p className="text-foreground-secondary mt-1">
-            {t("PROMPTS$SUBTITLE")}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 text-foreground-secondary hover:text-foreground border border-violet-500/20 rounded hover:bg-background"
-            disabled={exportMutation.isPending}
-          >
-            <Download className="w-4 h-4" />
-            {t("PROMPTS$EXPORT")}
-          </button>
-          <button
-            type="button"
-            onClick={handleImport}
-            className="flex items-center gap-2 px-4 py-2 text-foreground-secondary hover:text-foreground border border-violet-500/20 rounded hover:bg-background"
-            disabled={importMutation.isPending}
-          >
-            <Upload className="w-4 h-4" />
-            {t("PROMPTS$IMPORT")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark"
-          >
-            <Plus className="w-4 h-4" />
-            {t("PROMPTS$NEW_PROMPT")}
-          </button>
-        </div>
+    <div className="flex items-center justify-between">
+      <div>
+        <h1 className="text-2xl font-semibold text-foreground">{t("PROMPTS$TITLE")}</h1>
+        <p className="text-foreground-secondary mt-1">{t("PROMPTS$SUBTITLE")}</p>
       </div>
 
-      {/* Stats */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="p-4 bg-black border border-violet-500/20 rounded-lg">
-            <div className="flex items-center justify-between">
-              <span className="text-foreground-secondary text-sm">
-                {t("PROMPTS$TOTAL_PROMPTS")}
-              </span>
-              <TrendingUp className="w-4 h-4 text-primary" />
-            </div>
-            <p className="text-2xl font-semibold text-foreground mt-2">
-              {stats.total_prompts}
-            </p>
-          </div>
-
-          <div className="p-4 bg-black border border-violet-500/20 rounded-lg">
-            <div className="flex items-center justify-between">
-              <span className="text-foreground-secondary text-sm">
-                {t("PROMPTS$FAVORITES")}
-              </span>
-              <Star className="w-4 h-4 text-yellow-500" />
-            </div>
-            <p className="text-2xl font-semibold text-foreground mt-2">
-              {stats.total_favorites}
-            </p>
-          </div>
-
-          <div className="p-4 bg-black border border-violet-500/20 rounded-lg">
-            <div className="flex items-center justify-between">
-              <span className="text-foreground-secondary text-sm">
-                {t("PROMPTS$CATEGORIES")}
-              </span>
-              <Filter className="w-4 h-4 text-blue-500" />
-            </div>
-            <p className="text-2xl font-semibold text-foreground mt-2">
-              {Object.keys(stats.prompts_by_category).length}
-            </p>
-          </div>
-
-          <div className="p-4 bg-black border border-violet-500/20 rounded-lg">
-            <div className="flex items-center justify-between">
-              <span className="text-foreground-secondary text-sm">
-                {t("PROMPTS$TOTAL_TAGS")}
-              </span>
-              <span className="text-green-500 text-xs">#{stats.total_tags}</span>
-            </div>
-            <p className="text-2xl font-semibold text-foreground mt-2">
-              {stats.total_tags}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4">
-        {/* Search */}
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-secondary" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t("PROMPTS$SEARCH_PLACEHOLDER")}
-            className="w-full pl-10 pr-4 py-2 bg-background border border-violet-500/20 rounded text-foreground focus:outline-none focus:border-border-active"
-          />
-        </div>
-
-        {/* Category filter */}
-        <select
-          value={selectedCategory}
-          onChange={(e) =>
-            setSelectedCategory(e.target.value as PromptCategory | "all")
-          }
-          className="px-4 py-2 bg-background border border-violet-500/20 rounded text-foreground focus:outline-none focus:border-border-active"
-        >
-          <option value="all">{t("PROMPTS$ALL_CATEGORIES")}</option>
-          {Object.entries(PROMPT_CATEGORY_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-
-        {/* Favorites filter */}
+      <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-          className={`flex items-center gap-2 px-4 py-2 border rounded transition-colors ${
-            showFavoritesOnly
-              ? "bg-primary text-white border-primary"
-              : "bg-background text-foreground-secondary border-violet-500/20 hover:bg-black"
-          }`}
+          onClick={onExport}
+          className="flex items-center gap-2 px-4 py-2 text-foreground-secondary hover:text-foreground border border-violet-500/20 rounded hover:bg-background"
+          disabled={exportDisabled}
         >
-          <Star
-            className={`w-4 h-4 ${showFavoritesOnly ? "fill-white" : ""}`}
-          />
-          {t("PROMPTS$FAVORITES_ONLY")}
+          <Download className="w-4 h-4" />
+          {t("PROMPTS$EXPORT")}
+        </button>
+        <button
+          type="button"
+          onClick={onImport}
+          className="flex items-center gap-2 px-4 py-2 text-foreground-secondary hover:text-foreground border border-violet-500/20 rounded hover:bg-background"
+          disabled={importDisabled}
+        >
+          <Upload className="w-4 h-4" />
+          {t("PROMPTS$IMPORT")}
+        </button>
+        <button
+          type="button"
+          onClick={onCreate}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark"
+        >
+          <Plus className="w-4 h-4" />
+          {t("PROMPTS$NEW_PROMPT")}
         </button>
       </div>
-
-      {/* Prompts grid */}
-      {isLoading ? (
-        <CardSkeletonGrid count={6} />
-      ) : filteredPrompts.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-foreground-secondary mb-4">
-            {searchQuery || showFavoritesOnly || selectedCategory !== "all"
-              ? t("PROMPTS$NO_RESULTS")
-              : t("PROMPTS$EMPTY_STATE")}
-          </p>
-          {!searchQuery && !showFavoritesOnly && selectedCategory === "all" && (
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(true)}
-              className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark"
-            >
-              {t("PROMPTS$CREATE_FIRST")}
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredPrompts.map((prompt) => (
-            <PromptCard
-              key={prompt.id}
-              prompt={prompt}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onUse={handleUse}
-              onToggleFavorite={handleToggleFavorite}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Modal */}
-      <PromptFormModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onSubmit={editingPrompt ? handleUpdate : handleCreate}
-        initialData={editingPrompt}
-      />
-
-      {/* Toast notifications */}
-      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
     </div>
   );
 }
 
-export default PromptsSettingsScreen;
+function PromptsStatsSection({
+  stats,
+  t,
+}: {
+  stats: NonNullable<ReturnType<typeof usePromptStats>["data"]>;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <StatsCard
+        title={t("PROMPTS$TOTAL_PROMPTS")}
+        value={stats.total_prompts}
+        icon={<TrendingUp className="w-4 h-4 text-primary" />}
+      />
+      <StatsCard
+        title={t("PROMPTS$FAVORITES")}
+        value={stats.total_favorites}
+        icon={<Star className="w-4 h-4 text-yellow-500" />}
+      />
+      <StatsCard
+        title={t("PROMPTS$CATEGORIES")}
+        value={Object.keys(stats.prompts_by_category).length}
+        icon={<Filter className="w-4 h-4 text-blue-500" />}
+      />
+      <StatsCard
+        title={t("PROMPTS$TOTAL_TAGS")}
+        value={stats.total_tags}
+        badge={`#${stats.total_tags}`}
+      />
+    </div>
+  );
+}
+
+function StatsCard({
+  title,
+  value,
+  icon,
+  badge,
+}: {
+  title: string;
+  value: number;
+  icon?: React.ReactNode;
+  badge?: string;
+}) {
+  return (
+    <div className="p-4 bg-black border border-violet-500/20 rounded-lg">
+      <div className="flex items-center justify-between">
+        <span className="text-foreground-secondary text-sm">{title}</span>
+        {badge ? <span className="text-xs text-green-500">{badge}</span> : icon}
+      </div>
+      <p className="text-2xl font-semibold text-foreground mt-2">{value}</p>
+    </div>
+  );
+}
+
+function PromptsFilters({
+  t,
+  searchQuery,
+  onSearchChange,
+  selectedCategory,
+  onCategoryChange,
+  showFavoritesOnly,
+  toggleFavoritesOnly,
+}: {
+  t: ReturnType<typeof useTranslation>["t"];
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  selectedCategory: PromptCategory | "all";
+  onCategoryChange: (value: PromptCategory | "all") => void;
+  showFavoritesOnly: boolean;
+  toggleFavoritesOnly: () => void;
+}) {
+  return (
+    <div className="flex flex-col md:flex-row gap-4">
+      <div className="flex-1 relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-secondary" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder={t("PROMPTS$SEARCH_PLACEHOLDER")}
+          className="w-full pl-10 pr-4 py-2 bg-background border border-violet-500/20 rounded text-foreground focus:outline-none focus:border-border-active"
+        />
+      </div>
+
+      <select
+        value={selectedCategory}
+        onChange={(event) => onCategoryChange(event.target.value as PromptCategory | "all")}
+        className="px-4 py-2 bg-background border border-violet-500/20 rounded text-foreground focus:outline-none focus:border-border-active"
+      >
+        <option value="all">{t("PROMPTS$ALL_CATEGORIES")}</option>
+        {Object.entries(PROMPT_CATEGORY_LABELS).map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </select>
+
+      <button
+        type="button"
+        onClick={toggleFavoritesOnly}
+        className={`flex items-center gap-2 px-4 py-2 border rounded transition-colors ${
+          showFavoritesOnly
+            ? "bg-primary text-white border-primary"
+            : "bg-background text-foreground-secondary border-violet-500/20 hover:bg-black"
+        }`}
+      >
+        <Star className={`w-4 h-4 ${showFavoritesOnly ? "fill-white" : ""}`} />
+        {t("PROMPTS$FAVORITES_ONLY")}
+      </button>
+    </div>
+  );
+}
+
+function PromptsGridSection({
+  isLoading,
+  filteredPrompts,
+  searchQuery,
+  showFavoritesOnly,
+  selectedCategory,
+  onCreate,
+  onEdit,
+  onDelete,
+  onUse,
+  onToggleFavorite,
+  t,
+}: {
+  isLoading: boolean;
+  filteredPrompts: PromptTemplate[];
+  searchQuery: string;
+  showFavoritesOnly: boolean;
+  selectedCategory: PromptCategory | "all";
+  onCreate: () => void;
+  onEdit: (prompt: PromptTemplate) => void;
+  onDelete: (promptId: string) => void;
+  onUse: (prompt: PromptTemplate) => void;
+  onToggleFavorite: (promptId: string, isFavorite: boolean) => void;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  if (isLoading) {
+    return <CardSkeletonGrid count={6} />;
+  }
+
+  if (filteredPrompts.length === 0) {
+    const isFiltered = Boolean(
+      searchQuery || showFavoritesOnly || selectedCategory !== "all",
+    );
+
+    return (
+      <div className="text-center py-12">
+        <p className="text-foreground-secondary mb-4">
+          {isFiltered ? t("PROMPTS$NO_RESULTS") : t("PROMPTS$EMPTY_STATE")}
+        </p>
+        {!isFiltered && (
+          <button
+            type="button"
+            onClick={onCreate}
+            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark"
+          >
+            {t("PROMPTS$CREATE_FIRST")}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {filteredPrompts.map((prompt) => (
+        <PromptCard
+          key={prompt.id}
+          prompt={prompt}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onUse={onUse}
+          onToggleFavorite={onToggleFavorite}
+        />
+      ))}
+    </div>
+  );
+}
 

@@ -1,6 +1,6 @@
-# OpenHands Documentation
+# Forge Documentation
 
-Welcome to the comprehensive documentation for OpenHands - a production-grade AI coding agent system.
+Welcome to the comprehensive documentation for Forge - a production-grade AI coding agent system.
 
 ## 🚀 Quick Start
 
@@ -92,7 +92,7 @@ Welcome to the comprehensive documentation for OpenHands - a production-grade AI
 
 ## 💡 Key Differentiators
 
-**What makes OpenHands unique:**
+**What makes Forge unique:**
 
 1. **200+ LLM Models** - Support for 30+ providers via LiteLLM
 2. **Structure-Aware Editing** - Tree-sitter parsing for 45+ languages

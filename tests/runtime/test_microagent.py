@@ -6,16 +6,16 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from conftest import _close_test_runtime, _load_runtime
-from openhands.core.config import MCPConfig
-from openhands.core.config.mcp_config import MCPStdioServerConfig
-from openhands.mcp_client.utils import add_mcp_tools_to_agent
-from openhands.microagent.microagent import BaseMicroagent, KnowledgeMicroagent, RepoMicroagent, TaskMicroagent
-from openhands.microagent.types import MicroagentType
+from forge.core.config import MCPConfig
+from forge.core.config.mcp_config import MCPStdioServerConfig
+from forge.mcp_client.utils import add_mcp_tools_to_agent
+from forge.microagent.microagent import BaseMicroagent, KnowledgeMicroagent, RepoMicroagent, TaskMicroagent
+from forge.microagent.types import MicroagentType
 
 
 def _create_test_microagents(test_dir: str):
     """Create test microagent files in the given directory."""
-    microagents_dir = Path(test_dir) / ".openhands" / "microagents"
+    microagents_dir = Path(test_dir) / ".Forge" / "microagents"
     microagents_dir.mkdir(parents=True, exist_ok=True)
     knowledge_dir = microagents_dir / "knowledge"
     knowledge_dir.mkdir(exist_ok=True)
@@ -24,13 +24,13 @@ def _create_test_microagents(test_dir: str):
     repo_agent = "---\nname: test_repo_agent\ntype: repo\nversion: 1.0.0\nagent: CodeActAgent\n---\n\n# Test Repository Agent\n\nRepository-specific test instructions.\n"
     (microagents_dir / "repo.md").write_text(repo_agent)
     legacy_instructions = "# Legacy Instructions\n\nThese are legacy repository instructions.\n"
-    (Path(test_dir) / ".openhands_instructions").write_text(legacy_instructions)
+    (Path(test_dir) / ".FORGE_instructions").write_text(legacy_instructions)
 
 
-def test_load_microagents_with_trailing_slashes(temp_dir, runtime_cls, run_as_openhands):
+def test_load_microagents_with_trailing_slashes(temp_dir, runtime_cls, run_as_Forge):
     """Test loading microagents when directory paths have trailing slashes."""
     _create_test_microagents(temp_dir)
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         loaded_agents = runtime.get_microagents_from_selected_repo(None)
         knowledge_agents = [a for a in loaded_agents if isinstance(a, KnowledgeMicroagent)]
@@ -48,14 +48,14 @@ def test_load_microagents_with_trailing_slashes(temp_dir, runtime_cls, run_as_op
         _close_test_runtime(runtime)
 
 
-def test_load_microagents_with_selected_repo(temp_dir, runtime_cls, run_as_openhands):
+def test_load_microagents_with_selected_repo(temp_dir, runtime_cls, run_as_Forge):
     """Test loading microagents from a selected repository."""
-    repo_dir = Path(temp_dir) / "OpenHands"
+    repo_dir = Path(temp_dir) / "forge"
     repo_dir.mkdir(parents=True)
     _create_test_microagents(str(repo_dir))
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
-        loaded_agents = runtime.get_microagents_from_selected_repo("All-Hands-AI/OpenHands")
+        loaded_agents = runtime.get_microagents_from_selected_repo("All-Hands-AI/Forge")
         knowledge_agents = [a for a in loaded_agents if isinstance(a, KnowledgeMicroagent)]
         repo_agents = [a for a in loaded_agents if isinstance(a, RepoMicroagent)]
         assert len(knowledge_agents) == 1
@@ -71,13 +71,13 @@ def test_load_microagents_with_selected_repo(temp_dir, runtime_cls, run_as_openh
         _close_test_runtime(runtime)
 
 
-def test_load_microagents_with_missing_files(temp_dir, runtime_cls, run_as_openhands):
+def test_load_microagents_with_missing_files(temp_dir, runtime_cls, run_as_Forge):
     """Test loading microagents when some files are missing."""
-    microagents_dir = Path(temp_dir) / ".openhands" / "microagents"
+    microagents_dir = Path(temp_dir) / ".Forge" / "microagents"
     microagents_dir.mkdir(parents=True, exist_ok=True)
     repo_agent = "---\nname: test_repo_agent\ntype: repo\nversion: 1.0.0\nagent: CodeActAgent\n---\n\n# Test Repository Agent\n\nRepository-specific test instructions.\n"
     (microagents_dir / "repo.md").write_text(repo_agent)
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         loaded_agents = runtime.get_microagents_from_selected_repo(None)
         knowledge_agents = [a for a in loaded_agents if isinstance(a, KnowledgeMicroagent)]
@@ -92,7 +92,7 @@ def test_load_microagents_with_missing_files(temp_dir, runtime_cls, run_as_openh
 
 def test_task_microagent_creation():
     """Test that a TaskMicroagent is created correctly."""
-    content = '---\nname: test_task\nversion: 1.0.0\nauthor: openhands\nagent: CodeActAgent\ntriggers:\n- /test_task\ninputs:\n  - name: TEST_VAR\n    description: "Test variable"\n---\n\nThis is a test task microagent with a variable: ${test_var}.\n'
+    content = '---\nname: test_task\nversion: 1.0.0\nauthor: Forge\nagent: CodeActAgent\ntriggers:\n- /test_task\ninputs:\n  - name: TEST_VAR\n    description: "Test variable"\n---\n\nThis is a test task microagent with a variable: ${test_var}.\n'
     with tempfile.NamedTemporaryFile(suffix=".md") as f:
         f.write(content.encode())
         f.flush()
@@ -106,7 +106,7 @@ def test_task_microagent_creation():
 
 def test_task_microagent_variable_extraction():
     """Test that variables are correctly extracted from the content."""
-    content = '---\nname: test_task\nversion: 1.0.0\nauthor: openhands\nagent: CodeActAgent\ntriggers:\n- /test_task\ninputs:\n  - name: var1\n    description: "Variable 1"\n---\n\nThis is a test with variables: ${var1}, ${var2}, and ${var3}.\n'
+    content = '---\nname: test_task\nversion: 1.0.0\nauthor: Forge\nagent: CodeActAgent\ntriggers:\n- /test_task\ninputs:\n  - name: var1\n    description: "Variable 1"\n---\n\nThis is a test with variables: ${var1}, ${var2}, and ${var3}.\n'
     with tempfile.NamedTemporaryFile(suffix=".md") as f:
         f.write(content.encode())
         f.flush()
@@ -119,7 +119,7 @@ def test_task_microagent_variable_extraction():
 
 def test_knowledge_microagent_no_prompt():
     """Test that a regular KnowledgeMicroagent doesn't get the prompt."""
-    content = "---\nname: test_knowledge\nversion: 1.0.0\nauthor: openhands\nagent: CodeActAgent\ntriggers:\n- test_knowledge\n---\n\nThis is a test knowledge microagent.\n"
+    content = "---\nname: test_knowledge\nversion: 1.0.0\nauthor: Forge\nagent: CodeActAgent\ntriggers:\n- test_knowledge\n---\n\nThis is a test knowledge microagent.\n"
     with tempfile.NamedTemporaryFile(suffix=".md") as f:
         f.write(content.encode())
         f.flush()
@@ -131,7 +131,7 @@ def test_knowledge_microagent_no_prompt():
 
 def test_task_microagent_trigger_addition():
     """Test that a trigger is added if not present."""
-    content = '---\nname: test_task\nversion: 1.0.0\nauthor: openhands\nagent: CodeActAgent\ninputs:\n  - name: TEST_VAR\n    description: "Test variable"\n---\n\nThis is a test task microagent.\n'
+    content = '---\nname: test_task\nversion: 1.0.0\nauthor: Forge\nagent: CodeActAgent\ninputs:\n  - name: TEST_VAR\n    description: "Test variable"\n---\n\nThis is a test task microagent.\n'
     with tempfile.NamedTemporaryFile(suffix=".md") as f:
         f.write(content.encode())
         f.flush()
@@ -142,7 +142,7 @@ def test_task_microagent_trigger_addition():
 
 def test_task_microagent_no_duplicate_trigger():
     """Test that a trigger is not duplicated if already present."""
-    content = '---\nname: test_task\nversion: 1.0.0\nauthor: openhands\nagent: CodeActAgent\ntriggers:\n- /test_task\n- another_trigger\ninputs:\n  - name: TEST_VAR\n    description: "Test variable"\n---\n\nThis is a test task microagent.\n'
+    content = '---\nname: test_task\nversion: 1.0.0\nauthor: Forge\nagent: CodeActAgent\ntriggers:\n- /test_task\n- another_trigger\ninputs:\n  - name: TEST_VAR\n    description: "Test variable"\n---\n\nThis is a test task microagent.\n'
     with tempfile.NamedTemporaryFile(suffix=".md") as f:
         f.write(content.encode())
         f.flush()
@@ -156,7 +156,7 @@ def test_task_microagent_no_duplicate_trigger():
 
 def test_task_microagent_match_trigger():
     """Test that a task microagent matches its trigger correctly."""
-    content = '---\nname: test_task\nversion: 1.0.0\nauthor: openhands\nagent: CodeActAgent\ntriggers:\n- /test_task\ninputs:\n  - name: TEST_VAR\n    description: "Test variable"\n---\n\nThis is a test task microagent.\n'
+    content = '---\nname: test_task\nversion: 1.0.0\nauthor: Forge\nagent: CodeActAgent\ntriggers:\n- /test_task\ninputs:\n  - name: TEST_VAR\n    description: "Test variable"\n---\n\nThis is a test task microagent.\n'
     with tempfile.NamedTemporaryFile(suffix=".md") as f:
         f.write(content.encode())
         f.flush()
@@ -170,9 +170,9 @@ def test_task_microagent_match_trigger():
 
 def test_default_tools_microagent_exists():
     """Test that the default-tools microagent exists in the global microagents directory."""
-    import openhands
+    import forge
 
-    project_root = os.path.dirname(openhands.__file__)
+    project_root = os.path.dirname(forge.__file__)
     parent_dir = os.path.dirname(project_root)
     microagents_dir = os.path.join(parent_dir, "microagents")
     default_tools_path = os.path.join(microagents_dir, "default-tools.md")
@@ -188,7 +188,7 @@ def test_default_tools_microagent_exists():
 @pytest.mark.asyncio
 async def test_add_mcp_tools_from_microagents():
     """Test that add_mcp_tools_to_agent adds tools from microagents."""
-    from openhands.runtime.impl.action_execution.action_execution_client import ActionExecutionClient
+    from forge.runtime.impl.action_execution.action_execution_client import ActionExecutionClient
 
     mock_agent = MagicMock()
     mock_runtime = MagicMock(spec=ActionExecutionClient)
@@ -202,7 +202,7 @@ async def test_add_mcp_tools_from_microagents():
         "type": "function",
         "function": {"name": "test-tool", "description": "Test tool description", "parameters": {}},
     }
-    with patch("openhands.mcp.utils.fetch_mcp_tools_from_config", new=AsyncMock(return_value=[mock_tool])):
+    with patch("forge.mcp.utils.fetch_mcp_tools_from_config", new=AsyncMock(return_value=[mock_tool])):
         await add_mcp_tools_to_agent(mock_agent, mock_runtime, mock_memory)
         mock_memory.get_microagent_mcp_tools.assert_called_once()
         mock_runtime.get_mcp_config.assert_called_once()

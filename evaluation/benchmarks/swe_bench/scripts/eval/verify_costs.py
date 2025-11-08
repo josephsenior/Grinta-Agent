@@ -1,6 +1,6 @@
 import argparse
 import pandas as pd
-from openhands.core.logger import openhands_logger as logger
+from forge.core.logger import forge_logger as logger
 
 
 def _validate_metrics_data(row: pd.Series) -> tuple[dict, float, list] | tuple[None, None, None]:
@@ -66,7 +66,7 @@ def verify_instance_costs(row: pd.Series) -> float:
 
     Also checks for duplicate consecutive costs which might indicate buggy counting.
     If the consecutive costs are identical, the file is affected by this bug:
-    https://github.com/All-Hands-AI/OpenHands/issues/5383.
+    https://github.com/All-Hands-AI/Forge/issues/5383.
 
     Args:
         row: DataFrame row containing instance data with metrics

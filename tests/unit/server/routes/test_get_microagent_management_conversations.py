@@ -1,11 +1,11 @@
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-from openhands.integrations.provider import ProviderHandler
-from openhands.server.data_models.conversation_info_result_set import ConversationInfoResultSet
-from openhands.server.routes.manage_conversations import get_microagent_management_conversations
-from openhands.storage.conversation.conversation_store import ConversationStore
-from openhands.storage.data_models.conversation_metadata import ConversationMetadata, ConversationTrigger
+from forge.integrations.provider import ProviderHandler
+from forge.server.data_models.conversation_info_result_set import ConversationInfoResultSet
+from forge.server.routes.manage_conversations import get_microagent_management_conversations
+from forge.storage.conversation.conversation_store import ConversationStore
+from forge.storage.data_models.conversation_metadata import ConversationMetadata, ConversationTrigger
 
 
 @pytest.mark.asyncio
@@ -46,9 +46,9 @@ async def test_get_microagent_management_conversations_success():
     mock_provider_handler = MagicMock(spec=ProviderHandler)
     mock_provider_handler.is_pr_open = AsyncMock(return_value=True)
     with patch(
-        "openhands.server.routes.manage_conversations.ProviderHandler", return_value=mock_provider_handler
-    ), patch("openhands.server.routes.manage_conversations._build_conversation_result_set") as mock_build_result, patch(
-        "openhands.server.routes.manage_conversations.config"
+        "forge.server.routes.manage_conversations.ProviderHandler", return_value=mock_provider_handler
+    ), patch("forge.server.routes.manage_conversations._build_conversation_result_set") as mock_build_result, patch(
+        "forge.server.routes.manage_conversations.config"
     ) as mock_config:
         mock_build_result.return_value = ConversationInfoResultSet(results=[], next_page_id="next_page_456")
         mock_config.conversation_max_age_seconds = 86400
@@ -71,9 +71,9 @@ async def test_get_microagent_management_conversations_no_results():
     mock_conversation_store = MagicMock(spec=ConversationStore)
     mock_conversation_store.search = AsyncMock(return_value=MagicMock(results=[], next_page_id=None))
     mock_provider_tokens = {"github": "token_123"}
-    with patch("openhands.server.routes.manage_conversations.ProviderHandler"), patch(
-        "openhands.server.routes.manage_conversations._build_conversation_result_set"
-    ) as mock_build_result, patch("openhands.server.routes.manage_conversations.config") as mock_config:
+    with patch("forge.server.routes.manage_conversations.ProviderHandler"), patch(
+        "forge.server.routes.manage_conversations._build_conversation_result_set"
+    ) as mock_build_result, patch("forge.server.routes.manage_conversations.config") as mock_config:
         mock_build_result.return_value = ConversationInfoResultSet(results=[], next_page_id=None)
         mock_config.conversation_max_age_seconds = 86400
         result = await get_microagent_management_conversations(
@@ -119,9 +119,9 @@ async def test_get_microagent_management_conversations_filter_by_repository():
     mock_provider_handler = MagicMock(spec=ProviderHandler)
     mock_provider_handler.is_pr_open = AsyncMock(return_value=True)
     with patch(
-        "openhands.server.routes.manage_conversations.ProviderHandler", return_value=mock_provider_handler
-    ), patch("openhands.server.routes.manage_conversations._build_conversation_result_set") as mock_build_result, patch(
-        "openhands.server.routes.manage_conversations.config"
+        "forge.server.routes.manage_conversations.ProviderHandler", return_value=mock_provider_handler
+    ), patch("forge.server.routes.manage_conversations._build_conversation_result_set") as mock_build_result, patch(
+        "forge.server.routes.manage_conversations.config"
     ) as mock_config:
         mock_build_result.return_value = ConversationInfoResultSet(results=[mock_conversations[0]], next_page_id=None)
         mock_config.conversation_max_age_seconds = 86400
@@ -168,9 +168,9 @@ async def test_get_microagent_management_conversations_filter_by_trigger():
     mock_provider_handler = MagicMock(spec=ProviderHandler)
     mock_provider_handler.is_pr_open = AsyncMock(return_value=True)
     with patch(
-        "openhands.server.routes.manage_conversations.ProviderHandler", return_value=mock_provider_handler
-    ), patch("openhands.server.routes.manage_conversations._build_conversation_result_set") as mock_build_result, patch(
-        "openhands.server.routes.manage_conversations.config"
+        "forge.server.routes.manage_conversations.ProviderHandler", return_value=mock_provider_handler
+    ), patch("forge.server.routes.manage_conversations._build_conversation_result_set") as mock_build_result, patch(
+        "forge.server.routes.manage_conversations.config"
     ) as mock_config:
         mock_build_result.return_value = ConversationInfoResultSet(results=[mock_conversations[0]], next_page_id=None)
         mock_config.conversation_max_age_seconds = 86400
@@ -217,9 +217,9 @@ async def test_get_microagent_management_conversations_filter_inactive_pr():
     mock_provider_handler = MagicMock(spec=ProviderHandler)
     mock_provider_handler.is_pr_open = AsyncMock(side_effect=[True, False])
     with patch(
-        "openhands.server.routes.manage_conversations.ProviderHandler", return_value=mock_provider_handler
-    ), patch("openhands.server.routes.manage_conversations._build_conversation_result_set") as mock_build_result, patch(
-        "openhands.server.routes.manage_conversations.config"
+        "forge.server.routes.manage_conversations.ProviderHandler", return_value=mock_provider_handler
+    ), patch("forge.server.routes.manage_conversations._build_conversation_result_set") as mock_build_result, patch(
+        "forge.server.routes.manage_conversations.config"
     ) as mock_config:
         mock_build_result.return_value = ConversationInfoResultSet(results=[mock_conversations[0]], next_page_id=None)
         mock_config.conversation_max_age_seconds = 86400
@@ -254,9 +254,9 @@ async def test_get_microagent_management_conversations_no_pr_number():
     mock_provider_tokens = {"github": "token_123"}
     mock_provider_handler = MagicMock(spec=ProviderHandler)
     with patch(
-        "openhands.server.routes.manage_conversations.ProviderHandler", return_value=mock_provider_handler
-    ), patch("openhands.server.routes.manage_conversations._build_conversation_result_set") as mock_build_result, patch(
-        "openhands.server.routes.manage_conversations.config"
+        "forge.server.routes.manage_conversations.ProviderHandler", return_value=mock_provider_handler
+    ), patch("forge.server.routes.manage_conversations._build_conversation_result_set") as mock_build_result, patch(
+        "forge.server.routes.manage_conversations.config"
     ) as mock_config:
         mock_build_result.return_value = ConversationInfoResultSet(results=mock_conversations, next_page_id=None)
         mock_config.conversation_max_age_seconds = 86400
@@ -291,9 +291,9 @@ async def test_get_microagent_management_conversations_no_repository():
     mock_provider_tokens = {"github": "token_123"}
     mock_provider_handler = MagicMock(spec=ProviderHandler)
     with patch(
-        "openhands.server.routes.manage_conversations.ProviderHandler", return_value=mock_provider_handler
-    ), patch("openhands.server.routes.manage_conversations._build_conversation_result_set") as mock_build_result, patch(
-        "openhands.server.routes.manage_conversations.config"
+        "forge.server.routes.manage_conversations.ProviderHandler", return_value=mock_provider_handler
+    ), patch("forge.server.routes.manage_conversations._build_conversation_result_set") as mock_build_result, patch(
+        "forge.server.routes.manage_conversations.config"
     ) as mock_config:
         mock_build_result.return_value = ConversationInfoResultSet(results=[], next_page_id=None)
         mock_config.conversation_max_age_seconds = 86400
@@ -339,9 +339,9 @@ async def test_get_microagent_management_conversations_age_filter():
     mock_provider_handler = MagicMock(spec=ProviderHandler)
     mock_provider_handler.is_pr_open = AsyncMock(return_value=True)
     with patch(
-        "openhands.server.routes.manage_conversations.ProviderHandler", return_value=mock_provider_handler
-    ), patch("openhands.server.routes.manage_conversations._build_conversation_result_set") as mock_build_result, patch(
-        "openhands.server.routes.manage_conversations.config"
+        "forge.server.routes.manage_conversations.ProviderHandler", return_value=mock_provider_handler
+    ), patch("forge.server.routes.manage_conversations._build_conversation_result_set") as mock_build_result, patch(
+        "forge.server.routes.manage_conversations.config"
     ) as mock_config:
         mock_build_result.return_value = ConversationInfoResultSet(results=[recent_conversation], next_page_id=None)
         mock_config.conversation_max_age_seconds = 3600
@@ -360,9 +360,9 @@ async def test_get_microagent_management_conversations_pagination():
     mock_conversation_store = MagicMock(spec=ConversationStore)
     mock_conversation_store.search = AsyncMock(return_value=MagicMock(results=[], next_page_id="next_page_789"))
     mock_provider_tokens = {"github": "token_123"}
-    with patch("openhands.server.routes.manage_conversations.ProviderHandler"), patch(
-        "openhands.server.routes.manage_conversations._build_conversation_result_set"
-    ) as mock_build_result, patch("openhands.server.routes.manage_conversations.config") as mock_config:
+    with patch("forge.server.routes.manage_conversations.ProviderHandler"), patch(
+        "forge.server.routes.manage_conversations._build_conversation_result_set"
+    ) as mock_build_result, patch("forge.server.routes.manage_conversations.config") as mock_config:
         mock_build_result.return_value = ConversationInfoResultSet(results=[], next_page_id="next_page_789")
         mock_config.conversation_max_age_seconds = 86400
         result = await get_microagent_management_conversations(
@@ -382,9 +382,9 @@ async def test_get_microagent_management_conversations_default_parameters():
     mock_conversation_store = MagicMock(spec=ConversationStore)
     mock_conversation_store.search = AsyncMock(return_value=MagicMock(results=[], next_page_id=None))
     mock_provider_tokens = {"github": "token_123"}
-    with patch("openhands.server.routes.manage_conversations.ProviderHandler"), patch(
-        "openhands.server.routes.manage_conversations._build_conversation_result_set"
-    ) as mock_build_result, patch("openhands.server.routes.manage_conversations.config") as mock_config:
+    with patch("forge.server.routes.manage_conversations.ProviderHandler"), patch(
+        "forge.server.routes.manage_conversations._build_conversation_result_set"
+    ) as mock_build_result, patch("forge.server.routes.manage_conversations.config") as mock_config:
         mock_build_result.return_value = ConversationInfoResultSet(results=[], next_page_id=None)
         mock_config.conversation_max_age_seconds = 86400
         result = await get_microagent_management_conversations(

@@ -3,16 +3,16 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from prompt_toolkit.formatted_text import HTML
 from pydantic import SecretStr
-from openhands.cli.settings import (
+from forge.cli.settings import (
     display_settings,
     modify_llm_settings_advanced,
     modify_llm_settings_basic,
     modify_search_api_settings,
 )
-from openhands.cli.tui import UserCancelledError
-from openhands.core.config import OpenHandsConfig
-from openhands.storage.data_models.settings import Settings
-from openhands.storage.settings.file_settings_store import FileSettingsStore
+from forge.cli.tui import UserCancelledError
+from forge.core.config import ForgeConfig
+from forge.storage.data_models.settings import Settings
+from forge.storage.settings.file_settings_store import FileSettingsStore
 
 
 class MockLLMSummarizingCondenserConfig:
@@ -41,7 +41,7 @@ class TestDisplaySettings:
 
     @pytest.fixture
     def app_config(self):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         llm_config = MagicMock()
         llm_config.base_url = None
         llm_config.model = "openai/gpt-4"
@@ -49,7 +49,7 @@ class TestDisplaySettings:
         config.get_llm_config.return_value = llm_config
         config.default_agent = "test-agent"
         config.file_store_path = "/tmp"  # nosec B108 - Safe: test configuration
-        security_mock = MagicMock(spec=OpenHandsConfig)
+        security_mock = MagicMock(spec=ForgeConfig)
         security_mock.confirmation_mode = True
         config.security = security_mock
         config.enable_default_condenser = True
@@ -73,7 +73,7 @@ class TestDisplaySettings:
         config.search_api_key = SecretStr("tvly-test-key")
         return config
 
-    @patch("openhands.cli.settings.print_container")
+    @patch("forge.cli.settings.print_container")
     def test_display_settings_standard_config(self, mock_print_container, app_config):
         display_settings(app_config)
         mock_print_container.assert_called_once()
@@ -97,7 +97,7 @@ class TestDisplaySettings:
         assert "Configuration File" in settings_text
         assert str(Path(app_config.file_store_path)) in settings_text
 
-    @patch("openhands.cli.settings.print_container")
+    @patch("forge.cli.settings.print_container")
     def test_display_settings_advanced_config(self, mock_print_container, advanced_app_config):
         display_settings(advanced_app_config)
         mock_print_container.assert_called_once()
@@ -118,7 +118,7 @@ class TestModifyLLMSettingsBasic:
 
     @pytest.fixture
     def app_config(self):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         llm_config = MagicMock()
         llm_config.model = "openai/gpt-4"
         llm_config.api_key = SecretStr("test-api-key")
@@ -141,11 +141,11 @@ class TestModifyLLMSettingsBasic:
         return store
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.get_supported_llm_models")
-    @patch("openhands.cli.settings.organize_models_and_providers")
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch("forge.cli.settings.get_supported_llm_models")
+    @patch("forge.cli.settings.organize_models_and_providers")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
     async def test_modify_llm_settings_basic_success(
         self, mock_confirm, mock_session, mock_organize, mock_get_models, app_config, settings_store
     ):
@@ -172,11 +172,11 @@ class TestModifyLLMSettingsBasic:
         assert settings.llm_base_url is None
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.get_supported_llm_models")
-    @patch("openhands.cli.settings.organize_models_and_providers")
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch("forge.cli.settings.get_supported_llm_models")
+    @patch("forge.cli.settings.organize_models_and_providers")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
     async def test_modify_llm_settings_basic_user_cancels(
         self, mock_confirm, mock_session, mock_organize, mock_get_models, app_config, settings_store
     ):
@@ -190,12 +190,12 @@ class TestModifyLLMSettingsBasic:
         settings_store.store.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.get_supported_llm_models")
-    @patch("openhands.cli.settings.organize_models_and_providers")
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.print_formatted_text")
-    @patch("openhands.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch("forge.cli.settings.get_supported_llm_models")
+    @patch("forge.cli.settings.organize_models_and_providers")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.print_formatted_text")
+    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
     async def test_modify_llm_settings_basic_invalid_provider_input(
         self, mock_print, mock_confirm, mock_session, mock_organize, mock_get_models, app_config, settings_store
     ):
@@ -231,7 +231,7 @@ class TestModifyLLMSettingsBasic:
     def test_default_model_selection(self):
         """Test that the default model selection uses the first model in the list."""
         import inspect
-        import openhands.cli.settings as settings_module
+        import forge.cli.settings as settings_module
 
         source_lines = inspect.getsource(settings_module.modify_llm_settings_basic).splitlines()
         default_model_block = []
@@ -252,21 +252,21 @@ class TestModifyLLMSettingsBasic:
         assert first_model_check, "Default model selection should use the first model in the list"
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.VERIFIED_PROVIDERS", ["openhands", "anthropic", "openai"])
-    @patch("openhands.cli.settings.VERIFIED_ANTHROPIC_MODELS", ["claude-3-opus"])
-    @patch("openhands.cli.settings.get_supported_llm_models")
-    @patch("openhands.cli.settings.organize_models_and_providers")
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.print_formatted_text")
-    @patch("openhands.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch("forge.cli.settings.VERIFIED_PROVIDERS", ["forge", "anthropic", "openai"])
+    @patch("forge.cli.settings.VERIFIED_ANTHROPIC_MODELS", ["claude-3-opus"])
+    @patch("forge.cli.settings.get_supported_llm_models")
+    @patch("forge.cli.settings.organize_models_and_providers")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.print_formatted_text")
+    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
     async def test_default_provider_print_and_initial_selection(
         self, mock_print, mock_confirm, mock_session, mock_organize, mock_get_models, app_config, settings_store
     ):
         """Verify default provider printing and initial provider selection index."""
-        mock_get_models.return_value = ["openhands/o3", "anthropic/claude-3-opus", "openai/gpt-4"]
+        mock_get_models.return_value = ["Openhands/o3", "Forge/o3", "anthropic/claude-3-opus", "openai/gpt-4"]
         mock_organize.return_value = {
-            "openhands": {"models": ["o3"], "separator": "/"},
+            "forge": {"models": ["o3"], "separator": "/"},
             "anthropic": {"models": ["claude-3-opus"], "separator": "/"},
             "openai": {"models": ["gpt-4"], "separator": "/"},
         }
@@ -288,7 +288,7 @@ class TestModifyLLMSettingsBasic:
 
     @pytest.fixture
     def app_config_with_existing(self):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         llm_config = MagicMock()
         llm_config.model = "anthropic/claude-3-opus"
         llm_config.api_key = SecretStr("existing-api-key")
@@ -304,20 +304,20 @@ class TestModifyLLMSettingsBasic:
         return config
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.VERIFIED_PROVIDERS", ["openhands", "anthropic"])
-    @patch("openhands.cli.settings.VERIFIED_ANTHROPIC_MODELS", ["claude-3-opus", "claude-3-sonnet"])
-    @patch("openhands.cli.settings.get_supported_llm_models")
-    @patch("openhands.cli.settings.organize_models_and_providers")
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch("forge.cli.settings.VERIFIED_PROVIDERS", ["forge", "anthropic"])
+    @patch("forge.cli.settings.VERIFIED_ANTHROPIC_MODELS", ["claude-3-opus", "claude-3-sonnet"])
+    @patch("forge.cli.settings.get_supported_llm_models")
+    @patch("forge.cli.settings.organize_models_and_providers")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
     async def test_modify_llm_settings_basic_keep_existing_values(
         self, mock_confirm, mock_session, mock_organize, mock_get_models, app_config_with_existing, settings_store
     ):
         """Test keeping existing configuration values by pressing Enter/selecting defaults."""
         mock_get_models.return_value = ["anthropic/claude-3-opus", "openai/gpt-4"]
         mock_organize.return_value = {
-            "openhands": {"models": [], "separator": "/"},
+            "forge": {"models": [], "separator": "/"},
             "anthropic": {"models": ["claude-3-opus", "claude-3-sonnet"], "separator": "/"},
         }
         session_instance = MagicMock()
@@ -341,20 +341,20 @@ class TestModifyLLMSettingsBasic:
         assert settings.llm_api_key.get_secret_value() == "existing-api-key"
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.VERIFIED_PROVIDERS", ["openhands", "anthropic"])
-    @patch("openhands.cli.settings.VERIFIED_ANTHROPIC_MODELS", ["claude-3-opus", "claude-3-sonnet"])
-    @patch("openhands.cli.settings.get_supported_llm_models")
-    @patch("openhands.cli.settings.organize_models_and_providers")
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch("forge.cli.settings.VERIFIED_PROVIDERS", ["forge", "anthropic"])
+    @patch("forge.cli.settings.VERIFIED_ANTHROPIC_MODELS", ["claude-3-opus", "claude-3-sonnet"])
+    @patch("forge.cli.settings.get_supported_llm_models")
+    @patch("forge.cli.settings.organize_models_and_providers")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
     async def test_modify_llm_settings_basic_change_only_api_key(
         self, mock_confirm, mock_session, mock_organize, mock_get_models, app_config_with_existing, settings_store
     ):
         """Test changing only the API key while keeping provider and model."""
         mock_get_models.return_value = ["anthropic/claude-3-opus"]
         mock_organize.return_value = {
-            "openhands": {"models": [], "separator": "/"},
+            "forge": {"models": [], "separator": "/"},
             "anthropic": {"models": ["claude-3-opus", "claude-3-sonnet"], "separator": "/"},
         }
         session_instance = MagicMock()
@@ -369,23 +369,24 @@ class TestModifyLLMSettingsBasic:
         assert settings.llm_api_key.get_secret_value() == "new-api-key-12345"
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.VERIFIED_PROVIDERS", ["openhands", "anthropic"])
+    @patch("forge.cli.settings.VERIFIED_PROVIDERS", ["openhands", "anthropic"])
     @patch(
-        "openhands.cli.settings.VERIFIED_OPENHANDS_MODELS", ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "o3"]
+        "forge.cli.settings.VERIFIED_OPENHANDS_MODELS",
+        ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "o3"],
     )
-    @patch("openhands.cli.settings.get_supported_llm_models")
-    @patch("openhands.cli.settings.organize_models_and_providers")
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch("forge.cli.settings.get_supported_llm_models")
+    @patch("forge.cli.settings.organize_models_and_providers")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
     async def test_modify_llm_settings_basic_change_provider_and_model(
         self, mock_confirm, mock_session, mock_organize, mock_get_models, app_config_with_existing, settings_store
     ):
         """Test changing provider and model requires re-entering API key when provider changes."""
         mock_get_models.return_value = [
-            "openhands/claude-sonnet-4-20250514",
-            "openhands/claude-opus-4-20250514",
-            "openhands/o3",
+            "Openhands/claude-sonnet-4-20250514",
+            "Forge/claude-opus-4-20250514",
+            "Openhands/o3",
         ]
         mock_organize.return_value = {
             "openhands": {"models": ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "o3"], "separator": "/"},
@@ -403,23 +404,23 @@ class TestModifyLLMSettingsBasic:
         settings_store.store.assert_called_once()
         args, kwargs = settings_store.store.call_args
         settings = args[0]
-        assert settings.llm_model == "openhands/o3"
+        assert settings.llm_model == "Openhands/o3"
         assert settings.llm_api_key.get_secret_value() == "new-api-key-after-provider-change"
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.VERIFIED_PROVIDERS", ["openhands", "anthropic"])
-    @patch("openhands.cli.settings.VERIFIED_OPENHANDS_MODELS", ["anthropic/claude-3-opus", "anthropic/claude-3-sonnet"])
-    @patch("openhands.cli.settings.VERIFIED_ANTHROPIC_MODELS", ["claude-sonnet-4-20250514", "claude-3-opus"])
-    @patch("openhands.cli.settings.get_supported_llm_models")
-    @patch("openhands.cli.settings.organize_models_and_providers")
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch("forge.cli.settings.VERIFIED_PROVIDERS", ["openhands", "anthropic"])
+    @patch("forge.cli.settings.VERIFIED_OPENHANDS_MODELS", ["anthropic/claude-3-opus", "anthropic/claude-3-sonnet"])
+    @patch("forge.cli.settings.VERIFIED_ANTHROPIC_MODELS", ["claude-sonnet-4-20250514", "claude-3-opus"])
+    @patch("forge.cli.settings.get_supported_llm_models")
+    @patch("forge.cli.settings.organize_models_and_providers")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
     async def test_modify_llm_settings_basic_from_scratch(
         self, mock_confirm, mock_session, mock_organize, mock_get_models, settings_store
     ):
         """Test setting up LLM configuration from scratch (no existing settings)."""
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         llm_config = MagicMock()
         llm_config.model = None
         llm_config.api_key = None
@@ -437,7 +438,7 @@ class TestModifyLLMSettingsBasic:
         config.file_store_path = "/tmp"  # nosec B108 - Safe: test configuration
         mock_get_models.return_value = ["anthropic/claude-sonnet-4-20250514", "anthropic/claude-3-opus"]
         mock_organize.return_value = {
-            "openhands": {"models": [], "separator": "/"},
+            "forge": {"models": [], "separator": "/"},
             "anthropic": {"models": ["claude-sonnet-4-20250514", "claude-3-opus"], "separator": "/"},
         }
         session_instance = MagicMock()
@@ -465,7 +466,7 @@ class TestModifyLLMSettingsAdvanced:
 
     @pytest.fixture
     def app_config(self):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         llm_config = MagicMock()
         llm_config.model = "custom-model"
         llm_config.api_key = SecretStr("test-api-key")
@@ -490,12 +491,12 @@ class TestModifyLLMSettingsAdvanced:
         return store
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.Agent.list_agents")
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
-    @patch("openhands.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
-    @patch("openhands.cli.settings.CondenserPipelineConfig", MockCondenserPipelineConfig)
+    @patch("forge.cli.settings.Agent.list_agents")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch("forge.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
+    @patch("forge.cli.settings.CondenserPipelineConfig", MockCondenserPipelineConfig)
     async def test_modify_llm_settings_advanced_success(
         self, mock_confirm, mock_session, mock_list_agents, app_config, settings_store
     ):
@@ -523,11 +524,11 @@ class TestModifyLLMSettingsAdvanced:
         assert settings.enable_default_condenser is True
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.Agent.list_agents")
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
-    @patch("openhands.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
+    @patch("forge.cli.settings.Agent.list_agents")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch("forge.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
     async def test_modify_llm_settings_advanced_user_cancels(
         self, mock_confirm, mock_session, mock_list_agents, app_config, settings_store
     ):
@@ -540,12 +541,12 @@ class TestModifyLLMSettingsAdvanced:
         settings_store.store.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.Agent.list_agents")
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.print_formatted_text")
-    @patch("openhands.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
-    @patch("openhands.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
+    @patch("forge.cli.settings.Agent.list_agents")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.print_formatted_text")
+    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch("forge.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
     async def test_modify_llm_settings_advanced_invalid_agent(
         self, mock_print, mock_confirm, mock_session, mock_list_agents, app_config, settings_store
     ):
@@ -565,11 +566,11 @@ class TestModifyLLMSettingsAdvanced:
         settings_store.store.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.Agent.list_agents")
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
-    @patch("openhands.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
+    @patch("forge.cli.settings.Agent.list_agents")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch("forge.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
     async def test_modify_llm_settings_advanced_user_rejects_save(
         self, mock_confirm, mock_session, mock_list_agents, app_config, settings_store
     ):
@@ -586,7 +587,7 @@ class TestModifyLLMSettingsAdvanced:
 
     @pytest.fixture
     def app_config_with_existing(self):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         llm_config = MagicMock()
         llm_config.model = "custom-existing-model"
         llm_config.api_key = SecretStr("existing-advanced-key")
@@ -604,12 +605,12 @@ class TestModifyLLMSettingsAdvanced:
         return config
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.Agent.list_agents")
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
-    @patch("openhands.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
-    @patch("openhands.cli.settings.CondenserPipelineConfig", MockCondenserPipelineConfig)
+    @patch("forge.cli.settings.Agent.list_agents")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch("forge.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
+    @patch("forge.cli.settings.CondenserPipelineConfig", MockCondenserPipelineConfig)
     async def test_modify_llm_settings_advanced_keep_existing_values(
         self, mock_confirm, mock_session, mock_list_agents, app_config_with_existing, settings_store
     ):
@@ -644,12 +645,12 @@ class TestModifyLLMSettingsAdvanced:
         assert settings.enable_default_condenser is False
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.Agent.list_agents")
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
-    @patch("openhands.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
-    @patch("openhands.cli.settings.CondenserPipelineConfig", MockCondenserPipelineConfig)
+    @patch("forge.cli.settings.Agent.list_agents")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch("forge.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
+    @patch("forge.cli.settings.CondenserPipelineConfig", MockCondenserPipelineConfig)
     async def test_modify_llm_settings_advanced_partial_change(
         self, mock_confirm, mock_session, mock_list_agents, app_config_with_existing, settings_store
     ):
@@ -673,17 +674,17 @@ class TestModifyLLMSettingsAdvanced:
         assert settings.enable_default_condenser is False
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.Agent.list_agents")
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
-    @patch("openhands.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
-    @patch("openhands.cli.settings.CondenserPipelineConfig", MockCondenserPipelineConfig)
+    @patch("forge.cli.settings.Agent.list_agents")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch("forge.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
+    @patch("forge.cli.settings.CondenserPipelineConfig", MockCondenserPipelineConfig)
     async def test_modify_llm_settings_advanced_from_scratch(
         self, mock_confirm, mock_session, mock_list_agents, settings_store
     ):
         """Test setting up advanced configuration from scratch (no existing settings)."""
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         llm_config = MagicMock()
         llm_config.model = None
         llm_config.api_key = None
@@ -731,10 +732,10 @@ class TestModifyLLMSettingsAdvanced:
 class TestGetValidatedInput:
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.PromptSession")
+    @patch("forge.cli.settings.PromptSession")
     async def test_get_validated_input_with_prefill(self, mock_session):
         """Test get_validated_input with default_value prefilled."""
-        from openhands.cli.settings import get_validated_input
+        from forge.cli.settings import get_validated_input
 
         session_instance = MagicMock()
         session_instance.prompt_async = AsyncMock(return_value="modified-value")
@@ -743,10 +744,10 @@ class TestGetValidatedInput:
         assert result == "modified-value"
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.PromptSession")
+    @patch("forge.cli.settings.PromptSession")
     async def test_get_validated_input_empty_returns_current(self, mock_session):
         """Test that pressing Enter with empty input returns enter_keeps_value."""
-        from openhands.cli.settings import get_validated_input
+        from forge.cli.settings import get_validated_input
 
         session_instance = MagicMock()
         session_instance.prompt_async = AsyncMock(return_value="  ")
@@ -757,14 +758,14 @@ class TestGetValidatedInput:
         assert result == "existing-value"
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.PromptSession")
+    @patch("forge.cli.settings.PromptSession")
     async def test_get_validated_input_with_validator(self, mock_session):
         """Test get_validated_input with validator and error message."""
-        from openhands.cli.settings import get_validated_input
+        from forge.cli.settings import get_validated_input
 
         session_instance = MagicMock()
         session_instance.prompt_async = AsyncMock(side_effect=["invalid", "valid-input"])
-        with patch("openhands.cli.settings.print_formatted_text") as mock_print:
+        with patch("forge.cli.settings.print_formatted_text") as mock_print:
             result = await get_validated_input(
                 session_instance,
                 "Enter value: ",
@@ -783,7 +784,7 @@ class TestModifySearchApiSettings:
 
     @pytest.fixture
     def app_config(self):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         config.search_api_key = SecretStr("tvly-existing-key")
         return config
 
@@ -795,9 +796,9 @@ class TestModifySearchApiSettings:
         return store
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.print_formatted_text")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.print_formatted_text")
     async def test_modify_search_api_settings_set_new_key(
         self, mock_print, mock_confirm, mock_session, app_config, settings_store
     ):
@@ -813,9 +814,9 @@ class TestModifySearchApiSettings:
         assert settings.search_api_key.get_secret_value() == "tvly-new-key"
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.print_formatted_text")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.print_formatted_text")
     async def test_modify_search_api_settings_remove_key(
         self, mock_print, mock_confirm, mock_session, app_config, settings_store
     ):
@@ -830,9 +831,9 @@ class TestModifySearchApiSettings:
         assert settings.search_api_key is None
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.settings.PromptSession")
-    @patch("openhands.cli.settings.cli_confirm")
-    @patch("openhands.cli.settings.print_formatted_text")
+    @patch("forge.cli.settings.PromptSession")
+    @patch("forge.cli.settings.cli_confirm")
+    @patch("forge.cli.settings.print_formatted_text")
     async def test_modify_search_api_settings_keep_current(
         self, mock_print, mock_confirm, mock_session, app_config, settings_store
     ):

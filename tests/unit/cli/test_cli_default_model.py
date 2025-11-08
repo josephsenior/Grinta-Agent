@@ -1,15 +1,15 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-from openhands.cli.settings import modify_llm_settings_basic
-from openhands.cli.utils import VERIFIED_ANTHROPIC_MODELS
+from forge.cli.settings import modify_llm_settings_basic
+from forge.cli.utils import VERIFIED_ANTHROPIC_MODELS
 
 
 @pytest.mark.asyncio
-@patch("openhands.cli.settings.get_supported_llm_models")
-@patch("openhands.cli.settings.organize_models_and_providers")
-@patch("openhands.cli.settings.PromptSession")
-@patch("openhands.cli.settings.cli_confirm")
-@patch("openhands.cli.settings.print_formatted_text")
+@patch("forge.cli.settings.get_supported_llm_models")
+@patch("forge.cli.settings.organize_models_and_providers")
+@patch("forge.cli.settings.PromptSession")
+@patch("forge.cli.settings.cli_confirm")
+@patch("forge.cli.settings.print_formatted_text")
 async def test_anthropic_default_model_is_best_verified(
     mock_print, mock_confirm, mock_session, mock_organize, mock_get_models
 ):

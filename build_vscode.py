@@ -5,11 +5,11 @@ import subprocess
 import shutil
 
 logger = logging.getLogger(__name__)
-EXTENSION_NAME = "openhands-vscode"
+EXTENSION_NAME = "Forge-vscode"
 EXTENSION_VERSION = "0.0.1"
 VSIX_FILENAME = f"{EXTENSION_NAME}-{EXTENSION_VERSION}.vsix"
 ROOT_DIR = pathlib.Path(__file__).parent.resolve()
-VSCODE_EXTENSION_DIR = ROOT_DIR / "openhands" / "integrations" / "vscode"
+VSCODE_EXTENSION_DIR = ROOT_DIR / "forge" / "integrations" / "vscode"
 
 
 def check_node_version():

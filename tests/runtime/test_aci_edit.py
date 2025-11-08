@@ -3,14 +3,14 @@
 import os
 from unittest.mock import MagicMock
 from conftest import _close_test_runtime, _load_runtime
-from openhands.core.logger import openhands_logger as logger
-from openhands.events.action import FileEditAction, FileWriteAction
-from openhands.runtime.action_execution_server import _execute_file_editor
-from openhands.runtime.impl.cli.cli_runtime import CLIRuntime
+from forge.core.logger import forge_logger as logger
+from forge.events.action import FileEditAction, FileWriteAction
+from forge.runtime.action_execution_server import _execute_file_editor
+from forge.runtime.impl.cli.cli_runtime import CLIRuntime
 
 
-def test_view_file(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_view_file(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="This is a test file.\nThis file is for testing purposes.", path=test_file)
@@ -24,8 +24,8 @@ def test_view_file(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_view_directory(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands, enable_browser=True)
+def test_view_directory(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="This is a test file.\nThis file is for testing purposes.", path=test_file)
@@ -44,8 +44,8 @@ def test_view_directory(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_create_file(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_create_file(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         new_file = os.path.join(config.workspace_mount_path_in_sandbox, "new_file.txt")
         action = FileEditAction(command="create", path=new_file, file_text="New file content")
@@ -60,8 +60,8 @@ def test_create_file(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_create_file_with_empty_content(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_create_file_with_empty_content(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         new_file = os.path.join(config.workspace_mount_path_in_sandbox, "new_file.txt")
         action = FileEditAction(command="create", path=new_file, file_text="")
@@ -76,8 +76,8 @@ def test_create_file_with_empty_content(temp_dir, runtime_cls, run_as_openhands)
         _close_test_runtime(runtime)
 
 
-def test_create_with_none_file_text(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_create_with_none_file_text(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         new_file = os.path.join(config.workspace_mount_path_in_sandbox, "none_content.txt")
         action = FileEditAction(command="create", path=new_file, file_text=None)
@@ -88,8 +88,8 @@ def test_create_with_none_file_text(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_str_replace(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_str_replace(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="This is a test file.\nThis file is for testing purposes.", path=test_file)
@@ -104,8 +104,8 @@ def test_str_replace(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_str_replace_multi_line(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_str_replace_multi_line(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="This is a test file.\nThis file is for testing purposes.", path=test_file)
@@ -125,8 +125,8 @@ def test_str_replace_multi_line(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_str_replace_multi_line_with_tabs(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_str_replace_multi_line_with_tabs(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileEditAction(command="create", path=test_file, file_text='def test():\n\tprint("Hello, World!")')
@@ -147,8 +147,8 @@ def test_str_replace_multi_line_with_tabs(temp_dir, runtime_cls, run_as_openhand
         _close_test_runtime(runtime)
 
 
-def test_str_replace_error_multiple_occurrences(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_str_replace_error_multiple_occurrences(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="This is a test file.\nThis file is for testing purposes.", path=test_file)
@@ -162,8 +162,8 @@ def test_str_replace_error_multiple_occurrences(temp_dir, runtime_cls, run_as_op
         _close_test_runtime(runtime)
 
 
-def test_str_replace_error_multiple_multiline_occurrences(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_str_replace_error_multiple_multiline_occurrences(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         multi_block = 'def example():\n        print("Hello")\n        return True'
@@ -181,8 +181,8 @@ def test_str_replace_error_multiple_multiline_occurrences(temp_dir, runtime_cls,
         _close_test_runtime(runtime)
 
 
-def test_str_replace_nonexistent_string(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_str_replace_nonexistent_string(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
@@ -196,8 +196,8 @@ def test_str_replace_nonexistent_string(temp_dir, runtime_cls, run_as_openhands)
         _close_test_runtime(runtime)
 
 
-def test_str_replace_with_empty_new_str(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_str_replace_with_empty_new_str(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine to remove\nLine 3", path=test_file)
@@ -211,8 +211,8 @@ def test_str_replace_with_empty_new_str(temp_dir, runtime_cls, run_as_openhands)
         _close_test_runtime(runtime)
 
 
-def test_str_replace_with_empty_old_str(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_str_replace_with_empty_old_str(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2\nLine 3", path=test_file)
@@ -234,8 +234,8 @@ def test_str_replace_with_empty_old_str(temp_dir, runtime_cls, run_as_openhands)
         _close_test_runtime(runtime)
 
 
-def test_str_replace_with_none_old_str(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_str_replace_with_none_old_str(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2\nLine 3", path=test_file)
@@ -248,8 +248,8 @@ def test_str_replace_with_none_old_str(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_insert(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_insert(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
@@ -266,8 +266,8 @@ def test_insert(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_insert_invalid_line(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_insert_invalid_line(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
@@ -281,8 +281,8 @@ def test_insert_invalid_line(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_insert_with_empty_string(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_insert_with_empty_string(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
@@ -297,8 +297,8 @@ def test_insert_with_empty_string(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_insert_with_none_new_str(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_insert_with_none_new_str(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
@@ -312,8 +312,8 @@ def test_insert_with_none_new_str(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_undo_edit(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_undo_edit(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="This is a test file.", path=test_file)
@@ -335,8 +335,8 @@ def test_undo_edit(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_validate_path_invalid(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_validate_path_invalid(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         invalid_file = os.path.join(config.workspace_mount_path_in_sandbox, "nonexistent.txt")
         action = FileEditAction(command="view", path=invalid_file)
@@ -348,8 +348,8 @@ def test_validate_path_invalid(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_create_existing_file_error(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_create_existing_file_error(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
@@ -362,8 +362,8 @@ def test_create_existing_file_error(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_str_replace_missing_old_str(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_str_replace_missing_old_str(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
@@ -376,8 +376,8 @@ def test_str_replace_missing_old_str(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_str_replace_new_str_and_old_str_same(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_str_replace_new_str_and_old_str_same(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
@@ -390,8 +390,8 @@ def test_str_replace_new_str_and_old_str_same(temp_dir, runtime_cls, run_as_open
         _close_test_runtime(runtime)
 
 
-def test_insert_missing_line_param(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_insert_missing_line_param(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
@@ -404,8 +404,8 @@ def test_insert_missing_line_param(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_undo_edit_no_history_error(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_undo_edit_no_history_error(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         empty_file = os.path.join(config.workspace_mount_path_in_sandbox, "empty.txt")
         action = FileWriteAction(content="", path=empty_file)
@@ -418,8 +418,8 @@ def test_undo_edit_no_history_error(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_view_large_file_with_truncation(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands)
+def test_view_large_file_with_truncation(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         large_file = os.path.join(config.workspace_mount_path_in_sandbox, "large_test.txt")
         large_content = "Line 1\n" * 16000

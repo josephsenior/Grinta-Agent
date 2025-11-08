@@ -3,7 +3,7 @@ import {
   GetConfigResponse,
   Conversation,
   ResultSet,
-} from "#/api/open-hands.types";
+} from "#/api/forge.types";
 import { DEFAULT_SETTINGS } from "#/services/settings";
 import { STRIPE_BILLING_HANDLERS } from "./billing-handlers";
 import { ApiSettings, PostApiSettings, Provider } from "#/types/settings";
@@ -110,7 +110,7 @@ const CONVERSATIONS = new Map<string, Conversation>(
   ]),
 );
 
-const openHandsHandlers = [
+const ForgeHandlers = [
   http.get("/api/options/models", async () =>
     HttpResponse.json([
       "gpt-3.5-turbo",
@@ -118,7 +118,7 @@ const openHandsHandlers = [
       "gpt-4o-mini",
       "anthropic/claude-3.5",
       "anthropic/claude-sonnet-4-20250514",
-      "openhands/claude-sonnet-4-20250514",
+      "Openhands/claude-sonnet-4-20250514",
       "sambanova/Meta-Llama-3.1-8B-Instruct",
     ]),
   ),
@@ -147,7 +147,7 @@ export const handlers = [
   ...TASK_SUGGESTIONS_HANDLERS,
   ...SECRETS_HANDLERS,
   ...GIT_REPOSITORY_HANDLERS,
-  ...openHandsHandlers,
+  ...ForgeHandlers,
   http.get("/api/user/info", () => {
     const user: GitUser = {
       id: "1",

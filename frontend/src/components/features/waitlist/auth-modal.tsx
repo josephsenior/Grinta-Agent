@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { I18nKey } from "#/i18n/declaration";
 import logo from "#/assets/branding/logo1.png";
@@ -9,7 +9,7 @@ import GitHubLogo from "#/assets/branding/github-logo.svg?react";
 import GitLabLogo from "#/assets/branding/gitlab-logo.svg?react";
 import BitbucketLogo from "#/assets/branding/bitbucket-logo.svg?react";
 import { useAuthUrl } from "#/hooks/use-auth-url";
-import { GetConfigResponse } from "#/api/open-hands.types";
+import { GetConfigResponse } from "#/api/forge.types";
 import { Provider } from "#/types/settings";
 
 interface AuthModalProps {
@@ -45,62 +45,70 @@ export function AuthModal({
     authUrl,
   });
 
-  const handleGitHubAuth = () => {
-    if (githubAuthUrl) {
-      // Always start the OIDC flow, let the backend handle TOS check
-      window.location.href = githubAuthUrl;
+  const handleAuthClick = useCallback((url: string | null) => {
+    if (url) {
+      window.location.href = url;
     }
-  };
+  }, []);
 
-  const handleGitLabAuth = () => {
-    if (gitlabAuthUrl) {
-      // Always start the OIDC flow, let the backend handle TOS check
-      window.location.href = gitlabAuthUrl;
+  const configuredProviders = useMemo(() => new Set<Provider>(providersConfigured ?? []), [providersConfigured]);
+
+  const authOptions = useMemo(() => {
+    const options: AuthProviderOption[] = [];
+
+    if (configuredProviders.has("github") && githubAuthUrl) {
+      options.push({
+        key: "github",
+        labelKey: I18nKey.GITHUB$CONNECT_TO_GITHUB,
+        icon: <GitHubLogo width={20} height={20} />,
+        url: githubAuthUrl,
+      });
     }
-  };
 
-  const handleBitbucketAuth = () => {
-    if (bitbucketAuthUrl) {
-      // Always start the OIDC flow, let the backend handle TOS check
-      window.location.href = bitbucketAuthUrl;
+    if (configuredProviders.has("gitlab") && gitlabAuthUrl) {
+      options.push({
+        key: "gitlab",
+        labelKey: I18nKey.GITLAB$CONNECT_TO_GITLAB,
+        icon: <GitLabLogo width={20} height={20} />,
+        url: gitlabAuthUrl,
+      });
     }
-  };
 
-  const handleEnterpriseSsoAuth = () => {
-    if (enterpriseSsoUrl) {
-      // Always start the OIDC flow, let the backend handle TOS check
-      window.location.href = enterpriseSsoUrl;
+    if (configuredProviders.has("bitbucket") && bitbucketAuthUrl) {
+      options.push({
+        key: "bitbucket",
+        labelKey: I18nKey.BITBUCKET$CONNECT_TO_BITBUCKET,
+        icon: <BitbucketLogo width={20} height={20} />,
+        url: bitbucketAuthUrl,
+      });
     }
-  };
 
-  // Only show buttons if providers are configured and include the specific provider
-  const showGithub =
-    providersConfigured &&
-    providersConfigured.length > 0 &&
-    providersConfigured.includes("github");
-  const showGitlab =
-    providersConfigured &&
-    providersConfigured.length > 0 &&
-    providersConfigured.includes("gitlab");
-  const showBitbucket =
-    providersConfigured &&
-    providersConfigured.length > 0 &&
-    providersConfigured.includes("bitbucket");
-  const showEnterpriseSso =
-    providersConfigured &&
-    providersConfigured.length > 0 &&
-    providersConfigured.includes("enterprise_sso");
+    if (configuredProviders.has("enterprise_sso") && enterpriseSsoUrl) {
+      options.push({
+        key: "enterprise_sso",
+        labelKey: I18nKey.ENTERPRISE_SSO$CONNECT_TO_ENTERPRISE_SSO,
+        icon: null,
+        url: enterpriseSsoUrl,
+      });
+    }
 
-  // Check if no providers are configured
-  const noProvidersConfigured =
-    !providersConfigured || providersConfigured.length === 0;
+    return options;
+  }, [
+    configuredProviders,
+    githubAuthUrl,
+    gitlabAuthUrl,
+    bitbucketAuthUrl,
+    enterpriseSsoUrl,
+  ]);
+
+  const hasProviders = authOptions.length > 0;
 
   return (
     <ModalBackdrop>
       <ModalBody className="border border-border">
         <img
           src={logo}
-          alt="CodePilot Pro Logo"
+          alt="Forge Pro Logo"
           className="h-12 w-auto select-none drop-shadow-[0_0_4px_rgba(255,200,80,0.35)]"
           draggable={false}
         />
@@ -111,59 +119,19 @@ export function AuthModal({
         </div>
 
         <div className="flex flex-col gap-3 w-full">
-          {noProvidersConfigured ? (
+          {!hasProviders ? (
             <div className="text-center p-4 text-muted-foreground">
               {t(I18nKey.AUTH$NO_PROVIDERS_CONFIGURED)}
             </div>
           ) : (
-            <>
-              {showGithub && (
-                <BrandButton
-                  type="button"
-                  variant="primary"
-                  onClick={handleGitHubAuth}
-                  className="w-full"
-                  startContent={<GitHubLogo width={20} height={20} />}
-                >
-                  {t(I18nKey.GITHUB$CONNECT_TO_GITHUB)}
-                </BrandButton>
-              )}
-
-              {showGitlab && (
-                <BrandButton
-                  type="button"
-                  variant="primary"
-                  onClick={handleGitLabAuth}
-                  className="w-full"
-                  startContent={<GitLabLogo width={20} height={20} />}
-                >
-                  {t(I18nKey.GITLAB$CONNECT_TO_GITLAB)}
-                </BrandButton>
-              )}
-
-              {showBitbucket && (
-                <BrandButton
-                  type="button"
-                  variant="primary"
-                  onClick={handleBitbucketAuth}
-                  className="w-full"
-                  startContent={<BitbucketLogo width={20} height={20} />}
-                >
-                  {t(I18nKey.BITBUCKET$CONNECT_TO_BITBUCKET)}
-                </BrandButton>
-              )}
-
-              {showEnterpriseSso && (
-                <BrandButton
-                  type="button"
-                  variant="primary"
-                  onClick={handleEnterpriseSsoAuth}
-                  className="w-full"
-                >
-                  {t(I18nKey.ENTERPRISE_SSO$CONNECT_TO_ENTERPRISE_SSO)}
-                </BrandButton>
-              )}
-            </>
+            authOptions.map((option) => (
+              <AuthProviderButton
+                key={option.key}
+                label={t(option.labelKey)}
+                icon={option.icon}
+                onClick={() => handleAuthClick(option.url)}
+              />
+            ))
           )}
         </div>
 
@@ -193,5 +161,34 @@ export function AuthModal({
         </p>
       </ModalBody>
     </ModalBackdrop>
+  );
+}
+
+interface AuthProviderOption {
+  key: Provider;
+  labelKey: I18nKey;
+  icon?: React.ReactNode | null;
+  url: string;
+}
+
+function AuthProviderButton({
+  label,
+  icon,
+  onClick,
+}: {
+  label: string;
+  icon?: React.ReactNode | null;
+  onClick: () => void;
+}) {
+  return (
+    <BrandButton
+      type="button"
+      variant="primary"
+      onClick={onClick}
+      className="w-full"
+      startContent={icon ?? undefined}
+    >
+      {label}
+    </BrandButton>
   );
 }

@@ -1,20 +1,18 @@
-"""
-Basic CodeAct Agent Example
+"""Basic CodeAct Agent Example
 
 This example shows how to create and use a CodeAct agent programmatically.
 """
 
 import asyncio
-from openhands.controller.agent_controller import AgentController
-from openhands.core.config import OpenHandsConfig, LLMConfig
-from openhands.events.action import MessageAction
-from openhands.events.observation import AgentStateChangeObservation
-from openhands.core.schema.agent_state import AgentState
+from forge.controller.agent_controller import AgentController
+from forge.core.config import ForgeConfig, LLMConfig
+from forge.events.action import MessageAction
+from forge.events.observation import AgentStateChangeObservation
+from forge.core.schema.agent_state import AgentState
 
 
 async def main():
     """Run a simple CodeAct agent conversation."""
-    
     # Configure LLM
     llm_config = LLMConfig(
         model="claude-sonnet-4-20250514",
@@ -23,8 +21,8 @@ async def main():
         max_output_tokens=8000,
     )
     
-    # Create OpenHands config
-    config = OpenHandsConfig(
+    # Create Forge config
+    config = ForgeConfig(
         llm=llm_config,
         agent_name="CodeActAgent",
         workspace_base="./workspace",  # Working directory

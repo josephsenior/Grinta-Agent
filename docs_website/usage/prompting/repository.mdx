@@ -1,16 +1,16 @@
 ---
 title: Repository Customization
-description: You can customize how OpenHands interacts with your repository by creating a `.openhands` directory at the root level.
+description: You can customize how Forge interacts with your repository by creating a `.Forge` directory at the root level.
 ---
 
 ## Microagents
 
-Microagents allow you to extend OpenHands prompts with information specific to your project and define how OpenHands
+Microagents allow you to extend Forge prompts with information specific to your project and define how Forge
 should function. See [Microagents Overview](../prompting/microagents-overview) for more information.
 
 
 ## Setup Script
-You can add a `.openhands/setup.sh` file, which will run every time OpenHands begins working with your repository.
+You can add a `.Forge/setup.sh` file, which will run every time Forge begins working with your repository.
 This is an ideal location for installing dependencies, setting environment variables, and performing other setup tasks.
 
 For example:
@@ -23,7 +23,7 @@ cd frontend && npm install ; cd ..
 ```
 
 ## Pre-commit Script
-You can add a `.openhands/pre-commit.sh` file to create a custom git pre-commit hook that runs before each commit.
+You can add a `.Forge/pre-commit.sh` file to create a custom git pre-commit hook that runs before each commit.
 This can be used to enforce code quality standards, run tests, or perform other checks before allowing commits.
 
 For example:

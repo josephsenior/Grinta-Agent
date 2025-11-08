@@ -1,6 +1,6 @@
 import types
 import pytest
-from openhands.metasop.orchestrator import MetaSOPOrchestrator
+from forge.metasop.orchestrator import MetaSOPOrchestrator
 
 
 class DummyResult:

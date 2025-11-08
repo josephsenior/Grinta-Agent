@@ -3,15 +3,15 @@
 import os
 from unittest.mock import MagicMock, patch
 import pytest
-from openhands.core.config import OpenHandsConfig
-from openhands.events import EventStream
-from openhands.runtime.impl.local.local_runtime import LocalRuntime
+from forge.core.config import ForgeConfig
+from forge.events import EventStream
+from forge.runtime.impl.local.local_runtime import LocalRuntime
 
 
 @pytest.fixture
 def config():
-    """Create a mock OpenHandsConfig for testing."""
-    config = OpenHandsConfig()
+    """Create a mock ForgeConfig for testing."""
+    config = ForgeConfig()
     config.sandbox.local_runtime_url = "http://localhost"
     config.workspace_mount_path_in_sandbox = "/workspace"
     return config
@@ -47,7 +47,7 @@ class TestLocalRuntime:
 
     def test_runtime_url_with_env_var(self):
         """Test runtime_url when RUNTIME_URL environment variable is set."""
-        config = OpenHandsConfig()
+        config = ForgeConfig()
         config.sandbox.local_runtime_url = "http://localhost"
         runtime = LocalRuntime.__new__(LocalRuntime)
         runtime.config = config
@@ -60,7 +60,7 @@ class TestLocalRuntime:
 
     def test_runtime_url_with_pattern(self):
         """Test runtime_url when RUNTIME_URL_PATTERN environment variable is set."""
-        config = OpenHandsConfig()
+        config = ForgeConfig()
         config.sandbox.local_runtime_url = "http://localhost"
         runtime = LocalRuntime.__new__(LocalRuntime)
         runtime.config = config
@@ -74,7 +74,7 @@ class TestLocalRuntime:
 
     def test_runtime_url_fallback(self):
         """Test runtime_url fallback to local_runtime_url."""
-        config = OpenHandsConfig()
+        config = ForgeConfig()
         config.sandbox.local_runtime_url = "http://localhost"
         runtime = LocalRuntime.__new__(LocalRuntime)
         runtime.config = config
@@ -87,7 +87,7 @@ class TestLocalRuntime:
 
     def test_create_url_with_localhost(self):
         """Test _create_url when runtime_url contains 'localhost'."""
-        config = OpenHandsConfig()
+        config = ForgeConfig()
         runtime = LocalRuntime.__new__(LocalRuntime)
         runtime.config = config
         runtime._vscode_port = 8080
@@ -105,7 +105,7 @@ class TestLocalRuntime:
 
     def test_create_url_with_remote_url(self):
         """Test _create_url when runtime_url is a remote URL."""
-        config = OpenHandsConfig()
+        config = ForgeConfig()
         runtime = LocalRuntime.__new__(LocalRuntime)
         runtime.config = config
 
@@ -122,7 +122,7 @@ class TestLocalRuntime:
 
     def test_vscode_url_with_token(self):
         """Test vscode_url when token is available."""
-        config = OpenHandsConfig()
+        config = ForgeConfig()
         config.workspace_mount_path_in_sandbox = "/workspace"
         runtime = LocalRuntime.__new__(LocalRuntime)
         runtime.config = config
@@ -147,7 +147,7 @@ class TestLocalRuntime:
 
     def test_vscode_url_without_token(self):
         """Test vscode_url when token is not available."""
-        config = OpenHandsConfig()
+        config = ForgeConfig()
         runtime = LocalRuntime.__new__(LocalRuntime)
         runtime.config = config
 
@@ -163,7 +163,7 @@ class TestLocalRuntime:
 
     def test_web_hosts_with_multiple_ports(self):
         """Test web_hosts with multiple app ports."""
-        config = OpenHandsConfig()
+        config = ForgeConfig()
         runtime = LocalRuntime.__new__(LocalRuntime)
         runtime.config = config
         runtime._app_ports = [12000, 12001]
@@ -181,7 +181,7 @@ class TestLocalRuntime:
 
     def test_web_hosts_with_no_ports(self):
         """Test web_hosts with no app ports."""
-        config = OpenHandsConfig()
+        config = ForgeConfig()
         runtime = LocalRuntime.__new__(LocalRuntime)
         runtime.config = config
         runtime._app_ports = []

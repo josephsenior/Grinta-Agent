@@ -1,6 +1,6 @@
 ---
 title: Docker Runtime
-description: This is the default Runtime that's used when you start OpenHands.
+description: This is the default Runtime that's used when you start Forge.
 ---
 
 ## Image
@@ -42,10 +42,10 @@ Examples:
 
 ```bash
 # Linux and Mac Example - Writable workspace
-export SANDBOX_VOLUMES=$HOME/OpenHands:/workspace:rw
+export SANDBOX_VOLUMES=$HOME/Forge:/workspace:rw
 
 # WSL on Windows Example - Writable workspace
-export SANDBOX_VOLUMES=/mnt/c/dev/OpenHands:/workspace:rw
+export SANDBOX_VOLUMES=/mnt/c/dev/Forge:/workspace:rw
 
 # Read-only reference code example
 export SANDBOX_VOLUMES=/path/to/reference/code:/data:ro
@@ -74,7 +74,7 @@ export SANDBOX_VOLUMES=$HOME/projects:/workspace:rw,/path/to/large/dataset:/data
         # ...
     ```
 
-Be careful! There's nothing stopping the OpenHands agent from deleting or modifying
+Be careful! There's nothing stopping the Forge agent from deleting or modifying
 any files that are mounted into its workspace.
 
 The `-e SANDBOX_USER_ID=$(id -u)` is passed to the Docker command to ensure the sandbox user matches the host user’s
@@ -82,8 +82,8 @@ permissions. This prevents the agent from creating root-owned files in the mount
 
 ## Hardened Docker Installation
 
-When deploying OpenHands in environments where security is a priority, you should consider implementing a hardened
-Docker configuration. This section provides recommendations for securing your OpenHands Docker deployment beyond the default configuration.
+When deploying Forge in environments where security is a priority, you should consider implementing a hardened
+Docker configuration. This section provides recommendations for securing your Forge Docker deployment beyond the default configuration.
 
 ### Security Considerations
 
@@ -92,10 +92,10 @@ running on a public network (e.g. airport WiFi), you should implement additional
 
 ### Network Binding Security
 
-By default, OpenHands binds to all network interfaces (`0.0.0.0`), which can expose your instance to all networks the
+By default, Forge binds to all network interfaces (`0.0.0.0`), which can expose your instance to all networks the
 host is connected to. For a more secure setup:
 
-1. **Restrict Network Binding**: Use the `runtime_binding_address` configuration to restrict which network interfaces OpenHands listens on:
+1. **Restrict Network Binding**: Use the `runtime_binding_address` configuration to restrict which network interfaces Forge listens on:
 
    ```bash
    docker run # ...
@@ -103,7 +103,7 @@ host is connected to. For a more secure setup:
        # ...
    ```
 
-   This configuration ensures OpenHands only listens on the loopback interface (`127.0.0.1`), making it accessible only from the local machine.
+   This configuration ensures Forge only listens on the loopback interface (`127.0.0.1`), making it accessible only from the local machine.
 
 2. **Secure Port Binding**: Modify the `-p` flag to bind only to localhost instead of all interfaces:
 
@@ -112,19 +112,19 @@ host is connected to. For a more secure setup:
        -p 127.0.0.1:3000:3000 \
    ```
 
-   This ensures that the OpenHands web interface is only accessible from the local machine, not from other machines on the network.
+   This ensures that the Forge web interface is only accessible from the local machine, not from other machines on the network.
 
 ### Network Isolation
 
-Use Docker's network features to isolate OpenHands:
+Use Docker's network features to isolate Forge:
 
 ```bash
 # Create an isolated network
-docker network create openhands-network
+docker network create Forge-network
 
-# Run OpenHands in the isolated network
+# Run Forge in the isolated network
 docker run # ... \
-    --network openhands-network \
+    --network Forge-network \
 ```
 
 <Note>
@@ -136,22 +136,22 @@ docker run # ... \
 If you want to run sidecar containers to the sandbox 'runner' containers without exposing the sandbox containers to the host network, you can use the `SANDBOX_ADDITIONAL_NETWORKS` environment variable to specify additional Docker network names that should be added to the sandbox containers.
 
 ```bash
-docker network create openhands-sccache
+docker network create Forge-sccache
 
 docker run -d \
-  --hostname openhandsredis \
-  --network openhands-sccache \
+  --hostname Forgeredis \
+  --network Forge-sccache \
   redis
 
 docker run # ...
-    -e SANDBOX_ADDITIONAL_NETWORKS='["openhands-sccache"]' \
+    -e SANDBOX_ADDITIONAL_NETWORKS='["Forge-sccache"]' \
     # ...
 ```
 
-Then all sandbox instances will have to access a shared redis instance at `openhandsredis:6379`.
+Then all sandbox instances will have to access a shared redis instance at `Forgeredis:6379`.
 
 #### Docker Compose gotcha
 
 Note that Docker Compose adds a prefix (a scope) by default to created networks, which is not taken into account by the additional networks config. Therefore when using docker compose you have to either:
 - specify a network name via the `name` field to remove the scoping (https://docs.docker.com/reference/compose-file/networks/#name) 
-- or provide the scope within the given config (e.g. `SANDBOX_ADDITIONAL_NETWORKS: '["myscope_openhands-sccache"]'` where `myscope` is the docker-compose assigned prefix). 
+- or provide the scope within the given config (e.g. `SANDBOX_ADDITIONAL_NETWORKS: '["myscope_Forge-sccache"]'` where `myscope` is the docker-compose assigned prefix). 

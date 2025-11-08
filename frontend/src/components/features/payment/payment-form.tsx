@@ -18,7 +18,12 @@ export function PaymentForm() {
 
   const [buttonIsDisabled, setButtonIsDisabled] = React.useState(true);
 
-  const billingFormAction = async (formData: FormData) => {
+  const handleBillingFormSubmit = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
     const amount = formData.get("top-up-input")?.toString();
 
     if (amount?.trim()) {
@@ -39,7 +44,7 @@ export function PaymentForm() {
 
   return (
     <form
-      action={billingFormAction}
+      onSubmit={handleBillingFormSubmit}
       data-testid="billing-settings"
       className="flex flex-col gap-6 px-11 py-9"
     >

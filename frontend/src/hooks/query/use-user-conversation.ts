@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Query, useQuery } from "@tanstack/react-query";
 import { AxiosError } from "axios";
-import OpenHands from "#/api/open-hands";
-import { Conversation } from "#/api/open-hands.types";
+import Forge from "#/api/forge";
+import { Conversation } from "#/api/forge.types";
 
 const FIVE_MINUTES = 1000 * 60 * 5;
 const FIFTEEN_MINUTES = 1000 * 60 * 15;
@@ -21,7 +21,7 @@ export const useUserConversation = (
 ) =>
   useQuery({
     queryKey: ["user", "conversation", cid],
-    queryFn: () => OpenHands.getConversation(cid!),
+    queryFn: () => Forge.getConversation(cid!),
     enabled: !!cid,
     retry: false,
     refetchInterval,

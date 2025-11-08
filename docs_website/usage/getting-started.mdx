@@ -1,10 +1,10 @@
 ---
 title: Start Building
-description: So you've [run OpenHands](/usage/installation). Now what?
+description: So you've [run Forge](/usage/installation). Now what?
 icon: code
 ---
 
-OpenHands can assist with a range of engineering tasks. However, the technology is still new, and we’re far from having
+Forge can assist with a range of engineering tasks. However, the technology is still new, and we’re far from having
 agents that can handle complex tasks independently. It’s important to understand what the agent does well and where it
 needs support.
 
@@ -48,14 +48,14 @@ You can ask the agent to commit and push for you:
 
 ## Adding New Code
 
-OpenHands is great at adding new code to an existing codebase.
+Forge is great at adding new code to an existing codebase.
 
-For instance, you can ask OpenHands to add a GitHub action that lints your code. It might check your codebase to
+For instance, you can ask Forge to add a GitHub action that lints your code. It might check your codebase to
 determine the language, then create a new file in `./github/workflows/lint.yml`.
 
 > Add a GitHub action that lints the code in this repository.
 
-Some tasks need more context. While OpenHands can use commands like ls and grep to search, providing context upfront
+Some tasks need more context. While Forge can use commands like ls and grep to search, providing context upfront
 speeds things up and reduces token usage.
 
 > Modify ./backend/api/routes.js to add a new route that returns a list of all tasks.
@@ -65,7 +65,7 @@ speeds things up and reduces token usage.
 
 ## Refactoring
 
-OpenHands does great at refactoring code in small chunks. Rather than rearchitecting the entire codebase,
+Forge does great at refactoring code in small chunks. Rather than rearchitecting the entire codebase,
 it's more effective to break up long files and functions or rename variables.
 
 > Rename all the single-letter variables in ./app.go.
@@ -76,8 +76,8 @@ it's more effective to break up long files and functions or rename variables.
 
 ## Bug Fixes
 
-OpenHands can help track down and fix bugs, but bug fixing can be tricky and often requires more context.
-It’s helpful if you’ve already diagnosed the issue and just need OpenHands to handle the logic.
+Forge can help track down and fix bugs, but bug fixing can be tricky and often requires more context.
+It’s helpful if you’ve already diagnosed the issue and just need Forge to handle the logic.
 
 > The email field in the `/subscribe` endpoint is rejecting .io domains. Fix this.
 
@@ -90,11 +90,11 @@ until the bug is fixed:
 
 ## More
 
-OpenHands can assist with nearly any coding task, but it takes some practice to get the best results.
+Forge can assist with nearly any coding task, but it takes some practice to get the best results.
 Keep these tips in mind:
 * Keep your tasks small.
 * Be specific.
 * Provide plenty of context.
 * Commit and push frequently.
 
-See [Prompting Best Practices](./prompting/prompting-best-practices) for more tips on how to get the most out of OpenHands.
+See [Prompting Best Practices](./prompting/prompting-best-practices) for more tips on how to get the most out of Forge.

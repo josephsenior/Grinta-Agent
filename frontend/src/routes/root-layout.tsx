@@ -1,4 +1,4 @@
-import React, { Suspense } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   useRouteError,
   isRouteErrorResponse,
@@ -7,6 +7,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { ErrorBoundary as AppErrorBoundary } from "#/components/shared/error/error-boundary";
 import { I18nKey } from "#/i18n/declaration";
 import i18n from "#/i18n";
@@ -22,12 +23,10 @@ import { useAutoLogin } from "#/hooks/use-auto-login";
 import { useAuthCallback } from "#/hooks/use-auth-callback";
 import { LOCAL_STORAGE_KEYS } from "#/utils/local-storage";
 import { ToastProvider } from "#/components/shared/notifications/toast";
-
-// Performance optimization imports
 import { RoutePreloader } from "#/utils/route-preloader";
 import { injectCriticalCSS } from "#/utils/critical-css";
+import { cn } from "#/lib/utils";
 
-// Lazy load heavy components for better performance
 const ConversationPanelWrapper = React.lazy(() =>
   import(
     "#/components/features/conversation-panel/conversation-panel-wrapper"
@@ -114,183 +113,7 @@ export function ErrorBoundary() {
 }
 
 export default function MainApp() {
-  interface WindowWithE2E extends Window {
-    __OPENHANDS_PLAYWRIGHT?: boolean;
-  }
-
-  const getWin = () =>
-    typeof window !== "undefined"
-      ? (window as unknown as WindowWithE2E)
-      : undefined;
-  // Conversation overlay open/close managed at root level
-  const [conversationPanelIsOpen, setConversationPanelIsOpen] = React.useState(
-    () => {
-      const win = getWin();
-      // If Playwright is running, open panel by default so tests don't
-      // depend on socket-driven events or event ordering.
-      if (win?.__OPENHANDS_PLAYWRIGHT === true) {
-        return true;
-      }
-      return false;
-    },
-  );
-
-  React.useEffect(() => {
-    const openHandler = () => setConversationPanelIsOpen(true);
-    window.addEventListener("openhands:open-conversation-panel", openHandler);
-    // If Playwright test flag is present, open the panel immediately on mount
-    // This guards against the test harness dispatching the event before the
-    // listener is attached.
-    const win = getWin();
-    if (win?.__OPENHANDS_PLAYWRIGHT === true) {
-      openHandler();
-    }
-    return () =>
-      window.removeEventListener(
-        "openhands:open-conversation-panel",
-        openHandler,
-      );
-  }, []);
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const isOnTosPage = useIsOnTosPage();
-  const isConversationPage = pathname.startsWith("/conversations/");
-  const { data: settings } = useSettings();
-  const { error } = useBalance();
-  const { migrateUserConsent } = useMigrateUserConsent();
-  const { t } = useTranslation();
-
-  const config = useConfig();
-  const {
-    data: isAuthed,
-    isFetching: isFetchingAuth,
-    isError: isAuthError,
-  } = useIsAuthed();
-
-  // Always call the hook, but we'll only use the result when not on TOS page
-  const gitHubAuthUrl = useGitHubAuthUrl({
-    appMode: config.data?.APP_MODE || null,
-    gitHubClientId: config.data?.GITHUB_CLIENT_ID || null,
-    authUrl: config.data?.AUTH_URL,
-  });
-
-  // When on TOS page, we don't use the GitHub auth URL
-  const effectiveGitHubAuthUrl = isOnTosPage ? null : gitHubAuthUrl;
-
-  const [consentFormIsOpen, setConsentFormIsOpen] = React.useState(false);
-
-  // Auto-login if login method is stored in local storage
-  useAutoLogin();
-
-  // Handle authentication callback and set login method after successful authentication
-  useAuthCallback();
-
-  React.useEffect(() => {
-    // Don't change language when on TOS page
-    if (!isOnTosPage && settings?.LANGUAGE) {
-      i18n.changeLanguage(settings.LANGUAGE);
-    }
-    // (removed unused dev-only references)
-  }, [settings?.LANGUAGE, isOnTosPage]);
-
-  React.useEffect(() => {
-    // Don't show consent form when on TOS page
-    if (!isOnTosPage) {
-      const consentFormModalIsOpen =
-        settings?.USER_CONSENTS_TO_ANALYTICS === null;
-
-      setConsentFormIsOpen(consentFormModalIsOpen);
-    }
-  }, [settings, isOnTosPage]);
-
-  React.useEffect(() => {
-    // Don't migrate user consent when on TOS page
-    if (!isOnTosPage) {
-      // Migrate user consent to the server if it was previously stored in localStorage
-      migrateUserConsent({
-        handleAnalyticsWasPresentInLocalStorage: () => {
-          setConsentFormIsOpen(false);
-        },
-      });
-    }
-  }, [isOnTosPage]);
-
-  React.useEffect(() => {
-    if (settings?.IS_NEW_USER && config.data?.APP_MODE === "saas") {
-      displaySuccessToast(t(I18nKey.BILLING$YOURE_IN));
-    }
-  }, [settings?.IS_NEW_USER, config.data?.APP_MODE]);
-
-  React.useEffect(() => {
-    // Don't do any redirects when on TOS page
-    // Don't allow users to use the app if it 402s
-    if (!isOnTosPage && error?.status === 402 && pathname !== "/") {
-      navigate("/");
-    }
-  }, [error?.status, pathname, isOnTosPage]);
-
-  // Function to check if login method exists in local storage
-  const checkLoginMethodExists = React.useCallback(() => {
-    // Only check localStorage if we're in a browser environment
-    if (typeof window !== "undefined" && window.localStorage) {
-      return localStorage.getItem(LOCAL_STORAGE_KEYS.LOGIN_METHOD) !== null;
-    }
-    return false;
-  }, []);
-
-  // State to track if login method exists
-  const [loginMethodExists, setLoginMethodExists] = React.useState(
-    checkLoginMethodExists(),
-  );
-
-  // Listen for storage events to update loginMethodExists when logout happens
-  React.useEffect(() => {
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === LOCAL_STORAGE_KEYS.LOGIN_METHOD) {
-        setLoginMethodExists(checkLoginMethodExists());
-      }
-    };
-
-    // Also check on window focus, as logout might happen in another tab
-    const handleWindowFocus = () => {
-      setLoginMethodExists(checkLoginMethodExists());
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("focus", handleWindowFocus);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("focus", handleWindowFocus);
-    };
-  }, [checkLoginMethodExists]);
-
-  // Check login method status when auth status changes
-  React.useEffect(() => {
-    // When auth status changes (especially on logout), recheck login method
-    setLoginMethodExists(checkLoginMethodExists());
-  }, [isAuthed, checkLoginMethodExists]);
-
-  const renderAuthModal =
-    !isAuthed &&
-    !isAuthError &&
-    !isFetchingAuth &&
-    !isOnTosPage &&
-    config.data?.APP_MODE === "saas" &&
-    !loginMethodExists; // Don't show auth modal if login method exists in local storage
-
-  const renderReAuthModal =
-    !isAuthed &&
-    !isAuthError &&
-    !isFetchingAuth &&
-    !isOnTosPage &&
-    config.data?.APP_MODE === "saas" &&
-    loginMethodExists;
-
-  // Inject critical CSS for performance
-  React.useEffect(() => {
-    injectCriticalCSS();
-  }, []);
+  const controller = useMainAppController();
 
   return (
     <AppErrorBoundary>
@@ -299,170 +122,487 @@ export default function MainApp() {
           data-testid="root-layout"
           className="min-h-screen w-full bg-black font-sans safe-area-top safe-area-bottom safe-area-left safe-area-right"
         >
-        {/* Pure black background */}
-
-        {/* Main Layout Container with Sidebar Above Extensions */}
-        <div className="relative z-10 h-screen lg:min-w-[1024px] flex flex-col overflow-hidden">
-          {/* Header (template-wide) - Hidden on conversation pages */}
-          {!isConversationPage && (
-            <Suspense
-              fallback={<div className="h-16 bg-background-tertiary animate-pulse" />}
-            >
-              <Header />
-            </Suspense>
-          )}
-
-          {/* Sidebar (kept mounted so global UI effects like Settings modal on 404 run) */}
-          <Suspense
-            fallback={
-              <div
-                className={`fixed left-0 w-64 h-full bg-background-tertiary animate-pulse ${
-                  isConversationPage ? "top-0" : "top-16"
-                }`}
-              />
-            }
-          >
-            <Sidebar />
-          </Suspense>
-
-          {/* Main Content Area Below Sidebar */}
-          <div
-            className={`flex flex-1 h-full min-h-0 ${
-              isConversationPage ? "" : "pt-14"
-            }`}
-          >
-            <div className={isConversationPage ? "w-full h-full" : "p-3 md:p-4 lg:p-6 w-full"}>
-              <div className="flex flex-col flex-1 gap-3 md:gap-4 lg:gap-5 min-w-0 h-full">
-              {/* Maintenance Banner with Better Spacing */}
-              {config.data?.MAINTENANCE && (
-                <div className="flex-shrink-0 animate-slide-down">
-                  <div className="glass rounded-xl p-3 md:p-4 border-primary-600/30 bg-primary-985/20 backdrop-blur-lg shadow-lg">
-                    <Suspense
-                      fallback={
-                        <div className="h-8 bg-background-tertiary/70 animate-pulse rounded" />
-                      }
-                    >
-                      <MaintenanceBanner
-                        startTime={config.data.MAINTENANCE.startTime}
-                      />
-                    </Suspense>
-                  </div>
-                </div>
-              )}
-
-              {/* Main Content Outlet with Enhanced Container */}
-              <div
-                id="root-outlet"
-                className="flex-1 relative rounded-2xl bg-black h-full min-h-0"
-              >
-                <div className="h-full min-h-0 overflow-auto scrollbar-thin scrollbar-thumb-grey-700 scrollbar-track-transparent">
-                  <Suspense
-                    fallback={
-                      <div className="h-full bg-background-secondary animate-pulse" />
-                    }
-                  >
-                    <EmailVerificationGuard>
-                      <div className="h-full min-h-0">
-                        <Outlet />
-                      </div>
-                    </EmailVerificationGuard>
-                  </Suspense>
-                </div>
-              </div>
-            </div>
-            </div>
+          <div className="relative z-10 h-screen lg:min-w-[1024px] flex flex-col overflow-hidden">
+            <MainLayoutShell controller={controller} />
           </div>
-        </div>
 
-        {/* Footer (template-wide) - Hidden on conversation pages */}
-        {!isConversationPage && (
-          <Suspense fallback={<div className="h-16 bg-background-tertiary animate-pulse" />}>
-            <Footer />
-          </Suspense>
-        )}
-
-        {/* Modals */}
-        {/* Conversation Panel Overlay */}
-        {conversationPanelIsOpen && (
-          <Suspense
-            fallback={
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-                <div className="bg-background-tertiary w-96 h-96 animate-pulse rounded-lg" />
-              </div>
-            }
-          >
-            <ConversationPanelWrapper isOpen={conversationPanelIsOpen}>
-              <div className="animate-slide-up">
-                <ConversationPanel
-                  onClose={() => setConversationPanelIsOpen(false)}
-                />
-              </div>
-            </ConversationPanelWrapper>
-          </Suspense>
-        )}
-        {renderAuthModal && (
-          <Suspense
-            fallback={
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-                <div className="bg-background-tertiary w-96 h-64 animate-pulse rounded-lg" />
-              </div>
-            }
-          >
-            <AuthModal
-              githubAuthUrl={effectiveGitHubAuthUrl}
-              appMode={config.data?.APP_MODE}
-              providersConfigured={config.data?.PROVIDERS_CONFIGURED}
-              authUrl={config.data?.AUTH_URL}
-            />
-          </Suspense>
-        )}
-        {renderReAuthModal && (
-          <Suspense
-            fallback={
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-                <div className="bg-background-tertiary w-96 h-64 animate-pulse rounded-lg" />
-              </div>
-            }
-          >
-            <ReauthModal />
-          </Suspense>
-        )}
-        {config.data?.APP_MODE === "oss" && consentFormIsOpen && (
-          <Suspense
-            fallback={
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-                <div className="bg-background-tertiary w-96 h-64 animate-pulse rounded-lg" />
-              </div>
-            }
-          >
-            <AnalyticsConsentFormModal
-              onClose={() => {
-                setConsentFormIsOpen(false);
-              }}
-            />
-          </Suspense>
-        )}
-
-        {config.data?.FEATURE_FLAGS?.ENABLE_BILLING &&
-          config.data?.APP_MODE === "saas" &&
-          settings?.IS_NEW_USER && (
-            <Suspense
-              fallback={
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-                  <div className="bg-background-tertiary w-96 h-64 animate-pulse rounded-lg" />
-                </div>
-              }
-            >
-              <SetupPaymentModal />
-            </Suspense>
-          )}
-
-        {/* Route Preloader for performance optimization */}
-        <RoutePreloader />
+          <AppFooter isConversationPage={controller.isConversationPage} />
+          <OverlayModals controller={controller} />
+          <RoutePreloader />
         </div>
       </ToastProvider>
     </AppErrorBoundary>
   );
+}
+
+interface MainAppController {
+  isConversationPage: boolean;
+  showHeader: boolean;
+  status: {
+    renderAuthModal: boolean;
+    renderReAuthModal: boolean;
+    consentFormIsOpen: boolean;
+  };
+  config: ReturnType<typeof useConfig>["data"];
+  settings: ReturnType<typeof useSettings>["data"];
+  conversationPanelIsOpen: boolean;
+  openConversationPanel: () => void;
+  closeConversationPanel: () => void;
+  closeConsentForm: () => void;
+  effectiveGitHubAuthUrl: string | null;
+  isAuthed: boolean | undefined;
+  t: TFunction;
+}
+
+function useMainAppController(): MainAppController {
+  const { navigate, pathname, isOnTosPage, isConversationPage } = useRouteContext();
+  const { t } = useTranslation();
+
+  const appData = useMainAppData(isOnTosPage);
+  useMainAppLifecycle({
+    isOnTosPage,
+    settings: appData.settings,
+    config: appData.config,
+    balance: appData.balance,
+    pathname,
+    navigate,
+    t,
+  });
+
+  const effectiveGitHubAuthUrl = useEffectiveGitHubAuthUrl({
+    gitHubAuthUrl: appData.gitHubAuthUrl,
+    isOnTosPage,
+  });
+  const loginMethodExists = useLoginMethodDetection(appData.isAuthed);
+  const authModalState = useAuthModalState({
+    isAuthed: appData.isAuthed,
+    authQuery: appData.authQuery,
+    isOnTosPage,
+    config: appData.config,
+    loginMethodExists,
+  });
+  const {
+    conversationPanelIsOpen,
+    openConversationPanel,
+    closeConversationPanel,
+  } = useConversationPanelState();
+  const { consentFormIsOpen, closeConsentForm } = useConsentFormState({
+    isOnTosPage,
+    settings: appData.settings,
+    migrateUserConsent: appData.migrateUserConsent,
+  });
+
+  return {
+    isConversationPage,
+    showHeader: !isConversationPage,
+    status: {
+      renderAuthModal: authModalState.renderAuthModal,
+      renderReAuthModal: authModalState.renderReAuthModal,
+      consentFormIsOpen,
+    },
+    config: appData.config.data,
+    settings: appData.settings,
+    conversationPanelIsOpen,
+    openConversationPanel,
+    closeConversationPanel,
+    closeConsentForm,
+    effectiveGitHubAuthUrl,
+    isAuthed: appData.isAuthed,
+    t,
+  };
+}
+
+function useRouteContext() {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const isOnTosPage = useIsOnTosPage();
+  const isConversationPage = pathname.startsWith("/conversations/");
+
+  return { navigate, pathname, isOnTosPage, isConversationPage };
+}
+
+function useMainAppData(isOnTosPage: boolean) {
+  const config = useConfig();
+  const settingsQuery = useSettings();
+  const settings = settingsQuery.data;
+  const balance = useBalance();
+  const migrateUserConsent = useMigrateUserConsent();
+  const authQuery = useIsAuthed();
+  const isAuthed = authQuery.data;
+  const gitHubAuthUrl = useGitHubAuthUrl({
+    appMode: config.data?.APP_MODE || null,
+    gitHubClientId: config.data?.GITHUB_CLIENT_ID || null,
+    authUrl: config.data?.AUTH_URL,
+  });
+
+  return {
+    config,
+    settings,
+    balance,
+    migrateUserConsent,
+    authQuery,
+    isAuthed,
+    gitHubAuthUrl,
+  };
+}
+
+function useMainAppLifecycle({
+  isOnTosPage,
+  settings,
+  config,
+  balance,
+  pathname,
+  navigate,
+  t,
+}: {
+  isOnTosPage: boolean;
+  settings: ReturnType<typeof useSettings>["data"];
+  config: ReturnType<typeof useConfig>;
+  balance: ReturnType<typeof useBalance>;
+  pathname: string;
+  navigate: ReturnType<typeof useNavigate>;
+  t: TFunction;
+}) {
+  useAutoLogin();
+  useAuthCallback();
+  useCriticalCss();
+  useLanguageSync({ isOnTosPage, settings });
+  useNewUserToast({ settings, config, t });
+  useBalanceRedirect({ isOnTosPage, balance, pathname, navigate });
+}
+
+function useCriticalCss() {
+  useEffect(() => {
+    injectCriticalCSS();
+  }, []);
+}
+
+function useLanguageSync({
+  isOnTosPage,
+  settings,
+}: {
+  isOnTosPage: boolean;
+  settings: ReturnType<typeof useSettings>["data"];
+}) {
+  useEffect(() => {
+    if (!isOnTosPage && settings?.LANGUAGE) {
+      i18n.changeLanguage(settings.LANGUAGE);
+    }
+  }, [isOnTosPage, settings?.LANGUAGE]);
+}
+
+function useNewUserToast({
+  settings,
+  config,
+  t,
+}: {
+  settings: ReturnType<typeof useSettings>["data"];
+  config: ReturnType<typeof useConfig>;
+  t: TFunction;
+}) {
+  useEffect(() => {
+    if (settings?.IS_NEW_USER && config.data?.APP_MODE === "saas") {
+      displaySuccessToast(t(I18nKey.BILLING$YOURE_IN));
+    }
+  }, [settings?.IS_NEW_USER, config.data?.APP_MODE, t]);
+}
+
+function useBalanceRedirect({
+  isOnTosPage,
+  balance,
+  pathname,
+  navigate,
+}: {
+  isOnTosPage: boolean;
+  balance: ReturnType<typeof useBalance>;
+  pathname: string;
+  navigate: ReturnType<typeof useNavigate>;
+}) {
+  useEffect(() => {
+    if (!isOnTosPage && balance.error?.status === 402 && pathname !== "/") {
+      navigate("/");
+    }
+  }, [balance.error?.status, pathname, isOnTosPage, navigate]);
+}
+
+function useEffectiveGitHubAuthUrl({
+  gitHubAuthUrl,
+  isOnTosPage,
+}: {
+  gitHubAuthUrl: string | null;
+  isOnTosPage: boolean;
+}) {
+  return useMemo(() => (isOnTosPage ? null : gitHubAuthUrl), [gitHubAuthUrl, isOnTosPage]);
+}
+
+function useAuthModalState({
+  isAuthed,
+  authQuery,
+  isOnTosPage,
+  config,
+  loginMethodExists,
+}: {
+  isAuthed: boolean | undefined;
+  authQuery: ReturnType<typeof useIsAuthed>;
+  isOnTosPage: boolean;
+  config: ReturnType<typeof useConfig>;
+  loginMethodExists: boolean;
+}) {
+  const baseConditions =
+    !isAuthed &&
+    !authQuery.isError &&
+    !authQuery.isFetching &&
+    !isOnTosPage &&
+    config.data?.APP_MODE === "saas";
+
+  return {
+    renderAuthModal: baseConditions && !loginMethodExists,
+    renderReAuthModal: baseConditions && loginMethodExists,
+  };
+}
+
+function useLoginMethodDetection(isAuthed: boolean | undefined) {
+  const [loginMethodExists, setLoginMethodExists] = useState(checkLoginMethodExists());
+
+  useEffect(() => {
+    setLoginMethodExists(checkLoginMethodExists());
+  }, [isAuthed]);
+
+  useEffect(() => {
+    const onStorageChange = (event: StorageEvent) => {
+      if (event.key === LOCAL_STORAGE_KEYS.LOGIN_METHOD) {
+        setLoginMethodExists(checkLoginMethodExists());
+      }
+    };
+    const onFocus = () => setLoginMethodExists(checkLoginMethodExists());
+
+    window.addEventListener("storage", onStorageChange);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("storage", onStorageChange);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
+
+  return loginMethodExists;
+}
+
+function useConversationPanelState() {
+  const [conversationPanelIsOpen, setConversationPanelIsOpen] = useState(() =>
+    shouldConversationStartOpen(),
+  );
+
+  useEffect(() => {
+    const openHandler = () => setConversationPanelIsOpen(true);
+    window.addEventListener("Forge:open-conversation-panel", openHandler);
+
+    if (shouldConversationStartOpen()) {
+      openHandler();
+    }
+
+    return () => {
+      window.removeEventListener("Forge:open-conversation-panel", openHandler);
+    };
+  }, []);
+
+  const openConversationPanel = useCallback(() => {
+    setConversationPanelIsOpen(true);
+  }, []);
+
+  const closeConversationPanel = useCallback(() => {
+    setConversationPanelIsOpen(false);
+  }, []);
+
+  return {
+    conversationPanelIsOpen,
+    openConversationPanel,
+    closeConversationPanel,
+  };
+}
+
+function useConsentFormState({
+  isOnTosPage,
+  settings,
+  migrateUserConsent,
+}: {
+  isOnTosPage: boolean;
+  settings: ReturnType<typeof useSettings>["data"];
+  migrateUserConsent: ReturnType<typeof useMigrateUserConsent>;
+}) {
+  const [consentFormIsOpen, setConsentFormIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isOnTosPage) {
+      const consentRequired = settings?.USER_CONSENTS_TO_ANALYTICS === null;
+      setConsentFormIsOpen(Boolean(consentRequired));
+    }
+  }, [isOnTosPage, settings?.USER_CONSENTS_TO_ANALYTICS]);
+
+  useEffect(() => {
+    if (isOnTosPage) {
+      return;
+    }
+
+    migrateUserConsent.migrateUserConsent({
+      handleAnalyticsWasPresentInLocalStorage: () => {
+        setConsentFormIsOpen(false);
+      },
+    });
+  }, [isOnTosPage, migrateUserConsent]);
+
+  const closeConsentForm = useCallback(() => {
+    setConsentFormIsOpen(false);
+  }, []);
+
+  return { consentFormIsOpen, closeConsentForm };
+}
+
+function MainLayoutShell({ controller }: { controller: MainAppController }) {
+  const maintenanceEnabled = controller.config?.MAINTENANCE;
+
+  return (
+    <>
+      {controller.showHeader && (
+        <Suspense fallback={<div className="h-16 bg-background-tertiary animate-pulse" />}>
+          <Header />
+        </Suspense>
+      )}
+
+      <Suspense
+        fallback={
+          <div
+            className={`fixed left-0 w-64 h-full bg-background-tertiary animate-pulse ${
+              controller.isConversationPage ? "top-0" : "top-16"
+            }`}
+          />
+        }
+      >
+        <Sidebar />
+      </Suspense>
+
+      <div className={cn("flex flex-1 h-full min-h-0", controller.isConversationPage ? "" : "pt-14")}>
+        <div className={controller.isConversationPage ? "w-full h-full" : "p-3 md:p-4 lg:p-6 w-full"}>
+          <div className="flex flex-col flex-1 gap-3 md:gap-4 lg:gap-5 min-w-0 h-full">
+            {maintenanceEnabled && controller.config?.MAINTENANCE?.startTime && (
+              <div className="flex-shrink-0 animate-slide-down">
+                <div className="glass rounded-xl p-3 md:p-4 border-primary-600/30 bg-primary-985/20 backdrop-blur-lg shadow-lg">
+                  <Suspense fallback={<div className="h-8 bg-background-tertiary/70 animate-pulse rounded" />}>
+                    <MaintenanceBanner startTime={controller.config.MAINTENANCE.startTime} />
+                  </Suspense>
+                </div>
+              </div>
+            )}
+
+            <div id="root-outlet" className="flex-1 relative rounded-2xl bg-black h-full min-h-0">
+              <div className="h-full min-h-0 overflow-auto scrollbar-thin scrollbar-thumb-grey-700 scrollbar-track-transparent">
+                <Suspense fallback={<div className="h-full bg-background-secondary animate-pulse" />}>
+                  <EmailVerificationGuard>
+                    <div className="h-full min-h-0">
+                      <Outlet />
+                    </div>
+                  </EmailVerificationGuard>
+                </Suspense>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function AppFooter({ isConversationPage }: { isConversationPage: boolean }) {
+  if (isConversationPage) {
+    return null;
+  }
+
+  return (
+    <Suspense fallback={<div className="h-16 bg-background-tertiary animate-pulse" />}>
+      <Footer />
+    </Suspense>
+  );
+}
+
+function OverlayModals({ controller }: { controller: MainAppController }) {
+  return (
+    <>
+      {controller.conversationPanelIsOpen && (
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+              <div className="bg-background-tertiary w-96 h-96 animate-pulse rounded-lg" />
+            </div>
+          }
+        >
+          <ConversationPanelWrapper isOpen={controller.conversationPanelIsOpen}>
+            <div className="animate-slide-up">
+              <ConversationPanel onClose={controller.closeConversationPanel} />
+            </div>
+          </ConversationPanelWrapper>
+        </Suspense>
+      )}
+
+      {controller.status.renderAuthModal && (
+        <Suspense fallback={<ModalFallback />}> 
+          <AuthModal
+            githubAuthUrl={controller.effectiveGitHubAuthUrl}
+            appMode={controller.config?.APP_MODE}
+            providersConfigured={controller.config?.PROVIDERS_CONFIGURED}
+            authUrl={controller.config?.AUTH_URL}
+          />
+        </Suspense>
+      )}
+
+      {controller.status.renderReAuthModal && (
+        <Suspense fallback={<ModalFallback />}>
+          <ReauthModal />
+        </Suspense>
+      )}
+
+      {controller.config?.APP_MODE === "oss" && controller.status.consentFormIsOpen && (
+        <Suspense fallback={<ModalFallback />}>
+          <AnalyticsConsentFormModal
+            onClose={controller.closeConsentForm}
+          />
+        </Suspense>
+      )}
+
+      {controller.config?.FEATURE_FLAGS?.ENABLE_BILLING &&
+        controller.config?.APP_MODE === "saas" &&
+        controller.settings?.IS_NEW_USER && (
+          <Suspense fallback={<ModalFallback />}>
+            <SetupPaymentModal />
+          </Suspense>
+        )}
+    </>
+  );
+}
+
+function ModalFallback() {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div className="bg-background-tertiary w-96 h-64 animate-pulse rounded-lg" />
+    </div>
+  );
+}
+
+function shouldConversationStartOpen(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  const win = window as Window & { __Forge_PLAYWRIGHT?: boolean };
+  return win?.__Forge_PLAYWRIGHT === true;
+}
+
+function checkLoginMethodExists(): boolean {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return false;
+  }
+  return localStorage.getItem(LOCAL_STORAGE_KEYS.LOGIN_METHOD) !== null;
+}
+
+function cn(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
 }
 
 // Minimal hydrate fallback used by React Router to improve UX while route modules

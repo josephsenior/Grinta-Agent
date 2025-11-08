@@ -63,7 +63,7 @@ export METASOP_PROMETHEUS_PORT=9091
 ### **4. Start Forge Backend**
 ```bash
 # From project root
-poetry run python -m openhands.server.listen
+poetry run python -m Forge.server.listen
 ```
 
 ### **5. Access Dashboards**

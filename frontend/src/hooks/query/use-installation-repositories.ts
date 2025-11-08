@@ -3,7 +3,7 @@ import { useAppInstallations } from "./use-app-installations";
 import { useConfig } from "./use-config";
 import { useUserProviders } from "../use-user-providers";
 import { Provider } from "#/types/settings";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { shouldUseInstallationRepos } from "#/utils/utils";
 
 export const useInstallationRepositories = (
@@ -31,7 +31,7 @@ export const useInstallationRepositories = (
         throw new Error("Missing installation list");
       }
 
-      return OpenHands.retrieveInstallationRepositories(
+      return Forge.retrieveInstallationRepositories(
         selectedProvider!,
         installationIndex || 0,
         installations,

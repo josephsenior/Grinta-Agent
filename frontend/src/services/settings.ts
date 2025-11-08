@@ -3,7 +3,7 @@ import { Settings } from "#/types/settings";
 export const LATEST_SETTINGS_VERSION = 5;
 
 export const DEFAULT_SETTINGS: Settings = {
-  LLM_MODEL: "openhands/claude-sonnet-4-20250514",
+  LLM_MODEL: "Openhands/claude-sonnet-4-20250514",
   LLM_BASE_URL: "",
   AGENT: "CodeActAgent",
   LANGUAGE: "en",
@@ -29,8 +29,8 @@ export const DEFAULT_SETTINGS: Settings = {
     stdio_servers: [],
     shttp_servers: [],
   },
-  GIT_USER_NAME: "openhands",
-  GIT_USER_EMAIL: "openhands@all-hands.dev",
+  GIT_USER_NAME: "Forge",
+  GIT_USER_EMAIL: "Forge@all-hands.dev",
   // Autonomy Configuration
   autonomy_level: "balanced",
   ENABLE_PERMISSIONS: true,

@@ -2,9 +2,9 @@ import os
 import time
 from unittest.mock import MagicMock
 import pytest
-from openhands.cli.commands import handle_commands
-from openhands.core.schema import AgentState
-from openhands.core.schema.exit_reason import ExitReason
+from forge.cli.commands import handle_commands
+from forge.core.schema import AgentState
+from forge.core.schema.exit_reason import ExitReason
 
 
 def test_exit_reason_enum_values():
@@ -26,10 +26,10 @@ def test_exit_reason_str_representation():
 
 @pytest.mark.asyncio
 async def test_handle_exit_command_returns_intentional(monkeypatch):
-    monkeypatch.setattr("openhands.cli.commands.cli_confirm", lambda *a, **k: 0)
+    monkeypatch.setattr("forge.cli.commands.cli_confirm", lambda *a, **k: 0)
     try:
-        monkeypatch.setattr("openhands.cli.tui.print_formatted_text", lambda *a, **k: None)
-        monkeypatch.setattr("openhands.cli.tui.print_container", lambda *a, **k: None)
+        monkeypatch.setattr("forge.cli.tui.print_formatted_text", lambda *a, **k: None)
+        monkeypatch.setattr("forge.cli.tui.print_container", lambda *a, **k: None)
     except Exception:
         pass
     mock_usage_metrics = MagicMock()

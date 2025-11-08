@@ -1,7 +1,6 @@
-"""
-Cost Tracking Example
+"""Cost Tracking Example
 
-This example demonstrates how to monitor and control LLM costs in OpenHands.
+This example demonstrates how to monitor and control LLM costs in forge.
 """
 
 import asyncio
@@ -11,7 +10,6 @@ import httpx
 
 async def get_usage_stats(period='week'):
     """Get usage statistics for a time period."""
-    
     async with httpx.AsyncClient() as client:
         response = await client.get(
             f"http://localhost:3000/api/analytics/usage?period={period}"
@@ -37,7 +35,6 @@ async def get_usage_stats(period='week'):
 
 async def get_model_usage(period='week'):
     """Get per-model usage breakdown."""
-    
     async with httpx.AsyncClient() as client:
         response = await client.get(
             f"http://localhost:3000/api/analytics/models?period={period}"
@@ -65,7 +62,6 @@ async def get_model_usage(period='week'):
 
 async def monitor_realtime_costs():
     """Monitor costs in real-time during agent execution."""
-    
     print("\n⏱️  Real-Time Cost Monitoring")
     print("="*60)
     print("Monitoring conversation costs every 5 seconds...")
@@ -97,7 +93,6 @@ async def monitor_realtime_costs():
 
 async def set_cost_limits():
     """Set daily cost limits to prevent overspending."""
-    
     print("\n💸 Cost Limit Configuration")
     print("="*60)
     
@@ -127,7 +122,6 @@ async def set_cost_limits():
 
 async def cost_optimization_tips():
     """Display cost optimization strategies."""
-    
     print("\n💡 Cost Optimization Tips")
     print("="*60)
     
@@ -167,8 +161,7 @@ async def cost_optimization_tips():
 
 async def main_menu():
     """Interactive menu for cost tracking examples."""
-    
-    print("\n🎯 OpenHands Cost Tracking Examples")
+    print("\n🎯 Forge Cost Tracking Examples")
     print("="*60)
     print("\nChoose an option:")
     print("1. Get usage statistics (week)")
@@ -202,9 +195,9 @@ async def main_menu():
 
 if __name__ == "__main__":
     print("\n" + "="*60)
-    print("  OpenHands Cost Tracking & Optimization")
+    print("  Forge Cost Tracking & Optimization")
     print("="*60)
-    print("\nMake sure OpenHands is running: http://localhost:3000")
+    print("\nMake sure Forge is running: http://localhost:3000")
     print()
     
     try:

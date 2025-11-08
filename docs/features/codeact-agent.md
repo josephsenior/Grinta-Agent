@@ -330,8 +330,8 @@ blocked_modules = ["subprocess", "os.system", "eval"]
 
 ### **Python API**
 ```python
-from openhands.agenthub.codeact_agent import CodeActAgent
-from openhands.core.config.agent_config import AgentConfig
+from forge.agenthub.codeact_agent import CodeActAgent
+from forge.core.config.agent_config import AgentConfig
 
 # Initialize agent
 config = AgentConfig(
@@ -459,7 +459,7 @@ print(f"Tool performance improvement: {tool_status['performance_improvement']:.3
 
 ### **Custom Tool Creation**
 ```python
-from openhands.agenthub.codeact_agent.tools import BaseTool
+from forge.agenthub.codeact_agent.tools import BaseTool
 
 class CustomTool(BaseTool):
     def __init__(self):
@@ -642,8 +642,8 @@ Get tool-specific metrics.
 ### **Example 1: Basic Code Generation**
 ```python
 import asyncio
-from openhands.agenthub.codeact_agent import CodeActAgent
-from openhands.core.config.agent_config import AgentConfig
+from forge.agenthub.codeact_agent import CodeActAgent
+from forge.core.config.agent_config import AgentConfig
 
 async def basic_code_generation():
     # Initialize agent

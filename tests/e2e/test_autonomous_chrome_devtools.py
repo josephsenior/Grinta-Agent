@@ -1,5 +1,4 @@
-"""
-E2E tests using Chrome DevTools MCP to monitor autonomous agent behavior.
+"""E2E tests using Chrome DevTools MCP to monitor autonomous agent behavior.
 
 Tests real-time monitoring, performance, and debugging of the autonomous system.
 """
@@ -39,12 +38,12 @@ class TestAutonomousWithChromeDevTools:
     @pytest.mark.asyncio
     async def test_monitor_agent_performance(self):
         """Monitor agent performance metrics during execution."""
-        from openhands.core.config import OpenHandsConfig
-        from openhands.controller.agent_controller import AgentController
-        from openhands.core.setup import create_agent, create_runtime
-        from openhands.events.action import MessageAction
+        from forge.core.config import ForgeConfig
+        from forge.controller.agent_controller import AgentController
+        from forge.core.setup import create_agent, create_runtime
+        from forge.events.action import MessageAction
         
-        config = OpenHandsConfig()
+        config = ForgeConfig()
         runtime = await create_runtime(config)
         agent = create_agent(config)
         
@@ -95,12 +94,12 @@ class TestAutonomousWithChromeDevTools:
     @pytest.mark.asyncio
     async def test_monitor_network_activity(self):
         """Monitor network requests during agent execution."""
-        from openhands.core.config import OpenHandsConfig
-        from openhands.controller.agent_controller import AgentController
-        from openhands.core.setup import create_agent, create_runtime
-        from openhands.events.action import MessageAction
+        from forge.core.config import ForgeConfig
+        from forge.controller.agent_controller import AgentController
+        from forge.core.setup import create_agent, create_runtime
+        from forge.events.action import MessageAction
         
-        config = OpenHandsConfig()
+        config = ForgeConfig()
         runtime = await create_runtime(config)
         agent = create_agent(config)
         
@@ -139,12 +138,12 @@ class TestAutonomousWithChromeDevTools:
     @pytest.mark.asyncio
     async def test_capture_console_errors(self):
         """Capture and analyze console errors during execution."""
-        from openhands.core.config import OpenHandsConfig
-        from openhands.controller.agent_controller import AgentController
-        from openhands.core.setup import create_agent, create_runtime
-        from openhands.events.action import MessageAction
+        from forge.core.config import ForgeConfig
+        from forge.controller.agent_controller import AgentController
+        from forge.core.setup import create_agent, create_runtime
+        from forge.events.action import MessageAction
         
-        config = OpenHandsConfig()
+        config = ForgeConfig()
         runtime = await create_runtime(config)
         agent = create_agent(config)
         
@@ -179,12 +178,12 @@ class TestAutonomousWithChromeDevTools:
     @pytest.mark.asyncio
     async def test_trace_agent_decision_flow(self):
         """Trace agent's decision-making process with DevTools."""
-        from openhands.core.config import OpenHandsConfig
-        from openhands.controller.agent_controller import AgentController
-        from openhands.core.setup import create_agent, create_runtime
-        from openhands.events.action import MessageAction
+        from forge.core.config import ForgeConfig
+        from forge.controller.agent_controller import AgentController
+        from forge.core.setup import create_agent, create_runtime
+        from forge.events.action import MessageAction
         
-        config = OpenHandsConfig()
+        config = ForgeConfig()
         runtime = await create_runtime(config)
         agent = create_agent(config)
         
@@ -241,13 +240,13 @@ class TestFullAutonomousWorkflow:
     @pytest.mark.asyncio
     async def test_complete_web_app_build(self):
         """Build a complete web app with frontend, backend, and database."""
-        from openhands.core.config import OpenHandsConfig
-        from openhands.core.config.llm_config import LLMConfig
-        from openhands.controller.agent_controller import AgentController
-        from openhands.core.setup import create_agent, create_runtime
-        from openhands.events.action import MessageAction
+        from forge.core.config import ForgeConfig
+        from forge.core.config.llm_config import LLMConfig
+        from forge.controller.agent_controller import AgentController
+        from forge.core.setup import create_agent, create_runtime
+        from forge.events.action import MessageAction
         
-        config = OpenHandsConfig()
+        config = ForgeConfig()
         config.llm = LLMConfig(
             model='claude-sonnet-4-20250514',
             api_key=os.getenv('ANTHROPIC_API_KEY'),

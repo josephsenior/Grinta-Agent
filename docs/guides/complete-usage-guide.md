@@ -1,6 +1,6 @@
 # 📚 **Complete Usage Guide**
 
-> **Comprehensive guide to using all OpenHands features, from basic setup to advanced optimization.**
+> **Comprehensive guide to using all Forge features, from basic setup to advanced optimization.**
 
 ---
 
@@ -26,8 +26,8 @@
 1. **Installation**
 ```bash
 # Clone repository
-git clone https://github.com/your-org/openhands.git
-cd openhands
+git clone https://github.com/your-org/Forge.git
+cd Forge
 
 # Backend setup
 pip install -e .
@@ -38,17 +38,17 @@ npm install
 npm run dev
 
 # Start system
-python -m openhands.server  # Backend
+python -m Forge.server  # Backend
 npm run dev                 # Frontend
 ```
 
 2. **Environment Configuration**
 ```bash
 # .env file
-OPENHANDS_BACKEND_URL=http://localhost:8000
-OPENHANDS_LLM_PROVIDER=openai
-OPENHANDS_LLM_MODEL=gpt-4
-OPENHANDS_ENABLE_PROMPT_OPTIMIZATION=true
+FORGE_BACKEND_URL=http://localhost:8000
+FORGE_LLM_PROVIDER=openai
+FORGE_LLM_MODEL=gpt-4
+FORGE_ENABLE_PROMPT_OPTIMIZATION=true
 VITE_BACKEND_BASE_URL=http://localhost:8000
 VITE_WEBSOCKET_URL=ws://localhost:8000
 ```
@@ -252,7 +252,7 @@ dashboard.connect_ws()  # WebSocket connection for live updates
 ### **Basic Optimization Setup**
 
 ```python
-from openhands.prompt_optimization import PromptOptimizer
+from forge.prompt_optimization import PromptOptimizer
 
 # Initialize optimizer
 optimizer = PromptOptimizer(
@@ -299,7 +299,7 @@ print(f"Improvement: {analysis.improvement:.2%}")
 ### **Real-Time Optimization**
 
 ```python
-from openhands.prompt_optimization import LiveOptimizer
+from forge.prompt_optimization import LiveOptimizer
 
 # Enable real-time optimization
 live_optimizer = LiveOptimizer(
@@ -314,7 +314,7 @@ await live_optimizer.start()
 ### **Advanced Strategies**
 
 ```python
-from openhands.prompt_optimization.advanced import MultiObjectiveOptimizer
+from forge.prompt_optimization.advanced import MultiObjectiveOptimizer
 
 # Multi-objective optimization
 multi_optimizer = MultiObjectiveOptimizer(
@@ -385,7 +385,7 @@ const terminalConfig = {
 Access live performance metrics:
 
 ```python
-from openhands.prompt_optimization.analytics import AnalyticsDashboard
+from forge.prompt_optimization.analytics import AnalyticsDashboard
 
 dashboard = AnalyticsDashboard()
 
@@ -490,7 +490,7 @@ if (theme === 'oled') {
 ### **Agentic Context Engineering (ACE)**
 
 ```python
-from openhands.metasop.ace import ACEFramework
+from forge.metasop.ace import ACEFramework
 
 ace = ACEFramework(
     llm=llm,
@@ -510,7 +510,7 @@ await ace.apply_delta_updates(improvements)
 ### **Memory System Integration**
 
 ```python
-from openhands.memory import ConversationMemory
+from forge.memory import ConversationMemory
 
 memory = ConversationMemory(
     max_tokens=10000,
@@ -534,7 +534,7 @@ context = await memory.get_relevant_context(
 ### **Tool-Specific Optimization**
 
 ```python
-from openhands.prompt_optimization.tools import ToolOptimizer
+from forge.prompt_optimization.tools import ToolOptimizer
 
 tool_optimizer = ToolOptimizer()
 
@@ -623,9 +623,9 @@ batch_size = 10
 
 ```bash
 # Environment variables for performance
-export OPENHANDS_OPTIMIZATION_THREADS=4
-export OPENHANDS_CACHE_SIZE=2000
-export OPENHANDS_ENABLE_COMPRESSION=true
+export FORGE_OPTIMIZATION_THREADS=4
+export FORGE_CACHE_SIZE=2000
+export FORGE_ENABLE_COMPRESSION=true
 
 # Frontend optimization
 export VITE_TERMINAL_VIRTUAL_SCROLLING=true
@@ -636,7 +636,7 @@ export VITE_ENABLE_HARDWARE_ACCELERATION=true
 
 ```python
 # Performance monitoring
-from openhands.prompt_optimization.monitoring import PerformanceMonitor
+from forge.prompt_optimization.monitoring import PerformanceMonitor
 
 monitor = PerformanceMonitor()
 metrics = monitor.get_system_metrics()
@@ -686,4 +686,4 @@ print(f"Cache hit rate: {metrics.cache_hit_rate:.2%}")
 
 ---
 
-*This comprehensive guide covers all major features and capabilities of the OpenHands platform. For specific implementation details, refer to the individual component documentation in the features directory.*
+*This comprehensive guide covers all major features and capabilities of the Forge platform. For specific implementation details, refer to the individual component documentation in the features directory.*

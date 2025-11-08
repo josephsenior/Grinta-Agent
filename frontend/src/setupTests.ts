@@ -16,7 +16,7 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 // Mock IntersectionObserver
-(global as any).IntersectionObserver = class IntersectionObserver {
+(globalThis as unknown as Record<string, unknown>).IntersectionObserver = class IntersectionObserver {
   root: Element | null = null;
   rootMargin: string = "";
   thresholds: ReadonlyArray<number> = [];
@@ -33,10 +33,10 @@ Object.defineProperty(window, 'matchMedia', {
   takeRecords() {
     return [];
   }
-};
+} as any;
 
 // Mock ResizeObserver
-(global as any).ResizeObserver = class ResizeObserver {
+(globalThis as unknown as Record<string, unknown>).ResizeObserver = class ResizeObserver {
   constructor() {}
   observe() {
     return null;
@@ -47,10 +47,10 @@ Object.defineProperty(window, 'matchMedia', {
   unobserve() {
     return null;
   }
-};
+} as any;
 
 // Mock localStorage
-const localStorageMock: any = {
+const localStorageMock: Record<string, unknown> = {
   getItem: jest.fn(),
   setItem: jest.fn(),
   removeItem: jest.fn(),
@@ -58,10 +58,10 @@ const localStorageMock: any = {
   length: 0,
   key: jest.fn((i: number) => null),
 };
-(global as any).localStorage = localStorageMock;
+(globalThis as unknown as Record<string, unknown>).localStorage = localStorageMock;
 
 // Mock sessionStorage
-const sessionStorageMock: any = {
+const sessionStorageMock: Record<string, unknown> = {
   getItem: jest.fn(),
   setItem: jest.fn(),
   removeItem: jest.fn(),
@@ -69,30 +69,30 @@ const sessionStorageMock: any = {
   length: 0,
   key: jest.fn((i: number) => null),
 };
-(global as any).sessionStorage = sessionStorageMock;
+(globalThis as unknown as Record<string, unknown>).sessionStorage = sessionStorageMock;
 
 // Mock fetch
-global.fetch = jest.fn();
+(globalThis as unknown as Record<string, unknown>).fetch = jest.fn();
 
 // Mock WebSocket
-const WebSocketMock: any = jest.fn().mockImplementation(() => ({
+const WebSocketMock: Record<string, unknown> & { new?: unknown } = (jest.fn().mockImplementation(() => ({
   close: jest.fn(),
   send: jest.fn(),
   addEventListener: jest.fn(),
   removeEventListener: jest.fn(),
-}));
-WebSocketMock.CONNECTING = 0;
-WebSocketMock.OPEN = 1;
-WebSocketMock.CLOSING = 2;
-WebSocketMock.CLOSED = 3;
-(global as any).WebSocket = WebSocketMock;
+})) as unknown) as Record<string, unknown> & { new?: unknown };
+(WebSocketMock as Record<string, unknown>).CONNECTING = 0;
+(WebSocketMock as Record<string, unknown>).OPEN = 1;
+(WebSocketMock as Record<string, unknown>).CLOSING = 2;
+(WebSocketMock as Record<string, unknown>).CLOSED = 3;
+(globalThis as unknown as Record<string, unknown>).WebSocket = WebSocketMock;
 
 // Mock console methods to reduce noise in tests
 const originalError = console.error;
 const originalWarn = console.warn;
 
 beforeAll(() => {
-  console.error = (...args: any[]) => {
+  console.error = (...args: unknown[]) => {
     if (
       typeof args[0] === 'string' &&
       args[0].includes('Warning: ReactDOM.render is no longer supported')
@@ -102,7 +102,7 @@ beforeAll(() => {
     originalError.call(console, ...args);
   };
 
-  console.warn = (...args: any[]) => {
+  console.warn = (...args: unknown[]) => {
     if (
       typeof args[0] === 'string' &&
       (args[0].includes('componentWillReceiveProps') ||

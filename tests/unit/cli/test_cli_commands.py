@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 import pytest
 from prompt_toolkit.formatted_text import HTML
-from openhands.cli.commands import (
+from forge.cli.commands import (
     display_mcp_servers,
     handle_commands,
     handle_exit_command,
@@ -13,13 +13,13 @@ from openhands.cli.commands import (
     handle_settings_command,
     handle_status_command,
 )
-from openhands.cli.tui import UsageMetrics
-from openhands.core.config import OpenHandsConfig
-from openhands.core.schema import AgentState
-from openhands.events import EventSource
-from openhands.events.action import ChangeAgentStateAction, MessageAction
-from openhands.events.stream import EventStream
-from openhands.storage.settings.file_settings_store import FileSettingsStore
+from forge.cli.tui import UsageMetrics
+from forge.core.config import ForgeConfig
+from forge.core.schema import AgentState
+from forge.events import EventSource
+from forge.events.action import ChangeAgentStateAction, MessageAction
+from forge.events.stream import EventStream
+from forge.storage.settings.file_settings_store import FileSettingsStore
 
 
 class TestHandleCommands:
@@ -29,7 +29,7 @@ class TestHandleCommands:
         event_stream = MagicMock(spec=EventStream)
         usage_metrics = MagicMock(spec=UsageMetrics)
         sid = "test-session-id"
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         current_dir = "/test/dir"
         settings_store = MagicMock(spec=FileSettingsStore)
         agent_state = AgentState.RUNNING
@@ -44,7 +44,7 @@ class TestHandleCommands:
         }
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.handle_exit_command")
+    @patch("forge.cli.commands.handle_exit_command")
     async def test_handle_exit_command(self, mock_handle_exit, mock_dependencies):
         mock_handle_exit.return_value = True
         close_repl, reload_microagents, new_session, _ = await handle_commands("/exit", **mock_dependencies)
@@ -59,7 +59,7 @@ class TestHandleCommands:
         assert new_session is False
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.handle_help_command")
+    @patch("forge.cli.commands.handle_help_command")
     async def test_handle_help_command(self, mock_handle_help, mock_dependencies):
         mock_handle_help.return_value = (False, False, False)
         close_repl, reload_microagents, new_session, _ = await handle_commands("/help", **mock_dependencies)
@@ -69,7 +69,7 @@ class TestHandleCommands:
         assert new_session is False
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.handle_init_command")
+    @patch("forge.cli.commands.handle_init_command")
     async def test_handle_init_command(self, mock_handle_init, mock_dependencies):
         mock_handle_init.return_value = (True, True)
         close_repl, reload_microagents, new_session, _ = await handle_commands("/init", **mock_dependencies)
@@ -81,7 +81,7 @@ class TestHandleCommands:
         assert new_session is False
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.handle_status_command")
+    @patch("forge.cli.commands.handle_status_command")
     async def test_handle_status_command(self, mock_handle_status, mock_dependencies):
         mock_handle_status.return_value = (False, False, False)
         close_repl, reload_microagents, new_session, _ = await handle_commands("/status", **mock_dependencies)
@@ -91,7 +91,7 @@ class TestHandleCommands:
         assert new_session is False
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.handle_new_command")
+    @patch("forge.cli.commands.handle_new_command")
     async def test_handle_new_command(self, mock_handle_new, mock_dependencies):
         mock_handle_new.return_value = (True, True)
         close_repl, reload_microagents, new_session, _ = await handle_commands("/new", **mock_dependencies)
@@ -106,7 +106,7 @@ class TestHandleCommands:
         assert new_session is True
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.handle_settings_command")
+    @patch("forge.cli.commands.handle_settings_command")
     async def test_handle_settings_command(self, mock_handle_settings, mock_dependencies):
         close_repl, reload_microagents, new_session, _ = await handle_commands("/settings", **mock_dependencies)
         mock_handle_settings.assert_called_once_with(mock_dependencies["config"], mock_dependencies["settings_store"])
@@ -115,7 +115,7 @@ class TestHandleCommands:
         assert new_session is False
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.handle_mcp_command")
+    @patch("forge.cli.commands.handle_mcp_command")
     async def test_handle_mcp_command(self, mock_handle_mcp, mock_dependencies):
         close_repl, reload_microagents, new_session, _ = await handle_commands("/mcp", **mock_dependencies)
         mock_handle_mcp.assert_called_once_with(mock_dependencies["config"])
@@ -139,10 +139,10 @@ class TestHandleCommands:
 
 class TestHandleExitCommand:
 
-    @patch("openhands.cli.commands.cli_confirm")
-    @patch("openhands.cli.commands.display_shutdown_message")
+    @patch("forge.cli.commands.cli_confirm")
+    @patch("forge.cli.commands.display_shutdown_message")
     def test_exit_with_confirmation(self, mock_display_shutdown, mock_cli_confirm):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         event_stream = MagicMock(spec=EventStream)
         usage_metrics = MagicMock(spec=UsageMetrics)
         sid = "test-session-id"
@@ -157,10 +157,10 @@ class TestHandleExitCommand:
         mock_display_shutdown.assert_called_once_with(usage_metrics, sid)
         assert result is True
 
-    @patch("openhands.cli.commands.cli_confirm")
-    @patch("openhands.cli.commands.display_shutdown_message")
+    @patch("forge.cli.commands.cli_confirm")
+    @patch("forge.cli.commands.display_shutdown_message")
     def test_exit_without_confirmation(self, mock_display_shutdown, mock_cli_confirm):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         event_stream = MagicMock(spec=EventStream)
         usage_metrics = MagicMock(spec=UsageMetrics)
         sid = "test-session-id"
@@ -174,7 +174,7 @@ class TestHandleExitCommand:
 
 class TestHandleHelpCommand:
 
-    @patch("openhands.cli.commands.display_help")
+    @patch("forge.cli.commands.display_help")
     def test_help_command(self, mock_display_help):
         handle_help_command()
         mock_display_help.assert_called_once()
@@ -182,11 +182,11 @@ class TestHandleHelpCommand:
 
 class TestDisplayMcpServers:
 
-    @patch("openhands.cli.commands.print_formatted_text")
+    @patch("forge.cli.commands.print_formatted_text")
     def test_display_mcp_servers_no_servers(self, mock_print):
-        from openhands.core.config.mcp_config import MCPConfig
+        from forge.core.config.mcp_config import MCPConfig
 
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         config.mcp = MCPConfig()
         display_mcp_servers(config)
         mock_print.assert_called_once()
@@ -194,16 +194,16 @@ class TestDisplayMcpServers:
         assert "No custom MCP servers configured" in call_args
         assert "https://docs.all-hands.dev/usage/how-to/cli-mode#using-mcp-servers" in call_args
 
-    @patch("openhands.cli.commands.print_formatted_text")
+    @patch("forge.cli.commands.print_formatted_text")
     def test_display_mcp_servers_with_servers(self, mock_print):
-        from openhands.core.config.mcp_config import (
+        from forge.core.config.mcp_config import (
             MCPConfig,
             MCPSHTTPServerConfig,
             MCPSSEServerConfig,
             MCPStdioServerConfig,
         )
 
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         config.mcp = MCPConfig(
             sse_servers=[MCPSSEServerConfig(url="https://example.com/sse")],
             stdio_servers=[MCPStdioServerConfig(name="tavily", command="npx")],
@@ -222,10 +222,10 @@ class TestDisplayMcpServers:
 class TestHandleMcpCommand:
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.cli_confirm")
-    @patch("openhands.cli.commands.display_mcp_servers")
+    @patch("forge.cli.commands.cli_confirm")
+    @patch("forge.cli.commands.display_mcp_servers")
     async def test_handle_mcp_command_list_action(self, mock_display, mock_cli_confirm):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         mock_cli_confirm.return_value = 0
         await handle_mcp_command(config)
         mock_cli_confirm.assert_called_once_with(
@@ -238,7 +238,7 @@ class TestHandleMcpCommand:
 
 class TestHandleStatusCommand:
 
-    @patch("openhands.cli.commands.display_status")
+    @patch("forge.cli.commands.display_status")
     def test_status_command(self, mock_display_status):
         usage_metrics = MagicMock(spec=UsageMetrics)
         sid = "test-session-id"
@@ -248,10 +248,10 @@ class TestHandleStatusCommand:
 
 class TestHandleNewCommand:
 
-    @patch("openhands.cli.commands.cli_confirm")
-    @patch("openhands.cli.commands.display_shutdown_message")
+    @patch("forge.cli.commands.cli_confirm")
+    @patch("forge.cli.commands.display_shutdown_message")
     def test_new_with_confirmation(self, mock_display_shutdown, mock_cli_confirm):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         event_stream = MagicMock(spec=EventStream)
         usage_metrics = MagicMock(spec=UsageMetrics)
         sid = "test-session-id"
@@ -267,10 +267,10 @@ class TestHandleNewCommand:
         assert close_repl is True
         assert new_session is True
 
-    @patch("openhands.cli.commands.cli_confirm")
-    @patch("openhands.cli.commands.display_shutdown_message")
+    @patch("forge.cli.commands.cli_confirm")
+    @patch("forge.cli.commands.display_shutdown_message")
     def test_new_without_confirmation(self, mock_display_shutdown, mock_cli_confirm):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         event_stream = MagicMock(spec=EventStream)
         usage_metrics = MagicMock(spec=UsageMetrics)
         sid = "test-session-id"
@@ -286,9 +286,9 @@ class TestHandleNewCommand:
 class TestHandleInitCommand:
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.init_repository")
+    @patch("forge.cli.commands.init_repository")
     async def test_init_local_runtime_successful(self, mock_init_repository):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         config.runtime = "local"
         event_stream = MagicMock(spec=EventStream)
         current_dir = "/test/dir"
@@ -304,9 +304,9 @@ class TestHandleInitCommand:
         assert reload_microagents is True
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.init_repository")
+    @patch("forge.cli.commands.init_repository")
     async def test_init_local_runtime_unsuccessful(self, mock_init_repository):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         config.runtime = "local"
         event_stream = MagicMock(spec=EventStream)
         current_dir = "/test/dir"
@@ -318,10 +318,10 @@ class TestHandleInitCommand:
         assert reload_microagents is False
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.print_formatted_text")
-    @patch("openhands.cli.commands.init_repository")
+    @patch("forge.cli.commands.print_formatted_text")
+    @patch("forge.cli.commands.init_repository")
     async def test_init_non_local_runtime(self, mock_init_repository, mock_print):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         config.runtime = "remote"
         event_stream = MagicMock(spec=EventStream)
         current_dir = "/test/dir"
@@ -336,11 +336,11 @@ class TestHandleInitCommand:
 class TestHandleSettingsCommand:
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.display_settings")
-    @patch("openhands.cli.commands.cli_confirm")
-    @patch("openhands.cli.commands.modify_llm_settings_basic")
+    @patch("forge.cli.commands.display_settings")
+    @patch("forge.cli.commands.cli_confirm")
+    @patch("forge.cli.commands.modify_llm_settings_basic")
     async def test_settings_basic_with_changes(self, mock_modify_basic, mock_cli_confirm, mock_display_settings):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         settings_store = MagicMock(spec=FileSettingsStore)
         mock_cli_confirm.return_value = 0
         await handle_settings_command(config, settings_store)
@@ -349,11 +349,11 @@ class TestHandleSettingsCommand:
         mock_modify_basic.assert_called_once_with(config, settings_store)
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.display_settings")
-    @patch("openhands.cli.commands.cli_confirm")
-    @patch("openhands.cli.commands.modify_llm_settings_basic")
+    @patch("forge.cli.commands.display_settings")
+    @patch("forge.cli.commands.cli_confirm")
+    @patch("forge.cli.commands.modify_llm_settings_basic")
     async def test_settings_basic_without_changes(self, mock_modify_basic, mock_cli_confirm, mock_display_settings):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         settings_store = MagicMock(spec=FileSettingsStore)
         mock_cli_confirm.return_value = 0
         await handle_settings_command(config, settings_store)
@@ -362,11 +362,11 @@ class TestHandleSettingsCommand:
         mock_modify_basic.assert_called_once_with(config, settings_store)
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.display_settings")
-    @patch("openhands.cli.commands.cli_confirm")
-    @patch("openhands.cli.commands.modify_llm_settings_advanced")
+    @patch("forge.cli.commands.display_settings")
+    @patch("forge.cli.commands.cli_confirm")
+    @patch("forge.cli.commands.modify_llm_settings_advanced")
     async def test_settings_advanced_with_changes(self, mock_modify_advanced, mock_cli_confirm, mock_display_settings):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         settings_store = MagicMock(spec=FileSettingsStore)
         mock_cli_confirm.return_value = 1
         await handle_settings_command(config, settings_store)
@@ -375,13 +375,13 @@ class TestHandleSettingsCommand:
         mock_modify_advanced.assert_called_once_with(config, settings_store)
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.display_settings")
-    @patch("openhands.cli.commands.cli_confirm")
-    @patch("openhands.cli.commands.modify_llm_settings_advanced")
+    @patch("forge.cli.commands.display_settings")
+    @patch("forge.cli.commands.cli_confirm")
+    @patch("forge.cli.commands.modify_llm_settings_advanced")
     async def test_settings_advanced_without_changes(
         self, mock_modify_advanced, mock_cli_confirm, mock_display_settings
     ):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         settings_store = MagicMock(spec=FileSettingsStore)
         mock_cli_confirm.return_value = 1
         await handle_settings_command(config, settings_store)
@@ -390,10 +390,10 @@ class TestHandleSettingsCommand:
         mock_modify_advanced.assert_called_once_with(config, settings_store)
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.display_settings")
-    @patch("openhands.cli.commands.cli_confirm")
+    @patch("forge.cli.commands.display_settings")
+    @patch("forge.cli.commands.cli_confirm")
     async def test_settings_go_back(self, mock_cli_confirm, mock_display_settings):
-        config = MagicMock(spec=OpenHandsConfig)
+        config = MagicMock(spec=ForgeConfig)
         settings_store = MagicMock(spec=FileSettingsStore)
         mock_cli_confirm.return_value = 3
         await handle_settings_command(config, settings_store)
@@ -404,7 +404,7 @@ class TestHandleSettingsCommand:
 class TestHandleResumeCommand:
 
     @pytest.mark.asyncio
-    @patch("openhands.cli.commands.print_formatted_text")
+    @patch("forge.cli.commands.print_formatted_text")
     async def test_handle_resume_command_paused_state(self, mock_print):
         """Test that handle_resume_command works when agent is in PAUSED state."""
         event_stream = MagicMock(spec=EventStream)
@@ -421,7 +421,7 @@ class TestHandleResumeCommand:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("invalid_state", [AgentState.RUNNING, AgentState.FINISHED, AgentState.ERROR])
-    @patch("openhands.cli.commands.print_formatted_text")
+    @patch("forge.cli.commands.print_formatted_text")
     async def test_handle_resume_command_invalid_states(self, mock_print, invalid_state):
         """Test that handle_resume_command shows error for all non-PAUSED states."""
         event_stream = MagicMock(spec=EventStream)
@@ -439,10 +439,10 @@ class TestHandleResumeCommand:
 class TestMCPErrorHandling:
     """Test MCP error handling in commands."""
 
-    @patch("openhands.cli.commands.display_mcp_errors")
+    @patch("forge.cli.commands.display_mcp_errors")
     def test_handle_mcp_errors_command(self, mock_display_errors):
         """Test handling MCP errors command."""
-        from openhands.cli.commands import handle_mcp_errors_command
+        from forge.cli.commands import handle_mcp_errors_command
 
         handle_mcp_errors_command()
         mock_display_errors.assert_called_once()

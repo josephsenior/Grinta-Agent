@@ -3,7 +3,7 @@
 import time
 from unittest.mock import patch
 import psutil
-from openhands.runtime.utils.system_stats import get_system_info, get_system_stats, update_last_execution_time
+from forge.runtime.utils.system_stats import get_system_info, get_system_stats, update_last_execution_time
 
 
 def _validate_cpu_stats(stats):
@@ -79,7 +79,7 @@ def test_get_system_stats_stability():
 
 def test_get_system_info():
     """Test that get_system_info returns valid system information."""
-    with patch("openhands.runtime.utils.system_stats.get_system_stats") as mock_get_stats:
+    with patch("forge.runtime.utils.system_stats.get_system_stats") as mock_get_stats:
         mock_get_stats.return_value = {"cpu_percent": 10.0}
         info = get_system_info()
         assert isinstance(info, dict)
@@ -121,10 +121,10 @@ def test_idle_time_calculation(mock_time):
     """Test that idle_time is calculated correctly."""
     mock_time.side_effect = [100.0, 100.0, 110.0]
     import importlib
-    import openhands.runtime.utils.system_stats
+    import forge.runtime.utils.system_stats
 
-    importlib.reload(openhands.runtime.utils.system_stats)
-    from openhands.runtime.utils.system_stats import get_system_info
+    importlib.reload(forge.runtime.utils.system_stats)
+    from forge.runtime.utils.system_stats import get_system_info
 
     info = get_system_info()
     assert info["uptime"] == 10.0

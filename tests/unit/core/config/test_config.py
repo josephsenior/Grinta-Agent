@@ -2,24 +2,24 @@ import logging
 import os
 from io import StringIO
 import pytest
-from openhands.core.config import (
+from forge.core.config import (
     AgentConfig,
     LLMConfig,
-    OpenHandsConfig,
+    ForgeConfig,
     finalize_config,
     get_agent_config_arg,
     get_llm_config_arg,
     load_from_env,
     load_from_toml,
-    load_openhands_config,
+    load_FORGE_config,
 )
-from openhands.core.config.condenser_config import (
+from forge.core.config.condenser_config import (
     ConversationWindowCondenserConfig,
     LLMSummarizingCondenserConfig,
     NoOpCondenserConfig,
     RecentEventsCondenserConfig,
 )
-from openhands.core.logger import openhands_logger
+from forge.core.logger import forge_logger
 
 
 @pytest.fixture
@@ -40,20 +40,20 @@ def temp_toml_file(tmp_path):
 
 @pytest.fixture
 def default_config(monkeypatch):
-    yield OpenHandsConfig()
+    yield ForgeConfig()
 
 
 def test_compat_env_to_config(monkeypatch, setup_env):
-    monkeypatch.setenv("SANDBOX_VOLUMES", "/repos/openhands/workspace:/workspace:rw")
+    monkeypatch.setenv("SANDBOX_VOLUMES", "/repos/Forge/workspace:/workspace:rw")
     monkeypatch.setenv("LLM_API_KEY", "sk-proj-rgMV0...")
     monkeypatch.setenv("LLM_MODEL", "gpt-4o")
     monkeypatch.setenv("DEFAULT_AGENT", "CodeActAgent")
     monkeypatch.setenv("SANDBOX_TIMEOUT", "10")
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     load_from_env(config, os.environ)
     finalize_config(config)
-    assert config.sandbox.volumes == "/repos/openhands/workspace:/workspace:rw"
-    expected_tail = os.path.normcase(os.path.join("repos", "openhands", "workspace"))
+    assert config.sandbox.volumes == "/repos/Forge/workspace:/workspace:rw"
+    expected_tail = os.path.normcase(os.path.join("repos", "forge", "workspace"))
     assert os.path.normcase(os.path.normpath(config.workspace_base)).endswith(expected_tail)
     assert os.path.normcase(os.path.normpath(config.workspace_mount_path)).endswith(expected_tail)
     assert config.workspace_mount_path_in_sandbox == "/workspace"
@@ -234,7 +234,7 @@ def test_security_config_from_toml(default_config, temp_toml_file):
 
 def test_security_config_from_dict():
     """Test creating SecurityConfig instance from dictionary."""
-    from openhands.core.config.security_config import SecurityConfig
+    from forge.core.config.security_config import SecurityConfig
 
     config_dict = {"confirmation_mode": True, "security_analyzer": "some_analyzer"}
     security_config = SecurityConfig(**config_dict)
@@ -246,7 +246,7 @@ def test_defaults_dict_after_updates(default_config):
     initial_defaults = default_config.defaults_dict
     assert initial_defaults["workspace_mount_path"]["default"] is None
     assert initial_defaults["default_agent"]["default"] == "CodeActAgent"
-    updated_config = OpenHandsConfig()
+    updated_config = ForgeConfig()
     updated_config.get_llm_config().api_key = "updated-api-key"
     updated_config.get_llm_config("llm").api_key = "updated-api-key"
     updated_config.get_llm_config_from_agent("agent").api_key = "updated-api-key"
@@ -340,14 +340,14 @@ def test_load_from_toml_partial_invalid(default_config, temp_toml_file, caplog):
     """
     with open(temp_toml_file, "w", encoding="utf-8") as f:
         f.write(
-            '\n[core]\ndebug = true\n\n[llm]\n# Not set in `openhands/core/schema/config.py`\ninvalid_field = "test"\nmodel = "gpt-4"\n\n[agent]\nenable_prompt_extensions = true\n\n[sandbox]\ninvalid_field_in_sandbox = "test"\n'
+            '\n[core]\ndebug = true\n\n[llm]\n# Not set in `Forge/core/schema/config.py`\ninvalid_field = "test"\nmodel = "gpt-4"\n\n[agent]\nenable_prompt_extensions = true\n\n[sandbox]\ninvalid_field_in_sandbox = "test"\n'
         )
     log_output = StringIO()
     handler = logging.StreamHandler(log_output)
     handler.setLevel(logging.WARNING)
     formatter = logging.Formatter("%(message)s")
     handler.setFormatter(formatter)
-    openhands_logger.addHandler(handler)
+    FORGE_logger.addHandler(handler)
     try:
         with pytest.raises(ValueError) as excinfo:
             load_from_toml(default_config, temp_toml_file)
@@ -356,7 +356,7 @@ def test_load_from_toml_partial_invalid(default_config, temp_toml_file, caplog):
         assert "Cannot parse [llm] config from toml" in log_content
         assert default_config.debug is True
     finally:
-        openhands_logger.removeHandler(handler)
+        FORGE_logger.removeHandler(handler)
 
 
 def test_load_from_toml_security_invalid(default_config, temp_toml_file):
@@ -425,9 +425,9 @@ def test_sandbox_volumes_with_workspace_not_first(default_config):
 
 def test_agent_config_condenser_with_no_enabled():
     """Test default agent condenser with enable_default_condenser=False."""
-    config = OpenHandsConfig(enable_default_condenser=False)
+    config = ForgeConfig(enable_default_condenser=False)
     agent_config = config.get_agent_config()
-    assert isinstance(agent_config.condenser, ConversationWindowCondenserConfig)
+    assert isinstance(agent_config.condenser_config, ConversationWindowCondenserConfig)
 
 
 def test_sandbox_volumes_toml(default_config, temp_toml_file):
@@ -449,10 +449,10 @@ def test_condenser_config_from_toml_basic(default_config, temp_toml_file):
         toml_file.write('\n[condenser]\ntype = "recent"\nkeep_first = 3\nmax_events = 15\n')
     load_from_toml(default_config, temp_toml_file)
     agent_config = default_config.get_agent_config()
-    assert isinstance(agent_config.condenser, RecentEventsCondenserConfig)
-    assert agent_config.condenser.keep_first == 3
-    assert agent_config.condenser.max_events == 15
-    from openhands.core.config.condenser_config import condenser_config_from_toml_section
+    assert isinstance(agent_config.condenser_config, RecentEventsCondenserConfig)
+    assert agent_config.condenser_config.keep_first == 3
+    assert agent_config.condenser_config.max_events == 15
+    from forge.core.config.condenser_config import condenser_config_from_toml_section
 
     condenser_data = {"type": "recent", "keep_first": 3, "max_events": 15}
     condenser_mapping = condenser_config_from_toml_section(condenser_data)
@@ -472,11 +472,11 @@ def test_condenser_config_from_toml_with_llm_reference(default_config, temp_toml
     assert "condenser_llm" in default_config.llms
     assert default_config.llms["condenser_llm"].model == "gpt-4"
     agent_config = default_config.get_agent_config()
-    assert isinstance(agent_config.condenser, LLMSummarizingCondenserConfig)
-    assert agent_config.condenser.keep_first == 2
-    assert agent_config.condenser.max_size == 50
-    assert agent_config.condenser.llm_config.model == "gpt-4"
-    from openhands.core.config.condenser_config import condenser_config_from_toml_section
+    assert isinstance(agent_config.condenser_config, LLMSummarizingCondenserConfig)
+    assert agent_config.condenser_config.keep_first == 2
+    assert agent_config.condenser_config.max_size == 50
+    assert agent_config.condenser_config.llm_config.model == "gpt-4"
+    from forge.core.config.condenser_config import condenser_config_from_toml_section
 
     condenser_data = {"type": "llm", "llm_config": "condenser_llm", "keep_first": 2, "max_size": 50}
     condenser_mapping = condenser_config_from_toml_section(condenser_data, default_config.llms)
@@ -492,7 +492,7 @@ def test_condenser_config_from_toml_with_missing_llm_reference(default_config, t
     with open(temp_toml_file, "w", encoding="utf-8") as toml_file:
         toml_file.write('\n[condenser]\ntype = "llm"\nllm_config = "missing_llm"\nkeep_first = 2\nmax_size = 50\n')
     load_from_toml(default_config, temp_toml_file)
-    from openhands.core.config.condenser_config import condenser_config_from_toml_section
+    from forge.core.config.condenser_config import condenser_config_from_toml_section
 
     condenser_data = {"type": "llm", "llm_config": "missing_llm", "keep_first": 2, "max_size": 50}
     condenser_mapping = condenser_config_from_toml_section(condenser_data, default_config.llms)
@@ -506,7 +506,7 @@ def test_condenser_config_from_toml_with_invalid_config(default_config, temp_tom
     with open(temp_toml_file, "w", encoding="utf-8") as toml_file:
         toml_file.write('\n[condenser]\ntype = "invalid_type"\n')
     load_from_toml(default_config, temp_toml_file)
-    from openhands.core.config.condenser_config import condenser_config_from_toml_section
+    from forge.core.config.condenser_config import condenser_config_from_toml_section
 
     condenser_data = {"type": "invalid_type"}
     condenser_mapping = condenser_config_from_toml_section(condenser_data)
@@ -521,7 +521,7 @@ def test_condenser_config_from_toml_with_validation_error(default_config, temp_t
             '\n[condenser]\ntype = "recent"\nkeep_first = -1  # Invalid: must be >= 0\nmax_events = 0   # Invalid: must be >= 1\n'
         )
     load_from_toml(default_config, temp_toml_file)
-    from openhands.core.config.condenser_config import condenser_config_from_toml_section
+    from forge.core.config.condenser_config import condenser_config_from_toml_section
 
     condenser_data = {"type": "recent", "keep_first": -1, "max_events": 0}
     condenser_mapping = condenser_config_from_toml_section(condenser_data)
@@ -536,9 +536,9 @@ def test_default_condenser_behavior_enabled(default_config, temp_toml_file):
     default_config.enable_default_condenser = True
     load_from_toml(default_config, temp_toml_file)
     agent_config = default_config.get_agent_config()
-    assert isinstance(agent_config.condenser, LLMSummarizingCondenserConfig)
-    assert agent_config.condenser.keep_first == 1
-    assert agent_config.condenser.max_size == 100
+    assert isinstance(agent_config.condenser_config, LLMSummarizingCondenserConfig)
+    assert agent_config.condenser_config.keep_first == 1
+    assert agent_config.condenser_config.max_size == 100
 
 
 def test_default_condenser_behavior_disabled(default_config, temp_toml_file):
@@ -548,7 +548,7 @@ def test_default_condenser_behavior_disabled(default_config, temp_toml_file):
     default_config.enable_default_condenser = False
     load_from_toml(default_config, temp_toml_file)
     agent_config = default_config.get_agent_config()
-    assert isinstance(agent_config.condenser, ConversationWindowCondenserConfig)
+    assert isinstance(agent_config.condenser_config, ConversationWindowCondenserConfig)
 
 
 def test_default_condenser_explicit_toml_override(default_config, temp_toml_file):
@@ -558,9 +558,9 @@ def test_default_condenser_explicit_toml_override(default_config, temp_toml_file
         toml_file.write('\n[condenser]\ntype = "recent"\nkeep_first = 3\nmax_events = 15\n')
     load_from_toml(default_config, temp_toml_file)
     agent_config = default_config.get_agent_config()
-    assert isinstance(agent_config.condenser, RecentEventsCondenserConfig)
-    assert agent_config.condenser.keep_first == 3
-    assert agent_config.condenser.max_events == 15
+    assert isinstance(agent_config.condenser_config, RecentEventsCondenserConfig)
+    assert agent_config.condenser_config.keep_first == 3
+    assert agent_config.condenser_config.max_events == 15
 
 
 def _test_llm_config_api_key_redaction():
@@ -612,7 +612,7 @@ def _test_app_config_api_key_redaction():
         api_key="my_api_key", aws_access_key_id="my_access_key", aws_secret_access_key="my_secret_key"
     )
     agent_config = AgentConfig(enable_prompt_extensions=True, enable_browsing=False)
-    app_config = OpenHandsConfig(
+    app_config = ForgeConfig(
         llms={"llm": llm_config}, agents={"agent": agent_config}, search_api_key="my_search_api_key"
     )
     assert "my_search_api_key" not in repr(app_config)
@@ -622,14 +622,14 @@ def _test_app_config_api_key_redaction():
 def _validate_app_config_attributes():
     """Validate app config attributes don't contain unexpected key/token names."""
     known_key_token_attrs_app = ["search_api_key"]
-    for attr_name in OpenHandsConfig.model_fields.keys():
+    for attr_name in ForgeConfig.model_fields.keys():
         if not attr_name.startswith("__") and attr_name not in known_key_token_attrs_app:
             assert (
                 "key" not in attr_name.lower()
-            ), f"Unexpected attribute '{attr_name}' contains 'key' in OpenHandsConfig"
+            ), f"Unexpected attribute '{attr_name}' contains 'key' in ForgeConfig"
             assert (
                 "token" not in attr_name.lower() or "tokens" in attr_name.lower()
-            ), f"Unexpected attribute '{attr_name}' contains 'token' in OpenHandsConfig"
+            ), f"Unexpected attribute '{attr_name}' contains 'token' in ForgeConfig"
 
 
 def test_api_keys_repr_str():
@@ -652,7 +652,7 @@ def test_api_keys_repr_str():
 
 def test_max_iterations_and_max_budget_per_task_from_toml(temp_toml_file):
     temp_toml = "\n[core]\nmax_iterations = 42\nmax_budget_per_task = 4.7\n"
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     with open(temp_toml_file, "w", encoding='utf-8') as f:
         f.write(temp_toml)
     load_from_toml(config, temp_toml_file)
@@ -695,7 +695,7 @@ def test_agent_config_custom_group_name(temp_toml_file):
     temp_toml = "\n[core]\nmax_iterations = 99\n\n[agent.group1]\nenable_prompt_extensions = true\n\n[agent.group2]\nenable_prompt_extensions = false\n"
     with open(temp_toml_file, "w", encoding='utf-8') as f:
         f.write(temp_toml)
-    app_config = load_openhands_config(config_file=temp_toml_file)
+    app_config = load_FORGE_config(config_file=temp_toml_file)
     assert app_config.max_iterations == 99
     agent_config1 = get_agent_config_arg("group1", temp_toml_file)
     assert agent_config1.enable_prompt_extensions
@@ -705,7 +705,7 @@ def test_agent_config_custom_group_name(temp_toml_file):
 
 def test_agent_config_from_toml_section():
     """Test that AgentConfig.from_toml_section correctly parses agent configurations from TOML."""
-    from openhands.core.config.agent_config import AgentConfig
+    from forge.core.config.agent_config import AgentConfig
 
     agent_section = {
         "enable_prompt_extensions": True,
@@ -729,7 +729,7 @@ def test_agent_config_from_toml_section():
 
 def test_agent_config_from_toml_section_with_invalid_base():
     """Test that AgentConfig.from_toml_section handles invalid base configurations gracefully."""
-    from openhands.core.config.agent_config import AgentConfig
+    from forge.core.config.agent_config import AgentConfig
 
     agent_section = {
         "invalid_field": "some_value",

@@ -4,7 +4,7 @@ import { useUserProviders } from "../use-user-providers";
 import { useAppInstallations } from "./use-app-installations";
 import { GitRepository } from "../../types/git";
 import { Provider } from "../../types/settings";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { shouldUseInstallationRepos } from "#/utils/utils";
 
 interface UseGitRepositoriesOptions {
@@ -60,7 +60,7 @@ export function useGitRepositories(options: UseGitRepositoriesOptions) {
           throw new Error("Missing installation list");
         }
 
-        return OpenHands.retrieveInstallationRepositories(
+        return Forge.retrieveInstallationRepositories(
           provider,
           installationIndex || 0,
           installations,
@@ -69,7 +69,7 @@ export function useGitRepositories(options: UseGitRepositoriesOptions) {
         );
       }
 
-      return OpenHands.retrieveUserGitRepositories(
+      return Forge.retrieveUserGitRepositories(
         provider,
         pageParam as number,
         pageSize,

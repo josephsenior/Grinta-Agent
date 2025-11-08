@@ -23,8 +23,8 @@ Forge now has **production-grade API versioning** that allows safe evolution wit
 
 #### **Files Created:**
 ```python
-openhands/server/versioning.py       # Versioning middleware + utilities
-openhands/server/constants.py        # Version constants
+Forge/server/versioning.py       # Versioning middleware + utilities
+Forge/server/constants.py        # Version constants
 ```
 
 #### **How It Works:**
@@ -81,7 +81,7 @@ export const USE_VERSIONED_ENDPOINTS = false;  // ← Beta mode
 ```
 
 ```python
-# openhands/server/constants.py  
+# Forge/server/constants.py  
 ENFORCE_API_VERSIONING = False  # ← Beta mode (allows non-versioned)
 ```
 
@@ -134,7 +134,7 @@ export const USE_VERSIONED_ENDPOINTS = true;  // ← Enable versioning!
 ```
 
 ```python
-# openhands/server/constants.py
+# Forge/server/constants.py
 ENFORCE_API_VERSIONING = True  # ← Enforce strict versioning
 ```
 
@@ -176,7 +176,7 @@ DEPRECATED_VERSIONS = {
 }
 
 # 3. Create v2 routes (keep v1 working!)
-# openhands/server/routes/conversation_v2.py
+# Forge/server/routes/conversation_v2.py
 app = APIRouter(prefix="/api/v2/conversations")
 
 @app.get("/")
@@ -222,7 +222,7 @@ Warning: 299 - "v1 API is deprecated. Please migrate to v2."         ← Warning
 ### **Adding a New Endpoint (v1)**
 
 ```python
-# openhands/server/routes/my_feature.py
+# Forge/server/routes/my_feature.py
 from fastapi import APIRouter
 
 app = APIRouter(prefix="/api/my-feature")
@@ -233,8 +233,8 @@ async def get_my_feature():
 ```
 
 ```python
-# openhands/server/app.py
-from openhands.server.routes.my_feature import app as my_feature_router
+# Forge/server/app.py
+from forge.server.routes.my_feature import app as my_feature_router
 
 app.include_router(my_feature_router, tags=["v1", "my-feature"])
 ```
@@ -244,7 +244,7 @@ app.include_router(my_feature_router, tags=["v1", "my-feature"])
 ### **Adding a v2 Endpoint (Future)**
 
 ```python
-# openhands/server/routes/my_feature_v2.py
+# Forge/server/routes/my_feature_v2.py
 from fastapi import APIRouter
 
 app = APIRouter(prefix="/api/v2/my-feature")  # ← v2 prefix
@@ -258,8 +258,8 @@ async def get_my_feature_v2():
 ```
 
 ```python
-# openhands/server/app.py
-from openhands.server.routes.my_feature_v2 import app as my_feature_v2_router
+# Forge/server/app.py
+from forge.server.routes.my_feature_v2 import app as my_feature_v2_router
 
 app.include_router(my_feature_v2_router, tags=["v2", "my-feature"])
 ```
@@ -345,7 +345,7 @@ version = get_api_version_from_path(path)  # → None (safe)
 After launch, update swagger to show versions:
 
 ```python
-# openhands/server/app.py
+# Forge/server/app.py
 app = FastAPI(
     title="Forge API",
     description="Multi-version API with backward compatibility",

@@ -1,5 +1,5 @@
 import json
-from openhands.core.pydantic_compat import model_dump_json, model_dump_with_options, model_to_dict
+from forge.core.pydantic_compat import model_dump_json, model_dump_with_options, model_to_dict
 
 
 class V2Like:

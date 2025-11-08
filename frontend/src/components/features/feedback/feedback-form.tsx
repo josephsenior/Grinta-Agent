@@ -2,7 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import safeToast from "#/utils/safe-hot-toast";
 import { I18nKey } from "#/i18n/declaration";
-import { Feedback } from "#/api/open-hands.types";
+import { Feedback } from "#/api/forge.types";
 import { useSubmitFeedback } from "#/hooks/mutation/use-submit-feedback";
 import { BrandButton } from "../settings/brand-button";
 

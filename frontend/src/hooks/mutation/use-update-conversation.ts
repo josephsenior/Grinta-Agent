@@ -1,12 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 
 export const useUpdateConversation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (variables: { conversationId: string; newTitle: string }) =>
-      OpenHands.updateConversation(variables.conversationId, {
+      Forge.updateConversation(variables.conversationId, {
         title: variables.newTitle,
       }),
     onMutate: async (variables) => {

@@ -1,4 +1,4 @@
-# ScienceAgentBench Evaluation with OpenHands
+# ScienceAgentBench Evaluation with Forge
 
 This folder contains the evaluation harness for [ScienceAgentBench](https://osu-nlp-group.github.io/ScienceAgentBench/) (paper: <https://arxiv.org/abs/2410.05080>).
 
@@ -23,7 +23,7 @@ where `model_config` is mandatory, and the rest are optional.
 
 - `model_config`, e.g. `eval_gpt4_1106_preview`, is the config group name for your
   LLM settings, as defined in your `config.toml`.
-- `git-version`, e.g. `HEAD`, is the git commit hash of the OpenHands version you would
+- `git-version`, e.g. `HEAD`, is the git commit hash of the Forge version you would
   like to evaluate. It could also be a release tag like `0.6.2`.
 - `use_knowledge`, e.g. `true`, specifies whether allowing the agent to use expert-provided knowledge as additional input or not. By default, it is set to `false`.
 - `agent`, e.g. `CodeActAgent`, is the name of the agent for benchmarks, defaulting
@@ -38,7 +38,7 @@ where `model_config` is mandatory, and the rest are optional.
 
 ## Evaluate Generated Programs
 
-### Extract Necessary Information from OpenHands Log
+### Extract Necessary Information from forge Log
 
 After the inference is completed, you may use the following command to extract necessary information from the output log for evaluation:
 
@@ -46,7 +46,7 @@ After the inference is completed, you may use the following command to extract n
 python post_proc.py [log_fname]
 ```
 
-- `log_fname`, e.g. `evaluation/.../output.jsonl`, is the automatically saved trajectory log of an OpenHands agent.
+- `log_fname`, e.g. `evaluation/.../output.jsonl`, is the automatically saved trajectory log of an Forge agent.
 
 Output will be write to e.g. `evaluation/.../output.converted.jsonl`
 

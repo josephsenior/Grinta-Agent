@@ -1,7 +1,7 @@
 import gc
 from datetime import datetime
 import psutil
-from openhands.io.json import dumps
+from forge.io.json import dumps
 
 
 def get_memory_usage():

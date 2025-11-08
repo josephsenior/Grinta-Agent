@@ -7,7 +7,7 @@ from glob import glob
 from tqdm import tqdm
 
 tqdm.pandas()
-logger = logging.getLogger("openhands.eval.swe_bench.combine_final_completions")
+logger = logging.getLogger("forge.eval.swe_bench.combine_final_completions")
 
 
 def load_completions(output_dir: str, instance_id: str):

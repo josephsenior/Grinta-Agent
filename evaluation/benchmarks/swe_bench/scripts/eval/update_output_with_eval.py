@@ -18,7 +18,7 @@ instance_id_to_status = defaultdict(
     }
 )
 swebench_official_report_json = os.path.join(dirname, "report.json")
-openhands_remote_report_jsonl = args.input_file.replace(".jsonl", ".swebench_eval.jsonl")
+FORGE_remote_report_jsonl = args.input_file.replace(".jsonl", ".swebench_eval.jsonl")
 if os.path.exists(swebench_official_report_json):
     output_md_filepath = os.path.join(dirname, "README.md")
     with open(swebench_official_report_json, "r", encoding='utf-8') as f:
@@ -51,7 +51,7 @@ if os.path.exists(swebench_official_report_json):
         output_md += f"- [{instance_id}](./eval_outputs/{instance_id}/run_instance.log)\n"
     with open(output_md_filepath, "w", encoding='utf-8') as f:
         f.write(output_md)
-elif os.path.exists(openhands_remote_report_jsonl):
+elif os.path.exists(FORGE_remote_report_jsonl):
     output_md_filepath = args.input_file.replace(".jsonl", ".swebench_eval.md")
     instance_ids = set()
     eval_instance_ids = set()
@@ -63,7 +63,7 @@ elif os.path.exists(openhands_remote_report_jsonl):
             n_instances += 1
     print(f"Total instances in original file: {n_instances}")
     n_eval_instances = 0
-    with open(openhands_remote_report_jsonl, "r", encoding='utf-8') as f:
+    with open(FORGE_remote_report_jsonl, "r", encoding='utf-8') as f:
         for line in tqdm(f, desc="Processing eval report"):
             data = json.loads(line)
             instance_id = data["instance_id"]
@@ -130,7 +130,7 @@ elif os.path.exists(openhands_remote_report_jsonl):
         f.write(output_md)
 else:
     print(
-        f"No report file found: Both {swebench_official_report_json} and {openhands_remote_report_jsonl} do not exist."
+        f"No report file found: Both {swebench_official_report_json} and {FORGE_remote_report_jsonl} do not exist."
     )
 exit()
 needs_update = False

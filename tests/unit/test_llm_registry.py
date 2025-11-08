@@ -1,9 +1,9 @@
 from __future__ import annotations
 import unittest
 from unittest.mock import MagicMock, patch
-from openhands.core.config.llm_config import LLMConfig
-from openhands.core.config.openhands_config import OpenHandsConfig
-from openhands.llm.llm_registry import LLMRegistry, RegistryEvent
+from forge.core.config.llm_config import LLMConfig
+from forge.core.config.forge_config import ForgeConfig
+from forge.llm.llm_registry import LLMRegistry, RegistryEvent
 
 
 class TestLLMRegistry(unittest.TestCase):
@@ -11,7 +11,7 @@ class TestLLMRegistry(unittest.TestCase):
     def setUp(self):
         """Set up test environment before each test."""
         self.llm_config = LLMConfig(model="test-model")
-        self.config = OpenHandsConfig(llms={"llm": self.llm_config}, default_agent="CodeActAgent")
+        self.config = ForgeConfig(llms={"llm": self.llm_config}, default_agent="CodeActAgent")
         self.registry = LLMRegistry(config=self.config)
 
     def test_get_llm_creates_new_llm(self):

@@ -10,24 +10,24 @@ class TestCircularImports(unittest.TestCase):
         """Test that there are no circular imports in key modules that were previously problematic.
 
         This test specifically checks the modules that were involved in a previous circular import issue:
-        - openhands.utils.prompt
-        - openhands.agenthub.codeact_agent.tools.bash
-        - openhands.agenthub.codeact_agent.tools.prompt
-        - openhands.memory.memory
-        - openhands.memory.conversation_memory
+        - forge.utils.prompt
+        - forge.agenthub.codeact_agent.tools.bash
+        - forge.agenthub.codeact_agent.tools.prompt
+        - forge.memory.memory
+        - forge.memory.conversation_memory
         """
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
         module_paths = {
-            "openhands.utils.prompt": os.path.join(project_root, "openhands/utils/prompt.py"),
-            "openhands.agenthub.codeact_agent.tools.bash": os.path.join(
-                project_root, "openhands/agenthub/codeact_agent/tools/bash.py"
+            "forge.utils.prompt": os.path.join(project_root, "Forge/utils/prompt.py"),
+            "forge.agenthub.codeact_agent.tools.bash": os.path.join(
+                project_root, "Forge/agenthub/codeact_agent/tools/bash.py"
             ),
-            "openhands.agenthub.codeact_agent.tools.prompt": os.path.join(
-                project_root, "openhands/agenthub/codeact_agent/tools/prompt.py"
+            "forge.agenthub.codeact_agent.tools.prompt": os.path.join(
+                project_root, "Forge/agenthub/codeact_agent/tools/prompt.py"
             ),
-            "openhands.memory.memory": os.path.join(project_root, "openhands/memory/memory.py"),
-            "openhands.memory.conversation_memory": os.path.join(
-                project_root, "openhands/memory/conversation_memory.py"
+            "forge.memory.memory": os.path.join(project_root, "Forge/memory/memory.py"),
+            "forge.memory.conversation_memory": os.path.join(
+                project_root, "Forge/memory/conversation_memory.py"
             ),
         }
         if circular_imports := self._find_circular_imports(module_paths):
@@ -61,11 +61,11 @@ class TestCircularImports(unittest.TestCase):
                         parts = line[7:].split(",")
                         for part in parts:
                             module_part = part.strip().split(" as ")[0].strip()
-                            if module_part.startswith("openhands."):
+                            if module_part.startswith("forge."):
                                 imported_modules.append(module_part)
                     elif line.startswith("from "):
                         module_part = line[5:].split(" import ")[0].strip()
-                        if module_part.startswith("openhands."):
+                        if module_part.startswith("forge."):
                             imported_modules.append(module_part)
                 module_imports[module_name] = imported_modules
         circular_imports = []
@@ -83,14 +83,14 @@ class TestCircularImports(unittest.TestCase):
         """Test for the specific circular import pattern that caused the issue in the stack trace.
 
         The problematic pattern was:
-        openhands.utils.prompt imports from openhands.agenthub.codeact_agent.tools.bash
-        openhands.agenthub.codeact_agent.tools.bash imports from openhands.agenthub.codeact_agent.tools.prompt
-        openhands.agenthub.codeact_agent.tools.prompt imports from openhands.utils.prompt
+        forge.utils.prompt imports from forge.agenthub.codeact_agent.tools.bash
+        forge.agenthub.codeact_agent.tools.bash imports from forge.agenthub.codeact_agent.tools.prompt
+        forge.agenthub.codeact_agent.tools.prompt imports from forge.utils.prompt
         """
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-        prompt_path = os.path.join(project_root, "openhands/utils/prompt.py")
-        bash_path = os.path.join(project_root, "openhands/agenthub/codeact_agent/tools/bash.py")
-        tools_prompt_path = os.path.join(project_root, "openhands/agenthub/codeact_agent/tools/prompt.py")
+        prompt_path = os.path.join(project_root, "Forge/utils/prompt.py")
+        bash_path = os.path.join(project_root, "Forge/agenthub/codeact_agent/tools/bash.py")
+        tools_prompt_path = os.path.join(project_root, "Forge/agenthub/codeact_agent/tools/prompt.py")
         if not all((os.path.exists(path) for path in [prompt_path, bash_path, tools_prompt_path])):
             self.skipTest("One or more required files do not exist")
         with open(prompt_path, "r", encoding='utf-8') as f:
@@ -100,38 +100,38 @@ class TestCircularImports(unittest.TestCase):
         with open(tools_prompt_path, "r", encoding='utf-8') as f:
             tools_prompt_code = f.read()
         prompt_imports_bash = (
-            re.search("from openhands\\.agenthub\\.codeact_agent\\.tools\\.bash import", prompt_code) is not None
+            re.search("from forge\\.agenthub\\.codeact_agent\\.tools\\.bash import", prompt_code) is not None
         )
         bash_imports_tools_prompt = (
-            re.search("from openhands\\.agenthub\\.codeact_agent\\.tools\\.prompt import", bash_code) is not None
+            re.search("from forge\\.agenthub\\.codeact_agent\\.tools\\.prompt import", bash_code) is not None
         )
-        tools_prompt_imports_prompt = re.search("from openhands\\.utils\\.prompt import", tools_prompt_code) is not None
+        tools_prompt_imports_prompt = re.search("from forge\\.utils\\.prompt import", tools_prompt_code) is not None
         if prompt_imports_bash and bash_imports_tools_prompt and tools_prompt_imports_prompt:
             self.fail(
-                "Circular import pattern detected:\nopenhands.utils.prompt imports from openhands.agenthub.codeact_agent.tools.bash\nopenhands.agenthub.codeact_agent.tools.bash imports from openhands.agenthub.codeact_agent.tools.prompt\nopenhands.agenthub.codeact_agent.tools.prompt imports from openhands.utils.prompt"
+                "Circular import pattern detected:\nforge.utils.prompt imports from forge.agenthub.codeact_agent.tools.bash\nforge.agenthub.codeact_agent.tools.bash imports from forge.agenthub.codeact_agent.tools.prompt\nforge.agenthub.codeact_agent.tools.prompt imports from forge.utils.prompt"
             )
 
     def test_detect_circular_imports_in_server_modules(self):
         """Test for circular imports in the server modules that were involved in the stack trace.
 
         The problematic modules were:
-        - openhands.server.shared
-        - openhands.server.conversation_manager.conversation_manager
-        - openhands.server.session.agent_session
-        - openhands.server.session
-        - openhands.server.session.session
+        - forge.server.shared
+        - forge.server.conversation_manager.conversation_manager
+        - forge.server.session.agent_session
+        - forge.server.session
+        - forge.server.session.session
         """
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
         module_paths = {
-            "openhands.server.shared": os.path.join(project_root, "openhands/server/shared.py"),
-            "openhands.server.conversation_manager.conversation_manager": os.path.join(
-                project_root, "openhands/server/conversation_manager/conversation_manager.py"
+            "forge.server.shared": os.path.join(project_root, "Forge/server/shared.py"),
+            "forge.server.conversation_manager.conversation_manager": os.path.join(
+                project_root, "Forge/server/conversation_manager/conversation_manager.py"
             ),
-            "openhands.server.session.agent_session": os.path.join(
-                project_root, "openhands/server/session/agent_session.py"
+            "forge.server.session.agent_session": os.path.join(
+                project_root, "Forge/server/session/agent_session.py"
             ),
-            "openhands.server.session.__init__": os.path.join(project_root, "openhands/server/session/__init__.py"),
-            "openhands.server.session.session": os.path.join(project_root, "openhands/server/session/session.py"),
+            "forge.server.session.__init__": os.path.join(project_root, "Forge/server/session/__init__.py"),
+            "forge.server.session.session": os.path.join(project_root, "Forge/server/session/session.py"),
         }
         if circular_imports := self._find_circular_imports(module_paths):
             circular_import_str = "\n".join(
@@ -143,15 +143,15 @@ class TestCircularImports(unittest.TestCase):
         """Test for circular imports in the MCP modules that were involved in the stack trace.
 
         The problematic modules were:
-        - openhands.mcp
-        - openhands.mcp.utils
-        - openhands.memory.memory
+        - forge.mcp
+        - forge.mcp.utils
+        - forge.memory.memory
         """
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
         module_paths = {
-            "openhands.mcp.__init__": os.path.join(project_root, "openhands/mcp/__init__.py"),
-            "openhands.mcp.utils": os.path.join(project_root, "openhands/mcp/utils.py"),
-            "openhands.memory.memory": os.path.join(project_root, "openhands/memory/memory.py"),
+            "forge.mcp.__init__": os.path.join(project_root, "Forge/mcp/__init__.py"),
+            "forge.mcp.utils": os.path.join(project_root, "Forge/mcp/utils.py"),
+            "forge.memory.memory": os.path.join(project_root, "Forge/memory/memory.py"),
         }
         if circular_imports := self._find_circular_imports(module_paths):
             circular_import_str = "\n".join(
@@ -181,18 +181,18 @@ class TestCircularImports(unittest.TestCase):
     def _get_test_modules(self):
         """Get the list of modules to test."""
         return [
-            "openhands.utils.prompt",
-            "openhands.agenthub.codeact_agent.tools.bash",
-            "openhands.agenthub.codeact_agent.tools.prompt",
-            "openhands.memory.memory",
-            "openhands.memory.conversation_memory",
-            "openhands.server.shared",
-            "openhands.server.conversation_manager.conversation_manager",
-            "openhands.server.session.agent_session",
-            "openhands.server.session.__init__",
-            "openhands.server.session.session",
-            "openhands.mcp.__init__",
-            "openhands.mcp.utils",
+            "forge.utils.prompt",
+            "forge.agenthub.codeact_agent.tools.bash",
+            "forge.agenthub.codeact_agent.tools.prompt",
+            "forge.memory.memory",
+            "forge.memory.conversation_memory",
+            "forge.server.shared",
+            "forge.server.conversation_manager.conversation_manager",
+            "forge.server.session.agent_session",
+            "forge.server.session.__init__",
+            "forge.server.session.session",
+            "forge.mcp.__init__",
+            "forge.mcp.utils",
         ]
 
     def _build_module_paths(self, project_root, modules):
@@ -251,14 +251,14 @@ class TestCircularImports(unittest.TestCase):
         imported_modules = []
         for part in parts:
             module_part = part.strip().split(" as ")[0].strip()
-            if module_part.startswith("openhands."):
+            if module_part.startswith("forge."):
                 imported_modules.append(module_part)
         return imported_modules
 
     def _parse_from_statement(self, line):
         """Parse a from statement."""
         module_part = line[5:].split(" import ")[0].strip()
-        return [module_part] if module_part.startswith("openhands.") else []
+        return [module_part] if module_part.startswith("forge.") else []
 
     def _find_circular_chains(self, import_graph: dict[str, list[str]]) -> list[list[str]]:
         """Find circular import chains in the import graph.

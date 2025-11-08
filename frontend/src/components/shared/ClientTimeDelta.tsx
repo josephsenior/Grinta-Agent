@@ -1,4 +1,5 @@
 import React from "react";
+import { formatTimeDelta } from "#/utils/format-time-delta";
 
 interface ClientTimeDeltaProps {
   dateIso: string | Date | null | undefined;
@@ -18,27 +19,24 @@ export function ClientTimeDelta({ dateIso, className }: ClientTimeDeltaProps) {
       };
     }
 
-    const d = typeof dateIso === "string" ? new Date(dateIso) : dateIso;
-    if (!d || Number.isNaN(d.getTime())) {
+    const parsedDate = typeof dateIso === "string" ? new Date(dateIso) : dateIso;
+    if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
       setLabel(String(dateIso));
       return () => {
         /* no-op cleanup */
       };
     }
 
-    const update = () => {
-      const now = new Date();
-      const diff = now.getTime() - d.getTime();
-      const seconds = Math.floor(diff / 1000);
-      const minutes = Math.floor(seconds / 60);
-      const hours = Math.floor(minutes / 60);
-      const days = Math.floor(hours / 24);
+    const calculateLabel = (targetDate: Date) => {
+      const diff = Date.now() - targetDate.getTime();
+      if (diff < 60_000) {
+        return "Just now";
+      }
+      return formatTimeDelta(targetDate);
+    };
 
-      if (seconds < 60) setLabel("Just now");
-      else if (minutes < 60) setLabel(`${minutes}m ago`);
-      else if (hours < 24) setLabel(`${hours}h ago`);
-      else if (days < 7) setLabel(`${days}d ago`);
-      else setLabel(d.toLocaleDateString());
+    const update = () => {
+      setLabel(calculateLabel(parsedDate));
     };
 
     update();

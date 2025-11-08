@@ -29,7 +29,7 @@ npx react-router dev
 
 Output (error observed):
 
-failed to load config from C:\Users\youse\Bureau\Joseph\OpenHands\frontend\repro-react-router-plugin\vite.config.ts
+failed to load config from C:\Users\youse\Bureau\Joseph\Forge\frontend\repro-react-router-plugin\vite.config.ts
 SyntaxError: The requested module 'react-router' does not provide an export named 'createRequestHandler'
 at ModuleJobSync.runSync (node:internal/modules/esm/module_job:384:37)
 at ModuleLoader.importSyncForRequire (node:internal/modules/esm/module_job:329:47)

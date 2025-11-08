@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://forge.ai/metasop/manifest_v1.json",
+  "title": "MetaSOP Run Manifest",
+  "type": "object",
+  "required": [
+    "version",
+    "run_id",
+    "sop",
+    "timestamp",
+    "steps",
+    "provenance",
+    "efficiency",
+    "manifest_hash"
+  ],
+  "properties": {
+    "version": { "type": "integer", "enum": [1] },
+    "run_id": { "type": "string" },
+    "sop": { "type": "string" },
+    "timestamp": { "type": "integer", "minimum": 0 },
+    "environment_signature": { "type": ["string", "null"] },
+    "environment": { "type": ["object", "null"] },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["step_id", "role", "status"],
+        "properties": {
+          "step_id": { "type": "string" },
+          "role": { "type": "string" },
+          "status": { "type": "string" },
+          "artifact_hash": { "type": ["string", "null"] },
+          "step_hash": { "type": ["string", "null"] },
+          "retries": { "type": ["integer", "null"], "minimum": 0 },
+          "duration_ms": { "type": ["integer", "null"], "minimum": 0 },
+          "failure_type": { "type": ["string", "null"] },
+          "remediation": { "type": ["object", "string", "null"] },
+          "verification_result": { "type": ["object", "null"] },
+          "attempts": { "type": ["array", "null"] },
+          "retry_summary": { "type": ["object", "null"] }
+        },
+        "additionalProperties": true
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["chain_root", "final_step_hash", "all_step_hashes"],
+      "properties": {
+        "chain_root": { "type": ["string", "null"] },
+        "final_step_hash": { "type": ["string", "null"] },
+        "all_step_hashes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "efficiency": {
+      "type": "object",
+      "properties": {
+        "total_tokens": { "type": ["integer", "null"], "minimum": 0 },
+        "executed_steps": { "type": ["integer", "null"], "minimum": 0 },
+        "tokens_per_successful_step": { "type": ["number", "null"], "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "memory_stats": { "type": ["object", "null"] },
+    "retrieval": { "type": ["array", "null"] },
+    "manifest_hash": { "type": "string" }
+  },
+  "additionalProperties": true
+}

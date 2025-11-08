@@ -13,20 +13,20 @@ The tests verify that the condenser:
 
 from unittest.mock import patch
 import pytest
-from openhands.events import EventSource
-from openhands.events.action import CmdRunAction, MessageAction, RecallAction
-from openhands.events.action.agent import CondensationAction
-from openhands.events.action.message import SystemMessageAction
-from openhands.events.event import RecallType
-from openhands.events.observation import CmdOutputObservation, RecallObservation
-from openhands.memory.condenser.condenser import Condensation, View
-from openhands.memory.condenser.impl.conversation_window_condenser import ConversationWindowCondenser
+from forge.events import EventSource
+from forge.events.action import CmdRunAction, MessageAction, RecallAction
+from forge.events.action.agent import CondensationAction
+from forge.events.action.message import SystemMessageAction
+from forge.events.event import RecallType
+from forge.events.observation import CmdOutputObservation, RecallObservation
+from forge.memory.condenser.condenser import Condensation, View
+from forge.memory.condenser.impl.conversation_window_condenser import ConversationWindowCondenser
 
 
 def create_events(event_data):
     events = []
-    from openhands.events.action import CmdRunAction, RecallAction
-    from openhands.events.observation import CmdOutputObservation, RecallObservation
+    from forge.events.action import CmdRunAction, RecallAction
+    from forge.events.observation import CmdOutputObservation, RecallObservation
 
     for i, data in enumerate(event_data):
         event_type = data["type"]
@@ -223,7 +223,7 @@ def test_only_dangling_observations_in_recent_slice(condenser_fixture):
         ]
     )
     view = View(events=events)
-    with patch("openhands.memory.condenser.impl.conversation_window_condenser.logger.warning") as mock_log_warning:
+    with patch("forge.memory.condenser.impl.conversation_window_condenser.logger.warning") as mock_log_warning:
         condensation = condenser.get_condensation(view)
         assert isinstance(condensation, Condensation)
         assert isinstance(condensation.action, CondensationAction)

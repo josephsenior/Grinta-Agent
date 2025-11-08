@@ -182,7 +182,7 @@ export const getPRShort = (isGitLab: boolean) => (isGitLab ? "MR" : "PR");
  * constructPullRequestUrl(789, "bitbucket", "owner/repo") // "https://bitbucket.org/owner/repo/pull-requests/789"
  */
 export const constructPullRequestUrl = (
-  prNumber: number,
+  prNumber: number | string,
   provider: Provider,
   repositoryName: string,
 ): string => {
@@ -208,12 +208,12 @@ export const constructPullRequestUrl = (
  * @returns The URL to the microagent file in the Git provider
  *
  * @example
- * constructMicroagentUrl("github", "owner/repo", ".openhands/microagents/tell-me-a-joke.md")
- * // "https://github.com/owner/repo/blob/main/.openhands/microagents/tell-me-a-joke.md"
+ * constructMicroagentUrl("github", "owner/repo", ".Forge/microagents/tell-me-a-joke.md")
+ * // "https://github.com/owner/repo/blob/main/.Forge/microagents/tell-me-a-joke.md"
  * constructMicroagentUrl("gitlab", "owner/repo", "microagents/git-helper.md")
  * // "https://gitlab.com/owner/repo/-/blob/main/microagents/git-helper.md"
- * constructMicroagentUrl("bitbucket", "owner/repo", ".openhands/microagents/docker-helper.md")
- * // "https://bitbucket.org/owner/repo/src/main/.openhands/microagents/docker-helper.md"
+ * constructMicroagentUrl("bitbucket", "owner/repo", ".Forge/microagents/docker-helper.md")
+ * // "https://bitbucket.org/owner/repo/src/main/.Forge/microagents/docker-helper.md"
  */
 export const constructMicroagentUrl = (
   gitProvider: Provider,
@@ -267,7 +267,7 @@ export const getRepoMdCreatePrompt = (
   const pr = getPR(gitProvider === "gitlab");
   const prShort = getPRShort(gitProvider === "gitlab");
 
-  return `Please explore this repository. Create the file .openhands/microagents/repo.md with:
+  return `Please explore this repository. Create the file .Forge/microagents/repo.md with:
             ${
               query
                 ? `- ${query}`

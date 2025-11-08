@@ -4,9 +4,9 @@ import os
 import re
 import pytest
 from conftest import _close_test_runtime, _load_runtime
-from openhands.core.logger import openhands_logger as logger
-from openhands.events.action import BrowseInteractiveAction, BrowseURLAction, CmdRunAction
-from openhands.events.observation import (
+from forge.core.logger import forge_logger as logger
+from forge.events.action import BrowseInteractiveAction, BrowseURLAction, CmdRunAction
+from forge.events.observation import (
     BrowserOutputObservation,
     CmdOutputObservation,
     ErrorObservation,
@@ -84,8 +84,8 @@ def find_element_by_tag_and_attributes(axtree_elements: dict[str, str], tag: str
     return None
 
 
-def test_browser_disabled(temp_dir, runtime_cls, run_as_openhands):
-    runtime, _ = _load_runtime(temp_dir, runtime_cls, run_as_openhands, enable_browser=False)
+def test_browser_disabled(temp_dir, runtime_cls, run_as_Forge):
+    runtime, _ = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=False)
     action_cmd = CmdRunAction(command="python3 -m http.server 8000 > server.log 2>&1 &")
     logger.info(action_cmd, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_cmd)
@@ -99,8 +99,8 @@ def test_browser_disabled(temp_dir, runtime_cls, run_as_openhands):
     _close_test_runtime(runtime)
 
 
-def test_simple_browse(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands, enable_browser=True)
+def test_simple_browse(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
     action_cmd = CmdRunAction(command="python3 -m http.server 8000 > server.log 2>&1 &")
     logger.info(action_cmd, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_cmd)
@@ -239,9 +239,9 @@ def _test_go_forward(runtime):
     return obs
 
 
-def test_browser_navigation_actions(temp_dir, runtime_cls, run_as_openhands):
+def test_browser_navigation_actions(temp_dir, runtime_cls, run_as_Forge):
     """Test browser navigation actions: goto, go_back, go_forward, noop."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands, enable_browser=True)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
     try:
         # Create test pages
         page1_path, page2_path = _create_navigation_test_pages(temp_dir)
@@ -448,9 +448,9 @@ def _cleanup_test_server(runtime):
     return obs
 
 
-def test_browser_form_interactions(temp_dir, runtime_cls, run_as_openhands):
+def test_browser_form_interactions(temp_dir, runtime_cls, run_as_Forge):
     """Test browser form interaction actions: fill, click, select_option, clear."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands, enable_browser=True)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
     try:
         # Create test form file
         form_path = _create_test_form_file(temp_dir)
@@ -631,9 +631,9 @@ def _test_multiple_actions_sequence(runtime):
     return obs
 
 
-def test_browser_interactive_actions(temp_dir, runtime_cls, run_as_openhands):
+def test_browser_interactive_actions(temp_dir, runtime_cls, run_as_Forge):
     """Test browser interactive actions: scroll, hover, fill, press, focus."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands, enable_browser=True)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
     try:
         # Create scroll test page
         scroll_path = _create_scroll_test_page(temp_dir)
@@ -825,9 +825,9 @@ def _cleanup_server(runtime):
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
 
 
-def test_browser_file_upload(temp_dir, runtime_cls, run_as_openhands):
+def test_browser_file_upload(temp_dir, runtime_cls, run_as_Forge):
     """Test browser file upload action."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands, enable_browser=True)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
     try:
         # Create test files
         test_file_path, upload_path = _create_test_files(temp_dir)
@@ -855,8 +855,8 @@ def test_browser_file_upload(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_read_pdf_browse(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands, enable_browser=True)
+def test_read_pdf_browse(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
     try:
         from reportlab.lib.pagesizes import letter
         from reportlab.pdfgen import canvas
@@ -906,8 +906,8 @@ def test_read_pdf_browse(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_read_png_browse(temp_dir, runtime_cls, run_as_openhands):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands, enable_browser=True)
+def test_read_png_browse(temp_dir, runtime_cls, run_as_Forge):
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
     try:
         from PIL import Image, ImageDraw
 
@@ -954,9 +954,9 @@ def test_read_png_browse(temp_dir, runtime_cls, run_as_openhands):
         _close_test_runtime(runtime)
 
 
-def test_download_file(temp_dir, runtime_cls, run_as_openhands):
+def test_download_file(temp_dir, runtime_cls, run_as_Forge):
     """Test downloading a file using the browser."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_openhands, enable_browser=True)
+    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
 
     try:
         # Setup test files

@@ -11,7 +11,7 @@ export function MicroagentManagementDefault() {
       </div>
       <div className="text-white text-sm font-normal text-center max-w-[455px]">
         {t(
-          I18nKey.MICROAGENT_MANAGEMENT$OPENHANDS_CAN_LEARN_ABOUT_REPOSITORIES,
+          I18nKey.MICROAGENT_MANAGEMENT$Forge_CAN_LEARN_ABOUT_REPOSITORIES,
         )}
       </div>
     </div>

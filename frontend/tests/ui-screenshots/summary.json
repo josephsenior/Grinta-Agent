@@ -2,31 +2,31 @@
   {
     "route": "/",
     "url": "http://localhost:3002/",
-    "screenshot": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\landing.png",
-    "domJson": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\landing-dom.json"
+    "screenshot": "C:\\Users\\youse\\Bureau\\Joseph\\Forge\\frontend\\tests\\ui-screenshots\\landing.png",
+    "domJson": "C:\\Users\\youse\\Bureau\\Joseph\\Forge\\frontend\\tests\\ui-screenshots\\landing-dom.json"
   },
   {
     "route": "/conversations",
     "url": "http://localhost:3002/conversations",
-    "screenshot": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\conversations-list.png",
-    "domJson": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\conversations-list-dom.json"
+    "screenshot": "C:\\Users\\youse\\Bureau\\Joseph\\Forge\\frontend\\tests\\ui-screenshots\\conversations-list.png",
+    "domJson": "C:\\Users\\youse\\Bureau\\Joseph\\Forge\\frontend\\tests\\ui-screenshots\\conversations-list-dom.json"
   },
   {
     "route": "/conversations/1",
     "url": "http://localhost:3002/conversations/1",
-    "screenshot": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\chat-1.png",
-    "domJson": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\chat-1-dom.json"
+    "screenshot": "C:\\Users\\youse\\Bureau\\Joseph\\Forge\\frontend\\tests\\ui-screenshots\\chat-1.png",
+    "domJson": "C:\\Users\\youse\\Bureau\\Joseph\\Forge\\frontend\\tests\\ui-screenshots\\chat-1-dom.json"
   },
   {
     "route": "/settings",
     "url": "http://localhost:3002/settings",
-    "screenshot": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\settings.png",
-    "domJson": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\settings-dom.json"
+    "screenshot": "C:\\Users\\youse\\Bureau\\Joseph\\Forge\\frontend\\tests\\ui-screenshots\\settings.png",
+    "domJson": "C:\\Users\\youse\\Bureau\\Joseph\\Forge\\frontend\\tests\\ui-screenshots\\settings-dom.json"
   },
   {
     "route": "/about",
     "url": "http://localhost:3002/about",
-    "screenshot": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\about.png",
-    "domJson": "C:\\Users\\youse\\Bureau\\Joseph\\OpenHands\\frontend\\tests\\ui-screenshots\\about-dom.json"
+    "screenshot": "C:\\Users\\youse\\Bureau\\Joseph\\Forge\\frontend\\tests\\ui-screenshots\\about.png",
+    "domJson": "C:\\Users\\youse\\Bureau\\Joseph\\Forge\\frontend\\tests\\ui-screenshots\\about-dom.json"
   }
 ]

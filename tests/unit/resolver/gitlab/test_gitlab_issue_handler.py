@@ -1,8 +1,8 @@
 from unittest.mock import MagicMock, patch
-from openhands.core.config import LLMConfig
-from openhands.resolver.interfaces.gitlab import GitlabIssueHandler, GitlabPRHandler
-from openhands.resolver.interfaces.issue import ReviewThread
-from openhands.resolver.interfaces.issue_definitions import ServiceContextIssue, ServiceContextPR
+from forge.core.config import LLMConfig
+from forge.resolver.interfaces.gitlab import GitlabIssueHandler, GitlabPRHandler
+from forge.resolver.interfaces.issue import ReviewThread
+from forge.resolver.interfaces.issue_definitions import ServiceContextIssue, ServiceContextPR
 
 
 def test_get_converted_issues_initializes_review_comments():
@@ -380,3 +380,116 @@ def test_pr_handler_get_converted_issues_with_duplicate_issue_refs():
             assert prs[0].repo == "test-repo"
             assert prs[0].head_branch == "test-branch"
             assert prs[0].closing_issues == ["External context #1.", "External context #2."]
+
+
+def test_pr_handler_filters_gitlab_threads_without_matching_comment_id():
+    issue_payload = {
+        "iid": 1,
+        "title": "Test MR",
+        "description": "Test Body",
+        "source_branch": "test-branch",
+    }
+    discussions_payload = {
+        "data": {
+            "project": {
+                "mergeRequest": {
+                    "discussions": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "discussion-1",
+                                    "resolved": False,
+                                    "resolvable": True,
+                                    "notes": {
+                                        "nodes": [
+                                            {
+                                                "id": "gid://gitlab/DiffNote/999",
+                                                "body": "Unrelated note",
+                                                "position": {"filePath": "file.txt"},
+                                            }
+                                        ],
+                                    },
+                                }
+                            }
+                        ],
+                    },
+                }
+            }
+        }
+    }
+
+    with patch.object(GitlabPRHandler, "download_issues", return_value=[issue_payload]), patch.object(
+        GitlabPRHandler, "_fetch_closing_issues", return_value=([], []),
+    ), patch.object(
+        GitlabPRHandler, "_fetch_pr_discussions", return_value=discussions_payload,
+    ), patch.object(
+        GitlabPRHandler, "_fetch_comment_page", return_value=[],
+    ):
+        handler = ServiceContextPR(GitlabPRHandler("test-owner", "test-repo", "test-token"), LLMConfig(model="test"))
+        prs = handler.get_converted_issues(issue_numbers=[1], comment_id=123)
+        assert len(prs) == 1
+        assert prs[0].review_threads == []
+        assert prs[0].thread_ids == []
+
+
+def test_pr_handler_get_converted_issues_no_comment_id():
+    issue_payload = {
+        "iid": 1,
+        "title": "Test MR",
+        "description": "Test Body",
+        "source_branch": "test-branch",
+    }
+    discussions_payload = {
+        "data": {
+            "project": {
+                "mergeRequest": {
+                    "discussions": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "review-thread-1",
+                                    "resolved": False,
+                                    "resolvable": True,
+                                    "notes": {
+                                        "nodes": [
+                                            {
+                                                "id": "GID/121",
+                                                "body": "Specific review comment",
+                                                "position": {"filePath": "file1.txt"},
+                                            },
+                                            {
+                                                "id": "GID/456",
+                                                "body": "Another review comment",
+                                                "position": {"filePath": "file2.txt"},
+                                            },
+                                        ]
+                                    },
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+    comments_page = [
+        {"body": "Specific review comment", "resolvable": True, "system": False},
+        {"body": "Another review comment", "resolvable": True, "system": False},
+    ]
+
+    with patch.object(GitlabPRHandler, "download_issues", return_value=[issue_payload]), patch.object(
+        GitlabPRHandler, "_fetch_closing_issues", return_value=([], []),
+    ), patch.object(
+        GitlabPRHandler, "_fetch_pr_discussions", return_value=discussions_payload,
+    ), patch.object(
+        GitlabPRHandler, "_fetch_comment_page", side_effect=[comments_page, []],
+    ):
+        llm_config = LLMConfig(model="test", api_key="test")
+        handler = ServiceContextPR(GitlabPRHandler("test-owner", "test-repo", "test-token"), llm_config)
+        prs = handler.get_converted_issues(issue_numbers=[1])
+        assert len(prs) == 1
+        assert prs[0].thread_comments == ["Specific review comment", "Another review comment"]
+        assert len(prs[0].review_threads) == 1
+        assert isinstance(prs[0].review_threads[0], ReviewThread)
+        assert prs[0].review_threads[0].comment == "Specific review comment\n---\nlatest feedback:\nAnother review comment\n"
+        assert prs[0].review_threads[0].files == ["file1.txt", "file2.txt"]

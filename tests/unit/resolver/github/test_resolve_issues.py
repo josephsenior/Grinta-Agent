@@ -3,16 +3,16 @@ import subprocess
 import tempfile
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-from openhands.core.config import LLMConfig
-from openhands.events.action import CmdRunAction, MessageAction
-from openhands.events.observation import CmdOutputMetadata, CmdOutputObservation, NullObservation
-from openhands.integrations.service_types import ProviderType
-from openhands.llm.llm import LLM
-from openhands.resolver.interfaces.github import GithubIssueHandler, GithubPRHandler
-from openhands.resolver.interfaces.issue import Issue, ReviewThread
-from openhands.resolver.interfaces.issue_definitions import ServiceContextIssue, ServiceContextPR
-from openhands.resolver.issue_resolver import IssueResolver
-from openhands.resolver.resolver_output import ResolverOutput
+from forge.core.config import LLMConfig
+from forge.events.action import CmdRunAction, MessageAction
+from forge.events.observation import CmdOutputMetadata, CmdOutputObservation, NullObservation
+from forge.integrations.service_types import ProviderType
+from forge.llm.llm import LLM
+from forge.resolver.interfaces.github import GithubIssueHandler, GithubPRHandler
+from forge.resolver.interfaces.issue import Issue, ReviewThread
+from forge.resolver.interfaces.issue_definitions import ServiceContextIssue, ServiceContextPR
+from forge.resolver.issue_resolver import IssueResolver
+from forge.resolver.resolver_output import ResolverOutput
 
 
 @pytest.fixture
@@ -48,7 +48,7 @@ def mock_github_token():
 
     This eliminates the need for repeated patching in each test function.
     """
-    with patch("openhands.resolver.issue_resolver.identify_token", return_value=ProviderType.GITHUB) as patched:
+    with patch("forge.resolver.issue_resolver.identify_token", return_value=ProviderType.GITHUB) as patched:
         yield patched
 
 
@@ -58,6 +58,8 @@ def mock_output_dir():
         repo_path = os.path.join(temp_dir, "repo")
         os.makedirs(repo_path)
         subprocess.run(["git", "init", repo_path], check=True)
+        subprocess.run(["git", "-C", repo_path, "config", "user.email", "forge-tests@example.com"], check=True)
+        subprocess.run(["git", "-C", repo_path, "config", "user.name", "Forge Tests"], check=True)
         readme_path = os.path.join(repo_path, "README.md")
         with open(readme_path, "w", encoding='utf-8') as f:
             f.write("hello world")
@@ -346,8 +348,8 @@ async def test_process_issue(
         mock_run_controller.side_effect = test_case["run_controller_raises"]
     else:
         mock_run_controller.return_value = test_case["run_controller_return"]
-    with patch("openhands.resolver.issue_resolver.create_runtime", mock_create_runtime), patch(
-        "openhands.resolver.issue_resolver.run_controller", mock_run_controller
+    with patch("forge.resolver.issue_resolver.create_runtime", mock_create_runtime), patch(
+        "forge.resolver.issue_resolver.run_controller", mock_run_controller
     ), patch.object(resolver, "complete_runtime", return_value={"git_patch": "test patch"}), patch.object(
         resolver, "initialize_runtime"
     ) as mock_initialize_runtime:
@@ -425,9 +427,9 @@ def test_file_instruction():
         title="Test Issue",
         body="This is a test issue ![image](https://sampleimage.com/sample.png)",
     )
-    with open("openhands/resolver/prompts/resolve/basic.jinja", "r", encoding='utf-8') as f:
+    with open("Forge/resolver/prompts/resolve/basic.jinja", "r", encoding='utf-8') as f:
         prompt = f.read()
-    with open("openhands/resolver/prompts/resolve/basic-conversation-instructions.jinja", "r", encoding='utf-8') as f:
+    with open("Forge/resolver/prompts/resolve/basic-conversation-instructions.jinja", "r", encoding='utf-8') as f:
         conversation_instructions_template = f.read()
     mock_llm_config = LLMConfig(model="test_model", api_key="test_api_key")
     issue_handler = ServiceContextIssue(GithubIssueHandler("owner", "repo", "token"), mock_llm_config)
@@ -443,11 +445,11 @@ def test_file_instruction():
 
 def test_file_instruction_with_repo_instruction():
     issue = Issue(owner="test_owner", repo="test_repo", number=123, title="Test Issue", body="This is a test issue")
-    with open("openhands/resolver/prompts/resolve/basic.jinja", "r", encoding='utf-8') as f:
+    with open("Forge/resolver/prompts/resolve/basic.jinja", "r", encoding='utf-8') as f:
         prompt = f.read()
-    with open("openhands/resolver/prompts/resolve/basic-conversation-instructions.jinja", "r", encoding='utf-8') as f:
+    with open("Forge/resolver/prompts/resolve/basic-conversation-instructions.jinja", "r", encoding='utf-8') as f:
         conversation_instructions_prompt = f.read()
-    with open("openhands/resolver/prompts/repo_instructions/all-hands-ai___openhands-resolver.txt", "r", encoding='utf-8') as f:
+    with open("Forge/resolver/prompts/repo_instructions/all-hands-ai___Forge-resolver.txt", "r", encoding='utf-8') as f:
         repo_instruction = f.read()
     mock_llm_config = LLMConfig(model="test_model", api_key="test_api_key")
     issue_handler = ServiceContextIssue(GithubIssueHandler("owner", "repo", "token"), mock_llm_config)
@@ -458,7 +460,7 @@ def test_file_instruction_with_repo_instruction():
     assert "Resolve prompt for tests" in instruction
     assert "IMPORTANT: You should ONLY interact with the environment provided to you" in conversation_instructions
     assert "Some basic information about this repository:" in conversation_instructions
-    assert "This is a Python repo for openhands-resolver" in conversation_instructions
+    assert "This is a Python repo for Forge-resolver" in conversation_instructions
     assert conversation_instructions is not None
     assert issue_handler.issue_type == "issue"
     assert image_urls == []
@@ -518,9 +520,9 @@ def test_instruction_with_thread_comments():
         body="This is a test issue",
         thread_comments=["First comment", "Second comment", "latest feedback:\nPlease add tests"],
     )
-    with open("openhands/resolver/prompts/resolve/basic.jinja", "r", encoding='utf-8') as f:
+    with open("Forge/resolver/prompts/resolve/basic.jinja", "r", encoding='utf-8') as f:
         prompt = f.read()
-    with open("openhands/resolver/prompts/resolve/basic-conversation-instructions.jinja", "r", encoding='utf-8') as f:
+    with open("Forge/resolver/prompts/resolve/basic-conversation-instructions.jinja", "r", encoding='utf-8') as f:
         conversation_instructions_template = f.read()
     llm_config = LLMConfig(model="test", api_key="test")
     issue_handler = ServiceContextIssue(GithubIssueHandler("owner", "repo", "token"), llm_config)

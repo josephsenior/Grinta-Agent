@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import toml
 from datasets import load_dataset
-import openhands.agenthub
+import forge.agenthub
 from evaluation.benchmarks.testgeneval.constants import MAP_REPO_VERSION_TO_SPECS
 from evaluation.benchmarks.testgeneval.prompt import CODEACT_TESTGEN_PROMPT, CODEACT_TESTGEN_PROMPT_ITERATE
 from evaluation.benchmarks.testgeneval.utils import get_test_directives
@@ -20,7 +20,7 @@ from evaluation.utils.shared import (
     assert_and_raise,
     codeact_user_response,
     get_metrics,
-    get_openhands_config_for_eval,
+    get_FORGE_config_for_eval,
     is_fatal_evaluation_error,
     make_metadata,
     prepare_dataset,
@@ -28,15 +28,15 @@ from evaluation.utils.shared import (
     run_evaluation,
     update_llm_config_for_completions_logging,
 )
-from openhands.controller.state.state import State
-from openhands.core.config import AgentConfig, OpenHandsConfig, SandboxConfig, get_evaluation_parser, get_llm_config_arg
-from openhands.core.logger import openhands_logger as logger
-from openhands.core.main import create_runtime, run_controller
-from openhands.events.action import CmdRunAction, MessageAction
-from openhands.events.observation import CmdOutputObservation, ErrorObservation
-from openhands.events.serialization.event import event_to_dict
-from openhands.runtime.base import Runtime
-from openhands.utils.async_utils import call_async_from_sync
+from forge.controller.state.state import State
+from forge.core.config import AgentConfig, ForgeConfig, SandboxConfig, get_evaluation_parser, get_llm_config_arg
+from forge.core.logger import forge_logger as logger
+from forge.core.main import create_runtime, run_controller
+from forge.events.action import CmdRunAction, MessageAction
+from forge.events.observation import CmdOutputObservation, ErrorObservation
+from forge.events.serialization.event import event_to_dict
+from forge.runtime.base import Runtime
+from forge.utils.async_utils import call_async_from_sync
 
 RUN_WITH_BROWSING = os.environ.get("RUN_WITH_BROWSING", "false").lower() == "true"
 AGENT_CLS_TO_FAKE_USER_RESPONSE_FN = {"CodeActAgent": codeact_user_response}
@@ -81,10 +81,10 @@ def get_instance_docker_image(instance_id: str) -> str:
     return DOCKER_IMAGE_PREFIX.rstrip("/") + "/" + image_name
 
 
-def get_config(instance: pd.Series, metadata: EvalMetadata) -> OpenHandsConfig:
+def get_config(instance: pd.Series, metadata: EvalMetadata) -> ForgeConfig:
     base_container_image = get_instance_docker_image(instance["instance_id_swebench"])
     logger.info(
-        "Using instance container image: %s. Please make sure this image exists. Submit an issue on https://github.com/All-Hands-AI/OpenHands if you run into any issues.",
+        "Using instance container image: %s. Please make sure this image exists. Submit an issue on https://github.com/All-Hands-AI/Forge if you run into any issues.",
         base_container_image,
     )
     sandbox_config = SandboxConfig(
@@ -98,7 +98,7 @@ def get_config(instance: pd.Series, metadata: EvalMetadata) -> OpenHandsConfig:
         keep_runtime_alive=False,
         remote_runtime_init_timeout=3600,
     )
-    config = get_openhands_config_for_eval(
+    config = get_FORGE_config_for_eval(
         metadata=metadata, sandbox_config=sandbox_config, runtime=os.environ.get("RUNTIME", "docker")
     )
     config.set_llm_config(
@@ -359,7 +359,7 @@ if __name__ == "__main__":
     if llm_config is None:
         raise ValueError(f"Could not find LLM config: --llm_config {args.llm_config}")
     details = {}
-    _agent_cls = openhands.agenthub.Agent.get_cls(args.agent_cls)
+    _agent_cls = forge.agenthub.Agent.get_cls(args.agent_cls)
     dataset_descrption = args.dataset.replace("/", "__") + "-" + args.split.replace("/", "__")
     metadata = make_metadata(
         llm_config,

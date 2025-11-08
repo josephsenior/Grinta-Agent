@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Union
 import pandas as pd
 from datasets import load_dataset
-from openhands.runtime.base import Runtime
+from forge.runtime.base import Runtime
 
 
 @dataclass
@@ -84,7 +84,7 @@ class LocMeta:
 
     This class handles loading SWE-Bench datasets and extracting ground-truth
     localization information from patches for code localization evaluation.
-    Works with both standalone Docker containers and OpenHands runtime.
+    Works with both standalone Docker containers and Forge runtime.
     """
 
     def __init__(self, dataset_name: str = "princeton-nlp/SWE-bench_Verified", split: str = "test"):
@@ -382,14 +382,14 @@ class LocMeta:
     def _parse_patch_localization_with_runtime(
         self, patch_content: str, instance_id: str, runtime: Runtime
     ) -> LocalizationInfo:
-        """Parse localization information from a git patch using OpenHands runtime.
+        """Parse localization information from a git patch using Forge runtime.
 
         This is the superior method when runtime is available.
 
         Args:
             patch_content: The git patch content
             instance_id: Instance ID for logging
-            runtime: OpenHands runtime object
+            runtime: Forge runtime object
 
         Returns:
             LocalizationInfo object with extracted data
@@ -439,11 +439,11 @@ class LocMeta:
     def parse_instance_loc_with_runtime(
         self, instance: Union[pd.Series, str], runtime: Runtime = None
     ) -> LocalizationInfo:
-        """Parse ground-truth localization information using OpenHands runtime.
+        """Parse ground-truth localization information using Forge runtime.
 
         Args:
             instance: Either a pandas Series with instance data or an instance_id string
-            runtime: OpenHands runtime object
+            runtime: Forge runtime object
 
         Returns:
             LocalizationInfo object containing extracted localization data
@@ -463,10 +463,10 @@ class LocMeta:
     def _analyze_source_code_with_runtime(
         self, runtime: Runtime, file_path: str, affected_lines: list[int]
     ) -> tuple[list[str], list[str], dict[int, str], dict[int, str]]:
-        """Analyze source code using OpenHands runtime to find functions and classes.
+        """Analyze source code using Forge runtime to find functions and classes.
 
         Args:
-            runtime: OpenHands runtime object
+            runtime: Forge runtime object
             file_path: Path to the file being analyzed
             affected_lines: List of line numbers that were changed
 
@@ -477,7 +477,7 @@ class LocMeta:
             if not (file_path.endswith(".py") or file_path.endswith(".pyx")):
                 self.logger.info(f"Skipping non-Python/Cython file: {file_path}")
                 return ([], [], {}, {})
-            from openhands.events.action import CmdRunAction
+            from forge.events.action import CmdRunAction
 
             check_action = CmdRunAction(command=f'test -f "{file_path}" && echo "EXISTS" || echo "NOT_EXISTS"')
             obs = runtime.run_action(check_action)

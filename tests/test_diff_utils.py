@@ -1,4 +1,4 @@
-from openhands.metasop.diff_utils import compute_diff_fingerprint
+from forge.metasop.diff_utils import compute_diff_fingerprint
 
 SAMPLE_A = "line1\nline2\nline3\n"
 SAMPLE_B = "line1\nLINE2_changed\nline3\n"

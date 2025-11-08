@@ -1,8 +1,8 @@
 from unittest.mock import MagicMock, call
 import pytest
-from openhands.events.action import CmdRunAction, FileReadAction
-from openhands.events.observation import CmdOutputObservation, ErrorObservation, FileReadObservation
-from openhands.runtime.base import Runtime
+from forge.events.action import CmdRunAction, FileReadAction
+from forge.events.observation import CmdOutputObservation, ErrorObservation, FileReadObservation
+from forge.runtime.base import Runtime
 
 
 class TestGitHooks:
@@ -13,9 +13,9 @@ class TestGitHooks:
         mock_runtime.status_callback = None
 
         def mock_read(action):
-            if action.path == ".openhands/pre-commit.sh":
+            if action.path == ".Forge/pre-commit.sh":
                 return FileReadObservation(
-                    content="#!/bin/bash\necho 'Test pre-commit hook'\nexit 0", path=".openhands/pre-commit.sh"
+                    content="#!/bin/bash\necho 'Test pre-commit hook'\nexit 0", path=".Forge/pre-commit.sh"
                 )
             elif action.path == ".git/hooks/pre-commit":
                 return ErrorObservation(content="File not found")
@@ -28,7 +28,7 @@ class TestGitHooks:
 
     def test_maybe_setup_git_hooks_success(self, mock_runtime):
         Runtime.maybe_setup_git_hooks(mock_runtime)
-        assert mock_runtime.read.call_args_list[0] == call(FileReadAction(path=".openhands/pre-commit.sh"))
+        assert mock_runtime.read.call_args_list[0] == call(FileReadAction(path=".Forge/pre-commit.sh"))
         assert mock_runtime.run_action.called
         assert mock_runtime.run_action.called
         assert mock_runtime.write.called
@@ -38,7 +38,7 @@ class TestGitHooks:
     def test_maybe_setup_git_hooks_no_script(self, mock_runtime):
         mock_runtime.read.side_effect = lambda action: ErrorObservation(content="File not found")
         Runtime.maybe_setup_git_hooks(mock_runtime)
-        mock_runtime.read.assert_called_with(FileReadAction(path=".openhands/pre-commit.sh"))
+        mock_runtime.read.assert_called_with(FileReadAction(path=".Forge/pre-commit.sh"))
         mock_runtime.run_action.assert_not_called()
         mock_runtime.write.assert_not_called()
 
@@ -58,9 +58,9 @@ class TestGitHooks:
     def test_maybe_setup_git_hooks_with_existing_hook(self, mock_runtime):
 
         def mock_read(action):
-            if action.path == ".openhands/pre-commit.sh":
+            if action.path == ".Forge/pre-commit.sh":
                 return FileReadObservation(
-                    content="#!/bin/bash\necho 'Test pre-commit hook'\nexit 0", path=".openhands/pre-commit.sh"
+                    content="#!/bin/bash\necho 'Test pre-commit hook'\nexit 0", path=".Forge/pre-commit.sh"
                 )
             elif action.path == ".git/hooks/pre-commit":
                 return FileReadObservation(

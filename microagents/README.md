@@ -5,11 +5,11 @@ Specialized prompts that provide domain-specific knowledge.
 ## How It Works
 
 **Global microagents:** This folder (shareable knowledge)  
-**Repo-specific:** `.openhands/microagents/repo.md` (project context)
+**Repo-specific:** `.Forge/microagents/repo.md` (project context)
 
 ## Loading
 
-1. Load repo-specific `.openhands/microagents/repo.md` (if exists)
+1. Load repo-specific `.Forge/microagents/repo.md` (if exists)
 2. Load relevant microagents based on trigger keywords
 
 ## Types
@@ -33,7 +33,7 @@ triggers:
 ### Repository Agents
 Auto-loaded for specific repos
 
-Example `.openhands/microagents/repo.md`:
+Example `.Forge/microagents/repo.md`:
 ```markdown
 # My Project
 

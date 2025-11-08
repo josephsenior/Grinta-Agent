@@ -14,7 +14,7 @@ export default function TestimonialsSection(): React.ReactElement {
       company: "TechCorp",
       avatar: null, // Use fallback initials instead of external images
       content:
-        "CodePilot Pro has revolutionized our development workflow. What used to take days now takes hours. The code quality is consistently excellent.",
+        "Forge Pro has revolutionized our development workflow. What used to take days now takes hours. The code quality is consistently excellent.",
       rating: 5,
     },
     {
@@ -32,7 +32,7 @@ export default function TestimonialsSection(): React.ReactElement {
       company: "InnovateLab",
       avatar: null, // Use fallback initials instead of external images
       content:
-        "CodePilot Pro's ability to generate production-ready code with comprehensive tests is unmatched. It's become an essential part of our stack.",
+        "Forge Pro's ability to generate production-ready code with comprehensive tests is unmatched. It's become an essential part of our stack.",
       rating: 5,
     },
   ];
@@ -56,7 +56,7 @@ export default function TestimonialsSection(): React.ReactElement {
 
           <p className="text-lg text-foreground-secondary max-w-3xl mx-auto leading-relaxed">
             Join thousands of developers who have transformed their workflow
-            with CodePilot Pro
+            with Forge Pro
           </p>
         </div>
 
@@ -125,7 +125,7 @@ export default function TestimonialsSection(): React.ReactElement {
           <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full glass border border-brand-500/30 shadow-lg hover:border-brand-500/50 hover:shadow-brand-500/20 transition-all duration-300">
             <div className="w-2 h-2 bg-success-500 rounded-full animate-pulse shadow-lg shadow-success-500/50" />
             <span className="text-foreground font-medium">
-              Join 10,000+ developers building with CodePilot Pro
+              Join 10,000+ developers building with Forge Pro
             </span>
           </div>
         </div>

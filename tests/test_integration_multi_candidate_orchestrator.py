@@ -1,6 +1,6 @@
 import json
-from openhands.metasop.models import RoleProfile, SopStep, StepOutputSpec
-from openhands.metasop.orchestrator import MetaSOPOrchestrator
+from forge.metasop.models import RoleProfile, SopStep, StepOutputSpec
+from forge.metasop.orchestrator import MetaSOPOrchestrator
 
 
 def make_template_with_engineer_step(tmp_path):
@@ -24,7 +24,7 @@ class DummyExecutor:
         self.candidates = candidates
 
     def execute(self, step, ctx, role_profile, config=None):
-        from openhands.metasop.models import Artifact, StepResult
+        from forge.metasop.models import Artifact, StepResult
 
         return StepResult(
             ok=True, artifact=Artifact(step_id=step.id, role=step.role, content={"candidates": self.candidates})

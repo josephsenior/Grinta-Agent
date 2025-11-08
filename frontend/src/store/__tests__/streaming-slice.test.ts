@@ -90,11 +90,18 @@ describe("streamingSlice", () => {
       expect(state.streams["test-stream"].content).toBe("Line 1\nLine 2\nSpecial: !@#$%\n");
     });
     
-    it("should not create stream if not started", () => {
+    it("should lazily create stream if not started", () => {
       store.dispatch(appendStreamChunk({ streamId: "nonexistent", chunk: "test" }));
-      
+
       const state = store.getState().streaming;
-      expect(state.streams["nonexistent"]).toBeUndefined();
+      expect(state.streams["nonexistent"]).toEqual(
+        expect.objectContaining({
+          content: "test",
+          isStreaming: true,
+          isComplete: false,
+          error: null,
+        }),
+      );
     });
   });
   

@@ -68,18 +68,19 @@ describe("ThemeContext", () => {
     vi.restoreAllMocks();
   });
   
-  it("should default to system theme", () => {
+  it("should default to dark theme", () => {
     render(
       <ThemeProvider>
         <TestComponent />
       </ThemeProvider>
     );
     
-    expect(screen.getByTestId("current-theme")).toHaveTextContent("system");
+    // Default is "dark" per ThemeProvider implementation
+    expect(screen.getByTestId("current-theme")).toHaveTextContent("dark");
   });
   
   it("should load theme from localStorage", () => {
-    localStorageMock["theme"] = "light";
+    localStorageMock["Forge-theme-preference"] = "light";
     
     render(
       <ThemeProvider>
@@ -99,8 +100,8 @@ describe("ThemeContext", () => {
       </ThemeProvider>
     );
     
-    // Initial theme
-    expect(screen.getByTestId("current-theme")).toHaveTextContent("system");
+    // Initial theme is dark by default
+    expect(screen.getByTestId("current-theme")).toHaveTextContent("dark");
     
     // Click light theme button
     await user.click(screen.getByTestId("set-light"));
@@ -122,7 +123,7 @@ describe("ThemeContext", () => {
     await user.click(screen.getByTestId("set-dark"));
     
     await waitFor(() => {
-      expect(localStorage.setItem).toHaveBeenCalledWith("theme", "dark");
+      expect(localStorage.setItem).toHaveBeenCalledWith("Forge-theme-preference", "dark");
     });
   });
   
@@ -193,28 +194,28 @@ describe("ThemeContext", () => {
       </ThemeProvider>
     );
     
-    // Start with system
-    expect(screen.getByTestId("current-theme")).toHaveTextContent("system");
-    
-    // Switch to dark
-    await user.click(screen.getByTestId("set-dark"));
-    await waitFor(() => {
-      expect(screen.getByTestId("current-theme")).toHaveTextContent("dark");
-      expect(localStorage.setItem).toHaveBeenCalledWith("theme", "dark");
-    });
+    // Start with dark (default)
+    expect(screen.getByTestId("current-theme")).toHaveTextContent("dark");
     
     // Switch to light
     await user.click(screen.getByTestId("set-light"));
     await waitFor(() => {
       expect(screen.getByTestId("current-theme")).toHaveTextContent("light");
-      expect(localStorage.setItem).toHaveBeenCalledWith("theme", "light");
+      expect(localStorage.setItem).toHaveBeenCalledWith("Forge-theme-preference", "light");
     });
     
-    // Switch back to system
+    // Switch to system
     await user.click(screen.getByTestId("set-system"));
     await waitFor(() => {
       expect(screen.getByTestId("current-theme")).toHaveTextContent("system");
-      expect(localStorage.setItem).toHaveBeenCalledWith("theme", "system");
+      expect(localStorage.setItem).toHaveBeenCalledWith("Forge-theme-preference", "system");
+    });
+    
+    // Switch back to dark
+    await user.click(screen.getByTestId("set-dark"));
+    await waitFor(() => {
+      expect(screen.getByTestId("current-theme")).toHaveTextContent("dark");
+      expect(localStorage.setItem).toHaveBeenCalledWith("Forge-theme-preference", "dark");
     });
   });
   

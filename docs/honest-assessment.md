@@ -181,8 +181,8 @@ User: "Fix the typo in README"
 
 **Code Quality:**
 ```
-✅ openhands/agenthub/codeact_agent/codeact_agent.py  (1063 lines, well-structured)
-✅ openhands/agenthub/codeact_agent/prompts/          (7 active, 10 archived)
+✅ Forge/agenthub/codeact_agent/codeact_agent.py  (1063 lines, well-structured)
+✅ Forge/agenthub/codeact_agent/prompts/          (7 active, 10 archived)
 ✅ docs/                                              (9 files, comprehensive)
 ✅ microagents/                                       (22 files, optimized)
 ```

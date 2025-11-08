@@ -69,7 +69,7 @@ export function RuntimeLoadingScreen({ onComplete }: RuntimeLoadingScreenProps) 
               <Container className="w-8 h-8 text-white animate-pulse" />
             </div>
             <h2 className="text-2xl font-bold text-foreground mb-2">
-              Starting OpenHands
+              Starting Forge
             </h2>
             <p className="text-sm text-foreground-secondary">
               Preparing your development environment...

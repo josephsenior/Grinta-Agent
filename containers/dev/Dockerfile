@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y \
 	&& apt-get autoremove -y
 
 ###
-FROM dind AS openhands
+FROM dind AS Forge
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -88,7 +88,7 @@ chmod a+x /version.sh
 EOF
 
 ###
-FROM openhands AS dev
+FROM Forge AS dev
 
 RUN apt-get update && apt-get install -y \
 	dnsutils \
@@ -104,8 +104,8 @@ RUN apt-get update && apt-get install -y \
 	&& apt-get autoremove -y
 
 # Create non-root user
-RUN groupadd -g 1000 openhands && \
-    useradd -u 1000 -g 1000 -m -s /bin/bash openhands
+RUN groupadd -g 1000 Forge && \
+    useradd -u 1000 -g 1000 -m -s /bin/bash Forge
 
 WORKDIR /app
 
@@ -124,7 +124,7 @@ make -s install-python-dependencies
 EOF
 
 # Switch to non-root user
-USER openhands
+USER Forge
 
 # Add health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

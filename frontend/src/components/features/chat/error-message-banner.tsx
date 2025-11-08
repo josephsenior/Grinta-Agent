@@ -19,6 +19,84 @@ interface ErrorMessageBannerProps {
   error?: unknown;  // Raw error object for user-friendly formatting
 }
 
+type BannerVariant = NonNullable<ErrorMessageBannerProps["type"]>;
+
+const BANNER_STYLES: Record<
+  BannerVariant,
+  { container: string; icon: string; button: string }
+> = {
+  error: {
+    container: "bg-danger-DEFAULT/10 border-danger-DEFAULT/20 text-danger-DEFAULT",
+    icon: "text-danger-DEFAULT",
+    button: "hover:bg-danger-DEFAULT/20 text-danger-DEFAULT",
+  },
+  warning: {
+    container:
+      "bg-warning-DEFAULT/10 border-warning-DEFAULT/20 text-warning-DEFAULT",
+    icon: "text-warning-DEFAULT",
+    button: "hover:bg-warning-DEFAULT/20 text-warning-DEFAULT",
+  },
+  info: {
+    container: "bg-info-DEFAULT/10 border-info-DEFAULT/20 text-info-DEFAULT",
+    icon: "text-info-DEFAULT",
+    button: "hover:bg-info-DEFAULT/20 text-info-DEFAULT",
+  },
+};
+
+const renderBannerMessage = (message: string) =>
+  i18n.exists(message) ? (
+    <Trans
+      i18nKey={message}
+      components={{
+        a: (
+          <Link
+            className="underline font-bold cursor-pointer hover:opacity-80 transition-opacity inline-flex items-center gap-1"
+            to="/settings/billing"
+          >
+            link
+            <ExternalLink className="w-3 h-3" />
+          </Link>
+        ),
+      }}
+    />
+  ) : (
+    message
+  );
+
+const DetailsSection = ({
+  showDetails,
+  showFullDetails,
+  onToggle,
+  rawMessage,
+}: {
+  showDetails: boolean;
+  showFullDetails: boolean;
+  onToggle: () => void;
+  rawMessage: string;
+}) => {
+  if (!showDetails) {
+    return null;
+  }
+
+  return (
+    <>
+      <button
+        onClick={onToggle}
+        className="mt-2 text-xs opacity-75 hover:opacity-100 transition-opacity"
+      >
+        {showFullDetails ? "Hide details" : "Show details"}
+      </button>
+      {showFullDetails && (
+        <div className="mt-3 p-3 bg-background-elevated/50 rounded-lg text-xs font-mono">
+          <pre className="whitespace-pre-wrap break-words">
+            {rawMessage}
+          </pre>
+        </div>
+      )}
+    </>
+  );
+};
+
 export function ErrorMessageBanner({
   message,
   type = "error",
@@ -32,6 +110,8 @@ export function ErrorMessageBanner({
 }: ErrorMessageBannerProps) {
   const [isDismissed, setIsDismissed] = useState(false);
   const [showFullDetails, setShowFullDetails] = useState(false);
+
+  const styles = BANNER_STYLES[type];
 
   const handleDismiss = () => {
     setIsDismissed(true);
@@ -53,28 +133,6 @@ export function ErrorMessageBanner({
     );
   }
 
-  const typeStyles = {
-    error: {
-      container:
-        "bg-danger-DEFAULT/10 border-danger-DEFAULT/20 text-danger-DEFAULT",
-      icon: "text-danger-DEFAULT",
-      button: "hover:bg-danger-DEFAULT/20 text-danger-DEFAULT",
-    },
-    warning: {
-      container:
-        "bg-warning-DEFAULT/10 border-warning-DEFAULT/20 text-warning-DEFAULT",
-      icon: "text-warning-DEFAULT",
-      button: "hover:bg-warning-DEFAULT/20 text-warning-DEFAULT",
-    },
-    info: {
-      container: "bg-info-DEFAULT/10 border-info-DEFAULT/20 text-info-DEFAULT",
-      icon: "text-info-DEFAULT",
-      button: "hover:bg-info-DEFAULT/20 text-info-DEFAULT",
-    },
-  };
-
-  const styles = typeStyles[type];
-
   return (
     <div
       className={cn(
@@ -93,46 +151,19 @@ export function ErrorMessageBanner({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium">
-            {i18n.exists(message) ? (
-              <Trans
-                i18nKey={message}
-                components={{
-                  a: (
-                    <Link
-                      className="underline font-bold cursor-pointer hover:opacity-80 transition-opacity inline-flex items-center gap-1"
-                      to="/settings/billing"
-                    >
-                      link
-                      <ExternalLink className="w-3 h-3" />
-                    </Link>
-                  ),
-                }}
-              />
-            ) : (
-              message
-            )}
+            {renderBannerMessage(message)}
           </div>
 
-          {/* Details Toggle */}
-          {showDetails && (
-            <button
-              onClick={() => setShowFullDetails(!showFullDetails)}
-              className="mt-2 text-xs opacity-75 hover:opacity-100 transition-opacity"
-            >
-              {showFullDetails ? "Hide details" : "Show details"}
-            </button>
-          )}
-
-          {/* Full Details */}
-          {showDetails && showFullDetails && (
-            <div className="mt-3 p-3 bg-background-elevated/50 rounded-lg text-xs font-mono">
-              <pre className="whitespace-pre-wrap break-words">
-                {typeof message === "string"
-                  ? message
-                  : JSON.stringify(message, null, 2)}
-              </pre>
-            </div>
-          )}
+          <DetailsSection
+            showDetails={showDetails}
+            showFullDetails={showFullDetails}
+            onToggle={() => setShowFullDetails(current => !current)}
+            rawMessage={
+              typeof message === "string"
+                ? message
+                : JSON.stringify(message, null, 2)
+            }
+          />
         </div>
 
         {/* Actions */}

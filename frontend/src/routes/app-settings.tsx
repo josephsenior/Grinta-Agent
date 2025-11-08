@@ -1,5 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useSaveSettings } from "#/hooks/mutation/use-save-settings";
 import { useSettings } from "#/hooks/query/use-settings";
 import { AvailableLanguages } from "#/i18n";
@@ -19,176 +20,215 @@ import { AppSettingsInputsSkeleton } from "#/components/features/settings/app-se
 import { useConfig } from "#/hooks/query/use-config";
 import { parseMaxBudgetPerTask } from "#/utils/settings-utils";
 
-function AppSettingsScreen() {
-  const { t } = useTranslation();
+type DirtyFlagKey =
+  | "language"
+  | "analytics"
+  | "sound"
+  | "proactive"
+  | "solvability"
+  | "budget"
+  | "gitUserName"
+  | "gitUserEmail";
 
+type DirtyFlags = Record<DirtyFlagKey, boolean>;
+
+const INITIAL_DIRTY_FLAGS: DirtyFlags = {
+  language: false,
+  analytics: false,
+  sound: false,
+  proactive: false,
+  solvability: false,
+  budget: false,
+  gitUserName: false,
+  gitUserEmail: false,
+};
+
+interface AppSettingsController {
+  settings: ReturnType<typeof useSettings>["data"];
+  config: ReturnType<typeof useConfig>["data"];
+  formAction: (formData: FormData) => void;
+  handlers: {
+    onLanguageChange: (value: string) => void;
+    onAnalyticsToggle: (checked: boolean) => void;
+    onSoundToggle: (checked: boolean) => void;
+    onProactiveToggle: (checked: boolean) => void;
+    onSolvabilityToggle: (checked: boolean) => void;
+    onBudgetChange: (value: string) => void;
+    onGitUserNameChange: (value: string) => void;
+    onGitUserEmailChange: (value: string) => void;
+  };
+  formIsClean: boolean;
+  isPending: boolean;
+  shouldBeLoading: boolean;
+}
+
+function useAppSettingsController(t: TFunction): AppSettingsController {
   const { mutate: saveSettings, isPending } = useSaveSettings();
   const { data: settings, isLoading } = useSettings();
   const { data: config } = useConfig();
+  const [dirtyFlags, setDirtyFlags] = React.useState<DirtyFlags>(
+    INITIAL_DIRTY_FLAGS,
+  );
 
-  const [languageInputHasChanged, setLanguageInputHasChanged] =
-    React.useState(false);
-  const [analyticsSwitchHasChanged, setAnalyticsSwitchHasChanged] =
-    React.useState(false);
-  const [
-    soundNotificationsSwitchHasChanged,
-    setSoundNotificationsSwitchHasChanged,
-  ] = React.useState(false);
-  const [
-    proactiveConversationsSwitchHasChanged,
-    setProactiveConversationsSwitchHasChanged,
-  ] = React.useState(false);
-  const [
-    solvabilityAnalysisSwitchHasChanged,
-    setSolvabilityAnalysisSwitchHasChanged,
-  ] = React.useState(false);
-  const [maxBudgetPerTaskHasChanged, setMaxBudgetPerTaskHasChanged] =
-    React.useState(false);
-  const [gitUserNameHasChanged, setGitUserNameHasChanged] =
-    React.useState(false);
-  const [gitUserEmailHasChanged, setGitUserEmailHasChanged] =
-    React.useState(false);
+  const updateFlag = React.useCallback(
+    (key: DirtyFlagKey, value: boolean) => {
+      setDirtyFlags((prev) => ({ ...prev, [key]: value }));
+    },
+    [],
+  );
 
-  const formAction = (formData: FormData) => {
-    const languageLabel = formData.get("language-input")?.toString();
-    const languageValue = AvailableLanguages.find(
-      ({ label }) => label === languageLabel,
-    )?.value;
-    const language = languageValue || DEFAULT_SETTINGS.LANGUAGE;
+  const resetFlags = React.useCallback(() => {
+    setDirtyFlags(INITIAL_DIRTY_FLAGS);
+  }, []);
 
-    const enableAnalytics =
-      formData.get("enable-analytics-switch")?.toString() === "on";
-    const enableSoundNotifications =
-      formData.get("enable-sound-notifications-switch")?.toString() === "on";
+  const formAction = React.useCallback(
+    (formData: FormData) => {
+      const languageLabel = formData.get("language-input")?.toString();
+      const languageValue = AvailableLanguages.find(
+        ({ label }) => label === languageLabel,
+      )?.value;
+      const language = languageValue || DEFAULT_SETTINGS.LANGUAGE;
 
-    const enableProactiveConversations =
-      formData.get("enable-proactive-conversations-switch")?.toString() ===
-      "on";
+      const enableAnalytics =
+        formData.get("enable-analytics-switch")?.toString() === "on";
+      const enableSoundNotifications =
+        formData
+          .get("enable-sound-notifications-switch")
+          ?.toString() === "on";
 
-    const enableSolvabilityAnalysis =
-      formData.get("enable-solvability-analysis-switch")?.toString() === "on";
+      const enableProactiveConversations =
+        formData
+          .get("enable-proactive-conversations-switch")
+          ?.toString() === "on";
 
-    const maxBudgetPerTaskValue = formData
-      .get("max-budget-per-task-input")
-      ?.toString();
-    const maxBudgetPerTask = parseMaxBudgetPerTask(maxBudgetPerTaskValue || "");
+      const enableSolvabilityAnalysis =
+        formData
+          .get("enable-solvability-analysis-switch")
+          ?.toString() === "on";
 
-    const gitUserName =
-      formData.get("git-user-name-input")?.toString() ||
-      DEFAULT_SETTINGS.GIT_USER_NAME;
-    const gitUserEmail =
-      formData.get("git-user-email-input")?.toString() ||
-      DEFAULT_SETTINGS.GIT_USER_EMAIL;
+      const maxBudgetPerTaskValue = formData
+        .get("max-budget-per-task-input")
+        ?.toString();
+      const maxBudgetPerTask = parseMaxBudgetPerTask(
+        maxBudgetPerTaskValue || "",
+      );
 
-    saveSettings(
-      {
-        LANGUAGE: language,
-        user_consents_to_analytics: enableAnalytics,
-        ENABLE_SOUND_NOTIFICATIONS: enableSoundNotifications,
-        ENABLE_PROACTIVE_CONVERSATION_STARTERS: enableProactiveConversations,
-        ENABLE_SOLVABILITY_ANALYSIS: enableSolvabilityAnalysis,
-        MAX_BUDGET_PER_TASK: maxBudgetPerTask,
-        GIT_USER_NAME: gitUserName,
-        GIT_USER_EMAIL: gitUserEmail,
+      const gitUserName =
+        formData.get("git-user-name-input")?.toString() ||
+        DEFAULT_SETTINGS.GIT_USER_NAME;
+      const gitUserEmail =
+        formData.get("git-user-email-input")?.toString() ||
+        DEFAULT_SETTINGS.GIT_USER_EMAIL;
+
+      saveSettings(
+        {
+          LANGUAGE: language,
+          user_consents_to_analytics: enableAnalytics,
+          ENABLE_SOUND_NOTIFICATIONS: enableSoundNotifications,
+          ENABLE_PROACTIVE_CONVERSATION_STARTERS: enableProactiveConversations,
+          ENABLE_SOLVABILITY_ANALYSIS: enableSolvabilityAnalysis,
+          MAX_BUDGET_PER_TASK: maxBudgetPerTask,
+          GIT_USER_NAME: gitUserName,
+          GIT_USER_EMAIL: gitUserEmail,
+        },
+        {
+          onSuccess: () => {
+            handleCaptureConsent(enableAnalytics);
+            displaySuccessToast(t(I18nKey.SETTINGS$SAVED));
+          },
+          onError: (error) => {
+            const errorMessage = retrieveAxiosErrorMessage(error);
+            displayErrorToast(
+              t(I18nKey.ERROR$GENERIC, { defaultValue: errorMessage }),
+            );
+          },
+          onSettled: () => {
+            resetFlags();
+          },
+        },
+      );
+    },
+    [resetFlags, saveSettings, t],
+  );
+
+  const handlers: AppSettingsController["handlers"] = React.useMemo(
+    () => ({
+      onLanguageChange: (value: string) => {
+        if (!settings) {
+          return;
+        }
+        const selectedLanguage = AvailableLanguages.find(
+          ({ label: langValue }) => langValue === value,
+        )?.label;
+        const currentLanguage = AvailableLanguages.find(
+          ({ value: langValue }) => langValue === settings.LANGUAGE,
+        )?.label;
+        updateFlag("language", selectedLanguage !== currentLanguage);
       },
-      {
-        onSuccess: () => {
-          handleCaptureConsent(enableAnalytics);
-          displaySuccessToast(t(I18nKey.SETTINGS$SAVED));
-        },
-        onError: (error) => {
-          const errorMessage = retrieveAxiosErrorMessage(error);
-          displayErrorToast(
-            t(I18nKey.ERROR$GENERIC, { defaultValue: errorMessage }),
-          );
-        },
-        onSettled: () => {
-          setLanguageInputHasChanged(false);
-          setAnalyticsSwitchHasChanged(false);
-          setSoundNotificationsSwitchHasChanged(false);
-          setProactiveConversationsSwitchHasChanged(false);
-          setMaxBudgetPerTaskHasChanged(false);
-          setGitUserNameHasChanged(false);
-          setGitUserEmailHasChanged(false);
-        },
+      onAnalyticsToggle: (checked: boolean) => {
+        const currentAnalytics = !!settings?.USER_CONSENTS_TO_ANALYTICS;
+        updateFlag("analytics", checked !== currentAnalytics);
       },
-    );
-  };
+      onSoundToggle: (checked: boolean) => {
+        const current = !!settings?.ENABLE_SOUND_NOTIFICATIONS;
+        updateFlag("sound", checked !== current);
+      },
+      onProactiveToggle: (checked: boolean) => {
+        const current = !!settings?.ENABLE_PROACTIVE_CONVERSATION_STARTERS;
+        updateFlag("proactive", checked !== current);
+      },
+      onSolvabilityToggle: (checked: boolean) => {
+        const current = !!settings?.ENABLE_SOLVABILITY_ANALYSIS;
+        updateFlag("solvability", checked !== current);
+      },
+      onBudgetChange: (value: string) => {
+        const newValue = parseMaxBudgetPerTask(value);
+        const currentValue = settings?.MAX_BUDGET_PER_TASK;
+        updateFlag("budget", newValue !== currentValue);
+      },
+      onGitUserNameChange: (value: string) => {
+        const currentValue = settings?.GIT_USER_NAME ?? "";
+        updateFlag("gitUserName", value !== currentValue);
+      },
+      onGitUserEmailChange: (value: string) => {
+        const currentValue = settings?.GIT_USER_EMAIL ?? "";
+        updateFlag("gitUserEmail", value !== currentValue);
+      },
+    }),
+    [settings, updateFlag],
+  );
 
-  const checkIfLanguageInputHasChanged = (value: string) => {
-    const selectedLanguage = AvailableLanguages.find(
-      ({ label: langValue }) => langValue === value,
-    )?.label;
-    const currentLanguage = AvailableLanguages.find(
-      ({ value: langValue }) => langValue === settings?.LANGUAGE,
-    )?.label;
-
-    setLanguageInputHasChanged(selectedLanguage !== currentLanguage);
-  };
-
-  const checkIfAnalyticsSwitchHasChanged = (checked: boolean) => {
-    const currentAnalytics = !!settings?.USER_CONSENTS_TO_ANALYTICS;
-    setAnalyticsSwitchHasChanged(checked !== currentAnalytics);
-  };
-
-  const checkIfSoundNotificationsSwitchHasChanged = (checked: boolean) => {
-    const currentSoundNotifications = !!settings?.ENABLE_SOUND_NOTIFICATIONS;
-    setSoundNotificationsSwitchHasChanged(
-      checked !== currentSoundNotifications,
-    );
-  };
-
-  const checkIfProactiveConversationsSwitchHasChanged = (checked: boolean) => {
-    const currentProactiveConversations =
-      !!settings?.ENABLE_PROACTIVE_CONVERSATION_STARTERS;
-    setProactiveConversationsSwitchHasChanged(
-      checked !== currentProactiveConversations,
-    );
-  };
-
-  const checkIfSolvabilityAnalysisSwitchHasChanged = (checked: boolean) => {
-    const currentSolvabilityAnalysis = !!settings?.ENABLE_SOLVABILITY_ANALYSIS;
-    setSolvabilityAnalysisSwitchHasChanged(
-      checked !== currentSolvabilityAnalysis,
-    );
-  };
-
-  const checkIfMaxBudgetPerTaskHasChanged = (value: string) => {
-    const newValue = parseMaxBudgetPerTask(value);
-    const currentValue = settings?.MAX_BUDGET_PER_TASK;
-    setMaxBudgetPerTaskHasChanged(newValue !== currentValue);
-  };
-
-  const checkIfGitUserNameHasChanged = (value: string) => {
-    const currentValue = settings?.GIT_USER_NAME;
-    setGitUserNameHasChanged(value !== currentValue);
-  };
-
-  const checkIfGitUserEmailHasChanged = (value: string) => {
-    const currentValue = settings?.GIT_USER_EMAIL;
-    setGitUserEmailHasChanged(value !== currentValue);
-  };
-
-  const formIsClean =
-    !languageInputHasChanged &&
-    !analyticsSwitchHasChanged &&
-    !soundNotificationsSwitchHasChanged &&
-    !proactiveConversationsSwitchHasChanged &&
-    !solvabilityAnalysisSwitchHasChanged &&
-    !maxBudgetPerTaskHasChanged &&
-    !gitUserNameHasChanged &&
-    !gitUserEmailHasChanged;
+  const formIsClean = React.useMemo(
+    () => Object.values(dirtyFlags).every((flag) => !flag),
+    [dirtyFlags],
+  );
 
   const shouldBeLoading = !settings || isLoading || isPending;
+
+  return {
+    settings,
+    config,
+    formAction,
+    handlers,
+    formIsClean,
+    isPending,
+    shouldBeLoading,
+  };
+}
+
+function AppSettingsScreen() {
+  const { t } = useTranslation();
+  const controller = useAppSettingsController(t);
+  const { settings, config } = controller;
 
   return (
     <form
       data-testid="app-settings-screen"
-      action={formAction}
+      action={controller.formAction}
       className="flex flex-col h-full"
     >
-      {shouldBeLoading && <AppSettingsInputsSkeleton />}
-      {!shouldBeLoading && (
+      {controller.shouldBeLoading && <AppSettingsInputsSkeleton />}
+      {!controller.shouldBeLoading && settings && (
         <div className="flex-1 p-6 bg-black">
           <div className="max-w-4xl mx-auto space-y-8">
             {/* Language Settings */}
@@ -197,7 +237,7 @@ function AppSettingsScreen() {
               <LanguageInput
                 name="language-input"
                 defaultKey={settings.LANGUAGE}
-                onChange={checkIfLanguageInputHasChanged}
+                onChange={controller.handlers.onLanguageChange}
               />
             </div>
 
@@ -209,7 +249,7 @@ function AppSettingsScreen() {
                   testId="enable-analytics-switch"
                   name="enable-analytics-switch"
                   defaultIsToggled={!!settings.USER_CONSENTS_TO_ANALYTICS}
-                  onToggle={checkIfAnalyticsSwitchHasChanged}
+                  onToggle={controller.handlers.onAnalyticsToggle}
                 >
                   {t(I18nKey.ANALYTICS$SEND_ANONYMOUS_DATA)}
                 </SettingsSwitch>
@@ -218,7 +258,7 @@ function AppSettingsScreen() {
                   testId="enable-sound-notifications-switch"
                   name="enable-sound-notifications-switch"
                   defaultIsToggled={!!settings.ENABLE_SOUND_NOTIFICATIONS}
-                  onToggle={checkIfSoundNotificationsSwitchHasChanged}
+                  onToggle={controller.handlers.onSoundToggle}
                 >
                   {t(I18nKey.SETTINGS$SOUND_NOTIFICATIONS)}
                 </SettingsSwitch>
@@ -230,7 +270,7 @@ function AppSettingsScreen() {
                     defaultIsToggled={
                       !!settings.ENABLE_PROACTIVE_CONVERSATION_STARTERS
                     }
-                    onToggle={checkIfProactiveConversationsSwitchHasChanged}
+                    onToggle={controller.handlers.onProactiveToggle}
                   >
                     {t(I18nKey.SETTINGS$PROACTIVE_CONVERSATION_STARTERS)}
                   </SettingsSwitch>
@@ -241,7 +281,7 @@ function AppSettingsScreen() {
                     testId="enable-solvability-analysis-switch"
                     name="enable-solvability-analysis-switch"
                     defaultIsToggled={!!settings.ENABLE_SOLVABILITY_ANALYSIS}
-                    onToggle={checkIfSolvabilityAnalysisSwitchHasChanged}
+                    onToggle={controller.handlers.onSolvabilityToggle}
                   >
                     {t(I18nKey.SETTINGS$SOLVABILITY_ANALYSIS)}
                   </SettingsSwitch>
@@ -258,7 +298,7 @@ function AppSettingsScreen() {
                 type="number"
                 label={t(I18nKey.SETTINGS$MAX_BUDGET_PER_CONVERSATION)}
                 defaultValue={settings.MAX_BUDGET_PER_TASK?.toString() || ""}
-                onChange={checkIfMaxBudgetPerTaskHasChanged}
+                onChange={controller.handlers.onBudgetChange}
                 placeholder={t(I18nKey.SETTINGS$MAXIMUM_BUDGET_USD)}
                 min={1}
                 step={1}
@@ -281,7 +321,7 @@ function AppSettingsScreen() {
                   type="text"
                   label={t(I18nKey.SETTINGS$GIT_USERNAME)}
                   defaultValue={settings.GIT_USER_NAME || ""}
-                  onChange={checkIfGitUserNameHasChanged}
+                  onChange={controller.handlers.onGitUserNameChange}
                   placeholder="Username for git commits"
                   className="w-full max-w-md"
                 />
@@ -291,7 +331,7 @@ function AppSettingsScreen() {
                   type="email"
                   label={t(I18nKey.SETTINGS$GIT_EMAIL)}
                   defaultValue={settings.GIT_USER_EMAIL || ""}
-                  onChange={checkIfGitUserEmailHasChanged}
+                  onChange={controller.handlers.onGitUserEmailChange}
                   placeholder="Email for git commits"
                   className="w-full max-w-md"
                 />
@@ -309,11 +349,11 @@ function AppSettingsScreen() {
               testId="submit-button"
               variant="primary"
               type="submit"
-              isDisabled={isPending || formIsClean}
+              isDisabled={controller.isPending || controller.formIsClean}
               className="px-6 py-2 gradient-brand hover:opacity-90 transition-opacity rounded-lg font-medium text-white disabled:opacity-50"
             >
-              {!isPending && t("SETTINGS$SAVE_CHANGES")}
-              {isPending && t("SETTINGS$SAVING")}
+              {!controller.isPending && t("SETTINGS$SAVE_CHANGES")}
+              {controller.isPending && t("SETTINGS$SAVING")}
             </BrandButton>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import logging
-from openhands.metasop.memory import MemoryIndex
+from forge.metasop.memory import MemoryIndex
 
 logger = logging.getLogger(__name__)
 m = MemoryIndex(run_id="probe", max_records=50)

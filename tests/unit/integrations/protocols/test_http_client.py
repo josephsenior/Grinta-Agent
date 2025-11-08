@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, Mock
 import httpx
 import pytest
 from pydantic import SecretStr
-from openhands.integrations.protocols.http_client import HTTPClient
-from openhands.integrations.service_types import (
+from forge.integrations.protocols.http_client import HTTPClient
+from forge.integrations.service_types import (
     AuthenticationError,
     RateLimitError,
     RequestMethod,
@@ -176,7 +176,7 @@ class TestHTTPClient:
 
     def test_runtime_checkable(self):
         """Test that HTTPClient is runtime checkable."""
-        from openhands.integrations.protocols.http_client import HTTPClient
+        from forge.integrations.protocols.http_client import HTTPClient
 
         assert isinstance(self.client, HTTPClient)
 

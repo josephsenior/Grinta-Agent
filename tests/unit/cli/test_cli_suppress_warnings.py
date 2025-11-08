@@ -3,7 +3,7 @@
 import warnings
 from io import StringIO
 from unittest.mock import patch
-from openhands.cli.suppress_warnings import suppress_cli_warnings
+from forge.cli.suppress_warnings import suppress_cli_warnings
 
 
 class TestWarningSuppressionCLI:
@@ -53,9 +53,9 @@ class TestWarningSuppressionCLI:
         """Test that importing the module automatically applies suppression."""
         warnings.resetwarnings()
         import importlib
-        import openhands.cli.suppress_warnings
+        import forge.cli.suppress_warnings
 
-        importlib.reload(openhands.cli.suppress_warnings)
+        importlib.reload(forge.cli.suppress_warnings)
         captured_output = StringIO()
         with patch("sys.stderr", captured_output):
             warnings.warn("Pydantic serializer warnings: test", UserWarning, stacklevel=2)

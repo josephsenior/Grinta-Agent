@@ -66,8 +66,8 @@ GPT-4o:            ~90 seconds
 
 ```toml
 [llm]
-# Primary model - Claude 4.5 Haiku via OpenHands Provider
-model = "openhands/claude-haiku-4-5-20251001"
+# Primary model - Claude 4.5 Haiku via Forge Provider
+model = "Forge/claude-haiku-4-5-20251001"
 temperature = 0.1
 timeout = 120
 max_output_tokens = 4096
@@ -80,7 +80,7 @@ retry_max_wait = 15
 
 # Use same model for validation tasks
 [llm.validation]
-model = "openhands/claude-haiku-4-5-20251001"
+model = "Forge/claude-haiku-4-5-20251001"
 temperature = 0.0
 timeout = 60
 max_output_tokens = 2048
@@ -88,7 +88,7 @@ caching_prompt = true
 
 # Use same model for heavy computation tasks
 [llm.heavy]
-model = "openhands/claude-haiku-4-5-20251001"
+model = "Forge/claude-haiku-4-5-20251001"
 temperature = 0.1
 timeout = 180
 max_output_tokens = 8192
@@ -111,13 +111,13 @@ max_iterations = 75
 ### **Environment Variables**
 
 ```bash
-# OpenHands Provider API Key (uses your existing credits)
-export LLM_API_KEY="sk-your-openhands-api-key"
+# Forge Provider API Key (uses your existing credits)
+export LLM_API_KEY="sk-your-Forge-api-key"
 
 # Model configuration
-export OPENHANDS_LLM_MODEL="openhands/claude-haiku-4-5-20251001"
-export OPENHANDS_LLM_TEMPERATURE=0.1
-export OPENHANDS_LLM_MAX_TOKENS=4096
+export FORGE_LLM_MODEL="Forge/claude-haiku-4-5-20251001"
+export FORGE_LLM_TEMPERATURE=0.1
+export FORGE_LLM_MAX_TOKENS=4096
 ```
 
 ---
@@ -174,7 +174,7 @@ With **Claude 4.5 Haiku** + enhanced single-agent system:
 
 ```
 Baseline Claude 4.5 Haiku:      72-75%
-OpenHands Default System:       78-82%
+Forge Default System:       78-82%
 Our Enhanced Single-Agent:      92-98% (target)
 ```
 
@@ -253,7 +253,7 @@ Once budget allows or for specific use cases:
 #### **For Maximum Quality (Complex Debugging)**
 ```toml
 [llm.expert]
-model = "openhands/claude-sonnet-3-5-20241022"  # +10-15% quality
+model = "Forge/claude-sonnet-3-5-20241022"  # +10-15% quality
 temperature = 0.1
 max_output_tokens = 8192
 # Use sparingly - 4x more expensive
@@ -262,7 +262,7 @@ max_output_tokens = 8192
 #### **For Lightning Speed (Simple Tasks)**
 ```toml
 [llm.fast]
-model = "openhands/claude-haiku-4-5-20251001"  # Already fastest!
+model = "Forge/claude-haiku-4-5-20251001"  # Already fastest!
 temperature = 0.2
 max_output_tokens = 2048
 ```
@@ -270,7 +270,7 @@ max_output_tokens = 2048
 #### **For Ultra-Low Cost (Documentation)**
 ```toml
 [llm.cheap]
-model = "openhands/claude-haiku-3-5-20250320"  # Older, cheaper
+model = "Forge/claude-haiku-3-5-20250320"  # Older, cheaper
 temperature = 0.3
 max_output_tokens = 4096
 # ~50% cheaper, but less capable
@@ -281,12 +281,12 @@ max_output_tokens = 4096
 xAI's new model shows promise:
 - ⚡ **Ultra-fast**: Optimized for code generation
 - 💰 **Cost-effective**: Competitive pricing
-- 🆕 **Availability**: Check OpenHands provider support
+- 🆕 **Availability**: Check Forge provider support
 
 ```toml
-# Once available through OpenHands provider:
+# Once available through Forge provider:
 [llm.grok]
-model = "openhands/grok-code-fast-1"
+model = "Forge/grok-code-fast-1"
 temperature = 0.1
 max_output_tokens = 4096
 ```
@@ -372,7 +372,7 @@ Target: 95%+ quality, premium pricing
 
 - [ ] Update `config.toml` with Claude 4.5 Haiku settings
 - [ ] Set `metasop.enabled = false`
-- [ ] Configure OpenHands provider API key
+- [ ] Configure Forge provider API key
 - [ ] Enable Ultimate CodeAct prompt
 - [ ] Enable ACE Framework
 - [ ] Enable Causal Reasoning
@@ -392,16 +392,16 @@ cp config.toml config.toml.backup
 nano config.toml  # Update settings as shown above
 
 # 2. Set API key
-export LLM_API_KEY="sk-your-openhands-api-key"
+export LLM_API_KEY="sk-your-Forge-api-key"
 
 # 3. Test configuration
-python -c "from openhands.core.config import load_config; c = load_config(); print(f'Model: {c.llm.model}')"
+python -c "from forge.core.config import load_config; c = load_config(); print(f'Model: {c.llm.model}')"
 
 # 4. Start backend
 ./start_backend.sh
 
 # 5. Monitor performance
-tail -f logs/openhands.log
+tail -f logs/Forge.log
 ```
 
 ---

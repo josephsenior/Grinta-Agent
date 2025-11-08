@@ -2,9 +2,9 @@ from typing import Union
 from unittest.mock import Mock
 import pytest
 from litellm import ChatCompletionMessageToolCall
-from openhands.agenthub.codeact_agent.codeact_agent import CodeActAgent
-from openhands.agenthub.codeact_agent.function_calling import response_to_actions as codeact_response_to_actions
-from openhands.agenthub.codeact_agent.tools import (
+from forge.agenthub.codeact_agent.codeact_agent import CodeActAgent
+from forge.agenthub.codeact_agent.function_calling import response_to_actions as codeact_response_to_actions
+from forge.agenthub.codeact_agent.tools import (
     BrowserTool,
     IPythonTool,
     LLMBasedFileEditTool,
@@ -12,29 +12,29 @@ from openhands.agenthub.codeact_agent.tools import (
     create_cmd_run_tool,
     create_str_replace_editor_tool,
 )
-from openhands.agenthub.codeact_agent.tools.browser import _BROWSER_DESCRIPTION, _BROWSER_TOOL_DESCRIPTION
-from openhands.agenthub.readonly_agent.function_calling import response_to_actions as readonly_response_to_actions
-from openhands.agenthub.readonly_agent.readonly_agent import ReadOnlyAgent
-from openhands.agenthub.readonly_agent.tools import GlobTool, GrepTool
-from openhands.controller.state.state import State
-from openhands.core.config import AgentConfig, LLMConfig
-from openhands.core.config.openhands_config import OpenHandsConfig
-from openhands.core.exceptions import FunctionCallNotExistsError
-from openhands.core.message import ImageContent, Message, TextContent
-from openhands.events.action import CmdRunAction, MessageAction
-from openhands.events.action.message import SystemMessageAction
-from openhands.events.event import EventSource
-from openhands.events.observation.commands import CmdOutputObservation
-from openhands.events.tool import ToolCallMetadata
-from openhands.llm.llm_registry import LLMRegistry
-from openhands.memory.condenser import View
+from forge.agenthub.codeact_agent.tools.browser import _BROWSER_DESCRIPTION, _BROWSER_TOOL_DESCRIPTION
+from forge.agenthub.readonly_agent.function_calling import response_to_actions as readonly_response_to_actions
+from forge.agenthub.readonly_agent.readonly_agent import ReadOnlyAgent
+from forge.agenthub.readonly_agent.tools import GlobTool, GrepTool
+from forge.controller.state.state import State
+from forge.core.config import AgentConfig, LLMConfig
+from forge.core.config.forge_config import ForgeConfig
+from forge.core.exceptions import FunctionCallNotExistsError
+from forge.core.message import ImageContent, Message, TextContent
+from forge.events.action import CmdRunAction, MessageAction
+from forge.events.action.message import SystemMessageAction
+from forge.events.event import EventSource
+from forge.events.observation.commands import CmdOutputObservation
+from forge.events.tool import ToolCallMetadata
+from forge.llm.llm_registry import LLMRegistry
+from forge.memory.condenser import View
 
 
 @pytest.fixture
 def create_llm_registry():
 
     def _get_registry(llm_config):
-        config = OpenHandsConfig()
+        config = ForgeConfig()
         config.set_llm_config(llm_config)
         return LLMRegistry(config=config)
 
@@ -45,7 +45,7 @@ def create_llm_registry():
 def agent_class(request):
     if request.param == "CodeActAgent":
         return CodeActAgent
-    from openhands.agenthub.readonly_agent.readonly_agent import ReadOnlyAgent
+    from forge.agenthub.readonly_agent.readonly_agent import ReadOnlyAgent
 
     return ReadOnlyAgent
 
@@ -266,11 +266,11 @@ def test_correct_tool_description_loaded_based_on_model_name(agent_type, create_
     """Tests that the simplified tool descriptions are loaded for specific models."""
     o3_mock_config = LLMConfig(model="mock_o3_model", api_key="test_key")
     if agent_type == "CodeActAgent":
-        from openhands.agenthub.codeact_agent.codeact_agent import CodeActAgent
+        from forge.agenthub.codeact_agent.codeact_agent import CodeActAgent
 
         agent_class = CodeActAgent
     else:
-        from openhands.agenthub.readonly_agent.readonly_agent import ReadOnlyAgent
+        from forge.agenthub.readonly_agent.readonly_agent import ReadOnlyAgent
 
         agent_class = ReadOnlyAgent
     agent = agent_class(config=AgentConfig(), llm_registry=create_llm_registry(o3_mock_config))
@@ -396,7 +396,7 @@ def test_get_system_message(create_llm_registry):
     agent = CodeActAgent(config=config, llm_registry=create_llm_registry(llm_config))
     result = agent.get_system_message()
     assert isinstance(result, SystemMessageAction)
-    assert "You are OpenHands agent" in result.content
+    assert "You are Forge agent" in result.content
     assert len(result.tools) > 0
     assert any((tool["function"]["name"] == "execute_bash" for tool in result.tools))
     assert result._source == EventSource.AGENT

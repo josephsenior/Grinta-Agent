@@ -60,7 +60,7 @@ export function useChatInterfaceState() {
   // Technical details toggle with localStorage persistence
   const [showTechnicalDetails, setShowTechnicalDetails] = React.useState<boolean>(() => {
     try {
-      return localStorage.getItem("openhands.showTechnicalDetails") === "true";
+      return localStorage.getItem("Forge.showTechnicalDetails") === "true";
     } catch {
       return false;
     }
@@ -68,7 +68,7 @@ export function useChatInterfaceState() {
 
   React.useEffect(() => {
     try {
-      localStorage.setItem("openhands.showTechnicalDetails", showTechnicalDetails ? "true" : "false");
+      localStorage.setItem("Forge.showTechnicalDetails", showTechnicalDetails ? "true" : "false");
     } catch {
       /* ignore */
     }

@@ -246,7 +246,7 @@ enable_anti_hallucination = true
 ### **Manual Control (Advanced)**
 
 ```python
-from openhands.agenthub.codeact_agent.anti_hallucination_system import (
+from forge.agenthub.codeact_agent.anti_hallucination_system import (
     AntiHallucinationSystem
 )
 
@@ -443,7 +443,7 @@ def inject_verification_commands(self, actions: List[Action]) -> List[Action]:
 
 ## 🎓 **Why This is Better Than Competitors**
 
-| Feature | OpenHands (9.5/10) | Cursor | GitHub Copilot | Devin |
+| Feature | Forge (9.5/10) | Cursor | GitHub Copilot | Devin |
 |---------|-------------------|--------|----------------|-------|
 | **Multi-Layer Protection** | 5 layers | 2 layers | 2 layers | ⚠️ Unknown |
 | **Proactive Prevention** | ✅ Yes | ❌ No | ❌ No | ⚠️ Unknown |
@@ -452,7 +452,7 @@ def inject_verification_commands(self, actions: List[Action]) -> List[Action]:
 | **Continuation Tracking** | ✅ Yes | ❌ No | ❌ No | ⚠️ Unknown |
 | **Hallucination Rate** | **5%** | ~15% | ~20% | ~10% (est.) |
 
-**OpenHands now has the BEST anti-hallucination system in the industry!**
+**Forge now has the BEST anti-hallucination system in the industry!**
 
 ---
 

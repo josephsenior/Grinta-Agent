@@ -1,4 +1,4 @@
-from openhands.metasop.selective_tests import select_tests
+from forge.metasop.selective_tests import select_tests
 
 
 def test_selective_empty_changes():

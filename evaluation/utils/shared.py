@@ -13,11 +13,11 @@ from typing import Any, Awaitable, Callable, TextIO
 import pandas as pd
 from pydantic import BaseModel
 from tqdm import tqdm
-from openhands.controller.state.state import State
-from openhands.core.config import LLMConfig, SandboxConfig
-from openhands.core.config.agent_config import AgentConfig
-from openhands.core.config.condenser_config import CondenserConfig, NoOpCondenserConfig
-from openhands.core.exceptions import (
+from forge.controller.state.state import State
+from forge.core.config import LLMConfig, SandboxConfig
+from forge.core.config.agent_config import AgentConfig
+from forge.core.config.condenser_config import CondenserConfig, NoOpCondenserConfig
+from forge.core.exceptions import (
     AgentRuntimeBuildError,
     AgentRuntimeDisconnectedError,
     AgentRuntimeError,
@@ -26,14 +26,14 @@ from openhands.core.exceptions import (
     AgentRuntimeTimeoutError,
     AgentRuntimeUnavailableError,
 )
-from openhands.core.logger import get_console_handler
-from openhands.core.logger import openhands_logger as logger
-from openhands.events.action import Action
-from openhands.events.action.message import MessageAction
-from openhands.events.event import Event
-from openhands.events.serialization.event import event_to_dict
-from openhands.events.utils import get_pairs_from_events
-from openhands.memory.condenser import get_condensation_metadata
+from forge.core.logger import get_console_handler
+from forge.core.logger import forge_logger as logger
+from forge.events.action import Action
+from forge.events.action.message import MessageAction
+from forge.events.event import Event
+from forge.events.serialization.event import event_to_dict
+from forge.events.utils import get_pairs_from_events
+from forge.memory.condenser import get_condensation_metadata
 
 
 class EvalMetadata(BaseModel):
@@ -319,7 +319,7 @@ def log_skipped_maximum_retries_exceeded(instance, metadata, error, max_retries=
     Returns:
         EvalOutput with the error information
     """
-    from openhands.core.logger import openhands_logger as logger
+    from forge.core.logger import forge_logger as logger
 
     logger.exception(error)
     logger.error(
@@ -352,7 +352,7 @@ def log_skipped_maximum_retries_exceeded(instance, metadata, error, max_retries=
 
 def check_maximum_retries_exceeded(eval_output_dir):
     """Check if maximum_retries_exceeded.jsonl exists and output a message."""
-    from openhands.core.logger import openhands_logger as logger
+    from forge.core.logger import forge_logger as logger
 
     retries_file_path = os.path.join(eval_output_dir, "maximum_retries_exceeded.jsonl")
     if os.path.exists(retries_file_path):
@@ -615,7 +615,7 @@ def get_default_sandbox_config_for_eval() -> SandboxConfig:
     )
 
 
-def get_openhands_config_for_eval(
+def get_FORGE_config_for_eval(
     metadata: EvalMetadata | None = None,
     sandbox_config: SandboxConfig | None = None,
     runtime: str | None = None,
@@ -625,9 +625,9 @@ def get_openhands_config_for_eval(
     workspace_base: str | None = None,
     workspace_mount_path: str | None = None,
 ):
-    """Create an OpenHandsConfig with common patterns used across evaluation scripts.
+    """Create an ForgeConfig with common patterns used across evaluation scripts.
 
-    This function provides a standardized way to create OpenHands configurations
+    This function provides a standardized way to create Forge configurations
     for evaluation runs, with sensible defaults that match the patterns used in
     most run_infer.py scripts. Individual evaluation scripts can override specific
     attributes as needed.
@@ -643,9 +643,9 @@ def get_openhands_config_for_eval(
         workspace_mount_path: Workspace mount path. Defaults to None
 
     Returns:
-        OpenHandsConfig: Configured for evaluation with eval-specific overrides applied
+        ForgeConfig: Configured for evaluation with eval-specific overrides applied
     """
-    from openhands.core.config.openhands_config import OpenHandsConfig as _OHConfig
+    from forge.core.config.FORGE_config import ForgeConfig as _OHConfig
 
     if sandbox_config is None:
         sandbox_config = get_default_sandbox_config_for_eval()
@@ -663,7 +663,7 @@ def get_openhands_config_for_eval(
     eval_store = os.path.abspath(os.path.join(os.getcwd(), ".eval_sessions"))
     config = _OHConfig(
         default_agent=default_agent,
-        run_as_openhands=False,
+        run_as_Forge=False,
         runtime=runtime,
         max_iterations=max_iterations,
         enable_browser=enable_browser,

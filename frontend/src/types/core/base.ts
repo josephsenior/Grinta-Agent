@@ -1,4 +1,4 @@
-export type OpenHandsEventType =
+export type ForgeEventType =
   | "message"
   | "system"
   | "agent_state_changed"
@@ -22,30 +22,30 @@ export type OpenHandsEventType =
   | "user_rejected"
   | "streaming_chunk";
 
-export type OpenHandsSourceType = "agent" | "user" | "environment";
+export type ForgeSourceType = "agent" | "user" | "environment";
 
-interface OpenHandsBaseEvent {
+interface ForgeBaseEvent {
   id: number;
-  source: OpenHandsSourceType;
+  source: ForgeSourceType;
   message: string;
   timestamp: string; // ISO 8601
 }
 
-export interface OpenHandsActionEvent<T extends OpenHandsEventType>
-  extends OpenHandsBaseEvent {
+export interface ForgeActionEvent<T extends ForgeEventType>
+  extends ForgeBaseEvent {
   action: T;
   args: Record<string, unknown>;
 }
 
-export interface OpenHandsObservationEvent<T extends OpenHandsEventType>
-  extends OpenHandsBaseEvent {
+export interface ForgeObservationEvent<T extends ForgeEventType>
+  extends ForgeBaseEvent {
   cause: number;
   observation: T;
   content: string;
   extras: Record<string, unknown>;
 }
 
-// Union type for all OpenHands events (actions and observations)
-export type OpenHandsEvent<T extends OpenHandsEventType = OpenHandsEventType> =
-  | OpenHandsActionEvent<T>
-  | OpenHandsObservationEvent<T>;
+// Union type for all Forge events (actions and observations)
+export type ForgeEvent<T extends ForgeEventType = ForgeEventType> =
+  | ForgeActionEvent<T>
+  | ForgeObservationEvent<T>;

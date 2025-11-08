@@ -1,7 +1,7 @@
 import json
-from openhands.core.config import OpenHandsConfig
-from openhands.metasop.adapters.engineer_codeact import ENGINEER_SUMMARY_PATH, run_engineer_with_codeact
-from openhands.metasop.models import OrchestrationContext, SopStep, StepOutputSpec
+from forge.core.config import ForgeConfig
+from forge.metasop.adapters.engineer_codeact import ENGINEER_SUMMARY_PATH, run_engineer_with_codeact
+from forge.metasop.models import OrchestrationContext, SopStep, StepOutputSpec
 
 
 def make_step():
@@ -19,7 +19,7 @@ def test_adapter_reads_candidates(tmp_path, monkeypatch):
     async def _dummy_run_controller(*a, **k):
         return None
 
-    monkeypatch.setattr("openhands.metasop.adapters.engineer_codeact.run_controller", _dummy_run_controller)
+    monkeypatch.setattr("forge.metasop.adapters.engineer_codeact.run_controller", _dummy_run_controller)
     meta_dir = tmp_path / ".metasop"
     meta_dir.mkdir()
     summary = {
@@ -30,7 +30,7 @@ def test_adapter_reads_candidates(tmp_path, monkeypatch):
     summary_path.write_text(json.dumps(summary), encoding="utf-8")
     step = make_step()
     ctx = make_ctx(tmp_path)
-    res = run_engineer_with_codeact(step, ctx, role_profile={}, config=OpenHandsConfig())
+    res = run_engineer_with_codeact(step, ctx, role_profile={}, config=ForgeConfig())
     assert res.ok
     assert getattr(res, "artifact", None) is not None
     art = res.artifact

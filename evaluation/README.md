@@ -6,20 +6,20 @@ This folder contains code and resources to run experiments and evaluations.
 
 ### Setup
 
-Before starting evaluation, follow the instructions [here](https://github.com/All-Hands-AI/OpenHands/blob/main/Development.md) to setup your local development environment and LLM.
+Before starting evaluation, follow the instructions [here](https://github.com/All-Hands-AI/Forge/blob/main/Development.md) to setup your local development environment and LLM.
 
 Once you are done with setup, you can follow the benchmark-specific instructions in each subdirectory of the [evaluation directory](#supported-benchmarks).
 Generally these will involve running `run_infer.py` to perform inference with the agents.
 
 ### Implementing and Evaluating an Agent
 
-To add an agent to OpenHands, you will need to implement it in the [agenthub directory](https://github.com/All-Hands-AI/OpenHands/tree/main/openhands/agenthub). There is a README there with more information.
+To add an agent to Forge, you will need to implement it in the [agenthub directory](https://github.com/All-Hands-AI/Forge/tree/main/Forge/agenthub). There is a README there with more information.
 
 To evaluate an agent, you can provide the agent's name to the `run_infer.py` program.
 
 ### Evaluating Different LLMs
 
-OpenHands in development mode uses `config.toml` to keep track of most configuration.
+Forge in development mode uses `config.toml` to keep track of most configuration.
 **IMPORTANT: For evaluation, only the LLM section in `config.toml` will be used. Other configurations, such as `save_trajectory_path`, are not applied during evaluation.**
 
 Here's an example configuration file you can use to define and use multiple LLMs:
@@ -44,7 +44,7 @@ temperature = 0.0
 
 ### Configuring Condensers for Evaluation
 
-For benchmarks that support condenser configuration (like SWE-Bench), you can define multiple condenser configurations in your `config.toml` file. A condenser is responsible for managing conversation history to maintain context while staying within token limits - you can learn more about how it works [here](https://www.all-hands.dev/blog/openhands-context-condensensation-for-more-efficient-ai-agents):
+For benchmarks that support condenser configuration (like SWE-Bench), you can define multiple condenser configurations in your `config.toml` file. A condenser is responsible for managing conversation history to maintain context while staying within token limits - you can learn more about how it works [here](https://www.all-hands.dev/blog/Forge-context-condensensation-for-more-efficient-ai-agents):
 
 ```toml
 # LLM-based summarizing condenser for evaluation
@@ -96,7 +96,7 @@ max_output_tokens = 10500
 
 ## Supported Benchmarks
 
-The OpenHands evaluation harness supports a wide variety of benchmarks across [software engineering](#software-engineering), [web browsing](#web-browsing), [miscellaneous assistance](#misc-assistance), and [real-world](#real-world) tasks.
+The Forge evaluation harness supports a wide variety of benchmarks across [software engineering](#software-engineering), [web browsing](#web-browsing), [miscellaneous assistance](#misc-assistance), and [real-world](#real-world) tasks.
 
 ### Software Engineering
 
@@ -134,16 +134,16 @@ The OpenHands evaluation harness supports a wide variety of benchmarks across [s
 
 ## Result Visualization
 
-Check [this huggingface space](https://huggingface.co/spaces/OpenHands/evaluation) for visualization of existing experimental results.
+Check [this huggingface space](https://huggingface.co/spaces/Forge/evaluation) for visualization of existing experimental results.
 
-You can start your own fork of [our huggingface evaluation outputs](https://huggingface.co/spaces/OpenHands/evaluation) and submit a PR of your evaluation results to our hosted huggingface repo via PR following the guide [here](https://huggingface.co/docs/hub/en/repositories-pull-requests-discussions#pull-requests-and-discussions).
+You can start your own fork of [our huggingface evaluation outputs](https://huggingface.co/spaces/Forge/evaluation) and submit a PR of your evaluation results to our hosted huggingface repo via PR following the guide [here](https://huggingface.co/docs/hub/en/repositories-pull-requests-discussions#pull-requests-and-discussions).
 
 ## For Benchmark Developers
 
-To learn more about how to integrate your benchmark into OpenHands, check out [tutorial here](https://docs.all-hands.dev/usage/how-to/evaluation-harness). Briefly,
+To learn more about how to integrate your benchmark into Forge, check out [tutorial here](https://docs.all-hands.dev/usage/how-to/evaluation-harness). Briefly,
 
 - Each subfolder contains a specific benchmark or experiment. For example, [`evaluation/benchmarks/swe_bench`](./benchmarks/swe_bench) should contain
   all the preprocessing/evaluation/analysis scripts.
 - Raw data and experimental records should not be stored within this repo.
-- For model outputs, they should be stored at [this huggingface space](https://huggingface.co/spaces/OpenHands/evaluation) for visualization.
+- For model outputs, they should be stored at [this huggingface space](https://huggingface.co/spaces/Forge/evaluation) for visualization.
 - Important data files of manageable size and analysis scripts (e.g., jupyter notebooks) can be directly uploaded to this repo.

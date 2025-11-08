@@ -1,6 +1,6 @@
 # 🌐 **REST API Reference**
 
-> **Comprehensive REST API documentation for the OpenHands platform, covering all endpoints, request/response formats, and authentication.**
+> **Comprehensive REST API documentation for the Forge platform, covering all endpoints, request/response formats, and authentication.**
 
 ---
 
@@ -23,7 +23,7 @@
 
 ## 🌟 **Overview**
 
-The OpenHands REST API provides comprehensive access to all platform features through HTTP endpoints. The API follows RESTful principles and uses JSON for data exchange.
+The Forge REST API provides comprehensive access to all platform features through HTTP endpoints. The API follows RESTful principles and uses JSON for data exchange.
 
 ### **API Features**
 - **RESTful Design**: Standard HTTP methods and status codes
@@ -104,12 +104,12 @@ http://localhost:8000/api/v1
 
 ### **Staging**
 ```
-https://staging-api.openhands.ai/api/v1
+https://staging-api.Forge.ai/api/v1
 ```
 
 ### **Production**
 ```
-https://api.openhands.ai/api/v1
+https://api.Forge.ai/api/v1
 ```
 
 ### **WebSocket URLs**
@@ -118,10 +118,10 @@ https://api.openhands.ai/api/v1
 ws://localhost:8000/ws
 
 # Staging
-wss://staging-api.openhands.ai/ws
+wss://staging-api.Forge.ai/ws
 
 # Production
-wss://api.openhands.ai/ws
+wss://api.Forge.ai/ws
 ```
 
 ---
@@ -1117,5 +1117,5 @@ curl -X GET http://localhost:8000/api/optimization/metrics/system_prompt_1 \
 
 ---
 
-**REST API Reference - The gateway to OpenHands platform.** 🌐
+**REST API Reference - The gateway to Forge platform.** 🌐
 give 

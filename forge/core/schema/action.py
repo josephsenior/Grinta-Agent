@@ -1,0 +1,66 @@
+"""Core functionality for the Forge agent framework.
+
+Classes:
+    ActionType
+"""
+
+from enum import Enum
+
+
+class ActionType(str, Enum):
+    """Enum defining all possible agent action types.
+    
+    Each action type represents a specific operation the agent can perform.
+    """
+    MESSAGE = "message"
+    "Represents a message.\n    "
+    SYSTEM = "system"
+    "Represents a system message.\n    "
+    START = "start"
+    "Starts a new development task OR send chat from the user. Only sent by the client.\n    "
+    READ = "read"
+    "Reads the content of a file.\n    "
+    WRITE = "write"
+    "Writes the content to a file.\n    "
+    EDIT = "edit"
+    "Edits a file by providing a draft.\n    "
+    RUN = "run"
+    "Runs a command.\n    "
+    RUN_IPYTHON = "run_ipython"
+    "Runs a IPython cell.\n    "
+    BROWSE = "browse"
+    "Opens a web page.\n    "
+    BROWSE_INTERACTIVE = "browse_interactive"
+    "Interact with the browser instance.\n    "
+    MCP = "call_tool_mcp"
+    "Interact with the MCP server.\n    "
+    DELEGATE = "delegate"
+    "Delegates a task to another agent.\n    "
+    THINK = "think"
+    "Logs a thought.\n    "
+    FINISH = "finish"
+    "If you're absolutely certain that you've completed your task and have tested your work,\n    use the finish action to stop working.\n    "
+    REJECT = "reject"
+    "If you're absolutely certain that you cannot complete the task with given requirements,\n    use the reject action to stop working.\n    "
+    NULL = "null"
+    PAUSE = "pause"
+    "Pauses the task.\n    "
+    RESUME = "resume"
+    "Resumes the task.\n    "
+    STOP = "stop"
+    "Stops the task. Must send a start action to restart a new task.\n    "
+    CHANGE_AGENT_STATE = "change_agent_state"
+    PUSH = "push"
+    "Push a branch to github."
+    SEND_PR = "send_pr"
+    "Send a PR to github."
+    RECALL = "recall"
+    "Retrieves content from a user workspace, microagent, or other source."
+    CONDENSATION = "condensation"
+    "Condenses a list of events into a summary."
+    CONDENSATION_REQUEST = "condensation_request"
+    "Request for condensation of a list of events."
+    TASK_TRACKING = "task_tracking"
+    "Views or updates the task list for task management."
+    STREAMING_CHUNK = "streaming_chunk"
+    "Represents a streaming chunk from LLM response for real-time token-by-token display."

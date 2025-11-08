@@ -1,7 +1,7 @@
 import logging
 import time
 from fastapi.testclient import TestClient
-from openhands.server.app import app
+from forge.server.app import app
 
 
 def run_test():

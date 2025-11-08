@@ -13,7 +13,7 @@ source ~/.bashrc
 SWEUTIL_DIR=/swe_util
 
 # Create logs directory
-LOG_DIR=/openhands/logs
+LOG_DIR=/Forge/logs
 mkdir -p $LOG_DIR && chmod 755 $LOG_DIR  # nosec B103
 
 # FIXME: Cannot read SWE_INSTANCE_ID from the environment variable
@@ -35,7 +35,7 @@ CONDA_ENV_NAME=$(echo "$item" | jq -r '.repo + "__" + .version | gsub("/"; "__")
 
 echo "CONDA_ENV_NAME: $CONDA_ENV_NAME"
 
-SWE_TASK_DIR=/openhands/swe_tasks
+SWE_TASK_DIR=/Forge/swe_tasks
 mkdir -p $SWE_TASK_DIR
 # Dump test_patch to /workspace/test.patch
 echo "$item" | jq -r '.test_patch' > $SWE_TASK_DIR/test.patch

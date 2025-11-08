@@ -7,12 +7,12 @@ from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 from httpcore import Request
 from pydantic import SecretStr
-from openhands.integrations.provider import ProviderToken, ProviderType
-from openhands.integrations.service_types import AuthenticationError, Repository
-from openhands.microagent.types import MicroagentContentResponse
-from openhands.server.dependencies import check_session_api_key
-from openhands.server.routes.git import app as git_app
-from openhands.server.user_auth import get_access_token, get_provider_tokens, get_user_id
+from forge.integrations.provider import ProviderToken, ProviderType
+from forge.integrations.service_types import AuthenticationError, Repository
+from forge.microagent.types import MicroagentContentResponse
+from forge.server.dependencies import check_session_api_key
+from forge.server.routes.git import app as git_app
+from forge.server.user_auth import get_access_token, get_provider_tokens, get_user_id
 
 
 @pytest.fixture
@@ -90,7 +90,7 @@ class TestGetRepositoryMicroagents:
     """Test cases for the get_repository_microagents API endpoint."""
 
     @pytest.mark.asyncio
-    @patch("openhands.server.routes.git.ProviderHandler")
+    @patch("forge.server.routes.git.ProviderHandler")
     async def test_get_microagents_github_success(
         self,
         mock_provider_handler_cls,
@@ -125,7 +125,7 @@ def _setup_mock_provider_handler(mock_provider_handler_cls):
 def _configure_mock_microagents_response(mock_provider_handler):
     """Configure mock microagents response."""
     mock_provider_handler.get_microagents.return_value = [
-        {"name": "test_agent", "path": ".openhands/microagents/test_agent.md", "created_at": "2024-01-01T00:00:00"},
+        {"name": "test_agent", "path": ".Forge/microagents/test_agent.md", "created_at": "2024-01-01T00:00:00"},
         {"name": "cursorrules", "path": ".cursorrules", "created_at": "2024-01-01T00:00:00"},
     ]
 
@@ -158,13 +158,13 @@ def _verify_excluded_fields_absent(microagent):
         assert field not in microagent
 
     @pytest.mark.asyncio
-    @patch("openhands.server.routes.git.ProviderHandler")
+    @patch("forge.server.routes.git.ProviderHandler")
     async def test_get_microagents_gitlab_success(self, mock_provider_handler_cls, test_client, mock_gitlab_repository):
         """Test successful retrieval of microagents from GitLab repository."""
         mock_provider_handler = AsyncMock()
         mock_provider_handler_cls.return_value = mock_provider_handler
         mock_provider_handler.get_microagents.return_value = [
-            {"name": "test_agent", "path": ".openhands/microagents/test_agent.md", "created_at": "2024-01-01T00:00:00"}
+            {"name": "test_agent", "path": ".Forge/microagents/test_agent.md", "created_at": "2024-01-01T00:00:00"}
         ]
         response = test_client.get("/api/user/repository/test/repo/microagents")
         assert response.status_code == 200
@@ -173,7 +173,7 @@ def _verify_excluded_fields_absent(microagent):
         assert "content" not in data[0]
 
     @pytest.mark.asyncio
-    @patch("openhands.server.routes.git.ProviderHandler")
+    @patch("forge.server.routes.git.ProviderHandler")
     async def test_get_microagents_bitbucket_success(
         self, mock_provider_handler_cls, test_client, mock_bitbucket_repository
     ):
@@ -181,7 +181,7 @@ def _verify_excluded_fields_absent(microagent):
         mock_provider_handler = AsyncMock()
         mock_provider_handler_cls.return_value = mock_provider_handler
         mock_provider_handler.get_microagents.return_value = [
-            {"name": "test_agent", "path": ".openhands/microagents/test_agent.md", "created_at": "2024-01-01T00:00:00"}
+            {"name": "test_agent", "path": ".Forge/microagents/test_agent.md", "created_at": "2024-01-01T00:00:00"}
         ]
         response = test_client.get("/api/user/repository/test/repo/microagents")
         assert response.status_code == 200
@@ -190,7 +190,7 @@ def _verify_excluded_fields_absent(microagent):
         assert "content" not in data[0]
 
     @pytest.mark.asyncio
-    @patch("openhands.server.routes.git.ProviderHandler")
+    @patch("forge.server.routes.git.ProviderHandler")
     async def test_get_microagents_no_directory_found(
         self, mock_provider_handler_cls, test_client, mock_github_repository
     ):
@@ -204,7 +204,7 @@ def _verify_excluded_fields_absent(microagent):
         assert data == []
 
     @pytest.mark.asyncio
-    @patch("openhands.server.routes.git.ProviderHandler")
+    @patch("forge.server.routes.git.ProviderHandler")
     async def test_get_microagents_authentication_error(self, mock_provider_handler_cls, test_client):
         """Test authentication error."""
         mock_provider_handler = AsyncMock()
@@ -219,7 +219,7 @@ class TestGetRepositoryMicroagentContent:
     """Test cases for the get_repository_microagent_content API endpoint."""
 
     @pytest.mark.asyncio
-    @patch("openhands.server.routes.git.ProviderHandler")
+    @patch("forge.server.routes.git.ProviderHandler")
     async def test_get_microagent_content_github_success(
         self, mock_provider_handler_cls, test_client, sample_microagent_content
     ):
@@ -227,9 +227,9 @@ class TestGetRepositoryMicroagentContent:
         mock_provider_handler = AsyncMock()
         mock_provider_handler_cls.return_value = mock_provider_handler
         mock_provider_handler.get_microagent_content.return_value = MicroagentContentResponse(
-            content=sample_microagent_content, path=".openhands/microagents/test_agent.md", triggers=["test", "agent"]
+            content=sample_microagent_content, path=".Forge/microagents/test_agent.md", triggers=["test", "agent"]
         )
-        file_path = ".openhands/microagents/test_agent.md"
+        file_path = ".Forge/microagents/test_agent.md"
         response = test_client.get(f"/api/user/repository/test/repo/microagents/content?file_path={quote(file_path)}")
         assert response.status_code == 200
         data = response.json()
@@ -240,7 +240,7 @@ class TestGetRepositoryMicroagentContent:
         assert data["triggers"] == ["test", "agent"]
 
     @pytest.mark.asyncio
-    @patch("openhands.server.routes.git.ProviderHandler")
+    @patch("forge.server.routes.git.ProviderHandler")
     async def test_get_microagent_content_gitlab_success(
         self, mock_provider_handler_cls, test_client, sample_microagent_content
     ):
@@ -248,9 +248,9 @@ class TestGetRepositoryMicroagentContent:
         mock_provider_handler = AsyncMock()
         mock_provider_handler_cls.return_value = mock_provider_handler
         mock_provider_handler.get_microagent_content.return_value = MicroagentContentResponse(
-            content=sample_microagent_content, path=".openhands/microagents/test_agent.md", triggers=["test", "agent"]
+            content=sample_microagent_content, path=".Forge/microagents/test_agent.md", triggers=["test", "agent"]
         )
-        file_path = ".openhands/microagents/test_agent.md"
+        file_path = ".Forge/microagents/test_agent.md"
         response = test_client.get(f"/api/user/repository/test/repo/microagents/content?file_path={quote(file_path)}")
         assert response.status_code == 200
         data = response.json()
@@ -260,7 +260,7 @@ class TestGetRepositoryMicroagentContent:
         assert data["triggers"] == ["test", "agent"]
 
     @pytest.mark.asyncio
-    @patch("openhands.server.routes.git.ProviderHandler")
+    @patch("forge.server.routes.git.ProviderHandler")
     async def test_get_microagent_content_bitbucket_success(
         self, mock_provider_handler_cls, test_client, sample_microagent_content
     ):
@@ -268,9 +268,9 @@ class TestGetRepositoryMicroagentContent:
         mock_provider_handler = AsyncMock()
         mock_provider_handler_cls.return_value = mock_provider_handler
         mock_provider_handler.get_microagent_content.return_value = MicroagentContentResponse(
-            content=sample_microagent_content, path=".openhands/microagents/test_agent.md", triggers=["test", "agent"]
+            content=sample_microagent_content, path=".Forge/microagents/test_agent.md", triggers=["test", "agent"]
         )
-        file_path = ".openhands/microagents/test_agent.md"
+        file_path = ".Forge/microagents/test_agent.md"
         response = test_client.get(f"/api/user/repository/test/repo/microagents/content?file_path={quote(file_path)}")
         assert response.status_code == 200
         data = response.json()
@@ -280,7 +280,7 @@ class TestGetRepositoryMicroagentContent:
         assert data["triggers"] == ["test", "agent"]
 
     @pytest.mark.asyncio
-    @patch("openhands.server.routes.git.ProviderHandler")
+    @patch("forge.server.routes.git.ProviderHandler")
     async def test_get_microagent_content_file_not_found(
         self, mock_provider_handler_cls, test_client, mock_github_repository
     ):
@@ -288,25 +288,25 @@ class TestGetRepositoryMicroagentContent:
         mock_provider_handler = AsyncMock()
         mock_provider_handler_cls.return_value = mock_provider_handler
         mock_provider_handler.get_microagent_content.side_effect = RuntimeError("File not found")
-        file_path = ".openhands/microagents/nonexistent.md"
+        file_path = ".Forge/microagents/nonexistent.md"
         response = test_client.get(f"/api/user/repository/test/repo/microagents/content?file_path={quote(file_path)}")
         assert response.status_code == 500
         assert "File not found" in response.json()
 
     @pytest.mark.asyncio
-    @patch("openhands.server.routes.git.ProviderHandler")
+    @patch("forge.server.routes.git.ProviderHandler")
     async def test_get_microagent_content_authentication_error(self, mock_provider_handler_cls, test_client):
         """Test authentication error for content API."""
         mock_provider_handler = AsyncMock()
         mock_provider_handler_cls.return_value = mock_provider_handler
         mock_provider_handler.get_microagent_content.side_effect = AuthenticationError("Invalid credentials")
-        file_path = ".openhands/microagents/test_agent.md"
+        file_path = ".Forge/microagents/test_agent.md"
         response = test_client.get(f"/api/user/repository/test/repo/microagents/content?file_path={quote(file_path)}")
         assert response.status_code == 401
         assert response.json() == "Invalid credentials"
 
     @pytest.mark.asyncio
-    @patch("openhands.server.routes.git.ProviderHandler")
+    @patch("forge.server.routes.git.ProviderHandler")
     async def test_get_microagent_content_cursorrules(
         self, mock_provider_handler_cls, test_client, sample_cursorrules_content
     ):
@@ -330,30 +330,30 @@ class TestSpecialRepositoryStructures:
     """Test cases for special repository structures."""
 
     @pytest.mark.asyncio
-    @patch("openhands.server.routes.git.ProviderHandler")
-    async def test_get_microagents_openhands_repo_structure(self, mock_provider_handler_cls, test_client):
-        """Test microagents from .openhands repository structure."""
+    @patch("forge.server.routes.git.ProviderHandler")
+    async def test_get_microagents_FORGE_repo_structure(self, mock_provider_handler_cls, test_client):
+        """Test microagents from .Forge repository structure."""
         mock_provider_handler = AsyncMock()
         mock_provider_handler_cls.return_value = mock_provider_handler
         mock_provider_handler.get_microagents.return_value = [
             {"name": "test_agent", "path": "microagents/test_agent.md", "created_at": "2024-01-01T00:00:00"}
         ]
-        response = test_client.get("/api/user/repository/test/.openhands/microagents")
+        response = test_client.get("/api/user/repository/test/.Forge/microagents")
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1
         assert data[0]["path"] == "microagents/test_agent.md"
 
     @pytest.mark.asyncio
-    @patch("openhands.server.routes.git.ProviderHandler")
-    async def test_get_microagents_gitlab_openhands_config_structure(self, mock_provider_handler_cls, test_client):
-        """Test microagents from GitLab openhands-config repository structure."""
+    @patch("forge.server.routes.git.ProviderHandler")
+    async def test_get_microagents_gitlab_FORGE_config_structure(self, mock_provider_handler_cls, test_client):
+        """Test microagents from GitLab Forge-config repository structure."""
         mock_provider_handler = AsyncMock()
         mock_provider_handler_cls.return_value = mock_provider_handler
         mock_provider_handler.get_microagents.return_value = [
             {"name": "test_agent", "path": "microagents/test_agent.md", "created_at": "2024-01-01T00:00:00"}
         ]
-        response = test_client.get("/api/user/repository/test/openhands-config/microagents")
+        response = test_client.get("/api/user/repository/test/Forge-config/microagents")
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1

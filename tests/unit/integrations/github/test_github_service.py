@@ -2,9 +2,9 @@ from unittest.mock import AsyncMock, Mock, patch
 import httpx
 import pytest
 from pydantic import SecretStr
-from openhands.integrations.github.github_service import GitHubService
-from openhands.integrations.service_types import AuthenticationError, OwnerType, ProviderType, Repository, User
-from openhands.server.types import AppMode
+from forge.integrations.github.github_service import GitHubService
+from forge.integrations.service_types import AuthenticationError, OwnerType, ProviderType, Repository, User
+from forge.server.types import AppMode
 
 
 @pytest.mark.asyncio
@@ -191,11 +191,11 @@ async def test_github_search_repositories_with_organizations():
         "items": [
             {
                 "id": 1,
-                "name": "OpenHands",
-                "full_name": "All-Hands-AI/OpenHands",
+                "name": "forge",
+                "full_name": "All-Hands-AI/Forge",
                 "private": False,
-                "html_url": "https://github.com/All-Hands-AI/OpenHands",
-                "clone_url": "https://github.com/All-Hands-AI/OpenHands.git",
+                "html_url": "https://github.com/All-Hands-AI/Forge",
+                "clone_url": "https://github.com/All-Hands-AI/forge.git",
                 "pushed_at": "2023-01-01T00:00:00Z",
                 "owner": {"login": "All-Hands-AI", "type": "Organization"},
             }
@@ -205,21 +205,21 @@ async def test_github_search_repositories_with_organizations():
         service, "get_user_organizations", return_value=["All-Hands-AI", "example-org"]
     ), patch.object(service, "_make_request", return_value=(mock_search_response, {})) as mock_request:
         repositories = await service.search_repositories(
-            query="openhands", per_page=10, sort="stars", order="desc", public=False
+            query="forge", per_page=10, sort="stars", order="desc", public=False
         )
         assert mock_request.call_count == 3
         calls = mock_request.call_args_list
         user_call = calls[0]
         user_params = user_call[0][1]
-        assert user_params["q"] == "openhands user:testuser"
+        assert user_params["q"] == "Forge user:testuser"
         org1_call = calls[1]
         org1_params = org1_call[0][1]
-        assert org1_params["q"] == "openhands org:All-Hands-AI"
+        assert org1_params["q"] == "Forge org:All-Hands-AI"
         org2_call = calls[2]
         org2_params = org2_call[0][1]
-        assert org2_params["q"] == "openhands org:example-org"
+        assert org2_params["q"] == "Forge org:example-org"
         assert len(repositories) == 3
-        assert all((repo.full_name == "All-Hands-AI/OpenHands" for repo in repositories))
+        assert all((repo.full_name == "All-Hands-AI/Forge" for repo in repositories))
 
 
 @pytest.mark.asyncio

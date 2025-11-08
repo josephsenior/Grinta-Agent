@@ -1,25 +1,25 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-from openhands.controller.agent import Agent
-from openhands.controller.agent_controller import AgentController
-from openhands.controller.state.state import State
-from openhands.core.config import LLMConfig, OpenHandsConfig
-from openhands.core.config.agent_config import AgentConfig
-from openhands.events import EventStream, EventStreamSubscriber
-from openhands.integrations.service_types import ProviderType
-from openhands.llm.llm_registry import LLMRegistry
-from openhands.llm.metrics import Metrics
-from openhands.memory.memory import Memory
-from openhands.runtime.impl.action_execution.action_execution_client import ActionExecutionClient
-from openhands.server.services.conversation_stats import ConversationStats
-from openhands.server.session.agent_session import AgentSession
-from openhands.storage.memory import InMemoryFileStore
+from forge.controller.agent import Agent
+from forge.controller.agent_controller import AgentController
+from forge.controller.state.state import State
+from forge.core.config import LLMConfig, ForgeConfig
+from forge.core.config.agent_config import AgentConfig
+from forge.events import EventStream, EventStreamSubscriber
+from forge.integrations.service_types import ProviderType
+from forge.llm.llm_registry import LLMRegistry
+from forge.llm.metrics import Metrics
+from forge.memory.memory import Memory
+from forge.runtime.impl.action_execution.action_execution_client import ActionExecutionClient
+from forge.server.services.conversation_stats import ConversationStats
+from forge.server.session.agent_session import AgentSession
+from forge.storage.memory import InMemoryFileStore
 
 
 @pytest.fixture
 def mock_llm_registry():
     """Create a mock LLM registry that properly simulates LLM registration."""
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     return LLMRegistry(config=config, agent_cls=None, retry_listener=None)
 
 
@@ -93,14 +93,14 @@ async def test_agent_session_start_with_no_state(make_mock_agent, mock_llm_regis
 
     memory = Memory(event_stream=mock_event_stream, sid="test-session")
     memory.microagents_dir = "test-dir"
-    with patch("openhands.server.session.agent_session.AgentController", SpyAgentController), patch(
-        "openhands.server.session.agent_session.EventStream", return_value=mock_event_stream
+    with patch("forge.server.session.agent_session.AgentController", SpyAgentController), patch(
+        "forge.server.session.agent_session.EventStream", return_value=mock_event_stream
     ), patch(
-        "openhands.controller.state.state.State.restore_from_session", side_effect=Exception("No state found")
+        "forge.controller.state.state.State.restore_from_session", side_effect=Exception("No state found")
     ), patch(
-        "openhands.server.session.agent_session.Memory", return_value=memory
+        "forge.server.session.agent_session.Memory", return_value=memory
     ):
-        await session.start(runtime_name="test-runtime", config=OpenHandsConfig(), agent=mock_agent, max_iterations=10)
+        await session.start(runtime_name="test-runtime", config=ForgeConfig(), agent=mock_agent, max_iterations=10)
         mock_event_stream.subscribe.assert_any_call(
             EventStreamSubscriber.AGENT_CONTROLLER, session.controller.on_event, session.controller.id
         )
@@ -155,12 +155,12 @@ async def test_agent_session_start_with_restored_state(make_mock_agent, mock_llm
             super().set_initial_state(*args, state=state, **kwargs)
 
     mock_memory = MagicMock(spec=Memory)
-    with patch("openhands.server.session.agent_session.AgentController", SpyAgentController), patch(
-        "openhands.server.session.agent_session.EventStream", return_value=mock_event_stream
-    ), patch("openhands.controller.state.state.State.restore_from_session", return_value=mock_restored_state), patch(
-        "openhands.server.session.agent_session.Memory", mock_memory
+    with patch("forge.server.session.agent_session.AgentController", SpyAgentController), patch(
+        "forge.server.session.agent_session.EventStream", return_value=mock_event_stream
+    ), patch("forge.controller.state.state.State.restore_from_session", return_value=mock_restored_state), patch(
+        "forge.server.session.agent_session.Memory", mock_memory
     ):
-        await session.start(runtime_name="test-runtime", config=OpenHandsConfig(), agent=mock_agent, max_iterations=10)
+        await session.start(runtime_name="test-runtime", config=ForgeConfig(), agent=mock_agent, max_iterations=10)
         assert session.controller.set_initial_state_call_count == 1
         mock_event_stream.subscribe.assert_called_with(
             EventStreamSubscriber.AGENT_CONTROLLER, session.controller.on_event, session.controller.id
@@ -198,10 +198,10 @@ async def test_metrics_centralization_via_conversation_stats(make_mock_agent, co
     session.event_stream = mock_event_stream
     memory = Memory(event_stream=mock_event_stream, sid="test-session")
     memory.microagents_dir = "test-dir"
-    with patch("openhands.server.session.agent_session.EventStream", return_value=mock_event_stream), patch(
-        "openhands.controller.state.state.State.restore_from_session", side_effect=Exception("No state found")
-    ), patch("openhands.server.session.agent_session.Memory", return_value=memory):
-        await session.start(runtime_name="test-runtime", config=OpenHandsConfig(), agent=mock_agent, max_iterations=10)
+    with patch("forge.server.session.agent_session.EventStream", return_value=mock_event_stream), patch(
+        "forge.controller.state.state.State.restore_from_session", side_effect=Exception("No state found")
+    ), patch("forge.server.session.agent_session.Memory", return_value=memory):
+        await session.start(runtime_name="test-runtime", config=ForgeConfig(), agent=mock_agent, max_iterations=10)
         assert session.controller.state.conversation_stats is mock_conversation_stats
         test_cost = 0.05
         session.controller.agent.llm.metrics.add_cost(test_cost)
@@ -244,12 +244,12 @@ async def test_budget_control_flag_syncs_with_metrics(make_mock_agent, connected
     session.event_stream = mock_event_stream
     memory = Memory(event_stream=mock_event_stream, sid="test-session")
     memory.microagents_dir = "test-dir"
-    with patch("openhands.server.session.agent_session.EventStream", return_value=mock_event_stream), patch(
-        "openhands.controller.state.state.State.restore_from_session", side_effect=Exception("No state found")
-    ), patch("openhands.server.session.agent_session.Memory", return_value=memory):
+    with patch("forge.server.session.agent_session.EventStream", return_value=mock_event_stream), patch(
+        "forge.controller.state.state.State.restore_from_session", side_effect=Exception("No state found")
+    ), patch("forge.server.session.agent_session.Memory", return_value=memory):
         await session.start(
             runtime_name="test-runtime",
-            config=OpenHandsConfig(),
+            config=ForgeConfig(),
             agent=mock_agent,
             max_iterations=10,
             max_budget_per_task=1.0,

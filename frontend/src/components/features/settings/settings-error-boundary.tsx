@@ -59,7 +59,7 @@ export class SettingsErrorBoundary extends React.Component<
   handleResetSettings = () => {
     // Clear localStorage settings
     const settingsKeys = Object.keys(localStorage).filter(key => 
-      key.startsWith('openhands.') || key.includes('settings')
+      key.startsWith('Forge.') || key.includes('settings')
     );
     
     settingsKeys.forEach(key => localStorage.removeItem(key));

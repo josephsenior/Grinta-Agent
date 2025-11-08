@@ -13,7 +13,7 @@ export function ReauthModal() {
       <ModalBody className="border border-border">
         <img
           src={logo}
-          alt="CodePilot Pro Logo"
+          alt="Forge Pro Logo"
           className="h-12 w-auto select-none drop-shadow-[0_0_4px_rgba(255,200,80,0.35)]"
           draggable={false}
         />

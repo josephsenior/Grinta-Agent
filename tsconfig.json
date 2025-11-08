@@ -1,8 +1,15 @@
 {
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "strict": true
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
   },
-  "files": [],
+  "include": ["**/*.ts", "**/*.tsx", "vitest.config.ts", "types/**/*.d.ts"],
+  "exclude": ["frontend", "node_modules", "dist"],
   "references": []
 }

@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger 
 } from "#/components/ui/dropdown-menu";
 import { cn } from "#/utils/utils";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { FileIcon } from "#/components/ui/file-icon";
 
 export interface FileNode {
@@ -148,9 +148,12 @@ export function FileExplorer({
     
     setLoading(true);
     try {
-      const response = await OpenHands.getFiles(conversationId);
-      setFiles(response);
-      setFileTree(buildFileTree(response));
+      const response = await Forge.getFiles(conversationId);
+      const normalized: string[] = (response || []).map((entry: any) =>
+        typeof entry === "string" ? entry : entry?.path ?? "",
+      );
+      setFiles(normalized);
+      setFileTree(buildFileTree(normalized));
     } catch (error) {
       console.error('Failed to load files:', error);
     } finally {
@@ -203,160 +206,46 @@ export function FileExplorer({
   // Filter files based on search term
   const filteredTree = React.useMemo(() => {
     if (!searchTerm) return fileTree;
-    
-    const filterNode = (node: FileNode): FileNode | null => {
-      const matchesSearch = node.name.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      if (node.type === 'file') {
-        return matchesSearch ? node : null;
-      }
-      
-      // For folders, include if folder name matches or any child matches
-      const filteredChildren = node.children
-        ?.map(filterNode)
-        .filter((child): child is FileNode => child !== null) || [];
-      
-      if (matchesSearch || filteredChildren.length > 0) {
-        return {
-          ...node,
-          children: filteredChildren,
-          isExpanded: true // Auto-expand filtered folders
-        };
-      }
-      
-      return null;
-    };
-    
-    return fileTree.map(filterNode).filter((node): node is FileNode => node !== null);
+
+    return fileTree
+      .map((node) => filterNodeBySearch(node, searchTerm))
+      .filter((node): node is FileNode => node !== null);
   }, [fileTree, searchTerm]);
 
   // Render file/folder node
-  const renderNode = (node: FileNode, depth = 0) => {
-    const isExpanded = expandedFolders.has(node.path);
-    const isSelected = selectedFile === node.path;
-    
-    return (
-      <div key={node.path}>
-        <div
-          className={cn(
-            "flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer group transition-all duration-200",
-            "hover:bg-brand-500/5 hover:border-l-2 hover:border-brand-500/30",
-            isSelected && "bg-brand-500/10 border-l-2 border-brand-500 shadow-sm shadow-brand-500/10",
-            "text-sm"
-          )}
-          style={{ paddingLeft: `${8 + depth * 16}px` }}
-          onClick={() => {
-            if (node.type === 'folder') {
-              toggleFolder(node.path);
-            } else {
-              handleFileSelect(node.path);
-            }
-          }}
-        >
-          {/* Expand/Collapse Icon */}
-          {node.type === 'folder' && (
-            <div className="w-4 h-4 flex items-center justify-center">
-              {isExpanded ? (
-                <ChevronDown className="w-3 h-3 text-text-secondary" />
-              ) : (
-                <ChevronRight className="w-3 h-3 text-text-secondary" />
-              )}
-            </div>
-          )}
-          
-          {/* File/Folder Icon - Using FileIcon component for proper file-icons-js rendering */}
-          <div className="flex-shrink-0">
-            {node.type === 'folder' ? (
-              isExpanded ? (
-                <FolderOpen className="w-4 h-4 text-violet-500" />
-              ) : (
-                <Folder className="w-4 h-4 text-brand-400" />
-              )
-            ) : (
-              <FileIcon 
-                filename={node.name} 
-                size={16}
-                className="transition-transform duration-200 group-hover:scale-110"
-              />
-            )}
-          </div>
-          
-          {/* File/Folder Name */}
-          <span className={cn(
-            "flex-1 truncate",
-            isSelected ? "text-violet-500 font-medium" : "text-text-primary"
-          )}>
-            {node.name}
-          </span>
-          
-          {/* Status Badge */}
-          {showStatus && node.status && node.status !== 'unchanged' && (
-            <Badge 
-              variant="outline" 
-              className={cn("text-xs px-1.5 py-0.5", getStatusColor(node.status))}
-            >
-              {node.status === 'new' ? 'N' : node.status === 'modified' ? 'M' : 'D'}
-            </Badge>
-          )}
-          
-          {/* Actions Menu */}
-          {showActions && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 transition-opacity"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MoreHorizontal className="w-3 h-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleFileAction('open', node.path)}>
-                  <Eye className="w-4 h-4 mr-2" />
-                  Open
-                </DropdownMenuItem>
-                {node.type === 'file' && (
-                  <>
-                    <DropdownMenuItem onClick={() => handleFileAction('download', node.path)}>
-                      <Download className="w-4 h-4 mr-2" />
-                      Download
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleFileAction('rename', node.path)}>
-                      <Edit3 className="w-4 h-4 mr-2" />
-                      Rename
-                    </DropdownMenuItem>
-                  </>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={() => handleFileAction('delete', node.path)}
-                  className="text-red-500"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-        
-        {/* Render Children */}
-        {node.type === 'folder' && isExpanded && node.children && (
-          <div>
-            {node.children.map(child => renderNode(child, depth + 1))}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const renderNode = React.useCallback(
+    (node: FileNode, depth = 0) =>
+      renderFileNode({
+        node,
+        depth,
+        expandedFolders,
+        selectedFile,
+        toggleFolder,
+        onSelect: handleFileSelect,
+        showStatus,
+        showActions,
+        handleFileAction,
+        renderChild: (child, childDepth) => renderNode(child, childDepth),
+      }),
+    [
+      expandedFolders,
+      selectedFile,
+      toggleFolder,
+      handleFileSelect,
+      showStatus,
+      showActions,
+      handleFileAction,
+    ],
+  );
 
   // Don't render on server side to prevent hydration issues
   if (!isClient) {
     return (
       <div className={cn("flex flex-col h-full bg-background-primary border border-border rounded-lg", className)}>
-        <div className="flex items-center justify-center h-32">
+        <div
+          className="flex items-center justify-center h-32"
+          data-testid="file-explorer-loading"
+        >
           <div className="text-text-secondary">Loading...</div>
         </div>
       </div>
@@ -405,7 +294,10 @@ export function FileExplorer({
       {/* File Tree */}
       <div className="flex-1 overflow-y-auto p-2">
         {loading ? (
-          <div className="flex items-center justify-center h-32">
+          <div
+            className="flex items-center justify-center h-32"
+            data-testid="file-explorer-loading"
+          >
             <RefreshCw className="w-5 h-5 animate-spin text-text-secondary" />
           </div>
         ) : filteredTree.length === 0 ? (
@@ -418,10 +310,245 @@ export function FileExplorer({
           </div>
         ) : (
           <div className="space-y-1">
-            {filteredTree.map(node => renderNode(node))}
+            {filteredTree.map((node) => renderNode(node))}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+function filterNodeBySearch(node: FileNode, searchTerm: string): FileNode | null {
+  const matchesSearch = node.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+  if (node.type === "file") {
+    return matchesSearch ? node : null;
+  }
+
+  const filteredChildren =
+    node.children
+      ?.map((child) => filterNodeBySearch(child, searchTerm))
+      .filter((child): child is FileNode => child !== null) ?? [];
+
+  if (matchesSearch || filteredChildren.length > 0) {
+    return {
+      ...node,
+      children: filteredChildren,
+      isExpanded: true,
+    };
+  }
+
+  return null;
+}
+
+function renderFileNode({
+  node,
+  depth,
+  expandedFolders,
+  selectedFile,
+  toggleFolder,
+  onSelect,
+  showStatus,
+  showActions,
+  handleFileAction,
+  renderChild,
+}: {
+  node: FileNode;
+  depth: number;
+  expandedFolders: Set<string>;
+  selectedFile: string | null;
+  toggleFolder: (path: string) => void;
+  onSelect: (path: string) => void;
+  showStatus: boolean;
+  showActions: boolean;
+  handleFileAction: (action: "open" | "rename" | "delete" | "download", path: string) => void;
+  renderChild: (node: FileNode, depth: number) => React.ReactNode;
+}) {
+  const isExpanded = expandedFolders.has(node.path);
+  const isSelected = selectedFile === node.path;
+
+  return (
+    <div key={node.path}>
+      <div
+        className={cn(
+          "flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer group transition-all duration-200",
+          "hover:bg-brand-500/5 hover:border-l-2 hover:border-brand-500/30",
+          isSelected &&
+            "bg-brand-500/10 border-l-2 border-brand-500 shadow-sm shadow-brand-500/10",
+          "text-sm",
+        )}
+        style={{ paddingLeft: `${8 + depth * 16}px` }}
+        onClick={() => {
+          if (node.type === "folder") {
+            toggleFolder(node.path);
+          } else {
+            onSelect(node.path);
+          }
+        }}
+      >
+        <NodeIndicator node={node} isExpanded={isExpanded} />
+        <NodeIcon node={node} isExpanded={isExpanded} />
+        <NodeLabel node={node} isSelected={isSelected} />
+        <NodeStatusBadge node={node} showStatus={showStatus} />
+        <NodeActions
+          node={node}
+          showActions={showActions}
+          onAction={handleFileAction}
+        />
+      </div>
+
+      {node.type === "folder" && isExpanded && node.children && (
+        <div>{node.children.map((child) => renderChild(child, depth + 1))}</div>
+      )}
+    </div>
+  );
+}
+
+function NodeIndicator({
+  node,
+  isExpanded,
+}: {
+  node: FileNode;
+  isExpanded: boolean;
+}) {
+  if (node.type !== "folder") {
+    return <div className="w-4 h-4" />;
+  }
+
+  return (
+    <div className="w-4 h-4 flex items-center justify-center">
+      {isExpanded ? (
+        <ChevronDown className="w-3 h-3 text-text-secondary" />
+      ) : (
+        <ChevronRight className="w-3 h-3 text-text-secondary" />
+      )}
+    </div>
+  );
+}
+
+function NodeIcon({
+  node,
+  isExpanded,
+}: {
+  node: FileNode;
+  isExpanded: boolean;
+}) {
+  if (node.type === "folder") {
+    return (
+      <div className="flex-shrink-0">
+        {isExpanded ? (
+          <FolderOpen className="w-4 h-4 text-violet-500" />
+        ) : (
+          <Folder className="w-4 h-4 text-brand-400" />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-shrink-0">
+      <FileIcon
+        filename={node.name}
+        size={16}
+        className="transition-transform duration-200 group-hover:scale-110"
+      />
+    </div>
+  );
+}
+
+function NodeLabel({
+  node,
+  isSelected,
+}: {
+  node: FileNode;
+  isSelected: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        "flex-1 truncate",
+        isSelected ? "text-violet-500 font-medium" : "text-text-primary",
+      )}
+    >
+      {node.name}
+    </span>
+  );
+}
+
+function NodeStatusBadge({
+  node,
+  showStatus,
+}: {
+  node: FileNode;
+  showStatus: boolean;
+}) {
+  if (!showStatus || !node.status || node.status === "unchanged") {
+    return null;
+  }
+
+  const label = node.status === "new" ? "N" : node.status === "modified" ? "M" : "D";
+
+  return (
+    <Badge
+      variant="outline"
+      className={cn("text-xs px-1.5 py-0.5", getStatusColor(node.status))}
+    >
+      {label}
+    </Badge>
+  );
+}
+
+function NodeActions({
+  node,
+  showActions,
+  onAction,
+}: {
+  node: FileNode;
+  showActions: boolean;
+  onAction: (action: "open" | "rename" | "delete" | "download", path: string) => void;
+}) {
+  if (!showActions) {
+    return null;
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 transition-opacity"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <MoreHorizontal className="w-3 h-3" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => onAction("open", node.path)}>
+          <Eye className="w-4 h-4 mr-2" />
+          Open
+        </DropdownMenuItem>
+        {node.type === "file" && (
+          <>
+            <DropdownMenuItem onClick={() => onAction("download", node.path)}>
+              <Download className="w-4 h-4 mr-2" />
+              Download
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onAction("rename", node.path)}>
+              <Edit3 className="w-4 h-4 mr-2" />
+              Rename
+            </DropdownMenuItem>
+          </>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => onAction("delete", node.path)}
+          className="text-red-500"
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -1,0 +1,18 @@
+{
+  "id": "4a12d73a-34b4-40dd-8ef7-5c2ab81e702f",
+  "title": "Python Snippet",
+  "description": null,
+  "language": "python",
+  "category": "custom",
+  "code": "print('hi')",
+  "tags": [],
+  "is_favorite": false,
+  "usage_count": 0,
+  "created_at": "2025-11-08 01:27:01.120649",
+  "updated_at": "2025-11-08 12:04:14.562434",
+  "metadata": {},
+  "dependencies": [],
+  "related_snippets": [],
+  "source_url": null,
+  "license": null
+}

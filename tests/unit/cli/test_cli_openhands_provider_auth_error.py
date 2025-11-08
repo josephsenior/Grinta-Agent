@@ -4,10 +4,10 @@ import pytest
 import pytest_asyncio
 from litellm.exceptions import AuthenticationError
 from pydantic import SecretStr
-from openhands.cli import main as cli
-from openhands.core.config.llm_config import LLMConfig
-from openhands.events import EventSource
-from openhands.events.action import MessageAction
+from forge.cli import main as cli
+from forge.core.config.llm_config import LLMConfig
+from forge.events import EventSource
+from forge.events.action import MessageAction
 
 
 @pytest_asyncio.fixture
@@ -41,8 +41,8 @@ def mock_config():
     config.runtime = "local"
     config.cli_multiline_input = False
     config.workspace_base = "/test/dir"
-    llm_config = LLMConfig(model="openhands/o3", api_key=SecretStr("invalid-api-key"))
-    llm_config.model = "openhands/o3"
+    llm_config = LLMConfig(model="Openhands/o3", api_key=SecretStr("invalid-api-key"))
+    llm_config.model = "Openhands/o3"
     config.get_llm_config.return_value = llm_config
     config.get_llm_config_from_agent.return_value = llm_config
     search_api_key_mock = MagicMock()
@@ -59,17 +59,17 @@ def mock_settings_store():
 
 
 @pytest.mark.asyncio
-@patch("openhands.cli.main.display_runtime_initialization_message")
-@patch("openhands.cli.main.display_initialization_animation")
-@patch("openhands.cli.main.create_agent")
-@patch("openhands.cli.main.add_mcp_tools_to_agent")
-@patch("openhands.cli.main.create_runtime")
-@patch("openhands.cli.main.create_controller")
-@patch("openhands.cli.main.create_memory")
-@patch("openhands.cli.main.run_agent_until_done")
-@patch("openhands.cli.main.cleanup_session")
-@patch("openhands.cli.main.initialize_repository_for_runtime")
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.cli.main.display_runtime_initialization_message")
+@patch("forge.cli.main.display_initialization_animation")
+@patch("forge.cli.main.create_agent")
+@patch("forge.cli.main.add_mcp_tools_to_agent")
+@patch("forge.cli.main.create_runtime")
+@patch("forge.cli.main.create_controller")
+@patch("forge.cli.main.create_memory")
+@patch("forge.cli.main.run_agent_until_done")
+@patch("forge.cli.main.cleanup_session")
+@patch("forge.cli.main.initialize_repository_for_runtime")
+@patch("forge.llm.llm.litellm_completion")
 async def test_openhands_provider_authentication_error(
     mock_litellm_completion,
     mock_initialize_repo,
@@ -85,9 +85,9 @@ async def test_openhands_provider_authentication_error(
     mock_config,
     mock_settings_store,
 ):
-    """Test that authentication errors with the OpenHands provider are handled correctly.
+    """Test that authentication errors with the Openhands provider are handled correctly.
 
-    This test reproduces the error seen in the CLI when using the OpenHands provider:
+    This test reproduces the error seen in the CLI when using the Openhands provider (legacy Forge alias):
 
     ```
     litellm.exceptions.AuthenticationError: litellm.AuthenticationError: AuthenticationError: Litellm_proxyException -
@@ -95,11 +95,11 @@ async def test_openhands_provider_authentication_error(
     Key Hash (Token) =e316fa114498880be11f2e236d6f482feee5e324a4a148b98af247eded5290c4.
     Unable to find token in cache or `LiteLLM_VerificationTokenTable`
 
-    18:38:53 - openhands:ERROR: loop.py:25 - STATUS$ERROR_LLM_AUTHENTICATION
+    18:38:53 - Openhands:ERROR: loop.py:25 - STATUS$ERROR_LLM_AUTHENTICATION
     ```
 
     The test mocks the litellm_completion function to raise an AuthenticationError
-    with the OpenHands provider and verifies that the CLI handles the error gracefully.
+    with the Openhands provider (formerly Forge) and verifies that the CLI handles the error gracefully.
     """
     loop = asyncio.get_running_loop()
     mock_initialize_repo.return_value = "/test/dir"
@@ -117,11 +117,11 @@ async def test_openhands_provider_authentication_error(
     mock_litellm_completion.side_effect = AuthenticationError(
         message=auth_error_message, llm_provider="litellm_proxy", model="o3"
     )
-    with patch("openhands.cli.main.read_prompt_input", new_callable=AsyncMock) as mock_read_prompt:
+    with patch("forge.cli.main.read_prompt_input", new_callable=AsyncMock) as mock_read_prompt:
         mock_read_prompt.return_value = "/exit"
-        with patch("openhands.cli.main.handle_commands", new_callable=AsyncMock) as mock_handle_commands:
+        with patch("forge.cli.main.handle_commands", new_callable=AsyncMock) as mock_handle_commands:
             mock_handle_commands.return_value = (True, False, False)
-            with patch("openhands.core.logger.openhands_logger.error"):
+            with patch("forge.core.logger.FORGE_logger.error"):
                 initial_action_content = "Hello, I need help with a task"
                 result = await cli.run_session(
                     loop, mock_config, mock_settings_store, "/test/dir", initial_action_content

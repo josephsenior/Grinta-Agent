@@ -4,7 +4,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.middleware.cors import CORSMiddleware
-from openhands.server.middleware import LocalhostCORSMiddleware
+from forge.server.middleware import LocalhostCORSMiddleware
 
 
 @pytest.fixture

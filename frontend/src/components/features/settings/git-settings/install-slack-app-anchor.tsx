@@ -2,7 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { I18nKey } from "#/i18n/declaration";
 import { BrandButton } from "../brand-button";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 
 export function InstallSlackAppAnchor() {
   const { t } = useTranslation();

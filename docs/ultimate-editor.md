@@ -166,7 +166,7 @@ pip install tree-sitter tree-sitter-language-pack
 
 ## Implementation
 
-**File:** `openhands/agenthub/codeact_agent/tools/universal_editor.py`
+**File:** `Forge/agenthub/codeact_agent/tools/universal_editor.py`
 
 **Key classes:**
 - `UniversalEditor` - Main editor interface

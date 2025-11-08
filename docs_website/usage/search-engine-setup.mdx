@@ -1,28 +1,28 @@
 ---
 title: Search Engine Setup
-description: Configure OpenHands to use Tavily as a search engine.
+description: Configure Forge to use Tavily as a search engine.
 ---
 
-## Setting Up Search Engine in OpenHands
+## Setting Up Search Engine in Forge
 
-OpenHands can be configured to use [Tavily](https://tavily.com/) as a search engine, which allows the agent to search the web for information when needed. This capability enhances the agent's ability to provide up-to-date information and solve problems that require external knowledge.
+Forge can be configured to use [Tavily](https://tavily.com/) as a search engine, which allows the agent to search the web for information when needed. This capability enhances the agent's ability to provide up-to-date information and solve problems that require external knowledge.
 
 ### Getting a Tavily API Key
 
-To use the search functionality in OpenHands, you'll need to obtain a Tavily API key:
+To use the search functionality in Forge, you'll need to obtain a Tavily API key:
 
 1. Visit [Tavily's website](https://tavily.com/) and sign up for an account.
 2. Navigate to the API section in your dashboard.
 3. Generate a new API key.
 4. Copy the API key (it should start with `tvly-`).
 
-### Configuring Search in OpenHands
+### Configuring Search in Forge
 
-Once you have your Tavily API key, you can configure OpenHands to use it:
+Once you have your Tavily API key, you can configure Forge to use it:
 
-#### In the OpenHands UI
+#### In the Forge UI
 
-1. Open OpenHands and navigate to the Settings page.
+1. Open Forge and navigate to the Settings page.
 2. Under the `LLM` tab, enter your Tavily API key (starting with `tvly-`) in the `Search API Key (Tavily)` field.
 3. Click `Save` to apply the changes.
 
@@ -32,15 +32,15 @@ Once you have your Tavily API key, you can configure OpenHands to use it:
 
 #### Using Configuration Files
 
-If you're running OpenHands in headless mode or via CLI, you can configure the search API key in your configuration file:
+If you're running Forge in headless mode or via CLI, you can configure the search API key in your configuration file:
 
 ```toml
-# In your OpenHands config file
+# In your Forge config file
 [core]
 search_api_key = "tvly-your-api-key-here"
 ```
 
-### How Search Works in OpenHands
+### How Search Works in Forge
 
 When the search engine is configured:
 

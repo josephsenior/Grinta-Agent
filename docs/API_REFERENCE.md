@@ -4,7 +4,7 @@
 
 ```
 Development: http://localhost:3000
-Production: https://api.openhands.dev
+Production: https://api.Forge.dev
 ```
 
 ## Authentication
@@ -374,7 +374,7 @@ All errors follow this structure:
         "action": "retry"
       }
     ],
-    "help_url": "https://docs.openhands.dev/errors/validation"
+    "help_url": "https://docs.Forge.dev/errors/validation"
   }
 }
 ```
@@ -431,15 +431,15 @@ GET /api/options/agents
 ### Installation
 
 ```bash
-npm install @openhands/sdk
+npm install @Forge/sdk
 ```
 
 ### Usage
 
 ```typescript
-import { OpenHandsClient } from '@openhands/sdk';
+import { ForgeClient } from '@Forge/sdk';
 
-const client = new OpenHandsClient({
+const client = new ForgeClient({
   baseUrl: 'http://localhost:3000',
 });
 
@@ -464,15 +464,15 @@ client.conversations.subscribe(conversation.id, (event) => {
 ### Installation
 
 ```bash
-pip install openhands-sdk
+pip install Forge-sdk
 ```
 
 ### Usage
 
 ```python
-from openhands_sdk import OpenHandsClient
+from forge_sdk import forgeClient
 
-client = OpenHandsClient(base_url='http://localhost:3000')
+client = ForgeClient(base_url='http://localhost:3000')
 
 # Create conversation
 conversation = client.conversations.create(title='Build todo app')
@@ -500,7 +500,7 @@ API versioning via headers (optional, beta allows non-versioned):
 
 ```http
 GET /api/settings
-Accept: application/vnd.openhands.v1+json
+Accept: application/vnd.Forge.v1+json
 ```
 
 See [API Versioning Guide](./api-versioning-guide.md) for details.

@@ -1,6 +1,6 @@
-# OpenHands End-to-End Tests
+# Forge End-to-End Tests
 
-This directory contains end-to-end tests for the OpenHands application. These tests use Playwright to interact with the OpenHands UI and verify that the application works correctly.
+This directory contains end-to-end tests for the Forge application. These tests use Playwright to interact with the Forge UI and verify that the application works correctly.
 
 ## Running the Tests
 
@@ -27,7 +27,7 @@ Optional environment variables:
 
 The E2E tests support several command-line options:
 
-- `--base-url`: Specify the base URL of the OpenHands instance under test (default: `http://localhost:12000`)
+- `--base-url`: Specify the base URL of the Forge instance under test (default: `http://localhost:12000`)
 - `--headless`: Run browser in headless mode (default: `true`)
 - `--no-headless`: Run browser in non-headless mode to watch the browser interactions
 - `--slow-mo`: Add delay between actions in milliseconds (default: `0`)
@@ -49,12 +49,12 @@ This runs all tests in sequence:
 
 #### Specifying a Custom Base URL
 
-By default, the tests run against `http://localhost:12000`. You can specify a different OpenHands instance URL using the `--base-url` option:
+By default, the tests run against `http://localhost:12000`. You can specify a different Forge instance URL using the `--base-url` option:
 
 ```bash
 cd tests/e2e
 # Run against a remote instance
-poetry run pytest test_settings.py::test_github_token_configuration test_conversation.py::test_conversation_start -v --base-url=https://my-openhands-instance.com
+poetry run pytest test_settings.py::test_github_token_configuration test_conversation.py::test_conversation_start -v --base-url=https://my-Forge-instance.com
 
 # Run against a CI instance
 poetry run pytest test_settings.py::test_github_token_configuration test_conversation.py::test_conversation_start -v --base-url=http://ci-instance:8080
@@ -110,7 +110,7 @@ The tests can also be run as part of a GitHub workflow. The workflow is triggere
 
 The GitHub token configuration test (`test_github_token_configuration`) performs the following steps:
 
-1. Navigates to the OpenHands application
+1. Navigates to the Forge application
 2. Checks if the GitHub token is already configured:
    - If not configured, it navigates to the settings page and configures it
    - If already configured, it verifies the repository selection is available
@@ -120,8 +120,8 @@ The GitHub token configuration test (`test_github_token_configuration`) performs
 
 The conversation start test (`test_conversation_start`) performs the following steps:
 
-1. Navigates to the OpenHands application (assumes GitHub token is already configured)
-2. Selects the "openhands-agent/OpenHands" repository
+1. Navigates to the Forge application (assumes GitHub token is already configured)
+2. Selects the "Forge-agent/Forge" repository
 3. Clicks the "Launch" button
 4. Waits for the conversation interface to load
 5. Waits for the agent to initialize
@@ -132,8 +132,8 @@ The conversation start test (`test_conversation_start`) performs the following s
 
 The multi-conversation resume test (`test_multi_conversation_resume`) performs the following steps:
 
-1. Navigates to the OpenHands application (assumes GitHub token is already configured)
-2. Selects the "openhands-agent/OpenHands" repository
+1. Navigates to the Forge application (assumes GitHub token is already configured)
+2. Selects the "Forge-agent/Forge" repository
 3. Clicks the "Launch" button
 4. Waits for the conversation interface to load
 5. Waits for the agent to initialize
@@ -147,7 +147,7 @@ The multi-conversation resume test (`test_multi_conversation_resume`) performs t
 
 ### Simple Browser Navigation Test
 
-A simple test (`test_simple_browser_navigation`) that just navigates to the OpenHands GitHub repository to verify the browser setup works correctly.
+A simple test (`test_simple_browser_navigation`) that just navigates to the Forge GitHub repository to verify the browser setup works correctly.
 
 ### Local Runtime Test
 
@@ -158,6 +158,6 @@ A separate test (`test_headless_mode_with_dummy_agent_no_browser` in `test_local
 If the tests fail, check the following:
 
 1. Make sure all required environment variables are set
-2. Check the logs in `/tmp/openhands-e2e-test.log` and `/tmp/openhands-e2e-build.log`
-3. Verify that the OpenHands application is running correctly
+2. Check the logs in `/tmp/Forge-e2e-test.log` and `/tmp/Forge-e2e-build.log`
+3. Verify that the Forge application is running correctly
 4. Check the Playwright test results in the `test-results` directory

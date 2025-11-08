@@ -35,8 +35,8 @@ check_interval_seconds = 60
 
 ```bash
 # .env
-OPENHANDS_ENABLE_PROMPT_OPTIMIZATION=true
-OPENHANDS_OPTIMIZATION_STRATEGY=multi_objective
+FORGE_ENABLE_PROMPT_OPTIMIZATION=true
+FORGE_OPTIMIZATION_STRATEGY=multi_objective
 ```
 
 ---

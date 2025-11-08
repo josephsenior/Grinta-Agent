@@ -7,7 +7,7 @@ This file tracks the resource requirements of different instances.
 
 import json
 import os
-from openhands.core.logger import openhands_logger as logger
+from forge.core.logger import forge_logger as logger
 
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_RUNTIME_RESOURCE_FACTOR = int(os.environ.get("DEFAULT_RUNTIME_RESOURCE_FACTOR", 1))

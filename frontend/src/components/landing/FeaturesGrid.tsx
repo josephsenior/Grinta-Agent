@@ -79,7 +79,7 @@ export default function FeaturesGrid(): React.ReactElement {
       }),
       description: t("LANDING$FEATURE_1_DESC", {
         defaultValue:
-          "CodePilot Pro writes production-ready code in seconds, from simple functions to complex applications.",
+          "Forge Pro writes production-ready code in seconds, from simple functions to complex applications.",
       }),
       stats: "10x faster",
       color: "brand",
@@ -105,7 +105,7 @@ export default function FeaturesGrid(): React.ReactElement {
       title: t("LANDING$FEATURE_3_TITLE", { defaultValue: "Auto Deployment" }),
       description: t("LANDING$FEATURE_3_DESC", {
         defaultValue:
-          "CodePilot Pro handles the entire deployment pipeline, from build optimization to production release.",
+          "Forge Pro handles the entire deployment pipeline, from build optimization to production release.",
       }),
       stats: "Zero downtime",
       color: "accent",
@@ -148,7 +148,7 @@ export default function FeaturesGrid(): React.ReactElement {
       }),
       description: t("LANDING$FEATURE_6_DESC", {
         defaultValue:
-          "CodePilot Pro constantly evolves, learning from the latest development trends and best practices.",
+          "Forge Pro constantly evolves, learning from the latest development trends and best practices.",
       }),
       stats: "Always updated",
       color: "accent",

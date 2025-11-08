@@ -1,11 +1,11 @@
 <#!
 .SYNOPSIS
-  Starts the shadcn-ui MCP proxy (SuperGateway) and then launches OpenHands serve.
+  Starts the shadcn-ui MCP proxy (SuperGateway) and then launches Forge serve.
 .DESCRIPTION
   1. Ensures shadcn-ui MCP server dependencies are installed & built.
   2. Starts SuperGateway exposing http://localhost:8090/sse.
   3. Waits for the SSE endpoint to respond.
-  4. Launches OpenHands (uvx openhands serve) in the foreground after proxy is up.
+  4. Launches Forge (uvx Forge serve) in the foreground after proxy is up.
 .PARAMETER Port
   Port for SuperGateway (default 8090).
 .PARAMETER Framework
@@ -15,7 +15,7 @@
 .PARAMETER SkipBuild
   Skip rebuilding the MCP server even if build output missing.
 .PARAMETER NoServe
-  Start proxy only (do not start OpenHands serve).
+  Start proxy only (do not start Forge serve).
 #>
 param(
   [int]$Port = 8090,
@@ -138,13 +138,13 @@ if (-not $readyPort) {
 
 if ($NoServe) { Write-Host '[done] Proxy running only. Use Get-Job/Receive-Job to monitor.' -ForegroundColor Yellow; exit 0 }
 
-Write-Host "[4/5] Launching OpenHands server..." -ForegroundColor Cyan
-# Attempt to use uvx if available; fallback to 'openhands serve'
-$serveCmd = 'uvx --python 3.12 --from openhands-ai openhands serve'
-try { & uvx --version | Out-Null } catch { $serveCmd = 'openhands serve' }
+Write-Host "[4/5] Launching Forge server..." -ForegroundColor Cyan
+# Attempt to use uvx if available; fallback to 'Forge serve'
+$serveCmd = 'uvx --python 3.12 --from Forge-ai Forge serve'
+try { & uvx --version | Out-Null } catch { $serveCmd = 'Forge serve' }
 Write-Host "[cmd] $serveCmd" -ForegroundColor DarkGray
 
-# Run OpenHands in foreground
+# Run Forge in foreground
 try {
   Invoke-Expression $serveCmd
 } finally {

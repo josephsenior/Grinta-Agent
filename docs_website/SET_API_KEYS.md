@@ -4,16 +4,16 @@ This project should not store secrets in `config.toml`. Instead, set provider AP
 
 Recommended variables
 
-- OPENHANDS_API_KEY — key for the OpenHands LLM proxy provider
+- FORGE_API_KEY — key for the Forge LLM proxy provider
 - OPENROUTER_API_KEY — key for OpenRouter if you use the `openrouter/...` models
 
 Quick options
 
-1. Use the included PowerShell helper to persist the OpenHands key for your user:
+1. Use the included PowerShell helper to persist the Forge key for your user:
 
 ```powershell
 # Run from repository root (PowerShell)
-.\scripts\set_openhands_api_key.ps1
+.\scripts\set_FORGE_api_key.ps1
 ```
 
 This will:
@@ -25,13 +25,13 @@ This will:
 2. Manually set for the current session only (temporary):
 
 ```powershell
-$env:OPENHANDS_API_KEY = "sk-..."
+$env:FORGE_API_KEY = "sk-..."
 ```
 
 3. Persist manually (PowerShell):
 
 ```powershell
-setx OPENHANDS_API_KEY "sk-..."
+setx FORGE_API_KEY "sk-..."
 # Close and reopen shells/IDE to pick up the persistent value
 ```
 

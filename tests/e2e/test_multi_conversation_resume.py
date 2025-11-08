@@ -17,9 +17,9 @@ import time
 from playwright.sync_api import Page, expect
 
 
-def _navigate_to_openhands_multi(page: Page) -> None:
-    """Navigate to OpenHands application for multi-conversation test."""
-    print("Step 1: Navigating to OpenHands application...")
+def _navigate_to_FORGE_multi(page: Page) -> None:
+    """Navigate to Forge application for multi-conversation test."""
+    print("Step 1: Navigating to Forge application...")
     page.goto("http://localhost:12000")
     page.wait_for_load_state("networkidle", timeout=30000)
     page.screenshot(path="test-results/multi_conv_01_initial_load.png")
@@ -27,8 +27,8 @@ def _navigate_to_openhands_multi(page: Page) -> None:
 
 
 def _select_repository_multi(page: Page) -> None:
-    """Select the OpenHands repository for multi-conversation test."""
-    print("Step 2: Selecting openhands-agent/OpenHands repository...")
+    """Select the Forge repository for multi-conversation test."""
+    print("Step 2: Selecting Forge-agent/Forge repository...")
     home_screen = page.locator('[data-testid="home-screen"]')
     expect(home_screen).to_be_visible(timeout=15000)
     print("Home screen is visible")
@@ -41,7 +41,7 @@ def _select_repository_multi(page: Page) -> None:
 
     try:
         page.keyboard.press("Control+a")
-        page.keyboard.type("openhands-agent/OpenHands")
+        page.keyboard.type("Forge-agent/Forge")
         print("Used keyboard.type() for React Select component")
     except Exception as e:
         print(f"Keyboard input failed: {e}")
@@ -55,14 +55,14 @@ def _select_repository_multi(page: Page) -> None:
 def _select_repository_option_multi(page: Page) -> None:
     """Select repository option from dropdown for multi-conversation test."""
     option_selectors = [
-        '[data-testid="repo-dropdown"] [role="option"]:has-text("openhands-agent/OpenHands")',
-        '[data-testid="repo-dropdown"] [role="option"]:has-text("OpenHands")',
-        '[data-testid="repo-dropdown"] div[id*="option"]:has-text("openhands-agent/OpenHands")',
-        '[data-testid="repo-dropdown"] div[id*="option"]:has-text("OpenHands")',
-        '[role="option"]:has-text("openhands-agent/OpenHands")',
-        '[role="option"]:has-text("OpenHands")',
-        'div:has-text("openhands-agent/OpenHands"):not([id="aria-results"])',
-        'div:has-text("OpenHands"):not([id="aria-results"])',
+        '[data-testid="repo-dropdown"] [role="option"]:has-text("Forge-agent/Forge")',
+        '[data-testid="repo-dropdown"] [role="option"]:has-text("forge")',
+        '[data-testid="repo-dropdown"] div[id*="option"]:has-text("Forge-agent/Forge")',
+        '[data-testid="repo-dropdown"] div[id*="option"]:has-text("forge")',
+        '[role="option"]:has-text("Forge-agent/Forge")',
+        '[role="option"]:has-text("forge")',
+        'div:has-text("Forge-agent/Forge"):not([id="aria-results"])',
+        'div:has-text("forge"):not([id="aria-results"])',
     ]
 
     option_found = False
@@ -422,12 +422,12 @@ def _extract_project_name_from_response(content: str) -> str | None:
     if (
         "pyproject" in content_lower
         and ("name" in content_lower or "project" in content_lower)
-        and ("openhands" in content_lower or "openhands-ai" in content_lower)
+        and ("forge" in content_lower or "Forge-ai" in content_lower)
     ):
         if name_match := re.search(r'name.*?["\']([^"\']+)["\']', content, re.IGNORECASE):
             return name_match[1]
         else:
-            return "openhands-ai" if "openhands-ai" in content_lower else "openhands"
+            return "Forge-ai" if "Forge-ai" in content_lower else "forge"
     return None
 
 
@@ -723,7 +723,7 @@ def _check_followup_response_content(page: Page, agent_completed: bool) -> bool:
                     "application",
                     "software",
                     "ai",
-                    "openhands",
+                    "forge",
                 ]
                 if any(indicator in content_lower for indicator in context_indicators):
                     print("✅ Found agent response to follow-up question with context awareness!")
@@ -742,8 +742,8 @@ def _check_followup_response_content(page: Page, agent_completed: bool) -> bool:
 def test_multi_conversation_resume(page: Page):
     """Test resuming an older conversation and continuing it.
 
-    1. Navigate to OpenHands (assumes GitHub token is already configured)
-    2. Select the OpenHands repository
+    1. Navigate to Forge (assumes GitHub token is already configured)
+    2. Select the Forge repository
     3. Start a conversation and ask about a specific file
     4. Wait for agent response
     5. Navigate away from the conversation
@@ -753,7 +753,7 @@ def test_multi_conversation_resume(page: Page):
     """
     os.makedirs("test-results", exist_ok=True)
 
-    _navigate_to_openhands_multi(page)
+    _navigate_to_FORGE_multi(page)
     _select_repository_multi(page)
     _click_launch_button_multi(page)
     _wait_for_conversation_interface_multi(page)

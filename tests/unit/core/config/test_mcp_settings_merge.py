@@ -2,8 +2,8 @@
 
 from unittest.mock import patch
 import pytest
-from openhands.core.config.mcp_config import MCPConfig, MCPSSEServerConfig, MCPStdioServerConfig
-from openhands.storage.data_models.settings import Settings
+from forge.core.config.mcp_config import MCPConfig, MCPSSEServerConfig, MCPStdioServerConfig
+from forge.storage.data_models.settings import Settings
 
 
 @pytest.mark.asyncio

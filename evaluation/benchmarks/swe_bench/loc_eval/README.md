@@ -5,7 +5,7 @@ This folder implements localization evaluation at both file and function levels 
 ## **1. Environment Setup**
 
 - Python env: [Install python environment](../../../README.md#development-environment)
-- LLM config: [Configure LLM config](../../../README.md#configure-openhands-and-your-llm)
+- LLM config: [Configure LLM config](../../../README.md#configure-Forge-and-your-llm)
 
 ## **2. Inference & Evaluation**
 

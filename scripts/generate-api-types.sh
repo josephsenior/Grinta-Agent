@@ -23,7 +23,7 @@ NC='\033[0m' # No Color
 # Check if backend is running
 if ! curl -s http://localhost:3000/api/health > /dev/null 2>&1; then
     echo -e "${YELLOW}⚠️  Backend not running. Please start it first:${NC}"
-    echo "   poetry run python -m openhands.server.listen"
+    echo "   poetry run python -m Forge.server.listen"
     exit 1
 fi
 

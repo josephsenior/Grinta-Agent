@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest an idea for OpenHands
+about: Suggest an idea for Forge
 title: '[FEATURE] '
 labels: enhancement
 assignees: ''
@@ -25,7 +25,7 @@ What alternatives have you considered?
 ## Additional Context
 
 - Would you be willing to implement this feature?
-- Is this blocking your usage of OpenHands?
+- Is this blocking your usage of Forge?
 - Any relevant examples from other tools?
 
 ## Example Usage

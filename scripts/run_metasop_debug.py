@@ -6,7 +6,7 @@ import time
 import urllib.request
 
 logger = logging.getLogger(__name__)
-CONTAINER = "openhands-app"
+CONTAINER = "Forge-app"
 CONVERSATION_ID = "8cc289e6246847cc8b8f362902cdd55b"
 URL = f"http://localhost:3000/api/conversations/{CONVERSATION_ID}/metasop-debug"
 

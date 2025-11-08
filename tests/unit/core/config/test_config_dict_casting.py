@@ -1,6 +1,6 @@
 import os
 import pytest
-from openhands.core.config import OpenHandsConfig, load_from_env
+from forge.core.config import ForgeConfig, load_from_env
 
 
 def test_load_from_env_with_dict(monkeypatch, default_config):
@@ -19,4 +19,4 @@ def test_load_from_env_with_dict(monkeypatch, default_config):
 
 @pytest.fixture
 def default_config():
-    yield OpenHandsConfig()
+    yield ForgeConfig()

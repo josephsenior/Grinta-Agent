@@ -21,6 +21,13 @@ export function LanguageInput({
       testId={name}
       name={name}
       onInputChange={onChange}
+      onSelectionChange={(key) => {
+        if (typeof key === "string") {
+          const selectedLabel =
+            AvailableLanguages.find(({ value }) => value === key)?.label || key;
+          onChange(selectedLabel);
+        }
+      }}
       label={t(I18nKey.SETTINGS$LANGUAGE)}
       items={AvailableLanguages.map((l) => ({
         key: l.value,

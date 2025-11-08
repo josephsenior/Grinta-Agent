@@ -7,10 +7,10 @@ and applies filtering based on various criteria.
 from typing import Any
 from unittest.mock import MagicMock, patch
 import pytest
-from openhands.events.action import MessageAction
-from openhands.events.event import EventSource
-from openhands.events.event_filter import EventFilter
-from openhands.events.nested_event_store import NestedEventStore
+from forge.events.action import MessageAction
+from forge.events.event import EventSource
+from forge.events.event_filter import EventFilter
+from forge.events.nested_event_store import NestedEventStore
 
 
 def create_mock_event(id: int, content: str, source: str = "user", hidden: bool = False) -> dict[str, Any]:
@@ -112,7 +112,7 @@ class TestNestedEventStore:
         )
 
     @patch("httpx.get")
-    @patch("openhands.events.event_filter.EventFilter.exclude")
+    @patch("forge.events.event_filter.EventFilter.exclude")
     def test_search_events_with_filter(self, mock_exclude, mock_get, event_store):
         """Test event retrieval with an EventFilter."""
         mock_events = [
@@ -227,11 +227,11 @@ class TestNestedEventStore:
         backing store and having httpx.get return paginated JSON responses derived from it.
         """
         from urllib.parse import parse_qs, urlparse
-        from openhands.events.event import EventSource
-        from openhands.events.observation import NullObservation
-        from openhands.events.serialization.event import event_to_dict
-        from openhands.events.stream import EventStream
-        from openhands.storage.memory import InMemoryFileStore
+        from forge.events.event import EventSource
+        from forge.events.observation import NullObservation
+        from forge.events.serialization.event import event_to_dict
+        from forge.events.stream import EventStream
+        from forge.storage.memory import InMemoryFileStore
 
         fs = InMemoryFileStore()
         server_stream = EventStream("test-session", fs, user_id="test-user")

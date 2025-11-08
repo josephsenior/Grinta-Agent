@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Script to run comprehensive E2E tests for the autonomous system.
+"""Script to run comprehensive E2E tests for the autonomous system.
 
 Usage:
     python run_autonomous_tests.py --quick          # Run quick tests only

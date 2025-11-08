@@ -1,18 +1,16 @@
-"""
-Custom LLM Provider Example
+"""Custom LLM Provider Example
 
-This example shows how to add support for a new LLM provider to OpenHands.
+This example shows how to add support for a new LLM provider to forge.
 """
 
 from pydantic import SecretStr
-from openhands.core.config import LLMConfig
-from openhands.core.config.provider_config import ProviderConfig, provider_config_manager
-from openhands.llm import LLM
+from forge.core.config import LLMConfig
+from forge.core.config.provider_config import ProviderConfig, provider_config_manager
+from forge.llm import LLM
 
 
 def add_custom_provider():
     """Add a custom LLM provider to the system."""
-    
     # Step 1: Create provider configuration
     custom_provider_config = ProviderConfig(
         name='myprovider',
@@ -71,13 +69,12 @@ def add_custom_provider():
 
 def add_to_codebase():
     """Instructions for permanently adding the provider."""
-    
     print("\n" + "="*60)
-    print("To permanently add this provider to OpenHands:")
+    print("To permanently add this provider to Forge:")
     print("="*60)
     
     print("""
-1. Edit: openhands/core/config/provider_config.py
+1. Edit: Forge/core/config/provider_config.py
    
    Add to _load_provider_configurations():
    
@@ -95,7 +92,7 @@ def add_to_codebase():
 
 2. (Optional) Add model feature patterns:
    
-   Edit: openhands/llm/model_features.py
+   Edit: Forge/llm/model_features.py
    
    If your provider supports function calling:
    FUNCTION_CALLING_PATTERNS = [
@@ -111,7 +108,7 @@ def add_to_codebase():
 
 3. (Optional) Add to model list:
    
-   Edit: openhands/utils/llm.py
+   Edit: Forge/utils/llm.py
    
    Add to get_supported_llm_models():
    model_list.extend([
@@ -125,8 +122,8 @@ def add_to_codebase():
    LLM_MODEL=myprovider/model-1
    MYPROVIDER_API_KEY=mp-your-key
    
-   # Start OpenHands
-   poetry run python -m openhands.server.listen
+   # Start Forge
+   poetry run python -m forge.server.listen
    
 5. Submit PR:
    

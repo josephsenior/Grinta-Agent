@@ -21,7 +21,7 @@ if [ -z "$AGENT" ]; then
   AGENT="CodeActAgent"
 fi
 
-get_openhands_version
+get_FORGE_version
 
 if [ -z "$HUBS" ]; then
   HUBS="hf,torch,tf"
@@ -29,7 +29,7 @@ if [ -z "$HUBS" ]; then
 fi
 
 echo "AGENT: $AGENT"
-echo "OPENHANDS_VERSION: $OPENHANDS_VERSION"
+echo "FORGE_VERSION: $FORGE_VERSION"
 echo "MODEL_CONFIG: $MODEL_CONFIG"
 echo "HUBS: $HUBS"
 
@@ -40,7 +40,7 @@ COMMAND="poetry run python evaluation/benchmarks/gorilla/run_infer.py \
   --hubs $HUBS \
   --data-split validation \
   --eval-num-workers $NUM_WORKERS \
-  --eval-note ${OPENHANDS_VERSION}_${LEVELS}"
+  --eval-note ${FORGE_VERSION}_${LEVELS}"
 
 if [ -n "$EVAL_LIMIT" ]; then
   echo "EVAL_LIMIT: $EVAL_LIMIT"

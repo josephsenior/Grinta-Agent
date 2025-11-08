@@ -1,0 +1,194 @@
+# ACE Framework Configuration Examples
+# Copy relevant sections to your config.toml file
+
+# =============================================================================
+# MetaSOP Integration Configuration
+# =============================================================================
+[metasop]
+# Enable ACE framework for self-improving agents
+enable_ace = true
+
+# Playbook size management
+ace_max_bullets = 1000                    # Maximum bullets in playbook
+ace_max_playbook_content_length = 50     # Max bullets in LLM context
+
+# Learning parameters
+ace_multi_epoch = true                    # Enable multi-epoch training
+ace_num_epochs = 5                        # Number of training epochs
+ace_reflector_max_iterations = 5         # Max reflection iterations
+
+# Online adaptation
+ace_enable_online_adaptation = true      # Enable real-time learning
+ace_min_helpfulness_threshold = 0.0      # Min helpfulness for retrieval
+
+# Playbook maintenance
+ace_enable_grow_and_refine = true        # Enable automatic cleanup
+ace_cleanup_interval_days = 30           # Days between cleanup cycles
+ace_redundancy_threshold = 0.8           # Similarity threshold for redundancy
+
+# Persistence
+ace_playbook_persistence_path = "~/.Forge/ace_playbooks/metasop/"
+ace_auto_save_playbook = true            # Auto-save after updates
+ace_playbook_save_interval = 10          # Save every N updates
+
+# =============================================================================
+# CodeAct Agent Configuration
+# =============================================================================
+[agent]
+# Enable ACE framework for CodeAct agent
+enable_ace = true
+
+# Playbook size management
+ace_max_bullets = 1000
+ace_max_playbook_content_length = 50
+
+# Learning parameters
+ace_multi_epoch = true
+ace_num_epochs = 5
+ace_reflector_max_iterations = 5
+
+# Online adaptation
+ace_enable_online_adaptation = true
+ace_min_helpfulness_threshold = 0.0
+
+# Playbook maintenance
+ace_enable_grow_and_refine = true
+ace_cleanup_interval_days = 30
+ace_redundancy_threshold = 0.8
+
+# Persistence
+ace_playbook_path = "~/.Forge/ace_playbooks/codeact/"
+ace_auto_save_playbook = true
+ace_playbook_save_interval = 10
+
+# =============================================================================
+# Performance-Optimized Configuration
+# =============================================================================
+[metasop.performance]
+# Optimized for high-performance scenarios
+enable_ace = true
+ace_max_bullets = 2000                   # Larger playbook
+ace_max_playbook_content_length = 100    # More context
+ace_num_epochs = 3                       # Fewer epochs for speed
+ace_reflector_max_iterations = 3         # Fewer iterations
+ace_min_helpfulness_threshold = 0.3      # Higher threshold
+ace_redundancy_threshold = 0.9           # Stricter redundancy
+ace_playbook_save_interval = 5           # More frequent saves
+
+# =============================================================================
+# Memory-Constrained Configuration
+# =============================================================================
+[metasop.memory_constrained]
+# Optimized for limited memory environments
+enable_ace = true
+ace_max_bullets = 200                    # Smaller playbook
+ace_max_playbook_content_length = 20     # Less context
+ace_num_epochs = 2                       # Fewer epochs
+ace_reflector_max_iterations = 2         # Fewer iterations
+ace_min_helpfulness_threshold = 0.5      # Higher threshold
+ace_redundancy_threshold = 0.7           # More aggressive cleanup
+ace_cleanup_interval_days = 7            # More frequent cleanup
+ace_playbook_save_interval = 20          # Less frequent saves
+
+# =============================================================================
+# Development/Testing Configuration
+# =============================================================================
+[metasop.development]
+# Optimized for development and testing
+enable_ace = true
+ace_max_bullets = 100                    # Small playbook
+ace_max_playbook_content_length = 10     # Minimal context
+ace_multi_epoch = false                  # Disable multi-epoch
+ace_num_epochs = 1                       # Single epoch
+ace_reflector_max_iterations = 1         # Single iteration
+ace_enable_online_adaptation = false     # Disable online learning
+ace_min_helpfulness_threshold = 0.0      # Accept all bullets
+ace_redundancy_threshold = 0.5           # Loose redundancy
+ace_auto_save_playbook = false           # Manual saves only
+
+# =============================================================================
+# Production Configuration
+# =============================================================================
+[metasop.production]
+# Optimized for production environments
+enable_ace = true
+ace_max_bullets = 5000                   # Large playbook
+ace_max_playbook_content_length = 200    # Rich context
+ace_multi_epoch = true                   # Enable multi-epoch
+ace_num_epochs = 10                      # More epochs
+ace_reflector_max_iterations = 10        # More iterations
+ace_enable_online_adaptation = true      # Enable online learning
+ace_min_helpfulness_threshold = 0.2      # Moderate threshold
+ace_redundancy_threshold = 0.85          # Strict redundancy
+ace_cleanup_interval_days = 7            # Regular cleanup
+ace_auto_save_playbook = true            # Auto-save enabled
+ace_playbook_save_interval = 5           # Frequent saves
+
+# =============================================================================
+# Domain-Specific Configurations
+# =============================================================================
+
+# For code generation tasks
+[metasop.code_generation]
+enable_ace = true
+ace_max_bullets = 2000
+ace_max_playbook_content_length = 100
+ace_num_epochs = 5
+ace_min_helpfulness_threshold = 0.1
+ace_redundancy_threshold = 0.8
+ace_playbook_persistence_path = "~/.Forge/ace_playbooks/codegen/"
+
+# For general reasoning tasks
+[metasop.general_reasoning]
+enable_ace = true
+ace_max_bullets = 1000
+ace_max_playbook_content_length = 50
+ace_num_epochs = 3
+ace_min_helpfulness_threshold = 0.3
+ace_redundancy_threshold = 0.7
+ace_playbook_persistence_path = "~/.Forge/ace_playbooks/general/"
+
+# For MetaSOP orchestration tasks
+[metasop.metasop_orchestration]
+enable_ace = true
+ace_max_bullets = 3000
+ace_max_playbook_content_length = 150
+ace_num_epochs = 7
+ace_min_helpfulness_threshold = 0.2
+ace_redundancy_threshold = 0.85
+ace_playbook_persistence_path = "~/.Forge/ace_playbooks/metasop/"
+
+# =============================================================================
+# Advanced Configuration Options
+# =============================================================================
+[metasop.advanced]
+# Advanced configuration with all options
+enable_ace = true
+
+# Core settings
+ace_max_bullets = 1000
+ace_multi_epoch = true
+ace_num_epochs = 5
+ace_reflector_max_iterations = 5
+
+# Context management
+ace_max_playbook_content_length = 50
+ace_min_helpfulness_threshold = 0.0
+ace_redundancy_threshold = 0.8
+
+# Learning modes
+ace_enable_online_adaptation = true
+ace_enable_grow_and_refine = true
+
+# Maintenance
+ace_cleanup_interval_days = 30
+ace_auto_save_playbook = true
+ace_playbook_save_interval = 10
+
+# Persistence
+ace_playbook_persistence_path = "~/.Forge/ace_playbooks/advanced/"
+
+# Custom settings (if supported by your implementation)
+# ace_custom_retry_attempts = 3
+# ace_custom_timeout = 30.0
+# ace_custom_batch_size = 1

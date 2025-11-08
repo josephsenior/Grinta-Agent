@@ -1,5 +1,5 @@
 import time
-from openhands.metasop.cache import StepCache, StepCacheEntry
+from forge.metasop.cache import StepCache, StepCacheEntry
 
 
 def test_get_by_fingerprint_hit_and_miss(tmp_path):

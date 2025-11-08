@@ -17,7 +17,7 @@ import {
   FolderPlus
 } from "lucide-react";
 import { useConversationId } from "#/hooks/use-conversation-id";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { LazyMonaco } from "#/components/shared/lazy-monaco";
 import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
@@ -142,13 +142,16 @@ function WorkspaceFilesTab() {
     
     setLoading(true);
     try {
-      const response = await OpenHands.getFiles(conversationId);
-      setFiles(response);
-      setFileTree(buildFileTree(response));
-      
+      const response = await Forge.getFiles(conversationId);
+      const normalized: string[] = (response || []).map((entry: any) =>
+        typeof entry === 'string' ? entry : entry?.path ?? '',
+      );
+      setFiles(normalized);
+      setFileTree(buildFileTree(normalized));
+
       // Auto-select first actual file (not a directory)
-      if (response.length > 0 && !selectedFile) {
-        const firstFile = response.find(path => !path.endsWith('/') && path.includes('.'));
+      if (normalized.length > 0 && !selectedFile) {
+        const firstFile = normalized.find((path: string) => !path.endsWith('/') && path.includes('.'));
         if (firstFile) {
           setSelectedFile(firstFile);
           loadFileContent(firstFile);
@@ -175,7 +178,7 @@ function WorkspaceFilesTab() {
     
     setLoadingContent(true);
     try {
-      const content = await OpenHands.getFile(conversationId, filePath);
+      const content = await Forge.getFile(conversationId, filePath);
       setFileContent(content || '');
     } catch (err: any) {
       console.error('Failed to load file:', err);
@@ -265,7 +268,7 @@ function WorkspaceFilesTab() {
     
     try {
       const filesArray = Array.from(uploadedFiles);
-      await OpenHands.uploadFiles(conversationId, filesArray);
+      await Forge.uploadFiles(conversationId, filesArray);
       toast.success('upload-success', `Uploaded ${filesArray.length} file(s)`);
       
       // Reload files to show the uploaded ones

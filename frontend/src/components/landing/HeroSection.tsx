@@ -47,30 +47,34 @@ export default function HeroSection(): React.ReactElement {
   useEffect(() => {
     let currentIndex = 0;
     const typingSpeed = 80;
-    
+    const typingTimeout: { id: ReturnType<typeof setTimeout> | null } = { id: null };
+
     const typeText = () => {
       if (currentIndex < fullText.length) {
         setDisplayedText(fullText.slice(0, currentIndex + 1));
         currentIndex++;
-        setTimeout(typeText, typingSpeed);
+        typingTimeout.id = setTimeout(typeText, typingSpeed);
       }
     };
-    
+
     typeText();
     
     // Cursor blink
     const cursorInterval = setInterval(() => {
       setShowCursor((prev) => !prev);
     }, 530);
-    
-    return () => clearInterval(cursorInterval);
+
+    return () => {
+      clearInterval(cursorInterval);
+      if (typingTimeout.id != null) clearTimeout(typingTimeout.id);
+    };
   }, [fullText]);
 
   // Detect Playwright test runs
-  type WindowWithE2E = Window & { __OPENHANDS_PLAYWRIGHT?: boolean };
+  type WindowWithE2E = Window & { __Forge_PLAYWRIGHT?: boolean };
   const isPlaywrightRun =
     typeof window !== "undefined" &&
-    (window as unknown as WindowWithE2E).__OPENHANDS_PLAYWRIGHT === true;
+    (window as unknown as WindowWithE2E).__Forge_PLAYWRIGHT === true;
 
   const onStart = () => {
     soundEffects.success(); // Play success sound
@@ -155,7 +159,7 @@ export default function HeroSection(): React.ReactElement {
               <div className="relative group">
                 <img
                   src={logoImage}
-                  alt="CodePilot Pro Logo"
+                  alt="Forge Pro Logo"
                   className="w-20 h-20 object-contain group-hover:scale-110 transition-transform duration-500 logo-glow gpu-accelerated"
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-brand-500/30 to-accent-500/30 rounded-full blur-3xl -z-10 group-hover:blur-[60px] transition-all duration-500" />
@@ -166,7 +170,7 @@ export default function HeroSection(): React.ReactElement {
             {/* Main Heading with typing animation */}
             <h1
               data-testid="page-title"
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.15] tracking-tight mb-6"
+              className="section-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.15] tracking-tight mb-6"
             >
               <span className="bg-gradient-to-r from-foreground via-foreground-secondary to-foreground-tertiary bg-clip-text text-transparent block mb-4 stagger-item delay-300">
                 Ship Code 10x Faster
@@ -189,7 +193,7 @@ export default function HeroSection(): React.ReactElement {
                 onClick={onStart}
                 onMouseEnter={() => soundEffects.hover()}
                 disabled={isPending}
-                className="magnetic-button button-shine relative group px-12 py-6 text-lg font-bold rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 hover:shadow-2xl hover:shadow-brand-500/40 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed gpu-accelerated overflow-hidden"
+                className="cta-primary magnetic-button button-shine relative group px-12 py-6 text-lg font-bold rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 hover:shadow-2xl hover:shadow-brand-500/40 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed gpu-accelerated overflow-hidden"
                 style={{
                   transform: `translate(${primaryMagnetic.offset.x}px, ${primaryMagnetic.offset.y}px)`,
                 }}

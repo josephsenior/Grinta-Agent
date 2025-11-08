@@ -1,0 +1,14 @@
+{
+  "id": "cd9dd63b-c8ff-4e88-bb4e-4048c711f55f",
+  "title": "Stats Test 1",
+  "description": null,
+  "category": "coding",
+  "content": "Content 1",
+  "variables": [],
+  "tags": [],
+  "is_favorite": true,
+  "usage_count": 0,
+  "created_at": "2025-11-08 01:26:22.128593",
+  "updated_at": "2025-11-08 12:03:45.217290",
+  "metadata": {}
+}

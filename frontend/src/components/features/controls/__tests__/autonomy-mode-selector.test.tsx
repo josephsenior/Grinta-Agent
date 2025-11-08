@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { AutonomyModeSelector, AutonomyMode } from "../autonomy-mode-selector";
 
@@ -37,8 +37,8 @@ describe("AutonomyModeSelector", () => {
     fireEvent.click(button);
 
     expect(screen.getByText("Autonomy Mode")).toBeInTheDocument();
-    expect(screen.getByText("Supervised Mode")).toBeInTheDocument();
-    expect(screen.getByText("Full Autonomous Mode")).toBeInTheDocument();
+    expect(screen.getByText("Supervised")).toBeInTheDocument();
+    expect(screen.getByText("Full Autonomous")).toBeInTheDocument();
   });
 
   it("calls onModeChange when a different mode is selected", () => {
@@ -54,13 +54,13 @@ describe("AutonomyModeSelector", () => {
     fireEvent.click(button);
 
     // Select supervised mode
-    const supervisedButton = screen.getByText("Supervised Mode");
+    const supervisedButton = screen.getByText("Supervised");
     fireEvent.click(supervisedButton);
 
     expect(mockOnModeChange).toHaveBeenCalledWith("supervised");
   });
 
-  it("closes dropdown when backdrop is clicked", () => {
+  it("closes dropdown when backdrop is clicked", async () => {
     renderWithRouter(
       <AutonomyModeSelector
         currentMode="balanced"
@@ -76,13 +76,14 @@ describe("AutonomyModeSelector", () => {
     expect(screen.getByText("Autonomy Mode")).toBeInTheDocument();
 
     // Click backdrop
-    const backdrop = document.querySelector(".fixed.inset-0");
-    if (backdrop) {
-      fireEvent.click(backdrop);
-    }
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    fireEvent.click(document.body);
 
-    // Dropdown should be closed (content not visible)
-    expect(screen.queryByText("Autonomy Mode")).not.toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Autonomy Mode")).not.toBeInTheDocument();
+    });
   });
 
   it("shows correct icons for each mode", () => {

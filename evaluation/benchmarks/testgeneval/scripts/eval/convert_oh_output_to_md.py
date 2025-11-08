@@ -1,11 +1,11 @@
-"""Convert OpenHands output to a readable markdown format for visualization."""
+"""Convert Forge output to a readable markdown format for visualization."""
 
 import argparse
 import json
 import os
 import pandas as pd
 from tqdm import tqdm
-from openhands.events.serialization import event_from_dict
+from forge.events.serialization import event_from_dict
 
 tqdm.pandas()
 parser = argparse.ArgumentParser()

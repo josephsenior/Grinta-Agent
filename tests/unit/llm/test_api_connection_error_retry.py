@@ -1,8 +1,8 @@
 from unittest.mock import patch
 import pytest
 from litellm.exceptions import APIConnectionError
-from openhands.core.config import LLMConfig
-from openhands.llm.llm import LLM
+from forge.core.config import LLMConfig
+from forge.llm.llm import LLM
 
 
 @pytest.fixture
@@ -10,7 +10,7 @@ def default_config():
     return LLMConfig(model="gpt-4o", api_key="test_key", num_retries=2, retry_min_wait=1, retry_max_wait=2)
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_completion_retries_api_connection_error(mock_litellm_completion, default_config):
     """Test that APIConnectionError is properly retried."""
     mock_litellm_completion.side_effect = [
@@ -23,7 +23,7 @@ def test_completion_retries_api_connection_error(mock_litellm_completion, defaul
     assert mock_litellm_completion.call_count == 2
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_completion_max_retries_api_connection_error(mock_litellm_completion, default_config):
     """Test that APIConnectionError respects max retries."""
     mock_litellm_completion.side_effect = [

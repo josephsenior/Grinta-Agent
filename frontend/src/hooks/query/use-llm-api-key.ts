@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { openHands } from "#/api/open-hands-axios";
+import { Forge } from "#/api/forge-axios";
 import { useConfig } from "./use-config";
 
 export const LLM_API_KEY_QUERY_KEY = "llm-api-key";
@@ -16,7 +16,7 @@ export function useLlmApiKey() {
     enabled: config?.APP_MODE === "saas",
     queryFn: async () => {
       const { data } =
-        await openHands.get<LlmApiKeyResponse>("/api/keys/llm/byor");
+        await Forge.get<LlmApiKeyResponse>("/api/keys/llm/byor");
       return data;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -29,7 +29,7 @@ export function useRefreshLlmApiKey() {
 
   return useMutation({
     mutationFn: async () => {
-      const { data } = await openHands.post<LlmApiKeyResponse>(
+      const { data } = await Forge.post<LlmApiKeyResponse>(
         "/api/keys/llm/byor/refresh",
       );
       return data;

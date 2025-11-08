@@ -15,7 +15,7 @@ Two complementary memory systems:
 
 ## 1. Repository Memory (repo.md)
 
-**Location:** `.openhands/microagents/repo.md` in each repo
+**Location:** `.Forge/microagents/repo.md` in each repo
 
 **Purpose:** Project-specific knowledge (manual, curated)
 
@@ -80,7 +80,7 @@ I'll save to repo.md:
 Save all or skip any?
 ```
 
-After approval → Update `.openhands/microagents/repo.md`
+After approval → Update `.Forge/microagents/repo.md`
 
 ## Best Practices
 

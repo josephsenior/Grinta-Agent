@@ -21,7 +21,7 @@ try {
     Write-Host "✅ Backend is running" -ForegroundColor Green
 } catch {
     Write-Host "⚠️  Backend not running. Please start it first:" -ForegroundColor Yellow
-    Write-Host "   poetry run python -m openhands.server.listen" -ForegroundColor White
+    Write-Host "   poetry run python -m Forge.server.listen" -ForegroundColor White
     exit 1
 }
 

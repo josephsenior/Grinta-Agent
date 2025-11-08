@@ -4,7 +4,7 @@ import {
   IPythonObservation,
   EditObservation,
   BrowseObservation,
-  OpenHandsObservation,
+  ForgeObservation,
   RecallObservation,
   TaskTrackingObservation,
 } from "#/types/core/observations";
@@ -50,90 +50,45 @@ const getBrowseObservationContent = (event: BrowseObservation) => {
 };
 
 const getRecallObservationContent = (event: RecallObservation): string => {
-  let content = "";
-
   const extras = (event.extras as Record<string, unknown>) ?? {};
+  const sections: string[] = [];
+
   if (extras.recall_type === "workspace_context") {
-    if (typeof extras.repo_name === "string") {
-      content += `\n\n**Repository:** ${extras.repo_name}`;
-    }
-    if (typeof extras.repo_directory === "string") {
-      content += `\n\n**Directory:** ${extras.repo_directory}`;
-    }
-    if (typeof extras.date === "string") {
-      content += `\n\n**Date:** ${extras.date}`;
-    }
-    if (extras.runtime_hosts && Object.keys(extras.runtime_hosts as Record<string, unknown>).length > 0) {
-      content += `\n\n**Available Hosts**`;
-      for (const [host, port] of Object.entries(extras.runtime_hosts as Record<string, unknown>)) {
-        content += `\n\n- ${host} (port ${port})`;
-      }
-    }
-    if (typeof extras.repo_instructions === "string") {
-      content += `\n\n**Repository Instructions:**\n\n${extras.repo_instructions}`;
-    }
-    if (typeof extras.conversation_instructions === "string") {
-      content += `\n\n**Conversation Instructions:**\n\n${extras.conversation_instructions}`;
-    }
-    if (typeof extras.additional_agent_instructions === "string") {
-      content += `\n\n**Additional Instructions:**\n\n${extras.additional_agent_instructions}`;
-    }
+    sections.push(buildWorkspaceContextDetails(extras));
   }
 
-  // Handle microagent knowledge
-  if (Array.isArray(extras.microagent_knowledge) && (extras.microagent_knowledge as unknown[]).length > 0) {
-    content += `\n\n**Triggered Microagent Knowledge:**`;
-    for (const knowledge of extras.microagent_knowledge as unknown[]) {
-      const k = knowledge as Record<string, unknown>;
-      content += `\n\n- **${String(k.name)}** (triggered by keyword: ${String(k.trigger)})\n\n${String(k.content)}`;
-    }
+  const microagentKnowledge = buildMicroagentKnowledgeDetails(extras);
+  if (microagentKnowledge) {
+    sections.push(microagentKnowledge);
   }
 
-  if (extras.custom_secrets_descriptions && Object.keys(extras.custom_secrets_descriptions as Record<string, unknown>).length > 0) {
-    content += `\n\n**Custom Secrets**`;
-    for (const [name, description] of Object.entries(extras.custom_secrets_descriptions as Record<string, unknown>)) {
-      content += `\n\n- $${name}: ${String(description)}`;
-    }
+  const customSecrets = buildCustomSecretsDetails(extras);
+  if (customSecrets) {
+    sections.push(customSecrets);
   }
 
-  return content;
+  return sections.filter(Boolean).join("");
 };
 
 const getTaskTrackingObservationContent = (
   event: TaskTrackingObservation,
 ): string => {
   const { command, task_list: taskList } = event.extras;
-  let content = `**Command:** \`${command}\``;
+  const sections: string[] = [`**Command:** \`${command}\``];
 
-  if (command === "plan" && taskList.length > 0) {
-    content += `\n\n**Task List (${taskList.length} ${taskList.length === 1 ? "item" : "items"}):**\n`;
-
-    taskList.forEach((task, index) => {
-      const statusIcon =
-        {
-          todo: "⏳",
-          in_progress: "🔄",
-          done: "✅",
-        }[task.status] || "❓";
-
-      content += `\n${index + 1}. ${statusIcon} **[${task.status.toUpperCase().replace("_", " ")}]** ${task.title}`;
-      content += `\n   *ID: ${task.id}*`;
-      if (task.notes) {
-        content += `\n   *Notes: ${task.notes}*`;
-      }
-    });
-  } else if (command === "plan") {
-    content += "\n\n**Task List:** Empty";
+  if (command === "plan") {
+    sections.push(buildTaskListSection(taskList));
   }
 
-  if (event.content && event.content.trim()) {
-    content += `\n\n**Result:** ${event.content.trim()}`;
+  const resultSection = formatTaskResult(event.content);
+  if (resultSection) {
+    sections.push(resultSection);
   }
 
-  return content;
+  return sections.filter(Boolean).join("\n\n");
 };
 
-export const getObservationContent = (event: OpenHandsObservation): string => {
+export const getObservationContent = (event: ForgeObservation): string => {
   switch (event.observation) {
     case "read":
       return getReadObservationContent(event);
@@ -155,3 +110,98 @@ export const getObservationContent = (event: OpenHandsObservation): string => {
       return getDefaultEventContent(event);
   }
 };
+
+function buildWorkspaceContextDetails(extras: Record<string, unknown>): string {
+  const lines: string[] = [];
+
+  const pushIfString = (label: string, key: string) => {
+    if (typeof extras[key] === "string") {
+      lines.push(`\n\n**${label}:** ${String(extras[key])}`);
+    }
+  };
+
+  pushIfString("Repository", "repo_name");
+  pushIfString("Directory", "repo_directory");
+  pushIfString("Date", "date");
+
+  const runtimeHosts = extras.runtime_hosts as Record<string, unknown> | undefined;
+  if (runtimeHosts && Object.keys(runtimeHosts).length > 0) {
+    const hostLines = Object.entries(runtimeHosts)
+      .map(([host, port]) => `\n\n- ${host} (port ${port})`)
+      .join("");
+    lines.push(`\n\n**Available Hosts**${hostLines}`);
+  }
+
+  pushIfString("Repository Instructions", "repo_instructions");
+  pushIfString("Conversation Instructions", "conversation_instructions");
+  pushIfString("Additional Instructions", "additional_agent_instructions");
+
+  return lines.join("");
+}
+
+function buildMicroagentKnowledgeDetails(extras: Record<string, unknown>): string | null {
+  const knowledge = extras.microagent_knowledge as unknown[] | undefined;
+  if (!Array.isArray(knowledge) || knowledge.length === 0) {
+    return null;
+  }
+
+  const entries = knowledge
+    .map((item) => {
+      const record = item as Record<string, unknown>;
+      return `\n\n- **${String(record.name)}** (triggered by keyword: ${String(
+        record.trigger,
+      )})\n\n${String(record.content)}`;
+    })
+    .join("");
+
+  return `\n\n**Triggered Microagent Knowledge:**${entries}`;
+}
+
+function buildCustomSecretsDetails(extras: Record<string, unknown>): string | null {
+  const secrets = extras.custom_secrets_descriptions as Record<string, unknown> | undefined;
+  if (!secrets || Object.keys(secrets).length === 0) {
+    return null;
+  }
+
+  const entries = Object.entries(secrets)
+    .map(([name, description]) => `\n\n- $${name}: ${String(description)}`)
+    .join("");
+
+  return `\n\n**Custom Secrets**${entries}`;
+}
+
+function buildTaskListSection(taskList: TaskTrackingObservation["extras"]["task_list"]): string {
+  if (!Array.isArray(taskList) || taskList.length === 0) {
+    return "**Task List:** Empty";
+  }
+
+  const header = `**Task List (${taskList.length} ${taskList.length === 1 ? "item" : "items"}):**`;
+  const items = taskList
+    .map((task, index) => formatTaskItem(task, index))
+    .join("");
+  return `${header}${items}`;
+}
+
+function formatTaskItem(
+  task: TaskTrackingObservation["extras"]["task_list"][number],
+  index: number,
+): string {
+  const statusIcons: Record<string, string> = {
+    todo: "⏳",
+    in_progress: "🔄",
+    done: "✅",
+  };
+  const statusIcon = statusIcons[task.status] ?? "❓";
+  const notesLine = task.notes ? `\n   *Notes: ${task.notes}*` : "";
+
+  return `\n\n${index + 1}. ${statusIcon} **[${task.status.toUpperCase().replace("_", " ")}]** ${
+    task.title
+  }\n   *ID: ${task.id}*${notesLine}`;
+}
+
+function formatTaskResult(content: string | undefined): string | null {
+  if (!content || !content.trim()) {
+    return null;
+  }
+  return `**Result:** ${content.trim()}`;
+}

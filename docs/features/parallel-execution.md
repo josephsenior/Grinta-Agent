@@ -120,7 +120,7 @@ collect_detailed_stats = true
 
 ### **Automatic Parallel Execution**
 ```python
-from openhands.metasop import MetaSOPOrchestrator
+from forge.metasop import MetaSOPOrchestrator
 
 # Initialize with parallel execution enabled
 orchestrator = MetaSOPOrchestrator("feature_delivery")
@@ -133,7 +133,7 @@ result = await orchestrator.run_async(task_context)
 
 ### **Manual Parallel Group Creation**
 ```python
-from openhands.metasop.models import SopStep
+from forge.metasop.models import SopStep
 
 # Create independent steps
 step1 = SopStep(
@@ -279,7 +279,7 @@ tasks = [
 ### **Example 4: Async Performance Optimization**
 ```python
 import asyncio
-from openhands.metasop import MetaSOPOrchestrator
+from forge.metasop import MetaSOPOrchestrator
 
 async def high_performance_execution():
     orchestrator = MetaSOPOrchestrator("high_perf_delivery")

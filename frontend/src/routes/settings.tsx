@@ -22,9 +22,9 @@ import { cn } from "#/utils/utils";
 import { useConfig } from "#/hooks/query/use-config";
 import { I18nKey } from "#/i18n/declaration";
 import { Route } from "./+types/settings";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { queryClient } from "#/query-client-config";
-import { GetConfigResponse } from "#/api/open-hands.types";
+import { GetConfigResponse } from "#/api/forge.types";
 import { useSubscriptionAccess } from "#/hooks/query/use-subscription-access";
 
 const SAAS_ONLY_PATHS = [
@@ -76,7 +76,7 @@ export const clientLoader = async (args: Route.ClientLoaderArgs) => {
 
   let config = queryClient.getQueryData<GetConfigResponse>(["config"]);
   if (!config) {
-    config = await OpenHands.getConfig();
+    config = await Forge.getConfig();
     queryClient.setQueryData<GetConfigResponse>(["config"], config);
   }
 

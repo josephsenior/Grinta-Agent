@@ -383,7 +383,7 @@ export function useCleanMetaSOPOrchestration(events: any[]) {
 
 ```bash
 # 1. Start backend and frontend
-python -m openhands.server --port 3001
+python -m Forge.server --port 3001
 cd frontend && npm run dev
 
 # 2. Open http://localhost:3001
@@ -398,7 +398,7 @@ sop: Create a todo app with authentication
 
 ```python
 # Backend: Trigger MetaSOP with visualization
-from openhands.metasop.clean_router import run_clean_metasop_orchestration
+from forge.metasop.clean_router import run_clean_metasop_orchestration
 
 async def example():
     await run_clean_metasop_orchestration(
@@ -467,21 +467,21 @@ export function CustomPMVisual({ artifact }: { artifact: PMSpecArtifact }) {
 
 ```bash
 # Run backend tests
-cd OpenHands
-python -m pytest openhands/metasop/tests/ -v
+cd Forge
+python -m pytest Forge/metasop/tests/ -v
 
 # Test event emitter
-python -m pytest openhands/metasop/tests/test_event_emitter.py
+python -m pytest Forge/metasop/tests/test_event_emitter.py
 
 # Test artifact generation
-python -m pytest openhands/metasop/tests/test_artifacts.py
+python -m pytest Forge/metasop/tests/test_artifacts.py
 ```
 
 ### **Frontend Tests**
 
 ```bash
 # Run frontend tests
-cd OpenHands/frontend
+cd Forge/frontend
 npm test
 
 # Test parser
@@ -493,7 +493,7 @@ npm test -- clean-visualizations.test.tsx
 
 ### **Manual Testing**
 
-See `OpenHands/MANUAL_METASOP_TEST_GUIDE.md` for comprehensive manual testing procedures.
+See `Forge/MANUAL_METASOP_TEST_GUIDE.md` for comprehensive manual testing procedures.
 
 ---
 

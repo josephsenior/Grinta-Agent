@@ -2,14 +2,14 @@ import os
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import ValidationError
-from openhands.controller.agent import Agent
-from openhands.core.config import OpenHandsConfig, load_from_env
-from openhands.core.config.mcp_config import MCPConfig, MCPSHTTPServerConfig, MCPSSEServerConfig, MCPStdioServerConfig
-from openhands.llm.llm_registry import LLMRegistry
-from openhands.server.services.conversation_stats import ConversationStats
-from openhands.server.session.conversation_init_data import ConversationInitData
-from openhands.server.session.session import Session
-from openhands.storage.memory import InMemoryFileStore
+from forge.controller.agent import Agent
+from forge.core.config import ForgeConfig, load_from_env
+from forge.core.config.mcp_config import MCPConfig, MCPSHTTPServerConfig, MCPSSEServerConfig, MCPStdioServerConfig
+from forge.llm.llm_registry import LLMRegistry
+from forge.server.services.conversation_stats import ConversationStats
+from forge.server.session.conversation_init_data import ConversationInitData
+from forge.server.session.session import Session
+from forge.storage.memory import InMemoryFileStore
 
 
 def test_valid_sse_config():
@@ -223,7 +223,7 @@ def test_mcp_stdio_server_args_parsing_invalid_quotes():
 def test_env_var_mcp_shttp_server_config(monkeypatch):
     """Test creating MCPSHTTPServerConfig from environment variables."""
     monkeypatch.setenv("MCP_SHTTP_SERVERS", '[{"url": "http://env-server:8080", "api_key": "env-api-key"}]')
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     load_from_env(config, os.environ)
     config.mcp = MCPConfig(
         sse_servers=config.mcp.sse_servers,
@@ -250,8 +250,8 @@ def test_env_var_mcp_shttp_server_config_with_toml(monkeypatch, tmp_path):
             '\n[mcp]\nsse_servers = ["http://toml-server:8080"]\nshttp_servers = [\n    { url = "http://toml-http-server:8080", api_key = "toml-api-key" }\n]\n'
         )
     monkeypatch.setenv("MCP_SHTTP_SERVERS", '[{"url": "http://env-server:8080", "api_key": "env-api-key"}]')
-    config = OpenHandsConfig()
-    from openhands.core.config import load_from_toml
+    config = ForgeConfig()
+    from forge.core.config import load_from_toml
 
     load_from_toml(config, str(toml_file))
     assert len(config.mcp.shttp_servers) == 1
@@ -270,7 +270,7 @@ def test_env_var_mcp_shttp_servers_with_python_str_representation(monkeypatch):
     """Test creating MCPSHTTPServerConfig from environment variables using Python string representation."""
     mcp_shttp_servers = [{"url": "https://example.com/mcp/mcp", "api_key": "test-api-key"}]
     monkeypatch.setenv("MCP_SHTTP_SERVERS", str(mcp_shttp_servers))
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     load_from_env(config, os.environ)
     assert len(config.mcp.shttp_servers) == 1
     server = config.mcp.shttp_servers[0]
@@ -284,7 +284,7 @@ async def test_session_preserves_env_mcp_config(monkeypatch):
     """Test that Session preserves MCP configuration from environment variables."""
     monkeypatch.setenv("MCP_SHTTP_SERVERS", '[{"url": "http://env-server:8080", "api_key": "env-api-key"}]')
     monkeypatch.setenv("MCP_HOST", "dummy")
-    config = OpenHandsConfig()
+    config = ForgeConfig()
     load_from_env(config, os.environ)
     assert config.mcp_host == "dummy"
     assert len(config.mcp.shttp_servers) == 1
@@ -296,7 +296,7 @@ async def test_session_preserves_env_mcp_config(monkeypatch):
         file_store=InMemoryFileStore({}),
         config=config,
         sio=AsyncMock(),
-        llm_registry=LLMRegistry(config=OpenHandsConfig()),
+        llm_registry=LLMRegistry(config=ForgeConfig()),
         conversation_stats=ConversationStats(None, "test-sid", None),
     )
     settings = ConversationInitData()

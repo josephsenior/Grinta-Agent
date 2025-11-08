@@ -18,8 +18,8 @@ import {
 import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
 import { cn } from "#/utils/utils";
-import { OpenHandsAction } from "#/types/core/actions";
-import { OpenHandsObservation } from "#/types/core/observations";
+import { ForgeAction } from "#/types/core/actions";
+import { ForgeObservation } from "#/types/core/observations";
 import { isUserMessage, isAssistantMessage } from "#/types/core/guards";
 
 import ClientTimeDelta from "#/components/shared/ClientTimeDelta";
@@ -27,13 +27,13 @@ import ClientTimeDelta from "#/components/shared/ClientTimeDelta";
 interface ConversationSearchProps {
   isOpen: boolean;
   onClose: () => void;
-  messages: (OpenHandsAction | OpenHandsObservation)[];
+  messages: (ForgeAction | ForgeObservation)[];
   onSelectMessage: (messageIndex: number) => void;
 }
 
 interface SearchResult {
   index: number;
-  message: OpenHandsAction | OpenHandsObservation;
+  message: ForgeAction | ForgeObservation;
   snippet: string;
   timestamp?: Date;
   matchScore: number;
@@ -59,24 +59,52 @@ function highlightText(text: string, query: string): React.ReactNode {
   );
 }
 
-function getMessageText(
-  message: OpenHandsAction | OpenHandsObservation,
-): string {
-  if ("message" in message && typeof message.message === "string") {
-    return message.message;
-  }
-  if ("content" in message && typeof message.content === "string") {
-    return message.content;
-  }
-  if ("observation" in message && typeof message.observation === "string") {
-    return message.observation;
-  }
-  if ("args" in message && message.args) {
-    if (typeof message.args === "string") return message.args;
-    if (typeof message.args === "object" && "thought" in message.args) {
-      return String(message.args.thought || "");
+const STRING_FIELDS: Array<keyof ForgeAction | keyof ForgeObservation> = [
+  "message",
+  "content",
+  "observation",
+];
+
+const extractStringField = (message: ForgeAction | ForgeObservation) => {
+  for (const field of STRING_FIELDS) {
+    if (field in message && typeof (message as any)[field] === "string") {
+      return (message as any)[field] as string;
     }
   }
+
+  return null;
+};
+
+const extractArgsText = (args: unknown): string | null => {
+  if (!args) {
+    return null;
+  }
+
+  if (typeof args === "string") {
+    return args;
+  }
+
+  if (typeof args === "object" && "thought" in (args as Record<string, unknown>)) {
+    const thought = (args as Record<string, unknown>).thought;
+    return thought != null ? String(thought) : "";
+  }
+
+  return null;
+};
+
+function getMessageText(message: ForgeAction | ForgeObservation): string {
+  const stringField = extractStringField(message);
+  if (stringField !== null) {
+    return stringField;
+  }
+
+  if ("args" in message) {
+    const argsText = extractArgsText(message.args);
+    if (argsText !== null) {
+      return argsText;
+    }
+  }
+
   return JSON.stringify(message);
 }
 

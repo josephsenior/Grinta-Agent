@@ -42,7 +42,7 @@ fi
 echo "Building: $image_name"
 tags=()
 
-OPENHANDS_BUILD_VERSION="dev"
+FORGE_BUILD_VERSION="dev"
 
 cache_tag_base="buildcache"
 cache_tag="$cache_tag_base"
@@ -62,7 +62,7 @@ if [[ -n $GITHUB_REF_NAME ]]; then
     tags+=("latest")
   fi
   sanitized_ref_name=$(echo "$GITHUB_REF_NAME" | sed 's/[^a-zA-Z0-9.-]\+/-/g')
-  OPENHANDS_BUILD_VERSION=$sanitized_ref_name
+  FORGE_BUILD_VERSION=$sanitized_ref_name
   sanitized_ref_name=$(echo "$sanitized_ref_name" | tr '[:upper:]' '[:lower:]') # lower case is required in tagging
   tags+=("$sanitized_ref_name")
   cache_tag+="-${sanitized_ref_name}"
@@ -77,7 +77,7 @@ fi
 
 echo "Tags: ${tags[@]}"
 
-if [[ "$image_name" == "openhands" ]]; then
+if [[ "$image_name" == "Forge" ]]; then
   dir="./containers/app"
 elif [[ "$image_name" == "runtime" ]]; then
   dir="./containers/runtime"
@@ -147,13 +147,13 @@ if [[ $dry_run -eq 1 ]]; then
   jq -n \
     --argjson tags "$(printf '%s\n' "${full_tags[@]}" | jq -R . | jq -s .)" \
     --arg platform "$platform" \
-    --arg openhands_build_version "$OPENHANDS_BUILD_VERSION" \
+    --arg FORGE_build_version "$FORGE_BUILD_VERSION" \
     --arg dockerfile "$dir/Dockerfile" \
     '{
       tags: $tags,
       platform: $platform,
       build_args: [
-        "OPENHANDS_BUILD_VERSION=" + $openhands_build_version
+        "FORGE_BUILD_VERSION=" + $FORGE_build_version
       ],
       dockerfile: $dockerfile
     }' > docker-build-dry.json
@@ -167,7 +167,7 @@ echo "Building for platform(s): $platform"
 
 docker buildx build \
   $args \
-  --build-arg OPENHANDS_BUILD_VERSION="$OPENHANDS_BUILD_VERSION" \
+  --build-arg FORGE_BUILD_VERSION="$FORGE_BUILD_VERSION" \
   --cache-from=type=registry,ref=$DOCKER_REPOSITORY:$cache_tag \
   --cache-from=type=registry,ref=$DOCKER_REPOSITORY:$cache_tag_base-main \
   --platform $platform \

@@ -23,12 +23,12 @@ export function ConversationPanelWrapper({
   // while making the panel content itself pointer-events-auto so tests can
   // still interact with the panel when needed.
   interface WindowWithE2E extends Window {
-    __OPENHANDS_PLAYWRIGHT?: boolean;
+    __Forge_PLAYWRIGHT?: boolean;
   }
 
   const isPlaywrightRun =
     typeof window !== "undefined" &&
-    (window as unknown as WindowWithE2E).__OPENHANDS_PLAYWRIGHT === true;
+    (window as unknown as WindowWithE2E).__Forge_PLAYWRIGHT === true;
 
   return ReactDOM.createPortal(
     <div

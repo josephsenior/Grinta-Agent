@@ -19,76 +19,10 @@ interface MicroagentManagementRepoMicroagentsProps {
 export function MicroagentManagementRepoMicroagents({
   repository,
 }: MicroagentManagementRepoMicroagentsProps) {
-  const { selectedMicroagentItem } = useSelector(
-    (state: RootState) => state.microagentManagement,
-  );
-
-  const dispatch = useDispatch();
-
+  const controller = useRepoMicroagentsController({ repository });
   const { t } = useTranslation();
 
-  const { full_name: repositoryName } = repository;
-
-  // Extract owner and repo from repositoryName (format: "owner/repo")
-  const [owner, repo] = repositoryName.split("/");
-
-  const {
-    data: microagents,
-    isLoading: isLoadingMicroagents,
-    isError: isErrorMicroagents,
-  } = useRepositoryMicroagents(owner, repo, true);
-
-  const {
-    data: conversations,
-    isLoading: isLoadingConversations,
-    isError: isErrorConversations,
-  } = useMicroagentManagementConversations(
-    repositoryName,
-    undefined,
-    1000,
-    true,
-  );
-
-  useEffect(() => {
-    const hasConversations = conversations && conversations.length > 0;
-    const selectedConversation = selectedMicroagentItem?.conversation;
-
-    if (hasConversations && selectedConversation) {
-      // get the latest selected conversation.
-      const latestSelectedConversation = conversations.find(
-        (conversation) =>
-          conversation.conversation_id === selectedConversation.conversation_id,
-      );
-      if (latestSelectedConversation) {
-        dispatch(
-          setSelectedMicroagentItem({
-            microagent: null,
-            conversation: latestSelectedConversation,
-          }),
-        );
-      }
-    }
-  }, [conversations]);
-
-  useEffect(
-    () => () => {
-      dispatch(
-        setSelectedMicroagentItem({
-          microagent: null,
-          conversation: null,
-        }),
-      );
-    },
-    [],
-  );
-
-  // Show loading only when both queries are loading
-  const isLoading = isLoadingMicroagents || isLoadingConversations;
-
-  // Show error UI.
-  const isError = isErrorMicroagents || isErrorConversations;
-
-  if (isLoading) {
+  if (controller.isLoading) {
     return (
       <div className="pb-4 flex justify-center">
         <Spinner size="sm" data-testid="loading-spinner" />
@@ -97,7 +31,7 @@ export function MicroagentManagementRepoMicroagents({
   }
 
   // If there's an error with microagents, show the learn this repo component
-  if (isError) {
+  if (controller.isError) {
     return (
       <div>
         <MicroagentManagementLearnThisRepo repository={repository} />
@@ -105,8 +39,8 @@ export function MicroagentManagementRepoMicroagents({
     );
   }
 
-  const numberOfMicroagents = microagents?.length || 0;
-  const numberOfConversations = conversations?.length || 0;
+  const numberOfMicroagents = controller.microagents.length;
+  const numberOfConversations = controller.conversations.length;
   const totalItems = numberOfMicroagents + numberOfConversations;
   const hasMicroagents = numberOfMicroagents > 0;
   const hasConversations = numberOfConversations > 0;
@@ -122,7 +56,7 @@ export function MicroagentManagementRepoMicroagents({
           <span className="text-md text-white font-medium leading-5 mb-4">
             {t(I18nKey.MICROAGENT_MANAGEMENT$EXISTING_MICROAGENTS)}
           </span>
-          {microagents?.map((microagent) => (
+          {controller.microagents.map((microagent) => (
             <div key={microagent.name} className="pb-4 last:pb-0">
               <MicroagentManagementMicroagentCard
                 microagent={microagent}
@@ -139,7 +73,7 @@ export function MicroagentManagementRepoMicroagents({
           <span className="text-md text-white font-medium leading-5 mb-4">
             {t(I18nKey.COMMON$IN_PROGRESS)}
           </span>
-          {conversations?.map((conversation) => (
+          {controller.conversations.map((conversation) => (
             <div key={conversation.conversation_id} className="pb-4 last:pb-0">
               <MicroagentManagementMicroagentCard
                 conversation={conversation}
@@ -151,4 +85,65 @@ export function MicroagentManagementRepoMicroagents({
       )}
     </div>
   );
+}
+
+function useRepoMicroagentsController({
+  repository,
+}: {
+  repository: GitRepository;
+}) {
+  const { selectedMicroagentItem } = useSelector(
+    (state: RootState) => state.microagentManagement,
+  );
+  const dispatch = useDispatch();
+  const repositoryName = repository.full_name;
+  const [owner, repo] = repositoryName.split("/");
+
+  const microagentQuery = useRepositoryMicroagents(owner, repo, true);
+  const conversationsQuery = useMicroagentManagementConversations(
+    repositoryName,
+    undefined,
+    1000,
+    true,
+  );
+
+  useEffect(() => {
+    const conversations = conversationsQuery.data ?? [];
+    const selectedConversation = selectedMicroagentItem?.conversation;
+    if (!conversations.length || !selectedConversation) {
+      return;
+    }
+
+    const latestSelectedConversation = conversations.find(
+      (conversation) =>
+        conversation.conversation_id === selectedConversation.conversation_id,
+    );
+
+    if (latestSelectedConversation) {
+      dispatch(
+        setSelectedMicroagentItem({
+          microagent: null,
+          conversation: latestSelectedConversation,
+        }),
+      );
+    }
+  }, [conversationsQuery.data, dispatch, selectedMicroagentItem]);
+
+  useEffect(() => {
+    return () => {
+      dispatch(
+        setSelectedMicroagentItem({
+          microagent: null,
+          conversation: null,
+        }),
+      );
+    };
+  }, [dispatch]);
+
+  return {
+    microagents: microagentQuery.data ?? [],
+    conversations: conversationsQuery.data ?? [],
+    isLoading: microagentQuery.isLoading || conversationsQuery.isLoading,
+    isError: microagentQuery.isError || conversationsQuery.isError,
+  };
 }

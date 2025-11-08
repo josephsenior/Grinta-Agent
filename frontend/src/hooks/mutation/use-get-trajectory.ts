@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 
 export const useGetTrajectory = () =>
   useMutation({
-    mutationFn: (cid: string) => OpenHands.getTrajectory(cid),
+    mutationFn: (cid: string) => Forge.getTrajectory(cid),
   });

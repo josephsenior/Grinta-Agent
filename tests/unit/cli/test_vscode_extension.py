@@ -3,7 +3,7 @@ import pathlib
 import subprocess
 from unittest import mock
 import pytest
-from openhands.cli import vscode_extension
+from forge.cli import vscode_extension
 
 
 @pytest.fixture
@@ -18,11 +18,11 @@ def mock_env_and_dependencies():
     ) as mock_subprocess, mock.patch(
         "importlib.resources.as_file"
     ) as mock_as_file, mock.patch(
-        "openhands.cli.vscode_extension.download_latest_vsix_from_github"
+        "forge.cli.vscode_extension.download_latest_vsix_from_github"
     ) as mock_download, mock.patch(
         "builtins.print"
     ) as mock_print, mock.patch(
-        "openhands.cli.vscode_extension.logger.debug"
+        "forge.cli.vscode_extension.logger.debug"
     ) as mock_logger:
         temp_dir = pathlib.Path.cwd() / "temp_test_home"
         temp_dir.mkdir(exist_ok=True)
@@ -40,13 +40,13 @@ def mock_env_and_dependencies():
                 "logger": mock_logger,
             }
         finally:
-            openhands_dir = temp_dir / ".openhands"
-            if openhands_dir.exists():
-                for f in openhands_dir.glob("*"):
+            FORGE_dir = temp_dir / ".Forge"
+            if FORGE_dir.exists():
+                for f in FORGE_dir.glob("*"):
                     if f.is_file():
                         f.unlink()
                 try:
-                    openhands_dir.rmdir()
+                    FORGE_dir.rmdir()
                 except FileNotFoundError:
                     pass
             try:
@@ -77,14 +77,14 @@ def test_extension_already_installed_detected(mock_env_and_dependencies):
     os.environ["TERM_PROGRAM"] = "vscode"
     mock_env_and_dependencies["exists"].return_value = False
     mock_env_and_dependencies["subprocess"].return_value = subprocess.CompletedProcess(
-        returncode=0, args=[], stdout="openhands.openhands-vscode\nother.extension", stderr=""
+        returncode=0, args=[], stdout="forge.Forge-vscode\nother.extension", stderr=""
     )
     vscode_extension.attempt_vscode_extension_install()
     assert mock_env_and_dependencies["subprocess"].call_count == 1
     mock_env_and_dependencies["subprocess"].assert_called_with(
         ["code", "--list-extensions"], capture_output=True, text=True, check=False
     )
-    mock_env_and_dependencies["print"].assert_any_call("INFO: OpenHands VS Code extension is already installed.")
+    mock_env_and_dependencies["print"].assert_any_call("INFO: Forge VS Code extension is already installed.")
     mock_env_and_dependencies["touch"].assert_called_once()
     mock_env_and_dependencies["download"].assert_not_called()
 
@@ -94,10 +94,10 @@ def test_extension_detection_in_middle_of_list(mock_env_and_dependencies):
     os.environ["TERM_PROGRAM"] = "vscode"
     mock_env_and_dependencies["exists"].return_value = False
     mock_env_and_dependencies["subprocess"].return_value = subprocess.CompletedProcess(
-        returncode=0, args=[], stdout="first.extension\nopenhands.openhands-vscode\nlast.extension", stderr=""
+        returncode=0, args=[], stdout="first.extension\nforge.Forge-vscode\nlast.extension", stderr=""
     )
     vscode_extension.attempt_vscode_extension_install()
-    mock_env_and_dependencies["print"].assert_any_call("INFO: OpenHands VS Code extension is already installed.")
+    mock_env_and_dependencies["print"].assert_any_call("INFO: Forge VS Code extension is already installed.")
     mock_env_and_dependencies["touch"].assert_called_once()
 
 
@@ -107,7 +107,7 @@ def test_extension_detection_partial_match_ignored(mock_env_and_dependencies):
     mock_env_and_dependencies["exists"].return_value = False
     mock_env_and_dependencies["subprocess"].side_effect = [
         subprocess.CompletedProcess(
-            returncode=0, args=[], stdout="other.openhands-vscode-fork\nsome.extension", stderr=""
+            returncode=0, args=[], stdout="other.Forge-vscode-fork\nsome.extension", stderr=""
         ),
         subprocess.CompletedProcess(returncode=0, args=[], stdout="", stderr=""),
     ]
@@ -191,7 +191,7 @@ def test_installation_failure_no_flag_created(mock_env_and_dependencies):
     vscode_extension.attempt_vscode_extension_install()
     mock_env_and_dependencies["touch"].assert_not_called()
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Will retry installation next time you run OpenHands in VS Code."
+        "INFO: Will retry installation next time you run Forge in VS Code."
     )
 
 
@@ -249,7 +249,7 @@ def test_bundled_fails_falls_back_to_github(mock_env_and_dependencies):
             check=False,
         )
         mock_env_and_dependencies["print"].assert_any_call(
-            "INFO: OpenHands VS Code extension installed successfully from GitHub."
+            "INFO: Forge VS Code extension installed successfully from GitHub."
         )
         mock_os_remove.assert_called_once_with("/fake/path/to/github.vsix")
         mock_env_and_dependencies["touch"].assert_called_once()
@@ -272,10 +272,10 @@ def test_all_methods_fail(mock_env_and_dependencies):
         ["code", "--list-extensions"], capture_output=True, text=True, check=False
     )
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Automatic installation failed. Please check the OpenHands documentation for manual installation instructions."
+        "INFO: Automatic installation failed. Please check the Forge documentation for manual installation instructions."
     )
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Will retry installation next time you run OpenHands in VS Code."
+        "INFO: Will retry installation next time you run Forge in VS Code."
     )
     mock_env_and_dependencies["touch"].assert_not_called()
 
@@ -295,10 +295,10 @@ def test_windsurf_detection_and_install(mock_env_and_dependencies):
         ["surf", "--list-extensions"], capture_output=True, text=True, check=False
     )
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Automatic installation failed. Please check the OpenHands documentation for manual installation instructions."
+        "INFO: Automatic installation failed. Please check the Forge documentation for manual installation instructions."
     )
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Will retry installation next time you run OpenHands in Windsurf."
+        "INFO: Will retry installation next time you run Forge in Windsurf."
     )
     mock_env_and_dependencies["touch"].assert_not_called()
 
@@ -327,7 +327,7 @@ def test_os_error_on_touch(mock_env_and_dependencies):
     vscode_extension.attempt_vscode_extension_install()
     mock_env_and_dependencies["touch"].assert_not_called()
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Will retry installation next time you run OpenHands in VS Code."
+        "INFO: Will retry installation next time you run Forge in VS Code."
     )
 
 
@@ -355,7 +355,7 @@ def test_successful_install_attempt_vscode(mock_env_and_dependencies):
         ["code", "--list-extensions"], capture_output=True, text=True, check=False
     )
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Automatic installation failed. Please check the OpenHands documentation for manual installation instructions."
+        "INFO: Automatic installation failed. Please check the Forge documentation for manual installation instructions."
     )
 
 
@@ -374,7 +374,7 @@ def test_successful_install_attempt_windsurf(mock_env_and_dependencies):
         ["surf", "--list-extensions"], capture_output=True, text=True, check=False
     )
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Automatic installation failed. Please check the OpenHands documentation for manual installation instructions."
+        "INFO: Automatic installation failed. Please check the Forge documentation for manual installation instructions."
     )
 
 
@@ -390,7 +390,7 @@ def test_install_attempt_code_command_fails(mock_env_and_dependencies):
     vscode_extension.attempt_vscode_extension_install()
     assert mock_env_and_dependencies["subprocess"].call_count == 1
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Automatic installation failed. Please check the OpenHands documentation for manual installation instructions."
+        "INFO: Automatic installation failed. Please check the Forge documentation for manual installation instructions."
     )
 
 
@@ -406,7 +406,7 @@ def test_install_attempt_code_not_found(mock_env_and_dependencies):
     vscode_extension.attempt_vscode_extension_install()
     assert mock_env_and_dependencies["subprocess"].call_count == 1
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Automatic installation failed. Please check the OpenHands documentation for manual installation instructions."
+        "INFO: Automatic installation failed. Please check the Forge documentation for manual installation instructions."
     )
 
 
@@ -434,7 +434,7 @@ def test_flag_file_touch_os_error_vscode(mock_env_and_dependencies):
     vscode_extension.attempt_vscode_extension_install()
     mock_env_and_dependencies["touch"].assert_not_called()
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Will retry installation next time you run OpenHands in VS Code."
+        "INFO: Will retry installation next time you run Forge in VS Code."
     )
 
 
@@ -451,7 +451,7 @@ def test_flag_file_touch_os_error_windsurf(mock_env_and_dependencies):
     vscode_extension.attempt_vscode_extension_install()
     mock_env_and_dependencies["touch"].assert_not_called()
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Will retry installation next time you run OpenHands in Windsurf."
+        "INFO: Will retry installation next time you run Forge in Windsurf."
     )
 
 
@@ -462,12 +462,12 @@ def test_bundled_vsix_installation_failure_fallback_to_marketplace(mock_env_and_
     mock_env_and_dependencies["download"].return_value = None
     mock_vsix_path = mock.MagicMock()
     mock_vsix_path.exists.return_value = True
-    mock_vsix_path.__str__.return_value = "/mock/path/openhands-vscode-0.0.1.vsix"
+    mock_vsix_path.__str__.return_value = "/mock/path/Forge-vscode-0.0.1.vsix"
     mock_env_and_dependencies["as_file"].return_value.__enter__.return_value = mock_vsix_path
     mock_env_and_dependencies["subprocess"].side_effect = [
         subprocess.CompletedProcess(returncode=0, args=[], stdout="", stderr=""),
         subprocess.CompletedProcess(
-            args=["code", "--install-extension", "/mock/path/openhands-vscode-0.0.1.vsix", "--force"],
+            args=["code", "--install-extension", "/mock/path/Forge-vscode-0.0.1.vsix", "--force"],
             returncode=1,
             stdout="Installation failed",
             stderr="Error installing extension",
@@ -476,7 +476,7 @@ def test_bundled_vsix_installation_failure_fallback_to_marketplace(mock_env_and_
     vscode_extension.attempt_vscode_extension_install()
     assert mock_env_and_dependencies["subprocess"].call_count == 2
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Automatic installation failed. Please check the OpenHands documentation for manual installation instructions."
+        "INFO: Automatic installation failed. Please check the Forge documentation for manual installation instructions."
     )
 
 
@@ -494,7 +494,7 @@ def test_bundled_vsix_not_found_fallback_to_marketplace(mock_env_and_dependencie
     vscode_extension.attempt_vscode_extension_install()
     assert mock_env_and_dependencies["subprocess"].call_count == 1
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Automatic installation failed. Please check the OpenHands documentation for manual installation instructions."
+        "INFO: Automatic installation failed. Please check the Forge documentation for manual installation instructions."
     )
 
 
@@ -510,7 +510,7 @@ def test_importlib_resources_exception_fallback_to_marketplace(mock_env_and_depe
     vscode_extension.attempt_vscode_extension_install()
     assert mock_env_and_dependencies["subprocess"].call_count == 1
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Automatic installation failed. Please check the OpenHands documentation for manual installation instructions."
+        "INFO: Automatic installation failed. Please check the Forge documentation for manual installation instructions."
     )
 
 
@@ -529,7 +529,7 @@ def test_comprehensive_windsurf_detection_path_based(mock_env_and_dependencies):
         ["surf", "--list-extensions"], capture_output=True, text=True, check=False
     )
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Automatic installation failed. Please check the OpenHands documentation for manual installation instructions."
+        "INFO: Automatic installation failed. Please check the Forge documentation for manual installation instructions."
     )
 
 
@@ -545,7 +545,7 @@ def test_comprehensive_windsurf_detection_env_value_based(mock_env_and_dependenc
     vscode_extension.attempt_vscode_extension_install()
     assert mock_env_and_dependencies["subprocess"].call_count == 1
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Automatic installation failed. Please check the OpenHands documentation for manual installation instructions."
+        "INFO: Automatic installation failed. Please check the Forge documentation for manual installation instructions."
     )
 
 
@@ -563,7 +563,7 @@ def test_comprehensive_windsurf_detection_multiple_indicators(mock_env_and_depen
     vscode_extension.attempt_vscode_extension_install()
     assert mock_env_and_dependencies["subprocess"].call_count == 1
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Automatic installation failed. Please check the OpenHands documentation for manual installation instructions."
+        "INFO: Automatic installation failed. Please check the Forge documentation for manual installation instructions."
     )
 
 
@@ -585,12 +585,12 @@ def test_both_bundled_and_marketplace_fail(mock_env_and_dependencies):
     mock_env_and_dependencies["download"].return_value = None
     mock_vsix_path = mock.MagicMock()
     mock_vsix_path.exists.return_value = True
-    mock_vsix_path.__str__.return_value = "/mock/path/openhands-vscode-0.0.1.vsix"
+    mock_vsix_path.__str__.return_value = "/mock/path/Forge-vscode-0.0.1.vsix"
     mock_env_and_dependencies["as_file"].return_value.__enter__.return_value = mock_vsix_path
     mock_env_and_dependencies["subprocess"].side_effect = [
         subprocess.CompletedProcess(returncode=0, args=[], stdout="", stderr=""),
         subprocess.CompletedProcess(
-            args=["code", "--install-extension", "/mock/path/openhands-vscode-0.0.1.vsix", "--force"],
+            args=["code", "--install-extension", "/mock/path/Forge-vscode-0.0.1.vsix", "--force"],
             returncode=1,
             stdout="Bundled installation failed",
             stderr="Error installing bundled extension",
@@ -599,5 +599,5 @@ def test_both_bundled_and_marketplace_fail(mock_env_and_dependencies):
     vscode_extension.attempt_vscode_extension_install()
     assert mock_env_and_dependencies["subprocess"].call_count == 2
     mock_env_and_dependencies["print"].assert_any_call(
-        "INFO: Automatic installation failed. Please check the OpenHands documentation for manual installation instructions."
+        "INFO: Automatic installation failed. Please check the Forge documentation for manual installation instructions."
     )

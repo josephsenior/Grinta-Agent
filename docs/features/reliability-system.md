@@ -18,7 +18,7 @@ AI coding agents often **hallucinate** - they say "I created index.html" but nev
 
 ### **The Solution**
 
-OpenHands implements a **4-layer defense system** that prevents hallucinations at multiple levels:
+Forge implements a **4-layer defense system** that prevents hallucinations at multiple levels:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -37,7 +37,7 @@ OpenHands implements a **4-layer defense system** that prevents hallucinations a
 
 ### **Layer 1: Mandatory Tool Execution Rules**
 
-**Location**: `openhands/agenthub/codeact_agent/prompts/system_prompt.j2`
+**Location**: `Forge/agenthub/codeact_agent/prompts/system_prompt.j2`
 
 **What It Does:**
 - Adds explicit rules to system prompt forbidding text-only claims
@@ -68,7 +68,7 @@ MANDATORY REQUIREMENTS FOR PRODUCTION RELIABILITY - NEVER VIOLATE THESE RULES:
 
 ### **Layer 2: Tool-Choice Enforcement**
 
-**Location**: `openhands/agenthub/codeact_agent/codeact_agent.py`
+**Location**: `Forge/agenthub/codeact_agent/codeact_agent.py`
 
 **What It Does:**
 - Forces LLM to use tools (can't generate text-only responses)
@@ -100,7 +100,7 @@ def _build_llm_params(self, messages: list, state: State) -> dict:
 
 ### **Layer 3: Post-Action Verification**
 
-**Location**: `openhands/runtime/base.py`
+**Location**: `Forge/runtime/base.py`
 
 **What It Does:**
 - Automatically verifies file operations after execution
@@ -140,7 +140,7 @@ def _verify_action_if_needed(self, action: Action, observation: Observation) -> 
 
 ### **Layer 4: Hallucination Detection + Self-Correction**
 
-**Location**: `openhands/agenthub/codeact_agent/hallucination_detector.py`
+**Location**: `Forge/agenthub/codeact_agent/hallucination_detector.py`
 
 **What It Does:**
 - Detects when agent claims actions without tool calls
@@ -192,7 +192,7 @@ if hallucination_detected:
 ### **Competitive Position**
 
 ```
-OpenHands Reliability:  ████████████████████ 99%
+Forge Reliability:  ████████████████████ 99%
 Devin (Cognition AI):  █████████████████▒▒▒ 90%+ (estimated)
 Cursor:                 ████████████▒▒▒▒▒▒▒▒ 70%+ (estimated)
 GitHub Copilot:         ██████▒▒▒▒▒▒▒▒▒▒▒▒▒▒ 40%+ (estimated)
@@ -208,7 +208,7 @@ Most Open-Source:       ███▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒�
 The reliability system is **always active** - no configuration needed:
 
 ```python
-from openhands.agenthub.codeact_agent import CodeActAgent
+from forge.agenthub.codeact_agent import CodeActAgent
 
 # Initialize agent (reliability system automatically enabled)
 agent = CodeActAgent(config=AgentConfig())
@@ -306,7 +306,7 @@ Each layer catches hallucinations at a different stage:
 - ✅ `tool_choice="required"` parameter
 - ✅ Error handling + retry
 
-#### **OpenHands**
+#### **Forge**
 - ✅ All of the above PLUS
 - ✅ Hallucination detection (unique)
 - ✅ Self-correction (unique)

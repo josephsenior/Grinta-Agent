@@ -5,21 +5,21 @@ from unittest.mock import MagicMock, patch
 import pytest
 from litellm import PromptTokensDetails
 from litellm.exceptions import RateLimitError
-from openhands.core.config import LLMConfig
-from openhands.core.exceptions import LLMNoResponseError, OperationCancelled
-from openhands.core.message import Message, TextContent
-from openhands.llm.async_llm import AsyncLLM
-from openhands.llm.llm import LLM
-from openhands.llm.metrics import Metrics, TokenUsage
-from openhands.llm.streaming_llm import StreamingLLM
+from forge.core.config import LLMConfig
+from forge.core.exceptions import LLMNoResponseError, OperationCancelled
+from forge.core.message import Message, TextContent
+from forge.llm.async_llm import AsyncLLM
+from forge.llm.llm import LLM
+from forge.llm.metrics import Metrics, TokenUsage
+from forge.llm.streaming_llm import StreamingLLM
 
 
 @pytest.fixture(autouse=True)
 def mock_logger(monkeypatch):
     mock_logger = MagicMock()
-    monkeypatch.setattr("openhands.llm.debug_mixin.llm_prompt_logger", mock_logger)
-    monkeypatch.setattr("openhands.llm.debug_mixin.llm_response_logger", mock_logger)
-    monkeypatch.setattr("openhands.llm.llm.logger", mock_logger)
+    monkeypatch.setattr("forge.llm.debug_mixin.llm_prompt_logger", mock_logger)
+    monkeypatch.setattr("forge.llm.debug_mixin.llm_response_logger", mock_logger)
+    monkeypatch.setattr("forge.llm.llm.logger", mock_logger)
     return mock_logger
 
 
@@ -94,7 +94,7 @@ def test_metrics_merge_accumulated_token_usage():
     assert token_usages[1]["response_id"] == "response-2"
 
 
-@patch("openhands.llm.llm.litellm.get_model_info")
+@patch("forge.llm.llm.litellm.get_model_info")
 def test_llm_init_with_model_info(mock_get_model_info, default_config):
     mock_get_model_info.return_value = {"max_input_tokens": 8000, "max_output_tokens": 2000}
     llm = LLM(default_config, service_id="test-service")
@@ -103,7 +103,7 @@ def test_llm_init_with_model_info(mock_get_model_info, default_config):
     assert llm.config.max_output_tokens == 2000
 
 
-@patch("openhands.llm.llm.litellm.get_model_info")
+@patch("forge.llm.llm.litellm.get_model_info")
 def test_llm_init_without_model_info(mock_get_model_info, default_config):
     mock_get_model_info.side_effect = Exception("Model info not available")
     llm = LLM(default_config, service_id="test-service")
@@ -132,7 +132,7 @@ def test_llm_init_with_custom_config():
     assert llm.config.top_k is None
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_llm_top_k_in_completion_when_set(mock_litellm_completion):
     config_with_top_k = LLMConfig(top_k=50)
     llm = LLM(config_with_top_k, service_id="test-service")
@@ -146,7 +146,7 @@ def test_llm_top_k_in_completion_when_set(mock_litellm_completion):
     llm.completion(messages=[{"role": "system", "content": "Test message"}])
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_llm_top_k_not_in_completion_when_none(mock_litellm_completion):
     config_without_top_k = LLMConfig(top_k=None)
     llm = LLM(config_without_top_k, service_id="test-service")
@@ -167,7 +167,7 @@ def test_llm_init_with_metrics():
     assert llm.metrics.model_name == "default"
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 @patch("time.time")
 def test_response_latency_tracking(mock_time, mock_litellm_completion):
     mock_time.side_effect = [1000.0, 1002.5]
@@ -190,7 +190,7 @@ def test_response_latency_tracking(mock_time, mock_litellm_completion):
     assert latency_record.latency == 0.0
 
 
-@patch("openhands.llm.llm.litellm.get_model_info")
+@patch("forge.llm.llm.litellm.get_model_info")
 def test_llm_init_with_openrouter_model(mock_get_model_info, default_config):
     default_config.model = "openrouter/gpt-4o-mini"
     mock_get_model_info.return_value = {"max_input_tokens": 7000, "max_output_tokens": 1500}
@@ -201,7 +201,7 @@ def test_llm_init_with_openrouter_model(mock_get_model_info, default_config):
     mock_get_model_info.assert_called_once_with("openrouter/gpt-4o-mini")
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_stop_parameter_handling(mock_litellm_completion, default_config):
     """Test that stop parameter is only added for supported models."""
     from litellm.types.utils import ModelResponse
@@ -224,7 +224,7 @@ def test_stop_parameter_handling(mock_litellm_completion, default_config):
     assert "stop" not in mock_litellm_completion.call_args[1]
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_completion_with_mocked_logger(mock_litellm_completion, default_config, mock_logger):
     mock_litellm_completion.return_value = {"choices": [{"message": {"content": "Test response"}}]}
     llm = LLM(config=default_config, service_id="test-service")
@@ -238,7 +238,7 @@ def test_completion_with_mocked_logger(mock_litellm_completion, default_config, 
     "exception_class,extra_args,expected_retries",
     [(RateLimitError, {"llm_provider": "test_provider", "model": "test_model"}, 2)],
 )
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_completion_retries(mock_litellm_completion, default_config, exception_class, extra_args, expected_retries):
     mock_litellm_completion.side_effect = [
         exception_class("Test error message", **extra_args),
@@ -250,7 +250,7 @@ def test_completion_retries(mock_litellm_completion, default_config, exception_c
     assert mock_litellm_completion.call_count == expected_retries
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_completion_rate_limit_wait_time(mock_litellm_completion, default_config):
     with patch("time.sleep") as mock_sleep:
         mock_litellm_completion.side_effect = [
@@ -270,7 +270,7 @@ def test_completion_rate_limit_wait_time(mock_litellm_completion, default_config
             default_config.retry_max_wait} seconds, but got {wait_time}"
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_completion_operation_cancelled(mock_litellm_completion, default_config):
     mock_litellm_completion.side_effect = OperationCancelled("Operation cancelled")
     llm = LLM(config=default_config, service_id="test-service")
@@ -279,7 +279,7 @@ def test_completion_operation_cancelled(mock_litellm_completion, default_config)
     assert mock_litellm_completion.call_count == 1
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_completion_keyboard_interrupt(mock_litellm_completion, default_config):
 
     def side_effect(*args, **kwargs):
@@ -295,7 +295,7 @@ def test_completion_keyboard_interrupt(mock_litellm_completion, default_config):
     assert mock_litellm_completion.call_count == 1
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_completion_keyboard_interrupt_handler(mock_litellm_completion, default_config):
     global _should_exit
 
@@ -313,7 +313,7 @@ def test_completion_keyboard_interrupt_handler(mock_litellm_completion, default_
     _should_exit = False
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_completion_retry_with_llm_no_response_error_zero_temp(mock_litellm_completion, default_config):
     """Test that the retry decorator properly handles LLMNoResponseError by:.
 
@@ -339,7 +339,7 @@ def test_completion_retry_with_llm_no_response_error_zero_temp(mock_litellm_comp
     assert second_call_kwargs.get("temperature") == 1.0
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_completion_retry_with_llm_no_response_error_nonzero_temp(mock_litellm_completion, default_config):
     """Test that the retry decorator works for LLMNoResponseError when initial temperature is non-zero,.
 
@@ -359,8 +359,8 @@ def test_completion_retry_with_llm_no_response_error_nonzero_temp(mock_litellm_c
         assert call[1].get("temperature") == 0.7
 
 
-@patch("openhands.llm.llm.litellm.get_model_info")
-@patch("openhands.llm.llm.httpx.get")
+@patch("forge.llm.llm.litellm.get_model_info")
+@patch("forge.llm.llm.httpx.get")
 def test_gemini_25_pro_function_calling(mock_httpx_get, mock_get_model_info):
     """Test that Gemini 2.5 Pro models have function calling enabled by default.
 
@@ -398,7 +398,7 @@ def test_gemini_25_pro_function_calling(mock_httpx_get, mock_get_model_info):
         ), f"Expected function calling support to be {expected_support} for model {model_name}"
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_completion_retry_with_llm_no_response_error_nonzero_temp_successful_retry(
     mock_litellm_completion, default_config
 ):
@@ -429,7 +429,7 @@ def test_completion_retry_with_llm_no_response_error_nonzero_temp_successful_ret
     assert second_call_kwargs.get("temperature") == 0.7
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_completion_retry_with_llm_no_response_error_successful_retry(mock_litellm_completion, default_config):
     """Test that the retry decorator works for LLMNoResponseError with zero temperature.
 
@@ -458,7 +458,7 @@ def test_completion_retry_with_llm_no_response_error_successful_retry(mock_litel
     assert second_call_kwargs.get("temperature") == 1.0
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_completion_with_litellm_mock(mock_litellm_completion, default_config):
     mock_response = {"choices": [{"message": {"content": "This is a mocked response."}}]}
     mock_litellm_completion.return_value = mock_response
@@ -472,7 +472,7 @@ def test_completion_with_litellm_mock(mock_litellm_completion, default_config):
     assert not call_args["stream"]
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_llm_gemini_thinking_parameter(mock_litellm_completion, default_config):
     """Test that the 'thinking' parameter is correctly passed to litellm_completion.
 
@@ -492,7 +492,7 @@ def test_llm_gemini_thinking_parameter(mock_litellm_completion, default_config):
     assert len(call_args) == 0
 
 
-@patch("openhands.llm.llm.litellm.token_counter")
+@patch("forge.llm.llm.litellm.token_counter")
 def test_get_token_count_with_dict_messages(mock_token_counter, default_config):
     mock_token_counter.return_value = 42
     llm = LLM(default_config, service_id="test-service")
@@ -502,7 +502,7 @@ def test_get_token_count_with_dict_messages(mock_token_counter, default_config):
     mock_token_counter.assert_called_once_with(model=default_config.model, messages=messages, custom_tokenizer=None)
 
 
-@patch("openhands.llm.llm.litellm.token_counter")
+@patch("forge.llm.llm.litellm.token_counter")
 def test_get_token_count_with_message_objects(mock_token_counter, default_config, mock_logger):
     llm = LLM(default_config, service_id="test-service")
     message_obj = Message(role="user", content=[TextContent(text="Hello!")])
@@ -514,8 +514,8 @@ def test_get_token_count_with_message_objects(mock_token_counter, default_config
     assert mock_token_counter.call_count == 2
 
 
-@patch("openhands.llm.llm.litellm.token_counter")
-@patch("openhands.llm.llm.create_pretrained_tokenizer")
+@patch("forge.llm.llm.litellm.token_counter")
+@patch("forge.llm.llm.create_pretrained_tokenizer")
 def test_get_token_count_with_custom_tokenizer(mock_create_tokenizer, mock_token_counter, default_config):
     mock_tokenizer = MagicMock()
     mock_create_tokenizer.return_value = mock_tokenizer
@@ -530,7 +530,7 @@ def test_get_token_count_with_custom_tokenizer(mock_create_tokenizer, mock_token
     mock_token_counter.assert_called_once_with(model=config.model, messages=messages, custom_tokenizer=mock_tokenizer)
 
 
-@patch("openhands.llm.llm.litellm.token_counter")
+@patch("forge.llm.llm.litellm.token_counter")
 def test_get_token_count_error_handling(mock_token_counter, default_config, mock_logger):
     mock_token_counter.side_effect = Exception("Token counting failed")
     llm = LLM(default_config, service_id="test-service")
@@ -541,7 +541,7 @@ def test_get_token_count_error_handling(mock_token_counter, default_config, mock
     mock_logger.error.assert_called_once_with("Error getting token count for\n model gpt-4o\nToken counting failed")
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_llm_token_usage(mock_litellm_completion, default_config):
     mock_response_1 = {
         "id": "test-response-usage",
@@ -585,7 +585,7 @@ def test_llm_token_usage(mock_litellm_completion, default_config):
     assert usage_entry_2["response_id"] == "test-response-usage-2"
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_accumulated_token_usage(mock_litellm_completion, default_config):
     """Test that token usage is properly accumulated across multiple LLM calls."""
     # Setup mock responses
@@ -686,7 +686,7 @@ def _verify_second_usage_record(usage_record):
     assert usage_record["response_id"] == "test-response-2"
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_completion_with_log_completions(mock_litellm_completion, default_config):
     with tempfile.TemporaryDirectory() as temp_dir:
         default_config.log_completions = True
@@ -791,7 +791,7 @@ def test_explicit_reasoning_effort_preserved():
     assert config.reasoning_effort == "medium"
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_gemini_none_reasoning_effort_uses_thinking_budget(mock_completion):
     """Test that Gemini with reasoning_effort=None uses thinking budget."""
     config = LLMConfig(model="gemini-2.5-pro", api_key="test_key", reasoning_effort=None)
@@ -808,7 +808,7 @@ def test_gemini_none_reasoning_effort_uses_thinking_budget(mock_completion):
     assert call_kwargs.get("reasoning_effort") is None
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_gemini_low_reasoning_effort_uses_thinking_budget(mock_completion):
     """Test that Gemini with reasoning_effort='low' uses thinking budget."""
     config = LLMConfig(model="gemini-2.5-pro", api_key="test_key", reasoning_effort="low")
@@ -825,7 +825,7 @@ def test_gemini_low_reasoning_effort_uses_thinking_budget(mock_completion):
     assert call_kwargs.get("reasoning_effort") is None
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_gemini_medium_reasoning_effort_passes_through(mock_completion):
     """Test that Gemini with reasoning_effort='medium' passes through to litellm."""
     config = LLMConfig(model="gemini-2.5-pro", api_key="test_key", reasoning_effort="medium")
@@ -841,7 +841,7 @@ def test_gemini_medium_reasoning_effort_passes_through(mock_completion):
     assert call_kwargs.get("reasoning_effort") == "medium"
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_opus_41_keeps_temperature_top_p(mock_completion):
     mock_completion.return_value = {"choices": [{"message": {"content": "ok"}}]}
     config = LLMConfig(model="anthropic/claude-opus-4-1-20250805", api_key="k", temperature=0.7, top_p=0.9)
@@ -852,7 +852,7 @@ def test_opus_41_keeps_temperature_top_p(mock_completion):
     assert "top_p" not in call_kwargs
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_opus_4_keeps_temperature_top_p(mock_completion):
     mock_completion.return_value = {"choices": [{"message": {"content": "ok"}}]}
     config = LLMConfig(model="anthropic/claude-opus-4-20250514", api_key="k", temperature=0.7, top_p=0.9)
@@ -863,7 +863,7 @@ def test_opus_4_keeps_temperature_top_p(mock_completion):
     assert call_kwargs.get("top_p") == 0.9
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_opus_41_disables_thinking(mock_completion):
     mock_completion.return_value = {"choices": [{"message": {"content": "ok"}}]}
     config = LLMConfig(model="anthropic/claude-opus-4-1-20250805", api_key="k")
@@ -873,7 +873,7 @@ def test_opus_41_disables_thinking(mock_completion):
     assert call_kwargs.get("thinking") == {"type": "disabled"}
 
 
-@patch("openhands.llm.llm.litellm.get_model_info")
+@patch("forge.llm.llm.litellm.get_model_info")
 def test_is_caching_prompt_active_anthropic_prefixed(mock_get_model_info):
     mock_get_model_info.side_effect = Exception("skip")
     config = LLMConfig(model="anthropic/claude-3-7-sonnet", api_key="k", caching_prompt=True)
@@ -881,8 +881,8 @@ def test_is_caching_prompt_active_anthropic_prefixed(mock_get_model_info):
     assert llm.is_caching_prompt_active() is True
 
 
-@patch("openhands.llm.llm.httpx.get")
-@patch("openhands.llm.llm.litellm.get_model_info")
+@patch("forge.llm.llm.httpx.get")
+@patch("forge.llm.llm.litellm.get_model_info")
 def test_openhands_provider_rewrite_and_caching_prompt(mock_get_model_info, mock_httpx_get):
     mock_httpx_get.return_value = type(
         "Resp",
@@ -899,13 +899,13 @@ def test_openhands_provider_rewrite_and_caching_prompt(mock_get_model_info, mock
         },
     )()
     mock_get_model_info.return_value = {"max_input_tokens": 200000, "max_output_tokens": 64000}
-    config = LLMConfig(model="openhands/claude-3.7-sonnet", api_key="k", caching_prompt=True)
+    config = LLMConfig(model="Openhands/claude-3.7-sonnet", api_key="k", caching_prompt=True)
     llm = LLM(config, service_id="svc")
     assert llm.config.model.startswith("litellm_proxy/claude-3.7-sonnet")
     assert llm.is_caching_prompt_active() is True
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_gemini_high_reasoning_effort_passes_through(mock_completion):
     """Test that Gemini with reasoning_effort='high' passes through to litellm."""
     config = LLMConfig(model="gemini-2.5-pro", api_key="test_key", reasoning_effort="high")
@@ -921,7 +921,7 @@ def test_gemini_high_reasoning_effort_passes_through(mock_completion):
     assert call_kwargs.get("reasoning_effort") == "high"
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_non_gemini_uses_reasoning_effort(mock_completion):
     """Test that non-Gemini models use reasoning_effort instead of thinking budget."""
     config = LLMConfig(model="o1", api_key="test_key", reasoning_effort="high")
@@ -934,7 +934,7 @@ def test_non_gemini_uses_reasoning_effort(mock_completion):
     llm.completion(messages=sample_messages)
 
 
-@patch("openhands.llm.async_llm.litellm_acompletion")
+@patch("forge.llm.async_llm.litellm_acompletion")
 @pytest.mark.asyncio
 async def test_async_reasoning_effort_passthrough(mock_acompletion):
     mock_acompletion.return_value = {"choices": [{"message": {"content": "ok"}}]}
@@ -947,7 +947,7 @@ async def test_async_reasoning_effort_passthrough(mock_acompletion):
     assert call_kwargs.get("top_p") == 0.9
 
 
-@patch("openhands.llm.streaming_llm.AsyncLLM._call_acompletion")
+@patch("forge.llm.streaming_llm.AsyncLLM._call_acompletion")
 @pytest.mark.asyncio
 async def test_streaming_reasoning_effort_passthrough(mock_call):
 
@@ -971,7 +971,7 @@ async def test_streaming_reasoning_effort_passthrough(mock_call):
     assert call_kwargs.get("top_p") == 0.9
 
 
-@patch("openhands.llm.async_llm.litellm_acompletion")
+@patch("forge.llm.async_llm.litellm_acompletion")
 @pytest.mark.asyncio
 async def test_async_streaming_no_thinking_for_gemini(mock_acompletion):
     mock_acompletion.return_value = {"choices": [{"message": {"content": "ok"}}]}
@@ -982,7 +982,7 @@ async def test_async_streaming_no_thinking_for_gemini(mock_acompletion):
     assert "thinking" not in call_kwargs
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_non_reasoning_model_no_optimization(mock_completion):
     """Test that non-reasoning models don't get optimization parameters."""
     config = LLMConfig(model="gpt-3.5-turbo", api_key="test_key")
@@ -998,7 +998,7 @@ def test_non_reasoning_model_no_optimization(mock_completion):
     assert "reasoning_effort" not in call_kwargs
 
 
-@patch("openhands.llm.llm.litellm_completion")
+@patch("forge.llm.llm.litellm_completion")
 def test_gemini_performance_optimization_end_to_end(mock_completion):
     """Test the complete Gemini performance optimization flow end-to-end."""
     mock_completion.return_value = {

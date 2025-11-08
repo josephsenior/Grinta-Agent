@@ -1,22 +1,22 @@
 from unittest.mock import patch
 from pydantic import SecretStr
-from openhands.core.config.llm_config import LLMConfig
-from openhands.core.config.openhands_config import OpenHandsConfig
-from openhands.core.config.sandbox_config import SandboxConfig
-from openhands.core.config.security_config import SecurityConfig
-from openhands.server.routes.settings import convert_to_settings
-from openhands.storage.data_models.settings import Settings
+from forge.core.config.llm_config import LLMConfig
+from forge.core.config.forge_config import ForgeConfig
+from forge.core.config.sandbox_config import SandboxConfig
+from forge.core.config.security_config import SecurityConfig
+from forge.server.routes.settings import convert_to_settings
+from forge.storage.data_models.settings import Settings
 
 
 def test_settings_from_config():
-    mock_app_config = OpenHandsConfig(
+    mock_app_config = ForgeConfig(
         default_agent="test-agent",
         max_iterations=100,
         security=SecurityConfig(security_analyzer="test-analyzer", confirmation_mode=True),
         llms={"llm": LLMConfig(model="test-model", api_key=SecretStr("test-key"), base_url="https://test.example.com")},
         sandbox=SandboxConfig(remote_runtime_resource_factor=2),
     )
-    with patch("openhands.storage.data_models.settings.load_openhands_config", return_value=mock_app_config):
+    with patch("forge.storage.data_models.settings.load_FORGE_config", return_value=mock_app_config):
         settings = Settings.from_config()
         assert settings is not None
         assert settings.language == "en"
@@ -32,14 +32,14 @@ def test_settings_from_config():
 
 
 def test_settings_from_config_no_api_key():
-    mock_app_config = OpenHandsConfig(
+    mock_app_config = ForgeConfig(
         default_agent="test-agent",
         max_iterations=100,
         security=SecurityConfig(security_analyzer="test-analyzer", confirmation_mode=True),
         llms={"llm": LLMConfig(model="test-model", api_key=None, base_url="https://test.example.com")},
         sandbox=SandboxConfig(remote_runtime_resource_factor=2),
     )
-    with patch("openhands.storage.data_models.settings.load_openhands_config", return_value=mock_app_config):
+    with patch("forge.storage.data_models.settings.load_FORGE_config", return_value=mock_app_config):
         settings = Settings.from_config()
         assert settings is None
 

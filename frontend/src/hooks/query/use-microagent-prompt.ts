@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import OpenHands from "#/api/open-hands";
+import Forge from "#/api/forge";
 import { useConversationId } from "../use-conversation-id";
 
 export const useMicroagentPrompt = (eventId: number) => {
@@ -7,7 +7,7 @@ export const useMicroagentPrompt = (eventId: number) => {
 
   return useQuery({
     queryKey: ["memory", "prompt", conversationId, eventId],
-    queryFn: () => OpenHands.getMicroagentPrompt(conversationId!, eventId),
+    queryFn: () => Forge.getMicroagentPrompt(conversationId!, eventId),
     enabled: !!conversationId,
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 15, // 15 minutes

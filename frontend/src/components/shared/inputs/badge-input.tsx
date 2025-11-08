@@ -28,7 +28,12 @@ export function BadgeInput({
     }
 
     // If pressing Space or Enter with non-empty input, add a new badge
-    if (e.key === " " && inputValue.trim() !== "") {
+    const isSpaceOrEnter =
+      e.key === " " ||
+      e.key === "Space" ||
+      e.key === "Spacebar" ||
+      e.key === "Enter";
+    if (isSpaceOrEnter && inputValue.trim() !== "") {
       e.preventDefault();
       const newBadge = inputValue.trim();
       onChange([...value, newBadge]);

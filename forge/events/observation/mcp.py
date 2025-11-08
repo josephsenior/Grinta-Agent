@@ -1,0 +1,23 @@
+"""Observation payloads returned from Model Context Protocol calls."""
+
+from dataclasses import dataclass, field
+from typing import Any
+
+from forge.core.schema import ObservationType
+from forge.events.observation.observation import Observation
+
+
+@dataclass
+class MCPObservation(Observation):
+    """This data class represents the result of a MCP Server operation."""
+
+    observation: str = ObservationType.MCP
+    name: str = ""
+    arguments: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def message(self) -> str:
+        """Get MCP operation result message."""
+        return self.content
+
+    __test__ = False

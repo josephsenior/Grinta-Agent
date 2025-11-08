@@ -1,5 +1,5 @@
 import json
-from openhands.core.io import format_json, print_json_stdout
+from forge.core.io import format_json, print_json_stdout
 
 
 def test_print_json_stdout_happy_path(capsys):

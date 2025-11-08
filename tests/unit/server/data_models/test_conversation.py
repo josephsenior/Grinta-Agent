@@ -7,17 +7,17 @@ import pytest
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
-from openhands.integrations.service_types import (
+from forge.integrations.service_types import (
     AuthenticationError,
     CreateMicroagent,
     ProviderType,
     SuggestedTask,
     TaskType,
 )
-from openhands.runtime.runtime_status import RuntimeStatus
-from openhands.server.data_models.conversation_info import ConversationInfo
-from openhands.server.data_models.conversation_info_result_set import ConversationInfoResultSet
-from openhands.server.routes.manage_conversations import (
+from forge.runtime.runtime_status import RuntimeStatus
+from forge.server.data_models.conversation_info import ConversationInfo
+from forge.server.data_models.conversation_info_result_set import ConversationInfoResultSet
+from forge.server.routes.manage_conversations import (
     ConversationResponse,
     InitSessionRequest,
     delete_conversation,
@@ -25,13 +25,13 @@ from openhands.server.routes.manage_conversations import (
     new_conversation,
     search_conversations,
 )
-from openhands.server.routes.manage_conversations import app as conversation_app
-from openhands.server.types import LLMAuthenticationError, MissingSettingsError
-from openhands.server.user_auth.user_auth import AuthType
-from openhands.storage.data_models.conversation_metadata import ConversationMetadata, ConversationTrigger
-from openhands.storage.data_models.conversation_status import ConversationStatus
-from openhands.storage.locations import get_conversation_metadata_filename
-from openhands.storage.memory import InMemoryFileStore
+from forge.server.routes.manage_conversations import app as conversation_app
+from forge.server.types import LLMAuthenticationError, MissingSettingsError
+from forge.server.user_auth.user_auth import AuthType
+from forge.storage.data_models.conversation_metadata import ConversationMetadata, ConversationTrigger
+from forge.storage.data_models.conversation_status import ConversationStatus
+from forge.storage.locations import get_conversation_metadata_filename
+from forge.storage.memory import InMemoryFileStore
 
 
 @contextmanager
@@ -51,9 +51,9 @@ def _patch_store():
         ),
     )
     with patch(
-        "openhands.storage.conversation.file_conversation_store.get_file_store", MagicMock(return_value=file_store)
+        "forge.storage.conversation.file_conversation_store.get_file_store", MagicMock(return_value=file_store)
     ):
-        with patch("openhands.server.routes.manage_conversations.conversation_manager.file_store", file_store):
+        with patch("forge.server.routes.manage_conversations.conversation_manager.file_store", file_store):
             yield
 
 
@@ -79,7 +79,7 @@ def create_new_test_conversation(test_request: InitSessionRequest, auth_type: Au
 
 @pytest.fixture
 def provider_handler_mock():
-    with patch("openhands.server.routes.manage_conversations.ProviderHandler") as mock_cls:
+    with patch("forge.server.routes.manage_conversations.ProviderHandler") as mock_cls:
         mock_instance = MagicMock()
         mock_instance.verify_repo_provider = AsyncMock(return_value=ProviderType.GITHUB)
         mock_cls.return_value = mock_instance
@@ -89,9 +89,9 @@ def provider_handler_mock():
 @pytest.mark.asyncio
 async def test_search_conversations():
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.config") as mock_config:
+        with patch("forge.server.routes.manage_conversations.config") as mock_config:
             mock_config.conversation_max_age_seconds = 864000
-            with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+            with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
 
                 async def mock_get_running_agent_loops(*args, **kwargs):
                     return set()
@@ -105,7 +105,7 @@ async def test_search_conversations():
                 mock_manager.get_running_agent_loops = mock_get_running_agent_loops
                 mock_manager.get_connections = mock_get_connections
                 mock_manager.get_agent_loop_info = get_agent_loop_info
-                with patch("openhands.server.routes.manage_conversations.datetime") as mock_datetime:
+                with patch("forge.server.routes.manage_conversations.datetime") as mock_datetime:
                     mock_datetime.now.return_value = datetime.fromisoformat("2025-01-01T00:00:00+00:00")
                     mock_datetime.fromisoformat = datetime.fromisoformat
                     mock_datetime.timezone = timezone
@@ -153,9 +153,9 @@ async def test_search_conversations():
 async def test_search_conversations_with_repository_filter():
     """Test searching conversations with repository filter."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.config") as mock_config:
+        with patch("forge.server.routes.manage_conversations.config") as mock_config:
             mock_config.conversation_max_age_seconds = 864000
-            with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+            with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
 
                 async def mock_get_running_agent_loops(*args, **kwargs):
                     return set()
@@ -169,7 +169,7 @@ async def test_search_conversations_with_repository_filter():
                 mock_manager.get_running_agent_loops = mock_get_running_agent_loops
                 mock_manager.get_connections = mock_get_connections
                 mock_manager.get_agent_loop_info = get_agent_loop_info
-                with patch("openhands.server.routes.manage_conversations.datetime") as mock_datetime:
+                with patch("forge.server.routes.manage_conversations.datetime") as mock_datetime:
                     mock_datetime.now.return_value = datetime.fromisoformat("2025-01-01T00:00:00+00:00")
                     mock_datetime.fromisoformat = datetime.fromisoformat
                     mock_datetime.timezone = timezone
@@ -204,9 +204,9 @@ async def test_search_conversations_with_repository_filter():
 async def test_search_conversations_with_trigger_filter():
     """Test searching conversations with conversation trigger filter."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.config") as mock_config:
+        with patch("forge.server.routes.manage_conversations.config") as mock_config:
             mock_config.conversation_max_age_seconds = 864000
-            with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+            with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
 
                 async def mock_get_running_agent_loops(*args, **kwargs):
                     return set()
@@ -220,7 +220,7 @@ async def test_search_conversations_with_trigger_filter():
                 mock_manager.get_running_agent_loops = mock_get_running_agent_loops
                 mock_manager.get_connections = mock_get_connections
                 mock_manager.get_agent_loop_info = get_agent_loop_info
-                with patch("openhands.server.routes.manage_conversations.datetime") as mock_datetime:
+                with patch("forge.server.routes.manage_conversations.datetime") as mock_datetime:
                     mock_datetime.now.return_value = datetime.fromisoformat("2025-01-01T00:00:00+00:00")
                     mock_datetime.fromisoformat = datetime.fromisoformat
                     mock_datetime.timezone = timezone
@@ -256,9 +256,9 @@ async def test_search_conversations_with_trigger_filter():
 async def test_search_conversations_with_both_filters():
     """Test searching conversations with both repository and trigger filters."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.config") as mock_config:
+        with patch("forge.server.routes.manage_conversations.config") as mock_config:
             mock_config.conversation_max_age_seconds = 864000
-            with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+            with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
 
                 async def mock_get_running_agent_loops(*args, **kwargs):
                     return set()
@@ -272,7 +272,7 @@ async def test_search_conversations_with_both_filters():
                 mock_manager.get_running_agent_loops = mock_get_running_agent_loops
                 mock_manager.get_connections = mock_get_connections
                 mock_manager.get_agent_loop_info = get_agent_loop_info
-                with patch("openhands.server.routes.manage_conversations.datetime") as mock_datetime:
+                with patch("forge.server.routes.manage_conversations.datetime") as mock_datetime:
                     mock_datetime.now.return_value = datetime.fromisoformat("2025-01-01T00:00:00+00:00")
                     mock_datetime.fromisoformat = datetime.fromisoformat
                     mock_datetime.timezone = timezone
@@ -310,9 +310,9 @@ async def test_search_conversations_with_both_filters():
 async def test_search_conversations_with_pagination():
     """Test searching conversations with pagination."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.config") as mock_config:
+        with patch("forge.server.routes.manage_conversations.config") as mock_config:
             mock_config.conversation_max_age_seconds = 864000
-            with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+            with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
 
                 async def mock_get_running_agent_loops(*args, **kwargs):
                     return set()
@@ -326,7 +326,7 @@ async def test_search_conversations_with_pagination():
                 mock_manager.get_running_agent_loops = mock_get_running_agent_loops
                 mock_manager.get_connections = mock_get_connections
                 mock_manager.get_agent_loop_info = get_agent_loop_info
-                with patch("openhands.server.routes.manage_conversations.datetime") as mock_datetime:
+                with patch("forge.server.routes.manage_conversations.datetime") as mock_datetime:
                     mock_datetime.now.return_value = datetime.fromisoformat("2025-01-01T00:00:00+00:00")
                     mock_datetime.fromisoformat = datetime.fromisoformat
                     mock_datetime.timezone = timezone
@@ -361,9 +361,9 @@ async def test_search_conversations_with_pagination():
 async def test_search_conversations_with_filters_and_pagination():
     """Test searching conversations with filters and pagination."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.config") as mock_config:
+        with patch("forge.server.routes.manage_conversations.config") as mock_config:
             mock_config.conversation_max_age_seconds = 864000
-            with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+            with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
 
                 async def mock_get_running_agent_loops(*args, **kwargs):
                     return set()
@@ -377,7 +377,7 @@ async def test_search_conversations_with_filters_and_pagination():
                 mock_manager.get_running_agent_loops = mock_get_running_agent_loops
                 mock_manager.get_connections = mock_get_connections
                 mock_manager.get_agent_loop_info = get_agent_loop_info
-                with patch("openhands.server.routes.manage_conversations.datetime") as mock_datetime:
+                with patch("forge.server.routes.manage_conversations.datetime") as mock_datetime:
                     mock_datetime.now.return_value = datetime.fromisoformat("2025-01-01T00:00:00+00:00")
                     mock_datetime.fromisoformat = datetime.fromisoformat
                     mock_datetime.timezone = timezone
@@ -417,9 +417,9 @@ async def test_search_conversations_with_filters_and_pagination():
 async def test_search_conversations_empty_results():
     """Test searching conversations that returns empty results."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.config") as mock_config:
+        with patch("forge.server.routes.manage_conversations.config") as mock_config:
             mock_config.conversation_max_age_seconds = 864000
-            with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+            with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
 
                 async def mock_get_running_agent_loops(*args, **kwargs):
                     return set()
@@ -433,7 +433,7 @@ async def test_search_conversations_empty_results():
                 mock_manager.get_running_agent_loops = mock_get_running_agent_loops
                 mock_manager.get_connections = mock_get_connections
                 mock_manager.get_agent_loop_info = get_agent_loop_info
-                with patch("openhands.server.routes.manage_conversations.datetime") as mock_datetime:
+                with patch("forge.server.routes.manage_conversations.datetime") as mock_datetime:
                     mock_datetime.now.return_value = datetime.fromisoformat("2025-01-01T00:00:00+00:00")
                     mock_datetime.fromisoformat = datetime.fromisoformat
                     mock_datetime.timezone = timezone
@@ -465,7 +465,7 @@ async def test_get_conversation():
                 user_id="12345",
             )
         )
-        with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+        with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
             mock_manager.is_agent_loop_running = AsyncMock(return_value=False)
             mock_manager.get_connections = AsyncMock(return_value={})
             mock_manager.get_agent_loop_info = AsyncMock(return_value=[])
@@ -496,7 +496,7 @@ async def test_get_missing_conversation():
 async def test_new_conversation_success(provider_handler_mock):
     """Test successful creation of a new conversation."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
+        with patch("forge.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
             mock_create_conversation.return_value = MagicMock(
                 conversation_id="test_conversation_id",
                 url="https://my-conversation.com",
@@ -528,14 +528,14 @@ async def test_new_conversation_success(provider_handler_mock):
 async def test_new_conversation_with_suggested_task(provider_handler_mock):
     """Test creating a new conversation with a suggested task."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
+        with patch("forge.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
             mock_create_conversation.return_value = MagicMock(
                 conversation_id="test_conversation_id",
                 url="https://my-conversation.com",
                 session_api_key=None,
                 status=ConversationStatus.RUNNING,
             )
-            with patch("openhands.integrations.service_types.SuggestedTask.get_prompt_for_task") as mock_get_prompt:
+            with patch("forge.integrations.service_types.SuggestedTask.get_prompt_for_task") as mock_get_prompt:
                 mock_get_prompt.return_value = "Please fix the failing checks in PR #123"
                 test_task = SuggestedTask(
                     git_provider=ProviderType.GITHUB,
@@ -566,7 +566,7 @@ async def test_new_conversation_with_suggested_task(provider_handler_mock):
 async def test_new_conversation_missing_settings(provider_handler_mock):
     """Test creating a new conversation when settings are missing."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
+        with patch("forge.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
             mock_create_conversation.side_effect = MissingSettingsError("Settings not found")
             test_request = InitSessionRequest(
                 repository="test/repo", selected_branch="main", initial_user_msg="Hello, agent!"
@@ -582,7 +582,7 @@ async def test_new_conversation_missing_settings(provider_handler_mock):
 async def test_new_conversation_invalid_session_api_key(provider_handler_mock):
     """Test creating a new conversation with an invalid API key."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
+        with patch("forge.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
             mock_create_conversation.side_effect = LLMAuthenticationError(
                 "Error authenticating with the LLM provider. Please check your API key"
             )
@@ -600,7 +600,7 @@ async def test_new_conversation_invalid_session_api_key(provider_handler_mock):
 async def test_delete_conversation():
     with _patch_store():
         with patch(
-            "openhands.server.routes.manage_conversations.ConversationStoreImpl.get_instance"
+            "forge.server.routes.manage_conversations.ConversationStoreImpl.get_instance"
         ) as mock_get_instance:
             mock_store = MagicMock()
             mock_store.get_metadata = AsyncMock(
@@ -615,10 +615,10 @@ async def test_delete_conversation():
             )
             mock_store.delete_metadata = AsyncMock()
             mock_get_instance.return_value = mock_store
-            with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+            with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
                 mock_manager.is_agent_loop_running = AsyncMock(return_value=False)
                 mock_manager.get_connections = AsyncMock(return_value={})
-                with patch("openhands.server.routes.manage_conversations.get_runtime_cls") as mock_get_runtime_cls:
+                with patch("forge.server.routes.manage_conversations.get_runtime_cls") as mock_get_runtime_cls:
                     mock_runtime_cls = MagicMock()
                     mock_runtime_cls.delete = AsyncMock()
                     mock_get_runtime_cls.return_value = mock_runtime_cls
@@ -632,7 +632,7 @@ async def test_delete_conversation():
 async def test_new_conversation_with_bearer_auth(provider_handler_mock):
     """Test creating a new conversation with bearer authentication."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
+        with patch("forge.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
             mock_create_conversation.return_value = MagicMock(
                 conversation_id="test_conversation_id",
                 url="https://my-conversation.com",
@@ -654,7 +654,7 @@ async def test_new_conversation_with_bearer_auth(provider_handler_mock):
 async def test_new_conversation_with_null_repository():
     """Test creating a new conversation with null repository."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
+        with patch("forge.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
             mock_create_conversation.return_value = MagicMock(
                 conversation_id="test_conversation_id",
                 url="https://my-conversation.com",
@@ -675,7 +675,7 @@ async def test_new_conversation_with_provider_authentication_error(provider_hand
     provider_handler_mock.verify_repo_provider = AsyncMock(side_effect=AuthenticationError("auth error"))
     "Test creating a new conversation when provider authentication fails."
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
+        with patch("forge.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
             mock_create_conversation.return_value = "test_conversation_id"
             test_request = InitSessionRequest(
                 repository="test/repo", selected_branch="main", initial_user_msg="Hello, agent!"
@@ -705,7 +705,7 @@ async def test_new_conversation_with_unsupported_params():
 async def test_new_conversation_with_create_microagent(provider_handler_mock):
     """Test creating a new conversation with a CreateMicroagent object."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
+        with patch("forge.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
             mock_create_conversation.return_value = MagicMock(
                 conversation_id="test_conversation_id",
                 url="https://my-conversation.com",
@@ -740,7 +740,7 @@ async def test_new_conversation_with_create_microagent(provider_handler_mock):
 async def test_new_conversation_with_create_microagent_repository_override(provider_handler_mock):
     """Test creating a new conversation with CreateMicroagent when repository is already set."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
+        with patch("forge.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
             mock_create_conversation.return_value = MagicMock(
                 conversation_id="test_conversation_id",
                 url="https://my-conversation.com",
@@ -775,7 +775,7 @@ async def test_new_conversation_with_create_microagent_repository_override(provi
 async def test_new_conversation_with_create_microagent_minimal(provider_handler_mock):
     """Test creating a new conversation with minimal CreateMicroagent object (only repo field)."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
+        with patch("forge.server.routes.manage_conversations.create_new_conversation") as mock_create_conversation:
             mock_create_conversation.return_value = MagicMock(
                 conversation_id="test_conversation_id",
                 url="https://my-conversation.com",
@@ -808,9 +808,9 @@ async def test_new_conversation_with_create_microagent_minimal(provider_handler_
 async def test_search_conversations_with_pr_number():
     """Test searching conversations includes pr_number field in response."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.config") as mock_config:
+        with patch("forge.server.routes.manage_conversations.config") as mock_config:
             mock_config.conversation_max_age_seconds = 864000
-            with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+            with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
 
                 async def mock_get_running_agent_loops(*args, **kwargs):
                     return set()
@@ -824,7 +824,7 @@ async def test_search_conversations_with_pr_number():
                 mock_manager.get_running_agent_loops = mock_get_running_agent_loops
                 mock_manager.get_connections = mock_get_connections
                 mock_manager.get_agent_loop_info = get_agent_loop_info
-                with patch("openhands.server.routes.manage_conversations.datetime") as mock_datetime:
+                with patch("forge.server.routes.manage_conversations.datetime") as mock_datetime:
                     mock_datetime.now.return_value = datetime.fromisoformat("2025-01-01T00:00:00+00:00")
                     mock_datetime.fromisoformat = datetime.fromisoformat
                     mock_datetime.timezone = timezone
@@ -862,9 +862,9 @@ async def test_search_conversations_with_pr_number():
 async def test_search_conversations_with_empty_pr_number():
     """Test searching conversations with empty pr_number field."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.config") as mock_config:
+        with patch("forge.server.routes.manage_conversations.config") as mock_config:
             mock_config.conversation_max_age_seconds = 864000
-            with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+            with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
 
                 async def mock_get_running_agent_loops(*args, **kwargs):
                     return set()
@@ -878,7 +878,7 @@ async def test_search_conversations_with_empty_pr_number():
                 mock_manager.get_running_agent_loops = mock_get_running_agent_loops
                 mock_manager.get_connections = mock_get_connections
                 mock_manager.get_agent_loop_info = get_agent_loop_info
-                with patch("openhands.server.routes.manage_conversations.datetime") as mock_datetime:
+                with patch("forge.server.routes.manage_conversations.datetime") as mock_datetime:
                     mock_datetime.now.return_value = datetime.fromisoformat("2025-01-01T00:00:00+00:00")
                     mock_datetime.fromisoformat = datetime.fromisoformat
                     mock_datetime.timezone = timezone
@@ -916,9 +916,9 @@ async def test_search_conversations_with_empty_pr_number():
 async def test_search_conversations_with_single_pr_number():
     """Test searching conversations with single PR number."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.config") as mock_config:
+        with patch("forge.server.routes.manage_conversations.config") as mock_config:
             mock_config.conversation_max_age_seconds = 864000
-            with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+            with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
 
                 async def mock_get_running_agent_loops(*args, **kwargs):
                     return set()
@@ -932,7 +932,7 @@ async def test_search_conversations_with_single_pr_number():
                 mock_manager.get_running_agent_loops = mock_get_running_agent_loops
                 mock_manager.get_connections = mock_get_connections
                 mock_manager.get_agent_loop_info = get_agent_loop_info
-                with patch("openhands.server.routes.manage_conversations.datetime") as mock_datetime:
+                with patch("forge.server.routes.manage_conversations.datetime") as mock_datetime:
                     mock_datetime.now.return_value = datetime.fromisoformat("2025-01-01T00:00:00+00:00")
                     mock_datetime.fromisoformat = datetime.fromisoformat
                     mock_datetime.timezone = timezone
@@ -982,7 +982,7 @@ async def test_get_conversation_with_pr_number():
                 pr_number=[123, 456, 789],
             )
         )
-        with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+        with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
             mock_manager.is_agent_loop_running = AsyncMock(return_value=False)
             mock_manager.get_connections = AsyncMock(return_value={})
             mock_manager.get_agent_loop_info = AsyncMock(return_value=[])
@@ -1005,9 +1005,9 @@ async def test_get_conversation_with_pr_number():
 async def test_search_conversations_multiple_with_pr_numbers():
     """Test searching conversations with multiple conversations having different PR numbers."""
     with _patch_store():
-        with patch("openhands.server.routes.manage_conversations.config") as mock_config:
+        with patch("forge.server.routes.manage_conversations.config") as mock_config:
             mock_config.conversation_max_age_seconds = 864000
-            with patch("openhands.server.routes.manage_conversations.conversation_manager") as mock_manager:
+            with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
 
                 async def mock_get_running_agent_loops(*args, **kwargs):
                     return set()
@@ -1021,7 +1021,7 @@ async def test_search_conversations_multiple_with_pr_numbers():
                 mock_manager.get_running_agent_loops = mock_get_running_agent_loops
                 mock_manager.get_connections = mock_get_connections
                 mock_manager.get_agent_loop_info = get_agent_loop_info
-                with patch("openhands.server.routes.manage_conversations.datetime") as mock_datetime:
+                with patch("forge.server.routes.manage_conversations.datetime") as mock_datetime:
                     mock_datetime.now.return_value = datetime.fromisoformat("2025-01-01T00:00:00+00:00")
                     mock_datetime.fromisoformat = datetime.fromisoformat
                     mock_datetime.timezone = timezone

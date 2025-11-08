@@ -1,4 +1,4 @@
-# WebArena Evaluation with OpenHands Browsing Agents
+# WebArena Evaluation with Forge Browsing Agents
 
 This folder contains evaluation for [WebArena](https://github.com/web-arena-x/webarena) benchmark, powered by [BrowserGym](https://github.com/ServiceNow/BrowserGym) for easy evaluation of how well an agent capable of browsing can perform on realistic web browsing tasks.
 
@@ -8,7 +8,7 @@ Please follow instruction [here](../../README.md#setup) to setup your local deve
 
 ## Setup WebArena Environment
 
-WebArena requires you to set up websites containing pre-populated content that is accessible via URL to the machine running the OpenHands agents.
+WebArena requires you to set up websites containing pre-populated content that is accessible via URL to the machine running the Forge agents.
 Follow [this document](https://github.com/web-arena-x/webarena/blob/main/environment_docker/README.md) to set up your own WebArena environment through local servers or AWS EC2 instances.
 Take note of the base URL (`$WEBARENA_BASE_URL`) of the machine where the environment is installed.
 
@@ -37,7 +37,7 @@ poetry run python evaluation/benchmarks/webarena/get_success_rate.py evaluation/
 
 ## Submit your evaluation results
 
-You can start your own fork of [our huggingface evaluation outputs](https://huggingface.co/spaces/OpenHands/evaluation) and submit a PR of your evaluation results following the guide [here](https://huggingface.co/docs/hub/en/repositories-pull-requests-discussions#pull-requests-and-discussions).
+You can start your own fork of [our huggingface evaluation outputs](https://huggingface.co/spaces/Forge/evaluation) and submit a PR of your evaluation results following the guide [here](https://huggingface.co/docs/hub/en/repositories-pull-requests-discussions#pull-requests-and-discussions).
 
 ## BrowsingAgent V1.0 result
 

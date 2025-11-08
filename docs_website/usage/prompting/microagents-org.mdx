@@ -8,14 +8,14 @@ description: Organizations and users can define microagents that apply to all re
 These microagents can be [any type of microagent](./microagents-overview#microagent-types) and will be loaded
 accordingly. However, they are applied to all repositories belonging to the organization or user.
 
-Add a `.openhands` repository under the organization or user and create a `microagents` directory and place the
+Add a `.Forge` repository under the organization or user and create a `microagents` directory and place the
 microagents in that directory.
 
-For GitLab organizations, use `openhands-config` as the repository name instead of `.openhands`, since GitLab doesn't support repository names starting with non-alphanumeric characters.
+For GitLab organizations, use `Forge-config` as the repository name instead of `.Forge`, since GitLab doesn't support repository names starting with non-alphanumeric characters.
 
 ## Example
 
-General microagent file example for organization `Great-Co` located inside the `.openhands` repository:
+General microagent file example for organization `Great-Co` located inside the `.Forge` repository:
 `microagents/org-microagent.md`:
 ```
 * Use type hints and error boundaries; validate inputs at system boundaries and fail with meaningful error messages.
@@ -23,13 +23,13 @@ General microagent file example for organization `Great-Co` located inside the `
 * Follow the same naming convention for variables, classes, constants, etc. already used in each repository.
 ```
 
-For GitLab organizations, the same microagent would be located inside the `openhands-config` repository.
+For GitLab organizations, the same microagent would be located inside the `Forge-config` repository.
 
-## User Microagents When Running Openhands on Your Own
+## User Microagents When Running Forge on Your Own
 
 <Note>
-  This works with CLI, headless and development modes. It does not work out of the box when running OpenHands using the docker command.
+  This works with CLI, headless and development modes. It does not work out of the box when running Forge using the docker command.
 </Note>
 
-When running OpenHands on your own, you can place microagents in the `~/.openhands/microagents` folder on your local
-system and OpenHands will always load it for all your conversations.
+When running Forge on your own, you can place microagents in the `~/.Forge/microagents` folder on your local
+system and Forge will always load it for all your conversations.

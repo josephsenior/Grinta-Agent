@@ -10,7 +10,7 @@ export function ServedAppLabel() {
     <div className="flex items-center justify-between w-full">
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-2">
-          {t(I18nKey.APP$TITLE, { defaultValue: "CodePilot Pro" })}
+          {t(I18nKey.APP$TITLE, { defaultValue: "Forge Pro" })}
         </div>
         <span className="border rounded-md text- px-1 font-bold">BETA</span>
       </div>

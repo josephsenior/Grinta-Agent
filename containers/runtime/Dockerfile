@@ -3,14 +3,14 @@ FROM nikolaik/python-nodejs:python3.12-nodejs22
 SHELL ["/bin/bash", "-c"]
 
 # Shared environment variables
-ENV POETRY_VIRTUALENVS_PATH=/openhands/poetry \
-    MAMBA_ROOT_PREFIX=/openhands/micromamba \
+ENV POETRY_VIRTUALENVS_PATH=/Forge/poetry \
+    MAMBA_ROOT_PREFIX=/Forge/micromamba \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
     EDITOR=code \
     VISUAL=code \
     GIT_EDITOR="code --wait" \
-    OPENVSCODE_SERVER_ROOT=/openhands/.openvscode-server
+    OPENVSCODE_SERVER_ROOT=/Forge/.openvscode-server
 
 
 
@@ -27,7 +27,7 @@ ENV POETRY_VIRTUALENVS_PATH=/openhands/poetry \
 # START: Build Runtime Image from Scratch
 # ================================================================
 # This is used in cases where the base image is something more generic like nikolaik/python-nodejs
-# rather than the current OpenHands release
+# rather than the current Forge release
 
 
 
@@ -52,31 +52,31 @@ RUN apt-get update && \
 
 
 # Install uv (required by MCP)
-RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="/openhands/bin" sh
-# Add /openhands/bin to PATH
-ENV PATH="/openhands/bin:${PATH}"
+RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="/Forge/bin" sh
+# Add /Forge/bin to PATH
+ENV PATH="/Forge/bin:${PATH}"
 
-# Remove UID 1000 and GID 1000 users/groups that might conflict with openhands user
+# Remove UID 1000 and GID 1000 users/groups that might conflict with Forge user
 RUN (if getent passwd 1000; then getent passwd 1000 | cut -d: -f1 | xargs -r userdel; fi) && \
     (if getent group 1000; then getent group 1000 | cut -d: -f1 | xargs -r groupdel; fi)
 
-# Create openhands group and user
-RUN groupadd -g 1000 openhands && \
-    useradd -u 1000 -g 1000 -m -s /bin/bash openhands && \
-    usermod -aG openhands openhands && \
-    # Set empty password for openhands user to allow passwordless su
-    passwd -d openhands && \
+# Create Forge group and user
+RUN groupadd -g 1000 Forge && \
+    useradd -u 1000 -g 1000 -m -s /bin/bash Forge && \
+    usermod -aG Forge Forge && \
+    # Set empty password for Forge user to allow passwordless su
+    passwd -d Forge && \
     # Set empty password for root user as well to ensure su works in both directions
     passwd -d root && \
-    # Ensure root can su to openhands without password by configuring PAM
+    # Ensure root can su to Forge without password by configuring PAM
     sed -i '/pam_rootok.so/d' /etc/pam.d/su && \
     sed -i '1i auth sufficient pam_rootok.so' /etc/pam.d/su
 
 # Create necessary directories
-RUN mkdir -p /openhands && \
-    mkdir -p /openhands/logs && \
-    mkdir -p /openhands/poetry && \
-    chown -R openhands:openhands /openhands
+RUN mkdir -p /Forge && \
+    mkdir -p /Forge/logs && \
+    mkdir -p /Forge/poetry && \
+    chown -R Forge:Forge /Forge
 
 
 # ================================================================
@@ -129,50 +129,50 @@ RUN mkdir -p /etc/docker && \
 
 
 # Install micromamba
-RUN mkdir -p /openhands/micromamba/bin && \
-    /bin/bash -c "PREFIX_LOCATION=/openhands/micromamba BIN_FOLDER=/openhands/micromamba/bin INIT_YES=no CONDA_FORGE_YES=yes $(curl -L https://micro.mamba.pm/install.sh)" && \
-    /openhands/micromamba/bin/micromamba config remove channels defaults && \
-    /openhands/micromamba/bin/micromamba config list && \
-    chown -R openhands:openhands /openhands/micromamba && \
+RUN mkdir -p /Forge/micromamba/bin && \
+    /bin/bash -c "PREFIX_LOCATION=/Forge/micromamba BIN_FOLDER=/Forge/micromamba/bin INIT_YES=no CONDA_FORGE_YES=yes $(curl -L https://micro.mamba.pm/install.sh)" && \
+    /Forge/micromamba/bin/micromamba config remove channels defaults && \
+    /Forge/micromamba/bin/micromamba config list && \
+    chown -R Forge:Forge /Forge/micromamba && \
     # Create read-only shared access to micromamba for all users
-    # This allows both root and openhands users to access the same packages
-    # while maintaining security by keeping openhands as the owner
-    chmod -R 755 /openhands/micromamba && \
+    # This allows both root and Forge users to access the same packages
+    # while maintaining security by keeping Forge as the owner
+    chmod -R 755 /Forge/micromamba && \
     # Create a separate writable location for root's micromamba cache/config
     mkdir -p /root/.local/share/micromamba && \
     # Set up environment variables for system-wide access
-    echo 'export PATH="/openhands/micromamba/bin:$PATH"' >> /etc/environment
+    echo 'export PATH="/Forge/micromamba/bin:$PATH"' >> /etc/environment
 
-# Create the openhands virtual environment and install poetry and python
-RUN /openhands/micromamba/bin/micromamba create -n openhands -y && \
-    /openhands/micromamba/bin/micromamba install -n openhands -c conda-forge poetry python=3.12 -y
+# Create the Forge virtual environment and install poetry and python
+RUN /Forge/micromamba/bin/micromamba create -n Forge -y && \
+    /Forge/micromamba/bin/micromamba install -n Forge -c conda-forge poetry python=3.12 -y
 
-# Create a clean openhands directory including only the pyproject.toml, poetry.lock and openhands/__init__.py
+# Create a clean Forge directory including only the pyproject.toml, poetry.lock and Forge/__init__.py
 RUN \
-    if [ -d /openhands/code ]; then rm -rf /openhands/code; fi && \
-    mkdir -p /openhands/code/openhands && \
-    touch /openhands/code/openhands/__init__.py && \
-    chown -R openhands:openhands /openhands/code && \
+    if [ -d /Forge/code ]; then rm -rf /Forge/code; fi && \
+    mkdir -p /Forge/code/Forge && \
+    touch /Forge/code/Forge/__init__.py && \
+    chown -R Forge:Forge /Forge/code && \
     # Set global git configuration to ensure proper author/committer information
-    git config --global user.name "openhands" && \
-    git config --global user.email "openhands@all-hands.dev"
+    git config --global user.name "Forge" && \
+    git config --global user.email "Forge@all-hands.dev"
 
-COPY --chown=openhands:openhands ./pyproject.toml ./poetry.lock /openhands/code/
+COPY --chown=Forge:Forge ./pyproject.toml ./poetry.lock /Forge/code/
 
 
-# Install user-level dependencies as openhands user
-WORKDIR /openhands/code
+# Install user-level dependencies as Forge user
+WORKDIR /Forge/code
 
-USER openhands
+USER Forge
 RUN \
-    /openhands/micromamba/bin/micromamba config set changeps1 False && \
-    /openhands/micromamba/bin/micromamba run -n openhands poetry config virtualenvs.path /openhands/poetry && \
-    /openhands/micromamba/bin/micromamba run -n openhands poetry env use python3.12 && \
+    /Forge/micromamba/bin/micromamba config set changeps1 False && \
+    /Forge/micromamba/bin/micromamba run -n Forge poetry config virtualenvs.path /Forge/poetry && \
+    /Forge/micromamba/bin/micromamba run -n Forge poetry env use python3.12 && \
     # Install project dependencies
-    /openhands/micromamba/bin/micromamba run -n openhands poetry install --only main,runtime --no-interaction --no-root && \
+    /Forge/micromamba/bin/micromamba run -n Forge poetry install --only main,runtime --no-interaction --no-root && \
     # Clean up user caches
-    /openhands/micromamba/bin/micromamba run -n openhands poetry cache clear --all . -n && \
-    /openhands/micromamba/bin/micromamba clean --all
+    /Forge/micromamba/bin/micromamba run -n Forge poetry cache clear --all . -n && \
+    /Forge/micromamba/bin/micromamba clean --all
 
 
 
@@ -194,39 +194,39 @@ RUN \
     # Install Playwright browsers in shared location accessible to all users
     export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers && \
     mkdir -p /opt/playwright-browsers && \
-    /openhands/micromamba/bin/micromamba run -n openhands poetry run playwright install chromium && \
+    /Forge/micromamba/bin/micromamba run -n Forge poetry run playwright install chromium && \
     # Set proper permissions for shared access
     chmod -R 755 /opt/playwright-browsers && \
     # Create cache directories and symlinks for both users
-    mkdir -p /home/openhands/.cache && \
+    mkdir -p /home/Forge/.cache && \
     mkdir -p /root/.cache && \
-    ln -sf /opt/playwright-browsers /home/openhands/.cache/ms-playwright && \
+    ln -sf /opt/playwright-browsers /home/Forge/.cache/ms-playwright && \
     ln -sf /opt/playwright-browsers /root/.cache/ms-playwright && \
-    chown -h openhands:openhands /home/openhands/.cache/ms-playwright && \
+    chown -h Forge:Forge /home/Forge/.cache/ms-playwright && \
     # Set environment variable for all users
     echo 'export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers' >> /etc/environment && \
     # Set environment variables (requires root)
-    /openhands/micromamba/bin/micromamba run -n openhands poetry run python -c "import sys; print('OH_INTERPRETER_PATH=' + sys.executable)" >> /etc/environment && \
+    /Forge/micromamba/bin/micromamba run -n Forge poetry run python -c "import sys; print('OH_INTERPRETER_PATH=' + sys.executable)" >> /etc/environment && \
     # Set permissions for shared read-only access
-    chmod -R 755 /openhands/poetry && \
-    chmod -R 755 /openhands/micromamba && \
-    chown -R openhands:openhands /openhands/poetry && \
-    mkdir -p /openhands/workspace && chmod -R g+rws,o+rw /openhands/workspace && \
-    chown -R openhands:openhands /openhands/workspace && \
+    chmod -R 755 /Forge/poetry && \
+    chmod -R 755 /Forge/micromamba && \
+    chown -R Forge:Forge /Forge/poetry && \
+    mkdir -p /Forge/workspace && chmod -R g+rws,o+rw /Forge/workspace && \
+    chown -R Forge:Forge /Forge/workspace && \
     mkdir -p /workspace && chmod -R 777 /workspace && \
-    chown -R openhands:openhands /workspace && \
-    chown -R openhands:openhands /openhands/micromamba && \
+    chown -R Forge:Forge /workspace && \
+    chown -R Forge:Forge /Forge/micromamba && \
     # Ensure PATH includes system binaries early in startup
     echo 'export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"' >> /etc/environment && \
     echo 'export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"' >> /etc/bash.bashrc && \
     # Set up conda environment activation for all users
-    echo 'eval "$(/openhands/micromamba/bin/micromamba shell hook --shell bash)"' >> /etc/bash.bashrc && \
-    echo 'micromamba activate openhands 2>/dev/null || true' >> /etc/bash.bashrc && \
+    echo 'eval "$(/Forge/micromamba/bin/micromamba shell hook --shell bash)"' >> /etc/bash.bashrc && \
+    echo 'micromamba activate Forge 2>/dev/null || true' >> /etc/bash.bashrc && \
     # Set up environment for root user
-    echo 'export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/openhands/micromamba/bin:$PATH"' >> /root/.bashrc && \
+    echo 'export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/Forge/micromamba/bin:$PATH"' >> /root/.bashrc && \
     echo 'export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers' >> /root/.bashrc && \
-    echo 'eval "$(/openhands/micromamba/bin/micromamba shell hook --shell bash)"' >> /root/.bashrc && \
-    echo 'micromamba activate openhands 2>/dev/null || true' >> /root/.bashrc && \
+    echo 'eval "$(/Forge/micromamba/bin/micromamba shell hook --shell bash)"' >> /root/.bashrc && \
+    echo 'micromamba activate Forge 2>/dev/null || true' >> /root/.bashrc && \
     # Clean up system packages (requires root)
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -237,24 +237,24 @@ RUN \
 # ================================================================
 
 
-# Ensure openhands user/group and base dirs exist even when not building from scratch
+# Ensure Forge user/group and base dirs exist even when not building from scratch
 USER root
 RUN \
     # Ensure group exists (prefer GID 1000 if available)
-    if ! getent group openhands >/dev/null 2>&1; then \
-        if getent group 1000 >/dev/null 2>&1; then groupadd openhands; else groupadd -g 1000 openhands; fi; \
+    if ! getent group Forge >/dev/null 2>&1; then \
+        if getent group 1000 >/dev/null 2>&1; then groupadd Forge; else groupadd -g 1000 Forge; fi; \
     fi && \
     # Ensure user exists (prefer UID 1000 if available)
-    if ! id -u openhands >/dev/null 2>&1; then \
-        if getent passwd 1000 >/dev/null 2>&1; then useradd -m -s /bin/bash -g openhands openhands; else useradd -u 1000 -g openhands -m -s /bin/bash openhands; fi; \
+    if ! id -u Forge >/dev/null 2>&1; then \
+        if getent passwd 1000 >/dev/null 2>&1; then useradd -m -s /bin/bash -g Forge Forge; else useradd -u 1000 -g Forge -m -s /bin/bash Forge; fi; \
     fi && \
     # Ensure home and required directories exist before later steps
-    mkdir -p /home/openhands && \
-    mkdir -p /openhands && \
+    mkdir -p /home/Forge && \
+    mkdir -p /Forge && \
     mkdir -p $(dirname ${OPENVSCODE_SERVER_ROOT}) && \
-    # Ensure ownership is correct for all OpenHands paths
-    chown -R openhands:openhands /home/openhands || true && \
-    chown -R openhands:openhands /openhands || true
+    # Ensure ownership is correct for all Forge paths
+    chown -R Forge:Forge /home/Forge || true && \
+    chown -R Forge:Forge /Forge || true
 
 
 # Reference:
@@ -286,7 +286,7 @@ RUN if [ -z "${RELEASE_TAG}" ]; then \
     mv ${RELEASE_TAG}-linux-${arch} ${OPENVSCODE_SERVER_ROOT} && \
     cp ${OPENVSCODE_SERVER_ROOT}/bin/remote-cli/openvscode-server ${OPENVSCODE_SERVER_ROOT}/bin/remote-cli/code && \
     rm -f ${RELEASE_TAG}-linux-${arch}.tar.gz && \
-    chown -R openhands:openhands ${OPENVSCODE_SERVER_ROOT}
+    chown -R Forge:Forge ${OPENVSCODE_SERVER_ROOT}
 
 
 
@@ -295,13 +295,13 @@ RUN if [ -z "${RELEASE_TAG}" ]; then \
 # ================================================================
 # Copy Project source files
 # ================================================================
-RUN if [ -d /openhands/code/openhands ]; then rm -rf /openhands/code/openhands; fi
-COPY --chown=openhands:openhands ./pyproject.toml ./poetry.lock /openhands/code/
-RUN if [ -d /openhands/code/microagents ]; then rm -rf /openhands/code/microagents; fi
-COPY --chown=openhands:openhands ./microagents /openhands/code/microagents
-COPY --chown=openhands:openhands ./openhands /openhands/code/openhands
-RUN chmod a+rwx /openhands/code/openhands/__init__.py && \
-    chown -R openhands:openhands /openhands/code
+RUN if [ -d /Forge/code/Forge ]; then rm -rf /Forge/code/Forge; fi
+COPY --chown=Forge:Forge ./pyproject.toml ./poetry.lock /Forge/code/
+RUN if [ -d /Forge/code/microagents ]; then rm -rf /Forge/code/microagents; fi
+COPY --chown=Forge:Forge ./microagents /Forge/code/microagents
+COPY --chown=Forge:Forge ./Forge /Forge/code/Forge
+RUN chmod a+rwx /Forge/code/Forge/__init__.py && \
+    chown -R Forge:Forge /Forge/code
 
 
 # ================================================================
@@ -309,21 +309,21 @@ RUN chmod a+rwx /openhands/code/openhands/__init__.py && \
 # ================================================================
 
 
-# Install extra dependencies if specified (as openhands user)
+# Install extra dependencies if specified (as Forge user)
 
 
-# Set up environment for openhands user
+# Set up environment for Forge user
 USER root
 RUN \
-    # Set up environment for openhands user
-    echo 'export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/openhands/micromamba/bin:$PATH"' >> /home/openhands/.bashrc && \
-    echo 'export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers' >> /home/openhands/.bashrc && \
-    echo 'eval "$(/openhands/micromamba/bin/micromamba shell hook --shell bash)"' >> /home/openhands/.bashrc && \
-    echo 'micromamba activate openhands 2>/dev/null || true' >> /home/openhands/.bashrc && \
-    chown openhands:openhands /home/openhands/.bashrc
+    # Set up environment for Forge user
+    echo 'export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/Forge/micromamba/bin:$PATH"' >> /home/Forge/.bashrc && \
+    echo 'export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers' >> /home/Forge/.bashrc && \
+    echo 'eval "$(/Forge/micromamba/bin/micromamba shell hook --shell bash)"' >> /home/Forge/.bashrc && \
+    echo 'micromamba activate Forge 2>/dev/null || true' >> /home/Forge/.bashrc && \
+    chown Forge:Forge /home/Forge/.bashrc
 
 # Switch to non-root user for security
-USER openhands
+USER Forge
 
 # Add health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

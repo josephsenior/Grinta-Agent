@@ -8,29 +8,29 @@ from evaluation.utils.shared import codeact_user_response as fake_user_response
 from evaluation.utils.shared import (
     get_default_sandbox_config_for_eval,
     get_metrics,
-    get_openhands_config_for_eval,
+    get_FORGE_config_for_eval,
     make_metadata,
     prepare_dataset,
     reset_logger_for_multiprocessing,
     run_evaluation,
     update_llm_config_for_completions_logging,
 )
-from openhands.controller.state.state import State
-from openhands.core.config import AgentConfig, OpenHandsConfig, get_llm_config_arg, parse_arguments
-from openhands.core.logger import openhands_logger as logger
-from openhands.core.main import create_runtime, run_controller
-from openhands.events.action import MessageAction
-from openhands.events.serialization.event import event_to_dict
-from openhands.runtime.base import Runtime
-from openhands.utils.async_utils import call_async_from_sync
+from forge.controller.state.state import State
+from forge.core.config import AgentConfig, ForgeConfig, get_llm_config_arg, parse_arguments
+from forge.core.logger import forge_logger as logger
+from forge.core.main import create_runtime, run_controller
+from forge.events.action import MessageAction
+from forge.events.serialization.event import event_to_dict
+from forge.runtime.base import Runtime
+from forge.utils.async_utils import call_async_from_sync
 
 FAKE_RESPONSES = {"CodeActAgent": fake_user_response, "VisualBrowsingAgent": fake_user_response}
 
 
-def get_config(metadata: EvalMetadata, instance_id: str) -> OpenHandsConfig:
+def get_config(metadata: EvalMetadata, instance_id: str) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.platform = "linux/amd64"
-    config = get_openhands_config_for_eval(
+    config = get_FORGE_config_for_eval(
         metadata=metadata, runtime=os.environ.get("RUNTIME", "docker"), sandbox_config=sandbox_config
     )
     config.debug = True

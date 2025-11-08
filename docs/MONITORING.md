@@ -2,7 +2,7 @@
 
 ## Overview
 
-OpenHands includes comprehensive production-grade monitoring with:
+Forge includes comprehensive production-grade monitoring with:
 - **3 Grafana Dashboards** - Visual metrics and trends
 - **30+ Prometheus Metrics** - Operational telemetry
 - **6 Alerting Rules** - Proactive issue detection
@@ -313,7 +313,7 @@ Complete action history with timestamps
 
 ```bash
 # Trace single request through entire system
-tail -f logs/openhands.log | grep "request_id=req_abc123"
+tail -f logs/Forge.log | grep "request_id=req_abc123"
 
 # Output shows:
 # [Request received] request_id=req_abc123
@@ -420,16 +420,16 @@ GET /api/monitoring/metrics
 
 ```bash
 # Find errors
-grep "ERROR" logs/openhands.log
+grep "ERROR" logs/Forge.log
 
 # Find slow requests
-grep "duration_ms" logs/openhands.log | awk '$NF > 3000'
+grep "duration_ms" logs/Forge.log | awk '$NF > 3000'
 
 # Find expensive requests
-grep "cost_usd" logs/openhands.log | awk '$NF > 1.0'
+grep "cost_usd" logs/Forge.log | awk '$NF > 1.0'
 
 # Track specific user
-grep "user_id=user_123" logs/openhands.log
+grep "user_id=user_123" logs/Forge.log
 ```
 
 ## Troubleshooting Monitoring
@@ -475,8 +475,8 @@ curl http://localhost:9090/metrics | grep metasop
 **Add your own metrics:**
 
 ```python
-# In openhands/metasop/metrics.py
-from openhands.metasop.metrics import get_metrics_registry
+# In Forge/metasop/metrics.py
+from forge.metasop.metrics import get_metrics_registry
 
 metrics = get_metrics_registry()
 metrics.record_event({

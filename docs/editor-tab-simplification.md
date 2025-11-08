@@ -170,9 +170,9 @@ const buildFileTree = (files: string[]): FileNode[] => {
 
 #### **2. File Loading**
 ```typescript
-// Uses existing OpenHands API:
-const files = await OpenHands.getFiles(conversationId);
-const content = await OpenHands.getFile(conversationId, filePath);
+// Uses existing Forge API:
+const files = await Forge.getFiles(conversationId);
+const content = await Forge.getFile(conversationId, filePath);
 ```
 
 **VSCode Sync**: Uses same workspace folder as VSCode extension

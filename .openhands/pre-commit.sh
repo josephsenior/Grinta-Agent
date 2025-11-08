@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Running OpenHands pre-commit hook..."
+echo "Running Forge pre-commit hook..."
 echo "This hook runs selective linting based on changed files."
 
 # Store the exit code to return at the end
@@ -19,10 +19,10 @@ has_vscode_changes=false
 for file in $STAGED_FILES; do
     if [[ $file == frontend/* ]]; then
         has_frontend_changes=true
-    elif [[ $file == openhands/* || $file == evaluation/* || $file == tests/* ]]; then
+    elif [[ $file == Forge/* || $file == evaluation/* || $file == tests/* ]]; then
         has_backend_changes=true
         # Check for VSCode extension changes (subset of backend changes)
-        if [[ $file == openhands/integrations/vscode/* ]]; then
+        if [[ $file == Forge/integrations/vscode/* ]]; then
             has_vscode_changes=true
         fi
     fi
@@ -101,8 +101,8 @@ if [ "$has_vscode_changes" = true ]; then
         echo "Please run VSCode extension checks manually before submitting your PR."
     else
         echo "Running VSCode extension checks..."
-        if [ -d "openhands/integrations/vscode" ]; then
-            cd openhands/integrations/vscode || exit 1
+        if [ -d "Forge/integrations/vscode" ]; then
+            cd Forge/integrations/vscode || exit 1
 
             echo "Running npm lint:fix..."
             npm run lint:fix

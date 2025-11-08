@@ -1,9 +1,9 @@
 from unittest.mock import MagicMock, patch
 import pytest
-from openhands.core.config.openhands_config import OpenHandsConfig
-from openhands.storage.data_models.settings import Settings
-from openhands.storage.files import FileStore
-from openhands.storage.settings.file_settings_store import FileSettingsStore
+from forge.core.config.forge_config import ForgeConfig
+from forge.storage.data_models.settings import Settings
+from forge.storage.files import FileStore
+from forge.storage.settings.file_settings_store import FileSettingsStore
 
 
 @pytest.fixture
@@ -19,7 +19,7 @@ def file_settings_store(mock_file_store):
 @pytest.mark.asyncio
 async def test_load_nonexistent_data(file_settings_store):
     with patch(
-        "openhands.storage.data_models.settings.load_openhands_config", MagicMock(return_value=OpenHandsConfig())
+        "forge.storage.data_models.settings.load_FORGE_config", MagicMock(return_value=ForgeConfig())
     ):
         file_settings_store.file_store.read.side_effect = FileNotFoundError()
         assert await file_settings_store.load() is None
@@ -57,8 +57,8 @@ async def test_store_and_load_data(file_settings_store):
 
 @pytest.mark.asyncio
 async def test_get_instance():
-    config = OpenHandsConfig(file_store="local", file_store_path="/test/path")
-    with patch("openhands.storage.settings.file_settings_store.get_file_store") as mock_get_store:
+    config = ForgeConfig(file_store="local", file_store_path="/test/path")
+    with patch("forge.storage.settings.file_settings_store.get_file_store") as mock_get_store:
         mock_store = MagicMock(spec=FileStore)
         mock_get_store.return_value = mock_store
         store = await FileSettingsStore.get_instance(config, None)

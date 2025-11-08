@@ -7,11 +7,11 @@ import React, {
   useRef,
 } from "react";
 import { Socket } from "socket.io-client";
-import { OpenHandsParsedEvent } from "#/types/core";
+import { ForgeParsedEvent } from "#/types/core";
 import {
-  isOpenHandsEvent,
-  isOpenHandsAction,
-  isOpenHandsObservation,
+  isForgeEvent,
+  isForgeAction,
+  isForgeObservation,
   isAgentStateChangeObservation,
   isStatusUpdate,
 } from "#/types/core/guards";
@@ -25,7 +25,7 @@ import {
 interface ConversationSocket {
   socket: Socket;
   isConnected: boolean;
-  events: OpenHandsParsedEvent[];
+  events: ForgeParsedEvent[];
 }
 
 interface ConversationSubscriptionsContextType {
@@ -40,14 +40,14 @@ interface ConversationSubscriptionsContextType {
   }) => void;
   unsubscribeFromConversation: (conversationId: string) => void;
   isSubscribedToConversation: (conversationId: string) => boolean;
-  getEventsForConversation: (conversationId: string) => OpenHandsParsedEvent[];
+  getEventsForConversation: (conversationId: string) => ForgeParsedEvent[];
 }
 
 // Small helper types to avoid casting to `any` and trigger eslint warnings.
 type MaybeProcess = { env?: Record<string, string | undefined> };
 type MaybeImportMeta = { env?: { VITE_PLAYWRIGHT_STUB?: string } };
 interface WindowWithPlaywright {
-  __OPENHANDS_PLAYWRIGHT?: boolean;
+  __Forge_PLAYWRIGHT?: boolean;
 }
 
 const ConversationSubscriptionsContext =
@@ -73,8 +73,8 @@ const isErrorEvent = (
   "message" in event &&
   typeof event.message === "string";
 
-const isAgentStatusError = (event: unknown): event is OpenHandsParsedEvent =>
-  isOpenHandsEvent(event) &&
+const isAgentStatusError = (event: unknown): event is ForgeParsedEvent =>
+  isForgeEvent(event) &&
   isAgentStateChangeObservation(event) &&
   event.extras.agent_state === AgentState.ERROR;
 
@@ -163,7 +163,7 @@ export function ConversationSubscriptionsProvider({
         }
 
         // Update the events for this subscription
-        if (isOpenHandsEvent(event)) {
+        if (isForgeEvent(event)) {
           setConversationSockets((prev) => {
             // Make sure the conversation still exists in our state
             if (!prev[conversationId]) {
@@ -177,7 +177,7 @@ export function ConversationSubscriptionsProvider({
               if (existingEvent.id === event.id) return true;
 
               // If both are actions, compare source/action/args
-              if (isOpenHandsAction(existingEvent) && isOpenHandsAction(event)) {
+              if (isForgeAction(existingEvent) && isForgeAction(event)) {
                 return (
                   existingEvent.source === event.source &&
                   existingEvent.action === event.action &&
@@ -187,8 +187,8 @@ export function ConversationSubscriptionsProvider({
 
               // If both are observations, compare source/observation/extras
               if (
-                isOpenHandsObservation(existingEvent) &&
-                isOpenHandsObservation(event)
+                isForgeObservation(existingEvent) &&
+                isForgeObservation(event)
               ) {
                 return (
                   existingEvent.source === event.source &&
@@ -227,7 +227,7 @@ export function ConversationSubscriptionsProvider({
             renderConversationCreatedToast(conversationId);
           }
         } else if (
-          isOpenHandsEvent(event) &&
+          isForgeEvent(event) &&
           isAgentStateChangeObservation(event) &&
           event.extras.agent_state === AgentState.FINISHED
         ) {
@@ -252,7 +252,7 @@ export function ConversationSubscriptionsProvider({
           ) ||
           (typeof window !== "undefined" &&
             (window as unknown as WindowWithPlaywright)
-              .__OPENHANDS_PLAYWRIGHT === true);
+              .__Forge_PLAYWRIGHT === true);
 
         if (isPlaywrightRun) {
           // Create a lightweight noop socket-like object

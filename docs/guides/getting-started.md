@@ -1,6 +1,6 @@
 # 🚀 **Getting Started Guide**
 
-> **Complete guide to get up and running with OpenHands in minutes.**
+> **Complete guide to get up and running with Forge in minutes.**
 
 ---
 
@@ -19,12 +19,12 @@
 
 ## 🌟 **Quick Start**
 
-Get OpenHands running in **5 minutes**:
+Get Forge running in **5 minutes**:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/openhands.git
-cd openhands
+git clone https://github.com/your-org/Forge.git
+cd Forge
 
 # 2. Install dependencies
 pip install -e .
@@ -32,7 +32,7 @@ cd frontend && npm install
 
 # 3. Start the system
 # Terminal 1: Backend
-python -m openhands.server
+python -m Forge.server
 
 # Terminal 2: Frontend
 cd frontend && npm run dev
@@ -42,7 +42,7 @@ cd frontend && npm run dev
 # Backend API: http://localhost:8000
 ```
 
-**That's it!** 🎉 You now have OpenHands running locally.
+**That's it!** 🎉 You now have Forge running locally.
 
 ---
 
@@ -74,8 +74,8 @@ cd frontend && npm run dev
 
 #### **Step 1: Clone Repository**
 ```bash
-git clone https://github.com/your-org/openhands.git
-cd openhands
+git clone https://github.com/your-org/Forge.git
+cd Forge
 ```
 
 #### **Step 2: Install Backend Dependencies**
@@ -99,7 +99,7 @@ pnpm install
 #### **Step 4: Verify Installation**
 ```bash
 # Check Python installation
-python -c "import openhands; print('OpenHands installed successfully')"
+python -c "import forge; print('Forge installed successfully')"
 
 # Check Node.js installation
 cd frontend && npm run build
@@ -109,8 +109,8 @@ cd frontend && npm run build
 
 #### **Step 1: Clone Repository**
 ```bash
-git clone https://github.com/your-org/openhands.git
-cd openhands
+git clone https://github.com/your-org/Forge.git
+cd Forge
 ```
 
 #### **Step 2: Build and Run with Docker**
@@ -134,8 +134,8 @@ docker-compose ps
 
 #### **Step 1: Clone Repository**
 ```bash
-git clone https://github.com/your-org/openhands.git
-cd openhands
+git clone https://github.com/your-org/Forge.git
+cd Forge
 ```
 
 #### **Step 2: Create Virtual Environment**
@@ -163,7 +163,7 @@ npm install
 #### **Step 4: Run Development Server**
 ```bash
 # Terminal 1: Backend
-python -m openhands.server --reload
+python -m Forge.server --reload
 
 # Terminal 2: Frontend
 cd frontend
@@ -188,7 +188,7 @@ cp config.template.toml config.toml
 ```toml
 # config.toml
 [system]
-name = "OpenHands"
+name = "Forge"
 environment = "development"
 debug = true
 
@@ -216,13 +216,13 @@ min_samples = 10
 #### **Step 3: Set Environment Variables**
 ```bash
 # Set API keys
-export OPENHANDS_LLM_API_KEY="your-api-key-here"
-export OPENHANDS_LLM_PROVIDER="openai"
-export OPENHANDS_LLM_MODEL="gpt-4"
+export FORGE_LLM_API_KEY="your-api-key-here"
+export FORGE_LLM_PROVIDER="openai"
+export FORGE_LLM_MODEL="gpt-4"
 
 # Set other configuration
-export OPENHANDS_ENVIRONMENT="development"
-export OPENHANDS_DEBUG="true"
+export FORGE_ENVIRONMENT="development"
+export FORGE_DEBUG="true"
 ```
 
 ### **Advanced Configuration**
@@ -240,7 +240,7 @@ port = 8000
 workers = 4
 
 [database]
-url = "postgresql://user:pass@localhost/openhands"
+url = "postgresql://user:pass@localhost/Forge"
 pool_size = 20
 
 [llm]
@@ -282,10 +282,10 @@ optimization_threshold = 0.05
 #### **Backend**
 ```bash
 # Start backend server
-python -m openhands.server
+python -m Forge.server
 
 # Or with specific configuration
-python -m openhands.server --config config.toml
+python -m Forge.server --config config.toml
 ```
 
 #### **Frontend**
@@ -304,7 +304,7 @@ npm run preview
 #### **Web Interface**
 1. Open your browser
 2. Navigate to http://localhost:3000
-3. You should see the OpenHands dashboard
+3. You should see the Forge dashboard
 
 #### **API Interface**
 1. Open your browser
@@ -470,13 +470,13 @@ pip install -e .
 toml validate config.toml
 
 # Check environment variables
-env | grep OPENHANDS
+env | grep Forge
 ```
 
 **Problem**: API keys not working
 ```bash
 # Solution: Verify API keys
-curl -H "Authorization: Bearer $OPENHANDS_LLM_API_KEY" \
+curl -H "Authorization: Bearer $FORGE_LLM_API_KEY" \
   https://api.openai.com/v1/models
 ```
 
@@ -488,7 +488,7 @@ curl -H "Authorization: Bearer $OPENHANDS_LLM_API_KEY" \
 netstat -an | grep 8000
 
 # Check logs
-tail -f logs/openhands.log
+tail -f logs/Forge.log
 ```
 
 **Problem**: Frontend not loading
@@ -515,7 +515,7 @@ wmic memorychip get size  # Windows
 #### **Enable Debug Mode**
 ```bash
 # Set environment variable
-export OPENHANDS_DEBUG=true
+export FORGE_DEBUG=true
 
 # Or in config file
 [system]
@@ -525,7 +525,7 @@ debug = true
 #### **Verbose Logging**
 ```bash
 # Set log level
-export OPENHANDS_LOG_LEVEL=DEBUG
+export FORGE_LOG_LEVEL=DEBUG
 
 # Or in config file
 [logging]
@@ -579,7 +579,7 @@ default_ttl = 3600
 #### **1. Use Development Mode**
 ```bash
 # Start with development mode
-python -m openhands.server --reload --debug
+python -m Forge.server --reload --debug
 ```
 
 #### **2. Monitor Performance**
@@ -605,7 +605,7 @@ socket.on('agent_response', (data) => {
 #### **1. Use Production Configuration**
 ```bash
 # Use production config
-python -m openhands.server --config config.production.toml
+python -m Forge.server --config config.production.toml
 ```
 
 #### **2. Enable Monitoring**
@@ -623,7 +623,7 @@ alerts_enabled = true
 # Configure logging
 [logging]
 level = "INFO"
-file = "/var/log/openhands/app.log"
+file = "/var/log/Forge/app.log"
 max_size = "100MB"
 backup_count = 5
 ```
@@ -632,7 +632,7 @@ backup_count = 5
 
 ## 🎉 **Congratulations!**
 
-You've successfully set up OpenHands! Here's what you can do next:
+You've successfully set up Forge! Here's what you can do next:
 
 ### **Immediate Next Steps**
 1. **Explore the Web Interface**: Try the dashboard and agent console
@@ -654,6 +654,6 @@ You've successfully set up OpenHands! Here's what you can do next:
 
 ---
 
-**Welcome to OpenHands - The future of AI development!** 🚀
+**Welcome to Forge - The future of AI development!** 🚀
 
-*Need help? Check out our [Troubleshooting Guide](troubleshooting.md) or [Community Support](https://github.com/your-org/openhands/discussions).*
+*Need help? Check out our [Troubleshooting Guide](troubleshooting.md) or [Community Support](https://github.com/your-org/Forge/discussions).*

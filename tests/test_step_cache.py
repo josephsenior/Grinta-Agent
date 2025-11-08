@@ -1,6 +1,6 @@
 import types
-from openhands.metasop.models import Artifact, SopStep, SopTemplate, StepOutputSpec
-from openhands.metasop.orchestrator import MetaSOPOrchestrator
+from forge.metasop.models import Artifact, SopStep, SopTemplate, StepOutputSpec
+from forge.metasop.orchestrator import MetaSOPOrchestrator
 
 
 class DummyExecutor:
