@@ -26,7 +26,7 @@ export default function AnimatedBackground(): React.ReactElement {
   useEffect(() => {
     // Generate interactive particles
     const uid = () => Math.random().toString(36).slice(2, 11);
-    
+
     const newParticles: Particle[] = Array.from({ length: 80 }).map(() => ({
       id: uid(),
       x: Math.random() * 100,
@@ -59,7 +59,7 @@ export default function AnimatedBackground(): React.ReactElement {
           if (mousePosition.x > 0 && mousePosition.y > 0) {
             const mouseXPercent = (mousePosition.x / window.innerWidth) * 100;
             const mouseYPercent = (mousePosition.y / window.innerHeight) * 100;
-            
+
             const dx = mouseXPercent - newX;
             const dy = mouseYPercent - newY;
             const distance = Math.sqrt(dx * dx + dy * dy);
@@ -75,7 +75,7 @@ export default function AnimatedBackground(): React.ReactElement {
             x: Math.max(0, Math.min(100, newX)),
             y: Math.max(0, Math.min(100, newY)),
           };
-        })
+        }),
       );
 
       animationFrameId.current = requestAnimationFrame(animate);
@@ -128,7 +128,7 @@ export default function AnimatedBackground(): React.ReactElement {
           will-change: transform;
         }
       `}</style>
-      
+
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         {/* Mesh gradient background */}
         <MeshGradient />
@@ -137,7 +137,10 @@ export default function AnimatedBackground(): React.ReactElement {
         <WebGLParticles />
 
         {/* Interactive particles with mouse tracking */}
-        <div className="absolute inset-0" style={{ transform: "translateZ(0)" }}>
+        <div
+          className="absolute inset-0"
+          style={{ transform: "translateZ(0)" }}
+        >
           {particles.map((p, index) => (
             <div
               key={p.id}
@@ -149,7 +152,9 @@ export default function AnimatedBackground(): React.ReactElement {
                 top: `${p.y}%`,
                 background: `radial-gradient(circle, hsla(${p.hue}, 70%, 60%, ${p.opacity}), hsla(${p.hue}, 70%, 60%, 0))`,
                 boxShadow: `0 0 ${p.size * 3}px ${p.size}px hsla(${p.hue}, 70%, 60%, ${p.opacity * 0.3})`,
-                animation: reducedMotion ? "none" : `float-smooth ${12 + index % 8}s ease-in-out infinite`,
+                animation: reducedMotion
+                  ? "none"
+                  : `float-smooth ${12 + (index % 8)}s ease-in-out infinite`,
                 animationDelay: `${index * 0.1}s`,
                 opacity: p.opacity - scrollProgress * 0.2,
               }}
@@ -158,14 +163,14 @@ export default function AnimatedBackground(): React.ReactElement {
         </div>
 
         {/* Layered gradient overlays with parallax */}
-        <div 
+        <div
           className="parallax-layer absolute inset-0 bg-gradient-to-br from-brand-500/8 via-transparent to-accent-emerald/6 transition-opacity duration-700"
           style={{
             transform: `translateY(${scrollProgress * 50}px)`,
             opacity: 1 - scrollProgress * 0.3,
           }}
         />
-        <div 
+        <div
           className="parallax-layer absolute inset-0 bg-gradient-to-tl from-accent-500/5 via-transparent to-brand-600/4"
           style={{
             transform: `translateY(${scrollProgress * 30}px)`,
@@ -174,17 +179,21 @@ export default function AnimatedBackground(): React.ReactElement {
         />
 
         {/* Animated orbs with glow (bolt.new style) */}
-        <div 
+        <div
           className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-gradient-to-r from-brand-500/12 to-accent-500/8 rounded-full blur-3xl"
           style={{
-            animation: reducedMotion ? "none" : "glow-pulse 8s ease-in-out infinite, mesh-shift 20s ease-in-out infinite",
+            animation: reducedMotion
+              ? "none"
+              : "glow-pulse 8s ease-in-out infinite, mesh-shift 20s ease-in-out infinite",
             transform: `translateY(${scrollProgress * -100}px)`,
           }}
         />
         <div
           className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-gradient-to-r from-accent-emerald/10 to-accent-sapphire/6 rounded-full blur-3xl"
           style={{
-            animation: reducedMotion ? "none" : "glow-pulse 10s ease-in-out infinite 2s, mesh-shift 25s ease-in-out infinite 5s",
+            animation: reducedMotion
+              ? "none"
+              : "glow-pulse 10s ease-in-out infinite 2s, mesh-shift 25s ease-in-out infinite 5s",
             transform: `translateY(${scrollProgress * -80}px)`,
           }}
         />
@@ -193,7 +202,9 @@ export default function AnimatedBackground(): React.ReactElement {
         <div
           className="absolute top-1/2 left-1/2 w-[400px] h-[400px] -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-brand-600/8 to-accent-emerald/5 rounded-full blur-2xl"
           style={{
-            animation: reducedMotion ? "none" : "glow-pulse 12s ease-in-out infinite 4s, mesh-shift 30s ease-in-out infinite 10s",
+            animation: reducedMotion
+              ? "none"
+              : "glow-pulse 12s ease-in-out infinite 4s, mesh-shift 30s ease-in-out infinite 10s",
             opacity: 0.6 - scrollProgress * 0.3,
           }}
         />

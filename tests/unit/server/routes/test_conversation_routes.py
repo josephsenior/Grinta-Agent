@@ -1,12 +1,20 @@
 import json
+import sys
 from datetime import datetime, timezone
+from json import JSONDecodeError
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from fastapi import status
 from fastapi.responses import JSONResponse
+
 from forge.microagent.microagent import KnowledgeMicroagent, RepoMicroagent
 from forge.microagent.types import MicroagentMetadata, MicroagentType
-from forge.server.routes.conversation import get_microagents
+from forge.server.routes import conversation as conversation_routes
+from forge.server.routes.conversation import add_event, add_event_raw, get_git_changes, get_git_diff
+from forge.server.routes.conversation import get_hosts, get_microagents, get_remote_runtime_config
+from forge.server.routes.conversation import get_vscode_url, metasop_debug, search_events, simple_test_endpoint
 from forge.server.routes.manage_conversations import UpdateConversationRequest, update_conversation
 from forge.server.session.conversation import ServerConversation
 from forge.storage.conversation.conversation_store import ConversationStore
@@ -143,6 +151,399 @@ def _verify_knowledge_microagent(content, knowledge_microagent):
     assert knowledge_agent["triggers"] == ["test", "knowledge"]
     assert knowledge_agent["inputs"] == []
     assert knowledge_agent["tools"] == ["search", "fetch"]
+
+
+@pytest.mark.asyncio
+async def test_simple_test_endpoint():
+    response = await simple_test_endpoint()
+    assert response.status_code == 200
+    assert json.loads(response.body)["status"] == "simple_test_working"
+
+
+@pytest.mark.asyncio
+async def test_get_remote_runtime_config_success(monkeypatch):
+    runtime = SimpleNamespace(runtime_id="rt-1", sid="session-1")
+    conversation = SimpleNamespace(runtime=runtime)
+    attach_mock = AsyncMock(return_value=conversation)
+    detach_mock = AsyncMock()
+    monkeypatch.setattr(conversation_routes.conversation_manager, "attach_to_conversation", attach_mock)
+    monkeypatch.setattr(conversation_routes.conversation_manager, "detach_from_conversation", detach_mock)
+
+    response = await get_remote_runtime_config("conversation-123")
+
+    assert response.status_code == 200
+    assert json.loads(response.body) == {"runtime_id": "rt-1", "session_id": "session-1"}
+    attach_mock.assert_awaited_once_with("conversation-123", "dev-user")
+    detach_mock.assert_awaited_once_with(conversation)
+
+
+@pytest.mark.asyncio
+async def test_get_remote_runtime_config_not_found(monkeypatch):
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "attach_to_conversation",
+        AsyncMock(return_value=None),
+    )
+
+    response = await get_remote_runtime_config("missing-conv")
+
+    assert response.status_code == 404
+    assert json.loads(response.body)["error"] == "Conversation not found"
+
+
+@pytest.mark.asyncio
+async def test_get_remote_runtime_config_exception(monkeypatch):
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "attach_to_conversation",
+        AsyncMock(side_effect=RuntimeError("boom")),
+    )
+
+    response = await get_remote_runtime_config("conversation-123")
+
+    assert response.status_code == 500
+    assert json.loads(response.body)["error"] == "boom"
+
+
+@pytest.mark.asyncio
+async def test_get_vscode_url_success(monkeypatch):
+    runtime = SimpleNamespace(vscode_url="https://code")
+    conversation = SimpleNamespace(runtime=runtime)
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "attach_to_conversation",
+        AsyncMock(return_value=conversation),
+    )
+    monkeypatch.setattr(conversation_routes.conversation_manager, "detach_from_conversation", AsyncMock())
+
+    response = await get_vscode_url("conversation-123")
+
+    assert response.status_code == 200
+    assert json.loads(response.body)["vscode_url"] == "https://code"
+
+
+@pytest.mark.asyncio
+async def test_get_vscode_url_not_found(monkeypatch):
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "attach_to_conversation",
+        AsyncMock(return_value=None),
+    )
+
+    response = await get_vscode_url("missing")
+
+    assert response.status_code == 404
+    assert json.loads(response.body)["error"] == "Conversation not found"
+
+
+@pytest.mark.asyncio
+async def test_get_vscode_url_exception(monkeypatch):
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "attach_to_conversation",
+        AsyncMock(side_effect=RuntimeError("boom")),
+    )
+
+    response = await get_vscode_url("conversation-123")
+
+    assert response.status_code == 500
+    data = json.loads(response.body)
+    assert data["vscode_url"] is None
+    assert "Error getting VSCode URL" in data["error"]
+
+
+@pytest.mark.asyncio
+async def test_get_hosts_success(monkeypatch):
+    runtime = SimpleNamespace(web_hosts=["https://one", "https://two"])
+    conversation = SimpleNamespace(runtime=runtime)
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "attach_to_conversation",
+        AsyncMock(return_value=conversation),
+    )
+    monkeypatch.setattr(conversation_routes.conversation_manager, "detach_from_conversation", AsyncMock())
+
+    response = await get_hosts("conversation-123")
+
+    assert response.status_code == 200
+    assert json.loads(response.body)["hosts"] == ["https://one", "https://two"]
+
+
+@pytest.mark.asyncio
+async def test_get_hosts_not_found(monkeypatch):
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "attach_to_conversation",
+        AsyncMock(return_value=None),
+    )
+
+    response = await get_hosts("missing")
+
+    assert response.status_code == 404
+    assert json.loads(response.body)["error"] == "Conversation not found"
+
+
+@pytest.mark.asyncio
+async def test_get_hosts_exception(monkeypatch):
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "attach_to_conversation",
+        AsyncMock(side_effect=RuntimeError("boom")),
+    )
+
+    response = await get_hosts("conversation-123")
+
+    assert response.status_code == 500
+    data = json.loads(response.body)
+    assert data["hosts"] is None
+    assert "Error getting runtime hosts" in data["error"]
+
+
+@pytest.mark.asyncio
+async def test_search_events_success(monkeypatch):
+    captured = {}
+
+    class FakeEventStore:
+        def __init__(self, sid, file_store, user_id):
+            captured.update({"sid": sid, "user_id": user_id})
+
+        def search_events(self, **kwargs):
+            captured["search_kwargs"] = kwargs
+            return ["event1", "event2"]
+
+    monkeypatch.setattr(conversation_routes, "EventStore", FakeEventStore)
+    monkeypatch.setattr(conversation_routes, "event_to_dict", lambda event: event)
+
+    result = await search_events(
+        conversation_id="conv-1",
+        start_id=0,
+        end_id=None,
+        reverse=False,
+        filter=None,
+        limit=1,
+        metadata=SimpleNamespace(),
+        user_id="user-1",
+    )
+
+    assert result == {"events": ["event1"], "has_more": True}
+    assert captured["sid"] == "conv-1"
+    assert captured["user_id"] == "user-1"
+
+
+@pytest.mark.asyncio
+async def test_search_events_invalid_limit():
+    with pytest.raises(Exception) as exc:
+        await search_events(
+            conversation_id="conv",
+            start_id=0,
+            end_id=None,
+            reverse=False,
+            filter=None,
+            limit=101,
+            metadata=SimpleNamespace(),
+            user_id="user",
+        )
+    assert exc.value.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.asyncio
+async def test_add_event_success(monkeypatch):
+    request = AsyncMock()
+    request.json = AsyncMock(return_value={"foo": "bar"})
+    conversation = SimpleNamespace(sid="sid-1")
+
+    send_mock = AsyncMock()
+    monkeypatch.setattr(conversation_routes.conversation_manager, "send_event_to_conversation", send_mock)
+
+    response = await add_event(request, conversation)
+
+    assert response.status_code == 200
+    assert json.loads(response.body)["success"] is True
+    send_mock.assert_awaited_once_with("sid-1", {"foo": "bar"})
+
+
+@pytest.mark.asyncio
+async def test_add_event_invalid_json(monkeypatch):
+    request = AsyncMock()
+    request.json = AsyncMock(side_effect=JSONDecodeError("err", "text", 0))
+    request.body = AsyncMock(return_value=b"not-json")
+    conversation = SimpleNamespace(sid="sid-1")
+
+    response = await add_event(request, conversation)
+
+    assert response.status_code == 400
+    data = json.loads(response.body)
+    assert data["error"] == "Invalid JSON"
+
+
+@pytest.mark.asyncio
+async def test_add_event_raw_success(monkeypatch):
+    request = AsyncMock()
+    request.body = AsyncMock(return_value=b"hello world")
+    conversation = SimpleNamespace(sid="sid-1")
+
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "attach_to_conversation",
+        AsyncMock(return_value=conversation),
+    )
+    send_mock = AsyncMock()
+    monkeypatch.setattr(conversation_routes.conversation_manager, "send_event_to_conversation", send_mock)
+
+    response = await add_event_raw(request, conversation_id="sid-1", create=False, user_id="user")
+
+    assert response.status_code == 200
+    send_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_add_event_raw_creates_conversation(monkeypatch):
+    request = AsyncMock()
+    request.body = AsyncMock(return_value=b"hello")
+    conversation = SimpleNamespace(sid="sid-1")
+
+    attach_mock = AsyncMock(side_effect=[None, conversation])
+    monkeypatch.setattr(conversation_routes.conversation_manager, "attach_to_conversation", attach_mock)
+    monkeypatch.setattr(conversation_routes.conversation_manager, "send_event_to_conversation", AsyncMock())
+
+    store_holder = {}
+
+    async def fake_get_store(_request):
+        store = AsyncMock()
+        store.save_metadata = AsyncMock()
+        store_holder["store"] = store
+        return store
+
+    fake_utils = SimpleNamespace(get_conversation_store=fake_get_store)
+    monkeypatch.setitem(sys.modules, "forge.server.utils", fake_utils)
+
+    response = await add_event_raw(request, conversation_id="sid-1", create=True, user_id="user")
+
+    assert response.status_code == 200
+    assert attach_mock.await_count == 2
+    assert store_holder["store"].save_metadata.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_add_event_raw_not_found(monkeypatch):
+    request = AsyncMock()
+    request.body = AsyncMock(return_value=b"hello")
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "attach_to_conversation",
+        AsyncMock(return_value=None),
+    )
+
+    response = await add_event_raw(request, conversation_id="missing", create=False, user_id="user")
+
+    assert response.status_code == 404
+    assert "no_conversation" in json.loads(response.body)["error"]
+
+
+@pytest.mark.asyncio
+async def test_add_event_raw_runtime_fallback(monkeypatch):
+    request = AsyncMock()
+    request.body = AsyncMock(return_value=b"hi")
+    conversation = SimpleNamespace(sid="sid-1")
+
+    send_mock = AsyncMock(side_effect=RuntimeError("no_conversation:sid-1"))
+    monkeypatch.setattr(conversation_routes.conversation_manager, "attach_to_conversation", AsyncMock(return_value=conversation))
+    monkeypatch.setattr(conversation_routes.conversation_manager, "send_event_to_conversation", send_mock)
+
+    call_log = {}
+
+    class FakeEventStream:
+        def __init__(self, conversation_id, _file_store, user_id):
+            call_log["init"] = (conversation_id, user_id)
+            self.events = []
+
+        def add_event(self, event_obj, source):
+            call_log.setdefault("events", []).append((event_obj, source))
+
+    fake_event_module = SimpleNamespace(EventSource=SimpleNamespace(USER="USER"))
+    fake_serialization_module = SimpleNamespace(event_from_dict=lambda data: data)
+    fake_stream_module = SimpleNamespace(EventStream=FakeEventStream)
+    monkeypatch.setitem(sys.modules, "forge.events.event", fake_event_module)
+    monkeypatch.setitem(sys.modules, "forge.events.serialization.event", fake_serialization_module)
+    monkeypatch.setitem(sys.modules, "forge.events.stream", fake_stream_module)
+
+    response = await add_event_raw(request, conversation_id="sid-1", create=False, user_id="user")
+
+    assert response.status_code == 200
+    data = json.loads(response.body)
+    assert data["success"] is True
+    assert data["note"] == "persisted_to_event_store"
+    assert call_log["init"] == ("sid-1", "user")
+    assert call_log["events"][0][0]["args"]["content"] == "hi"
+
+
+@pytest.mark.asyncio
+async def test_add_event_raw_empty_body():
+    request = AsyncMock()
+    request.body = AsyncMock(return_value=b"")
+    response = await add_event_raw(request, conversation_id="sid", create=False, user_id="user")
+    assert response.status_code == 400
+    assert json.loads(response.body)["error"] == "Empty body"
+
+
+@pytest.mark.asyncio
+async def test_add_event_raw_exception(monkeypatch):
+    request = AsyncMock()
+    request.body = AsyncMock(side_effect=RuntimeError("boom"))
+    response = await add_event_raw(request, conversation_id="sid", create=False, user_id="user")
+    assert response.status_code == 500
+    assert json.loads(response.body)["error"] == "boom"
+
+
+@pytest.mark.asyncio
+async def test_metasop_debug_requires_conversation_id(monkeypatch):
+    request = AsyncMock()
+    request.json = AsyncMock(return_value={})
+    response = await metasop_debug(request)
+    assert response.status_code == 400
+    assert json.loads(response.body)["error"] == "conversation_id required in request body"
+
+
+@pytest.mark.asyncio
+async def test_metasop_debug_starts_task(monkeypatch):
+    payload = {"conversation_id": "conv", "message": "run"}
+    request = AsyncMock()
+    request.json = AsyncMock(return_value=payload)
+
+    tasks = []
+
+    def fake_create_task(coro):
+        tasks.append(coro)
+        return SimpleNamespace()
+
+    monkeypatch.setitem(sys.modules, "forge.metasop.router", SimpleNamespace(run_metasop_for_conversation=AsyncMock()))
+    monkeypatch.setattr("asyncio.create_task", fake_create_task)
+
+    response = await metasop_debug(request)
+    assert response.status_code == 200
+    assert tasks
+
+
+@pytest.mark.asyncio
+async def test_metasop_debug_handles_exception(monkeypatch):
+    request = AsyncMock()
+    payload = {"conversation_id": "conv"}
+    request.json = AsyncMock(return_value=payload)
+    monkeypatch.setitem(sys.modules, "forge.metasop.router", SimpleNamespace(run_metasop_for_conversation=AsyncMock()))
+
+    def raise_task(_):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr("asyncio.create_task", raise_task)
+
+    response = await metasop_debug(request)
+    assert response.status_code == 500
+    assert json.loads(response.body)["error"] == "boom"
+
+
+def test_extract_mcp_tools_empty():
+    agent = SimpleNamespace(metadata=SimpleNamespace(mcp_tools=None))
+    assert conversation_routes._extract_mcp_tools(agent) == []
 
 
 @pytest.mark.asyncio

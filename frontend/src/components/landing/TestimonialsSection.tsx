@@ -49,9 +49,7 @@ export default function TestimonialsSection(): React.ReactElement {
           </div>
 
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            <span className="text-foreground">
-              What Developers Say
-            </span>
+            <span className="text-foreground">What Developers Say</span>
           </h2>
 
           <p className="text-lg text-foreground-secondary max-w-3xl mx-auto leading-relaxed">
@@ -95,7 +93,7 @@ export default function TestimonialsSection(): React.ReactElement {
                         alt={testimonial.name}
                         onError={(e) => {
                           // Hide the image on error, fallback will show
-                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.style.display = "none";
                         }}
                       />
                     )}

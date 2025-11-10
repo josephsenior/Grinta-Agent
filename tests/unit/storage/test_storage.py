@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 import logging
+import os
 import shutil
 import tempfile
 from abc import ABC
@@ -99,6 +101,26 @@ class TestLocalFileStore(TestCase, _StorageTest):
             shutil.rmtree(self.temp_dir, ignore_errors=True)
         except Exception as e:
             logging.warning(f"Failed to remove temporary directory {self.temp_dir}: {e}")
+
+    def test_delete_missing_path_is_noop(self):
+        store = self.get_store()
+        # Should not raise even if the path is absent
+        store.delete("does/not/exist.txt")
+
+    def test_write_bytes_and_handles_delete_errors(self):
+        store = self.get_store()
+        store.write("bytes.bin", b"binary payload")
+        # Reading should decode utf-8 bytes without error
+        self.assertEqual(store.read("bytes.bin"), "binary payload")
+        full_path = store.get_full_path("bytes.bin")
+        with patch("forge.storage.local.os.remove", side_effect=OSError("boom")) as mock_remove, patch(
+            "forge.storage.local.logger"
+        ) as mock_logger:
+            store.delete("bytes.bin")
+            mock_remove.assert_called_once()
+            mock_logger.error.assert_called_once()
+        # Clean up after failure branch
+        os.remove(full_path)
 
 
 class TestInMemoryFileStore(TestCase, _StorageTest):

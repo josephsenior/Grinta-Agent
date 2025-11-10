@@ -28,9 +28,8 @@ import { useChatMessageHandlers } from "./hooks/use-chat-message-handlers";
 import { useChatFeedbackActions } from "./hooks/use-chat-feedback-actions";
 import { useFilteredEvents } from "./utils/use-filtered-events";
 
-type ChatEvent = ReturnType<typeof useFilteredEvents> extends Array<infer Item>
-  ? Item
-  : never;
+type ChatEvent =
+  ReturnType<typeof useFilteredEvents> extends Array<infer Item> ? Item : never;
 
 /**
  * Refactored ChatInterface component with improved separation of concerns
@@ -41,40 +40,41 @@ export function ChatInterfaceRefactored() {
 
   // Main state management hook
   const {
-     curAgentState,
-     isAwaitingUserConfirmation,
-     parsedEvents,
-     isLoadingMessages,
-     tasks,
-     isTaskPanelOpen,
-     toggleTaskPanel,
-     t,
-     send,
-     uploadFiles,
-     scrollRef,
-     scrollDomToBottom,
-     onChatBodyScroll,
-     isMobileMenuOpen,
-     setIsMobileMenuOpen,
-     setLastUserMessage,
-     showShortcutsPanel,
-     setShowShortcutsPanel,
-     isInputFocused,
-     setIsInputFocused,
-     showOrchestrationPanel,
-     setShowOrchestrationPanel,
-     showTechnicalDetails,
-     steps,
-     hasSteps,
-     errorMessage,
-     setOptimisticUserMessage,
+    curAgentState,
+    isAwaitingUserConfirmation,
+    parsedEvents,
+    isLoadingMessages,
+    tasks,
+    isTaskPanelOpen,
+    toggleTaskPanel,
+    t,
+    send,
+    uploadFiles,
+    scrollRef,
+    scrollDomToBottom,
+    onChatBodyScroll,
+    isMobileMenuOpen,
+    setIsMobileMenuOpen,
+    messageToSend,
+    setMessageToSend,
+    lastUserMessage,
+    setLastUserMessage,
+    showShortcutsPanel,
+    setShowShortcutsPanel,
+    isInputFocused,
+    setIsInputFocused,
+    showOrchestrationPanel,
+    setShowOrchestrationPanel,
+    showTechnicalDetails,
+    steps,
+    hasSteps,
+    errorMessage,
+    setOptimisticUserMessage,
   } = useChatInterfaceState();
 
   // Keyboard shortcuts hook
-  const { isSearchOpen, setIsSearchOpen, bookmarksHook } = useChatKeyboardShortcuts(
-    isInputFocused,
-    setShowShortcutsPanel
-  );
+  const { isSearchOpen, setIsSearchOpen, bookmarksHook } =
+    useChatKeyboardShortcuts(isInputFocused, setShowShortcutsPanel);
 
   // Message handling hooks
   const {
@@ -99,7 +99,7 @@ export function ChatInterfaceRefactored() {
       },
       [uploadFiles, params?.conversationId],
     ),
-    params.conversationId
+    params.conversationId,
   );
 
   // Feedback and actions hook
@@ -136,7 +136,11 @@ export function ChatInterfaceRefactored() {
         onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
 
-      <TaskPanel tasks={tasks} isOpen={isTaskPanelOpen} onToggle={toggleTaskPanel} />
+      <TaskPanel
+        tasks={tasks}
+        isOpen={isTaskPanelOpen}
+        onToggle={toggleTaskPanel}
+      />
 
       <div className="flex-1 flex flex-col min-h-0">
         <ChatStatusBanner lastEvent={lastEvent} />
@@ -224,7 +228,12 @@ function ChatHeader({
   return (
     <div className="flex items-center justify-between p-4 border-b border-border">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onGoBack} className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onGoBack}
+          className="flex items-center gap-2"
+        >
           <ChevronLeft className="w-4 h-4" />
           {t("Go back")}
         </Button>
@@ -237,7 +246,9 @@ function ChatHeader({
             className="flex items-center gap-2"
           >
             <Search className="w-4 h-4" />
-            <kbd className="px-1.5 py-0.5 text-xs bg-background-secondary rounded">⌘K</kbd>
+            <kbd className="px-1.5 py-0.5 text-xs bg-background-secondary rounded">
+              ⌘K
+            </kbd>
           </Button>
 
           <Button
@@ -247,7 +258,9 @@ function ChatHeader({
             className="flex items-center gap-2"
           >
             <Bookmark className="w-4 h-4" />
-            <kbd className="px-1.5 py-0.5 text-xs bg-background-secondary rounded">⌘B</kbd>
+            <kbd className="px-1.5 py-0.5 text-xs bg-background-secondary rounded">
+              ⌘B
+            </kbd>
           </Button>
         </div>
       </div>
@@ -260,7 +273,9 @@ function ChatHeader({
           className="flex items-center gap-2"
         >
           <Keyboard className="w-4 h-4" />
-          <kbd className="px-1.5 py-0.5 text-xs bg-background-secondary rounded">?</kbd>
+          <kbd className="px-1.5 py-0.5 text-xs bg-background-secondary rounded">
+            ?
+          </kbd>
         </Button>
 
         <Button
@@ -269,7 +284,11 @@ function ChatHeader({
           onClick={onToggleMobileMenu}
           className="md:hidden"
         >
-          {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          {isMobileMenuOpen ? (
+            <X className="w-4 h-4" />
+          ) : (
+            <Menu className="w-4 h-4" />
+          )}
         </Button>
       </div>
     </div>
@@ -282,7 +301,12 @@ function ChatStatusBanner({ lastEvent }: { lastEvent?: ChatEvent }) {
   }
 
   if (isTaskTrackingObservation(lastEvent)) {
-    return <StatusIndicator type="plan" message={buildPlanUpdateMessage(lastEvent)} />;
+    return (
+      <StatusIndicator
+        type="plan"
+        message={buildPlanUpdateMessage(lastEvent)}
+      />
+    );
   }
 
   if (isForgeAction(lastEvent)) {
@@ -293,14 +317,14 @@ function ChatStatusBanner({ lastEvent }: { lastEvent?: ChatEvent }) {
 }
 
 interface ChatMessagesSectionProps {
-  scrollRef: React.RefObject<HTMLDivElement>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
   onScroll: (element: HTMLElement) => void;
   events: ChatEvent[];
   isLoadingMessages: boolean;
   isAwaitingUserConfirmation: boolean;
   showTechnicalDetails: boolean;
-  onAskAboutCode: (message: ChatEvent) => void;
-  onRunCode: (message: ChatEvent) => void;
+  onAskAboutCode: (code: string) => void;
+  onRunCode: (code: string, language: string) => void;
 }
 
 function ChatMessagesSection({
@@ -315,7 +339,7 @@ function ChatMessagesSection({
 }: ChatMessagesSectionProps) {
   return (
     <div
-      ref={scrollRef}
+      ref={scrollRef as React.RefObject<HTMLDivElement>}
       className="flex-1 overflow-y-auto px-4 py-2"
       onScroll={(event) => onScroll(event.currentTarget)}
     >
@@ -339,11 +363,17 @@ interface ChatSuggestionsSectionProps {
   onSelectSuggestion: (value: string) => void;
 }
 
-function ChatSuggestionsSection({ lastEvent, onSelectSuggestion }: ChatSuggestionsSectionProps) {
+function ChatSuggestionsSection({
+  lastEvent,
+  onSelectSuggestion,
+}: ChatSuggestionsSectionProps) {
   return (
     <div className="px-4 py-2">
       <ActionSuggestions onSuggestionsClick={onSelectSuggestion} />
-      <SmartSuggestions lastEvent={lastEvent} onSelectSuggestion={onSelectSuggestion} />
+      <SmartSuggestions
+        lastEvent={lastEvent}
+        onSelectSuggestion={onSelectSuggestion}
+      />
     </div>
   );
 }
@@ -426,9 +456,11 @@ function ChatOverlays({
   return (
     <>
       {showShortcutsPanel && (
-        <KeyboardShortcutsPanel isOpen={showShortcutsPanel} onClose={closeShortcuts} />
+        <KeyboardShortcutsPanel
+          isOpen={showShortcutsPanel}
+          onClose={closeShortcuts}
+        />
       )}
-
       {isSearchOpen && (
         <ConversationSearch
           isOpen={isSearchOpen}
@@ -440,7 +472,6 @@ function ChatOverlays({
           }}
         />
       )}
-
       {bookmarksHook.isOpen && (
         <ConversationBookmarks
           isOpen={bookmarksHook.isOpen}
@@ -453,14 +484,12 @@ function ChatOverlays({
           onRemoveBookmark={(id: string) => bookmarksHook.removeBookmark(id)}
         />
       )}
-
       {showOrchestrationPanel && (
         <MetaSOPOrchestrationPanel
           isOpen={showOrchestrationPanel}
           onClose={closeOrchestrationPanel}
         />
       )}
-
       {feedbackModalIsOpen && (
         <FeedbackModal
           isOpen={feedbackModalIsOpen}
@@ -468,9 +497,9 @@ function ChatOverlays({
           polarity={feedbackPolarity}
         />
       )}
-
-      {errorMessage && <ErrorMessageBanner message={errorMessage} onDismiss={() => {}} />}
-
+      {errorMessage && (
+        <ErrorMessageBanner message={errorMessage ?? ""} onDismiss={() => {}} />
+      )}{" "}
       {hasSteps && <OrchestrationSteps steps={steps} />}
     </>
   );

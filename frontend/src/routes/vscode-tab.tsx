@@ -13,7 +13,6 @@ function VSCodeTab() {
   const [isCrossProtocol, setIsCrossProtocol] = useState(false);
   const [iframeError, setIframeError] = useState<string | null>(null);
 
-
   useEffect(() => {
     if (data?.url) {
       try {
@@ -49,7 +48,7 @@ function VSCodeTab() {
     return (
       <div className="w-full h-full flex items-center text-center justify-center text-2xl text-foreground-secondary">
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500" />
           <div>{t("VSCODE$LOADING")}</div>
         </div>
       </div>

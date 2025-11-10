@@ -5,23 +5,28 @@ export type ObservationResultStatus = "success" | "error" | "timeout";
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-const getExitCodeFromExtras = (extras: ForgeObservation["extras"]): number | undefined => {
+const getExitCodeFromExtras = (
+  extras: ForgeObservation["extras"],
+): number | undefined => {
   if (!isRecord(extras)) {
     return undefined;
   }
 
-  const metadata = (extras as Record<string, unknown>)["metadata"];
+  const { metadata } = extras as Record<string, unknown>;
 
   if (!isRecord(metadata)) {
     return undefined;
   }
 
-  const exitCode = (metadata as Record<string, unknown>)["exit_code"];
+  const exitCode = (metadata as Record<string, unknown>).exit_code;
 
   return typeof exitCode === "number" ? exitCode : undefined;
 };
 
-const getRunObservationStatus = (event: ForgeObservation, hasContent: boolean) => {
+const getRunObservationStatus = (
+  event: ForgeObservation,
+  hasContent: boolean,
+) => {
   const exitCode = getExitCodeFromExtras(event.extras);
 
   if (exitCode === -1) {
@@ -32,7 +37,11 @@ const getRunObservationStatus = (event: ForgeObservation, hasContent: boolean) =
     return "success";
   }
 
-  return typeof exitCode === "number" ? "error" : hasContent ? "success" : "error";
+  return typeof exitCode === "number"
+    ? "error"
+    : hasContent
+      ? "success"
+      : "error";
 };
 
 const isContentError = (event: ForgeObservation, hasContent: boolean) => {
@@ -48,7 +57,8 @@ const isContentError = (event: ForgeObservation, hasContent: boolean) => {
 };
 
 export const getObservationResult = (event: ForgeObservation) => {
-  const hasContent = typeof event.content === "string" && event.content.length > 0;
+  const hasContent =
+    typeof event.content === "string" && event.content.length > 0;
 
   switch (event.observation) {
     case "run":

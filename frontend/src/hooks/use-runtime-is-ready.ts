@@ -46,8 +46,9 @@ export const useRuntimeIsReady = (): boolean => {
   // 1. Conversation is RUNNING, OR
   // 2. Agent state is active (not INIT, LOADING, or ERROR)
   const conversationRunning = conversation?.status === "RUNNING";
-  const agentStateActive = curAgentState && !RUNTIME_INACTIVE_STATES.includes(curAgentState);
-  
+  const agentStateActive =
+    curAgentState && !RUNTIME_INACTIVE_STATES.includes(curAgentState);
+
   // Debug logging
   console.log("🔍 Runtime ready check:", {
     conversationStatus: conversation?.status,
@@ -57,6 +58,6 @@ export const useRuntimeIsReady = (): boolean => {
     isReady: conversationRunning || agentStateActive,
     inactiveStates: RUNTIME_INACTIVE_STATES,
   });
-  
+
   return conversationRunning || agentStateActive;
 };

@@ -181,13 +181,17 @@ function extractCommandText(event: {
   message?: unknown;
 }) {
   const props = ["command", "cmd", "shell_command", "message"];
-  const args = event.args;
+  const { args } = event;
 
   const directCandidates = props
     .map((key) => getNestedProperty(args, key))
     .filter(Boolean);
 
-  const additional = [event.content, event.message, typeof args === "string" ? args : undefined]
+  const additional = [
+    event.content,
+    event.message,
+    typeof args === "string" ? args : undefined,
+  ]
     .filter(Boolean)
     .map((value) => String(value));
 
@@ -236,7 +240,10 @@ function looksLikeShellCommand(value: string) {
 }
 
 function generateCommandId() {
-  if (typeof crypto !== "undefined" && typeof (crypto as any).randomUUID === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof (crypto as any).randomUUID === "function"
+  ) {
     return (crypto as any).randomUUID();
   }
   return Math.random().toString(36).slice(2, 9);

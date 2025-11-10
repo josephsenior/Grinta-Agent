@@ -101,8 +101,8 @@ describe("TaskTrackingObservationContent", () => {
         ...mockEvent.extras,
         task_list: [
           null,
-          { id: 123, title: 456, status: "unknown" },
-        ],
+          { id: "123", title: "456", status: "todo" as const },
+        ] as any,
       },
     } as TaskTrackingObservation;
 

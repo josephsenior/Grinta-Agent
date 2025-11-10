@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import React from "react";
 import posthog from "posthog-js";
 import Forge from "#/api/forge";
@@ -57,7 +57,9 @@ export const useSettings = () => {
   return query;
 };
 
-function mapApiSettingsToClient(apiSettings: Awaited<ReturnType<typeof Forge.getSettings>>): Settings {
+function mapApiSettingsToClient(
+  apiSettings: Awaited<ReturnType<typeof Forge.getSettings>>,
+): Settings {
   return {
     ...DEFAULT_SETTINGS,
     ...buildPrimarySettings(apiSettings),
@@ -67,7 +69,9 @@ function mapApiSettingsToClient(apiSettings: Awaited<ReturnType<typeof Forge.get
   };
 }
 
-function buildPrimarySettings(apiSettings: Awaited<ReturnType<typeof Forge.getSettings>>) {
+function buildPrimarySettings(
+  apiSettings: Awaited<ReturnType<typeof Forge.getSettings>>,
+) {
   return {
     LLM_MODEL: apiSettings.llm_model,
     LLM_BASE_URL: apiSettings.llm_base_url,
@@ -98,7 +102,9 @@ function buildPrimarySettings(apiSettings: Awaited<ReturnType<typeof Forge.getSe
   } as Partial<Settings>;
 }
 
-function buildAutonomySettings(apiSettings: Awaited<ReturnType<typeof Forge.getSettings>>) {
+function buildAutonomySettings(
+  apiSettings: Awaited<ReturnType<typeof Forge.getSettings>>,
+) {
   return {
     autonomy_level:
       apiSettings.autonomy_level || DEFAULT_SETTINGS.autonomy_level,
@@ -109,13 +115,16 @@ function buildAutonomySettings(apiSettings: Awaited<ReturnType<typeof Forge.getS
   } as Partial<Settings>;
 }
 
-function buildAdvancedLlmSettings(apiSettings: Awaited<ReturnType<typeof Forge.getSettings>>) {
+function buildAdvancedLlmSettings(
+  apiSettings: Awaited<ReturnType<typeof Forge.getSettings>>,
+) {
   return {
     LLM_TEMPERATURE:
       apiSettings.llm_temperature ?? DEFAULT_SETTINGS.LLM_TEMPERATURE,
     LLM_TOP_P: apiSettings.llm_top_p ?? DEFAULT_SETTINGS.LLM_TOP_P,
     LLM_MAX_OUTPUT_TOKENS:
-      apiSettings.llm_max_output_tokens ?? DEFAULT_SETTINGS.LLM_MAX_OUTPUT_TOKENS,
+      apiSettings.llm_max_output_tokens ??
+      DEFAULT_SETTINGS.LLM_MAX_OUTPUT_TOKENS,
     LLM_TIMEOUT: apiSettings.llm_timeout ?? DEFAULT_SETTINGS.LLM_TIMEOUT,
     LLM_NUM_RETRIES:
       apiSettings.llm_num_retries ?? DEFAULT_SETTINGS.LLM_NUM_RETRIES,
@@ -124,7 +133,8 @@ function buildAdvancedLlmSettings(apiSettings: Awaited<ReturnType<typeof Forge.g
     LLM_DISABLE_VISION:
       apiSettings.llm_disable_vision ?? DEFAULT_SETTINGS.LLM_DISABLE_VISION,
     LLM_CUSTOM_LLM_PROVIDER:
-      apiSettings.llm_custom_llm_provider ?? DEFAULT_SETTINGS.LLM_CUSTOM_LLM_PROVIDER,
+      apiSettings.llm_custom_llm_provider ??
+      DEFAULT_SETTINGS.LLM_CUSTOM_LLM_PROVIDER,
   } as Partial<Settings>;
 }
 
@@ -132,7 +142,7 @@ function shouldRetrySettings(_: number, error: { status?: number }) {
   return error.status !== 404;
 }
 
-function trackUserActivation(query: ReturnType<typeof useQuery<Settings>>) {
+function trackUserActivation(query: UseQueryResult<Settings, unknown>) {
   if (query.isFetched && query.data?.LLM_API_KEY_SET) {
     posthog.capture("user_activated");
   }

@@ -41,39 +41,39 @@ def test_localhost_cors_middleware_is_allowed_origin_localhost(app):
     """Test that localhost origins are allowed regardless of port when no specific origins are configured."""
     with patch.dict(os.environ, {}, clear=True):
         app.add_middleware(LocalhostCORSMiddleware)
-        client = TestClient(app)
-        response = client.get("/test", headers={"Origin": "http://localhost:8000"})
-        assert response.status_code == 200
-        assert response.headers["access-control-allow-origin"] == "http://localhost:8000"
-        response = client.get("/test", headers={"Origin": "http://localhost:3000"})
-        assert response.status_code == 200
-        assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
-        response = client.get("/test", headers={"Origin": "http://127.0.0.1:8000"})
-        assert response.status_code == 200
-        assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:8000"
+        with TestClient(app) as client:
+            response = client.get("/test", headers={"Origin": "http://localhost:8000"})
+            assert response.status_code == 200
+            assert response.headers["access-control-allow-origin"] == "http://localhost:8000"
+            response = client.get("/test", headers={"Origin": "http://localhost:3000"})
+            assert response.status_code == 200
+            assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
+            response = client.get("/test", headers={"Origin": "http://127.0.0.1:8000"})
+            assert response.status_code == 200
+            assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:8000"
 
 
 def test_localhost_cors_middleware_is_allowed_origin_non_localhost(app):
     """Test that non-localhost origins follow the standard CORS rules."""
     with patch.dict(os.environ, {"PERMITTED_CORS_ORIGINS": "https://example.com"}):
         app.add_middleware(LocalhostCORSMiddleware)
-        client = TestClient(app)
-        response = client.get("/test", headers={"Origin": "https://example.com"})
-        assert response.status_code == 200
-        assert response.headers["access-control-allow-origin"] == "https://example.com"
-        response = client.get("/test", headers={"Origin": "https://disallowed.com"})
-        assert response.status_code == 200
-        assert "access-control-allow-origin" not in response.headers
+        with TestClient(app) as client:
+            response = client.get("/test", headers={"Origin": "https://example.com"})
+            assert response.status_code == 200
+            assert response.headers["access-control-allow-origin"] == "https://example.com"
+            response = client.get("/test", headers={"Origin": "https://disallowed.com"})
+            assert response.status_code == 200
+            assert "access-control-allow-origin" not in response.headers
 
 
 def test_localhost_cors_middleware_missing_origin(app):
     """Test behavior when Origin header is missing."""
     with patch.dict(os.environ, {}, clear=True):
         app.add_middleware(LocalhostCORSMiddleware)
-        client = TestClient(app)
-        response = client.get("/test")
-        assert response.status_code == 200
-        assert "access-control-allow-origin" not in response.headers
+        with TestClient(app) as client:
+            response = client.get("/test")
+            assert response.status_code == 200
+            assert "access-control-allow-origin" not in response.headers
 
 
 def test_localhost_cors_middleware_inheritance():

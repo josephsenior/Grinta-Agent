@@ -1,7 +1,7 @@
 import React, { createContext, useContext, ReactNode, RefObject } from "react";
 import { useScrollToBottom } from "#/hooks/use-scroll-to-bottom";
 
-interface ScrollContextType {
+export interface ScrollContextType {
   scrollRef: RefObject<HTMLDivElement | null>;
   autoScroll: boolean;
   setAutoScroll: (value: boolean) => void;

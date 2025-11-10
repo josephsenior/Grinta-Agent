@@ -3,6 +3,7 @@ FROM node:24.3.0-bookworm-slim AS frontend-builder
 
 WORKDIR /app
 
+COPY tsconfig.json /tsconfig.json
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm install && \
     npm install \
@@ -33,7 +34,7 @@ COPY pyproject.toml poetry.lock ./
 RUN touch README.md
 RUN export POETRY_CACHE_DIR && poetry install --no-root && rm -rf $POETRY_CACHE_DIR
 
-FROM base AS Forge-app
+FROM base AS forge-app
 
 WORKDIR /app
 
@@ -83,12 +84,12 @@ ENV VIRTUAL_ENV=/app/.venv \
 COPY --chown=Forge:Forge --chmod=770 --from=backend-builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 
 COPY --chown=Forge:Forge --chmod=770 ./microagents ./microagents
-COPY --chown=Forge:Forge --chmod=770 ./Forge ./Forge
-COPY --chown=Forge:Forge --chmod=777 ./Forge/runtime/plugins ./Forge/runtime/plugins
+COPY --chown=Forge:Forge --chmod=770 ./forge ./forge
+COPY --chown=Forge:Forge --chmod=777 ./forge/runtime/plugins ./forge/runtime/plugins
 COPY --chown=Forge:Forge pyproject.toml poetry.lock README.md MANIFEST.in LICENSE ./
 
 # This is run as "Forge" user, and will create __pycache__ with Forge:Forge ownership
-RUN python Forge/core/download.py # No-op to download assets
+RUN python -m forge.core.download  # No-op to download assets
 # Add this line to set group ownership of all files/directories not already in "app" group
 # Forge:Forge -> Forge:Forge
 RUN find /app \! -group Forge -exec chgrp Forge {} +
@@ -103,4 +104,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 WORKDIR /app
 
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["uvicorn", "Forge.server.listen:app", "--host", "0.0.0.0", "--port", "3000"]
+CMD ["uvicorn", "forge.server.listen:app", "--host", "0.0.0.0", "--port", "3000"]

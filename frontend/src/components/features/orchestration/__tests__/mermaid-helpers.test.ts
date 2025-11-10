@@ -17,7 +17,9 @@ describe("mermaid-helpers", () => {
 
   it("initializes mermaid only once", async () => {
     const mermaidModule = await import("mermaid");
-    const initializeSpy = mermaidModule.default.initialize as ReturnType<typeof vi.fn>;
+    const initializeSpy = mermaidModule.default.initialize as ReturnType<
+      typeof vi.fn
+    >;
 
     const first = await ensureMermaid();
     const second = await ensureMermaid();
@@ -26,5 +28,3 @@ describe("mermaid-helpers", () => {
     expect(initializeSpy).toHaveBeenCalledTimes(1);
   });
 });
-
-

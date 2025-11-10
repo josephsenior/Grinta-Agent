@@ -12,9 +12,20 @@ interface StatCardProps {
   subtitle?: string;
 }
 
-export function StatCard({ title, value, icon: Icon, trend, subtitle }: StatCardProps) {
-  const trendColor = trend && trend.value > 0 ? "text-success-500" : trend && trend.value < 0 ? "text-error-500" : "text-foreground-secondary";
-  
+export function StatCard({
+  title,
+  value,
+  icon: Icon,
+  trend,
+  subtitle,
+}: StatCardProps) {
+  const trendColor =
+    trend && trend.value > 0
+      ? "text-success-500"
+      : trend && trend.value < 0
+        ? "text-error-500"
+        : "text-foreground-secondary";
+
   return (
     <div className="p-6 bg-background-secondary border border-border rounded-lg hover:border-brand-500/50 transition-all">
       <div className="flex items-start justify-between mb-4">
@@ -23,14 +34,15 @@ export function StatCard({ title, value, icon: Icon, trend, subtitle }: StatCard
         </div>
         {trend && (
           <div className={`text-sm font-medium ${trendColor}`}>
-            {trend.value > 0 ? "+" : ""}{trend.value.toFixed(1)}%
+            {trend.value > 0 ? "+" : ""}
+            {trend.value.toFixed(1)}%
             <div className="text-xs text-foreground-secondary mt-0.5">
               {trend.label}
             </div>
           </div>
         )}
       </div>
-      
+
       <h3 className="text-sm font-medium text-foreground-secondary mb-1">
         {title}
       </h3>
@@ -41,5 +53,3 @@ export function StatCard({ title, value, icon: Icon, trend, subtitle }: StatCard
     </div>
   );
 }
-
-

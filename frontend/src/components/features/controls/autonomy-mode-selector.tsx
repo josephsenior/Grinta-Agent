@@ -23,7 +23,7 @@ const MODE_CONFIG = {
   },
   balanced: {
     icon: Eye,
-    label: "Balanced", 
+    label: "Balanced",
     description: "Confirm high-risk actions",
     color: "text-blue-500",
     bgColor: "bg-blue-500/10",
@@ -33,7 +33,7 @@ const MODE_CONFIG = {
     icon: Zap,
     label: "Full Autonomous",
     description: "Execute without confirmation",
-    color: "text-green-500", 
+    color: "text-green-500",
     bgColor: "bg-green-500/10",
     borderColor: "border-green-500/20",
   },
@@ -44,14 +44,16 @@ const MODE_CONFIG = {
  * Allows users to switch between different autonomy levels
  * Keyboard shortcut: Ctrl+Shift+A to cycle through modes
  */
-export function AutonomyModeSelector({ 
-  currentMode, 
-  onModeChange, 
-  className 
+export function AutonomyModeSelector({
+  currentMode,
+  onModeChange,
+  className,
 }: AutonomyModeSelectorProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
-  const [dropdownPosition, setDropdownPosition] = React.useState<'above' | 'below'>('above');
+  const [dropdownPosition, setDropdownPosition] = React.useState<
+    "above" | "below"
+  >("above");
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
   const currentConfig = MODE_CONFIG[currentMode];
@@ -67,14 +69,14 @@ export function AutonomyModeSelector({
   // Keyboard shortcut: Ctrl+Shift+A to cycle through modes
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'A') {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "A") {
         e.preventDefault();
         cycleMode();
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [cycleMode]);
 
   // Click outside to close dropdown
@@ -82,18 +84,21 @@ export function AutonomyModeSelector({
     if (!isOpen) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
 
     // Delay to let current click event finish
     setTimeout(() => {
-      document.addEventListener('click', handleClickOutside);
+      document.addEventListener("click", handleClickOutside);
     }, 0);
 
     return () => {
-      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener("click", handleClickOutside);
     };
   }, [isOpen]);
 
@@ -105,11 +110,13 @@ export function AutonomyModeSelector({
   // Smart positioning - check if there's enough space above
   const handleToggle = () => {
     if (!isOpen) {
-      const buttonRect = document.querySelector('[data-testid="autonomy-mode-button"]')?.getBoundingClientRect();
+      const buttonRect = document
+        .querySelector('[data-testid="autonomy-mode-button"]')
+        ?.getBoundingClientRect();
       if (buttonRect) {
         const spaceAbove = buttonRect.top;
         const spaceBelow = window.innerHeight - buttonRect.bottom;
-        setDropdownPosition(spaceAbove > 200 ? 'above' : 'below');
+        setDropdownPosition(spaceAbove > 200 ? "above" : "below");
       }
     }
     setIsOpen(!isOpen);
@@ -133,79 +140,84 @@ export function AutonomyModeSelector({
           currentConfig.bgColor,
           currentConfig.borderColor,
           "hover:border-current hover:shadow-lg hover:shadow-current/20",
-          "group relative"
+          "group relative",
         )}
       >
         {/* Pulsing indicator */}
-        <div className={cn(
-          "absolute -top-1 -right-1 w-2 h-2 rounded-full animate-pulse",
-          currentMode === "full" ? "bg-green-500" : 
-          currentMode === "supervised" ? "bg-orange-500" : 
-          "bg-blue-500"
-        )} />
-        
+        <div
+          className={cn(
+            "absolute -top-1 -right-1 w-2 h-2 rounded-full animate-pulse",
+            currentMode === "full"
+              ? "bg-green-500"
+              : currentMode === "supervised"
+                ? "bg-orange-500"
+                : "bg-blue-500",
+          )}
+        />
+
         <CurrentIcon className={cn("w-4 h-4", currentConfig.color)} />
         <span className={cn("text-sm font-semibold", currentConfig.color)}>
           {currentConfig.label}
         </span>
-        
+
         {/* Keyboard hint */}
         <span className="hidden group-hover:inline-flex items-center gap-1 ml-1 text-[10px] text-text-tertiary">
-          <kbd className="px-1 py-0.5 bg-background-tertiary rounded text-[9px]">⌃⇧A</kbd>
+          <kbd className="px-1 py-0.5 bg-background-tertiary rounded text-[9px]">
+            ⌃⇧A
+          </kbd>
         </span>
       </Button>
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div 
+        <div
           ref={dropdownRef}
           className={cn(
             "absolute left-0 z-[10000] min-w-[200px]",
-            dropdownPosition === 'above' 
-              ? "bottom-full mb-1" 
-              : "top-full mt-1"
+            dropdownPosition === "above" ? "bottom-full mb-1" : "top-full mt-1",
           )}
         >
           <div className="bg-background-secondary border border-border rounded-lg shadow-xl p-1">
-              <div className="px-3 py-2 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <Settings className="w-4 h-4 text-text-secondary" />
-                  <span className="text-xs font-medium text-text-secondary">
-                    Autonomy Mode
-                  </span>
-                </div>
+            <div className="px-3 py-2 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Settings className="w-4 h-4 text-text-secondary" />
+                <span className="text-xs font-medium text-text-secondary">
+                  Autonomy Mode
+                </span>
               </div>
-              
-              {Object.entries(MODE_CONFIG).map(([mode, config]) => {
-                const Icon = config.icon;
-                const isSelected = mode === currentMode;
-                
-                return (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => handleModeSelect(mode as AutonomyMode)}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-all duration-200",
-                      "hover:bg-background-tertiary hover:shadow-md cursor-pointer",
-                      isSelected && "bg-background-tertiary ring-1 ring-brand-500/50"
-                    )}
-                  >
-                    <Icon className={cn("w-4 h-4", config.color)} />
-                    <div className="flex-1 min-w-0">
-                      <div className={cn("text-xs font-medium", config.color)}>
-                        {config.label}
-                      </div>
-                      <div className="text-[10px] text-text-tertiary">
-                        {config.description}
-                      </div>
+            </div>
+
+            {Object.entries(MODE_CONFIG).map(([mode, config]) => {
+              const Icon = config.icon;
+              const isSelected = mode === currentMode;
+
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => handleModeSelect(mode as AutonomyMode)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-all duration-200",
+                    "hover:bg-background-tertiary hover:shadow-md cursor-pointer",
+                    isSelected &&
+                      "bg-background-tertiary ring-1 ring-brand-500/50",
+                  )}
+                >
+                  <Icon className={cn("w-4 h-4", config.color)} />
+                  <div className="flex-1 min-w-0">
+                    <div className={cn("text-xs font-medium", config.color)}>
+                      {config.label}
                     </div>
-                    {isSelected && (
-                      <div className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-                    )}
-                  </button>
-                );
-              })}
+                    <div className="text-[10px] text-text-tertiary">
+                      {config.description}
+                    </div>
+                  </div>
+                  {isSelected && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

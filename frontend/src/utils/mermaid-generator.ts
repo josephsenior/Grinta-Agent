@@ -142,7 +142,8 @@ export function generateUserStoryFlow(pmJson: {
   });
 
   sanitizedStories.forEach(({ nodeId }, index) => {
-    const previousNodeId = index === 0 ? "start" : sanitizedStories[index - 1].nodeId;
+    const previousNodeId =
+      index === 0 ? "start" : sanitizedStories[index - 1].nodeId;
     lines.push(`  ${previousNodeId} --> ${nodeId}`);
   });
 
@@ -271,7 +272,7 @@ export function generateGanttChart(timelineJson: {
 
   buildGanttSections(timelineJson.tasks).forEach(({ label, tasks }) => {
     lines.push(`  section ${label}`);
-    tasks.forEach(task => {
+    tasks.forEach((task) => {
       lines.push(formatGanttTask(task));
     });
   });
@@ -296,8 +297,8 @@ const GANTT_SECTION_DEFINITIONS: Array<{
 const buildGanttSections = (tasks: TimelineTask[]) =>
   GANTT_SECTION_DEFINITIONS.map(({ label, status }) => ({
     label,
-    tasks: tasks.filter(task => task.status === status),
-  })).filter(section => section.tasks.length > 0);
+    tasks: tasks.filter((task) => task.status === status),
+  })).filter((section) => section.tasks.length > 0);
 
 const formatGanttTask = (task: TimelineTask): string => {
   const name = task.name.substring(0, 40).replace(/"/g, "'");
@@ -395,10 +396,7 @@ type MermaidDiagram = { type: string; mermaid: string };
 
 type DiagramStrategy = {
   type: string;
-  matches: (context: {
-    role: string;
-    artifactContent: any;
-  }) => boolean;
+  matches: (context: { role: string; artifactContent: any }) => boolean;
   generate: (artifactContent: any) => string;
 };
 
@@ -410,20 +408,17 @@ const ROLE_STRATEGIES: DiagramStrategy[] = [
   },
   {
     type: "ui-components",
-    matches: ({ role }) =>
-      role.includes("designer") || role.includes("ui"),
+    matches: ({ role }) => role.includes("designer") || role.includes("ui"),
     generate: generateUiComponentDiagram,
   },
   {
     type: "user-stories",
-    matches: ({ role }) =>
-      role.includes("product") || role.includes("pm"),
+    matches: ({ role }) => role.includes("product") || role.includes("pm"),
     generate: generateUserStoryFlow,
   },
   {
     type: "er-diagram",
-    matches: ({ role }) =>
-      role.includes("database") || role.includes("dba"),
+    matches: ({ role }) => role.includes("database") || role.includes("dba"),
     generate: generateERDiagram,
   },
 ];
@@ -431,14 +426,12 @@ const ROLE_STRATEGIES: DiagramStrategy[] = [
 const CONTENT_STRATEGIES: DiagramStrategy[] = [
   {
     type: "gantt-chart",
-    matches: ({ artifactContent }) =>
-      Array.isArray(artifactContent?.tasks),
+    matches: ({ artifactContent }) => Array.isArray(artifactContent?.tasks),
     generate: generateGanttChart,
   },
   {
     type: "class-diagram",
-    matches: ({ artifactContent }) =>
-      Array.isArray(artifactContent?.classes),
+    matches: ({ artifactContent }) => Array.isArray(artifactContent?.classes),
     generate: generateClassDiagram,
   },
 ];

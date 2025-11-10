@@ -4,6 +4,7 @@
 import asyncio
 import contextlib
 from functools import partial
+from importlib import import_module
 from typing import Any, Callable
 
 from litellm import acompletion as litellm_acompletion
@@ -13,6 +14,9 @@ from forge.core.logger import forge_logger as logger
 from forge.llm.llm import LLM, LLM_RETRY_EXCEPTIONS
 from forge.llm.model_features import get_features
 from forge.utils.shutdown_listener import should_continue
+
+# Backwards compatibility for imports expecting ``forge.llm.async_llm.llm``.
+llm = import_module("forge.llm.llm")
 
 
 class AsyncLLM(LLM):

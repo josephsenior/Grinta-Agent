@@ -1,12 +1,13 @@
 import os
 import shutil
+from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock
 import pytest
 from litellm import ChatCompletionMessageToolCall
 from forge.controller.state.state import State
 from forge.core.config.agent_config import AgentConfig
 from forge.core.message import ImageContent, Message, TextContent
-from forge.events.action import AgentFinishAction, CmdRunAction, MessageAction
+from forge.events.action import AgentFinishAction, AgentThinkAction, CmdRunAction, MessageAction
 from forge.events.action.message import SystemMessageAction
 from forge.events.event import Event, EventSource, FileEditSource, FileReadSource, RecallType
 from forge.events.observation import CmdOutputObservation
@@ -19,7 +20,7 @@ from forge.events.observation.files import FileEditObservation, FileReadObservat
 from forge.events.observation.reject import UserRejectObservation
 from forge.events.tool import ToolCallMetadata
 from forge.memory.conversation_memory import ConversationMemory
-from forge.utils.prompt import PromptManager, RepositoryInfo, RuntimeInfo
+from forge.utils.prompt import ConversationInstructions, PromptManager, RepositoryInfo, RuntimeInfo
 
 
 @pytest.fixture
@@ -60,6 +61,73 @@ def mock_state():
 @pytest.fixture
 def mock_prompt_manager():
     return MagicMock()
+
+
+def _make_memory(config_overrides=None):
+    base_config = {
+        "enable_vector_memory": False,
+        "enable_hybrid_retrieval": False,
+        "enable_prompt_extensions": True,
+        "enable_prompt_caching": True,
+        "enable_som_visual_browsing": True,
+        "disabled_microagents": [],
+        "cli_mode": False,
+    }
+    if config_overrides:
+        base_config.update(config_overrides)
+    config = SimpleNamespace(**base_config)
+    prompt_manager = MagicMock(spec=PromptManager)
+    prompt_manager.get_system_message.return_value = "System message"
+    prompt_manager.build_workspace_context.return_value = "context"
+    prompt_manager.build_microagent_info.return_value = "microagents"
+    return ConversationMemory(config, prompt_manager)
+
+
+def test_conversation_memory_initializes_vector_store(monkeypatch):
+    config = SimpleNamespace(
+        enable_vector_memory=True,
+        enable_hybrid_retrieval=False,
+        enable_prompt_extensions=True,
+        enable_som_visual_browsing=False,
+        disabled_microagents=[],
+    )
+    prompt_manager = MagicMock(spec=PromptManager)
+    stub_store = SimpleNamespace(stats=lambda: {"backend": "stub"})
+    calls = {}
+
+    def factory(*args, **kwargs):
+        calls["called"] = True
+        return stub_store
+
+    monkeypatch.setattr("forge.memory.enhanced_vector_store.EnhancedVectorStore", factory)
+    memory = ConversationMemory(config, prompt_manager)
+    assert calls["called"]
+    assert memory.vector_store is stub_store
+
+
+def test_conversation_memory_vector_store_failure(monkeypatch):
+    config = SimpleNamespace(
+        enable_vector_memory=True,
+        enable_hybrid_retrieval=True,
+        enable_prompt_extensions=True,
+        enable_som_visual_browsing=False,
+        disabled_microagents=[],
+    )
+    prompt_manager = MagicMock(spec=PromptManager)
+
+    def failing(*args, **kwargs):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr("forge.memory.enhanced_vector_store.EnhancedVectorStore", failing)
+    memory = ConversationMemory(config, prompt_manager)
+    assert memory.vector_store is None
+
+
+def test_apply_prompt_caching_disabled():
+    memory = _make_memory({"enable_prompt_caching": False})
+    messages = [Message(role="user", content=[TextContent(text="hello")])]
+    memory.apply_prompt_caching(messages)
+    assert messages[0].content[0].cache_prompt is False
 
 
 def test_process_events_with_message_action(conversation_memory):
@@ -792,6 +860,89 @@ def test_has_agent_in_earlier_events(conversation_memory):
     assert conversation_memory._has_agent_in_earlier_events("non_existent", 3, events) is False
 
 
+def test_build_message_content_includes_microagent(conversation_memory):
+    repo_info = RepositoryInfo(repo_name="repo", repo_directory="/repo", branch_name=None)
+    runtime_info = RuntimeInfo(
+        date="2025-01-01",
+        available_hosts={},
+        additional_agent_instructions="",
+        custom_secrets_descriptions={},
+        working_dir="/repo",
+    )
+    content = conversation_memory._build_message_content(
+        repo_info,
+        runtime_info,
+        ConversationInstructions(content="instructions"),
+        "Repo instructions",
+        [MicroagentKnowledge(name="agent", trigger="x", content="info")],
+    )
+    texts = [item.text for item in content if isinstance(item, TextContent)]
+    assert any("Formatted repository and runtime info" in text for text in texts)
+    assert any("info" in text for text in texts)
+
+
+def test_filter_agents_in_microagent_obs_non_knowledge(conversation_memory):
+    obs = RecallObservation(recall_type=RecallType.WORKSPACE_CONTEXT, microagent_knowledge=[MicroagentKnowledge(name="agent", trigger="t", content="c")], content="")
+    assert conversation_memory._filter_agents_in_microagent_obs(obs, 0, []) == obs.microagent_knowledge
+
+
+def test_should_include_message_helpers():
+    tool_message = Message(role="tool", content=[TextContent(text="Tool")], tool_call_id="call_1")
+    assistant_message = Message(
+        role="assistant",
+        content=[TextContent(text="Assistant")],
+        tool_calls=[
+            ChatCompletionMessageToolCall(id="call_1", type="function", function={"name": "fn", "arguments": ""})
+        ],
+    )
+    assert ConversationMemory._should_include_message(tool_message, {"call_1"}, set())
+    assert ConversationMemory._should_include_message(assistant_message, set(), {"call_1"})
+    assistant_message.tool_calls[0] = ChatCompletionMessageToolCall(id="missing", type="function", function={"name": "fn", "arguments": ""})
+    assert ConversationMemory._should_include_message(assistant_message, set(), {"call_1"}) is False
+
+
+def test_all_tool_calls_match():
+    assistant_message = Message(
+        role="assistant",
+        content=[TextContent(text="Assistant")],
+        tool_calls=[
+            ChatCompletionMessageToolCall(id="call_1", type="function", function={"name": "fn", "arguments": ""})
+        ],
+    )
+    assert ConversationMemory._all_tool_calls_match(assistant_message, {"call_1"})
+    assert ConversationMemory._all_tool_calls_match(assistant_message, set()) is False
+
+
+def test_store_and_recall_from_memory(monkeypatch):
+    memory = _make_memory({"enable_vector_memory": True})
+    add_calls = {}
+
+    class StubVectorStore:
+        def add(self, *args, **kwargs):
+            add_calls["added"] = True
+
+        def search(self, query, k):
+            return [{"step_id": "1"}]
+
+    memory.vector_store = StubVectorStore()
+    memory.store_in_memory("event1", "user", "content")
+    assert add_calls.get("added")
+
+    results = memory.recall_from_memory("query")
+    assert results == [{"step_id": "1"}]
+
+    class FailingStore(StubVectorStore):
+        def add(self, *args, **kwargs):
+            raise RuntimeError("fail")
+
+        def search(self, query, k):
+            raise RuntimeError("fail")
+
+    memory.vector_store = FailingStore()
+    memory.store_in_memory("event2", "user", "content")
+    assert memory.recall_from_memory("query") == []
+
+
 class TestFilterUnmatchedToolCalls:
 
     @pytest.fixture
@@ -1072,6 +1223,102 @@ def test_process_ipython_observation_with_vision_enabled(agent_config, mock_prom
     assert message.content[1].image_urls == ["data:image/png;base64,abc123"]
 
 
+def test_handle_tool_based_action_user_without_metadata(conversation_memory):
+    class DummyAction:
+        def __init__(self):
+            self.source = "user"
+            self.tool_call_metadata = None
+
+        def __str__(self):
+            return "dummy-action"
+
+    result = conversation_memory._handle_tool_based_action(DummyAction(), {})
+    assert result[0].role == "user"
+    assert "dummy-action" in result[0].content[0].text
+
+
+def test_handle_tool_based_action_agent_think(conversation_memory):
+    action = AgentThinkAction(thought="considering options")
+    action._source = "agent"
+    messages = conversation_memory._handle_tool_based_action(action, {})
+    assert messages[0].role == "assistant"
+    assert "considering options" in messages[0].content[0].text
+
+
+def test_handle_tool_based_action_empty_choices(conversation_memory):
+    metadata = SimpleNamespace(model_response=SimpleNamespace(choices=[]))
+    action = SimpleNamespace(source="agent", tool_call_metadata=metadata)
+    assert conversation_memory._handle_tool_based_action(action, {}) == []
+
+
+def test_handle_tool_based_action_missing_message(conversation_memory):
+    metadata = SimpleNamespace(model_response=SimpleNamespace(choices=[SimpleNamespace()]))
+    action = SimpleNamespace(source="agent", tool_call_metadata=metadata)
+    assert conversation_memory._handle_tool_based_action(action, {}) == []
+
+
+def test_handle_tool_based_action_populates_pending(conversation_memory):
+    assistant_message = SimpleNamespace(content=" Trim me ", tool_calls=None, role="agent")
+    choice = SimpleNamespace(message=assistant_message)
+    response = SimpleNamespace(id="response-1", choices=[choice])
+    metadata = SimpleNamespace(model_response=response)
+    action = SimpleNamespace(source="agent", tool_call_metadata=metadata)
+    pending: dict[str, Message] = {}
+
+    result = conversation_memory._handle_tool_based_action(action, pending)
+    assert result == []
+    assert "response-1" in pending
+    stored = pending["response-1"]
+    assert stored.role == "assistant"
+    assert stored.content[0].text == "Trim me"
+
+
+def test_handle_tool_based_action_non_string_content(conversation_memory):
+    assistant_message = SimpleNamespace(content=["value"], tool_calls=None, role="invalid")
+    choice = SimpleNamespace(message=assistant_message)
+    response = SimpleNamespace(id="response-2", choices=[choice])
+    metadata = SimpleNamespace(model_response=response)
+    action = SimpleNamespace(source="agent", tool_call_metadata=metadata)
+    pending: dict[str, Message] = {}
+
+    conversation_memory._handle_tool_based_action(action, pending)
+    stored = pending["response-2"]
+    assert stored.role == "assistant"
+    assert stored.content[0].text == "['value']"
+
+
+def test_handle_tool_based_action_missing_response_id(conversation_memory):
+    assistant_message = SimpleNamespace(content="hello", tool_calls=None, role="assistant")
+    response = SimpleNamespace(id=None, choices=[SimpleNamespace(message=assistant_message)])
+    metadata = SimpleNamespace(model_response=response)
+    action = SimpleNamespace(source="agent", tool_call_metadata=metadata)
+    assert conversation_memory._handle_tool_based_action(action, {}) == []
+
+
+def test_handle_agent_finish_action_sets_content(conversation_memory):
+    action = AgentFinishAction(thought=None)
+    action._source = EventSource.AGENT
+    metadata = _create_mock_tool_call_metadata(tool_call_id="call", function_name="finish")
+    metadata.model_response["choices"][0]["message"]["content"] = "Result content"
+    action.tool_call_metadata = metadata
+    messages = conversation_memory._handle_agent_finish_action(action)
+    assert messages[0].content[0].text == "Result content"
+    assert action.tool_call_metadata is None
+
+
+def test_handle_message_action_user_images_with_vision(conversation_memory):
+    class UserImageMessage(MessageAction):
+        @property
+        def source(self):
+            return "user"
+
+    action = UserImageMessage(content="See image", image_urls=["http://example.com/img.png"])
+    messages = conversation_memory._handle_message_action(action, vision_is_active=True)
+    assert len(messages[0].content) == 3
+    assert isinstance(messages[0].content[1], TextContent)
+    assert isinstance(messages[0].content[2], ImageContent)
+
+
 def test_process_ipython_observation_with_vision_disabled(agent_config, mock_prompt_manager):
     """Test that _process_observation correctly handles IPythonRunCellObservation with image_urls when vision is disabled."""
     memory = ConversationMemory(agent_config, mock_prompt_manager)
@@ -1087,3 +1334,42 @@ def test_process_ipython_observation_with_vision_disabled(agent_config, mock_pro
     assert isinstance(message.content[0], TextContent)
     assert isinstance(message.content[1], ImageContent)
     assert "invalid or empty image(s) were filtered" not in message.content[0].text
+
+
+def test_process_action_returns_empty(conversation_memory):
+    assert conversation_memory._process_action(SimpleNamespace(source="agent"), {}) == []
+
+
+def test_process_mcp_observation(conversation_memory):
+    from forge.events.observation.mcp import MCPObservation
+
+    obs = MCPObservation(content="MCP content")
+    message = conversation_memory._process_mcp_observation(obs, max_message_chars=None)
+    assert message.content[0].text == "MCP content"
+
+
+def test_extract_browser_image_prefers_screenshot(conversation_memory):
+    obs = BrowserOutputObservation(
+        content="Browser output", url="", trigger_by_action="", screenshot="data:image", set_of_marks=None, error=False
+    )
+    url, image_type = conversation_memory._extract_browser_image(obs)
+    assert url == "data:image"
+    assert image_type == "screenshot"
+
+
+def test_add_browser_image_fallback_invalid_url(conversation_memory):
+    content = [TextContent(text="Log")]
+    conversation_memory._add_browser_image_fallback(content, "http://invalid", "screenshot")
+    assert "invalid or empty" in content[0].text
+
+
+def test_add_browser_image_fallback_no_image(conversation_memory):
+    content = [TextContent(text="Log")]
+    conversation_memory._add_browser_image_fallback(content, None, None)
+    assert "No visual information" in content[0].text
+
+
+def test_process_recall_observation_prompt_extensions_disabled():
+    memory = _make_memory({"enable_prompt_extensions": False})
+    obs = RecallObservation(recall_type=RecallType.KNOWLEDGE, microagent_knowledge=[], content="")
+    assert memory._process_recall_observation(obs, current_index=0, events=[]) == []

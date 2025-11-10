@@ -20,23 +20,23 @@ export interface MCPMarketplaceItem {
   homepage?: string;
   repository?: string;
   documentation?: string;
-  
+
   // Installation config
   config: {
     // For stdio servers
     command?: string;
     args?: string[];
     env?: Record<string, string>;
-    
+
     // For SSE/SHTTP servers
     url?: string;
     requiresApiKey?: boolean;
     apiKeyDescription?: string;
   };
-  
+
   // Tags for search
   tags?: string[];
-  
+
   // Requirements
   requirements?: {
     os?: ("windows" | "macos" | "linux")[];
@@ -79,4 +79,3 @@ export interface MCPMarketplaceResponse {
     count: number;
   }[];
 }
-

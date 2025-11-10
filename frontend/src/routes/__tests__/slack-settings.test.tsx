@@ -28,6 +28,8 @@ vi.mock("lucide-react", () => ({
 describe("SlackSettingsScreen", () => {
   let queryClient: QueryClient;
 
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     queryClient = new QueryClient({
       defaultOptions: {
@@ -36,23 +38,27 @@ describe("SlackSettingsScreen", () => {
       },
     });
     vi.clearAllMocks();
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
-  const renderWithQueryClient = (component: React.ReactElement) => {
-    return render(
+  const renderWithQueryClient = (component: React.ReactElement) =>
+    render(
       <QueryClientProvider client={queryClient}>
         {component}
-      </QueryClientProvider>
+      </QueryClientProvider>,
     );
-  };
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
 
   it("should render loading state", () => {
     vi.mocked(slackApi.listSlackWorkspaces).mockImplementation(
-      () => new Promise(() => {}) // Never resolves
+      () => new Promise(() => {}), // Never resolves
     );
 
     renderWithQueryClient(<SlackSettingsScreen />);
-    
+
     expect(screen.getByText("Slack Integration")).toBeInTheDocument();
   });
 
@@ -62,7 +68,9 @@ describe("SlackSettingsScreen", () => {
     renderWithQueryClient(<SlackSettingsScreen />);
 
     await waitFor(() => {
-      expect(screen.getByText("No Slack workspaces installed yet")).toBeInTheDocument();
+      expect(
+        screen.getByText("No Slack workspaces installed yet"),
+      ).toBeInTheDocument();
     });
   });
 
@@ -107,9 +115,7 @@ describe("SlackSettingsScreen", () => {
 
   it("should handle uninstall button click", async () => {
     const user = userEvent.setup();
-    const mockWorkspaces = [
-      { team_id: "T123", team_name: "Test Workspace" },
-    ];
+    const mockWorkspaces = [{ team_id: "T123", team_name: "Test Workspace" }];
 
     vi.mocked(slackApi.listSlackWorkspaces).mockResolvedValue(mockWorkspaces);
     vi.mocked(slackApi.uninstallSlackWorkspace).mockResolvedValue();
@@ -134,6 +140,25 @@ describe("SlackSettingsScreen", () => {
     });
   });
 
+  it("should cancel uninstall when confirmation is declined", async () => {
+    const user = userEvent.setup();
+    const mockWorkspaces = [{ team_id: "T789", team_name: "Cancel Workspace" }];
+
+    vi.mocked(slackApi.listSlackWorkspaces).mockResolvedValue(mockWorkspaces);
+    vi.mocked(slackApi.uninstallSlackWorkspace).mockResolvedValue();
+
+    window.confirm = vi.fn(() => false);
+
+    renderWithQueryClient(<SlackSettingsScreen />);
+
+    const uninstallButton = await screen.findByTestId("uninstall-slack-T789");
+    await user.click(uninstallButton);
+
+    await waitFor(() => {
+      expect(slackApi.uninstallSlackWorkspace).not.toHaveBeenCalled();
+    });
+  });
+
   it("should show setup instructions", async () => {
     vi.mocked(slackApi.listSlackWorkspaces).mockResolvedValue([]);
 
@@ -146,13 +171,39 @@ describe("SlackSettingsScreen", () => {
     });
   });
 
+  it("should log an error when Slack installation fails", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(slackApi.listSlackWorkspaces).mockResolvedValue([]);
+    vi.mocked(slackApi.getSlackInstallUrl).mockRejectedValue(
+      new Error("install failed"),
+    );
+
+    delete (window as any).location;
+    window.location = { href: "" } as any;
+
+    renderWithQueryClient(<SlackSettingsScreen />);
+
+    const installButton = screen.getByTestId("install-slack-button");
+    await user.click(installButton);
+
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "Failed to start Slack installation:",
+        expect.any(Error),
+      );
+    });
+  });
+
   it("should show how it works guide", async () => {
     vi.mocked(slackApi.listSlackWorkspaces).mockResolvedValue([]);
 
     renderWithQueryClient(<SlackSettingsScreen />);
 
     await waitFor(() => {
-      expect(screen.getByText("How Slack Integration Works")).toBeInTheDocument();
+      expect(
+        screen.getByText("How Slack Integration Works"),
+      ).toBeInTheDocument();
       expect(screen.getByText(/Install the Forge app/)).toBeInTheDocument();
       expect(screen.getByText(/Mention @Forge/)).toBeInTheDocument();
     });
@@ -169,4 +220,3 @@ describe("SlackSettingsScreen", () => {
     });
   });
 });
-

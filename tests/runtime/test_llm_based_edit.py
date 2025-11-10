@@ -1,9 +1,11 @@
 """Edit-related tests for the DockerRuntime."""
 
 import os
+
 import pytest
-from forge_aci.utils.diff import get_diff
+
 from conftest import TEST_IN_CI, _close_test_runtime, _load_runtime
+from forge.runtime.utils.edit import get_diff
 from forge.core.logger import forge_logger as logger
 from forge.events.action import FileEditAction, FileReadAction
 from forge.events.observation import FileEditObservation

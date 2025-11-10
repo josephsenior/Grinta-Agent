@@ -5,7 +5,9 @@
 
 class SoundEffects {
   private audioContext: AudioContext | null = null;
+
   private enabled: boolean = true;
+
   private volume: number = 0.15; // Very subtle
 
   constructor() {
@@ -18,7 +20,8 @@ class SoundEffects {
 
   private getContext(): AudioContext {
     if (!this.audioContext && typeof window !== "undefined") {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.audioContext = new (window.AudioContext ||
+        (window as any).webkitAudioContext)();
     }
     return this.audioContext!;
   }
@@ -42,7 +45,10 @@ class SoundEffects {
       oscillator.type = "sine";
 
       gainNode.gain.setValueAtTime(0, ctx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(this.volume * 0.3, ctx.currentTime + 0.01);
+      gainNode.gain.linearRampToValueAtTime(
+        this.volume * 0.3,
+        ctx.currentTime + 0.01,
+      );
       gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
 
       oscillator.start(ctx.currentTime);
@@ -60,7 +66,7 @@ class SoundEffects {
 
     try {
       const ctx = this.getContext();
-      
+
       // Two-note ascending chime
       const playNote = (frequency: number, delay: number) => {
         const oscillator = ctx.createOscillator();
@@ -73,8 +79,14 @@ class SoundEffects {
         oscillator.type = "sine";
 
         gainNode.gain.setValueAtTime(0, ctx.currentTime + delay);
-        gainNode.gain.linearRampToValueAtTime(this.volume * 0.5, ctx.currentTime + delay + 0.01);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.15);
+        gainNode.gain.linearRampToValueAtTime(
+          this.volume * 0.5,
+          ctx.currentTime + delay + 0.01,
+        );
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          ctx.currentTime + delay + 0.15,
+        );
 
         oscillator.start(ctx.currentTime + delay);
         oscillator.stop(ctx.currentTime + delay + 0.15);
@@ -105,7 +117,10 @@ class SoundEffects {
       oscillator.type = "square";
 
       gainNode.gain.setValueAtTime(0, ctx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(this.volume * 0.4, ctx.currentTime + 0.005);
+      gainNode.gain.linearRampToValueAtTime(
+        this.volume * 0.4,
+        ctx.currentTime + 0.005,
+      );
       gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
 
       oscillator.start(ctx.currentTime);
@@ -131,11 +146,17 @@ class SoundEffects {
 
       // Descending tone
       oscillator.frequency.setValueAtTime(600, ctx.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.1);
+      oscillator.frequency.exponentialRampToValueAtTime(
+        300,
+        ctx.currentTime + 0.1,
+      );
       oscillator.type = "sawtooth";
 
       gainNode.gain.setValueAtTime(0, ctx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(this.volume * 0.3, ctx.currentTime + 0.01);
+      gainNode.gain.linearRampToValueAtTime(
+        this.volume * 0.3,
+        ctx.currentTime + 0.01,
+      );
       gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
 
       oscillator.start(ctx.currentTime);
@@ -173,5 +194,3 @@ class SoundEffects {
 
 // Singleton instance
 export const soundEffects = new SoundEffects();
-
-

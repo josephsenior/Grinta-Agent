@@ -14,7 +14,9 @@ export function useChatFeedbackActions() {
   const { t } = useTranslation();
   const params = useParams<{ conversationId: string }>();
 
-  const [feedbackPolarity, setFeedbackPolarity] = React.useState<"positive" | "negative">("positive");
+  const [feedbackPolarity, setFeedbackPolarity] = React.useState<
+    "positive" | "negative"
+  >("positive");
   const [feedbackModalIsOpen, setFeedbackModalIsOpen] = React.useState(false);
 
   const onClickShareFeedbackActionButton = React.useCallback(
@@ -22,7 +24,7 @@ export function useChatFeedbackActions() {
       setFeedbackModalIsOpen(true);
       setFeedbackPolarity(polarity);
     },
-    []
+    [],
   );
 
   const onClickExportTrajectoryButton = React.useCallback(async () => {
@@ -35,7 +37,7 @@ export function useChatFeedbackActions() {
       const data = await getTrajectory(params.conversationId);
       await downloadTrajectory(
         params.conversationId ?? t(I18nKey.CONVERSATION$UNKNOWN),
-        data
+        data,
       );
     } catch (error) {
       console.error("Failed to export trajectory:", error);

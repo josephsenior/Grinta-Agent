@@ -86,7 +86,7 @@ export function QueryEditor({
                 handleExecute();
               },
             });
-            
+
             // Focus editor on mount
             editor.focus();
           }}
@@ -95,4 +95,3 @@ export function QueryEditor({
     </div>
   );
 }
-

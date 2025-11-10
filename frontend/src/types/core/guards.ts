@@ -1,4 +1,4 @@
-import { ForgeParsedEvent, ForgeEvent } from ".";
+import { ForgeParsedEvent } from ".";
 import {
   UserMessageAction,
   AssistantMessageAction,
@@ -21,9 +21,7 @@ import {
 } from "./observations";
 import { StatusUpdate } from "./variances";
 
-export const isForgeEvent = (
-  event: unknown,
-): event is ForgeParsedEvent =>
+export const isForgeEvent = (event: unknown): event is ForgeParsedEvent =>
   typeof event === "object" &&
   event !== null &&
   "id" in event &&
@@ -31,28 +29,20 @@ export const isForgeEvent = (
   "message" in event &&
   "timestamp" in event;
 
-export const isForgeAction = (
-  event: unknown,
-): event is ForgeAction =>
+export const isForgeAction = (event: unknown): event is ForgeAction =>
   typeof event === "object" &&
   event !== null &&
   "action" in event &&
   typeof (event as any).action === "string";
 
-export const isForgeObservation = (
-  event: unknown,
-): event is ForgeObservation =>
+export const isForgeObservation = (event: unknown): event is ForgeObservation =>
   typeof event === "object" &&
   event !== null &&
   "observation" in event &&
   typeof (event as any).observation === "string";
 
-export const isUserMessage = (
-  event: unknown,
-): event is UserMessageAction =>
-  isForgeAction(event) &&
-  event.source === "user" &&
-  event.action === "message";
+export const isUserMessage = (event: unknown): event is UserMessageAction =>
+  isForgeAction(event) && event.source === "user" && event.action === "message";
 
 export const isAssistantMessage = (
   event: unknown,
@@ -61,14 +51,11 @@ export const isAssistantMessage = (
   event.source === "agent" &&
   (event.action === "message" || event.action === "finish");
 
-export const isErrorObservation = (
-  event: unknown,
-): event is ErrorObservation =>
+export const isErrorObservation = (event: unknown): event is ErrorObservation =>
   isForgeObservation(event) && event.observation === "error";
 
-export const isCommandAction = (
-  event: unknown,
-): event is CommandAction => isForgeAction(event) && event.action === "run";
+export const isCommandAction = (event: unknown): event is CommandAction =>
+  isForgeAction(event) && event.action === "run";
 
 export const isAgentStateChangeObservation = (
   event: unknown,
@@ -80,14 +67,10 @@ export const isCommandObservation = (
 ): event is CommandObservation =>
   isForgeObservation(event) && event.observation === "run";
 
-export const isFinishAction = (
-  event: unknown,
-): event is FinishAction =>
+export const isFinishAction = (event: unknown): event is FinishAction =>
   isForgeAction(event) && event.action === "finish";
 
-export const isSystemMessage = (
-  event: unknown,
-): event is SystemMessageAction =>
+export const isSystemMessage = (event: unknown): event is SystemMessageAction =>
   isForgeAction(event) && event.action === "system";
 
 export const isRejectObservation = (
@@ -95,9 +78,7 @@ export const isRejectObservation = (
 ): event is ForgeObservation =>
   isForgeObservation(event) && event.observation === "user_rejected";
 
-export const isMcpObservation = (
-  event: unknown,
-): event is MCPObservation =>
+export const isMcpObservation = (event: unknown): event is MCPObservation =>
   isForgeObservation(event) && event.observation === "mcp";
 
 export const isTaskTrackingAction = (
@@ -110,14 +91,10 @@ export const isTaskTrackingObservation = (
 ): event is TaskTrackingObservation =>
   isForgeObservation(event) && event.observation === "task_tracking";
 
-export const isFileWriteAction = (
-  event: unknown,
-): event is FileWriteAction =>
+export const isFileWriteAction = (event: unknown): event is FileWriteAction =>
   isForgeAction(event) && event.action === "write";
 
-export const isFileEditAction = (
-  event: unknown,
-): event is FileEditAction =>
+export const isFileEditAction = (event: unknown): event is FileEditAction =>
   isForgeAction(event) && event.action === "edit";
 
 export const isStreamingChunkAction = (
@@ -148,7 +125,10 @@ export const hasExtras = (
   (event as any).extras !== null;
 
 // Dynamic name checks (useful for safe runtime branching)
-export const isActionNamed = (event: unknown, name: string): event is ForgeAction =>
+export const isActionNamed = (
+  event: unknown,
+  name: string,
+): event is ForgeAction =>
   isForgeAction(event) && (event as any).action === name;
 
 export const isObservationNamed = (

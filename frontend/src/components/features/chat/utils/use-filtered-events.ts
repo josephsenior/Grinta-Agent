@@ -9,16 +9,16 @@ import type { ForgeObservation } from "#/types/core/observations";
  */
 export function useFilteredEvents(
   parsedEvents: (ForgeAction | ForgeObservation)[],
-  showTechnicalDetails: boolean
+  showTechnicalDetails: boolean,
 ) {
   return React.useMemo(() => {
     const baseFiltered = parsedEvents.filter(shouldRenderEvent);
-    
+
     // If showing all technical details, return everything
     if (showTechnicalDetails) {
       return baseFiltered;
     }
-    
+
     // Otherwise, apply additional filtering (this logic should match EventMessage's filtering)
     // We keep the filtering in EventMessage for now to avoid duplication
     // The EventMessage component will return null for filtered events

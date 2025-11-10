@@ -10,7 +10,7 @@ import {
 /**
  * Coalesces consecutive assistant messages into single messages
  * for a cleaner, less fragmented UX (bolt.new style)
- * 
+ *
  * Before: ["Let me help", "I'll do this", "And this"]
  * After:  ["Let me help\n\nI'll do this\n\nAnd this"]
  */
@@ -18,7 +18,7 @@ export function coalesceMessages(events: ForgeEvent[]): ForgeEvent[] {
   // 🚫 DISABLED: Coalescing prevents real-time streaming
   // For ChatGPT-style character-by-character streaming, we need EVERY message
   // to appear immediately without batching
-  // 
+  //
   // Before fix: Messages batched → rendered all at once → bad UX
   // After fix: Each message streams immediately → smooth real-time updates
   return events;
@@ -199,4 +199,3 @@ function extractFilename(path: string): string {
   const parts = path.split("/");
   return parts[parts.length - 1] || path;
 }
-

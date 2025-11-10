@@ -180,7 +180,7 @@ export function WsClientProvider({
 
   const appendEvent = React.useCallback(
     (event: Record<string, unknown>) => {
-      setEvents(prevEvents => [...prevEvents, event]);
+      setEvents((prevEvents) => [...prevEvents, event]);
       updateLastEventRefFromEvent(event);
     },
     [setEvents, updateLastEventRefFromEvent],
@@ -210,34 +210,38 @@ export function WsClientProvider({
         return;
       }
 
-      const eventId = getEventId(event) ?? "";
+      const eventId =
+        getEventId(event as unknown as Record<string, unknown>) ?? "";
       flushSync(() => {
-        setParsedEvents(prevEvents => {
+        setParsedEvents((prevEvents) => {
           const existingIds = new Set(
-            prevEvents.map(existing =>
-              getEventId(existing as unknown as Record<string, unknown>) ?? "",
-            ),
+            prevEvents.map((existing) => getEventId(existing as any) ?? ""),
           );
 
           if (existingIds.has(eventId)) {
             return prevEvents;
           }
 
-          return [...prevEvents, event];
+          return [...prevEvents, event as any];
         });
       });
     },
     [setParsedEvents],
   );
 
-  const dispatchServerReadyIfPresent = React.useCallback((event: ForgeParsedEvent) => {
-    const serverReadyInfo = extractServerReadyInfo(event);
-    if (!serverReadyInfo) {
-      return;
-    }
+  const dispatchServerReadyIfPresent = React.useCallback(
+    (event: ForgeParsedEvent) => {
+      const serverReadyInfo = extractServerReadyInfo(event);
+      if (!serverReadyInfo) {
+        return;
+      }
 
-    window.dispatchEvent(new CustomEvent("Forge:server-ready", { detail: serverReadyInfo }));
-  }, []);
+      window.dispatchEvent(
+        new CustomEvent("Forge:server-ready", { detail: serverReadyInfo }),
+      );
+    },
+    [],
+  );
 
   const applyObservationEffects = React.useCallback(
     (event: ForgeParsedEvent) => {
@@ -270,7 +274,12 @@ export function WsClientProvider({
         invalidateFileChangeQueries(event);
       }
     },
-    [applyObservationEffects, invalidateFileChangeQueries, messageRateHandler, removeOptimisticUserMessage],
+    [
+      applyObservationEffects,
+      invalidateFileChangeQueries,
+      messageRateHandler,
+      removeOptimisticUserMessage,
+    ],
   );
 
   function handleMessage(event: Record<string, unknown>) {
@@ -347,7 +356,7 @@ export function WsClientProvider({
     }
 
     const isPlaywright = detectPlaywrightRun();
-    if (!shouldEstablishConnection(conversation, isPlaywright)) {
+    if (!shouldEstablishConnection(conversation as any, isPlaywright)) {
       return () => undefined;
     }
 
@@ -356,7 +365,7 @@ export function WsClientProvider({
 
     const query = buildSocketQuery({
       conversationId,
-      conversation,
+      conversation: conversation as any,
       providers,
       lastEvent: lastEventRef.current,
     });
@@ -370,7 +379,7 @@ export function WsClientProvider({
         setWebSocketStatus,
       });
     } else {
-      const { baseUrl, socketPath } = resolveSocketTarget(conversation);
+      const { baseUrl, socketPath } = resolveSocketTarget(conversation as any);
       const socket = createSocketConnection({ baseUrl, socketPath, query });
       sioRef.current = socket;
       teardown = registerSocketHandlers({
@@ -532,7 +541,7 @@ function createSocketConnection({
   socketPath: string;
   query: Record<string, unknown>;
 }): Socket {
-  return io(baseUrl, {
+  return io(baseUrl ?? undefined, {
     transports: ["websocket", "polling"],
     path: socketPath,
     query,
@@ -641,7 +650,10 @@ function setupPlaywrightSocket({
   }, 0);
 
   try {
-    if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+    if (
+      typeof window !== "undefined" &&
+      typeof window.dispatchEvent === "function"
+    ) {
       window.dispatchEvent(new CustomEvent("Forge:open-conversation-panel"));
     }
   } catch (error) {
@@ -803,9 +815,6 @@ function markItemAsHydrated(
 
 function isTrajectoryCandidate(item: Record<string, unknown>): boolean {
   return (
-    "id" in item &&
-    "source" in item &&
-    "message" in item &&
-    "timestamp" in item
+    "id" in item && "source" in item && "message" in item && "timestamp" in item
   );
 }

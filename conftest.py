@@ -1,9 +1,49 @@
+import asyncio
+import inspect
 import pathlib
 import importlib
 import os
 import shutil
 import sys
+import time
+from collections.abc import Iterator
+
 import pytest
+
+
+@pytest.fixture
+def event_loop():
+    """Provide a fresh event loop for async tests without requiring pytest-asyncio."""
+
+    loop = asyncio.new_event_loop()
+    try:
+        yield loop
+    finally:
+        if not loop.is_closed():
+            loop.close()
+
+
+def pytest_pyfunc_call(pyfuncitem):
+    """Execute coroutine tests by driving them with an event loop."""
+
+    if inspect.iscoroutinefunction(pyfuncitem.obj):
+        loop = pyfuncitem.funcargs.get("event_loop")  # type: ignore[attr-defined]
+        owns_loop = False
+        if loop is None:
+            loop = asyncio.new_event_loop()
+            owns_loop = True
+
+        try:
+            asyncio.set_event_loop(loop)
+            fixture_names = getattr(pyfuncitem, "_fixtureinfo").argnames
+            test_kwargs = {name: pyfuncitem.funcargs[name] for name in fixture_names}
+            loop.run_until_complete(pyfuncitem.obj(**test_kwargs))
+        finally:
+            asyncio.set_event_loop(None)
+            if owns_loop and not loop.is_closed():
+                loop.close()
+        return True
+    return None
 
 
 def _has_pkg(name: str) -> bool:
@@ -204,3 +244,157 @@ def stub_win32_output_on_windows(monkeypatch):
     except Exception:
         pass
     yield
+
+
+@pytest.fixture(autouse=True, scope="session")
+def mock_litellm() -> Iterator[None]:
+    """Provide deterministic LiteLLM completions during tests to avoid real API calls."""
+
+    try:
+        import litellm
+        from litellm.types.utils import ModelResponse
+        from forge.llm import llm as forge_llm_module
+    except Exception:
+        # If LiteLLM or the Forge LLM module is unavailable, skip mocking.
+        yield
+        return
+
+    def _extract_messages(args, kwargs):
+        messages = kwargs.get("messages")
+        if messages is None and args:
+            messages = args[0]
+        return messages
+
+    def _build_response(messages=None, model=None):
+        content = "Mock response"
+        if isinstance(messages, list):
+            for message in reversed(messages):
+                if isinstance(message, dict):
+                    payload = message.get("content")
+                    if isinstance(payload, str) and payload.strip():
+                        content = f"Mock response: {payload.strip()}"
+                        break
+        data = {
+            "id": "mock-response-id",
+            "object": "chat.completion",
+            "created": int(time.time()),
+            "model": model or "mock-model",
+            "system_fingerprint": "mock-fingerprint",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": content},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+        }
+        return ModelResponse.model_validate(data)
+
+    def _stream_generator(messages, model):
+        response = _build_response(messages=messages, model=model)
+        content = response.choices[0]["message"]["content"]
+        yield {
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {"content": content},
+                    "finish_reason": None,
+                }
+            ],
+            "model": response.model,
+        }
+        yield {
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {},
+                    "finish_reason": "stop",
+                }
+            ],
+            "model": response.model,
+        }
+
+    def _completion_stub(*args, **kwargs):
+        messages = _extract_messages(args, kwargs)
+        model = kwargs.get("model")
+        if kwargs.get("stream"):
+            return _stream_generator(messages, model)
+        return _build_response(messages=messages, model=model)
+
+    async def _acompletion_stub(*args, **kwargs):
+        messages = _extract_messages(args, kwargs)
+        model = kwargs.get("model")
+        if kwargs.get("stream"):
+            async def _async_gen():
+                for chunk in _stream_generator(messages, model):
+                    yield chunk
+
+            return _async_gen()
+        return _build_response(messages=messages, model=model)
+
+    def _streaming_stub(*args, **kwargs):
+        messages = _extract_messages(args, kwargs)
+        model = kwargs.get("model")
+        return _stream_generator(messages, model)
+
+    monkeypatcher = pytest.MonkeyPatch()
+    monkeypatcher.setattr(litellm, "completion", _completion_stub)
+    monkeypatcher.setattr(litellm, "acompletion", _acompletion_stub)
+    monkeypatcher.setattr(litellm, "stream", _streaming_stub, raising=False)
+    monkeypatcher.setattr(litellm, "streaming", _streaming_stub, raising=False)
+    monkeypatcher.setattr(forge_llm_module, "litellm_completion", _completion_stub, raising=False)
+    try:
+        yield
+    finally:
+        monkeypatcher.undo()
+
+
+@pytest.fixture(autouse=True, scope="session")
+def set_dummy_llm_env() -> Iterator[None]:
+    """Ensure LLM-related environment variables exist so config validation passes."""
+
+    env_defaults = {
+        "LLM_API_KEY": "test_key",
+        "OPENAI_API_KEY": "test_key",
+        "LITELLM_API_KEY": "test_key",
+        "ANTHROPIC_API_KEY": "test_key",
+    }
+    monkeypatcher = pytest.MonkeyPatch()
+    for key, value in env_defaults.items():
+        if not os.environ.get(key):
+            monkeypatcher.setenv(key, value)
+    try:
+        yield
+    finally:
+        monkeypatcher.undo()
+
+
+# ---------------------------------------------------------------------------
+# Runtime test helpers
+# ---------------------------------------------------------------------------
+try:
+    from tests.runtime.conftest import _close_test_runtime as _runtime_close  # type: ignore
+    from tests.runtime.conftest import _load_runtime as _runtime_load  # type: ignore
+except Exception:  # pragma: no cover - optional dependency for runtime tests
+    def _load_runtime(*args, **kwargs):  # type: ignore[override]
+        pytest.skip("runtime test helpers are unavailable in this environment")
+
+    def _close_test_runtime(*args, **kwargs):  # type: ignore[override]
+        return None
+else:
+    globals().setdefault("_load_runtime", _runtime_load)
+    globals().setdefault("_close_test_runtime", _runtime_close)
+
+__all__ = [
+    "event_loop",
+    "pytest_pyfunc_call",
+    "require_pkg",
+    "use_repo_root_cwd",
+    "stub_win32_output_on_windows",
+    "mock_litellm",
+    "set_dummy_llm_env",
+]
+
+if "_load_runtime" in globals():
+    __all__.extend(["_load_runtime", "_close_test_runtime"])

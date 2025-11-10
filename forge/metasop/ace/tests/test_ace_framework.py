@@ -1,7 +1,9 @@
 """Unit tests for ACE Framework."""
 
-import pytest
+from types import SimpleNamespace
 from unittest.mock import Mock
+
+import pytest
 from forge.metasop.ace.ace_framework import ACEFramework
 from forge.metasop.ace.context_playbook import ContextPlaybook, BulletSection
 from forge.metasop.ace.models import (
@@ -273,3 +275,208 @@ class TestACEFramework:
         ace_framework.context_playbook.add_bullet.assert_called_once()
         ace_framework.context_playbook.update_bullet.assert_called_once()
         ace_framework.context_playbook.remove_bullet.assert_called_once()
+
+    def test_run_curation_phase_returns_none_without_insights(self, ace_framework):
+        """_run_curation_phase should exit early when reflection fails."""
+        reflection_result = SimpleNamespace(success=False, insights=[])
+        result = ace_framework._run_curation_phase(
+            reflection_result=reflection_result,
+            query="Task",
+            task_type="general",
+            role=None,
+            expected_outcome=None,
+        )
+
+        assert result is None
+        ace_framework.curator.curate.assert_not_called()
+
+    def test_update_metrics_handles_failure(self, ace_framework):
+        """_update_metrics should track failure paths and helpfulness averages."""
+        ace_framework.context_playbook.add_bullet(
+            content="Existing insight",
+            section=BulletSection.STRATEGIES_AND_HARD_RULES,
+            bullet_id="ctx-existing",
+        )
+        metrics_before = ace_framework.performance_metrics.failed_tasks
+
+        generation_result = ACEGenerationResult(
+            trajectory=ACETrajectory(
+                content="",
+                task_type="general",
+                used_bullet_ids=[],
+                playbook_content="",
+                generation_metadata={},
+            ),
+            success=False,
+            processing_time=0.1,
+            tokens_used=0,
+        )
+        reflection_result = ACEReflectionResult(
+            insights=[],
+            success=False,
+            confidence=0.0,
+            processing_time=0.2,
+            tokens_used=0,
+        )
+
+        ace_framework._update_metrics(
+            generation_result=generation_result,
+            reflection_result=reflection_result,
+            curation_result=None,
+            overall_success=False,
+            processing_time=0.5,
+        )
+
+        assert ace_framework.performance_metrics.failed_tasks == metrics_before + 1
+        assert ace_framework.performance_metrics.avg_helpfulness >= 0
+
+    def test_process_task_applies_delta_updates(self, ace_framework):
+        """process_task should apply delta updates when curation succeeds."""
+        trajectory = ACETrajectory(
+            content="Content long enough to succeed." * 2,
+            task_type="general",
+            used_bullet_ids=[],
+            playbook_content="",
+            generation_metadata={},
+        )
+        generation_result = ACEGenerationResult(
+            trajectory=trajectory,
+            success=True,
+            processing_time=0.1,
+            tokens_used=10,
+        )
+        ace_framework.generator.generate = Mock(return_value=generation_result)
+
+        reflection_insight = ACEInsight(
+            reasoning="",
+            error_identification="",
+            root_cause_analysis="",
+            correct_approach="",
+            key_insight="Add guard clauses",
+            bullet_tags=[],
+            success=True,
+            confidence=0.7,
+        )
+        reflection_result = ACEReflectionResult(
+            insights=[reflection_insight],
+            success=True,
+            confidence=0.7,
+            processing_time=0.2,
+            tokens_used=5,
+        )
+        ace_framework.reflector.analyze = Mock(return_value=reflection_result)
+
+        delta_update = ACEDeltaUpdate(
+            type="ADD",
+            section=BulletSection.COMMON_MISTAKES,
+            content="Avoid unchecked assumptions",
+        )
+        ace_framework.curator.curate = Mock(
+            return_value=ACECurationResult(
+                delta_updates=[delta_update],
+                success=True,
+                redundancy_removed=0,
+                processing_time=0.1,
+                tokens_used=3,
+            )
+        )
+        ace_framework.context_playbook.add_bullet = Mock()
+
+        result = ace_framework.process_task("Task", task_type="general")
+
+        assert result.curation_result.delta_updates == [delta_update]
+        assert ace_framework.performance_metrics.context_updates == 1
+        ace_framework.context_playbook.add_bullet.assert_called_once()
+
+    def test_process_task_with_feedback_branches(self, ace_framework):
+        """process_task_with_feedback should handle missing and present generation results."""
+        ace_framework.process_task = Mock(return_value="processed")
+        ace_framework.generator.generate_with_feedback = Mock(return_value="improved")
+
+        # Missing generation result branch
+        fallback = ace_framework.process_task_with_feedback(
+            query="Task",
+            previous_result=SimpleNamespace(generation_result=None),
+            task_type="general",
+            role=None,
+        )
+        assert fallback == "processed"
+        ace_framework.generator.generate_with_feedback.assert_not_called()
+
+        # Present generation result branch
+        ace_framework.generator.generate_with_feedback.reset_mock()
+        previous = SimpleNamespace(
+            generation_result=ACEGenerationResult(
+                trajectory=ACETrajectory(
+                    content="Existing",
+                    task_type="general",
+                    used_bullet_ids=[],
+                    playbook_content="",
+                    generation_metadata={},
+                ),
+                success=True,
+                processing_time=0.1,
+                tokens_used=1,
+                retries=0,
+            )
+        )
+        result = ace_framework.process_task_with_feedback(
+            query="Task",
+            previous_result=previous,
+            task_type="general",
+            role="engineer",
+        )
+
+        ace_framework.generator.generate_with_feedback.assert_called_once()
+        assert result == "processed"
+
+    def test_multi_epoch_training_disabled_short_circuit(self, ace_framework):
+        """Disable multi-epoch training should return immediately."""
+        ace_framework.config.multi_epoch = False
+        assert ace_framework.multi_epoch_training(["Task"], "general") == []
+
+    def test_multi_epoch_training_progress_logging(self, ace_framework, monkeypatch):
+        """Progress logging should trigger after every tenth item."""
+        ace_framework.config.num_epochs = 1
+        ace_framework.process_task = Mock(return_value=Mock(success=True))
+
+        log_calls = []
+
+        def fake_logger(message):
+            log_calls.append(message)
+
+        monkeypatch.setattr("forge.metasop.ace.ace_framework.logger.info", fake_logger)
+        queries = [f"Task {i}" for i in range(10)]
+        ace_framework.multi_epoch_training(queries, task_type="general")
+
+        assert any("Processed 10/10 queries" in call for call in log_calls)
+
+    def test_apply_delta_updates_handles_exceptions(self, ace_framework, monkeypatch):
+        """_apply_delta_updates should swallow exceptions and continue."""
+        update = ACEDeltaUpdate(
+            type="ADD",
+            section=BulletSection.STRATEGIES_AND_HARD_RULES,
+            content="New insight",
+        )
+        ace_framework.context_playbook.add_bullet = Mock(side_effect=RuntimeError("failure"))
+
+        warnings = []
+
+        def fake_warning(message):
+            warnings.append(message)
+
+        monkeypatch.setattr("forge.metasop.ace.ace_framework.logger.warning", fake_warning)
+
+        ace_framework._apply_delta_updates([update])
+
+        assert warnings
+
+    def test_save_and_load_playbook_failure_paths(self, ace_framework, monkeypatch):
+        """save_playbook and load_playbook should return False on errors."""
+        monkeypatch.setattr("builtins.open", Mock(side_effect=OSError("io error")))
+
+        assert ace_framework.save_playbook("path.json") is False
+
+        monkeypatch.setattr("builtins.open", Mock(side_effect=FileNotFoundError("missing")))
+        assert ace_framework.load_playbook("path.json") is False
+

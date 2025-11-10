@@ -1,4 +1,10 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   useRouteError,
   isRouteErrorResponse,
@@ -25,7 +31,6 @@ import { LOCAL_STORAGE_KEYS } from "#/utils/local-storage";
 import { ToastProvider } from "#/components/shared/notifications/toast";
 import { RoutePreloader } from "#/utils/route-preloader";
 import { injectCriticalCSS } from "#/utils/critical-css";
-import { cn } from "#/lib/utils";
 
 const ConversationPanelWrapper = React.lazy(() =>
   import(
@@ -155,7 +160,8 @@ interface MainAppController {
 }
 
 function useMainAppController(): MainAppController {
-  const { navigate, pathname, isOnTosPage, isConversationPage } = useRouteContext();
+  const { navigate, pathname, isOnTosPage, isConversationPage } =
+    useRouteContext();
   const { t } = useTranslation();
 
   const appData = useMainAppData(isOnTosPage);
@@ -332,7 +338,10 @@ function useEffectiveGitHubAuthUrl({
   gitHubAuthUrl: string | null;
   isOnTosPage: boolean;
 }) {
-  return useMemo(() => (isOnTosPage ? null : gitHubAuthUrl), [gitHubAuthUrl, isOnTosPage]);
+  return useMemo(
+    () => (isOnTosPage ? null : gitHubAuthUrl),
+    [gitHubAuthUrl, isOnTosPage],
+  );
 }
 
 function useAuthModalState({
@@ -362,7 +371,9 @@ function useAuthModalState({
 }
 
 function useLoginMethodDetection(isAuthed: boolean | undefined) {
-  const [loginMethodExists, setLoginMethodExists] = useState(checkLoginMethodExists());
+  const [loginMethodExists, setLoginMethodExists] = useState(
+    checkLoginMethodExists(),
+  );
 
   useEffect(() => {
     setLoginMethodExists(checkLoginMethodExists());
@@ -392,8 +403,16 @@ function useConversationPanelState() {
     shouldConversationStartOpen(),
   );
 
+  const openConversationPanel = useCallback(() => {
+    setConversationPanelIsOpen(true);
+  }, []);
+
+  const closeConversationPanel = useCallback(() => {
+    setConversationPanelIsOpen(false);
+  }, []);
+
   useEffect(() => {
-    const openHandler = () => setConversationPanelIsOpen(true);
+    const openHandler = () => openConversationPanel();
     window.addEventListener("Forge:open-conversation-panel", openHandler);
 
     if (shouldConversationStartOpen()) {
@@ -403,15 +422,7 @@ function useConversationPanelState() {
     return () => {
       window.removeEventListener("Forge:open-conversation-panel", openHandler);
     };
-  }, []);
-
-  const openConversationPanel = useCallback(() => {
-    setConversationPanelIsOpen(true);
-  }, []);
-
-  const closeConversationPanel = useCallback(() => {
-    setConversationPanelIsOpen(false);
-  }, []);
+  }, [openConversationPanel]);
 
   return {
     conversationPanelIsOpen,
@@ -463,7 +474,11 @@ function MainLayoutShell({ controller }: { controller: MainAppController }) {
   return (
     <>
       {controller.showHeader && (
-        <Suspense fallback={<div className="h-16 bg-background-tertiary animate-pulse" />}>
+        <Suspense
+          fallback={
+            <div className="h-16 bg-background-tertiary animate-pulse" />
+          }
+        >
           <Header />
         </Suspense>
       )}
@@ -480,22 +495,47 @@ function MainLayoutShell({ controller }: { controller: MainAppController }) {
         <Sidebar />
       </Suspense>
 
-      <div className={cn("flex flex-1 h-full min-h-0", controller.isConversationPage ? "" : "pt-14")}>
-        <div className={controller.isConversationPage ? "w-full h-full" : "p-3 md:p-4 lg:p-6 w-full"}>
+      <div
+        className={cn(
+          "flex flex-1 h-full min-h-0",
+          controller.isConversationPage ? "" : "pt-14",
+        )}
+      >
+        <div
+          className={
+            controller.isConversationPage
+              ? "w-full h-full"
+              : "p-3 md:p-4 lg:p-6 w-full"
+          }
+        >
           <div className="flex flex-col flex-1 gap-3 md:gap-4 lg:gap-5 min-w-0 h-full">
-            {maintenanceEnabled && controller.config?.MAINTENANCE?.startTime && (
-              <div className="flex-shrink-0 animate-slide-down">
-                <div className="glass rounded-xl p-3 md:p-4 border-primary-600/30 bg-primary-985/20 backdrop-blur-lg shadow-lg">
-                  <Suspense fallback={<div className="h-8 bg-background-tertiary/70 animate-pulse rounded" />}>
-                    <MaintenanceBanner startTime={controller.config.MAINTENANCE.startTime} />
-                  </Suspense>
+            {maintenanceEnabled &&
+              controller.config?.MAINTENANCE?.startTime && (
+                <div className="flex-shrink-0 animate-slide-down">
+                  <div className="glass rounded-xl p-3 md:p-4 border-primary-600/30 bg-primary-985/20 backdrop-blur-lg shadow-lg">
+                    <Suspense
+                      fallback={
+                        <div className="h-8 bg-background-tertiary/70 animate-pulse rounded" />
+                      }
+                    >
+                      <MaintenanceBanner
+                        startTime={controller.config.MAINTENANCE.startTime}
+                      />
+                    </Suspense>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div id="root-outlet" className="flex-1 relative rounded-2xl bg-black h-full min-h-0">
+            <div
+              id="root-outlet"
+              className="flex-1 relative rounded-2xl bg-black h-full min-h-0"
+            >
               <div className="h-full min-h-0 overflow-auto scrollbar-thin scrollbar-thumb-grey-700 scrollbar-track-transparent">
-                <Suspense fallback={<div className="h-full bg-background-secondary animate-pulse" />}>
+                <Suspense
+                  fallback={
+                    <div className="h-full bg-background-secondary animate-pulse" />
+                  }
+                >
                   <EmailVerificationGuard>
                     <div className="h-full min-h-0">
                       <Outlet />
@@ -517,7 +557,9 @@ function AppFooter({ isConversationPage }: { isConversationPage: boolean }) {
   }
 
   return (
-    <Suspense fallback={<div className="h-16 bg-background-tertiary animate-pulse" />}>
+    <Suspense
+      fallback={<div className="h-16 bg-background-tertiary animate-pulse" />}
+    >
       <Footer />
     </Suspense>
   );
@@ -543,7 +585,7 @@ function OverlayModals({ controller }: { controller: MainAppController }) {
       )}
 
       {controller.status.renderAuthModal && (
-        <Suspense fallback={<ModalFallback />}> 
+        <Suspense fallback={<ModalFallback />}>
           <AuthModal
             githubAuthUrl={controller.effectiveGitHubAuthUrl}
             appMode={controller.config?.APP_MODE}
@@ -559,13 +601,12 @@ function OverlayModals({ controller }: { controller: MainAppController }) {
         </Suspense>
       )}
 
-      {controller.config?.APP_MODE === "oss" && controller.status.consentFormIsOpen && (
-        <Suspense fallback={<ModalFallback />}>
-          <AnalyticsConsentFormModal
-            onClose={controller.closeConsentForm}
-          />
-        </Suspense>
-      )}
+      {controller.config?.APP_MODE === "oss" &&
+        controller.status.consentFormIsOpen && (
+          <Suspense fallback={<ModalFallback />}>
+            <AnalyticsConsentFormModal onClose={controller.closeConsentForm} />
+          </Suspense>
+        )}
 
       {controller.config?.FEATURE_FLAGS?.ENABLE_BILLING &&
         controller.config?.APP_MODE === "saas" &&
@@ -608,3 +649,5 @@ function cn(...classes: Array<string | false | null | undefined>) {
 // Minimal hydrate fallback used by React Router to improve UX while route modules
 // hydrate on the client. This also silences the 'hydrateFallback' developer hint.
 export const hydrateFallback = <div aria-hidden className="route-loading" />;
+
+export { shouldConversationStartOpen, checkLoginMethodExists };

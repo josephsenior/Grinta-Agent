@@ -5,9 +5,7 @@ from forge.metasop.models import OrchestrationContext, SopStep, StepOutputSpec
 
 
 def make_step():
-    return SopStep(
-        id="eng_test", role="engineer", task="Make a tiny change", outputs=StepOutputSpec(schema_file=""), depends_on=[]
-    )
+    return SopStep(id="eng_test", role="engineer", task="Make a tiny change", outputs=StepOutputSpec(schema=""), depends_on=[])
 
 
 def make_ctx(tmp_path):

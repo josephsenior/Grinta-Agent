@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { AgentState } from "#/types/agent-state";
 import { generateAgentStateChangeEvent } from "#/services/agent-state-service";
 import { displayErrorToast } from "#/utils/custom-toast-handlers";
-import { I18nKey } from "#/i18n/declaration";
 import type { FileUploadSuccessResponse } from "#/api/forge.types";
 import { createChatMessage } from "#/services/chat-service";
 import { validateFiles } from "#/utils/file-validation";
@@ -20,7 +19,7 @@ export function useChatMessageHandlers(
   setMessageToSend: (message: string | null) => void,
   setLastUserMessage: (message: string | null) => void,
   uploadFiles: (files: File[]) => Promise<FileUploadSuccessResponse>,
-  conversationId: string | undefined
+  conversationId: string | undefined,
 ) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -33,7 +32,9 @@ export function useChatMessageHandlers(
         // Validate files
         const validationResult = validateFiles(files);
         if (!validationResult.isValid) {
-          displayErrorToast(validationResult.errorMessage || "Invalid file selection");
+          displayErrorToast(
+            validationResult.errorMessage || "Invalid file selection",
+          );
           return;
         }
 
@@ -55,9 +56,14 @@ export function useChatMessageHandlers(
         const imageUrls = uploadedImages.map((i) => i.data);
         const fileUrls: string[] = [];
         const timestamp = new Date().toISOString();
-        const messageToSend = createChatMessage(message, imageUrls, fileUrls, timestamp);
+        const messageToSend = createChatMessage(
+          message,
+          imageUrls,
+          fileUrls,
+          timestamp,
+        );
         send(messageToSend);
-        
+
         setOptimisticUserMessage(message);
         setMessageToSend(null);
         setLastUserMessage(message);
@@ -67,7 +73,14 @@ export function useChatMessageHandlers(
         displayErrorToast(String(t("Failed to send message")));
       }
     },
-    [send, setOptimisticUserMessage, setMessageToSend, setLastUserMessage, uploadFiles, t]
+    [
+      send,
+      setOptimisticUserMessage,
+      setMessageToSend,
+      setLastUserMessage,
+      uploadFiles,
+      t,
+    ],
   );
 
   const handleStop = React.useCallback(() => {
@@ -79,7 +92,7 @@ export function useChatMessageHandlers(
       const question = `Can you explain this code?\n\n\`\`\`\n${code}\n\`\`\``;
       setMessageToSend(question);
     },
-    [setMessageToSend]
+    [setMessageToSend],
   );
 
   const handleRunCode = React.useCallback(
@@ -87,7 +100,7 @@ export function useChatMessageHandlers(
       const message = `Please run this ${language} code:\n\n\`\`\`${language}\n${code}\n\`\`\``;
       handleSendMessage(message, [], []);
     },
-    [handleSendMessage]
+    [handleSendMessage],
   );
 
   const handleGoBack = React.useCallback(() => {

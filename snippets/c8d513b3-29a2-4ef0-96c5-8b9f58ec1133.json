@@ -1,0 +1,18 @@
+{
+  "id": "c8d513b3-29a2-4ef0-96c5-8b9f58ec1133",
+  "title": "Usage Test",
+  "description": null,
+  "language": "python",
+  "category": "custom",
+  "code": "code",
+  "tags": [],
+  "is_favorite": false,
+  "usage_count": 1,
+  "created_at": "2025-11-09 00:43:54.395041",
+  "updated_at": "2025-11-09 16:05:07.355993",
+  "metadata": {},
+  "dependencies": [],
+  "related_snippets": [],
+  "source_url": null,
+  "license": null
+}

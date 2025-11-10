@@ -5,6 +5,7 @@ import { cn } from "#/utils/utils";
 import { I18nKey } from "#/i18n/declaration";
 import { useSubmitConversationFeedback } from "#/hooks/mutation/use-submit-conversation-feedback";
 import { ScrollContext } from "#/context/scroll-context";
+import type { ScrollContextType } from "#/context/scroll-context";
 
 // Global timeout duration in milliseconds
 const AUTO_SUBMIT_TIMEOUT = 10000;
@@ -35,23 +36,24 @@ export function LikertScale({
       <div className="text-sm text-foreground-secondary mb-1">
         {controller.isSubmitted
           ? t(I18nKey.FEEDBACK$THANK_YOU_FOR_FEEDBACK)
-          : t(I18nKey.FEEDBACK$RATE_RESPONSE)}
+          : t("Rate this response")}
       </div>
       <div className="flex items-center gap-2">
         {[1, 2, 3, 4, 5].map((rating) => (
           <button
             key={rating}
             type="button"
+            aria-label={`Rate ${rating} star${rating === 1 ? "" : "s"}`}
             className={cn(
               "transition-colors",
               getButtonClass({
                 rating,
-                isSubmitted: controller.isSubmitted,
+                isSubmitted: controller.isSubmitted ?? false,
                 selectedRating: controller.selectedRating,
               }),
             )}
             onClick={() => controller.handleRatingClick(rating)}
-            disabled={controller.isSubmitted}
+            disabled={controller.isSubmitted ?? false}
           >
             <FaStar className="w-5 h-5" />
           </button>
@@ -153,15 +155,17 @@ function useLikertController({
     [isSubmitted, reasonTimeout, selectedRating, submitFeedback],
   );
 
-  useCountdownEffect({ countdown, showReasons, isSubmitted, setCountdown });
+  useCountdownEffect({
+    countdown,
+    showReasons,
+    isSubmitted: isSubmitted ?? false,
+    setCountdown,
+  });
   useCleanupTimeout(reasonTimeout);
-  useAutoScrollOnMount({ scrollContext, isSubmitted });
+  useAutoScrollOnMount({ scrollContext, isSubmitted: isSubmitted ?? false });
   useAutoScrollOnReasons({ scrollContext, showReasons });
 
-  const feedbackReasons = React.useMemo(
-    () => buildFeedbackReasons(t),
-    [t],
-  );
+  const feedbackReasons = React.useMemo(() => buildFeedbackReasons(t), [t]);
 
   return {
     t,
@@ -200,7 +204,7 @@ function startReasonFlow({
   setCountdown: React.Dispatch<React.SetStateAction<number>>;
   setReasonTimeout: React.Dispatch<React.SetStateAction<NodeJS.Timeout | null>>;
   submitFeedback: (rating: number, reason?: string) => void;
-  scrollContext?: ScrollContext;
+  scrollContext?: ScrollContextType;
 }) {
   setShowReasons(true);
   setCountdown(Math.ceil(AUTO_SUBMIT_TIMEOUT / 1000));
@@ -213,7 +217,11 @@ function startReasonFlow({
   attemptScroll({ scrollContext });
 }
 
-function attemptScroll({ scrollContext }: { scrollContext?: ScrollContext }) {
+function attemptScroll({
+  scrollContext,
+}: {
+  scrollContext?: ScrollContextType;
+}) {
   const scrollToBottom = scrollContext?.scrollDomToBottom;
   if (scrollToBottom && scrollContext?.autoScroll) {
     setTimeout(() => scrollToBottom(), 100);
@@ -243,24 +251,29 @@ function useCountdownEffect({
 }
 
 function useCleanupTimeout(reasonTimeout: NodeJS.Timeout | null) {
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       if (reasonTimeout) {
         clearTimeout(reasonTimeout);
       }
-    };
-  }, [reasonTimeout]);
+    },
+    [reasonTimeout],
+  );
 }
 
 function useAutoScrollOnMount({
   scrollContext,
   isSubmitted,
 }: {
-  scrollContext?: ScrollContext;
+  scrollContext?: ScrollContextType;
   isSubmitted: boolean;
 }) {
   useEffect(() => {
-    if (scrollContext?.scrollDomToBottom && scrollContext.autoScroll && !isSubmitted) {
+    if (
+      scrollContext?.scrollDomToBottom &&
+      scrollContext.autoScroll &&
+      !isSubmitted
+    ) {
       setTimeout(() => {
         scrollContext.scrollDomToBottom?.();
       }, 100);
@@ -272,11 +285,15 @@ function useAutoScrollOnReasons({
   scrollContext,
   showReasons,
 }: {
-  scrollContext?: ScrollContext;
+  scrollContext?: ScrollContextType;
   showReasons: boolean;
 }) {
   useEffect(() => {
-    if (scrollContext?.scrollDomToBottom && scrollContext.autoScroll && showReasons) {
+    if (
+      scrollContext?.scrollDomToBottom &&
+      scrollContext.autoScroll &&
+      showReasons
+    ) {
       setTimeout(() => {
         scrollContext.scrollDomToBottom?.();
       }, 100);
@@ -316,10 +333,12 @@ function LikertReasons({
   return (
     <div className="mt-2 space-y-2">
       <div className="text-xs text-foreground-secondary">
-        {controller.t(I18nKey.FEEDBACK$WHY_RATING)}
+        {controller.t("Why this rating?")}
         {controller.countdown > 0 && (
           <span className="ml-2 text-foreground">
-            {controller.t(I18nKey.FEEDBACK$AUTO_SUBMIT, { seconds: controller.countdown })}
+            {controller.t("Auto-submitting in {{seconds}}s", {
+              seconds: controller.countdown,
+            })}
           </span>
         )}
       </div>

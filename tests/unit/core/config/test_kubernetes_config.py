@@ -57,3 +57,24 @@ def test_kubernetes_config_validation():
     """Test that KubernetesConfig validates input correctly."""
     with pytest.raises(ValidationError):
         KubernetesConfig(extra_field="not allowed")
+
+
+def test_kubernetes_config_from_toml_section():
+    """KubernetesConfig.from_toml_section should build config mapping."""
+    data = {
+        "namespace": "custom",
+        "pvc_storage_size": "10Gi",
+        "privileged": True,
+    }
+    mapping = KubernetesConfig.from_toml_section(data)
+    assert "kubernetes" in mapping
+    config = mapping["kubernetes"]
+    assert isinstance(config, KubernetesConfig)
+    assert config.namespace == "custom"
+    assert config.privileged is True
+
+
+def test_kubernetes_config_from_toml_section_invalid():
+    """Invalid kubernetes section should raise ValueError."""
+    with pytest.raises(ValueError):
+        KubernetesConfig.from_toml_section({"namespace": ["invalid", "list"]})

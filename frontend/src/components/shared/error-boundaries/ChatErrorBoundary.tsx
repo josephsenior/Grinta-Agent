@@ -1,7 +1,6 @@
 import React from "react";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
 import { Button } from "#/components/ui/button";
-import { cn } from "#/utils/utils";
 
 interface ChatErrorBoundaryState {
   hasError: boolean;
@@ -37,7 +36,7 @@ export class ChatErrorBoundary extends React.Component<
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("ChatErrorBoundary caught an error:", error, errorInfo);
-    
+
     // Log error to monitoring service
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
@@ -63,7 +62,12 @@ export class ChatErrorBoundary extends React.Component<
       // Use custom fallback if provided
       if (this.props.fallback && this.state.error) {
         const FallbackComponent = this.props.fallback;
-        return <FallbackComponent error={this.state.error} retry={this.handleRetry} />;
+        return (
+          <FallbackComponent
+            error={this.state.error}
+            retry={this.handleRetry}
+          />
+        );
       }
 
       // Default error UI
@@ -76,7 +80,8 @@ export class ChatErrorBoundary extends React.Component<
                 Chat Error
               </h2>
               <p className="text-text-secondary mb-4">
-                Something went wrong with the chat interface. This might be a temporary issue.
+                Something went wrong with the chat interface. This might be a
+                temporary issue.
               </p>
             </div>
 
@@ -101,7 +106,7 @@ export class ChatErrorBoundary extends React.Component<
                 <RefreshCw className="w-4 h-4" />
                 Try Again
               </Button>
-              
+
               <Button
                 onClick={this.handleGoHome}
                 variant="outline"

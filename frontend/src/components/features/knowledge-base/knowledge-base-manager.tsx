@@ -15,7 +15,9 @@ import { useDeleteCollection } from "#/hooks/mutation/use-knowledge-base-mutatio
 export function KnowledgeBaseManager() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [uploadCollectionId, setUploadCollectionId] = useState<string | null>(null);
+  const [uploadCollectionId, setUploadCollectionId] = useState<string | null>(
+    null,
+  );
   const [uploadCollectionName, setUploadCollectionName] = useState("");
 
   const { data: collections, isLoading, error } = useKnowledgeBaseCollections();
@@ -23,7 +25,11 @@ export function KnowledgeBaseManager() {
   const deleteMutation = useDeleteCollection();
 
   const handleDeleteCollection = async (collectionId: string) => {
-    if (!confirm("Are you sure you want to delete this collection? All documents will be removed.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this collection? All documents will be removed.",
+      )
+    ) {
       return;
     }
     await deleteMutation.mutateAsync(collectionId);
@@ -34,9 +40,10 @@ export function KnowledgeBaseManager() {
     setUploadCollectionName(collectionName);
   };
 
-  const filteredCollections = collections?.filter((collection) =>
-    collection.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    collection.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredCollections = collections?.filter(
+    (collection) =>
+      collection.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      collection.description?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -68,7 +75,9 @@ export function KnowledgeBaseManager() {
               <div className="text-2xl font-bold text-foreground">
                 {stats.total_collections}
               </div>
-              <div className="text-xs text-foreground-secondary">Collections</div>
+              <div className="text-xs text-foreground-secondary">
+                Collections
+              </div>
             </div>
             <div className="bg-background-tertiary/50 rounded-lg p-3">
               <div className="text-2xl font-bold text-foreground">
@@ -86,7 +95,9 @@ export function KnowledgeBaseManager() {
               <div className="text-2xl font-bold text-foreground">
                 {stats.total_size_mb.toFixed(1)} MB
               </div>
-              <div className="text-xs text-foreground-secondary">Total Size</div>
+              <div className="text-xs text-foreground-secondary">
+                Total Size
+              </div>
             </div>
           </div>
         )}
@@ -109,7 +120,7 @@ export function KnowledgeBaseManager() {
       {/* Collections Grid */}
       <div className="flex-1 overflow-y-auto p-6">
         {isLoading ? (
-            <div className="flex items-center justify-center h-64">
+          <div className="flex items-center justify-center h-64">
             <LoadingSpinner size="large" />
           </div>
         ) : error ? (
@@ -121,7 +132,9 @@ export function KnowledgeBaseManager() {
               Failed to load collections
             </h3>
             <p className="text-sm text-foreground-secondary max-w-md">
-              {error instanceof Error ? error.message : "An unknown error occurred"}
+              {error instanceof Error
+                ? error.message
+                : "An unknown error occurred"}
             </p>
           </div>
         ) : !filteredCollections || filteredCollections.length === 0 ? (
@@ -151,7 +164,9 @@ export function KnowledgeBaseManager() {
                 key={collection.id}
                 collection={collection}
                 onDelete={handleDeleteCollection}
-                onUploadDocument={(id) => handleUploadClick(id, collection.name)}
+                onUploadDocument={(id) =>
+                  handleUploadClick(id, collection.name)
+                }
               />
             ))}
           </div>
@@ -176,4 +191,3 @@ export function KnowledgeBaseManager() {
     </div>
   );
 }
-

@@ -22,7 +22,11 @@ except Exception:  # pragma: no cover - optional dependency
 class GitLabResolverMixin(GitLabMixinBase):
     """Helper methods used for the GitLab Resolver."""
 
-    async def get_review_thread_comments(gitlab_client: GitlabClient, review_thread_id: int) -> list[ReviewThreadComment]:
+    async def get_review_thread_comments(
+        self,
+        gitlab_client: GitlabClient,
+        review_thread_id: int,
+    ) -> list[ReviewThreadComment]:
         """Fetch review thread comments for given thread id using authenticated GitLab client."""
         response = await gitlab_client.get_review_thread_comments(review_thread_id)
         notes = response.get("notes") or []

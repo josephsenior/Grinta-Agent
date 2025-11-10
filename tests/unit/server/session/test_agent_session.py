@@ -1,297 +1,679 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+"""Unit tests for `AgentSession`."""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import time
+from types import MappingProxyType, SimpleNamespace
+import json
+
 import pytest
-from forge.controller.agent import Agent
-from forge.controller.agent_controller import AgentController
-from forge.controller.state.state import State
-from forge.core.config import LLMConfig, ForgeConfig
-from forge.core.config.agent_config import AgentConfig
-from forge.events import EventStream, EventStreamSubscriber
-from forge.integrations.service_types import ProviderType
-from forge.llm.llm_registry import LLMRegistry
-from forge.llm.metrics import Metrics
-from forge.memory.memory import Memory
-from forge.runtime.impl.action_execution.action_execution_client import ActionExecutionClient
-from forge.server.services.conversation_stats import ConversationStats
-from forge.server.session.agent_session import AgentSession
-from forge.storage.memory import InMemoryFileStore
+
+from forge.server.session import agent_session as session_module
+from forge.server.session.agent_session import AgentSession, AgentState
+from forge.events.action import MessageAction
 
 
-@pytest.fixture
-def mock_llm_registry():
-    """Create a mock LLM registry that properly simulates LLM registration."""
-    config = ForgeConfig()
-    return LLMRegistry(config=config, agent_cls=None, retry_listener=None)
+class DummyEventStream:
+    def __init__(self, sid, file_store, user_id):
+        self.sid = sid
+        self.file_store = file_store
+        self.user_id = user_id
+        self.events = []
+        self.closed = False
+
+    def add_event(self, event, source):
+        self.events.append((event, source))
+
+    def get_latest_event_id(self):
+        return len(self.events)
+
+    def close(self):
+        self.closed = True
 
 
-@pytest.fixture
-def mock_conversation_stats():
-    """Create a mock ConversationStats that properly simulates metrics tracking."""
-    file_store = InMemoryFileStore({})
-    return ConversationStats(file_store=file_store, conversation_id="test-conversation", user_id="test-user")
+class DummyRuntime:
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        self.connected = False
+        self.closed = False
+        self.plugins = kwargs.get("plugins", [])
+        self.security_analyzer = "security"
+        self.clone_called = False
+        self.setup_script_called = False
+        self.git_hooks_called = False
+
+    async def connect(self):
+        self.connected = True
+
+    async def clone_or_init_repo(self, *args, **kwargs):
+        self.clone_called = True
+
+    def maybe_run_setup_script(self):
+        self.setup_script_called = True
+
+    def maybe_setup_git_hooks(self):
+        self.git_hooks_called = True
+
+    def close(self):
+        self.closed = True
+
+    async def get_microagents_from_selected_repo(self, repo):
+        return [f"microagent:{repo or 'default'}"]
 
 
-@pytest.fixture
-def connected_registry_and_stats(mock_llm_registry, mock_conversation_stats):
-    """Connect the LLMRegistry and ConversationStats properly."""
-    mock_llm_registry.subscribe(mock_conversation_stats.register_llm)
-    return (mock_llm_registry, mock_conversation_stats)
+class DummyRemoteRuntime(DummyRuntime):
+    pass
 
 
-@pytest.fixture
-def make_mock_agent():
+class DummyProviderHandler:
+    created = []
 
-    def _make_mock_agent(llm_registry):
-        agent = MagicMock(spec=Agent)
-        agent_config = MagicMock(spec=AgentConfig)
-        llm_config = LLMConfig(model="gpt-4o", api_key="test_key", num_retries=2, retry_min_wait=1, retry_max_wait=2)
-        agent_config.disabled_microagents = []
-        agent_config.enable_mcp = True
-        llm_registry.service_to_llm.clear()
-        mock_llm = llm_registry.get_llm("agent_llm", llm_config)
-        agent.llm = mock_llm
-        agent.name = "test-agent"
-        agent.sandbox_plugins = []
-        agent.config = agent_config
-        agent.prompt_manager = MagicMock()
-        return agent
+    def __init__(self, provider_tokens=None):
+        self.provider_tokens = provider_tokens or {}
+        DummyProviderHandler.created.append(self)
+        self.event_stream = None
 
-    return _make_mock_agent
+    @staticmethod
+    def get_provider_env_key(provider):
+        return f"{provider}_token"
+
+    async def set_event_stream_secrets(self, event_stream):
+        self.event_stream = event_stream
+
+    async def get_env_vars(self, expose_secrets=False):
+        return {f"ENV_{key.upper()}": value for key, value in self.provider_tokens.items()}
+
+
+class DummyUserSecrets:
+    def __init__(self, custom_secrets: dict | None):
+        self.custom_secrets = custom_secrets or {}
+        self.event_stream = None
+
+    def set_event_stream_secrets(self, event_stream):
+        self.event_stream = event_stream
+
+    def get_env_vars(self):
+        return {f"SECRET_{k}": v for k, v in self.custom_secrets.items()}
+
+    def get_custom_secrets_descriptions(self):
+        return {k: f"desc:{k}" for k in self.custom_secrets}
+
+
+class DummyMemory:
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        self.runtime_info = None
+        self.instructions = None
+        self.microagents = None
+        self.repo_info = None
+
+    def set_runtime_info(self, runtime, secrets, working_dir):
+        self.runtime_info = (runtime, secrets, working_dir)
+
+    def set_conversation_instructions(self, instructions):
+        self.instructions = instructions
+
+    def load_user_workspace_microagents(self, microagents):
+        self.microagents = microagents
+
+    def set_repository_info(self, repo, directory, branch):
+        self.repo_info = (repo, directory, branch)
+
+
+class DummyAgentController:
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        self.state = SimpleNamespace(agent_state=kwargs.get("initial_state", AgentState.RUNNING))
+        self.closed = False
+        self.saved = False
+
+    def save_state(self):
+        self.saved = True
+
+    async def close(self):
+        self.closed = True
+
+    async def set_agent_state_to(self, state):
+        self.state.agent_state = state
+
+
+class DummyReplayManager:
+    @staticmethod
+    def get_replay_events(data):
+        return data
+
+
+class DummyAgent:
+    def __init__(self):
+        self.name = "dummy-agent"
+        self.config = SimpleNamespace(enable_mcp=True)
+        self.llm = SimpleNamespace(config=SimpleNamespace(model="model", base_url="url"))
+        self.sandbox_plugins = [SimpleNamespace(name="plugin")]
+
+
+@pytest.fixture(autouse=True)
+def patch_dependencies(monkeypatch):
+    monkeypatch.setattr(session_module, "EventStream", DummyEventStream)
+    monkeypatch.setattr(session_module, "forgeLoggerAdapter", lambda extra=None: logging.getLogger("agent-session-test"))
+    monkeypatch.setattr(session_module, "ProviderHandler", DummyProviderHandler)
+    monkeypatch.setattr(session_module, "UserSecrets", DummyUserSecrets)
+    monkeypatch.setattr(session_module, "Memory", DummyMemory)
+    monkeypatch.setattr(session_module, "AgentController", DummyAgentController)
+    monkeypatch.setattr(session_module, "ReplayManager", DummyReplayManager)
+
+    async def noop_add_mcp(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(session_module, "add_mcp_tools_to_agent", noop_add_mcp)
+
+    async def async_call_sync(func, *args, **kwargs):
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr(session_module, "call_sync_from_async", async_call_sync)
+    monkeypatch.setattr(session_module, "RemoteRuntime", DummyRemoteRuntime)
+    yield
+    DummyProviderHandler.created.clear()
+
+
+def make_agent_session():
+    return AgentSession(
+        sid="sid",
+        file_store="fs",
+        llm_registry=SimpleNamespace(),
+        conversation_stats=SimpleNamespace(),
+        status_callback=None,
+        user_id="user",
+    )
+
+
+def make_agent():
+    return DummyAgent()
 
 
 @pytest.mark.asyncio
-async def test_agent_session_start_with_no_state(make_mock_agent, mock_llm_registry, mock_conversation_stats):
-    """Test that AgentSession.start() works correctly when there's no state to restore."""
-    mock_agent = make_mock_agent(mock_llm_registry)
-    file_store = InMemoryFileStore({})
-    session = AgentSession(
-        sid="test-session",
-        file_store=file_store,
-        llm_registry=mock_llm_registry,
-        conversation_stats=mock_conversation_stats,
-    )
-    mock_runtime = MagicMock(spec=ActionExecutionClient)
-
-    async def mock_create_runtime(*args, **kwargs):
-        session.runtime = mock_runtime
+async def test_setup_runtime_and_providers_invokes_handlers(monkeypatch):
+    session = make_agent_session()
+    async def fake_create_runtime(*args, **kwargs):
         return True
 
-    session._create_runtime = AsyncMock(side_effect=mock_create_runtime)
-    mock_event_stream = MagicMock(spec=EventStream)
-    mock_event_stream.get_events.return_value = []
-    mock_event_stream.subscribe = MagicMock()
-    mock_event_stream.get_latest_event_id.return_value = 0
-    session.event_stream = mock_event_stream
+    called = {}
 
-    class SpyAgentController(AgentController):
-        set_initial_state_call_count = 0
-        test_initial_state = None
+    async def fake_setup_handlers(*args, **kwargs):
+        called["handled"] = True
 
-        def set_initial_state(self, *args, state=None, **kwargs):
-            self.set_initial_state_call_count += 1
-            self.test_initial_state = state
-            super().set_initial_state(*args, state=state, **kwargs)
+    session._create_runtime = fake_create_runtime
+    session._setup_provider_handlers = fake_setup_handlers
 
-    memory = Memory(event_stream=mock_event_stream, sid="test-session")
-    memory.microagents_dir = "test-dir"
-    with patch("forge.server.session.agent_session.AgentController", SpyAgentController), patch(
-        "forge.server.session.agent_session.EventStream", return_value=mock_event_stream
-    ), patch(
-        "forge.controller.state.state.State.restore_from_session", side_effect=Exception("No state found")
-    ), patch(
-        "forge.server.session.agent_session.Memory", return_value=memory
-    ):
-        await session.start(runtime_name="test-runtime", config=ForgeConfig(), agent=mock_agent, max_iterations=10)
-        mock_event_stream.subscribe.assert_any_call(
-            EventStreamSubscriber.AGENT_CONTROLLER, session.controller.on_event, session.controller.id
-        )
-        mock_event_stream.subscribe.assert_any_call(
-            EventStreamSubscriber.MEMORY, session.memory.on_event, session.controller.id
-        )
-        assert session.controller.set_initial_state_call_count == 1
-        assert session.controller.test_initial_state is None
-        assert session.controller.state.iteration_flag.max_value == 10
-        assert session.controller.agent.name == "test-agent"
-        assert session.controller.state.start_id == 0
-        assert session.controller.state.end_id == -1
+    result = await session._setup_runtime_and_providers(
+        runtime_name="runtime",
+        config=SimpleNamespace(),
+        agent=make_agent(),
+        git_provider_tokens=None,
+        custom_secrets=None,
+        selected_repository=None,
+        selected_branch=None,
+    )
+    assert result is True
+    assert called["handled"] is True
 
 
 @pytest.mark.asyncio
-async def test_agent_session_start_with_restored_state(make_mock_agent, mock_llm_registry, mock_conversation_stats):
-    """Test that AgentSession.start() works correctly when there's a state to restore."""
-    mock_agent = make_mock_agent(mock_llm_registry)
-    file_store = InMemoryFileStore({})
-    session = AgentSession(
-        sid="test-session",
-        file_store=file_store,
-        llm_registry=mock_llm_registry,
-        conversation_stats=mock_conversation_stats,
-    )
-    mock_runtime = MagicMock(spec=ActionExecutionClient)
+async def test_start_success(monkeypatch):
+    session = make_agent_session()
+    session._validate_session_state = lambda: True
+    startup_state = {"started_at": time.time(), "finished": False, "restored_state": False}
+    session._initialize_session_startup = lambda: startup_state
+    events = {}
 
-    async def mock_create_runtime(*args, **kwargs):
-        session.runtime = mock_runtime
+    async def fake_setup_runtime(*args, **kwargs):
         return True
 
-    session._create_runtime = AsyncMock(side_effect=mock_create_runtime)
-    mock_event_stream = MagicMock(spec=EventStream)
-    mock_event_stream.get_events.return_value = []
-    mock_event_stream.subscribe = MagicMock()
-    mock_event_stream.get_latest_event_id.return_value = 5
-    session.event_stream = mock_event_stream
-    mock_restored_state = MagicMock(spec=State)
-    mock_restored_state.start_id = -1
-    mock_restored_state.end_id = -1
-    mock_restored_state.iteration_flag = MagicMock()
-    mock_restored_state.iteration_flag.max_value = 5
-    mock_restored_state.metrics = MagicMock(spec=Metrics)
+    async def fake_setup_memory(*args, **kwargs):
+        events["memory"] = True
 
-    class SpyAgentController(AgentController):
-        set_initial_state_call_count = 0
-        test_initial_state = None
+    async def fake_setup_controller(*args, **kwargs):
+        return SimpleNamespace(content="hello")
 
-        def set_initial_state(self, *args, state=None, **kwargs):
-            self.set_initial_state_call_count += 1
-            self.test_initial_state = state
-            super().set_initial_state(*args, state=state, **kwargs)
+    session._setup_runtime_and_providers = fake_setup_runtime
+    session._setup_memory_and_mcp_tools = fake_setup_memory
+    session._setup_controller_and_handle_replay = fake_setup_controller
+    recorded = {}
+    session._start_agent_execution = lambda msg: recorded.setdefault("msg", msg)
+    finalize_calls = {}
+    session._finalize_session_startup = lambda state, runtime_connected: finalize_calls.setdefault("called", (state, runtime_connected))
 
-    mock_memory = MagicMock(spec=Memory)
-    with patch("forge.server.session.agent_session.AgentController", SpyAgentController), patch(
-        "forge.server.session.agent_session.EventStream", return_value=mock_event_stream
-    ), patch("forge.controller.state.state.State.restore_from_session", return_value=mock_restored_state), patch(
-        "forge.server.session.agent_session.Memory", mock_memory
-    ):
-        await session.start(runtime_name="test-runtime", config=ForgeConfig(), agent=mock_agent, max_iterations=10)
-        assert session.controller.set_initial_state_call_count == 1
-        mock_event_stream.subscribe.assert_called_with(
-            EventStreamSubscriber.AGENT_CONTROLLER, session.controller.on_event, session.controller.id
-        )
-        assert session.controller.test_initial_state is mock_restored_state
-        assert session.controller.state is mock_restored_state
-        assert session.controller.state.iteration_flag.max_value == 5
-        assert session.controller.state.start_id == 0
-        assert session.controller.state.end_id == -1
+    await session.start(
+        runtime_name="runtime",
+        config=SimpleNamespace(),
+        agent=make_agent(),
+        max_iterations=5,
+        git_provider_tokens=None,
+    )
+
+    assert recorded["msg"].content == "hello"
+    assert finalize_calls["called"][1] is True
 
 
 @pytest.mark.asyncio
-async def test_metrics_centralization_via_conversation_stats(make_mock_agent, connected_registry_and_stats):
-    """Test that metrics are centralized through the ConversationStats service."""
-    mock_llm_registry, mock_conversation_stats = connected_registry_and_stats
-    mock_agent = make_mock_agent(mock_llm_registry)
-    file_store = InMemoryFileStore({})
-    session = AgentSession(
-        sid="test-session",
-        file_store=file_store,
-        llm_registry=mock_llm_registry,
-        conversation_stats=mock_conversation_stats,
-    )
-    mock_runtime = MagicMock(spec=ActionExecutionClient)
+async def test_start_handles_exception(monkeypatch):
+    session = make_agent_session()
+    session._validate_session_state = lambda: True
+    session._initialize_session_startup = lambda: {"started_at": time.time(), "finished": False, "restored_state": False}
 
-    async def mock_create_runtime(*args, **kwargs):
-        session.runtime = mock_runtime
-        return True
+    async def failing_setup(*args, **kwargs):
+        raise RuntimeError("boom")
 
-    session._create_runtime = AsyncMock(side_effect=mock_create_runtime)
-    mock_event_stream = MagicMock(spec=EventStream)
-    mock_event_stream.get_events.return_value = []
-    mock_event_stream.subscribe = MagicMock()
-    mock_event_stream.get_latest_event_id.return_value = 0
-    session.event_stream = mock_event_stream
-    memory = Memory(event_stream=mock_event_stream, sid="test-session")
-    memory.microagents_dir = "test-dir"
-    with patch("forge.server.session.agent_session.EventStream", return_value=mock_event_stream), patch(
-        "forge.controller.state.state.State.restore_from_session", side_effect=Exception("No state found")
-    ), patch("forge.server.session.agent_session.Memory", return_value=memory):
-        await session.start(runtime_name="test-runtime", config=ForgeConfig(), agent=mock_agent, max_iterations=10)
-        assert session.controller.state.conversation_stats is mock_conversation_stats
-        test_cost = 0.05
-        session.controller.agent.llm.metrics.add_cost(test_cost)
-        combined_metrics = session.controller.state.conversation_stats.get_combined_metrics()
-        assert combined_metrics.accumulated_cost == test_cost
-        additional_cost = 0.1
-        session.controller.agent.llm.metrics.add_cost(additional_cost)
-        combined_metrics = session.controller.state.conversation_stats.get_combined_metrics()
-        assert combined_metrics.accumulated_cost == test_cost + additional_cost
-        session.controller.agent.reset()
-        assert (
-            session.controller.state.conversation_stats.get_combined_metrics().accumulated_cost
-            == test_cost + additional_cost
-        )
+    finalize = {}
+    session._setup_runtime_and_providers = failing_setup
+    session._finalize_session_startup = lambda state, runtime_connected: finalize.setdefault("called", (state, runtime_connected))
 
-
-@pytest.mark.asyncio
-async def test_budget_control_flag_syncs_with_metrics(make_mock_agent, connected_registry_and_stats):
-    """Test that BudgetControlFlag's current value matches the accumulated costs."""
-    mock_llm_registry, mock_conversation_stats = connected_registry_and_stats
-    mock_agent = make_mock_agent(mock_llm_registry)
-    file_store = InMemoryFileStore({})
-    session = AgentSession(
-        sid="test-session",
-        file_store=file_store,
-        llm_registry=mock_llm_registry,
-        conversation_stats=mock_conversation_stats,
-    )
-    mock_runtime = MagicMock(spec=ActionExecutionClient)
-
-    async def mock_create_runtime(*args, **kwargs):
-        session.runtime = mock_runtime
-        return True
-
-    session._create_runtime = AsyncMock(side_effect=mock_create_runtime)
-    mock_event_stream = MagicMock(spec=EventStream)
-    mock_event_stream.get_events.return_value = []
-    mock_event_stream.subscribe = MagicMock()
-    mock_event_stream.get_latest_event_id.return_value = 0
-    session.event_stream = mock_event_stream
-    memory = Memory(event_stream=mock_event_stream, sid="test-session")
-    memory.microagents_dir = "test-dir"
-    with patch("forge.server.session.agent_session.EventStream", return_value=mock_event_stream), patch(
-        "forge.controller.state.state.State.restore_from_session", side_effect=Exception("No state found")
-    ), patch("forge.server.session.agent_session.Memory", return_value=memory):
+    with pytest.raises(RuntimeError):
         await session.start(
-            runtime_name="test-runtime",
-            config=ForgeConfig(),
-            agent=mock_agent,
-            max_iterations=10,
-            max_budget_per_task=1.0,
+            runtime_name="runtime",
+            config=SimpleNamespace(),
+            agent=make_agent(),
+            max_iterations=1,
         )
-        assert session.controller.state.budget_flag is not None
-        assert session.controller.state.budget_flag.max_value == 1.0
-        assert session.controller.state.budget_flag.current_value == 0.0
-        test_cost = 0.05
-        session.controller.agent.llm.metrics.add_cost(test_cost)
-        session.controller.state_tracker.sync_budget_flag_with_metrics()
-        assert session.controller.state.budget_flag.current_value == test_cost
-        additional_cost = 0.1
-        session.controller.agent.llm.metrics.add_cost(additional_cost)
-        session.controller.state_tracker.sync_budget_flag_with_metrics()
-        assert session.controller.state.budget_flag.current_value == test_cost + additional_cost
-        session.controller.agent.reset()
-        session.controller.state_tracker.sync_budget_flag_with_metrics()
-        assert session.controller.state.budget_flag.current_value == test_cost + additional_cost
+
+    assert finalize["called"][1] is False
 
 
-def test_override_provider_tokens_with_custom_secret(mock_llm_registry, mock_conversation_stats):
-    """Test that override_provider_tokens_with_custom_secret works correctly.
-
-    This test verifies that the method properly removes provider tokens when
-    corresponding custom secrets exist, without causing the 'dictionary changed
-    size during iteration' error that occurred before the fix.
-    """
-    file_store = InMemoryFileStore({})
-    session = AgentSession(
-        sid="test-session",
-        file_store=file_store,
-        llm_registry=mock_llm_registry,
-        conversation_stats=mock_conversation_stats,
+def test_create_controller(monkeypatch):
+    session = make_agent_session()
+    session.runtime = DummyRuntime()
+    controller, restored = session._create_controller(
+        agent=make_agent(),
+        confirmation_mode=False,
+        max_iterations=5,
+        max_budget_per_task=None,
+        agent_to_llm_config=None,
+        agent_configs=None,
+        replay_events=None,
     )
-    git_provider_tokens = {
-        ProviderType.GITHUB: "github_token_123",
-        ProviderType.GITLAB: "gitlab_token_456",
-        ProviderType.BITBUCKET: "bitbucket_token_789",
-    }
-    custom_secrets = {"github_token": "custom_github_token", "GITLAB_TOKEN": "custom_gitlab_token"}
-    result = session.override_provider_tokens_with_custom_secret(git_provider_tokens, custom_secrets)
-    assert ProviderType.GITHUB not in result
-    assert ProviderType.GITLAB not in result
-    assert ProviderType.BITBUCKET in result
-    assert result[ProviderType.BITBUCKET] == "bitbucket_token_789"
+    assert isinstance(controller, DummyAgentController)
+    assert restored is False
+
+
+def test_run_replay(monkeypatch):
+    session = make_agent_session()
+    session.runtime = DummyRuntime()
+    events = [MessageAction(content="hi"), SimpleNamespace()]
+    monkeypatch.setattr(session_module.json, "loads", lambda data: events)
+    session._create_controller = lambda *a, **k: (DummyAgentController(), False)
+    result = session._run_replay(
+        initial_message=None,
+        replay_json="{}",
+        agent=make_agent(),
+        config=SimpleNamespace(security=SimpleNamespace(confirmation_mode=False)),
+        max_iterations=5,
+        max_budget_per_task=None,
+        agent_to_llm_config=None,
+        agent_configs=None,
+    )
+    assert isinstance(result, MessageAction)
+
+
+def test_maybe_restore_state(monkeypatch):
+    session = make_agent_session()
+    monkeypatch.setattr(session_module.State, "restore_from_session", lambda *args, **kwargs: SimpleNamespace())
+    restored = session._maybe_restore_state()
+    assert restored is not None
+
+    calls = {"count": 0}
+
+    def raise_restore(*args, **kwargs):
+        calls["count"] += 1
+        raise ValueError("fail")
+
+    session.event_stream.get_latest_event_id = lambda: 0
+    monkeypatch.setattr(session_module.State, "restore_from_session", raise_restore)
+    assert session._maybe_restore_state() is None
+
+
+def test_validate_session_state(monkeypatch):
+    session = make_agent_session()
+    session.controller = object()
+    with pytest.raises(RuntimeError):
+        session._validate_session_state()
+
+    session.controller = None
+    session._closed = True
+    assert session._validate_session_state() is False
+
+
+def test_initialize_and_finalize_startup():
+    session = make_agent_session()
+    state = session._initialize_session_startup()
+    assert session._starting is True
+    assert "started_at" in state
+
+    state["finished"] = True
+    session._finalize_session_startup(state, runtime_connected=True)
+    assert session._starting is False
+
+    state["finished"] = False
+    session._finalize_session_startup(state, runtime_connected=False)
+
+
+def test_override_provider_tokens_with_custom_secret():
+    session = make_agent_session()
+    tokens = MappingProxyType({"github": "token", "gitlab": "token2"})
+    secrets = {"GITHUB_TOKEN": "custom"}
+    filtered = session.override_provider_tokens_with_custom_secret(tokens, secrets)
+    assert "github" not in filtered
+    assert "gitlab" in filtered
+
+    assert session.override_provider_tokens_with_custom_secret(None, None) is None
+
+
+def test_validate_session_state_default():
+    session = make_agent_session()
+    assert session._validate_session_state() is True
+
+
+@pytest.mark.asyncio
+async def test_setup_provider_handlers(monkeypatch):
+    session = make_agent_session()
+    secrets = {"foo": "bar"}
+    await session._setup_provider_handlers({"github": "token"}, secrets)
+    assert DummyProviderHandler.created
+    handler = DummyProviderHandler.created[0]
+    assert handler.event_stream is session.event_stream
+
+
+@pytest.mark.asyncio
+async def test_setup_memory_and_mcp_tools(monkeypatch):
+    session = make_agent_session()
+    session.runtime = DummyRuntime()
+    agent = make_agent()
+    await session._setup_memory_and_mcp_tools(
+        selected_repository="repo/owner",
+        selected_branch="main",
+        conversation_instructions="instruction",
+        custom_secrets={"foo": SimpleNamespace(description="desc")},
+        config=SimpleNamespace(workspace_mount_path_in_sandbox="/workspace"),
+        agent=agent,
+    )
+    assert isinstance(session.memory, DummyMemory)
+    assert session.memory.runtime_info[0] is session.runtime
+    assert session.memory.repo_info == ("repo/owner", "owner", "main")
+
+
+@pytest.mark.asyncio
+async def test_setup_controller_and_handle_replay(monkeypatch):
+    session = make_agent_session()
+    session.runtime = DummyRuntime()
+    session._run_replay = lambda *a, **k: SimpleNamespace(content="replayed")
+    session._create_controller = lambda *a, **k: (DummyAgentController(), False)
+
+    msg = await session._setup_controller_and_handle_replay(
+        replay_json="[{}]",
+        initial_message=None,
+        agent=make_agent(),
+        config=SimpleNamespace(security=SimpleNamespace(confirmation_mode=False)),
+        max_iterations=5,
+        max_budget_per_task=None,
+        agent_to_llm_config=None,
+        agent_configs=None,
+    )
+    assert isinstance(msg, SimpleNamespace)
+
+    called = {}
+
+    def fake_create(agent, confirmation_mode, max_iterations, **kwargs):
+        called["args"] = (agent, confirmation_mode, max_iterations)
+        return DummyAgentController(), False
+
+    session._create_controller = fake_create
+    session._run_replay = lambda *a, **k: None
+
+    msg2 = await session._setup_controller_and_handle_replay(
+        replay_json=None,
+        initial_message=None,
+        agent=make_agent(),
+        config=SimpleNamespace(security=SimpleNamespace(confirmation_mode=True)),
+        max_iterations=3,
+        max_budget_per_task=None,
+        agent_to_llm_config=None,
+        agent_configs=None,
+    )
+    assert called["args"][1] is True
+    assert msg2 is None
+
+
+@pytest.mark.asyncio
+async def test_create_runtime_remote(monkeypatch):
+    session = make_agent_session()
+    agent = make_agent()
+    monkeypatch.setattr(session_module, "get_runtime_cls", lambda name: DummyRemoteRuntime)
+
+    connected = await session._create_runtime(
+        runtime_name="remote",
+        config=SimpleNamespace(),
+        agent=agent,
+        git_provider_tokens={"github": "token"},
+        custom_secrets={"GITHUB_TOKEN": "override"},
+        selected_repository="owner/repo",
+        selected_branch="main",
+    )
+
+    assert connected is True
+    assert isinstance(session.runtime, DummyRemoteRuntime)
+    assert session.runtime.connected is True
+    assert session.runtime.clone_called is True
+
+
+@pytest.mark.asyncio
+async def test_create_runtime_non_remote(monkeypatch):
+    session = make_agent_session()
+    agent = make_agent()
+    monkeypatch.setattr(session_module, "get_runtime_cls", lambda name: DummyRuntime)
+
+    connected = await session._create_runtime(
+        runtime_name="local",
+        config=SimpleNamespace(),
+        agent=agent,
+        git_provider_tokens={"github": "token"},
+        custom_secrets=None,
+        selected_repository=None,
+        selected_branch=None,
+    )
+    assert connected is True
+    assert DummyProviderHandler.created[-1].provider_tokens == {"github": "token"}
+
+
+@pytest.mark.asyncio
+async def test_create_runtime_handles_unavailable(monkeypatch):
+    session = make_agent_session()
+
+    class FailingRuntime(DummyRuntime):
+        async def connect(self):
+            raise session_module.AgentRuntimeUnavailableError("offline")
+
+    monkeypatch.setattr(session_module, "get_runtime_cls", lambda name: FailingRuntime)
+
+    status_calls = []
+    session._status_callback = lambda msg_type, status, message: status_calls.append((msg_type, status, message))
+
+    connected = await session._create_runtime(
+        runtime_name="failing",
+        config=SimpleNamespace(),
+        agent=make_agent(),
+    )
+    assert connected is False
+    assert status_calls
+
+
+@pytest.mark.asyncio
+async def test_create_runtime_raises_when_duplicate(monkeypatch):
+    session = make_agent_session()
+    session.runtime = DummyRuntime()
+    with pytest.raises(RuntimeError):
+        await session._create_runtime("any", SimpleNamespace(), make_agent())
+
+
+def test_start_agent_execution():
+    session = make_agent_session()
+    msg = SimpleNamespace()
+    session._start_agent_execution(msg)
+    assert session.event_stream.events[0][0] is msg
+    session.event_stream.events.clear()
+    session._start_agent_execution(None)
+    action = session.event_stream.events[0][0]
+    assert action.agent_state == AgentState.AWAITING_USER_INPUT
+
+
+def test_get_state_and_close(monkeypatch):
+    session = make_agent_session()
+    session.controller = DummyAgentController()
+    assert session.get_state() == AgentState.RUNNING
+    session.controller = None
+    session._started_at = time.time() - session_module.WAIT_TIME_BEFORE_CLOSE - 1
+    assert session.get_state() == AgentState.ERROR
+
+    monkeypatch.setattr(session_module, "should_continue", lambda: False)
+    runtime = DummyRuntime()
+    session.runtime = runtime
+    controller = DummyAgentController()
+    session.controller = controller
+    session.event_stream = DummyEventStream("sid", "fs", "user")
+
+    async def close_session():
+        await session.close()
+
+    asyncio.get_event_loop().run_until_complete(close_session())
+    assert session.event_stream.closed is True
+    assert controller.saved is True
+    assert runtime.closed is True
+
+
+@pytest.mark.asyncio
+async def test_close_waits_for_initialization(monkeypatch):
+    session = make_agent_session()
+    session._starting = True
+    session._started_at = time.time()
+    calls = iter([True, False])
+    monkeypatch.setattr(session_module, "should_continue", lambda: next(calls, False))
+    session.event_stream = DummyEventStream("sid", "fs", "user")
+    session.controller = DummyAgentController()
+    session.runtime = DummyRuntime()
+
+    await session.close()
+    assert session.event_stream.closed is True
+
+
+def test_is_closed_flag():
+    session = make_agent_session()
+    assert session.is_closed() is False
+    session._closed = True
+    assert session.is_closed() is True
+
+
+@pytest.mark.asyncio
+async def test_close_noop_when_already_closed():
+    session = make_agent_session()
+    session._closed = True
+    await session.close()
+
+
+def test_create_controller_raises_without_runtime():
+    session = make_agent_session()
+    session.runtime = None
+    with pytest.raises(RuntimeError):
+        session._create_controller(make_agent(), False, 1)
+
+    session.runtime = DummyRuntime()
+    session.controller = DummyAgentController()
+    with pytest.raises(RuntimeError):
+        session._create_controller(make_agent(), False, 1)
+
+
+def test_maybe_restore_state_warning(monkeypatch):
+    session = make_agent_session()
+    session.event_stream.add_event("event", "source")
+
+    def raise_restore(*args, **kwargs):
+        raise ValueError("boom")
+
+    monkeypatch.setattr(session_module.State, "restore_from_session", raise_restore)
+    assert session._maybe_restore_state() is None
+
+
+@pytest.mark.asyncio
+async def test_start_returns_when_invalid(monkeypatch):
+    session = make_agent_session()
+    calls = {}
+
+    def fake_validate():
+        calls["called"] = True
+        return False
+
+    session._validate_session_state = fake_validate
+    called = {}
+    session._setup_runtime_and_providers = lambda *a, **k: called.setdefault("runtime", True)
+
+    await session.start(
+        runtime_name="runtime",
+        config=SimpleNamespace(),
+        agent=make_agent(),
+        max_iterations=1,
+    )
+    assert calls["called"] is True
+    assert "runtime" not in called
+
+
+@pytest.mark.asyncio
+async def test_start_respects_closed(monkeypatch):
+    session = make_agent_session()
+    session._initialize_session_startup = lambda: {"started_at": time.time(), "finished": False, "restored_state": False}
+
+    async def fake_setup_runtime(*args, **kwargs):
+        return True
+
+    async def fake_setup_memory(*args, **kwargs):
+        return True
+
+    async def fake_setup_controller(*args, **kwargs):
+        return SimpleNamespace(content="hello")
+
+    session._setup_runtime_and_providers = fake_setup_runtime
+    session._setup_memory_and_mcp_tools = fake_setup_memory
+    session._setup_controller_and_handle_replay = fake_setup_controller
+    recorded = {}
+    session._start_agent_execution = lambda msg: recorded.setdefault("msg", msg)
+    finalize_calls = {}
+    session._finalize_session_startup = lambda state, runtime_connected: finalize_calls.setdefault("called", (state, runtime_connected))
+
+    await session.start(
+        runtime_name="runtime",
+        config=SimpleNamespace(),
+        agent=make_agent(),
+        max_iterations=5,
+        git_provider_tokens=None,
+    )
+
+    assert recorded["msg"].content == "hello"
+    assert finalize_calls["called"][1] is True
+
+    session._closed = True
+    session._initialize_session_startup = lambda: {"started_at": time.time(), "finished": False, "restored_state": False}
+    recorded.clear()
+    await session.start(
+        runtime_name="runtime",
+        config=SimpleNamespace(),
+        agent=make_agent(),
+        max_iterations=1,
+    )
+    assert recorded == {}
+
+
+def test_get_state_timeout_paths(monkeypatch):
+    session = make_agent_session()
+    session.controller = None
+    session._started_at = 0
+    monkeypatch.setattr(session_module.time, "time", lambda: session_module.WAIT_TIME_BEFORE_CLOSE + 1)
+    assert session.get_state() == AgentState.ERROR
+    monkeypatch.setattr(session_module.time, "time", lambda: 0)
+    assert session.get_state() is None

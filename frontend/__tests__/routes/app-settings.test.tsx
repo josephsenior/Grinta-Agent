@@ -7,6 +7,7 @@ import { MOCK_DEFAULT_USER_SETTINGS } from "#/mocks/handlers";
 import { AvailableLanguages } from "#/i18n";
 import * as CaptureConsent from "#/utils/handle-capture-consent";
 import * as ToastHandlers from "#/utils/custom-toast-handlers";
+import { DEFAULT_SETTINGS } from "#/services/settings";
 import { renderWithProviders } from "../../test-utils";
 
 const renderAppSettingsScreen = () =>
@@ -229,6 +230,80 @@ describe("Form submission", () => {
     expect(saveSettingsSpy).toHaveBeenCalled();
 
     await waitFor(() => expect(submit).toBeDisabled());
+  });
+
+  it("should expose SaaS-only toggles and track their dirty state", async () => {
+    const getSettingsSpy = vi.spyOn(Forge, "getSettings");
+    getSettingsSpy.mockResolvedValue({
+      ...MOCK_DEFAULT_USER_SETTINGS,
+      enable_proactive_conversation_starters: false,
+      enable_solvability_analysis: false,
+    });
+    const getConfigSpy = vi.spyOn(Forge, "getConfig");
+    getConfigSpy.mockResolvedValue({
+      APP_MODE: "saas",
+      FEATURE_FLAGS: {},
+    });
+
+    renderAppSettingsScreen();
+
+    const submit = await screen.findByTestId("submit-button");
+    const proactive = await screen.findByTestId(
+      "enable-proactive-conversations-switch",
+    );
+    const solvability = await screen.findByTestId(
+      "enable-solvability-analysis-switch",
+    );
+
+    expect(submit).toBeDisabled();
+
+    await userEvent.click(proactive);
+    expect(submit).not.toBeDisabled();
+
+    await userEvent.click(proactive);
+    expect(submit).toBeDisabled();
+
+    await userEvent.click(solvability);
+    expect(submit).not.toBeDisabled();
+  });
+
+  it("should submit sanitized git and budget values", async () => {
+    const saveSettingsSpy = vi.spyOn(Forge, "saveSettings");
+    const getSettingsSpy = vi.spyOn(Forge, "getSettings");
+    getSettingsSpy.mockResolvedValue({
+      ...MOCK_DEFAULT_USER_SETTINGS,
+      max_budget_per_task: 250,
+      git_user_name: "custom-user",
+      git_user_email: "custom@example.com",
+    });
+
+    renderAppSettingsScreen();
+
+    const budgetInput = await screen.findByTestId("max-budget-per-task-input");
+    const gitNameInput = await screen.findByTestId("git-user-name-input");
+    const gitEmailInput = await screen.findByTestId("git-user-email-input");
+    const submit = await screen.findByTestId("submit-button");
+
+    expect(submit).toBeDisabled();
+
+    await userEvent.clear(budgetInput);
+
+    await userEvent.clear(gitNameInput);
+    await userEvent.clear(gitEmailInput);
+
+    await waitFor(() => expect(submit).not.toBeDisabled());
+
+    await userEvent.click(submit);
+
+    await waitFor(() => expect(saveSettingsSpy).toHaveBeenCalled());
+
+    expect(saveSettingsSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        max_budget_per_task: null,
+        git_user_name: DEFAULT_SETTINGS.GIT_USER_NAME,
+        git_user_email: DEFAULT_SETTINGS.GIT_USER_EMAIL,
+      }),
+    );
   });
 });
 

@@ -2,7 +2,10 @@
 
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
+
+from forge.core.config import LLMConfig
 from forge.core.config.forge_config import ForgeConfig
 from forge.events.action import MessageAction
 from forge.events.event import EventSource
@@ -12,7 +15,12 @@ from forge.server.conversation_manager.standalone_conversation_manager import St
 from forge.server.monitoring import MonitoringListener
 from forge.storage.data_models.settings import Settings
 from forge.storage.memory import InMemoryFileStore
-from forge.utils.conversation_summary import auto_generate_title
+from forge.utils.conversation_summary import (
+    _try_llm_title_generation,
+    auto_generate_title,
+    generate_conversation_title,
+    get_default_conversation_title,
+)
 
 
 @pytest.mark.asyncio
@@ -115,3 +123,70 @@ async def test_update_conversation_with_title():
         assert call_args[1]["type"] == "info"
         assert call_args[1]["message"] == conversation_id
         assert call_args[1]["conversation_title"] == "Generated Title"
+
+
+@pytest.mark.asyncio
+async def test_generate_conversation_title_blank_message():
+    llm_registry = MagicMock(spec=LLMRegistry)
+    llm_config = LLMConfig(model="test-model")
+    assert await generate_conversation_title("   ", llm_config, llm_registry) is None
+
+
+@pytest.mark.asyncio
+async def test_generate_conversation_title_truncates(monkeypatch):
+    llm_registry = MagicMock(spec=LLMRegistry)
+    llm_registry.request_extraneous_completion.return_value = "x" * 40
+    long_message = "A" * 1100
+    llm_config = LLMConfig(model="test-model")
+    result = await generate_conversation_title(long_message, llm_config, llm_registry, max_length=10)
+    assert result == "x" * 7 + "..."
+    args = llm_registry.request_extraneous_completion.call_args[0]
+    assert "conversation_title_creator" == args[0]
+    user_prompt = args[2][1]["content"]
+    assert "(truncated)" in user_prompt
+
+
+@pytest.mark.asyncio
+async def test_generate_conversation_title_handles_exception():
+    llm_registry = MagicMock(spec=LLMRegistry)
+    llm_registry.request_extraneous_completion.side_effect = RuntimeError("boom")
+    llm_config = LLMConfig(model="test-model")
+    assert await generate_conversation_title("hello", llm_config, llm_registry) is None
+
+
+@pytest.mark.asyncio
+async def test_auto_generate_title_handles_internal_errors(monkeypatch):
+    file_store = InMemoryFileStore()
+    llm_registry = MagicMock(spec=LLMRegistry)
+    settings = Settings(llm_model="model", llm_api_key="key")
+    monkeypatch.setattr(
+        "forge.utils.conversation_summary._get_first_user_message",
+        MagicMock(side_effect=RuntimeError("boom")),
+    )
+    title = await auto_generate_title("conversation", "user", file_store, settings, llm_registry)
+    assert title == ""
+
+
+def test_get_default_conversation_title():
+    assert get_default_conversation_title("abcdef12345").startswith("Conversation ")
+    assert get_default_conversation_title("abcdef12345").endswith("abcde")
+
+
+@pytest.mark.asyncio
+async def test_try_llm_title_generation_without_model():
+    assert await _try_llm_title_generation("msg", None, MagicMock(spec=LLMRegistry)) is None
+    settings = Settings(llm_model=None, llm_api_key=None)
+    assert await _try_llm_title_generation("msg", settings, MagicMock(spec=LLMRegistry)) is None
+
+
+@pytest.mark.asyncio
+async def test_try_llm_title_generation_handles_exception(monkeypatch):
+    settings = Settings(llm_model="model", llm_api_key="key")
+    llm_registry = MagicMock(spec=LLMRegistry)
+    async def fake_generate(message, llm_config, registry):
+        raise RuntimeError("boom")
+    monkeypatch.setattr(
+        "forge.utils.conversation_summary.generate_conversation_title",
+        fake_generate,
+    )
+    assert await _try_llm_title_generation("msg", settings, llm_registry) is None

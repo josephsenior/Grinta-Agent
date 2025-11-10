@@ -57,7 +57,6 @@ if (!(globalThis as any).jest) {
     clearAllMocks: vi.clearAllMocks,
     resetAllMocks: vi.resetAllMocks,
     restoreAllMocks: vi.restoreAllMocks,
-    setTimeout: vi.setTimeout,
     useFakeTimers: vi.useFakeTimers,
     useRealTimers: vi.useRealTimers,
     advanceTimersByTime: bind("advanceTimersByTime"),
@@ -83,12 +82,13 @@ if (typeof (globalThis as any).__TEST_SETTINGS_FEATURE_FLAGS === "undefined") {
 }
 
 declare global {
+  // @ts-expect-error - jest compatibility layer for vitest
   // eslint-disable-next-line no-var
   var jest: typeof vi;
   // eslint-disable-next-line no-var
-  var __TEST_APP_MODE: string;
+  var __TEST_APP_MODE: string | undefined;
   // eslint-disable-next-line no-var
-  var __TEST_SETTINGS_ERROR_STATUS: number;
+  var __TEST_SETTINGS_ERROR_STATUS: number | undefined;
   // eslint-disable-next-line no-var
   var __TEST_SETTINGS_FEATURE_FLAGS: Record<string, boolean>;
 }
@@ -207,7 +207,7 @@ beforeEach(() => {
     if (
       typeof window === "object" &&
       window !== null &&
-      typeof (window as Record<string, unknown>).navigator === "undefined"
+      typeof (window as unknown as Record<string, unknown>).navigator === "undefined"
     ) {
       Object.defineProperty(window, "navigator", {
         configurable: true,

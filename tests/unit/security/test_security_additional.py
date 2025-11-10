@@ -295,6 +295,20 @@ def test_invariant_analyzer_use_existing_client_and_rich_repr():
     assert ("role", "assistant") in rich_repr
 
 
+def test_invariant_analyzer_use_existing_client_handles_missing_server():
+    analyzer = InvariantAnalyzer.__new__(InvariantAnalyzer)
+    analyzer._initialize_basic_attributes(None)
+
+    class FaultyClient:
+        def __getattr__(self, item):
+            if item == "server":
+                raise RuntimeError("boom")
+            raise AttributeError(item)
+
+    analyzer._use_existing_client(FaultyClient())
+    assert analyzer.api_server is None
+
+
 def test_invariant_analyzer_setup_docker_client_handles_failure(monkeypatch: pytest.MonkeyPatch):
     analyzer = InvariantAnalyzer.__new__(InvariantAnalyzer)
     analyzer._initialize_basic_attributes(None)
@@ -367,6 +381,92 @@ def test_invariant_analyzer_create_new_container(monkeypatch: pytest.MonkeyPatch
     analyzer.container = SimpleNamespace(attrs={}, status="running")
     analyzer._get_api_port()
     assert analyzer.api_port == 4321
+
+
+def test_invariant_analyzer_create_new_client_with_fallback(monkeypatch: pytest.MonkeyPatch):
+    analyzer = InvariantAnalyzer.__new__(InvariantAnalyzer)
+    analyzer._initialize_basic_attributes("sid-1")
+
+    def fake_setup(self):
+        self.docker_client = None
+
+    analyzer._setup_docker_client = fake_setup.__get__(analyzer, InvariantAnalyzer)
+
+    monkeypatch.setattr("forge.runtime.utils.find_available_tcp_port", lambda: 9876)
+
+    class DummyClient:
+        def __init__(self, api_server, sid):
+            self.server = api_server
+            self.session_id = sid
+            self.Policy = SimpleNamespace(get_template=lambda: (None, None))
+            self.Monitor = SimpleNamespace(
+                from_string=lambda rule: SimpleNamespace(check=lambda past, pending: ([], None))
+            )
+
+    monkeypatch.setattr("forge.security.invariant.analyzer.InvariantClient", DummyClient)
+    analyzer._create_new_client()
+    assert analyzer.api_port == 9876
+    assert analyzer.api_server == f"{analyzer.api_host}:9876"
+
+def test_invariant_analyzer_setup_container_creates_new():
+    analyzer = InvariantAnalyzer.__new__(InvariantAnalyzer)
+    analyzer._initialize_basic_attributes(None)
+    created = {"called": False}
+
+    def fake_create(self):
+        created["called"] = True
+        self.container = SimpleNamespace(status="running")
+
+    analyzer._create_new_container = fake_create.__get__(analyzer, InvariantAnalyzer)
+    analyzer._wait_for_container_ready = lambda: None
+
+    class EmptyContainers:
+        def list(self, *, filters=None, all=False):
+            return []
+
+    analyzer.docker_client = SimpleNamespace(containers=EmptyContainers())
+    analyzer._setup_container()
+    assert created["called"] is True
+    assert analyzer.container.status == "running"
+
+def test_invariant_analyzer_wait_for_container_handles_lookup_failure(caplog: pytest.LogCaptureFixture):
+    analyzer = InvariantAnalyzer.__new__(InvariantAnalyzer)
+    analyzer._initialize_basic_attributes(None)
+
+    class ErrorContainers:
+        def get(self, name):
+            raise RuntimeError("not found")
+
+    analyzer.docker_client = SimpleNamespace(containers=ErrorContainers())
+    analyzer.container = SimpleNamespace(status="created")
+    with caplog.at_level("DEBUG"):
+        analyzer._wait_for_container_ready()
+    assert analyzer.container is None
+
+@pytest.mark.asyncio
+async def test_invariant_analyzer_security_risk_normalizes_unexpected_response():
+    class OddMonitor:
+        def __init__(self):
+            self.policy = ""
+
+        def from_string(self, rule):
+            return self
+
+        def check(self, past, pending):
+            return "not-a-tuple"
+
+    class StubPolicy:
+        def get_template(self):
+            return None, None
+
+    class StubClient:
+        def __init__(self):
+            self.Policy = StubPolicy()
+            self.Monitor = OddMonitor()
+
+    analyzer = InvariantAnalyzer(client=StubClient())
+    risk = await analyzer.security_risk(MessageAction("hi"))
+    assert risk == ActionSecurityRisk.LOW
 
 
 @pytest.mark.asyncio
@@ -449,22 +549,52 @@ def test_invariant_client_policy_monitor_success(monkeypatch: pytest.MonkeyPatch
     monitor = client.Monitor.from_string("rule")
     assert monitor.monitor_id == "mid"
 
+def test_invariant_client_init_raises_on_session_error(monkeypatch: pytest.MonkeyPatch):
+    def fake_create(self, session_id=None):  # type: ignore[override]
+        return (None, RuntimeError("fail"))
 
-def test_invariant_client_monitor_check_success(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(InvariantClient, "_create_session", fake_create)
+    with pytest.raises(RuntimeError):
+        InvariantClient("http://localhost:9999")
+
+def test_invariant_client_create_session_error_paths(monkeypatch: pytest.MonkeyPatch):
+    client = InvariantClient.__new__(InvariantClient)
+    client.server = "http://localhost:9999"
+    client.timeout = 1
+
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: (_ for _ in ()).throw(httpx.HTTPError("bad")))
+    session_id, err = InvariantClient._create_session(client)
+    assert session_id is None
+    assert isinstance(err, httpx.HTTPError)
+
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: (_ for _ in ()).throw(ValueError("boom")))
+    session_id, err = InvariantClient._create_session(client)
+    assert session_id is None
+    assert isinstance(err, ValueError)
+
+def test_invariant_client_policy_template_error(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(InvariantClient, "timeout", 0)
     client = InvariantClient("http://localhost:9999")
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: (_ for _ in ()).throw(httpx.TimeoutException("late")))
+    template, err = client.Policy.get_template()
+    assert template is None
+    assert isinstance(err, httpx.TimeoutException)
 
-    class DummyResponse:
-        def raise_for_status(self):
-            return None
+def test_invariant_client_policy_and_monitor_error_responses(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(InvariantClient, "timeout", 0)
+    client = InvariantClient("http://localhost:9999")
+    client.Policy.policy_id = "pid"
+    client.Monitor.monitor_id = "mid"
 
-        def json(self):
-            return ["ok"]
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: (_ for _ in ()).throw(httpx.HTTPError("policy")))
+    result, err = client.Policy.analyze([{}])
+    assert result is None
+    assert isinstance(err, httpx.HTTPError)
 
-    monkeypatch.setattr(httpx, "post", lambda *args, **kwargs: DummyResponse())
-    monitor = client.Monitor
-    monitor.monitor_id = "mid"
-    assert monitor.check([], [])[0] == ["ok"]
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: (_ for _ in ()).throw(httpx.TimeoutException("monitor")))
+    result, err = client.Monitor.check([], [])
+    assert result is None
+    assert isinstance(err, httpx.TimeoutException)
 
 
 def test_default_policy_constant():

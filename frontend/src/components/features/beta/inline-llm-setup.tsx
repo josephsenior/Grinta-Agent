@@ -11,8 +11,16 @@ interface InlineLLMSetupProps {
 }
 
 const POPULAR_MODELS = [
-  { id: "anthropic/claude-sonnet-4", name: "Claude Sonnet 4", provider: "Anthropic" },
-  { id: "anthropic/claude-haiku-4-5-20251001", name: "Claude Haiku 4.5", provider: "Anthropic" },
+  {
+    id: "anthropic/claude-sonnet-4",
+    name: "Claude Sonnet 4",
+    provider: "Anthropic",
+  },
+  {
+    id: "anthropic/claude-haiku-4-5-20251001",
+    name: "Claude Haiku 4.5",
+    provider: "Anthropic",
+  },
   { id: "openai/gpt-4o", name: "GPT-4o", provider: "OpenAI" },
   { id: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "OpenAI" },
 ];
@@ -20,7 +28,9 @@ const POPULAR_MODELS = [
 export function InlineLLMSetup({ onComplete }: InlineLLMSetupProps) {
   const { data: settings } = useSettings();
   const { mutate: saveSettings, isPending } = useSaveSettings();
-  const [selectedModel, setSelectedModel] = useState(settings?.LLM_MODEL || POPULAR_MODELS[1].id);
+  const [selectedModel, setSelectedModel] = useState(
+    settings?.LLM_MODEL || POPULAR_MODELS[1].id,
+  );
   const [apiKey, setApiKey] = useState("");
 
   const handleSave = () => {
@@ -79,8 +89,12 @@ export function InlineLLMSetup({ onComplete }: InlineLLMSetupProps) {
                     : "border-border hover:border-brand-500/50 hover:bg-background-tertiary/50"
                 }`}
               >
-                <div className="font-semibold text-foreground mb-1">{model.name}</div>
-                <div className="text-xs text-foreground-secondary">{model.provider}</div>
+                <div className="font-semibold text-foreground mb-1">
+                  {model.name}
+                </div>
+                <div className="text-xs text-foreground-secondary">
+                  {model.provider}
+                </div>
               </button>
             ))}
           </div>
@@ -127,7 +141,8 @@ export function InlineLLMSetup({ onComplete }: InlineLLMSetupProps) {
         {/* Info Box */}
         <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
           <p className="text-sm text-blue-400">
-            💡 <strong>Your API key stays on your device.</strong> We never store or transmit it to our servers.
+            💡 <strong>Your API key stays on your device.</strong> We never
+            store or transmit it to our servers.
           </p>
         </div>
 
@@ -155,4 +170,3 @@ export function InlineLLMSetup({ onComplete }: InlineLLMSetupProps) {
     </Card>
   );
 }
-

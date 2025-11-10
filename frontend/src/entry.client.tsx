@@ -6,12 +6,6 @@
  */
 
 // Polyfill for React scheduler performance API
-if (typeof performance === 'undefined') {
-  (globalThis as any).performance = {
-    now: () => Date.now(),
-  };
-}
-
 import React, { startTransition, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
@@ -21,7 +15,7 @@ import "./i18n";
 // Import CSS files
 import "./tailwind.css";
 import "./index.css";
-import "./styles/Forge-theme.css";
+import "./styles/forge-theme.css";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "./context/theme-context";
 import store from "./store";
@@ -30,6 +24,12 @@ import Forge from "./api/forge";
 import { displayErrorToast } from "./utils/custom-toast-handlers";
 import { queryClient } from "./query-client-config";
 import { performanceMonitor } from "./utils/performanceMonitor";
+
+if (typeof performance === "undefined") {
+  (globalThis as any).performance = {
+    now: () => Date.now(),
+  };
+}
 // Lazy load heavy dependencies
 const fileIconsCSS = import("file-icons-js/css/style.css");
 const fileIconsJS = import("file-icons-js");
@@ -336,160 +336,260 @@ prepareApp().then(async () => {
       // Create router with lazy-loaded routes for better code splitting
       const router = createBrowserRouter(
         [
+          {
+            path: "/",
+            Component: RootLayout, // Use Component instead of element to defer instantiation
+            HydrateFallback: () => <div className="min-h-screen bg-black" />,
+            children: [
+              {
+                index: true,
+                lazy: () =>
+                  import("./routes/home").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "accept-tos",
+                lazy: () =>
+                  import("./routes/accept-tos").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "about",
+                lazy: () =>
+                  import("./routes/about").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "contact",
+                lazy: () =>
+                  import("./routes/contact").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "terms",
+                lazy: () =>
+                  import("./routes/terms").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "privacy",
+                lazy: () =>
+                  import("./routes/privacy").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "settings",
+                lazy: () =>
+                  import("./routes/settings").then((m) => ({
+                    Component: m.default,
+                  })),
+                children: [
+                  {
+                    index: true,
+                    lazy: () =>
+                      import("./routes/llm-settings").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "mcp",
+                    lazy: () =>
+                      import("./routes/mcp-settings").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "user",
+                    lazy: () =>
+                      import("./routes/user-settings").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "integrations",
+                    lazy: () =>
+                      import("./routes/git-settings").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "databases",
+                    lazy: () =>
+                      import("./routes/database-settings").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "memory",
+                    lazy: () =>
+                      import("./routes/memory-settings").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "analytics",
+                    lazy: () =>
+                      import("./routes/analytics-settings").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "prompts",
+                    lazy: () =>
+                      import("./routes/prompts-settings").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "snippets",
+                    lazy: () =>
+                      import("./routes/snippets-settings").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "slack",
+                    lazy: () =>
+                      import("./routes/slack-settings").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "backup",
+                    lazy: () =>
+                      import("./routes/backup-settings").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "app",
+                    lazy: () =>
+                      import("./routes/app-settings").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "billing",
+                    lazy: () =>
+                      import("./routes/billing").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "secrets",
+                    lazy: () =>
+                      import("./routes/secrets-settings").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "api-keys",
+                    lazy: () =>
+                      import("./routes/api-keys").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                ],
+              },
+              {
+                path: "database-browser",
+                lazy: () =>
+                  import("./routes/database-browser").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "conversation",
+                lazy: () =>
+                  import("./routes/conversation-redirect").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "conversations",
+                lazy: () =>
+                  import("./routes/conversations-list").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "conversations/:conversationId",
+                lazy: () =>
+                  import("./routes/conversation").then((m) => ({
+                    Component: m.default,
+                  })),
+                children: [
+                  {
+                    index: true,
+                    lazy: () =>
+                      import("./routes/workspace-tab").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "browser",
+                    lazy: () =>
+                      import("./routes/browser-tab").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "jupyter",
+                    lazy: () =>
+                      import("./routes/jupyter-tab").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "served",
+                    lazy: () =>
+                      import("./routes/served-tab").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "terminal",
+                    lazy: () =>
+                      import("./routes/terminal-tab").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "vscode",
+                    lazy: () =>
+                      import("./routes/vscode-tab").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                ],
+              },
+              {
+                path: "microagent-management",
+                lazy: () =>
+                  import("./routes/microagent-management").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+            ],
+          },
+        ],
         {
-          path: "/",
-          Component: RootLayout,  // Use Component instead of element to defer instantiation
-          HydrateFallback: () => <div className="min-h-screen bg-black" />,
-          children: [
-            {
-              index: true,
-              lazy: () => import("./routes/home").then((m) => ({ Component: m.default })),
-            },
-            {
-              path: "accept-tos",
-              lazy: () => import("./routes/accept-tos").then((m) => ({ Component: m.default })),
-            },
-            {
-              path: "about",
-              lazy: () => import("./routes/about").then((m) => ({ Component: m.default })),
-            },
-            {
-              path: "contact",
-              lazy: () => import("./routes/contact").then((m) => ({ Component: m.default })),
-            },
-            {
-              path: "terms",
-              lazy: () => import("./routes/terms").then((m) => ({ Component: m.default })),
-            },
-            {
-              path: "privacy",
-              lazy: () => import("./routes/privacy").then((m) => ({ Component: m.default })),
-            },
-            {
-              path: "settings",
-              lazy: () => import("./routes/settings").then((m) => ({ Component: m.default })),
-              children: [
-                {
-                  index: true,
-                  lazy: () => import("./routes/llm-settings").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "mcp",
-                  lazy: () => import("./routes/mcp-settings").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "user",
-                  lazy: () => import("./routes/user-settings").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "integrations",
-                  lazy: () => import("./routes/git-settings").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "databases",
-                  lazy: () => import("./routes/database-settings").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "memory",
-                  lazy: () => import("./routes/memory-settings").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "analytics",
-                  lazy: () => import("./routes/analytics-settings").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "prompts",
-                  lazy: () => import("./routes/prompts-settings").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "snippets",
-                  lazy: () => import("./routes/snippets-settings").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "slack",
-                  lazy: () => import("./routes/slack-settings").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "backup",
-                  lazy: () => import("./routes/backup-settings").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "app",
-                  lazy: () => import("./routes/app-settings").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "billing",
-                  lazy: () => import("./routes/billing").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "secrets",
-                  lazy: () => import("./routes/secrets-settings").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "api-keys",
-                  lazy: () => import("./routes/api-keys").then((m) => ({ Component: m.default })),
-                },
-              ],
-            },
-            {
-              path: "database-browser",
-              lazy: () => import("./routes/database-browser").then((m) => ({ Component: m.default })),
-            },
-            {
-              path: "conversation",
-              lazy: () => import("./routes/conversation-redirect").then((m) => ({ Component: m.default })),
-            },
-            {
-              path: "conversations",
-              lazy: () => import("./routes/conversations-list").then((m) => ({ Component: m.default })),
-            },
-            {
-              path: "conversations/:conversationId",
-              lazy: () => import("./routes/conversation").then((m) => ({ Component: m.default })),
-              children: [
-                {
-                  index: true,
-                  lazy: () => import("./routes/workspace-tab").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "browser",
-                  lazy: () => import("./routes/browser-tab").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "jupyter",
-                  lazy: () => import("./routes/jupyter-tab").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "served",
-                  lazy: () => import("./routes/served-tab").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "terminal",
-                  lazy: () => import("./routes/terminal-tab").then((m) => ({ Component: m.default })),
-                },
-                {
-                  path: "vscode",
-                  lazy: () => import("./routes/vscode-tab").then((m) => ({ Component: m.default })),
-                },
-              ],
-            },
-            {
-              path: "microagent-management",
-              lazy: () => import("./routes/microagent-management").then((m) => ({ Component: m.default })),
-            },
-          ],
+          future: {
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+            v7_fetcherPersist: true,
+            v7_normalizeFormMethod: true,
+            v7_partialHydration: true,
+            v7_skipActionErrorRevalidation: true,
+          },
         },
-      ],
-      {
-        future: {
-          v7_startTransition: true,
-          v7_relativeSplatPath: true,
-          v7_fetcherPersist: true,
-          v7_normalizeFormMethod: true,
-          v7_partialHydration: true,
-          v7_skipActionErrorRevalidation: true,
-        },
-      });
+      );
 
       createRoot(rootEl).render(
         <ThemeProvider defaultTheme="dark">

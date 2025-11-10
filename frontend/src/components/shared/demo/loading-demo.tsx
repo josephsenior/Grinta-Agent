@@ -63,7 +63,9 @@ export function LoadingDemo() {
   } = useAsyncOperation();
 
   const simulateAsyncOperation = async () => {
-    await new Promise((resolve) => { setTimeout(resolve, 2000); });
+    await new Promise((resolve) => {
+      setTimeout(resolve, 2000);
+    });
     if (Math.random() > 0.5) {
       throw new Error("Simulated API error");
     }
@@ -170,7 +172,9 @@ export function LoadingDemo() {
               type="button"
               onClick={() =>
                 withLoading(async () => {
-                  await new Promise((resolve) => { setTimeout(resolve, 2000); });
+                  await new Promise((resolve) => {
+                    setTimeout(resolve, 2000);
+                  });
                 })
               }
             >

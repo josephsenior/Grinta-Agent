@@ -74,7 +74,9 @@ interface ConversationCardController {
   setSystemModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
   microagentsModalVisible: boolean;
   setMicroagentsModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
-  systemMessage: ReturnType<typeof useWsClient>["parsedEvents"][number] | undefined;
+  systemMessage:
+    | ReturnType<typeof useWsClient>["parsedEvents"][number]
+    | undefined;
   metrics: RootState["metrics"];
 }
 
@@ -103,12 +105,13 @@ function useConversationCardController({
   const [titleMode, setTitleMode] = React.useState<TitleMode>("view");
   const [metricsModalVisible, setMetricsModalVisible] = React.useState(false);
   const [systemModalVisible, setSystemModalVisible] = React.useState(false);
-  const [microagentsModalVisible, setMicroagentsModalVisible] = React.useState(false);
+  const [microagentsModalVisible, setMicroagentsModalVisible] =
+    React.useState(false);
 
   const handleBlur = React.useMemo(
     () =>
       createBlurHandler({
-        inputRef,
+        inputRef: inputRef as React.RefObject<HTMLInputElement>,
         title,
         onChangeTitle,
         setTitleMode,
@@ -139,7 +142,8 @@ function useConversationCardController({
   );
 
   const handleDownloadViaVSCode = React.useMemo(
-    () => createDownloadHandler({ conversationId, onToggle: onContextMenuToggle }),
+    () =>
+      createDownloadHandler({ conversationId, onToggle: onContextMenuToggle }),
     [conversationId, onContextMenuToggle],
   );
 
@@ -244,7 +248,7 @@ function useConversationCardController({
 
   return {
     titleMode,
-    inputRef,
+    inputRef: inputRef as React.RefObject<HTMLInputElement>,
     handleInputClick,
     handleBlur,
     handleKeyUp,
@@ -277,7 +281,9 @@ type ConversationCardMenuHandlers = {
   delete?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   stop?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   edit?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  download?: (event: React.MouseEvent<HTMLButtonElement>) => Promise<void> | void;
+  download?: (
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => Promise<void> | void;
   displayCost?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   showAgentTools?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   showMicroagents?: (event: React.MouseEvent<HTMLButtonElement>) => void;
@@ -411,7 +417,9 @@ function buildMenuActions({
   conversationId?: string;
   showOptions?: boolean;
   conversationStatus: ConversationStatus;
-  systemMessage: ReturnType<typeof useWsClient>["parsedEvents"][number] | undefined;
+  systemMessage:
+    | ReturnType<typeof useWsClient>["parsedEvents"][number]
+    | undefined;
 }): ConversationCardMenuActions {
   return {
     canDelete: Boolean(onDelete),
@@ -453,7 +461,9 @@ function buildMenuHandlers({
   handleDisplayCost: ReturnType<typeof createDisplayCostHandler>;
   handleShowAgentTools: ReturnType<typeof createShowAgentToolsHandler>;
   handleShowMicroagents: ReturnType<typeof createShowMicroagentsHandler>;
-  systemMessage: ReturnType<typeof useWsClient>["parsedEvents"][number] | undefined;
+  systemMessage:
+    | ReturnType<typeof useWsClient>["parsedEvents"][number]
+    | undefined;
 }): ConversationCardMenuHandlers {
   const conditionalHandlers: Array<{
     condition: boolean;
@@ -468,7 +478,11 @@ function buildMenuHandlers({
       key: "download",
       handler: handleDownloadViaVSCode,
     },
-    { condition: Boolean(showOptions), key: "displayCost", handler: handleDisplayCost },
+    {
+      condition: Boolean(showOptions),
+      key: "displayCost",
+      handler: handleDisplayCost,
+    },
     {
       condition: Boolean(showOptions && systemMessage),
       key: "showAgentTools",
@@ -484,7 +498,7 @@ function buildMenuHandlers({
   return conditionalHandlers.reduce<ConversationCardMenuHandlers>(
     (handlers, { condition, key, handler }) => {
       if (condition) {
-        handlers[key] = handler;
+        handlers[key] = handler as any;
       }
       return handlers;
     },
@@ -691,7 +705,9 @@ function ConversationCardMenuContent({
         onEdit={actions.canEdit ? handleEdit : undefined}
         onDownloadViaVSCode={actions.canDownload ? handleDownload : undefined}
         onDisplayCost={actions.canDisplayCost ? displayCost : undefined}
-        onShowAgentTools={actions.canShowAgentTools ? showAgentTools : undefined}
+        onShowAgentTools={
+          actions.canShowAgentTools ? showAgentTools : undefined
+        }
         onShowMicroagents={
           actions.canShowMicroagents ? showMicroagents : undefined
         }
@@ -728,21 +744,21 @@ function ConversationCardMetadata({
       {selectedRepository?.selected_repository && (
         <ConversationRepoLink
           selectedRepository={selectedRepository}
-          variant={variant}
+          variant={variant ?? "default"}
         />
       )}
       {(createdAt || lastUpdatedAt) && (
         <div className="flex items-center gap-1 text-[11px] text-foreground-secondary font-medium tracking-wide">
           <Clock3 className="w-3 h-3 opacity-60 text-foreground-secondary" />
           <span>
-            {t(I18nKey.CONVERSATION$CREATED)} {""}
-            <ClientTimeDelta dateIso={createdAt || lastUpdatedAt} /> {""}
+            {t(I18nKey.CONVERSATION$CREATED)}
+            <ClientTimeDelta dateIso={createdAt || lastUpdatedAt} />
             {t(I18nKey.CONVERSATION$AGO)}
           </span>
           {showUpdateTime && (
             <span className="inline-flex items-center gap-1 before:content-['•'] before:text-foreground-secondary/60 before:px-1">
-              {t(I18nKey.CONVERSATION$UPDATED)} {""}
-              <ClientTimeDelta dateIso={lastUpdatedAt} /> {""}
+              {t(I18nKey.CONVERSATION$UPDATED)}
+              <ClientTimeDelta dateIso={lastUpdatedAt} />
               {t(I18nKey.CONVERSATION$AGO)}
             </span>
           )}
@@ -891,9 +907,12 @@ function MetricsUsageSection({
     return null;
   }
 
-  const usage = metrics.usage;
+  const { usage } = metrics;
   const totalTokens = usage.prompt_tokens + usage.completion_tokens;
-  const contextUsagePercentage = ((usage.per_turn_token / usage.context_window) * 100).toFixed(2);
+  const contextUsagePercentage = (
+    (usage.per_turn_token / usage.context_window) *
+    100
+  ).toFixed(2);
 
   return (
     <>
@@ -939,7 +958,11 @@ function MetricsUsageSection({
         </span>
       </div>
 
-      <MetricsContextWindow usage={usage} contextUsagePercentage={contextUsagePercentage} t={t} />
+      <MetricsContextWindow
+        usage={usage}
+        contextUsagePercentage={contextUsagePercentage}
+        t={t}
+      />
     </>
   );
 }
@@ -964,14 +987,14 @@ function MetricsContextWindow({
         <div
           className="h-full bg-gradient-to-r from-brand-500 to-accent-500 transition-all duration-300"
           style={{
-            width: `${Math.min(100, (usage.per_turn_token / usage.context_window) * 100)}%`,
+            width: `${Math.min(100, ((usage?.per_turn_token ?? 0) / (usage?.context_window ?? 1)) * 100)}%`,
           }}
         />
       </div>
       <div className="flex justify-end">
         <span className="text-xs text-foreground-secondary">
-          <ClientNumber value={usage.per_turn_token} /> {"/"}{" "}
-          <ClientNumber value={usage.context_window} /> {"("}
+          <ClientNumber value={usage?.per_turn_token ?? 0} /> {"/"}{" "}
+          <ClientNumber value={usage?.context_window ?? 0} /> (
           {contextUsagePercentage}% {t(I18nKey.CONVERSATION$USED)})
         </span>
       </div>

@@ -144,9 +144,12 @@ export async function exportSnippets(params?: {
   return response.json();
 }
 
-export async function importSnippets(
-  collection: SnippetCollection,
-): Promise<{ imported: number; updated: number; skipped: number; total: number }> {
+export async function importSnippets(collection: SnippetCollection): Promise<{
+  imported: number;
+  updated: number;
+  skipped: number;
+  total: number;
+}> {
   const response = await fetch(`${API_BASE}/import`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -173,4 +176,3 @@ export async function trackSnippetUsage(
 
   return response.json();
 }
-

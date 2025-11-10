@@ -29,7 +29,9 @@ export const PerformanceOptimizedImage: React.FC<
         className={`bg-background-tertiary flex items-center justify-center ${className}`}
         style={{ width, height }}
       >
-        <span className="text-foreground-secondary text-sm">Image failed to load</span>
+        <span className="text-foreground-secondary text-sm">
+          Image failed to load
+        </span>
       </div>
     );
   }

@@ -1,7 +1,7 @@
 import React from "react";
-import { Editor, Monaco } from "@monaco-editor/react";
+import { Editor } from "@monaco-editor/react";
 import { editor as editor_t } from "monaco-editor";
-import { Copy, Check, FileText, ChevronRight, Zap } from "lucide-react";
+import { Copy, Check, FileText, Zap } from "lucide-react";
 import { cn } from "#/utils/utils";
 import { getLanguageFromPath } from "#/utils/get-language-from-path";
 
@@ -12,11 +12,11 @@ interface StreamingFileViewerProps {
   className?: string;
 }
 
-export function StreamingFileViewer({ 
-  path, 
-  content, 
+export function StreamingFileViewer({
+  path,
+  content,
   isStreaming = false,
-  className 
+  className,
 }: StreamingFileViewerProps) {
   const editorRef = React.useRef<editor_t.IStandaloneCodeEditor | null>(null);
   const [copied, setCopied] = React.useState(false);
@@ -31,14 +31,16 @@ export function StreamingFileViewer({
       editorRef.current.setValue(content);
       // Scroll to bottom for streaming content
       if (isStreaming) {
-        editorRef.current.revealLine(editorRef.current.getModel()?.getLineCount() || 1);
+        editorRef.current.revealLine(
+          editorRef.current.getModel()?.getLineCount() || 1,
+        );
       }
     }
   }, [content, isStreaming]);
 
   const handleEditorDidMount = (editor: editor_t.IStandaloneCodeEditor) => {
     editorRef.current = editor;
-    
+
     // Configure editor for streaming content
     editor.updateOptions({
       readOnly: true,
@@ -54,12 +56,12 @@ export function StreamingFileViewer({
     const model = editor.getModel();
     if (model) {
       setLineCount(model.getLineCount());
-      
+
       // Listen for content changes to update line count
       const disposable = model.onDidChangeContent(() => {
         setLineCount(model.getLineCount());
       });
-      
+
       // Cleanup on unmount
       return () => disposable.dispose();
     }
@@ -76,7 +78,9 @@ export function StreamingFileViewer({
   };
 
   return (
-    <div className={cn("h-full flex flex-col bg-background-primary", className)}>
+    <div
+      className={cn("h-full flex flex-col bg-background-primary", className)}
+    >
       {/* Header */}
       <div className="flex-none border-b border-border bg-background-secondary">
         <div className="flex items-center justify-between px-4 py-2.5">

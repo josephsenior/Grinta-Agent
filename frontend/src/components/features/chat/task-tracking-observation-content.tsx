@@ -1,7 +1,6 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { TaskTrackingObservation } from "#/types/core/observations";
 import { useTasks } from "#/context/task-context";
-import { StatusIndicator } from "./status-indicator";
 
 interface TaskTrackingObservationContentProps {
   event: TaskTrackingObservation;
@@ -13,7 +12,8 @@ export function TaskTrackingObservationContent({
   const { updateTasks } = useTasks();
 
   const extras = event.extras ?? {};
-  const command = typeof extras.command === "string" ? extras.command : undefined;
+  const command =
+    typeof extras.command === "string" ? extras.command : undefined;
   const rawTaskList = Array.isArray(extras.task_list) ? extras.task_list : [];
   const shouldShowTaskList = command === "plan" && rawTaskList.length > 0;
 
@@ -24,10 +24,14 @@ export function TaskTrackingObservationContent({
         const safeTasks = (rawTaskList ?? []).map((it) => {
           if (typeof it === "object" && it !== null) {
             const rec = it as Record<string, unknown>;
-            const id = String(rec["id"] ?? "");
-            const title = String(rec["title"] ?? "");
-            const statusRaw = String(rec["status"] ?? "todo");
-            const status = (["todo", "in_progress", "done", "cancelled"].includes(statusRaw) ? statusRaw : "todo") as "todo" | "in_progress" | "done" | "cancelled";
+            const id = String(rec.id ?? "");
+            const title = String(rec.title ?? "");
+            const statusRaw = String(rec.status ?? "todo");
+            const status = (
+              ["todo", "in_progress", "done", "cancelled"].includes(statusRaw)
+                ? statusRaw
+                : "todo"
+            ) as "todo" | "in_progress" | "done" | "cancelled";
             return { id, title, status };
           }
           return { id: "", title: "", status: "todo" as const };

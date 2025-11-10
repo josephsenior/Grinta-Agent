@@ -25,7 +25,7 @@ function SlackSettingsScreen() {
       const response = await installMutation.mutateAsync({
         redirect_url: window.location.href,
       });
-      
+
       // Redirect to Slack OAuth
       if (response.url) {
         window.location.href = response.url;
@@ -77,37 +77,48 @@ function SlackSettingsScreen() {
               1
             </div>
             <div>
-              <p className="font-medium text-foreground">Install the Forge app to your Slack workspace</p>
+              <p className="font-medium text-foreground">
+                Install the Forge app to your Slack workspace
+              </p>
               <p>Click "Add to Slack" above to start the OAuth flow</p>
             </div>
           </div>
-          
+
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs font-bold">
               2
             </div>
             <div>
-              <p className="font-medium text-foreground">Mention @Forge in any channel or thread</p>
+              <p className="font-medium text-foreground">
+                Mention @Forge in any channel or thread
+              </p>
               <p>The bot will start a new Forge conversation</p>
             </div>
           </div>
-          
+
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs font-bold">
               3
             </div>
             <div>
-              <p className="font-medium text-foreground">Get real-time updates in the Slack thread</p>
-              <p>The agent will post its thoughts, commands, and results directly to Slack</p>
+              <p className="font-medium text-foreground">
+                Get real-time updates in the Slack thread
+              </p>
+              <p>
+                The agent will post its thoughts, commands, and results directly
+                to Slack
+              </p>
             </div>
           </div>
-          
+
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs font-bold">
               4
             </div>
             <div>
-              <p className="font-medium text-foreground">Reply in the thread to continue the conversation</p>
+              <p className="font-medium text-foreground">
+                Reply in the thread to continue the conversation
+              </p>
               <p>No need to @mention again - just type your message!</p>
             </div>
           </div>
@@ -189,17 +200,27 @@ function SlackSettingsScreen() {
         </h3>
         <div className="space-y-3 text-sm text-foreground-secondary">
           <p>
-            To enable Slack integration, administrators need to configure the following
-            environment variables on the server:
+            To enable Slack integration, administrators need to configure the
+            following environment variables on the server:
           </p>
           <ul className="list-disc list-inside space-y-1 ml-2">
-            <li><code className="text-xs bg-background px-1 py-0.5 rounded">SLACK_CLIENT_ID</code></li>
-            <li><code className="text-xs bg-background px-1 py-0.5 rounded">SLACK_CLIENT_SECRET</code></li>
-            <li><code className="text-xs bg-background px-1 py-0.5 rounded">SLACK_SIGNING_SECRET</code></li>
+            <li>
+              <code className="text-xs bg-background px-1 py-0.5 rounded">
+                SLACK_CLIENT_ID
+              </code>
+            </li>
+            <li>
+              <code className="text-xs bg-background px-1 py-0.5 rounded">
+                SLACK_CLIENT_SECRET
+              </code>
+            </li>
+            <li>
+              <code className="text-xs bg-background px-1 py-0.5 rounded">
+                SLACK_SIGNING_SECRET
+              </code>
+            </li>
           </ul>
-          <p className="mt-3">
-            Get these credentials by creating a Slack app:
-          </p>
+          <p className="mt-3">Get these credentials by creating a Slack app:</p>
           <a
             href="https://api.slack.com/apps"
             target="_blank"
@@ -213,9 +234,7 @@ function SlackSettingsScreen() {
 
       {/* Features */}
       <Card className="p-6 bg-black border-violet-500/20">
-        <h3 className="text-sm font-semibold text-foreground mb-3">
-          Features
-        </h3>
+        <h3 className="text-sm font-semibold text-foreground mb-3">Features</h3>
         <ul className="space-y-2 text-sm text-foreground-secondary">
           <li className="flex items-start gap-2">
             <CheckCircle className="w-4 h-4 text-success-500 flex-shrink-0 mt-0.5" />
@@ -223,7 +242,9 @@ function SlackSettingsScreen() {
           </li>
           <li className="flex items-start gap-2">
             <CheckCircle className="w-4 h-4 text-success-500 flex-shrink-0 mt-0.5" />
-            <span>Continue conversations by replying in threads (no @mention needed)</span>
+            <span>
+              Continue conversations by replying in threads (no @mention needed)
+            </span>
           </li>
           <li className="flex items-start gap-2">
             <CheckCircle className="w-4 h-4 text-success-500 flex-shrink-0 mt-0.5" />
@@ -244,4 +265,3 @@ function SlackSettingsScreen() {
 }
 
 export default SlackSettingsScreen;
-

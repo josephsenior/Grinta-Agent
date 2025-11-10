@@ -1,7 +1,22 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
-import { Files, Search, RefreshCw, Zap, Folder, Eye, Download, Copy } from "lucide-react";
+import {
+  Files,
+  Search,
+  RefreshCw,
+  Zap,
+  Folder,
+  Eye,
+  Download,
+  Copy,
+} from "lucide-react";
 import { FileDiffViewer } from "#/components/features/diff-viewer/file-diff-viewer";
 import { StreamingFileViewer } from "#/components/features/diff-viewer/streaming-file-viewer";
 import FileTree, {
@@ -94,9 +109,7 @@ export default function GitChanges() {
   const controller = useGitChangesController();
 
   if (controller.showEmptyState) {
-    return (
-      <StatusSection messages={controller.statusMessage} t={t} />
-    );
+    return <StatusSection messages={controller.statusMessage} t={t} />;
   }
 
   return (
@@ -122,14 +135,17 @@ function useGitChangesController(): GitChangesController {
 
   const streamingChunks = useStreamingChunks();
   const latestStreamingContent = useLatestStreamingContent();
-  const isStreaming = streamingChunks.length > 0 &&
+  const isStreaming =
+    streamingChunks.length > 0 &&
     streamingChunks[streamingChunks.length - 1]?.args.is_final === false;
 
   const [viewMode, setViewMode] = useState<ViewMode>("changes");
   const [allFiles, setAllFiles] = useState<string[]>([]);
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
   const [loadingAllFiles, setLoadingAllFiles] = useState(false);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set(),
+  );
   const [selectedFileContent, setSelectedFileContent] = useState("");
   const [loadingFileContent, setLoadingFileContent] = useState(false);
   const [selected, setSelected] = useState<FileSelection | null>(null);
@@ -169,7 +185,7 @@ function useGitChangesController(): GitChangesController {
     try {
       const response = await Forge.getFiles(conversationId);
       const normalized: string[] = (response || []).map((entry: any) =>
-        typeof entry === "string" ? entry : entry?.path ?? "",
+        typeof entry === "string" ? entry : (entry?.path ?? ""),
       );
       setAllFiles(normalized);
       setFileTree(buildFileTree(normalized));
@@ -271,7 +287,10 @@ function useGitChangesController(): GitChangesController {
 
       if (event.key === "ArrowDown") {
         event.preventDefault();
-        const nextIndex = Math.min(currentIndex + 1, filteredChanges.length - 1);
+        const nextIndex = Math.min(
+          currentIndex + 1,
+          filteredChanges.length - 1,
+        );
         const next = filteredChanges[nextIndex];
         setSelected({ path: next.path ?? "", status: next.status });
       } else if (event.key === "ArrowUp") {
@@ -311,7 +330,7 @@ function useGitChangesController(): GitChangesController {
     expandedFolders,
     onToggleFolder: toggleFolder,
     onAllFileSelect: handleAllFileSelect,
-    fileListRef,
+    fileListRef: fileListRef as React.RefObject<HTMLDivElement>,
   };
 
   const viewerProps: GitChangesViewerProps = {
@@ -337,7 +356,7 @@ function useGitChangesController(): GitChangesController {
   };
 }
 
-const HeaderTitleSection = ({
+function HeaderTitleSection({
   viewMode,
   changesLabel,
   allFilesLabel,
@@ -355,7 +374,7 @@ const HeaderTitleSection = ({
   searchQuery: string;
   totalChangesCount: number;
   t: TFunction;
-}) => {
+}) {
   const isChangesView = viewMode === "changes";
   const TitleIcon = isChangesView ? Files : Folder;
   const title = isChangesView ? changesLabel : allFilesLabel;
@@ -370,14 +389,15 @@ const HeaderTitleSection = ({
       </span>
       {isChangesView && searchQuery && (
         <span className="text-[10px] text-foreground-secondary">
-          ({t("WORKSPACE$FILTERED_FROM", { defaultValue: "filtered from" })} {totalChangesCount})
+          ({t("WORKSPACE$FILTERED_FROM", { defaultValue: "filtered from" })}{" "}
+          {totalChangesCount})
         </span>
       )}
     </div>
   );
-};
+}
 
-const GitChangesViewModeToggle = ({
+function GitChangesViewModeToggle({
   viewMode,
   onChangeViewMode,
   changesLabel,
@@ -389,40 +409,46 @@ const GitChangesViewModeToggle = ({
   changesLabel: string;
   allFilesLabel: string;
   t: TFunction;
-}) => (
-  <div className="flex items-center border border-violet-500/20 rounded-md p-0.5 mr-1">
-    <button
-      type="button"
-      onClick={() => onChangeViewMode("changes")}
-      className={cn(
-        "px-2 py-1 text-[10px] font-medium rounded transition-all duration-150",
-        viewMode === "changes"
-          ? "bg-brand-500 text-white"
-          : "text-foreground-secondary hover:text-foreground hover:bg-black",
-      )}
-      title={t("WORKSPACE$SHOW_CHANGED_FILES", { defaultValue: "Show only changed files" })}
-    >
-      <Files className="w-3 h-3 inline mr-1" />
-      {changesLabel}
-    </button>
-    <button
-      type="button"
-      onClick={() => onChangeViewMode("all")}
-      className={cn(
-        "px-2 py-1 text-[10px] font-medium rounded transition-all duration-150",
-        viewMode === "all"
-          ? "bg-brand-500 text-white"
-          : "text-foreground-secondary hover:text-foreground hover:bg-black",
-      )}
-      title={t("WORKSPACE$SHOW_ALL_FILES", { defaultValue: "Show all workspace files" })}
-    >
-      <Folder className="w-3 h-3 inline mr-1" />
-      {allFilesLabel}
-    </button>
-  </div>
-);
+}) {
+  return (
+    <div className="flex items-center border border-violet-500/20 rounded-md p-0.5 mr-1">
+      <button
+        type="button"
+        onClick={() => onChangeViewMode("changes")}
+        className={cn(
+          "px-2 py-1 text-[10px] font-medium rounded transition-all duration-150",
+          viewMode === "changes"
+            ? "bg-brand-500 text-white"
+            : "text-foreground-secondary hover:text-foreground hover:bg-black",
+        )}
+        title={t("WORKSPACE$SHOW_CHANGED_FILES", {
+          defaultValue: "Show only changed files",
+        })}
+      >
+        <Files className="w-3 h-3 inline mr-1" />
+        {changesLabel}
+      </button>
+      <button
+        type="button"
+        onClick={() => onChangeViewMode("all")}
+        className={cn(
+          "px-2 py-1 text-[10px] font-medium rounded transition-all duration-150",
+          viewMode === "all"
+            ? "bg-brand-500 text-white"
+            : "text-foreground-secondary hover:text-foreground hover:bg-black",
+        )}
+        title={t("WORKSPACE$SHOW_ALL_FILES", {
+          defaultValue: "Show all workspace files",
+        })}
+      >
+        <Folder className="w-3 h-3 inline mr-1" />
+        {allFilesLabel}
+      </button>
+    </div>
+  );
+}
 
-const StreamingModeToggle = ({
+function StreamingModeToggle({
   isStreaming,
   showStreamingMode,
   onToggleStreamingMode,
@@ -432,7 +458,7 @@ const StreamingModeToggle = ({
   showStreamingMode: boolean;
   onToggleStreamingMode: () => void;
   t: TFunction;
-}) => {
+}) {
   if (!isStreaming) {
     return null;
   }
@@ -447,19 +473,25 @@ const StreamingModeToggle = ({
           ? "text-brand-500 bg-brand-500/10"
           : "text-foreground-secondary hover:text-brand-500 hover:bg-black",
       )}
-      aria-label={t("WORKSPACE$TOGGLE_STREAMING", { defaultValue: "Toggle streaming mode" })}
+      aria-label={t("WORKSPACE$TOGGLE_STREAMING", {
+        defaultValue: "Toggle streaming mode",
+      })}
       title={
         showStreamingMode
-          ? t("WORKSPACE$SHOW_GIT_CHANGES", { defaultValue: "Show git changes" })
-          : t("WORKSPACE$SHOW_STREAMING_CONTENT", { defaultValue: "Show streaming content" })
+          ? t("WORKSPACE$SHOW_GIT_CHANGES", {
+              defaultValue: "Show git changes",
+            })
+          : t("WORKSPACE$SHOW_STREAMING_CONTENT", {
+              defaultValue: "Show streaming content",
+            })
       }
     >
       <Zap className={cn("w-3.5 h-3.5", isStreaming && "animate-pulse")} />
     </button>
   );
-};
+}
 
-const RefreshButton = ({
+function RefreshButton({
   onRefresh,
   isRefreshing,
   t,
@@ -467,18 +499,24 @@ const RefreshButton = ({
   onRefresh: () => void;
   isRefreshing: boolean;
   t: TFunction;
-}) => (
-  <button
-    type="button"
-    onClick={onRefresh}
-    className="p-1 rounded text-foreground-secondary hover:text-brand-500 hover:bg-black transition-all duration-150"
-    aria-label={t("WORKSPACE$REFRESH_CHANGES", { defaultValue: "Refresh changes" })}
-  >
-    <RefreshCw className={cn("w-3.5 h-3.5", isRefreshing && "animate-spin")} />
-  </button>
-);
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onRefresh}
+      className="p-1 rounded text-foreground-secondary hover:text-brand-500 hover:bg-black transition-all duration-150"
+      aria-label={t("WORKSPACE$REFRESH_CHANGES", {
+        defaultValue: "Refresh changes",
+      })}
+    >
+      <RefreshCw
+        className={cn("w-3.5 h-3.5", isRefreshing && "animate-spin")}
+      />
+    </button>
+  );
+}
 
-const HeaderSearchInput = ({
+function HeaderSearchInput({
   searchQuery,
   onSearchChange,
   t,
@@ -486,20 +524,24 @@ const HeaderSearchInput = ({
   searchQuery: string;
   onSearchChange: (value: string) => void;
   t: TFunction;
-}) => (
-  <div className="px-4 pb-2.5">
-    <div className="relative">
-      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-foreground-secondary" />
-      <input
-        type="text"
-        placeholder={t("WORKSPACE$SEARCH_FILES", { defaultValue: "Search files..." })}
-        value={searchQuery}
-        onChange={event => onSearchChange(event.target.value)}
-        className="w-full pl-8 pr-3 py-1.5 text-xs bg-black border border-violet-500/20 rounded text-foreground placeholder:text-foreground-secondary/50 focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all duration-150"
-      />
+}) {
+  return (
+    <div className="px-4 pb-2.5">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-foreground-secondary" />
+        <input
+          type="text"
+          placeholder={t("WORKSPACE$SEARCH_FILES", {
+            defaultValue: "Search files...",
+          })}
+          value={searchQuery}
+          onChange={(event) => onSearchChange(event.target.value)}
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-black border border-violet-500/20 rounded text-foreground placeholder:text-foreground-secondary/50 focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all duration-150"
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+}
 
 function GitChangesHeader({
   t,
@@ -516,8 +558,12 @@ function GitChangesHeader({
   onRefresh,
   isRefreshing,
 }: GitChangesHeaderProps & { t: TFunction }) {
-  const changesLabel = t("WORKSPACE$CHANGES_TAB_LABEL", { defaultValue: "Changes" });
-  const allFilesLabel = t("WORKSPACE$ALL_FILES_LABEL", { defaultValue: "All Files" });
+  const changesLabel = t("WORKSPACE$CHANGES_TAB_LABEL", {
+    defaultValue: "Changes",
+  });
+  const allFilesLabel = t("WORKSPACE$ALL_FILES_LABEL", {
+    defaultValue: "All Files",
+  });
 
   return (
     <div className="flex-none border-b border-violet-500/20 bg-black backdrop-blur-sm">
@@ -546,10 +592,18 @@ function GitChangesHeader({
             onToggleStreamingMode={onToggleStreamingMode}
             t={t}
           />
-          <RefreshButton onRefresh={onRefresh} isRefreshing={isRefreshing} t={t} />
+          <RefreshButton
+            onRefresh={onRefresh}
+            isRefreshing={isRefreshing}
+            t={t}
+          />
         </div>
       </div>
-      <HeaderSearchInput searchQuery={searchQuery} onSearchChange={onSearchChange} t={t} />
+      <HeaderSearchInput
+        searchQuery={searchQuery}
+        onSearchChange={onSearchChange}
+        t={t}
+      />
     </div>
   );
 }
@@ -609,7 +663,9 @@ function ChangesList({
       {filteredChanges.length > 0 && (
         <div className="px-3 py-2 border-b border-violet-500/20 bg-black">
           <div className="text-[10px] text-foreground-secondary">
-            {t("WORKSPACE$USE_ARROWS_HINT", { defaultValue: "Use ↑↓ to navigate" })}
+            {t("WORKSPACE$USE_ARROWS_HINT", {
+              defaultValue: "Use ↑↓ to navigate",
+            })}
           </div>
         </div>
       )}
@@ -758,7 +814,9 @@ function AllFilesTreeNode({
         <span
           className={cn(
             "flex-1 truncate text-left",
-            isSelected ? "text-brand-500 font-medium" : "text-foreground-secondary",
+            isSelected
+              ? "text-brand-500 font-medium"
+              : "text-foreground-secondary",
           )}
         >
           {node.name}
@@ -778,7 +836,11 @@ function AllFilesTreeNode({
   );
 }
 
-type GitChangesViewerState = "streaming" | "allSelected" | "changesSelected" | "empty";
+type GitChangesViewerState =
+  | "streaming"
+  | "allSelected"
+  | "changesSelected"
+  | "empty";
 
 const getGitChangesViewerState = ({
   showStreamingMode,
@@ -823,7 +885,8 @@ const renderStreamingViewer = ({
 );
 
 const getFileName = (path: string) => path.split("/").pop() || path;
-const getLanguageFromPath = (path: string) => path.split(".").pop()?.toLowerCase() || "plaintext";
+const getLanguageFromPath = (path: string) =>
+  path.split(".").pop()?.toLowerCase() || "plaintext";
 
 const renderAllFilesViewer = ({
   selected,
@@ -848,17 +911,29 @@ const renderAllFilesViewer = ({
       <div className="flex items-center justify-between px-4 py-2 border-b border-violet-500/20 bg-black">
         <div className="flex items-center gap-2">
           <Eye className="w-3.5 h-3.5 text-brand-500" />
-          <span className="text-xs font-medium text-foreground">{fileName}</span>
+          <span className="text-xs font-medium text-foreground">
+            {fileName}
+          </span>
           <Badge variant="outline" className="text-[10px]">
             {language}
           </Badge>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={onCopyFile} className="h-6 px-2 text-[10px]">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onCopyFile}
+            className="h-6 px-2 text-[10px]"
+          >
             <Copy className="w-3 h-3 mr-1" />
             {t("WORKSPACE$COPY", { defaultValue: "Copy" })}
           </Button>
-          <Button variant="ghost" size="sm" onClick={onDownloadFile} className="h-6 px-2 text-[10px]">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onDownloadFile}
+            className="h-6 px-2 text-[10px]"
+          >
             <Download className="w-3 h-3 mr-1" />
             {t("WORKSPACE$DOWNLOAD", { defaultValue: "Download" })}
           </Button>
@@ -902,7 +977,10 @@ const renderAllFilesViewer = ({
 
 const renderChangesViewer = (selected: FileSelection) => (
   <section className="flex-1 overflow-hidden bg-black flex flex-col">
-    <FileDiffViewer path={selected.path} type={(selected.status as GitChangeStatus) ?? "M"} />
+    <FileDiffViewer
+      path={selected.path}
+      type={(selected.status as GitChangeStatus) ?? "M"}
+    />
   </section>
 );
 
@@ -923,7 +1001,9 @@ const renderEmptyViewer = ({
         <>
           <Folder className="w-12 h-12 mb-4 opacity-50" />
           <p className="text-sm">
-            {t("WORKSPACE$SELECT_FILE_TO_VIEW", { defaultValue: "Select a file to view its content" })}
+            {t("WORKSPACE$SELECT_FILE_TO_VIEW", {
+              defaultValue: "Select a file to view its content",
+            })}
           </p>
         </>
       ) : (
@@ -956,7 +1036,12 @@ function GitChangesViewer({
   onCopyFile,
   onDownloadFile,
 }: GitChangesViewerProps & { t: TFunction }) {
-  const viewerState = getGitChangesViewerState({ showStreamingMode, isStreaming, viewMode, selected });
+  const viewerState = getGitChangesViewerState({
+    showStreamingMode,
+    isStreaming,
+    viewMode,
+    selected,
+  });
 
   switch (viewerState) {
     case "streaming":
@@ -1074,7 +1159,7 @@ function determineStatusMessage({
     return null;
   }
 
-  const errorMessage = retrieveAxiosErrorMessage(error);
+  const errorMessage = retrieveAxiosErrorMessage(error as any);
 
   if (errorMessage.includes("404") || errorMessage.includes("Not Found")) {
     return [I18nKey.DIFF_VIEWER$WAITING_FOR_RUNTIME];

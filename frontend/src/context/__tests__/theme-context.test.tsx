@@ -7,7 +7,7 @@ import { ThemeProvider, useTheme } from "../theme-context";
 // Test component that uses the theme context
 function TestComponent() {
   const { theme, setTheme } = useTheme();
-  
+
   return (
     <div>
       <div data-testid="current-theme">{theme}</div>
@@ -27,11 +27,11 @@ function TestComponent() {
 describe("ThemeContext", () => {
   let mockMatchMedia: ReturnType<typeof vi.fn>;
   let localStorageMock: { [key: string]: string };
-  
+
   beforeEach(() => {
     // Mock localStorage
     localStorageMock = {};
-    
+
     Object.defineProperty(window, "localStorage", {
       value: {
         getItem: vi.fn((key: string) => localStorageMock[key] || null),
@@ -47,7 +47,7 @@ describe("ThemeContext", () => {
       },
       writable: true,
     });
-    
+
     // Mock matchMedia
     mockMatchMedia = vi.fn().mockImplementation((query: string) => ({
       matches: query === "(prefers-color-scheme: dark)",
@@ -57,111 +57,114 @@ describe("ThemeContext", () => {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     }));
-    
+
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: mockMatchMedia,
     });
   });
-  
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
-  
+
   it("should default to dark theme", () => {
     render(
       <ThemeProvider>
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
-    
+
     // Default is "dark" per ThemeProvider implementation
     expect(screen.getByTestId("current-theme")).toHaveTextContent("dark");
   });
-  
+
   it("should load theme from localStorage", () => {
     localStorageMock["Forge-theme-preference"] = "light";
-    
+
     render(
       <ThemeProvider>
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
-    
+
     expect(screen.getByTestId("current-theme")).toHaveTextContent("light");
   });
-  
+
   it("should change theme when setTheme is called", async () => {
     const user = userEvent.setup();
-    
+
     render(
       <ThemeProvider>
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
-    
+
     // Initial theme is dark by default
     expect(screen.getByTestId("current-theme")).toHaveTextContent("dark");
-    
+
     // Click light theme button
     await user.click(screen.getByTestId("set-light"));
-    
+
     await waitFor(() => {
       expect(screen.getByTestId("current-theme")).toHaveTextContent("light");
     });
   });
-  
+
   it("should save theme to localStorage", async () => {
     const user = userEvent.setup();
-    
+
     render(
       <ThemeProvider>
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
-    
+
     await user.click(screen.getByTestId("set-dark"));
-    
+
     await waitFor(() => {
-      expect(localStorage.setItem).toHaveBeenCalledWith("Forge-theme-preference", "dark");
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        "Forge-theme-preference",
+        "dark",
+      );
     });
   });
-  
+
   it("should apply dark class to root element", async () => {
     const user = userEvent.setup();
-    
+
     render(
       <ThemeProvider>
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
-    
+
     await user.click(screen.getByTestId("set-dark"));
-    
+
     await waitFor(() => {
       expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
     });
   });
-  
+
   it("should apply light class to root element", async () => {
     const user = userEvent.setup();
-    
+
     render(
       <ThemeProvider>
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
-    
+
     await user.click(screen.getByTestId("set-light"));
-    
+
     await waitFor(() => {
       expect(document.documentElement.getAttribute("data-theme")).toBe("light");
     });
   });
-  
+
   it("should detect system theme when set to system", async () => {
     const user = userEvent.setup();
-    
+
     // Mock system prefers dark
     mockMatchMedia.mockImplementation((query: string) => ({
       matches: query === "(prefers-color-scheme: dark)",
@@ -171,64 +174,72 @@ describe("ThemeContext", () => {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     }));
-    
+
     render(
       <ThemeProvider>
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
-    
+
     await user.click(screen.getByTestId("set-system"));
-    
+
     await waitFor(() => {
       expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
     });
   });
-  
+
   it("should switch all themes correctly", async () => {
     const user = userEvent.setup();
-    
+
     render(
       <ThemeProvider>
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
-    
+
     // Start with dark (default)
     expect(screen.getByTestId("current-theme")).toHaveTextContent("dark");
-    
+
     // Switch to light
     await user.click(screen.getByTestId("set-light"));
     await waitFor(() => {
       expect(screen.getByTestId("current-theme")).toHaveTextContent("light");
-      expect(localStorage.setItem).toHaveBeenCalledWith("Forge-theme-preference", "light");
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        "Forge-theme-preference",
+        "light",
+      );
     });
-    
+
     // Switch to system
     await user.click(screen.getByTestId("set-system"));
     await waitFor(() => {
       expect(screen.getByTestId("current-theme")).toHaveTextContent("system");
-      expect(localStorage.setItem).toHaveBeenCalledWith("Forge-theme-preference", "system");
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        "Forge-theme-preference",
+        "system",
+      );
     });
-    
+
     // Switch back to dark
     await user.click(screen.getByTestId("set-dark"));
     await waitFor(() => {
       expect(screen.getByTestId("current-theme")).toHaveTextContent("dark");
-      expect(localStorage.setItem).toHaveBeenCalledWith("Forge-theme-preference", "dark");
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        "Forge-theme-preference",
+        "dark",
+      );
     });
   });
-  
+
   it("should throw error when useTheme is called outside ThemeProvider", () => {
     // Suppress console.error for this test
     const originalError = console.error;
     console.error = vi.fn();
-    
+
     expect(() => {
       render(<TestComponent />);
     }).toThrow("useTheme must be used within a ThemeProvider");
-    
+
     console.error = originalError;
   });
 });
-

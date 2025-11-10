@@ -158,7 +158,7 @@ const getContextAwareSuggestions = (lastEvent?: ForgeEvent): Suggestion[] => {
     return [];
   }
 
-  const action = lastEvent.action;
+  const { action } = lastEvent;
 
   // If agent wrote a file
   if (action === "write") {
@@ -353,9 +353,7 @@ export function SmartSuggestions({
               <span className="flex-shrink-0 text-violet-500 scale-75">
                 {suggestion.icon}
               </span>
-              <span className="text-xs font-medium">
-                {suggestion.label}
-              </span>
+              <span className="text-xs font-medium">{suggestion.label}</span>
             </span>
           </Button>
         ))}

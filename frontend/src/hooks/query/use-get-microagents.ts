@@ -11,7 +11,8 @@ export const useGetMicroagents = (microagentDirectory: string) => {
     enabled: !!conversationId,
     select: (data) =>
       (data || []).map((fileName: any) => {
-        const name = typeof fileName === "string" ? fileName : fileName?.path ?? "";
+        const name =
+          typeof fileName === "string" ? fileName : (fileName?.path ?? "");
         return name.replace(microagentDirectory, "");
       }),
   });

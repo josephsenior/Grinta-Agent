@@ -1,0 +1,14 @@
+{
+  "id": "1d0c8598-b694-4ed9-9528-c45f8d768103",
+  "title": "Favorite Test",
+  "description": null,
+  "category": "coding",
+  "content": "Test",
+  "variables": [],
+  "tags": [],
+  "is_favorite": false,
+  "usage_count": 0,
+  "created_at": "2025-11-09 14:38:54.874429",
+  "updated_at": "2025-11-10 00:53:13.484384",
+  "metadata": {}
+}

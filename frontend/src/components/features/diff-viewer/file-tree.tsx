@@ -41,10 +41,10 @@ function buildTree(changes: GitChange[]): Node[] {
 
   changes.forEach((c) => {
     // Check if path exists and is a valid string
-    if (!c.path || typeof c.path !== 'string') {
+    if (!c.path || typeof c.path !== "string") {
       return;
     }
-    
+
     const parts = c.path.split("/").filter(Boolean);
     if (parts.length === 0) {
       return;
@@ -109,7 +109,7 @@ export default function FileTree({
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!selected || typeof selected !== 'string') {
+    if (!selected || typeof selected !== "string") {
       return;
     }
     const parts = selected.split("/").slice(0, -1);
@@ -183,7 +183,8 @@ export default function FileTree({
             className={clsx(
               "group flex items-center gap-2 w-full px-2 py-1 rounded text-sm transition-all duration-150",
               "hover:bg-background-tertiary",
-              isSelected && "bg-background-tertiary border-l-2 border-brand-500",
+              isSelected &&
+                "bg-background-tertiary border-l-2 border-brand-500",
             )}
             style={{ paddingLeft: 8 + node.depth * 16 }}
           >
@@ -193,7 +194,9 @@ export default function FileTree({
             <span
               className={clsx(
                 "flex-1 truncate text-left text-xs",
-                isSelected ? "text-foreground font-medium" : "text-foreground-secondary",
+                isSelected
+                  ? "text-foreground font-medium"
+                  : "text-foreground-secondary",
               )}
             >
               {node.name}

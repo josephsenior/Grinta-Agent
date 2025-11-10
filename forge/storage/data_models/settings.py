@@ -195,6 +195,25 @@ class Settings(BaseModel):
         return True
 
     @staticmethod
+    def _has_explicit_api_key(config: object) -> bool:
+        """Determine if the provided config carried an explicit API key."""
+        try:
+            return bool(getattr(config, "_has_explicit_api_key"))
+        except AttributeError:
+            # Fallback if attribute missing: assume explicit when key provided
+            api_key = getattr(config, "api_key", None)
+            return api_key is not None
+
+    @staticmethod
+    def _cache_and_return_none(current_time: float) -> None:
+        """Cache a None result to avoid repeated config loads."""
+        global _settings_from_config_cache, _settings_from_config_cache_time, _settings_from_config_cache_loader_id
+        _settings_from_config_cache = None
+        _settings_from_config_cache_time = current_time
+        _settings_from_config_cache_loader_id = id(load_FORGE_config)
+        return None
+
+    @staticmethod
     def from_config() -> Settings | None:
         """Load settings from config.toml with global caching.
         
@@ -228,21 +247,16 @@ class Settings(BaseModel):
 
         # Check for explicit LLM config that should skip settings
         if Settings._check_explicit_llm_config(app_config):
-            # 🚀 FIX: Cache the None result
-            _settings_from_config_cache = None
-            _settings_from_config_cache_time = current_time
-            _settings_from_config_cache_loader_id = id(load_FORGE_config)
-            return None
+            return Settings._cache_and_return_none(current_time)
 
         # Get and validate API key
         llm_config: LLMConfig = app_config.get_llm_config()
+        if not Settings._has_explicit_api_key(llm_config):
+            return Settings._cache_and_return_none(current_time)
+
         api_key = llm_config.api_key if hasattr(llm_config, "api_key") else None
         if not Settings._validate_api_key(api_key):
-            # 🚀 FIX: Cache the None result
-            _settings_from_config_cache = None
-            _settings_from_config_cache_time = current_time
-            _settings_from_config_cache_loader_id = id(load_FORGE_config)
-            return None
+            return Settings._cache_and_return_none(current_time)
 
         # Build settings
         security = app_config.security

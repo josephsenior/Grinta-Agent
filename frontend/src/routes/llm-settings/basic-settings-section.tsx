@@ -35,7 +35,8 @@ export function BasicSettingsSection({
   t,
 }: BasicSettingsSectionProps) {
   const showOpenhandsHelpLink =
-    isOpenhandsModel(settings.LLM_MODEL) || isOpenhandsModel(currentSelectedModel);
+    isOpenhandsModel(settings.LLM_MODEL) ||
+    isOpenhandsModel(currentSelectedModel);
 
   return (
     <div data-testid="llm-settings-form-basic" className="flex flex-col gap-6">
@@ -67,7 +68,9 @@ export function BasicSettingsSection({
         placeholder={settings.LLM_API_KEY_SET ? "<hidden>" : ""}
         onChange={onApiKeyChange}
         startContent={
-          settings.LLM_API_KEY_SET && <KeyStatusIcon isSet={settings.LLM_API_KEY_SET} />
+          settings.LLM_API_KEY_SET && (
+            <KeyStatusIcon isSet={settings.LLM_API_KEY_SET} />
+          )
         }
       />
 
@@ -103,5 +106,3 @@ export function BasicSettingsSection({
     </div>
   );
 }
-
-

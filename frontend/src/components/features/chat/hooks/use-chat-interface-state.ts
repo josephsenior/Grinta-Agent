@@ -14,7 +14,6 @@ import { useWSErrorMessage } from "#/hooks/use-ws-error-message";
 // Removed fragile message pattern matching - auto-navigation now via server detection + Playwright URL sync
 import { useConversationSearch } from "./use-conversation-search";
 import { useConversationBookmarks } from "./use-conversation-bookmarks";
-import { useKeyboardShortcuts } from "./use-keyboard-shortcuts";
 import { useMetaSOPOrchestration } from "#/hooks/use-metasop-orchestration";
 import { useUploadFiles } from "#/hooks/mutation/use-upload-files";
 
@@ -27,7 +26,8 @@ export function useChatInterfaceState() {
   useActiveConversation();
   const { getErrorMessage } = useWSErrorMessage();
   const { send, isLoadingMessages, parsedEvents } = useWsClient();
-  const { setOptimisticUserMessage, getOptimisticUserMessage } = useOptimisticUserMessage();
+  const { setOptimisticUserMessage, getOptimisticUserMessage } =
+    useOptimisticUserMessage();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: config } = useConfig();
@@ -42,33 +42,50 @@ export function useChatInterfaceState() {
 
   // Custom hooks for specific functionality
   // Auto-navigation handled by server detection (automatic) + Playwright URL sync (robust)
-  const { scrollDomToBottom, onChatBodyScroll, hitBottom, autoScroll, setAutoScroll, setHitBottom } = useScrollToBottom(scrollRef);
-  const { isOpen: isSearchOpen, setIsOpen: setIsSearchOpen } = useConversationSearch();
+  const {
+    scrollDomToBottom,
+    onChatBodyScroll,
+    hitBottom,
+    autoScroll,
+    setAutoScroll,
+    setHitBottom,
+  } = useScrollToBottom(scrollRef);
+  const { isOpen: isSearchOpen, setIsOpen: setIsSearchOpen } =
+    useConversationSearch();
   const bookmarksHook = useConversationBookmarks();
   const { steps, isOrchestrating, hasSteps } = useMetaSOPOrchestration();
 
   // Component state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
-  const [feedbackPolarity, setFeedbackPolarity] = React.useState<"positive" | "negative">("positive");
+  const [feedbackPolarity, setFeedbackPolarity] = React.useState<
+    "positive" | "negative"
+  >("positive");
   const [feedbackModalIsOpen, setFeedbackModalIsOpen] = React.useState(false);
   const [messageToSend, setMessageToSend] = React.useState<string | null>(null);
-  const [lastUserMessage, setLastUserMessage] = React.useState<string | null>(null);
+  const [lastUserMessage, setLastUserMessage] = React.useState<string | null>(
+    null,
+  );
   const [showShortcutsPanel, setShowShortcutsPanel] = React.useState(false);
   const [isInputFocused, setIsInputFocused] = React.useState(false);
-  const [showOrchestrationPanel, setShowOrchestrationPanel] = React.useState(false);
+  const [showOrchestrationPanel, setShowOrchestrationPanel] =
+    React.useState(false);
 
   // Technical details toggle with localStorage persistence
-  const [showTechnicalDetails, setShowTechnicalDetails] = React.useState<boolean>(() => {
-    try {
-      return localStorage.getItem("Forge.showTechnicalDetails") === "true";
-    } catch {
-      return false;
-    }
-  });
+  const [showTechnicalDetails, setShowTechnicalDetails] =
+    React.useState<boolean>(() => {
+      try {
+        return localStorage.getItem("Forge.showTechnicalDetails") === "true";
+      } catch {
+        return false;
+      }
+    });
 
   React.useEffect(() => {
     try {
-      localStorage.setItem("Forge.showTechnicalDetails", showTechnicalDetails ? "true" : "false");
+      localStorage.setItem(
+        "Forge.showTechnicalDetails",
+        showTechnicalDetails ? "true" : "false",
+      );
     } catch {
       /* ignore */
     }
@@ -76,10 +93,11 @@ export function useChatInterfaceState() {
 
   // Optimistic user message
   const optimisticUserMessage = getOptimisticUserMessage();
-  const errorMessage = getErrorMessage();
+  const errorMessage = getErrorMessage() ?? null;
 
   // Derived state
-  const isAwaitingUserConfirmation = curAgentState === AgentState.AWAITING_USER_CONFIRMATION;
+  const isAwaitingUserConfirmation =
+    curAgentState === AgentState.AWAITING_USER_CONFIRMATION;
 
   return {
     // Core state
@@ -95,10 +113,10 @@ export function useChatInterfaceState() {
     navigate,
     send,
     uploadFiles,
-    
+
     // Refs
     scrollRef,
-    
+
     // Scroll management
     scrollDomToBottom,
     onChatBodyScroll,
@@ -106,7 +124,7 @@ export function useChatInterfaceState() {
     autoScroll,
     setAutoScroll,
     setHitBottom,
-    
+
     // UI state
     isMobileMenuOpen,
     setIsMobileMenuOpen,
@@ -126,21 +144,21 @@ export function useChatInterfaceState() {
     setShowOrchestrationPanel,
     showTechnicalDetails,
     setShowTechnicalDetails,
-    
+
     // Search and navigation
     isSearchOpen,
     setIsSearchOpen,
     bookmarksHook,
-    
+
     // MetaSOP
     steps,
     isOrchestrating,
     hasSteps,
-    
+
     // Messages
     optimisticUserMessage,
     errorMessage,
-    
+
     // Optimistic message handlers
     setOptimisticUserMessage,
     getOptimisticUserMessage,

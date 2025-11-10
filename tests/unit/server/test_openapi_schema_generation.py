@@ -55,7 +55,8 @@ def test_client():
         "forge.storage.settings.file_settings_store.FileSettingsStore.get_instance",
         AsyncMock(return_value=FileSettingsStore(InMemoryFileStore())),
     ):
-        yield TestClient(app)
+        with TestClient(app) as client:
+            yield client
 
 
 @pytest.mark.asyncio

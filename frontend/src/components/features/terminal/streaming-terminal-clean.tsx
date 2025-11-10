@@ -30,7 +30,8 @@ export function StreamingTerminalClean({
     onComplete,
   });
 
-  const exitCodeSymbol = exitCode === undefined ? "" : exitCode === 0 ? "✓" : "✗";
+  const exitCodeSymbol =
+    exitCode === undefined ? "" : exitCode === 0 ? "✓" : "✗";
 
   return (
     <div
@@ -159,7 +160,11 @@ function StreamingTerminalContent({
     <div
       ref={contentRef}
       className="terminal-content px-3 py-2 overflow-y-auto font-mono text-xs leading-relaxed"
-      style={{ maxHeight, scrollbarGutter: "stable", transition: "max-height 0.2s ease-in-out" }}
+      style={{
+        maxHeight,
+        scrollbarGutter: "stable",
+        transition: "max-height 0.2s ease-in-out",
+      }}
     >
       <pre className="whitespace-pre-wrap break-words text-foreground-secondary/90">
         {displayedContent}

@@ -23,7 +23,7 @@ export function LoadingSpinner({
   };
 
   const colorClasses = {
-    primary: "text-brand-500",  /* Updated to violet brand */
+    primary: "text-brand-500" /* Updated to violet brand */,
     secondary: "text-text-secondary",
     success: "text-success-DEFAULT",
     warning: "text-warning-DEFAULT",
@@ -118,7 +118,7 @@ export function LoadingSpinner({
       <div
         className={cn(
           "rounded-full border-4 border-border-primary/40 absolute",
-          "shadow-lg shadow-brand-500/15",  /* Subtle violet glow */
+          "shadow-lg shadow-brand-500/15" /* Subtle violet glow */,
           sizeStyle,
         )}
       />
@@ -127,11 +127,12 @@ export function LoadingSpinner({
           "absolute animate-spin",
           colorClasses[color],
           "drop-shadow-lg filter transition-all duration-300",
-          "opacity-90",  /* Slightly transparent for softer feel */
+          "opacity-90" /* Slightly transparent for softer feel */,
           sizeStyle,
         )}
         style={{
-          filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'  /* Enhanced glow */
+          filter:
+            "drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))" /* Enhanced glow */,
         }}
       />
     </div>

@@ -22,24 +22,31 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  const updateTasks = useCallback((newTasks: Task[]) => {
-    const previousTaskCount = tasks.length;
-    setTasks(newTasks);
-    
-    // Auto-open panel ONLY when:
-    // 1. Not on initial load (to prevent opening on page reload)
-    // 2. Tasks are being added (not just updating existing tasks)
-    // 3. Haven't auto-opened before in this session
-    if (!isInitialLoad && newTasks.length > previousTaskCount && !hasAutoOpened) {
-      setIsTaskPanelOpen(true);
-      setHasAutoOpened(true);
-    }
-    
-    // Mark that initial load is complete after first update
-    if (isInitialLoad) {
-      setIsInitialLoad(false);
-    }
-  }, [hasAutoOpened, isInitialLoad, tasks.length]);
+  const updateTasks = useCallback(
+    (newTasks: Task[]) => {
+      const previousTaskCount = tasks.length;
+      setTasks(newTasks);
+
+      // Auto-open panel ONLY when:
+      // 1. Not on initial load (to prevent opening on page reload)
+      // 2. Tasks are being added (not just updating existing tasks)
+      // 3. Haven't auto-opened before in this session
+      if (
+        !isInitialLoad &&
+        newTasks.length > previousTaskCount &&
+        !hasAutoOpened
+      ) {
+        setIsTaskPanelOpen(true);
+        setHasAutoOpened(true);
+      }
+
+      // Mark that initial load is complete after first update
+      if (isInitialLoad) {
+        setIsInitialLoad(false);
+      }
+    },
+    [hasAutoOpened, isInitialLoad, tasks.length],
+  );
 
   const toggleTaskPanel = useCallback(() => {
     setIsTaskPanelOpen((prev) => !prev);
@@ -66,4 +73,3 @@ export function useTasks() {
   }
   return context;
 }
-

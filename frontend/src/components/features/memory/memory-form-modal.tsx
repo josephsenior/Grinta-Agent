@@ -247,17 +247,19 @@ function useMemoryFormController({
     tagInput,
     tags,
     isSaveDisabled: !title.trim() || !content.trim(),
-    handleTitleChange: (event: React.ChangeEvent<HTMLInputElement>) => setTitle(event.target.value),
-    handleContentChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => setContent(event.target.value),
+    handleTitleChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+      setTitle(event.target.value),
+    handleContentChange: (event: React.ChangeEvent<HTMLTextAreaElement>) =>
+      setContent(event.target.value),
     handleCategoryChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
       setCategory(event.target.value as MemoryCategory),
     handleImportanceChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
       setImportance(event.target.value as MemoryImportance),
-    handleTagInputChange: (event: React.ChangeEvent<HTMLInputElement>) => setTagInput(event.target.value),
+    handleTagInputChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+      setTagInput(event.target.value),
     handleAddTag,
     handleRemoveTag,
     handleSubmit,
     handleKeyDown,
   };
 }
-

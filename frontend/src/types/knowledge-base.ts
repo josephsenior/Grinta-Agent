@@ -57,4 +57,3 @@ export interface KnowledgeBaseStats {
   total_size_bytes: number;
   total_size_mb: number;
 }
-

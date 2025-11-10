@@ -1,14 +1,10 @@
-import { FaExternalLinkAlt } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
-import { VscCode } from "react-icons/vsc";
 import { TbFileCode, TbTerminal2, TbWorld } from "react-icons/tb";
 import { Container } from "#/components/layout/container";
 import { I18nKey } from "#/i18n/declaration";
 import { useRuntimeIsReady } from "#/hooks/use-runtime-is-ready";
 import { TabContent } from "#/components/layout/tab-content";
-import { transformVSCodeUrl } from "#/utils/vscode-url-helper";
 import { useConversationId } from "#/hooks/use-conversation-id";
-import Forge from "#/api/forge";
 
 export function ConversationTabs() {
   const runtimeIsReady = useRuntimeIsReady();

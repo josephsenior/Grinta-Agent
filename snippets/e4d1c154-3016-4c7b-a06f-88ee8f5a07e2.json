@@ -1,0 +1,18 @@
+{
+  "id": "e4d1c154-3016-4c7b-a06f-88ee8f5a07e2",
+  "title": "List Test",
+  "description": null,
+  "language": "javascript",
+  "category": "utility",
+  "code": "console.log('test');",
+  "tags": [],
+  "is_favorite": false,
+  "usage_count": 0,
+  "created_at": "2025-11-09 15:30:45.351784",
+  "updated_at": "2025-11-09 16:05:07.416370",
+  "metadata": {},
+  "dependencies": [],
+  "related_snippets": [],
+  "source_url": null,
+  "license": null
+}

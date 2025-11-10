@@ -50,7 +50,10 @@ const saveSettingsMutationFn = async (settings: Partial<PostSettings>) => {
   };
 
   console.log("[useSaveSettings] Sending to backend:", apiSettings);
-  console.log("[useSaveSettings] autonomy_level specifically:", apiSettings.autonomy_level);
+  console.log(
+    "[useSaveSettings] autonomy_level specifically:",
+    apiSettings.autonomy_level,
+  );
   await Forge.saveSettings(apiSettings);
 };
 
@@ -102,14 +105,19 @@ export const useSaveSettings = () => {
     },
     onSuccess: async () => {
       // Keep the optimistic update - no need to refetch since we know the save succeeded
-      console.log("[useSaveSettings] Settings saved successfully, keeping optimistic update");
+      console.log(
+        "[useSaveSettings] Settings saved successfully, keeping optimistic update",
+      );
     },
     onError: (err, variables, context) => {
       // If the mutation fails, use the context returned from onMutate to roll back
       if (context?.previousSettings) {
         queryClient.setQueryData(["settings"], context.previousSettings);
       }
-      console.error("[useSaveSettings] Failed to save settings after all retries:", err);
+      console.error(
+        "[useSaveSettings] Failed to save settings after all retries:",
+        err,
+      );
     },
     meta: {
       disableToast: true,
@@ -137,7 +145,7 @@ async function saveSettingsWithRetry(settings: Partial<PostSettings>) {
         throw error;
       }
 
-      const delay = baseDelay * Math.pow(2, attempt);
+      const delay = baseDelay * 2 ** attempt;
       console.warn(
         `[useSaveSettings] Retry ${attempt + 1}/${maxRetries} after ${delay}ms...`,
       );

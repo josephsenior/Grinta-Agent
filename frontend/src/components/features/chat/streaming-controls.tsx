@@ -126,7 +126,9 @@ export function StreamingControls({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Zap className="w-4 h-4 text-warning-500" />
-                  <span className="text-sm font-medium text-foreground">Speed</span>
+                  <span className="text-sm font-medium text-foreground">
+                    Speed
+                  </span>
                 </div>
                 <span className="text-xs text-foreground-secondary">
                   {speedLabels[streamingSpeed as keyof typeof speedLabels] ||
@@ -152,7 +154,9 @@ export function StreamingControls({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-violet-500" />
-                  <span className="text-sm font-medium text-foreground">Start Delay</span>
+                  <span className="text-sm font-medium text-foreground">
+                    Start Delay
+                  </span>
                 </div>
                 <span className="text-xs text-foreground-secondary">
                   {streamingDelay}ms
@@ -174,7 +178,9 @@ export function StreamingControls({
 
             {/* Preview */}
             <div className="p-3 bg-background-tertiary rounded-lg border border-border">
-              <div className="text-xs text-foreground-secondary mb-2">Preview:</div>
+              <div className="text-xs text-foreground-secondary mb-2">
+                Preview:
+              </div>
               <div className="text-sm text-foreground font-mono">
                 <span className="text-success-500">Hello world!</span>
                 <span className="inline-block w-0.5 h-4 bg-brand-500 ml-0.5 animate-pulse" />
@@ -225,7 +231,9 @@ export function StreamingStatus({
         </div>
       )}
 
-      <span className="text-xs text-foreground-secondary">{Math.round(progress)}%</span>
+      <span className="text-xs text-foreground-secondary">
+        {Math.round(progress)}%
+      </span>
     </div>
   );
 }

@@ -62,7 +62,7 @@ export function SafetyScoreGauge({
             strokeWidth={strokeWidth}
             className="text-gray-700"
           />
-          
+
           {/* Animated progress circle */}
           <circle
             cx={radius + strokeWidth}
@@ -95,4 +95,3 @@ export function SafetyScoreGauge({
     </div>
   );
 }
-

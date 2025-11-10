@@ -69,9 +69,7 @@ function filterItemsByQuery(
   }
 
   if (isFlatItemList(list)) {
-    return list.filter((item) =>
-      item.label.toLowerCase().includes(normalized),
-    );
+    return list.filter((item) => item.label.toLowerCase().includes(normalized));
   }
 
   const sections = list as DropdownSection[];
@@ -124,7 +122,9 @@ function useCustomDropdownController({
   const inputRef = useRef<HTMLInputElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const initialKey = value ?? defaultValue ?? "";
-  const [inputValue, setInputValue] = useState(() => findItemLabel(items, initialKey));
+  const [inputValue, setInputValue] = useState(() =>
+    findItemLabel(items, initialKey),
+  );
   const [filteredItems, setFilteredItems] = useState(items);
   const [selectedKey, setSelectedKey] = useState(initialKey);
   const [isUserTyping, setIsUserTyping] = useState(false);
@@ -136,7 +136,8 @@ function useCustomDropdownController({
   }, []);
 
   useEffect(() => {
-    const hasControlledValue = value !== undefined || defaultValue !== undefined;
+    const hasControlledValue =
+      value !== undefined || defaultValue !== undefined;
     if (!hasControlledValue) {
       return;
     }
@@ -330,7 +331,9 @@ function DropdownOptionButton({
     >
       <div className="flex items-center justify-between">
         <span>{item.label}</span>
-        {selectedKey === item.key && <Check className="w-4 h-4 text-violet-500" />}
+        {selectedKey === item.key && (
+          <Check className="w-4 h-4 text-violet-500" />
+        )}
       </div>
     </button>
   );
@@ -373,7 +376,10 @@ export function CustomDropdown({
   );
 
   return (
-    <div ref={controller.dropdownRef} className={cn("relative w-full", className)}>
+    <div
+      ref={controller.dropdownRef}
+      className={cn("relative w-full", className)}
+    >
       <DropdownInput
         controller={controller}
         disabled={disabled}
@@ -389,7 +395,11 @@ export function CustomDropdown({
         onClear={handleClearClick}
       />
       <DropdownErrorMessage error={error} />
-      <DropdownMenu controller={controller} disabled={disabled} isLoading={isLoading} />
+      <DropdownMenu
+        controller={controller}
+        disabled={disabled}
+        isLoading={isLoading}
+      />
     </div>
   );
 }
@@ -443,8 +453,18 @@ function DropdownInput({
           className="p-1 hover:bg-violet-500/10 rounded transition-colors"
           aria-label="Clear selection"
         >
-          <svg className="w-4 h-4 text-foreground-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <svg
+            className="w-4 h-4 text-foreground-secondary"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       )}

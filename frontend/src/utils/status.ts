@@ -78,7 +78,9 @@ function isTransitionIndicatorState({
     agentState != null && TRANSITION_AGENT_STATES.has(agentState),
   );
 
-  return conversationStatus === "STARTING" || runtimeIsBusy || agentIsTransitioning;
+  return (
+    conversationStatus === "STARTING" || runtimeIsBusy || agentIsTransitioning
+  );
 }
 
 export function getIndicatorColor(
@@ -160,9 +162,7 @@ const STATUS_RESOLVERS: StatusResolver[] = [
       ? I18nKey.CHAT_INTERFACE$DISCONNECTED
       : null,
   ({ webSocketStatus }) =>
-    webSocketStatus === "CONNECTING"
-      ? I18nKey.CHAT_INTERFACE$CONNECTING
-      : null,
+    webSocketStatus === "CONNECTING" ? I18nKey.CHAT_INTERFACE$CONNECTING : null,
   ({ agentState, statusMessage }) =>
     agentState === AgentState.LOADING &&
     statusMessage?.id &&

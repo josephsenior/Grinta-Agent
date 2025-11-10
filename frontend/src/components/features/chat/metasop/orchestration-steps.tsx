@@ -16,9 +16,15 @@ export function OrchestrationSteps({ steps = [] }: OrchestrationStepsProps) {
       <h3 className="text-sm font-semibold mb-2">Orchestration Steps</h3>
       <div className="space-y-2">
         {steps.map((step, index: number) => {
-          const s = typeof step === "object" && step !== null ? (step as Record<string, unknown>) : undefined;
+          const s =
+            typeof step === "object" && step !== null
+              ? (step as Record<string, unknown>)
+              : undefined;
           return (
-            <div key={index} className="text-xs text-gray-600 dark:text-gray-400">
+            <div
+              key={index}
+              className="text-xs text-gray-600 dark:text-gray-400"
+            >
               Step {index + 1}: {String(s?.name ?? "Unknown")}
             </div>
           );
@@ -27,4 +33,3 @@ export function OrchestrationSteps({ steps = [] }: OrchestrationStepsProps) {
     </div>
   );
 }
-

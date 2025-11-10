@@ -1,3 +1,0 @@
-"""
-ACE Framework usage examples
-"""

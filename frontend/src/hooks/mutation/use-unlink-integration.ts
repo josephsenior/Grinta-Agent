@@ -21,8 +21,7 @@ export function useUnlinkIntegration(
   const { t } = useTranslation();
 
   return useMutation({
-    mutationFn: () =>
-      Forge.post(`/integration/${platform}/workspaces/unlink`),
+    mutationFn: () => Forge.post(`/integration/${platform}/workspaces/unlink`),
     onSuccess: () => {
       displaySuccessToast(t(I18nKey.SETTINGS$SAVED));
       queryClient.invalidateQueries({

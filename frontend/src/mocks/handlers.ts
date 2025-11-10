@@ -1,9 +1,5 @@
 import { delay, http, HttpResponse } from "msw";
-import {
-  GetConfigResponse,
-  Conversation,
-  ResultSet,
-} from "#/api/forge.types";
+import { GetConfigResponse, Conversation, ResultSet } from "#/api/forge.types";
 import { DEFAULT_SETTINGS } from "#/services/settings";
 import { STRIPE_BILLING_HANDLERS } from "./billing-handlers";
 import { ApiSettings, PostApiSettings, Provider } from "#/types/settings";

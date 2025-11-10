@@ -51,7 +51,10 @@ export function AuthModal({
     }
   }, []);
 
-  const configuredProviders = useMemo(() => new Set<Provider>(providersConfigured ?? []), [providersConfigured]);
+  const configuredProviders = useMemo(
+    () => new Set<Provider>(providersConfigured ?? []),
+    [providersConfigured],
+  );
 
   const authOptions = useMemo(() => {
     const options: AuthProviderOption[] = [];

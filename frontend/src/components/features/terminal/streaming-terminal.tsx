@@ -1,8 +1,18 @@
-import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+  useCallback,
+} from "react";
 import { Copy, Check, Terminal as TerminalIcon } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "#/store";
-import { selectIsStreaming, selectStreamingEnabled, selectStreamContent } from "#/store/streaming-slice";
+import {
+  selectIsStreaming,
+  selectStreamingEnabled,
+  selectStreamContent,
+} from "#/store/streaming-slice";
 
 interface StreamingTerminalProps {
   eventId?: string;
@@ -97,7 +107,9 @@ function StreamingTerminalHeader({
           </>
         )}
         {exitCode !== undefined && (
-          <span className={`text-xs font-mono ${exitCodeColor} ml-2`}>{exitCode}</span>
+          <span className={`text-xs font-mono ${exitCodeColor} ml-2`}>
+            {exitCode}
+          </span>
         )}
         {lineCount > 0 && (
           <span className="text-[10px] text-foreground-secondary/50 ml-2">
@@ -156,7 +168,11 @@ function StreamingTerminalContent({
     <div
       ref={contentRef}
       className="terminal-content px-3 py-2 overflow-y-auto font-mono text-xs leading-relaxed"
-      style={{ maxHeight, scrollbarGutter: "stable", transition: "max-height 0.2s ease-in-out" }}
+      style={{
+        maxHeight,
+        scrollbarGutter: "stable",
+        transition: "max-height 0.2s ease-in-out",
+      }}
     >
       <pre className="whitespace-pre-wrap break-words text-foreground-secondary/90">
         {displayedContent}

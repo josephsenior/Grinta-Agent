@@ -1,5 +1,13 @@
 import React from "react";
-import { Github, Heart, Info, Mail, FileText, Shield, ExternalLink } from "lucide-react";
+import {
+  Github,
+  Heart,
+  Info,
+  Mail,
+  FileText,
+  Shield,
+  ExternalLink,
+} from "lucide-react";
 import { BRAND } from "#/config/brand";
 import logoImage from "#/assets/branding/logo2.png";
 
@@ -7,12 +15,12 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer 
+    <footer
       className="relative z-10 py-12 px-6 border-t border-border bg-background-secondary/50 safe-area-bottom safe-area-left safe-area-right"
       style={{
-        paddingBottom: 'max(3rem, env(safe-area-inset-bottom))',
-        paddingLeft: 'max(1.5rem, env(safe-area-inset-left))',
-        paddingRight: 'max(1.5rem, env(safe-area-inset-right))',
+        paddingBottom: "max(3rem, env(safe-area-inset-bottom))",
+        paddingLeft: "max(1.5rem, env(safe-area-inset-left))",
+        paddingRight: "max(1.5rem, env(safe-area-inset-right))",
       }}
     >
       <div className="max-w-7xl mx-auto">
@@ -34,7 +42,7 @@ export function Footer() {
                 </p>
               </div>
             </div>
-            
+
             <p className="text-sm text-foreground-secondary leading-relaxed mb-4">
               {BRAND.description}
             </p>
@@ -43,9 +51,7 @@ export function Footer() {
             <div className="p-3 rounded-lg border border-border bg-background-tertiary/50">
               <p className="text-xs text-foreground-tertiary flex items-center gap-2">
                 <Heart className="w-3 h-3 text-accent-500" />
-                <span>
-                  {BRAND.attribution.acknowledgment}
-                </span>
+                <span>{BRAND.attribution.acknowledgment}</span>
               </p>
               <a
                 href="https://github.com/All-Hands-AI/Forge"
@@ -154,10 +160,11 @@ export function Footer() {
           <div className="text-sm text-foreground-tertiary text-center md:text-left">
             © {currentYear} {BRAND.name}. All rights reserved.
           </div>
-          
+
           <div className="text-xs text-foreground-tertiary text-center md:text-right">
             <span className="inline-flex items-center gap-1">
-              Made with <Heart className="w-3 h-3 text-accent-500 inline" /> for developers
+              Made with <Heart className="w-3 h-3 text-accent-500 inline" /> for
+              developers
             </span>
           </div>
         </div>

@@ -57,7 +57,7 @@ export function ImageCarousel({
       >
         {images.map((src, index) => (
           <ImagePreview
-            key={String(src)}
+            key={`${src}-${index}`}
             size={size}
             src={src}
             onRemove={onRemove ? () => onRemove?.(index) : undefined}

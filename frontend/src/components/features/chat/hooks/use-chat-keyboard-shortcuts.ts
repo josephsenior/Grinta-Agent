@@ -9,9 +9,10 @@ import { useConversationBookmarks } from "./use-conversation-bookmarks";
  */
 export function useChatKeyboardShortcuts(
   isInputFocused: boolean,
-  setShowShortcutsPanel: (show: boolean) => void
+  setShowShortcutsPanel: (show: boolean) => void,
 ) {
-  const { isOpen: isSearchOpen, setIsOpen: setIsSearchOpen } = useConversationSearch();
+  const { isOpen: isSearchOpen, setIsOpen: setIsSearchOpen } =
+    useConversationSearch();
   const bookmarksHook = useConversationBookmarks();
 
   // Use existing keyboard shortcuts hook
@@ -46,7 +47,7 @@ export function useChatKeyboardShortcuts(
     if (!isInputFocused) {
       window.addEventListener("keydown", handleKeyDown);
     }
-    
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };

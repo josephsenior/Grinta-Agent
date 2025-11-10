@@ -36,7 +36,8 @@ const QUERY_KEYS = {
   snippets: ["snippets"] as const,
   snippet: (id: string) => ["snippets", id] as const,
   stats: ["snippets", "stats"] as const,
-  search: (params: SearchSnippetsRequest) => ["snippets", "search", params] as const,
+  search: (params: SearchSnippetsRequest) =>
+    ["snippets", "search", params] as const,
 };
 
 export function useSnippets(params?: {
@@ -75,7 +76,11 @@ export function useSearchSnippets(
   return useQuery({
     queryKey: QUERY_KEYS.search(params),
     queryFn: () => searchSnippets(params),
-    enabled: !!params.query || !!params.language || !!params.category || !!params.tags?.length,
+    enabled:
+      !!params.query ||
+      !!params.language ||
+      !!params.category ||
+      !!params.tags?.length,
   });
 }
 
@@ -118,7 +123,9 @@ export function useDeleteSnippet(): UseMutationResult<void, Error, string> {
   return useMutation({
     mutationFn: deleteSnippet,
     onSuccess: (_, snippetId) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.snippet(snippetId) });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.snippet(snippetId),
+      });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.snippets });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.stats });
     },
@@ -128,7 +135,12 @@ export function useDeleteSnippet(): UseMutationResult<void, Error, string> {
 export function useExportSnippets(): UseMutationResult<
   SnippetCollection,
   Error,
-  { language?: SnippetLanguage; category?: SnippetCategory; is_favorite?: boolean } | undefined
+  | {
+      language?: SnippetLanguage;
+      category?: SnippetCategory;
+      is_favorite?: boolean;
+    }
+  | undefined
 > {
   return useMutation({
     mutationFn: exportSnippets,
@@ -167,4 +179,3 @@ export function useTrackSnippetUsage(): UseMutationResult<
     },
   });
 }
-

@@ -7,7 +7,7 @@ import type {
 
 /**
  * MCP Marketplace API
- * 
+ *
  * Multi-source marketplace with fallback strategy:
  * 1. Smithery Registry (139 servers, premium with API key)
  * 2. npm Registry (official @modelcontextprotocol packages)
@@ -18,8 +18,10 @@ import type {
 
 // API endpoints (using real, accessible sources)
 const SMITHERY_API = "https://registry.smithery.ai/servers";
-const NPM_MCP_API = "https://registry.npmjs.org/-/v1/search?text=@modelcontextprotocol&size=100";
-const GITHUB_MCP_API = "https://api.github.com/search/repositories?q=model+context+protocol+mcp+topic:mcp";
+const NPM_MCP_API =
+  "https://registry.npmjs.org/-/v1/search?text=@modelcontextprotocol&size=100";
+const GITHUB_MCP_API =
+  "https://api.github.com/search/repositories?q=model+context+protocol+mcp+topic:mcp";
 const OFFICIAL_API = "https://registry.modelcontextprotocol.info/api/servers";
 
 // Cache configuration
@@ -37,8 +39,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "playwright",
     name: "Playwright MCP",
     slug: "playwright",
-    description: "Browser automation with Playwright - navigate, click, fill forms, take screenshots",
-    longDescription: "Full-featured browser automation using Playwright. Navigate websites, interact with elements, take screenshots, fill forms, and extract data from web pages.",
+    description:
+      "Browser automation with Playwright - navigate, click, fill forms, take screenshots",
+    longDescription:
+      "Full-featured browser automation using Playwright. Navigate websites, interact with elements, take screenshots, fill forms, and extract data from web pages.",
     author: "Anthropic",
     icon: "🎭",
     category: "browser",
@@ -49,7 +53,8 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.8,
     version: "1.0.0",
     homepage: "https://github.com/modelcontextprotocol/servers",
-    repository: "https://github.com/modelcontextprotocol/servers/tree/main/src/playwright",
+    repository:
+      "https://github.com/modelcontextprotocol/servers/tree/main/src/playwright",
     documentation: "https://docs.all-hands.dev/usage/mcp",
     config: {
       command: "npx",
@@ -64,8 +69,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "chrome-devtools",
     name: "Chrome DevTools",
     slug: "chrome-devtools",
-    description: "Chrome browser automation via DevTools protocol - debugging, screenshots, network inspection",
-    longDescription: "Control Chrome browser using the DevTools Protocol. Navigate pages, capture screenshots, inspect network requests, evaluate JavaScript, and more.",
+    description:
+      "Chrome browser automation via DevTools protocol - debugging, screenshots, network inspection",
+    longDescription:
+      "Control Chrome browser using the DevTools Protocol. Navigate pages, capture screenshots, inspect network requests, evaluate JavaScript, and more.",
     author: "ModelContextProtocol",
     icon: "🔍",
     category: "browser",
@@ -76,7 +83,8 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.7,
     version: "1.0.0",
     homepage: "https://github.com/modelcontextprotocol/servers",
-    repository: "https://github.com/modelcontextprotocol/servers/tree/main/src/chrome-devtools",
+    repository:
+      "https://github.com/modelcontextprotocol/servers/tree/main/src/chrome-devtools",
     documentation: "https://docs.all-hands.dev/usage/mcp",
     config: {
       command: "npx",
@@ -91,8 +99,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "postgres",
     name: "PostgreSQL",
     slug: "postgres",
-    description: "PostgreSQL database queries and operations - read/write data, execute SQL, manage schemas",
-    longDescription: "Connect to PostgreSQL databases, execute queries, manage schemas, and perform CRUD operations directly from your AI assistant.",
+    description:
+      "PostgreSQL database queries and operations - read/write data, execute SQL, manage schemas",
+    longDescription:
+      "Connect to PostgreSQL databases, execute queries, manage schemas, and perform CRUD operations directly from your AI assistant.",
     author: "ModelContextProtocol",
     icon: "🐘",
     category: "database",
@@ -103,13 +113,15 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.9,
     version: "1.0.0",
     homepage: "https://github.com/modelcontextprotocol/servers",
-    repository: "https://github.com/modelcontextprotocol/servers/tree/main/src/postgres",
+    repository:
+      "https://github.com/modelcontextprotocol/servers/tree/main/src/postgres",
     documentation: "https://docs.all-hands.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-postgres"],
       env: {
-        POSTGRES_CONNECTION_STRING: "postgresql://user:password@localhost:5432/dbname",
+        POSTGRES_CONNECTION_STRING:
+          "postgresql://user:password@localhost:5432/dbname",
       },
     },
     tags: ["database", "sql", "postgresql", "data"],
@@ -121,8 +133,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "sqlite",
     name: "SQLite",
     slug: "sqlite",
-    description: "SQLite database operations - lightweight SQL database queries and management",
-    longDescription: "Work with SQLite databases - execute queries, manage tables, and perform data operations with the lightweight SQL database engine.",
+    description:
+      "SQLite database operations - lightweight SQL database queries and management",
+    longDescription:
+      "Work with SQLite databases - execute queries, manage tables, and perform data operations with the lightweight SQL database engine.",
     author: "ModelContextProtocol",
     icon: "💾",
     category: "database",
@@ -132,7 +146,8 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.7,
     version: "1.0.0",
     homepage: "https://github.com/modelcontextprotocol/servers",
-    repository: "https://github.com/modelcontextprotocol/servers/tree/main/src/sqlite",
+    repository:
+      "https://github.com/modelcontextprotocol/servers/tree/main/src/sqlite",
     documentation: "https://docs.all-hands.dev/usage/mcp",
     config: {
       command: "npx",
@@ -147,8 +162,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "aws-kb",
     name: "AWS Knowledge Base",
     slug: "aws-kb",
-    description: "Query AWS documentation and resources - get answers about AWS services and best practices",
-    longDescription: "Access AWS documentation, query service information, and get best practices for AWS cloud services directly through your AI assistant.",
+    description:
+      "Query AWS documentation and resources - get answers about AWS services and best practices",
+    longDescription:
+      "Access AWS documentation, query service information, and get best practices for AWS cloud services directly through your AI assistant.",
     author: "Amazon",
     icon: "☁️",
     category: "cloud",
@@ -174,7 +191,8 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     name: "Figma MCP",
     slug: "figma",
     description: "Access Figma designs and generate UI code from mockups",
-    longDescription: "Connect to Figma files, extract design information, generate code from mockups, and access design tokens directly.",
+    longDescription:
+      "Connect to Figma files, extract design information, generate code from mockups, and access design tokens directly.",
     author: "Figma",
     icon: "🎨",
     category: "development",
@@ -199,8 +217,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "github",
     name: "GitHub MCP",
     slug: "github",
-    description: "GitHub integration - repositories, issues, PRs, commits, and code search",
-    longDescription: "Full GitHub integration allowing you to search code, create issues, manage pull requests, browse repositories, and interact with GitHub API.",
+    description:
+      "GitHub integration - repositories, issues, PRs, commits, and code search",
+    longDescription:
+      "Full GitHub integration allowing you to search code, create issues, manage pull requests, browse repositories, and interact with GitHub API.",
     author: "ModelContextProtocol",
     icon: "🐙",
     category: "development",
@@ -210,7 +230,8 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.8,
     version: "1.0.0",
     homepage: "https://github.com/modelcontextprotocol/servers",
-    repository: "https://github.com/modelcontextprotocol/servers/tree/main/src/github",
+    repository:
+      "https://github.com/modelcontextprotocol/servers/tree/main/src/github",
     documentation: "https://docs.all-hands.dev/usage/mcp",
     config: {
       command: "npx",
@@ -228,8 +249,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "slack",
     name: "Slack MCP",
     slug: "slack",
-    description: "Slack integration - send messages, read channels, manage workspace",
-    longDescription: "Connect to Slack workspaces, send messages to channels, read messages, and manage your Slack workspace through AI.",
+    description:
+      "Slack integration - send messages, read channels, manage workspace",
+    longDescription:
+      "Connect to Slack workspaces, send messages to channels, read messages, and manage your Slack workspace through AI.",
     author: "ModelContextProtocol",
     icon: "💬",
     category: "communication",
@@ -239,7 +262,8 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.5,
     version: "1.0.0",
     homepage: "https://github.com/modelcontextprotocol/servers",
-    repository: "https://github.com/modelcontextprotocol/servers/tree/main/src/slack",
+    repository:
+      "https://github.com/modelcontextprotocol/servers/tree/main/src/slack",
     documentation: "https://docs.all-hands.dev/usage/mcp",
     config: {
       command: "npx",
@@ -257,8 +281,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "google-drive",
     name: "Google Drive",
     slug: "google-drive",
-    description: "Access Google Drive files and folders - read, write, and organize documents",
-    longDescription: "Connect to Google Drive, access files and folders, read documents, upload files, and manage your Drive storage.",
+    description:
+      "Access Google Drive files and folders - read, write, and organize documents",
+    longDescription:
+      "Connect to Google Drive, access files and folders, read documents, upload files, and manage your Drive storage.",
     author: "ModelContextProtocol",
     icon: "📁",
     category: "file-system",
@@ -267,7 +293,8 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.6,
     version: "1.0.0",
     homepage: "https://github.com/modelcontextprotocol/servers",
-    repository: "https://github.com/modelcontextprotocol/servers/tree/main/src/gdrive",
+    repository:
+      "https://github.com/modelcontextprotocol/servers/tree/main/src/gdrive",
     documentation: "https://docs.all-hands.dev/usage/mcp",
     config: {
       command: "npx",
@@ -282,8 +309,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "memory",
     name: "Memory Server",
     slug: "memory",
-    description: "Persistent memory storage - remember context across conversations",
-    longDescription: "Give your AI assistant persistent memory. Store and retrieve information across conversations, maintain context, and build a knowledge base.",
+    description:
+      "Persistent memory storage - remember context across conversations",
+    longDescription:
+      "Give your AI assistant persistent memory. Store and retrieve information across conversations, maintain context, and build a knowledge base.",
     author: "ModelContextProtocol",
     icon: "🧠",
     category: "productivity",
@@ -294,7 +323,8 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.9,
     version: "1.0.0",
     homepage: "https://github.com/modelcontextprotocol/servers",
-    repository: "https://github.com/modelcontextprotocol/servers/tree/main/src/memory",
+    repository:
+      "https://github.com/modelcontextprotocol/servers/tree/main/src/memory",
     documentation: "https://docs.all-hands.dev/usage/mcp",
     config: {
       command: "npx",
@@ -309,8 +339,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "filesystem",
     name: "File System",
     slug: "filesystem",
-    description: "Local file system access - read, write, and manage files on your computer",
-    longDescription: "Access your local file system securely. Read files, write content, create directories, and manage your local files through AI.",
+    description:
+      "Local file system access - read, write, and manage files on your computer",
+    longDescription:
+      "Access your local file system securely. Read files, write content, create directories, and manage your local files through AI.",
     author: "ModelContextProtocol",
     icon: "📂",
     category: "file-system",
@@ -320,7 +352,8 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.7,
     version: "1.0.0",
     homepage: "https://github.com/modelcontextprotocol/servers",
-    repository: "https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem",
+    repository:
+      "https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem",
     documentation: "https://docs.all-hands.dev/usage/mcp",
     config: {
       command: "npx",
@@ -335,8 +368,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "git",
     name: "Git Operations",
     slug: "git",
-    description: "Git repository operations - commits, branches, diffs, and repository management",
-    longDescription: "Perform Git operations through AI - commit changes, create branches, view diffs, manage remotes, and interact with Git repositories.",
+    description:
+      "Git repository operations - commits, branches, diffs, and repository management",
+    longDescription:
+      "Perform Git operations through AI - commit changes, create branches, view diffs, manage remotes, and interact with Git repositories.",
     author: "ModelContextProtocol",
     icon: "🌿",
     category: "development",
@@ -345,7 +380,8 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.8,
     version: "1.0.0",
     homepage: "https://github.com/modelcontextprotocol/servers",
-    repository: "https://github.com/modelcontextprotocol/servers/tree/main/src/git",
+    repository:
+      "https://github.com/modelcontextprotocol/servers/tree/main/src/git",
     documentation: "https://docs.all-hands.dev/usage/mcp",
     config: {
       command: "npx",
@@ -360,8 +396,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "puppeteer",
     name: "Puppeteer",
     slug: "puppeteer",
-    description: "Chrome automation with Puppeteer - web scraping and browser control",
-    longDescription: "Control Chrome/Chromium browsers using Puppeteer. Navigate websites, scrape data, take screenshots, generate PDFs, and automate web tasks.",
+    description:
+      "Chrome automation with Puppeteer - web scraping and browser control",
+    longDescription:
+      "Control Chrome/Chromium browsers using Puppeteer. Navigate websites, scrape data, take screenshots, generate PDFs, and automate web tasks.",
     author: "ModelContextProtocol",
     icon: "🎪",
     category: "browser",
@@ -370,7 +408,8 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.6,
     version: "1.0.0",
     homepage: "https://github.com/modelcontextprotocol/servers",
-    repository: "https://github.com/modelcontextprotocol/servers/tree/main/src/puppeteer",
+    repository:
+      "https://github.com/modelcontextprotocol/servers/tree/main/src/puppeteer",
     documentation: "https://docs.all-hands.dev/usage/mcp",
     config: {
       command: "npx",
@@ -385,8 +424,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "brave-search",
     name: "Brave Search",
     slug: "brave-search",
-    description: "Web search using Brave Search API - find information across the web",
-    longDescription: "Perform web searches using Brave Search API. Get search results, news, images, and web information with privacy-focused search.",
+    description:
+      "Web search using Brave Search API - find information across the web",
+    longDescription:
+      "Perform web searches using Brave Search API. Get search results, news, images, and web information with privacy-focused search.",
     author: "ModelContextProtocol",
     icon: "🔎",
     category: "api-integration",
@@ -396,7 +437,8 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.5,
     version: "1.0.0",
     homepage: "https://github.com/modelcontextprotocol/servers",
-    repository: "https://github.com/modelcontextprotocol/servers/tree/main/src/brave-search",
+    repository:
+      "https://github.com/modelcontextprotocol/servers/tree/main/src/brave-search",
     documentation: "https://docs.all-hands.dev/usage/mcp",
     config: {
       command: "npx",
@@ -414,8 +456,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "docker",
     name: "Docker",
     slug: "docker",
-    description: "Docker container management - build, run, and manage containers",
-    longDescription: "Interact with Docker daemon to manage containers, images, volumes, and networks. Build images, run containers, and orchestrate your Docker environment.",
+    description:
+      "Docker container management - build, run, and manage containers",
+    longDescription:
+      "Interact with Docker daemon to manage containers, images, volumes, and networks. Build images, run containers, and orchestrate your Docker environment.",
     author: "Community",
     icon: "🐳",
     category: "development",
@@ -437,8 +481,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "sentry",
     name: "Sentry",
     slug: "sentry",
-    description: "Sentry error monitoring - track errors, performance, and application health",
-    longDescription: "Connect to Sentry to monitor application errors, track performance issues, and get insights into your application's health.",
+    description:
+      "Sentry error monitoring - track errors, performance, and application health",
+    longDescription:
+      "Connect to Sentry to monitor application errors, track performance issues, and get insights into your application's health.",
     author: "Community",
     icon: "🚨",
     category: "monitoring",
@@ -464,8 +510,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "docker",
     name: "Docker MCP",
     slug: "docker",
-    description: "Docker container management - build, run, and manage containers",
-    longDescription: "Interact with Docker daemon to manage containers, images, volumes, and networks. Build images, run containers, and orchestrate your Docker environment.",
+    description:
+      "Docker container management - build, run, and manage containers",
+    longDescription:
+      "Interact with Docker daemon to manage containers, images, volumes, and networks. Build images, run containers, and orchestrate your Docker environment.",
     author: "Community",
     icon: "🐳",
     category: "development",
@@ -488,8 +536,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "sentry",
     name: "Sentry MCP",
     slug: "sentry",
-    description: "Sentry error monitoring - track errors, performance, and application health",
-    longDescription: "Connect to Sentry to monitor application errors, track performance issues, and get insights into your application's health.",
+    description:
+      "Sentry error monitoring - track errors, performance, and application health",
+    longDescription:
+      "Connect to Sentry to monitor application errors, track performance issues, and get insights into your application's health.",
     author: "Community",
     icon: "🚨",
     category: "monitoring",
@@ -515,8 +565,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "discord",
     name: "Discord MCP",
     slug: "discord",
-    description: "Discord bot integration - send messages, manage servers, interact with Discord API",
-    longDescription: "Connect to Discord servers, send messages to channels, manage roles, and interact with Discord's API through AI.",
+    description:
+      "Discord bot integration - send messages, manage servers, interact with Discord API",
+    longDescription:
+      "Connect to Discord servers, send messages to channels, manage roles, and interact with Discord's API through AI.",
     author: "Community",
     icon: "🎮",
     category: "communication",
@@ -542,8 +594,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "redis",
     name: "Redis MCP",
     slug: "redis",
-    description: "Redis database operations - key-value store, caching, and data management",
-    longDescription: "Connect to Redis databases, perform CRUD operations on keys, manage caches, and work with Redis data structures.",
+    description:
+      "Redis database operations - key-value store, caching, and data management",
+    longDescription:
+      "Connect to Redis databases, perform CRUD operations on keys, manage caches, and work with Redis data structures.",
     author: "Community",
     icon: "🔴",
     category: "database",
@@ -569,8 +623,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "mysql",
     name: "MySQL MCP",
     slug: "mysql",
-    description: "MySQL database operations - SQL queries, data management, and schema operations",
-    longDescription: "Connect to MySQL databases, execute SQL queries, manage schemas, and perform database operations through AI.",
+    description:
+      "MySQL database operations - SQL queries, data management, and schema operations",
+    longDescription:
+      "Connect to MySQL databases, execute SQL queries, manage schemas, and perform database operations through AI.",
     author: "Community",
     icon: "🐬",
     category: "database",
@@ -596,8 +652,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "mongodb",
     name: "MongoDB MCP",
     slug: "mongodb",
-    description: "MongoDB database operations - NoSQL queries, document management, and collections",
-    longDescription: "Connect to MongoDB databases, perform CRUD operations on documents, manage collections, and work with MongoDB queries.",
+    description:
+      "MongoDB database operations - NoSQL queries, document management, and collections",
+    longDescription:
+      "Connect to MongoDB databases, perform CRUD operations on documents, manage collections, and work with MongoDB queries.",
     author: "Community",
     icon: "🍃",
     category: "database",
@@ -623,8 +681,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "aws-s3",
     name: "AWS S3 MCP",
     slug: "aws-s3",
-    description: "AWS S3 storage operations - upload, download, and manage files in S3 buckets",
-    longDescription: "Connect to AWS S3, upload and download files, manage buckets, and perform storage operations through AI.",
+    description:
+      "AWS S3 storage operations - upload, download, and manage files in S3 buckets",
+    longDescription:
+      "Connect to AWS S3, upload and download files, manage buckets, and perform storage operations through AI.",
     author: "Amazon",
     icon: "🪣",
     category: "cloud",
@@ -653,8 +713,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "azure-blob",
     name: "Azure Blob MCP",
     slug: "azure-blob",
-    description: "Azure Blob Storage operations - manage files and containers in Azure",
-    longDescription: "Connect to Azure Blob Storage, upload and download files, manage containers, and perform cloud storage operations.",
+    description:
+      "Azure Blob Storage operations - manage files and containers in Azure",
+    longDescription:
+      "Connect to Azure Blob Storage, upload and download files, manage containers, and perform cloud storage operations.",
     author: "Microsoft",
     icon: "☁️",
     category: "cloud",
@@ -680,8 +742,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "jest",
     name: "Jest MCP",
     slug: "jest",
-    description: "Jest testing framework integration - run tests, generate reports, and manage test suites",
-    longDescription: "Integrate with Jest testing framework, run tests, generate coverage reports, and manage test suites through AI.",
+    description:
+      "Jest testing framework integration - run tests, generate reports, and manage test suites",
+    longDescription:
+      "Integrate with Jest testing framework, run tests, generate coverage reports, and manage test suites through AI.",
     author: "Community",
     icon: "🧪",
     category: "testing",
@@ -704,8 +768,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "cypress",
     name: "Cypress MCP",
     slug: "cypress",
-    description: "Cypress e2e testing integration - run tests, manage test suites, and generate reports",
-    longDescription: "Integrate with Cypress for end-to-end testing, run tests, manage test suites, and generate test reports.",
+    description:
+      "Cypress e2e testing integration - run tests, manage test suites, and generate reports",
+    longDescription:
+      "Integrate with Cypress for end-to-end testing, run tests, manage test suites, and generate test reports.",
     author: "Community",
     icon: "🌲",
     category: "testing",
@@ -728,8 +794,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "vault",
     name: "HashiCorp Vault MCP",
     slug: "vault",
-    description: "HashiCorp Vault integration - manage secrets, keys, and secure configuration",
-    longDescription: "Connect to HashiCorp Vault to manage secrets, encryption keys, and secure configuration through AI.",
+    description:
+      "HashiCorp Vault integration - manage secrets, keys, and secure configuration",
+    longDescription:
+      "Connect to HashiCorp Vault to manage secrets, encryption keys, and secure configuration through AI.",
     author: "HashiCorp",
     icon: "🔐",
     category: "security",
@@ -757,8 +825,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "kubernetes",
     name: "Kubernetes MCP",
     slug: "kubernetes",
-    description: "Kubernetes cluster management - deploy, scale, and manage containerized applications",
-    longDescription: "Connect to Kubernetes clusters, deploy applications, manage pods and services, and orchestrate containerized workloads.",
+    description:
+      "Kubernetes cluster management - deploy, scale, and manage containerized applications",
+    longDescription:
+      "Connect to Kubernetes clusters, deploy applications, manage pods and services, and orchestrate containerized workloads.",
     author: "Community",
     icon: "⚙️",
     category: "development",
@@ -785,8 +855,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "terraform",
     name: "Terraform MCP",
     slug: "terraform",
-    description: "Terraform infrastructure management - plan, apply, and manage cloud resources",
-    longDescription: "Integrate with Terraform to plan, apply, and manage infrastructure as code through AI.",
+    description:
+      "Terraform infrastructure management - plan, apply, and manage cloud resources",
+    longDescription:
+      "Integrate with Terraform to plan, apply, and manage infrastructure as code through AI.",
     author: "HashiCorp",
     icon: "🏗️",
     category: "development",
@@ -809,8 +881,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "elasticsearch",
     name: "Elasticsearch MCP",
     slug: "elasticsearch",
-    description: "Elasticsearch search and analytics - query data, manage indices, and perform analytics",
-    longDescription: "Connect to Elasticsearch clusters, perform searches, manage indices, and work with log analytics through AI.",
+    description:
+      "Elasticsearch search and analytics - query data, manage indices, and perform analytics",
+    longDescription:
+      "Connect to Elasticsearch clusters, perform searches, manage indices, and work with log analytics through AI.",
     author: "Community",
     icon: "🔍",
     category: "database",
@@ -836,8 +910,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "prometheus",
     name: "Prometheus MCP",
     slug: "prometheus",
-    description: "Prometheus metrics and monitoring - query metrics, manage alerts, and monitor systems",
-    longDescription: "Connect to Prometheus to query metrics, manage alerting rules, and monitor system performance through AI.",
+    description:
+      "Prometheus metrics and monitoring - query metrics, manage alerts, and monitor systems",
+    longDescription:
+      "Connect to Prometheus to query metrics, manage alerting rules, and monitor system performance through AI.",
     author: "Community",
     icon: "📈",
     category: "monitoring",
@@ -864,8 +940,10 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     id: "grafana",
     name: "Grafana MCP",
     slug: "grafana",
-    description: "Grafana dashboards and visualization - manage dashboards, datasources, and alerts",
-    longDescription: "Connect to Grafana to manage dashboards, configure datasources, and create visualizations through AI.",
+    description:
+      "Grafana dashboards and visualization - manage dashboards, datasources, and alerts",
+    longDescription:
+      "Connect to Grafana to manage dashboards, configure datasources, and create visualizations through AI.",
     author: "Community",
     icon: "📊",
     category: "monitoring",
@@ -932,13 +1010,13 @@ function setCachedData(data: MCPMarketplaceItem[]): void {
  */
 async function fetchFromSmithery(): Promise<MCPMarketplaceItem[]> {
   // Try with API key first (if available)
-  const apiKey = localStorage.getItem('smithery-api-key');
+  const apiKey = localStorage.getItem("smithery-api-key");
   const headers: HeadersInit = {
-    'Accept': 'application/json',
+    Accept: "application/json",
   };
-  
+
   if (apiKey) {
-    headers['Authorization'] = `Bearer ${apiKey}`;
+    headers.Authorization = `Bearer ${apiKey}`;
   }
 
   const response = await fetch(SMITHERY_API, { headers });
@@ -992,7 +1070,10 @@ function transformSmitheryData(data: any): MCPMarketplaceItem[] {
   );
 }
 
-function normalizeSmitheryServer(server: any, index: number): MCPMarketplaceItem {
+function normalizeSmitheryServer(
+  server: any,
+  index: number,
+): MCPMarketplaceItem {
   const name = getSmitheryName(server);
   const description = getSmitheryDescription(server);
   const longDescription = getSmitheryLongDescription(server, description);
@@ -1159,7 +1240,10 @@ function normalizeNpmPackage(pkg: any, index: number): MCPMarketplaceItem {
 }
 
 function deriveNpmNames(packageInfo: any, index: number) {
-  const rawName = typeof packageInfo?.name === "string" ? packageInfo.name : `unknown-${index}`;
+  const rawName =
+    typeof packageInfo?.name === "string"
+      ? packageInfo.name
+      : `unknown-${index}`;
   const displayName = rawName.replace("@modelcontextprotocol/", "");
 
   return {
@@ -1170,7 +1254,11 @@ function deriveNpmNames(packageInfo: any, index: number) {
   } as const;
 }
 
-function deriveNpmMetadata(pkg: any, packageInfo: any, names: ReturnType<typeof deriveNpmNames>) {
+function deriveNpmMetadata(
+  pkg: any,
+  packageInfo: any,
+  names: ReturnType<typeof deriveNpmNames>,
+) {
   const description = packageInfo?.description ?? "No description available";
   const category = derivePrimaryCategory(names.rawName, description);
   const popularityScore = pkg?.score?.final ?? 0;
@@ -1190,7 +1278,11 @@ function deriveNpmMetadata(pkg: any, packageInfo: any, names: ReturnType<typeof 
   } as const;
 }
 
-function derivePrimaryCategory(name: string, description: string, tags: string[] = []): MCPCategory {
+function derivePrimaryCategory(
+  name: string,
+  description: string,
+  tags: string[] = [],
+): MCPCategory {
   const categories = inferCategory(name, description, tags);
   return (categories[0] as MCPCategory | undefined) ?? "other";
 }
@@ -1225,9 +1317,9 @@ function buildNpmTags(displayName: string): string[] {
 function buildNpmConfig(rawName: string) {
   return {
     command: "npx",
-    args: ["-y", rawName],
+    args: ["-y", rawName] as string[],
     requiresApiKey: false,
-  } as const;
+  };
 }
 
 /**
@@ -1321,7 +1413,8 @@ function normalizeOfficialRegistryServer(
 }
 
 function deriveOfficialServerMetadata(server: any, index: number) {
-  const name = typeof server?.name === "string" ? server.name : "Unknown Server";
+  const name =
+    typeof server?.name === "string" ? server.name : "Unknown Server";
   const description = server?.description ?? "No description available";
   const category = derivePrimaryCategory(name, description, server?.tags ?? []);
   const slugSource = typeof server?.slug === "string" ? server.slug : name;
@@ -1334,8 +1427,10 @@ function deriveOfficialServerMetadata(server: any, index: number) {
     icon: getIconForCategory(category),
     slug: slugSource.toLowerCase().replace(/\s+/g, "-"),
     type: server?.type ?? "stdio",
-    homepage: typeof server?.homepage === "string" ? server.homepage : undefined,
-    repository: typeof server?.repository === "string" ? server.repository : undefined,
+    homepage:
+      typeof server?.homepage === "string" ? server.homepage : undefined,
+    repository:
+      typeof server?.repository === "string" ? server.repository : undefined,
     documentation:
       typeof server?.documentation === "string"
         ? server.documentation
@@ -1364,8 +1459,13 @@ function buildOfficialServerConfig(server: any) {
 /**
  * Infer category from server metadata
  */
-function inferCategory(name: string, description?: string, tags?: string[]): string[] {
-  const text = `${name} ${description || ""} ${(tags || []).join(" ")}`.toLowerCase();
+function inferCategory(
+  name: string,
+  description?: string,
+  tags?: string[],
+): string[] {
+  const text =
+    `${name} ${description || ""} ${(tags || []).join(" ")}`.toLowerCase();
   const categories = new Set<string>();
 
   for (const rule of CATEGORY_RULES) {
@@ -1378,8 +1478,14 @@ function inferCategory(name: string, description?: string, tags?: string[]): str
 }
 
 const CATEGORY_RULES: Array<{ pattern: RegExp; category: string }> = [
-  { pattern: /browser|playwright|puppeteer|chrome|selenium/, category: "browser" },
-  { pattern: /database|postgres|mysql|sqlite|mongo|redis/, category: "database" },
+  {
+    pattern: /browser|playwright|puppeteer|chrome|selenium/,
+    category: "browser",
+  },
+  {
+    pattern: /database|postgres|mysql|sqlite|mongo|redis/,
+    category: "database",
+  },
   { pattern: /cloud|aws|azure|gcp|s3|lambda/, category: "cloud" },
   { pattern: /ai|llm|gpt|claude|model/, category: "ai-tools" },
   { pattern: /git|github|gitlab|code|dev|vscode/, category: "development" },
@@ -1417,7 +1523,9 @@ function getIconForCategory(category: string): string {
 /**
  * Merge and deduplicate MCPs from multiple sources
  */
-function mergeAndDeduplicateMCPs(sources: MCPMarketplaceItem[][]): MCPMarketplaceItem[] {
+function mergeAndDeduplicateMCPs(
+  sources: MCPMarketplaceItem[][],
+): MCPMarketplaceItem[] {
   const seen = new Set<string>();
   const merged: MCPMarketplaceItem[] = [];
 
@@ -1425,7 +1533,7 @@ function mergeAndDeduplicateMCPs(sources: MCPMarketplaceItem[][]): MCPMarketplac
     for (const mcp of source) {
       // Create unique key based on name and type
       const key = `${mcp.name.toLowerCase()}-${mcp.type}`;
-      
+
       if (!seen.has(key)) {
         seen.add(key);
         merged.push(mcp);
@@ -1486,7 +1594,10 @@ function matchesMarketplaceFilters(
   return searchQuery ? matchesSearchQuery(item, searchQuery) : true;
 }
 
-function matchesSearchQuery(item: MCPMarketplaceItem, searchQuery: string): boolean {
+function matchesSearchQuery(
+  item: MCPMarketplaceItem,
+  searchQuery: string,
+): boolean {
   const nameMatches = item.name.toLowerCase().includes(searchQuery);
   const descriptionMatches = item.description
     .toLowerCase()
@@ -1498,11 +1609,15 @@ function matchesSearchQuery(item: MCPMarketplaceItem, searchQuery: string): bool
   return Boolean(nameMatches || descriptionMatches || tagMatches);
 }
 
-function extractFeaturedItems(items: MCPMarketplaceItem[]): MCPMarketplaceItem[] {
+function extractFeaturedItems(
+  items: MCPMarketplaceItem[],
+): MCPMarketplaceItem[] {
   return items.filter((item) => item.featured);
 }
 
-function extractPopularItems(items: MCPMarketplaceItem[]): MCPMarketplaceItem[] {
+function extractPopularItems(
+  items: MCPMarketplaceItem[],
+): MCPMarketplaceItem[] {
   return items.filter((item) => item.popular);
 }
 
@@ -1577,7 +1692,7 @@ async function fetchLiveMCPs(): Promise<MCPMarketplaceItem[]> {
 
   // Merge and deduplicate
   const merged = mergeAndDeduplicateMCPs(sources);
-  
+
   return merged;
 }
 
@@ -1620,4 +1735,3 @@ export function clearMarketplaceCache(): void {
     // Error clearing cache - silently fail
   }
 }
-

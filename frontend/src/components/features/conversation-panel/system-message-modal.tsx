@@ -47,7 +47,10 @@ export function SystemMessageModal({
 
   return (
     <ModalBackdrop onClose={onClose}>
-      <ModalBody width="medium" className="max-h-[80vh] flex flex-col items-start">
+      <ModalBody
+        width="medium"
+        className="max-h-[80vh] flex flex-col items-start"
+      >
         <div className="flex flex-col gap-6 w-full">
           <BaseModalTitle title={t("SYSTEM_MESSAGE_MODAL$TITLE")} />
           <SystemMessageMetadata
@@ -82,11 +85,18 @@ export function SystemMessageModal({
   );
 }
 
-function useSystemMessageModalController(systemMessage: SystemMessageModalProps["systemMessage"]) {
+function useSystemMessageModalController(
+  systemMessage: SystemMessageModalProps["systemMessage"],
+) {
   const [activeTab, setActiveTab] = useState<"system" | "tools">("system");
-  const [expandedTools, setExpandedTools] = useState<Record<number, boolean>>({});
+  const [expandedTools, setExpandedTools] = useState<Record<number, boolean>>(
+    {},
+  );
 
-  const tools = useMemo(() => normalizeTools(systemMessage?.tools ?? []), [systemMessage?.tools]);
+  const tools = useMemo(
+    () => normalizeTools(systemMessage?.tools ?? []),
+    [systemMessage?.tools],
+  );
 
   const toggleTool = (index: number) => {
     setExpandedTools((previous) => ({
@@ -125,14 +135,11 @@ const resolveToolKey = (
   toolData: ToolData,
   functionData: FunctionData,
   index: number,
-) =>
-  String(
-    functionData.name ??
-      toolData.type ??
-      `tool-${index}`,
-  );
+) => String(functionData.name ?? toolData.type ?? `tool-${index}`);
 
-function normalizeTools(tools: Array<Record<string, unknown>>): NormalizedTool[] {
+function normalizeTools(
+  tools: Array<Record<string, unknown>>,
+): NormalizedTool[] {
   return tools.map((tool, index) => {
     const toolData = tool as ToolData;
     const functionData = resolveFunctionData(toolData);

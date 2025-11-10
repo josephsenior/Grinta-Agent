@@ -31,8 +31,7 @@ export interface CommandAction extends ForgeActionEvent<"run"> {
   };
 }
 
-export interface AssistantMessageAction
-  extends ForgeActionEvent<"message"> {
+export interface AssistantMessageAction extends ForgeActionEvent<"message"> {
   source: "agent";
   args: {
     thought: string;
@@ -60,7 +59,8 @@ export interface ThinkAction extends ForgeActionEvent<"think"> {
   };
 }
 
-export interface StreamingChunkAction extends ForgeActionEvent<"streaming_chunk"> {
+export interface StreamingChunkAction
+  extends ForgeActionEvent<"streaming_chunk"> {
   source: "agent";
   args: {
     chunk: string;
@@ -171,8 +171,7 @@ export interface MCPAction extends ForgeActionEvent<"call_tool_mcp"> {
   };
 }
 
-export interface TaskTrackingAction
-  extends ForgeActionEvent<"task_tracking"> {
+export interface TaskTrackingAction extends ForgeActionEvent<"task_tracking"> {
   source: "agent";
   args: {
     command: string;

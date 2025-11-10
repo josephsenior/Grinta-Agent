@@ -32,7 +32,9 @@ const buildFallbackContent = ({
 }) => {
   if (!diagram) {
     return (
-      <div className={`flex items-center justify-center p-8 text-foreground-secondary ${className}`}>
+      <div
+        className={`flex items-center justify-center p-8 text-foreground-secondary ${className}`}
+      >
         No diagram available
       </div>
     );
@@ -40,8 +42,15 @@ const buildFallbackContent = ({
 
   if (error) {
     return (
-      <div className={`flex flex-col items-center justify-center p-8 text-error-500 ${className}`}>
-        <svg className="w-12 h-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div
+        className={`flex flex-col items-center justify-center p-8 text-error-500 ${className}`}
+      >
+        <svg
+          className="w-12 h-12 mb-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -101,8 +110,8 @@ const useDiagramControls = ({
   setShowExportMenu: React.Dispatch<React.SetStateAction<boolean>>;
   isExporting: boolean;
   handleExport: (format: ExportFormat) => Promise<void>;
-}) => {
-  return useMemo(() => {
+}) =>
+  useMemo(() => {
     if (!shouldShowControls) {
       return null;
     }
@@ -110,7 +119,12 @@ const useDiagramControls = ({
     return (
       <div className="absolute top-2 right-2 z-10 flex gap-2">
         {enableZoom && (
-          <MermaidZoomControls zoom={zoom} onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={reset} />
+          <MermaidZoomControls
+            zoom={zoom}
+            onZoomIn={zoomIn}
+            onZoomOut={zoomOut}
+            onReset={reset}
+          />
         )}
 
         {enableFullscreen && (
@@ -119,7 +133,12 @@ const useDiagramControls = ({
             className="p-2 rounded-lg bg-white dark:bg-background-tertiary shadow-md hover:bg-background-tertiary/80 dark:hover:bg-background-tertiary/70 transition-colors"
             title="Enter fullscreen"
           >
-            <svg className="w-4 h-4 text-foreground-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-4 h-4 text-foreground-secondary"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -134,7 +153,7 @@ const useDiagramControls = ({
           <MermaidExportMenu
             isOpen={showExportMenu}
             isExporting={isExporting}
-            onToggle={() => setShowExportMenu(prev => !prev)}
+            onToggle={() => setShowExportMenu((prev) => !prev)}
             onRequestClose={() => setShowExportMenu(false)}
             onExport={handleExport}
           />
@@ -156,7 +175,6 @@ const useDiagramControls = ({
     isExporting,
     handleExport,
   ]);
-};
 
 export function MermaidDiagramViewer({
   diagram,
@@ -167,13 +185,10 @@ export function MermaidDiagramViewer({
   enableFullscreen = true,
   enableZoom = true,
 }: MermaidDiagramViewerProps) {
-  const {
-    containerRef,
-    svgRef,
-    svg,
-    error,
-    isRendering,
-  } = useMermaidDiagram({ diagram, onNodeClick });
+  const { containerRef, svgRef, svg, error, isRendering } = useMermaidDiagram({
+    diagram,
+    onNodeClick,
+  });
 
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -215,11 +230,14 @@ export function MermaidDiagramViewer({
     async (format: ExportFormat) => {
       setIsExporting(true);
       try {
+        const svgElement = (
+          svgRef.current instanceof SVGSVGElement ? svgRef.current : null
+        ) as SVGSVGElement | null;
         await performMermaidExport({
           format,
           diagram,
           exportFilename,
-          svgElement: svgRef.current,
+          svgElement,
         });
         setShowExportMenu(false);
       } catch (exportError) {
@@ -254,7 +272,8 @@ export function MermaidDiagramViewer({
     onZoomOut: zoomOut,
   });
 
-  const shouldShowControls = Boolean(svg) && (showExportButtons || enableFullscreen || enableZoom);
+  const shouldShowControls =
+    Boolean(svg) && (showExportButtons || enableFullscreen || enableZoom);
   const controls = useDiagramControls({
     shouldShowControls,
     enableZoom,
@@ -339,9 +358,8 @@ async function performMermaidExport({
       return;
     case "copy":
       await copyMermaidSource(diagram);
-      return;
+
     default:
-      return;
   }
 }
 
@@ -379,15 +397,27 @@ function MermaidFullscreenOverlay({
       <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-4 flex items-center justify-between z-10">
         <div className="text-white">
           <h3 className="text-lg font-semibold">{exportFilename}</h3>
-          <p className="text-sm text-foreground-secondary">Press ESC to exit fullscreen</p>
+          <p className="text-sm text-foreground-secondary">
+            Press ESC to exit fullscreen
+          </p>
         </div>
         <button
           onClick={onClose}
           className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white"
           title="Exit fullscreen (ESC)"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
@@ -455,8 +485,18 @@ function MermaidFullscreenControl({
       className="p-2 rounded bg-white/20 hover:bg-white/30 transition-colors text-white"
       title={title}
     >
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={iconPath} />
+      <svg
+        className="w-5 h-5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d={iconPath}
+        />
       </svg>
     </button>
   );
@@ -480,8 +520,18 @@ function MermaidZoomControls({
         className="p-1 hover:bg-background-tertiary rounded transition-colors"
         title="Zoom out (-)"
       >
-        <svg className="w-4 h-4 text-foreground-secondary/70 dark:text-foreground-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+        <svg
+          className="w-4 h-4 text-foreground-secondary/70 dark:text-foreground-secondary"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M20 12H4"
+          />
         </svg>
       </button>
       <span className="text-xs font-medium text-foreground-secondary/70 dark:text-foreground-secondary min-w-[3rem] text-center">
@@ -492,8 +542,18 @@ function MermaidZoomControls({
         className="p-1 hover:bg-background-tertiary rounded transition-colors"
         title="Zoom in (+)"
       >
-        <svg className="w-4 h-4 text-foreground-secondary/70 dark:text-foreground-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        <svg
+          className="w-4 h-4 text-foreground-secondary/70 dark:text-foreground-secondary"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 4v16m8-8H4"
+          />
         </svg>
       </button>
       <button
@@ -501,8 +561,18 @@ function MermaidZoomControls({
         className="p-1 hover:bg-background-tertiary rounded transition-colors"
         title="Reset (0)"
       >
-        <svg className="w-4 h-4 text-foreground-secondary/70 dark:text-foreground-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        <svg
+          className="w-4 h-4 text-foreground-secondary/70 dark:text-foreground-secondary"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+          />
         </svg>
       </button>
     </div>
@@ -529,8 +599,18 @@ function MermaidExportMenu({
         className="p-2 rounded-lg bg-white dark:bg-background-tertiary shadow-md hover:bg-background-tertiary/80 dark:hover:bg-background-tertiary/70 transition-colors"
         title="Export diagram"
       >
-        <svg className="w-4 h-4 text-foreground-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v6h6M20 20v-6h-6M18.364 5.636L5.636 18.364" />
+        <svg
+          className="w-4 h-4 text-foreground-secondary"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 4v6h6M20 20v-6h-6M18.364 5.636L5.636 18.364"
+          />
         </svg>
       </button>
 

@@ -12,11 +12,11 @@ import {
   Shield,
 } from "lucide-react";
 import { BRAND } from "#/config/brand";
-// Use public logo instead of bundled asset
-const logoImage = "/forge-logo.png";
 
 import { useCreateConversation } from "#/hooks/mutation/use-create-conversation";
 import { useIsCreatingConversation } from "#/hooks/use-is-creating-conversation";
+// Use public logo instead of bundled asset
+const logoImage = "/forge-logo.png";
 
 export function Header() {
   const navigate = useNavigate();
@@ -73,7 +73,7 @@ export function Header() {
         isPlaywrightRun ? "z-[9999] pointer-events-auto" : "z-50"
       }`}
       style={{
-        paddingTop: 'max(0.875rem, env(safe-area-inset-top))',
+        paddingTop: "max(0.875rem, env(safe-area-inset-top))",
       }}
     >
       <div className="max-w-7xl mx-auto px-6 h-full">

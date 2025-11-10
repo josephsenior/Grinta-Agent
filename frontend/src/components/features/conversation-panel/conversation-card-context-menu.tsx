@@ -113,8 +113,15 @@ function MenuSectionRenderer({
     <>
       {sectionIndex > 0 && <ContextMenuSeparator />}
       {section.map((item) => (
-        <ContextMenuListItem key={item.testId} testId={item.testId} onClick={item.onClick}>
-          <ContextMenuIconText icon={item.icon} text={translator(item.i18nKey)} />
+        <ContextMenuListItem
+          key={item.testId}
+          testId={item.testId}
+          onClick={item.onClick!}
+        >
+          <ContextMenuIconText
+            icon={item.icon}
+            text={translator(item.i18nKey)}
+          />
         </ContextMenuListItem>
       ))}
     </>
@@ -202,7 +209,9 @@ function buildMenuSections(handlers: {
   return sections.filter((section) => section.length > 0);
 }
 
-function createMenuSection(items: Array<MenuItemConfig | false | undefined>): MenuSection {
+function createMenuSection(
+  items: Array<MenuItemConfig | false | undefined>,
+): MenuSection {
   return items.filter(Boolean) as MenuSection;
 }
 

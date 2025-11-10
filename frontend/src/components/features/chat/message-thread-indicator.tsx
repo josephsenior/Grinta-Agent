@@ -27,7 +27,10 @@ export function MessageThreadIndicator({
 
   return (
     <div className={cn("relative", className)}>
-      <ThreadConnector isFirstInThread={isFirstInThread} isLastInThread={isLastInThread} />
+      <ThreadConnector
+        isFirstInThread={isFirstInThread}
+        isLastInThread={isLastInThread}
+      />
       <ThreadBadge
         isFirstInThread={isFirstInThread}
         threadSize={threadSize}

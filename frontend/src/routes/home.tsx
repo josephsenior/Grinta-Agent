@@ -16,7 +16,10 @@ function HomeScreen() {
       {
         onSuccess: (data) => {
           try {
-            localStorage.setItem("RECENT_CONVERSATION_ID", data.conversation_id);
+            localStorage.setItem(
+              "RECENT_CONVERSATION_ID",
+              data.conversation_id,
+            );
           } catch (err) {
             // ignore
           }
@@ -33,7 +36,7 @@ function HomeScreen() {
     >
       {/* Animated background with violet theme */}
       <div className="fixed inset-0 w-full h-full z-0">
-        <DarkVeil 
+        <DarkVeil
           hueShift={250}
           speed={0.3}
           noiseIntensity={0.02}
@@ -41,10 +44,10 @@ function HomeScreen() {
           resolutionScale={1}
         />
       </div>
-      
+
       {/* Overlay gradient for better text readability */}
       <div className="fixed inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60 z-[1]" />
-      
+
       {/* Content */}
       <main className="relative z-[2] flex flex-col items-center justify-center min-h-screen px-6 py-20">
         {/* Hero */}
@@ -63,7 +66,9 @@ function HomeScreen() {
           <div className="flex justify-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20">
               <Sparkles className="w-4 h-4 text-violet-400" />
-              <span className="text-sm font-light text-violet-300">Private Beta</span>
+              <span className="text-sm font-light text-violet-300">
+                Private Beta
+              </span>
             </div>
           </div>
 
@@ -78,7 +83,7 @@ function HomeScreen() {
 
           {/* Subtitle */}
           <p className="text-lg md:text-xl text-gray-400 font-light max-w-2xl mx-auto leading-relaxed">
-            Production-grade AI coding assistant with persistent memory, 
+            Production-grade AI coding assistant with persistent memory,
             multi-agent orchestration, and self-improving capabilities.
           </p>
 
@@ -92,7 +97,7 @@ function HomeScreen() {
               {isPending ? "Starting..." : "Start Building"}
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
-            
+
             <a
               href="https://github.com/All-Hands-AI/Forge"
               target="_blank"
@@ -110,7 +115,8 @@ function HomeScreen() {
               <Brain className="w-8 h-8 text-violet-400 mb-4" />
               <h3 className="text-white font-medium mb-2">Advanced Memory</h3>
               <p className="text-sm text-gray-400 font-light">
-                92% accuracy semantic search with persistent context across sessions
+                92% accuracy semantic search with persistent context across
+                sessions
               </p>
             </div>
 

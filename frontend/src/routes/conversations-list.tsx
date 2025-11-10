@@ -29,11 +29,13 @@ function ConversationsList() {
       </div>
     );
   }
-  
+
   if (isError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="text-red-400 font-light">Failed to load conversations.</div>
+        <div className="text-red-400 font-light">
+          Failed to load conversations.
+        </div>
       </div>
     );
   }
@@ -46,7 +48,10 @@ function ConversationsList() {
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 data-testid="page-title" className="text-3xl font-light text-white mb-2">
+          <h1
+            data-testid="page-title"
+            className="text-3xl font-light text-white mb-2"
+          >
             Conversations
           </h1>
           <p className="text-sm text-gray-500 font-light">
@@ -78,7 +83,7 @@ function ConversationsList() {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <div className="text-xs text-gray-500 font-light">
                     <ClientFormattedDate iso={c.created_at} />

@@ -29,8 +29,8 @@ export const DEFAULT_SETTINGS: Settings = {
     stdio_servers: [],
     shttp_servers: [],
   },
-  GIT_USER_NAME: "Forge",
-  GIT_USER_EMAIL: "Forge@all-hands.dev",
+  GIT_USER_NAME: "josephsenior",
+  GIT_USER_EMAIL: "yousef.yousefmejdi@esprit.tn",
   // Autonomy Configuration
   autonomy_level: "balanced",
   ENABLE_PERMISSIONS: true,

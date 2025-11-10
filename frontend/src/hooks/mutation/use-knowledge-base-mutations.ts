@@ -12,7 +12,10 @@ import type {
   UpdateCollectionRequest,
   SearchRequest,
 } from "#/types/knowledge-base";
-import { displaySuccessToast, displayErrorToast } from "#/utils/custom-toast-handlers";
+import {
+  displaySuccessToast,
+  displayErrorToast,
+} from "#/utils/custom-toast-handlers";
 
 export function useCreateCollection() {
   const queryClient = useQueryClient();
@@ -20,9 +23,13 @@ export function useCreateCollection() {
   return useMutation({
     mutationFn: (data: CreateCollectionRequest) => createCollection(data),
     onSuccess: (newCollection) => {
-      queryClient.invalidateQueries({ queryKey: ["knowledge-base", "collections"] });
+      queryClient.invalidateQueries({
+        queryKey: ["knowledge-base", "collections"],
+      });
       queryClient.invalidateQueries({ queryKey: ["knowledge-base", "stats"] });
-      displaySuccessToast(`Collection "${newCollection.name}" created successfully`);
+      displaySuccessToast(
+        `Collection "${newCollection.name}" created successfully`,
+      );
     },
     onError: (error: Error) => {
       displayErrorToast(`Failed to create collection: ${error.message}`);
@@ -34,11 +41,20 @@ export function useUpdateCollection() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ collectionId, data }: { collectionId: string; data: UpdateCollectionRequest }) =>
-      updateCollection(collectionId, data),
+    mutationFn: ({
+      collectionId,
+      data,
+    }: {
+      collectionId: string;
+      data: UpdateCollectionRequest;
+    }) => updateCollection(collectionId, data),
     onSuccess: (updatedCollection) => {
-      queryClient.invalidateQueries({ queryKey: ["knowledge-base", "collections"] });
-      queryClient.invalidateQueries({ queryKey: ["knowledge-base", "collections", updatedCollection.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["knowledge-base", "collections"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["knowledge-base", "collections", updatedCollection.id],
+      });
       displaySuccessToast(`Collection updated successfully`);
     },
     onError: (error: Error) => {
@@ -53,7 +69,9 @@ export function useDeleteCollection() {
   return useMutation({
     mutationFn: (collectionId: string) => deleteCollection(collectionId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["knowledge-base", "collections"] });
+      queryClient.invalidateQueries({
+        queryKey: ["knowledge-base", "collections"],
+      });
       queryClient.invalidateQueries({ queryKey: ["knowledge-base", "stats"] });
       displaySuccessToast("Collection deleted successfully");
     },
@@ -67,17 +85,29 @@ export function useUploadDocument() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ collectionId, file }: { collectionId: string; file: File }) =>
-      uploadDocument(collectionId, file),
+    mutationFn: ({
+      collectionId,
+      file,
+    }: {
+      collectionId: string;
+      file: File;
+    }) => uploadDocument(collectionId, file),
     onSuccess: (newDocument, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ["knowledge-base", "collections", variables.collectionId, "documents"],
+        queryKey: [
+          "knowledge-base",
+          "collections",
+          variables.collectionId,
+          "documents",
+        ],
       });
       queryClient.invalidateQueries({
         queryKey: ["knowledge-base", "collections", variables.collectionId],
       });
       queryClient.invalidateQueries({ queryKey: ["knowledge-base", "stats"] });
-      displaySuccessToast(`Document "${newDocument.filename}" uploaded successfully`);
+      displaySuccessToast(
+        `Document "${newDocument.filename}" uploaded successfully`,
+      );
     },
     onError: (error: Error) => {
       displayErrorToast(`Failed to upload document: ${error.message}`);
@@ -89,11 +119,21 @@ export function useDeleteDocument() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ collectionId, documentId }: { collectionId: string; documentId: string }) =>
-      deleteDocument(collectionId, documentId),
+    mutationFn: ({
+      collectionId,
+      documentId,
+    }: {
+      collectionId: string;
+      documentId: string;
+    }) => deleteDocument(collectionId, documentId),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ["knowledge-base", "collections", variables.collectionId, "documents"],
+        queryKey: [
+          "knowledge-base",
+          "collections",
+          variables.collectionId,
+          "documents",
+        ],
       });
       queryClient.invalidateQueries({
         queryKey: ["knowledge-base", "collections", variables.collectionId],
@@ -115,4 +155,3 @@ export function useSearchKnowledgeBase() {
     },
   });
 }
-

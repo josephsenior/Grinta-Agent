@@ -534,7 +534,7 @@ class Runtime(FileEditRuntimeMixin):
             True if observation should be added to stream, False otherwise
 
         """
-        observation._cause = event.id
+        observation.cause = event.id
         observation.tool_call_metadata = event.tool_call_metadata
         
         if isinstance(observation, NullObservation):
@@ -1324,6 +1324,21 @@ Please retry the file creation."""
 
         """
         pass
+
+    @abstractmethod
+    def copy_to(self, host_src: str, sandbox_dest: str, recursive: bool = False) -> None:
+        """Copy files from host into the runtime sandbox."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def copy_from(self, path: str) -> Path:
+        """Copy files from the runtime sandbox to the host."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def list_files(self, path: str, recursive: bool = False) -> list[str]:
+        """List files within the runtime sandbox."""
+        raise NotImplementedError
 
     @abstractmethod
     def browse(self, action: BrowseURLAction) -> Observation:

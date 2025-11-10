@@ -6,7 +6,11 @@ interface UploadImageInputProps {
   inputTestId?: string;
 }
 
-export function UploadImageInput({ onUpload, label, inputTestId }: UploadImageInputProps) {
+export function UploadImageInput({
+  onUpload,
+  label,
+  inputTestId,
+}: UploadImageInputProps) {
   const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       onUpload(Array.from(event.target.files));

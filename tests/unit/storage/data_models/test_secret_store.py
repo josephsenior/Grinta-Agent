@@ -1,7 +1,10 @@
 from __future__ import annotations
 from types import MappingProxyType
 from typing import Any
+
+import pytest
 from pydantic import SecretStr
+
 from forge.integrations.provider import CustomSecret, ProviderToken, ProviderType
 from forge.storage.data_models.user_secrets import UserSecrets
 
@@ -154,6 +157,56 @@ class TestUserSecrets:
         assert isinstance(store.custom_secrets["DATABASE_PASSWORD"], CustomSecret)
         assert store.custom_secrets["DATABASE_PASSWORD"].secret.get_secret_value() == "db-pass-456"
         assert store.custom_secrets["DATABASE_PASSWORD"].description == "DB password"
+
+    def test_set_event_stream_secrets_and_env_helpers(self):
+        """Ensure event stream receives redacted secrets and helper accessors behave."""
+        secrets = {
+            "API_KEY": CustomSecret(secret=SecretStr("api-key-xyz"), description="Primary API key"),
+            "SECONDARY": CustomSecret(secret=SecretStr("secondary-456"), description="Backup key"),
+        }
+        store = UserSecrets(custom_secrets=secrets)
+        captured: dict[str, str] = {}
+
+        class DummyEventStream:
+            def set_secrets(self, values: dict[str, str]) -> None:
+                captured.update(values)
+
+        store.set_event_stream_secrets(DummyEventStream())
+        assert captured == {"API_KEY": "api-key-xyz", "SECONDARY": "secondary-456"}
+        assert store.get_env_vars() == captured
+        assert store.get_custom_secrets_descriptions() == {
+            "API_KEY": "Primary API key",
+            "SECONDARY": "Backup key",
+        }
+
+    def test_convert_dict_to_mappingproxy_none_and_invalid(self):
+        """Validate convert helper handles None and invalid inputs."""
+        converted = UserSecrets.convert_dict_to_mappingproxy(None)
+        assert converted["provider_tokens"] is None
+        assert isinstance(converted["custom_secrets"], MappingProxyType)
+        assert len(converted["custom_secrets"]) == 0
+
+        with pytest.raises(ValueError):
+            UserSecrets.convert_dict_to_mappingproxy(["not", "a", "dict"])  # type: ignore[arg-type]
+
+    def test_internal_conversion_helpers_ignore_invalid_entries(self):
+        """Ensure helper conversions ignore invalid entries gracefully."""
+        provider_result = UserSecrets._convert_provider_tokens({"unknown": {"token": "abc", "user_id": "1"}})
+        assert isinstance(provider_result, MappingProxyType)
+        assert len(provider_result) == 0
+
+        custom_result = UserSecrets._convert_custom_secrets({"bad": {"secret": None}})
+        assert isinstance(custom_result, MappingProxyType)
+        assert isinstance(custom_result["bad"].secret, SecretStr)
+        assert custom_result["bad"].description == ""
+
+    def test_model_post_init_normalizes_none_values(self):
+        """Ensure model post init normalizes None values into mapping proxies."""
+        store = UserSecrets(provider_tokens=None, custom_secrets=None)
+        assert isinstance(store.provider_tokens, MappingProxyType)
+        assert len(store.provider_tokens) == 0
+        assert isinstance(store.custom_secrets, MappingProxyType)
+        assert len(store.custom_secrets) == 0
 
 
 class SerializationInfo:

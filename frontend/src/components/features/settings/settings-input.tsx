@@ -81,9 +81,7 @@ export function SettingsInput({
           {error}
         </p>
       )}
-      {helpText && (
-        <p className="text-xs text-neutral-500 mt-1">{helpText}</p>
-      )}
+      {helpText && <p className="text-xs text-neutral-500 mt-1">{helpText}</p>}
     </label>
   );
 }

@@ -97,9 +97,10 @@ export function AgentStatusBar() {
       <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 rounded-full border border-gray-200 dark:border-gray-700">
         <div
           className={`w-2 h-2 rounded-full ${indicatorColor} ${
-            curAgentState === AgentState.RUNNING || curAgentState === AgentState.LOADING
-              ? 'animate-pulse'
-              : ''
+            curAgentState === AgentState.RUNNING ||
+            curAgentState === AgentState.LOADING
+              ? "animate-pulse"
+              : ""
           }`}
         />
         <span className="text-xs font-medium text-gray-600 dark:text-gray-300 tracking-wide">

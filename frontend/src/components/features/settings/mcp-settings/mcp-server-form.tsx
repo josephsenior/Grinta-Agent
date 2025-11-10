@@ -40,6 +40,7 @@ export function MCPServerForm({
     server,
     existingServers,
     onSubmit,
+    onCancel,
   });
   const {
     t,
@@ -59,20 +60,20 @@ export function MCPServerForm({
     >
       {mode === "add" && (
         <SettingsDropdownInput
-          data-testid="server-type-input"
+          testId="server-type-input"
           name="type"
-          defaultKey={serverType}
+          defaultSelectedKey={serverType}
           onSelectionChange={(value) => setServerType(value as MCPServerType)}
-          options={serverTypeOptions}
+          items={serverTypeOptions}
         />
       )}
 
       {error && (
-         <div className="text-danger text-sm" data-testid="form-error">
-           {error}
-         </div>
-       )}
- 
+        <div className="text-danger text-sm" data-testid="form-error">
+          {error}
+        </div>
+      )}
+
       <ServerSpecificFields
         serverType={serverType}
         server={server}
@@ -112,39 +113,33 @@ function ServerSpecificFields({
   if (serverType === "stdio") {
     return (
       <>
-        <label className="flex flex-col gap-2.5 w-full sm:max-w-xs md:max-w-sm lg:max-w-[680px]">
-          <span className="text-sm">
-            {t(I18nKey.SETTINGS$MCP_SERVER_NAME)}
-          </span>
-          <SettingsInput
-            data-testid="name-input"
-            name="name"
-            defaultValue={server?.name}
-            placeholder="my-stdio-server"
-            className={cn(
-              "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl px-3 py-2 placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
-              "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
-            )}
-            required
-          />
-        </label>
+        <SettingsInput
+          testId="name-input"
+          name="name"
+          label={t(I18nKey.SETTINGS$MCP_SERVER_TYPE)}
+          type="text"
+          defaultValue={server?.name}
+          placeholder="my-stdio-server"
+          className={cn(
+            "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl px-3 py-2 placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
+            "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
+          )}
+          required
+        />
 
-        <label className="flex flex-col gap-2.5 w-full sm:max-w-xs md:max-w-sm lg:max-w-[680px]">
-          <span className="text-sm">
-            {t(I18nKey.SETTINGS$MCP_COMMAND)}
-          </span>
-          <SettingsInput
-            data-testid="command-input"
-            name="command"
-            defaultValue={server?.command}
-            placeholder="python"
-            className={cn(
-              "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl px-3 py-2 placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
-              "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
-            )}
-            required
-          />
-        </label>
+        <SettingsInput
+          testId="command-input"
+          name="command"
+          label={t(I18nKey.SETTINGS$MCP_COMMAND)}
+          type="text"
+          defaultValue={server?.command}
+          placeholder="python"
+          className={cn(
+            "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl px-3 py-2 placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
+            "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
+          )}
+          required
+        />
 
         <label className="flex flex-col gap-2.5 w-full sm:max-w-xs md:max-w-sm lg:max-w-[680px]">
           <div className="flex items-center gap-2">
@@ -196,41 +191,33 @@ function ServerSpecificFields({
 
   return (
     <>
-      <label className="flex flex-col gap-2.5 w-full sm:max-w-xs md:max-w-sm lg:max-w-[680px]">
-        <span className="text-sm">{t(I18nKey.SETTINGS$MCP_SERVER_URL)}</span>
-        <SettingsInput
-          data-testid="url-input"
-          name="url"
-          type="url"
-          defaultValue={server?.url}
-          placeholder="https://your-mcp-server.com"
-          className={cn(
-            "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl px-3 py-2 placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
-            "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
-          )}
-          required
-        />
-      </label>
+      <SettingsInput
+        testId="url-input"
+        name="url"
+        label={t(I18nKey.SETTINGS$MCP_URL)}
+        type="url"
+        defaultValue={server?.url}
+        placeholder="https://your-mcp-server.com"
+        className={cn(
+          "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl px-3 py-2 placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
+          "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
+        )}
+        required
+      />
 
-      <label className="flex flex-col gap-2.5 w-full sm:max-w-xs md:max-w-sm lg:max-w-[680px]">
-        <div className="flex items-center gap-2">
-          <span className="text-sm">
-            {t(I18nKey.SETTINGS$MCP_API_KEY)}
-          </span>
-          <OptionalTag />
-        </div>
-        <SettingsInput
-          data-testid="api-key-input"
-          name="api_key"
-          type="password"
-          defaultValue={server?.api_key}
-          placeholder={t(I18nKey.SETTINGS$MCP_API_KEY_PLACEHOLDER)}
-          className={cn(
-            "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl px-3 py-2 placeholder:italic placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
-            "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
-          )}
-        />
-      </label>
+      <SettingsInput
+        testId="api-key-input"
+        name="api_key"
+        label={t(I18nKey.SETTINGS$MCP_API_KEY)}
+        showOptionalTag
+        type="password"
+        defaultValue={server?.api_key}
+        placeholder={t(I18nKey.SETTINGS$MCP_API_KEY_PLACEHOLDER)}
+        className={cn(
+          "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl px-3 py-2 placeholder:italic placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
+          "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
+        )}
+      />
     </>
   );
 }
@@ -377,7 +364,10 @@ function createValidatorHelpers({
     return validateUrlUniqueness(url);
   };
 
-  const validators: Record<MCPServerType, (formData: FormData) => string | null> = {
+  const validators: Record<
+    MCPServerType,
+    (formData: FormData) => string | null
+  > = {
     sse: validateUrlServer,
     shttp: validateUrlServer,
     stdio: validateStdioServer,
@@ -432,8 +422,10 @@ const SERVER_PAYLOAD_BUILDERS: Record<
       env: parseEnvironmentVariables(envString),
     };
   },
-  sse: ({ formData, baseConfig }) => buildUrlServerPayload({ formData, baseConfig }),
-  shttp: ({ formData, baseConfig }) => buildUrlServerPayload({ formData, baseConfig }),
+  sse: ({ formData, baseConfig }) =>
+    buildUrlServerPayload({ formData, baseConfig }),
+  shttp: ({ formData, baseConfig }) =>
+    buildUrlServerPayload({ formData, baseConfig }),
 };
 
 function extractArgs(value: FormDataEntryValue | null): string[] {
@@ -469,6 +461,7 @@ function useMcpServerFormController({
   server,
   existingServers,
   onSubmit,
+  onCancel,
 }: MCPServerFormProps) {
   const { t } = useTranslation();
   const [serverType, setServerType] = React.useState<MCPServerType>(
@@ -563,7 +556,14 @@ function useMcpServerFormController({
 
       onSubmit(payload);
     },
-    [validators, serverType, server?.id, clientId, parseEnvironmentVariables, onSubmit],
+    [
+      validators,
+      serverType,
+      server?.id,
+      clientId,
+      parseEnvironmentVariables,
+      onSubmit,
+    ],
   );
 
   return {

@@ -23,9 +23,15 @@ export function ConversationRepoLink({
 
   return (
     <div className="flex items-center gap-1">
-      {selectedRepository.git_provider === "github" && <FaGithub size={14} className="text-foreground-secondary" />}
-      {selectedRepository.git_provider === "gitlab" && <FaGitlab className="text-foreground-secondary" />}
-      {selectedRepository.git_provider === "bitbucket" && <FaBitbucket className="text-foreground-secondary" />}
+      {selectedRepository.git_provider === "github" && (
+        <FaGithub size={14} className="text-foreground-secondary" />
+      )}
+      {selectedRepository.git_provider === "gitlab" && (
+        <FaGitlab className="text-foreground-secondary" />
+      )}
+      {selectedRepository.git_provider === "bitbucket" && (
+        <FaBitbucket className="text-foreground-secondary" />
+      )}
 
       <span
         data-testid="conversation-card-selected-repository"

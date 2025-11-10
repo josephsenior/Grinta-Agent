@@ -15,7 +15,8 @@ export default function WebGLParticles(): React.ReactElement {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const gl = (canvas.getContext("webgl") || canvas.getContext("experimental-webgl")) as WebGLRenderingContext | null;
+    const gl = (canvas.getContext("webgl") ||
+      canvas.getContext("experimental-webgl")) as WebGLRenderingContext | null;
     if (!gl) {
       console.warn("WebGL not supported, falling back to CSS particles");
       return;
@@ -83,26 +84,34 @@ export default function WebGLParticles(): React.ReactElement {
     `;
 
     // Compile shader
-    function createShader(gl: WebGLRenderingContext, type: number, source: string) {
+    function createShader(
+      gl: WebGLRenderingContext,
+      type: number,
+      source: string,
+    ) {
       const shader = gl.createShader(type);
       if (!shader) return null;
-      
+
       gl.shaderSource(shader, source);
       gl.compileShader(shader);
-      
+
       if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
         console.error("Shader compile error:", gl.getShaderInfoLog(shader));
         gl.deleteShader(shader);
         return null;
       }
-      
+
       return shader;
     }
 
     // Create program
     const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-    
+    const fragmentShader = createShader(
+      gl,
+      gl.FRAGMENT_SHADER,
+      fragmentShaderSource,
+    );
+
     if (!vertexShader || !fragmentShader) return;
 
     const program = gl.createProgram();
@@ -140,7 +149,7 @@ export default function WebGLParticles(): React.ReactElement {
       // Update particles
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
-        
+
         p.x += p.vx;
         p.y += p.vy;
 
@@ -181,7 +190,7 @@ export default function WebGLParticles(): React.ReactElement {
         positions[i * 2] = p.x;
         positions[i * 2 + 1] = p.y;
         sizes[i] = p.size;
-        
+
         // HSL to RGB (simplified for violet range)
         const h = p.hue / 360;
         const s = 0.7;
@@ -233,5 +242,3 @@ export default function WebGLParticles(): React.ReactElement {
     />
   );
 }
-
-

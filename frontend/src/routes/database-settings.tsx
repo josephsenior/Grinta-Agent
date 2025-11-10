@@ -14,7 +14,13 @@ import {
   displaySuccessToast,
 } from "#/utils/custom-toast-handlers";
 
-type View = "list" | "add-postgresql" | "add-mongodb" | "add-mysql" | "add-redis" | "edit";
+type View =
+  | "list"
+  | "add-postgresql"
+  | "add-mongodb"
+  | "add-mysql"
+  | "add-redis"
+  | "edit";
 
 function DatabaseSettingsScreen() {
   const controller = useDatabaseSettingsController();
@@ -48,7 +54,7 @@ function DatabaseSettingsScreen() {
                 <Plus className="w-4 h-4" />
                 Add Database
               </BrandButton>
-              
+
               {/* Dropdown menu */}
               {controller.showAddDropdown && (
                 <>
@@ -60,7 +66,9 @@ function DatabaseSettingsScreen() {
                   <div className="absolute right-0 top-full mt-2 w-48 bg-black border border-violet-500/20 rounded-lg shadow-lg overflow-hidden z-50">
                     <button
                       type="button"
-                      onClick={() => controller.handleAddConnection("postgresql")}
+                      onClick={() =>
+                        controller.handleAddConnection("postgresql")
+                      }
                       className="w-full px-4 py-2 text-left text-foreground hover:bg-black transition-colors flex items-center gap-2"
                     >
                       <Database className="w-4 h-4 text-brand-500" />
@@ -140,25 +148,21 @@ function DatabaseSettingsScreen() {
 
       {controller.view === "edit" && controller.editingConnection && (
         <DatabaseConnectionForm
-          connection={controller.editingConnection}
+          type={controller.editingConnection.type}
+          existingConnection={controller.editingConnection}
           onSubmit={controller.handleSaveConnection}
           onCancel={controller.handleCancel}
         />
       )}
 
       {/* Delete Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={controller.deleteConfirmOpen}
-        onConfirm={controller.handleConfirmDelete}
-        onCancel={controller.closeDeleteDialog}
-      >
-        <div className="space-y-2">
-          <p>Are you sure you want to delete this database connection?</p>
-          <p className="text-sm text-foreground-secondary">
-            This action cannot be undone.
-          </p>
-        </div>
-      </ConfirmationModal>
+      {controller.deleteConfirmOpen && (
+        <ConfirmationModal
+          text="Are you sure you want to delete this database connection? This action cannot be undone."
+          onConfirm={controller.handleConfirmDelete}
+          onCancel={controller.closeDeleteDialog}
+        />
+      )}
     </div>
   );
 }
@@ -253,4 +257,3 @@ function useDatabaseSettingsController() {
     setShowAddDropdown,
   };
 }
-

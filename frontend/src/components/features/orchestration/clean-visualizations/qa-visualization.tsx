@@ -42,7 +42,9 @@ export function QAVisualization({
       <div className="metasop-viz-header bg-orange-500/10 border-orange-500/20">
         <TestTube className="w-5 h-5 text-orange-400" />
         <h3 className="text-sm font-semibold text-orange-300">QA Engineer</h3>
-        <span className="text-xs text-orange-400/60">Testing & Quality Assurance</span>
+        <span className="text-xs text-orange-400/60">
+          Testing & Quality Assurance
+        </span>
       </div>
 
       <div className="p-4 space-y-6">{sections}</div>
@@ -60,54 +62,54 @@ function buildQASections({
   const passRate = calculatePassRate(artifact);
   const builders: Array<() => React.ReactNode | null> = [
     () =>
-      hasTestResults(artifact)
-        ? (
-            <TestResultsSummary
-              key="test-results"
-              artifact={artifact}
-              animated={animated}
-              passRate={passRate}
-            />
-          )
-        : null,
+      hasTestResults(artifact) ? (
+        <TestResultsSummary
+          key="test-results"
+          artifact={artifact}
+          animated={animated}
+          passRate={passRate}
+        />
+      ) : null,
     () =>
-      hasCoverage(artifact)
-        ? (
-            <CodeCoverageSection
-              key="coverage"
-              coverage={artifact.code_coverage!}
-              animated={animated}
-            />
-          )
-        : null,
+      hasCoverage(artifact) ? (
+        <CodeCoverageSection
+          key="coverage"
+          coverage={artifact.code_coverage!}
+          animated={animated}
+        />
+      ) : null,
     () =>
-      artifact.test_scenarios?.length
-        ? (
-            <TestScenarioSection
-              key="scenarios"
-              scenarios={artifact.test_scenarios}
-              animated={animated}
-            />
-          )
-        : null,
+      artifact.test_scenarios?.length ? (
+        <TestScenarioSection
+          key="scenarios"
+          scenarios={artifact.test_scenarios}
+          animated={animated}
+        />
+      ) : null,
     () => buildSecuritySections({ artifact, animated }),
     () =>
-      hasPerformanceMetrics(artifact)
-        ? (
-            <PerformanceMetricsSection
-              key="performance"
-              metrics={artifact.performance_metrics!}
-              animated={animated}
-            />
-          )
-        : null,
+      hasPerformanceMetrics(artifact) ? (
+        <PerformanceMetricsSection
+          key="performance"
+          metrics={artifact.performance_metrics!}
+          animated={animated}
+        />
+      ) : null,
     () =>
       artifact.lint_status ? (
-        <LintStatusCard key="lint" status={artifact.lint_status} animated={animated} />
+        <LintStatusCard
+          key="lint"
+          status={artifact.lint_status}
+          animated={animated}
+        />
       ) : null,
     () =>
       artifact.quality_score !== undefined ? (
-        <QualityScoreCard key="quality" score={artifact.quality_score} animated={animated} />
+        <QualityScoreCard
+          key="quality"
+          score={artifact.quality_score}
+          animated={animated}
+        />
       ) : null,
   ];
 
@@ -142,23 +144,36 @@ function buildSecuritySections({
 }
 
 function hasTestResults(artifact: QASpecArtifact): boolean {
-  return Boolean(artifact.test_results && artifact.test_results.total !== undefined);
+  return Boolean(
+    artifact.test_results && artifact.test_results.total !== undefined,
+  );
 }
 
 function hasCoverage(artifact: QASpecArtifact): boolean {
-  return Boolean(artifact.code_coverage && Object.keys(artifact.code_coverage).length > 0);
+  return Boolean(
+    artifact.code_coverage && Object.keys(artifact.code_coverage).length > 0,
+  );
 }
 
 function hasPerformanceMetrics(artifact: QASpecArtifact): boolean {
-  return Boolean(artifact.performance_metrics && Object.keys(artifact.performance_metrics).length > 0);
+  return Boolean(
+    artifact.performance_metrics &&
+      Object.keys(artifact.performance_metrics).length > 0,
+  );
 }
 
 function calculatePassRate(artifact: QASpecArtifact): number {
-  if (!artifact.test_results || !artifact.test_results.total || artifact.test_results.total === 0) {
+  if (
+    !artifact.test_results ||
+    !artifact.test_results.total ||
+    artifact.test_results.total === 0
+  ) {
     return 0;
   }
 
-  return Math.round(((artifact.test_results.passed || 0) / artifact.test_results.total) * 100);
+  return Math.round(
+    ((artifact.test_results.passed || 0) / artifact.test_results.total) * 100,
+  );
 }
 
 function CodeCoverageSection({
@@ -215,7 +230,12 @@ function TestScenarioSection({
         Test Scenarios ({scenarios.length})
       </h4>
       {scenarios.slice(0, displayCount).map((scenario, index) => (
-        <TestScenarioCard key={scenario.id || index} scenario={scenario} index={index} animated={animated} />
+        <TestScenarioCard
+          key={scenario.id || index}
+          scenario={scenario}
+          index={index}
+          animated={animated}
+        />
       ))}
       {scenarios.length > displayCount && (
         <p className="text-xs text-neutral-500 text-center py-2">
@@ -248,12 +268,23 @@ function SecurityFindingsSection({
           className="bg-red-500/10 border border-red-500/20 rounded p-3"
         >
           <div className="flex items-start justify-between mb-1">
-            <h5 className="text-sm font-medium text-red-300">{finding.title}</h5>
-            <span className={cn("text-xs px-2 py-1 rounded", getSeverityColor(finding.severity ?? ""))}>
+            <h5 className="text-sm font-medium text-red-300">
+              {finding.title}
+            </h5>
+            <span
+              className={cn(
+                "text-xs px-2 py-1 rounded",
+                getSeverityColor(finding.severity ?? ""),
+              )}
+            >
               {finding.severity}
             </span>
           </div>
-          {finding.description && <p className="text-xs text-neutral-400 mt-1">{finding.description}</p>}
+          {finding.description && (
+            <p className="text-xs text-neutral-400 mt-1">
+              {finding.description}
+            </p>
+          )}
           {finding.file && (
             <p className="text-xs text-neutral-500 mt-1">
               {finding.file}
@@ -263,7 +294,9 @@ function SecurityFindingsSection({
           {finding.recommendation && (
             <div className="mt-2 bg-black/20 rounded p-2">
               <p className="text-xs text-orange-300">Recommendation:</p>
-              <p className="text-xs text-neutral-400 mt-0.5">{finding.recommendation}</p>
+              <p className="text-xs text-neutral-400 mt-0.5">
+                {finding.recommendation}
+              </p>
             </div>
           )}
         </motion.div>
@@ -280,7 +313,9 @@ function NoSecurityFindingsCard({ animated }: { animated: boolean }) {
       className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 text-center"
     >
       <Shield className="w-8 h-8 text-green-400 mx-auto mb-2" />
-      <p className="text-sm text-green-300 font-medium">No security vulnerabilities found</p>
+      <p className="text-sm text-green-300 font-medium">
+        No security vulnerabilities found
+      </p>
     </motion.div>
   );
 }
@@ -306,8 +341,12 @@ function PerformanceMetricsSection({
             animate={animated ? { opacity: 1, scale: 1 } : undefined}
             className="bg-orange-500/5 border border-orange-500/20 rounded px-3 py-2"
           >
-            <p className="text-xs text-orange-400 capitalize">{key.replace(/_/g, " ")}</p>
-            <p className="text-sm font-mono text-orange-300 mt-0.5">{String(value)}</p>
+            <p className="text-xs text-orange-400 capitalize">
+              {key.replace(/_/g, " ")}
+            </p>
+            <p className="text-sm font-mono text-orange-300 mt-0.5">
+              {String(value)}
+            </p>
           </motion.div>
         ))}
       </div>
@@ -315,7 +354,13 @@ function PerformanceMetricsSection({
   );
 }
 
-function LintStatusCard({ status, animated }: { status: string; animated: boolean }) {
+function LintStatusCard({
+  status,
+  animated,
+}: {
+  status: string;
+  animated: boolean;
+}) {
   return (
     <motion.div
       initial={animated ? { opacity: 0, y: 20 } : undefined}
@@ -336,7 +381,13 @@ function LintStatusCard({ status, animated }: { status: string; animated: boolea
   );
 }
 
-function QualityScoreCard({ score, animated }: { score: number; animated: boolean }) {
+function QualityScoreCard({
+  score,
+  animated,
+}: {
+  score: number;
+  animated: boolean;
+}) {
   return (
     <motion.div
       initial={animated ? { opacity: 0, scale: 0.95 } : undefined}
@@ -360,14 +411,18 @@ function TestResultsSummary({
 }) {
   return (
     <div className="space-y-3">
-      <h4 className="text-xs font-medium text-orange-300 uppercase tracking-wide">Test Results</h4>
+      <h4 className="text-xs font-medium text-orange-300 uppercase tracking-wide">
+        Test Results
+      </h4>
       <div className="grid grid-cols-4 gap-2">
         <motion.div
           initial={animated ? { opacity: 0, y: 20 } : undefined}
           animate={animated ? { opacity: 1, y: 0 } : undefined}
           className="bg-green-500/10 border border-green-500/20 rounded p-3 text-center"
         >
-          <p className="text-2xl font-bold text-green-400">{artifact.test_results!.passed || 0}</p>
+          <p className="text-2xl font-bold text-green-400">
+            {artifact.test_results!.passed || 0}
+          </p>
           <p className="text-xs text-green-300 mt-1">Passed</p>
         </motion.div>
         <motion.div
@@ -376,7 +431,9 @@ function TestResultsSummary({
           transition={{ delay: 0.05 }}
           className="bg-red-500/10 border border-red-500/20 rounded p-3 text-center"
         >
-          <p className="text-2xl font-bold text-red-400">{artifact.test_results!.failed || 0}</p>
+          <p className="text-2xl font-bold text-red-400">
+            {artifact.test_results!.failed || 0}
+          </p>
           <p className="text-xs text-red-300 mt-1">Failed</p>
         </motion.div>
         <motion.div
@@ -385,7 +442,9 @@ function TestResultsSummary({
           transition={{ delay: 0.1 }}
           className="bg-yellow-500/10 border border-yellow-500/20 rounded p-3 text-center"
         >
-          <p className="text-2xl font-bold text-yellow-400">{artifact.test_results!.skipped || 0}</p>
+          <p className="text-2xl font-bold text-yellow-400">
+            {artifact.test_results!.skipped || 0}
+          </p>
           <p className="text-xs text-yellow-300 mt-1">Skipped</p>
         </motion.div>
         <motion.div
@@ -438,10 +497,17 @@ function TestScenarioCard({
         <div className="mt-0.5">{statusIcons[status]}</div>
         <div className="flex-1">
           <div className="flex items-start justify-between mb-1">
-            <h5 className="text-sm font-medium text-orange-200">{scenario.title}</h5>
+            <h5 className="text-sm font-medium text-orange-200">
+              {scenario.title}
+            </h5>
             <div className="flex items-center gap-1">
               {scenario.priority && (
-                <span className={cn("text-xs px-2 py-1 rounded", getPriorityBadgeColor(scenario.priority))}>
+                <span
+                  className={cn(
+                    "text-xs px-2 py-1 rounded",
+                    getPriorityBadgeColor(scenario.priority),
+                  )}
+                >
                   {scenario.priority}
                 </span>
               )}
@@ -453,12 +519,19 @@ function TestScenarioCard({
             </div>
           </div>
 
-          {scenario.description && <p className="text-xs text-neutral-400 mt-1">{scenario.description}</p>}
+          {scenario.description && (
+            <p className="text-xs text-neutral-400 mt-1">
+              {scenario.description}
+            </p>
+          )}
 
           {scenario.tags && scenario.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {scenario.tags.map((tag, i) => (
-                <span key={i} className="text-xs px-1.5 py-0.5 bg-orange-500/10 text-orange-400 rounded">
+                <span
+                  key={i}
+                  className="text-xs px-1.5 py-0.5 bg-orange-500/10 text-orange-400 rounded"
+                >
                   {tag}
                 </span>
               ))}
@@ -487,7 +560,9 @@ function getLintStatusColor(status: string): string {
     warnings: "bg-yellow-500/10 border-yellow-500/20 text-yellow-300",
     errors: "bg-red-500/10 border-red-500/20 text-red-300",
   };
-  return colors[status] || "bg-neutral-500/10 border-neutral-500/20 text-neutral-300";
+  return (
+    colors[status] || "bg-neutral-500/10 border-neutral-500/20 text-neutral-300"
+  );
 }
 
 function getPriorityBadgeColor(priority: string): string {
@@ -497,7 +572,8 @@ function getPriorityBadgeColor(priority: string): string {
     medium: "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30",
     low: "bg-green-500/20 text-green-300 border border-green-500/30",
   };
-  return colors[priority] || "bg-neutral-500/20 text-neutral-300 border border-neutral-500/30";
+  return (
+    colors[priority] ||
+    "bg-neutral-500/20 text-neutral-300 border border-neutral-500/30"
+  );
 }
-
-

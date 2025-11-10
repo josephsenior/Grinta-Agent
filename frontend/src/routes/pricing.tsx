@@ -97,10 +97,20 @@ const FEATURE_COMPARISON = [
   {
     category: "Core Features",
     features: [
-      { name: "CodeAct autonomous agent", free: true, pro: true, proPlus: true },
+      {
+        name: "CodeAct autonomous agent",
+        free: true,
+        pro: true,
+        proPlus: true,
+      },
       { name: "All LLM models (200+)", free: true, pro: true, proPlus: true },
       { name: "Real-time cost tracking", free: true, pro: true, proPlus: true },
-      { name: "BYOK (Bring Your Own Key)", free: true, pro: true, proPlus: true },
+      {
+        name: "BYOK (Bring Your Own Key)",
+        free: true,
+        pro: true,
+        proPlus: true,
+      },
       { name: "Docker sandboxing", free: true, pro: true, proPlus: true },
       { name: "Browser automation", free: true, pro: true, proPlus: true },
     ],
@@ -108,15 +118,35 @@ const FEATURE_COMPARISON = [
   {
     category: "Platform Credits",
     features: [
-      { name: "Monthly platform credits", free: false, pro: "$15", proPlus: "$25" },
-      { name: "Rollover unused credits", free: false, pro: false, proPlus: true },
-      { name: "Credit top-up discount", free: false, pro: "10%", proPlus: "20%" },
+      {
+        name: "Monthly platform credits",
+        free: false,
+        pro: "$15",
+        proPlus: "$25",
+      },
+      {
+        name: "Rollover unused credits",
+        free: false,
+        pro: false,
+        proPlus: true,
+      },
+      {
+        name: "Credit top-up discount",
+        free: false,
+        pro: "10%",
+        proPlus: "20%",
+      },
     ],
   },
   {
     category: "Usage Limits",
     features: [
-      { name: "Conversations per day", free: "100", pro: "500", proPlus: "1000" },
+      {
+        name: "Conversations per day",
+        free: "100",
+        pro: "500",
+        proPlus: "1000",
+      },
       { name: "Priority queue", free: false, pro: true, proPlus: true },
       { name: "Concurrent sessions", free: "1", pro: "3", proPlus: "10" },
     ],
@@ -124,20 +154,45 @@ const FEATURE_COMPARISON = [
   {
     category: "Support & Analytics",
     features: [
-      { name: "Community support (GitHub)", free: true, pro: true, proPlus: true },
+      {
+        name: "Community support (GitHub)",
+        free: true,
+        pro: true,
+        proPlus: true,
+      },
       { name: "Email support", free: false, pro: "24h", proPlus: "4h" },
       { name: "Advanced analytics", free: false, pro: true, proPlus: true },
-      { name: "Usage optimization tips", free: false, pro: true, proPlus: true },
-      { name: "Dedicated account manager", free: false, pro: false, proPlus: true },
+      {
+        name: "Usage optimization tips",
+        free: false,
+        pro: true,
+        proPlus: true,
+      },
+      {
+        name: "Dedicated account manager",
+        free: false,
+        pro: false,
+        proPlus: true,
+      },
     ],
   },
   {
     category: "Advanced Features",
     features: [
-      { name: "Early access to features", free: false, pro: false, proPlus: true },
+      {
+        name: "Early access to features",
+        free: false,
+        pro: false,
+        proPlus: true,
+      },
       { name: "Custom model routing", free: false, pro: false, proPlus: true },
       { name: "White-label options", free: false, pro: false, proPlus: true },
-      { name: "API rate limit increase", free: false, pro: false, proPlus: true },
+      {
+        name: "API rate limit increase",
+        free: false,
+        pro: false,
+        proPlus: true,
+      },
     ],
   },
 ];
@@ -179,7 +234,9 @@ export default function PricingPage(): React.ReactElement {
   const navigate = useNavigate();
   const { mutate: createConversation, isPending } = useCreateConversation();
   const [openFAQIndex, setOpenFAQIndex] = useState<number | null>(null);
-  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
+  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">(
+    "monthly",
+  );
 
   const onStartPlan = (tierName: string) => {
     createConversation(
@@ -187,7 +244,10 @@ export default function PricingPage(): React.ReactElement {
       {
         onSuccess: (data) => {
           try {
-            localStorage.setItem("RECENT_CONVERSATION_ID", data.conversation_id);
+            localStorage.setItem(
+              "RECENT_CONVERSATION_ID",
+              data.conversation_id,
+            );
             // Store selected plan for post-signup flow
             localStorage.setItem("SELECTED_PLAN", tierName.toLowerCase());
           } catch (err) {
@@ -203,14 +263,18 @@ export default function PricingPage(): React.ReactElement {
     setOpenFAQIndex(openFAQIndex === index ? null : index);
   };
 
-  const getCardColorClasses = (color: PricingTier["color"], isPopular?: boolean) => {
+  const getCardColorClasses = (
+    color: PricingTier["color"],
+    isPopular?: boolean,
+  ) => {
     if (isPopular) {
       return {
         border: "border-brand-500/40",
         bg: "bg-brand-500/5",
         shadow: "shadow-xl shadow-brand-500/20",
         badge: "bg-brand-500 text-white",
-        button: "bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 hover:shadow-xl hover:shadow-brand-500/40",
+        button:
+          "bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 hover:shadow-xl hover:shadow-brand-500/40",
         glow: "from-brand-500/20 to-accent-500/20",
       };
     }
@@ -222,7 +286,8 @@ export default function PricingPage(): React.ReactElement {
           bg: "bg-brand-500/5",
           shadow: "shadow-lg shadow-brand-500/10",
           badge: "bg-brand-500/20 text-violet-500",
-          button: "bg-brand-500/10 text-violet-500 hover:bg-brand-500/20 border-2 border-brand-500/30",
+          button:
+            "bg-brand-500/10 text-violet-500 hover:bg-brand-500/20 border-2 border-brand-500/30",
           glow: "from-brand-500/10 to-brand-500/5",
         };
       case "emerald":
@@ -231,7 +296,8 @@ export default function PricingPage(): React.ReactElement {
           bg: "bg-success-500/5",
           shadow: "shadow-lg shadow-success-500/10",
           badge: "bg-success-500/20 text-success-500",
-          button: "bg-success-500/10 text-success-500 hover:bg-success-500/20 border-2 border-success-500/30",
+          button:
+            "bg-success-500/10 text-success-500 hover:bg-success-500/20 border-2 border-success-500/30",
           glow: "from-success-500/10 to-success-500/5",
         };
       default:
@@ -240,7 +306,8 @@ export default function PricingPage(): React.ReactElement {
           bg: "bg-background-secondary/50",
           shadow: "shadow-md",
           badge: "bg-foreground-tertiary/20 text-foreground-secondary",
-          button: "bg-foreground/10 text-foreground hover:bg-foreground/20 border-2 border-border",
+          button:
+            "bg-foreground/10 text-foreground hover:bg-foreground/20 border-2 border-border",
           glow: "from-foreground/5 to-foreground/5",
         };
     }
@@ -267,7 +334,10 @@ export default function PricingPage(): React.ReactElement {
     }
     return (
       <div className="text-center">
-        <Badge variant="secondary" className="bg-brand-500/10 text-violet-500 border-brand-500/20">
+        <Badge
+          variant="secondary"
+          className="bg-brand-500/10 text-violet-500 border-brand-500/20"
+        >
           {value}
         </Badge>
       </div>
@@ -296,9 +366,7 @@ export default function PricingPage(): React.ReactElement {
 
           {/* Heading */}
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight stagger-item delay-100">
-            <span className="text-foreground block mb-2">
-              Choose Your Plan
-            </span>
+            <span className="text-foreground block mb-2">Choose Your Plan</span>
             <span className="bg-gradient-to-r from-brand-500 via-accent-500 to-brand-600 bg-clip-text text-transparent gradient-shimmer block">
               Start Free, Scale as You Grow
             </span>
@@ -306,7 +374,8 @@ export default function PricingPage(): React.ReactElement {
 
           {/* Subtitle */}
           <p className="text-lg md:text-xl text-foreground-secondary max-w-3xl mx-auto leading-relaxed stagger-item delay-200">
-            All plans include access to 200+ AI models. Use your own API keys for full control, or use platform credits for convenience.
+            All plans include access to 200+ AI models. Use your own API keys
+            for full control, or use platform credits for convenience.
           </p>
 
           {/* Billing toggle */}
@@ -317,7 +386,7 @@ export default function PricingPage(): React.ReactElement {
                 "px-6 py-3 rounded-lg font-semibold transition-all duration-300",
                 billingPeriod === "monthly"
                   ? "bg-brand-500 text-white shadow-lg shadow-brand-500/30"
-                  : "text-foreground-secondary hover:text-foreground"
+                  : "text-foreground-secondary hover:text-foreground",
               )}
             >
               Monthly
@@ -328,7 +397,7 @@ export default function PricingPage(): React.ReactElement {
                 "px-6 py-3 rounded-lg font-semibold transition-all duration-300 relative",
                 billingPeriod === "annual"
                   ? "bg-brand-500 text-white shadow-lg shadow-brand-500/30"
-                  : "text-foreground-secondary hover:text-foreground"
+                  : "text-foreground-secondary hover:text-foreground",
               )}
             >
               Annual
@@ -346,8 +415,12 @@ export default function PricingPage(): React.ReactElement {
           <div className="grid md:grid-cols-3 gap-8">
             {PRICING_TIERS.map((tier, index) => {
               const colors = getCardColorClasses(tier.color, tier.popular);
-              const annualPrice = billingPeriod === "annual" ? Math.round(tier.price * 0.8 * 12) : tier.price;
-              const displayPrice = billingPeriod === "annual" ? annualPrice : tier.price;
+              const annualPrice =
+                billingPeriod === "annual"
+                  ? Math.round(tier.price * 0.8 * 12)
+                  : tier.price;
+              const displayPrice =
+                billingPeriod === "annual" ? annualPrice : tier.price;
 
               return (
                 <Card
@@ -358,7 +431,7 @@ export default function PricingPage(): React.ReactElement {
                     colors.border,
                     colors.bg,
                     colors.shadow,
-                    tier.popular && "scale-105 ring-2 ring-brand-500/30"
+                    tier.popular && "scale-105 ring-2 ring-brand-500/30",
                   )}
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
@@ -368,7 +441,12 @@ export default function PricingPage(): React.ReactElement {
                   )}
 
                   {/* Glow effect */}
-                  <div className={cn("absolute inset-0 bg-gradient-to-br opacity-50 pointer-events-none", colors.glow)} />
+                  <div
+                    className={cn(
+                      "absolute inset-0 bg-gradient-to-br opacity-50 pointer-events-none",
+                      colors.glow,
+                    )}
+                  />
 
                   <CardHeader className="relative space-y-6">
                     {/* Tier name & badge */}
@@ -377,7 +455,12 @@ export default function PricingPage(): React.ReactElement {
                         {tier.name}
                       </CardTitle>
                       {tier.popular && (
-                        <Badge className={cn("font-semibold text-xs px-3 py-1", colors.badge)}>
+                        <Badge
+                          className={cn(
+                            "font-semibold text-xs px-3 py-1",
+                            colors.badge,
+                          )}
+                        >
                           <Star className="w-3 h-3 mr-1" />
                           Most Popular
                         </Badge>
@@ -412,7 +495,7 @@ export default function PricingPage(): React.ReactElement {
                       disabled={isPending}
                       className={cn(
                         "w-full py-6 text-base font-bold transition-all duration-300 interactive-scale",
-                        colors.button
+                        colors.button,
                       )}
                     >
                       {isPending ? (
@@ -588,14 +671,14 @@ export default function PricingPage(): React.ReactElement {
                   <ChevronDown
                     className={cn(
                       "w-5 h-5 text-foreground-secondary flex-shrink-0 transition-transform duration-300",
-                      openFAQIndex === index && "rotate-180"
+                      openFAQIndex === index && "rotate-180",
                     )}
                   />
                 </button>
                 <div
                   className={cn(
                     "overflow-hidden transition-all duration-300",
-                    openFAQIndex === index ? "max-h-96" : "max-h-0"
+                    openFAQIndex === index ? "max-h-96" : "max-h-0",
                   )}
                 >
                   <div className="px-6 pb-5 text-foreground-secondary leading-relaxed">
@@ -640,7 +723,8 @@ export default function PricingPage(): React.ReactElement {
                 </h3>
 
                 <p className="text-lg text-foreground-secondary max-w-2xl mx-auto">
-                  Join 50,000+ developers who are shipping code 10x faster with Forge
+                  Join 50,000+ developers who are shipping code 10x faster with
+                  Forge
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
@@ -686,4 +770,3 @@ export default function PricingPage(): React.ReactElement {
 }
 
 export const hydrateFallback = <div aria-hidden className="route-loading" />;
-

@@ -106,7 +106,17 @@ def _populate_metrics_from_dict(metrics: Metrics, value: dict) -> None:
 
     # Process costs
     for cost in value.get("costs", []):
-        metrics._costs.append(Cost(**cost))
+        if not isinstance(cost, dict):
+            continue
+        cost_kwargs: dict[str, Any] = {}
+        # Support legacy schemas that use ``amount`` instead of ``cost``.
+        cost_kwargs["cost"] = cost.get("cost", cost.get("amount", 0.0))
+        cost_kwargs["model"] = cost.get("model", metrics.model_name if hasattr(metrics, "model_name") else "")
+        if "prompt_tokens" in cost:
+            cost_kwargs["prompt_tokens"] = cost["prompt_tokens"]
+        if "timestamp" in cost:
+            cost_kwargs["timestamp"] = cost["timestamp"]
+        metrics._costs.append(Cost(**cost_kwargs))
 
     # Process response latencies
     metrics.response_latencies = [ResponseLatency(**latency) for latency in value.get("response_latencies", [])]
@@ -116,7 +126,9 @@ def _populate_metrics_from_dict(metrics: Metrics, value: dict) -> None:
 
     # Process accumulated token usage
     if "accumulated_token_usage" in value:
-        metrics._accumulated_token_usage = TokenUsage(**value.get("accumulated_token_usage", {}))
+        accumulated = value.get("accumulated_token_usage", {})
+        if isinstance(accumulated, dict):
+            metrics._accumulated_token_usage = TokenUsage(**accumulated)
 
 
 def _convert_pydantic_to_dict(obj: BaseModel | dict) -> dict:
@@ -362,6 +374,8 @@ def event_to_trajectory(event: Event, include_screenshots: bool = False) -> dict
             d["extras"],
             DELETE_FROM_TRAJECTORY_EXTRAS if include_screenshots else DELETE_FROM_TRAJECTORY_EXTRAS_AND_SCREENSHOTS,
         )
+        # set_of_marks can be very large; exclude regardless of screenshot preference
+        d["extras"].pop("set_of_marks", None)
     return d
 
 

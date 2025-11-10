@@ -25,7 +25,10 @@ type MetaSopAction =
   | { type: "UPSERT_STEP"; payload: OrchestrationStep }
   | {
       type: "ATTACH_ARTIFACT_REFERENCE";
-      payload: { stepId: string; artifact: { hash: string; type: string; timestamp: string } };
+      payload: {
+        stepId: string;
+        artifact: { hash: string; type: string; timestamp: string };
+      };
     }
   | { type: "ATTACH_ARTIFACT_DATA"; payload: { artifact: unknown } }
   | { type: "FAIL_RUNNING_STEP"; payload: { error: string } }
@@ -70,7 +73,10 @@ export function useMetaSOPOrchestration() {
   };
 }
 
-function metaSopReducer(state: OrchestrationStep[], action: MetaSopAction): OrchestrationStep[] {
+function metaSopReducer(
+  state: OrchestrationStep[],
+  action: MetaSopAction,
+): OrchestrationStep[] {
   const handler = META_SOP_REDUCER_HANDLERS[action.type];
   if (!handler) {
     return state;
@@ -96,8 +102,10 @@ const META_SOP_REDUCER_HANDLERS: {
           }
         : step,
     ),
-  ATTACH_ARTIFACT_DATA: (state, action) => attachArtifactData(state, action.payload.artifact),
-  FAIL_RUNNING_STEP: (state, action) => failRunningStep(state, action.payload.error),
+  ATTACH_ARTIFACT_DATA: (state, action) =>
+    attachArtifactData(state, action.payload.artifact),
+  FAIL_RUNNING_STEP: (state, action) =>
+    failRunningStep(state, action.payload.error),
   MARK_RUNNING_SUCCESS: (state) =>
     state.map((step) =>
       step.status === "running"
@@ -216,11 +224,17 @@ function handleMetaSopMessage(
 
   const artifactData = parseArtifactJson(message);
   if (artifactData) {
-    context.dispatch({ type: "ATTACH_ARTIFACT_DATA", payload: { artifact: artifactData } });
+    context.dispatch({
+      type: "ATTACH_ARTIFACT_DATA",
+      payload: { artifact: artifactData },
+    });
   }
 
   if (isStepFailureMessage(message)) {
-    context.dispatch({ type: "FAIL_RUNNING_STEP", payload: { error: message } });
+    context.dispatch({
+      type: "FAIL_RUNNING_STEP",
+      payload: { error: message },
+    });
   }
 }
 
@@ -290,7 +304,9 @@ function findMostRecentExecutedStepId(events: unknown[] | undefined) {
   for (let i = events.length - 1; i >= 0; i -= 1) {
     const event = events[i];
     if (isStatusUpdate(event) && typeof event.message === "string") {
-      const match = event.message.match(/step:(\S+)\s+role:([^:]+)\s+status:(\S+)/i);
+      const match = event.message.match(
+        /step:(\S+)\s+role:([^:]+)\s+status:(\S+)/i,
+      );
       if (match && match[3] === "executed") {
         return match[1];
       }

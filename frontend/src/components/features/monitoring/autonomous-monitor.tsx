@@ -61,18 +61,22 @@ export function AutonomousMonitor({
   const [alerts, setAlerts] = useState<RiskAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [riskHistory, setRiskHistory] = useState<Array<{
-    timestamp: string;
-    low: number;
-    medium: number;
-    high: number;
-  }>>([]);
+  const [riskHistory, setRiskHistory] = useState<
+    Array<{
+      timestamp: string;
+      low: number;
+      medium: number;
+      high: number;
+    }>
+  >([]);
 
   // Fetch session status
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const response = await fetch(`/api/monitoring/sessions/${sessionId}/status`);
+        const response = await fetch(
+          `/api/monitoring/sessions/${sessionId}/status`,
+        );
         if (response.ok) {
           const data = await response.json();
           setStatus(data);
@@ -100,16 +104,18 @@ export function AutonomousMonitor({
           else if (entry.risk_level === "HIGH") acc.high++;
           return acc;
         },
-        { low: 0, medium: 0, high: 0 }
+        { low: 0, medium: 0, high: 0 },
       );
 
-      setRiskHistory(prev => [
-        ...prev,
-        {
-          timestamp: new Date().toISOString(),
-          ...counts,
-        },
-      ].slice(-50)); // Keep last 50 data points
+      setRiskHistory((prev) =>
+        [
+          ...prev,
+          {
+            timestamp: new Date().toISOString(),
+            ...counts,
+          },
+        ].slice(-50),
+      ); // Keep last 50 data points
     }
   }, [auditTrail]);
 
@@ -118,7 +124,7 @@ export function AutonomousMonitor({
     const fetchAudit = async () => {
       try {
         const response = await fetch(
-          `/api/monitoring/sessions/${sessionId}/audit?limit=50`
+          `/api/monitoring/sessions/${sessionId}/audit?limit=50`,
         );
         if (response.ok) {
           const data = await response.json();
@@ -140,7 +146,7 @@ export function AutonomousMonitor({
     const fetchAlerts = async () => {
       try {
         const response = await fetch(
-          `/api/monitoring/sessions/${sessionId}/alerts?resolved=false`
+          `/api/monitoring/sessions/${sessionId}/alerts?resolved=false`,
         );
         if (response.ok) {
           const data = await response.json();
@@ -165,7 +171,7 @@ export function AutonomousMonitor({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action }),
-        }
+        },
       );
 
       if (response.ok) {
@@ -201,37 +207,58 @@ export function AutonomousMonitor({
     const errorPenalty = status.consecutive_errors * 10;
     const highRiskPenalty = status.high_risk_actions_count * 5;
     const stagnationPenalty = status.stagnation_iterations * 2;
-    const circuitBreakerPenalty = 
-      status.circuit_breaker_status === "tripped" ? 30 :
-      status.circuit_breaker_status === "warning" ? 15 : 0;
-    
-    return Math.max(0, 100 - errorPenalty - highRiskPenalty - stagnationPenalty - circuitBreakerPenalty);
+    const circuitBreakerPenalty =
+      status.circuit_breaker_status === "tripped"
+        ? 30
+        : status.circuit_breaker_status === "warning"
+          ? 15
+          : 0;
+
+    return Math.max(
+      0,
+      100 -
+        errorPenalty -
+        highRiskPenalty -
+        stagnationPenalty -
+        circuitBreakerPenalty,
+    );
   };
 
   // Prepare metrics for LiveMetricsCards
   const metrics = {
-    errorRate: (status.consecutive_errors / Math.max(status.current_iteration, 1)) * 100,
+    errorRate:
+      (status.consecutive_errors / Math.max(status.current_iteration, 1)) * 100,
     highRiskActions: status.high_risk_actions_count,
     progress: status.progress_percentage * 100,
-    iterationsPerMinute: status.current_iteration / Math.max(1, (Date.now() - Date.parse(status.last_action_timestamp || new Date().toISOString())) / 60000),
+    iterationsPerMinute:
+      status.current_iteration /
+      Math.max(
+        1,
+        (Date.now() -
+          Date.parse(
+            status.last_action_timestamp || new Date().toISOString(),
+          )) /
+          60000,
+      ),
     avgResponseTime: 2500, // Mock data - would come from backend
     securityScore: calculateSafetyScore(),
   };
 
   // Prepare blocked commands
   const blockedCommands = auditTrail
-    .filter(entry => entry.validation_result === "blocked")
-    .map(entry => ({
+    .filter((entry) => entry.validation_result === "blocked")
+    .map((entry) => ({
       id: entry.id,
       timestamp: entry.timestamp,
       command: entry.action_content,
       reason: entry.blocked_reason || "Security policy violation",
-      riskLevel: entry.risk_level === "HIGH" ? "HIGH" as const : "CRITICAL" as const,
+      riskLevel:
+        entry.risk_level === "HIGH" ? ("HIGH" as const) : ("CRITICAL" as const),
       patterns: entry.matched_risk_patterns,
     }));
 
   // Prepare alerts from risk alerts
-  const formattedAlerts = alerts.map(alert => ({
+  const formattedAlerts = alerts.map((alert) => ({
     id: alert.id,
     severity: alert.severity as "warning" | "error" | "critical",
     title: `${alert.action_type} Action`,
@@ -251,10 +278,12 @@ export function AutonomousMonitor({
             <h2 className="text-xl font-bold text-white bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               Autonomous Safety Monitor
             </h2>
-            <p className="text-xs text-gray-400">Real-time security & performance tracking</p>
+            <p className="text-xs text-gray-400">
+              Real-time security & performance tracking
+            </p>
           </div>
         </div>
-        
+
         {/* Control Buttons with Icons */}
         <div className="flex gap-2">
           {status.agent_state === "paused" ? (
@@ -336,7 +365,9 @@ export function AutonomousMonitor({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-700/50">
         <div className="text-center">
           <p className="text-xs text-gray-400 mb-1">Agent State</p>
-          <p className="text-sm font-semibold text-white capitalize">{status.agent_state}</p>
+          <p className="text-sm font-semibold text-white capitalize">
+            {status.agent_state}
+          </p>
         </div>
         <div className="text-center">
           <p className="text-xs text-gray-400 mb-1">Iterations</p>
@@ -368,4 +399,3 @@ export function AutonomousMonitor({
     </div>
   );
 }
-

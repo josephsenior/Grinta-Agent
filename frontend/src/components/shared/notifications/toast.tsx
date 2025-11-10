@@ -135,7 +135,9 @@ function ToastItem({ toast }: Readonly<ToastItemProps>) {
         <div className="flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="text-sm font-medium">{toast.title}</div>
-            <div className="text-xs text-foreground-secondary">{/* optional */}</div>
+            <div className="text-xs text-foreground-secondary">
+              {/* optional */}
+            </div>
           </div>
           {toast.description && (
             <div className="text-sm text-text-secondary mt-1">

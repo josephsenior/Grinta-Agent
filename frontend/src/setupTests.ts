@@ -1,9 +1,9 @@
-import '@testing-library/jest-dom';
+import "@testing-library/jest-dom";
 
 // Mock window.matchMedia
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(window, "matchMedia", {
   writable: true,
-  value: jest.fn().mockImplementation(query => ({
+  value: jest.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -16,38 +16,50 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 // Mock IntersectionObserver
-(globalThis as unknown as Record<string, unknown>).IntersectionObserver = class IntersectionObserver {
-  root: Element | null = null;
-  rootMargin: string = "";
-  thresholds: ReadonlyArray<number> = [];
-  constructor() {}
-  observe() {
-    return null;
-  }
-  disconnect() {
-    return null;
-  }
-  unobserve() {
-    return null;
-  }
-  takeRecords() {
-    return [];
-  }
-} as any;
+(globalThis as unknown as Record<string, unknown>).IntersectionObserver =
+  class IntersectionObserver {
+    root: Element | null = null;
+
+    rootMargin: string = "";
+
+    thresholds: ReadonlyArray<number> = [];
+
+    constructor() {}
+
+    observe() {
+      return null;
+    }
+
+    disconnect() {
+      return null;
+    }
+
+    unobserve() {
+      return null;
+    }
+
+    takeRecords() {
+      return [];
+    }
+  } as any;
 
 // Mock ResizeObserver
-(globalThis as unknown as Record<string, unknown>).ResizeObserver = class ResizeObserver {
-  constructor() {}
-  observe() {
-    return null;
-  }
-  disconnect() {
-    return null;
-  }
-  unobserve() {
-    return null;
-  }
-} as any;
+(globalThis as unknown as Record<string, unknown>).ResizeObserver =
+  class ResizeObserver {
+    constructor() {}
+
+    observe() {
+      return null;
+    }
+
+    disconnect() {
+      return null;
+    }
+
+    unobserve() {
+      return null;
+    }
+  } as any;
 
 // Mock localStorage
 const localStorageMock: Record<string, unknown> = {
@@ -58,7 +70,8 @@ const localStorageMock: Record<string, unknown> = {
   length: 0,
   key: jest.fn((i: number) => null),
 };
-(globalThis as unknown as Record<string, unknown>).localStorage = localStorageMock;
+(globalThis as unknown as Record<string, unknown>).localStorage =
+  localStorageMock;
 
 // Mock sessionStorage
 const sessionStorageMock: Record<string, unknown> = {
@@ -69,18 +82,21 @@ const sessionStorageMock: Record<string, unknown> = {
   length: 0,
   key: jest.fn((i: number) => null),
 };
-(globalThis as unknown as Record<string, unknown>).sessionStorage = sessionStorageMock;
+(globalThis as unknown as Record<string, unknown>).sessionStorage =
+  sessionStorageMock;
 
 // Mock fetch
 (globalThis as unknown as Record<string, unknown>).fetch = jest.fn();
 
 // Mock WebSocket
-const WebSocketMock: Record<string, unknown> & { new?: unknown } = (jest.fn().mockImplementation(() => ({
-  close: jest.fn(),
-  send: jest.fn(),
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-})) as unknown) as Record<string, unknown> & { new?: unknown };
+const WebSocketMock: Record<string, unknown> & { new?: unknown } = jest
+  .fn()
+  .mockImplementation(() => ({
+    close: jest.fn(),
+    send: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+  })) as unknown as Record<string, unknown> & { new?: unknown };
 (WebSocketMock as Record<string, unknown>).CONNECTING = 0;
 (WebSocketMock as Record<string, unknown>).OPEN = 1;
 (WebSocketMock as Record<string, unknown>).CLOSING = 2;
@@ -94,8 +110,8 @@ const originalWarn = console.warn;
 beforeAll(() => {
   console.error = (...args: unknown[]) => {
     if (
-      typeof args[0] === 'string' &&
-      args[0].includes('Warning: ReactDOM.render is no longer supported')
+      typeof args[0] === "string" &&
+      args[0].includes("Warning: ReactDOM.render is no longer supported")
     ) {
       return;
     }
@@ -104,9 +120,9 @@ beforeAll(() => {
 
   console.warn = (...args: unknown[]) => {
     if (
-      typeof args[0] === 'string' &&
-      (args[0].includes('componentWillReceiveProps') ||
-       args[0].includes('componentWillMount'))
+      typeof args[0] === "string" &&
+      (args[0].includes("componentWillReceiveProps") ||
+        args[0].includes("componentWillMount"))
     ) {
       return;
     }

@@ -11,4 +11,3 @@ export async function getTrajectory(conversationId: string): Promise<any> {
   const response = await Forge.getConversation(conversationId);
   return response;
 }
-

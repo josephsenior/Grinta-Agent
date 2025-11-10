@@ -1,6 +1,7 @@
 """Tests for microagent loading in runtime."""
 
 import os
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -186,6 +187,7 @@ def test_default_tools_microagent_exists():
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="MCP functionality is disabled on Windows")
 async def test_add_mcp_tools_from_microagents():
     """Test that add_mcp_tools_to_agent adds tools from microagents."""
     from forge.runtime.impl.action_execution.action_execution_client import ActionExecutionClient

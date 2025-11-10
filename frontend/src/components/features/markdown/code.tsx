@@ -20,7 +20,7 @@ function CopyCodeButton({ code }: { code: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy code:', err);
+      console.error("Failed to copy code:", err);
     }
   };
 
@@ -33,7 +33,7 @@ function CopyCodeButton({ code }: { code: string }) {
         "bg-background-secondary/80 hover:bg-background-secondary",
         "border border-border-subtle",
         "opacity-0 group-hover:opacity-100",
-        "focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+        "focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-brand-500",
       )}
       title={copied ? "Copied!" : "Copy code"}
       aria-label="Copy code to clipboard"
@@ -67,10 +67,10 @@ export function code({
         <MermaidDiagramViewer
           diagram={codeString}
           className="rounded-lg border border-border"
-          showExportButtons={true}
+          showExportButtons
           exportFilename="diagram"
-          enableFullscreen={true}
-          enableZoom={true}
+          enableFullscreen
+          enableZoom
         />
       </div>
     );

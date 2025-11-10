@@ -5,7 +5,8 @@ const PRIORITY_BADGE_CLASSES: Record<string, string> = {
   low: "text-green-400 bg-green-500/20 border-green-500/30",
 };
 
-const DEFAULT_PRIORITY_BADGE_CLASS = "text-neutral-400 bg-neutral-500/20 border-neutral-500/30";
+const DEFAULT_PRIORITY_BADGE_CLASS =
+  "text-neutral-400 bg-neutral-500/20 border-neutral-500/30";
 
 export function getPriorityBadgeClass(priority?: string | null): string {
   if (!priority) {
@@ -15,5 +16,3 @@ export function getPriorityBadgeClass(priority?: string | null): string {
   const normalized = priority.toLowerCase();
   return PRIORITY_BADGE_CLASSES[normalized] ?? DEFAULT_PRIORITY_BADGE_CLASS;
 }
-
-

@@ -7,10 +7,13 @@ export default function Terms(): React.ReactElement {
     <main className="max-w-4xl mx-auto px-6 py-16">
       <div className="card-modern space-y-8">
         <div className="text-center">
-          <h1 data-testid="page-title" className="text-4xl font-bold text-foreground mb-4">
+          <h1
+            data-testid="page-title"
+            className="text-4xl font-bold text-foreground mb-4"
+          >
             {t("TOS$TERMS", { defaultValue: "Terms" })}
           </h1>
-          <div className="w-24 h-1 bg-gradient-to-r from-brand-500 to-accent-500 mx-auto rounded-full mb-6"></div>
+          <div className="w-24 h-1 bg-gradient-to-r from-brand-500 to-accent-500 mx-auto rounded-full mb-6" />
           <p className="text-foreground-secondary text-sm">
             <em>
               {t("TOS$LAST_UPDATED", {
@@ -19,7 +22,7 @@ export default function Terms(): React.ReactElement {
             </em>
           </p>
         </div>
-        
+
         <div className="prose prose-invert max-w-none">
           <p className="text-foreground-secondary leading-relaxed text-lg">
             {t("TOS$PLACEHOLDER", {
@@ -27,7 +30,7 @@ export default function Terms(): React.ReactElement {
                 "These placeholder Terms outline basic usage concepts and will be replaced with a formal legal document.",
             })}
           </p>
-          
+
           <div className="mt-8 space-y-6">
             <div className="border-l-4 border-brand-500 pl-6">
               <h2 className="text-2xl font-bold text-foreground mb-3">
@@ -40,7 +43,7 @@ export default function Terms(): React.ReactElement {
                 })}
               </p>
             </div>
-            
+
             <div className="border-l-4 border-success-500 pl-6">
               <h2 className="text-2xl font-bold text-foreground mb-3">
                 {t("TOS$SECTION_2", { defaultValue: "2. Ownership" })}
@@ -52,7 +55,7 @@ export default function Terms(): React.ReactElement {
                 })}
               </p>
             </div>
-            
+
             <div className="border-l-4 border-accent-500 pl-6">
               <h2 className="text-2xl font-bold text-foreground mb-3">
                 {t("TOS$SECTION_3", { defaultValue: "3. Acceptable Use" })}
@@ -64,7 +67,7 @@ export default function Terms(): React.ReactElement {
                 })}
               </p>
             </div>
-            
+
             <div className="border-l-4 border-warning-500 pl-6">
               <h2 className="text-2xl font-bold text-foreground mb-3">
                 {t("TOS$SECTION_4", { defaultValue: "4. Disclaimer" })}

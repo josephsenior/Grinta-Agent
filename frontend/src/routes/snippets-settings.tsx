@@ -73,7 +73,10 @@ function SnippetCard({
   };
 
   return (
-    <div className="bg-black border border-violet-500/20 rounded-lg p-4 hover:border-border-active transition-colors">
+    <div
+      className="bg-black border border-violet-500/20 rounded-lg p-4 hover:border-border-active transition-colors"
+      data-testid={`snippet-card-${snippet.id}`}
+    >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -103,6 +106,7 @@ function SnippetCard({
             type="button"
             onClick={() => setShowMenu(!showMenu)}
             className="p-1 hover:bg-background rounded text-foreground-secondary hover:text-foreground"
+            aria-label="Snippet actions"
           >
             <MoreVertical className="w-4 h-4" />
           </button>
@@ -259,7 +263,9 @@ const useSnippetForm = ({
 }) => {
   const isEditing = Boolean(initialData);
   const [title, setTitle] = useState(initialData?.title ?? "");
-  const [description, setDescription] = useState(initialData?.description ?? "");
+  const [description, setDescription] = useState(
+    initialData?.description ?? "",
+  );
   const [language, setLanguage] = useState<SnippetLanguage>(
     initialData?.language ?? SnippetLanguage.PLAINTEXT,
   );
@@ -269,7 +275,9 @@ const useSnippetForm = ({
   const [code, setCode] = useState(initialData?.code ?? "");
   const [tags, setTags] = useState<string[]>(initialData?.tags ?? []);
   const [tagInput, setTagInput] = useState("");
-  const [isFavorite, setIsFavorite] = useState(initialData?.is_favorite ?? false);
+  const [isFavorite, setIsFavorite] = useState(
+    initialData?.is_favorite ?? false,
+  );
 
   const resetForm = useCallback(() => {
     setTitle("");
@@ -300,7 +308,19 @@ const useSnippetForm = ({
 
       onClose();
     },
-    [category, code, description, isEditing, isFavorite, language, onClose, onSubmit, resetForm, tags, title],
+    [
+      category,
+      code,
+      description,
+      isEditing,
+      isFavorite,
+      language,
+      onClose,
+      onSubmit,
+      resetForm,
+      tags,
+      title,
+    ],
   );
 
   const addTag = useCallback(() => {
@@ -309,7 +329,7 @@ const useSnippetForm = ({
       return;
     }
 
-    setTags(prevTags => {
+    setTags((prevTags) => {
       if (prevTags.includes(trimmed)) {
         return prevTags;
       }
@@ -320,7 +340,9 @@ const useSnippetForm = ({
   }, [tagInput]);
 
   const removeTag = useCallback((tag: string) => {
-    setTags(prevTags => prevTags.filter(existingTag => existingTag !== tag));
+    setTags((prevTags) =>
+      prevTags.filter((existingTag) => existingTag !== tag),
+    );
   }, []);
 
   const handleTagKeyDown = useCallback(
@@ -379,7 +401,17 @@ function SnippetFormModal({
 }) {
   const { t } = useTranslation();
   const {
-    state: { title, description, language, category, code, tags, tagInput, isFavorite, isEditing },
+    state: {
+      title,
+      description,
+      language,
+      category,
+      code,
+      tags,
+      tagInput,
+      isFavorite,
+      isEditing,
+    },
     actions: {
       setTitle,
       setDescription,
@@ -416,14 +448,22 @@ function SnippetFormModal({
         </div>
 
         {/* Form */}
-        <form onSubmit={submitForm} className="flex-1 overflow-y-auto p-6">
+        <form
+          onSubmit={submitForm}
+          className="flex-1 overflow-y-auto p-6"
+          data-testid="snippet-form"
+        >
           <div className="space-y-6">
             {/* Title */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
+              <label
+                htmlFor="snippet-title"
+                className="block text-sm font-medium text-foreground mb-2"
+              >
                 Title <span className="text-red-500">*</span>
               </label>
               <input
+                id="snippet-title"
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -434,10 +474,14 @@ function SnippetFormModal({
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
+              <label
+                htmlFor="snippet-description"
+                className="block text-sm font-medium text-foreground mb-2"
+              >
                 Description
               </label>
               <textarea
+                id="snippet-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
@@ -448,46 +492,66 @@ function SnippetFormModal({
             {/* Language & Category */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
+                <label
+                  htmlFor="snippet-language"
+                  className="block text-sm font-medium text-foreground mb-2"
+                >
                   Language
                 </label>
                 <select
+                  id="snippet-language"
                   value={language}
-                  onChange={(e) => setLanguage(e.target.value as SnippetLanguage)}
+                  onChange={(e) =>
+                    setLanguage(e.target.value as SnippetLanguage)
+                  }
                   className="w-full px-3 py-2 bg-background border border-violet-500/20 rounded text-foreground focus:outline-none focus:border-border-active"
                 >
-                  {Object.entries(SNIPPET_LANGUAGE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
+                  {Object.entries(SNIPPET_LANGUAGE_LABELS).map(
+                    ([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ),
+                  )}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
+                <label
+                  htmlFor="snippet-category"
+                  className="block text-sm font-medium text-foreground mb-2"
+                >
                   Category
                 </label>
                 <select
+                  id="snippet-category"
                   value={category}
-                  onChange={(e) => setCategory(e.target.value as SnippetCategory)}
+                  onChange={(e) =>
+                    setCategory(e.target.value as SnippetCategory)
+                  }
                   className="w-full px-3 py-2 bg-background border border-violet-500/20 rounded text-foreground focus:outline-none focus:border-border-active"
                 >
-                  {Object.entries(SNIPPET_CATEGORY_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
+                  {Object.entries(SNIPPET_CATEGORY_LABELS).map(
+                    ([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ),
+                  )}
                 </select>
               </div>
             </div>
 
             {/* Code */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
+              <label
+                htmlFor="snippet-code"
+                className="block text-sm font-medium text-foreground mb-2"
+              >
                 Code <span className="text-red-500">*</span>
               </label>
               <div className="border border-violet-500/20 rounded overflow-hidden">
                 <textarea
+                  id="snippet-code"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   rows={12}
@@ -499,7 +563,8 @@ function SnippetFormModal({
               </div>
               {code && (
                 <div className="mt-2 text-xs text-foreground-secondary">
-                  Preview with {SNIPPET_LANGUAGE_LABELS[language]} syntax highlighting
+                  Preview with {SNIPPET_LANGUAGE_LABELS[language]} syntax
+                  highlighting
                 </div>
               )}
               {code && (
@@ -528,7 +593,7 @@ function SnippetFormModal({
                 <input
                   type="text"
                   value={tagInput}
-                  onChange={e => setTagInput(e.target.value)}
+                  onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={handleTagKeyDown}
                   placeholder="Add a tag..."
                   className="flex-1 px-3 py-2 bg-background border border-violet-500/20 rounded text-foreground focus:outline-none focus:border-border-active"
@@ -643,11 +708,18 @@ function SnippetsSettingsScreen() {
       <SnippetFormModal
         isOpen={controller.isModalOpen}
         onClose={controller.handleCloseModal}
-        onSubmit={controller.editingSnippet ? controller.handleUpdate : controller.handleCreate}
+        onSubmit={
+          controller.editingSnippet
+            ? controller.handleUpdate
+            : controller.handleCreate
+        }
         initialData={controller.editingSnippet}
       />
 
-      <ToastContainer toasts={controller.toast.toasts} onRemove={controller.toast.removeToast} />
+      <ToastContainer
+        toasts={controller.toast.toasts}
+        onRemove={controller.toast.removeToast}
+      />
     </div>
   );
 }
@@ -668,7 +740,9 @@ function SnippetsHeader({
   return (
     <div className="flex items-center justify-between">
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">Code Snippet Library</h1>
+        <h1 className="text-2xl font-semibold text-foreground">
+          Code Snippet Library
+        </h1>
         <p className="text-foreground-secondary mt-1">
           Save and reuse code snippets across your projects
         </p>
@@ -731,7 +805,9 @@ function SnippetsStats({ stats }: { stats: SnippetStats | undefined }) {
       <StatsTile
         label="Total Tags"
         value={stats.total_tags}
-        icon={<span className="text-green-500 text-xs">#{stats.total_tags}</span>}
+        icon={
+          <span className="text-green-500 text-xs">#{stats.total_tags}</span>
+        }
       />
     </div>
   );
@@ -829,9 +905,7 @@ function SnippetsFilters({
             : "bg-background text-foreground-secondary border-violet-500/20 hover:bg-black"
         }`}
       >
-        <Star
-          className={`w-4 h-4 ${showFavoritesOnly ? "fill-white" : ""}`}
-        />
+        <Star className={`w-4 h-4 ${showFavoritesOnly ? "fill-white" : ""}`} />
         Favorites Only
       </button>
     </div>
@@ -914,9 +988,15 @@ function SnippetsGrid({
 function useSnippetsSettingsController() {
   const toast = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingSnippet, setEditingSnippet] = useState<CodeSnippet | undefined>();
-  const [selectedLanguage, setSelectedLanguage] = useState<SnippetLanguage | "all">("all");
-  const [selectedCategory, setSelectedCategory] = useState<SnippetCategory | "all">("all");
+  const [editingSnippet, setEditingSnippet] = useState<
+    CodeSnippet | undefined
+  >();
+  const [selectedLanguage, setSelectedLanguage] = useState<
+    SnippetLanguage | "all"
+  >("all");
+  const [selectedCategory, setSelectedCategory] = useState<
+    SnippetCategory | "all"
+  >("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
@@ -1022,7 +1102,13 @@ function useSnippetsSettingsController() {
     } catch (error) {
       toast.error("Failed to export snippets");
     }
-  }, [exportMutation, selectedLanguage, selectedCategory, showFavoritesOnly, toast]);
+  }, [
+    exportMutation,
+    selectedLanguage,
+    selectedCategory,
+    showFavoritesOnly,
+    toast,
+  ]);
 
   const handleImport = useCallback(() => {
     const input = document.createElement("input");
@@ -1055,7 +1141,7 @@ function useSnippetsSettingsController() {
   }, []);
 
   const filteredSnippets = useMemo(() => {
-    const data = snippetsQuery.data;
+    const { data } = snippetsQuery;
     if (!data || !Array.isArray(data)) {
       return [] as CodeSnippet[];
     }
@@ -1065,11 +1151,12 @@ function useSnippetsSettingsController() {
     }
 
     const query = searchQuery.toLowerCase();
-    return data.filter((snippet) =>
-      snippet.title.toLowerCase().includes(query) ||
-      snippet.description?.toLowerCase().includes(query) ||
-      snippet.code.toLowerCase().includes(query) ||
-      snippet.tags.some((tag) => tag.toLowerCase().includes(query)),
+    return data.filter(
+      (snippet) =>
+        snippet.title.toLowerCase().includes(query) ||
+        snippet.description?.toLowerCase().includes(query) ||
+        snippet.code.toLowerCase().includes(query) ||
+        snippet.tags.some((tag) => tag.toLowerCase().includes(query)),
     );
   }, [snippetsQuery.data, searchQuery]);
 
@@ -1127,4 +1214,3 @@ function useSnippetsSettingsController() {
 }
 
 export default SnippetsSettingsScreen;
-

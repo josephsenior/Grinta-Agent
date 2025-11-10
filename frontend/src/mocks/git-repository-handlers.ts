@@ -292,9 +292,7 @@ function resolveRepositories(provider: string | null) {
   if (!provider) {
     return [] as GitRepository[];
   }
-  return (
-    MOCK_REPOSITORIES[provider as keyof typeof MOCK_REPOSITORIES] || []
-  );
+  return MOCK_REPOSITORIES[provider as keyof typeof MOCK_REPOSITORIES] || [];
 }
 
 function sortRepositories(repositories: GitRepository[], sort: string) {

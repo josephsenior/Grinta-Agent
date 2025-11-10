@@ -7,9 +7,6 @@ import type {
   DatabaseConnection,
   TestConnectionRequest,
   TestConnectionResponse,
-  SchemaInfo,
-  QueryRequest,
-  QueryResponse,
 } from "#/types/database";
 
 /**
@@ -56,9 +53,7 @@ export async function deleteDatabaseConnection(
 /**
  * Get database schema (tables, collections, or keys)
  */
-export async function getDatabaseSchema(
-  connectionId: string,
-): Promise<any> {
+export async function getDatabaseSchema(connectionId: string): Promise<any> {
   const response = await Forge.get(
     `/api/database-connections/${connectionId}/schema`,
   );
@@ -91,9 +86,6 @@ export async function executeQuery(
 export async function testDatabaseConnection(
   request: TestConnectionRequest,
 ): Promise<TestConnectionResponse> {
-  const response = await Forge.post(
-    "/api/database-connections/test",
-    request,
-  );
+  const response = await Forge.post("/api/database-connections/test", request);
   return response.data;
 }

@@ -55,4 +55,3 @@ export function CardSkeletonGrid({ count = 6 }: { count?: number }) {
     </div>
   );
 }
-

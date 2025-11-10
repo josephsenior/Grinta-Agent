@@ -1,6 +1,6 @@
 /**
  * LLM Configuration Presets
- * 
+ *
  * Predefined configurations for different use cases:
  * - Conservative: Focused, deterministic responses (low temperature)
  * - Balanced: Mix of creativity and consistency (default)
@@ -25,7 +25,8 @@ export interface LLMPresetConfig {
 export const LLM_PRESETS: Record<LLMPreset, LLMPresetConfig> = {
   conservative: {
     name: "Conservative",
-    description: "Focused and deterministic. Best for precise code generation and refactoring.",
+    description:
+      "Focused and deterministic. Best for precise code generation and refactoring.",
     temperature: 0.0,
     top_p: 0.9,
     max_output_tokens: 4096,
@@ -36,7 +37,8 @@ export const LLM_PRESETS: Record<LLMPreset, LLMPresetConfig> = {
   },
   balanced: {
     name: "Balanced",
-    description: "Default settings. Good balance between creativity and consistency.",
+    description:
+      "Default settings. Good balance between creativity and consistency.",
     temperature: 0.1,
     top_p: 1.0,
     max_output_tokens: 4096,
@@ -47,7 +49,8 @@ export const LLM_PRESETS: Record<LLMPreset, LLMPresetConfig> = {
   },
   creative: {
     name: "Creative",
-    description: "Explorative and varied. Better for brainstorming and novel solutions.",
+    description:
+      "Explorative and varied. Better for brainstorming and novel solutions.",
     temperature: 0.7,
     top_p: 1.0,
     max_output_tokens: 8192,
@@ -74,7 +77,7 @@ export const LLM_PRESETS: Record<LLMPreset, LLMPresetConfig> = {
  */
 export function detectPreset(config: Partial<LLMPresetConfig>): LLMPreset {
   const presets: LLMPreset[] = ["conservative", "balanced", "creative"];
-  
+
   for (const preset of presets) {
     const presetConfig = LLM_PRESETS[preset];
     if (
@@ -85,7 +88,7 @@ export function detectPreset(config: Partial<LLMPresetConfig>): LLMPreset {
       return preset;
     }
   }
-  
+
   return "custom";
 }
 
@@ -95,4 +98,3 @@ export function detectPreset(config: Partial<LLMPresetConfig>): LLMPreset {
 export function getPresetConfig(preset: LLMPreset): LLMPresetConfig {
   return LLM_PRESETS[preset];
 }
-

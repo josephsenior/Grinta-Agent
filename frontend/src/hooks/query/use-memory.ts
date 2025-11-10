@@ -4,11 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as memoryAPI from "#/api/memory";
-import type {
-  CreateMemoryRequest,
-  UpdateMemoryRequest,
-  SearchMemoriesRequest,
-} from "#/types/memory";
+import type { UpdateMemoryRequest } from "#/types/memory";
 
 /**
  * Fetch all memories
@@ -142,4 +138,3 @@ export function useImportMemories() {
     },
   });
 }
-

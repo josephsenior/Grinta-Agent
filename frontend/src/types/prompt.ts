@@ -118,4 +118,3 @@ export const PROMPT_CATEGORY_LABELS: Record<PromptCategory, string> = {
   [PromptCategory.BRAINSTORMING]: "Brainstorming",
   [PromptCategory.CUSTOM]: "Custom",
 };
-

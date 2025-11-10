@@ -1,36 +1,57 @@
+from __future__ import annotations
+
 import logging
 import time
 import types
+from typing import Any, TYPE_CHECKING, cast
+
 from forge.metasop.cache import StepCacheEntry
-from forge.metasop.models import Artifact, SopStep, SopTemplate, StepOutputSpec
+from forge.metasop.models import Artifact, RoleProfile, SopStep, SopTemplate, StepOutputSpec, StepResult, StepTrace
 from forge.metasop.orchestrator import MetaSOPOrchestrator
+from forge.metasop.strategies import BaseStepExecutor
+
+if TYPE_CHECKING:
+    from forge.core.config import ForgeConfig
 
 
-class DummyExecutor:
-
-    def execute(self, step, ctx, role_profile, config=None):
+class DummyExecutor(BaseStepExecutor):
+    def execute(
+        self,
+        step: SopStep,
+        ctx: Any,
+        role_profile: dict[str, Any],
+        config: "ForgeConfig | None" = None,
+    ) -> StepResult:
         content = {"result": "ok", "value": 42}
-        art = Artifact(step_id=step.id, role=step.role, content=content)
-        trace = types.SimpleNamespace(total_tokens=20, model_name="dummy-model")
-        return types.SimpleNamespace(ok=True, artifact=art, trace=trace, rationale=None, error=None)
+        artifact = Artifact(step_id=step.id, role=step.role, content=content)
+        trace = StepTrace(step_id=step.id, role=step.role, total_tokens=20, model_name="dummy-model")
+        return StepResult(ok=True, artifact=artifact, trace=trace)
 
 
 def _make_single_engineer_template():
     return SopTemplate(
         name="feature_delivery",
-        steps=[SopStep(id="impl", role="engineer", task="t", outputs=StepOutputSpec(schema_file="dummy.json"))],
+        steps=[SopStep(id="impl", role="engineer", task="t", outputs=StepOutputSpec(schema="dummy.json"))],
     )
 
 
 metasop_cfg = {"enable_step_cache": True}
-config = types.SimpleNamespace(extended=types.SimpleNamespace(metasop=metasop_cfg), runtime=types.SimpleNamespace())
-orch = MetaSOPOrchestrator(sop_name="feature_delivery", config=config)
+config: Any = types.SimpleNamespace(extended=types.SimpleNamespace(metasop=metasop_cfg), runtime=types.SimpleNamespace())
+orch = MetaSOPOrchestrator(sop_name="feature_delivery", config=cast("ForgeConfig | None", config))
 orch.template = _make_single_engineer_template()
 orch.settings.enabled = True
 orch.step_executor = DummyExecutor()
-orch.profiles["engineer"] = types.SimpleNamespace(model_dump=lambda: {}, capabilities=["implement"])
+orch.profiles["engineer"] = RoleProfile(
+    name="engineer",
+    goal="Implement task",
+    capabilities=["implement"],
+)
 logger = logging.getLogger(__name__)
-logger.info("before manual put stats: %s", orch.step_cache.stats())
+
+step_cache = orch.step_cache
+if step_cache is None:
+    raise RuntimeError("Step cache is not initialized on the orchestrator")
+logger.info("before manual put stats: %s", step_cache.stats())
 entry = StepCacheEntry(
     context_hash="manual_ctx",
     step_id="impl",
@@ -44,9 +65,9 @@ entry = StepCacheEntry(
     diff_fingerprint=None,
     created_ts=time.time(),
 )
-ok = orch.step_cache.put(entry)
+ok = step_cache.put(entry)
 logger.info("manual put returned: %s", ok)
-logger.info("after manual put stats: %s", orch.step_cache.stats())
-hit = orch.step_cache.get("manual_ctx", "engineer")
+logger.info("after manual put stats: %s", step_cache.stats())
+hit = step_cache.get("manual_ctx", "engineer")
 logger.info("get hit: %s", bool(hit))
 logger.info("hit entry: %s", getattr(hit, "artifact_content", None))

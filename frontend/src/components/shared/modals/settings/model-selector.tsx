@@ -31,7 +31,6 @@ export function ModelSelector({
     undefined,
   );
 
-
   const normalizeProvider = (provider?: string | null) => {
     if (!provider) return undefined;
     const lower = provider.toLowerCase();
@@ -92,9 +91,13 @@ export function ModelSelector({
   return (
     <div className="flex flex-col sm:flex-row w-full max-w-[680px] justify-between gap-3 sm:gap-4 md:gap-[46px]">
       {/* Hidden inputs for form submission */}
-      <input type="hidden" name="llm-provider-input" value={selectedProvider || ""} />
+      <input
+        type="hidden"
+        name="llm-provider-input"
+        value={selectedProvider || ""}
+      />
       <input type="hidden" name="llm-model-input" value={selectedModel || ""} />
-      
+
       <fieldset className="flex flex-col gap-2 sm:gap-2.5 w-full">
         <label className="text-xs sm:text-sm">{t(I18nKey.LLM$PROVIDER)}</label>
         <CustomDropdown
@@ -114,18 +117,16 @@ export function ModelSelector({
           items={[
             {
               title: t(I18nKey.MODEL_SELECTOR$VERIFIED),
-              items: VERIFIED_PROVIDERS.filter(
-                (provider) => {
-                  const normalized = normalizeProvider(provider);
-                  return models[normalized || provider];
-                },
-              ).map((provider) => {
+              items: VERIFIED_PROVIDERS.filter((provider) => {
+                const normalized = normalizeProvider(provider);
+                return models[normalized || provider];
+              }).map((provider) => {
                 const normalized = normalizeProvider(provider);
                 return {
                   key: normalized || provider,
                   label: mapProvider(normalized || provider || ""),
                 };
-              })),
+              }),
             },
             ...(Object.keys(models).some(
               (provider) => !VERIFIED_PROVIDERS.includes(provider),
@@ -137,11 +138,15 @@ export function ModelSelector({
                       .filter(
                         (provider) =>
                           !VERIFIED_PROVIDERS.includes(provider) &&
-                          !VERIFIED_PROVIDERS.includes(normalizeProvider(provider) || ""),
+                          !VERIFIED_PROVIDERS.includes(
+                            normalizeProvider(provider) || "",
+                          ),
                       )
                       .map((provider) => ({
                         key: normalizeProvider(provider) || provider,
-                        label: mapProvider(normalizeProvider(provider) || provider),
+                        label: mapProvider(
+                          normalizeProvider(provider) || provider,
+                        ),
                       })),
                   },
                 ]
@@ -168,10 +173,12 @@ export function ModelSelector({
           items={[
             {
               title: t(I18nKey.MODEL_SELECTOR$VERIFIED),
-            items: getVerifiedModels()
-              .filter((model) =>
-                models[(normalizeProvider(selectedProvider) || "")]?.models?.includes(model),
-              )
+              items: getVerifiedModels()
+                .filter((model) =>
+                  models[
+                    normalizeProvider(selectedProvider) || ""
+                  ]?.models?.includes(model),
+                )
                 .map((model) => ({
                   key: model,
                   label: model,

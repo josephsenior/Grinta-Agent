@@ -94,9 +94,7 @@ export function BetaFAQ() {
         </div>
 
         <div className="mt-12 text-center">
-          <p className="text-foreground-secondary mb-4">
-            Have more questions?
-          </p>
+          <p className="text-foreground-secondary mb-4">Have more questions?</p>
           <a
             href="mailto:support@all-hands.dev"
             className="text-violet-500 hover:text-brand-600 font-medium hover:underline"
@@ -110,4 +108,3 @@ export function BetaFAQ() {
 }
 
 export default BetaFAQ;
-

@@ -22,9 +22,6 @@ class StreamingLLM(AsyncLLM):
             Callable: The partial streaming completion function.
 
         """
-        # Import the API key manager for provider detection
-        from forge.core.config.api_key_manager import api_key_manager
-        
         # Build base completion parameters
         base_completion_kwargs = {
             'model': self.config.model,
@@ -44,16 +41,20 @@ class StreamingLLM(AsyncLLM):
             base_completion_kwargs['api_version'] = self.config.api_version
         if self.config.custom_llm_provider is not None:
             base_completion_kwargs['custom_llm_provider'] = self.config.custom_llm_provider
-        
-        # CRITICAL: Use provider configuration to validate and clean parameters
-        cleaned_completion_kwargs = api_key_manager.validate_and_clean_completion_params(
-            self.config.model, base_completion_kwargs
+        logger.debug(
+            "Streaming LLM setup for %s with %d base parameters",
+            self.config.model,
+            len(base_completion_kwargs),
         )
-        
-        logger.debug(f"Streaming LLM setup for {self.config.model} with {len(cleaned_completion_kwargs)} validated parameters")
-        return partial(self._call_acompletion, **cleaned_completion_kwargs)
+        return partial(self._call_acompletion, **base_completion_kwargs)
 
-    def _process_streaming_messages(self, args: tuple, kwargs: dict) -> list[dict[str, Any]]:
+    def _process_streaming_messages(
+        self,
+        args: tuple,
+        kwargs: dict,
+        *,
+        allow_empty: bool = False,
+    ) -> list[dict[str, Any]]:
         """Process and validate messages for streaming completion.
 
         Args:
@@ -76,12 +77,15 @@ class StreamingLLM(AsyncLLM):
         elif "messages" in kwargs:
             messages = kwargs["messages"]
 
-        messages = messages if isinstance(messages, list) else [messages]
-        if not messages:
+        message_list = messages if isinstance(messages, list) else [messages] if messages else []
+        if not message_list:
+            if allow_empty:
+                kwargs.setdefault("messages", [])
+                return []
             msg = "The messages list is empty. At least one message is required."
             raise ValueError(msg)
 
-        return messages
+        return message_list
 
     async def _process_streaming_chunks(self, resp, kwargs: dict) -> Any:
         """Process streaming chunks from the LLM response.
@@ -123,7 +127,7 @@ class StreamingLLM(AsyncLLM):
             Any: Chunks from the streaming response.
 
         """
-        messages = self._process_streaming_messages(args, kwargs)
+        messages = self._process_streaming_messages(args, kwargs, allow_empty=True)
 
         if get_features(self.config.model).supports_reasoning_effort:
             kwargs["reasoning_effort"] = self.config.reasoning_effort

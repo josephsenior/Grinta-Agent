@@ -31,11 +31,16 @@ export function MCPMarketplaceDetailsModal({
       <div className="bg-background-secondary border border-border rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <ModalHeader mcp={mcp} badges={badges} onClose={onClose} />
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          <DescriptionSection description={mcp.longDescription || mcp.description} />
+          <DescriptionSection
+            description={mcp.longDescription || mcp.description}
+          />
           <StatsSection stats={stats} />
           <TagsSection tags={mcp.tags} />
           <ConfigurationSection sections={configSections} />
-          <ApiKeyRequirement requiresApiKey={mcp.config.requiresApiKey} description={mcp.config.apiKeyDescription} />
+          <ApiKeyRequirement
+            requiresApiKey={mcp.config.requiresApiKey ?? false}
+            description={mcp.config.apiKeyDescription}
+          />
           <RequirementsSection requirements={requirements} />
           <LinksSection links={links} />
         </div>
@@ -68,23 +73,27 @@ function buildMcpBadges(mcp: MCPMarketplaceItem): Badge[] {
   if (mcp.featured) {
     badges.push({
       label: "Featured",
-      className: "px-2 py-0.5 text-xs font-medium bg-brand-500/20 text-brand-400 rounded-full border border-brand-500/30",
+      className:
+        "px-2 py-0.5 text-xs font-medium bg-brand-500/20 text-brand-400 rounded-full border border-brand-500/30",
     });
   }
   if (mcp.popular) {
     badges.push({
       label: "Popular",
-      className: "px-2 py-0.5 text-xs font-medium bg-accent-500/20 text-accent-400 rounded-full border border-accent-500/30",
+      className:
+        "px-2 py-0.5 text-xs font-medium bg-accent-500/20 text-accent-400 rounded-full border border-accent-500/30",
     });
   }
   badges.push({
     label: mcp.type.toUpperCase(),
-    className: "px-2 py-0.5 text-xs font-medium bg-background-tertiary text-foreground-secondary rounded-full border border-border",
+    className:
+      "px-2 py-0.5 text-xs font-medium bg-background-tertiary text-foreground-secondary rounded-full border border-border",
   });
   if (mcp.version) {
     badges.push({
       label: `v${mcp.version}`,
-      className: "px-2 py-0.5 text-xs font-medium bg-background-tertiary text-foreground-secondary rounded-full border border-border",
+      className:
+        "px-2 py-0.5 text-xs font-medium bg-background-tertiary text-foreground-secondary rounded-full border border-border",
     });
   }
   return badges;
@@ -194,8 +203,12 @@ function ModalHeader({
           {mcp.icon || "📦"}
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-2xl font-bold text-foreground mb-1">{mcp.name}</h2>
-          <p className="text-sm text-foreground-secondary mb-2">by {mcp.author}</p>
+          <h2 className="text-2xl font-bold text-foreground mb-1">
+            {mcp.name}
+          </h2>
+          <p className="text-sm text-foreground-secondary mb-2">
+            by {mcp.author}
+          </p>
           <div className="flex flex-wrap gap-2">
             {badges.map((badge) => (
               <span key={badge.label} className={badge.className}>
@@ -224,7 +237,9 @@ function DescriptionSection({ description }: { description: string }) {
   return (
     <section>
       <SectionTitle>Description</SectionTitle>
-      <p className="text-sm text-foreground-secondary leading-relaxed">{description}</p>
+      <p className="text-sm text-foreground-secondary leading-relaxed">
+        {description}
+      </p>
     </section>
   );
 }
@@ -317,7 +332,9 @@ function ApiKeyRequirement({
       <div className="flex items-start gap-3">
         <AlertCircle className="w-5 h-5 text-warning-500 flex-shrink-0 mt-0.5" />
         <div>
-          <h4 className="text-sm font-semibold text-foreground mb-1">API Key Required</h4>
+          <h4 className="text-sm font-semibold text-foreground mb-1">
+            API Key Required
+          </h4>
           <p className="text-sm text-foreground-secondary">
             {description ||
               "This MCP requires an API key to function. You'll need to configure it after installation."}
@@ -415,9 +432,6 @@ function ModalFooter({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-sm font-semibold text-foreground mb-2">
-      {children}
-    </h3>
+    <h3 className="text-sm font-semibold text-foreground mb-2">{children}</h3>
   );
 }
-

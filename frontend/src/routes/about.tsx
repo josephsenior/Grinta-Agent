@@ -14,16 +14,18 @@ export default function About(): React.ReactElement {
           >
             {t("ABOUT")}
           </h1>
-          <div className="w-24 h-1 bg-gradient-to-r from-brand-500 to-accent-500 mx-auto rounded-full"></div>
+          <div className="w-24 h-1 bg-gradient-to-r from-brand-500 to-accent-500 mx-auto rounded-full" />
         </div>
-        
+
         <div className="prose prose-invert max-w-none">
           <p className="text-foreground-secondary leading-relaxed text-lg">
             {t(I18nKey.HOME$Forge_DESCRIPTION)}
           </p>
-          
+
           <div className="mt-8">
-            <h2 className="text-2xl font-bold text-foreground mb-4">{t("MISSION")}</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-4">
+              {t("MISSION")}
+            </h2>
             <p className="text-foreground-secondary leading-relaxed">
               {t("MISSION$DESCRIPTION", {
                 defaultValue:
@@ -31,12 +33,14 @@ export default function About(): React.ReactElement {
               })}
             </p>
           </div>
-          
+
           <div className="mt-8">
-            <h2 className="text-2xl font-bold text-foreground mb-6">{t("CORE_CAPABILITIES")}</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-6">
+              {t("CORE_CAPABILITIES")}
+            </h2>
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
-                <div className="w-2 h-2 bg-brand-500 rounded-full mt-2 flex-shrink-0"></div>
+                <div className="w-2 h-2 bg-brand-500 rounded-full mt-2 flex-shrink-0" />
                 <span className="text-foreground-secondary">
                   {t("AUTOMATED_CODING", {
                     defaultValue: "Automated coding & refactoring",
@@ -44,7 +48,7 @@ export default function About(): React.ReactElement {
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <div className="w-2 h-2 bg-success-500 rounded-full mt-2 flex-shrink-0"></div>
+                <div className="w-2 h-2 bg-success-500 rounded-full mt-2 flex-shrink-0" />
                 <span className="text-foreground-secondary">
                   {t("TEST_GENERATION", {
                     defaultValue: "Test generation & maintenance",
@@ -52,7 +56,7 @@ export default function About(): React.ReactElement {
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <div className="w-2 h-2 bg-accent-500 rounded-full mt-2 flex-shrink-0"></div>
+                <div className="w-2 h-2 bg-accent-500 rounded-full mt-2 flex-shrink-0" />
                 <span className="text-foreground-secondary">
                   {t("FAILURE_TAXONOMY", {
                     defaultValue: "Failure taxonomy driven remediation",
@@ -60,7 +64,7 @@ export default function About(): React.ReactElement {
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <div className="w-2 h-2 bg-warning-500 rounded-full mt-2 flex-shrink-0"></div>
+                <div className="w-2 h-2 bg-warning-500 rounded-full mt-2 flex-shrink-0" />
                 <span className="text-foreground-secondary">
                   {t("GOVERNANCE", {
                     defaultValue: "Governance-aware resource management",

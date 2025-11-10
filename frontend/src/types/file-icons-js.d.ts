@@ -1,4 +1,4 @@
-declare module 'file-icons-js' {
+declare module "file-icons-js" {
   interface FileIcons {
     getClass(filename: string): string;
     getClassWithColor(filename: string): string;

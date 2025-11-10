@@ -160,7 +160,9 @@ function ShortcutRow({ shortcut }: { shortcut: KeyboardShortcut }) {
         {shortcut.keys.map((key, index) => (
           <React.Fragment key={index}>
             {index > 0 && (
-              <span className="text-xs text-text-foreground-secondary mx-1">+</span>
+              <span className="text-xs text-text-foreground-secondary mx-1">
+                +
+              </span>
             )}
             <KeyBadge keyName={key} />
           </React.Fragment>

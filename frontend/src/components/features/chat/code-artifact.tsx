@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { Copy, Check, FileCode, Code2, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Copy,
+  Check,
+  FileCode,
+  Code2,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { Card, CardContent, CardHeader } from "#/components/ui/card";
 import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
@@ -18,7 +25,7 @@ interface CodeArtifactProps {
 
 /**
  * CodeArtifact - Claude-style code display component
- * 
+ *
  * Features:
  * - Beautiful card layout with file path header
  * - Syntax highlighting via Monaco Editor
@@ -38,7 +45,7 @@ export function CodeArtifact({
 }: CodeArtifactProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(code);
@@ -49,22 +56,22 @@ export function CodeArtifact({
       console.error("Failed to copy:", error);
     }
   };
-  
+
   const actionColors = {
     create: "bg-success-500/10 text-success-500 border-success-500/30",
     edit: "bg-warning-500/10 text-warning-500 border-warning-500/30",
     delete: "bg-error-500/10 text-error-500 border-error-500/30",
   };
-  
+
   const actionLabels = {
     create: "Created",
     edit: "Modified",
     delete: "Deleted",
   };
-  
+
   const lineCount = code.split("\n").length;
   const isLongCode = lineCount > 50;
-  
+
   return (
     <Card
       className={cn(
@@ -72,7 +79,7 @@ export function CodeArtifact({
         "bg-gradient-to-br from-background-elevated to-background-surface",
         "border border-border-secondary shadow-xl shadow-primary-500/5",
         "transition-all duration-300 hover:shadow-2xl hover:shadow-primary-500/10",
-        className
+        className,
       )}
     >
       {/* Header */}
@@ -82,26 +89,29 @@ export function CodeArtifact({
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <FileCode className="w-4 h-4 text-primary-500 flex-shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-mono text-foreground truncate" title={filePath}>
+              <p
+                className="text-sm font-mono text-foreground truncate"
+                title={filePath}
+              >
                 {filePath}
               </p>
               <p className="text-xs text-foreground-secondary mt-0.5">
                 {lineCount} {lineCount === 1 ? "line" : "lines"} · {language}
               </p>
             </div>
-            
+
             {/* Action Badge */}
             <Badge
               variant="outline"
               className={cn(
                 "text-xs font-medium flex-shrink-0",
-                actionColors[action]
+                actionColors[action],
               )}
             >
               {actionLabels[action]}
             </Badge>
           </div>
-          
+
           {/* Actions */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Collapse Button (for long code) */}
@@ -126,7 +136,7 @@ export function CodeArtifact({
                 )}
               </Button>
             )}
-            
+
             {/* Copy Button */}
             <Button
               type="button"
@@ -147,7 +157,7 @@ export function CodeArtifact({
                 </>
               )}
             </Button>
-            
+
             {/* Apply Button (optional) */}
             {onApply && (
               <Button
@@ -164,7 +174,7 @@ export function CodeArtifact({
           </div>
         </div>
       </CardHeader>
-      
+
       {/* Code Content */}
       {!isCollapsed && (
         <CardContent className="p-0">
@@ -195,7 +205,7 @@ export function CodeArtifact({
           </div>
         </CardContent>
       )}
-      
+
       {/* Footer (collapsed state) */}
       {isCollapsed && (
         <CardContent className="px-4 py-3 bg-background-surface/50">
@@ -207,4 +217,3 @@ export function CodeArtifact({
     </Card>
   );
 }
-

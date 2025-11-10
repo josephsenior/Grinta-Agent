@@ -127,7 +127,10 @@ function SecurityInvariant() {
       <>
         <div className="flex justify-between items-center border-b border-border mb-4 p-4">
           <h2 className="text-2xl">{t(I18nKey.INVARIANT$LOG_LABEL)}</h2>
-          <Button onPress={() => exportTraces()} className="bg-background-tertiary">
+          <Button
+            onPress={() => exportTraces()}
+            className="bg-background-tertiary"
+          >
             {t(I18nKey.INVARIANT$EXPORT_TRACE_LABEL)}
           </Button>
         </div>

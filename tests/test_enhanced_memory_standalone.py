@@ -6,9 +6,15 @@ import time
 from pathlib import Path
 
 # Fix Windows encoding
-import io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+if sys.platform == "win32":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    else:
+        import io
+
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", closefd=False)
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", closefd=False)
 
 # Add Forge to path
 sys.path.insert(0, str(Path(__file__).parent / "forge"))

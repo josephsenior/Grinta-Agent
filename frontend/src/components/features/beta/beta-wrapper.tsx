@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { RuntimeLoadingScreen } from "./runtime-loading-screen";
 import { InlineLLMSetup } from "./inline-llm-setup";
 import { useSettings } from "#/hooks/query/use-settings";
@@ -36,7 +36,10 @@ export function BetaWrapper({ children }: BetaWrapperProps) {
   }
 
   // Show runtime loading screen while runtime initializes
-  if (runtimeStatus.isInitializing || (!runtimeStatus.isReady && !runtimeStatus.error)) {
+  if (
+    runtimeStatus.isInitializing ||
+    (!runtimeStatus.isReady && !runtimeStatus.error)
+  ) {
     return <RuntimeLoadingScreen />;
   }
 
@@ -80,4 +83,3 @@ export function BetaWrapper({ children }: BetaWrapperProps) {
   // Render children when everything is ready
   return <>{children}</>;
 }
-

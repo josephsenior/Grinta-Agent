@@ -21,3 +21,16 @@ class Observation(Event):
 
     content: str
     __test__ = False
+
+    @property
+    def exit_code(self) -> int | None:
+        """Return generic exit code when available."""
+        if hasattr(self, "_exit_code"):
+            exit_val = self._exit_code
+            return int(exit_val) if exit_val is not None else None
+        return None
+
+    @exit_code.setter
+    def exit_code(self, value: int | None) -> None:
+        """Set generic exit code metadata."""
+        self._exit_code = value

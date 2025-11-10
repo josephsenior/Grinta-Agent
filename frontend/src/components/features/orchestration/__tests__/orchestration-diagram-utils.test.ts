@@ -40,7 +40,9 @@ type MermaidGeneratorModule = {
 let mermaidGenerator: MermaidGeneratorModule;
 
 beforeAll(async () => {
-  mermaidGenerator = (await import("#/utils/mermaid-generator")) as MermaidGeneratorModule;
+  mermaidGenerator = (await import(
+    "#/utils/mermaid-generator"
+  )) as unknown as MermaidGeneratorModule;
 });
 
 describe("orchestration-diagram-utils", () => {
@@ -93,7 +95,9 @@ describe("orchestration-diagram-utils", () => {
     ];
 
     buildOrchestrationDiagramState(steps, true);
-    expect(mermaidGenerator.generateApiSequenceDiagram).toHaveBeenCalledTimes(1);
+    expect(mermaidGenerator.generateApiSequenceDiagram).toHaveBeenCalledTimes(
+      1,
+    );
   });
 
   it("converts raw steps into orchestration steps", () => {
@@ -124,5 +128,3 @@ describe("orchestration-diagram-utils", () => {
     expect(mapStatusString("pending")).toBe("pending");
   });
 });
-
-

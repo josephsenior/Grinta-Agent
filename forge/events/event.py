@@ -78,6 +78,11 @@ class Event:
             return int(id_val) if id_val is not None else Event.INVALID_ID
         return Event.INVALID_ID
 
+    @id.setter
+    def id(self, value: int | None) -> None:
+        """Set event ID."""
+        self._id = value
+
     @property
     def sequence(self) -> int:
         """Sequence number for guaranteed event ordering."""
@@ -85,6 +90,11 @@ class Event:
             seq_val = self._sequence
             return int(seq_val) if seq_val is not None else Event.INVALID_ID
         return Event.INVALID_ID
+
+    @sequence.setter
+    def sequence(self, value: int | None) -> None:
+        """Set event sequence number."""
+        self._sequence = value
 
     @property
     def timestamp(self) -> str | None:
@@ -108,6 +118,16 @@ class Event:
             return EventSource(src) if src is not None else None
         return None
 
+    @source.setter
+    def source(self, value: EventSource | str | None) -> None:
+        """Set event source."""
+        if value is None:
+            self._source = None
+        elif isinstance(value, EventSource):
+            self._source = value.value
+        else:
+            self._source = value
+
     @property
     def cause(self) -> int | None:
         """Get ID of event that caused this event."""
@@ -115,6 +135,11 @@ class Event:
             cause_val = self._cause
             return int(cause_val) if cause_val is not None else None
         return None
+
+    @cause.setter
+    def cause(self, value: int | None) -> None:
+        """Set ID of event that caused this event."""
+        self._cause = value
 
     @property
     def timeout(self) -> float | None:

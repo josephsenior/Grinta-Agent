@@ -169,10 +169,11 @@ export function ChatInput({
           "transition-all duration-300 ease-in-out",
           "focus:text-text-primary focus:placeholder:text-text-secondary",
           // Enhanced focus shadow for depth (premium feel)
-          isFocused && !isDraggingOver && [
-            "shadow-[0_2px_12px_rgba(189,147,249,0.15)]",
-            "transform scale-[1.001]", // Subtle scale on focus
-          ],
+          isFocused &&
+            !isDraggingOver && [
+              "shadow-[0_2px_12px_rgba(189,147,249,0.15)]",
+              "transform scale-[1.001]", // Subtle scale on focus
+            ],
           isDraggingOver && [
             "bg-gradient-to-br from-primary-500/20 to-primary-600/10",
             "border border-primary-500/40 rounded-xl px-4 py-3",

@@ -24,7 +24,9 @@ export function ArchitectVisualization({
     return (
       <div className={`metasop-viz-empty ${className}`}>
         <Settings className="w-12 h-12 text-blue-400 opacity-50 mb-2" />
-        <p className="text-sm text-neutral-400">No architecture details yet...</p>
+        <p className="text-sm text-neutral-400">
+          No architecture details yet...
+        </p>
       </div>
     );
   }
@@ -34,7 +36,9 @@ export function ArchitectVisualization({
       <div className="metasop-viz-header bg-blue-500/10 border-blue-500/20">
         <Settings className="w-5 h-5 text-blue-400" />
         <h3 className="text-sm font-semibold text-blue-300">Architect</h3>
-        <span className="text-xs text-blue-400/60">System Design & Architecture</span>
+        <span className="text-xs text-blue-400/60">
+          System Design & Architecture
+        </span>
       </div>
 
       <div className="p-4 space-y-6">
@@ -73,7 +77,10 @@ function buildArchitectSections(
     sections.push({
       key: "api-endpoints",
       node: (
-        <ApiEndpointsSection endpoints={artifact.api_endpoints} animated={animated} />
+        <ApiEndpointsSection
+          endpoints={artifact.api_endpoints}
+          animated={animated}
+        />
       ),
     });
   }
@@ -82,7 +89,10 @@ function buildArchitectSections(
     sections.push({
       key: "database-schema",
       node: (
-        <DatabaseSchemaSection schemas={artifact.database_schema} animated={animated} />
+        <DatabaseSchemaSection
+          schemas={artifact.database_schema}
+          animated={animated}
+        />
       ),
     });
   }
@@ -99,11 +109,17 @@ function buildArchitectSections(
     });
   }
 
-  if (artifact.technology_stack && Object.keys(artifact.technology_stack).length) {
+  if (
+    artifact.technology_stack &&
+    Object.keys(artifact.technology_stack).length
+  ) {
     sections.push({
       key: "technology-stack",
       node: (
-        <TechnologyStackSection stack={artifact.technology_stack} animated={animated} />
+        <TechnologyStackSection
+          stack={artifact.technology_stack}
+          animated={animated}
+        />
       ),
     });
   }
@@ -130,9 +146,15 @@ function SystemComponentsSection({
   components,
   animated,
 }: {
-  components: NonNullable<ArchitectSpecArtifact["system_architecture"]>["components"];
+  components: NonNullable<
+    ArchitectSpecArtifact["system_architecture"]
+  >["components"];
   animated: boolean;
 }) {
+  if (!components || components.length === 0) {
+    return null;
+  }
+
   return (
     <div className="space-y-3">
       <SectionTitle
@@ -151,7 +173,9 @@ function SystemComponentsSection({
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <h5 className="text-sm font-medium text-blue-200">{component.name}</h5>
+                  <h5 className="text-sm font-medium text-blue-200">
+                    {component.name}
+                  </h5>
                   {component.type && (
                     <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded border border-blue-500/30">
                       {component.type}
@@ -159,7 +183,9 @@ function SystemComponentsSection({
                   )}
                 </div>
                 {component.description && (
-                  <p className="text-xs text-neutral-400 mt-1">{component.description}</p>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    {component.description}
+                  </p>
                 )}
                 {component.technologies?.length ? (
                   <div className="flex flex-wrap gap-1 mt-2">
@@ -204,11 +230,17 @@ function ApiEndpointsSection({
           className="bg-blue-500/5 border border-blue-500/20 rounded p-3"
         >
           <div className="flex items-center gap-2 mb-2">
-            <span className={`text-xs font-mono px-2 py-1 rounded ${getMethodColor(endpoint.method ?? "")}`}>
+            <span
+              className={`text-xs font-mono px-2 py-1 rounded ${getMethodColor(endpoint.method ?? "")}`}
+            >
               {endpoint.method}
             </span>
-            <code className="text-xs text-blue-300 font-mono">{endpoint.path}</code>
-            {endpoint.auth_required && <Lock className="w-3 h-3 text-yellow-400" />}
+            <code className="text-xs text-blue-300 font-mono">
+              {endpoint.path}
+            </code>
+            {endpoint.auth_required && (
+              <Lock className="w-3 h-3 text-yellow-400" />
+            )}
           </div>
           {endpoint.description && (
             <p className="text-xs text-neutral-400">{endpoint.description}</p>
@@ -240,7 +272,9 @@ function DatabaseSchemaSection({
           transition={{ delay: index * 0.05 }}
           className="bg-blue-500/5 border border-blue-500/20 rounded p-3"
         >
-          <h5 className="text-sm font-mono text-blue-300 mb-2">{schema.table_name}</h5>
+          <h5 className="text-sm font-mono text-blue-300 mb-2">
+            {schema.table_name}
+          </h5>
           {schema.columns?.length ? (
             <div className="text-xs text-neutral-400 space-y-1">
               {schema.columns.slice(0, 5).map((col, columnIndex) => (
@@ -284,19 +318,27 @@ function TechnicalDecisionsSection({
           className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3"
         >
           <div className="flex items-start justify-between mb-2">
-            <h5 className="text-sm font-medium text-blue-200">{decision.decision}</h5>
+            <h5 className="text-sm font-medium text-blue-200">
+              {decision.decision}
+            </h5>
             {decision.confidence && (
-              <span className={`text-xs px-2 py-1 rounded ${getConfidenceColor(decision.confidence)}`}>
+              <span
+                className={`text-xs px-2 py-1 rounded ${getConfidenceColor(decision.confidence)}`}
+              >
                 {decision.confidence}
               </span>
             )}
           </div>
           {decision.rationale && (
-            <p className="text-xs text-neutral-400 mt-2">{decision.rationale}</p>
+            <p className="text-xs text-neutral-400 mt-2">
+              {decision.rationale}
+            </p>
           )}
           {decision.alternatives?.length ? (
             <div className="mt-2">
-              <p className="text-xs text-blue-400 mb-1">Alternatives considered:</p>
+              <p className="text-xs text-blue-400 mb-1">
+                Alternatives considered:
+              </p>
               <ul className="text-xs text-neutral-500 space-y-0.5 pl-4">
                 {decision.alternatives.map((alt, alternativeIndex) => (
                   <li key={alternativeIndex}>• {String(alt)}</li>
@@ -335,7 +377,9 @@ function TechnologyStackSection({
             className="bg-blue-500/5 border border-blue-500/20 rounded px-3 py-2"
           >
             <p className="text-xs text-blue-400">{key}</p>
-            <p className="text-xs text-neutral-300 font-mono">{String(value)}</p>
+            <p className="text-xs text-neutral-300 font-mono">
+              {String(value)}
+            </p>
           </motion.div>
         ))}
       </div>
@@ -351,7 +395,10 @@ function getMethodColor(method: string): string {
     PATCH: "bg-orange-500/20 text-orange-300 border border-orange-500/30",
     DELETE: "bg-red-500/20 text-red-300 border border-red-500/30",
   };
-  return colors[method] || "bg-neutral-500/20 text-neutral-300 border border-neutral-500/30";
+  return (
+    colors[method] ||
+    "bg-neutral-500/20 text-neutral-300 border border-neutral-500/30"
+  );
 }
 
 function getConfidenceColor(confidence: string): string {
@@ -360,7 +407,8 @@ function getConfidenceColor(confidence: string): string {
     medium: "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30",
     low: "bg-orange-500/20 text-orange-300 border border-orange-500/30",
   };
-  return colors[confidence] || "bg-neutral-500/20 text-neutral-300 border border-neutral-500/30";
+  return (
+    colors[confidence] ||
+    "bg-neutral-500/20 text-neutral-300 border border-neutral-500/30"
+  );
 }
-
-

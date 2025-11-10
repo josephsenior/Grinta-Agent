@@ -37,7 +37,8 @@ export function MCPObservationContent({ event }: MCPObservationContentProps) {
 function useMcpObservationData(event: MCPObservation) {
   return React.useMemo(() => {
     const output = parseObservationOutput(event.content);
-    const { argumentsObject, hasArguments } = extractObservationArguments(event);
+    const { argumentsObject, hasArguments } =
+      extractObservationArguments(event);
 
     return {
       output,
@@ -88,7 +89,9 @@ function ArgumentsSection({
   return (
     <section className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground-secondary">{label}</h3>
+        <h3 className="text-sm font-semibold text-foreground-secondary">
+          {label}
+        </h3>
       </div>
       <div className="p-3 bg-background-secondary rounded-md overflow-auto text-foreground-secondary max-h-[200px] shadow-inner">
         <ReactJsonView
@@ -117,7 +120,9 @@ function OutputSection({
   return (
     <section className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground-secondary">{label}</h3>
+        <h3 className="text-sm font-semibold text-foreground-secondary">
+          {label}
+        </h3>
       </div>
       <div className="p-3 bg-background-secondary rounded-md overflow-auto text-foreground-secondary max-h-[300px] shadow-inner">
         {isRenderableObject ? (

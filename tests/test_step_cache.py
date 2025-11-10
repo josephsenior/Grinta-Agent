@@ -1,33 +1,44 @@
+from __future__ import annotations
+
 import types
-from forge.metasop.models import Artifact, SopStep, SopTemplate, StepOutputSpec
+from typing import Any, TYPE_CHECKING, cast
+
+from forge.metasop.models import Artifact, RoleProfile, SopStep, SopTemplate, StepOutputSpec, StepResult, StepTrace
 from forge.metasop.orchestrator import MetaSOPOrchestrator
+from forge.metasop.strategies import BaseStepExecutor
+
+if TYPE_CHECKING:
+    from forge.core.config import ForgeConfig
 
 
-class DummyExecutor:
-
-    def execute(self, step, ctx, role_profile, config=None):
+class DummyExecutor(BaseStepExecutor):
+    def execute(
+        self,
+        step: SopStep,
+        ctx: Any,
+        role_profile: dict[str, Any],
+        config: "ForgeConfig | None" = None,
+    ) -> StepResult:
         content = {"result": "ok", "value": 42}
-        art = Artifact(step_id=step.id, role=step.role, content=content)
-        trace = types.SimpleNamespace(
+        artifact = Artifact(step_id=step.id, role=step.role, content=content)
+        trace = StepTrace(
+            step_id=step.id,
+            role=step.role,
             total_tokens=20,
             model_name="dummy-model",
             prompt_tokens=10,
             completion_tokens=10,
             duration_ms=0,
             retries=0,
-            step_id=step.id,
-            role=step.role,
         )
-        return types.SimpleNamespace(ok=True, artifact=art, trace=trace, rationale=None, error=None)
+        return StepResult(ok=True, artifact=artifact, trace=trace)
 
 
 def _make_single_engineer_template():
     return SopTemplate(
         name="feature_delivery",
         steps=[
-            SopStep(
-                id="impl", role="engineer", task="implement feature", outputs=StepOutputSpec(schema_file="dummy.json")
-            )
+            SopStep(id="impl", role="engineer", task="implement feature", outputs=StepOutputSpec(schema="dummy.json"))
         ],
     )
 
@@ -38,12 +49,18 @@ def _new_orchestrator(persist_dir=None, exclude_roles=None):
         metasop_cfg["step_cache_dir"] = persist_dir
     if exclude_roles:
         metasop_cfg["step_cache_exclude_roles"] = exclude_roles
-    config = types.SimpleNamespace(extended=types.SimpleNamespace(metasop=metasop_cfg), runtime=types.SimpleNamespace())
-    orch = MetaSOPOrchestrator(sop_name="feature_delivery", config=config)
+    config: Any = types.SimpleNamespace(
+        extended=types.SimpleNamespace(metasop=metasop_cfg), runtime=types.SimpleNamespace()
+    )
+    orch = MetaSOPOrchestrator(sop_name="feature_delivery", config=cast("ForgeConfig | None", config))
     orch.template = _make_single_engineer_template()
     orch.settings.enabled = True
     orch.step_executor = DummyExecutor()
-    orch.profiles["engineer"] = types.SimpleNamespace(model_dump=lambda: {}, capabilities=["implement"])
+    orch.profiles["engineer"] = RoleProfile(
+        name="engineer",
+        goal="Implement feature",
+        capabilities=["implement"],
+    )
     return orch
 
 

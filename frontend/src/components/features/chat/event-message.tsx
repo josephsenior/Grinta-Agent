@@ -206,7 +206,8 @@ const decisionResolvers: Array<
     resolvePairedDecision(event, hasObservationPair, args),
   ({ event }) => (isFileWriteAction(event) ? { type: "file-write" } : null),
   ({ event }) => (isFileEditAction(event) ? { type: "file-edit" } : null),
-  ({ event }) => (isStreamingChunkAction(event) ? { type: "streaming-chunk" } : null),
+  ({ event }) =>
+    isStreamingChunkAction(event) ? { type: "streaming-chunk" } : null,
   ({ event }) => (isFinishAction(event) ? { type: "finish" } : null),
   ({ event }) =>
     isUserMessage(event) || isAssistantMessage(event)
@@ -453,7 +454,8 @@ const renderFinishDecision: DecisionHandler = ({
 );
 
 const renderChatMessageDecision: DecisionHandler = (context) => {
-  const { event, actions, onAskAboutCode, onRunCode, hideAvatar, compactMode } = context;
+  const { event, actions, onAskAboutCode, onRunCode, hideAvatar, compactMode } =
+    context;
   if (!isUserMessage(event) && !isAssistantMessage(event)) {
     return null;
   }
@@ -529,11 +531,10 @@ const renderMcpDecision: DecisionHandler = ({
   );
 };
 
-const renderTaskTrackingDecision: DecisionHandler = ({ event }) => (
+const renderTaskTrackingDecision: DecisionHandler = ({ event }) =>
   isTaskTrackingObservation(event) ? (
     <TaskTrackingObservationContent event={event} />
-  ) : null
-);
+  ) : null;
 
 function canRenderMcpObservation(event: ForgeAction | ForgeObservation) {
   return isForgeObservation(event) && isMcpObservation(event);
@@ -547,7 +548,7 @@ function hasRenderableMcpTitle(
     return false;
   }
 
-  const title = eventContent.title;
+  const { title } = eventContent;
   if (typeof title !== "string") {
     return Boolean(title);
   }
@@ -561,16 +562,12 @@ const renderRunDecision: DecisionHandler = ({
   extras,
   renderLikertScale,
   shouldShowConfirmationButtons,
-}) => (
+}) =>
   isForgeObservation(event) ? (
     <div>
       <StreamingTerminal
         eventId={String(event.id)}
-        content={
-          String(
-            typeof event.content === "string" ? event.content : "",
-          )
-        }
+        content={String(typeof event.content === "string" ? event.content : "")}
         exitCode={
           typeof extras.exit_code === "number" ? extras.exit_code : undefined
         }
@@ -581,11 +578,15 @@ const renderRunDecision: DecisionHandler = ({
       {shouldShowConfirmationButtons && <ConfirmationButtons />}
       {renderLikertScale()}
     </div>
-  ) : null
-);
+  ) : null;
 
 const renderGenericDecision: DecisionHandler = (context) => {
-  const { event, attachments, renderStreamingThought, shouldShowConfirmationButtons } = context;
+  const {
+    event,
+    attachments,
+    renderStreamingThought,
+    shouldShowConfirmationButtons,
+  } = context;
   const eventContent = getEventContent(event);
 
   if (!shouldRenderGenericContent(event, eventContent)) {
@@ -628,7 +629,8 @@ const decisionHandlers: Record<RenderDecisionType, DecisionHandler> = {
 };
 
 function shouldAnimateChatMessage(context: RenderContext) {
-  const { event, hydratedEventIds, getEventHydratedFlag, isLastMessage } = context;
+  const { event, hydratedEventIds, getEventHydratedFlag, isLastMessage } =
+    context;
   return (
     isAssistantMessage(event) &&
     isLastMessage &&
@@ -641,7 +643,10 @@ function renderChatMessageChildren(context: RenderContext) {
   const elements: React.ReactNode[] = [];
   const { attachments, shouldShowConfirmationButtons } = context;
 
-  if (Array.isArray(attachments.image_urls) && attachments.image_urls.length > 0) {
+  if (
+    Array.isArray(attachments.image_urls) &&
+    attachments.image_urls.length > 0
+  ) {
     elements.push(
       <ImageCarousel
         key="images"
@@ -651,8 +656,13 @@ function renderChatMessageChildren(context: RenderContext) {
     );
   }
 
-  if (Array.isArray(attachments.file_urls) && attachments.file_urls.length > 0) {
-    elements.push(<FileList key="files" files={attachments.file_urls as string[]} />);
+  if (
+    Array.isArray(attachments.file_urls) &&
+    attachments.file_urls.length > 0
+  ) {
+    elements.push(
+      <FileList key="files" files={attachments.file_urls as string[]} />,
+    );
   }
 
   if (shouldShowConfirmationButtons) {
@@ -679,7 +689,10 @@ function shouldRenderGenericContent(
     return false;
   }
 
-  if (isTitleEmpty(eventContent.title) && isDetailsEmpty(eventContent.details)) {
+  if (
+    isTitleEmpty(eventContent.title) &&
+    isDetailsEmpty(eventContent.details)
+  ) {
     return false;
   }
 
@@ -757,7 +770,8 @@ function useEventMessageController({
   } = useFeedbackExists(event.id);
 
   const shouldShowConfirmationButtons = useMemo(
-    () => isLastMessage && event.source === "agent" && isAwaitingUserConfirmation,
+    () =>
+      isLastMessage && event.source === "agent" && isAwaitingUserConfirmation,
     [event.source, isAwaitingUserConfirmation, isLastMessage],
   );
 
@@ -810,7 +824,14 @@ function useEventMessageController({
         initialReason={feedbackData.reason}
       />
     );
-  }, [config?.APP_MODE, event, feedbackData, isCheckingFeedback, isInLast10Actions, isLastMessage]);
+  }, [
+    config?.APP_MODE,
+    event,
+    feedbackData,
+    isCheckingFeedback,
+    isInLast10Actions,
+    isLastMessage,
+  ]);
 
   const shouldStreamCodeArtifact =
     curAgentState === AgentState.RUNNING && isLastMessage;
@@ -854,17 +875,25 @@ function useEventMessageController({
         </div>
       );
     },
-    [event.id, microagentIndicator, renderStreamingThought, shouldStreamCodeArtifact],
+    [
+      event.id,
+      microagentIndicator,
+      renderStreamingThought,
+      shouldStreamCodeArtifact,
+    ],
   );
 
-  const getEventHydratedFlag = useCallback((ev: ForgeAction | ForgeObservation) => {
-    try {
-      const v = ev as unknown as Record<string, unknown>;
-      return Boolean(v.__hydrated);
-    } catch (_e) {
-      return false;
-    }
-  }, []);
+  const getEventHydratedFlag = useCallback(
+    (ev: ForgeAction | ForgeObservation) => {
+      try {
+        const v = ev as unknown as Record<string, unknown>;
+        return Boolean(v.__hydrated);
+      } catch (_e) {
+        return false;
+      }
+    },
+    [],
+  );
 
   const decision = useMemo(
     () =>

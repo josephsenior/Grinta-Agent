@@ -2,7 +2,11 @@ import { useMemo, useState, useCallback } from "react";
 import { Database, TestTube, Eye, EyeOff, Loader2 } from "lucide-react";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { SettingsSwitch } from "#/components/features/settings/settings-switch";
-import type { DatabaseType, TestConnectionRequest, TestConnectionResponse } from "#/types/database";
+import type {
+  DatabaseType,
+  TestConnectionRequest,
+  TestConnectionResponse,
+} from "#/types/database";
 import { useTestDatabaseConnection } from "#/hooks/query/use-database-connections";
 import { cn } from "#/utils/utils";
 
@@ -13,11 +17,13 @@ interface DatabaseConnectionFormProps {
   existingConnection?: any;
 }
 
-type TestResult = (TestConnectionResponse & { details?: Record<string, any> }) | {
-  success: boolean;
-  message: string;
-  details?: Record<string, any>;
-};
+type TestResult =
+  | (TestConnectionResponse & { details?: Record<string, any> })
+  | {
+      success: boolean;
+      message: string;
+      details?: Record<string, any>;
+    };
 
 type FormValues = {
   name: string;
@@ -70,7 +76,10 @@ export function DatabaseConnectionForm({
       <SecurityNoticeCard />
 
       <div className="space-y-4">
-        <ConnectionNameInput value={values.name} onChange={(value) => setValue("name", value)} />
+        <ConnectionNameInput
+          value={values.name}
+          onChange={(value) => setValue("name", value)}
+        />
         {isMongoConnection ? (
           <MongoConnectionStringInput
             value={values.connectionString}
@@ -106,7 +115,10 @@ export function DatabaseConnectionForm({
           showPassword={showPassword}
           onTogglePassword={toggleShowPassword}
         />
-        <SslToggle ssl={values.ssl} onToggle={(value) => setValue("ssl", value)} />
+        <SslToggle
+          ssl={values.ssl}
+          onToggle={(value) => setValue("ssl", value)}
+        />
       </div>
 
       <TestResultAlert testResult={testResult} />
@@ -133,7 +145,8 @@ function useDatabaseConnectionFormState({
   existingConnection?: any;
   onSubmit: (connection: any) => void;
 }) {
-  const { mutateAsync: testConnection, isPending: isTesting } = useTestDatabaseConnection();
+  const { mutateAsync: testConnection, isPending: isTesting } =
+    useTestDatabaseConnection();
 
   const [values, setValues] = useState<FormValues>(() => ({
     name: existingConnection?.name ?? "",
@@ -152,20 +165,26 @@ function useDatabaseConnectionFormState({
   const isRedisConnection = type === "redis";
   const formIsValid = Boolean(values.name && values.host && values.port);
 
-  const setValue = useCallback(<K extends keyof FormValues>(key: K, value: FormValues[K]) => {
-    setValues((prev) => ({ ...prev, [key]: value }));
-  }, []);
+  const setValue = useCallback(
+    <K extends keyof FormValues>(key: K, value: FormValues[K]) => {
+      setValues((prev) => ({ ...prev, [key]: value }));
+    },
+    [],
+  );
 
-  const buildTestRequest = useCallback((): TestConnectionRequest => ({
-    type,
-    host: values.host,
-    port: values.port,
-    database: values.database || undefined,
-    username: values.username || undefined,
-    password: values.password || undefined,
-    ssl: values.ssl,
-    connectionString: values.connectionString || undefined,
-  }), [type, values]);
+  const buildTestRequest = useCallback(
+    (): TestConnectionRequest => ({
+      type,
+      host: values.host,
+      port: values.port,
+      database: values.database || undefined,
+      username: values.username || undefined,
+      password: values.password || undefined,
+      ssl: values.ssl,
+      connectionString: values.connectionString || undefined,
+    }),
+    [type, values],
+  );
 
   const submitPayload = useMemo(
     () => ({
@@ -177,7 +196,8 @@ function useDatabaseConnectionFormState({
       username: values.username || undefined,
       password: values.password || undefined,
       ssl: values.ssl,
-      connectionString: type === "mongodb" ? values.connectionString : undefined,
+      connectionString:
+        type === "mongodb" ? values.connectionString : undefined,
     }),
     [type, values],
   );
@@ -242,14 +262,21 @@ function ConnectionHeader({
 function SecurityNoticeCard() {
   return (
     <div className="p-4 bg-brand-500/10 border border-brand-500/30 rounded-lg">
-      <h4 className="text-sm font-semibold text-violet-500 mb-2">🔒 Secure SaaS Deployment</h4>
+      <h4 className="text-sm font-semibold text-violet-500 mb-2">
+        🔒 Secure SaaS Deployment
+      </h4>
       <p className="text-xs text-foreground-secondary mb-2">
-        For maximum security, database connections execute in YOUR sandbox environment (not our servers).
-        Credentials are stored as environment variables in YOUR environment only.
+        For maximum security, database connections execute in YOUR sandbox
+        environment (not our servers). Credentials are stored as environment
+        variables in YOUR environment only.
       </p>
       <p className="text-xs text-foreground-secondary">
-        <strong>Recommended:</strong> Set credentials in <a href="/settings/secrets" className="text-violet-500 underline">Settings &gt; Secrets</a> as environment variables,
-        then reference them in the agent's sandbox. This keeps your credentials private and secure.
+        <strong>Recommended:</strong> Set credentials in{" "}
+        <a href="/settings/secrets" className="text-violet-500 underline">
+          Settings &gt; Secrets
+        </a>{" "}
+        as environment variables, then reference them in the agent's sandbox.
+        This keeps your credentials private and secure.
       </p>
     </div>
   );
@@ -264,7 +291,9 @@ function ConnectionNameInput({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-foreground mb-2">Connection Name *</label>
+      <label className="block text-sm font-medium text-foreground mb-2">
+        Connection Name *
+      </label>
       <input
         type="text"
         value={value}
@@ -287,7 +316,9 @@ function MongoConnectionStringInput({
     <div>
       <label className="block text-sm font-medium text-foreground mb-2">
         Connection String
-        <span className="text-foreground-secondary text-xs ml-2">(Optional - or use host/port below)</span>
+        <span className="text-foreground-secondary text-xs ml-2">
+          (Optional - or use host/port below)
+        </span>
       </label>
       <input
         type="text"
@@ -316,7 +347,9 @@ function HostPortFields({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
-        <label className="block text-sm font-medium text-foreground mb-2">Host *</label>
+        <label className="block text-sm font-medium text-foreground mb-2">
+          Host *
+        </label>
         <input
           type="text"
           value={host}
@@ -326,11 +359,15 @@ function HostPortFields({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-foreground mb-2">Port *</label>
+        <label className="block text-sm font-medium text-foreground mb-2">
+          Port *
+        </label>
         <input
           type="number"
           value={port}
-          onChange={(event) => onPortChange(parseInt(event.target.value, 10) || 0)}
+          onChange={(event) =>
+            onPortChange(parseInt(event.target.value, 10) || 0)
+          }
           placeholder={portPlaceholder}
           className="w-full px-3 py-2 bg-background-primary border border-border rounded-md text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
         />
@@ -355,7 +392,9 @@ function DatabaseField({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-foreground mb-2">Database {labelSuffix}</label>
+      <label className="block text-sm font-medium text-foreground mb-2">
+        Database {labelSuffix}
+      </label>
       <input
         type="text"
         value={database}
@@ -383,7 +422,9 @@ function UsernameField({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-foreground mb-2">Username {labelSuffix}</label>
+      <label className="block text-sm font-medium text-foreground mb-2">
+        Username {labelSuffix}
+      </label>
       <input
         type="text"
         value={username}
@@ -408,7 +449,9 @@ function PasswordField({
 }) {
   return (
     <div className="relative">
-      <label className="block text-sm font-medium text-foreground mb-2">Password</label>
+      <label className="block text-sm font-medium text-foreground mb-2">
+        Password
+      </label>
       <div className="relative">
         <input
           type={showPassword ? "text" : "password"}
@@ -422,7 +465,11 @@ function PasswordField({
           onClick={onTogglePassword}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-secondary hover:text-foreground transition-colors"
         >
-          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          {showPassword ? (
+            <EyeOff className="w-4 h-4" />
+          ) : (
+            <Eye className="w-4 h-4" />
+          )}
         </button>
       </div>
     </div>
@@ -441,7 +488,9 @@ function SslToggle({
       <SettingsSwitch isToggled={ssl} onToggle={onToggle} testId="ssl-toggle">
         Use SSL/TLS
       </SettingsSwitch>
-      <span className="text-sm text-foreground-secondary">Encrypt connection using SSL/TLS</span>
+      <span className="text-sm text-foreground-secondary">
+        Encrypt connection using SSL/TLS
+      </span>
     </div>
   );
 }
@@ -461,7 +510,9 @@ function TestResultAlert({ testResult }: { testResult: TestResult | null }) {
         <div className="flex-1">
           <p className="font-medium">{testResult.message}</p>
           {testResult.details?.version ? (
-            <p className="text-sm opacity-80 mt-1">Version: {testResult.details.version}</p>
+            <p className="text-sm opacity-80 mt-1">
+              Version: {testResult.details.version}
+            </p>
           ) : null}
           {testResult.details?.note ? (
             <p className="text-xs opacity-70 mt-1">{testResult.details.note}</p>
@@ -489,7 +540,8 @@ function FormActions({
   formIsValid: boolean;
   testResult: TestResult | null;
 }) {
-  const isSaveDisabled = !formIsValid || (testResult && !testResult.success);
+  const isSaveDisabled =
+    !formIsValid || (testResult && !testResult.success) || false;
 
   return (
     <div className="flex gap-3 justify-end pt-4 border-t border-border">
@@ -548,4 +600,3 @@ function getDefaultPort(type: DatabaseType): number {
       return 5432;
   }
 }
-

@@ -1,0 +1,23 @@
+{
+  "id": "b2180797-fd06-47f6-9769-467caeb8c184",
+  "title": "Full Update",
+  "description": "updated description",
+  "category": "debugging",
+  "content": "New content",
+  "variables": [
+    {
+      "name": "var",
+      "description": "desc",
+      "default_value": null,
+      "required": false
+    }
+  ],
+  "tags": [
+    "tagged"
+  ],
+  "is_favorite": true,
+  "usage_count": 0,
+  "created_at": "2025-11-10 00:41:43.081322",
+  "updated_at": "2025-11-10 00:53:13.871853",
+  "metadata": {}
+}

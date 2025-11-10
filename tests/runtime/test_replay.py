@@ -4,8 +4,8 @@ import asyncio
 from pathlib import Path
 from conftest import _close_test_runtime, _load_runtime
 from forge.controller.state.state import State
+from forge.core.config import ForgeConfig
 from forge.core.config.config_utils import OH_DEFAULT_AGENT
-from forge.core.config.FORGE_config import ForgeConfig
 from forge.core.main import run_controller
 from forge.core.schema.agent import AgentState
 from forge.events.action.empty import NullAction

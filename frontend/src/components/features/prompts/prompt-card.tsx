@@ -13,7 +13,6 @@ import {
   Star,
   Trash2,
   Copy,
-  Download,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { PromptTemplate } from "#/types/prompt";
@@ -206,4 +205,3 @@ export function PromptCard({
     </div>
   );
 }
-

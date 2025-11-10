@@ -77,7 +77,11 @@ export function PromptFormModal({
     ]);
   };
 
-  const updateVariable = (index: number, field: keyof PromptVariable, value: string | boolean) => {
+  const updateVariable = (
+    index: number,
+    field: keyof PromptVariable,
+    value: string | boolean,
+  ) => {
     const updated = [...variables];
     updated[index] = { ...updated[index], [field]: value };
     setVariables(updated);
@@ -99,7 +103,7 @@ export function PromptFormModal({
   };
 
   const insertVariable = (varName: string) => {
-    setContent(content + `{{${varName}}}`);
+    setContent(`${content}{{${varName}}}`);
   };
 
   if (!isOpen) return null;
@@ -110,7 +114,9 @@ export function PromptFormModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border">
           <h2 className="text-xl font-semibold text-foreground">
-            {initialData ? t("PROMPTS$EDIT_PROMPT") : t("PROMPTS$CREATE_PROMPT")}
+            {initialData
+              ? t("PROMPTS$EDIT_PROMPT")
+              : t("PROMPTS$CREATE_PROMPT")}
           </h2>
           <button
             type="button"
@@ -174,11 +180,13 @@ export function PromptFormModal({
                 onChange={(e) => setCategory(e.target.value as PromptCategory)}
                 className="w-full px-3 py-2 bg-background border border-border rounded text-foreground focus:outline-none focus:border-border-active"
               >
-                {Object.entries(PROMPT_CATEGORY_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
+                {Object.entries(PROMPT_CATEGORY_LABELS).map(
+                  ([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ),
+                )}
               </select>
             </div>
 
@@ -368,4 +376,3 @@ export function PromptFormModal({
     </div>
   );
 }
-

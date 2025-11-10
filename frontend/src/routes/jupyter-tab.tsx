@@ -43,9 +43,7 @@ function Jupyter() {
   return (
     <div ref={parentRef} className="h-full">
       <Suspense
-        fallback={
-          <div className="h-full bg-black animate-pulse rounded-lg" />
-        }
+        fallback={<div className="h-full bg-black animate-pulse rounded-lg" />}
       >
         <JupyterEditor maxWidth={maxWidth} />
       </Suspense>

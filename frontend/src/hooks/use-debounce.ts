@@ -1,16 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 /**
  * Debounces a value by delaying its update until after the specified delay
- * 
+ *
  * @param value - The value to debounce
  * @param delay - The delay in milliseconds (default: 300ms)
  * @returns The debounced value
- * 
+ *
  * @example
  * const [searchQuery, setSearchQuery] = useState('');
  * const debouncedQuery = useDebounce(searchQuery, 500);
- * 
+ *
  * useEffect(() => {
  *   // This will only run when debouncedQuery changes (500ms after typing stops)
  *   fetchSearchResults(debouncedQuery);
@@ -36,16 +36,16 @@ export function useDebounce<T>(value: T, delay: number = 300): T {
 
 /**
  * Creates a debounced version of a callback function
- * 
+ *
  * @param callback - The function to debounce
  * @param delay - The delay in milliseconds (default: 300ms)
  * @returns A debounced version of the callback
- * 
+ *
  * @example
  * const handleSearch = useDebouncedCallback((query: string) => {
  *   fetchSearchResults(query);
  * }, 500);
- * 
+ *
  * <input onChange={(e) => handleSearch(e.target.value)} />
  */
 export function useDebouncedCallback<T extends (...args: unknown[]) => void>(
@@ -54,13 +54,14 @@ export function useDebouncedCallback<T extends (...args: unknown[]) => void>(
 ): T {
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
-    };
-  }, [timeoutId]);
+    },
+    [timeoutId],
+  );
 
   return ((...args: Parameters<T>) => {
     if (timeoutId) {

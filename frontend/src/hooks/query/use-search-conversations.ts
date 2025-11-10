@@ -16,11 +16,7 @@ export const useSearchConversations = (
       limit,
     ],
     queryFn: () =>
-      Forge.searchConversations(
-        selectedRepository,
-        conversationTrigger,
-        limit,
-      ),
+      Forge.searchConversations(selectedRepository, conversationTrigger, limit),
     enabled: true, // Always enabled since parameters are optional
     staleTime: cacheDisabled ? 0 : 1000 * 60 * 5, // 5 minutes
     gcTime: cacheDisabled ? 0 : 1000 * 60 * 15, // 15 minutes

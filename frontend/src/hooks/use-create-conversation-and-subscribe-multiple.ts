@@ -72,7 +72,11 @@ export const useCreateConversationAndSubscribeMultiple = () => {
         return;
       }
 
-      const { status, url, session_api_key: sessionApiKey = null } = query.data ?? {};
+      const {
+        status,
+        url,
+        session_api_key: sessionApiKey = null,
+      } = query.data ?? {};
 
       let { baseUrl } = conversationData;
       if (url && !url.startsWith("/")) {
@@ -174,12 +178,12 @@ export const useCreateConversationAndSubscribeMultiple = () => {
             setCreatedConversations((prev) => ({
               ...prev,
               [data.conversation_id]: {
-                  conversationId: data.conversation_id,
-                  sessionApiKey: data.session_api_key ?? null,
-                  baseUrl,
-                  socketPath,
-                  onEventCallback,
-                },
+                conversationId: data.conversation_id,
+                sessionApiKey: data.session_api_key ?? null,
+                baseUrl,
+                socketPath,
+                onEventCallback,
+              },
             }));
           },
         },

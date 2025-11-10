@@ -16,7 +16,6 @@ import { useTranslation } from "react-i18next";
 import { useCreateConversation } from "#/hooks/mutation/use-create-conversation";
 import { I18nKey } from "#/i18n/declaration";
 import logoImage from "#/assets/branding/logo2.png";
-import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
 import { Card, CardContent } from "#/components/ui/card";
 import { Progress } from "#/components/ui/progress";
@@ -33,21 +32,23 @@ export default function HeroSection(): React.ReactElement {
   const [displayedText, setDisplayedText] = useState("");
   const [showCursor, setShowCursor] = useState(true);
   const [cardTilt, setCardTilt] = useState({ rotateX: 0, rotateY: 0 });
-  
+
   const primaryButtonRef = useRef<HTMLButtonElement>(null);
   const secondaryButtonRef = useRef<HTMLButtonElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  
+
   const primaryMagnetic = useMagneticHover(primaryButtonRef, 0.25);
   const secondaryMagnetic = useMagneticHover(secondaryButtonRef, 0.2);
 
   // Typing animation for headline
   const fullText = t(I18nKey.LANDING$SUBTITLE);
-  
+
   useEffect(() => {
     let currentIndex = 0;
     const typingSpeed = 80;
-    const typingTimeout: { id: ReturnType<typeof setTimeout> | null } = { id: null };
+    const typingTimeout: { id: ReturnType<typeof setTimeout> | null } = {
+      id: null,
+    };
 
     const typeText = () => {
       if (currentIndex < fullText.length) {
@@ -58,7 +59,7 @@ export default function HeroSection(): React.ReactElement {
     };
 
     typeText();
-    
+
     // Cursor blink
     const cursorInterval = setInterval(() => {
       setShowCursor((prev) => !prev);
@@ -78,7 +79,7 @@ export default function HeroSection(): React.ReactElement {
 
   const onStart = () => {
     soundEffects.success(); // Play success sound
-    
+
     createConversation(
       {},
       {
@@ -108,17 +109,17 @@ export default function HeroSection(): React.ReactElement {
   // 3D card tilt effect
   const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
-    
+
     const rect = cardRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    
+
     const rotateY = ((x - centerX) / centerX) * 10;
     const rotateX = ((centerY - y) / centerY) * 10;
-    
+
     setCardTilt({ rotateX, rotateY });
   };
 
@@ -177,13 +178,16 @@ export default function HeroSection(): React.ReactElement {
               </span>
               <span className="block text-gradient-animated bg-gradient-to-r from-brand-500 via-accent-500 to-brand-600 bg-clip-text text-transparent stagger-item delay-400 text-glow">
                 {displayedText}
-                {showCursor && <span className="typing-cursor inline-block w-1 h-[0.9em] bg-brand-500 ml-1" />}
+                {showCursor && (
+                  <span className="typing-cursor inline-block w-1 h-[0.9em] bg-brand-500 ml-1" />
+                )}
               </span>
             </h1>
 
             {/* Subtitle - Benefit-driven */}
             <p className="text-lg sm:text-xl text-foreground-secondary max-w-3xl leading-relaxed font-light mx-auto mb-8 stagger-item delay-500">
-              Your AI-powered software engineer that writes, tests, and deploys production-ready code in minutes, not days.
+              Your AI-powered software engineer that writes, tests, and deploys
+              production-ready code in minutes, not days.
             </p>
 
             {/* CTA Buttons with magnetic hover */}
@@ -229,9 +233,7 @@ export default function HeroSection(): React.ReactElement {
             <div className="flex flex-wrap items-center justify-center gap-4 text-sm stagger-item delay-700">
               <div className="flex items-center gap-3 glass-modern px-6 py-3 rounded-full shadow-lg hover:shadow-brand-500/20 interactive-scale group gpu-accelerated">
                 <Github className="w-4 h-4 text-violet-500 group-hover:rotate-12 transition-transform duration-300" />
-                <span className="font-medium text-foreground">
-                  34k+ stars
-                </span>
+                <span className="font-medium text-foreground">34k+ stars</span>
               </div>
               <div className="flex items-center gap-3 glass-modern px-6 py-3 rounded-full shadow-lg hover:shadow-success-500/20 interactive-scale group gpu-accelerated">
                 <Users className="w-4 h-4 text-success-500 group-hover:scale-110 transition-transform duration-300" />
@@ -267,13 +269,13 @@ export default function HeroSection(): React.ReactElement {
           </div>
 
           {/* Interactive Demo with 3D tilt */}
-          <div 
+          <div
             ref={cardRef}
             className="relative w-full max-w-3xl stagger-item delay-900"
             onMouseMove={handleCardMouseMove}
             onMouseLeave={handleCardMouseLeave}
           >
-            <div 
+            <div
               className="card-3d gpu-accelerated"
               style={{
                 transform: `perspective(1000px) rotateX(${cardTilt.rotateX}deg) rotateY(${cardTilt.rotateY}deg)`,
@@ -315,8 +317,14 @@ export default function HeroSection(): React.ReactElement {
                         <div className="glass-modern rounded-xl p-6 border border-brand-500/20 spotlight-effect">
                           <div className="flex items-center gap-3 mb-4">
                             <div className="w-3 h-3 bg-danger-500 rounded-full shadow-lg shadow-danger-500/50 animate-pulse" />
-                            <div className="w-3 h-3 bg-warning-500 rounded-full shadow-lg shadow-warning-500/50 animate-pulse" style={{ animationDelay: "0.2s" }} />
-                            <div className="w-3 h-3 bg-success-500 rounded-full shadow-lg shadow-success-500/50 animate-pulse" style={{ animationDelay: "0.4s" }} />
+                            <div
+                              className="w-3 h-3 bg-warning-500 rounded-full shadow-lg shadow-warning-500/50 animate-pulse"
+                              style={{ animationDelay: "0.2s" }}
+                            />
+                            <div
+                              className="w-3 h-3 bg-success-500 rounded-full shadow-lg shadow-success-500/50 animate-pulse"
+                              style={{ animationDelay: "0.4s" }}
+                            />
                             <span className="text-sm text-foreground ml-3 font-medium">
                               app.py
                             </span>
@@ -363,9 +371,19 @@ export default function HeroSection(): React.ReactElement {
                             </span>
                           </div>
                           <div className="font-mono text-sm text-foreground leading-relaxed space-y-1">
-                            {["Test case 1 passed", "Test case 2 passed", "All tests passed"].map((text, i) => (
-                              <div key={i} className="flex items-center gap-2 stagger-item" style={{ animationDelay: `${i * 100}ms` }}>
-                                <span className="text-success-500 text-lg">✓</span>
+                            {[
+                              "Test case 1 passed",
+                              "Test case 2 passed",
+                              "All tests passed",
+                            ].map((text, i) => (
+                              <div
+                                key={i}
+                                className="flex items-center gap-2 stagger-item"
+                                style={{ animationDelay: `${i * 100}ms` }}
+                              >
+                                <span className="text-success-500 text-lg">
+                                  ✓
+                                </span>
                                 <span className="text-foreground">{text}</span>
                               </div>
                             ))}
@@ -392,9 +410,19 @@ export default function HeroSection(): React.ReactElement {
                             </span>
                           </div>
                           <div className="font-mono text-sm text-foreground leading-relaxed space-y-1">
-                            {["Build successful", "Deployed to production", "Health check passed"].map((text, i) => (
-                              <div key={i} className="flex items-center gap-2 stagger-item" style={{ animationDelay: `${i * 100}ms` }}>
-                                <span className="text-accent-500 text-lg">✓</span>
+                            {[
+                              "Build successful",
+                              "Deployed to production",
+                              "Health check passed",
+                            ].map((text, i) => (
+                              <div
+                                key={i}
+                                className="flex items-center gap-2 stagger-item"
+                                style={{ animationDelay: `${i * 100}ms` }}
+                              >
+                                <span className="text-accent-500 text-lg">
+                                  ✓
+                                </span>
                                 <span className="text-foreground">{text}</span>
                               </div>
                             ))}

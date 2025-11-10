@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Trash2, Copy, Reply } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Trash2, Reply } from "lucide-react";
 import { cn } from "#/utils/utils";
 import { triggerHaptic } from "#/utils/haptic-feedback";
 
@@ -48,7 +48,10 @@ export function SwipeableMessage({
       setSwipeDistance(deltaX);
 
       // Haptic feedback at threshold
-      if (Math.abs(deltaX) >= threshold && Math.abs(swipeDistance) < threshold) {
+      if (
+        Math.abs(deltaX) >= threshold &&
+        Math.abs(swipeDistance) < threshold
+      ) {
         triggerHaptic("selection");
       }
 
@@ -139,7 +142,9 @@ export function SwipeableMessage({
         className="relative z-10 touch-pan-y"
         style={{
           transform: `translateX(${swipeDistance}px)`,
-          transition: isSwiping ? "none" : "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          transition: isSwiping
+            ? "none"
+            : "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         }}
       >
         {children}
@@ -147,4 +152,3 @@ export function SwipeableMessage({
     </div>
   );
 }
-

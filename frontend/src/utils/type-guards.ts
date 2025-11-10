@@ -3,7 +3,6 @@
  */
 
 import type {
-  ForgeEvent,
   ForgeAction,
   ForgeObservation,
   ForgeParsedEvent,
@@ -13,9 +12,7 @@ import type {
  * Type guard to check if an ForgeEvent is a valid ForgeParsedEvent
  * This helps TypeScript narrow the type from the generic ForgeEvent to the specific parsed types
  */
-export function isForgeParsedEvent(
-  event: unknown
-): event is ForgeParsedEvent {
+export function isForgeParsedEvent(event: unknown): event is ForgeParsedEvent {
   // Basic validation - the event should have required properties
   if (!event || typeof event !== "object") {
     return false;
@@ -38,9 +35,7 @@ export function isForgeParsedEvent(
  * Safely cast an ForgeEvent to ForgeParsedEvent
  * Returns the event if it's valid, otherwise returns null
  */
-export function asForgeParsedEvent(
-  event: unknown
-): ForgeParsedEvent | null {
+export function asForgeParsedEvent(event: unknown): ForgeParsedEvent | null {
   if (isForgeParsedEvent(event)) {
     return event;
   }
@@ -51,14 +46,24 @@ export function asForgeParsedEvent(
  * Type guard to check if an event is an action
  */
 export function isActionEvent(event: unknown): event is ForgeAction {
-  return typeof event === "object" && event !== null && "action" in event && "args" in (event as any);
+  return (
+    typeof event === "object" &&
+    event !== null &&
+    "action" in event &&
+    "args" in (event as any)
+  );
 }
 
 /**
  * Type guard to check if an event is an observation
  */
 export function isObservationEvent(event: unknown): event is ForgeObservation {
-  return typeof event === "object" && event !== null && "observation" in event && "content" in (event as any);
+  return (
+    typeof event === "object" &&
+    event !== null &&
+    "observation" in event &&
+    "content" in (event as any)
+  );
 }
 
 // Axios-oriented helpers used by error utilities
@@ -79,4 +84,3 @@ export const isAxiosErrorWithMessageField = (
   (error as any).response &&
   (error as any).response.data &&
   typeof (error as any).response.data.message === "string";
-

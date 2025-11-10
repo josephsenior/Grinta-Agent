@@ -1,11 +1,18 @@
 /**
  * Haptic Feedback Utility
- * 
+ *
  * Provides tactile feedback for user interactions on supported devices.
  * Falls back gracefully on devices without haptic support.
  */
 
-type HapticStyle = "light" | "medium" | "heavy" | "selection" | "success" | "warning" | "error";
+type HapticStyle =
+  | "light"
+  | "medium"
+  | "heavy"
+  | "selection"
+  | "success"
+  | "warning"
+  | "error";
 
 /**
  * Trigger haptic feedback
@@ -78,4 +85,3 @@ export function useHaptic() {
 export function isHapticSupported(): boolean {
   return "vibrate" in navigator;
 }
-

@@ -1,0 +1,24 @@
+{
+  "id": "a3667f78-9a6f-4bbe-8eca-c7a1d6eada6c",
+  "title": "Test Prompt",
+  "description": "Test description",
+  "category": "coding",
+  "content": "This is a test prompt: {{variable1}}",
+  "variables": [
+    {
+      "name": "variable1",
+      "description": "Test variable",
+      "default_value": null,
+      "required": true
+    }
+  ],
+  "tags": [
+    "test",
+    "example"
+  ],
+  "is_favorite": false,
+  "usage_count": 0,
+  "created_at": "2025-11-10 00:41:38.989590",
+  "updated_at": "2025-11-10 00:53:13.828969",
+  "metadata": {}
+}

@@ -19,7 +19,8 @@ export function ClientTimeDelta({ dateIso, className }: ClientTimeDeltaProps) {
       };
     }
 
-    const parsedDate = typeof dateIso === "string" ? new Date(dateIso) : dateIso;
+    const parsedDate =
+      typeof dateIso === "string" ? new Date(dateIso) : dateIso;
     if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
       setLabel(String(dateIso));
       return () => {

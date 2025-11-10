@@ -21,9 +21,8 @@ vi.mock("#/hooks/query/use-config");
 vi.mock("#/hooks/mutation/use-get-trajectory");
 vi.mock("#/hooks/mutation/use-upload-files");
 vi.mock("react-redux", async () => {
-  const actual = await vi.importActual<typeof import("react-redux")>(
-    "react-redux",
-  );
+  const actual =
+    await vi.importActual<typeof import("react-redux")>("react-redux");
   return {
     ...actual,
     useSelector: vi.fn(() => ({

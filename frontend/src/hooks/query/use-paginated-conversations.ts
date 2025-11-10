@@ -7,8 +7,7 @@ export const usePaginatedConversations = (limit: number = 20) => {
 
   return useInfiniteQuery({
     queryKey: ["user", "conversations", "paginated", limit],
-    queryFn: ({ pageParam }) =>
-      Forge.getUserConversations(limit, pageParam),
+    queryFn: ({ pageParam }) => Forge.getUserConversations(limit, pageParam),
     enabled: !!userIsAuthenticated,
     getNextPageParam: (lastPage) => lastPage.next_page_id,
     initialPageParam: undefined as string | undefined,

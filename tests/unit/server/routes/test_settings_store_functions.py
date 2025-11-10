@@ -23,8 +23,25 @@ async def get_settings_store(request):
 def test_client():
     with patch.dict(os.environ, {"SESSION_API_KEY": ""}, clear=False), patch(
         "forge.server.dependencies._SESSION_API_KEY", None
-    ), patch("forge.server.routes.secrets.check_provider_tokens", AsyncMock(return_value="")):
-        yield TestClient(app)
+    ):
+        async def fake_check_provider_tokens(provider_info, existing_tokens):
+            normalized: dict[str, ProviderToken] = {}
+            if provider_info.provider_tokens:
+                for key, token in provider_info.provider_tokens.items():
+                    provider_key = key.value if isinstance(key, ProviderType) else str(key)
+                    normalized[provider_key] = ProviderToken(
+                        token=token.token,
+                        user_id=token.user_id,
+                        host=token.host,
+                    )
+            return "", normalized
+
+        with patch(
+            "forge.server.routes.secrets.check_provider_tokens",
+            AsyncMock(side_effect=fake_check_provider_tokens),
+        ):
+            with TestClient(app) as client:
+                yield client
 
 
 @pytest.fixture
@@ -50,8 +67,9 @@ async def test_check_provider_tokens_valid():
     existing_provider_tokens = {}
     with patch("forge.server.routes.secrets.validate_provider_token") as mock_validate:
         mock_validate.return_value = ProviderType.GITHUB
-        result = await check_provider_tokens(providers, existing_provider_tokens)
-        assert result == ""
+        msg, normalized = await check_provider_tokens(providers, existing_provider_tokens)
+        assert msg == ""
+        assert normalized == {"github": provider_token}
         mock_validate.assert_called_once()
 
 
@@ -63,8 +81,9 @@ async def test_check_provider_tokens_invalid():
     existing_provider_tokens = {}
     with patch("forge.server.routes.secrets.validate_provider_token") as mock_validate:
         mock_validate.return_value = None
-        result = await check_provider_tokens(providers, existing_provider_tokens)
-        assert "Invalid token" in result
+        msg, normalized = await check_provider_tokens(providers, existing_provider_tokens)
+        assert "Invalid token" in msg
+        assert normalized == {"github": provider_token}
         mock_validate.assert_called_once()
 
 
@@ -73,8 +92,9 @@ async def test_check_provider_tokens_wrong_type():
     """Test check_provider_tokens with unsupported provider type."""
     providers = POSTProviderModel(provider_tokens={})
     existing_provider_tokens = {}
-    result = await check_provider_tokens(providers, existing_provider_tokens)
-    assert result == ""
+    msg, normalized = await check_provider_tokens(providers, existing_provider_tokens)
+    assert msg == ""
+    assert normalized == {}
 
 
 @pytest.mark.asyncio
@@ -82,8 +102,9 @@ async def test_check_provider_tokens_no_tokens():
     """Test check_provider_tokens with no tokens."""
     providers = POSTProviderModel(provider_tokens={})
     existing_provider_tokens = {}
-    result = await check_provider_tokens(providers, existing_provider_tokens)
-    assert result == ""
+    msg, normalized = await check_provider_tokens(providers, existing_provider_tokens)
+    assert msg == ""
+    assert normalized == {}
 
 
 @pytest.mark.asyncio

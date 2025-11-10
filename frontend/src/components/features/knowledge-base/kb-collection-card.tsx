@@ -71,7 +71,8 @@ export function KBCollectionCard({
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-foreground-secondary" />
             <span className="text-sm text-foreground-secondary">
-              {collection.document_count} {collection.document_count === 1 ? "document" : "documents"}
+              {collection.document_count}{" "}
+              {collection.document_count === 1 ? "document" : "documents"}
             </span>
           </div>
           <div className="text-sm text-foreground-secondary">
@@ -111,4 +112,3 @@ export function KBCollectionCard({
     </Card>
   );
 }
-

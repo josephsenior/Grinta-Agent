@@ -36,7 +36,7 @@ export class GlobalErrorBoundary extends React.Component<
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("GlobalErrorBoundary caught an error:", error, errorInfo);
-    
+
     // Log error to monitoring service
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
@@ -62,7 +62,12 @@ export class GlobalErrorBoundary extends React.Component<
       // Use custom fallback if provided
       if (this.props.fallback && this.state.error) {
         const FallbackComponent = this.props.fallback;
-        return <FallbackComponent error={this.state.error} retry={this.handleRetry} />;
+        return (
+          <FallbackComponent
+            error={this.state.error}
+            retry={this.handleRetry}
+          />
+        );
       }
 
       // Default error UI
@@ -75,7 +80,8 @@ export class GlobalErrorBoundary extends React.Component<
                 Something went wrong
               </h1>
               <p className="text-text-secondary mb-6">
-                We encountered an unexpected error. This has been logged and we'll look into it.
+                We encountered an unexpected error. This has been logged and
+                we'll look into it.
               </p>
             </div>
 
@@ -93,7 +99,9 @@ export class GlobalErrorBoundary extends React.Component<
                   </div>
                   {this.state.error.stack && (
                     <div>
-                      <strong className="text-text-primary">Stack Trace:</strong>
+                      <strong className="text-text-primary">
+                        Stack Trace:
+                      </strong>
                       <pre className="text-xs text-text-tertiary mt-1 overflow-auto max-h-48">
                         {this.state.error.stack}
                       </pre>
@@ -112,7 +120,7 @@ export class GlobalErrorBoundary extends React.Component<
                 <RefreshCw className="w-4 h-4" />
                 Try Again
               </Button>
-              
+
               <Button
                 onClick={this.handleReload}
                 variant="outline"
@@ -124,7 +132,8 @@ export class GlobalErrorBoundary extends React.Component<
             </div>
 
             <div className="mt-8 text-xs text-text-tertiary">
-              If this problem persists, please contact support with the error details above.
+              If this problem persists, please contact support with the error
+              details above.
             </div>
           </div>
         </div>

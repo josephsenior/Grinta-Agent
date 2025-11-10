@@ -28,8 +28,7 @@ export interface IPythonObservation
   };
 }
 
-export interface DelegateObservation
-  extends ForgeObservationEvent<"delegate"> {
+export interface DelegateObservation extends ForgeObservationEvent<"delegate"> {
   source: "agent";
   extras: {
     outputs: Record<string, unknown>;
@@ -103,8 +102,7 @@ export interface ErrorObservation extends ForgeObservationEvent<"error"> {
   };
 }
 
-export interface AgentThinkObservation
-  extends ForgeObservationEvent<"think"> {
+export interface AgentThinkObservation extends ForgeObservationEvent<"think"> {
   source: "agent";
   extras: {
     thought: string;

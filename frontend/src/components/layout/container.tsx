@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import React, { useRef, useState, useCallback, useMemo } from "react";
+import React, { useRef, useState, useCallback } from "react";
 import { NavTab } from "./nav-tab";
 import { ScrollLeftButton } from "./scroll-left-button";
 import { ScrollRightButton } from "./scroll-right-button";
@@ -172,17 +172,19 @@ function ContainerTabsHeader({
         )}
         onScroll={scroll.updateScrollButtons}
       >
-        {labels.map(({ label: tabLabel, to, icon, isBeta, isLoading, rightContent }) => (
-          <NavTab
-            key={to}
-            to={to}
-            label={tabLabel}
-            icon={icon}
-            isBeta={isBeta}
-            isLoading={isLoading}
-            rightContent={rightContent}
-          />
-        ))}
+        {labels.map(
+          ({ label: tabLabel, to, icon, isBeta, isLoading, rightContent }) => (
+            <NavTab
+              key={to}
+              to={to}
+              label={tabLabel}
+              icon={icon}
+              isBeta={isBeta}
+              isLoading={isLoading}
+              rightContent={rightContent}
+            />
+          ),
+        )}
       </div>
 
       {scroll.showScrollButtons && (

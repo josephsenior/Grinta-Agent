@@ -15,7 +15,8 @@ export default function ToasterClient(): React.ReactElement | null {
     // If the safe wrapper has already loaded the real library, use it.
     const holder = safeToast as unknown;
     const raw =
-      typeof holder === "object" && holder !== null &&
+      typeof holder === "object" &&
+      holder !== null &&
       "raw" in (holder as Record<string, unknown>)
         ? (holder as Record<string, unknown>).raw
         : undefined;
@@ -41,7 +42,8 @@ export default function ToasterClient(): React.ReactElement | null {
     const interval = window.setInterval(() => {
       const holder = safeToast as unknown;
       const m =
-        typeof holder === "object" && holder !== null &&
+        typeof holder === "object" &&
+        holder !== null &&
         "raw" in (holder as Record<string, unknown>)
           ? (holder as Record<string, unknown>).raw
           : undefined;

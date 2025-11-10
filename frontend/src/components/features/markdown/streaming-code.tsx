@@ -260,7 +260,10 @@ function useStreamingCodeState({
 
     const interval = setInterval(() => {
       setDisplayedCode((previous) => {
-        const nextLength = Math.min(previous.length + streamingSpeed, code.length);
+        const nextLength = Math.min(
+          previous.length + streamingSpeed,
+          code.length,
+        );
         const nextCode = code.slice(0, nextLength);
 
         if (nextLength >= code.length) {
@@ -277,13 +280,14 @@ function useStreamingCodeState({
     return () => clearInterval(interval);
   }, [code, isStreaming, streamingInterval, streamingSpeed]);
 
-  React.useEffect(() => {
-    return () => {
+  React.useEffect(
+    () => () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
-    };
-  }, []);
+    },
+    [],
+  );
 
   return { displayedCode, isComplete } as const;
 }

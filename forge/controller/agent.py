@@ -99,7 +99,7 @@ class Agent(ABC):
             system_message = self.prompt_manager.get_system_message(cli_mode=self.config.cli_mode, config=self.config)
             tools = getattr(self, "tools", None)
             system_message_action = SystemMessageAction(content=system_message, tools=tools, agent_class=self.name)
-            system_message_action._source = EventSource.AGENT
+            system_message_action.source = EventSource.AGENT
             return system_message_action
         except Exception as e:
             logger.warning("[%s] Failed to generate system message: %s", self.name, e)

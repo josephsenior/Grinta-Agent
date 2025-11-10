@@ -1,5 +1,6 @@
 import React from "react";
-import { useTranslation, type TFunction } from "react-i18next";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { createPortal } from "react-dom";
 import { ForgeAction } from "#/types/core/actions";
 import { ForgeObservation } from "#/types/core/observations";
@@ -9,13 +10,12 @@ import {
   isForgeEvent,
   isAgentStateChangeObservation,
   isFinishAction,
-  isUserMessage,
   isAssistantMessage,
   hasExtras,
   hasArgs,
 } from "#/types/core/guards";
 import { groupMessagesIntoTurns } from "#/utils/group-messages-into-turns";
-import { coalesceMessages, getEventSpacing } from "#/utils/coalesce-messages";
+import { getEventSpacing } from "#/utils/coalesce-messages";
 import { shouldRenderEvent } from "#/utils/should-render-event";
 import { EventMessage } from "./event-message";
 import { ChatMessage } from "./chat-message";
@@ -36,7 +36,9 @@ import { cn } from "#/utils/utils";
 
 // Small runtime helper to safely treat unknown values as records when appropriate
 const asRecord = (v: unknown): Record<string, unknown> | undefined =>
-  typeof v === "object" && v !== null ? (v as Record<string, unknown>) : undefined;
+  typeof v === "object" && v !== null
+    ? (v as Record<string, unknown>)
+    : undefined;
 
 const isErrorEvent = (evt: unknown): evt is { error: true; message: string } =>
   typeof evt === "object" &&
@@ -44,20 +46,23 @@ const isErrorEvent = (evt: unknown): evt is { error: true; message: string } =>
   "error" in evt &&
   evt.error === true;
 
-    const isAgentStatusError = (evt: unknown): boolean =>
-    isForgeEvent(evt) &&
-    isAgentStateChangeObservation(evt) &&
-    hasExtras(evt) &&
-    (() => {
-      try {
-        const r = asRecord(evt);
-        const ex = asRecord(r?.extras);
-        const agentState = typeof ex?.agent_state === "string" ? (ex!.agent_state as AgentState) : undefined;
-        return typeof agentState === "string" && agentState === AgentState.ERROR;
-      } catch {
-        return false;
-      }
-    })();
+const isAgentStatusError = (evt: unknown): boolean =>
+  isForgeEvent(evt) &&
+  isAgentStateChangeObservation(evt) &&
+  hasExtras(evt) &&
+  (() => {
+    try {
+      const r = asRecord(evt);
+      const ex = asRecord(r?.extras);
+      const agentState =
+        typeof ex?.agent_state === "string"
+          ? (ex!.agent_state as AgentState)
+          : undefined;
+      return typeof agentState === "string" && agentState === AgentState.ERROR;
+    } catch {
+      return false;
+    }
+  })();
 
 const hasId = (value: unknown): value is { id: number | string } =>
   typeof value === "object" &&
@@ -89,7 +94,7 @@ const getSequenceNumber = (event: unknown): number => {
 
 const logStreamingDebug = (
   messages: Array<ForgeAction | ForgeObservation>,
-  turns: Array<{ type: string; events: Array<ForgeAction | ForgeObservation> }>,
+  turns: Array<{ type: string; events: Array<unknown> }>,
 ) => {
   if (!shouldLogStreamingDebug()) {
     return;
@@ -104,7 +109,9 @@ const logStreamingDebug = (
       type: turnItem.type,
       eventCount: turnItem.events.length,
       eventIds: turnItem.events
-        .map((event) => (hasId(event) ? event.id : undefined))
+        .map((event) =>
+          hasId(event as unknown) ? (event as any).id : undefined,
+        )
         .filter(Boolean)
         .join(","),
       sequences: turnItem.events
@@ -115,9 +122,7 @@ const logStreamingDebug = (
   });
 };
 
-const buildTurns = (
-  messages: Array<ForgeAction | ForgeObservation>,
-) => {
+const buildTurns = (messages: Array<ForgeAction | ForgeObservation>) => {
   const sortedMessages = [...messages].sort(
     (a, b) => getSequenceNumber(a) - getSequenceNumber(b),
   );
@@ -242,7 +247,13 @@ interface MessagesProps {
 }
 
 export const Messages: React.FC<MessagesProps> = React.memo(
-  ({ messages, isAwaitingUserConfirmation, showTechnicalDetails = false, onAskAboutCode, onRunCode }) => {
+  ({
+    messages,
+    isAwaitingUserConfirmation,
+    showTechnicalDetails = false,
+    onAskAboutCode,
+    onRunCode,
+  }) => {
     const {
       createConversationAndSubscribe,
       isPending,
@@ -275,8 +286,10 @@ export const Messages: React.FC<MessagesProps> = React.memo(
         try {
           const r = asRecord(event);
           if (isForgeAction(event) && typeof r?.id !== "undefined") {
-            const id = r!.id;
-            return !!messages.some((msg) => isForgeObservation(msg) && msg.cause === id);
+            const { id } = r!;
+            return !!messages.some(
+              (msg) => isForgeObservation(msg) && msg.cause === id,
+            );
           }
         } catch {
           /* ignore */
@@ -323,10 +336,18 @@ export const Messages: React.FC<MessagesProps> = React.memo(
     };
 
     // Group messages into turns (bolt.new style)
-    const turns = React.useMemo(() => {
-      return buildTurns(messages as Array<ForgeAction | ForgeObservation>);
-    }, [messages]);
-    
+    type Turn = {
+      type: string;
+      events: Array<ForgeAction | ForgeObservation>;
+      startIndex: number;
+    };
+
+    const turns = React.useMemo(
+      (): Turn[] =>
+        buildTurns(messages as Array<ForgeAction | ForgeObservation>) as Turn[],
+      [messages],
+    );
+
     const renderContext: TurnRenderContext = {
       turns,
       isAwaitingUserConfirmation,
@@ -345,7 +366,7 @@ export const Messages: React.FC<MessagesProps> = React.memo(
 
     return (
       <>
-        {turns.map((turn, turnIndex) =>
+        {turns.map((turn: any, turnIndex: number) =>
           renderTurn({
             turn,
             turnIndex,
@@ -378,7 +399,7 @@ export const Messages: React.FC<MessagesProps> = React.memo(
           )}
       </>
     );
-  }
+  },
 );
 
 Messages.displayName = "Messages";
@@ -671,9 +692,13 @@ function renderAgentEvent({
           eventIndex === group.events.length - 1
         }
         showTechnicalDetails={context.showTechnicalDetails}
-        microagentStatus={eventId ? context.getMicroagentStatusForEvent(eventId) : undefined}
+        microagentStatus={
+          eventId ? context.getMicroagentStatusForEvent(eventId) : undefined
+        }
         microagentConversationId={
-          eventId ? context.getMicroagentConversationIdForEvent(eventId) : undefined
+          eventId
+            ? context.getMicroagentConversationIdForEvent(eventId)
+            : undefined
         }
         microagentPRUrl={
           eventId ? context.getMicroagentPRUrlForEvent(eventId) : undefined
@@ -715,7 +740,9 @@ function buildEventActions({
 }: {
   event: ForgeAction | ForgeObservation;
   context: TurnRenderContext;
-}): Array<{ icon: React.ReactNode; onClick: () => void; tooltip?: string }> | undefined {
+}):
+  | Array<{ icon: React.ReactNode; onClick: () => void; tooltip?: string }>
+  | undefined {
   if (!context.conversation?.selected_repository) {
     return undefined;
   }
@@ -801,7 +828,9 @@ function createMicroagentStateChangeProcessor(
   };
 }
 
-function canProcessAgentStateChange(socketEvent: unknown): socketEvent is ForgeObservation {
+function canProcessAgentStateChange(
+  socketEvent: unknown,
+): socketEvent is ForgeObservation {
   if (typeof socketEvent !== "object" || socketEvent === null) {
     return false;
   }
@@ -817,7 +846,9 @@ function extractAgentState(event: ForgeObservation): AgentState | undefined {
     const record = asRecord(event);
     const extras = asRecord(record?.extras);
     const state = extras?.agent_state;
-    return typeof state === "number" ? (state as AgentState) : undefined;
+    return typeof state === "number"
+      ? (state as unknown as AgentState)
+      : undefined;
   } catch {
     return undefined;
   }
@@ -825,8 +856,7 @@ function extractAgentState(event: ForgeObservation): AgentState | undefined {
 
 function isTerminalAgentState(state: AgentState | undefined) {
   return (
-    state === AgentState.FINISHED ||
-    state === AgentState.AWAITING_USER_INPUT
+    state === AgentState.FINISHED || state === AgentState.AWAITING_USER_INPUT
   );
 }
 
@@ -846,11 +876,12 @@ function createMicroagentFinishProcessor(
         const record = asRecord(socketEvent);
         const args = asRecord(record?.args);
         const finalThought = args?.final_thought;
-        prUrl = getFirstPRUrl(
-          typeof finalThought === "string"
-            ? finalThought
-            : String(finalThought ?? ""),
-        );
+        prUrl =
+          getFirstPRUrl(
+            typeof finalThought === "string"
+              ? finalThought
+              : String(finalThought ?? ""),
+          ) || undefined;
       } catch {
         prUrl = undefined;
       }

@@ -1,6 +1,6 @@
 /**
  * MetaSOP Artifact Type Definitions
- * 
+ *
  * Type-safe interfaces for all MetaSOP agent artifacts
  */
 
@@ -236,10 +236,10 @@ export interface QASpecArtifact {
 // UNIFIED ARTIFACT TYPE
 // ============================================================================
 
-export type ArtifactData = 
-  | PMSpecArtifact 
-  | ArchitectSpecArtifact 
-  | EngineerSpecArtifact 
+export type ArtifactData =
+  | PMSpecArtifact
+  | ArchitectSpecArtifact
+  | EngineerSpecArtifact
   | QASpecArtifact;
 
 export interface ParsedArtifact {
@@ -271,7 +271,11 @@ export interface OrchestrationStep {
 // ============================================================================
 
 export interface MetaSOPEvent {
-  type: "metasop_step_start" | "metasop_step_update" | "metasop_step_complete" | "metasop_orchestration_complete";
+  type:
+    | "metasop_step_start"
+    | "metasop_step_update"
+    | "metasop_step_complete"
+    | "metasop_orchestration_complete";
   event_type?: string;
   step_id: string;
   role: AgentRole;
@@ -292,4 +296,3 @@ export interface VisualizationProps {
   className?: string;
   onInteraction?: (action: string, data: any) => void;
 }
-

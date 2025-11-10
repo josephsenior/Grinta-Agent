@@ -1,7 +1,6 @@
 import React from "react";
 import { Check, Circle, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "#/utils/utils";
-import { TooltipButton } from "#/components/shared/buttons/tooltip-button";
 import { ForgeEvent } from "#/types/core/base";
 import type { ForgeAction, ForgeObservation } from "#/types/core";
 import { isErrorObservation } from "#/types/core/guards";
@@ -27,14 +26,17 @@ export const ActionSummary: React.FC<ActionSummaryProps> = ({
       {events.map((event, index) => {
         // Safely extract `id` from the event union without assuming shape
         const rawId = (event as unknown as Record<string, unknown>)?.id;
-        const eventId = typeof rawId === "string" || typeof rawId === "number" ? rawId : undefined;
+        const eventId =
+          typeof rawId === "string" || typeof rawId === "number"
+            ? rawId
+            : undefined;
         const isError = isErrorObservation(event);
         const isLast = index === events.length - 1;
-        
+
         // Determine status icon
         let StatusIcon = Circle;
         let statusColor = "text-muted-foreground";
-        
+
         if (isError) {
           StatusIcon = AlertCircle;
           statusColor = "text-danger";
@@ -50,7 +52,10 @@ export const ActionSummary: React.FC<ActionSummaryProps> = ({
         const summary = getEventSummaryText(event);
         if (!summary) return null;
 
-        const keyVal = typeof eventId === "string" || typeof eventId === "number" ? eventId : `event-${index}`;
+        const keyVal =
+          typeof eventId === "string" || typeof eventId === "number"
+            ? eventId
+            : `event-${index}`;
 
         return (
           <div
@@ -66,17 +71,19 @@ export const ActionSummary: React.FC<ActionSummaryProps> = ({
               }
             }}
           >
-            <StatusIcon 
+            <StatusIcon
               className={cn(
                 "w-3.5 h-3.5 shrink-0",
                 statusColor,
-                isLast && !isError && "animate-spin"
-              )} 
+                isLast && !isError && "animate-spin",
+              )}
             />
-            <span className={cn(
-              "text-xs font-medium",
-              isError ? "text-danger" : "text-foreground-secondary"
-            )}>
+            <span
+              className={cn(
+                "text-xs font-medium",
+                isError ? "text-danger" : "text-foreground-secondary",
+              )}
+            >
               {summary}
             </span>
           </div>
@@ -172,7 +179,7 @@ function isObservationEvent(event: ForgeEvent): event is ForgeObservation {
 }
 
 function getEventArg(event: ForgeAction, key: string) {
-  const args = (event as unknown as { args?: Record<string, unknown> }).args;
+  const { args } = event as unknown as { args?: Record<string, unknown> };
   if (!args || typeof args !== "object") {
     return undefined;
   }
@@ -183,4 +190,3 @@ function getEventArg(event: ForgeAction, key: string) {
 function extractFilename(path: string): string {
   return path.split("/").pop() || path;
 }
-

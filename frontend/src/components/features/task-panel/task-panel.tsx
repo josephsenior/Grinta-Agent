@@ -1,5 +1,12 @@
 import React from "react";
-import { CheckCircle2, Circle, Clock, ChevronDown, ChevronUp, ListTodo } from "lucide-react";
+import {
+  CheckCircle2,
+  Circle,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  ListTodo,
+} from "lucide-react";
 import { cn } from "#/utils/utils";
 
 interface Task {
@@ -17,7 +24,9 @@ interface TaskPanelProps {
 
 export function TaskPanel({ tasks, isOpen, onToggle }: TaskPanelProps) {
   const todoCount = tasks.filter((task) => task.status === "todo").length;
-  const inProgressCount = tasks.filter((task) => task.status === "in_progress").length;
+  const inProgressCount = tasks.filter(
+    (task) => task.status === "in_progress",
+  ).length;
   const doneCount = tasks.filter((task) => task.status === "done").length;
   const totalCount = tasks.length;
   const progress = totalCount > 0 ? (doneCount / totalCount) * 100 : 0;
@@ -61,13 +70,13 @@ export function TaskPanel({ tasks, isOpen, onToggle }: TaskPanelProps) {
         className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-background-tertiary/50 transition-colors"
       >
         <ListTodo className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
-        
+
         {/* Inline Progress Info */}
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <span className="text-xs font-medium text-text-primary whitespace-nowrap">
             Tasks {doneCount}/{totalCount}
           </span>
-          
+
           {/* Compact Progress Bar */}
           <div className="flex-1 min-w-[80px] max-w-[200px] h-1 bg-background-tertiary rounded-full overflow-hidden">
             <div
@@ -75,8 +84,10 @@ export function TaskPanel({ tasks, isOpen, onToggle }: TaskPanelProps) {
               style={{ width: `${progress}%` }}
             />
           </div>
-          
-          <span className="text-[10px] text-text-tertiary whitespace-nowrap">{Math.round(progress)}%</span>
+
+          <span className="text-[10px] text-text-tertiary whitespace-nowrap">
+            {Math.round(progress)}%
+          </span>
         </div>
 
         {/* Status Counts - More Compact */}
@@ -101,7 +112,10 @@ export function TaskPanel({ tasks, isOpen, onToggle }: TaskPanelProps) {
 
       {/* Expandable Task List */}
       {isOpen && (
-        <div className="px-3 pb-2 overflow-y-auto animate-fade-in" style={{ maxHeight: "320px" }}>
+        <div
+          className="px-3 pb-2 overflow-y-auto animate-fade-in"
+          style={{ maxHeight: "320px" }}
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1.5">
             {tasks.map((task, index) => (
               <div
@@ -111,8 +125,8 @@ export function TaskPanel({ tasks, isOpen, onToggle }: TaskPanelProps) {
                   task.status === "done"
                     ? "bg-success-500/5 border-success-500/20"
                     : task.status === "in_progress"
-                    ? "bg-warning-500/5 border-warning-500/20"
-                    : "bg-background-tertiary/30 border-border-subtle"
+                      ? "bg-warning-500/5 border-warning-500/20"
+                      : "bg-background-tertiary/30 border-border-subtle",
                 )}
               >
                 <div className="flex items-start gap-1.5">
@@ -121,10 +135,12 @@ export function TaskPanel({ tasks, isOpen, onToggle }: TaskPanelProps) {
                     <p
                       className={cn(
                         "text-[11px] font-medium leading-tight",
-                        getStatusClassName(task.status)
+                        getStatusClassName(task.status),
                       )}
                     >
-                      <span className="text-text-tertiary mr-1">{index + 1}.</span>
+                      <span className="text-text-tertiary mr-1">
+                        {index + 1}.
+                      </span>
                       {task.title}
                     </p>
                     {task.notes && (
@@ -142,4 +158,3 @@ export function TaskPanel({ tasks, isOpen, onToggle }: TaskPanelProps) {
     </div>
   );
 }
-

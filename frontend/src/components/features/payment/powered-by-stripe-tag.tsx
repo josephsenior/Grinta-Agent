@@ -11,9 +11,12 @@ export function PoweredByStripeTag() {
       return <img src={stripeLogo} alt="Stripe" className="h-8" />;
     }
 
-    const StripeLogoComponent =
-      stripeLogo as unknown as ComponentType<SVGProps<SVGSVGElement>>;
-    return <StripeLogoComponent role="img" aria-label="Stripe" className="h-8" />;
+    const StripeLogoComponent = stripeLogo as unknown as ComponentType<
+      SVGProps<SVGSVGElement>
+    >;
+    return (
+      <StripeLogoComponent role="img" aria-label="Stripe" className="h-8" />
+    );
   };
 
   return (

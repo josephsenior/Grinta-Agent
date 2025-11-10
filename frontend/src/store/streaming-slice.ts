@@ -31,16 +31,16 @@ export interface ProgressData {
 export interface StreamingState {
   // Active streams being displayed
   activeStreams: Record<string, StreamData>;
-  
+
   // Accumulated chunks for each stream (for incremental display)
   chunks: Record<string, string[]>;
-  
+
   // Progress tracking for operations
   progress: Record<string, ProgressData>;
-  
+
   // Current operation being executed (for status bar)
   currentOperation: string | null;
-  
+
   // Streaming settings
   enableStreaming: boolean;
   streamSpeed: number; // ms per chunk
@@ -76,10 +76,17 @@ const streamingSlice = createSlice({
      */
     startStream: (
       state,
-      action: PayloadAction<{ id?: string; streamId?: string; type?: StreamType }>
+      action: PayloadAction<{
+        id?: string;
+        streamId?: string;
+        type?: StreamType;
+      }>,
     ) => {
-      const id = action.payload.id ?? action.payload.streamId ?? String(Math.random().toString(36).slice(2, 9));
-      const type = action.payload.type ?? "terminal" as StreamType;
+      const id =
+        action.payload.id ??
+        action.payload.streamId ??
+        String(Math.random().toString(36).slice(2, 9));
+      const type = action.payload.type ?? ("terminal" as StreamType);
       state.activeStreams[id] = {
         id,
         type,
@@ -102,10 +109,10 @@ const streamingSlice = createSlice({
      */
     appendStreamChunk: (
       state,
-      action: PayloadAction<{ id?: string; streamId?: string; chunk: string }>
+      action: PayloadAction<{ id?: string; streamId?: string; chunk: string }>,
     ) => {
       const id = action.payload.id ?? action.payload.streamId ?? "";
-      const chunk = action.payload.chunk;
+      const { chunk } = action.payload;
 
       if (!id) return;
 
@@ -138,8 +145,14 @@ const streamingSlice = createSlice({
     /**
      * Complete a stream
      */
-    completeStream: (state, action: PayloadAction<string | { streamId: string }>) => {
-      const id = typeof action.payload === "string" ? action.payload : action.payload.streamId;
+    completeStream: (
+      state,
+      action: PayloadAction<string | { streamId: string }>,
+    ) => {
+      const id =
+        typeof action.payload === "string"
+          ? action.payload
+          : action.payload.streamId;
 
       if (!id) return;
 
@@ -159,10 +172,10 @@ const streamingSlice = createSlice({
      */
     errorStream: (
       state,
-      action: PayloadAction<{ id?: string; streamId?: string; error: string }>
+      action: PayloadAction<{ id?: string; streamId?: string; error: string }>,
     ) => {
       const id = action.payload.id ?? action.payload.streamId;
-      const error = action.payload.error;
+      const { error } = action.payload;
 
       if (!id) return;
 
@@ -190,8 +203,14 @@ const streamingSlice = createSlice({
     /**
      * Clear a stream (cleanup)
      */
-    clearStream: (state, action: PayloadAction<string | { streamId: string }>) => {
-      const id = typeof action.payload === "string" ? action.payload : action.payload.streamId;
+    clearStream: (
+      state,
+      action: PayloadAction<string | { streamId: string }>,
+    ) => {
+      const id =
+        typeof action.payload === "string"
+          ? action.payload
+          : action.payload.streamId;
       if (!id) return;
       delete state.activeStreams[id];
       delete state.chunks[id];
@@ -204,12 +223,12 @@ const streamingSlice = createSlice({
      */
     updateProgress: (state, action: PayloadAction<ProgressData>) => {
       const data = action.payload;
-      
+
       // Calculate elapsed time
       const existing = state.progress[data.id];
       const startTime = existing?.startTime || Date.now();
       const elapsed = (Date.now() - startTime) / 1000; // seconds
-      
+
       state.progress[data.id] = {
         ...data,
         startTime,
@@ -277,30 +296,44 @@ export default streamingSlice.reducer;
 /**
  * Selectors
  */
-export const selectStreamData = (state: { streaming: StreamingState }, id: string) =>
-  state.streaming.activeStreams[id];
+export const selectStreamData = (
+  state: { streaming: StreamingState },
+  id: string,
+) => state.streaming.activeStreams[id];
 
-export const selectStreamChunks = (state: { streaming: StreamingState }, id: string) =>
-  state.streaming.chunks[id] || [];
+export const selectStreamChunks = (
+  state: { streaming: StreamingState },
+  id: string,
+) => state.streaming.chunks[id] || [];
 
-export const selectStreamContent = (state: { streaming: StreamingState }, id: string) =>
-  (state.streaming.chunks[id] || []).join("");
+export const selectStreamContent = (
+  state: { streaming: StreamingState },
+  id: string,
+) => (state.streaming.chunks[id] || []).join("");
 
-export const selectProgressData = (state: { streaming: StreamingState }, id: string) =>
-  state.streaming.progress[id];
+export const selectProgressData = (
+  state: { streaming: StreamingState },
+  id: string,
+) => state.streaming.progress[id];
 
 export const selectCurrentOperation = (state: { streaming: StreamingState }) =>
   state.streaming.currentOperation;
 
-export const selectIsStreaming = (state: { streaming: StreamingState }, id: string) =>
-  state.streaming.activeStreams[id]?.status === "streaming";
+export const selectIsStreaming = (
+  state: { streaming: StreamingState },
+  id: string,
+) => state.streaming.activeStreams[id]?.status === "streaming";
 
 export const selectStreamingEnabled = (state: { streaming: StreamingState }) =>
   state.streaming.enableStreaming;
 
-export const selectStreamError = (state: { streaming: StreamingState }, id: string) =>
-  state.streaming.streams[id]?.error ?? state.streaming.activeStreams[id]?.error ?? null;
+export const selectStreamError = (
+  state: { streaming: StreamingState },
+  id: string,
+) =>
+  state.streaming.streams[id]?.error ??
+  state.streaming.activeStreams[id]?.error ??
+  null;
 
 // Backwards-compatible action alias used by older tests
 export const setStreamError = errorStream;
-

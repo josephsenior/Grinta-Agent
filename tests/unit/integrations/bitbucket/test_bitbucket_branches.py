@@ -45,3 +45,17 @@ async def test_search_branches_bitbucket_filters_by_name_contains():
         assert branches == [
             Branch(name="bugfix/issue-1", commit_sha="hhh", protected=False, last_push_date="2024-01-10T10:00:00Z")
         ]
+
+
+@pytest.mark.asyncio
+async def test_get_paginated_branches_bitbucket_invalid_repository():
+    service = BitBucketService(token=SecretStr("t"))
+    with pytest.raises(ValueError):
+        await service.get_paginated_branches("invalid")
+
+
+@pytest.mark.asyncio
+async def test_search_branches_bitbucket_invalid_repository():
+    service = BitBucketService(token=SecretStr("t"))
+    with pytest.raises(ValueError):
+        await service.search_branches("invalid", query="feature")

@@ -7,6 +7,7 @@ import { useMetaSOPOrchestration } from "#/hooks/use-metasop-orchestration";
 import { applyAllNodeEnhancements } from "#/utils/diagram-node-enhancements";
 import { CleanVisualAdapter } from "./clean-visualizations";
 import { ModernFlowDiagram } from "./modern-flow-diagram";
+import type { ParsedArtifact } from "#/types/metasop-artifacts";
 import {
   buildOrchestrationDiagramState,
   convertToOrchestrationStep,
@@ -28,7 +29,11 @@ export function OrchestrationDiagramPanel({
   const orchestration = useMetaSOPOrchestration();
 
   const diagramState = useMemo(
-    () => buildOrchestrationDiagramState(orchestration.steps, orchestration.hasSteps),
+    () =>
+      buildOrchestrationDiagramState(
+        orchestration.steps,
+        orchestration.hasSteps,
+      ),
     [orchestration.steps, orchestration.hasSteps],
   );
 
@@ -70,7 +75,10 @@ export function OrchestrationDiagramPanel({
         stepCount={orchestration.steps?.length ?? 0}
       />
 
-      <PassToCodeActSection hasSteps={orchestration.hasSteps} steps={orchestration.steps} />
+      <PassToCodeActSection
+        hasSteps={orchestration.hasSteps}
+        steps={orchestration.steps}
+      />
 
       <DiagramTabs
         tabs={diagramState.tabs}
@@ -107,11 +115,21 @@ function OrchestrationDiagramHeader({
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
           </button>
         )}
-        <svg className="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-5 h-5 text-primary-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -119,9 +137,13 @@ function OrchestrationDiagramHeader({
             d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
           />
         </svg>
-        <h3 className="text-lg font-semibold text-foreground">Orchestration Diagrams</h3>
+        <h3 className="text-lg font-semibold text-foreground">
+          Orchestration Diagrams
+        </h3>
         {isOrchestrating && (
-          <span className="ml-2 px-2 py-1 text-xs bg-blue-900 text-blue-200 rounded-full animate-pulse">Live</span>
+          <span className="ml-2 px-2 py-1 text-xs bg-blue-900 text-blue-200 rounded-full animate-pulse">
+            Live
+          </span>
         )}
       </div>
       <div className="text-sm text-foreground-secondary">
@@ -150,9 +172,24 @@ function PassToCodeActSection({
         }}
         className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-emerald-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+          />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
         </svg>
         Pass to CodeAct
       </button>
@@ -194,7 +231,10 @@ interface DiagramContentProps {
   onTabChange: (tab: DiagramTab) => void;
   diagramState: ReturnType<typeof buildOrchestrationDiagramState>;
   orchestration: ReturnType<typeof useMetaSOPOrchestration>;
-  enrichedSteps: Array<{ raw: any; orchestration: ReturnType<typeof convertToOrchestrationStep> }>;
+  enrichedSteps: Array<{
+    raw: any;
+    orchestration: ReturnType<typeof convertToOrchestrationStep>;
+  }>;
   orchestrationSteps: ReturnType<typeof convertToOrchestrationStep>[];
   onNavigateToStep?: (stepId: string) => void;
 }
@@ -216,11 +256,21 @@ function DiagramContent({
         orchestrationSteps,
         onNavigateToStep,
       }),
-    [diagramState, orchestration, enrichedSteps, orchestrationSteps, onNavigateToStep],
+    [
+      diagramState,
+      orchestration,
+      enrichedSteps,
+      orchestrationSteps,
+      onNavigateToStep,
+    ],
   );
 
   const renderer = renderers[activeTab];
-  return <div className="flex-1 overflow-auto p-4 bg-background-secondary">{renderer()}</div>;
+  return (
+    <div className="flex-1 overflow-auto p-4 bg-background-secondary">
+      {renderer()}
+    </div>
+  );
 }
 
 function buildTabRenderers({
@@ -232,7 +282,10 @@ function buildTabRenderers({
 }: {
   diagramState: ReturnType<typeof buildOrchestrationDiagramState>;
   orchestration: ReturnType<typeof useMetaSOPOrchestration>;
-  enrichedSteps: Array<{ raw: any; orchestration: ReturnType<typeof convertToOrchestrationStep> }>;
+  enrichedSteps: Array<{
+    raw: any;
+    orchestration: ReturnType<typeof convertToOrchestrationStep>;
+  }>;
   orchestrationSteps: ReturnType<typeof convertToOrchestrationStep>[];
   onNavigateToStep?: (stepId: string) => void;
 }): Record<DiagramTab, () => React.ReactNode> {
@@ -308,7 +361,10 @@ function buildTabRenderers({
       />
     ),
     raw: () => (
-      <RawJsonTab orchestrationSteps={orchestrationSteps} isOrchestrating={orchestration.isOrchestrating} />
+      <RawJsonTab
+        orchestrationSteps={orchestrationSteps}
+        isOrchestrating={orchestration.isOrchestrating}
+      />
     ),
   };
 }
@@ -329,7 +385,9 @@ function FlowTab({
     <div className="h-full">
       <h4 className="text-sm font-semibold text-foreground-secondary mb-4">
         Modern Orchestration Flow
-        {isOrchestrating && <span className="ml-2 text-xs text-violet-500">● Live Updates</span>}
+        {isOrchestrating && (
+          <span className="ml-2 text-xs text-violet-500">● Live Updates</span>
+        )}
       </h4>
       {hasSteps ? (
         <ModernFlowDiagram
@@ -354,7 +412,10 @@ function AgentsTab({
   enrichedSteps,
   hasSteps,
 }: {
-  enrichedSteps: Array<{ raw: any; orchestration: ReturnType<typeof convertToOrchestrationStep> }>;
+  enrichedSteps: Array<{
+    raw: any;
+    orchestration: ReturnType<typeof convertToOrchestrationStep>;
+  }>;
   hasSteps: number;
 }) {
   if (!hasSteps) {
@@ -381,7 +442,7 @@ function AgentsTab({
       {artifactSteps.map(({ raw, orchestration }) => (
         <CleanVisualAdapter
           key={raw.step_id ?? raw.id}
-          artifact={orchestration.artifact}
+          artifact={orchestration.artifact as ParsedArtifact}
           animated
           onInteraction={(action, data) => {
             console.log("Interaction:", action, data);
@@ -417,7 +478,9 @@ function OverviewTab({
     <div>
       <h4 className="text-sm font-semibold text-foreground-secondary mb-4">
         Orchestration Flow
-        {isOrchestrating && <span className="ml-2 text-xs text-violet-500">● In Progress</span>}
+        {isOrchestrating && (
+          <span className="ml-2 text-xs text-violet-500">● In Progress</span>
+        )}
       </h4>
       <MermaidDiagramViewer
         diagram={diagram}
@@ -452,10 +515,7 @@ function SimpleDiagramTab({
       <h4 className="text-sm font-semibold text-foreground-secondary mb-4">
         {title}
       </h4>
-      <MermaidDiagramViewer
-        diagram={diagram}
-        exportFilename={exportName}
-      />
+      <MermaidDiagramViewer diagram={diagram} exportFilename={exportName} />
     </div>
   );
 }
@@ -479,9 +539,7 @@ function RawJsonTab({
             className="bg-white dark:bg-background-secondary rounded-lg p-4 border border-border dark:border-border"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="font-medium text-foreground">
-                {step.role}
-              </span>
+              <span className="font-medium text-foreground">{step.role}</span>
               <span
                 className={`text-xs px-2 py-1 rounded ${
                   step.status === "success"
@@ -494,11 +552,16 @@ function RawJsonTab({
                 {step.status}
               </span>
             </div>
-            {step.artifact && (
-              <pre className="text-xs text-foreground-secondary/70 dark:text-foreground-secondary overflow-auto max-h-64 bg-background-tertiary p-2 rounded">
-                {JSON.stringify(step.artifact, null, 2)}
-              </pre>
-            )}
+            {step.artifact
+              ? (() => {
+                  const artifactJson = JSON.stringify(step.artifact, null, 2);
+                  return (
+                    <pre className="text-xs text-foreground-secondary/70 dark:text-foreground-secondary overflow-auto max-h-64 bg-background-tertiary p-2 rounded">
+                      {artifactJson}
+                    </pre>
+                  );
+                })()
+              : null}
           </div>
         ))}
       </div>
@@ -540,10 +603,7 @@ function useActiveTabFallback(
   setActiveTab: (tab: DiagramTab) => void,
 ) {
   useEffect(() => {
-    if (
-      tabs.length > 0 &&
-      !tabs.some((tab) => tab.id === activeTab)
-    ) {
+    if (tabs.length > 0 && !tabs.some((tab) => tab.id === activeTab)) {
       setActiveTab(tabs[0].id);
     }
   }, [tabs, activeTab, setActiveTab]);

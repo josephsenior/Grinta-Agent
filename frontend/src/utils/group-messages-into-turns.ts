@@ -14,15 +14,15 @@ export interface MessageTurn {
 
 /**
  * Groups consecutive messages into "turns" for bolt.new-style rendering
- * 
+ *
  * A "turn" is:
  * - User message (single event)
  * - Agent response (multiple consecutive agent events grouped together)
- * 
+ *
  * This creates the conversational flow where:
  * - User says something → one bubble
  * - Agent responds with multiple actions → ONE grouped visual unit
- * 
+ *
  * Special handling for StreamingChunkAction:
  * - Multiple streaming chunks update THE SAME turn (not create new turns)
  * - This gives real-time token-by-token updates within one message
@@ -61,11 +61,13 @@ export function turnHasStreaming(turn: MessageTurn): boolean {
  * Get the latest streaming content from a turn
  */
 export function getTurnStreamingContent(turn: MessageTurn): string | null {
-  const streamingEvents = turn.events.filter((event) => isStreamingChunkAction(event));
+  const streamingEvents = turn.events.filter((event) =>
+    isStreamingChunkAction(event),
+  );
   if (streamingEvents.length === 0) return null;
-  
+
   const lastStreaming = streamingEvents[streamingEvents.length - 1];
-    if (typeof lastStreaming === "object" && lastStreaming !== null) {
+  if (typeof lastStreaming === "object" && lastStreaming !== null) {
     const ls = lastStreaming as unknown as Record<string, unknown>;
     const args = ls.args as Record<string, unknown> | undefined;
     return (args?.accumulated as string) || null;
@@ -73,7 +75,10 @@ export function getTurnStreamingContent(turn: MessageTurn): string | null {
   return null;
 }
 
-function finalizeCurrentTurn(turns: MessageTurn[], currentTurn: MessageTurn | null) {
+function finalizeCurrentTurn(
+  turns: MessageTurn[],
+  currentTurn: MessageTurn | null,
+) {
   if (currentTurn) {
     turns.push(currentTurn);
   }
@@ -127,7 +132,10 @@ function createAgentTurn(event: ForgeEvent, index: number): MessageTurn {
   return turn;
 }
 
-function mergeStreamingChunkIntoTurn(turn: MessageTurn, streamingEvent: ForgeEvent) {
+function mergeStreamingChunkIntoTurn(
+  turn: MessageTurn,
+  streamingEvent: ForgeEvent,
+) {
   const lastAssistantIndex = findLastAssistantMessage(turn.events);
   if (lastAssistantIndex === -1) {
     return;
@@ -151,7 +159,11 @@ function mergeStreamingChunkIntoTurn(turn: MessageTurn, streamingEvent: ForgeEve
 function findLastAssistantMessage(events: ForgeEvent[]) {
   for (let i = events.length - 1; i >= 0; i -= 1) {
     const candidate = events[i];
-    if (isForgeAction(candidate) && candidate.source === "agent" && candidate.action === "message") {
+    if (
+      isForgeAction(candidate) &&
+      candidate.source === "agent" &&
+      candidate.action === "message"
+    ) {
       return i;
     }
   }
@@ -161,11 +173,15 @@ function findLastAssistantMessage(events: ForgeEvent[]) {
 function mergeStreamingArgs(previousArgs: unknown, streamingEvent: ForgeEvent) {
   const prevRecord = toRecord(previousArgs);
   const streamingRecord = toRecord(streamingEvent as unknown);
-  const streamingArgs = streamingRecord?.args as Record<string, unknown> | undefined;
+  const streamingArgs = streamingRecord?.args as
+    | Record<string, unknown>
+    | undefined;
 
   return {
     ...prevRecord,
-    content: (streamingArgs?.accumulated as string) || (prevRecord?.content as string | undefined),
+    content:
+      (streamingArgs?.accumulated as string) ||
+      (prevRecord?.content as string | undefined),
   };
 }
 
@@ -174,4 +190,3 @@ function toRecord(value: unknown): Record<string, unknown> | undefined {
     ? (value as Record<string, unknown>)
     : undefined;
 }
-

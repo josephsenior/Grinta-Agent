@@ -10,14 +10,16 @@ interface KBCreateCollectionModalProps {
   onClose: () => void;
 }
 
-export function KBCreateCollectionModal({ onClose }: KBCreateCollectionModalProps) {
+export function KBCreateCollectionModal({
+  onClose,
+}: KBCreateCollectionModalProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const createMutation = useCreateCollection();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name.trim()) {
       return;
     }
@@ -54,7 +56,10 @@ export function KBCreateCollectionModal({ onClose }: KBCreateCollectionModalProp
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="collection-name" className="block text-sm font-medium text-foreground mb-2">
+            <label
+              htmlFor="collection-name"
+              className="block text-sm font-medium text-foreground mb-2"
+            >
               Collection Name *
             </label>
             <Input
@@ -70,7 +75,10 @@ export function KBCreateCollectionModal({ onClose }: KBCreateCollectionModalProp
           </div>
 
           <div>
-            <label htmlFor="collection-description" className="block text-sm font-medium text-foreground mb-2">
+            <label
+              htmlFor="collection-description"
+              className="block text-sm font-medium text-foreground mb-2"
+            >
               Description (optional)
             </label>
             <Textarea
@@ -107,4 +115,3 @@ export function KBCreateCollectionModal({ onClose }: KBCreateCollectionModalProp
     </ModalBackdrop>
   );
 }
-

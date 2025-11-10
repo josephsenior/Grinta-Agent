@@ -56,7 +56,9 @@ const renderErrorState = (message: string) => (
 
 const renderEmptyState = () => (
   <div className="flex items-center justify-center p-12">
-    <p className="text-foreground-secondary text-sm">Run a query to see results</p>
+    <p className="text-foreground-secondary text-sm">
+      Run a query to see results
+    </p>
   </div>
 );
 
@@ -97,10 +99,13 @@ const renderNonSelectState = ({
   </div>
 );
 
-const createCsvPayload = (columns: string[], data: QueryDataRow[]) => [
-  columns.join(","),
-  ...data.map(row => columns.map(column => JSON.stringify(row[column] ?? "")).join(",")),
-].join("\n");
+const createCsvPayload = (columns: string[], data: QueryDataRow[]) =>
+  [
+    columns.join(","),
+    ...data.map((row) =>
+      columns.map((column) => JSON.stringify(row[column] ?? "")).join(","),
+    ),
+  ].join("\n");
 
 const handleCsvExport = (columns: string[], data: QueryDataRow[]) => {
   const csv = createCsvPayload(columns, data);
@@ -147,7 +152,7 @@ const renderTableState = ({
       <table className="w-full text-sm">
         <thead className="sticky top-0 bg-background-tertiary border-b border-border">
           <tr>
-            {displayColumns.map(column => (
+            {displayColumns.map((column) => (
               <th
                 key={column}
                 className="px-4 py-2 text-left font-medium text-foreground border-r border-border last:border-r-0"
@@ -163,7 +168,7 @@ const renderTableState = ({
               key={rowIndex}
               className="border-b border-border hover:bg-background-tertiary transition-colors"
             >
-              {displayColumns.map(column => (
+              {displayColumns.map((column) => (
                 <td
                   key={column}
                   className="px-4 py-2 text-foreground border-r border-border last:border-r-0 font-mono text-xs"
@@ -272,5 +277,3 @@ export function QueryResults({
       return null;
   }
 }
-
-

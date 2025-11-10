@@ -40,14 +40,18 @@ export function KBDocumentUpload({
 
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      setError(`File too large. Maximum size is ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
+      setError(
+        `File too large. Maximum size is ${MAX_FILE_SIZE / (1024 * 1024)}MB`,
+      );
       return;
     }
 
     // Validate file type
     const extension = `.${file.name.split(".").pop()}`;
     if (!ALLOWED_FILE_TYPES.includes(extension.toLowerCase())) {
-      setError(`Unsupported file type. Allowed: ${ALLOWED_FILE_TYPES.join(", ")}`);
+      setError(
+        `Unsupported file type. Allowed: ${ALLOWED_FILE_TYPES.join(", ")}`,
+      );
       return;
     }
 
@@ -135,7 +139,8 @@ export function KBDocumentUpload({
                 Click to browse or drag & drop
               </p>
               <p className="text-xs text-foreground-secondary">
-                {ALLOWED_FILE_TYPES.join(", ")} • Max {MAX_FILE_SIZE / (1024 * 1024)}MB
+                {ALLOWED_FILE_TYPES.join(", ")} • Max{" "}
+                {MAX_FILE_SIZE / (1024 * 1024)}MB
               </p>
             </div>
           )}
@@ -179,4 +184,3 @@ export function KBDocumentUpload({
     </ModalBackdrop>
   );
 }
-

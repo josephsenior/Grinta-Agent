@@ -26,7 +26,7 @@ const resolveMicroagentContent = (
     return <MicroagentManagementViewMicroagent />;
   }
 
-  const conversation = selectedMicroagentItem.conversation;
+  const { conversation } = selectedMicroagentItem;
   if (!conversation) {
     return <MicroagentManagementDefault />;
   }
@@ -50,9 +50,13 @@ const resolveMicroagentContent = (
   return <MicroagentManagementDefault />;
 };
 
-const isConversationOpeningPr = (conversation: NonNullable<
-  RootState["microagentManagement"]["selectedMicroagentItem"]
->["conversation"]) => {
+const isConversationOpeningPr = (
+  conversation: NonNullable<
+    RootState["microagentManagement"]["selectedMicroagentItem"]
+  >["conversation"],
+) => {
+  if (!conversation) return false;
+
   const isStarting =
     conversation.status === "STARTING" ||
     conversation.runtime_status === "STATUS$STARTING_RUNTIME";
@@ -64,8 +68,15 @@ const isConversationOpeningPr = (conversation: NonNullable<
   return isStarting || isOpeningPr;
 };
 
-const isConversationStopped = (conversation: NonNullable<
-  RootState["microagentManagement"]["selectedMicroagentItem"]
->["conversation"]) =>
-  conversation.status === "STOPPED" ||
-  conversation.runtime_status === "STATUS$STOPPED";
+const isConversationStopped = (
+  conversation: NonNullable<
+    RootState["microagentManagement"]["selectedMicroagentItem"]
+  >["conversation"],
+) => {
+  if (!conversation) return false;
+
+  return (
+    conversation.status === "STOPPED" ||
+    conversation.runtime_status === "STATUS$STOPPED"
+  );
+};

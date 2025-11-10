@@ -1,6 +1,6 @@
 /**
  * MetaSOP Artifact Parser
- * 
+ *
  * Robust, type-safe parser for MetaSOP agent artifacts
  * Handles __raw__ field unwrapping and validation
  */
@@ -17,7 +17,13 @@ import type {
   AcceptanceCriteria,
   FileNode,
 } from "#/types/metasop-artifacts";
-import { isAPIEndpoint, isSystemComponent, isDatabaseColumn, isTestScenario, isSecurityFinding } from "./artifact-validators";
+import {
+  isAPIEndpoint,
+  isSystemComponent,
+  isDatabaseColumn,
+  isTestScenario,
+  isSecurityFinding,
+} from "./artifact-validators";
 
 // ============================================================================
 // MAIN PARSER
@@ -25,7 +31,7 @@ import { isAPIEndpoint, isSystemComponent, isDatabaseColumn, isTestScenario, isS
 
 export function parseArtifact(
   rawData: unknown,
-  role: AgentRole
+  role: AgentRole,
 ): ParsedArtifact {
   const timestamp = new Date().toISOString();
 
@@ -56,7 +62,11 @@ const ROLE_PARSERS: Record<AgentRole, (data: unknown) => ArtifactData> = {
 };
 
 function unwrapRawData(rawData: unknown) {
-  if (rawData && typeof rawData === "object" && "__raw__" in (rawData as Record<string, unknown>)) {
+  if (
+    rawData &&
+    typeof rawData === "object" &&
+    "__raw__" in (rawData as Record<string, unknown>)
+  ) {
     const rawValue = (rawData as Record<string, unknown>).__raw__;
     if (typeof rawValue === "string") {
       try {
@@ -70,7 +80,11 @@ function unwrapRawData(rawData: unknown) {
   return rawData;
 }
 
-function buildParseErrorResult(role: AgentRole, timestamp: string, error: unknown): ParsedArtifact {
+function buildParseErrorResult(
+  role: AgentRole,
+  timestamp: string,
+  error: unknown,
+): ParsedArtifact {
   return {
     role,
     data: {} as ArtifactData,
@@ -125,7 +139,9 @@ function parsePMSpec(data: unknown): PMSpecArtifact {
         id: (e.id as string) || generateId(),
         title: (e.title as string) || (e.name as string) || "Untitled Epic",
         description: e.description as string | undefined,
-        stories: Array.isArray(e.stories) ? (e.stories as unknown[]).map(String) : [],
+        stories: Array.isArray(e.stories)
+          ? (e.stories as unknown[]).map(String)
+          : [],
       };
     });
   }
@@ -189,7 +205,9 @@ function resolveFirstString(
 // ARCHITECT PARSER
 // ============================================================================
 
-const parseSystemArchitecture = (value: unknown): ArchitectSpecArtifact["system_architecture"] => {
+const parseSystemArchitecture = (
+  value: unknown,
+): ArchitectSpecArtifact["system_architecture"] => {
   if (!value || typeof value !== "object") {
     return undefined;
   }
@@ -197,25 +215,33 @@ const parseSystemArchitecture = (value: unknown): ArchitectSpecArtifact["system_
   const arch = value as Record<string, unknown>;
   const components = Array.isArray(arch.components)
     ? (arch.components as unknown[])
-        .filter(component => isSystemComponent(component))
-        .map(component => {
+        .filter((component) => isSystemComponent(component))
+        .map((component) => {
           const comp = component as Record<string, unknown>;
           return {
             id:
               typeof comp.id === "string" || typeof comp.id === "number"
                 ? comp.id
                 : generateId(),
-            name: typeof comp.name === "string" ? comp.name : "Unnamed Component",
+            name:
+              typeof comp.name === "string" ? comp.name : "Unnamed Component",
             type: normalizeComponentType(comp.type),
-            description: typeof comp.description === "string" ? comp.description : undefined,
-            dependencies: Array.isArray(comp.dependencies) ? (comp.dependencies as unknown[]).map(String) : [],
-            technologies: Array.isArray(comp.technologies) ? (comp.technologies as unknown[]).map(String) : [],
+            description:
+              typeof comp.description === "string"
+                ? comp.description
+                : undefined,
+            dependencies: Array.isArray(comp.dependencies)
+              ? (comp.dependencies as unknown[]).map(String)
+              : [],
+            technologies: Array.isArray(comp.technologies)
+              ? (comp.technologies as unknown[]).map(String)
+              : [],
           };
         })
     : [];
 
   const connections = Array.isArray(arch.connections)
-    ? (arch.connections as unknown[]).map(connection => {
+    ? (arch.connections as unknown[]).map((connection) => {
         const conn = connection as Record<string, unknown>;
         return {
           from: (conn.from as string) || (conn.source as string) || "",
@@ -233,19 +259,22 @@ const parseSystemArchitecture = (value: unknown): ArchitectSpecArtifact["system_
   };
 };
 
-const parseApiEndpoints = (value: unknown): ArchitectSpecArtifact["api_endpoints"] => {
+const parseApiEndpoints = (
+  value: unknown,
+): ArchitectSpecArtifact["api_endpoints"] => {
   if (!Array.isArray(value)) {
     return undefined;
   }
 
   return (value as unknown[])
-    .filter(endpoint => isAPIEndpoint(endpoint))
-    .map(endpoint => {
+    .filter((endpoint) => isAPIEndpoint(endpoint))
+    .map((endpoint) => {
       const ep = endpoint as Record<string, unknown>;
       return {
         method: normalizeHttpMethod(ep.method),
         path: (ep.path as string) || (ep.url as string) || "/",
-        description: typeof ep.description === "string" ? ep.description : undefined,
+        description:
+          typeof ep.description === "string" ? ep.description : undefined,
         request_body: normalizeToStringOrUndefined(ep.request_body ?? ep.body),
         response: normalizeToStringOrUndefined(ep.response),
         auth_required: Boolean(ep.auth_required),
@@ -254,60 +283,85 @@ const parseApiEndpoints = (value: unknown): ArchitectSpecArtifact["api_endpoints
     });
 };
 
-const parseDatabaseSchema = (value: unknown): ArchitectSpecArtifact["database_schema"] => {
+const parseDatabaseSchema = (
+  value: unknown,
+): ArchitectSpecArtifact["database_schema"] => {
   if (!Array.isArray(value)) {
     return undefined;
   }
 
-  return (value as unknown[]).map(schema => {
+  return (value as unknown[]).map((schema) => {
     const s = schema as Record<string, unknown>;
     const columns = Array.isArray(s.columns)
       ? (s.columns as unknown[])
-          .filter(column => isDatabaseColumn(column))
-          .map(column => {
+          .filter((column) => isDatabaseColumn(column))
+          .map((column) => {
             const col = column as Record<string, unknown>;
             return {
-              name: (col.name as string) || (col.column_name as string) || "col",
-              type: (col.type as string) || (col.datatype as string) || "string",
-              constraints: Array.isArray(col.constraints) ? (col.constraints as unknown[]).map(String) : [],
+              name:
+                (col.name as string) || (col.column_name as string) || "col",
+              type:
+                (col.type as string) || (col.datatype as string) || "string",
+              constraints: Array.isArray(col.constraints)
+                ? (col.constraints as unknown[]).map(String)
+                : [],
             };
           })
       : [];
 
     return {
-      table_name: (s.table_name as string) || (s.name as string) || "unnamed_table",
+      table_name:
+        (s.table_name as string) || (s.name as string) || "unnamed_table",
       columns,
-      indexes: Array.isArray(s.indexes) ? (s.indexes as unknown[]).map(String) : [],
-      relationships: Array.isArray(s.relationships) ? (s.relationships as unknown[]).map(String) : [],
+      indexes: Array.isArray(s.indexes)
+        ? (s.indexes as unknown[]).map(String)
+        : [],
+      relationships: Array.isArray(s.relationships)
+        ? (s.relationships as unknown[]).map(String)
+        : [],
     };
   });
 };
 
-const parseTechnicalDecisions = (value: unknown): ArchitectSpecArtifact["technical_decisions"] => {
+const parseTechnicalDecisions = (
+  value: unknown,
+): ArchitectSpecArtifact["technical_decisions"] => {
   if (!Array.isArray(value)) {
     return undefined;
   }
 
-  return (value as unknown[]).map(decision => {
+  return (value as unknown[]).map((decision) => {
     const d = decision as Record<string, unknown>;
     return {
-      decision: (d.decision as string) || (d.title as string) || "Untitled Decision",
+      decision:
+        (d.decision as string) || (d.title as string) || "Untitled Decision",
       rationale: (d.rationale as string) || (d.reason as string) || undefined,
-      alternatives: Array.isArray(d.alternatives) ? (d.alternatives as unknown[]).map(String) : [],
-      trade_offs: (d.trade_offs as string | undefined) || (d.tradeoffs as string | undefined),
+      alternatives: Array.isArray(d.alternatives)
+        ? (d.alternatives as unknown[]).map(String)
+        : [],
+      trade_offs:
+        (d.trade_offs as string | undefined) ||
+        (d.tradeoffs as string | undefined),
       context: d.context as string | undefined,
       confidence: normalizeConfidence(d.confidence),
     };
   });
 };
 
-const parseTechnologyStack = (value: unknown): ArchitectSpecArtifact["technology_stack"] => {
+const parseTechnologyStack = (
+  value: unknown,
+): ArchitectSpecArtifact["technology_stack"] => {
   if (!value || typeof value !== "object") {
     return undefined;
   }
 
   const stack = value as Record<string, unknown>;
-  return Object.fromEntries(Object.entries(stack).map(([key, val]) => [key, val == null ? "" : String(val)]));
+  return Object.fromEntries(
+    Object.entries(stack).map(([key, val]) => [
+      key,
+      val == null ? "" : String(val),
+    ]),
+  );
 };
 
 function parseArchitectSpec(data: unknown): ArchitectSpecArtifact {
@@ -328,8 +382,11 @@ function parseArchitectSpec(data: unknown): ArchitectSpecArtifact {
     ...(databaseSchema ? { database_schema: databaseSchema } : {}),
     ...(technicalDecisions ? { technical_decisions: technicalDecisions } : {}),
     ...(technologyStack ? { technology_stack: technologyStack } : {}),
-    scalability_plan: obj.scalability_plan != null ? String(obj.scalability_plan) : undefined,
-    security_considerations: Array.isArray(obj.security_considerations) ? obj.security_considerations : [],
+    scalability_plan:
+      obj.scalability_plan != null ? String(obj.scalability_plan) : undefined,
+    security_considerations: Array.isArray(obj.security_considerations)
+      ? obj.security_considerations
+      : [],
   };
 }
 
@@ -348,7 +405,7 @@ function parseEngineerSpec(data: unknown): EngineerSpecArtifact {
   // Parse file structure
   if (Array.isArray(obj.file_structure)) {
     artifact.file_structure = obj.file_structure.map((node: any) =>
-      parseFileNode(node)
+      parseFileNode(node),
     );
   }
 
@@ -359,30 +416,47 @@ function parseEngineerSpec(data: unknown): EngineerSpecArtifact {
         const st = step as Record<string, unknown>;
         return {
           step_number: (st.step_number as number) || index + 1,
-          title: (st.title as string) || (st.name as string) || `Step ${index + 1}`,
+          title:
+            (st.title as string) || (st.name as string) || `Step ${index + 1}`,
           description: st.description as string | undefined,
-          files_to_create: Array.isArray(st.files_to_create) ? (st.files_to_create as unknown[]).map(String) : [],
-          files_to_modify: Array.isArray(st.files_to_modify) ? (st.files_to_modify as unknown[]).map(String) : [],
-          commands: Array.isArray(st.commands) ? (st.commands as unknown[]).map(String) : [],
-          estimated_time: st.estimated_time != null ? String(st.estimated_time) : (st.time != null ? String(st.time) : undefined),
-          dependencies: Array.isArray(st.dependencies) ? (st.dependencies as unknown[]).map(String) : [],
+          files_to_create: Array.isArray(st.files_to_create)
+            ? (st.files_to_create as unknown[]).map(String)
+            : [],
+          files_to_modify: Array.isArray(st.files_to_modify)
+            ? (st.files_to_modify as unknown[]).map(String)
+            : [],
+          commands: Array.isArray(st.commands)
+            ? (st.commands as unknown[]).map(String)
+            : [],
+          estimated_time:
+            st.estimated_time != null
+              ? String(st.estimated_time)
+              : st.time != null
+                ? String(st.time)
+                : undefined,
+          dependencies: Array.isArray(st.dependencies)
+            ? (st.dependencies as unknown[]).map(String)
+            : [],
           completed: Boolean(st.completed),
         };
-      }
+      },
     );
   }
 
   // Parse dependencies
   if (Array.isArray(obj.dependencies)) {
-    artifact.dependencies = (obj.dependencies as unknown[]).map((dep: unknown) => {
-      const d = dep as Record<string, unknown>;
-      return {
-        name: (d.name as string) || (d.package as string) || "unknown",
-        version: d.version as string | undefined,
-        purpose: (d.purpose as string) || (d.description as string | undefined),
-        dev: Boolean(d.dev || d.devDependency),
-      };
-    });
+    artifact.dependencies = (obj.dependencies as unknown[]).map(
+      (dep: unknown) => {
+        const d = dep as Record<string, unknown>;
+        return {
+          name: (d.name as string) || (d.package as string) || "unknown",
+          version: d.version as string | undefined,
+          purpose:
+            (d.purpose as string) || (d.description as string | undefined),
+          dev: Boolean(d.dev || d.devDependency),
+        };
+      },
+    );
   }
 
   // Parse commands
@@ -398,15 +472,17 @@ function parseEngineerSpec(data: unknown): EngineerSpecArtifact {
 
   // Parse code snippets
   if (Array.isArray(obj.code_snippets)) {
-    artifact.code_snippets = (obj.code_snippets as unknown[]).map((snippet: unknown) => {
-      const sn = snippet as Record<string, unknown>;
-      return {
-        file: (sn.file as string) || (sn.filename as string) || "untitled",
-        language: (sn.language as string) || (sn.lang as string) || "text",
-        code: (sn.code as string) || (sn.content as string) || "",
-        description: sn.description as string | undefined,
-      };
-    });
+    artifact.code_snippets = (obj.code_snippets as unknown[]).map(
+      (snippet: unknown) => {
+        const sn = snippet as Record<string, unknown>;
+        return {
+          file: (sn.file as string) || (sn.filename as string) || "untitled",
+          language: (sn.language as string) || (sn.lang as string) || "text",
+          code: (sn.code as string) || (sn.content as string) || "",
+          description: sn.description as string | undefined,
+        };
+      },
+    );
   }
 
   artifact.estimated_effort = obj.estimated_effort;
@@ -435,7 +511,12 @@ function parseFileNode(node: unknown): FileNode {
       ? (n.children as unknown[]).map((child: unknown) => parseFileNode(child))
       : undefined,
     language: n.language as string | undefined,
-    lines_of_code: typeof n.lines_of_code === "number" ? (n.lines_of_code as number) : typeof n.loc === "number" ? (n.loc as number) : undefined,
+    lines_of_code:
+      typeof n.lines_of_code === "number"
+        ? (n.lines_of_code as number)
+        : typeof n.loc === "number"
+          ? (n.loc as number)
+          : undefined,
   };
 }
 
@@ -476,7 +557,9 @@ function parseTestScenarios(value: unknown): QASpecArtifact["test_scenarios"] {
       id: scenario.id || generateId(),
       title: scenario.title || scenario.name || "Untitled Test",
       description:
-        typeof scenario.description === "string" ? scenario.description : undefined,
+        typeof scenario.description === "string"
+          ? scenario.description
+          : undefined,
       scenario:
         typeof scenario.scenario === "string" ? scenario.scenario : undefined,
       priority: normalizePriority(scenario.priority),
@@ -518,7 +601,9 @@ function parseCodeCoverage(value: unknown): QASpecArtifact["code_coverage"] {
   };
 }
 
-function parseSecurityFindings(value: unknown): QASpecArtifact["security_findings"] {
+function parseSecurityFindings(
+  value: unknown,
+): QASpecArtifact["security_findings"] {
   if (!Array.isArray(value)) {
     return undefined;
   }
@@ -529,14 +614,18 @@ function parseSecurityFindings(value: unknown): QASpecArtifact["security_finding
       severity: normalizeSeverity(finding.severity),
       title: finding.title || finding.name || "Security Issue",
       description:
-        typeof finding.description === "string" ? finding.description : undefined,
+        typeof finding.description === "string"
+          ? finding.description
+          : undefined,
       file: typeof finding.file === "string" ? finding.file : undefined,
       line: typeof finding.line === "number" ? finding.line : undefined,
       recommendation: finding.recommendation || finding.fix,
     }));
 }
 
-function parsePerformanceMetrics(value: unknown): QASpecArtifact["performance_metrics"] {
+function parsePerformanceMetrics(
+  value: unknown,
+): QASpecArtifact["performance_metrics"] {
   if (!value || typeof value !== "object") {
     return undefined;
   }
@@ -563,7 +652,9 @@ function parseLintDetails(value: unknown): QASpecArtifact["lint_details"] {
     return undefined;
   }
 
-  return value.map((detail) => (typeof detail === "string" ? detail : String(detail)));
+  return value.map((detail) =>
+    typeof detail === "string" ? detail : String(detail),
+  );
 }
 
 function normalizeNumberMetric(value: unknown): number {
@@ -585,9 +676,11 @@ function normalizeNumberMetric(value: unknown): number {
 // UTILITY FUNCTIONS
 // ============================================================================
 
-function normalizePriority(priority: any): "high" | "medium" | "low" | "critical" {
+function normalizePriority(
+  priority: any,
+): "high" | "medium" | "low" | "critical" {
   if (typeof priority !== "string") return "medium";
-  
+
   const p = priority.toLowerCase();
   if (p === "critical" || p === "p0") return "critical";
   if (p === "high" || p === "p1") return "high";
@@ -595,19 +688,24 @@ function normalizePriority(priority: any): "high" | "medium" | "low" | "critical
   return "medium";
 }
 
-function normalizeStatus(status: any): "pending" | "in_progress" | "complete" | "blocked" {
+function normalizeStatus(
+  status: any,
+): "pending" | "in_progress" | "complete" | "blocked" {
   if (typeof status !== "string") return "pending";
-  
+
   const s = status.toLowerCase().replace(/[_-]/g, "");
   if (s === "complete" || s === "done" || s === "completed") return "complete";
-  if (s === "inprogress" || s === "active" || s === "working") return "in_progress";
+  if (s === "inprogress" || s === "active" || s === "working")
+    return "in_progress";
   if (s === "blocked" || s === "stuck") return "blocked";
   return "pending";
 }
 
-function normalizeTestStatus(status: any): "passed" | "failed" | "skipped" | "pending" {
+function normalizeTestStatus(
+  status: any,
+): "passed" | "failed" | "skipped" | "pending" {
   if (typeof status !== "string") return "pending";
-  
+
   const s = status.toLowerCase();
   if (s === "passed" || s === "pass" || s === "success") return "passed";
   if (s === "failed" || s === "fail" || s === "error") return "failed";
@@ -640,7 +738,9 @@ function normalizeToStringOrUndefined(v: unknown): string | undefined {
   }
 }
 
-function normalizeComponentType(v: unknown): "service" | "database" | "cache" | "queue" | "api" | "client" {
+function normalizeComponentType(
+  v: unknown,
+): "service" | "database" | "cache" | "queue" | "api" | "client" {
   if (typeof v !== "string") return "service";
   const s = v.toLowerCase();
   if (s.includes("db") || s.includes("database")) return "database";
@@ -651,7 +751,9 @@ function normalizeComponentType(v: unknown): "service" | "database" | "cache" | 
   return "service";
 }
 
-function normalizeHttpMethod(v: unknown): "GET" | "POST" | "PUT" | "PATCH" | "DELETE" {
+function normalizeHttpMethod(
+  v: unknown,
+): "GET" | "POST" | "PUT" | "PATCH" | "DELETE" {
   if (typeof v !== "string") return "GET";
   const m = v.toUpperCase();
   if (m === "POST") return "POST";
@@ -669,7 +771,9 @@ function normalizeFileNodeType(v: unknown): "file" | "folder" | "directory" {
   return "file";
 }
 
-function normalizeTestType(v: unknown): "unit" | "integration" | "e2e" | "performance" | "security" {
+function normalizeTestType(
+  v: unknown,
+): "unit" | "integration" | "e2e" | "performance" | "security" {
   if (typeof v !== "string") return "unit";
   const s = v.toLowerCase();
   if (s === "integration") return "integration";
@@ -679,7 +783,9 @@ function normalizeTestType(v: unknown): "unit" | "integration" | "e2e" | "perfor
   return "unit";
 }
 
-function normalizeSeverity(v: unknown): "critical" | "high" | "medium" | "low" | "info" {
+function normalizeSeverity(
+  v: unknown,
+): "critical" | "high" | "medium" | "low" | "info" {
   if (typeof v !== "string") return "info";
   const s = v.toLowerCase();
   if (s === "critical") return "critical";
@@ -718,7 +824,9 @@ const hasArrayEntries = (value: unknown): boolean =>
 const anyTrue = (...checks: Array<boolean | undefined>): boolean =>
   checks.some(Boolean);
 
-const ARTIFACT_VALIDATORS: Partial<Record<ParsedArtifact["role"], ArtifactValidator>> = {
+const ARTIFACT_VALIDATORS: Partial<
+  Record<ParsedArtifact["role"], ArtifactValidator>
+> = {
   product_manager: (data) => {
     const pmData = data as PMSpecArtifact;
     return anyTrue(
@@ -749,4 +857,3 @@ const ARTIFACT_VALIDATORS: Partial<Record<ParsedArtifact["role"], ArtifactValida
     );
   },
 };
-

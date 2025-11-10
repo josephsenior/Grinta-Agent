@@ -4,6 +4,7 @@ import pytest
 from forge.utils.async_utils import (
     AsyncException,
     call_async_from_sync,
+    call_coro_in_bg_thread,
     call_sync_from_async,
     run_in_loop,
     wait_all,
@@ -106,6 +107,31 @@ def test_call_async_from_sync_error():
 
     with pytest.raises(ValueError):
         call_async_from_sync(dummy, 0, 3)
+
+
+def test_call_async_from_sync_with_none():
+    with pytest.raises(ValueError, match="corofn is None"):
+        call_async_from_sync(None)  # type: ignore[arg-type]
+
+
+def test_call_async_from_sync_with_non_coroutine():
+    def not_a_coroutine():
+        return 1
+
+    with pytest.raises(ValueError, match="corofn is not a coroutine function"):
+        call_async_from_sync(not_a_coroutine)  # type: ignore[arg-type]
+
+
+def test_call_async_from_sync_executor_shutdown(monkeypatch):
+    async def dummy():
+        return "ok"
+
+    # Replace executor with object indicating shutdown so we exercise fallback path.
+    class DummyExecutor:
+        _shutdown = True
+
+    monkeypatch.setattr("forge.utils.async_utils.EXECUTOR", DummyExecutor())
+    assert call_async_from_sync(dummy) == "ok"
 
 
 def test_call_async_from_sync_background_tasks():
@@ -290,3 +316,38 @@ def test_run_in_loop_sync_context():
 
     result = sync_function()
     assert result == 24
+
+
+@pytest.mark.asyncio
+async def test_call_coro_in_bg_thread(monkeypatch):
+    """Ensure call_coro_in_bg_thread delegates to call_sync_from_async with provided args."""
+    calls = []
+
+    async def fake_call_sync(fn, *args, **kwargs):
+        calls.append((fn, args, kwargs))
+
+    monkeypatch.setattr("forge.utils.async_utils.call_sync_from_async", fake_call_sync)
+
+    async def sample_coro(x: int) -> int:
+        return x * 2
+
+    await call_coro_in_bg_thread(sample_coro, 5, 7)
+    assert len(calls) == 1
+    called_fn, args, kwargs = calls[0]
+    assert called_fn == call_async_from_sync
+    assert args[0] is sample_coro
+    assert args[1] == 5
+    assert args[2] == 7
+    assert kwargs == {}
+
+
+@pytest.mark.asyncio
+async def test_wait_all_empty_iterable():
+    assert await wait_all((), timeout=0.1) == []
+
+
+def test_async_exception_str():
+    error = AsyncException([ValueError("bad"), RuntimeError("worse")])
+    message = str(error)
+    assert "bad" in message
+    assert "worse" in message

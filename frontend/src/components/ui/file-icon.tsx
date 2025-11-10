@@ -30,7 +30,10 @@ export function FileIcon({
   if (iconClass && iconClass !== "default-icon") {
     return (
       <div
-        className={cn("file-icon inline-flex items-center justify-center", className)}
+        className={cn(
+          "file-icon inline-flex items-center justify-center",
+          className,
+        )}
         data-category={dataCategory || category}
         data-status={dataStatus || status}
         style={{ width: size, height: size }}
@@ -39,7 +42,7 @@ export function FileIcon({
       >
         <i
           className={iconClassWithColor || iconClass}
-          style={{ fontSize: size, lineHeight: 1, display: 'inline-block' }}
+          style={{ fontSize: size, lineHeight: 1, display: "inline-block" }}
           aria-hidden="true"
         />
       </div>
@@ -49,7 +52,10 @@ export function FileIcon({
   // Fallback to emoji (always use fallback if file-icons-js not loaded)
   return (
     <div
-      className={cn("file-icon inline-flex items-center justify-center", className)}
+      className={cn(
+        "file-icon inline-flex items-center justify-center",
+        className,
+      )}
       data-category={dataCategory || category}
       data-status={dataStatus || status}
       style={{ width: size, height: size }}

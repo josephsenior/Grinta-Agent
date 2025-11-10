@@ -6,7 +6,7 @@ import {
   Dispatch,
   SetStateAction,
 } from "react";
-import { Search, Filter, X, Sparkles, TrendingUp, RefreshCw } from "lucide-react";
+import { Search, Filter, X, Sparkles, TrendingUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type {
   MCPMarketplaceItem,
@@ -69,7 +69,9 @@ function useMarketplaceController({
 }: MarketplaceControllerParams): MarketplaceController {
   const [filters, setFilters] = useState<MCPMarketplaceFilters>({});
   const [searchInput, setSearchInput] = useState("");
-  const [selectedMCP, setSelectedMCP] = useState<MCPMarketplaceItem | null>(null);
+  const [selectedMCP, setSelectedMCP] = useState<MCPMarketplaceItem | null>(
+    null,
+  );
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
@@ -91,12 +93,15 @@ function useMarketplaceController({
     }));
   }, []);
 
-  const handleTypeFilter = useCallback((type: "sse" | "stdio" | "shttp" | "all") => {
-    setFilters((prev) => ({
-      ...prev,
-      type: type === "all" ? undefined : type,
-    }));
-  }, []);
+  const handleTypeFilter = useCallback(
+    (type: "sse" | "stdio" | "shttp" | "all") => {
+      setFilters((prev) => ({
+        ...prev,
+        type: type === "all" ? undefined : type,
+      }));
+    },
+    [],
+  );
 
   const handleFeaturedFilter = useCallback(() => {
     setFilters((prev) => ({
@@ -178,7 +183,10 @@ export function MCPMarketplace({
 
   return (
     <div className="space-y-6">
-      <MarketplaceStatsBanner data={controller.data} onRefresh={controller.refetch} />
+      <MarketplaceStatsBanner
+        data={controller.data}
+        onRefresh={controller.refetch}
+      />
       <MarketplaceSearchBar
         searchInput={controller.searchInput}
         setSearchInput={controller.setSearchInput}
@@ -187,8 +195,14 @@ export function MCPMarketplace({
         activeFiltersCount={controller.activeFiltersCount}
       />
       <MarketplaceFilterPanel controller={controller} />
-      <MarketplaceResultsSection controller={controller} onInstall={onInstall} />
-      <MarketplaceDetailsModalWrapper controller={controller} onInstall={onInstall} />
+      <MarketplaceResultsSection
+        controller={controller}
+        onInstall={onInstall}
+      />
+      <MarketplaceDetailsModalWrapper
+        controller={controller}
+        onInstall={onInstall}
+      />
     </div>
   );
 }
@@ -318,7 +332,9 @@ function MarketplaceQuickFilters({
 }) {
   return (
     <div>
-      <h4 className="text-sm font-medium text-foreground mb-2">Quick Filters</h4>
+      <h4 className="text-sm font-medium text-foreground mb-2">
+        Quick Filters
+      </h4>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
@@ -535,4 +551,3 @@ function MarketplaceDetailsModalWrapper({
     />
   );
 }
-

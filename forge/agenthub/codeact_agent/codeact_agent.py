@@ -1008,7 +1008,7 @@ Instructions:
                         accumulated=accumulated_content,
                         is_final=False,
                     )
-                    streaming_action._source = EventSource.AGENT
+                    streaming_action.source = EventSource.AGENT
                     self.event_stream.add_event(streaming_action, EventSource.AGENT)
 
         # Mark final chunk
@@ -1018,7 +1018,7 @@ Instructions:
                 accumulated=accumulated_content,
                 is_final=True,
             )
-            final_chunk._source = EventSource.AGENT
+            final_chunk.source = EventSource.AGENT
             self.event_stream.add_event(final_chunk, EventSource.AGENT)
 
         return accumulated_content, accumulated_chunks
@@ -1090,7 +1090,7 @@ Instructions:
             if getattr(response, "choices", None):
                 message_text = getattr(response.choices[0].message, "content", "") or ""
             action = MessageAction(content=message_text)
-            action._source = EventSource.AGENT
+            action.source = EventSource.AGENT
             return action
 
         for action in actions[1:]:
@@ -1101,7 +1101,7 @@ Instructions:
         """Find the initial user message if it exists."""
         events = history.history if hasattr(history, "history") else history
         for event in events:
-            if isinstance(event, MessageAction) and getattr(event, "_source", None) == EventSource.USER:
+            if isinstance(event, MessageAction) and event.source == EventSource.USER:
                 return event
         msg = "Initial user message not found"
         raise ValueError(msg)

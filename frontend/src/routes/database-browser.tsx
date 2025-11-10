@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Database, ArrowLeft } from "lucide-react";
-import { useDatabaseConnections, useExecuteQuery } from "#/hooks/query/use-database-connections";
+import {
+  useDatabaseConnections,
+  useExecuteQuery,
+} from "#/hooks/query/use-database-connections";
 import { SchemaBrowser } from "#/components/features/database-browser/schema-browser";
 import { QueryEditor } from "#/components/features/database-browser/query-editor";
 import { QueryResults } from "#/components/features/database-browser/query-results";
@@ -16,7 +19,11 @@ function DatabaseBrowserScreen() {
   const connectionId = searchParams.get("connection");
 
   const { data: connections } = useDatabaseConnections();
-  const { mutate: executeQuery, isPending, data: queryResults } = useExecuteQuery();
+  const {
+    mutate: executeQuery,
+    isPending,
+    data: queryResults,
+  } = useExecuteQuery();
 
   const [currentQuery, setCurrentQuery] = useState("");
 
@@ -100,7 +107,8 @@ function DatabaseBrowserScreen() {
                 {connection.name}
               </h1>
               <p className="text-sm text-foreground-secondary">
-                {connection.type.toUpperCase()} • {connection.host}:{connection.port}
+                {connection.type.toUpperCase()} • {connection.host}:
+                {connection.port}
               </p>
             </div>
           </div>
@@ -122,7 +130,10 @@ function DatabaseBrowserScreen() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left sidebar - Schema Browser */}
         <div className="w-64 border-r border-border bg-background-secondary overflow-y-auto">
-          <SchemaBrowser connection={connection} onTableSelect={handleTableSelect} />
+          <SchemaBrowser
+            connection={connection}
+            onTableSelect={handleTableSelect}
+          />
         </div>
 
         {/* Right side - Query Editor and Results */}
@@ -151,4 +162,3 @@ function DatabaseBrowserScreen() {
 }
 
 export default DatabaseBrowserScreen;
-

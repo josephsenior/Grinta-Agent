@@ -32,21 +32,21 @@ export function MessageSkeleton({
 
             {/* Content lines - staggered shimmer */}
             <div className="space-y-2">
-              <div 
+              <div
                 className="skeleton h-3 rounded-lg w-full bg-gradient-to-r from-background-surface/50 via-brand-500/10 to-background-surface/50"
                 style={{ animationDelay: "100ms" }}
               />
-              <div 
+              <div
                 className="skeleton h-3 rounded-lg w-5/6 bg-gradient-to-r from-background-surface/50 via-brand-500/10 to-background-surface/50"
                 style={{ animationDelay: "200ms" }}
               />
               {index % 2 === 0 && (
                 <>
-                  <div 
+                  <div
                     className="skeleton h-3 rounded-lg w-4/6 bg-gradient-to-r from-background-surface/50 via-brand-500/10 to-background-surface/50"
                     style={{ animationDelay: "300ms" }}
                   />
-                  <div 
+                  <div
                     className="skeleton h-3 rounded-lg w-3/4 bg-gradient-to-r from-background-surface/50 via-brand-500/10 to-background-surface/50"
                     style={{ animationDelay: "400ms" }}
                   />
@@ -58,11 +58,11 @@ export function MessageSkeleton({
             {index % 3 === 0 && (
               <div className="mt-3 space-y-2 p-3 rounded-lg border border-brand-500/15 bg-gradient-to-br from-background-surface/30 to-brand-500/5">
                 <div className="skeleton h-2 rounded w-2/3 bg-gradient-to-r from-background-surface/50 via-brand-500/10 to-background-surface/50" />
-                <div 
+                <div
                   className="skeleton h-2 rounded w-3/4 bg-gradient-to-r from-background-surface/50 via-brand-500/10 to-background-surface/50"
                   style={{ animationDelay: "150ms" }}
                 />
-                <div 
+                <div
                   className="skeleton h-2 rounded w-1/2 bg-gradient-to-r from-background-surface/50 via-brand-500/10 to-background-surface/50"
                   style={{ animationDelay: "300ms" }}
                 />

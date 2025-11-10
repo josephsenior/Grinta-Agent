@@ -3,4 +3,3 @@ import { KnowledgeBaseManager } from "#/components/features/knowledge-base/knowl
 export default function KnowledgeBaseSettings() {
   return <KnowledgeBaseManager />;
 }
-

@@ -35,7 +35,9 @@ export function PMVisualization({
     return (
       <div className={`metasop-viz-empty ${className}`}>
         <User className="w-12 h-12 text-purple-400 opacity-50 mb-2" />
-        <p className="text-sm text-neutral-400">No product specifications yet...</p>
+        <p className="text-sm text-neutral-400">
+          No product specifications yet...
+        </p>
       </div>
     );
   }
@@ -44,8 +46,12 @@ export function PMVisualization({
     <div className={`metasop-viz-pm ${className}`}>
       <div className="metasop-viz-header bg-purple-500/10 border-purple-500/20">
         <User className="w-5 h-5 text-purple-400" />
-        <h3 className="text-sm font-semibold text-purple-300">Product Manager</h3>
-        <span className="text-xs text-purple-400/60">Requirements & User Stories</span>
+        <h3 className="text-sm font-semibold text-purple-300">
+          Product Manager
+        </h3>
+        <span className="text-xs text-purple-400/60">
+          Requirements & User Stories
+        </span>
       </div>
 
       <div className="p-4 space-y-6">{sections}</div>
@@ -121,13 +127,18 @@ const renderEpicsSection = ({
       >
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h5 className="text-sm font-medium text-purple-200">{epic.title}</h5>
+            <h5 className="text-sm font-medium text-purple-200">
+              {epic.title}
+            </h5>
             {epic.description && (
-              <p className="text-xs text-neutral-400 mt-1">{epic.description}</p>
+              <p className="text-xs text-neutral-400 mt-1">
+                {epic.description}
+              </p>
             )}
             {epic.stories && epic.stories.length > 0 && (
               <div className="mt-2 text-xs text-purple-400">
-                {epic.stories.length} {epic.stories.length === 1 ? "story" : "stories"}
+                {epic.stories.length}{" "}
+                {epic.stories.length === 1 ? "story" : "stories"}
               </div>
             )}
           </div>
@@ -209,7 +220,9 @@ const renderSuccessMetricsSection = ({
         <div className="flex items-start justify-between">
           <p className="text-sm text-purple-200">{metric.metric}</p>
           {metric.target && (
-            <span className="text-xs text-purple-400 ml-2">Target: {metric.target}</span>
+            <span className="text-xs text-purple-400 ml-2">
+              Target: {metric.target}
+            </span>
           )}
         </div>
         {metric.description && (
@@ -316,7 +329,7 @@ function buildUserStoryMetadata(story: UserStory) {
   if (story.estimate) {
     metadata.push({
       icon: <Clock className="w-3 h-3" />,
-      text: story.estimate,
+      text: String(story.estimate),
     });
   }
 
@@ -379,7 +392,9 @@ function AcceptanceCriteriaCard({
   index: number;
   animated?: boolean;
 }) {
-  const [isCompleted, setIsCompleted] = React.useState<boolean>(() => Boolean(criteria.completed));
+  const [isCompleted, setIsCompleted] = React.useState<boolean>(() =>
+    Boolean(criteria.completed),
+  );
 
   const bddSection = buildBddSection(criteria);
   const scenarioSection = buildScenarioSection(criteria);
@@ -398,7 +413,11 @@ function AcceptanceCriteriaCard({
           onClick={() => setIsCompleted(!isCompleted)}
           className="mt-0.5 text-purple-400 hover:text-purple-300 transition-colors"
         >
-          {isCompleted ? <CheckCircle className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
+          {isCompleted ? (
+            <CheckCircle className="w-4 h-4" />
+          ) : (
+            <Circle className="w-4 h-4" />
+          )}
         </button>
         <div className="flex-1">
           <p
@@ -444,9 +463,5 @@ function buildScenarioSection(criteria: AcceptanceCriteria) {
     return null;
   }
 
-  return (
-    <p className="text-xs text-neutral-500 mt-1">{criteria.scenario}</p>
-  );
+  return <p className="text-xs text-neutral-500 mt-1">{criteria.scenario}</p>;
 }
-
-

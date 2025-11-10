@@ -267,16 +267,19 @@ function useMicroagentHandlers({
     dispatch(setLearnThisRepoModalVisible(false));
   }, [dispatch]);
 
-  const invalidateConversationsList = React.useCallback((repositoryName: string) => {
-    queryClient.invalidateQueries({
-      queryKey: [
-        "conversations",
-        "search",
-        repositoryName,
-        "microagent_management",
-      ],
-    });
-  }, []);
+  const invalidateConversationsList = React.useCallback(
+    (repositoryName: string) => {
+      queryClient.invalidateQueries({
+        queryKey: [
+          "conversations",
+          "search",
+          repositoryName,
+          "microagent_management",
+        ],
+      });
+    },
+    [],
+  );
 
   const handleMicroagentEvent = React.useCallback(
     (socketEvent: unknown) => {
@@ -309,8 +312,20 @@ function useMicroagentHandlers({
       const prShort = getPRShort(isGitLab);
 
       const conversationInstructions = isUpdate
-        ? getUpdateConversationInstructions(repositoryName, formData, pr, prShort, gitProvider)
-        : getConversationInstructions(repositoryName, formData, pr, prShort, gitProvider);
+        ? getUpdateConversationInstructions(
+            repositoryName,
+            formData,
+            pr,
+            prShort,
+            gitProvider,
+          )
+        : getConversationInstructions(
+            repositoryName,
+            formData,
+            pr,
+            prShort,
+            gitProvider,
+          );
 
       const createMicroagent = {
         repo: repositoryName,
@@ -377,7 +392,11 @@ function useMicroagentHandlers({
         },
       });
     },
-    [createConversationAndSubscribe, hideLearnThisRepoModal, selectedRepository],
+    [
+      createConversationAndSubscribe,
+      hideLearnThisRepoModal,
+      selectedRepository,
+    ],
   );
 
   return {
@@ -388,7 +407,7 @@ function useMicroagentHandlers({
   } as const;
 }
 
-const MicroagentModals = ({
+function MicroagentModals({
   addVisible,
   updateVisible,
   learnVisible,
@@ -406,25 +425,27 @@ const MicroagentModals = ({
   onCancelUpsert: (isUpdate?: boolean) => void;
   onCancelLearn: () => void;
   isLoading: boolean;
-}) => (
-  <>
-    {(addVisible || updateVisible) && (
-      <MicroagentManagementUpsertMicroagentModal
-        onConfirm={(formData) => onConfirmUpsert(formData, updateVisible)}
-        onCancel={() => onCancelUpsert(updateVisible)}
-        isLoading={isLoading}
-        isUpdate={updateVisible}
-      />
-    )}
-    {learnVisible && (
-      <MicroagentManagementLearnThisRepoModal
-        onCancel={onCancelLearn}
-        onConfirm={onConfirmLearn}
-        isLoading={isLoading}
-      />
-    )}
-  </>
-);
+}) {
+  return (
+    <>
+      {(addVisible || updateVisible) && (
+        <MicroagentManagementUpsertMicroagentModal
+          onConfirm={(formData) => onConfirmUpsert(formData, updateVisible)}
+          onCancel={() => onCancelUpsert(updateVisible)}
+          isLoading={isLoading}
+          isUpdate={updateVisible}
+        />
+      )}
+      {learnVisible && (
+        <MicroagentManagementLearnThisRepoModal
+          onCancel={onCancelLearn}
+          onConfirm={onConfirmLearn}
+          isLoading={isLoading}
+        />
+      )}
+    </>
+  );
+}
 
 const isCompactLayout = (width: number) => width < 1024;
 
@@ -440,10 +461,7 @@ const renderCompactLayout = ({
   <div className="w-full h-full flex flex-col gap-6">
     <div className="w-full rounded-lg border border-[#525252] bg-[#24272E] max-h-[494px] min-h-[494px]">
       {providersAreSet && (
-        <MicroagentManagementSidebar
-          isSmallerScreen
-          providers={providers}
-        />
+        <MicroagentManagementSidebar isSmallerScreen providers={providers} />
       )}
     </div>
     <div className="w-full rounded-lg border border-[#525252] bg-[#24272E] flex-1 min-h-[494px]">

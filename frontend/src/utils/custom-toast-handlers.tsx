@@ -3,7 +3,7 @@ import type { ToastOptions } from "react-hot-toast";
 import safeToast from "#/utils/safe-hot-toast";
 import { calculateToastDuration } from "./toast-duration";
 import { normalizeToastMessage } from "./toast-normalize";
-import { extractUserFriendlyError, formatClientError, isUserFriendlyError } from "./format-error";
+import { extractUserFriendlyError, formatClientError } from "./format-error";
 import type { UserFriendlyErrorData } from "#/components/shared/error/user-friendly-error";
 
 const TOAST_STYLE: CSSProperties = {
@@ -47,12 +47,12 @@ export const displayErrorToast = (error: unknown) => {
 
   // Try to extract user-friendly error from backend
   const userFriendlyError = extractUserFriendlyError(error);
-  
+
   if (userFriendlyError) {
     // Use formatted error from backend
     const message = `${userFriendlyError.icon || "❌"} ${userFriendlyError.title}\n\n${userFriendlyError.suggestion || userFriendlyError.message.split("\n\n")[0]}`;
     const duration = calculateToastDuration(message, 5000);
-    
+
     safeToast.error(message, {
       ...TOAST_OPTIONS,
       duration,
@@ -78,13 +78,16 @@ export const displaySuccessToast = (message: unknown) => {
 
 /**
  * Display user-friendly error in a detailed toast
- * 
+ *
  * Shows full error with actions when available
  */
-export const displayDetailedErrorToast = (error: UserFriendlyErrorData, onAction?: (action: any) => void) => {
+export const displayDetailedErrorToast = (
+  error: UserFriendlyErrorData,
+  onAction?: (action: any) => void,
+) => {
   const message = `${error.icon || "❌"} ${error.title}\n\n${error.message}`;
-  const duration = calculateToastDuration(message, 8000);  // Longer for detailed errors
-  
+  const duration = calculateToastDuration(message, 8000); // Longer for detailed errors
+
   safeToast.error(message, {
     ...TOAST_OPTIONS,
     duration,

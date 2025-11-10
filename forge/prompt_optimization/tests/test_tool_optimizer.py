@@ -1,7 +1,7 @@
 """Tests for tool-specific prompt optimization."""
 
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 from forge.prompt_optimization.tool_optimizer import ToolOptimizer
 from forge.prompt_optimization.models import PromptCategory, PromptVariant
 from forge.prompt_optimization.registry import PromptRegistry
@@ -57,7 +57,7 @@ class TestToolOptimizer:
         optimized_tool = tool_optimizer.optimize_tool(original_tool, "test_tool")
         assert optimized_tool == original_tool
     
-    def test_optimize_tool_with_variant(self):
+    def test_optimize_tool_with_variant_dict_input(self):
         """Test tool optimization with a variant."""
         # Mock the optimizer to return a variant
         mock_variant = PromptVariant(
@@ -81,10 +81,9 @@ class TestToolOptimizer:
             )
         )
         
-        optimized_tool = self.tool_optimizer.optimize_tool(original_tool, "test_tool")
-        
-        # Should return the original tool since test_tool is not in tool_prompt_ids
-        assert optimized_tool == original_tool
+        optimized_tool = self.tool_optimizer.optimize_tool(original_tool, "think")
+        function_block = optimized_tool["function"]
+        assert function_block["description"].startswith("Optimized")
     
     def test_optimize_think_tool(self):
         """Test optimization of the think tool."""
@@ -137,6 +136,20 @@ PARAMETERS:
         assert 'param1' in parsed['parameters']['properties']
         assert 'param2' in parsed['parameters']['properties']
         assert parsed['parameters']['properties']['param1']['description'] == "This is parameter 1"
+
+    def test_parse_tool_variant_handles_simple_values(self):
+        """Ensure parser handles non-dict parameter descriptions."""
+        content = """DESCRIPTION: Simple description
+
+PARAMETERS:
+- paramX:
+  description: Simple
+- paramY:
+  value: Example"""
+
+        parsed = self.tool_optimizer._parse_tool_variant(content)
+        assert parsed["parameters"]["properties"]["paramX"]["description"] == "Simple"
+        assert parsed["parameters"]["properties"]["paramY"]["value"] == "Example"
     
     def test_track_tool_execution(self):
         """Test tracking tool execution."""
@@ -158,6 +171,11 @@ PARAMETERS:
         assert call_args[1]['token_cost'] == 0.1
         assert call_args[1]['metadata']['test'] == "data"
     
+    def test_track_tool_execution_without_optimizer(self):
+        """Tracking should no-op when optimizer missing."""
+        tool_optimizer = ToolOptimizer(self.registry, self.tracker, None)
+        tool_optimizer.track_tool_execution("think", True, 1.0)
+
     def test_create_tool_variants(self):
         """Test creating tool variants."""
         self.optimizer.add_variant = Mock(return_value="variant-id-1")
@@ -171,6 +189,15 @@ PARAMETERS:
         assert len(variants) == 1
         assert variants[0] == "variant-id-1"
         self.optimizer.add_variant.assert_called_once()
+
+    def test_create_tool_variants_unknown_tool(self):
+        """Should return empty list for unknown tool."""
+        variants = self.tool_optimizer.create_tool_variants(
+            tool_name="unknown",
+            original_description="Original description",
+            original_parameters={},
+        )
+        assert variants == []
     
     def test_get_tool_optimization_status(self):
         """Test getting tool optimization status."""
@@ -206,6 +233,15 @@ PARAMETERS:
         self.optimizer.add_variant.assert_called_once()
         self.optimizer.force_switch_variant.assert_called_once_with("tool_think", "variant-id-1")
     
+    def test_force_optimize_tool_unknown(self):
+        """Force optimize should return None for unknown tool."""
+        result = self.tool_optimizer.force_optimize_tool(
+            tool_name="unknown",
+            description="Forced description",
+            parameters={},
+        )
+        assert result is None
+
     def test_get_tool_performance_summary(self):
         """Test getting tool performance summary."""
         self.tracker.get_prompt_metrics = Mock(return_value={
@@ -219,6 +255,40 @@ PARAMETERS:
         assert "think" in summary
         assert summary["think"]["variants"] == 2
         assert summary["think"]["best_score"] == 0.9
+
+    def test_get_tool_performance_summary_with_iterable_metrics(self):
+        """Ensure summary handles iterable metrics outputs."""
+        self.tracker.get_prompt_metrics = Mock(return_value=[
+            ("variant-1", Mock(composite_score=0.7)),
+            ("variant-3", Mock(composite_score=0.95)),
+        ])
+
+        summary = self.tool_optimizer.get_tool_performance_summary()
+        assert summary["think"]["best_score"] == 0.95
+        assert summary["think"]["variants"] == 2
+
+    def test_evolve_tool_flow(self, monkeypatch: pytest.MonkeyPatch):
+        """Test evolve_tool invoking PromptEvolver."""
+        self.optimizer.should_evolve_prompt.return_value = True
+        self.optimizer.get_candidates_for_evolution.return_value = [PromptVariant(prompt_id="tool_think")]
+
+        class _StubEvolver:
+            def __init__(self, *args, **kwargs):
+                pass
+
+        from forge.prompt_optimization import evolver as evolver_module
+
+        def _stub(*args, **kwargs):
+            class _Stub:
+                def evolve_prompt(self, prompt_id: str, max_variants: int = 3):
+                    return ["variant_a", "variant_b"]
+
+            return _Stub()
+
+        monkeypatch.setattr(evolver_module, "PromptEvolver", _stub)
+
+        variants = self.tool_optimizer.evolve_tool("think")
+        assert variants == ["variant_a", "variant_b"]
 
 
 class TestToolDescriptions:
@@ -241,10 +311,13 @@ class TestToolDescriptions:
     
     def test_get_all_optimized_descriptions(self):
         """Test getting all optimized descriptions."""
-        all_descriptions = get_optimized_description("all")
-        
-        # This should return empty dict since "all" is not a valid tool name
-        assert all_descriptions == {}
+        from forge.prompt_optimization.tool_descriptions import get_all_optimized_descriptions
+
+        all_descriptions = get_all_optimized_descriptions()
+
+        assert isinstance(all_descriptions, dict)
+        assert "think" in all_descriptions
+        assert all_descriptions["think"]["parameters"]
     
     def test_create_tool_variant_content(self):
         """Test creating tool variant content."""
@@ -266,6 +339,17 @@ class TestToolDescriptions:
         assert "- thought:" in content
         assert "description: Test thought parameter" in content
 
+    def test_create_tool_variant_content_with_string_parameter(self):
+        """Test variant content creation when parameter is plain string."""
+        from forge.prompt_optimization.tool_descriptions import create_tool_variant_content
+
+        content = create_tool_variant_content(
+            tool_name="notes",
+            description="Simple",
+            parameters={"note": "Use carefully"},
+        )
+        assert "note" in content
+        assert "Use carefully" in content
 
 if __name__ == "__main__":
     pytest.main([__file__])

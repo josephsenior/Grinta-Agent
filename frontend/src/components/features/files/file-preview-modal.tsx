@@ -10,9 +10,10 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "#/components/ui/dialog";
 import { Button } from "#/components/ui/button";
 import { cn } from "#/utils/utils";
@@ -103,6 +104,9 @@ export function FilePreviewModal({
               {selectedFiles.length === 1 ? "file" : "files"}
             </Badge>
           </DialogTitle>
+          <DialogDescription className="text-sm text-text-secondary">
+            Review your selected files and remove any you do not want to upload.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-4 py-4">

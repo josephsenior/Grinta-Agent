@@ -8,18 +8,23 @@ import { ol, ul } from "../markdown/list";
 import ArrowDown from "#/icons/angle-down-solid.svg?react";
 import ArrowUp from "#/icons/angle-up-solid.svg?react";
 import i18n from "#/i18n";
-import { UserFriendlyError, type UserFriendlyErrorData } from "#/components/shared/error/user-friendly-error";
-import { extractUserFriendlyError, formatClientError } from "#/utils/format-error";
+import { UserFriendlyError } from "#/components/shared/error/user-friendly-error";
+import { extractUserFriendlyError } from "#/utils/format-error";
 import { useErrorActionHandler } from "#/hooks/use-error-action-handler";
 
 interface ErrorMessageProps {
   errorId?: string;
   defaultMessage: string;
-  error?: unknown;  // Raw error object (for user-friendly formatting)
+  error?: unknown; // Raw error object (for user-friendly formatting)
   onRetry?: () => void;
 }
 
-export function ErrorMessage({ errorId, defaultMessage, error, onRetry }: ErrorMessageProps) {
+export function ErrorMessage({
+  errorId,
+  defaultMessage,
+  error,
+  onRetry,
+}: ErrorMessageProps) {
   const { t } = useTranslation();
   const [showDetails, setShowDetails] = React.useState(false);
   const { handleErrorAction } = useErrorActionHandler();
@@ -33,7 +38,9 @@ export function ErrorMessage({ errorId, defaultMessage, error, onRetry }: ErrorM
       <div className="my-4">
         <UserFriendlyError
           error={userFriendlyError}
-          onAction={(action) => handleErrorAction(action, { retry: onRetry ?? (() => {}) })}
+          onAction={(action) =>
+            handleErrorAction(action, { retry: onRetry ?? (() => {}) })
+          }
           onRetry={onRetry || (() => {})}
         />
       </div>
@@ -54,6 +61,7 @@ export function ErrorMessage({ errorId, defaultMessage, error, onRetry }: ErrorM
           type="button"
           onClick={() => setShowDetails((prev) => !prev)}
           className="cursor-pointer text-left"
+          aria-label={showDetails ? "Hide error details" : "Show error details"}
         >
           {showDetails ? (
             <ArrowUp className="h-4 w-4 ml-2 inline fill-danger" />

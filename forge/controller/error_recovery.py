@@ -22,7 +22,19 @@ from forge.core.exceptions import FunctionCallValidationError, FunctionCallNotEx
 
 # Import for checking authentication errors
 try:
-    from litellm.exceptions import AuthenticationError
+    from litellm import exceptions as _litellm_exceptions
+
+    class _FlexibleAuthenticationError(_litellm_exceptions.AuthenticationError):  # type: ignore[misc]
+        """Compatibility wrapper that accepts simplified constructor signatures."""
+
+        def __init__(self, *args, **kwargs):
+            if len(args) == 1 and not kwargs:
+                super().__init__(llm_provider="unknown", model="unknown", message=args[0])  # type: ignore[arg-type]
+            else:
+                super().__init__(*args, **kwargs)
+
+    _litellm_exceptions.AuthenticationError = _FlexibleAuthenticationError  # type: ignore[attr-defined]
+    AuthenticationError = _FlexibleAuthenticationError
 except ImportError:
     AuthenticationError = Exception  # Fallback if not available
 from forge.events.action import (

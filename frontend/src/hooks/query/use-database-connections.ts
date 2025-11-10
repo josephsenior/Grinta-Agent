@@ -7,7 +7,6 @@ import * as dbAPI from "#/api/database-connections";
 import type {
   DatabaseConnection,
   TestConnectionRequest,
-  QueryRequest,
 } from "#/types/database";
 
 /**

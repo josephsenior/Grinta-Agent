@@ -36,9 +36,7 @@ const createSelectFileHandler = (path: string) =>
 
 export const FILE_SERVICE_HANDLERS = [
   createListFilesHandler("/api/conversations/:conversationId/list-files"),
-  createListFilesHandler(
-    "/api/conversations/:conversationId/files/list-files",
-  ),
+  createListFilesHandler("/api/conversations/:conversationId/files/list-files"),
   createSelectFileHandler("/api/conversations/:conversationId/select-file"),
   createSelectFileHandler(
     "/api/conversations/:conversationId/files/select-file",

@@ -5,24 +5,38 @@ import { useMagneticHover } from "#/hooks/use-mouse-position";
 import { soundEffects } from "#/utils/sound-effects";
 
 export function FinalCTA() {
-  const { ref, isVisible } = useScrollReveal({ threshold: 0.2, triggerOnce: true });
+  const { ref, isVisible } = useScrollReveal({
+    threshold: 0.2,
+    triggerOnce: true,
+  });
   const primaryButtonRef = useRef<HTMLAnchorElement>(null);
   const secondaryButtonRef = useRef<HTMLAnchorElement>(null);
-  
+
   const primaryMagnetic = useMagneticHover(primaryButtonRef, 0.3);
   const secondaryMagnetic = useMagneticHover(secondaryButtonRef, 0.25);
 
   return (
     <section ref={ref} className="py-20 px-6 relative">
       <div className="max-w-5xl mx-auto">
-        <div className={`relative overflow-hidden rounded-3xl ${isVisible ? "bento-card delay-0" : "opacity-0"}`}>
+        <div
+          className={`relative overflow-hidden rounded-3xl ${isVisible ? "bento-card delay-0" : "opacity-0"}`}
+        >
           {/* Enhanced gradient background */}
           <div className="absolute inset-0 bg-gradient-to-br from-brand-500 via-brand-600 to-purple-600 opacity-95" />
-          
+
           {/* Animated background elements */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "0s" }} />
-          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-accent-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-brand-400/15 rounded-full blur-2xl animate-pulse" style={{ animationDelay: "2s" }} />
+          <div
+            className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse"
+            style={{ animationDelay: "0s" }}
+          />
+          <div
+            className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-accent-500/20 rounded-full blur-3xl animate-pulse"
+            style={{ animationDelay: "1s" }}
+          />
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-brand-400/15 rounded-full blur-2xl animate-pulse"
+            style={{ animationDelay: "2s" }}
+          />
 
           {/* Content */}
           <div className="relative z-10 p-12 md:p-16">

@@ -30,10 +30,10 @@ export const SkeletonLoader: React.FC = () => (
         {/* Content grid skeleton - Enhanced with stagger */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <div 
-              key={i} 
+            <div
+              key={i}
               className="border border-border-primary/50 rounded-xl p-6 bg-background-elevated/30 backdrop-blur-md scroll-reveal"
-              style={{ animationDelay: `${(i-1) * 50}ms` }}
+              style={{ animationDelay: `${(i - 1) * 50}ms` }}
             >
               <div className="skeleton w-8 h-8 mb-4" />
               <div className="skeleton-text w-3/4 h-6 mb-2" />

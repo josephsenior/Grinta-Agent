@@ -7,10 +7,13 @@ export default function Privacy(): React.ReactElement {
     <main className="max-w-4xl mx-auto px-6 py-16">
       <div className="card-modern space-y-8">
         <div className="text-center">
-          <h1 data-testid="page-title" className="text-4xl font-bold text-foreground mb-4">
+          <h1
+            data-testid="page-title"
+            className="text-4xl font-bold text-foreground mb-4"
+          >
             {t("COMMON$PRIVACY_POLICY", { defaultValue: "Privacy Policy" })}
           </h1>
-          <div className="w-24 h-1 bg-gradient-to-r from-brand-500 to-accent-500 mx-auto rounded-full mb-6"></div>
+          <div className="w-24 h-1 bg-gradient-to-r from-brand-500 to-accent-500 mx-auto rounded-full mb-6" />
           <p className="text-foreground-secondary text-sm">
             <em>
               {t("PRIVACY$LAST_UPDATED", {
@@ -19,7 +22,7 @@ export default function Privacy(): React.ReactElement {
             </em>
           </p>
         </div>
-        
+
         <div className="prose prose-invert max-w-none">
           <p className="text-foreground-secondary leading-relaxed text-lg">
             {t("PRIVACY$PLACEHOLDER", {
@@ -27,11 +30,13 @@ export default function Privacy(): React.ReactElement {
                 "This placeholder Privacy Policy describes how data may be processed. A comprehensive policy will follow.",
             })}
           </p>
-          
+
           <div className="mt-8 space-y-6">
             <div className="border-l-4 border-brand-500 pl-6">
               <h2 className="text-2xl font-bold text-foreground mb-3">
-                {t("PRIVACY$DATA_COLLECTION", { defaultValue: "Data Collection" })}
+                {t("PRIVACY$DATA_COLLECTION", {
+                  defaultValue: "Data Collection",
+                })}
               </h2>
               <p className="text-foreground-secondary leading-relaxed">
                 {t("PRIVACY$DATA_COLLECTION_TEXT", {
@@ -40,7 +45,7 @@ export default function Privacy(): React.ReactElement {
                 })}
               </p>
             </div>
-            
+
             <div className="border-l-4 border-success-500 pl-6">
               <h2 className="text-2xl font-bold text-foreground mb-3">
                 {t("PRIVACY$DATA_USAGE", { defaultValue: "Data Usage" })}
@@ -52,7 +57,7 @@ export default function Privacy(): React.ReactElement {
                 })}
               </p>
             </div>
-            
+
             <div className="border-l-4 border-accent-500 pl-6">
               <h2 className="text-2xl font-bold text-foreground mb-3">
                 {t("PRIVACY$RETENTION", { defaultValue: "Retention" })}
@@ -64,7 +69,7 @@ export default function Privacy(): React.ReactElement {
                 })}
               </p>
             </div>
-            
+
             <div className="border-l-4 border-warning-500 pl-6">
               <h2 className="text-2xl font-bold text-foreground mb-3">
                 {t("PRIVACY$SECURITY", { defaultValue: "Security" })}

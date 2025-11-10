@@ -56,7 +56,12 @@ function AnalyticsSettingsScreen() {
 
 function useAnalyticsSettings() {
   const [period, setPeriod] = useState<AnalyticsPeriod>("week");
-  const { data: dashboard, isLoading, error, refetch } = useAnalyticsDashboard(period);
+  const {
+    data: dashboard,
+    isLoading,
+    error,
+    refetch,
+  } = useAnalyticsDashboard(period);
 
   const handleExport = useAnalyticsExport(period);
   const handleRefresh = useCallback(() => {
@@ -96,7 +101,8 @@ function useAnalyticsExport(period: AnalyticsPeriod) {
         URL.revokeObjectURL(url);
         displaySuccessToast(`Analytics exported as ${format.toUpperCase()}`);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error";
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
         displayErrorToast(`Failed to export analytics: ${message}`);
       }
     },
@@ -122,7 +128,8 @@ function AnalyticsErrorState({
   error: unknown;
   onRetry: () => void;
 }) {
-  const message = error instanceof Error ? error.message : "An unknown error occurred";
+  const message =
+    error instanceof Error ? error.message : "An unknown error occurred";
 
   return (
     <div className="px-11 py-9 flex items-center justify-center min-h-[400px]">
@@ -130,7 +137,9 @@ function AnalyticsErrorState({
         <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
           <AlertTriangle className="w-8 h-8 text-red-500" />
         </div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">Failed to Load Analytics</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-2">
+          Failed to Load Analytics
+        </h3>
         <p className="text-foreground-secondary mb-4">{message}</p>
         <button
           type="button"
@@ -151,7 +160,9 @@ function AnalyticsEmptyState() {
         <div className="w-16 h-16 bg-neutral-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
           <BarChart3 className="w-8 h-8 text-neutral-500" />
         </div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">No Data Available</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-2">
+          No Data Available
+        </h3>
         <p className="text-foreground-secondary">
           Analytics data will appear here once you have active conversations
         </p>
@@ -187,13 +198,18 @@ function AnalyticsDashboardContent({
         onRefresh={onRefresh}
       />
 
-      <AnalyticsSummaryCards summary={dashboard.summary} activeConversations={conversationSummary} />
+      <AnalyticsSummaryCards
+        summary={dashboard.summary}
+        activeConversations={conversationSummary}
+      />
 
       <AnalyticsChartsRow dashboard={dashboard} />
 
       <ModelUsageTable models={dashboard.models} />
 
-      <TopExpensiveConversationsSection conversations={dashboard.costs?.topExpensiveConversations} />
+      <TopExpensiveConversationsSection
+        conversations={dashboard.costs?.topExpensiveConversations}
+      />
 
       <ProductivityInsightsSection
         productivity={dashboard.productivity}
@@ -223,7 +239,9 @@ function AnalyticsHeader({
       <div className="flex items-center gap-3">
         <BarChart3 className="w-8 h-8 text-brand-500" />
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Analytics Dashboard</h2>
+          <h2 className="text-2xl font-bold text-foreground">
+            Analytics Dashboard
+          </h2>
           <p className="text-sm text-foreground-secondary mt-1">
             Track usage, costs, and performance insights
           </p>
@@ -231,7 +249,11 @@ function AnalyticsHeader({
       </div>
 
       <div className="flex items-center gap-3">
-        <PeriodSelector period={period} periods={periods} onChange={onChangePeriod} />
+        <PeriodSelector
+          period={period}
+          periods={periods}
+          onChange={onChangePeriod}
+        />
         <ExportMenu onExport={onExport} />
         <button
           type="button"
@@ -275,7 +297,11 @@ function PeriodSelector({
   );
 }
 
-function ExportMenu({ onExport }: { onExport: (format: "json" | "csv") => void }) {
+function ExportMenu({
+  onExport,
+}: {
+  onExport: (format: "json" | "csv") => void;
+}) {
   return (
     <div className="relative group">
       <button
@@ -360,17 +386,33 @@ function PerformanceCard({
 
   return (
     <div className="p-6 bg-black border border-violet-500/20 rounded-lg">
-      <h3 className="text-lg font-semibold text-foreground mb-4">Performance Metrics</h3>
+      <h3 className="text-lg font-semibold text-foreground mb-4">
+        Performance Metrics
+      </h3>
       <div className="space-y-4">
-        <PerformanceMetric label="Average Response" value={performance?.avgResponseTime} />
-        <PerformanceMetric label="95th Percentile" value={performance?.p95ResponseTime} />
-        <PerformanceMetric label="99th Percentile" value={performance?.p99ResponseTime} />
+        <PerformanceMetric
+          label="Average Response"
+          value={performance?.avgResponseTime}
+        />
+        <PerformanceMetric
+          label="95th Percentile"
+          value={performance?.p95ResponseTime}
+        />
+        <PerformanceMetric
+          label="99th Percentile"
+          value={performance?.p99ResponseTime}
+        />
         {slowestRequests.length > 0 ? (
           <div className="mt-6 pt-4 border-t border-violet-500/20">
-            <h4 className="text-sm font-medium text-foreground-secondary mb-3">Slowest Requests</h4>
+            <h4 className="text-sm font-medium text-foreground-secondary mb-3">
+              Slowest Requests
+            </h4>
             <div className="space-y-2">
               {slowestRequests.slice(0, 5).map((request, index) => (
-                <div key={index} className="flex items-center justify-between text-xs">
+                <div
+                  key={index}
+                  className="flex items-center justify-between text-xs"
+                >
                   <span className="text-foreground-secondary truncate max-w-[200px]">
                     {request.model}
                   </span>
@@ -387,11 +429,19 @@ function PerformanceCard({
   );
 }
 
-function PerformanceMetric({ label, value }: { label: string; value?: number }) {
+function PerformanceMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value?: number;
+}) {
   return (
     <div className="flex items-center justify-between">
       <span className="text-sm text-foreground-secondary">{label}</span>
-      <span className="text-lg font-semibold text-foreground">{(value || 0).toFixed(2)}s</span>
+      <span className="text-lg font-semibold text-foreground">
+        {(value || 0).toFixed(2)}s
+      </span>
     </div>
   );
 }
@@ -407,7 +457,9 @@ function TopExpensiveConversationsSection({
 
   return (
     <div className="p-6 bg-black border border-violet-500/20 rounded-lg">
-      <h3 className="text-lg font-semibold text-foreground mb-4">Most Expensive Conversations</h3>
+      <h3 className="text-lg font-semibold text-foreground mb-4">
+        Most Expensive Conversations
+      </h3>
       <div className="space-y-2">
         {conversations.map((conversation, index) => (
           <div
@@ -415,9 +467,13 @@ function TopExpensiveConversationsSection({
             className="flex items-center justify-between p-3 bg-black rounded-lg hover:bg-black transition-colors"
           >
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <span className="text-sm font-medium text-brand-500">#{index + 1}</span>
+              <span className="text-sm font-medium text-brand-500">
+                #{index + 1}
+              </span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{conversation.title}</p>
+                <p className="text-sm font-medium text-foreground truncate">
+                  {conversation.title}
+                </p>
                 <p className="text-xs text-foreground-secondary">
                   {new Date(conversation.timestamp).toLocaleDateString()}
                 </p>
@@ -442,9 +498,10 @@ function ProductivityInsightsSection({
 }) {
   const estimatedTimeSaved = productivity?.estimatedTimeSaved || 0;
   const totalCost = summary?.totalCost || 0;
-  const roiEstimate = estimatedTimeSaved > 0 && totalCost > 0
-    ? `${(((estimatedTimeSaved || 0) * 50) / (totalCost || 1)).toFixed(0)}x`
-    : "N/A";
+  const roiEstimate =
+    estimatedTimeSaved > 0 && totalCost > 0
+      ? `${(((estimatedTimeSaved || 0) * 50) / (totalCost || 1)).toFixed(0)}x`
+      : "N/A";
 
   return (
     <div className="p-6 bg-gradient-to-br from-brand-500/10 to-brand-500/5 border border-brand-500/20 rounded-lg">
@@ -499,11 +556,10 @@ function ProductivityItem({
 function AnalyticsFooter({ generatedAt }: { generatedAt: string }) {
   return (
     <div className="text-center text-xs text-foreground-secondary">
-      Generated at {new Date(generatedAt).toLocaleString()} • Auto-refreshes every 5 minutes
+      Generated at {new Date(generatedAt).toLocaleString()} • Auto-refreshes
+      every 5 minutes
     </div>
   );
 }
 
 export default AnalyticsSettingsScreen;
-
-

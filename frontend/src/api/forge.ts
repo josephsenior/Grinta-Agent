@@ -32,7 +32,7 @@ import { extractNextPageFromLink } from "#/utils/extract-next-page-from-link";
 import { RepositoryMicroagent } from "#/types/microagent-management";
 import { BatchFeedbackData } from "#/hooks/query/use-batch-feedback";
 import { SubscriptionAccess } from "#/types/billing";
-import { getAPIBase, APIVersion, CURRENT_API_VERSION } from "#/config/api-config";
+import { getAPIBase, CURRENT_API_VERSION } from "#/config/api-config";
 
 /**
  * Safely extract a user-friendly error message from unknown error values.
@@ -42,11 +42,11 @@ function safeErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (typeof err === "object" && err !== null) {
     const e = err as Record<string, unknown>;
-    const resp = e["response"] as Record<string, unknown> | undefined;
-    const data = resp?.["data"] as Record<string, unknown> | undefined;
-    const errorStr = data?.["error"];
+    const resp = e.response as Record<string, unknown> | undefined;
+    const data = resp?.data as Record<string, unknown> | undefined;
+    const errorStr = data?.error;
     if (typeof errorStr === "string") return errorStr;
-    const msg = e["message"];
+    const msg = e.message;
     if (typeof msg === "string") return msg;
   }
   return "";
@@ -99,7 +99,9 @@ class ForgeClient {
    * @returns List of models available
    */
   static async getModels(): Promise<string[]> {
-    const { data } = await Forge.get<string[]>(`${this.getBase()}/options/models`);
+    const { data } = await Forge.get<string[]>(
+      `${this.getBase()}/options/models`,
+    );
     return data;
   }
 
@@ -108,7 +110,9 @@ class ForgeClient {
    * @returns List of agents available
    */
   static async getAgents(): Promise<string[]> {
-    const { data } = await Forge.get<string[]>(`${this.getBase()}/options/agents`);
+    const { data } = await Forge.get<string[]>(
+      `${this.getBase()}/options/agents`,
+    );
     return data;
   }
 
@@ -117,7 +121,7 @@ class ForgeClient {
    * @returns List of security analyzers available
    */
   static async getSecurityAnalyzers(): Promise<string[]> {
-    const { data} = await Forge.get<string[]>(
+    const { data } = await Forge.get<string[]>(
       `${this.getBase()}/options/security-analyzers`,
     );
     return data;
@@ -560,7 +564,9 @@ class ForgeClient {
 
   static async logout(appMode: GetConfigResponse["APP_MODE"]): Promise<void> {
     const endpoint =
-      appMode === "saas" ? `${this.getBase()}/logout` : `${this.getBase()}/unset-provider-tokens`;
+      appMode === "saas"
+        ? `${this.getBase()}/logout`
+        : `${this.getBase()}/unset-provider-tokens`;
     await Forge.post(endpoint);
   }
 
@@ -669,17 +675,14 @@ class ForgeClient {
     perPage: number = 30,
     selectedProvider?: Provider,
   ): Promise<Branch[]> {
-    const { data } = await Forge.get<Branch[]>(
-      `/api/user/search/branches`,
-      {
-        params: {
-          repository,
-          query,
-          per_page: perPage,
-          selected_provider: selectedProvider,
-        },
+    const { data } = await Forge.get<Branch[]>(`/api/user/search/branches`, {
+      params: {
+        repository,
+        query,
+        per_page: perPage,
+        selected_provider: selectedProvider,
       },
-    );
+    });
     return data;
   }
 
@@ -771,11 +774,11 @@ class ForgeClient {
     path?: string,
   ): Promise<GetFilesResponse> {
     const url = `${this.getConversationUrl(conversationId)}/files/list-files`;
-    
+
     // Retry logic for transient runtime failures
     const maxRetries = 3;
     const retryDelayMs = 1000;
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const { data } = await Forge.get<GetFilesResponse>(url, {
@@ -785,35 +788,45 @@ class ForgeClient {
         return data;
       } catch (err: unknown) {
         const errorMsg = safeErrorMessage(err);
-        
+
         // 503 = Runtime container is permanently dead/crashed - don't retry
         if ((err as any)?.response?.status === 503) {
-          console.error('❌ Runtime container permanently unavailable:', errorMsg);
+          console.error(
+            "❌ Runtime container permanently unavailable:",
+            errorMsg,
+          );
           // Mark agent as errored so UI can recover
-          const { setCurrentAgentState } = await import('#/state/agent-slice');
-          const { default: store } = await import('#/store');
-          const { AgentState } = await import('#/types/agent-state');
+          const { setCurrentAgentState } = await import("#/state/agent-slice");
+          const { default: store } = await import("#/store");
+          const { AgentState } = await import("#/types/agent-state");
           store.dispatch(setCurrentAgentState(AgentState.ERROR));
-          throw new Error('Runtime container unavailable. Please start a new conversation.');
+          throw new Error(
+            "Runtime container unavailable. Please start a new conversation.",
+          );
         }
-        
+
         // Retryable errors (500) - retry with exponential backoff
-        const isRuntimeUnavailable = errorMsg.includes('Runtime unavailable') || 
-                   errorMsg.includes('Connection refused') ||
-                   (err as any)?.response?.status === 500;
-        
+        const isRuntimeUnavailable =
+          errorMsg.includes("Runtime unavailable") ||
+          errorMsg.includes("Connection refused") ||
+          (err as any)?.response?.status === 500;
+
         if (isRuntimeUnavailable && attempt < maxRetries) {
-          console.warn(`Runtime temporarily unavailable, retrying file list (${attempt}/${maxRetries})...`);
-          await new Promise(resolve => setTimeout(resolve, retryDelayMs * attempt)); // Exponential backoff
+          console.warn(
+            `Runtime temporarily unavailable, retrying file list (${attempt}/${maxRetries})...`,
+          );
+          await new Promise((resolve) =>
+            setTimeout(resolve, retryDelayMs * attempt),
+          ); // Exponential backoff
           continue;
         }
-        
+
         // Final attempt failed
         throw err;
       }
     }
-    
-    throw new Error('Failed to load files after retries');
+
+    throw new Error("Failed to load files after retries");
   }
 
   /**
@@ -845,7 +858,9 @@ class ForgeClient {
       const { default: store } = await import("#/store");
       const { AgentState } = await import("#/types/agent-state");
       store.dispatch(setCurrentAgentState(AgentState.ERROR));
-      throw new Error("Runtime container unavailable. Please start a new conversation.");
+      throw new Error(
+        "Runtime container unavailable. Please start a new conversation.",
+      );
     };
 
     const shouldRetry = (errorMsg: string, status?: number) =>
@@ -874,8 +889,12 @@ class ForgeClient {
         }
 
         if (shouldRetry(errorMsg, responseStatus) && attempt < maxRetries) {
-          console.warn(`Runtime temporarily unavailable, retrying (${attempt}/${maxRetries})...`);
-          await new Promise(resolve => setTimeout(resolve, retryDelayMs * attempt));
+          console.warn(
+            `Runtime temporarily unavailable, retrying (${attempt}/${maxRetries})...`,
+          );
+          await new Promise((resolve) =>
+            setTimeout(resolve, retryDelayMs * attempt),
+          );
           continue;
         }
 

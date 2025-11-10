@@ -5,7 +5,11 @@ import { ObservationMessage } from "#/types/message";
 import { appendOutput } from "#/state/command-slice";
 import { appendJupyterOutput } from "#/state/jupyter-slice";
 import ObservationType from "#/types/observation-type";
-import { startStream, appendStreamChunk, completeStream } from "#/store/streaming-slice";
+import {
+  startStream,
+  appendStreamChunk,
+  completeStream,
+} from "#/store/streaming-slice";
 
 // Helper function to handle browser-related observations
 function handleBrowserObservation(message: ObservationMessage) {
@@ -25,22 +29,26 @@ function handleCommandOutput(message: ObservationMessage) {
 
   const { content } = message;
   const eventId = String(message.id);
-  
+
   // Enable streaming for terminal output
-  store.dispatch(startStream({
-    id: eventId,
-    type: "terminal",
-  }));
-  
+  store.dispatch(
+    startStream({
+      id: eventId,
+      type: "terminal",
+    }),
+  );
+
   // Add content to stream (will be displayed progressively by StreamingTerminal)
-  store.dispatch(appendStreamChunk({
-    id: eventId,
-    chunk: content,
-  }));
-  
+  store.dispatch(
+    appendStreamChunk({
+      id: eventId,
+      chunk: content,
+    }),
+  );
+
   // Mark stream as complete
   store.dispatch(completeStream(eventId));
-  
+
   // Also append to terminal output store for compatibility
   store.dispatch(appendOutput(content));
 }

@@ -24,13 +24,13 @@ export function useAutonomyMode() {
     ) {
       return settings.autonomy_level as AutonomyMode;
     }
-    
+
     // Fallback to localStorage if backend doesn't support autonomy_level
     const stored = localStorage.getItem("autonomy_mode");
     if (stored && ["supervised", "balanced", "full"].includes(stored)) {
       return stored as AutonomyMode;
     }
-    
+
     return "balanced";
   }, [settings?.autonomy_level]);
 

@@ -1,5 +1,13 @@
 import React from "react";
-import { Clock, CheckCircle2, AlertCircle, Copy, ThumbsUp, ThumbsDown, MoreHorizontal } from "lucide-react";
+import {
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Copy,
+  ThumbsUp,
+  ThumbsDown,
+  MoreHorizontal,
+} from "lucide-react";
 import { cn } from "#/utils/utils";
 import { Card, CardContent } from "#/components/ui/card";
 import { Button } from "#/components/ui/button";
@@ -26,7 +34,10 @@ const STATUS_ICON_CONFIG: Record<
   MessageStatus,
   { Icon: typeof Clock; className: string } | undefined
 > = {
-  sending: { Icon: Clock, className: "text-text-foreground-secondary animate-pulse" },
+  sending: {
+    Icon: Clock,
+    className: "text-text-foreground-secondary animate-pulse",
+  },
   sent: { Icon: CheckCircle2, className: "text-success-500" },
   delivered: { Icon: CheckCircle2, className: "text-success-500" },
   error: { Icon: AlertCircle, className: "text-danger-500" },
@@ -47,8 +58,10 @@ const SENDER_CONFIG: Record<
     label: "You",
     typingEmoji: "👤",
     avatarEmoji: "👤",
-    bubbleClassName: "ml-auto max-w-[80%] bg-gradient-to-br from-accent-cyan/20 to-accent-green/20",
-    hoverGradientClassName: "bg-gradient-to-r from-accent-cyan/5 to-accent-green/5",
+    bubbleClassName:
+      "ml-auto max-w-[80%] bg-gradient-to-br from-accent-cyan/20 to-accent-green/20",
+    hoverGradientClassName:
+      "bg-gradient-to-r from-accent-cyan/5 to-accent-green/5",
     enableFeedback: false,
   },
   assistant: {
@@ -56,15 +69,18 @@ const SENDER_CONFIG: Record<
     typingEmoji: "🤖",
     avatarEmoji: "🤖",
     bubbleClassName: "bg-gradient-to-br from-primary-500/10 to-primary-600/10",
-    hoverGradientClassName: "bg-gradient-to-r from-primary-500/5 to-primary-600/5",
+    hoverGradientClassName:
+      "bg-gradient-to-r from-primary-500/5 to-primary-600/5",
     enableFeedback: true,
   },
   system: {
     label: "System",
     typingEmoji: "⚙️",
     avatarEmoji: "⚙️",
-    bubbleClassName: "bg-gradient-to-br from-accent-pink/10 to-accent-purple/10",
-    hoverGradientClassName: "bg-gradient-to-r from-accent-pink/5 to-accent-purple/5",
+    bubbleClassName:
+      "bg-gradient-to-br from-accent-pink/10 to-accent-purple/10",
+    hoverGradientClassName:
+      "bg-gradient-to-r from-accent-pink/5 to-accent-purple/5",
     enableFeedback: false,
   },
 };

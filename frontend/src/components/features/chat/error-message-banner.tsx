@@ -4,7 +4,7 @@ import { AlertTriangle, X, RefreshCw, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import i18n from "#/i18n";
 import { cn } from "#/utils/utils";
-import { ErrorBanner, type UserFriendlyErrorData } from "#/components/shared/error/user-friendly-error";
+import { ErrorBanner } from "#/components/shared/error/user-friendly-error";
 import { extractUserFriendlyError } from "#/utils/format-error";
 
 interface ErrorMessageBannerProps {
@@ -16,7 +16,7 @@ interface ErrorMessageBannerProps {
   retryLabel?: string;
   showDetails?: boolean;
   className?: string;
-  error?: unknown;  // Raw error object for user-friendly formatting
+  error?: unknown; // Raw error object for user-friendly formatting
 }
 
 type BannerVariant = NonNullable<ErrorMessageBannerProps["type"]>;
@@ -26,7 +26,8 @@ const BANNER_STYLES: Record<
   { container: string; icon: string; button: string }
 > = {
   error: {
-    container: "bg-danger-DEFAULT/10 border-danger-DEFAULT/20 text-danger-DEFAULT",
+    container:
+      "bg-danger-DEFAULT/10 border-danger-DEFAULT/20 text-danger-DEFAULT",
     icon: "text-danger-DEFAULT",
     button: "hover:bg-danger-DEFAULT/20 text-danger-DEFAULT",
   },
@@ -63,7 +64,7 @@ const renderBannerMessage = (message: string) =>
     message
   );
 
-const DetailsSection = ({
+function DetailsSection({
   showDetails,
   showFullDetails,
   onToggle,
@@ -73,7 +74,7 @@ const DetailsSection = ({
   showFullDetails: boolean;
   onToggle: () => void;
   rawMessage: string;
-}) => {
+}) {
   if (!showDetails) {
     return null;
   }
@@ -88,14 +89,12 @@ const DetailsSection = ({
       </button>
       {showFullDetails && (
         <div className="mt-3 p-3 bg-background-elevated/50 rounded-lg text-xs font-mono">
-          <pre className="whitespace-pre-wrap break-words">
-            {rawMessage}
-          </pre>
+          <pre className="whitespace-pre-wrap break-words">{rawMessage}</pre>
         </div>
       )}
     </>
   );
-};
+}
 
 export function ErrorMessageBanner({
   message,
@@ -122,7 +121,7 @@ export function ErrorMessageBanner({
 
   // Try to use user-friendly error if available
   const userFriendlyError = error ? extractUserFriendlyError(error) : null;
-  
+
   if (userFriendlyError) {
     return (
       <ErrorBanner
@@ -157,7 +156,7 @@ export function ErrorMessageBanner({
           <DetailsSection
             showDetails={showDetails}
             showFullDetails={showFullDetails}
-            onToggle={() => setShowFullDetails(current => !current)}
+            onToggle={() => setShowFullDetails((current) => !current)}
             rawMessage={
               typeof message === "string"
                 ? message

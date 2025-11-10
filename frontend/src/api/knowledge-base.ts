@@ -95,10 +95,13 @@ export async function uploadDocument(
   formData.append("file", file);
   formData.append("collection_id", collectionId);
 
-  const response = await fetch(`${BASE_URL}/collections/${collectionId}/documents`, {
-    method: "POST",
-    body: formData,
-  });
+  const response = await fetch(
+    `${BASE_URL}/collections/${collectionId}/documents`,
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to upload document: ${response.statusText}`);
@@ -110,7 +113,9 @@ export async function uploadDocument(
 export async function getDocuments(
   collectionId: string,
 ): Promise<KnowledgeBaseDocument[]> {
-  const response = await fetch(`${BASE_URL}/collections/${collectionId}/documents`);
+  const response = await fetch(
+    `${BASE_URL}/collections/${collectionId}/documents`,
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to fetch documents: ${response.statusText}`);
@@ -178,9 +183,10 @@ export async function getKnowledgeBaseStats(): Promise<KnowledgeBaseStats> {
   const response = await fetch(`${BASE_URL}/stats`);
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch knowledge base stats: ${response.statusText}`);
+    throw new Error(
+      `Failed to fetch knowledge base stats: ${response.statusText}`,
+    );
   }
 
   return response.json();
 }
-

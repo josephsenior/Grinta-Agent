@@ -9,7 +9,7 @@ interface UseMermaidDiagramOptions {
 }
 
 interface UseMermaidDiagramResult {
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   svgRef: React.MutableRefObject<SVGElement | null>;
   svg: string;
   error: string | null;
@@ -18,10 +18,10 @@ interface UseMermaidDiagramResult {
 
 const SANITIZE_OPTIONS = {
   USE_PROFILES: { svg: true, svgFilters: true },
-  ADD_TAGS: ["foreignObject"],
-  FORBID_TAGS: ["script", "iframe", "object", "embed"],
-  FORBID_ATTR: ["onerror", "onload", "onclick"],
-} as const;
+  ADD_TAGS: ["foreignObject"] as string[],
+  FORBID_TAGS: ["script", "iframe", "object", "embed"] as string[],
+  FORBID_ATTR: ["onerror", "onload", "onclick"] as string[],
+};
 
 export function useMermaidDiagram({
   diagram,
@@ -29,7 +29,9 @@ export function useMermaidDiagram({
 }: UseMermaidDiagramOptions): UseMermaidDiagramResult {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGElement | null>(null);
-  const idRef = useRef<string>(`mermaid-${Math.random().toString(36).slice(2, 11)}`);
+  const idRef = useRef<string>(
+    `mermaid-${Math.random().toString(36).slice(2, 11)}`,
+  );
   const listenersRef = useRef<Array<() => void>>([]);
 
   const [svg, setSvg] = useState<string>("");
@@ -66,11 +68,15 @@ export function useMermaidDiagram({
         const element = node as HTMLElement;
         element.style.cursor = "pointer";
         const handler = () => {
-          const nodeId = element.id.replace("flowchart-", "").replace(/-\d+$/, "");
+          const nodeId = element.id
+            .replace("flowchart-", "")
+            .replace(/-\d+$/, "");
           onNodeClick(nodeId);
         };
         element.addEventListener("click", handler);
-        listenersRef.current.push(() => element.removeEventListener("click", handler));
+        listenersRef.current.push(() =>
+          element.removeEventListener("click", handler),
+        );
       });
     },
     [onNodeClick],
@@ -114,7 +120,9 @@ export function useMermaidDiagram({
       } catch (err) {
         if (!isCancelled) {
           logMermaidError();
-          setError(err instanceof Error ? err.message : "Failed to render diagram");
+          setError(
+            err instanceof Error ? err.message : "Failed to render diagram",
+          );
           setIsRendering(false);
         }
       }
@@ -161,7 +169,10 @@ export function useZoomPan({ enabled }: ZoomPanOptions): ZoomPanResult {
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0 });
 
-  const clampZoom = useCallback((value: number) => Math.min(Math.max(value, 0.5), 3), []);
+  const clampZoom = useCallback(
+    (value: number) => Math.min(Math.max(value, 0.5), 3),
+    [],
+  );
 
   const zoomIn = useCallback(() => {
     if (!enabled) return;
@@ -337,5 +348,3 @@ function processFullscreenShortcut(
     options.exitFullscreen();
   }
 }
-
-

@@ -2,6 +2,7 @@ import asyncio
 import os
 import shutil
 import time
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from forge.controller.agent import Agent
@@ -13,12 +14,17 @@ from forge.events.action.agent import RecallAction
 from forge.events.action.message import MessageAction, SystemMessageAction
 from forge.events.event import EventSource
 from forge.events.observation.agent import RecallObservation, RecallType
+from forge.events.observation.empty import NullObservation
 from forge.events.serialization.observation import observation_from_dict
 from forge.events.stream import EventStream
 from forge.llm import LLM
 from forge.llm.llm_registry import LLMRegistry
 from forge.llm.metrics import Metrics
 from forge.memory.memory import Memory
+from forge.microagent import KnowledgeMicroagent, RepoMicroagent
+from forge.microagent.types import MicroagentMetadata, MicroagentType
+from forge.runtime.base import Runtime
+from forge.runtime.runtime_status import RuntimeStatus
 from forge.runtime.impl.action_execution.action_execution_client import ActionExecutionClient
 from forge.server.services.conversation_stats import ConversationStats
 from forge.server.session.agent_session import AgentSession
@@ -385,3 +391,135 @@ async def test_conversation_instructions_plumbed_to_memory(mock_agent, event_str
             conversation_instructions="instructions for conversation",
         )
         assert session.memory.conversation_instructions.content == "instructions for conversation"
+
+
+@pytest.mark.asyncio
+async def test_on_event_workspace_recall_without_content(memory):
+    added = []
+    memory.event_stream = MagicMock()
+    memory.event_stream.add_event = lambda event, source: added.append((event, source))
+    event = RecallAction(query="no data", recall_type=RecallType.WORKSPACE_CONTEXT)
+    event._source = EventSource.USER
+    event._id = 123
+    await memory._on_event(event)
+    observation, source = added[0]
+    assert isinstance(observation, NullObservation)
+    assert observation.content == ""
+    assert observation._cause == 123
+    assert source == EventSource.ENVIRONMENT
+
+
+@pytest.mark.asyncio
+async def test_on_event_microagent_recall_without_match(memory):
+    added = []
+    memory.event_stream = MagicMock()
+    memory.event_stream.add_event = lambda event, source: added.append((event, source))
+    event = RecallAction(query="no trigger", recall_type=RecallType.KNOWLEDGE)
+    event._source = EventSource.USER
+    event._id = 456
+    await memory._on_event(event)
+    observation, _ = added[0]
+    assert isinstance(observation, NullObservation)
+    assert observation.content == ""
+
+
+def test_on_workspace_context_recall_returns_none(memory):
+    memory.repository_info = None
+    memory.runtime_info = None
+    memory.conversation_instructions = None
+    memory.repo_microagents = {}
+    event = RecallAction(query="none", recall_type=RecallType.WORKSPACE_CONTEXT)
+    result = memory._on_workspace_context_recall(event)
+    assert result is None
+
+
+def test_on_microagent_recall_returns_none(memory):
+    event = RecallAction(query="no triggers here", recall_type=RecallType.KNOWLEDGE)
+    event._source = EventSource.USER
+    assert memory._on_microagent_recall(event) is None
+
+
+def test_find_microagent_knowledge_empty_query(memory):
+    assert memory._find_microagent_knowledge("") == []
+
+
+def test_load_user_workspace_microagents_assigns(memory):
+    knowledge = KnowledgeMicroagent(
+        name="knowledge",
+        content="knowledge content",
+        metadata=MicroagentMetadata(name="knowledge", triggers=["trig"]),
+        source="local",
+        type=MicroagentType.KNOWLEDGE,
+    )
+    repo = RepoMicroagent(
+        name="repo",
+        content="repo content",
+        metadata=MicroagentMetadata(name="repo"),
+        source="local",
+        type=MicroagentType.REPO_KNOWLEDGE,
+    )
+    memory.load_user_workspace_microagents([knowledge, repo])
+    assert "knowledge" in memory.knowledge_microagents
+    assert "repo" in memory.repo_microagents
+
+
+def test_load_user_microagents_exception(monkeypatch):
+    monkeypatch.setattr("forge.memory.memory.load_microagents_from_dir", lambda path: ({}, {}))
+    memory = Memory(event_stream=MagicMock(), sid="sid")
+    def boom(path):
+        raise Exception("fail")
+    monkeypatch.setattr("forge.memory.memory.load_microagents_from_dir", boom)
+    memory._load_user_microagents()
+    assert isinstance(memory.repo_microagents, dict)
+
+
+def test_set_repository_info_clears(memory):
+    memory.set_repository_info("repo", "/path")
+    assert memory.repository_info.repo_name == "repo"
+    memory.set_repository_info("", "")
+    assert memory.repository_info is None
+
+
+def test_set_runtime_info_without_hosts(memory):
+    runtime = SimpleNamespace(web_hosts=[], additional_agent_instructions=None)
+    memory.set_runtime_info(runtime, {}, "/workspace")
+    assert memory.runtime_info.additional_agent_instructions == ""
+
+
+def test_set_runtime_status_sync_fallback(monkeypatch):
+    monkeypatch.setattr("forge.memory.memory.load_microagents_from_dir", lambda path: ({}, {}))
+    memory = Memory(event_stream=MagicMock(), sid="sid")
+    loop = asyncio.new_event_loop()
+    monkeypatch.setattr("asyncio.get_running_loop", lambda: loop)
+    def fail_run(*args, **kwargs):
+        raise RuntimeError("loop not running")
+    monkeypatch.setattr("asyncio.run_coroutine_threadsafe", fail_run)
+    callback_calls = []
+
+    def callback(msg_type, status, message):
+        callback_calls.append((msg_type, status, message))
+
+    memory.status_callback = callback
+    memory.set_runtime_status(RuntimeStatus.ERROR_MEMORY, "msg")
+    assert callback_calls == [("error", RuntimeStatus.ERROR_MEMORY, "msg")]
+    loop.close()
+
+
+def test_set_runtime_status_async_create_task(monkeypatch):
+    monkeypatch.setattr("forge.memory.memory.load_microagents_from_dir", lambda path: ({}, {}))
+    memory = Memory(event_stream=MagicMock(), sid="sid")
+    loop = asyncio.new_event_loop()
+    monkeypatch.setattr("asyncio.get_running_loop", lambda: loop)
+    def fail_run(*args, **kwargs):
+        raise RuntimeError("loop not running")
+    monkeypatch.setattr("asyncio.run_coroutine_threadsafe", fail_run)
+    callback_calls = []
+    monkeypatch.setattr("asyncio.create_task", lambda coro: callback_calls.append("async"))
+
+    def failing_callback(*args, **kwargs):
+        raise RuntimeError("callback failure")
+
+    memory.status_callback = failing_callback
+    memory.set_runtime_status(RuntimeStatus.ERROR_MEMORY, "msg")
+    assert callback_calls == ["async"]
+    loop.close()

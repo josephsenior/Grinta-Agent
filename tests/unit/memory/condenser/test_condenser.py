@@ -1,4 +1,5 @@
 from datetime import datetime
+from types import SimpleNamespace
 from typing import Any, Callable, Iterable
 from unittest.mock import MagicMock
 import pytest
@@ -25,7 +26,14 @@ from forge.events.observation.observation import Observation
 from forge.llm import LLM
 from forge.llm.llm_registry import LLMRegistry
 from forge.memory.condenser import Condenser
-from forge.memory.condenser.condenser import Condensation, RollingCondenser, View
+from forge.memory.condenser.condenser import (
+    CONDENSER_METADATA_KEY,
+    CONDENSER_REGISTRY,
+    Condensation,
+    RollingCondenser,
+    View,
+    get_condensation_metadata,
+)
 from forge.memory.condenser.impl import (
     AmortizedForgettingCondenser,
     BrowserOutputCondenser,
@@ -90,6 +98,87 @@ def mock_llm_registry(mock_llm, mock_conversation_stats) -> LLMRegistry:
     """Creates an actual LLMRegistry that returns real LLMs."""
     config = ForgeConfig()
     return LLMRegistry(config=config, agent_cls=None, retry_listener=None)
+
+
+def test_get_condensation_metadata_handles_missing_and_present():
+    state = SimpleNamespace(extra_data={})
+    assert get_condensation_metadata(state) == []
+
+    sample = [{"foo": "bar"}]
+    state.extra_data[CONDENSER_METADATA_KEY] = sample
+    assert get_condensation_metadata(state) == sample
+
+
+def test_metadata_batch_writes_on_exit():
+    class DummyCondenser(Condenser):
+        def condense(self, View):
+            return View
+
+    condenser = DummyCondenser()
+    state = SimpleNamespace(extra_data={})
+
+    with pytest.raises(RuntimeError):
+        with condenser.metadata_batch(state):
+            condenser.add_metadata("key", "value")
+            raise RuntimeError("boom")
+
+    assert state.extra_data[CONDENSER_METADATA_KEY] == [{"key": "value"}]
+
+
+def test_llm_metadata_warns_when_empty():
+    class DummyCondenser(Condenser):
+        def condense(self, View):
+            return View
+
+    condenser = DummyCondenser()
+    assert condenser.llm_metadata == {}
+
+
+def test_condensed_history_sets_llm_metadata():
+    class DummyCondenser(Condenser):
+        def condense(self, view):
+            return view
+
+    condenser = DummyCondenser()
+    condenser.llm = SimpleNamespace(config=SimpleNamespace(model="gpt-test"))
+    state = SimpleNamespace(
+        extra_data={},
+        view=View(events=[]),
+        to_llm_metadata=lambda model_name, agent_name: {"model": model_name, "agent": agent_name},
+    )
+
+    result = condenser.condensed_history(state)
+    assert result == state.view
+    assert condenser.llm_metadata["model"] == "gpt-test"
+    assert condenser.llm_metadata["agent"] == "condenser"
+
+
+def test_register_config_prevents_duplicates():
+    class DummyConfig:
+        pass
+
+    class DummyCondenser(Condenser):
+        def condense(self, View):
+            return View
+
+        @classmethod
+        def from_config(cls, config, llm_registry):
+            return cls()
+
+    try:
+        DummyCondenser.register_config(DummyConfig)
+        with pytest.raises(ValueError):
+            DummyCondenser.register_config(DummyConfig)
+    finally:
+        CONDENSER_REGISTRY.pop(DummyConfig, None)
+
+
+def test_from_config_unknown_config():
+    class UnknownConfig:
+        pass
+
+    with pytest.raises(ValueError):
+        Condenser.from_config(UnknownConfig(), MagicMock())
 
 
 class RollingCondenserTestHarness:

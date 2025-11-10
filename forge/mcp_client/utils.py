@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import sys
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -28,6 +30,11 @@ from forge.mcp_client.client import MCPClient
 from forge.mcp_client.error_collector import mcp_error_collector
 from forge.mcp_client.wrappers import WRAPPER_TOOL_REGISTRY, wrapper_tool_params
 from forge.runtime.impl.cli.cli_runtime import CLIRuntime
+
+
+def _is_windows_mcp_disabled() -> bool:
+    """Return True when MCP support should be bypassed on Windows."""
+    return sys.platform == "win32" and not os.getenv("FORGE_ENABLE_WINDOWS_MCP")
 
 
 def convert_mcp_clients_to_tools(mcp_clients: list[MCPClient] | None) -> list[dict]:
@@ -77,10 +84,8 @@ async def create_mcp_clients(
 
     Reduced complexity: 13 → 5 by extracting connection logic to separate handlers.
     """
-    import sys
-
     # Early returns for unsupported platforms or no servers
-    if sys.platform == "win32":
+    if _is_windows_mcp_disabled():
         logger.info("MCP functionality is disabled on Windows, skipping client creation")
         return []
 
@@ -198,9 +203,7 @@ async def fetch_mcp_tools_from_config(
         A list of tool dictionaries. Returns an empty list if no connections could be established.
 
     """
-    import sys
-
-    if sys.platform == "win32":
+    if _is_windows_mcp_disabled():
         logger.info("MCP functionality is disabled on Windows, skipping tool fetching")
         return []
     mcp_clients = []
@@ -315,11 +318,9 @@ async def call_tool_mcp(mcp_clients: list[MCPClient], action: MCPAction) -> Obse
         The observation from the MCP server
 
     """
-    import sys
-
     from forge.events.observation import ErrorObservation
 
-    if sys.platform == "win32":
+    if _is_windows_mcp_disabled():
         logger.info("MCP functionality is disabled on Windows")
         return ErrorObservation("MCP functionality is not available on Windows")
 
@@ -354,11 +355,9 @@ async def _call_mcp_raw(mcp_clients: list[MCPClient], action) -> dict:
     return result_dict
 
 
-async def add_mcp_tools_to_agent(agent: Agent, runtime: Runtime, memory: Memory) -> MCPConfig:
+async def add_mcp_tools_to_agent(agent: Agent, runtime: Runtime, memory: Memory) -> MCPConfig | None:
     """Add MCP tools to an agent."""
-    import sys
-
-    if sys.platform == "win32":
+    if _is_windows_mcp_disabled():
         logger.info("MCP functionality is disabled on Windows, skipping MCP tools")
         agent.set_mcp_tools([])
         return None
@@ -374,7 +373,12 @@ async def add_mcp_tools_to_agent(agent: Agent, runtime: Runtime, memory: Memory)
                     extra_stdio_servers.append(stdio_server)
                     logger.warning("Added microagent stdio server: %s", stdio_server.name)
     updated_mcp_config = runtime.get_mcp_config(extra_stdio_servers)
-    mcp_tools = await fetch_mcp_tools_from_config(updated_mcp_config, use_stdio=isinstance(runtime, CLIRuntime))
+    from forge.mcp.utils import fetch_mcp_tools_from_config as compat_fetch_mcp_tools_from_config
+
+    mcp_tools = await compat_fetch_mcp_tools_from_config(
+        updated_mcp_config,
+        use_stdio=isinstance(runtime, CLIRuntime),
+    )
     tool_names = [tool["function"]["name"] for tool in mcp_tools]
     logger.info("Loaded %s MCP tools: %s", len(mcp_tools), tool_names)
     agent.set_mcp_tools(mcp_tools)

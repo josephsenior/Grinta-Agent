@@ -25,7 +25,7 @@ export function ModelUsageTable({ models }: ModelUsageTableProps) {
       <h3 className="text-lg font-semibold text-foreground mb-4">
         Model Usage & Costs
       </h3>
-      
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -52,11 +52,13 @@ export function ModelUsageTable({ models }: ModelUsageTableProps) {
           </thead>
           <tbody>
             {sortedModels.map((model, index) => {
-              const totalTokens = model.totalPromptTokens + model.totalCompletionTokens;
-              const cacheHitPercentage = model.totalPromptTokens > 0
-                ? (model.cacheHitTokens / model.totalPromptTokens) * 100
-                : 0;
-              
+              const totalTokens =
+                model.totalPromptTokens + model.totalCompletionTokens;
+              const cacheHitPercentage =
+                model.totalPromptTokens > 0
+                  ? (model.cacheHitTokens / model.totalPromptTokens) * 100
+                  : 0;
+
               return (
                 <tr
                   key={model.modelName}
@@ -78,9 +80,12 @@ export function ModelUsageTable({ models }: ModelUsageTableProps) {
                     {model.requestCount.toLocaleString()}
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <div className="text-foreground">{totalTokens.toLocaleString()}</div>
+                    <div className="text-foreground">
+                      {totalTokens.toLocaleString()}
+                    </div>
                     <div className="text-xs text-foreground-secondary">
-                      {model.totalPromptTokens.toLocaleString()} in / {model.totalCompletionTokens.toLocaleString()} out
+                      {model.totalPromptTokens.toLocaleString()} in /{" "}
+                      {model.totalCompletionTokens.toLocaleString()} out
                     </div>
                   </td>
                   <td className="py-3 px-4 text-right text-foreground">
@@ -109,17 +114,30 @@ export function ModelUsageTable({ models }: ModelUsageTableProps) {
             <tr className="border-t-2 border-border font-semibold">
               <td className="py-3 px-4 text-foreground">Total</td>
               <td className="py-3 px-4 text-right text-foreground">
-                {sortedModels.reduce((sum, m) => sum + m.requestCount, 0).toLocaleString()}
+                {sortedModels
+                  .reduce((sum, m) => sum + m.requestCount, 0)
+                  .toLocaleString()}
               </td>
               <td className="py-3 px-4 text-right text-foreground">
-                {sortedModels.reduce((sum, m) => sum + m.totalPromptTokens + m.totalCompletionTokens, 0).toLocaleString()}
+                {sortedModels
+                  .reduce(
+                    (sum, m) =>
+                      sum + m.totalPromptTokens + m.totalCompletionTokens,
+                    0,
+                  )
+                  .toLocaleString()}
               </td>
               <td className="py-3 px-4 text-right text-foreground">-</td>
               <td className="py-3 px-4 text-right text-foreground">
-                {sortedModels.reduce((sum, m) => sum + m.cacheHitTokens, 0).toLocaleString()}
+                {sortedModels
+                  .reduce((sum, m) => sum + m.cacheHitTokens, 0)
+                  .toLocaleString()}
               </td>
               <td className="py-3 px-4 text-right text-violet-500">
-                ${sortedModels.reduce((sum, m) => sum + m.totalCost, 0).toFixed(3)}
+                $
+                {sortedModels
+                  .reduce((sum, m) => sum + m.totalCost, 0)
+                  .toFixed(3)}
               </td>
             </tr>
           </tfoot>
@@ -128,5 +146,3 @@ export function ModelUsageTable({ models }: ModelUsageTableProps) {
     </div>
   );
 }
-
-

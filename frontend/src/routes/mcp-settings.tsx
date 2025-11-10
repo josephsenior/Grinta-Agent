@@ -14,6 +14,10 @@ import { MCPMarketplace } from "#/components/features/settings/mcp-settings/mcp-
 import { ConfirmationModal } from "#/components/shared/modals/confirmation-modal";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { MCPConfig } from "#/types/settings";
+import {
+  displayErrorToast,
+  displaySuccessToast,
+} from "#/utils/custom-toast-handlers";
 
 type MCPServerType = "sse" | "stdio" | "shttp";
 
@@ -30,14 +34,20 @@ interface MCPServerConfig {
 
 type TabType = "my-servers" | "marketplace";
 
-function MCPSettingsScreen() {
+interface MCPSettingsScreenProps {
+  initialTab?: TabType;
+}
+
+function MCPSettingsScreen({
+  initialTab = "my-servers",
+}: MCPSettingsScreenProps = {}) {
   const { t } = useTranslation();
   const { data: settings, isLoading } = useSettings();
   const { mutate: deleteMcpServer } = useDeleteMcpServer();
   const { mutate: addMcpServer } = useAddMcpServer();
   const { mutate: updateMcpServer } = useUpdateMcpServer();
 
-  const [activeTab, setActiveTab] = useState<TabType>("my-servers");
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [view, setView] = useState<"list" | "add" | "edit">("list");
   const [editingServer, setEditingServer] = useState<MCPServerConfig | null>(
     null,
@@ -60,7 +70,13 @@ function MCPSettingsScreen() {
   const handleAddServer = (serverConfig: MCPServerConfig) => {
     addMcpServer(serverConfig, {
       onSuccess: () => {
+        displaySuccessToast("Server added successfully");
         setView("list");
+      },
+      onError: (error) => {
+        displayErrorToast(
+          error instanceof Error ? error.message : "Failed to add MCP server",
+        );
       },
     });
   };
@@ -73,7 +89,15 @@ function MCPSettingsScreen() {
       },
       {
         onSuccess: () => {
+          displaySuccessToast("Server updated successfully");
           setView("list");
+        },
+        onError: (error) => {
+          displayErrorToast(
+            error instanceof Error
+              ? error.message
+              : "Failed to update MCP server",
+          );
         },
       },
     );
@@ -82,7 +106,15 @@ function MCPSettingsScreen() {
   const handleDeleteServer = (serverId: string) => {
     deleteMcpServer(serverId, {
       onSuccess: () => {
+        displaySuccessToast("Server deleted successfully");
         setConfirmationModalIsVisible(false);
+      },
+      onError: (error) => {
+        displayErrorToast(
+          error instanceof Error
+            ? error.message
+            : "Failed to delete MCP server",
+        );
       },
     });
   };
@@ -110,24 +142,13 @@ function MCPSettingsScreen() {
     setServerToDelete(null);
   };
 
-  const handleInstallFromMarketplace = (mcp: MCPMarketplaceItem) => {
-    const serverConfig: MCPServerConfig = {
-      id: `${mcp.type}-${Date.now()}`,
-      type: mcp.type,
-      name: mcp.config.command ? mcp.name : undefined,
-      command: mcp.config.command,
-      args: mcp.config.args,
-      env: mcp.config.env,
-      url: mcp.config.url,
-    };
-
-    addMcpServer(serverConfig, {
-      onSuccess: () => {
-        // Switch to My Servers tab after successful install
-        setActiveTab("my-servers");
-      },
-    });
-  };
+  const handleInstallFromMarketplace = React.useCallback(
+    createTemplateInstaller({
+      addMcpServer,
+      setActiveTab,
+    }),
+    [addMcpServer, setActiveTab],
+  );
 
   // Get installed server names for marketplace
   const installedServerNames = React.useMemo(
@@ -137,6 +158,29 @@ function MCPSettingsScreen() {
 
   if (isLoading) {
     return <McpSettingsSkeleton />;
+  }
+
+  if (!settings) {
+    return (
+      <div className="px-11 py-9">
+        <div className="bg-black border border-violet-500/20 rounded-lg p-6 text-center space-y-3">
+          <h2 className="text-lg font-semibold text-foreground">
+            {t(I18nKey.SETTINGS$MCP_CONFIG_ERROR)}
+          </h2>
+          <p className="text-sm text-foreground-secondary">
+            {t(I18nKey.SETTINGS$MCP_CONFIG_DESCRIPTION)}
+          </p>
+          <BrandButton
+            variant="secondary"
+            onClick={() => window.location.reload()}
+            type="button"
+            testId="reload-mcp-settings"
+          >
+            Refresh
+          </BrandButton>
+        </div>
+      </div>
+    );
   }
 
   const tabNavigation = (
@@ -211,20 +255,30 @@ function buildServerList(mcpConfig: MCPConfig): MCPServerConfig[] {
   return [...sseServers, ...stdioServers, ...shttpServers];
 }
 
-function confirmServerDeletion({
+export function confirmServerDeletion({
   serverToDelete,
   handleDeleteServer,
   setServerToDelete,
+  onAfterDelete,
 }: {
   serverToDelete: string | null;
   handleDeleteServer: (serverId: string) => void;
   setServerToDelete: React.Dispatch<React.SetStateAction<string | null>>;
+  onAfterDelete?: () => void;
 }) {
   if (!serverToDelete) {
+    displayErrorToast("No server selected for deletion.");
     return;
   }
+
+  if (!handleDeleteServer) {
+    displayErrorToast("Unable to delete server right now.");
+    return;
+  }
+
   handleDeleteServer(serverToDelete);
   setServerToDelete(null);
+  onAfterDelete?.();
 }
 
 function handleTabChange({
@@ -240,6 +294,38 @@ function handleTabChange({
   if (tab === "my-servers" && setView) {
     setView("list");
   }
+}
+
+export function createTemplateInstaller({
+  addMcpServer,
+  setActiveTab,
+}: {
+  addMcpServer: ReturnType<typeof useAddMcpServer>["mutate"];
+  setActiveTab: React.Dispatch<React.SetStateAction<TabType>>;
+}) {
+  return (mcp: MCPMarketplaceItem) => {
+    const serverConfig: MCPServerConfig = {
+      id: `${mcp.type}-${Date.now()}`,
+      type: mcp.type,
+      name: mcp.config.command ? mcp.name : undefined,
+      command: mcp.config.command,
+      args: mcp.config.args,
+      env: mcp.config.env,
+      url: mcp.config.url,
+    };
+
+    addMcpServer(serverConfig, {
+      onSuccess: () => {
+        displaySuccessToast("Template installed");
+        setActiveTab("my-servers");
+      },
+      onError: (error) => {
+        displayErrorToast(
+          error instanceof Error ? error.message : "Failed to install template",
+        );
+      },
+    });
+  };
 }
 
 function McpSettingsSkeleton() {
@@ -318,7 +404,9 @@ function TabButton({
       {typeof badge === "number" && (
         <span
           className={`px-1.5 py-0.5 text-xs rounded-full ${
-            isActive ? "bg-white/20 text-white" : "bg-black text-foreground-secondary"
+            isActive
+              ? "bg-white/20 text-white"
+              : "bg-black text-foreground-secondary"
           }`}
         >
           {badge}
@@ -355,7 +443,9 @@ function renderMcpContent({
   handleAddServer: (server: MCPServerConfig) => void;
   handleEditServer: (server: MCPServerConfig) => void;
   setView: React.Dispatch<React.SetStateAction<"list" | "add" | "edit">>;
-  setEditingServer: React.Dispatch<React.SetStateAction<MCPServerConfig | null>>;
+  setEditingServer: React.Dispatch<
+    React.SetStateAction<MCPServerConfig | null>
+  >;
   installedServerNames: string[];
   handleInstallFromMarketplace: (mcp: MCPMarketplaceItem) => void;
 }) {

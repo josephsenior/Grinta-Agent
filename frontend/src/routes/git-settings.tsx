@@ -116,7 +116,11 @@ function GitSettingsScreen() {
 
       {isLoading && <GitSettingInputsSkeleton />}
 
-      <GitSettingsFooter formIsClean={formIsClean} isPending={isPending} t={t} />
+      <GitSettingsFooter
+        formIsClean={formIsClean}
+        isPending={isPending}
+        t={t}
+      />
     </form>
   );
 }
@@ -217,11 +221,14 @@ function GitSettingsFooter({
   return (
     <div className="border-t border-border bg-background-tertiary/40 px-9 py-6 flex justify-end">
       <BrandButton
+        testId="submit-button"
         type="submit"
         variant="primary"
         isDisabled={formIsClean || isPending}
       >
-        {isPending ? t(I18nKey.SETTINGS$SAVING) : t(I18nKey.SETTINGS$SAVE_CHANGES)}
+        {isPending
+          ? t(I18nKey.SETTINGS$SAVING)
+          : t(I18nKey.SETTINGS$SAVE_CHANGES)}
       </BrandButton>
     </div>
   );
@@ -238,9 +245,8 @@ function useGitSettingsController() {
 
   const { data: config } = useConfig();
 
-  const [dirtyFlags, setDirtyFlags] = React.useState<DirtyFlags>(
-    INITIAL_DIRTY_FLAGS,
-  );
+  const [dirtyFlags, setDirtyFlags] =
+    React.useState<DirtyFlags>(INITIAL_DIRTY_FLAGS);
   const markDirty = React.useCallback((key: DirtyFlagKey, value: boolean) => {
     setDirtyFlags((previous) =>
       previous[key] === value ? previous : { ...previous, [key]: value },

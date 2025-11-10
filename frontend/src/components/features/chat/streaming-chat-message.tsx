@@ -61,9 +61,8 @@ export function StreamingChatMessage({
     streamingInterval,
     streamingSpeed,
   });
-  const { isHovering, setIsHovering, isCopy, handleCopyToClipboard } = useCopyController(
-    message,
-  );
+  const { isHovering, setIsHovering, isCopy, handleCopyToClipboard } =
+    useCopyController(message);
   const handleReaction = useReactionHandler({ onReact, messageId });
   const icon = renderChatIcon(type);
   const containerClassName = getContainerClassName({ type, animate });
@@ -140,7 +139,10 @@ function useStreamingMessage({
     delayTimeoutRef.current = setTimeout(() => {
       intervalRef.current = setInterval(() => {
         setDisplayedMessage((previous) => {
-          const nextLength = Math.min(previous.length + streamingSpeed, message.length);
+          const nextLength = Math.min(
+            previous.length + streamingSpeed,
+            message.length,
+          );
           const nextMessage = message.slice(0, nextLength);
 
           if (nextLength >= message.length) {
@@ -154,13 +156,7 @@ function useStreamingMessage({
     }, streamingDelay);
 
     return clearTimers;
-  }, [
-    message,
-    isStreaming,
-    streamingSpeed,
-    streamingInterval,
-    streamingDelay,
-  ]);
+  }, [message, isStreaming, streamingSpeed, streamingInterval, streamingDelay]);
 
   return { displayedMessage, isComplete } as const;
 }
@@ -217,7 +213,7 @@ const getContainerClassName = ({
     type === "user" && "bg-brand-500/5 border border-brand-500/20",
   );
 
-const MessageHeader = ({
+function MessageHeader({
   type,
   isStreamingComplete,
   actions,
@@ -233,33 +229,35 @@ const MessageHeader = ({
   isHovering: boolean;
   handleCopyToClipboard: () => void;
   messageId?: string | number;
-}) => (
-  <div className="flex items-center justify-between mb-2">
-    <div className="flex items-center gap-2">
-      <span className="text-sm font-medium text-foreground">
-        {getSenderLabel(type)}
-      </span>
-      {!isStreamingComplete && <StreamingIndicator />}
-    </div>
+}) {
+  return (
+    <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-foreground">
+          {getSenderLabel(type)}
+        </span>
+        {!isStreamingComplete && <StreamingIndicator />}
+      </div>
 
-    <div className="flex items-center gap-2">
-      {renderActionButtons({
-        actions,
-        isCopy,
-        handleCopyToClipboard,
-        messageId,
-      })}
-      <CopyToClipboardButton
-        isHidden={!isHovering}
-        isDisabled={isCopy}
-        onClick={handleCopyToClipboard}
-        mode={isCopy ? "copied" : "copy"}
-      />
+      <div className="flex items-center gap-2">
+        {renderActionButtons({
+          actions,
+          isCopy,
+          handleCopyToClipboard,
+          messageId,
+        })}
+        <CopyToClipboardButton
+          isHidden={!isHovering}
+          isDisabled={isCopy}
+          onClick={handleCopyToClipboard}
+          mode={isCopy ? "copied" : "copy"}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+}
 
-const MessageBody = ({
+function MessageBody({
   type,
   streaming,
   onAskAboutCode,
@@ -275,35 +273,37 @@ const MessageBody = ({
   isStreaming: boolean;
   streamingSpeed: number;
   streamingInterval: number;
-}) => (
-  <div
-    className={cn(
-      "text-sm",
-      type === "agent" && "text-foreground",
-      type === "user" && "text-foreground",
-    )}
-    style={{
-      whiteSpace: "normal",
-      wordBreak: "break-word",
-    }}
-  >
-    <Markdown
-      components={buildMarkdownComponents({
-        onAskAboutCode,
-        onRunCode,
-        isStreaming,
-        streamingSpeed,
-        streamingInterval,
-      })}
-      remarkPlugins={[remarkGfm, remarkBreaks]}
+}) {
+  return (
+    <div
+      className={cn(
+        "text-sm",
+        type === "agent" && "text-foreground",
+        type === "user" && "text-foreground",
+      )}
+      style={{
+        whiteSpace: "normal",
+        wordBreak: "break-word",
+      }}
     >
-      {streaming.displayedMessage}
-    </Markdown>
-    {!streaming.isComplete && (
-      <span className="inline-block w-0.5 h-4 bg-primary-500 ml-0.5 animate-pulse" />
-    )}
-  </div>
-);
+      <Markdown
+        components={buildMarkdownComponents({
+          onAskAboutCode,
+          onRunCode,
+          isStreaming,
+          streamingSpeed,
+          streamingInterval,
+        })}
+        remarkPlugins={[remarkGfm, remarkBreaks]}
+      >
+        {streaming.displayedMessage}
+      </Markdown>
+      {!streaming.isComplete && (
+        <span className="inline-block w-0.5 h-4 bg-primary-500 ml-0.5 animate-pulse" />
+      )}
+    </div>
+  );
+}
 
 const ChildrenContainer: React.FC<React.PropsWithChildren> = ({ children }) => {
   if (!children) {
@@ -313,13 +313,15 @@ const ChildrenContainer: React.FC<React.PropsWithChildren> = ({ children }) => {
   return <div className="mt-3">{children}</div>;
 };
 
-const StreamingIndicator = () => (
-  <div className="flex items-center gap-1">
-    <div className="w-1 h-1 bg-primary-500 rounded-full animate-pulse" />
-    <div className="w-1 h-1 bg-primary-500 rounded-full animate-pulse delay-100" />
-    <div className="w-1 h-1 bg-primary-500 rounded-full animate-pulse delay-200" />
-  </div>
-);
+function StreamingIndicator() {
+  return (
+    <div className="flex items-center gap-1">
+      <div className="w-1 h-1 bg-primary-500 rounded-full animate-pulse" />
+      <div className="w-1 h-1 bg-primary-500 rounded-full animate-pulse delay-100" />
+      <div className="w-1 h-1 bg-primary-500 rounded-full animate-pulse delay-200" />
+    </div>
+  );
+}
 
 const getSenderLabel = (type: ForgeSourceType) =>
   type === "agent" ? "Assistant" : "You";
@@ -339,8 +341,20 @@ const buildMarkdownComponents = ({
 }) => ({
   code:
     onAskAboutCode || onRunCode
-      ? streamingCode(onAskAboutCode, onRunCode, isStreaming, streamingSpeed, streamingInterval)
-      : streamingCode(undefined, undefined, isStreaming, streamingSpeed, streamingInterval),
+      ? streamingCode(
+          onAskAboutCode,
+          onRunCode,
+          isStreaming,
+          streamingSpeed,
+          streamingInterval,
+        )
+      : streamingCode(
+          undefined,
+          undefined,
+          isStreaming,
+          streamingSpeed,
+          streamingInterval,
+        ),
   ul,
   ol,
   a: anchor,
@@ -355,7 +369,11 @@ function renderChatIcon(type: ForgeSourceType) {
 
   return (
     <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
-      <img src={iconSrc.src} alt={iconSrc.alt} className="w-8 h-8 object-contain" />
+      <img
+        src={iconSrc.src}
+        alt={iconSrc.alt}
+        className="w-8 h-8 object-contain"
+      />
     </div>
   );
 }

@@ -50,5 +50,3 @@ export function useCostBreakdown(period: AnalyticsPeriod = "week") {
     staleTime: 2 * 60 * 1000,
   });
 }
-
-

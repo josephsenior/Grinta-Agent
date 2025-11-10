@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
@@ -141,7 +141,7 @@ describe.skip("ChatInterfaceRefactored", () => {
 
   it("renders empty state when no events", () => {
     renderWithProviders(<ChatInterfaceRefactored />);
-    
+
     expect(screen.getByText(/no conversations/i)).toBeInTheDocument();
   });
 
@@ -154,23 +154,23 @@ describe.skip("ChatInterfaceRefactored", () => {
     mockUseFilteredEvents.mockReturnValue(mockEvents);
 
     renderWithProviders(<ChatInterfaceRefactored />);
-    
+
     expect(screen.queryByText(/no conversations/i)).not.toBeInTheDocument();
   });
 
   it("handles keyboard shortcuts correctly", () => {
     renderWithProviders(<ChatInterfaceRefactored />);
-    
+
     // Test that keyboard shortcuts hook is called with correct parameters
     expect(mockUseChatKeyboardShortcuts).toHaveBeenCalledWith(
       false, // isInputFocused
-      expect.any(Function) // setShowShortcutsPanel
+      expect.any(Function), // setShowShortcutsPanel
     );
   });
 
   it("handles message sending", async () => {
     renderWithProviders(<ChatInterfaceRefactored />);
-    
+
     // Test that message handlers hook is called with correct parameters
     expect(mockUseChatMessageHandlers).toHaveBeenCalledWith(
       expect.any(Function), // send
@@ -178,59 +178,59 @@ describe.skip("ChatInterfaceRefactored", () => {
       expect.any(Function), // setMessageToSend
       expect.any(Function), // setLastUserMessage
       expect.any(Function), // uploadFiles
-      undefined // conversationId
+      undefined, // conversationId
     );
   });
 
   it("shows task panel when tasks are present", () => {
     const mockStateWithTasks = {
       ...defaultMockState,
-      tasks: [
-        { id: "1", title: "Test task", status: "todo" },
-      ],
+      tasks: [{ id: "1", title: "Test task", status: "todo" }],
       isTaskPanelOpen: true,
     };
 
     mockUseChatInterfaceState.mockReturnValue(mockStateWithTasks);
 
     renderWithProviders(<ChatInterfaceRefactored />);
-    
+
     expect(screen.getByText("Test task")).toBeInTheDocument();
   });
 
   it("handles mobile menu toggle", () => {
     renderWithProviders(<ChatInterfaceRefactored />);
-    
+
     const menuButton = screen.getByRole("button", { name: /menu/i });
     fireEvent.click(menuButton);
-    
+
     expect(defaultMockState.setIsMobileMenuOpen).toHaveBeenCalledWith(true);
   });
 
   it("handles search panel toggle", () => {
     renderWithProviders(<ChatInterfaceRefactored />);
-    
+
     const searchButton = screen.getByRole("button", { name: /search/i });
     fireEvent.click(searchButton);
-    
-    expect(defaultMockKeyboardShortcuts.setIsSearchOpen).toHaveBeenCalledWith(true);
+
+    expect(defaultMockKeyboardShortcuts.setIsSearchOpen).toHaveBeenCalledWith(
+      true,
+    );
   });
 
   it("handles shortcuts panel toggle", () => {
     renderWithProviders(<ChatInterfaceRefactored />);
-    
+
     const shortcutsButton = screen.getByRole("button", { name: /keyboard/i });
     fireEvent.click(shortcutsButton);
-    
+
     expect(defaultMockState.setShowShortcutsPanel).toHaveBeenCalledWith(true);
   });
 
   it("handles go back navigation", () => {
     renderWithProviders(<ChatInterfaceRefactored />);
-    
+
     const goBackButton = screen.getByRole("button", { name: /go back/i });
     fireEvent.click(goBackButton);
-    
+
     expect(defaultMockMessageHandlers.handleGoBack).toHaveBeenCalled();
   });
 
@@ -243,7 +243,7 @@ describe.skip("ChatInterfaceRefactored", () => {
     mockUseChatInterfaceState.mockReturnValue(mockStateWithLoading);
 
     renderWithProviders(<ChatInterfaceRefactored />);
-    
+
     expect(screen.getByTestId("message-skeleton")).toBeInTheDocument();
   });
 
@@ -256,7 +256,7 @@ describe.skip("ChatInterfaceRefactored", () => {
     mockUseChatInterfaceState.mockReturnValue(mockStateWithError);
 
     renderWithProviders(<ChatInterfaceRefactored />);
-    
+
     expect(screen.getByText("Test error message")).toBeInTheDocument();
   });
 });

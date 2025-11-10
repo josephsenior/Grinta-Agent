@@ -41,7 +41,13 @@ export function useKnowledgeBaseDocument(
   documentId: string | null,
 ) {
   return useQuery({
-    queryKey: ["knowledge-base", "collections", collectionId, "documents", documentId],
+    queryKey: [
+      "knowledge-base",
+      "collections",
+      collectionId,
+      "documents",
+      documentId,
+    ],
     queryFn: () => getDocument(collectionId!, documentId!),
     enabled: !!collectionId && !!documentId,
     staleTime: 1000 * 30,
@@ -57,4 +63,3 @@ export function useKnowledgeBaseStats() {
     gcTime: 1000 * 60 * 5,
   });
 }
-

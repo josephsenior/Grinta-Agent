@@ -3,7 +3,13 @@
  */
 
 import { Forge } from "./forge-axios";
-import type { AnalyticsDashboard, AnalyticsPeriod, ModelUsageStats, CostBreakdown, AnalyticsSummary } from "#/types/analytics";
+import type {
+  AnalyticsDashboard,
+  AnalyticsPeriod,
+  ModelUsageStats,
+  CostBreakdown,
+  AnalyticsSummary,
+} from "#/types/analytics";
 
 /**
  * Get comprehensive analytics dashboard
@@ -65,5 +71,3 @@ export async function exportAnalytics(
   });
   return response.data;
 }
-
-

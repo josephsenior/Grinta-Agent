@@ -67,7 +67,7 @@ export async function ensureMermaid(): Promise<MermaidModule> {
   initializationPromise = import("mermaid")
     .then((module) => {
       const mermaid = module.default;
-      mermaid.initialize(MERMAID_CONFIG);
+      mermaid.initialize(MERMAID_CONFIG as any);
       cachedMermaid = mermaid;
       return mermaid;
     })
@@ -84,5 +84,3 @@ export function resetMermaidCache(): void {
   cachedMermaid = null;
   initializationPromise = null;
 }
-
-

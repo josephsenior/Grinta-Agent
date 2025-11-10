@@ -126,6 +126,9 @@ def _extract_observation_data(observation: dict) -> tuple[str, dict]:
     content = observation.pop("content", "")
     extras = copy.deepcopy(observation.pop("extras", {}))
     extras = handle_observation_deprecated_extras(extras)
+    # Remaining keys (e.g., command, metadata) should be treated as extras/kwargs
+    if observation:
+        extras.update(observation)
     return content, extras
 
 

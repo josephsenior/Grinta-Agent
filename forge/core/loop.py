@@ -1,6 +1,7 @@
 """Agent control loop helpers for running runtimes and handling status callbacks."""
 
 import asyncio
+from typing import Callable
 
 from forge.controller import AgentController
 from forge.core.logger import forge_logger as logger
@@ -32,7 +33,7 @@ def _handle_error_status(controller: AgentController, runtime_status: RuntimeSta
         asyncio.create_task(controller.set_agent_state_to(AgentState.ERROR))
 
 
-def _create_status_callback(controller: AgentController) -> callable:
+def _create_status_callback(controller: AgentController) -> Callable[[str, RuntimeStatus, str], None]:
     """Create the status callback function."""
 
     def status_callback(msg_type: str, runtime_status: RuntimeStatus, msg: str) -> None:
@@ -67,7 +68,7 @@ def _set_status_callbacks(
     runtime: Runtime,
     controller: AgentController,
     memory: Memory,
-    status_callback: callable,
+    status_callback: Callable[[str, RuntimeStatus, str], None],
 ) -> None:
     """Set status callbacks on runtime, controller, and memory."""
     runtime.status_callback = status_callback

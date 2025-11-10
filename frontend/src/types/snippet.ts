@@ -197,4 +197,3 @@ export const SNIPPET_CATEGORY_LABELS: Record<SnippetCategory, string> = {
   [SnippetCategory.BOILERPLATE]: "Boilerplate",
   [SnippetCategory.CUSTOM]: "Custom",
 };
-

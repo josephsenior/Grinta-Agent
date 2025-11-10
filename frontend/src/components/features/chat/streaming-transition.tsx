@@ -248,7 +248,9 @@ export function StreamingProgress({
         <div className="flex justify-between text-sm mb-2">
           <span className="text-foreground-secondary">{label}</span>
           {showPercentage && (
-            <span className="text-foreground-secondary">{Math.round(progress)}%</span>
+            <span className="text-foreground-secondary">
+              {Math.round(progress)}%
+            </span>
           )}
         </div>
       )}

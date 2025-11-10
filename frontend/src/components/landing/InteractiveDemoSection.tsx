@@ -12,7 +12,10 @@ export default function InteractiveDemoSection(): React.ReactElement {
   const [activeTab, setActiveTab] = useState("code");
   const [typedCode, setTypedCode] = useState("");
   const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
-  const { ref, isVisible } = useScrollReveal({ threshold: 0.2, triggerOnce: true });
+  const { ref, isVisible } = useScrollReveal({
+    threshold: 0.2,
+    triggerOnce: true,
+  });
 
   const fullCode = `import React from 'react';
 import { Button } from './components/ui/button';
@@ -30,7 +33,7 @@ export default function App() {
   // Typing animation for code
   useEffect(() => {
     if (!isVisible) return;
-    
+
     let index = 0;
     const typingSpeed = 30;
 
@@ -75,7 +78,9 @@ export default function App() {
     <section ref={ref} className="py-20 px-6 relative">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className={`text-center mb-16 max-w-3xl mx-auto ${isVisible ? "stagger-item delay-0" : "opacity-0"}`}>
+        <div
+          className={`text-center mb-16 max-w-3xl mx-auto ${isVisible ? "stagger-item delay-0" : "opacity-0"}`}
+        >
           <Badge
             variant="secondary"
             className="glass-modern border-brand-500/30 text-violet-500 px-5 py-2.5 text-sm font-medium shadow-lg interactive-scale mb-8"
@@ -85,9 +90,7 @@ export default function App() {
           </Badge>
 
           <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight tracking-tight">
-            <span className="text-foreground block mb-2">
-              See It In Action
-            </span>
+            <span className="text-foreground block mb-2">See It In Action</span>
             <span className="bg-gradient-to-r from-brand-500 via-accent-500 to-brand-600 bg-clip-text text-transparent gradient-shimmer block">
               Real-Time Code Generation
             </span>
@@ -99,9 +102,15 @@ export default function App() {
         </div>
 
         {/* Interactive Demo Card */}
-        <Card className={`glass-modern gradient-border-animated shadow-2xl overflow-hidden gpu-accelerated ${isVisible ? "bento-card delay-200" : "opacity-0"}`}>
+        <Card
+          className={`glass-modern gradient-border-animated shadow-2xl overflow-hidden gpu-accelerated ${isVisible ? "bento-card delay-200" : "opacity-0"}`}
+        >
           <CardContent className="p-0">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
               {/* Tab Navigation */}
               <div className="border-b border-border/50 px-6 pt-6">
                 <TabsList className="glass-modern p-1 gap-1">
@@ -135,8 +144,14 @@ export default function App() {
                   <div className="flex items-center gap-3 mb-6">
                     <div className="flex gap-2">
                       <div className="w-3 h-3 bg-danger-500 rounded-full shadow-lg shadow-danger-500/50 animate-pulse" />
-                      <div className="w-3 h-3 bg-warning-500 rounded-full shadow-lg shadow-warning-500/50 animate-pulse" style={{ animationDelay: "0.2s" }} />
-                      <div className="w-3 h-3 bg-success-500 rounded-full shadow-lg shadow-success-500/50 animate-pulse" style={{ animationDelay: "0.4s" }} />
+                      <div
+                        className="w-3 h-3 bg-warning-500 rounded-full shadow-lg shadow-warning-500/50 animate-pulse"
+                        style={{ animationDelay: "0.2s" }}
+                      />
+                      <div
+                        className="w-3 h-3 bg-success-500 rounded-full shadow-lg shadow-success-500/50 animate-pulse"
+                        style={{ animationDelay: "0.4s" }}
+                      />
                     </div>
                     <span className="text-sm text-foreground-secondary font-medium ml-3">
                       App.tsx
@@ -177,7 +192,9 @@ export default function App() {
                         ) : line.includes("✓") ? (
                           <span className="text-success-500">{line}</span>
                         ) : (
-                          <span className="text-foreground-secondary">{line}</span>
+                          <span className="text-foreground-secondary">
+                            {line}
+                          </span>
                         )}
                       </div>
                     ))}
@@ -211,4 +228,3 @@ export default function App() {
     </section>
   );
 }
-

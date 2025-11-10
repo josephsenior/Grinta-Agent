@@ -1,6 +1,16 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Send, Paperclip, X, Loader2, Sparkles, Lightbulb, Rocket, Palette, BarChart3 } from "lucide-react";
+import {
+  Send,
+  Paperclip,
+  X,
+  Loader2,
+  Sparkles,
+  Lightbulb,
+  Rocket,
+  Palette,
+  BarChart3,
+} from "lucide-react";
 import { I18nKey } from "#/i18n/declaration";
 import { cn } from "#/utils/utils";
 import { Button } from "#/components/ui/button";
@@ -73,7 +83,8 @@ const QUICK_ACTIONS = [
   { icon: BarChart3, label: "Analytics", action: "analytics" },
 ] as const;
 
-const getFilesFromTransfer = (items: FileList | null) => (items ? Array.from(items) : []);
+const getFilesFromTransfer = (items: FileList | null) =>
+  items ? Array.from(items) : [];
 
 const useDragAndDrop = (
   onFilesPaste?: (files: File[]) => void,
@@ -95,10 +106,13 @@ const useDragAndDrop = (
     [],
   );
 
-  const handleDragLeave = useCallback((event: React.DragEvent<HTMLTextAreaElement>) => {
-    event.preventDefault();
-    setIsDraggingOver(false);
-  }, []);
+  const handleDragLeave = useCallback(
+    (event: React.DragEvent<HTMLTextAreaElement>) => {
+      event.preventDefault();
+      setIsDraggingOver(false);
+    },
+    [],
+  );
 
   const handleDrop = useCallback(
     (event: React.DragEvent<HTMLTextAreaElement>) => {
@@ -270,12 +284,11 @@ export function ModernChatInput({
     maxHeight: computedMaxHeight,
   });
 
-  const { isDraggingOver, handleDragOver, handleDragLeave, handleDrop } = useDragAndDrop(
-    onFilesPaste,
-  );
+  const { isDraggingOver, handleDragOver, handleDragLeave, handleDrop } =
+    useDragAndDrop(onFilesPaste);
   const { submitMessage, handleEnterPress } = useMessageHandlers({
     disabled,
-    onSubmit: message => {
+    onSubmit: (message) => {
       onSubmit(message);
       setInputValue("");
     },
@@ -283,7 +296,13 @@ export function ModernChatInput({
     textareaRef,
     adjustHeight,
   });
-  useExternalValueSync({ value, inputValue, setInputValue, textareaRef, adjustHeight });
+  useExternalValueSync({
+    value,
+    inputValue,
+    setInputValue,
+    textareaRef,
+    adjustHeight,
+  });
 
   const handlePaste = useClipboardPaste(onFilesPaste);
 
@@ -328,7 +347,10 @@ export function ModernChatInput({
   return (
     <div className={cn("w-full space-y-4", className)}>
       {showQuickActions && (
-        <QuickActions quickActions={QUICK_ACTIONS} onAction={handleQuickAction} />
+        <QuickActions
+          quickActions={QUICK_ACTIONS}
+          onAction={handleQuickAction}
+        />
       )}
 
       <Card
@@ -352,7 +374,9 @@ export function ModernChatInput({
               <MessageTextarea
                 textareaRef={textareaRef}
                 name={name}
-                placeholder={placeholder ?? t(I18nKey.SUGGESTIONS$WHAT_TO_BUILD)}
+                placeholder={
+                  placeholder ?? t(I18nKey.SUGGESTIONS$WHAT_TO_BUILD)
+                }
                 value={inputValue}
                 onChange={handleChange}
                 onKeyDown={handleEnterPress}
@@ -385,46 +409,50 @@ type QuickAction = {
   action: string;
 };
 
-const QuickActions = ({
+function QuickActions({
   quickActions,
   onAction,
 }: {
   quickActions: readonly QuickAction[];
   onAction: (action: string) => void;
-}) => (
-  <div className="flex items-center justify-center flex-wrap gap-2">
-    {quickActions.map(quickAction => {
-      const IconComponent = quickAction.icon;
-      return (
-        <Button
-          key={quickAction.action}
-          variant="outline"
-          size="sm"
-          onClick={() => onAction(quickAction.action)}
-          className="flex items-center gap-2 rounded-full border-border-glass bg-background-glass/50 text-text-secondary hover:text-text-primary hover:bg-primary-500/10 hover:border-primary-500/40 transition-all duration-200 backdrop-blur-sm"
-        >
-          <IconComponent className="w-4 h-4" />
-          <span className="text-xs font-medium">{quickAction.label}</span>
-        </Button>
-      );
-    })}
-  </div>
-);
+}) {
+  return (
+    <div className="flex items-center justify-center flex-wrap gap-2">
+      {quickActions.map((quickAction) => {
+        const IconComponent = quickAction.icon;
+        return (
+          <Button
+            key={quickAction.action}
+            variant="outline"
+            size="sm"
+            onClick={() => onAction(quickAction.action)}
+            className="flex items-center gap-2 rounded-full border-border-glass bg-background-glass/50 text-text-secondary hover:text-text-primary hover:bg-primary-500/10 hover:border-primary-500/40 transition-all duration-200 backdrop-blur-sm"
+          >
+            <IconComponent className="w-4 h-4" />
+            <span className="text-xs font-medium">{quickAction.label}</span>
+          </Button>
+        );
+      })}
+    </div>
+  );
+}
 
-const AttachmentButton = () => (
-  <div className="flex-shrink-0">
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className="h-10 w-10 rounded-full bg-background-glass/50 hover:bg-primary-500/10 text-text-foreground-secondary hover:text-primary-500 transition-all duration-200 backdrop-blur-sm"
-    >
-      <Paperclip className="h-4 w-4" />
-    </Button>
-  </div>
-);
+function AttachmentButton() {
+  return (
+    <div className="flex-shrink-0">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-10 w-10 rounded-full bg-background-glass/50 hover:bg-primary-500/10 text-text-foreground-secondary hover:text-primary-500 transition-all duration-200 backdrop-blur-sm"
+      >
+        <Paperclip className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
 
-const MessageTextarea = ({
+function MessageTextarea({
   textareaRef,
   name,
   placeholder,
@@ -458,55 +486,59 @@ const MessageTextarea = ({
   isDraggingOver: boolean;
   maxHeight: number;
   isTyping: boolean;
-}) => (
-  <div className="relative">
-    <textarea
-      ref={textareaRef}
-      name={name}
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-      onKeyDown={onKeyDown}
-      onFocus={onFocus}
-      onBlur={onBlur}
-      onPaste={onPaste}
-      onDrop={onDrop}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      disabled={disabled}
-      data-dragging-over={isDraggingOver}
-      className={cn(
-        "w-full resize-none outline-none ring-0 transition-all duration-300",
-        "bg-transparent text-text-primary placeholder:text-text-foreground-secondary",
-        "font-medium leading-relaxed text-sm",
-        "focus:placeholder:text-text-secondary",
-        isDraggingOver && [
-          "bg-gradient-to-br from-primary-500/20 to-primary-600/10",
-          "border border-primary-500/40 rounded-xl px-4 py-3",
-          "shadow-[0_0_20px_rgba(189,147,249,0.3)]",
-        ],
-        "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-primary-500/20",
-      )}
-      style={{
-        minHeight: "48px",
-        maxHeight: `${maxHeight}px`,
-        overflow: "hidden",
-      }}
-    />
+}) {
+  return (
+    <div className="relative">
+      <textarea
+        ref={textareaRef}
+        name={name}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        onPaste={onPaste}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        disabled={disabled}
+        data-dragging-over={isDraggingOver}
+        className={cn(
+          "w-full resize-none outline-none ring-0 transition-all duration-300",
+          "bg-transparent text-text-primary placeholder:text-text-foreground-secondary",
+          "font-medium leading-relaxed text-sm",
+          "focus:placeholder:text-text-secondary",
+          isDraggingOver && [
+            "bg-gradient-to-br from-primary-500/20 to-primary-600/10",
+            "border border-primary-500/40 rounded-xl px-4 py-3",
+            "shadow-[0_0_20px_rgba(189,147,249,0.3)]",
+          ],
+          "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-primary-500/20",
+        )}
+        style={{
+          minHeight: "48px",
+          maxHeight: `${maxHeight}px`,
+          overflow: "hidden",
+        }}
+      />
 
-    {isTyping && <TypingIndicator />}
-  </div>
-);
+      {isTyping && <TypingIndicator />}
+    </div>
+  );
+}
 
-const TypingIndicator = () => (
-  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-    <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
-    <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse delay-75" />
-    <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse delay-150" />
-  </div>
-);
+function TypingIndicator() {
+  return (
+    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+      <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
+      <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse delay-75" />
+      <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse delay-150" />
+    </div>
+  );
+}
 
-const DragOverlay = ({ isVisible }: { isVisible: boolean }) => {
+function DragOverlay({ isVisible }: { isVisible: boolean }) {
   if (!isVisible) {
     return null;
   }
@@ -519,7 +551,7 @@ const DragOverlay = ({ isVisible }: { isVisible: boolean }) => {
       </div>
     </div>
   );
-};
+}
 
 const renderActionButton = ({
   showButton,

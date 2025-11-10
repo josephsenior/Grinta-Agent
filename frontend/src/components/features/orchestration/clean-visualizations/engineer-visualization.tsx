@@ -39,7 +39,9 @@ export function EngineerVisualization({
     return (
       <div className={cn("metasop-viz-empty", className)}>
         <Code className="w-12 h-12 text-green-400 opacity-50 mb-2" />
-        <p className="text-sm text-neutral-400">No implementation details yet...</p>
+        <p className="text-sm text-neutral-400">
+          No implementation details yet...
+        </p>
       </div>
     );
   }
@@ -97,9 +99,9 @@ function buildSections({
   }
 
   if (
-    (artifact.setup_commands?.length ||
-      artifact.run_commands?.length ||
-      artifact.test_commands?.length)
+    artifact.setup_commands?.length ||
+    artifact.run_commands?.length ||
+    artifact.test_commands?.length
   ) {
     sections.push(
       <EngineerCommandsSection
@@ -138,7 +140,13 @@ function EngineerFileStructureSection({
       </h4>
       <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3">
         {fileStructure.map((node, index) => (
-          <FileTreeNode key={index} node={node} depth={0} animated={animated} index={index} />
+          <FileTreeNode
+            key={index}
+            node={node}
+            depth={0}
+            animated={animated}
+            index={index}
+          />
         ))}
       </div>
     </div>
@@ -159,7 +167,12 @@ function EngineerImplementationPlanSection({
         Implementation Steps ({implementationPlan.length})
       </h4>
       {implementationPlan.map((step, index) => (
-        <ImplementationStepCard key={index} step={step} index={index} animated={animated} />
+        <ImplementationStepCard
+          key={index}
+          step={step}
+          index={index}
+          animated={animated}
+        />
       ))}
     </div>
   );
@@ -194,8 +207,12 @@ function EngineerDependenciesSection({
               <p className="text-xs font-mono text-green-300">{dep.name}</p>
               {dep.dev && <span className="text-xs text-neutral-500">dev</span>}
             </div>
-            {dep.version && <p className="text-xs text-neutral-500 mt-0.5">{dep.version}</p>}
-            {dep.purpose && <p className="text-xs text-neutral-600 mt-1">{dep.purpose}</p>}
+            {dep.version && (
+              <p className="text-xs text-neutral-500 mt-0.5">{dep.version}</p>
+            )}
+            {dep.purpose && (
+              <p className="text-xs text-neutral-600 mt-1">{dep.purpose}</p>
+            )}
           </motion.div>
         ))}
       </div>
@@ -225,7 +242,11 @@ function EngineerCommandsSection({
   );
 }
 
-function EngineerEffortSection({ estimatedEffort }: { estimatedEffort: string }) {
+function EngineerEffortSection({
+  estimatedEffort,
+}: {
+  estimatedEffort: string;
+}) {
   return (
     <div className="bg-green-500/5 border border-green-500/20 rounded p-3">
       <p className="text-xs text-green-400 mb-1">Estimated Effort:</p>
@@ -314,7 +335,7 @@ function FileTreeNode({
 
   const toggleExpanded = () => {
     if (isFolder) {
-      setIsExpanded(prev => !prev);
+      setIsExpanded((prev) => !prev);
     }
   };
 
@@ -331,11 +352,18 @@ function FileTreeNode({
         onClick={toggleExpanded}
       >
         {renderFileTreeLeadingIcons({ isFolder, isExpanded })}
-        <span className={cn("text-xs", isFolder ? "text-green-300 font-medium" : "text-neutral-400")}>
+        <span
+          className={cn(
+            "text-xs",
+            isFolder ? "text-green-300 font-medium" : "text-neutral-400",
+          )}
+        >
           {node.name}
         </span>
         {node.purpose && (
-          <span className="text-xs text-neutral-600 hidden group-hover:inline ml-2">- {node.purpose}</span>
+          <span className="text-xs text-neutral-600 hidden group-hover:inline ml-2">
+            - {node.purpose}
+          </span>
         )}
       </div>
 
@@ -373,11 +401,17 @@ function ImplementationStepCard({
           onClick={() => setIsCompleted(!isCompleted)}
           className="mt-0.5 text-green-400 hover:text-green-300 transition-colors"
         >
-          {isCompleted ? <CheckCircle className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
+          {isCompleted ? (
+            <CheckCircle className="w-5 h-5" />
+          ) : (
+            <Circle className="w-5 h-5" />
+          )}
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-mono text-green-400">Step {step.step_number || index + 1}</span>
+            <span className="text-xs font-mono text-green-400">
+              Step {step.step_number || index + 1}
+            </span>
             {step.estimated_time && (
               <span className="text-xs text-neutral-500 flex items-center gap-1">
                 <Clock className="w-3 h-3" />
@@ -385,10 +419,17 @@ function ImplementationStepCard({
               </span>
             )}
           </div>
-          <h5 className={cn("text-sm font-medium", isCompleted ? "line-through text-neutral-500" : "text-green-200")}>
+          <h5
+            className={cn(
+              "text-sm font-medium",
+              isCompleted ? "line-through text-neutral-500" : "text-green-200",
+            )}
+          >
             {step.title}
           </h5>
-          {step.description && <p className="text-xs text-neutral-400 mt-1">{step.description}</p>}
+          {step.description && (
+            <p className="text-xs text-neutral-400 mt-1">{step.description}</p>
+          )}
           {fileSections}
           {commandSection}
         </div>
@@ -426,11 +467,7 @@ function buildFileSections(step: ImplementationStep) {
     return null;
   }
 
-  return (
-    <div className="mt-2 text-xs space-y-1">
-      {sections}
-    </div>
-  );
+  return <div className="mt-2 text-xs space-y-1">{sections}</div>;
 }
 
 function buildCommandSection(commands?: string[]) {
@@ -474,17 +511,24 @@ function ImplementationStepFileList({
   );
 }
 
-function CommandList({ title, commands }: { title: string; commands: string[] }) {
+function CommandList({
+  title,
+  commands,
+}: {
+  title: string;
+  commands: string[];
+}) {
   return (
     <div>
       <p className="text-xs text-green-400 mb-1">{title}:</p>
       {commands.map((cmd, i) => (
-        <div key={i} className="bg-black/40 border border-green-500/20 rounded px-3 py-2 mb-1">
+        <div
+          key={i}
+          className="bg-black/40 border border-green-500/20 rounded px-3 py-2 mb-1"
+        >
           <code className="text-xs text-green-300 font-mono">{cmd}</code>
         </div>
       ))}
     </div>
   );
 }
-
-

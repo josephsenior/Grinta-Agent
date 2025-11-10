@@ -67,4 +67,3 @@ export interface MemoryExport {
   memories: Memory[];
   stats: MemoryStats;
 }
-

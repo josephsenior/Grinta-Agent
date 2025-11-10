@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import os
 import re
 from itertools import chain
 from pathlib import Path
@@ -132,8 +133,55 @@ class BaseMicroagent(BaseModel):
         """Load file content from path if not provided."""
         if file_content is not None:
             return file_content
-        with open(path, encoding="utf-8", errors="replace") as f:
-            return f.read()
+        try:
+            with open(path, encoding="utf-8", errors="replace") as f:
+                return f.read()
+        except PermissionError:
+            # Windows NamedTemporaryFile defaults to exclusive access which prevents a second
+            # open() call while the handle is still alive. Tests keep the temporary file open,
+            # so we fall back to the Win32 CreateFile API that allows shared reads.
+            if os.name == "nt":
+                return cls._read_locked_file_windows(path)
+            raise
+
+    @staticmethod
+    def _read_locked_file_windows(path: Path) -> str:
+        """Read a file that may be locked by another handle on Windows."""
+        import ctypes
+
+        from ctypes import wintypes
+
+        GENERIC_READ = 0x80000000
+        FILE_SHARE_READ = 0x00000001
+        FILE_SHARE_WRITE = 0x00000002
+        FILE_SHARE_DELETE = 0x00000004
+        OPEN_EXISTING = 3
+        FILE_ATTRIBUTE_NORMAL = 0x00000080
+        INVALID_HANDLE_VALUE = wintypes.HANDLE(-1).value
+
+        kernel32 = ctypes.windll.kernel32
+        kernel32.SetLastError(0)
+        handle = kernel32.CreateFileW(
+            str(path),
+            GENERIC_READ,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            None,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            None,
+        )
+        if handle == INVALID_HANDLE_VALUE:
+            error = ctypes.GetLastError()
+            raise PermissionError(f"Unable to open locked file {path}: error {error}")  # pragma: no cover
+        try:
+            import msvcrt
+
+            fd = msvcrt.open_osfhandle(handle, os.O_RDONLY)
+        except Exception:
+            kernel32.CloseHandle(handle)
+            raise
+        with os.fdopen(fd, "r", encoding="utf-8", errors="replace") as file_obj:
+            return file_obj.read()
 
     @classmethod
     def _create_microagent_instance(

@@ -129,16 +129,17 @@ function useRepoMicroagentsController({
     }
   }, [conversationsQuery.data, dispatch, selectedMicroagentItem]);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       dispatch(
         setSelectedMicroagentItem({
           microagent: null,
           conversation: null,
         }),
       );
-    };
-  }, [dispatch]);
+    },
+    [dispatch],
+  );
 
   return {
     microagents: microagentQuery.data ?? [],

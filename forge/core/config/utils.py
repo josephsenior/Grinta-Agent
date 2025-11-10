@@ -225,20 +225,24 @@ def load_from_env(cfg: ForgeConfig, env_or_toml_dict: dict | MutableMapping[str,
         env_or_toml_dict: Dictionary containing environment variables or TOML values.
 
     """
-    # Apply configuration to main config and sub-configs
-    _set_attr_from_env(cfg, env_or_toml_dict)
-    default_llm_config = cfg.get_llm_config()
-    _set_attr_from_env(default_llm_config, env_or_toml_dict, "LLM_")
+    # Work on a shallow copy so runtime mutations (e.g. from API key manager)
+    # don't overwrite the values being loaded from the caller.
+    env_dict = dict(env_or_toml_dict)
 
-    if "LLM_API_KEY" in env_or_toml_dict:
+    # Apply configuration to main config and sub-configs
+    _set_attr_from_env(cfg, env_dict)
+    default_llm_config = cfg.get_llm_config()
+    _set_attr_from_env(default_llm_config, env_dict, "LLM_")
+
+    if "LLM_API_KEY" in env_dict:
         from forge.core.config.llm_config import LLMConfig
 
         updated_data = default_llm_config.model_dump()
-        updated_data["api_key"] = env_or_toml_dict["LLM_API_KEY"]
+        updated_data["api_key"] = env_dict["LLM_API_KEY"]
         cfg.set_llm_config(LLMConfig.model_validate(updated_data))
     else:
         cfg.set_llm_config(default_llm_config)
-    _set_attr_from_env(cfg.get_agent_config(), env_or_toml_dict, "AGENT_")
+    _set_attr_from_env(cfg.get_agent_config(), env_dict, "AGENT_")
 
 
 def _restore_environment(original_env: dict[str, str]) -> None:

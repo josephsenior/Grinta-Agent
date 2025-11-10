@@ -51,7 +51,7 @@ function AppContent() {
 
   // Fetch batch feedback data when conversation is loaded
   useBatchFeedback();
-  
+
   // Auto-navigate to browser when servers start
   useAutoNavigateToApp();
 
@@ -150,7 +150,9 @@ function AppContent() {
 
   return (
     <Suspense
-      fallback={<div className="h-full bg-background-secondary animate-pulse rounded-lg" />}
+      fallback={
+        <div className="h-full bg-background-secondary animate-pulse rounded-lg" />
+      }
     >
       <TaskProvider>
         <WsClientProvider conversationId={conversationId}>

@@ -10,7 +10,10 @@ interface MousePosition {
  * Optimized with throttling for performance
  */
 export function useMousePosition(throttleMs: number = 16): MousePosition {
-  const [mousePosition, setMousePosition] = useState<MousePosition>({ x: 0, y: 0 });
+  const [mousePosition, setMousePosition] = useState<MousePosition>({
+    x: 0,
+    y: 0,
+  });
 
   useEffect(() => {
     let lastUpdate = 0;
@@ -18,7 +21,7 @@ export function useMousePosition(throttleMs: number = 16): MousePosition {
 
     const updateMousePosition = (e: MouseEvent) => {
       const now = Date.now();
-      
+
       // Throttle updates to avoid performance issues
       if (now - lastUpdate < throttleMs) {
         return;
@@ -54,7 +57,7 @@ export function useMousePosition(throttleMs: number = 16): MousePosition {
  */
 export function useMagneticHover(
   elementRef: React.RefObject<HTMLElement | null>,
-  strength: number = 0.3
+  strength: number = 0.3,
 ) {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
@@ -93,4 +96,3 @@ export function useMagneticHover(
 
   return { offset, isHovered };
 }
-

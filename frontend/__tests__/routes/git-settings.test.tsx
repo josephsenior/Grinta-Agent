@@ -11,6 +11,7 @@ import { MOCK_DEFAULT_USER_SETTINGS } from "#/mocks/handlers";
 import { GetConfigResponse } from "#/api/forge.types";
 import * as ToastHandlers from "#/utils/custom-toast-handlers";
 import { SecretsService } from "#/api/secrets-service";
+import { I18nKey } from "#/i18n/declaration";
 
 const VALID_OSS_CONFIG: GetConfigResponse = {
   APP_MODE: "oss",
@@ -61,6 +62,8 @@ const renderGitSettingsScreen = () => {
           GITLAB$HOST_LABEL: "GitLab Host",
           BITBUCKET$TOKEN_LABEL: "Bitbucket Token",
           BITBUCKET$HOST_LABEL: "Bitbucket Host",
+          SETTINGS$SAVE_CHANGES: "Save Changes",
+          SETTINGS$SAVING: "Saving…",
         },
       },
     },
@@ -94,11 +97,53 @@ const renderGitSettingsScreen = () => {
   };
 };
 
+const disconnectMutation = vi.fn();
+vi.mock("#/hooks/mutation/use-logout", () => ({
+  useLogout: () => ({ mutate: disconnectMutation }),
+}));
+
+const addGitProvidersMutate = vi.fn(
+  (
+    variables: { providers: Record<string, { token: string; host: string }> },
+    options?: {
+      onSuccess?: (value: unknown) => void;
+      onError?: (error: unknown) => void;
+      onSettled?: () => void;
+    },
+  ) => {
+    const result = SecretsService.addGitProvider(variables.providers);
+    return Promise.resolve(result)
+      .then((value) => {
+        options?.onSuccess?.(value);
+        return value;
+      })
+      .catch((error) => {
+        options?.onError?.(error);
+        throw error;
+      })
+      .finally(() => {
+        options?.onSettled?.();
+      });
+  },
+);
+
+const addGitProvidersState = { isPending: false };
+
+vi.mock("#/hooks/mutation/use-add-git-providers", () => ({
+  useAddGitProviders: () => ({
+    mutate: addGitProvidersMutate,
+    isPending: addGitProvidersState.isPending,
+  }),
+}));
+
 beforeEach(() => {
   // Since we don't recreate the query client on every test, we need to
   // reset the query client before each test to avoid state leaks
   // between tests.
   queryClient.invalidateQueries();
+  disconnectMutation.mockReset();
+  addGitProvidersMutate.mockReset();
+  addGitProvidersState.isPending = false;
 });
 
 describe("Content", () => {
@@ -235,7 +280,9 @@ describe("Content", () => {
     expect(button).not.toBeInTheDocument();
 
     expect(screen.getByTestId("submit-button")).toBeInTheDocument();
-    expect(screen.getByTestId("disconnect-tokens-button")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("disconnect-tokens-button"),
+    ).not.toBeInTheDocument();
 
     getConfigSpy.mockResolvedValue(VALID_SAAS_CONFIG);
     queryClient.invalidateQueries();
@@ -258,11 +305,29 @@ describe("Content", () => {
     await waitFor(() => {
       button = screen.getByTestId("configure-github-repositories-button");
       expect(button).toBeInTheDocument();
-      expect(screen.queryByTestId("submit-button")).not.toBeInTheDocument();
-      expect(
-        screen.queryByTestId("disconnect-tokens-button"),
-      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("submit-button")).toBeDisabled();
     });
+  });
+
+  it("should render project management integrations when feature flags enabled", async () => {
+    const getConfigSpy = vi.spyOn(Forge, "getConfig");
+    getConfigSpy.mockResolvedValue({
+      ...VALID_OSS_CONFIG,
+      FEATURE_FLAGS: {
+        ...VALID_OSS_CONFIG.FEATURE_FLAGS,
+        ENABLE_JIRA: true,
+        ENABLE_JIRA_DC: true,
+        ENABLE_LINEAR: true,
+      },
+    });
+
+    renderGitSettingsScreen();
+
+    expect(await screen.findByTestId("jira-integration-row")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("jira-dc-integration-row"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("linear-integration-row")).toBeInTheDocument();
   });
 });
 
@@ -285,6 +350,7 @@ describe("Form submission", () => {
       github: { token: "test-token", host: "" },
       gitlab: { token: "", host: "" },
       bitbucket: { token: "", host: "" },
+      enterprise_sso: { token: "", host: "" },
     });
   });
 
@@ -306,6 +372,7 @@ describe("Form submission", () => {
       github: { token: "", host: "" },
       gitlab: { token: "test-token", host: "" },
       bitbucket: { token: "", host: "" },
+      enterprise_sso: { token: "", host: "" },
     });
   });
 
@@ -327,6 +394,7 @@ describe("Form submission", () => {
       github: { token: "", host: "" },
       gitlab: { token: "", host: "" },
       bitbucket: { token: "test-token", host: "" },
+      enterprise_sso: { token: "", host: "" },
     });
   });
 
@@ -356,63 +424,86 @@ describe("Form submission", () => {
     expect(submit).toBeDisabled();
   });
 
-  it("should enable a disconnect tokens button if there is at least one token set", async () => {
+  it("should mark host inputs as dirty when edited", async () => {
     const getConfigSpy = vi.spyOn(Forge, "getConfig");
     const getSettingsSpy = vi.spyOn(Forge, "getSettings");
-
     getConfigSpy.mockResolvedValue(VALID_OSS_CONFIG);
-    getSettingsSpy.mockResolvedValue({
-      ...MOCK_DEFAULT_USER_SETTINGS,
-      provider_tokens_set: {
-        github: null,
-        gitlab: null,
-      },
-    });
+    getSettingsSpy.mockResolvedValue(MOCK_DEFAULT_USER_SETTINGS);
 
     renderGitSettingsScreen();
-    await screen.findByTestId("git-settings-screen");
 
-    let disconnectButton = await screen.findByTestId(
-      "disconnect-tokens-button",
+    const submit = await screen.findByTestId("submit-button");
+    expect(submit).toBeDisabled();
+
+    const githubHostInput = await screen.findByTestId("github-host-input");
+    await userEvent.type(githubHostInput, "enterprise.github.com");
+    expect(githubHostInput).toHaveValue("enterprise.github.com");
+    expect(submit).not.toBeDisabled();
+
+    await userEvent.clear(githubHostInput);
+    expect(githubHostInput).toHaveValue("");
+    expect(submit).toBeDisabled();
+
+    const gitlabHostInput = await screen.findByTestId("gitlab-host-input");
+    await userEvent.type(gitlabHostInput, "gitlab.enterprise.com");
+    expect(gitlabHostInput).toHaveValue("gitlab.enterprise.com");
+    expect(submit).not.toBeDisabled();
+
+    await userEvent.clear(gitlabHostInput);
+    expect(gitlabHostInput).toHaveValue("");
+    expect(submit).toBeDisabled();
+
+    const bitbucketHostInput = await screen.findByTestId(
+      "bitbucket-host-input",
     );
-    // When tokens are set (github and gitlab are not null), the button should be enabled
-    await waitFor(() => expect(disconnectButton).not.toBeDisabled());
+    await userEvent.type(bitbucketHostInput, "bitbucket.enterprise.com");
+    expect(bitbucketHostInput).toHaveValue("bitbucket.enterprise.com");
+    expect(submit).not.toBeDisabled();
 
-    // Mock settings with no tokens set
-    getSettingsSpy.mockResolvedValue({
-      ...MOCK_DEFAULT_USER_SETTINGS,
-      provider_tokens_set: {},
-    });
-    queryClient.invalidateQueries();
-
-    disconnectButton = await screen.findByTestId("disconnect-tokens-button");
-    // When no tokens are set, the button should be disabled
-    await waitFor(() => expect(disconnectButton).toBeDisabled());
+    await userEvent.clear(bitbucketHostInput);
+    expect(bitbucketHostInput).toHaveValue("");
+    expect(submit).toBeDisabled();
   });
 
-  it("should call logout when pressing the disconnect tokens button", async () => {
-    const getConfigSpy = vi.spyOn(Forge, "getConfig");
-    const logoutSpy = vi.spyOn(Forge, "logout");
-    const getSettingsSpy = vi.spyOn(Forge, "getSettings");
+  it("shows saving state while a mutation is pending", async () => {
+    addGitProvidersState.isPending = true;
 
+    const getConfigSpy = vi.spyOn(Forge, "getConfig");
     getConfigSpy.mockResolvedValue(VALID_OSS_CONFIG);
-    getSettingsSpy.mockResolvedValue({
-      ...MOCK_DEFAULT_USER_SETTINGS,
-      provider_tokens_set: {
-        github: null,
-        gitlab: null,
-      },
-    });
 
     renderGitSettingsScreen();
 
-    const disconnectButton = await screen.findByTestId(
-      "disconnect-tokens-button",
-    );
-    await waitFor(() => expect(disconnectButton).not.toBeDisabled());
-    await userEvent.click(disconnectButton);
+    const submit = await screen.findByTestId("submit-button");
+    expect(submit).toBeDisabled();
+    expect(submit).toHaveTextContent(I18nKey.SETTINGS$SAVING);
+  });
 
-    expect(logoutSpy).toHaveBeenCalled();
+  it("disconnects git tokens when the disconnect field is present", async () => {
+    const getConfigSpy = vi.spyOn(Forge, "getConfig");
+    const getSettingsSpy = vi.spyOn(Forge, "getSettings");
+    getConfigSpy.mockResolvedValue(VALID_OSS_CONFIG);
+    getSettingsSpy.mockResolvedValue(MOCK_DEFAULT_USER_SETTINGS);
+    const saveProvidersSpy = vi.spyOn(SecretsService, "addGitProvider");
+    saveProvidersSpy.mockResolvedValue(true);
+
+    renderGitSettingsScreen();
+
+    const form = await screen.findByTestId("git-settings-screen");
+    const submit = await screen.findByTestId("submit-button");
+
+    const hiddenInput = document.createElement("input");
+    hiddenInput.type = "hidden";
+    hiddenInput.name = "disconnect-tokens-button";
+    hiddenInput.value = "1";
+    form.appendChild(hiddenInput);
+
+    const githubInput = await screen.findByTestId("github-token-input");
+    await userEvent.type(githubInput, "x");
+
+    await userEvent.click(submit);
+
+    expect(disconnectMutation).toHaveBeenCalledTimes(1);
+    expect(saveProvidersSpy).not.toHaveBeenCalled();
   });
 
   // flaky test

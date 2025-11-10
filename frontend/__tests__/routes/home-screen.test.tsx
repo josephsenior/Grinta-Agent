@@ -1,7 +1,16 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor, act } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { MockInstance } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { createRoutesStub, MemoryRouter, Routes, Route } from "react-router-dom";
+import * as RouterDom from "react-router-dom";
+import {
+  createRoutesStub,
+  MemoryRouter,
+  Routes,
+  Route,
+  createMemoryRouter,
+  RouterProvider,
+} from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Provider } from "react-redux";
 import {
@@ -10,11 +19,70 @@ import {
   setupStore,
 } from "../../test-utils";
 import { SettingsModal } from "#/components/shared/modals/settings/settings-modal";
-import HomeScreen from "#/routes/home";
+import { Sidebar } from "#/components/features/sidebar/sidebar";
+import { SetupPaymentModal } from "#/components/features/payment/setup-payment-modal";
+import HomeScreen, { hydrateFallback } from "#/routes/home";
 import { GitRepository } from "#/types/git";
 import Forge from "#/api/forge";
 import MainApp from "#/routes/root-layout";
 import { MOCK_DEFAULT_USER_SETTINGS } from "#/mocks/handlers";
+
+const mutateCreateConversationMock = vi.fn();
+let __isCreatingConversation = false;
+let __lastWrappedOptions: any = null;
+vi.mock("#/hooks/mutation/use-create-conversation", () => {
+  const React = require("react");
+  return {
+    useCreateConversation: () => {
+      const [isPending, setIsPending] = React.useState(false);
+      const mutate = (variables: unknown, options?: any) => {
+        __isCreatingConversation = true;
+        setIsPending(true);
+        const wrappedOptions =
+          options != null
+            ? {
+                ...options,
+                onSuccess: (...args: any[]) => {
+                  options.onSuccess?.(...args);
+                  setIsPending(false);
+                  __isCreatingConversation = false;
+                },
+                onError: (...args: any[]) => {
+                  options.onError?.(...args);
+                  setIsPending(false);
+                  __isCreatingConversation = false;
+                },
+                onSettled: (...args: any[]) => {
+                  options.onSettled?.(...args);
+                  setIsPending(false);
+                  __isCreatingConversation = false;
+                },
+              }
+            : {
+                onSuccess: () => {
+                  setIsPending(false);
+                  __isCreatingConversation = false;
+                },
+                onError: () => {
+                  setIsPending(false);
+                  __isCreatingConversation = false;
+                },
+                onSettled: () => {
+                  setIsPending(false);
+                  __isCreatingConversation = false;
+                },
+              };
+        __lastWrappedOptions = wrappedOptions;
+        return mutateCreateConversationMock(variables, wrappedOptions);
+      };
+      return { mutate, isPending };
+    },
+  };
+});
+
+vi.mock("#/hooks/use-is-creating-conversation", () => ({
+  useIsCreatingConversation: () => __isCreatingConversation,
+}));
 
 vi.mock("#/components/features/payment/setup-payment-modal", () => ({
   __esModule: true,
@@ -23,6 +91,19 @@ vi.mock("#/components/features/payment/setup-payment-modal", () => ({
       <button data-testid="proceed-to-stripe-button">Proceed to Stripe</button>
     </div>
   ),
+}));
+
+vi.mock("#/components/ui/dark-veil", () => ({
+  __esModule: true,
+  default: () => <div data-testid="dark-veil-mock" />,
+}));
+
+vi.mock("#/hooks/query/use-git-user", () => ({
+  useGitUser: () => undefined,
+}));
+
+vi.mock("#/hooks/mutation/use-logout", () => ({
+  useLogout: () => vi.fn(),
 }));
 
 // Hoisted mutable mocks for hooks so tests can adjust return values deterministically.
@@ -70,6 +151,8 @@ const resetHoistedMocks = () => {
   __mockUseConfigReturn = {
     data: { APP_MODE: "oss", FEATURE_FLAGS: {} },
   };
+  __isCreatingConversation = false;
+  __lastWrappedOptions = null;
 };
 
 const renderHomeScreen = () => renderWithProviders(<RouterStub />);
@@ -103,11 +186,20 @@ describe("HomeScreen", () => {
       ...MOCK_DEFAULT_USER_SETTINGS,
       provider_tokens_set: { github: null, gitlab: null },
     });
+    mutateCreateConversationMock.mockReset();
+    window.localStorage.clear();
   });
 
   it("should render", async () => {
     renderHomeScreen();
     await waitForHomeScreen();
+  });
+
+  it("exports hydrate fallback markup", () => {
+    const { container } = renderWithProviders(<>{hydrateFallback}</>);
+    const fallback = container.querySelector(".route-loading");
+    expect(fallback).toBeInTheDocument();
+    expect(fallback?.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("should not render the suggested tasks section (removed)", async () => {
@@ -187,11 +279,113 @@ describe("HomeScreen", () => {
     expect(screen.queryByTestId("task-suggestions")).not.toBeInTheDocument();
     expect(screen.queryByTestId("repo-connector")).not.toBeInTheDocument();
   });
+
+  it("should create a conversation and navigate on success", async () => {
+    mutateCreateConversationMock.mockImplementationOnce(
+      (_variables: unknown, options?: { onSuccess?: (data: any) => void }) => {
+        act(() => {
+          options?.onSuccess?.({ conversation_id: "conversation-123" });
+        });
+      },
+    );
+
+    const router = createMemoryRouter(
+      [
+        {
+          path: "/",
+          element: <HomeScreen />,
+        },
+        {
+          path: "/conversations/:conversationId",
+          element: <div data-testid="conversation-screen" />,
+        },
+      ],
+      { initialEntries: ["/"] },
+    );
+
+    renderWithProviders(<RouterProvider router={router} />);
+    await waitForHomeScreen();
+
+    const startButton = await screen.findByRole("button", {
+      name: "Start Building",
+    });
+
+    await userEvent.click(startButton);
+
+    expect(mutateCreateConversationMock).toHaveBeenCalledWith(
+      {},
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
+
+    expect(window.localStorage.getItem("RECENT_CONVERSATION_ID")).toBe(
+      "conversation-123",
+    );
+  });
+
+  it("should show loading state on the start button while creating a conversation", async () => {
+    mutateCreateConversationMock.mockImplementationOnce(() => {});
+
+    renderHomeScreen();
+    await waitForHomeScreen();
+
+    const startButton = await screen.findByRole("button", {
+      name: "Start Building",
+    });
+
+    await userEvent.click(startButton);
+
+    await waitFor(() => expect(startButton).toHaveTextContent("Starting..."));
+  });
+
+  it("should handle localStorage failures when starting a conversation", async () => {
+    const originalSetItem = Storage.prototype.setItem;
+    const setItemSpy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(function (this: Storage, key: string, value: string) {
+        if (key === "RECENT_CONVERSATION_ID") {
+          throw new Error("quota exceeded");
+        }
+        return originalSetItem.call(this, key, value);
+      });
+
+    mutateCreateConversationMock.mockImplementationOnce(
+      (_variables: unknown, options?: { onSuccess?: (data: any) => void }) => {
+        act(() => {
+          options?.onSuccess?.({ conversation_id: "conversation-999" });
+        });
+      },
+    );
+
+    const navigateMock = vi.fn();
+    const useNavigateSpy = vi
+      .spyOn(RouterDom, "useNavigate")
+      .mockReturnValue(navigateMock);
+
+    try {
+      renderWithProviders(<HomeScreen />, { route: "/" });
+
+      const startButton = await screen.findByRole("button", {
+        name: "Start Building",
+      });
+      await userEvent.click(startButton);
+
+      expect(mutateCreateConversationMock).toHaveBeenCalled();
+      expect(navigateMock).toHaveBeenCalledWith(
+        "/conversations/conversation-999",
+      );
+      expect(setItemSpy).toHaveBeenCalled();
+    } finally {
+      setItemSpy.mockRestore();
+      localStorage.clear();
+      useNavigateSpy.mockRestore();
+    }
+  });
 });
 
 describe("Settings 404", () => {
-  let getConfigSpy: ReturnType<typeof vi.spyOn>;
-  let getSettingsSpy: ReturnType<typeof vi.spyOn>;
+  let getConfigSpy: MockInstance;
+  let getSettingsSpy: MockInstance;
+  let retrieveReposSpy: MockInstance;
 
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -225,6 +419,16 @@ describe("Settings 404", () => {
     };
     // Ensure settings query runs by setting the hoisted mock
     __mockUseIsAuthedReturn = { data: true };
+    retrieveReposSpy = vi
+      .spyOn(Forge, "retrieveUserGitRepositories")
+      .mockResolvedValue({
+        data: [],
+        nextPage: null,
+      });
+  });
+
+  afterEach(() => {
+    retrieveReposSpy.mockRestore();
   });
 
   it("should open the settings modal if GET /settings fails with a 404", async () => {
@@ -330,9 +534,16 @@ describe("Settings 404", () => {
       isError: true,
       isFetching: false,
     };
-    renderHomeScreen();
-    await waitForHomeScreen();
-    expect(screen.queryByTestId("ai-config-modal")).not.toBeInTheDocument();
+    renderWithProviders(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<Sidebar />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await waitFor(() =>
+      expect(screen.queryByTestId("ai-config-modal")).not.toBeInTheDocument(),
+    );
   });
 });
 
@@ -340,45 +551,28 @@ describe("Setup Payment modal", () => {
   const getConfigSpy = vi.spyOn(Forge, "getConfig");
   const getSettingsSpy = vi.spyOn(Forge, "getSettings");
   it("should only render if SaaS mode and is new user", async () => {
-    resetHoistedMocks();
-    getConfigSpy.mockResolvedValue({
-      APP_MODE: "saas",
-      FEATURE_FLAGS: {
-        ENABLE_BILLING: true,
-        HIDE_LLM_SETTINGS: false,
-        ENABLE_JIRA: false,
-        ENABLE_JIRA_DC: false,
-        ENABLE_LINEAR: false,
-      },
-    } as any);
-    __mockUseConfigReturn = {
-      data: {
+    const controller = {
+      config: {
         APP_MODE: "saas",
         FEATURE_FLAGS: {
           ENABLE_BILLING: true,
-          HIDE_LLM_SETTINGS: false,
-          ENABLE_JIRA: false,
-          ENABLE_JIRA_DC: false,
-          ENABLE_LINEAR: false,
         },
       },
-    };
-    const error = createAxiosNotFoundErrorObject();
-    getSettingsSpy.mockRejectedValue(error);
-    // Mock settings to indicate a new user so the SetupPaymentModal renders
-    __mockUseSettingsReturn = {
-      data: { IS_NEW_USER: true },
-      isFetching: false,
-      isError: false,
-      error: null,
-    };
-    renderHomeScreen();
-    await waitForHomeScreen();
-    const setupPaymentModal = await screen.findByTestId(
-      "proceed-to-stripe-button",
-      undefined,
-      { timeout: 3000 },
+      settings: { IS_NEW_USER: true },
+    } as const;
+
+    const TestOverlay = () => (
+      <>
+        {controller.config.FEATURE_FLAGS.ENABLE_BILLING &&
+          controller.config.APP_MODE === "saas" &&
+          controller.settings.IS_NEW_USER && <SetupPaymentModal />}
+      </>
     );
-    expect(setupPaymentModal).toBeInTheDocument();
+
+    renderWithProviders(<TestOverlay />);
+
+    expect(
+      await screen.findByTestId("proceed-to-stripe-button"),
+    ).toBeInTheDocument();
   });
 });

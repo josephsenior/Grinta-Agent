@@ -163,14 +163,14 @@ class ActionExecutionClient(Runtime):
         response = self._send_action_server_request("GET", f"{self.action_execution_server_url}/alive", timeout=5)
         assert response.is_closed
 
-    def list_files(self, path: str | None = None) -> list[str]:
+    def list_files(self, path: str = "", recursive: bool = False) -> list[str]:
         """List files in the sandbox.
 
         If path is None, list files in the sandbox's initial working directory (e.g., /workspace).
         """
         try:
-            data = {}
-            if path is not None:
+            data: dict[str, Any] = {"recursive": recursive}
+            if path:
                 data["path"] = path
             response = self._send_action_server_request(
                 "POST",
@@ -387,18 +387,23 @@ class ActionExecutionClient(Runtime):
     def _execute_action_on_server(self, action: Action) -> Observation:
         """Execute action on the action execution server."""
         execution_action_body: dict[str, Any] = {"action": event_to_dict(action)}
+        timeout = action.timeout if action.timeout is not None else self.config.sandbox.timeout
+        if timeout is None:
+            msg = "Expected action timeout to be set before execution."
+            raise RuntimeError(msg)
+
         response = self._send_action_server_request(
             "POST",
             f"{self.action_execution_server_url}/execute_action",
             json=execution_action_body,
-            timeout=action.timeout + 5,
+            timeout=timeout + 5,
         )
         assert response.is_closed
         output = response.json()
         if getattr(action, "hidden", False):
             output.get("extras")["hidden"] = True
         obs = observation_from_dict(output)
-        obs._cause = action.id
+        obs.cause = action.id
         return obs
 
     def send_action_for_execution(self, action: Action) -> Observation:

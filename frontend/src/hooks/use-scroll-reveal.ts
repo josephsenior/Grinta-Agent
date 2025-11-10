@@ -11,7 +11,7 @@ interface ScrollRevealOptions {
  * Uses IntersectionObserver for performance
  */
 export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(
-  options: ScrollRevealOptions = {}
+  options: ScrollRevealOptions = {},
 ) {
   const {
     threshold = 0.1,
@@ -37,7 +37,7 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(
           setIsVisible(false);
         }
       },
-      { threshold, rootMargin }
+      { threshold, rootMargin },
     );
 
     observer.observe(element);
@@ -59,10 +59,11 @@ export function useScrollProgress() {
   useEffect(() => {
     const handleScroll = () => {
       const windowHeight = window.innerHeight;
-      const documentHeight = document.documentElement.scrollHeight - windowHeight;
+      const documentHeight =
+        document.documentElement.scrollHeight - windowHeight;
       const scrolled = window.scrollY;
       const progress = Math.min(scrolled / documentHeight, 1);
-      
+
       setScrollProgress(progress);
     };
 
@@ -87,7 +88,7 @@ export function useScrollY(throttleMs: number = 16) {
 
     const handleScroll = () => {
       const now = Date.now();
-      
+
       if (now - lastUpdate < throttleMs) {
         return;
       }
@@ -115,4 +116,3 @@ export function useScrollY(throttleMs: number = 16) {
 
   return scrollY;
 }
-

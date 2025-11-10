@@ -1,12 +1,30 @@
-import { Terminal, FileEdit, Brain, Code, Search, Loader2, ListTodo } from "lucide-react";
+import {
+  Terminal,
+  FileEdit,
+  Brain,
+  Code,
+  Search,
+  ListTodo,
+} from "lucide-react";
 import { cn } from "#/utils/utils";
 
 interface TypingIndicatorProps {
-  action?: "run" | "write" | "edit" | "think" | "browse" | "read" | "plan" | string;
+  action?:
+    | "run"
+    | "write"
+    | "edit"
+    | "think"
+    | "browse"
+    | "read"
+    | "plan"
+    | string;
 }
 
 // Map actions to human-readable text and icons (bolt.diy style)
-const ACTION_MAP: Record<string, { text: string; icon: React.ReactNode; color: string }> = {
+const ACTION_MAP: Record<
+  string,
+  { text: string; icon: React.ReactNode; color: string }
+> = {
   run: {
     text: "Running command",
     icon: <Terminal className="w-3.5 h-3.5" />,
@@ -50,7 +68,9 @@ const ACTION_MAP: Record<string, { text: string; icon: React.ReactNode; color: s
 };
 
 export function TypingIndicator({ action }: TypingIndicatorProps) {
-  const actionInfo = action ? ACTION_MAP[action] || ACTION_MAP.think : ACTION_MAP.think;
+  const actionInfo = action
+    ? ACTION_MAP[action] || ACTION_MAP.think
+    : ACTION_MAP.think;
 
   return (
     <div className="flex items-center gap-2 bg-background-secondary/50 backdrop-blur-sm px-4 py-2 rounded-xl border border-border-subtle">

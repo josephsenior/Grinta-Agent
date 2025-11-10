@@ -134,8 +134,12 @@ const renderBinaryPlaceholder = () => (
   <div className="flex items-center justify-center h-full p-8">
     <div className="text-center">
       <EyeOff className="w-12 h-12 text-text-secondary mx-auto mb-3 opacity-50" />
-      <p className="text-text-secondary">Binary file - cannot display content</p>
-      <p className="text-xs text-text-tertiary mt-1">Use download to access this file</p>
+      <p className="text-text-secondary">
+        Binary file - cannot display content
+      </p>
+      <p className="text-xs text-text-tertiary mt-1">
+        Use download to access this file
+      </p>
     </div>
   </div>
 );
@@ -319,7 +323,7 @@ export function FileViewer({
   const isBinary = isBinaryFile(filePath);
   const fileName = filePath.split("/").pop() || filePath;
   const viewerState = getViewerState({ isLoading: loading, isBinary, editing });
-  const toggleFullscreen = () => setIsFullscreen(prev => !prev);
+  const toggleFullscreen = () => setIsFullscreen((prev) => !prev);
 
   const renderContent = () => {
     switch (viewerState) {
@@ -333,7 +337,7 @@ export function FileViewer({
             <div className="flex-1 p-4">
               <Textarea
                 value={editContent}
-                onChange={event => setEditContent(event.target.value)}
+                onChange={(event) => setEditContent(event.target.value)}
                 className="h-full resize-none font-mono text-sm"
                 placeholder="Edit file content..."
               />
@@ -341,7 +345,11 @@ export function FileViewer({
           </div>
         );
       case "preview":
-        return <div className="h-full">{renderMonaco({ value: content, language })}</div>;
+        return (
+          <div className="h-full">
+            {renderMonaco({ value: content, language })}
+          </div>
+        );
       default:
         return null;
     }
@@ -365,16 +373,16 @@ export function FileViewer({
               {fileName}
             </span>
           </div>
-          
+
           <Badge variant="outline" className="text-xs">
             {language}
           </Badge>
-          
+
           <span className="text-xs text-text-secondary">
             {content.length.toLocaleString()} chars
           </span>
         </div>
-        
+
         <div className="flex items-center gap-1">
           {/* Copy Button */}
           <Button
@@ -384,9 +392,7 @@ export function FileViewer({
             className="h-7 px-2 text-xs"
           >
             {copied ? (
-              <>
-                <span className="text-success-500">Copied!</span>
-              </>
+              <span className="text-success-500">Copied!</span>
             ) : (
               <>
                 <Copy className="w-3 h-3 mr-1" />
@@ -394,7 +400,7 @@ export function FileViewer({
               </>
             )}
           </Button>
-          
+
           {/* Download Button */}
           <Button
             variant="ghost"
@@ -405,7 +411,7 @@ export function FileViewer({
             <Download className="w-3 h-3 mr-1" />
             Download
           </Button>
-          
+
           {/* Edit Button */}
           {editable && !editing && (
             <Button
@@ -418,7 +424,7 @@ export function FileViewer({
               Edit
             </Button>
           )}
-          
+
           {/* Save/Cancel Buttons */}
           {editing && (
             <>
@@ -441,7 +447,7 @@ export function FileViewer({
               </Button>
             </>
           )}
-          
+
           {/* Fullscreen Toggle */}
           <Button
             variant="ghost"
@@ -455,7 +461,7 @@ export function FileViewer({
               <Maximize2 className="w-3 h-3" />
             )}
           </Button>
-          
+
           {/* Close Button */}
           {onClose && (
             <Button
@@ -469,11 +475,9 @@ export function FileViewer({
           )}
         </div>
       </div>
-      
+
       {/* Content */}
-      <div className="flex-1 overflow-hidden">
-        {renderContent()}
-      </div>
+      <div className="flex-1 overflow-hidden">{renderContent()}</div>
     </div>
   );
 }

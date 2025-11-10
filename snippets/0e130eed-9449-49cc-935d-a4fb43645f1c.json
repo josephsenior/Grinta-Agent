@@ -1,0 +1,18 @@
+{
+  "id": "0e130eed-9449-49cc-935d-a4fb43645f1c",
+  "title": "JS Snippet",
+  "description": null,
+  "language": "javascript",
+  "category": "custom",
+  "code": "console.log('hi')",
+  "tags": [],
+  "is_favorite": false,
+  "usage_count": 0,
+  "created_at": "2025-11-09 15:29:41.570078",
+  "updated_at": "2025-11-09 16:05:07.021922",
+  "metadata": {},
+  "dependencies": [],
+  "related_snippets": [],
+  "source_url": null,
+  "license": null
+}

@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, vi, expect } from "vitest";
 import { MemoryCard } from "../memory-card";
@@ -46,15 +46,23 @@ describe("MemoryCard", () => {
     renderWithProviders(<MemoryCard {...defaultProps} />);
 
     expect(screen.getByText("Test Memory")).toBeInTheDocument();
-    expect(screen.getByText("This is a test memory content")).toBeInTheDocument();
+    expect(
+      screen.getByText("This is a test memory content"),
+    ).toBeInTheDocument();
   });
 
   it("should display tags", () => {
     renderWithProviders(<MemoryCard {...defaultProps} />);
 
-    expect(screen.getByText((text) => text.trim() === "python")).toBeInTheDocument();
-    expect(screen.getByText((text) => text.trim() === "async")).toBeInTheDocument();
-    expect(screen.getByText((text) => text.trim() === "testing")).toBeInTheDocument();
+    expect(
+      screen.getByText((text) => text.trim() === "python"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText((text) => text.trim() === "async"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText((text) => text.trim() === "testing"),
+    ).toBeInTheDocument();
   });
 
   it("should show category badge for technical", () => {
@@ -82,8 +90,9 @@ describe("MemoryCard", () => {
     renderWithProviders(<MemoryCard {...defaultProps} />);
 
     // Button might use title attribute instead of aria-label
-    const editButton = screen.getByRole("button", { name: /edit/i }) || 
-                       document.querySelector('button[title="Edit memory"]');
+    const editButton =
+      screen.getByRole("button", { name: /edit/i }) ||
+      document.querySelector('button[title="Edit memory"]');
     if (editButton) {
       await user.click(editButton);
       expect(defaultProps.onEdit).toHaveBeenCalledWith(mockMemory);
@@ -95,9 +104,9 @@ describe("MemoryCard", () => {
     renderWithProviders(<MemoryCard {...defaultProps} />);
 
     // Button might use title attribute instead of aria-label
-    const deleteButton = screen.getAllByRole("button").find(btn => 
-      btn.getAttribute("title") === "Delete memory"
-    );
+    const deleteButton = screen
+      .getAllByRole("button")
+      .find((btn) => btn.getAttribute("title") === "Delete memory");
     if (deleteButton) {
       await user.click(deleteButton);
       expect(defaultProps.onDelete).toHaveBeenCalledWith("mem-1");
@@ -123,10 +132,14 @@ describe("MemoryCard", () => {
       tags: ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7"],
     };
 
-    renderWithProviders(<MemoryCard {...defaultProps} memory={manyTagsMemory} />);
+    renderWithProviders(
+      <MemoryCard {...defaultProps} memory={manyTagsMemory} />,
+    );
 
     manyTagsMemory.tags.forEach((tag) => {
-      expect(screen.getByText((text) => text.trim() === tag)).toBeInTheDocument();
+      expect(
+        screen.getByText((text) => text.trim() === tag),
+      ).toBeInTheDocument();
     });
   });
 
@@ -137,4 +150,3 @@ describe("MemoryCard", () => {
     expect(screen.getByText("Test Memory")).toBeInTheDocument();
   });
 });
-

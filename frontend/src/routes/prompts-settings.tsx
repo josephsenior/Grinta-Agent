@@ -26,10 +26,7 @@ import {
   useExportPrompts,
   useImportPrompts,
 } from "#/hooks/query/use-prompts";
-import type {
-  CreatePromptRequest,
-  PromptTemplate,
-} from "#/types/prompt";
+import type { CreatePromptRequest, PromptTemplate } from "#/types/prompt";
 import { PromptCategory, PROMPT_CATEGORY_LABELS } from "#/types/prompt";
 import { useDebounce } from "#/hooks/use-debounce";
 
@@ -53,6 +50,7 @@ function PromptsSettingsScreen() {
     handleDeletePrompt,
     handleUsePrompt,
     handleToggleFavorite,
+    handleUpdatePrompt,
     isModalOpen,
     openCreateModal,
     closeModal,
@@ -117,8 +115,12 @@ function usePromptsSettingsController() {
   const { t } = useTranslation();
   const toast = useToast();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [editingPrompt, setEditingPrompt] = React.useState<PromptTemplate | undefined>();
-  const [selectedCategory, setSelectedCategory] = React.useState<PromptCategory | "all">("all");
+  const [editingPrompt, setEditingPrompt] = React.useState<
+    PromptTemplate | undefined
+  >();
+  const [selectedCategory, setSelectedCategory] = React.useState<
+    PromptCategory | "all"
+  >("all");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [showFavoritesOnly, setShowFavoritesOnly] = React.useState(false);
 
@@ -145,11 +147,12 @@ function usePromptsSettingsController() {
       return prompts;
     }
     const query = debouncedSearchQuery.toLowerCase();
-    return prompts.filter((prompt) =>
-      prompt.title.toLowerCase().includes(query) ||
-      prompt.description?.toLowerCase().includes(query) ||
-      prompt.content.toLowerCase().includes(query) ||
-      prompt.tags.some((tag) => tag.toLowerCase().includes(query)),
+    return prompts.filter(
+      (prompt) =>
+        prompt.title.toLowerCase().includes(query) ||
+        prompt.description?.toLowerCase().includes(query) ||
+        prompt.content.toLowerCase().includes(query) ||
+        prompt.tags.some((tag) => tag.toLowerCase().includes(query)),
     );
   }, [promptsQuery.data, debouncedSearchQuery]);
 
@@ -332,8 +335,12 @@ function PromptsHeader({
   return (
     <div className="flex items-center justify-between">
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">{t("PROMPTS$TITLE")}</h1>
-        <p className="text-foreground-secondary mt-1">{t("PROMPTS$SUBTITLE")}</p>
+        <h1 className="text-2xl font-semibold text-foreground">
+          {t("PROMPTS$TITLE")}
+        </h1>
+        <p className="text-foreground-secondary mt-1">
+          {t("PROMPTS$SUBTITLE")}
+        </p>
       </div>
 
       <div className="flex items-center gap-3">
@@ -455,7 +462,9 @@ function PromptsFilters({
 
       <select
         value={selectedCategory}
-        onChange={(event) => onCategoryChange(event.target.value as PromptCategory | "all")}
+        onChange={(event) =>
+          onCategoryChange(event.target.value as PromptCategory | "all")
+        }
         className="px-4 py-2 bg-background border border-violet-500/20 rounded text-foreground focus:outline-none focus:border-border-active"
       >
         <option value="all">{t("PROMPTS$ALL_CATEGORIES")}</option>
@@ -549,4 +558,3 @@ function PromptsGridSection({
     </div>
   );
 }
-

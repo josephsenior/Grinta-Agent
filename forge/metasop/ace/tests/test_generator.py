@@ -7,6 +7,7 @@ import pytest
 
 from forge.metasop.ace.context_playbook import BulletSection, ContextPlaybook
 from forge.metasop.ace.generator import ACEGenerator
+from forge.metasop.ace.models import ACEGenerationResult, ACETrajectory
 
 
 def make_response(content, total_tokens=42):
@@ -104,3 +105,100 @@ def test_generate_with_feedback(playbook):
     assert metrics["total_generations"] == 1
     assert metrics["successful_generations"] == 1
 
+
+def test_generate_retry_then_success(monkeypatch, playbook):
+    """Generator should retry after transient failure before succeeding."""
+    llm = Mock()
+    llm.completion = Mock(
+        side_effect=[
+            RuntimeError("temporary outage"),
+            make_response("Recovered content"),
+        ]
+    )
+    monkeypatch.setattr("time.sleep", lambda _: None)
+
+    generator = ACEGenerator(llm=llm, context_playbook=playbook)
+    result = generator.generate(query="Retry scenario", task_type="general", max_retries=2)
+
+    assert result.success is True
+    assert result.trajectory.content == "Recovered content"
+    assert llm.completion.call_count == 2
+
+
+def test_create_feedback_prompt_handles_helpful_and_harmful(playbook):
+    """Feedback prompt should surface helpful and harmful bullets and respect role."""
+    generator = ACEGenerator(llm=Mock(), context_playbook=playbook)
+    bullet = playbook.bullets["ctx-00000"]
+    bullet.helpful_count = 2
+    bullet.harmful_count = 1
+    helpful_prompt = generator._create_feedback_prompt(
+        query="Task",
+        helpful_bullets=[bullet],
+        harmful_bullets=[],
+        task_type="metasop",
+        role="qa",
+    )
+    bullet.helpful_count = 0
+    bullet.harmful_count = 3
+    harmful_prompt = generator._create_feedback_prompt(
+        query="Task",
+        helpful_bullets=[],
+        harmful_bullets=[bullet],
+        task_type="general",
+        role=None,
+    )
+
+    assert "HELPFUL STRATEGIES" in helpful_prompt
+    assert "expert qa" in helpful_prompt
+    assert "STRATEGIES TO AVOID" in harmful_prompt
+
+
+def test_generate_with_feedback_failure_path(monkeypatch, playbook):
+    """generate_with_feedback should surface failures and retain retry count."""
+    generator = ACEGenerator(llm=Mock(), context_playbook=playbook)
+    bullet = playbook.bullets["ctx-00000"]
+    bullet.harmful_count = 5
+    previous = ACEGenerationResult(
+        trajectory=ACETrajectory(
+            content="Prior attempt",
+            task_type="general",
+            used_bullet_ids=["ctx-00000"],
+            playbook_content="",
+            generation_metadata={},
+        ),
+        success=False,
+        processing_time=0.1,
+        tokens_used=10,
+        retries=0,
+    )
+    monkeypatch.setattr(generator, "_generate_with_retries", Mock(side_effect=RuntimeError("boom")))
+
+    result = generator.generate_with_feedback(
+        query="Retry with feedback",
+        previous_result=previous,
+        task_type="general",
+        role=None,
+    )
+
+    assert result.success is False
+    assert result.retries == 3
+
+
+def test_generator_extract_total_tokens_fallback():
+    """_extract_total_tokens should approximate counts when totals missing."""
+    response = SimpleNamespace(usage={"prompt_tokens": 12})
+    estimate = ACEGenerator._extract_total_tokens(
+        response,
+        prompt="one two",
+        text="three four five",
+    )
+    assert estimate == 5
+
+
+def test_generator_get_metrics_without_generations(playbook):
+    """Metrics should remain pristine prior to any generation."""
+    generator = ACEGenerator(llm=Mock(), context_playbook=playbook)
+    metrics = generator.get_metrics()
+
+    assert metrics["total_generations"] == 0
+    assert "success_rate" not in metrics

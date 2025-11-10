@@ -1,16 +1,18 @@
 /**
  * Error Formatting Utilities for Frontend
- * 
+ *
  * Provides client-side error formatting and handling.
  * Works with backend error formatter for consistent UX.
  */
 
-import type { UserFriendlyErrorData, ErrorAction } from "#/components/shared/error/user-friendly-error";
+import type { UserFriendlyErrorData } from "#/components/shared/error/user-friendly-error";
 
 /**
  * Check if error response has user-friendly format
  */
-export function isUserFriendlyError(error: unknown): error is UserFriendlyErrorData {
+export function isUserFriendlyError(
+  error: unknown,
+): error is UserFriendlyErrorData {
   return (
     typeof error === "object" &&
     error !== null &&
@@ -23,7 +25,9 @@ export function isUserFriendlyError(error: unknown): error is UserFriendlyErrorD
 /**
  * Extract user-friendly error from API response
  */
-export function extractUserFriendlyError(error: unknown): UserFriendlyErrorData | null {
+export function extractUserFriendlyError(
+  error: unknown,
+): UserFriendlyErrorData | null {
   // Check if it's already formatted
   if (isUserFriendlyError(error)) {
     return error;
@@ -33,7 +37,9 @@ export function extractUserFriendlyError(error: unknown): UserFriendlyErrorData 
   if (typeof error === "object" && error !== null) {
     const errRec = error as Record<string, unknown>;
     const resp =
-      "response" in errRec && typeof errRec.response === "object" && errRec.response !== null
+      "response" in errRec &&
+      typeof errRec.response === "object" &&
+      errRec.response !== null
         ? (errRec.response as Record<string, unknown>)
         : undefined;
     if (resp && "data" in resp) {
@@ -56,21 +62,24 @@ export function formatClientError(error: unknown): UserFriendlyErrorData {
   if (backendError) {
     return backendError;
   }
- 
+
   const axiosDetails = extractAxiosDetails(error);
   if (axiosDetails) {
-    const mapped = mapHttpStatusToError(axiosDetails.status, axiosDetails.message);
+    const mapped = mapHttpStatusToError(
+      axiosDetails.status,
+      axiosDetails.message,
+    );
     if (mapped) {
       return mapped;
     }
     return buildDefaultAxiosError(axiosDetails.message);
   }
- 
+
   // Handle Error objects
   if (error instanceof Error) {
     return formatJavaScriptError(error);
   }
- 
+
   // Fallback for unknown errors
   return {
     title: "Unexpected error",
@@ -79,11 +88,9 @@ export function formatClientError(error: unknown): UserFriendlyErrorData {
     category: "system",
     icon: "❌",
     suggestion: "Refresh the page",
-    actions: [
-      { label: "Refresh", type: "refresh", highlight: true }
-    ],
+    actions: [{ label: "Refresh", type: "refresh", highlight: true }],
     technical_details: String(error),
-    can_retry: true
+    can_retry: true,
   };
 }
 
@@ -97,17 +104,16 @@ function formatJavaScriptError(error: Error): UserFriendlyErrorData {
   if (message.includes("network") || message.includes("fetch")) {
     return {
       title: "Connection problem",
-      message: "Can't reach the server. Check your internet connection and try again.",
+      message:
+        "Can't reach the server. Check your internet connection and try again.",
       severity: "error",
       category: "network",
       icon: "📡",
       suggestion: "Check your connection",
-      actions: [
-        { label: "Retry", type: "retry", highlight: true }
-      ],
+      actions: [{ label: "Retry", type: "retry", highlight: true }],
       technical_details: error.stack,
       can_retry: true,
-      retry_delay: 5
+      retry_delay: 5,
     };
   }
 
@@ -115,19 +121,20 @@ function formatJavaScriptError(error: Error): UserFriendlyErrorData {
   if (message.includes("runtime") || message.includes("container")) {
     return {
       title: "Workspace not ready",
-      message: "Your development environment is starting up. This usually takes 30-60 seconds.",
+      message:
+        "Your development environment is starting up. This usually takes 30-60 seconds.",
       severity: "warning",
       category: "system",
       icon: "⏳",
       suggestion: "Wait a moment and try again",
       actions: [
         { label: "Retry", type: "retry", highlight: true },
-        { label: "New Session", type: "new_conversation" }
+        { label: "New Session", type: "new_conversation" },
       ],
       technical_details: error.stack,
       can_retry: true,
       retry_delay: 30,
-      reassurance: "Your work is safe!"
+      reassurance: "Your work is safe!",
     };
   }
 
@@ -141,10 +148,10 @@ function formatJavaScriptError(error: Error): UserFriendlyErrorData {
     suggestion: "Try again or refresh the page",
     actions: [
       { label: "Retry", type: "retry", highlight: true },
-      { label: "Refresh", type: "refresh" }
+      { label: "Refresh", type: "refresh" },
     ],
     technical_details: error.stack,
-    can_retry: true
+    can_retry: true,
   };
 }
 
@@ -156,8 +163,10 @@ function extractAxiosDetails(
     return null;
   }
 
-  const status = typeof response.status === "number" ? response.status : undefined;
-  const message = extractAxiosMessage(response) ?? (error as Record<string, unknown>).message;
+  const status =
+    typeof response.status === "number" ? response.status : undefined;
+  const message =
+    extractAxiosMessage(response) ?? (error as Record<string, unknown>).message;
 
   return {
     status,
@@ -170,16 +179,16 @@ function extractAxiosResponse(error: unknown) {
     return null;
   }
 
-  const response = (error as Record<string, unknown>).response;
+  const { response } = error as Record<string, unknown>;
   return typeof response === "object" && response !== null
     ? (response as Record<string, unknown>)
     : null;
 }
 
 function extractAxiosMessage(response: Record<string, unknown>) {
-  const data = response.data;
+  const { data } = response;
   if (typeof data === "object" && data !== null && "message" in data) {
-    const message = (data as Record<string, unknown>).message;
+    const { message } = data as Record<string, unknown>;
     if (typeof message === "string") {
       return message;
     }
@@ -201,7 +210,9 @@ function mapHttpStatusToError(
         category: "authentication",
         icon: "🔒",
         suggestion: "Sign in to continue",
-        actions: [{ label: "Sign In", type: "login", url: "/login", highlight: true }],
+        actions: [
+          { label: "Sign In", type: "login", url: "/login", highlight: true },
+        ],
         can_retry: false,
         reassurance: "Your work is saved",
       };
@@ -220,7 +231,8 @@ function mapHttpStatusToError(
     case 404:
       return {
         title: "Not found",
-        message: "The requested resource wasn't found. It may have been moved or deleted.",
+        message:
+          "The requested resource wasn't found. It may have been moved or deleted.",
         severity: "warning",
         category: "user_input",
         icon: "🔍",
@@ -231,7 +243,8 @@ function mapHttpStatusToError(
     case 429:
       return {
         title: "Too many requests",
-        message: "You're sending requests too quickly. Please wait a moment and try again.",
+        message:
+          "You're sending requests too quickly. Please wait a moment and try again.",
         severity: "warning",
         category: "rate_limit",
         icon: "⏰",
@@ -256,7 +269,11 @@ function mapHttpStatusToError(
         suggestion: "Wait a moment and try again",
         actions: [
           { label: "Retry", type: "retry", highlight: true },
-          { label: "Check Status", type: "status", url: "https://status.forge.ai" },
+          {
+            label: "Check Status",
+            type: "status",
+            url: "https://status.forge.ai",
+          },
         ],
         can_retry: true,
         retry_delay: 30,
@@ -268,7 +285,9 @@ function mapHttpStatusToError(
   }
 }
 
-function buildDefaultAxiosError(message: string | undefined): UserFriendlyErrorData {
+function buildDefaultAxiosError(
+  message: string | undefined,
+): UserFriendlyErrorData {
   return {
     title: "Something went wrong",
     message: message || "An unexpected error occurred.",
@@ -296,9 +315,9 @@ export function getErrorIcon(category: string): string {
     authentication: "🔒",
     network: "📡",
     ai_model: "🤖",
-    configuration: "⚙️"
+    configuration: "⚙️",
   };
-  
+
   return iconMap[category] || "❌";
 }
 
@@ -312,7 +331,10 @@ export function getHelpfulMessage(errorMessage: string): string {
     return "The request took too long. Try simplifying your task or checking your connection.";
   }
 
-  if (lowerMessage.includes("unauthorized") || lowerMessage.includes("authentication")) {
+  if (
+    lowerMessage.includes("unauthorized") ||
+    lowerMessage.includes("authentication")
+  ) {
     return "You need to sign in again. Your session may have expired.";
   }
 
@@ -330,4 +352,3 @@ export function getHelpfulMessage(errorMessage: string): string {
 
   return "An error occurred. Try again or contact support if this persists.";
 }
-

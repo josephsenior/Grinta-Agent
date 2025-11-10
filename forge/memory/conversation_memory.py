@@ -85,7 +85,7 @@ class ConversationMemory:
             )
             logger.info(
                 "✅ Vector memory initialized for ConversationMemory\n"
-                "   Accuracy: 92% | Hybrid retrieval: %s",
+                "   Accuracy: 92%% | Hybrid retrieval: %s",
                 "enabled" if hybrid_enabled else "disabled",
             )
         except Exception as e:

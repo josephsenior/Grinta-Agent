@@ -9,7 +9,7 @@ canonical implementations until call time.
 
 from __future__ import annotations
 
-__all__ = ["call_tool_mcp", "create_mcp_clients"]
+__all__ = ["call_tool_mcp", "create_mcp_clients", "fetch_mcp_tools_from_config"]
 
 
 async def create_mcp_clients(*args, **kwargs):
@@ -24,4 +24,13 @@ async def call_tool_mcp(*args, **kwargs):
     from forge.mcp_client.utils import call_tool_mcp as _call_tool_mcp
 
     return await _call_tool_mcp(*args, **kwargs)
+
+
+async def fetch_mcp_tools_from_config(*args, **kwargs):
+    """Proxy ``fetch_mcp_tools_from_config`` to the canonical implementation."""
+    from forge.mcp_client.utils import (
+        fetch_mcp_tools_from_config as _fetch_mcp_tools_from_config,
+    )
+
+    return await _fetch_mcp_tools_from_config(*args, **kwargs)
 

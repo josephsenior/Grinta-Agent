@@ -33,7 +33,7 @@ export function AutonomySettings({
       label: "Supervised Mode",
     },
     {
-      key: "balanced", 
+      key: "balanced",
       label: "Balanced Mode",
     },
     {
@@ -52,12 +52,14 @@ export function AutonomySettings({
           </h3>
           <Info className="w-4 h-4 text-text-tertiary" />
         </div>
-        
+
         {/* Wrap in a div to isolate from form events */}
-        <div onClick={(e) => {
-          console.log('[AutonomySettings] Wrapper clicked');
-          // Don't prevent propagation, just log to debug
-        }}>
+        <div
+          onClick={(e) => {
+            console.log("[AutonomySettings] Wrapper clicked");
+            // Don't prevent propagation, just log to debug
+          }}
+        >
           <SettingsDropdownInput
             testId="autonomy-level-input"
             name="autonomy-level-input"
@@ -66,18 +68,23 @@ export function AutonomySettings({
             placeholder="Select autonomy mode"
             selectedKey={autonomyLevel}
             onSelectionChange={(key) => {
-              console.log('═══════════════════════════════════════════════════');
-              console.log('[AutonomySettings] 🎯 SELECTION CHANGED:', key);
-              console.log('[AutonomySettings] Previous value:', autonomyLevel);
-              console.log('[AutonomySettings] New value:', key);
-              console.log('═══════════════════════════════════════════════════');
+              console.log(
+                "═══════════════════════════════════════════════════",
+              );
+              console.log("[AutonomySettings] 🎯 SELECTION CHANGED:", key);
+              console.log("[AutonomySettings] Previous value:", autonomyLevel);
+              console.log("[AutonomySettings] New value:", key);
+              console.log(
+                "═══════════════════════════════════════════════════",
+              );
               onAutonomyLevelChange?.(key as string);
             }}
           />
         </div>
-        
+
         <div className="text-xs text-text-tertiary mt-2">
-          Controls how much the agent asks for confirmation before taking actions.
+          Controls how much the agent asks for confirmation before taking
+          actions.
         </div>
       </div>
 
@@ -94,9 +101,10 @@ export function AutonomySettings({
             <span>Fine-grained Permissions</span>
           </div>
         </SettingsSwitch>
-        
+
         <div className="text-xs text-text-tertiary">
-          Enable detailed permission controls for file operations, git commands, shell access, and more.
+          Enable detailed permission controls for file operations, git commands,
+          shell access, and more.
         </div>
       </div>
 
@@ -113,43 +121,50 @@ export function AutonomySettings({
             <span>Automatic Checkpoints</span>
           </div>
         </SettingsSwitch>
-        
+
         <div className="text-xs text-text-tertiary">
-          Automatically create checkpoints before risky operations to enable rollback.
+          Automatically create checkpoints before risky operations to enable
+          rollback.
         </div>
       </div>
 
       {/* Mode Descriptions */}
       <div className="bg-background-secondary rounded-lg p-4 space-y-3">
         <h4 className="text-xs font-medium text-text-primary">Mode Details</h4>
-        
+
         <div className="space-y-2">
           <div className="flex items-start gap-2">
             <Shield className="w-3.5 h-3.5 text-orange-500 mt-0.5 flex-shrink-0" />
             <div>
-              <div className="text-xs font-medium text-orange-500">Supervised</div>
+              <div className="text-xs font-medium text-orange-500">
+                Supervised
+              </div>
               <div className="text-[10px] text-text-tertiary">
                 Agent requests confirmation for every action. Maximum safety.
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-start gap-2">
             <Eye className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
             <div>
               <div className="text-xs font-medium text-blue-500">Balanced</div>
               <div className="text-[10px] text-text-tertiary">
-                Agent confirms only high-risk operations. Good balance of safety and efficiency.
+                Agent confirms only high-risk operations. Good balance of safety
+                and efficiency.
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-start gap-2">
             <Zap className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
             <div>
-              <div className="text-xs font-medium text-green-500">Full Autonomous</div>
+              <div className="text-xs font-medium text-green-500">
+                Full Autonomous
+              </div>
               <div className="text-[10px] text-text-tertiary">
-                Agent executes tasks independently. Maximum efficiency with built-in safety.
+                Agent executes tasks independently. Maximum efficiency with
+                built-in safety.
               </div>
             </div>
           </div>

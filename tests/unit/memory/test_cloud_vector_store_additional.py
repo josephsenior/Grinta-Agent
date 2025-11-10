@@ -214,3 +214,148 @@ def test_qdrant_backend_creation(qdrant_stub, monkeypatch):
     stats = backend.stats()
     assert stats["backend"].startswith("Qdrant")
 
+
+def test_chromadb_backend_search_handles_empty_collection(chroma_and_sentence_stubs):
+    from forge.memory.cloud_vector_store import ChromaDBBackend
+
+    backend = ChromaDBBackend(collection_name="empty")
+    assert backend.search("nothing") == []
+
+
+def test_chromadb_backend_add_includes_artifact_metadata(chroma_and_sentence_stubs):
+    from forge.memory.cloud_vector_store import ChromaDBBackend
+
+    backend = ChromaDBBackend(collection_name="meta")
+    backend.add(
+        "step-42",
+        "assistant",
+        artifact_hash="abc123",
+        rationale="Reason",
+        content_text="Longer content chunk",
+        metadata={"topic": "testing"},
+    )
+    results = backend.search("content", k=1)
+    assert results
+    doc = results[0]
+    assert doc["artifact_hash"] == "abc123"
+    assert doc["topic"] == "testing"
+
+
+def test_chromadb_backend_missing_dependencies(monkeypatch):
+    import builtins
+
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name.startswith("chromadb") or name.startswith("sentence_transformers"):
+            raise ImportError("boom")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    from forge.memory.cloud_vector_store import ChromaDBBackend
+
+    with pytest.raises(ImportError) as exc:
+        ChromaDBBackend(collection_name="will-fail")
+    assert "chromadb" in str(exc.value).lower()
+
+
+def test_qdrant_backend_missing_dependency(monkeypatch):
+    import builtins
+
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name.startswith("qdrant_client"):
+            raise ImportError("no qdrant")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    from forge.memory.cloud_vector_store import QdrantCloudBackend
+
+    with pytest.raises(ImportError):
+        QdrantCloudBackend(collection_name="missing")
+
+
+def test_qdrant_backend_requires_env(qdrant_stub, monkeypatch):
+    monkeypatch.delenv("QDRANT_URL", raising=False)
+    monkeypatch.delenv("QDRANT_API_KEY", raising=False)
+    from forge.memory.cloud_vector_store import QdrantCloudBackend
+
+    with pytest.raises(ValueError):
+        QdrantCloudBackend(collection_name="no-env")
+
+
+def test_qdrant_backend_hf_api_fallback(qdrant_stub, monkeypatch):
+    monkeypatch.setenv("QDRANT_URL", "https://example")
+    monkeypatch.setenv("QDRANT_API_KEY", "key")
+    monkeypatch.setenv("HF_API_KEY", "token")
+
+    import sys
+
+    class Response:
+        status_code = 500
+
+        def json(self):
+            return []
+
+    monkeypatch.setattr(sys.modules["requests"], "post", lambda *args, **kwargs: Response(), raising=False)
+
+    from forge.memory.cloud_vector_store import QdrantCloudBackend
+
+    backend = QdrantCloudBackend(collection_name="hf-fallback")
+    vector = backend._get_embedding("text to embed")
+    assert isinstance(vector, list)
+    assert vector
+
+
+def test_qdrant_backend_hf_api_exception_fallback(qdrant_stub, monkeypatch):
+    monkeypatch.setenv("QDRANT_URL", "https://example")
+    monkeypatch.setenv("QDRANT_API_KEY", "key")
+    monkeypatch.setenv("HF_API_KEY", "token")
+
+    import sys
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("network down")
+
+    monkeypatch.setattr(sys.modules["requests"], "post", boom, raising=False)
+
+    from forge.memory.cloud_vector_store import QdrantCloudBackend
+
+    backend = QdrantCloudBackend(collection_name="hf-exception")
+    vector = backend._get_embedding("another text")
+    assert isinstance(vector, list)
+    assert vector
+
+
+def test_adaptive_vector_store_falls_back_to_chromadb(monkeypatch, chroma_and_sentence_stubs):
+    import forge.memory.cloud_vector_store as module
+
+    class FailingQdrant:
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError("qdrant unavailable")
+
+    class StubChroma:
+        def __init__(self, *args, **kwargs):
+            self.docs = []
+
+        def add(self, *args, **kwargs):
+            self.docs.append(kwargs)
+
+        def search(self, *args, **kwargs):
+            return []
+
+        def stats(self):
+            return {"backend": "stub chroma"}
+
+    monkeypatch.setenv("QDRANT_URL", "https://example")
+    monkeypatch.setenv("QDRANT_API_KEY", "key")
+    monkeypatch.setattr(module, "QdrantCloudBackend", FailingQdrant)
+    monkeypatch.setattr(module, "ChromaDBBackend", StubChroma)
+
+    store = module.AdaptiveVectorStore(collection_name="fallback")
+    assert isinstance(store.backend, StubChroma)
+
+    # cleanup env
+    monkeypatch.delenv("QDRANT_URL", raising=False)
+    monkeypatch.delenv("QDRANT_API_KEY", raising=False)

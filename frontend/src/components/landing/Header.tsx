@@ -28,11 +28,11 @@ export default function Header(): React.ReactElement {
   const { pathname } = useLocation();
   const isConversationRoute = pathname.startsWith("/conversations/");
   const scrollY = useScrollY(16);
-  
+
   // Calculate blur amount based on scroll (0-20px)
   const blurAmount = Math.min(scrollY / 10, 20);
   // Calculate opacity for background (0.8-0.95)
-  const bgOpacity = Math.min(0.8 + (scrollY / 500), 0.95);
+  const bgOpacity = Math.min(0.8 + scrollY / 500, 0.95);
   // Calculate shadow intensity
   const shadowOpacity = Math.min(scrollY / 500, 0.3);
 
@@ -91,7 +91,10 @@ export default function Header(): React.ReactElement {
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4">
         <div className="flex items-center justify-between gap-4">
           {/* Logo with enhanced glow */}
-          <div className="flex items-center space-x-3 select-none group cursor-pointer" onClick={() => navigate("/")}>
+          <div
+            className="flex items-center space-x-3 select-none group cursor-pointer"
+            onClick={() => navigate("/")}
+          >
             <img
               src={logo}
               alt="Forge"
@@ -160,7 +163,7 @@ export default function Header(): React.ReactElement {
             {!isConversationRoute && (
               <>
                 <ThemeToggle variant="icon" />
-                
+
                 <button
                   data-testid="header-launch-button"
                   type="button"

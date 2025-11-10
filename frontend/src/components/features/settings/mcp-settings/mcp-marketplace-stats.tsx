@@ -1,6 +1,6 @@
 import { RefreshCw } from "lucide-react";
-import { clearMarketplaceCache } from "#/api/mcp-marketplace";
 import { useState } from "react";
+import { clearMarketplaceCache } from "#/api/mcp-marketplace";
 
 interface MCPMarketplaceStatsProps {
   totalServers: number;
@@ -12,7 +12,7 @@ export function MCPMarketplaceStats({
   onRefresh,
 }: MCPMarketplaceStatsProps) {
   const [smitheryApiKey, setSmitheryApiKey] = useState(
-    localStorage.getItem('smithery-api-key') || ''
+    localStorage.getItem("smithery-api-key") || "",
   );
 
   const handleClearCache = () => {
@@ -23,9 +23,9 @@ export function MCPMarketplaceStats({
   const handleApiKeyChange = (key: string) => {
     setSmitheryApiKey(key);
     if (key) {
-      localStorage.setItem('smithery-api-key', key);
+      localStorage.setItem("smithery-api-key", key);
     } else {
-      localStorage.removeItem('smithery-api-key');
+      localStorage.removeItem("smithery-api-key");
     }
     // Refresh data when API key changes
     setTimeout(() => {
@@ -57,7 +57,9 @@ export function MCPMarketplaceStats({
       <div className="flex items-center gap-3">
         {/* Smithery API Key Input */}
         <div className="flex items-center gap-2">
-          <label className="text-xs text-foreground-secondary">Smithery API:</label>
+          <label className="text-xs text-foreground-secondary">
+            Smithery API:
+          </label>
           <input
             type="password"
             value={smitheryApiKey}
@@ -79,4 +81,3 @@ export function MCPMarketplaceStats({
     </div>
   );
 }
-

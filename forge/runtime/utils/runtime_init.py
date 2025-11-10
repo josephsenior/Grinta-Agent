@@ -46,29 +46,43 @@ def init_user_and_working_directory(username: str, user_id: int, initial_cwd: st
     if username == os.getenv("USER") and username not in ["root", "forge"]:
         return None
     if username != "root":
+        if os.geteuid() != 0:
+            logger.warning(
+                "Skipping user setup for `%s` because the current process lacks root privileges.",
+                username,
+            )
+            return None
+
         logger.debug("Attempting to create user `%s` with UID %s.", username, user_id)
-        existing_user_id = -1
         try:
             result = subprocess.run(["id", "-u", username], shell=False, check=True, capture_output=True)
             existing_user_id = int(result.stdout.decode().strip())
             if existing_user_id == user_id:
-                logger.debug("User `%s` already has the provided UID %s. Skipping user setup.", username, user_id)
-            else:
-                logger.warning("User `%s` already exists with UID %s. Skipping user setup.", username, existing_user_id)
-                return existing_user_id
-            return None
+                logger.debug(
+                    "User `%s` already has the provided UID %s. Skipping user setup.", username, user_id
+                )
+                return None
+
+            logger.warning(
+                "User `%s` already exists with UID %s. Skipping user setup.",
+                username,
+                existing_user_id,
+            )
+            return existing_user_id
         except subprocess.CalledProcessError as e:
             if e.returncode == 1:
                 logger.debug("User `%s` does not exist. Proceeding with user creation.", username)
             else:
                 logger.error("Error checking user `%s`, skipping setup:\n%s\n", username, e)
                 raise
+
         sudoer_line = ["sh", "-c", "echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers"]
         output = subprocess.run(sudoer_line, check=False, shell=False, capture_output=True)
         if output.returncode != 0:
-            msg = f"Failed to add sudoer: {output.stderr.decode()}"
-            raise RuntimeError(msg)
-        logger.debug("Added sudoer successfully. Output: [%s]", output.stdout.decode())
+            logger.warning("Failed to add sudoer entry: %s", output.stderr.decode())
+        else:
+            logger.debug("Added sudoer successfully. Output: [%s]", output.stdout.decode())
+
         command = [
             "useradd",
             "-rm",
@@ -93,10 +107,11 @@ def init_user_and_working_directory(username: str, user_id: int, initial_cwd: st
                 output.stdout.decode(),
             )
         else:
-            msg = f"Failed to create user `{username}` with UID {user_id}. Output: [{
-                output.stderr.decode()}]"
-            raise RuntimeError(
-                msg,
+            logger.warning(
+                "Failed to create user `%s` with UID %s. Output: [%s]",
+                username,
+                user_id,
+                output.stderr.decode(),
             )
     logger.debug("Client working directory: %s", initial_cwd)
     command = ["sh", "-c", f"umask 002; mkdir -p {initial_cwd}"]

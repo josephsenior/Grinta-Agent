@@ -5,6 +5,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft } from "lucide-react";
 import { convertImageToBase64 } from "#/utils/convert-image-to-base-64";
+import { displayErrorToast } from "#/utils/custom-toast-handlers";
 import { AgentControlBar } from "#/components/features/controls/agent-control-bar";
 import { AgentStatusBar } from "#/components/features/controls/agent-status-bar";
 import { createChatMessage } from "#/services/chat-service";
@@ -14,8 +15,12 @@ import { AgentState } from "#/types/agent-state";
 import { isForgeAction, isTaskTrackingObservation } from "#/types/core/guards";
 import { generateAgentStateChangeEvent } from "#/services/agent-state-service";
 import { FeedbackModal } from "../feedback/feedback-modal";
+import { shouldRenderEvent } from "#/utils/should-render-event";
+import { ErrorMessageBanner } from "./error-message-banner";
 import { useScrollToBottom } from "#/hooks/use-scroll-to-bottom";
 import { useWsClient } from "#/context/ws-client-provider";
+import { useWSErrorMessage } from "#/hooks/use-ws-error-message";
+import { useOptimisticUserMessage } from "#/hooks/use-optimistic-user-message";
 import { Messages } from "./messages";
 // ChatSuggestions removed (onboarding suggestions) per request
 import { ActionSuggestions } from "./action-suggestions";
@@ -73,9 +78,11 @@ export function ChatInterface() {
     useOptimisticUserMessage();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const params = useParams();
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { tasks, isTaskPanelOpen, toggleTaskPanel } = useTasks();
+  const { mutateAsync: uploadFiles } = useUploadFiles();
 
   // Auto-navigation now handled via:
   // 1. Server detection in terminal (automatic)
@@ -94,6 +101,10 @@ export function ChatInterface() {
   const { data: config } = useConfig();
 
   const { curAgentState } = useSelector((state: RootState) => state.agent);
+  const { selectedRepository, replayJson } = useSelector(
+    (state: RootState) => state.initialQuery,
+  );
+  const events = parsedEvents;
 
   const [feedbackPolarity, setFeedbackPolarity] = React.useState<
     "positive" | "negative"
@@ -113,15 +124,25 @@ export function ChatInterface() {
   const { optimisticSopStarting, triggerOptimisticSop } =
     useOptimisticSopIndicator(isOrchestrating);
 
+  // State for optimistic SOP with setter for compatibility
+  const [_optimisticSopStarting, setOptimisticSopStarting] = React.useState(
+    optimisticSopStarting,
+  );
+  React.useEffect(() => {
+    setOptimisticSopStarting(optimisticSopStarting);
+  }, [optimisticSopStarting]);
+
   const messaging = useChatMessaging({
     events,
     selectedRepository,
     replayJson,
     send,
-    conversationId: params.conversationId,
+    conversationId: params.conversationId ?? undefined,
     uploadFiles,
     t,
-    setOptimisticUserMessage,
+    setOptimisticUserMessage: (msg: string | null) => {
+      if (msg) setOptimisticUserMessage(msg);
+    },
     triggerOptimisticSop,
     useSop,
   });
@@ -138,7 +159,7 @@ export function ChatInterface() {
   // Orchestration panel disabled for beta
   const showOrchestrationPanel = false;
   // const [showOrchestrationPanel, setShowOrchestrationPanel] = React.useState(false);
-  
+
   // Technical details hardcoded to false for beta launch
   // Post-beta: Re-enable with proper UI controls (not console-accessible)
   const showTechnicalDetails = false;
@@ -174,24 +195,20 @@ export function ChatInterface() {
     }
   }, [useSop]);
 
-  const { selectedRepository, replayJson } = useSelector(
-    (state: RootState) => state.initialQuery,
-  );
-  const params = useParams();
-  const { mutateAsync: uploadFiles } = useUploadFiles();
-
-  const optimisticUserMessage = getOptimisticUserMessage();
-  const errorMessage = getErrorMessage();
+  const optimisticUserMessage = getOptimisticUserMessage() ?? null;
+  const errorMessage = getErrorMessage() ?? null;
 
   // Filter events based on shouldRenderEvent and showTechnicalDetails
-  const events = React.useMemo(() => {
-    const baseFiltered = parsedEvents.filter(shouldRenderEvent);
-    
+  const filteredEvents = React.useMemo(() => {
+    const baseFiltered = parsedEvents.filter((event) =>
+      shouldRenderEvent(event, showTechnicalDetails),
+    );
+
     // If showing all technical details, return everything
     if (showTechnicalDetails) {
       return baseFiltered;
     }
-    
+
     // Otherwise, apply additional filtering (this logic should match EventMessage's filtering)
     // We keep the filtering in EventMessage for now to avoid duplication
     // The EventMessage component will return null for filtered events
@@ -230,7 +247,8 @@ export function ChatInterface() {
     onChatBodyScroll,
   };
 
-  const lastEvent = parsedEvents.length > 0 ? parsedEvents[parsedEvents.length - 1] : null;
+  const lastEvent =
+    parsedEvents.length > 0 ? parsedEvents[parsedEvents.length - 1] : null;
 
   const taskCount = isTaskTrackingObservation(lastEvent)
     ? (lastEvent.extras?.task_list?.length ?? 0)
@@ -286,7 +304,7 @@ export function ChatInterface() {
       <ConversationSearch
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
-        messages={events}
+        messages={filteredEvents}
         onSelectMessage={(index) => {
           console.log("Navigate to message:", index);
         }}
@@ -345,7 +363,8 @@ function useSopPreference() {
 }
 
 function useOptimisticSopIndicator(isOrchestrating: boolean) {
-  const [optimisticSopStarting, setOptimisticSopStarting] = React.useState(false);
+  const [optimisticSopStarting, setOptimisticSopStarting] =
+    React.useState(false);
   const timerRef = React.useRef<number | null>(null);
 
   const clearTimer = React.useCallback(() => {
@@ -413,7 +432,10 @@ const trackUserMessageEvents = ({
 }) => {
   if (events.length === 0) {
     posthog.capture("initial_query_submitted", {
-      entry_point: getEntryPoint(selectedRepository !== null, replayJson !== null),
+      entry_point: getEntryPoint(
+        selectedRepository !== null,
+        replayJson !== null,
+      ),
       query_character_length: contentLength,
       replay_json_size: replayJson?.length,
     });
@@ -443,7 +465,7 @@ const uploadAttachments = async ({
 };
 
 const reportSkippedFiles = (skippedFiles: Array<{ reason?: string }>) => {
-  skippedFiles.forEach(file => {
+  skippedFiles.forEach((file) => {
     if (file.reason) {
       displayErrorToast(file.reason);
     }
@@ -505,7 +527,9 @@ function useChatMessaging({
   useSop: boolean;
 }) {
   const [messageToSend, setMessageToSend] = React.useState<string | null>(null);
-  const [lastUserMessage, setLastUserMessage] = React.useState<string | null>(null);
+  const [lastUserMessage, setLastUserMessage] = React.useState<string | null>(
+    null,
+  );
 
   const handleSendMessage = React.useCallback(
     async (content: string, originalImages: File[], originalFiles: File[]) => {
@@ -536,20 +560,29 @@ function useChatMessaging({
         return;
       }
 
-      const imageUrls = await Promise.all(images.map(image => convertImageToBase64(image)));
+      const imageUrls = await Promise.all(
+        images.map((image) => convertImageToBase64(image)),
+      );
       const timestamp = new Date().toISOString();
-      const { skipped_files: skippedFiles, uploaded_files: uploadedFiles } =
-        await uploadAttachments({
-          conversationId,
-          files,
-          uploadFiles,
-        });
+      const uploadResult = await uploadAttachments({
+        conversationId: conversationId!,
+        files,
+        uploadFiles,
+      });
+      const skippedFiles =
+        (uploadResult as any).skippedFiles ||
+        (uploadResult as any).skipped_files ||
+        [];
+      const uploadedFiles =
+        (uploadResult as any).uploadedFiles ||
+        (uploadResult as any).uploaded_files ||
+        [];
 
       reportSkippedFiles(skippedFiles);
 
       const prompt = buildPromptWithFiles({
         content: messageContent,
-        uploadedFiles,
+        uploadedFiles: uploadedFiles as string[],
         isSopMessage: useSop,
         t,
       });
@@ -585,13 +618,10 @@ function useChatMessaging({
     ],
   );
 
-  const handleAskAboutCode = React.useCallback(
-    (code: string) => {
-      const question = `Can you explain this code?\n\n\`\`\`\n${code}\n\`\`\``;
-      setMessageToSend(question);
-    },
-    [],
-  );
+  const handleAskAboutCode = React.useCallback((code: string) => {
+    const question = `Can you explain this code?\n\n\`\`\`\n${code}\n\`\`\``;
+    setMessageToSend(question);
+  }, []);
 
   const handleRunCode = React.useCallback(
     (code: string, language: string) => {
@@ -649,7 +679,7 @@ function ChatMainColumn({
   tasks: ReturnType<typeof useTasks>["tasks"];
   isTaskPanelOpen: boolean;
   toggleTaskPanel: () => void;
-  scrollRef: React.RefObject<HTMLDivElement>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
   onChatBodyScroll: (element: HTMLDivElement) => void;
   isLoadingMessages: boolean;
   events: unknown[];
@@ -682,7 +712,11 @@ function ChatMainColumn({
         scrollDomToBottom={scrollDomToBottom}
       />
 
-      <TaskPanel tasks={tasks} isOpen={isTaskPanelOpen} onToggle={toggleTaskPanel} />
+      <TaskPanel
+        tasks={tasks}
+        isOpen={isTaskPanelOpen}
+        onToggle={toggleTaskPanel}
+      />
 
       <ChatMessagesSection
         scrollRef={scrollRef}
@@ -791,7 +825,7 @@ function ChatMessagesSection({
   optimisticUserMessage,
   handleSendMessage,
 }: {
-  scrollRef: React.RefObject<HTMLDivElement>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
   onChatBodyScroll: (element: HTMLDivElement) => void;
   isLoadingMessages: boolean;
   events: unknown[];
@@ -823,8 +857,10 @@ function ChatMessagesSection({
             </div>
           ) : (
             <Messages
-              messages={events}
-              isAwaitingUserConfirmation={curAgentState === AgentState.AWAITING_USER_CONFIRMATION}
+              messages={events as any}
+              isAwaitingUserConfirmation={
+                curAgentState === AgentState.AWAITING_USER_CONFIRMATION
+              }
               showTechnicalDetails={showTechnicalDetails}
               onAskAboutCode={handleAskAboutCode}
               onRunCode={handleRunCode}
@@ -941,7 +977,7 @@ function ChatControlsSection({
   );
 }
 
-const ErrorBannerSection = ({ message }: { message: string | null }) => {
+function ErrorBannerSection({ message }: { message: string | null }) {
   if (!message) {
     return null;
   }
@@ -951,7 +987,7 @@ const ErrorBannerSection = ({ message }: { message: string | null }) => {
       <ErrorMessageBanner message={message} />
     </div>
   );
-};
+}
 
 const getOrchestrationMessage = ({
   optimisticSopStarting,
@@ -969,12 +1005,36 @@ const getOrchestrationMessage = ({
       <div className="flex items-center gap-2 text-sm text-text-secondary">
         <LoadingSpinner size="small" />
         <span>
-          {isOrchestrating ? "MetaSOP orchestration in progress" : "Starting MetaSOP…"}
+          {isOrchestrating
+            ? "MetaSOP orchestration in progress"
+            : "Starting MetaSOP…"}
         </span>
       </div>
     </div>
   );
 };
+
+function mapActionToStatusType(
+  action: string,
+):
+  | "think"
+  | "thinking"
+  | "plan"
+  | "run"
+  | "write"
+  | "edit"
+  | "browse"
+  | "read"
+  | "message" {
+  if (action === "write") return "write";
+  if (action === "edit") return "edit";
+  if (action === "run") return "run";
+  if (action === "browse") return "browse";
+  if (action === "read") return "read";
+  if (action === "message") return "message";
+  if (action === "task_tracking") return "plan";
+  return "think";
+}
 
 function ChatStatusIndicator({
   parsedEvents,

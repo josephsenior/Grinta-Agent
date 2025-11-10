@@ -1,5 +1,6 @@
 import { screen, within } from "@testing-library/react";
-import { createRoutesStub } from "react-router-dom";
+import * as RouterDom from "react-router-dom";
+import type { GetConfigResponse } from "#/api/open-hands.types";
 import { describe, expect, it, vi } from "vitest";
 import SettingsScreen, { clientLoader } from "#/routes/settings";
 import Forge from "#/api/forge";
@@ -33,24 +34,54 @@ vi.mock("react-i18next", async () => {
   };
 });
 
-describe("Settings Screen", () => {
-  const { handleLogoutMock, mockQueryClient } = vi.hoisted(() => ({
+const { handleLogoutMock, mockQueryClient, subscriptionAccessMock } =
+  vi.hoisted(() => ({
     handleLogoutMock: vi.fn(),
+    subscriptionAccessMock: vi.fn<() => boolean | undefined>(
+      () => undefined,
+    ),
     mockQueryClient: (() => {
       const { QueryClient } = require("@tanstack/react-query");
       return new QueryClient();
     })(),
   }));
 
-  vi.mock("#/hooks/use-app-logout", () => ({
-    useAppLogout: vi.fn().mockReturnValue({ handleLogout: handleLogoutMock }),
-  }));
+const navigateMock = vi.fn();
+vi.spyOn(RouterDom, "useNavigate").mockImplementation(() => navigateMock);
 
-  vi.mock("#/query-client-config", () => ({
-    queryClient: mockQueryClient,
-  }));
+const baseConfig: GetConfigResponse = {
+  APP_MODE: "oss",
+  GITHUB_CLIENT_ID: "",
+  POSTHOG_CLIENT_KEY: "",
+  FEATURE_FLAGS: {
+    ENABLE_BILLING: false,
+    HIDE_LLM_SETTINGS: false,
+    ENABLE_JIRA: false,
+    ENABLE_JIRA_DC: false,
+    ENABLE_LINEAR: false,
+  },
+};
 
-  const RouterStub = createRoutesStub([
+vi.mock("#/hooks/use-app-logout", () => ({
+  useAppLogout: vi.fn().mockReturnValue({ handleLogout: handleLogoutMock }),
+}));
+
+vi.mock("#/query-client-config", () => ({
+  queryClient: mockQueryClient,
+}));
+
+vi.mock("#/hooks/query/use-subscription-access", () => ({
+  useSubscriptionAccess: () => ({ data: subscriptionAccessMock() }),
+}));
+
+describe("Settings Screen", () => {
+  beforeEach(() => {
+    navigateMock.mockReset();
+    subscriptionAccessMock.mockReset();
+    subscriptionAccessMock.mockReturnValue(undefined);
+  });
+
+  const RouterStub = RouterDom.createRoutesStub([
     {
           Component: SettingsScreen,
           loader: clientLoader as any,
@@ -120,9 +151,11 @@ describe("Settings Screen", () => {
   });
 
   it("should render the saas navbar", async () => {
-    const saasConfig = {
+    const saasConfig: GetConfigResponse = {
+      ...baseConfig,
       APP_MODE: "saas",
       FEATURE_FLAGS: {
+        ...baseConfig.FEATURE_FLAGS,
         ENABLE_BILLING: true,
       },
     };
@@ -154,11 +187,47 @@ describe("Settings Screen", () => {
     getConfigSpy.mockRestore();
   });
 
+  it("should render the LLM tab when subscription access is granted in saas mode", async () => {
+    const saasConfig: GetConfigResponse = {
+      ...baseConfig,
+      APP_MODE: "saas",
+    };
+
+    subscriptionAccessMock.mockReturnValue(true);
+    mockQueryClient.clear();
+    mockQueryClient.setQueryData(["config"], saasConfig);
+    const getConfigSpy = vi.spyOn(Forge, "getConfig");
+    getConfigSpy.mockResolvedValue(saasConfig);
+
+    renderSettingsScreen();
+
+    const navbar = await screen.findByRole("navigation");
+    expect(navbar.querySelector('a[href="/settings"]')).not.toBeNull();
+
+    getConfigSpy.mockRestore();
+  });
+
+  it("should navigate back to home when the back button is clicked", async () => {
+    const getConfigSpy = vi.spyOn(Forge, "getConfig");
+    getConfigSpy.mockResolvedValue(baseConfig);
+
+    mockQueryClient.clear();
+
+    renderSettingsScreen();
+
+    const backButton = await screen.findByRole("button", {
+      name: "Go back to home",
+    });
+    await backButton.click();
+
+    expect(navigateMock).toHaveBeenCalledWith("/");
+
+    getConfigSpy.mockRestore();
+  });
+
   it("should not be able to access saas-only routes in oss mode", async () => {
     const getConfigSpy = vi.spyOn(Forge, "getConfig");
-    getConfigSpy.mockResolvedValue({
-      APP_MODE: "oss",
-    });
+    getConfigSpy.mockResolvedValue(baseConfig);
 
     // Clear any existing query data
     mockQueryClient.clear();
@@ -189,4 +258,58 @@ describe("Settings Screen", () => {
   });
 
   it.todo("should not be able to access oss-only routes in saas mode");
+});
+
+describe("clientLoader", () => {
+  afterEach(() => {
+    mockQueryClient.clear();
+  });
+
+  it("should return null when called without args", async () => {
+    await expect(clientLoader(undefined as any)).resolves.toBeNull();
+  });
+
+  it("should redirect /settings to /settings/user in saas mode", async () => {
+    const saasConfig: GetConfigResponse = {
+      ...baseConfig,
+      APP_MODE: "saas",
+      FEATURE_FLAGS: {
+        ...baseConfig.FEATURE_FLAGS,
+        ENABLE_BILLING: true,
+      },
+    };
+    const getConfigSpy = vi.spyOn(Forge, "getConfig");
+    getConfigSpy.mockResolvedValue(saasConfig);
+
+    const request = new Request("https://example.com/settings");
+    const response = await clientLoader({ request } as any);
+
+    expect(response?.status).toBe(302);
+    expect(response?.headers.get("Location")).toBe("/settings/user");
+
+    getConfigSpy.mockRestore();
+  });
+
+  it("should redirect saas-only paths to /settings in oss mode", async () => {
+    const getConfigSpy = vi.spyOn(Forge, "getConfig");
+    getConfigSpy.mockResolvedValue(baseConfig);
+
+    const request = new Request("https://example.com/settings/billing");
+    const response = await clientLoader({ request } as any);
+
+    expect(response?.status).toBe(302);
+    expect(response?.headers.get("Location")).toBe("/settings");
+
+    getConfigSpy.mockRestore();
+  });
+
+  it("should return null for allowed paths", async () => {
+    const getConfigSpy = vi.spyOn(Forge, "getConfig");
+    getConfigSpy.mockResolvedValue(baseConfig);
+
+    const request = new Request("https://example.com/settings/snippets");
+    await expect(clientLoader({ request } as any)).resolves.toBeNull();
+
+    getConfigSpy.mockRestore();
+  });
 });

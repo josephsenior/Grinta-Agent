@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { ExternalLink, Download, Info, Check, Sparkles, TrendingUp } from "lucide-react";
+import {
+  ExternalLink,
+  Download,
+  Info,
+  Check,
+  Sparkles,
+  TrendingUp,
+} from "lucide-react";
 import type { MCPMarketplaceItem } from "#/types/mcp-marketplace";
 import { BrandButton } from "#/components/features/settings/brand-button";
 
@@ -34,8 +41,7 @@ export function MCPMarketplaceCard({
 }: MCPMarketplaceCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
-  const categoryColor =
-    CATEGORY_COLORS[mcp.category] || CATEGORY_COLORS.other;
+  const categoryColor = CATEGORY_COLORS[mcp.category] || CATEGORY_COLORS.other;
 
   const formatInstallCount = (count?: number) => {
     if (!count) return "";
@@ -97,7 +103,9 @@ export function MCPMarketplaceCard({
                   <span className="text-foreground-tertiary">•</span>
                   <span className="flex items-center gap-1.5 px-2 py-1 bg-background-primary/50 rounded-md">
                     <Download className="w-3 h-3" />
-                    <span className="font-medium">{formatInstallCount(mcp.installCount)}</span>
+                    <span className="font-medium">
+                      {formatInstallCount(mcp.installCount)}
+                    </span>
                   </span>
                 </>
               )}
@@ -106,7 +114,11 @@ export function MCPMarketplaceCard({
                   <span className="text-foreground-tertiary">•</span>
                   <span className="flex items-center gap-1 px-2 py-1 bg-background-primary/50 rounded-md">
                     <span className="text-yellow-400">⭐</span>
-                    <span className="font-medium">{typeof mcp.rating === 'number' ? mcp.rating.toFixed(1) : mcp.rating}</span>
+                    <span className="font-medium">
+                      {typeof mcp.rating === "number"
+                        ? mcp.rating.toFixed(1)
+                        : mcp.rating}
+                    </span>
                   </span>
                 </>
               )}
@@ -179,4 +191,3 @@ export function MCPMarketplaceCard({
     </div>
   );
 }
-

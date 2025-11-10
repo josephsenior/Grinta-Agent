@@ -16,7 +16,6 @@ import {
   displaySuccessToast,
   displayErrorToast,
 } from "#/utils/custom-toast-handlers";
-import { AutonomyModeSelector } from "../controls/autonomy-mode-selector";
 import { useAutonomyMode } from "#/hooks/use-autonomy-mode";
 
 interface InteractiveChatBoxProps {
@@ -52,12 +51,14 @@ export function InteractiveChatBox({
 }: InteractiveChatBoxProps) {
   const { t } = useTranslation();
   const { currentMode, handleModeChange } = useAutonomyMode();
-  const [images, setImages] = React.useState<File[]>([]);
+  type ImageEntry = { file: File; previewUrl: string };
+  const [images, setImages] = React.useState<ImageEntry[]>([]);
   const [files, setFiles] = React.useState<File[]>([]);
   const [showFileUpload, setShowFileUpload] = React.useState(false);
   const [pendingFiles, setPendingFiles] = React.useState<File[]>([]);
   const [showFilePreview, setShowFilePreview] = React.useState(false);
-  const [isDraggingOverContainer, setIsDraggingOverContainer] = React.useState(false); // For drag-drop overlay
+  const [isDraggingOverContainer, setIsDraggingOverContainer] =
+    React.useState(false); // For drag-drop overlay
   const hiddenFileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Helper to safely extract HTTP status from various error shapes.
@@ -76,9 +77,40 @@ export function InteractiveChatBox({
     return typeof st === "number" ? st : undefined;
   };
 
+  const revokePreviewUrl = (entry: ImageEntry) => {
+    try {
+      URL.revokeObjectURL(entry.previewUrl);
+    } catch (error) {
+      // ignore revoke errors
+    }
+  };
+
+  const imageEntriesRef = React.useRef<ImageEntry[]>(images);
+
+  React.useEffect(() => {
+    imageEntriesRef.current = images;
+  }, [images]);
+
+  React.useEffect(
+    () => () => {
+      imageEntriesRef.current.forEach(revokePreviewUrl);
+    },
+    [],
+  );
+
+  const clearImages = React.useCallback(() => {
+    setImages((prev) => {
+      prev.forEach(revokePreviewUrl);
+      return [];
+    });
+  }, []);
+
   const handleUpload = (selectedFiles: File[]) => {
     // Validate files before adding them
-    const validation = validateFiles(selectedFiles, [...images, ...files]);
+    const validation = validateFiles(selectedFiles, [
+      ...images.map((entry) => entry.file),
+      ...files,
+    ]);
 
     if (!validation.isValid) {
       displayErrorToast(`Error: ${validation.errorMessage}`);
@@ -96,7 +128,13 @@ export function InteractiveChatBox({
     const validImages = confirmedFiles.filter((f) => isFileImage(f));
 
     setFiles((prevFiles) => [...prevFiles, ...validFiles]);
-    setImages((prevImages) => [...prevImages, ...validImages]);
+    setImages((prevImages) => [
+      ...prevImages,
+      ...validImages.map((file) => ({
+        file,
+        previewUrl: URL.createObjectURL(file),
+      })),
+    ]);
     setShowFilePreview(false);
     setPendingFiles([]);
     setShowFileUpload(false);
@@ -118,13 +156,27 @@ export function InteractiveChatBox({
     setFiles(removeElementByIndex(files, index));
   };
   const handleRemoveImage = (index: number) => {
-    setImages(removeElementByIndex(images, index));
+    setImages((prevImages) => {
+      if (index < 0 || index >= prevImages.length) {
+        return prevImages;
+      }
+      const updated = [...prevImages];
+      const [removed] = updated.splice(index, 1);
+      if (removed) {
+        revokePreviewUrl(removed);
+      }
+      return updated;
+    });
   };
 
   const handleSubmit = (message: string) => {
-    onSubmit(message, images, files);
+    onSubmit(
+      message,
+      images.map((entry) => entry.file),
+      files,
+    );
     setFiles([]);
-    setImages([]);
+    clearImages();
     if (message) {
       onChange?.("");
     }
@@ -150,14 +202,16 @@ export function InteractiveChatBox({
   const handleContainerDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsDraggingOverContainer(false);
-    
+
     if (event.dataTransfer.files.length > 0) {
       const droppedFiles = Array.from(event.dataTransfer.files);
       handleUpload(droppedFiles);
     }
   };
 
-  const handleHiddenInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleHiddenInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     if (event.target.files) {
       const selectedFiles = Array.from(event.target.files);
       handleUpload(selectedFiles);
@@ -203,7 +257,7 @@ export function InteractiveChatBox({
           </div>
         </div>
       )}
-      
+
       {/* File Upload Area - Collapsible */}
       {showFileUpload && (
         <Card className="animate-slide-down bg-black border border-violet-500/20 shadow-lg shadow-violet-500/10">
@@ -257,7 +311,7 @@ export function InteractiveChatBox({
                 type="button"
                 variant="ghost"
                 size="icon"
-                onClick={() => setImages([])}
+                onClick={clearImages}
                 className="h-6 w-6 text-text-secondary hover:text-text-primary"
               >
                 <X className="h-3 w-3" />
@@ -265,7 +319,7 @@ export function InteractiveChatBox({
             </div>
             <ImageCarousel
               size="small"
-              images={images.map((image) => URL.createObjectURL(image))}
+              images={images.map((entry) => entry.previewUrl)}
               onRemove={handleRemoveImage}
             />
           </CardContent>
@@ -303,9 +357,7 @@ export function InteractiveChatBox({
 
       {/* Enhanced Input Container - Mobile Optimized */}
       <Card className="group bg-black border-0 shadow-lg shadow-violet-500/10 transition-all duration-300 [&]:focus-visible:outline-none [&]:focus-within:outline-none [&_*]:focus-visible:outline-none">
-        <CardContent
-          className={cn("flex items-end gap-2 sm:gap-3 p-0")}
-        >
+        <CardContent className={cn("flex items-end gap-2 sm:gap-3 p-0")}>
           {/* Upload Button - Inside Input */}
           <Button
             type="button"
@@ -315,14 +367,14 @@ export function InteractiveChatBox({
             className={cn(
               "flex-shrink-0 h-10 w-10 rounded-full transition-all duration-200",
               "text-violet-400 hover:text-violet-300 hover:bg-violet-500/10",
-              hasFiles && "text-violet-500 bg-violet-500/10"
+              hasFiles && "text-violet-500 bg-violet-500/10",
             )}
             title={hasFiles ? "Manage Files" : "Add Files"}
           >
             <Upload className="h-4 w-4" />
             {hasFiles && (
-              <Badge 
-                variant="outline" 
+              <Badge
+                variant="outline"
                 className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs bg-violet-500 text-white border-none"
               >
                 {images.length + files.length}

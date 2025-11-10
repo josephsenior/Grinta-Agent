@@ -1,13 +1,13 @@
 import React from "react";
-import { AutonomyModeSelector } from "./autonomy-mode-selector";
-import { AutonomyMode } from "./autonomy-mode-selector";
+import { AutonomyModeSelector, AutonomyMode } from "./autonomy-mode-selector";
 
 /**
  * Demo component to showcase the autonomy mode selector
  * Shows how the component looks and behaves
  */
 export function AutonomyModeDemo() {
-  const [currentMode, setCurrentMode] = React.useState<AutonomyMode>("balanced");
+  const [currentMode, setCurrentMode] =
+    React.useState<AutonomyMode>("balanced");
 
   const handleModeChange = (mode: AutonomyMode) => {
     setCurrentMode(mode);
@@ -24,26 +24,34 @@ export function AutonomyModeDemo() {
           Click the button below to switch between autonomy modes:
         </p>
       </div>
-      
+
       <div className="flex items-center gap-4">
         <AutonomyModeSelector
           currentMode={currentMode}
           onModeChange={handleModeChange}
         />
-        
+
         <div className="text-sm text-text-secondary">
-          Current mode: <span className="font-medium text-text-primary">{currentMode}</span>
+          Current mode:{" "}
+          <span className="font-medium text-text-primary">{currentMode}</span>
         </div>
       </div>
-      
+
       <div className="mt-4 p-3 bg-background-secondary rounded-md">
         <p className="text-xs text-text-tertiary">
           This selector allows users to choose between three autonomy levels:
         </p>
         <ul className="text-xs text-text-tertiary mt-2 space-y-1">
-          <li>• <strong>Supervised:</strong> Always ask for confirmation</li>
-          <li>• <strong>Balanced:</strong> Ask for confirmation on high-risk actions</li>
-          <li>• <strong>Full Autonomous:</strong> Execute without confirmation</li>
+          <li>
+            • <strong>Supervised:</strong> Always ask for confirmation
+          </li>
+          <li>
+            • <strong>Balanced:</strong> Ask for confirmation on high-risk
+            actions
+          </li>
+          <li>
+            • <strong>Full Autonomous:</strong> Execute without confirmation
+          </li>
         </ul>
       </div>
     </div>

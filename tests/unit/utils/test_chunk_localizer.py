@@ -128,3 +128,23 @@ def test_get_top_k_chunk_matches_with_overlapping_chunks():
     assert matches[1].text == "chunk3\nchunk4"
     assert matches[1].line_range == (3, 4)
     assert matches[0].normalized_lcs == matches[1].normalized_lcs
+
+
+def test_create_chunks_with_unsupported_language(monkeypatch):
+    def fake_get_parser(language):
+        raise AttributeError("no parser")
+
+    monkeypatch.setattr("forge.utils.chunk_localizer.get_parser", fake_get_parser)
+    text = "line1\nline2"
+    chunks = create_chunks(text, size=1, language="python")
+    assert len(chunks) == 2
+    assert chunks[0].text == "line1"
+
+
+def test_create_chunks_with_supported_language(monkeypatch):
+    class DummyParser:
+        pass
+
+    monkeypatch.setattr("forge.utils.chunk_localizer.get_parser", lambda language: DummyParser())
+    with pytest.raises(NotImplementedError):
+        create_chunks("line1\nline2", language="python")

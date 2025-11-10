@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from "react";
-import { Download, Upload, Database, CheckCircle, AlertCircle, AlertTriangle } from "lucide-react";
+import { Download, Upload, Database, AlertTriangle } from "lucide-react";
 import { useToast, ToastContainer } from "#/components/shared/toast";
 
 function BackupSettingsScreen() {
@@ -13,14 +13,14 @@ function BackupSettingsScreen() {
 
   const handleExport = async () => {
     setIsExporting(true);
-    
+
     try {
       const response = await fetch("/api/global-export/");
-      
+
       if (!response.ok) {
         throw new Error("Export failed");
       }
-      
+
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -30,7 +30,7 @@ function BackupSettingsScreen() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       toast.success("Successfully exported all data!");
     } catch (error) {
       console.error("Export error:", error);
@@ -44,14 +44,14 @@ function BackupSettingsScreen() {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".json";
-    
+
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
       setIsImporting(true);
 
-      try{
+      try {
         const text = await file.text();
         const data = JSON.parse(text);
 
@@ -104,7 +104,6 @@ function BackupSettingsScreen() {
         </p>
       </div>
 
-
       {/* Export Section */}
       <div className="p-6 bg-black border border-violet-500/20 rounded-lg">
         <div className="flex items-start gap-4">
@@ -116,9 +115,9 @@ function BackupSettingsScreen() {
               Export Your Data
             </h2>
             <p className="text-foreground-secondary text-sm mb-4">
-              Download a complete backup of all your memories, prompts, code snippets,
-              and conversation templates. This file can be used to restore your data
-              or transfer it to another system.
+              Download a complete backup of all your memories, prompts, code
+              snippets, and conversation templates. This file can be used to
+              restore your data or transfer it to another system.
             </p>
             <div className="p-3 bg-background rounded border border-violet-500/20 mb-4">
               <h3 className="text-sm font-medium text-foreground mb-2">
@@ -155,16 +154,16 @@ function BackupSettingsScreen() {
               Import Your Data
             </h2>
             <p className="text-foreground-secondary text-sm mb-4">
-              Restore your data from a previous backup or import data from another
-              system. Existing items with the same ID will be updated.
+              Restore your data from a previous backup or import data from
+              another system. Existing items with the same ID will be updated.
             </p>
             <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded mb-4">
               <p className="text-sm text-yellow-400 flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <span>
-                  <strong>Important:</strong> Importing will merge with your existing data.
-                  Items with matching IDs will be updated. Make sure you have a current
-                  backup before importing.
+                  <strong>Important:</strong> Importing will merge with your
+                  existing data. Items with matching IDs will be updated. Make
+                  sure you have a current backup before importing.
                 </span>
               </p>
             </div>
@@ -195,29 +194,29 @@ function BackupSettingsScreen() {
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-1">•</span>
                 <span>
-                  <strong>Regular Backups:</strong> Export your data regularly to avoid
-                  losing important work.
+                  <strong>Regular Backups:</strong> Export your data regularly
+                  to avoid losing important work.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-1">•</span>
                 <span>
-                  <strong>Secure Storage:</strong> Store backups in a secure location
-                  like cloud storage or encrypted drives.
+                  <strong>Secure Storage:</strong> Store backups in a secure
+                  location like cloud storage or encrypted drives.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-1">•</span>
                 <span>
-                  <strong>Test Restores:</strong> Periodically test importing your backups
-                  to ensure they work correctly.
+                  <strong>Test Restores:</strong> Periodically test importing
+                  your backups to ensure they work correctly.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary mt-1">•</span>
                 <span>
-                  <strong>Version Control:</strong> Keep multiple backup versions with
-                  dated filenames.
+                  <strong>Version Control:</strong> Keep multiple backup
+                  versions with dated filenames.
                 </span>
               </li>
             </ul>
@@ -232,4 +231,3 @@ function BackupSettingsScreen() {
 }
 
 export default BackupSettingsScreen;
-

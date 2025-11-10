@@ -9,24 +9,20 @@ interface ForgeLogoProps {
 
 const heightClasses = {
   sm: "h-6",
-  md: "h-8", 
+  md: "h-8",
   lg: "h-12",
   xl: "h-16",
 };
 
-export function ForgeLogo({ 
-  className, 
-  size = "md", 
-  variant = "icon" 
+export function ForgeLogo({
+  className,
+  size = "md",
+  variant = "icon",
 }: ForgeLogoProps) {
   const heightClass = heightClasses[size];
 
   if (variant === "text") {
-    return (
-      <span className="font-light text-white tracking-tight">
-        Forge
-      </span>
-    );
+    return <span className="font-light text-white tracking-tight">Forge</span>;
   }
 
   // Both "icon" and "full" now use the actual logo image
@@ -39,4 +35,3 @@ export function ForgeLogo({
     />
   );
 }
-

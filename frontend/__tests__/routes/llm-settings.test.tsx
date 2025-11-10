@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import LlmSettingsScreen from "#/routes/llm-settings";
@@ -9,7 +9,10 @@ import {
 } from "#/mocks/handlers";
 import * as AdvancedSettingsUtlls from "#/utils/has-advanced-settings-set";
 import * as ToastHandlers from "#/utils/custom-toast-handlers";
+import * as AiConfigOptions from "#/hooks/query/use-ai-config-options";
 import { renderWithProviders } from "../../test-utils";
+import { DEFAULT_OPENHANDS_MODEL } from "#/utils/verified-models";
+import * as LlmSettingsHelpers from "#/routes/llm-settings/llm-settings-helpers";
 
 const renderLlmSettingsScreen = () =>
   renderWithProviders(<LlmSettingsScreen />);
@@ -17,6 +20,9 @@ const renderLlmSettingsScreen = () =>
 beforeEach(() => {
   vi.resetAllMocks();
   resetTestHandlersMockSettings();
+  vi.spyOn(Forge, "getSettings").mockResolvedValue({
+    ...MOCK_DEFAULT_USER_SETTINGS,
+  });
 });
 
 describe("Content", () => {
@@ -41,7 +47,7 @@ describe("Content", () => {
       const apiKey = screen.getByTestId("llm-api-key-input");
 
       await waitFor(() => {
-        expect(provider).toHaveValue("openhands");
+        expect(provider).toHaveValue("Openhands");
         expect(model).toHaveValue("claude-sonnet-4-20250514");
 
         expect(apiKey).toHaveValue("");
@@ -393,6 +399,9 @@ describe("Form submission", () => {
     const condensor = await screen.findByTestId(
       "enable-memory-condenser-switch",
     );
+    const condenserMaxSizeInput = await screen.findByTestId(
+      "condenser-max-size-input",
+    );
 
     // Confirmation mode switch is now in basic settings, always visible
     const confirmation = await screen.findByTestId(
@@ -479,7 +488,11 @@ describe("Form submission", () => {
     );
     await userEvent.click(securityAnalyzerOption);
     expect(securityAnalyzer).toHaveValue("SETTINGS$SECURITY_ANALYZER_NONE");
+    expect(submitButton).not.toBeDisabled();
 
+    // clear the security analyzer selection using the input
+    await userEvent.clear(securityAnalyzer);
+    expect(securityAnalyzer).toHaveValue("");
     expect(submitButton).not.toBeDisabled();
 
     // revert back to original value
@@ -493,6 +506,194 @@ describe("Form submission", () => {
     );
     expect(submitButton).toBeDisabled();
   }, 20000);
+
+  it("should mark condenser and search API key inputs as dirty", async () => {
+    renderLlmSettingsScreen();
+    await screen.findByTestId("llm-settings-screen");
+
+    const submitButton = screen.getByTestId("submit-button");
+    expect(submitButton).toBeDisabled();
+
+    const advancedSwitch = screen.getByTestId("advanced-settings-switch");
+    await userEvent.click(advancedSwitch);
+
+    const condensorSwitch = screen.getByTestId(
+      "enable-memory-condenser-switch",
+    );
+    expect(condensorSwitch).toBeChecked();
+
+    await userEvent.click(condensorSwitch);
+    expect(condensorSwitch).not.toBeChecked();
+    expect(submitButton).not.toBeDisabled();
+
+    const condenserMaxSizeInput = screen.getByTestId(
+      "condenser-max-size-input",
+    );
+    await userEvent.type(
+      condenserMaxSizeInput,
+      "{selectall}{delete}250",
+    );
+
+    const searchApiKeyInput = screen.getByTestId("search-api-key-input");
+    await userEvent.type(searchApiKeyInput, "search-key");
+
+    expect(submitButton).not.toBeDisabled();
+  });
+
+  it("should clamp and reset the condenser max size when edited", async () => {
+    renderLlmSettingsScreen();
+    await screen.findByTestId("llm-settings-screen");
+
+    const submitButton = screen.getByTestId("submit-button");
+    expect(submitButton).toBeDisabled();
+
+    const advancedSwitch = screen.getByTestId("advanced-settings-switch");
+    await userEvent.click(advancedSwitch);
+
+    const condenserInput = screen.getByTestId("condenser-max-size-input");
+    expect(condenserInput).toHaveValue(120);
+
+    // Enter a value below the minimum; it should clamp to 20 and mark the form dirty.
+    fireEvent.change(condenserInput, { target: { value: "10" } });
+    expect(condenserInput).toHaveValue(20);
+    expect(submitButton).not.toBeDisabled();
+
+    // Clearing the field should revert to the default and reset the dirty state.
+    fireEvent.change(condenserInput, { target: { value: "" } });
+    expect(condenserInput).toHaveValue(120);
+    expect(submitButton).toBeDisabled();
+  });
+
+  it("should auto-select a security analyzer when enabling confirmation mode", async () => {
+    const getSettingsSpy = vi.spyOn(Forge, "getSettings");
+    getSettingsSpy.mockResolvedValue({
+      ...MOCK_DEFAULT_USER_SETTINGS,
+      confirmation_mode: false,
+      security_analyzer: "",
+    });
+
+    const normalizeSpy = vi
+      .spyOn(LlmSettingsHelpers, "normalizeSecurityAnalyzerSelection")
+      .mockImplementation((analyzer) => {
+        if (!analyzer) {
+          return "";
+        }
+        return analyzer;
+      });
+
+    try {
+      renderLlmSettingsScreen();
+      await screen.findByTestId("llm-settings-screen");
+
+      const advancedSwitch = screen.getByTestId("advanced-settings-switch");
+      await userEvent.click(advancedSwitch);
+
+      const confirmationSwitch = screen.getByTestId(
+        "enable-confirmation-mode-switch",
+      );
+      expect(
+        screen.queryByTestId("security-analyzer-input"),
+      ).not.toBeInTheDocument();
+
+      await userEvent.click(confirmationSwitch);
+
+      const securityAnalyzer = await screen.findByTestId(
+        "security-analyzer-input",
+      );
+      expect(securityAnalyzer).toHaveValue(
+        "SETTINGS$SECURITY_ANALYZER_LLM_DEFAULT",
+      );
+    } finally {
+      normalizeSpy.mockRestore();
+    }
+  });
+
+  it("should expose built-in security analyzer options when available", async () => {
+    const aiConfigSpy = vi
+      .spyOn(AiConfigOptions, "useAIConfigOptions")
+      .mockReturnValue({
+        data: {
+          models: [],
+          agents: [],
+          securityAnalyzers: ["llm", "invariant", "custom"],
+        },
+      } as unknown as ReturnType<typeof AiConfigOptions.useAIConfigOptions>);
+
+    try {
+      renderLlmSettingsScreen();
+      await screen.findByTestId("llm-settings-screen");
+
+      const confirmationSwitch = screen.getByTestId(
+        "enable-confirmation-mode-switch",
+      );
+      await userEvent.click(confirmationSwitch);
+
+      const securityAnalyzer = await screen.findByTestId(
+        "security-analyzer-input",
+      );
+      await userEvent.click(securityAnalyzer);
+
+      screen.getByText("SETTINGS$SECURITY_ANALYZER_LLM_DEFAULT");
+      screen.getByText("SETTINGS$SECURITY_ANALYZER_INVARIANT");
+      screen.getByText("custom");
+    } finally {
+      aiConfigSpy.mockRestore();
+    }
+  });
+
+  it("should restore the default analyzer when confirmation mode is re-enabled", async () => {
+    const normalizeSpy = vi
+      .spyOn(LlmSettingsHelpers, "normalizeSecurityAnalyzerSelection")
+      .mockImplementation((analyzer) => {
+        if (!analyzer) {
+          return "";
+        }
+        return analyzer;
+      });
+
+    try {
+      renderLlmSettingsScreen();
+      await screen.findByTestId("llm-settings-screen");
+
+      const confirmationSwitch = screen.getByTestId(
+        "enable-confirmation-mode-switch",
+      );
+
+      // Enable confirmation mode to reveal the analyzer input.
+      await userEvent.click(confirmationSwitch);
+      const securityAnalyzer = await screen.findByTestId(
+        "security-analyzer-input",
+      );
+      expect(securityAnalyzer).toHaveValue(
+        "SETTINGS$SECURITY_ANALYZER_LLM_DEFAULT",
+      );
+
+      // Switch to the "None" option then clear it, ensuring state becomes empty.
+      await userEvent.click(securityAnalyzer);
+      await userEvent.click(
+        screen.getByText("SETTINGS$SECURITY_ANALYZER_NONE"),
+      );
+      await userEvent.clear(securityAnalyzer);
+      expect(securityAnalyzer).toHaveValue("");
+
+      // Disable confirmation mode (input disappears).
+      await userEvent.click(confirmationSwitch);
+      expect(
+        screen.queryByTestId("security-analyzer-input"),
+      ).not.toBeInTheDocument();
+
+      // Re-enable confirmation mode; it should auto-select the default analyzer again.
+      await userEvent.click(confirmationSwitch);
+      const restoredAnalyzer = await screen.findByTestId(
+        "security-analyzer-input",
+      );
+      expect(restoredAnalyzer).toHaveValue(
+        "SETTINGS$SECURITY_ANALYZER_LLM_DEFAULT",
+      );
+    } finally {
+      normalizeSpy.mockRestore();
+    }
+  });
 
   it("should reset button state when switching between forms", async () => {
     renderLlmSettingsScreen();
@@ -582,7 +783,7 @@ describe("Form submission", () => {
 
     expect(saveSettingsSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        llm_model: "Openhands/claude-sonnet-4-20250514",
+        llm_model: DEFAULT_OPENHANDS_MODEL.toLowerCase(),
         llm_base_url: "",
         confirmation_mode: true, // Confirmation mode is now a basic setting, should be preserved
       }),

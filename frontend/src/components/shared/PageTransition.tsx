@@ -5,7 +5,11 @@ import { prefersReducedMotion } from "#/utils/animation-utils";
 /**
  * Smooth page transitions between routes
  */
-export function PageTransition({ children }: { children: React.ReactNode }): React.ReactElement {
+export function PageTransition({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.ReactElement {
   const location = useLocation();
   const [displayLocation, setDisplayLocation] = useState(location);
   const [transitionStage, setTransitionStage] = useState("fadeIn");
@@ -30,7 +34,7 @@ export function PageTransition({ children }: { children: React.ReactNode }): Rea
         setDisplayLocation(location);
         setTransitionStage("fadeIn");
       }, 200);
-      
+
       return () => clearTimeout(timeout);
     }
   }, [transitionStage, location, reducedMotion]);
@@ -45,9 +49,10 @@ export function PageTransition({ children }: { children: React.ReactNode }): Rea
         ${transitionStage === "fadeOut" ? "animate-fade-out" : "animate-fade-in"}
       `}
       style={{
-        animation: transitionStage === "fadeOut" 
-          ? "fadeOut 0.2s ease-in forwards" 
-          : "fadeIn 0.3s ease-out forwards",
+        animation:
+          transitionStage === "fadeOut"
+            ? "fadeOut 0.2s ease-in forwards"
+            : "fadeIn 0.3s ease-out forwards",
       }}
     >
       {children}
@@ -79,5 +84,3 @@ export const pageTransitionStyles = `
   }
 }
 `;
-
-

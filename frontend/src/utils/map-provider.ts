@@ -25,7 +25,7 @@ export const MAP_PROVIDER = {
   openrouter: "OpenRouter",
   openhands: "Openhands",
   forge: "Openhands", // Legacy alias
-  Forge: "Openhands",  // Legacy alias
+  Forge: "Openhands", // Legacy alias
 };
 
 export const mapProvider = (provider: string) =>

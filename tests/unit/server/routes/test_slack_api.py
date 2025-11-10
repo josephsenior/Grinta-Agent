@@ -5,6 +5,7 @@ import uuid
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from forge.core.config import AppConfig
@@ -35,12 +36,12 @@ def test_client(tmp_path):
         mock_app_config = AppConfig()
         mock_app_config.workspace_base = str(workspace_dir)
 
-        with patch("forge.server.routes.slack.get_slack_store") as mock_get_store:
-            slack_store = SlackStore(mock_app_config)
-            mock_get_store.return_value = slack_store
-
-            client = TestClient(app)
-            yield client, slack_store
+        slack_store = SlackStore(mock_app_config)
+        with patch("forge.server.routes.slack.get_slack_store", autospec=True, return_value=slack_store):
+            fastapi_app = FastAPI()
+            fastapi_app.include_router(app)
+            with TestClient(fastapi_app) as client:
+                yield client, slack_store
 
 
 def test_slack_install_url_generation(test_client):
@@ -61,8 +62,10 @@ def test_slack_install_without_config():
     with patch("forge.server.routes.slack.FORGE_config") as mock_config:
         mock_config.SLACK_CLIENT_ID = None
 
-        client = TestClient(app)
-        response = client.get("/install?user_id=user123")
+        fastapi_app = FastAPI()
+        fastapi_app.include_router(app)
+        with TestClient(fastapi_app) as client:
+            response = client.get("/install?user_id=user123")
 
         assert response.status_code == 501
         assert "not configured" in response.json()["detail"]
@@ -110,7 +113,7 @@ def test_slack_events_url_verification(test_client):
 
     response = client.post("/events", json=challenge_payload)
 
-    assert response.status_code == 200
+    assert response.status_code == 200, response.json()
     data = response.json()
     assert data["challenge"] == "test-challenge-123"
 

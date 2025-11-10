@@ -1,6 +1,10 @@
 import React from "react";
 import { Sun, Moon, Monitor } from "lucide-react";
-import { useTheme } from "#/context/theme-context";
+import {
+  useTheme,
+  type Theme,
+  type ResolvedTheme,
+} from "#/context/theme-context";
 
 interface ThemeToggleProps {
   variant?: "icon" | "button" | "dropdown";
@@ -10,7 +14,10 @@ interface ThemeToggleProps {
 /**
  * Theme toggle component with multiple variants
  */
-export function ThemeToggle({ variant = "icon", className = "" }: ThemeToggleProps) {
+export function ThemeToggle({
+  variant = "icon",
+  className = "",
+}: ThemeToggleProps) {
   const { theme, resolvedTheme, setTheme, toggleTheme } = useTheme();
 
   const sharedProps = {
@@ -40,9 +47,9 @@ function ThemeToggleIcon({
   theme,
 }: {
   className: string;
-  resolvedTheme: string;
+  resolvedTheme: ResolvedTheme;
   toggleTheme: () => void;
-  theme: string;
+  theme: Theme;
 }) {
   return (
     <button
@@ -92,7 +99,7 @@ function ThemeToggleButton({
   toggleTheme,
 }: {
   className: string;
-  resolvedTheme: string;
+  resolvedTheme: ResolvedTheme;
   toggleTheme: () => void;
 }) {
   return (
@@ -128,9 +135,9 @@ function ThemeToggleDropdown({
   setTheme,
 }: {
   className: string;
-  theme: string;
-  resolvedTheme: string;
-  setTheme: (theme: string) => void;
+  theme: Theme;
+  resolvedTheme: ResolvedTheme;
+  setTheme: (theme: Theme) => void;
 }) {
   return (
     <div className={`relative ${className}`}>
@@ -202,4 +209,3 @@ function ThemeDropdownOption({
     </button>
   );
 }
-

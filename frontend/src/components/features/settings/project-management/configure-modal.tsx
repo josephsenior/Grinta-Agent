@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Trans, useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import axios from "axios";
@@ -170,9 +176,12 @@ export function ConfigureModal({
 
 interface ConfigureModalStateOptions {
   isOpen: boolean;
-  existingWorkspace: ConfigureModalProps["integrationData"] extends { workspace?: infer W }
-    ? W | null
-    : null;
+  existingWorkspace: {
+    id: number;
+    name: string;
+    status: string;
+    editable: boolean;
+  } | null;
   platform: "jira" | "jira-dc" | "linear";
   onClose: () => void;
   onConfirm: ConfigureModalProps["onConfirm"];
@@ -380,15 +389,15 @@ function useConfigureModalState({
         !webhookSecret.trim() ||
         !serviceAccountEmail.trim() ||
         !serviceAccountApiKey.trim() ||
-        Boolean(workspaceError || webhookSecretError || emailError || apiKeyError) ||
+        Boolean(
+          workspaceError || webhookSecretError || emailError || apiKeyError,
+        ) ||
         validateMutation.isPending
       );
     }
 
     return (
-      !workspace.trim() ||
-      workspaceError !== null ||
-      validateMutation.isPending
+      !workspace.trim() || workspaceError !== null || validateMutation.isPending
     );
   }, [
     apiKeyError,
@@ -448,9 +457,12 @@ function WorkspaceSection({
   error: string | null;
   label: string;
   placeholder: string;
-  existingWorkspace: ConfigureModalProps["integrationData"] extends { workspace?: infer W }
-    ? W | null
-    : null;
+  existingWorkspace: {
+    id: number;
+    name: string;
+    status: string;
+    editable: boolean;
+  } | null;
   onUnlink?: () => void;
   unlinkLabel: string;
 }) {
@@ -540,7 +552,9 @@ function ConfigurationFieldsSection({
           type="email"
         />
         {errors.serviceAccountEmail && (
-          <p className="text-error-500 text-sm mt-2">{errors.serviceAccountEmail}</p>
+          <p className="text-error-500 text-sm mt-2">
+            {errors.serviceAccountEmail}
+          </p>
         )}
       </div>
       <div>
@@ -553,11 +567,17 @@ function ConfigurationFieldsSection({
           type="password"
         />
         {errors.serviceAccountApiKey && (
-          <p className="text-error-500 text-sm mt-2">{errors.serviceAccountApiKey}</p>
+          <p className="text-error-500 text-sm mt-2">
+            {errors.serviceAccountApiKey}
+          </p>
         )}
       </div>
       <div className="mt-4">
-        <SettingsSwitch testId="active-toggle" onToggle={onToggleActive} isToggled={isActive}>
+        <SettingsSwitch
+          testId="active-toggle"
+          onToggle={onToggleActive}
+          isToggled={isActive}
+        >
           {labels.activeToggleLabel}
         </SettingsSwitch>
       </div>
@@ -633,9 +653,7 @@ function ConfigureModalDescription({
   if (variant === "configure") {
     return (
       <Trans
-        i18nKey={
-          I18nKey.PROJECT_MANAGEMENT$CONFIGURE_MODAL_DESCRIPTION_STAGE_2
-        }
+        i18nKey={I18nKey.PROJECT_MANAGEMENT$CONFIGURE_MODAL_DESCRIPTION_STAGE_2}
         components={baseComponents}
       />
     );
@@ -643,9 +661,7 @@ function ConfigureModalDescription({
 
   return (
     <Trans
-      i18nKey={
-        I18nKey.PROJECT_MANAGEMENT$CONFIGURE_MODAL_DESCRIPTION_STAGE_1
-      }
+      i18nKey={I18nKey.PROJECT_MANAGEMENT$CONFIGURE_MODAL_DESCRIPTION_STAGE_1}
       components={baseComponents}
       values={{ platform: platformName }}
     />
@@ -679,11 +695,12 @@ function getConnectButtonLabel({
   showConfigurationFields,
   t,
 }: {
-  existingWorkspace: ConfigureModalProps["integrationData"] extends {
-    workspace?: infer W;
-  }
-    ? W | null
-    : null;
+  existingWorkspace: {
+    id: number;
+    name: string;
+    status: string;
+    editable: boolean;
+  } | null;
   showConfigurationFields: boolean;
   t: TFunction;
 }): string {

@@ -72,16 +72,23 @@ export function handleAssistantMessage(message: unknown) {
 
   const m = message as Record<string, unknown>;
 
-  const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
+  const isObj = (v: unknown): v is Record<string, unknown> =>
+    typeof v === "object" && v !== null;
 
   const isActionMsg = (x: unknown): x is ActionMessage =>
-    isObj(x) && "action" in x && typeof (x as Record<string, unknown>).action === "string";
+    isObj(x) &&
+    "action" in x &&
+    typeof (x as Record<string, unknown>).action === "string";
 
   const isObservationMsg = (x: unknown): x is ObservationMessage =>
-    isObj(x) && "observation" in x && typeof (x as Record<string, unknown>).observation === "string";
+    isObj(x) &&
+    "observation" in x &&
+    typeof (x as Record<string, unknown>).observation === "string";
 
   const isStatusMsg = (x: unknown): x is StatusMessage =>
-    isObj(x) && (("status_update" in x && !!(x as Record<string, unknown>).status_update) || ("type" in x && typeof (x as Record<string, unknown>).type === "string"));
+    isObj(x) &&
+    (("status_update" in x && !!(x as Record<string, unknown>).status_update) ||
+      ("type" in x && typeof (x as Record<string, unknown>).type === "string"));
 
   if (isActionMsg(m)) {
     handleActionMessage(m);
@@ -95,6 +102,5 @@ export function handleAssistantMessage(message: unknown) {
 
   if (isStatusMsg(m)) {
     handleStatusMessage(m);
-    return;
   }
 }

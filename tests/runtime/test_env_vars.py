@@ -45,9 +45,14 @@ def test_env_vars_added_by_config(temp_dir, runtime_cls):
     _close_test_runtime(runtime)
 
 
+@pytest.mark.docker
 @pytest.mark.skipif(
     os.environ.get("TEST_RUNTIME") in ["cli", "local"],
     reason="This test is specific to DockerRuntime and its pause/resume persistence",
+)
+@pytest.mark.skipif(
+    os.environ.get("FORGE_RUN_DOCKER_TESTS", "0") != "1",
+    reason="Docker runtime tests are disabled by default; set FORGE_RUN_DOCKER_TESTS=1 to enable.",
 )
 def test_docker_runtime_env_vars_persist_after_restart(temp_dir):
     from forge.runtime.impl.docker.docker_runtime import DockerRuntime

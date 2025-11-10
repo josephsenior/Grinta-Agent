@@ -91,12 +91,25 @@ async def test_mcp_tool_timeout_error_handling(conversation_stats):
         budget_per_task_delta=None,
         sid="test-session",
     )
-    await controller.set_agent_state_to(AgentState.RUNNING)
-    mcp_action = MCPAction(name="test_tool", arguments={"param": "value"}, thought="Testing MCP timeout handling")
-    event_stream.add_event(mcp_action, EventSource.AGENT)
-    controller._pending_action = mcp_action
-    with mock.patch("sys.platform", "linux"):
-        result = await call_tool_mcp([mock_client], mcp_action)
+    from forge.events.serialization import observation as observation_module
+
+    original_observation_from_dict = observation_module.observation_from_dict
+
+    def _strip_id(data):
+        data = data.copy()
+        for key in ("id", "timestamp", "source", "sequence", "cause"):
+            data.pop(key, None)
+        return original_observation_from_dict(data)
+
+    with mock.patch(
+        "forge.events.serialization.observation.observation_from_dict", side_effect=_strip_id
+    ), mock.patch("forge.events.serialization.event.observation_from_dict", side_effect=_strip_id):
+        await controller.set_agent_state_to(AgentState.RUNNING)
+        mcp_action = MCPAction(name="test_tool", arguments={"param": "value"}, thought="Testing MCP timeout handling")
+        event_stream.add_event(mcp_action, EventSource.AGENT)
+        controller._pending_action = mcp_action
+        with mock.patch("sys.platform", "linux"):
+            result = await call_tool_mcp([mock_client], mcp_action)
     assert isinstance(result, MCPObservation)
     content = json.loads(result.content)
     assert content["isError"] is True
@@ -135,10 +148,15 @@ async def test_mcp_tool_timeout_agent_continuation(conversation_stats):
         budget_per_task_delta=None,
         sid="test-session",
     )
-    await controller.set_agent_state_to(AgentState.RUNNING)
-    mcp_action = MCPAction(name="test_tool", arguments={"param": "value"}, thought="Testing MCP timeout handling")
-    event_stream.add_event(mcp_action, EventSource.AGENT)
-    controller._pending_action = mcp_action
+    from forge.events.serialization import observation as observation_module
+
+    original_observation_from_dict = observation_module.observation_from_dict
+
+    def _strip_id(data):
+        data = data.copy()
+        for key in ("id", "timestamp", "source", "sequence", "cause"):
+            data.pop(key, None)
+        return original_observation_from_dict(data)
 
     async def fixed_call_tool_mcp(clients, action):
         try:
@@ -149,7 +167,15 @@ async def test_mcp_tool_timeout_agent_continuation(conversation_stats):
             setattr(observation, "_cause", action.id)
             return observation
 
-    with mock.patch("forge.mcp_client.utils.call_tool_mcp", side_effect=fixed_call_tool_mcp):
+    with mock.patch(
+        "forge.events.serialization.observation.observation_from_dict", side_effect=_strip_id
+    ), mock.patch("forge.events.serialization.event.observation_from_dict", side_effect=_strip_id), mock.patch(
+        "forge.mcp_client.utils.call_tool_mcp", side_effect=fixed_call_tool_mcp
+    ):
+        await controller.set_agent_state_to(AgentState.RUNNING)
+        mcp_action = MCPAction(name="test_tool", arguments={"param": "value"}, thought="Testing MCP timeout handling")
+        event_stream.add_event(mcp_action, EventSource.AGENT)
+        controller._pending_action = mcp_action
         result = await fixed_call_tool_mcp([mock_client], mcp_action)
         assert isinstance(result, MCPObservation)
         content = json.loads(result.content)

@@ -18,12 +18,7 @@ export const useSubmitConversationFeedback = () => {
 
   return useMutation({
     mutationFn: ({ rating, eventId, reason }: SubmitConversationFeedbackArgs) =>
-      Forge.submitConversationFeedback(
-        conversationId,
-        rating,
-        eventId,
-        reason,
-      ),
+      Forge.submitConversationFeedback(conversationId, rating, eventId, reason),
     onMutate: async ({ rating, eventId, reason }) => {
       if (!eventId) {
         return { previousFeedback: null };

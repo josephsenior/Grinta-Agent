@@ -38,7 +38,8 @@ const QUERY_KEYS = {
   prompts: ["prompts"] as const,
   prompt: (id: string) => ["prompts", id] as const,
   stats: ["prompts", "stats"] as const,
-  search: (params: SearchPromptsRequest) => ["prompts", "search", params] as const,
+  search: (params: SearchPromptsRequest) =>
+    ["prompts", "search", params] as const,
 };
 
 /**
@@ -217,4 +218,3 @@ export function useTrackPromptUsage(): UseMutationResult<
     },
   });
 }
-

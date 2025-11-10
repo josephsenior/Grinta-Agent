@@ -75,7 +75,7 @@ class Memory:
                     workspace_obs = self._on_workspace_context_recall(event)
                     if workspace_obs is None:
                         workspace_obs = NullObservation(content="")
-                    workspace_obs._cause = event.id
+                    workspace_obs.cause = event.id
                     self.event_stream.add_event(workspace_obs, EventSource.ENVIRONMENT)
                     return
                 if event.source in [EventSource.USER, EventSource.AGENT] and event.recall_type == RecallType.KNOWLEDGE:
@@ -84,7 +84,7 @@ class Memory:
                     microagent_obs = self._on_microagent_recall(event)
                     if microagent_obs is None:
                         microagent_obs = NullObservation(content="")
-                    microagent_obs._cause = event.id
+                    microagent_obs.cause = event.id
                     self.event_stream.add_event(microagent_obs, EventSource.ENVIRONMENT)
                     return
         except Exception as e:

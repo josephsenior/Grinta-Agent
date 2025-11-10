@@ -12,9 +12,13 @@ try:
     from forge_aci.utils.diff import get_diff
 except ImportError:
     # Stub for when forge_aci is not installed
-    def get_diff(old: str, new: str) -> str:
+    def get_diff(old: str, new: str, path: str | None = None) -> str:
         """Stub diff function."""
-        return f"--- old\n+++ new\n@@ -1 +1 @@\n-{old}\n+{new}"
+        # When forge_aci is not available we compute a basic unified diff so downstream
+        # callers like tests can still exercise visualization code paths. The optional
+        # ``path`` argument keeps the signature compatible with the real implementation.
+        _header = f"--- {path or 'old'}\n+++ {path or 'new'}\n"
+        return _header + f"@@ -1 +1 @@\n-{old}\n+{new}"
 
 from forge.core.logger import forge_logger as logger
 from forge.events.action import (

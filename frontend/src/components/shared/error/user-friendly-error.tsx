@@ -1,8 +1,8 @@
 /**
  * User-Friendly Error Display Component
- * 
+ *
  * Beautiful, actionable error messages that help users understand and resolve issues.
- * 
+ *
  * Features:
  * - Clear, non-technical language
  * - Visual hierarchy with icons
@@ -13,13 +13,21 @@
  */
 
 import React from "react";
-import { AlertTriangle, Info, AlertCircle, XCircle, RefreshCw, HelpCircle, ExternalLink } from "lucide-react";
+import {
+  AlertTriangle,
+  Info,
+  AlertCircle,
+  XCircle,
+  RefreshCw,
+  HelpCircle,
+  ExternalLink,
+} from "lucide-react";
 import { Button } from "#/components/ui/button";
 import { cn } from "#/utils/utils";
 
 export interface ErrorAction {
   label: string;
-  type: string;  // "retry", "new_conversation", "help", "upgrade", etc.
+  type: string; // "retry", "new_conversation", "help", "upgrade", etc.
   url?: string;
   highlight?: boolean;
   data?: Record<string, unknown>;
@@ -29,7 +37,14 @@ export interface UserFriendlyErrorData {
   title: string;
   message: string;
   severity: "info" | "warning" | "error" | "critical";
-  category: "user_input" | "system" | "rate_limit" | "authentication" | "network" | "ai_model" | "configuration";
+  category:
+    | "user_input"
+    | "system"
+    | "rate_limit"
+    | "authentication"
+    | "network"
+    | "ai_model"
+    | "configuration";
   icon?: string;
   suggestion?: string;
   actions?: ErrorAction[];
@@ -58,29 +73,29 @@ const SEVERITY_CONFIG = {
     color: "text-blue-500",
     bg: "bg-blue-500/10",
     border: "border-blue-500/30",
-    iconBg: "bg-blue-500/20"
+    iconBg: "bg-blue-500/20",
   },
   warning: {
     icon: AlertTriangle,
     color: "text-yellow-500",
     bg: "bg-yellow-500/10",
     border: "border-yellow-500/30",
-    iconBg: "bg-yellow-500/20"
+    iconBg: "bg-yellow-500/20",
   },
   error: {
     icon: AlertCircle,
     color: "text-red-500",
     bg: "bg-red-500/10",
     border: "border-red-500/30",
-    iconBg: "bg-red-500/20"
+    iconBg: "bg-red-500/20",
   },
   critical: {
     icon: XCircle,
     color: "text-red-600",
     bg: "bg-red-600/15",
     border: "border-red-600/40",
-    iconBg: "bg-red-600/25"
-  }
+    iconBg: "bg-red-600/25",
+  },
 };
 
 export function UserFriendlyError({
@@ -89,10 +104,13 @@ export function UserFriendlyError({
   onRetry,
   onDismiss,
   className,
-  showActions = true
+  showActions = true,
 }: UserFriendlyErrorProps) {
   const [showTechnicalDetails, setShowTechnicalDetails] = React.useState(false);
-  const config = React.useMemo(() => SEVERITY_CONFIG[error.severity], [error.severity]);
+  const config = React.useMemo(
+    () => SEVERITY_CONFIG[error.severity],
+    [error.severity],
+  );
   const IconComponent = config.icon;
   const retryCountdown = useRetryCountdown(error);
   const handleAction = useErrorActionHandler({ onRetry, onAction });
@@ -104,7 +122,7 @@ export function UserFriendlyError({
         config.bg,
         config.border,
         "shadow-lg backdrop-blur-sm",
-        className
+        className,
       )}
       role="alert"
       aria-live="polite"
@@ -142,7 +160,9 @@ export function UserFriendlyError({
 
 function useRetryCountdown(error: UserFriendlyErrorData) {
   const { retry_delay, can_retry } = error;
-  const [retryCountdown, setRetryCountdown] = React.useState<number | null>(null);
+  const [retryCountdown, setRetryCountdown] = React.useState<number | null>(
+    null,
+  );
 
   React.useEffect(() => {
     if (!retry_delay || !can_retry) {
@@ -205,7 +225,7 @@ function ErrorHeader({
   onDismiss,
 }: {
   error: UserFriendlyErrorData;
-  config: typeof SEVERITY_CONFIG[UserFriendlyErrorData["severity"]];
+  config: (typeof SEVERITY_CONFIG)[UserFriendlyErrorData["severity"]];
   IconComponent: React.ComponentType<{ className?: string }>;
   onDismiss?: () => void;
 }) {
@@ -221,7 +241,9 @@ function ErrorHeader({
         {error.icon ? (
           <span className="text-2xl sm:text-3xl">{error.icon}</span>
         ) : (
-          <IconComponent className={cn("h-5 w-5 sm:h-6 sm:w-6", config.color)} />
+          <IconComponent
+            className={cn("h-5 w-5 sm:h-6 sm:w-6", config.color)}
+          />
         )}
       </div>
 
@@ -230,7 +252,9 @@ function ErrorHeader({
           {error.title}
         </h3>
         {error.error_code && (
-          <p className="text-xs text-text-tertiary mt-0.5">Error Code: {error.error_code}</p>
+          <p className="text-xs text-text-tertiary mt-0.5">
+            Error Code: {error.error_code}
+          </p>
         )}
       </div>
 
@@ -255,13 +279,16 @@ function ErrorMessageSection({ error }: { error: UserFriendlyErrorData }) {
       </div>
 
       {error.suggestion && (
-        <div className={cn(
-          "flex items-start gap-2 p-3 rounded-lg",
-          "bg-brand-500/5 border border-brand-500/20",
-        )}>
+        <div
+          className={cn(
+            "flex items-start gap-2 p-3 rounded-lg",
+            "bg-brand-500/5 border border-brand-500/20",
+          )}
+        >
           <HelpCircle className="h-4 w-4 text-brand-500 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-text-secondary">
-            <span className="font-medium text-brand-500">Suggestion:</span> {error.suggestion}
+            <span className="font-medium text-brand-500">Suggestion:</span>{" "}
+            {error.suggestion}
           </p>
         </div>
       )}
@@ -332,7 +359,11 @@ function ErrorActionButton({
   );
 }
 
-function RetryActionContent({ retryCountdown }: { retryCountdown: number | null }) {
+function RetryActionContent({
+  retryCountdown,
+}: {
+  retryCountdown: number | null;
+}) {
   if (!retryCountdown || retryCountdown <= 0) {
     return (
       <>
@@ -417,7 +448,11 @@ function TechnicalDetailsSection({
 /**
  * Compact error banner (for inline display)
  */
-export function ErrorBanner({ error, onDismiss, className }: {
+export function ErrorBanner({
+  error,
+  onDismiss,
+  className,
+}: {
   error: UserFriendlyErrorData;
   onDismiss?: () => void;
   className?: string;
@@ -431,7 +466,7 @@ export function ErrorBanner({ error, onDismiss, className }: {
         "flex items-center gap-3 p-3 rounded-lg border",
         config.bg,
         config.border,
-        className
+        className,
       )}
       role="alert"
     >
@@ -446,9 +481,7 @@ export function ErrorBanner({ error, onDismiss, className }: {
 
       {/* Message */}
       <div className="flex-1 min-w-0">
-        <p className={cn("text-sm font-medium", config.color)}>
-          {error.title}
-        </p>
+        <p className={cn("text-sm font-medium", config.color)}>{error.title}</p>
         {error.suggestion && (
           <p className="text-xs text-text-secondary mt-0.5">
             {error.suggestion}
@@ -469,4 +502,3 @@ export function ErrorBanner({ error, onDismiss, className }: {
     </div>
   );
 }
-

@@ -67,7 +67,10 @@ export default function AcceptTOS() {
         />
 
         <div className="flex flex-col gap-2 w-full items-center text-center">
-          <h1 data-testid="page-title" className="text-2xl font-bold text-foreground">
+          <h1
+            data-testid="page-title"
+            className="text-2xl font-bold text-foreground"
+          >
             {t(I18nKey.TOS$ACCEPT_TERMS_OF_SERVICE)}
           </h1>
           <p className="text-sm text-foreground-secondary">

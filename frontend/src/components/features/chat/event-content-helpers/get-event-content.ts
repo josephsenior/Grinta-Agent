@@ -1,16 +1,14 @@
-import type {
-  ForgeAction,
-  ForgeObservation,
-} from "#/types/core";
+import type { ForgeAction, ForgeObservation } from "#/types/core";
 import { hasArgs, isForgeObservation } from "#/types/core/guards";
 
 /**
  * Extract a friendly title/details pair from an event for rendering.
  * This is deliberately defensive and accepts both action and observation shapes.
  */
-export function getEventContent(
-  event: ForgeAction | ForgeObservation,
-): { title: string; details: string } {
+export function getEventContent(event: ForgeAction | ForgeObservation): {
+  title: string;
+  details: string;
+} {
   if (isForgeObservation(event)) {
     return extractObservationContent(event);
   }
@@ -23,9 +21,8 @@ function extractObservationContent(event: ForgeObservation): {
   details: string;
 } {
   const record = toRecord(event);
-  const title = getStringField(record, ["title"], "");
-  const details =
-    getStringField(record, ["content", "details"], "") ?? "";
+  const title = getStringField(record, ["title"], "") ?? "";
+  const details = getStringField(record, ["content", "details"], "") ?? "";
 
   return { title, details };
 }
@@ -40,7 +37,7 @@ function extractActionContent(action: ForgeAction): {
     getStringField(args, ["content", "message", "thought"], undefined) ??
     (typeof action.message === "string" ? action.message : "");
 
-  return { title: "", details: candidate ?? "" };
+  return { title: "", details: candidate || "" };
 }
 
 function toRecord(value: unknown): Record<string, unknown> {

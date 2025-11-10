@@ -107,7 +107,9 @@ export function SchemaBrowser({
                       {column.type}
                     </span>
                     {!column.nullable && (
-                      <span className="text-error-500 text-[10px]">NOT NULL</span>
+                      <span className="text-error-500 text-[10px]">
+                        NOT NULL
+                      </span>
                     )}
                     {column.isForeignKey && (
                       <span className="text-violet-500 text-[10px]">FK</span>
@@ -186,4 +188,3 @@ export function SchemaBrowser({
     </div>
   );
 }
-

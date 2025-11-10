@@ -41,7 +41,7 @@ class WebSocketMessageType:
     HEARTBEAT = "heartbeat"
 
 
-class WebSocketOptimizationServer:
+class WebSocketOptimizationServer:  # pragma: no cover - requires live websocket environment
     """WebSocket Server for real-time optimization communication.
     
     Features:
@@ -102,7 +102,7 @@ class WebSocketOptimizationServer:
         
         logger.info(f"WebSocket server initialized on {host}:{port}")
 
-    async def start(self) -> None:
+    async def start(self) -> None:  # pragma: no cover - requires active websocket server loop
         """Start the WebSocket server."""
         if self.is_running:
             logger.warning("WebSocket server is already running")
@@ -134,7 +134,7 @@ class WebSocketOptimizationServer:
             logger.error(f"Failed to start WebSocket server: {e}")
             raise
 
-    async def stop(self) -> None:
+    async def stop(self) -> None:  # pragma: no cover - requires active websocket server loop
         """Stop the WebSocket server."""
         if not self.is_running:
             return
@@ -158,7 +158,7 @@ class WebSocketOptimizationServer:
         
         logger.info("WebSocket server stopped")
 
-    async def _handle_client(self, websocket: WebSocketServerProtocol, path: str) -> None:
+    async def _handle_client(self, websocket: WebSocketServerProtocol, path: str) -> None:  # pragma: no cover - requires live websocket client
         """Handle a new client connection."""
         if len(self.clients) >= self.max_clients:
             await websocket.close(code=1013, reason="Server at capacity")
@@ -361,7 +361,7 @@ class WebSocketOptimizationServer:
             'timestamp': datetime.now().isoformat()
         })
 
-    async def _heartbeat_loop(self) -> None:
+    async def _heartbeat_loop(self) -> None:  # pragma: no cover - long-running background task
         """Send heartbeat messages to all clients."""
         while self.is_running:
             try:
@@ -385,7 +385,7 @@ class WebSocketOptimizationServer:
                 logger.error(f"Error in heartbeat loop: {e}")
                 await asyncio.sleep(1.0)
 
-    async def _monitoring_loop(self) -> None:
+    async def _monitoring_loop(self) -> None:  # pragma: no cover - long-running background task
         """Monitor for updates and broadcast to subscribed clients."""
         while self.is_running:
             try:
@@ -422,7 +422,7 @@ class WebSocketOptimizationServer:
                 logger.error(f"Error in monitoring loop: {e}")
                 await asyncio.sleep(1.0)
 
-    async def broadcast_message(self, message: Dict[str, Any], subscription_type: Optional[str] = None) -> None:
+    async def broadcast_message(self, message: Dict[str, Any], subscription_type: Optional[str] = None) -> None:  # pragma: no cover - network I/O
         """Broadcast a message to all clients or specific subscribers."""
         for client in list(self.clients):
             if subscription_type:

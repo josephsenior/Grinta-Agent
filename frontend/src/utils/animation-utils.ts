@@ -8,16 +8,16 @@
 export const easings = {
   // Smooth easing (bolt.new style)
   smooth: "cubic-bezier(0.4, 0.0, 0.2, 1)",
-  
+
   // Elastic bounce
   bounce: "cubic-bezier(0.68, -0.55, 0.265, 1.55)",
-  
+
   // Sharp entrance
   sharpIn: "cubic-bezier(0.4, 0.0, 1, 1)",
-  
+
   // Smooth exit
   smoothOut: "cubic-bezier(0.0, 0.0, 0.2, 1)",
-  
+
   // Organic movement
   organic: "cubic-bezier(0.45, 0.05, 0.55, 0.95)",
 };
@@ -36,7 +36,7 @@ export function calculateMagneticOffset(
   elementRect: DOMRect,
   mouseX: number,
   mouseY: number,
-  strength: number = 0.3
+  strength: number = 0.3,
 ): { x: number; y: number } {
   const centerX = elementRect.left + elementRect.width / 2;
   const centerY = elementRect.top + elementRect.height / 2;
@@ -83,26 +83,26 @@ export function animateValue(
   start: number,
   end: number,
   duration: number,
-  callback: (value: number) => void
+  callback: (value: number) => void,
 ) {
   const startTime = Date.now();
-  
+
   const animate = () => {
     const now = Date.now();
     const elapsed = now - startTime;
     const progress = Math.min(elapsed / duration, 1);
-    
+
     // Ease out cubic
-    const easeProgress = 1 - Math.pow(1 - progress, 3);
+    const easeProgress = 1 - (1 - progress) ** 3;
     const current = start + (end - start) * easeProgress;
-    
+
     callback(Math.round(current));
-    
+
     if (progress < 1) {
       requestAnimationFrame(animate);
     }
   };
-  
+
   requestAnimationFrame(animate);
 }
 
@@ -117,7 +117,7 @@ export function generateMeshGradient(baseHue: number = 270) {
     `hsl(${baseHue - 30}, 75%, 65%)`,
     `hsl(${baseHue + 60}, 60%, 50%)`,
   ];
-  
+
   return colors;
 }
 
@@ -159,4 +159,3 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
     }
   };
 }
-

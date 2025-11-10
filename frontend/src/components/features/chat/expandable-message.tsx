@@ -72,7 +72,11 @@ export function ExpandableMessage({
     message,
   });
   const toggleIcon = getToggleIcon({ showDetails, type });
-  const statusIcon = getStatusIcon({ type, success, classes: statusIconClasses });
+  const statusIcon = getStatusIcon({
+    type,
+    success,
+    classes: statusIconClasses,
+  });
 
   return (
     <div
@@ -195,7 +199,11 @@ function getToggleIcon({
     type === "error" ? "fill-error-500" : "fill-foreground",
   );
 
-  return showDetails ? <ArrowUp className={iconClasses} /> : <ArrowDown className={iconClasses} />;
+  return showDetails ? (
+    <ArrowUp className={iconClasses} />
+  ) : (
+    <ArrowDown className={iconClasses} />
+  );
 }
 
 function getStatusIcon({
@@ -214,9 +222,15 @@ function getStatusIcon({
   return (
     <span className="flex-shrink-0">
       {success ? (
-        <CheckCircle data-testid="status-icon" className={cn(classes, "fill-success")} />
+        <CheckCircle
+          data-testid="status-icon"
+          className={cn(classes, "fill-success")}
+        />
       ) : (
-        <XCircle data-testid="status-icon" className={cn(classes, "fill-danger")} />
+        <XCircle
+          data-testid="status-icon"
+          className={cn(classes, "fill-danger")}
+        />
       )}
     </span>
   );

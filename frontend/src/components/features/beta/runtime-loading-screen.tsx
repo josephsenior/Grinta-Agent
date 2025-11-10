@@ -14,13 +14,30 @@ interface LoadingStep {
 }
 
 const LOADING_STEPS: LoadingStep[] = [
-  { id: "docker", label: "Starting Docker runtime...", status: "pending", duration: 3000 },
-  { id: "container", label: "Initializing container...", status: "pending", duration: 2000 },
-  { id: "agent", label: "Loading AI agent...", status: "pending", duration: 2000 },
+  {
+    id: "docker",
+    label: "Starting Docker runtime...",
+    status: "pending",
+    duration: 3000,
+  },
+  {
+    id: "container",
+    label: "Initializing container...",
+    status: "pending",
+    duration: 2000,
+  },
+  {
+    id: "agent",
+    label: "Loading AI agent...",
+    status: "pending",
+    duration: 2000,
+  },
   { id: "ready", label: "System ready!", status: "pending", duration: 1000 },
 ];
 
-export function RuntimeLoadingScreen({ onComplete }: RuntimeLoadingScreenProps) {
+export function RuntimeLoadingScreen({
+  onComplete,
+}: RuntimeLoadingScreenProps) {
   const [steps, setSteps] = useState<LoadingStep[]>(LOADING_STEPS);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
@@ -37,7 +54,9 @@ export function RuntimeLoadingScreen({ onComplete }: RuntimeLoadingScreenProps) 
         );
 
         // Wait for step duration
-        await new Promise((resolve) => setTimeout(resolve, LOADING_STEPS[i].duration));
+        await new Promise((resolve) =>
+          setTimeout(resolve, LOADING_STEPS[i].duration),
+        );
 
         // Mark step as complete
         setSteps((prev) =>
@@ -121,7 +140,8 @@ export function RuntimeLoadingScreen({ onComplete }: RuntimeLoadingScreenProps) 
           {/* Tip */}
           <div className="mt-6 pt-6 border-t border-border">
             <p className="text-xs text-foreground-secondary text-center">
-              💡 First startup may take a moment. Subsequent loads will be faster.
+              💡 First startup may take a moment. Subsequent loads will be
+              faster.
             </p>
           </div>
         </CardContent>
@@ -129,4 +149,3 @@ export function RuntimeLoadingScreen({ onComplete }: RuntimeLoadingScreenProps) 
     </div>
   );
 }
-

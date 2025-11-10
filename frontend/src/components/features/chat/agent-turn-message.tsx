@@ -1,10 +1,11 @@
 import React from "react";
-import { cn } from "#/utils/utils";
 import { EventMessage } from "./event-message";
-import type { ForgeEvent } from "#/types/core/base";
 
 interface AgentTurnMessageProps {
-  events: (import("#/types/core").ForgeAction | import("#/types/core").ForgeObservation)[];
+  events: (
+    | import("#/types/core").ForgeAction
+    | import("#/types/core").ForgeObservation
+  )[];
   isLastTurn: boolean;
   isAwaitingUserConfirmation: boolean;
   showTechnicalDetails: boolean;
@@ -14,10 +15,10 @@ interface AgentTurnMessageProps {
 
 /**
  * AgentTurnMessage - Groups consecutive agent events into a single visual "turn"
- * 
+ *
  * This matches bolt.new's UX where all agent actions/thoughts/outputs
  * are shown as ONE unified message instead of separate bubbles.
- * 
+ *
  * Features:
  * - Single avatar for the entire turn
  * - Compact spacing between events
@@ -39,9 +40,9 @@ export function AgentTurnMessage({
         aria-label="Agent"
         className="shrink-0 w-8 h-8 flex items-center justify-center"
       >
-        <img 
-          src="/agent-icon.png?v=2" 
-          alt="Forge Agent" 
+        <img
+          src="/agent-icon.png?v=2"
+          alt="Forge Agent"
           className="w-8 h-8 object-contain"
         />
       </div>
@@ -51,7 +52,7 @@ export function AgentTurnMessage({
         {events.map((event, index) => {
           const isLastInTurn = index === events.length - 1;
           const isLastOverall = isLastTurn && isLastInTurn;
-          
+
           return (
             <div key={`turn-event-${event.id || index}`} className="w-full">
               <EventMessage
@@ -75,4 +76,3 @@ export function AgentTurnMessage({
     </div>
   );
 }
-

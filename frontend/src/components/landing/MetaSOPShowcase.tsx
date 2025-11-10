@@ -282,7 +282,16 @@ export default function MetaSOPShowcase(): React.ReactElement {
                     <div className="w-2.5 h-2.5 bg-warning-500 rounded-full" />
                     <div className="w-2.5 h-2.5 bg-success-500 rounded-full" />
                     <span className="text-xs text-foreground-tertiary ml-2">
-                      output.{activeStep === 0 ? "json" : activeStep === 1 ? "yaml" : activeStep === 2 ? "py" : activeStep === 3 ? "test" : "sh"}
+                      output.
+                      {activeStep === 0
+                        ? "json"
+                        : activeStep === 1
+                          ? "yaml"
+                          : activeStep === 2
+                            ? "py"
+                            : activeStep === 3
+                              ? "test"
+                              : "sh"}
                     </span>
                   </div>
                   <div className="text-foreground-secondary space-y-1">
@@ -419,4 +428,3 @@ export default function MetaSOPShowcase(): React.ReactElement {
     </section>
   );
 }
-

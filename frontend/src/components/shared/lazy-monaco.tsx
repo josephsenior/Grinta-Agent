@@ -1,8 +1,8 @@
-import React, { Suspense } from 'react';
-import { Loader2 } from 'lucide-react';
+import React, { Suspense } from "react";
+import { Loader2 } from "lucide-react";
 
 // Lazy load Monaco Editor to reduce initial bundle size
-const MonacoEditor = React.lazy(() => import('@monaco-editor/react'));
+const MonacoEditor = React.lazy(() => import("@monaco-editor/react"));
 
 interface LazyMonacoProps {
   value: string;
@@ -22,9 +22,9 @@ interface LazyMonacoProps {
 export function LazyMonaco({
   value,
   onChange,
-  language = 'sql',
-  height = '400px',
-  theme = 'vs-dark',
+  language = "sql",
+  height = "400px",
+  theme = "vs-dark",
   options = {},
   onMount,
   beforeMount,
@@ -32,7 +32,7 @@ export function LazyMonaco({
   return (
     <Suspense
       fallback={
-        <div 
+        <div
           className="flex items-center justify-center bg-gray-900 rounded-lg"
           style={{ height }}
         >
@@ -54,7 +54,7 @@ export function LazyMonaco({
         options={{
           minimap: { enabled: false },
           fontSize: 14,
-          lineNumbers: 'on',
+          lineNumbers: "on",
           scrollBeyondLastLine: false,
           automaticLayout: true,
           ...options,
@@ -63,4 +63,3 @@ export function LazyMonaco({
     </Suspense>
   );
 }
-

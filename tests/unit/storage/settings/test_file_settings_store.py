@@ -1,8 +1,11 @@
 from unittest.mock import MagicMock, patch
+
 import pytest
+
 from forge.core.config.forge_config import ForgeConfig
 from forge.storage.data_models.settings import Settings
 from forge.storage.files import FileStore
+from forge.storage.settings import file_settings_store as file_settings_module
 from forge.storage.settings.file_settings_store import FileSettingsStore
 
 
@@ -14,6 +17,15 @@ def mock_file_store():
 @pytest.fixture
 def file_settings_store(mock_file_store):
     return FileSettingsStore(mock_file_store)
+
+
+@pytest.fixture(autouse=True)
+def reset_settings_cache():
+    file_settings_module._file_settings_cache.clear()
+    file_settings_module._file_settings_locks.clear()
+    yield
+    file_settings_module._file_settings_cache.clear()
+    file_settings_module._file_settings_locks.clear()
 
 
 @pytest.mark.asyncio
@@ -53,6 +65,48 @@ async def test_store_and_load_data(file_settings_store):
     assert init_data.llm_api_key
     assert loaded_data.llm_api_key.get_secret_value() == init_data.llm_api_key.get_secret_value()
     assert loaded_data.llm_base_url == init_data.llm_base_url
+
+
+@pytest.mark.asyncio
+async def test_load_uses_cache(file_settings_store, monkeypatch: pytest.MonkeyPatch):
+    init_data = Settings(agent="cached-agent")
+    json_payload = init_data.model_dump_json(context={"expose_secrets": True})
+    file_settings_store.file_store.read.return_value = json_payload
+
+    fake_time = {"value": 100.0}
+    monkeypatch.setattr(file_settings_module.time, "time", lambda: fake_time["value"])
+
+    first = await file_settings_store.load()
+    assert first is not None
+    assert file_settings_store.file_store.read.call_count == 1
+
+    file_settings_store.file_store.read.reset_mock()
+    fake_time["value"] = 120.0  # within TTL, should hit cache
+    second = await file_settings_store.load()
+    assert second is first
+    file_settings_store.file_store.read.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_store_invalidates_cache(file_settings_store, monkeypatch: pytest.MonkeyPatch):
+    init_data = Settings(agent="invalidate-agent")
+    json_payload = init_data.model_dump_json(context={"expose_secrets": True})
+    file_settings_store.file_store.read.return_value = json_payload
+
+    fake_time = {"value": 200.0}
+    monkeypatch.setattr(file_settings_module.time, "time", lambda: fake_time["value"])
+
+    await file_settings_store.load()
+    assert file_settings_store.file_store.read.call_count == 1
+
+    new_settings = Settings(agent="updated")
+    await file_settings_store.store(new_settings)
+    file_settings_store.file_store.write.assert_called_once()
+
+    file_settings_store.file_store.read.reset_mock()
+    fake_time["value"] = 210.0
+    await file_settings_store.load()
+    file_settings_store.file_store.read.assert_called_once()
 
 
 @pytest.mark.asyncio

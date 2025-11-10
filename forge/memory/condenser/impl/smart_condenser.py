@@ -421,7 +421,7 @@ Respond ONLY with a JSON array of scores in order:
 
             if isinstance(event, Action) and hasattr(event, "id"):
                 self._pair_observation_for_action(events, i, event, paired_ids)
-            elif isinstance(event, Observation) and hasattr(event, "_cause"):
+            elif isinstance(event, Observation) and event.cause is not None:
                 self._pair_action_for_observation(events, i, event, paired_ids)
 
         return paired_ids
@@ -441,7 +441,7 @@ Respond ONLY with a JSON array of scores in order:
         for j in range(action_idx + 1, min(action_idx + 5, len(events))):
             next_event = events[j]
             if isinstance(next_event, Observation):
-                if hasattr(next_event, "_cause") and next_event._cause == action.id:
+                if next_event.cause == action.id:
                     paired_ids.add(next_event.id)
                 break
 
@@ -459,7 +459,7 @@ Respond ONLY with a JSON array of scores in order:
         """
         for j in range(max(0, obs_idx - 5), obs_idx):
             prev_event = events[j]
-            if isinstance(prev_event, Action) and prev_event.id == observation._cause:
+            if isinstance(prev_event, Action) and prev_event.id == observation.cause:
                 paired_ids.add(prev_event.id)
                 break
 

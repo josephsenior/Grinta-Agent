@@ -16,7 +16,8 @@ export const agentSlice = createSlice({
 export const { setCurrentAgentState } = agentSlice.actions;
 
 // Selector to get current agent state
-export const getCurrentAgentState = (state: { agent: { curAgentState: AgentState } }) => 
-  state.agent.curAgentState;
+export const getCurrentAgentState = (state: {
+  agent: { curAgentState: AgentState };
+}) => state.agent.curAgentState;
 
 export default agentSlice.reducer;

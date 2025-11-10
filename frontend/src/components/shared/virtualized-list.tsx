@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
-import { cn } from '#/utils/utils';
+import React, { useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { cn } from "#/utils/utils";
 
 interface VirtualizedListProps<T> {
   items: T[];
@@ -15,7 +15,7 @@ interface VirtualizedListProps<T> {
 /**
  * High-performance virtualized list component
  * Only renders visible items, dramatically improving performance for long lists
- * 
+ *
  * @example
  * <VirtualizedList
  *   items={conversations}
@@ -49,21 +49,23 @@ export function VirtualizedList<T>({
   return (
     <div
       ref={parentRef}
-      className={cn('h-full overflow-auto', className)}
+      className={cn("h-full overflow-auto", className)}
       style={{
-        contain: 'strict',
+        contain: "strict",
       }}
     >
       <div
         style={{
           height: `${virtualizer.getTotalSize()}px`,
-          width: '100%',
-          position: 'relative',
+          width: "100%",
+          position: "relative",
         }}
       >
         {virtualItems.map((virtualRow) => {
           const item = items[virtualRow.index];
-          const key = getItemKey ? getItemKey(item, virtualRow.index) : virtualRow.index;
+          const key = getItemKey
+            ? getItemKey(item, virtualRow.index)
+            : virtualRow.index;
 
           return (
             <div
@@ -71,10 +73,10 @@ export function VirtualizedList<T>({
               data-index={virtualRow.index}
               className={itemClassName}
               style={{
-                position: 'absolute',
+                position: "absolute",
                 top: 0,
                 left: 0,
-                width: '100%',
+                width: "100%",
                 height: `${virtualRow.size}px`,
                 transform: `translateY(${virtualRow.start}px)`,
               }}
@@ -102,7 +104,7 @@ interface VirtualizedGridProps<T> {
 /**
  * High-performance virtualized grid component
  * Only renders visible items in a grid layout
- * 
+ *
  * @example
  * <VirtualizedGrid
  *   items={mcpServers}
@@ -141,16 +143,16 @@ export function VirtualizedGrid<T>({
   return (
     <div
       ref={parentRef}
-      className={cn('h-full overflow-auto', className)}
+      className={cn("h-full overflow-auto", className)}
       style={{
-        contain: 'strict',
+        contain: "strict",
       }}
     >
       <div
         style={{
           height: `${virtualizer.getTotalSize()}px`,
-          width: '100%',
-          position: 'relative',
+          width: "100%",
+          position: "relative",
         }}
       >
         {virtualRows.map((virtualRow) => {
@@ -162,20 +164,22 @@ export function VirtualizedGrid<T>({
               key={virtualRow.index}
               data-index={virtualRow.index}
               style={{
-                position: 'absolute',
+                position: "absolute",
                 top: 0,
                 left: 0,
-                width: '100%',
+                width: "100%",
                 height: `${virtualRow.size}px`,
                 transform: `translateY(${virtualRow.start}px)`,
-                display: 'grid',
+                display: "grid",
                 gridTemplateColumns: `repeat(${columns}, 1fr)`,
-                gap: '1rem',
+                gap: "1rem",
               }}
             >
               {rowItems.map((item, colIndex) => {
                 const itemIndex = startIndex + colIndex;
-                const key = getItemKey ? getItemKey(item, itemIndex) : itemIndex;
+                const key = getItemKey
+                  ? getItemKey(item, itemIndex)
+                  : itemIndex;
 
                 return (
                   <div key={key} className={itemClassName}>
@@ -190,4 +194,3 @@ export function VirtualizedGrid<T>({
     </div>
   );
 }
-

@@ -15,8 +15,7 @@ export function useLlmApiKey() {
     queryKey: [LLM_API_KEY_QUERY_KEY],
     enabled: config?.APP_MODE === "saas",
     queryFn: async () => {
-      const { data } =
-        await Forge.get<LlmApiKeyResponse>("/api/keys/llm/byor");
+      const { data } = await Forge.get<LlmApiKeyResponse>("/api/keys/llm/byor");
       return data;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes

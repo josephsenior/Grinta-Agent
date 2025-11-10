@@ -232,13 +232,13 @@ class EventStream(EventStore):
             )
         from forge.events.action import ChangeAgentStateAction  # local import to avoid global cycle
 
-        event._timestamp = datetime.now().isoformat()
-        event._source = source
+        event.timestamp = datetime.now()
+        event.source = source
         with self._lock:
-            event._id = self.cur_id
+            event.id = self.cur_id
             # 🔢 CRITICAL FIX: Add sequence number for guaranteed ordering
             # Sequence ensures events render in correct order even if network delays cause out-of-order delivery
-            event._sequence = self.cur_id
+            event.sequence = self.cur_id
             self.cur_id += 1
             current_write_page = self._write_page_cache
             data = event_to_dict(event)

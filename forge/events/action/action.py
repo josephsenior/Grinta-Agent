@@ -35,5 +35,10 @@ class Action(Event):
     Actions represent things the agent wants to do (edit files, run commands, etc.).
     They are executed by the runtime and produce Observations.
     """
+    action: ClassVar[str] = ""
     runnable: ClassVar[bool] = False
     __test__ = False
+
+    def __post_init__(self) -> None:
+        if not hasattr(self, "confirmation_state"):
+            self.confirmation_state = ActionConfirmationStatus.CONFIRMED

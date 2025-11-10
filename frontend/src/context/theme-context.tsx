@@ -6,8 +6,8 @@ import React, {
   useCallback,
 } from "react";
 
-type Theme = "light" | "dark" | "system";
-type ResolvedTheme = "light" | "dark";
+export type Theme = "light" | "dark" | "system";
+export type ResolvedTheme = "light" | "dark";
 
 interface ThemeContextType {
   theme: Theme;
@@ -45,7 +45,7 @@ function resolveTheme(theme: Theme): ResolvedTheme {
  */
 function applyTheme(resolvedTheme: ResolvedTheme) {
   const root = document.documentElement;
-  
+
   if (resolvedTheme === "dark") {
     root.classList.add("dark");
     root.setAttribute("data-theme", "dark");
@@ -67,21 +67,24 @@ export function ThemeProvider({
   // Initialize theme from localStorage or default
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === "undefined") return defaultTheme;
-    
+
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored && (stored === "light" || stored === "dark" || stored === "system")) {
+      if (
+        stored &&
+        (stored === "light" || stored === "dark" || stored === "system")
+      ) {
         return stored as Theme;
       }
     } catch (error) {
       console.error("Failed to read theme from localStorage:", error);
     }
-    
+
     return defaultTheme;
   });
 
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(
-    () => resolveTheme(theme)
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() =>
+    resolveTheme(theme),
   );
 
   // Update resolved theme when theme or system preference changes
@@ -96,7 +99,7 @@ export function ThemeProvider({
     if (theme !== "system") return;
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    
+
     const handleChange = () => {
       const newResolvedTheme = getSystemTheme();
       setResolvedTheme(newResolvedTheme);
@@ -108,7 +111,7 @@ export function ThemeProvider({
       mediaQuery.addEventListener("change", handleChange);
       return () => mediaQuery.removeEventListener("change", handleChange);
     }
-    
+
     // Fallback for older browsers
     if (mediaQuery.addListener) {
       mediaQuery.addListener(handleChange);
@@ -119,7 +122,7 @@ export function ThemeProvider({
   // Set theme and persist to localStorage
   const setTheme = useCallback((newTheme: Theme) => {
     setThemeState(newTheme);
-    
+
     try {
       localStorage.setItem(STORAGE_KEY, newTheme);
     } catch (error) {
@@ -149,11 +152,10 @@ export function ThemeProvider({
  */
 export function useTheme() {
   const context = useContext(ThemeContext);
-  
+
   if (context === undefined) {
     throw new Error("useTheme must be used within a ThemeProvider");
   }
-  
+
   return context;
 }
-

@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { 
-  Folder, 
-  FolderOpen, 
+import {
+  Folder,
+  FolderOpen,
   File,
   MoreHorizontal,
-  Plus,
   Trash2,
   Edit3,
   Download,
@@ -14,17 +13,16 @@ import {
   ChevronDown,
   RefreshCw,
   Search,
-  Filter
 } from "lucide-react";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
 import { Badge } from "#/components/ui/badge";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "#/components/ui/dropdown-menu";
 import { cn } from "#/utils/utils";
 import Forge from "#/api/forge";
@@ -58,14 +56,14 @@ interface FileExplorerProps {
 // Status color mapping
 const getStatusColor = (status?: string) => {
   switch (status) {
-    case 'new':
-      return 'bg-green-500/10 text-green-500 border-green-500/30';
-    case 'modified':
-      return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30';
-    case 'deleted':
-      return 'bg-red-500/10 text-red-500 border-red-500/30';
+    case "new":
+      return "bg-green-500/10 text-green-500 border-green-500/30";
+    case "modified":
+      return "bg-yellow-500/10 text-yellow-500 border-yellow-500/30";
+    case "deleted":
+      return "bg-red-500/10 text-red-500 border-red-500/30";
     default:
-      return 'bg-gray-500/10 text-gray-500 border-gray-500/30';
+      return "bg-gray-500/10 text-gray-500 border-gray-500/30";
   }
 };
 
@@ -73,35 +71,35 @@ const getStatusColor = (status?: string) => {
 const buildFileTree = (files: string[]): FileNode[] => {
   const tree: FileNode[] = [];
   const nodeMap = new Map<string, FileNode>();
-  
+
   // Sort files to ensure consistent ordering
   const sortedFiles = [...files].sort();
-  
+
   for (const filePath of sortedFiles) {
-    const parts = filePath.split('/').filter(Boolean);
-    let currentPath = '';
-    
+    const parts = filePath.split("/").filter(Boolean);
+    let currentPath = "";
+
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
       const parentPath = currentPath;
       currentPath = currentPath ? `${currentPath}/${part}` : part;
-      
+
       if (!nodeMap.has(currentPath)) {
         const isLast = i === parts.length - 1;
         const node: FileNode = {
           name: part,
           path: currentPath,
-          type: isLast ? 'file' : 'folder',
-          status: 'unchanged'
+          type: isLast ? "file" : "folder",
+          status: "unchanged",
         };
-        
+
         if (!isLast) {
           node.children = [];
           node.isExpanded = false;
         }
-        
+
         nodeMap.set(currentPath, node);
-        
+
         if (parentPath) {
           const parent = nodeMap.get(parentPath);
           if (parent && parent.children) {
@@ -113,7 +111,7 @@ const buildFileTree = (files: string[]): FileNode[] => {
       }
     }
   }
-  
+
   return tree;
 };
 
@@ -126,15 +124,17 @@ export function FileExplorer({
   className,
   showActions = true,
   showStatus = true,
-  showSearch = true
+  showSearch = true,
 }: FileExplorerProps) {
   const { t } = useTranslation();
   const [files, setFiles] = useState<string[]>([]);
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set(),
+  );
   const [isClient, setIsClient] = useState(false);
 
   // Prevent hydration issues
@@ -145,17 +145,17 @@ export function FileExplorer({
   // Load files from API
   const loadFiles = useCallback(async () => {
     if (!conversationId) return;
-    
+
     setLoading(true);
     try {
       const response = await Forge.getFiles(conversationId);
       const normalized: string[] = (response || []).map((entry: any) =>
-        typeof entry === "string" ? entry : entry?.path ?? "",
+        typeof entry === "string" ? entry : (entry?.path ?? ""),
       );
       setFiles(normalized);
       setFileTree(buildFileTree(normalized));
     } catch (error) {
-      console.error('Failed to load files:', error);
+      console.error("Failed to load files:", error);
     } finally {
       setLoading(false);
     }
@@ -168,7 +168,7 @@ export function FileExplorer({
 
   // Toggle folder expansion
   const toggleFolder = (folderPath: string) => {
-    setExpandedFolders(prev => {
+    setExpandedFolders((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(folderPath)) {
         newSet.delete(folderPath);
@@ -188,16 +188,16 @@ export function FileExplorer({
   // Handle file actions
   const handleFileAction = (action: string, filePath: string) => {
     switch (action) {
-      case 'open':
+      case "open":
         onFileOpen?.(filePath);
         break;
-      case 'delete':
+      case "delete":
         onFileDelete?.(filePath);
         break;
-      case 'rename':
+      case "rename":
         // TODO: Implement rename functionality
         break;
-      case 'download':
+      case "download":
         // TODO: Implement download functionality
         break;
     }
@@ -214,7 +214,7 @@ export function FileExplorer({
 
   // Render file/folder node
   const renderNode = React.useCallback(
-    (node: FileNode, depth = 0) =>
+    (node: FileNode, depth = 0): React.JSX.Element | null =>
       renderFileNode({
         node,
         depth,
@@ -225,7 +225,8 @@ export function FileExplorer({
         showStatus,
         showActions,
         handleFileAction,
-        renderChild: (child, childDepth) => renderNode(child, childDepth),
+        renderChild: (child, childDepth): React.JSX.Element | null =>
+          renderNode(child, childDepth),
       }),
     [
       expandedFolders,
@@ -241,7 +242,12 @@ export function FileExplorer({
   // Don't render on server side to prevent hydration issues
   if (!isClient) {
     return (
-      <div className={cn("flex flex-col h-full bg-background-primary border border-border rounded-lg", className)}>
+      <div
+        className={cn(
+          "flex flex-col h-full bg-background-primary border border-border rounded-lg",
+          className,
+        )}
+      >
         <div
           className="flex items-center justify-center h-32"
           data-testid="file-explorer-loading"
@@ -253,16 +259,24 @@ export function FileExplorer({
   }
 
   return (
-    <div className={cn("flex flex-col h-full bg-black/95 backdrop-blur-xl border border-brand-500/10 rounded-lg shadow-lg", className)}>
+    <div
+      className={cn(
+        "flex flex-col h-full bg-black/95 backdrop-blur-xl border border-brand-500/10 rounded-lg shadow-lg",
+        className,
+      )}
+    >
       {/* Header - Violet themed */}
       <div className="flex items-center justify-between p-3 border-b border-brand-500/10 bg-brand-500/5">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-foreground">Files</h3>
-          <Badge variant="secondary" className="text-xs bg-brand-500/20 text-brand-400 border-brand-500/30">
-            {files.length} {files.length === 1 ? 'file' : 'files'}
+          <Badge
+            variant="secondary"
+            className="text-xs bg-brand-500/20 text-brand-400 border-brand-500/30"
+          >
+            {files.length} {files.length === 1 ? "file" : "files"}
           </Badge>
         </div>
-        
+
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -275,7 +289,7 @@ export function FileExplorer({
           </Button>
         </div>
       </div>
-      
+
       {/* Search - Violet themed */}
       {showSearch && (
         <div className="p-3 border-b border-brand-500/10">
@@ -290,7 +304,7 @@ export function FileExplorer({
           </div>
         </div>
       )}
-      
+
       {/* File Tree */}
       <div className="flex-1 overflow-y-auto p-2">
         {loading ? (
@@ -318,8 +332,13 @@ export function FileExplorer({
   );
 }
 
-function filterNodeBySearch(node: FileNode, searchTerm: string): FileNode | null {
-  const matchesSearch = node.name.toLowerCase().includes(searchTerm.toLowerCase());
+function filterNodeBySearch(
+  node: FileNode,
+  searchTerm: string,
+): FileNode | null {
+  const matchesSearch = node.name
+    .toLowerCase()
+    .includes(searchTerm.toLowerCase());
 
   if (node.type === "file") {
     return matchesSearch ? node : null;
@@ -361,7 +380,10 @@ function renderFileNode({
   onSelect: (path: string) => void;
   showStatus: boolean;
   showActions: boolean;
-  handleFileAction: (action: "open" | "rename" | "delete" | "download", path: string) => void;
+  handleFileAction: (
+    action: "open" | "rename" | "delete" | "download",
+    path: string,
+  ) => void;
   renderChild: (node: FileNode, depth: number) => React.ReactNode;
 }) {
   const isExpanded = expandedFolders.has(node.path);
@@ -486,7 +508,8 @@ function NodeStatusBadge({
     return null;
   }
 
-  const label = node.status === "new" ? "N" : node.status === "modified" ? "M" : "D";
+  const label =
+    node.status === "new" ? "N" : node.status === "modified" ? "M" : "D";
 
   return (
     <Badge
@@ -505,7 +528,10 @@ function NodeActions({
 }: {
   node: FileNode;
   showActions: boolean;
-  onAction: (action: "open" | "rename" | "delete" | "download", path: string) => void;
+  onAction: (
+    action: "open" | "rename" | "delete" | "download",
+    path: string,
+  ) => void;
 }) {
   if (!showActions) {
     return null;

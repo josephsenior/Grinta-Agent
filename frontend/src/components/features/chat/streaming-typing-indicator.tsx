@@ -115,10 +115,14 @@ export function StreamingFileGeneration({
           <div className="w-4 h-4 bg-brand-500 rounded flex items-center justify-center">
             <span className="text-xs text-white">📄</span>
           </div>
-          <span className="text-sm font-medium text-foreground">{fileName}</span>
+          <span className="text-sm font-medium text-foreground">
+            {fileName}
+          </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-foreground-secondary">{Math.round(progress)}%</span>
+          <span className="text-sm text-foreground-secondary">
+            {Math.round(progress)}%
+          </span>
           {isComplete && (
             <div className="w-4 h-4 bg-success-500 rounded-full flex items-center justify-center">
               <span className="text-xs text-white">✓</span>

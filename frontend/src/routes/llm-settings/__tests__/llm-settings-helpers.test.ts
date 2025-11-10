@@ -76,5 +76,3 @@ describe("llm-settings helpers", () => {
     expect(normalizeSecurityAnalyzerSelection("llm")).toBe("llm");
   });
 });
-
-

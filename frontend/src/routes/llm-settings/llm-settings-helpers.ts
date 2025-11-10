@@ -1,6 +1,6 @@
 import { DEFAULT_SETTINGS } from "#/services/settings";
 import { getProviderId } from "#/utils/map-provider";
-import type { PostSettings, Settings } from "#/types/settings";
+import type { PostSettings } from "#/types/settings";
 
 export type LlmSettingsView = "basic" | "advanced";
 
@@ -36,7 +36,9 @@ export interface AdvancedPayloadParams {
   formData: FormData;
 }
 
-export const buildBasicPayload = ({ formData }: BasicPayloadParams): Partial<PostSettings> => {
+export const buildBasicPayload = ({
+  formData,
+}: BasicPayloadParams): Partial<PostSettings> => {
   const providerDisplay = formData.get("llm-provider-input")?.toString();
   const provider = providerDisplay ? getProviderId(providerDisplay) : undefined;
   const model = formData.get("llm-model-input")?.toString();
@@ -91,12 +93,12 @@ const parseBoolean = (value: string | undefined | null): boolean | null => {
 
 const deriveCondenserMaxSize = (value: string | undefined | null): number => {
   if (!value) {
-    return DEFAULT_SETTINGS.CONDENSER_MAX_SIZE;
+    return DEFAULT_SETTINGS.CONDENSER_MAX_SIZE as number;
   }
 
   const parsed = Number.parseInt(value, 10);
   if (!Number.isFinite(parsed)) {
-    return DEFAULT_SETTINGS.CONDENSER_MAX_SIZE;
+    return DEFAULT_SETTINGS.CONDENSER_MAX_SIZE as number;
   }
 
   return Math.max(20, parsed);
@@ -138,9 +140,7 @@ export const buildAdvancedPayload = ({
       formData.get("LLM_MAX_OUTPUT_TOKENS")?.toString(),
     ),
     LLM_TIMEOUT: parseNumber(formData.get("LLM_TIMEOUT")?.toString()),
-    LLM_NUM_RETRIES: parseNumber(
-      formData.get("LLM_NUM_RETRIES")?.toString(),
-    ),
+    LLM_NUM_RETRIES: parseNumber(formData.get("LLM_NUM_RETRIES")?.toString()),
     LLM_CACHING_PROMPT: parseBoolean(
       formData.get("LLM_CACHING_PROMPT")?.toString(),
     ),
@@ -161,5 +161,3 @@ export const normalizeSecurityAnalyzerSelection = (
 
   return analyzer;
 };
-
-

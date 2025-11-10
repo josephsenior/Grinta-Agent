@@ -84,8 +84,11 @@ const extractArgsText = (args: unknown): string | null => {
     return args;
   }
 
-  if (typeof args === "object" && "thought" in (args as Record<string, unknown>)) {
-    const thought = (args as Record<string, unknown>).thought;
+  if (
+    typeof args === "object" &&
+    "thought" in (args as Record<string, unknown>)
+  ) {
+    const { thought } = args as Record<string, unknown>;
     return thought != null ? String(thought) : "";
   }
 

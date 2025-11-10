@@ -5,12 +5,14 @@ import { FileExplorer } from "../file-explorer";
 
 vi.mock("#/api/forge", () => ({
   default: {
-    getFiles: vi.fn().mockResolvedValue([
-      "src/components/App.tsx",
-      "src/utils/helpers.ts",
-      "README.md",
-      "package.json",
-    ]),
+    getFiles: vi
+      .fn()
+      .mockResolvedValue([
+        "src/components/App.tsx",
+        "src/utils/helpers.ts",
+        "README.md",
+        "package.json",
+      ]),
   },
 }));
 
@@ -41,6 +43,8 @@ describe("FileExplorer", () => {
   it("shows loading state initially", async () => {
     renderExplorer();
 
-    expect(await screen.findByTestId("file-explorer-loading")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("file-explorer-loading"),
+    ).toBeInTheDocument();
   });
 });

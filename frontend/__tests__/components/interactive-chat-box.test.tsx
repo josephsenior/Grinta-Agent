@@ -1,8 +1,10 @@
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../../test-utils";
 import { InteractiveChatBox } from "#/components/features/chat/interactive-chat-box";
+import * as fileValidation from "#/utils/file-validation";
+import * as toastHandlers from "#/utils/custom-toast-handlers";
 
 describe("InteractiveChatBox", () => {
   const onSubmitMock = vi.fn();
@@ -213,5 +215,90 @@ const confirmFileUpload = async (
     // Verify text input is still empty and onChange was not called
     expect(screen.getByRole("textbox")).toHaveValue("");
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("should toggle the file upload panel when the add files button is clicked", async () => {
+    const user = getUser();
+    renderWithProviders(
+      <InteractiveChatBox onSubmit={onSubmitMock} onStop={onStopMock} />,
+    );
+
+    const toggleButton = await screen.findByRole("button", { name: /add files/i });
+    expect(screen.queryByText("Upload Files")).not.toBeInTheDocument();
+
+    await user.click(toggleButton);
+    expect(screen.getByText("Upload Files")).toBeInTheDocument();
+
+    await user.click(toggleButton);
+    expect(screen.queryByText("Upload Files")).not.toBeInTheDocument();
+  });
+
+  it("should show drag overlay and handle dropped files", async () => {
+    const user = getUser();
+    renderWithProviders(
+      <InteractiveChatBox onSubmit={onSubmitMock} onStop={onStopMock} />,
+    );
+
+    const chatBox = screen.getByTestId("interactive-chat-box");
+    const droppedFile = new File(["hello"], "dragged.png", { type: "image/png" });
+    const dataTransfer = {
+      files: [droppedFile],
+      types: ["Files"],
+      getData: vi.fn(),
+      setData: vi.fn(),
+      dropEffect: "none",
+      effectAllowed: "all",
+    };
+
+    fireEvent.dragOver(chatBox, { dataTransfer });
+    expect(screen.getByText(/drop files here/i)).toBeInTheDocument();
+
+    fireEvent.drop(chatBox, { dataTransfer });
+    await confirmFileUpload(user, { optional: true });
+
+    expect(screen.queryByText(/drop files here/i)).not.toBeInTheDocument();
+    expect(screen.queryAllByTestId("image-preview")).toHaveLength(1);
+  });
+
+  it("should show an error toast when validation fails", async () => {
+    const user = getUser();
+    const validationSpy = vi
+      .spyOn(fileValidation, "validateFiles")
+      .mockReturnValue({ isValid: false, errorMessage: "Too big" });
+    const errorToastSpy = vi
+      .spyOn(toastHandlers, "displayErrorToast")
+      .mockImplementation(() => {});
+
+    renderWithProviders(
+      <InteractiveChatBox onSubmit={onSubmitMock} onStop={onStopMock} />,
+    );
+
+    const input = screen.getByTestId("upload-image-input");
+    const oversizedFile = new File(["big"], "too-large.png", { type: "image/png" });
+    await user.upload(input, oversizedFile);
+
+    expect(errorToastSpy).toHaveBeenCalledWith("Error: Too big");
+    expect(screen.queryByRole("button", { name: /upload/i })).not.toBeInTheDocument();
+
+    validationSpy.mockRestore();
+    errorToastSpy.mockRestore();
+  });
+
+  it("should allow removing uploaded non-image files from the list", async () => {
+    const user = getUser();
+    renderWithProviders(
+      <InteractiveChatBox onSubmit={onSubmitMock} onStop={onStopMock} />,
+    );
+
+    const docFile = new File(["content"], "document.txt", { type: "text/plain" });
+    const input = screen.getByTestId("upload-image-input");
+    await user.upload(input, docFile);
+    await confirmFileUpload(user);
+
+    const fileItem = screen.getByTestId("file-item");
+    const removeButton = within(fileItem).getByRole("button");
+    await user.click(removeButton);
+
+    expect(screen.queryByTestId("file-item")).toBeNull();
   });
 });

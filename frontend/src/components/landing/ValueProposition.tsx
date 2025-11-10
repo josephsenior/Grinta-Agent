@@ -11,10 +11,10 @@ import {
   Code,
   TrendingUp,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
-import { useNavigate } from "react-router-dom";
 import { useCreateConversation } from "#/hooks/mutation/use-create-conversation";
 
 export default function ValueProposition(): React.ReactElement {
@@ -105,9 +105,7 @@ export default function ValueProposition(): React.ReactElement {
             <span className="text-foreground block mb-2">
               Why Choose Forge Pro?
             </span>
-            <span className="text-gradient-brand">
-              The Smart Alternative
-            </span>
+            <span className="text-gradient-brand">The Smart Alternative</span>
           </h2>
 
           <p className="text-lg md:text-xl text-foreground-secondary max-w-3xl mx-auto leading-relaxed">
@@ -352,4 +350,3 @@ export default function ValueProposition(): React.ReactElement {
     </section>
   );
 }
-

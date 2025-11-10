@@ -1,6 +1,14 @@
+from __future__ import annotations
+
 import json
-from forge.metasop.models import RoleProfile, SopStep, StepOutputSpec
+from typing import Any, TYPE_CHECKING
+
+from forge.metasop.models import Artifact, RoleProfile, SopStep, StepOutputSpec, StepResult
 from forge.metasop.orchestrator import MetaSOPOrchestrator
+from forge.metasop.strategies import BaseStepExecutor
+
+if TYPE_CHECKING:
+    from forge.core.config import ForgeConfig
 
 
 def make_template_with_engineer_step(tmp_path):
@@ -12,23 +20,23 @@ def make_template_with_engineer_step(tmp_path):
     Returns:
         list: List containing a single engineer step.
     """
-    step = SopStep(
-        id="eng_step", role="engineer", task="Make change", outputs=StepOutputSpec(schema_file=""), depends_on=[]
-    )
+    step = SopStep(id="eng_step", role="engineer", task="Make change", outputs=StepOutputSpec(schema=""), depends_on=[])
     return [step]
 
 
-class DummyExecutor:
-
-    def __init__(self, candidates):
+class DummyExecutor(BaseStepExecutor):
+    def __init__(self, candidates: list[dict[str, Any]]) -> None:
         self.candidates = candidates
 
-    def execute(self, step, ctx, role_profile, config=None):
-        from forge.metasop.models import Artifact, StepResult
-
-        return StepResult(
-            ok=True, artifact=Artifact(step_id=step.id, role=step.role, content={"candidates": self.candidates})
-        )
+    def execute(
+        self,
+        step: SopStep,
+        ctx: Any,
+        role_profile: dict[str, Any],
+        config: "ForgeConfig | None" = None,
+    ) -> StepResult:
+        artifact = Artifact(step_id=step.id, role=step.role, content={"candidates": self.candidates})
+        return StepResult(ok=True, artifact=artifact)
 
 
 def test_orchestrator_selects_best_candidate(tmp_path, monkeypatch):

@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { NavLink, Outlet, redirect, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft } from "#/assets/chevron-left";
 import {
   User,
   Plug,
@@ -18,6 +17,7 @@ import {
   Workflow,
   Bot,
 } from "lucide-react";
+import { ChevronLeft } from "#/assets/chevron-left";
 import { cn } from "#/utils/utils";
 import { useConfig } from "#/hooks/query/use-config";
 import { I18nKey } from "#/i18n/declaration";
@@ -36,11 +36,19 @@ const SAAS_ONLY_PATHS = [
 
 const SAAS_NAV_ITEMS = [
   { to: "/settings/user", text: "SETTINGS$NAV_USER", icon: User },
-  { to: "/settings/integrations", text: "SETTINGS$NAV_INTEGRATIONS", icon: Plug },
+  {
+    to: "/settings/integrations",
+    text: "SETTINGS$NAV_INTEGRATIONS",
+    icon: Plug,
+  },
   { to: "/settings/databases", text: "SETTINGS$NAV_DATABASES", icon: Database },
   { to: "/settings/knowledge-base", text: "Knowledge Base", icon: Brain },
   { to: "/settings/memory", text: "SETTINGS$NAV_MEMORY", icon: Brain },
-  { to: "/settings/analytics", text: "SETTINGS$NAV_ANALYTICS", icon: BarChart3 },
+  {
+    to: "/settings/analytics",
+    text: "SETTINGS$NAV_ANALYTICS",
+    icon: BarChart3,
+  },
   { to: "/settings/prompts", text: "SETTINGS$NAV_PROMPTS", icon: FileText },
   { to: "/settings/snippets", text: "SETTINGS$NAV_SNIPPETS", icon: Code },
   { to: "/settings/slack", text: "SETTINGS$NAV_SLACK", icon: MessageSquare },
@@ -55,11 +63,19 @@ const SAAS_NAV_ITEMS = [
 const OSS_NAV_ITEMS = [
   { to: "/settings", text: "SETTINGS$NAV_LLM", icon: Bot },
   { to: "/settings/mcp", text: "SETTINGS$NAV_MCP", icon: Workflow },
-  { to: "/settings/integrations", text: "SETTINGS$NAV_INTEGRATIONS", icon: Plug },
+  {
+    to: "/settings/integrations",
+    text: "SETTINGS$NAV_INTEGRATIONS",
+    icon: Plug,
+  },
   { to: "/settings/databases", text: "SETTINGS$NAV_DATABASES", icon: Database },
   { to: "/settings/knowledge-base", text: "Knowledge Base", icon: Database },
   { to: "/settings/memory", text: "SETTINGS$NAV_MEMORY", icon: Brain },
-  { to: "/settings/analytics", text: "SETTINGS$NAV_ANALYTICS", icon: BarChart3 },
+  {
+    to: "/settings/analytics",
+    text: "SETTINGS$NAV_ANALYTICS",
+    icon: BarChart3,
+  },
   { to: "/settings/prompts", text: "SETTINGS$NAV_PROMPTS", icon: FileText },
   { to: "/settings/snippets", text: "SETTINGS$NAV_SNIPPETS", icon: Code },
   { to: "/settings/backup", text: "SETTINGS$NAV_BACKUP", icon: Download },
@@ -151,9 +167,9 @@ function SettingsScreen() {
                 className={({ isActive }) =>
                   cn(
                     "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap flex items-center gap-2",
-                    isActive 
-                      ? "bg-brand-500 text-white shadow-sm" 
-                      : "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary"
+                    isActive
+                      ? "bg-brand-500 text-white shadow-sm"
+                      : "text-foreground-secondary hover:text-foreground hover:bg-background-tertiary",
                   )
                 }
               >

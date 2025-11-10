@@ -10,7 +10,12 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 
-export type FlowStatus = "pending" | "in_progress" | "complete" | "blocked" | "unknown";
+export type FlowStatus =
+  | "pending"
+  | "in_progress"
+  | "complete"
+  | "blocked"
+  | "unknown";
 
 interface StatusMeta {
   id: FlowStatus;
@@ -28,7 +33,8 @@ const STATUS_LOOKUP: Record<FlowStatus, Omit<StatusMeta, "id">> = {
   pending: {
     label: "Pending",
     nodeClass: "bg-neutral-500/10 border-neutral-500/30 text-neutral-400",
-    bannerClass: "bg-neutral-500/10 border border-neutral-500/30 text-neutral-300",
+    bannerClass:
+      "bg-neutral-500/10 border border-neutral-500/30 text-neutral-300",
     icon: Clock,
     isPending: true,
     isInProgress: false,
@@ -68,7 +74,8 @@ const STATUS_LOOKUP: Record<FlowStatus, Omit<StatusMeta, "id">> = {
   unknown: {
     label: "Unknown",
     nodeClass: "bg-neutral-500/10 border-neutral-500/30 text-neutral-400",
-    bannerClass: "bg-neutral-500/10 border border-neutral-500/30 text-neutral-300",
+    bannerClass:
+      "bg-neutral-500/10 border border-neutral-500/30 text-neutral-300",
     icon: Clock,
     isPending: false,
     isInProgress: false,
@@ -83,7 +90,12 @@ export function getStatusMeta(status: unknown): StatusMeta {
   return { id: normalized, ...definition };
 }
 
-export type FlowRole = "product_manager" | "architect" | "engineer" | "qa" | "other";
+export type FlowRole =
+  | "product_manager"
+  | "architect"
+  | "engineer"
+  | "qa"
+  | "other";
 
 interface RoleMeta {
   id: FlowRole;
@@ -93,7 +105,7 @@ interface RoleMeta {
   icon: ComponentType<{ className?: string }>;
 }
 
-const ROLE_LOOKUP: Record<FlowRole, RoleMeta> = {
+const ROLE_LOOKUP: Record<FlowRole, Omit<RoleMeta, "id">> = {
   product_manager: {
     label: "Product Manager",
     badgeClass: "text-purple-400 bg-purple-500/20",
@@ -140,7 +152,9 @@ export function normalizeProgress(progress: unknown): number | undefined {
   return undefined;
 }
 
-export function formatStepTimestamp(value?: string | number | Date): string | undefined {
+export function formatStepTimestamp(
+  value?: string | number | Date,
+): string | undefined {
   if (!value) return undefined;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -149,7 +163,9 @@ export function formatStepTimestamp(value?: string | number | Date): string | un
   return date.toLocaleTimeString();
 }
 
-export function formatStepDateTime(value?: string | number | Date): string | undefined {
+export function formatStepDateTime(
+  value?: string | number | Date,
+): string | undefined {
   if (!value) return undefined;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -204,5 +220,3 @@ const ROLE_PATTERNS: Array<{ patterns: string[]; role: FlowRole }> = [
   { patterns: ["engineer", "eng"], role: "engineer" },
   { patterns: ["qa", "test"], role: "qa" },
 ];
-
-

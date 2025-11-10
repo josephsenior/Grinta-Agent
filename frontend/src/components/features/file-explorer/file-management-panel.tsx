@@ -1,14 +1,11 @@
 import React, { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { 
-  PanelLeft, 
-  PanelLeftClose, 
-  FileText, 
+import {
+  PanelLeft,
+  PanelLeftClose,
+  FileText,
   Grid3X3,
   List,
-  Settings,
-  Plus,
-  FolderPlus
 } from "lucide-react";
 import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
@@ -29,10 +26,12 @@ export function FileManagementPanel({
   isOpen,
   onToggle,
   className,
-  defaultView = "split"
+  defaultView = "split",
 }: FileManagementPanelProps) {
   const { t } = useTranslation();
-  const [view, setView] = useState<"split" | "explorer" | "viewer">(defaultView);
+  const [view, setView] = useState<"split" | "explorer" | "viewer">(
+    defaultView,
+  );
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [viewedFiles, setViewedFiles] = useState<string[]>([]);
   const [isClient, setIsClient] = useState(false);
@@ -46,10 +45,10 @@ export function FileManagementPanel({
   const handleFileSelect = useCallback((filePath: string) => {
     setSelectedFile(filePath);
     setView("split");
-    
+
     // Add to viewed files history
-    setViewedFiles(prev => {
-      const filtered = prev.filter(f => f !== filePath);
+    setViewedFiles((prev) => {
+      const filtered = prev.filter((f) => f !== filePath);
       return [filePath, ...filtered].slice(0, 10); // Keep last 10 files
     });
   }, []);
@@ -58,10 +57,10 @@ export function FileManagementPanel({
   const handleFileOpen = useCallback((filePath: string) => {
     setSelectedFile(filePath);
     setView("viewer");
-    
+
     // Add to viewed files history
-    setViewedFiles(prev => {
-      const filtered = prev.filter(f => f !== filePath);
+    setViewedFiles((prev) => {
+      const filtered = prev.filter((f) => f !== filePath);
       return [filePath, ...filtered].slice(0, 10);
     });
   }, []);
@@ -102,7 +101,7 @@ export function FileManagementPanel({
         className={cn(
           "fixed left-4 top-20 z-40 h-8 w-8 p-0",
           "bg-background-primary/80 backdrop-blur-sm border border-border",
-          "hover:bg-background-secondary/80 transition-all duration-200"
+          "hover:bg-background-secondary/80 transition-all duration-200",
         )}
       >
         <PanelLeft className="w-4 h-4" />
@@ -111,21 +110,25 @@ export function FileManagementPanel({
   }
 
   return (
-    <div className={cn(
-      "flex flex-col h-full bg-background-primary border-r border-border",
-      "transition-all duration-300 ease-in-out",
-      className
-    )}>
+    <div
+      className={cn(
+        "flex flex-col h-full bg-background-primary border-r border-border",
+        "transition-all duration-300 ease-in-out",
+        className,
+      )}
+    >
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-border bg-background-secondary">
         <div className="flex items-center gap-2">
           <FileText className="w-4 h-4 text-violet-500" />
-          <h2 className="text-sm font-semibold text-text-primary">File Manager</h2>
+          <h2 className="text-sm font-semibold text-text-primary">
+            File Manager
+          </h2>
           <Badge variant="secondary" className="text-xs">
             {viewedFiles.length} recent
           </Badge>
         </div>
-        
+
         <div className="flex items-center gap-1">
           {/* View Toggle */}
           <div className="flex items-center border border-border rounded-md p-0.5">
@@ -155,7 +158,7 @@ export function FileManagementPanel({
               <FileText className="w-3 h-3" />
             </Button>
           </div>
-          
+
           {/* Close Button */}
           <Button
             variant="ghost"
@@ -179,9 +182,9 @@ export function FileManagementPanel({
               onFileOpen={handleFileOpen}
               onFileDelete={handleFileDelete}
               onFileRename={handleFileRename}
-              showActions={true}
-              showStatus={true}
-              showSearch={true}
+              showActions
+              showStatus
+              showSearch
             />
           </div>
         )}
@@ -196,9 +199,9 @@ export function FileManagementPanel({
                 onFileOpen={handleFileOpen}
                 onFileDelete={handleFileDelete}
                 onFileRename={handleFileRename}
-                showActions={true}
-                showStatus={true}
-                showSearch={true}
+                showActions
+                showStatus
+                showSearch
               />
             </div>
             <div className="w-1/2">
@@ -208,14 +211,16 @@ export function FileManagementPanel({
                   conversationId={conversationId}
                   onClose={handleCloseViewer}
                   onFileEdit={handleFileEdit}
-                  editable={true}
+                  editable
                 />
               ) : (
                 <div className="flex items-center justify-center h-full p-8">
                   <div className="text-center text-text-secondary">
                     <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
                     <p className="text-sm">Select a file to view</p>
-                    <p className="text-xs mt-1">Choose a file from the explorer</p>
+                    <p className="text-xs mt-1">
+                      Choose a file from the explorer
+                    </p>
                   </div>
                 </div>
               )}
@@ -232,14 +237,16 @@ export function FileManagementPanel({
                 conversationId={conversationId}
                 onClose={handleCloseViewer}
                 onFileEdit={handleFileEdit}
-                editable={true}
+                editable
               />
             ) : (
               <div className="flex items-center justify-center h-full p-8">
                 <div className="text-center text-text-secondary">
                   <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
                   <p className="text-sm">No file selected</p>
-                  <p className="text-xs mt-1">Open a file to view its content</p>
+                  <p className="text-xs mt-1">
+                    Open a file to view its content
+                  </p>
                 </div>
               </div>
             )}
@@ -251,13 +258,15 @@ export function FileManagementPanel({
       {viewedFiles.length > 0 && (
         <div className="border-t border-border p-2 bg-background-secondary">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-medium text-text-secondary">Recent Files</span>
+            <span className="text-xs font-medium text-text-secondary">
+              Recent Files
+            </span>
           </div>
           <div className="flex flex-wrap gap-1">
             {viewedFiles.slice(0, 5).map((filePath) => {
-              const fileName = filePath.split('/').pop() || filePath;
+              const fileName = filePath.split("/").pop() || filePath;
               const isSelected = selectedFile === filePath;
-              
+
               return (
                 <Button
                   key={filePath}
@@ -266,7 +275,7 @@ export function FileManagementPanel({
                   onClick={() => handleFileSelect(filePath)}
                   className={cn(
                     "h-6 px-2 text-xs",
-                    isSelected && "bg-brand-500/10 text-violet-500"
+                    isSelected && "bg-brand-500/10 text-violet-500",
                   )}
                 >
                   <span className="truncate max-w-20" title={fileName}>

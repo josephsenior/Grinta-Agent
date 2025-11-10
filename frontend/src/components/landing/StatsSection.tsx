@@ -60,17 +60,13 @@ export default function StatsSection(): React.ReactElement {
                     <stat.icon className="w-6 h-6 text-violet-500" />
                   </div>
                 </div>
-                
+
                 <div className="space-y-1">
                   <div className="text-3xl font-bold text-gradient-brand">
                     {stat.value}
                   </div>
-                  <h3 className="text-base font-bold">
-                    {stat.label}
-                  </h3>
-                  <p className="text-sm">
-                    {stat.description}
-                  </p>
+                  <h3 className="text-base font-bold">{stat.label}</h3>
+                  <p className="text-sm">{stat.description}</p>
                 </div>
               </CardContent>
             </Card>

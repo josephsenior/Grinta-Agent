@@ -20,17 +20,26 @@ type VisualizationRenderer = (params: {
   animated?: boolean;
   className?: string;
   onInteraction?: VisualizationProps["onInteraction"];
-}) => JSX.Element;
+}) => React.JSX.Element;
 
-const ROLE_VISUALIZATIONS: Record<ParsedArtifact["role"], VisualizationRenderer> = {
+const ROLE_VISUALIZATIONS: Record<
+  ParsedArtifact["role"],
+  VisualizationRenderer
+> = {
   product_manager: ({ artifact, ...rest }) => (
     <PMVisualization artifact={artifact as PMSpecArtifact} {...rest} />
   ),
   architect: ({ artifact, ...rest }) => (
-    <ArchitectVisualization artifact={artifact as ArchitectSpecArtifact} {...rest} />
+    <ArchitectVisualization
+      artifact={artifact as ArchitectSpecArtifact}
+      {...rest}
+    />
   ),
   engineer: ({ artifact, ...rest }) => (
-    <EngineerVisualization artifact={artifact as EngineerSpecArtifact} {...rest} />
+    <EngineerVisualization
+      artifact={artifact as EngineerSpecArtifact}
+      {...rest}
+    />
   ),
   qa: ({ artifact, ...rest }) => (
     <QAVisualization artifact={artifact as QASpecArtifact} {...rest} />
@@ -55,19 +64,17 @@ export function CleanVisualAdapter({
   const renderer = ROLE_VISUALIZATIONS[artifact.role];
 
   if (!renderer) {
-      return (
-        <div className={`metasop-viz-unknown ${className}`}>
-          <p>Unknown role: {artifact.role}</p>
-        </div>
-      );
+    return (
+      <div className={`metasop-viz-unknown ${className}`}>
+        <p>Unknown role: {artifact.role}</p>
+      </div>
+    );
   }
 
   return renderer({
     artifact: artifact.data,
-  animated,
+    animated,
     className,
-  onInteraction,
+    onInteraction,
   });
 }
-
-

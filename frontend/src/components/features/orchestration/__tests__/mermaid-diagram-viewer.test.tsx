@@ -9,7 +9,8 @@ const useFullscreenShortcutsMock = vi.fn();
 vi.mock("../hooks/mermaid-viewer-hooks", () => ({
   useMermaidDiagram: (...args: unknown[]) => useMermaidDiagramMock(...args),
   useZoomPan: (...args: unknown[]) => useZoomPanMock(...args),
-  useFullscreenShortcuts: (...args: unknown[]) => useFullscreenShortcutsMock(...args),
+  useFullscreenShortcuts: (...args: unknown[]) =>
+    useFullscreenShortcutsMock(...args),
 }));
 
 const baseZoomPan = {
@@ -25,7 +26,7 @@ const baseZoomPan = {
 };
 
 const baseDiagramState = {
-  containerRef: { current: null } as React.RefObject<HTMLDivElement>,
+  containerRef: { current: null } as unknown as React.RefObject<HTMLDivElement>,
   svgRef: { current: null } as React.MutableRefObject<SVGElement | null>,
   svg: "<svg></svg>",
   error: null as string | null,
@@ -69,5 +70,3 @@ describe("MermaidDiagramViewer", () => {
     expect(screen.getByTitle(/Export diagram/i)).toBeInTheDocument();
   });
 });
-
-

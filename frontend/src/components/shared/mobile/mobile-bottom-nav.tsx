@@ -123,4 +123,3 @@ export function MobileBottomNav({ className }: MobileBottomNavProps) {
     </nav>
   );
 }
-

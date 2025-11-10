@@ -61,7 +61,11 @@ export async function exportDiagramAsPNG(
       // Get SVG dimensions
       let width = 0;
       let height = 0;
-      if (svgElement && "getBBox" in svgElement && typeof (svgElement as SVGGraphicsElement).getBBox === "function") {
+      if (
+        svgElement &&
+        "getBBox" in svgElement &&
+        typeof (svgElement as SVGGraphicsElement).getBBox === "function"
+      ) {
         const svgGraphics = svgElement as SVGGraphicsElement;
         const bbox = svgGraphics.getBBox();
         width = bbox.width;

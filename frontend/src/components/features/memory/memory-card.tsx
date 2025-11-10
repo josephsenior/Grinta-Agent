@@ -1,4 +1,4 @@
-import { Brain, Edit, Trash2, Clock, Hash, Tag } from "lucide-react";
+import { Edit, Trash2, Clock, Hash, Tag } from "lucide-react";
 import type { Memory } from "#/types/memory";
 
 interface MemoryCardProps {
@@ -59,7 +59,8 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
 
     if (diffMins < 1) return "just now";
     if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? "s" : ""} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    if (diffHours < 24)
+      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
     return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
   };
 
@@ -79,7 +80,8 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
               <span
                 className={`px-2 py-0.5 text-xs font-medium rounded border ${getCategoryColor(memory.category)}`}
               >
-                {memory.category.charAt(0).toUpperCase() + memory.category.slice(1)}
+                {memory.category.charAt(0).toUpperCase() +
+                  memory.category.slice(1)}
               </span>
               <span
                 className={`px-2 py-0.5 text-xs font-medium rounded border ${getImportanceColor(memory.importance)}`}
@@ -151,4 +153,3 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
     </div>
   );
 }
-

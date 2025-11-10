@@ -21,15 +21,13 @@ const OBSERVATION_NO_RENDER_LIST: ForgeEventType[] = ["think"];
 // Streaming chunks should always be rendered for real-time display
 const ALWAYS_RENDER_ACTIONS: ForgeEventType[] = ["streaming_chunk"];
 
-export const shouldRenderEvent = (
-  event: ForgeAction | ForgeObservation,
-) => {
+export const shouldRenderEvent = (event: ForgeAction | ForgeObservation) => {
   if (isForgeAction(event)) {
     // Always render streaming chunks
     if (ALWAYS_RENDER_ACTIONS.includes(event.action)) {
       return true;
     }
-    
+
     if (isCommandAction(event) && event.source === "user") {
       // For user commands, we always hide them from the chat interface
       return false;

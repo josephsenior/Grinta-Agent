@@ -151,4 +151,3 @@ export interface AnalyticsSummary {
   totalRequests: number;
   avgResponseTime: number;
 }
-

@@ -7,15 +7,11 @@ import {
   Rocket,
   Lightbulb,
   Terminal,
-  GitBranch,
   Zap,
-  Search,
   BookOpen,
   Wand2,
 } from "lucide-react";
-import { Card } from "#/components/ui/card";
 import { Button } from "#/components/ui/button";
-import { Badge } from "#/components/ui/badge";
 import { cn } from "#/utils/utils";
 
 interface Example {
@@ -179,16 +175,25 @@ export function EmptyState({ onSelectExample, className }: EmptyStateProps) {
         <div className="relative">
           {/* Pulsing background glow */}
           <div className="absolute inset-0 bg-gradient-to-r from-brand-500/20 to-brand-600/20 rounded-full blur-2xl animate-pulse-glow" />
-          
+
           {/* Main icon container */}
           <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-500/10 to-brand-600/5 border border-brand-500/20 flex items-center justify-center shadow-lg shadow-brand-500/10">
             <Sparkles className="h-10 w-10 text-brand-500 animate-pulse" />
           </div>
-          
+
           {/* Floating particles */}
-          <div className="absolute -top-2 -right-2 w-3 h-3 rounded-full bg-brand-400 animate-bounce opacity-70" style={{ animationDelay: "0ms", animationDuration: "2s" }} />
-          <div className="absolute -bottom-1 -left-2 w-2 h-2 rounded-full bg-brand-500 animate-bounce opacity-60" style={{ animationDelay: "300ms", animationDuration: "2.5s" }} />
-          <div className="absolute top-3 -right-3 w-2 h-2 rounded-full bg-brand-300 animate-bounce opacity-50" style={{ animationDelay: "600ms", animationDuration: "3s" }} />
+          <div
+            className="absolute -top-2 -right-2 w-3 h-3 rounded-full bg-brand-400 animate-bounce opacity-70"
+            style={{ animationDelay: "0ms", animationDuration: "2s" }}
+          />
+          <div
+            className="absolute -bottom-1 -left-2 w-2 h-2 rounded-full bg-brand-500 animate-bounce opacity-60"
+            style={{ animationDelay: "300ms", animationDuration: "2.5s" }}
+          />
+          <div
+            className="absolute top-3 -right-3 w-2 h-2 rounded-full bg-brand-300 animate-bounce opacity-50"
+            style={{ animationDelay: "600ms", animationDuration: "3s" }}
+          />
         </div>
       </div>
 
@@ -206,7 +211,9 @@ export function EmptyState({ onSelectExample, className }: EmptyStateProps) {
       <div className="flex items-center justify-center gap-2 py-2">
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20">
           <Sparkles className="h-3.5 w-3.5 text-brand-500" />
-          <span className="text-xs font-medium text-brand-500">Popular Tasks</span>
+          <span className="text-xs font-medium text-brand-500">
+            Popular Tasks
+          </span>
         </div>
       </div>
 
@@ -222,7 +229,7 @@ export function EmptyState({ onSelectExample, className }: EmptyStateProps) {
               "bg-gradient-to-br from-black to-brand-500/5 border border-brand-500/20",
               "hover:border-brand-500/40 hover:from-brand-500/5 hover:to-brand-500/10",
               "transition-all duration-300 hover:shadow-lg hover:shadow-brand-500/10",
-              "hover:scale-[1.01] active:scale-[0.99]"
+              "hover:scale-[1.01] active:scale-[0.99]",
             )}
             style={{
               animationDelay: `${index * 100}ms`,
@@ -230,13 +237,13 @@ export function EmptyState({ onSelectExample, className }: EmptyStateProps) {
           >
             {/* Subtle gradient overlay on hover */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-brand-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            
+
             <div className="flex items-center gap-3 w-full relative z-10">
               {/* Icon with glow effect */}
               <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-500 group-hover:bg-brand-500/20 group-hover:border-brand-500/30 transition-all duration-300 group-hover:shadow-md group-hover:shadow-brand-500/20">
                 {example.icon}
               </div>
-              
+
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold text-text-primary group-hover:text-brand-400 transition-colors duration-300 mb-0.5">
                   {example.title}
@@ -245,11 +252,21 @@ export function EmptyState({ onSelectExample, className }: EmptyStateProps) {
                   {example.description}
                 </div>
               </div>
-              
+
               {/* Arrow indicator */}
               <div className="flex-shrink-0 text-brand-500/0 group-hover:text-brand-500/100 transition-all duration-300 group-hover:translate-x-1">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
                 </svg>
               </div>
             </div>

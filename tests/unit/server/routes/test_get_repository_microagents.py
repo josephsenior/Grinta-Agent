@@ -47,7 +47,8 @@ def test_client():
     app.dependency_overrides[get_access_token] = mock_get_access_token
     app.dependency_overrides[get_user_id] = mock_get_user_id
     app.dependency_overrides[check_session_api_key] = mock_check_session_api_key
-    yield TestClient(app)
+    with TestClient(app) as client:
+        yield client
 
 
 @pytest.fixture

@@ -59,8 +59,8 @@ function isPlaywrightEnvironment(): boolean {
   try {
     return (
       typeof window !== "undefined" &&
-      (window as Window & { __Forge_PLAYWRIGHT?: boolean }).__Forge_PLAYWRIGHT ===
-        true
+      (window as Window & { __Forge_PLAYWRIGHT?: boolean })
+        .__Forge_PLAYWRIGHT === true
     );
   } catch {
     return false;

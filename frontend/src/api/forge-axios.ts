@@ -67,10 +67,12 @@ Forge.interceptors.response.use(
     // Check if it's a 503 error (runtime container crashed/unavailable)
     if (error.response?.status === 503) {
       // Dynamically import to avoid circular dependencies
-      import('#/state/agent-slice').then(({ setCurrentAgentState }) => {
-        import('#/store').then(({ default: store }) => {
-          import('#/types/agent-state').then(({ AgentState }) => {
-            console.error('🔴 Runtime container permanently unavailable, setting agent to ERROR state');
+      import("#/state/agent-slice").then(({ setCurrentAgentState }) => {
+        import("#/store").then(({ default: store }) => {
+          import("#/types/agent-state").then(({ AgentState }) => {
+            console.error(
+              "🔴 Runtime container permanently unavailable, setting agent to ERROR state",
+            );
             store.dispatch(setCurrentAgentState(AgentState.ERROR));
           });
         });

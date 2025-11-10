@@ -158,7 +158,9 @@ export function EnhancedAuditTrail({
                     Action Content:
                   </p>
                   <pre className="text-xs font-mono bg-black/60 text-gray-300 p-3 rounded border border-gray-700 overflow-x-auto">
-                    <code className="language-bash">{entry.action_content}</code>
+                    <code className="language-bash">
+                      {entry.action_content}
+                    </code>
                   </pre>
                 </div>
 
@@ -209,4 +211,3 @@ export function EnhancedAuditTrail({
     </div>
   );
 }
-

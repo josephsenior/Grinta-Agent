@@ -62,13 +62,22 @@ export default function MeshGradient(): React.ReactElement {
         0,
         meshPoints[0].x * canvas.width,
         meshPoints[0].y * canvas.height,
-        canvas.width * 0.8
+        canvas.width * 0.8,
       );
 
       // Violet/lavender theme colors
-      gradient.addColorStop(0, `rgba(139, 92, 246, ${0.15 + scrollProgress * 0.05})`);
-      gradient.addColorStop(0.4, `rgba(189, 147, 249, ${0.08 + scrollProgress * 0.03})`);
-      gradient.addColorStop(0.7, `rgba(99, 102, 241, ${0.05 + scrollProgress * 0.02})`);
+      gradient.addColorStop(
+        0,
+        `rgba(139, 92, 246, ${0.15 + scrollProgress * 0.05})`,
+      );
+      gradient.addColorStop(
+        0.4,
+        `rgba(189, 147, 249, ${0.08 + scrollProgress * 0.03})`,
+      );
+      gradient.addColorStop(
+        0.7,
+        `rgba(99, 102, 241, ${0.05 + scrollProgress * 0.02})`,
+      );
       gradient.addColorStop(1, "rgba(139, 92, 246, 0)");
 
       ctx.fillStyle = gradient;
@@ -81,7 +90,7 @@ export default function MeshGradient(): React.ReactElement {
         0,
         meshPoints[1].x * canvas.width,
         meshPoints[1].y * canvas.height,
-        canvas.width * 0.6
+        canvas.width * 0.6,
       );
 
       gradient2.addColorStop(0, "rgba(16, 185, 129, 0.08)");
@@ -110,4 +119,3 @@ export default function MeshGradient(): React.ReactElement {
     />
   );
 }
-

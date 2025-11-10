@@ -125,9 +125,9 @@ export function ChatInterfaceDemo() {
             </h1>
           </div>
           <p className="text-xl text-text-secondary max-w-2xl mx-auto">
-            Experience the new Forge AI interface with glass morphism,
-            smooth animations, and modern design patterns that harmonize
-            perfectly with your Dracula theme.
+            Experience the new Forge AI interface with glass morphism, smooth
+            animations, and modern design patterns that harmonize perfectly with
+            your Dracula theme.
           </p>
         </div>
 

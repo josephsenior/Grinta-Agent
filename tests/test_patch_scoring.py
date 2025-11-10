@@ -1,24 +1,43 @@
+from __future__ import annotations
+
 import types
-from forge.metasop.models import SopStep, SopTemplate, StepOutputSpec
+from typing import Any, TYPE_CHECKING, cast
+
+from forge.metasop.models import (
+    Artifact,
+    RoleProfile,
+    SopStep,
+    SopTemplate,
+    StepOutputSpec,
+    StepResult,
+    StepTrace,
+)
 from forge.metasop.orchestrator import MetaSOPOrchestrator
+from forge.metasop.strategies import BaseStepExecutor
+
+if TYPE_CHECKING:
+    from forge.core.config import ForgeConfig
 
 
-class RotatingExecutor:
-
-    def __init__(self):
+class RotatingExecutor(BaseStepExecutor):
+    def __init__(self) -> None:
         self.calls = 0
 
-    def execute(self, step, ctx, role_profile, config=None):
+    def execute(
+        self,
+        step: SopStep,
+        ctx: Any,
+        role_profile: dict[str, Any],
+        config: "ForgeConfig | None" = None,
+    ) -> StepResult:
         ctx.extra.get(f"micro_prev_artifact::{step.id}")
         variants = ["func a()\nprint('A')", "func b()\nprint('B B B B')", "func c()\nprint('C')"]
         content_variant = variants[self.calls % len(variants)]
         ctx.extra["last_variant"] = content_variant
         self.calls += 1
-        return types.SimpleNamespace(
-            ok=True,
-            artifact=types.SimpleNamespace(step_id=step.id, role=step.role, content={"content": content_variant}),
-            trace=types.SimpleNamespace(total_tokens=0, model_name="dummy"),
-        )
+        artifact = Artifact(step_id=step.id, role=step.role, content={"content": content_variant})
+        trace = StepTrace(step_id=step.id, role=step.role, total_tokens=0, model_name="dummy")
+        return StepResult(ok=True, artifact=artifact, trace=trace)
 
 
 def test_patch_scoring_events():
@@ -29,11 +48,14 @@ def test_patch_scoring_events():
     """
     orch = MetaSOPOrchestrator(
         sop_name="feature_delivery",
-        config=types.SimpleNamespace(extended=types.SimpleNamespace(metasop={}), runtime=types.SimpleNamespace()),
+        config=cast(
+            "ForgeConfig | None",
+            types.SimpleNamespace(extended=types.SimpleNamespace(metasop={}), runtime=types.SimpleNamespace()),
+        ),
     )
     orch.template = SopTemplate(
         name="feature_delivery",
-        steps=[SopStep(id="impl", role="engineer", task="impl task", outputs=StepOutputSpec(schema_file="dummy.json"))],
+        steps=[SopStep(id="impl", role="engineer", task="impl task", outputs=StepOutputSpec(schema="dummy.json"))],
     )
     settings = orch.settings
     settings.metrics_prometheus_port = None
@@ -44,7 +66,11 @@ def test_patch_scoring_events():
     settings.patch_scoring_enable = False  # Disable patch scoring for this test
     settings.micro_iteration_candidate_count = 3
     orch.step_executor = RotatingExecutor()
-    orch.profiles["engineer"] = types.SimpleNamespace(model_dump=lambda: {}, capabilities=["implement"])
+    orch.profiles["engineer"] = RoleProfile(
+        name="engineer",
+        goal="Implement patch scoring task",
+        capabilities=["implement"],
+    )
     success, _ = orch.run(user_request="try scoring")
     assert success
     events = [e for e in orch.step_events if e.get("step_id") == "impl"]
@@ -60,25 +86,30 @@ def test_patch_scoring_multi_candidate():
     score event per candidate (n=3).
 
     """
-    from forge.metasop.models import Artifact, StepResult
-
-    class MultiCandidateExecutor:
-
-        def __init__(self, candidates):
+    class MultiCandidateExecutor(BaseStepExecutor):
+        def __init__(self, candidates: list[dict[str, str]]) -> None:
             self.candidates = candidates
 
-        def execute(self, step, ctx, role_profile, config=None):
-            return StepResult(
-                ok=True, artifact=Artifact(step_id=step.id, role=step.role, content={"candidates": self.candidates})
-            )
+        def execute(
+            self,
+            step: SopStep,
+            ctx: Any,
+            role_profile: dict[str, Any],
+            config: "ForgeConfig | None" = None,
+        ) -> StepResult:
+            artifact = Artifact(step_id=step.id, role=step.role, content={"candidates": self.candidates})
+            return StepResult(ok=True, artifact=artifact)
 
     orch = MetaSOPOrchestrator(
         sop_name="feature_delivery",
-        config=types.SimpleNamespace(extended=types.SimpleNamespace(metasop={}), runtime=types.SimpleNamespace()),
+        config=cast(
+            "ForgeConfig | None",
+            types.SimpleNamespace(extended=types.SimpleNamespace(metasop={}), runtime=types.SimpleNamespace()),
+        ),
     )
     orch.template = SopTemplate(
         name="feature_delivery",
-        steps=[SopStep(id="impl", role="engineer", task="impl task", outputs=StepOutputSpec(schema_file="dummy.json"))],
+        steps=[SopStep(id="impl", role="engineer", task="impl task", outputs=StepOutputSpec(schema="dummy.json"))],
     )
     settings = orch.settings
     settings.metrics_prometheus_port = None
@@ -90,7 +121,11 @@ def test_patch_scoring_multi_candidate():
     settings.micro_iteration_candidate_count = 3
     candidates = [{"content": "alpha"}, {"content": "beta"}, {"content": "gamma"}]
     orch.step_executor = MultiCandidateExecutor(candidates)
-    orch.profiles["engineer"] = types.SimpleNamespace(model_dump=lambda: {}, capabilities=["implement"])
+    orch.profiles["engineer"] = RoleProfile(
+        name="engineer",
+        goal="Implement patch scoring task",
+        capabilities=["implement"],
+    )
     ok, _ = orch.run(user_request="multi candidate test")
     assert ok
     events = [e for e in orch.step_events if e.get("step_id") == "impl"]

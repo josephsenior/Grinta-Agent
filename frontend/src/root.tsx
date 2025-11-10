@@ -8,7 +8,7 @@ import {
 } from "react-router-dom";
 import "./tailwind.css";
 import "./index.css";
-import "./styles/Forge-theme.css";
+import "./styles/forge-theme.css";
 import React, { useEffect } from "react";
 import ToasterClient from "./components/ToasterClient";
 import { ThemeProvider } from "./context/theme-context";
@@ -39,7 +39,8 @@ export const meta: MetaFunction = () => [
   },
   {
     property: "og:description",
-    content: "Enterprise-grade AI coding assistant with persistent memory, world-class code quality, and 64% faster performance.",
+    content:
+      "Enterprise-grade AI coding assistant with persistent memory, world-class code quality, and 64% faster performance.",
   },
   {
     property: "og:type",
@@ -55,7 +56,8 @@ export const meta: MetaFunction = () => [
   },
   {
     name: "twitter:description",
-    content: "Enterprise-grade AI coding assistant with persistent memory and world-class code quality.",
+    content:
+      "Enterprise-grade AI coding assistant with persistent memory and world-class code quality.",
   },
 ];
 
@@ -84,7 +86,9 @@ export function HydrateFallback() {
             margin: "0 auto 24px",
           }}
         />
-        <div style={{ fontSize: "16px", fontWeight: 500 }}>Loading Forge Pro...</div>
+        <div style={{ fontSize: "16px", fontWeight: 500 }}>
+          Loading Forge Pro...
+        </div>
       </div>
       <style
         dangerouslySetInnerHTML={{

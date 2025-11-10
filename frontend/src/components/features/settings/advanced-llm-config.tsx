@@ -20,23 +20,25 @@ export function AdvancedLLMConfig({
   const { t } = useTranslation();
 
   // Detect current preset
-  const currentPreset = React.useMemo(() => {
-    return detectPreset({
-      temperature: settings.LLM_TEMPERATURE ?? undefined,
-      top_p: settings.LLM_TOP_P ?? undefined,
-      max_output_tokens: settings.LLM_MAX_OUTPUT_TOKENS ?? undefined,
-      timeout: settings.LLM_TIMEOUT ?? undefined,
-      num_retries: settings.LLM_NUM_RETRIES ?? undefined,
-      caching_prompt: settings.LLM_CACHING_PROMPT ?? undefined,
-      disable_vision: settings.LLM_DISABLE_VISION ?? undefined,
-    });
-  }, [settings]);
+  const currentPreset = React.useMemo(
+    () =>
+      detectPreset({
+        temperature: settings.LLM_TEMPERATURE ?? undefined,
+        top_p: settings.LLM_TOP_P ?? undefined,
+        max_output_tokens: settings.LLM_MAX_OUTPUT_TOKENS ?? undefined,
+        timeout: settings.LLM_TIMEOUT ?? undefined,
+        num_retries: settings.LLM_NUM_RETRIES ?? undefined,
+        caching_prompt: settings.LLM_CACHING_PROMPT ?? undefined,
+        disable_vision: settings.LLM_DISABLE_VISION ?? undefined,
+      }),
+    [settings],
+  );
 
   const handlePresetSelect = (preset: LLMPreset) => {
     if (onPresetChange) {
       onPresetChange(preset);
     }
-    
+
     if (onConfigChange && preset !== "custom") {
       const presetConfig = LLM_PRESETS[preset];
       onConfigChange({
@@ -71,16 +73,17 @@ export function AdvancedLLMConfig({
           {t(I18nKey.LLM_SETTINGS$PRESET_LABEL)}
         </label>
         <div className="grid grid-cols-3 gap-2">
-          {(["conservative", "balanced", "creative"] as LLMPreset[]).map((preset) => {
-            const presetConfig = LLM_PRESETS[preset];
-            const isSelected = currentPreset === preset;
-            
-            return (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => handlePresetSelect(preset)}
-                className={`
+          {(["conservative", "balanced", "creative"] as LLMPreset[]).map(
+            (preset) => {
+              const presetConfig = LLM_PRESETS[preset];
+              const isSelected = currentPreset === preset;
+
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => handlePresetSelect(preset)}
+                  className={`
                   flex flex-col items-start p-4 rounded-lg border-2 transition-all
                   ${
                     isSelected
@@ -88,16 +91,19 @@ export function AdvancedLLMConfig({
                       : "border-border hover:border-primary/50"
                   }
                 `}
-              >
-                <span className={`text-sm font-semibold ${isSelected ? "text-primary" : "text-white"}`}>
-                  {presetConfig.name}
-                </span>
-                <span className="text-xs text-neutral-400 mt-1 text-left">
-                  {presetConfig.description}
-                </span>
-              </button>
-            );
-          })}
+                >
+                  <span
+                    className={`text-sm font-semibold ${isSelected ? "text-primary" : "text-white"}`}
+                  >
+                    {presetConfig.name}
+                  </span>
+                  <span className="text-xs text-neutral-400 mt-1 text-left">
+                    {presetConfig.description}
+                  </span>
+                </button>
+              );
+            },
+          )}
         </div>
         {currentPreset === "custom" && (
           <p className="text-xs text-neutral-400">
@@ -123,7 +129,9 @@ export function AdvancedLLMConfig({
           max="2"
           step="0.1"
           value={settings.LLM_TEMPERATURE ?? 0.1}
-          onChange={(e) => handleSliderChange("LLM_TEMPERATURE", parseFloat(e.target.value))}
+          onChange={(e) =>
+            handleSliderChange("LLM_TEMPERATURE", parseFloat(e.target.value))
+          }
           className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer slider-thumb"
         />
         <p className="text-xs text-neutral-500">
@@ -148,7 +156,9 @@ export function AdvancedLLMConfig({
           max="1"
           step="0.05"
           value={settings.LLM_TOP_P ?? 1.0}
-          onChange={(e) => handleSliderChange("LLM_TOP_P", parseFloat(e.target.value))}
+          onChange={(e) =>
+            handleSliderChange("LLM_TOP_P", parseFloat(e.target.value))
+          }
           className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer slider-thumb"
         />
         <p className="text-xs text-neutral-500">
@@ -163,7 +173,9 @@ export function AdvancedLLMConfig({
         label={t(I18nKey.LLM_SETTINGS$MAX_OUTPUT_TOKENS_LABEL)}
         type="number"
         value={settings.LLM_MAX_OUTPUT_TOKENS?.toString() ?? "4096"}
-        onChange={(v) => handleSliderChange("LLM_MAX_OUTPUT_TOKENS", parseInt(v, 10))}
+        onChange={(v) =>
+          handleSliderChange("LLM_MAX_OUTPUT_TOKENS", parseInt(v, 10))
+        }
         helpText={t(I18nKey.LLM_SETTINGS$MAX_OUTPUT_TOKENS_HELP)}
       />
 
@@ -224,7 +236,9 @@ export function AdvancedLLMConfig({
         label={t(I18nKey.LLM_SETTINGS$CUSTOM_PROVIDER_LABEL)}
         type="text"
         value={settings.LLM_CUSTOM_LLM_PROVIDER ?? ""}
-        onChange={(v) => onConfigChange?.({ LLM_CUSTOM_LLM_PROVIDER: v || null })}
+        onChange={(v) =>
+          onConfigChange?.({ LLM_CUSTOM_LLM_PROVIDER: v || null })
+        }
         helpText={t(I18nKey.LLM_SETTINGS$CUSTOM_PROVIDER_HELP)}
         placeholder="e.g., anthropic, openai, azure"
       />
@@ -241,10 +255,14 @@ export function AdvancedLLMConfig({
                 Autonomy Mode Settings Moved
               </h4>
               <p className="text-xs text-blue-300/80">
-                For better UX, autonomy mode settings are now available directly in the chat interface. 
-                Look for the mode selector button (🛡️ Supervised / 👁️ Balanced / ⚡ Full Autonomous) 
-                in the top control bar when chatting with the agent. You can also use the keyboard shortcut 
-                <kbd className="mx-1 px-1.5 py-0.5 bg-blue-500/20 rounded text-blue-300 text-[10px]">Ctrl+Shift+A</kbd> 
+                For better UX, autonomy mode settings are now available directly
+                in the chat interface. Look for the mode selector button (🛡️
+                Supervised / 👁️ Balanced / ⚡ Full Autonomous) in the top
+                control bar when chatting with the agent. You can also use the
+                keyboard shortcut
+                <kbd className="mx-1 px-1.5 py-0.5 bg-blue-500/20 rounded text-blue-300 text-[10px]">
+                  Ctrl+Shift+A
+                </kbd>
                 to cycle through modes.
               </p>
             </div>
@@ -254,4 +272,3 @@ export function AdvancedLLMConfig({
     </div>
   );
 }
-

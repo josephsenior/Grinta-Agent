@@ -1,6 +1,6 @@
 /**
  * Error Action Handler Hook
- * 
+ *
  * Centralized handler for error action buttons (retry, new session, help, etc.)
  */
 
@@ -116,7 +116,11 @@ function handleNavigationAction(
 }
 
 function handleExternalLinkAction(action: ErrorAction): boolean {
-  if (action.type === "help" || action.type === "support" || action.type === "status") {
+  if (
+    action.type === "help" ||
+    action.type === "support" ||
+    action.type === "status"
+  ) {
     const defaultUrl = EXTERNAL_LINK_DEFAULTS[action.type];
     openInNewTab(action.url ?? defaultUrl);
     return true;
@@ -154,4 +158,3 @@ function handleFallbackAction(action: ErrorAction) {
 function openInNewTab(url: string) {
   window.open(url, "_blank");
 }
-

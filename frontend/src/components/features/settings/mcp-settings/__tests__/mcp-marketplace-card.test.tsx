@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, vi, expect } from "vitest";
 import { MCPMarketplaceCard } from "../mcp-marketplace-card";
@@ -70,7 +70,9 @@ describe("MCPMarketplaceCard", () => {
     render(<MCPMarketplaceCard {...defaultProps} />);
 
     // Rating may be split across elements due to icon rendering
-    expect(screen.getByText((content) => content.includes("4.5"))).toBeInTheDocument();
+    expect(
+      screen.getByText((content) => content.includes("4.5")),
+    ).toBeInTheDocument();
   });
 
   it("should show featured badge when featured", () => {
@@ -115,7 +117,7 @@ describe("MCPMarketplaceCard", () => {
   });
 
   it("should show installed state when isInstalled is true", () => {
-    render(<MCPMarketplaceCard {...defaultProps} isInstalled={true} />);
+    render(<MCPMarketplaceCard {...defaultProps} isInstalled />);
 
     const installedButton = screen.getByRole("button", { name: /Installed/i });
     expect(installedButton).toBeDisabled();
@@ -136,7 +138,10 @@ describe("MCPMarketplaceCard", () => {
     render(<MCPMarketplaceCard {...defaultProps} />);
 
     const homepageLink = screen.getByLabelText("Open homepage");
-    expect(homepageLink).toHaveAttribute("href", "https://github.com/test/mcp-server");
+    expect(homepageLink).toHaveAttribute(
+      "href",
+      "https://github.com/test/mcp-server",
+    );
     expect(homepageLink).toHaveAttribute("target", "_blank");
   });
 
@@ -165,11 +170,10 @@ describe("MCPMarketplaceCard", () => {
     const { container } = render(<MCPMarketplaceCard {...defaultProps} />);
 
     const card = container.firstChild as HTMLElement;
-    
+
     await user.hover(card);
 
     // Card should be rendered and interactive
     expect(card).toBeInTheDocument();
   });
 });
-

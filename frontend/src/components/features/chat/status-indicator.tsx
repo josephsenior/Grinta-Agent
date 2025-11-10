@@ -1,9 +1,25 @@
 import React from "react";
-import { ListTodo, Brain, Terminal, FileEdit, Code, Search } from "lucide-react";
+import {
+  ListTodo,
+  Brain,
+  Terminal,
+  FileEdit,
+  Code,
+  Search,
+} from "lucide-react";
 import { cn } from "#/utils/utils";
 
 interface StatusIndicatorProps {
-  type: "think" | "thinking" | "plan" | "run" | "write" | "edit" | "browse" | "read" | "message";
+  type:
+    | "think"
+    | "thinking"
+    | "plan"
+    | "run"
+    | "write"
+    | "edit"
+    | "browse"
+    | "read"
+    | "message";
   message?: string;
   className?: string;
 }
@@ -56,27 +72,29 @@ const STATUS_MAP = {
   },
 };
 
-export function StatusIndicator({ type, message, className }: StatusIndicatorProps) {
+export function StatusIndicator({
+  type,
+  message,
+  className,
+}: StatusIndicatorProps) {
   const status = STATUS_MAP[type];
-  
+
   // Guard against undefined status
   if (!status) {
     console.warn(`Unknown status type: ${type}`);
     return null;
   }
-  
+
   const displayText = message || status.text;
 
   return (
     <div
       className={cn(
         "inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-background-secondary/50 backdrop-blur-sm border border-border-subtle",
-        className
+        className,
       )}
     >
-      <div className={cn("flex-shrink-0", status.color)}>
-        {status.icon}
-      </div>
+      <div className={cn("flex-shrink-0", status.color)}>{status.icon}</div>
       <span className="text-sm text-text-primary font-medium whitespace-nowrap">
         {displayText}
       </span>

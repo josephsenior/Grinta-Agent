@@ -31,12 +31,17 @@ const STEPS = [
 ];
 
 export function SimpleHowItWorks() {
-  const { ref, isVisible } = useScrollReveal({ threshold: 0.2, triggerOnce: true });
+  const { ref, isVisible } = useScrollReveal({
+    threshold: 0.2,
+    triggerOnce: true,
+  });
 
   return (
     <section ref={ref} className="py-20 px-6 relative">
       <div className="max-w-6xl mx-auto">
-        <div className={`text-center mb-16 ${isVisible ? "stagger-item delay-0" : "opacity-0"}`}>
+        <div
+          className={`text-center mb-16 ${isVisible ? "stagger-item delay-0" : "opacity-0"}`}
+        >
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
             From Idea to Production{" "}
             <span className="bg-gradient-to-r from-brand-500 to-accent-500 bg-clip-text text-transparent gradient-shimmer">
@@ -44,7 +49,8 @@ export function SimpleHowItWorks() {
             </span>
           </h2>
           <p className="text-lg text-foreground-secondary max-w-2xl mx-auto">
-            Three simple steps to ship production-ready code faster than ever before
+            Three simple steps to ship production-ready code faster than ever
+            before
           </p>
         </div>
 
@@ -56,8 +62,8 @@ export function SimpleHowItWorks() {
           {STEPS.map((step, index) => {
             const Icon = step.icon;
             return (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className={`relative ${isVisible ? `bento-card delay-${(index + 1) * 100}` : "opacity-0"}`}
               >
                 <div className="flex flex-col items-center text-center">
@@ -66,10 +72,15 @@ export function SimpleHowItWorks() {
                     className={`relative z-10 w-24 h-24 rounded-2xl bg-gradient-to-br ${step.bgGradient} flex items-center justify-center mb-6 shadow-xl morphing-icon group cursor-pointer hover:scale-110 transition-all duration-500 gpu-accelerated`}
                     style={{ animationDelay: `${index * 0.5}s` }}
                   >
-                    <Icon className={`w-12 h-12 text-white floating-icon`} style={{ animationDelay: `${index * 0.3}s` }} />
-                    
+                    <Icon
+                      className="w-12 h-12 text-white floating-icon"
+                      style={{ animationDelay: `${index * 0.3}s` }}
+                    />
+
                     {/* Glow effect */}
-                    <div className={`absolute inset-0 bg-gradient-to-br ${step.bgGradient} rounded-2xl blur-xl opacity-50 -z-10 group-hover:blur-2xl group-hover:opacity-75 transition-all duration-500`} />
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-br ${step.bgGradient} rounded-2xl blur-xl opacity-50 -z-10 group-hover:blur-2xl group-hover:opacity-75 transition-all duration-500`}
+                    />
                   </div>
 
                   {/* Content */}
@@ -86,7 +97,9 @@ export function SimpleHowItWorks() {
         </div>
 
         {/* CTA */}
-        <div className={`text-center mt-16 ${isVisible ? "stagger-item delay-400" : "opacity-0"}`}>
+        <div
+          className={`text-center mt-16 ${isVisible ? "stagger-item delay-400" : "opacity-0"}`}
+        >
           <a
             href="/conversations/new"
             onMouseEnter={() => soundEffects.hover()}

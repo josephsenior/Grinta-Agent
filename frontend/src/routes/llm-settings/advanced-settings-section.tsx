@@ -53,10 +53,14 @@ export function AdvancedSettingsSection({
   const isOpenhandsModel = (model?: string | null) =>
     !!model && (model.startsWith("Openhands/") || model.startsWith("Forge/"));
   const showOpenhandsHelpLink =
-    isOpenhandsModel(settings.LLM_MODEL) || isOpenhandsModel(currentSelectedModel);
+    isOpenhandsModel(settings.LLM_MODEL) ||
+    isOpenhandsModel(currentSelectedModel);
 
   return (
-    <div data-testid="llm-settings-form-advanced" className="flex flex-col gap-6">
+    <div
+      data-testid="llm-settings-form-advanced"
+      className="flex flex-col gap-6"
+    >
       <SettingsInput
         testId="llm-custom-model-input"
         name="llm-custom-model-input"
@@ -97,7 +101,9 @@ export function AdvancedSettingsSection({
         placeholder={settings.LLM_API_KEY_SET ? "<hidden>" : ""}
         onChange={onApiKeyChange}
         startContent={
-          settings.LLM_API_KEY_SET && <KeyStatusIcon isSet={settings.LLM_API_KEY_SET} />
+          settings.LLM_API_KEY_SET && (
+            <KeyStatusIcon isSet={settings.LLM_API_KEY_SET} />
+          )
         }
       />
       <HelpLink
@@ -190,7 +196,9 @@ export function AdvancedSettingsSection({
           min={20}
           step={1}
           label={t(I18nKey.SETTINGS$CONDENSER_MAX_SIZE)}
-          value={(condenserMaxSize ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE)?.toString()}
+          value={(
+            condenserMaxSize ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE
+          )?.toString()}
           onChange={onCondenserMaxSizeChange}
           isDisabled={!enableDefaultCondenser}
         />
@@ -211,5 +219,3 @@ export function AdvancedSettingsSection({
     </div>
   );
 }
-
-

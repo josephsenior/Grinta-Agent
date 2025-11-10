@@ -2,7 +2,14 @@ import React from "react";
 import { ExtraProps } from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Copy, Play, Save, MessageSquare, Check, ListOrdered } from "lucide-react";
+import {
+  Copy,
+  Play,
+  Save,
+  MessageSquare,
+  Check,
+  ListOrdered,
+} from "lucide-react";
 import { Button } from "#/components/ui/button";
 import { cn } from "#/utils/utils";
 import {
@@ -19,7 +26,14 @@ interface CodeActionsProps {
   onToggleLineNumbers?: () => void;
 }
 
-function CodeActions({ code, language, onAskAbout, onRun, showLineNumbers, onToggleLineNumbers }: CodeActionsProps) {
+function CodeActions({
+  code,
+  language,
+  onAskAbout,
+  onRun,
+  showLineNumbers,
+  onToggleLineNumbers,
+}: CodeActionsProps) {
   const [copied, setCopied] = React.useState(false);
   const [isVisible, setIsVisible] = React.useState(false);
 
@@ -172,7 +186,9 @@ function CodeActions({ code, language, onAskAbout, onRun, showLineNumbers, onTog
           onClick={onToggleLineNumbers}
           className={cn(
             "h-8 w-8 bg-background-surface/80 backdrop-blur-sm border border-border-glass text-text-secondary",
-            showLineNumbers ? "bg-primary-500/20 text-primary-500" : "hover:bg-primary-500/10 hover:text-primary-500"
+            showLineNumbers
+              ? "bg-primary-500/20 text-primary-500"
+              : "hover:bg-primary-500/10 hover:text-primary-500",
           )}
           title={showLineNumbers ? "Hide line numbers" : "Show line numbers"}
         >
@@ -255,7 +271,7 @@ export function enhancedCode(
             </span>
           </div>
         )}
-        
+
         <CodeActions
           code={codeString}
           language={match[1]}

@@ -82,6 +82,49 @@ async def test_search_components_uses_cache(monkeypatch):
     assert payload == {"query": "widget", "results": [], "total_matches": 0}
 
 
+@pytest.mark.asyncio
+async def test_get_components_list_handles_invalid_json(monkeypatch):
+    from forge.mcp_client import wrappers
+
+    monkeypatch.setattr(
+        "forge.mcp_client.wrappers.get_cached",
+        lambda *_, **__: {"content": [{"type": "text", "text": "{not-json"}]},
+    )
+
+    async def fake_call(name, args):
+        raise AssertionError("should not be called when cache is populated")
+
+    result = await wrappers._get_components_list(fake_call)
+    assert result == []
+
+
+def test_score_and_filter_components_paths():
+    from forge.mcp_client import wrappers
+
+    components = ["Exact", 123, "partial-match", "miss"]
+
+    fuzzy_results = wrappers._score_and_filter_components(components, "ex", fuzzy=True)
+    assert [name for _, name in fuzzy_results] == ["Exact"]
+
+    exact_results = wrappers._score_and_filter_components(components, "partial", fuzzy=False)
+    assert [name for _, name in exact_results] == ["partial-match"]
+
+    assert wrappers._score_and_filter_components(["zzzz"], "a", fuzzy=True) == []
+    assert wrappers._score_and_filter_components(["alpha"], "beta", fuzzy=False) == []
+
+
+@pytest.mark.asyncio
+async def test_search_components_requires_query():
+    from forge.mcp_client import wrappers
+
+    async def unexpected_call(name, args):
+        raise AssertionError("call_tool_func should not be invoked when query missing")
+
+    response = await wrappers.search_components([], {}, unexpected_call)
+    payload = json.loads(response["content"][0]["text"])
+    assert payload == {"error": "query parameter required"}
+
+
 def test_wrapper_tool_params_generation():
     from forge.mcp_client.wrappers import wrapper_tool_params
 

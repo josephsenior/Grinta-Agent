@@ -182,9 +182,12 @@ export async function exportPrompts(params?: {
 /**
  * Import prompts from a collection
  */
-export async function importPrompts(
-  collection: PromptCollection,
-): Promise<{ imported: number; updated: number; skipped: number; total: number }> {
+export async function importPrompts(collection: PromptCollection): Promise<{
+  imported: number;
+  updated: number;
+  skipped: number;
+  total: number;
+}> {
   const response = await fetch(`${API_BASE}/import`, {
     method: "POST",
     headers: {
@@ -237,4 +240,3 @@ export async function trackPromptUsage(
 
   return response.json();
 }
-

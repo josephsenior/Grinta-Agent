@@ -171,7 +171,7 @@ export function ConversationSubscriptionsProvider({
             }
 
             const currentEvents = prev[conversationId]?.events || [];
-            
+
             // Check if this event already exists (deduplication)
             const eventExists = currentEvents.some((existingEvent) => {
               if (existingEvent.id === event.id) return true;
@@ -181,7 +181,8 @@ export function ConversationSubscriptionsProvider({
                 return (
                   existingEvent.source === event.source &&
                   existingEvent.action === event.action &&
-                  JSON.stringify(existingEvent.args) === JSON.stringify(event.args)
+                  JSON.stringify(existingEvent.args) ===
+                    JSON.stringify(event.args)
                 );
               }
 
@@ -200,7 +201,7 @@ export function ConversationSubscriptionsProvider({
 
               return false;
             });
-            
+
             // Only add if it doesn't already exist
             if (!eventExists) {
               return {
@@ -211,7 +212,7 @@ export function ConversationSubscriptionsProvider({
                 },
               };
             }
-            
+
             return prev; // No change if event already exists
           });
         }
@@ -251,8 +252,8 @@ export function ConversationSubscriptionsProvider({
               ?.VITE_PLAYWRIGHT_STUB,
           ) ||
           (typeof window !== "undefined" &&
-            (window as unknown as WindowWithPlaywright)
-              .__Forge_PLAYWRIGHT === true);
+            (window as unknown as WindowWithPlaywright).__Forge_PLAYWRIGHT ===
+              true);
 
         if (isPlaywrightRun) {
           // Create a lightweight noop socket-like object

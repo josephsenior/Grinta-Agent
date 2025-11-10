@@ -193,6 +193,7 @@ class LLMConfig(BaseModel):
             and self.api_key.get_secret_value()
             and self.api_key.get_secret_value().strip()
         )
+        object.__setattr__(self, "_has_explicit_api_key", bool(has_explicit_key))
 
         if not _SUPPRESS_ENV_EXPORT and not has_explicit_key:
             try:

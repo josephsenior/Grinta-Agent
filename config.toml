@@ -1,6 +1,5 @@
 [core]
 workspace_base = "."
-sandbox_volumes = [".:/workspace:rw"]
 # Persist trajectories for replay/analysis
 save_trajectory_path = "./trajectories"
 

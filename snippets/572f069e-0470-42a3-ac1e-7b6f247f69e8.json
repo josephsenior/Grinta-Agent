@@ -1,0 +1,18 @@
+{
+  "id": "572f069e-0470-42a3-ac1e-7b6f247f69e8",
+  "title": "Export 2",
+  "description": null,
+  "language": "javascript",
+  "category": "custom",
+  "code": "code2",
+  "tags": [],
+  "is_favorite": false,
+  "usage_count": 0,
+  "created_at": "2025-11-09 00:43:54.631925",
+  "updated_at": "2025-11-09 16:05:07.161020",
+  "metadata": {},
+  "dependencies": [],
+  "related_snippets": [],
+  "source_url": null,
+  "license": null
+}

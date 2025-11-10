@@ -2,6 +2,10 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { screen, render } from "@testing-library/react";
 import React from "react";
 
+// Mock declarations for skipped test
+let mockBrowserState: any;
+const BrowserPanel = () => null;
+
 // Component no longer exists - this test is kept for reference but skipped
 describe.skip("Browser", () => {
   afterEach(() => {

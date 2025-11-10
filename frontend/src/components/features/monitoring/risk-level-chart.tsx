@@ -48,7 +48,7 @@ export function RiskLevelChart({
     // Calculate max value for scaling
     const maxValue = Math.max(
       ...displayData.flatMap((d) => [d.low, d.medium, d.high]),
-      5
+      5,
     );
 
     // Draw grid lines
@@ -68,7 +68,7 @@ export function RiskLevelChart({
       ctx.fillText(
         Math.round((maxValue * (4 - i)) / 4).toString(),
         padding.left - 5,
-        y + 4
+        y + 4,
       );
     }
 
@@ -76,11 +76,11 @@ export function RiskLevelChart({
     const drawArea = (
       dataKey: "low" | "medium" | "high",
       color: string,
-      previousData?: number[]
+      previousData?: number[],
     ) => {
       const gradient = ctx.createLinearGradient(0, padding.top, 0, rect.height);
-      gradient.addColorStop(0, color + "40");
-      gradient.addColorStop(1, color + "10");
+      gradient.addColorStop(0, `${color}40`);
+      gradient.addColorStop(1, `${color}10`);
 
       ctx.fillStyle = gradient;
       ctx.beginPath();
@@ -89,8 +89,7 @@ export function RiskLevelChart({
       displayData.forEach((point, i) => {
         const x = padding.left + (chartWidth / (displayData.length - 1)) * i;
         const value = point[dataKey] + (previousData?.[i] || 0);
-        const y =
-          padding.top + chartHeight - (value / maxValue) * chartHeight;
+        const y = padding.top + chartHeight - (value / maxValue) * chartHeight;
 
         if (i === 0) {
           ctx.moveTo(x, y);
@@ -103,8 +102,7 @@ export function RiskLevelChart({
       for (let i = displayData.length - 1; i >= 0; i--) {
         const x = padding.left + (chartWidth / (displayData.length - 1)) * i;
         const value = previousData?.[i] || 0;
-        const y =
-          padding.top + chartHeight - (value / maxValue) * chartHeight;
+        const y = padding.top + chartHeight - (value / maxValue) * chartHeight;
         ctx.lineTo(x, y);
       }
 
@@ -118,8 +116,7 @@ export function RiskLevelChart({
       displayData.forEach((point, i) => {
         const x = padding.left + (chartWidth / (displayData.length - 1)) * i;
         const value = point[dataKey] + (previousData?.[i] || 0);
-        const y =
-          padding.top + chartHeight - (value / maxValue) * chartHeight;
+        const y = padding.top + chartHeight - (value / maxValue) * chartHeight;
 
         if (i === 0) {
           ctx.moveTo(x, y);
@@ -187,4 +184,3 @@ export function RiskLevelChart({
     </div>
   );
 }
-

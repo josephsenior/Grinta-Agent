@@ -83,7 +83,7 @@ describe("PromptFormModal", () => {
         expect.objectContaining({
           title: "New Prompt",
           content: "Test content here",
-        })
+        }),
       );
       expect(defaultProps.onClose).toHaveBeenCalled();
     });
@@ -101,7 +101,9 @@ describe("PromptFormModal", () => {
     const nameInput = screen.getByPlaceholderText("PROMPTS$VARIABLE_NAME");
     await user.type(nameInput, "testVar");
 
-    const defaultValueInput = screen.getByPlaceholderText("PROMPTS$DEFAULT_VALUE");
+    const defaultValueInput = screen.getByPlaceholderText(
+      "PROMPTS$DEFAULT_VALUE",
+    );
     await user.type(defaultValueInput, "defaultValue");
 
     // Remove variable
@@ -226,4 +228,3 @@ describe("PromptFormModal", () => {
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 });
-

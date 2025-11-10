@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useSelector } from "react-redux";
 import {
   Globe,
@@ -10,6 +10,10 @@ import {
 } from "lucide-react";
 import { RootState } from "#/store";
 import { cn } from "#/utils/utils";
+
+type InteractiveBrowserProps = {
+  className?: string;
+};
 
 type InteractiveBrowserController = {
   iframeRef: React.RefObject<HTMLIFrameElement>;
@@ -24,7 +28,82 @@ type InteractiveBrowserController = {
   isLocalhostApp: (url: string) => boolean;
 };
 
-export function InteractiveBrowser() {
+function useInteractiveBrowserController(): InteractiveBrowserController {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const agentUrl = useSelector((state: RootState) => state.browser.url);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [corsError, setCorsError] = useState(false);
+  const [currentUrl, setCurrentUrl] = useState("");
+
+  useEffect(() => {
+    if (agentUrl) {
+      setCurrentUrl(agentUrl);
+      setIsLoading(true);
+      setCorsError(false);
+    }
+  }, [agentUrl]);
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    const handleLoad = () => {
+      setIsLoading(false);
+      setCorsError(false);
+    };
+
+    const handleError = () => {
+      setIsLoading(false);
+      setCorsError(true);
+    };
+
+    iframe.addEventListener("load", handleLoad);
+    iframe.addEventListener("error", handleError);
+
+    return () => {
+      iframe.removeEventListener("load", handleLoad);
+      iframe.removeEventListener("error", handleError);
+    };
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen((prev) => !prev);
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    if (iframeRef.current && currentUrl) {
+      setIsLoading(true);
+      iframeRef.current.src = currentUrl;
+    }
+  }, [currentUrl]);
+
+  const handleOpenInNewTab = useCallback(() => {
+    if (currentUrl) {
+      window.open(currentUrl, "_blank");
+    }
+  }, [currentUrl]);
+
+  const isLocalhostApp = useCallback(
+    (url: string) => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(url),
+    [],
+  );
+
+  return {
+    iframeRef: iframeRef as React.RefObject<HTMLIFrameElement>,
+    currentUrl,
+    isLoading,
+    isFullscreen,
+    corsError,
+    agentUrl,
+    toggleFullscreen,
+    handleRefresh,
+    handleOpenInNewTab,
+    isLocalhostApp,
+  };
+}
+
+export function InteractiveBrowser({ className }: InteractiveBrowserProps) {
   const controller = useInteractiveBrowserController();
 
   return (
@@ -40,7 +119,11 @@ export function InteractiveBrowser() {
   );
 }
 
-function BrowserHeader({ controller }: { controller: InteractiveBrowserController }) {
+function BrowserHeader({
+  controller,
+}: {
+  controller: InteractiveBrowserController;
+}) {
   return (
     <div className="flex-none bg-background-secondary/95 backdrop-blur-sm border-b border-border/60">
       <HeaderControls controller={controller} />
@@ -49,7 +132,11 @@ function BrowserHeader({ controller }: { controller: InteractiveBrowserControlle
   );
 }
 
-function HeaderControls({ controller }: { controller: InteractiveBrowserController }) {
+function HeaderControls({
+  controller,
+}: {
+  controller: InteractiveBrowserController;
+}) {
   return (
     <div className="flex items-center gap-3 px-4 py-2.5">
       <ReadOnlyUrlDisplay url={controller.currentUrl} />
@@ -58,8 +145,19 @@ function HeaderControls({ controller }: { controller: InteractiveBrowserControll
   );
 }
 
-function HeaderActionButtons({ controller }: { controller: InteractiveBrowserController }) {
-  const { currentUrl, isLoading, handleRefresh, handleOpenInNewTab, toggleFullscreen, isFullscreen } = controller;
+function HeaderActionButtons({
+  controller,
+}: {
+  controller: InteractiveBrowserController;
+}) {
+  const {
+    currentUrl,
+    isLoading,
+    handleRefresh,
+    handleOpenInNewTab,
+    toggleFullscreen,
+    isFullscreen,
+  } = controller;
 
   return (
     <div className="flex items-center gap-1 flex-shrink-0">
@@ -71,14 +169,12 @@ function HeaderActionButtons({ controller }: { controller: InteractiveBrowserCon
           "p-2 rounded-lg transition-all duration-150",
           currentUrl
             ? "text-foreground-secondary hover:text-violet-500 hover:bg-background-tertiary/60"
-            : "text-foreground-secondary/50 cursor-not-allowed"
+            : "text-foreground-secondary/50 cursor-not-allowed",
         )}
         title="Refresh preview"
         aria-label="Refresh"
       >
-        <RefreshCw
-          className={cn("w-4 h-4", isLoading && "animate-spin")}
-        />
+        <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
       </button>
 
       {/* Open in New Tab */}
@@ -114,7 +210,11 @@ function HeaderActionButtons({ controller }: { controller: InteractiveBrowserCon
   );
 }
 
-function HeaderNotice({ controller }: { controller: InteractiveBrowserController }) {
+function HeaderNotice({
+  controller,
+}: {
+  controller: InteractiveBrowserController;
+}) {
   const { currentUrl, corsError, agentUrl } = controller;
 
   return (
@@ -124,12 +224,13 @@ function HeaderNotice({ controller }: { controller: InteractiveBrowserController
           <div className="flex items-center gap-2">
             <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
             <span>
-              {agentUrl && (agentUrl.includes('chrome-error://') || agentUrl.includes('chromewebdata'))
+              {agentUrl &&
+              (agentUrl.includes("chrome-error://") ||
+                agentUrl.includes("chromewebdata"))
                 ? "❌ Navigation failed - server may not be ready. The agent should wait for the server to start before navigating."
                 : controller.isLocalhostApp(currentUrl)
                   ? "Agent app may not be running or blocked. Click 'Open in new tab' to check."
-                  : "This site may block iframe embedding. Click 'Open in new tab' if it doesn't load."
-              }
+                  : "This site may block iframe embedding. Click 'Open in new tab' if it doesn't load."}
             </span>
           </div>
           <button
@@ -158,7 +259,11 @@ function ReadOnlyUrlDisplay({ url }: { url: string }) {
   );
 }
 
-function BrowserContent({ controller }: { controller: InteractiveBrowserController }) {
+function BrowserContent({
+  controller,
+}: {
+  controller: InteractiveBrowserController;
+}) {
   if (!controller.currentUrl) {
     return <WaitingForAgent />;
   }
@@ -174,12 +279,10 @@ function WaitingForAgent() {
   return (
     <div className="h-full flex flex-col items-center justify-center text-foreground-secondary p-8">
       <Globe className="w-16 h-16 mb-4 text-foreground-secondary/50" />
-      <h3 className="text-lg font-medium text-foreground mb-2">
-        App Preview
-      </h3>
+      <h3 className="text-lg font-medium text-foreground mb-2">App Preview</h3>
       <p className="text-sm text-center max-w-md text-foreground-secondary">
-        The agent will navigate here when building your app.
-        You'll be able to interact with it in real-time!
+        The agent will navigate here when building your app. You'll be able to
+        interact with it in real-time!
       </p>
     </div>
   );
@@ -196,7 +299,11 @@ function LoadingOverlay() {
   );
 }
 
-function BrowserIframe({ controller }: { controller: InteractiveBrowserController }) {
+function BrowserIframe({
+  controller,
+}: {
+  controller: InteractiveBrowserController;
+}) {
   const sandbox = controller.isLocalhostApp(controller.currentUrl)
     ? "allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation allow-downloads allow-modals"
     : "allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation-by-user-activation";

@@ -54,10 +54,7 @@ export function Sidebar() {
     }
 
     return () => {
-      window.removeEventListener(
-        "Forge:open-conversation-panel",
-        openHandler,
-      );
+      window.removeEventListener("Forge:open-conversation-panel", openHandler);
     };
   }, []);
 

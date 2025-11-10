@@ -1,5 +1,12 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Copy, Check, FileCode, Code2, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Copy,
+  Check,
+  FileCode,
+  Code2,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { Card, CardContent, CardHeader } from "#/components/ui/card";
 import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
@@ -20,7 +27,7 @@ interface StreamingCodeArtifactProps {
 
 /**
  * StreamingCodeArtifact - Real-time token-by-token file streaming component
- * 
+ *
  * Features:
  * - Token-by-token streaming of file content
  * - Beautiful card layout with file path header
@@ -61,7 +68,7 @@ export function StreamingCodeArtifact({
         "border border-border-secondary shadow-xl shadow-primary-500/5",
         "transition-all duration-300 hover:shadow-2xl hover:shadow-primary-500/10",
         isStreaming && "border-brand-500/30 shadow-brand-500/10",
-        className
+        className,
       )}
     >
       <StreamingCodeHeader
@@ -111,7 +118,7 @@ export function StreamingCodeArtifact({
           </div>
         </CardContent>
       )}
-      
+
       {/* Footer (collapsed state) */}
       {isCollapsed && (
         <CardContent className="px-4 py-3 bg-background-surface/50">
@@ -163,13 +170,7 @@ function useCodeStreaming({
   } as const;
 }
 
-function useCodeCopy({
-  code,
-  onCopy,
-}: {
-  code: string;
-  onCopy?: () => void;
-}) {
+function useCodeCopy({ code, onCopy }: { code: string; onCopy?: () => void }) {
   const [isCopied, setIsCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
@@ -229,8 +230,8 @@ function getActionBadge(action: StreamingCodeArtifactProps["action"]) {
   } as const;
 
   return {
-    className: actionColors[action],
-    label: actionLabels[action],
+    className: actionColors[action as keyof typeof actionColors],
+    label: actionLabels[action as keyof typeof actionLabels],
   } as const;
 }
 
@@ -276,9 +277,7 @@ function StreamingCodeHeader({
         />
       </div>
 
-      {isStreaming && (
-        <StreamingCodeProgress progress={headerMeta.progress} />
-      )}
+      {isStreaming && <StreamingCodeProgress progress={headerMeta.progress} />}
     </CardHeader>
   );
 }
@@ -303,12 +302,16 @@ function StreamingCodeFileInfo({
         )}
       />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-mono text-foreground truncate" title={filePath}>
+        <p
+          className="text-sm font-mono text-foreground truncate"
+          title={filePath}
+        >
           {filePath}
         </p>
         <p className="text-xs text-foreground-secondary mt-0.5">
           {headerMeta.lineCount}/{headerMeta.totalLineCount}{" "}
-          {headerMeta.totalLineCount === 1 ? "line" : "lines"} · {headerMeta.language}
+          {headerMeta.totalLineCount === 1 ? "line" : "lines"} ·{" "}
+          {headerMeta.language}
           {isStreaming && " · Streaming"}
         </p>
       </div>
@@ -368,7 +371,13 @@ function StreamingCodeHeaderActions({
         </Button>
       )}
 
-      <Button type="button" variant="ghost" size="sm" onClick={onCopy} className="h-8 px-3 text-xs">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={onCopy}
+        className="h-8 px-3 text-xs"
+      >
         {isCopied ? (
           <>
             <Check className="w-3.5 h-3.5 mr-1.5 text-success-500" />

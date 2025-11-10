@@ -29,16 +29,17 @@ export function SecretForm({
   const { mutate: createSecret } = useCreateSecret();
   const { mutate: updateSecret } = useUpdateSecret();
 
-  const { secretDescription, nameError, valueError, handleSubmit } = useSecretFormState({
-    mode,
-    selectedSecret,
-    onCancel,
-    secrets,
-    createSecret,
-    updateSecret,
-    queryClient,
-    t,
-  });
+  const { secretDescription, nameError, valueError, handleSubmit } =
+    useSecretFormState({
+      mode,
+      selectedSecret,
+      onCancel,
+      secrets,
+      createSecret,
+      updateSecret,
+      queryClient,
+      t,
+    });
 
   const formTestId = mode === "add" ? "add-secret-form" : "edit-secret-form";
 
@@ -152,7 +153,11 @@ function useSecretFormState({
       return "";
     }
 
-    return secrets.find((secret) => secret.name === selectedSecret)?.description?.trim() ?? "";
+    return (
+      secrets
+        .find((secret) => secret.name === selectedSecret)
+        ?.description?.trim() ?? ""
+    );
   }, [mode, secrets, selectedSecret]);
 
   const handleCreateSecret = React.useCallback(
@@ -209,7 +214,12 @@ function useSecretFormState({
         },
       );
     },
-    [onCancel, revertOptimisticUpdate, updateSecret, updateSecretOptimistically],
+    [
+      onCancel,
+      revertOptimisticUpdate,
+      updateSecret,
+      updateSecretOptimistically,
+    ],
   );
 
   const handleSubmit = React.useCallback(
@@ -237,22 +247,15 @@ function useSecretFormState({
           setValueError(t("SECRETS$SECRET_VALUE_REQUIRED"));
           return;
         }
-        handleCreateSecret(name, value, description || undefined);
+        handleCreateSecret(name ?? "", value, description || undefined);
         return;
       }
 
       if (mode === "edit" && selectedSecret) {
-        handleEditSecret(selectedSecret, name, description || undefined);
+        handleEditSecret(selectedSecret, name ?? "", description || undefined);
       }
     },
-    [
-      handleCreateSecret,
-      handleEditSecret,
-      mode,
-      secrets,
-      selectedSecret,
-      t,
-    ],
+    [handleCreateSecret, handleEditSecret, mode, secrets, selectedSecret, t],
   );
 
   return {

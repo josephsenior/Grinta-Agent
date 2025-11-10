@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import { AutonomyModeSelector, AutonomyMode } from "../autonomy-mode-selector";
+import { AutonomyModeSelector } from "../autonomy-mode-selector";
 
 describe("AutonomyModeSelector", () => {
   const mockOnModeChange = jest.fn();
@@ -10,16 +10,15 @@ describe("AutonomyModeSelector", () => {
     mockOnModeChange.mockClear();
   });
 
-  const renderWithRouter = (component: React.ReactElement) => {
-    return render(<BrowserRouter>{component}</BrowserRouter>);
-  };
+  const renderWithRouter = (component: React.ReactElement) =>
+    render(<BrowserRouter>{component}</BrowserRouter>);
 
   it("renders the current mode correctly", () => {
     renderWithRouter(
       <AutonomyModeSelector
         currentMode="balanced"
         onModeChange={mockOnModeChange}
-      />
+      />,
     );
 
     expect(screen.getByText("Balanced")).toBeInTheDocument();
@@ -30,7 +29,7 @@ describe("AutonomyModeSelector", () => {
       <AutonomyModeSelector
         currentMode="balanced"
         onModeChange={mockOnModeChange}
-      />
+      />,
     );
 
     const button = screen.getByRole("button");
@@ -46,7 +45,7 @@ describe("AutonomyModeSelector", () => {
       <AutonomyModeSelector
         currentMode="balanced"
         onModeChange={mockOnModeChange}
-      />
+      />,
     );
 
     // Open dropdown
@@ -65,7 +64,7 @@ describe("AutonomyModeSelector", () => {
       <AutonomyModeSelector
         currentMode="balanced"
         onModeChange={mockOnModeChange}
-      />
+      />,
     );
 
     // Open dropdown
@@ -91,7 +90,7 @@ describe("AutonomyModeSelector", () => {
       <AutonomyModeSelector
         currentMode="balanced"
         onModeChange={mockOnModeChange}
-      />
+      />,
     );
 
     // Open dropdown
@@ -100,7 +99,7 @@ describe("AutonomyModeSelector", () => {
 
     // Check that icons are present (they have specific classes)
     expect(document.querySelector(".text-orange-500")).toBeInTheDocument(); // Supervised
-    expect(document.querySelector(".text-blue-500")).toBeInTheDocument(); // Balanced  
+    expect(document.querySelector(".text-blue-500")).toBeInTheDocument(); // Balanced
     expect(document.querySelector(".text-green-500")).toBeInTheDocument(); // Full
   });
 
@@ -109,7 +108,7 @@ describe("AutonomyModeSelector", () => {
       <AutonomyModeSelector
         currentMode="full"
         onModeChange={mockOnModeChange}
-      />
+      />,
     );
 
     // Open dropdown

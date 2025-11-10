@@ -26,7 +26,9 @@ export function CommandBlockingCard({
       >
         <div className="flex items-center justify-center gap-3 text-green-400">
           <Shield className="w-5 h-5" />
-          <p className="text-sm font-medium">No blocked commands - All clear!</p>
+          <p className="text-sm font-medium">
+            No blocked commands - All clear!
+          </p>
         </div>
       </div>
     );
@@ -125,4 +127,3 @@ if (typeof document !== "undefined") {
   styleSheet.textContent = styles;
   document.head.appendChild(styleSheet);
 }
-

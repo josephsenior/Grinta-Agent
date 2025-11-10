@@ -1,34 +1,45 @@
+from __future__ import annotations
+
 import json
 import logging
 import types
-from forge.metasop.models import SopStep, SopTemplate, StepOutputSpec
+from typing import Any, TYPE_CHECKING, cast
+
+from forge.metasop.models import Artifact, RoleProfile, SopStep, SopTemplate, StepOutputSpec, StepResult, StepTrace
 from forge.metasop.orchestrator import MetaSOPOrchestrator
+from forge.metasop.strategies import BaseStepExecutor
+
+if TYPE_CHECKING:
+    from forge.core.config import ForgeConfig
 
 
-class RotatingExecutor:
-
-    def __init__(self):
+class RotatingExecutor(BaseStepExecutor):
+    def __init__(self) -> None:
         self.calls = 0
 
-    def execute(self, step, ctx, role_profile, config=None):
+    def execute(
+        self,
+        step: SopStep,
+        ctx: Any,
+        role_profile: dict[str, Any],
+        config: "ForgeConfig | None" = None,
+    ) -> StepResult:
         ctx.extra.get(f"micro_prev_artifact::{step.id}")
         variants = ["func a()\nprint('A')", "func b()\nprint('B B B B')", "func c()\nprint('C')"]
         content_variant = variants[self.calls % len(variants)]
         ctx.extra["last_variant"] = content_variant
         self.calls += 1
-        return types.SimpleNamespace(
-            ok=True,
-            artifact=types.SimpleNamespace(step_id=step.id, role=step.role, content={"content": content_variant}),
-            trace=types.SimpleNamespace(total_tokens=0, model_name="dummy"),
-        )
+        artifact = Artifact(step_id=step.id, role=step.role, content={"content": content_variant})
+        trace = StepTrace(step_id=step.id, role=step.role, total_tokens=0, model_name="dummy")
+        return StepResult(ok=True, artifact=artifact, trace=trace)
 
 
-def main():
-    cfg = types.SimpleNamespace(extended=types.SimpleNamespace(metasop={}), runtime=types.SimpleNamespace())
-    orch = MetaSOPOrchestrator(sop_name="feature_delivery", config=cfg)
+def main() -> None:
+    cfg: Any = types.SimpleNamespace(extended=types.SimpleNamespace(metasop={}), runtime=types.SimpleNamespace())
+    orch = MetaSOPOrchestrator(sop_name="feature_delivery", config=cast("ForgeConfig | None", cfg))
     orch.template = SopTemplate(
         name="feature_delivery",
-        steps=[SopStep(id="impl", role="engineer", task="impl task", outputs=StepOutputSpec(schema_file="dummy.json"))],
+        steps=[SopStep(id="impl", role="engineer", task="impl task", outputs=StepOutputSpec(schema="dummy.json"))],
     )
     settings = orch.settings
     settings.metrics_prometheus_port = None
@@ -39,7 +50,11 @@ def main():
     settings.patch_scoring_enable = True
     settings.micro_iteration_candidate_count = 3
     orch.step_executor = RotatingExecutor()
-    orch.profiles["engineer"] = types.SimpleNamespace(model_dump=lambda: {}, capabilities=["implement"])
+    orch.profiles["engineer"] = RoleProfile(
+        name="engineer",
+        goal="Implement micro iteration candidate",
+        capabilities=["implement"],
+    )
     logger = logging.getLogger(__name__)
     try:
         success, done = orch.run(user_request="repro")

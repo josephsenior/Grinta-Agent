@@ -37,9 +37,8 @@ const isImportantCommand = (cmd?: string | null): boolean => {
 
 const hasThoughtProperty = (
   args: Record<string, unknown>,
-): args is { thought: string } => {
-  return "thought" in args && typeof args.thought === "string";
-};
+): args is { thought: string } =>
+  "thought" in args && typeof args.thought === "string";
 
 type RenderPredicate = (event: ForgeEvent) => boolean;
 
@@ -85,4 +84,3 @@ function eventContainsAgentThought(event: ForgeEvent): boolean {
 
   return event.action !== "think" && hasThoughtProperty(event.args);
 }
-

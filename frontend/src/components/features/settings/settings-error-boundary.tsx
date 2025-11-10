@@ -30,7 +30,9 @@ export class SettingsErrorBoundary extends React.Component<
     };
   }
 
-  static getDerivedStateFromError(error: Error): Partial<SettingsErrorBoundaryState> {
+  static getDerivedStateFromError(
+    error: Error,
+  ): Partial<SettingsErrorBoundaryState> {
     return {
       hasError: true,
       error,
@@ -51,19 +53,19 @@ export class SettingsErrorBoundary extends React.Component<
       error: null,
       errorInfo: null,
     });
-    
+
     // Reload the page to reset all settings state
     window.location.reload();
   };
 
   handleResetSettings = () => {
     // Clear localStorage settings
-    const settingsKeys = Object.keys(localStorage).filter(key => 
-      key.startsWith('Forge.') || key.includes('settings')
+    const settingsKeys = Object.keys(localStorage).filter(
+      (key) => key.startsWith("Forge.") || key.includes("settings"),
     );
-    
-    settingsKeys.forEach(key => localStorage.removeItem(key));
-    
+
+    settingsKeys.forEach((key) => localStorage.removeItem(key));
+
     // Reload
     window.location.reload();
   };
@@ -89,13 +91,13 @@ export class SettingsErrorBoundary extends React.Component<
                 Settings Error
               </h2>
               <p className="text-sm text-text-secondary">
-                {fallbackMessage || 
+                {fallbackMessage ||
                   "An error occurred while loading or saving your settings. This might be due to corrupted data or a connection issue."}
               </p>
             </div>
 
             {/* Error Details (Development Only) */}
-            {process.env.NODE_ENV === 'development' && error && (
+            {process.env.NODE_ENV === "development" && error && (
               <details className="mt-4 p-3 bg-background-tertiary rounded-lg">
                 <summary className="text-xs font-medium text-text-secondary cursor-pointer hover:text-text-primary">
                   Error Details (Dev Only)
@@ -122,7 +124,7 @@ export class SettingsErrorBoundary extends React.Component<
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Reload Page
               </Button>
-              
+
               <Button
                 onClick={this.handleResetSettings}
                 variant="outline"
@@ -131,9 +133,10 @@ export class SettingsErrorBoundary extends React.Component<
                 <AlertTriangle className="w-4 h-4 mr-2" />
                 Reset Settings & Reload
               </Button>
-              
+
               <p className="text-xs text-text-tertiary text-center mt-2">
-                If the problem persists, try clearing your browser cache or contact support.
+                If the problem persists, try clearing your browser cache or
+                contact support.
               </p>
             </div>
           </div>
@@ -144,4 +147,3 @@ export class SettingsErrorBoundary extends React.Component<
     return this.props.children;
   }
 }
-

@@ -38,7 +38,9 @@ export function MicroagentsModal({ onClose }: MicroagentsModalProps) {
 }
 
 function useMicroagentsModalController(curAgentState: AgentState) {
-  const [expandedAgents, setExpandedAgents] = useState<Record<string, boolean>>({});
+  const [expandedAgents, setExpandedAgents] = useState<Record<string, boolean>>(
+    {},
+  );
   const { data, isLoading, isError, refetch, isRefetching } =
     useConversationMicroagents();
 
@@ -50,7 +52,9 @@ function useMicroagentsModalController(curAgentState: AgentState) {
   };
 
   return {
-    isAgentReady: ![AgentState.LOADING, AgentState.INIT].includes(curAgentState),
+    isAgentReady: ![AgentState.LOADING, AgentState.INIT].includes(
+      curAgentState,
+    ),
     expandedAgents,
     toggleAgent,
     microagents: data,
@@ -133,9 +137,7 @@ function MicroagentsContentBody({
   t: ReturnType<typeof useTranslation>["t"];
 }) {
   if (!controller.isAgentReady) {
-    return (
-      <EmptyState message={t(I18nKey.DIFF_VIEWER$WAITING_FOR_RUNTIME)} />
-    );
+    return <EmptyState message={t(I18nKey.DIFF_VIEWER$WAITING_FOR_RUNTIME)} />;
   }
 
   if (controller.isLoading) {
@@ -143,15 +145,11 @@ function MicroagentsContentBody({
   }
 
   if (!controller.microagents || controller.microagents.length === 0) {
-    return (
-      <EmptyState message={t(I18nKey.CONVERSATION$NO_MICROAGENTS)} />
-    );
+    return <EmptyState message={t(I18nKey.CONVERSATION$NO_MICROAGENTS)} />;
   }
 
   if (controller.isError) {
-    return (
-      <EmptyState message={t(I18nKey.MICROAGENTS_MODAL$FETCH_ERROR)} />
-    );
+    return <EmptyState message={t(I18nKey.MICROAGENTS_MODAL$FETCH_ERROR)} />;
   }
 
   return (
@@ -213,14 +211,16 @@ function MicroagentAccordion({
             {badgeLabel}
           </span>
           <span className="text-foreground-secondary">
-            {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+            {isExpanded ? (
+              <ChevronDown size={18} />
+            ) : (
+              <ChevronRight size={18} />
+            )}
           </span>
         </div>
       </button>
 
-      {isExpanded && (
-        <MicroagentDetails agent={agent} t={t} />
-      )}
+      {isExpanded && <MicroagentDetails agent={agent} t={t} />}
     </div>
   );
 }

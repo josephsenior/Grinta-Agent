@@ -124,7 +124,9 @@ function buildWorkspaceContextDetails(extras: Record<string, unknown>): string {
   pushIfString("Directory", "repo_directory");
   pushIfString("Date", "date");
 
-  const runtimeHosts = extras.runtime_hosts as Record<string, unknown> | undefined;
+  const runtimeHosts = extras.runtime_hosts as
+    | Record<string, unknown>
+    | undefined;
   if (runtimeHosts && Object.keys(runtimeHosts).length > 0) {
     const hostLines = Object.entries(runtimeHosts)
       .map(([host, port]) => `\n\n- ${host} (port ${port})`)
@@ -139,7 +141,9 @@ function buildWorkspaceContextDetails(extras: Record<string, unknown>): string {
   return lines.join("");
 }
 
-function buildMicroagentKnowledgeDetails(extras: Record<string, unknown>): string | null {
+function buildMicroagentKnowledgeDetails(
+  extras: Record<string, unknown>,
+): string | null {
   const knowledge = extras.microagent_knowledge as unknown[] | undefined;
   if (!Array.isArray(knowledge) || knowledge.length === 0) {
     return null;
@@ -157,8 +161,12 @@ function buildMicroagentKnowledgeDetails(extras: Record<string, unknown>): strin
   return `\n\n**Triggered Microagent Knowledge:**${entries}`;
 }
 
-function buildCustomSecretsDetails(extras: Record<string, unknown>): string | null {
-  const secrets = extras.custom_secrets_descriptions as Record<string, unknown> | undefined;
+function buildCustomSecretsDetails(
+  extras: Record<string, unknown>,
+): string | null {
+  const secrets = extras.custom_secrets_descriptions as
+    | Record<string, unknown>
+    | undefined;
   if (!secrets || Object.keys(secrets).length === 0) {
     return null;
   }
@@ -170,7 +178,9 @@ function buildCustomSecretsDetails(extras: Record<string, unknown>): string | nu
   return `\n\n**Custom Secrets**${entries}`;
 }
 
-function buildTaskListSection(taskList: TaskTrackingObservation["extras"]["task_list"]): string {
+function buildTaskListSection(
+  taskList: TaskTrackingObservation["extras"]["task_list"],
+): string {
   if (!Array.isArray(taskList) || taskList.length === 0) {
     return "**Task List:** Empty";
   }

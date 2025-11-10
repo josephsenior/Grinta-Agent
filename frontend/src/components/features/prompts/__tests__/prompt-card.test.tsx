@@ -23,7 +23,9 @@ vi.mock("lucide-react", () => ({
   Code: () => <div data-testid="code-icon" />,
   Edit: () => <div data-testid="edit-icon" />,
   FileText: () => <div data-testid="file-icon" />,
-  Heart: ({ className }: any) => <div data-testid="heart-icon" className={className} />,
+  Heart: ({ className }: any) => (
+    <div data-testid="heart-icon" className={className} />
+  ),
   MoreVertical: () => <div data-testid="more-icon" />,
   Star: () => <div data-testid="star-icon" />,
   Trash2: () => <div data-testid="trash-icon" />,
@@ -61,13 +63,17 @@ describe("PromptCard", () => {
     render(<PromptCard {...defaultProps} />);
 
     expect(screen.getByText("Test Prompt")).toBeInTheDocument();
-    expect(screen.getByText("This is a test prompt description")).toBeInTheDocument();
+    expect(
+      screen.getByText("This is a test prompt description"),
+    ).toBeInTheDocument();
   });
 
   it("should display prompt content preview", () => {
     render(<PromptCard {...defaultProps} />);
 
-    expect(screen.getByText(/Write a {{language}} function/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Write a {{language}} function/),
+    ).toBeInTheDocument();
   });
 
   it("should show tags", () => {
@@ -152,14 +158,19 @@ describe("PromptCard", () => {
     const favoriteButton = await screen.findByText("PROMPTS$ADD_FAVORITE");
     await user.click(favoriteButton);
 
-    expect(defaultProps.onToggleFavorite).toHaveBeenCalledWith("test-prompt-1", true);
+    expect(defaultProps.onToggleFavorite).toHaveBeenCalledWith(
+      "test-prompt-1",
+      true,
+    );
   });
 
   it("should copy to clipboard when copy is clicked", async () => {
     const user = userEvent.setup();
-    
+
     // Mock clipboard API - use vi.spyOn since clipboard is already defined in vitest.setup
-    const writeTextSpy = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+    const writeTextSpy = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined);
 
     render(<PromptCard {...defaultProps} />);
 
@@ -213,4 +224,3 @@ describe("PromptCard", () => {
     expect(screen.getByTestId("code-icon")).toBeInTheDocument();
   });
 });
-

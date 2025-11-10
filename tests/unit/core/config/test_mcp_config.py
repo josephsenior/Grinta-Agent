@@ -1,3 +1,76 @@
+import pytest
+
+from forge.core.config import mcp_config as mcp_module
+from forge.core.config.mcp_config import (
+    MCPConfig,
+    MCPSHTTPServerConfig,
+    MCPStdioServerConfig,
+    MCPSSEServerConfig,
+    _validate_mcp_url,
+)
+
+
+def test_validate_mcp_url_rejects_invalid_scheme():
+    with pytest.raises(ValueError):
+        _validate_mcp_url("example.com")
+    with pytest.raises(ValueError):
+        _validate_mcp_url("ftp://example.com")
+    assert _validate_mcp_url("https://example.com") == "https://example.com"
+
+
+def test_stdio_server_parsing():
+    config = MCPStdioServerConfig(
+        name="tool_server",
+        command="binary",
+        args='--config "path with spaces" --debug',
+        env="KEY=value, FLAG=1",
+    )
+    assert config.args == ["--config", "path with spaces", "--debug"]
+    assert config.env == {"KEY": "value", "FLAG": "1"}
+
+
+def test_stdio_server_invalid_command():
+    with pytest.raises(ValueError):
+        MCPStdioServerConfig(name="tool", command="with spaces")
+
+
+def test_stdio_server_invalid_env_pair():
+    with pytest.raises(ValueError):
+        MCPStdioServerConfig(name="tool", command="binary", env="BADPAIR")
+
+
+def test_mcp_config_from_toml_section_and_merge():
+    data = {
+        "sse_servers": [{"url": "https://example.com"}],
+        "stdio_servers": [{"name": "tool", "command": "binary"}],
+        "shttp_servers": [{"url": "https://example.com/api"}],
+    }
+    mapping = MCPConfig.from_toml_section(data)
+    config = mapping["mcp"]
+    assert isinstance(config.sse_servers[0], MCPSSEServerConfig)
+    assert isinstance(config.stdio_servers[0], MCPStdioServerConfig)
+    assert isinstance(config.shttp_servers[0], MCPSHTTPServerConfig)
+
+    merged = config.merge(
+        MCPConfig(
+            sse_servers=[MCPSSEServerConfig(url="https://another.com")],
+            stdio_servers=[],
+            shttp_servers=[],
+        )
+    )
+    assert len(merged.sse_servers) == 2
+
+
+def test_mcp_config_duplicate_urls_raise():
+    with pytest.raises(ValueError):
+        MCPConfig.from_toml_section({"sse_servers": [{"url": "https://dup"}, {"url": "https://dup"}]})
+
+
+def test_forge_mcp_config_default(monkeypatch: pytest.MonkeyPatch):
+    cfg = MCPConfig()
+    default_shttp, stdio = mcp_module.ForgeMCPConfig.create_default_mcp_server_config("localhost:8000", cfg)
+    assert default_shttp.url == "http://localhost:8000/mcp/mcp"
+    assert stdio == []
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
@@ -303,6 +376,7 @@ async def test_session_preserves_env_mcp_config(monkeypatch):
     mock_agent_cls = MagicMock()
     mock_agent_instance = MagicMock()
     mock_agent_cls.return_value = mock_agent_instance
+    session.agent_session.event_stream.add_event = MagicMock()
     with patch.object(session.agent_session, "start", AsyncMock()), patch.object(
         Agent, "get_cls", return_value=mock_agent_cls
     ):

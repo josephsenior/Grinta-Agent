@@ -11,7 +11,10 @@ import { isCustomModel } from "#/utils/is-custom-model";
 import { LlmSettingsInputsSkeleton } from "#/components/features/settings/llm-settings/llm-settings-inputs-skeleton";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { SettingsSwitch } from "#/components/features/settings/settings-switch";
-import { displayErrorToast, displaySuccessToast } from "#/utils/custom-toast-handlers";
+import {
+  displayErrorToast,
+  displaySuccessToast,
+} from "#/utils/custom-toast-handlers";
 import { retrieveAxiosErrorMessage } from "#/utils/retrieve-axios-error-message";
 import { DEFAULT_SETTINGS } from "#/services/settings";
 import { SettingsErrorBoundary } from "#/components/features/settings/settings-error-boundary";
@@ -96,7 +99,9 @@ const mergeAdvancedSettings = (
     CONDENSER_MAX_SIZE: condenserMaxSize ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE,
     CONFIRMATION_MODE: confirmationModeEnabled,
     SECURITY_ANALYZER:
-      securityAnalyzer === "none" ? null : securityAnalyzer || base.SECURITY_ANALYZER,
+      securityAnalyzer === "none"
+        ? null
+        : securityAnalyzer || base.SECURITY_ANALYZER,
     AGENT: agentValue || DEFAULT_SETTINGS.AGENT,
   };
 };
@@ -119,23 +124,29 @@ function LlmSettingsScreen() {
   const [dirtyInputs, setDirtyInputs] = React.useState<DirtyInputs>(
     createDefaultDirtyInputs,
   );
-  const [currentSelectedModel, setCurrentSelectedModel] = React.useState<string | null>(null);
+  const [currentSelectedModel, setCurrentSelectedModel] = React.useState<
+    string | null
+  >(null);
   const [confirmationModeEnabled, setConfirmationModeEnabled] = React.useState(
     settings?.CONFIRMATION_MODE ?? DEFAULT_SETTINGS.CONFIRMATION_MODE,
   );
-  const [selectedSecurityAnalyzer, setSelectedSecurityAnalyzer] = React.useState(
-    normalizeSecurityAnalyzerSelection(settings?.SECURITY_ANALYZER),
-  );
+  const [selectedSecurityAnalyzer, setSelectedSecurityAnalyzer] =
+    React.useState(
+      normalizeSecurityAnalyzerSelection(settings?.SECURITY_ANALYZER),
+    );
   const [agentValue, setAgentValue] = React.useState(
     settings?.AGENT ?? DEFAULT_SETTINGS.AGENT ?? "CodeActAgent",
   );
   const [enableDefaultCondenser, setEnableDefaultCondenser] = React.useState(
-    settings?.ENABLE_DEFAULT_CONDENSER ?? DEFAULT_SETTINGS.ENABLE_DEFAULT_CONDENSER,
+    settings?.ENABLE_DEFAULT_CONDENSER ??
+      DEFAULT_SETTINGS.ENABLE_DEFAULT_CONDENSER,
   );
   const [condenserMaxSize, setCondenserMaxSize] = React.useState<number | null>(
     settings?.CONDENSER_MAX_SIZE ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE,
   );
-  const [advancedOverrides, setAdvancedOverrides] = React.useState<Partial<Settings>>({});
+  const [advancedOverrides, setAdvancedOverrides] = React.useState<
+    Partial<Settings>
+  >({});
 
   React.useEffect(() => {
     initializeStateFromSettings({
@@ -259,7 +270,10 @@ function LlmSettingsScreen() {
 
   const handleEnableDefaultCondenserChange = (isToggled: boolean) => {
     setEnableDefaultCondenser(isToggled);
-    markDirty("enableDefaultCondenser", isToggled !== (settings?.ENABLE_DEFAULT_CONDENSER ?? true));
+    markDirty(
+      "enableDefaultCondenser",
+      isToggled !== (settings?.ENABLE_DEFAULT_CONDENSER ?? true),
+    );
   };
 
   const handleCondenserMaxSizeChange = (value: string) => {
@@ -316,7 +330,10 @@ function LlmSettingsScreen() {
   return (
     <SettingsErrorBoundary fallbackMessage="Failed to load LLM settings. Please try refreshing the page.">
       <div data-testid="llm-settings-screen" className="h-full">
-        <form onSubmit={handleSubmit} className="flex h-full flex-col justify-between">
+        <form
+          onSubmit={handleSubmit}
+          className="flex h-full flex-col justify-between"
+        >
           <div className="flex flex-col gap-6 p-9">
             <SettingsSwitch
               testId="advanced-settings-switch"
@@ -358,7 +375,9 @@ function LlmSettingsScreen() {
                 onAgentChange={handleAgentChange}
                 onAdvancedConfigChange={handleAdvancedConfigChange}
                 onCondenserMaxSizeChange={handleCondenserMaxSizeChange}
-                onEnableDefaultCondenserToggle={handleEnableDefaultCondenserChange}
+                onEnableDefaultCondenserToggle={
+                  handleEnableDefaultCondenserChange
+                }
                 t={t}
               />
             )}
@@ -450,12 +469,19 @@ function applyPrimarySettings({
 }) {
   setCurrentSelectedModel(settings.LLM_MODEL ?? null);
   setAgentValue(settings.AGENT ?? DEFAULT_SETTINGS.AGENT ?? "CodeActAgent");
-  setConfirmationModeEnabled(settings.CONFIRMATION_MODE ?? DEFAULT_SETTINGS.CONFIRMATION_MODE);
-  setSelectedSecurityAnalyzer(normalizeSecurityAnalyzerSelection(settings.SECURITY_ANALYZER));
-  setEnableDefaultCondenser(
-    settings.ENABLE_DEFAULT_CONDENSER ?? DEFAULT_SETTINGS.ENABLE_DEFAULT_CONDENSER,
+  setConfirmationModeEnabled(
+    settings.CONFIRMATION_MODE ?? DEFAULT_SETTINGS.CONFIRMATION_MODE,
   );
-  setCondenserMaxSize(settings.CONDENSER_MAX_SIZE ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE);
+  setSelectedSecurityAnalyzer(
+    normalizeSecurityAnalyzerSelection(settings.SECURITY_ANALYZER),
+  );
+  setEnableDefaultCondenser(
+    settings.ENABLE_DEFAULT_CONDENSER ??
+      DEFAULT_SETTINGS.ENABLE_DEFAULT_CONDENSER,
+  );
+  setCondenserMaxSize(
+    settings.CONDENSER_MAX_SIZE ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE,
+  );
 }
 
 function applyAdvancedOverrides({
@@ -574,7 +600,10 @@ function onConfirmationModeChange({
   markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
 }) {
   setConfirmationModeEnabled(isToggled);
-  markDirty("confirmationMode", isToggled !== (settings?.CONFIRMATION_MODE ?? false));
+  markDirty(
+    "confirmationMode",
+    isToggled !== (settings?.CONFIRMATION_MODE ?? false),
+  );
 
   if (isToggled && !selectedSecurityAnalyzer) {
     setSelectedSecurityAnalyzer(DEFAULT_SETTINGS.SECURITY_ANALYZER ?? "llm");
@@ -594,9 +623,11 @@ function onCondenserMaxSizeChange({
   markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
 }) {
   const parsed = value ? Number.parseInt(value, 10) : null;
-  const bounded = parsed !== null && Number.isFinite(parsed) ? Math.max(20, parsed) : null;
+  const bounded =
+    parsed !== null && Number.isFinite(parsed) ? Math.max(20, parsed) : null;
   setCondenserMaxSize(bounded);
-  const previous = settings?.CONDENSER_MAX_SIZE ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE;
+  const previous =
+    settings?.CONDENSER_MAX_SIZE ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE;
   const next = bounded ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE;
   markDirty("condenserMaxSize", next !== previous);
 }
@@ -631,7 +662,7 @@ function onSecurityAnalyzerClear({
   setSelectedSecurityAnalyzer("");
   markDirty(
     "securityAnalyzer",
-    "" !== normalizeSecurityAnalyzerSelection(settings?.SECURITY_ANALYZER),
+    normalizeSecurityAnalyzerSelection(settings?.SECURITY_ANALYZER) !== "",
   );
 }
 

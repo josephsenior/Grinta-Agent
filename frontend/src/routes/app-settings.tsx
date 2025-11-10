@@ -5,6 +5,7 @@ import { useSaveSettings } from "#/hooks/mutation/use-save-settings";
 import { useSettings } from "#/hooks/query/use-settings";
 import { AvailableLanguages } from "#/i18n";
 import { DEFAULT_SETTINGS } from "#/services/settings";
+import type { Settings } from "#/types/settings";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { SettingsSwitch } from "#/components/features/settings/settings-switch";
 import { SettingsInput } from "#/components/features/settings/settings-input";
@@ -60,22 +61,20 @@ interface AppSettingsController {
   formIsClean: boolean;
   isPending: boolean;
   shouldBeLoading: boolean;
+  viewSettings: Settings;
 }
 
 function useAppSettingsController(t: TFunction): AppSettingsController {
   const { mutate: saveSettings, isPending } = useSaveSettings();
   const { data: settings, isLoading } = useSettings();
   const { data: config } = useConfig();
-  const [dirtyFlags, setDirtyFlags] = React.useState<DirtyFlags>(
-    INITIAL_DIRTY_FLAGS,
-  );
+  const normalizedSettings = settings ?? DEFAULT_SETTINGS;
+  const [dirtyFlags, setDirtyFlags] =
+    React.useState<DirtyFlags>(INITIAL_DIRTY_FLAGS);
 
-  const updateFlag = React.useCallback(
-    (key: DirtyFlagKey, value: boolean) => {
-      setDirtyFlags((prev) => ({ ...prev, [key]: value }));
-    },
-    [],
-  );
+  const updateFlag = React.useCallback((key: DirtyFlagKey, value: boolean) => {
+    setDirtyFlags((prev) => ({ ...prev, [key]: value }));
+  }, []);
 
   const resetFlags = React.useCallback(() => {
     setDirtyFlags(INITIAL_DIRTY_FLAGS);
@@ -92,19 +91,14 @@ function useAppSettingsController(t: TFunction): AppSettingsController {
       const enableAnalytics =
         formData.get("enable-analytics-switch")?.toString() === "on";
       const enableSoundNotifications =
-        formData
-          .get("enable-sound-notifications-switch")
-          ?.toString() === "on";
+        formData.get("enable-sound-notifications-switch")?.toString() === "on";
 
       const enableProactiveConversations =
-        formData
-          .get("enable-proactive-conversations-switch")
-          ?.toString() === "on";
+        formData.get("enable-proactive-conversations-switch")?.toString() ===
+        "on";
 
       const enableSolvabilityAnalysis =
-        formData
-          .get("enable-solvability-analysis-switch")
-          ?.toString() === "on";
+        formData.get("enable-solvability-analysis-switch")?.toString() === "on";
 
       const maxBudgetPerTaskValue = formData
         .get("max-budget-per-task-input")
@@ -154,48 +148,49 @@ function useAppSettingsController(t: TFunction): AppSettingsController {
   const handlers: AppSettingsController["handlers"] = React.useMemo(
     () => ({
       onLanguageChange: (value: string) => {
-        if (!settings) {
-          return;
-        }
-        const selectedLanguage = AvailableLanguages.find(
-          ({ label: langValue }) => langValue === value,
-        )?.label;
-        const currentLanguage = AvailableLanguages.find(
-          ({ value: langValue }) => langValue === settings.LANGUAGE,
-        )?.label;
+        const selectedLanguage =
+          AvailableLanguages.find(({ label: langValue }) => langValue === value)
+            ?.label ?? value;
+        const currentLanguageValue = normalizedSettings.LANGUAGE;
+        const currentLanguage =
+          AvailableLanguages.find(
+            ({ value: langValue }) => langValue === currentLanguageValue,
+          )?.label ?? currentLanguageValue;
         updateFlag("language", selectedLanguage !== currentLanguage);
       },
       onAnalyticsToggle: (checked: boolean) => {
-        const currentAnalytics = !!settings?.USER_CONSENTS_TO_ANALYTICS;
+        const currentAnalytics =
+          !!normalizedSettings.USER_CONSENTS_TO_ANALYTICS;
         updateFlag("analytics", checked !== currentAnalytics);
       },
       onSoundToggle: (checked: boolean) => {
-        const current = !!settings?.ENABLE_SOUND_NOTIFICATIONS;
+        const current = !!normalizedSettings.ENABLE_SOUND_NOTIFICATIONS;
         updateFlag("sound", checked !== current);
       },
       onProactiveToggle: (checked: boolean) => {
-        const current = !!settings?.ENABLE_PROACTIVE_CONVERSATION_STARTERS;
+        const current =
+          !!normalizedSettings.ENABLE_PROACTIVE_CONVERSATION_STARTERS;
         updateFlag("proactive", checked !== current);
       },
       onSolvabilityToggle: (checked: boolean) => {
-        const current = !!settings?.ENABLE_SOLVABILITY_ANALYSIS;
+        const current = !!normalizedSettings.ENABLE_SOLVABILITY_ANALYSIS;
         updateFlag("solvability", checked !== current);
       },
       onBudgetChange: (value: string) => {
         const newValue = parseMaxBudgetPerTask(value);
-        const currentValue = settings?.MAX_BUDGET_PER_TASK;
+        const currentValue = normalizedSettings.MAX_BUDGET_PER_TASK;
         updateFlag("budget", newValue !== currentValue);
       },
       onGitUserNameChange: (value: string) => {
-        const currentValue = settings?.GIT_USER_NAME ?? "";
+        const currentValue = normalizedSettings.GIT_USER_NAME;
         updateFlag("gitUserName", value !== currentValue);
       },
       onGitUserEmailChange: (value: string) => {
-        const currentValue = settings?.GIT_USER_EMAIL ?? "";
+        const currentValue = normalizedSettings.GIT_USER_EMAIL;
         updateFlag("gitUserEmail", value !== currentValue);
       },
     }),
-    [settings, updateFlag],
+    [normalizedSettings, updateFlag],
   );
 
   const formIsClean = React.useMemo(
@@ -213,13 +208,14 @@ function useAppSettingsController(t: TFunction): AppSettingsController {
     formIsClean,
     isPending,
     shouldBeLoading,
+    viewSettings: normalizedSettings,
   };
 }
 
 function AppSettingsScreen() {
   const { t } = useTranslation();
   const controller = useAppSettingsController(t);
-  const { settings, config } = controller;
+  const { settings, config, viewSettings } = controller;
 
   return (
     <form
@@ -233,22 +229,26 @@ function AppSettingsScreen() {
           <div className="max-w-4xl mx-auto space-y-8">
             {/* Language Settings */}
             <div className="card-modern">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Language & Region</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">
+                Language & Region
+              </h2>
               <LanguageInput
                 name="language-input"
-                defaultKey={settings.LANGUAGE}
+                defaultKey={viewSettings.LANGUAGE}
                 onChange={controller.handlers.onLanguageChange}
               />
             </div>
 
             {/* Preferences */}
             <div className="card-modern">
-              <h2 className="text-lg font-semibold text-foreground mb-6">Preferences</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-6">
+                Preferences
+              </h2>
               <div className="space-y-4">
                 <SettingsSwitch
                   testId="enable-analytics-switch"
                   name="enable-analytics-switch"
-                  defaultIsToggled={!!settings.USER_CONSENTS_TO_ANALYTICS}
+                  defaultIsToggled={!!viewSettings.USER_CONSENTS_TO_ANALYTICS}
                   onToggle={controller.handlers.onAnalyticsToggle}
                 >
                   {t(I18nKey.ANALYTICS$SEND_ANONYMOUS_DATA)}
@@ -257,7 +257,7 @@ function AppSettingsScreen() {
                 <SettingsSwitch
                   testId="enable-sound-notifications-switch"
                   name="enable-sound-notifications-switch"
-                  defaultIsToggled={!!settings.ENABLE_SOUND_NOTIFICATIONS}
+                  defaultIsToggled={!!viewSettings.ENABLE_SOUND_NOTIFICATIONS}
                   onToggle={controller.handlers.onSoundToggle}
                 >
                   {t(I18nKey.SETTINGS$SOUND_NOTIFICATIONS)}
@@ -268,7 +268,7 @@ function AppSettingsScreen() {
                     testId="enable-proactive-conversations-switch"
                     name="enable-proactive-conversations-switch"
                     defaultIsToggled={
-                      !!settings.ENABLE_PROACTIVE_CONVERSATION_STARTERS
+                      !!viewSettings.ENABLE_PROACTIVE_CONVERSATION_STARTERS
                     }
                     onToggle={controller.handlers.onProactiveToggle}
                   >
@@ -280,7 +280,9 @@ function AppSettingsScreen() {
                   <SettingsSwitch
                     testId="enable-solvability-analysis-switch"
                     name="enable-solvability-analysis-switch"
-                    defaultIsToggled={!!settings.ENABLE_SOLVABILITY_ANALYSIS}
+                    defaultIsToggled={
+                      !!viewSettings.ENABLE_SOLVABILITY_ANALYSIS
+                    }
                     onToggle={controller.handlers.onSolvabilityToggle}
                   >
                     {t(I18nKey.SETTINGS$SOLVABILITY_ANALYSIS)}
@@ -291,13 +293,17 @@ function AppSettingsScreen() {
 
             {/* Budget Settings */}
             <div className="card-modern">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Budget & Usage</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">
+                Budget & Usage
+              </h2>
               <SettingsInput
                 testId="max-budget-per-task-input"
                 name="max-budget-per-task-input"
                 type="number"
                 label={t(I18nKey.SETTINGS$MAX_BUDGET_PER_CONVERSATION)}
-                defaultValue={settings.MAX_BUDGET_PER_TASK?.toString() || ""}
+                defaultValue={
+                  viewSettings.MAX_BUDGET_PER_TASK?.toString() || ""
+                }
                 onChange={controller.handlers.onBudgetChange}
                 placeholder={t(I18nKey.SETTINGS$MAXIMUM_BUDGET_USD)}
                 min={1}
@@ -320,7 +326,7 @@ function AppSettingsScreen() {
                   name="git-user-name-input"
                   type="text"
                   label={t(I18nKey.SETTINGS$GIT_USERNAME)}
-                  defaultValue={settings.GIT_USER_NAME || ""}
+                  defaultValue={viewSettings.GIT_USER_NAME || ""}
                   onChange={controller.handlers.onGitUserNameChange}
                   placeholder="Username for git commits"
                   className="w-full max-w-md"
@@ -330,7 +336,7 @@ function AppSettingsScreen() {
                   name="git-user-email-input"
                   type="email"
                   label={t(I18nKey.SETTINGS$GIT_EMAIL)}
-                  defaultValue={settings.GIT_USER_EMAIL || ""}
+                  defaultValue={viewSettings.GIT_USER_EMAIL || ""}
                   onChange={controller.handlers.onGitUserEmailChange}
                   placeholder="Email for git commits"
                   className="w-full max-w-md"

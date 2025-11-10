@@ -603,7 +603,8 @@ class AgentController:
             self.state.last_error = RuntimeStatus.ERROR_LLM_CONTENT_POLICY_VIOLATION.value
             return RuntimeStatus.ERROR_LLM_CONTENT_POLICY_VIOLATION
         if isinstance(e, RateLimitError):
-            return RuntimeStatus.ERROR_LLM_RATE_LIMITED
+            self.state.last_error = RuntimeStatus.LLM_RETRY.value
+            return RuntimeStatus.LLM_RETRY
         return RuntimeStatus.ERROR
 
     async def _handle_rate_limit_error(self, e: Exception) -> None:
@@ -979,7 +980,7 @@ class AgentController:
                 obs = ErrorObservation(content=error_content, error_id=error_id)
                 if meta := getattr(self._pending_action, "tool_call_metadata", None):
                     obs.tool_call_metadata = meta
-                obs._cause = getattr(self._pending_action, "id", None)
+                obs.cause = getattr(self._pending_action, "id", None)
                 self.event_stream.add_event(obs, EventSource.AGENT)
         self._pending_action = None
         self.agent.reset()
@@ -1299,7 +1300,7 @@ class AgentController:
             raise LLMNoActionError(msg)
         if not isinstance(action, Action):
             action = NullAction()
-        action._source = EventSource.AGENT
+        action.source = EventSource.AGENT
         return action
 
     def _is_context_window_error(self, error_str: str, e: Exception) -> bool:
@@ -1489,7 +1490,7 @@ class AgentController:
                     content=f"ACTION BLOCKED FOR SAFETY:\n{validation.blocked_reason}",
                     error_id="SAFETY_VALIDATOR_BLOCKED",
                 )
-                error_obs._cause = getattr(action, "id", None)
+                error_obs.cause = getattr(action, "id", None)
                 self.event_stream.add_event(error_obs, EventSource.ENVIRONMENT)
 
                 # Clear pending action and return (don't execute)
@@ -1512,7 +1513,7 @@ class AgentController:
             await self.set_agent_state_to(AgentState.AWAITING_USER_CONFIRMATION)
 
         self._prepare_metrics_for_frontend(action)
-        self.event_stream.add_event(action, action._source)
+        self.event_stream.add_event(action, action.source or EventSource.AGENT)
 
         # Record successful action in circuit breaker
         if self.circuit_breaker:
@@ -1558,7 +1559,7 @@ class AgentController:
                 content=f"Pending action timed out after {elapsed_time:.1f}s: {action_type}",
                 error_id="PENDING_ACTION_TIMEOUT",
             )
-            timeout_obs._cause = action_id if action_id != "unknown" else None
+            timeout_obs.cause = action_id if action_id != "unknown" else None
             self.event_stream.add_event(timeout_obs, EventSource.ENVIRONMENT)
 
             # Clear pending action

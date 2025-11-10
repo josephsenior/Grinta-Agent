@@ -45,9 +45,9 @@ function MemorySettingsScreen() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [memoryToDelete, setMemoryToDelete] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<MemoryCategory | "all">(
-    "all",
-  );
+  const [selectedCategory, setSelectedCategory] = useState<
+    MemoryCategory | "all"
+  >("all");
 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
@@ -204,11 +204,15 @@ function MemorySettingsScreen() {
     setSearchQuery(value);
   }, []);
 
-  const handleCategoryChange = useCallback((category: MemoryCategory | "all") => {
-    setSelectedCategory(category);
-  }, []);
+  const handleCategoryChange = useCallback(
+    (category: MemoryCategory | "all") => {
+      setSelectedCategory(category);
+    },
+    [],
+  );
 
-  const hasFilters = searchQuery.trim().length > 0 || selectedCategory !== "all";
+  const hasFilters =
+    searchQuery.trim().length > 0 || selectedCategory !== "all";
 
   if (isLoading) {
     return (
@@ -285,10 +289,11 @@ function filterMemories(
       : memories.filter((memory) => memory.category === category);
 
   const byQuery = query
-    ? byCategory.filter((memory) =>
-        memory.title.toLowerCase().includes(query) ||
-        memory.content.toLowerCase().includes(query) ||
-        memory.tags.some((tag) => tag.toLowerCase().includes(query)),
+    ? byCategory.filter(
+        (memory) =>
+          memory.title.toLowerCase().includes(query) ||
+          memory.content.toLowerCase().includes(query) ||
+          memory.tags.some((tag) => tag.toLowerCase().includes(query)),
       )
     : byCategory;
 
@@ -307,7 +312,9 @@ function MemoryHeader({ onCreate, onExport, onImport }: MemoryHeaderProps) {
       <div className="flex items-center gap-3">
         <Brain className="w-8 h-8 text-brand-500" />
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Memory Management</h2>
+          <h2 className="text-2xl font-bold text-foreground">
+            Memory Management
+          </h2>
           <p className="text-sm text-foreground-secondary mt-1">
             Store and manage persistent memories for better AI assistance
           </p>
@@ -531,4 +538,3 @@ function MemoryEmptyState({ hasFilters, onCreate }: MemoryEmptyStateProps) {
     </div>
   );
 }
-

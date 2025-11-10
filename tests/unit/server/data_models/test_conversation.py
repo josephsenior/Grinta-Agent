@@ -62,7 +62,8 @@ def test_client():
     """Create a test client for the settings API."""
     app = FastAPI()
     app.include_router(conversation_app)
-    return TestClient(app)
+    with TestClient(app) as client:
+        yield client
 
 
 def create_new_test_conversation(test_request: InitSessionRequest, auth_type: AuthType | None = None):

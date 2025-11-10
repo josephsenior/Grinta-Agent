@@ -45,7 +45,7 @@ export interface FileDiffViewerProps {
 
 export function FileDiffViewer({ path, type }: FileDiffViewerProps) {
   const controller = useFileDiffController({ path, type });
-  const status = controller.status;
+  const { status } = controller;
 
   return (
     <div
@@ -112,7 +112,10 @@ function useFileDiffController({ path, type }: FileDiffViewerProps) {
   const [lineCount, setLineCount] = React.useState(0);
   const isDeleted = type === "D";
 
-  const filePath = React.useMemo(() => deriveFilePath(path, type), [path, type]);
+  const filePath = React.useMemo(
+    () => deriveFilePath(path, type),
+    [path, type],
+  );
 
   const diffQuery = useGitDiff({
     filePath,
@@ -122,7 +125,9 @@ function useFileDiffController({ path, type }: FileDiffViewerProps) {
 
   React.useEffect(() => {
     if (diffQuery.isSuccess && diffQuery.data) {
-      const content = isDeleted ? diffQuery.data.original : diffQuery.data.modified;
+      const content = isDeleted
+        ? diffQuery.data.original
+        : diffQuery.data.modified;
       if (content) {
         setLineCount(content.split("\n").length);
       }
@@ -155,7 +160,9 @@ function useFileDiffController({ path, type }: FileDiffViewerProps) {
     [],
   );
 
-  const content = isDeleted ? diffQuery.data?.original : diffQuery.data?.modified;
+  const content = isDeleted
+    ? diffQuery.data?.original
+    : diffQuery.data?.modified;
   const status = (type === "U" ? STATUS_MAP.A : STATUS_MAP[type]) || "?";
 
   return {
@@ -183,7 +190,7 @@ function deriveFilePath(path: string, type: GitChangeStatus) {
 
 function buildBoltTheme() {
   return {
-    base: "vs-dark",
+    base: "vs-dark" as const,
     inherit: true,
     rules: [
       { token: "comment", foreground: "6A9955" },
@@ -192,7 +199,7 @@ function buildBoltTheme() {
       { token: "number", foreground: "B5CEA8" },
       { token: "type", foreground: "4EC9B0" },
       { token: "function", foreground: "DCDCAA" },
-    ],
+    ] as any,
     colors: {
       "editor.background": "#0A0A0A",
       "editor.foreground": "#D4D4D4",
@@ -203,7 +210,7 @@ function buildBoltTheme() {
       "editorCursor.foreground": "#AEAFAD",
       "editorWhitespace.foreground": "#3B3B3B",
     },
-  } as const;
+  };
 }
 
 function FileDiffHeader({
@@ -215,7 +222,10 @@ function FileDiffHeader({
 }) {
   return (
     <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-background-secondary">
-      <FileDiffBreadcrumbs status={status} breadcrumbs={controller.breadcrumbs} />
+      <FileDiffBreadcrumbs
+        status={status}
+        breadcrumbs={controller.breadcrumbs}
+      />
       <FileDiffActions
         lineCount={controller.lineCount}
         copied={controller.copied}

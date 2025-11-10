@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   Zap,
   Shield,
@@ -11,8 +11,13 @@ import {
   Star,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { I18nKey } from "#/i18n/declaration";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "#/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "#/components/ui/card";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Progress } from "#/components/ui/progress";
@@ -24,7 +29,10 @@ export default function FeaturesGrid(): React.ReactElement {
   const [mousePosition, setMousePosition] = useState({ x: 50, y: 50 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { ref: sectionRef, isVisible } = useScrollReveal({ threshold: 0.1, triggerOnce: true });
+  const { ref: sectionRef, isVisible } = useScrollReveal({
+    threshold: 0.1,
+    triggerOnce: true,
+  });
 
   const getColorClasses = (color: string) => {
     switch (color) {
@@ -34,7 +42,8 @@ export default function FeaturesGrid(): React.ReactElement {
           ring: "ring-brand-500/20",
           text: "text-violet-500",
           shadow: "shadow-brand-500/20",
-          button: "text-violet-500 hover:bg-violet-500/10 group-hover:bg-brand-500/15"
+          button:
+            "text-violet-500 hover:bg-violet-500/10 group-hover:bg-brand-500/15",
         };
       case "success":
         return {
@@ -42,7 +51,8 @@ export default function FeaturesGrid(): React.ReactElement {
           ring: "ring-success-500/20",
           text: "text-success-500",
           shadow: "shadow-success-500/20",
-          button: "text-success-500 hover:bg-success-500/10 group-hover:bg-success-500/15"
+          button:
+            "text-success-500 hover:bg-success-500/10 group-hover:bg-success-500/15",
         };
       case "accent":
         return {
@@ -50,7 +60,8 @@ export default function FeaturesGrid(): React.ReactElement {
           ring: "ring-accent-500/20",
           text: "text-accent-500",
           shadow: "shadow-accent-500/20",
-          button: "text-accent-500 hover:bg-accent-500/10 group-hover:bg-accent-500/15"
+          button:
+            "text-accent-500 hover:bg-accent-500/10 group-hover:bg-accent-500/15",
         };
       case "warning":
         return {
@@ -58,7 +69,8 @@ export default function FeaturesGrid(): React.ReactElement {
           ring: "ring-warning-500/20",
           text: "text-warning-500",
           shadow: "shadow-warning-500/20",
-          button: "text-warning-500 hover:bg-warning-500/10 group-hover:bg-warning-500/15"
+          button:
+            "text-warning-500 hover:bg-warning-500/10 group-hover:bg-warning-500/15",
         };
       default:
         return {
@@ -66,7 +78,8 @@ export default function FeaturesGrid(): React.ReactElement {
           ring: "ring-brand-500/20",
           text: "text-violet-500",
           shadow: "shadow-brand-500/20",
-          button: "text-violet-500 hover:bg-violet-500/10 group-hover:bg-brand-500/15"
+          button:
+            "text-violet-500 hover:bg-violet-500/10 group-hover:bg-brand-500/15",
         };
     }
   };
@@ -161,11 +174,11 @@ export default function FeaturesGrid(): React.ReactElement {
   // Track mouse for spotlight effect
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
-    
+
     const rect = containerRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    
+
     setMousePosition({ x, y });
   };
 
@@ -173,7 +186,9 @@ export default function FeaturesGrid(): React.ReactElement {
     <section ref={sectionRef} className="py-20 px-6 relative">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className={`text-center mb-16 max-w-3xl mx-auto ${isVisible ? "stagger-item delay-0" : "opacity-0"}`}>
+        <div
+          className={`text-center mb-16 max-w-3xl mx-auto ${isVisible ? "stagger-item delay-0" : "opacity-0"}`}
+        >
           <div className="inline-flex items-center gap-3 mb-8">
             <Badge
               variant="secondary"
@@ -218,14 +233,16 @@ export default function FeaturesGrid(): React.ReactElement {
           ref={containerRef}
           onMouseMove={handleMouseMove}
           className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-fr"
-          style={{
-            "--mouse-x": `${mousePosition.x}%`,
-            "--mouse-y": `${mousePosition.y}%`,
-          } as React.CSSProperties}
+          style={
+            {
+              "--mouse-x": `${mousePosition.x}%`,
+              "--mouse-y": `${mousePosition.y}%`,
+            } as React.CSSProperties
+          }
         >
           {features.map((feature, index) => {
             const colors = getColorClasses(feature.color);
-            
+
             // Bento box layout classes (asymmetric)
             const sizeClasses = {
               large: "md:col-span-8 md:row-span-1",
@@ -247,7 +264,7 @@ export default function FeaturesGrid(): React.ReactElement {
                 onMouseLeave={() => setHoveredFeature(null)}
               >
                 {/* Spotlight follows mouse */}
-                <div 
+                <div
                   className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
                   style={{
                     background: `radial-gradient(600px circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(139, 92, 246, 0.1), transparent 40%)`,
@@ -256,17 +273,22 @@ export default function FeaturesGrid(): React.ReactElement {
 
                 <CardHeader className="space-y-4 relative z-10">
                   <div className="flex items-start justify-between">
-                    <div className={`w-14 h-14 rounded-xl ${colors.bg} flex items-center justify-center ring-1 ${colors.ring} group-hover:scale-110 transition-all duration-300 morphing-icon`}>
-                      <feature.icon className={`w-7 h-7 ${colors.text} floating-icon`} style={{ animationDelay: `${index * 0.2}s` }} />
+                    <div
+                      className={`w-14 h-14 rounded-xl ${colors.bg} flex items-center justify-center ring-1 ${colors.ring} group-hover:scale-110 transition-all duration-300 morphing-icon`}
+                    >
+                      <feature.icon
+                        className={`w-7 h-7 ${colors.text} floating-icon`}
+                        style={{ animationDelay: `${index * 0.2}s` }}
+                      />
                     </div>
-                    <Badge 
-                      variant="secondary" 
+                    <Badge
+                      variant="secondary"
                       className={`text-xs ${colors.bg} ${colors.text} border ${colors.ring} interactive-scale`}
                     >
                       {feature.badge}
                     </Badge>
                   </div>
-                  
+
                   <div>
                     <CardTitle className="text-xl mb-3 text-foreground font-bold group-hover:text-violet-500 transition-colors duration-300">
                       {feature.title}
@@ -279,17 +301,24 @@ export default function FeaturesGrid(): React.ReactElement {
 
                 <CardContent className="space-y-4 relative z-10">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-foreground-secondary font-medium">Performance</span>
-                    <span className={`font-bold ${colors.text}`}>{feature.stats}</span>
+                    <span className="text-foreground-secondary font-medium">
+                      Performance
+                    </span>
+                    <span className={`font-bold ${colors.text}`}>
+                      {feature.stats}
+                    </span>
                   </div>
-                  
+
                   <div className="relative">
-                    <Progress value={feature.progress} className="h-2.5 bg-background-tertiary" />
+                    <Progress
+                      value={feature.progress}
+                      className="h-2.5 bg-background-tertiary"
+                    />
                     {hoveredFeature === index && (
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer pointer-events-none" />
                     )}
                   </div>
-                  
+
                   <Button
                     variant="ghost"
                     size="sm"

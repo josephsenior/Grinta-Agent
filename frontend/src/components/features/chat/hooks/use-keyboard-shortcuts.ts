@@ -4,7 +4,9 @@ import { useEffect } from "react";
  * Placeholder hook for keyboard shortcuts functionality
  * TODO: Implement actual keyboard shortcuts
  */
-export function useKeyboardShortcuts(handlers: Record<string, () => void> = {}) {
+export function useKeyboardShortcuts(
+  handlers: Record<string, () => void> = {},
+) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Placeholder - implement actual shortcuts
@@ -26,4 +28,3 @@ export function useKeyboardShortcuts(handlers: Record<string, () => void> = {}) 
 
   return {};
 }
-

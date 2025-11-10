@@ -92,14 +92,14 @@ export interface SchemaInfo {
       unique: boolean;
     }>;
   }>;
-  
+
   // For MongoDB
   collections?: Array<{
     name: string;
     documentCount?: number;
     sampleDocument?: Record<string, unknown>;
   }>;
-  
+
   // For Redis
   keys?: Array<{
     key: string;
@@ -161,4 +161,3 @@ export interface TableInfo {
   }>;
   rowCount?: number;
 }
-
