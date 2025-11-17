@@ -84,7 +84,9 @@ class BaseMicroagent(BaseModel):
     }
 
     @classmethod
-    def _handle_third_party(cls, path: Path, file_content: str) -> RepoMicroagent | None:
+    def _handle_third_party(
+        cls, path: Path, file_content: str
+    ) -> RepoMicroagent | None:
         microagent_name = cls.PATH_TO_THIRD_PARTY_MICROAGENT_NAME.get(path.name.lower())
         if microagent_name is not None:
             return RepoMicroagent(
@@ -107,14 +109,16 @@ class BaseMicroagent(BaseModel):
     @classmethod
     def _derive_microagent_name(cls, path: Path, microagent_dir: Path) -> str | None:
         """Derive microagent name from path relative to microagent_dir."""
-        third_party_name = cls.PATH_TO_THIRD_PARTY_MICROAGENT_NAME.get(path.name.lower())
+        third_party_name = cls.PATH_TO_THIRD_PARTY_MICROAGENT_NAME.get(
+            path.name.lower()
+        )
         if third_party_name is not None:
             return third_party_name
 
         # Try relative path
         try:
-            rel = path.relative_to(microagent_dir).with_suffix("")
-            return str(rel).replace("\\", "/")
+            rel_path = path.relative_to(microagent_dir).with_suffix("")
+            return str(rel_path).replace("\\", "/")
         except Exception:
             pass
 
@@ -122,9 +126,9 @@ class BaseMicroagent(BaseModel):
         import os
 
         try:
-            rel = os.path.relpath(str(path), start=str(microagent_dir))
-            rel = os.path.splitext(rel)[0]
-            return rel.replace("\\", "/")
+            rel_str = os.path.relpath(str(path), start=str(microagent_dir))
+            rel_str = os.path.splitext(rel_str)[0]
+            return rel_str.replace("\\", "/")
         except Exception:
             return None
 
@@ -172,7 +176,9 @@ class BaseMicroagent(BaseModel):
         )
         if handle == INVALID_HANDLE_VALUE:
             error = ctypes.GetLastError()
-            raise PermissionError(f"Unable to open locked file {path}: error {error}")  # pragma: no cover
+            raise PermissionError(
+                f"Unable to open locked file {path}: error {error}"
+            )  # pragma: no cover
         try:
             import msvcrt
 
@@ -205,7 +211,13 @@ class BaseMicroagent(BaseModel):
 
         agent_name = derived_name if derived_name is not None else metadata.name
         agent_class = subclass_map[inferred_type]
-        return agent_class(name=agent_name, content=content, metadata=metadata, source=str(path), type=inferred_type)
+        return agent_class(
+            name=agent_name,
+            content=content,
+            metadata=metadata,
+            source=str(path),
+            type=inferred_type,
+        )
 
     @classmethod
     def load(
@@ -250,12 +262,16 @@ class BaseMicroagent(BaseModel):
         loaded = frontmatter.load(file_io)
         content = loaded.content
         metadata_dict = loaded.metadata or {}
-        if "version" in metadata_dict and (not isinstance(metadata_dict["version"], str)):
+        if "version" in metadata_dict and (
+            not isinstance(metadata_dict["version"], str)
+        ):
             metadata_dict["version"] = str(metadata_dict["version"])
         metadata = _finalize_loaded_microagent(metadata_dict, path)
         inferred_type = _infer_microagent_type(metadata)
 
-        return cls._create_microagent_instance(derived_name, content, metadata, path, inferred_type)
+        return cls._create_microagent_instance(
+            derived_name, content, metadata, path, inferred_type
+        )
 
 
 class KnowledgeMicroagent(BaseMicroagent):
@@ -281,7 +297,9 @@ class KnowledgeMicroagent(BaseMicroagent):
         It returns the first trigger that matches the message.
         """
         message = message.lower()
-        return next((trigger for trigger in self.triggers if trigger.lower() in message), None)
+        return next(
+            (trigger for trigger in self.triggers if trigger.lower() in message), None
+        )
 
     @property
     def triggers(self) -> list[str]:
@@ -458,8 +476,8 @@ def load_microagents_from_dir(
     if isinstance(microagent_dir, str):
         microagent_dir = Path(microagent_dir)
 
-    repo_agents = {}
-    knowledge_agents = {}
+    repo_agents: dict[str, RepoMicroagent] = {}
+    knowledge_agents: dict[str, KnowledgeMicroagent] = {}
     logger.debug("Loading agents from %s", microagent_dir)
 
     # Collect files to process
@@ -470,12 +488,15 @@ def load_microagents_from_dir(
     # Load agents from all files
     for file in chain(special_files, md_files):
         agent = _load_single_microagent(file, microagent_dir)
-        agent_type, agent = _categorize_agent(agent)
+        agent_type, categorized_agent = _categorize_agent(agent)
 
-        if agent_type == "repo":
-            repo_agents[agent.name] = agent
-        elif agent_type == "knowledge":
-            knowledge_agents[agent.name] = agent
+        if agent_type == "repo" and isinstance(categorized_agent, RepoMicroagent):
+            repo_agents[categorized_agent.name] = categorized_agent
+        elif (
+            agent_type == "knowledge"
+            and isinstance(categorized_agent, KnowledgeMicroagent)
+        ):
+            knowledge_agents[categorized_agent.name] = categorized_agent
 
     logger.debug(
         "Loaded %s microagents: %s",

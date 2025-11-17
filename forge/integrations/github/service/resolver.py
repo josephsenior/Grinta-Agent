@@ -18,7 +18,9 @@ from forge.integrations.service_types import Comment
 class GitHubResolverMixin(GitHubMixinBase):
     """Helper methods used for the GitHub Resolver."""
 
-    async def get_issue_or_pr_title_and_body(self, repository: str, issue_number: int) -> tuple[str, str]:
+    async def get_issue_or_pr_title_and_body(
+        self, repository: str, issue_number: int
+    ) -> tuple[str, str]:
         """Get the title and body of an issue.
 
         Args:
@@ -56,7 +58,12 @@ class GitHubResolverMixin(GitHubMixinBase):
         page = 1
         all_comments: list[dict] = []
         while len(all_comments) < max_comments:
-            params = {"per_page": 10, "sort": "created", "direction": "asc", "page": page}
+            params = {
+                "per_page": 10,
+                "sort": "created",
+                "direction": "asc",
+                "page": page,
+            }
             response, headers = await self._make_request(url, params=params)
             all_comments.extend(response or [])
             link_header = headers.get("Link", "")
@@ -68,39 +75,59 @@ class GitHubResolverMixin(GitHubMixinBase):
     async def _get_comment_node(self, comment_id: str) -> dict | None:
         """Get comment node from GraphQL query."""
         variables = {"commentId": comment_id}
-        data = await self.execute_graphql_query(get_thread_from_comment_graphql_query, variables)
+        data = await self.execute_graphql_query(
+            get_thread_from_comment_graphql_query, variables
+        )
         return data.get("data", {}).get("node")
 
     def _find_root_comment_id(self, comment_node: dict, comment_id: str) -> str:
         """Find the root comment ID by traversing up the reply chain."""
-        return reply_to["id"] if (reply_to := comment_node.get("replyTo")) else comment_id
+        return (
+            reply_to["id"] if (reply_to := comment_node.get("replyTo")) else comment_id
+        )
 
-    async def _find_thread_id(self, root_comment_id: str, owner: str, repo: str, pr_number: int) -> str | None:
+    async def _find_thread_id(
+        self, root_comment_id: str, owner: str, repo: str, pr_number: int
+    ) -> str | None:
         """Find the thread ID by searching through review threads."""
         thread_id = None
         after_cursor = None
         has_next_page = True
 
         while has_next_page and not thread_id:
-            threads_variables: dict[str, Any] = {"owner": owner, "repo": repo, "number": pr_number, "first": 50}
+            threads_variables: dict[str, Any] = {
+                "owner": owner,
+                "repo": repo,
+                "number": pr_number,
+                "first": 50,
+            }
             if after_cursor:
                 threads_variables["after"] = after_cursor
 
-            threads_data = await self.execute_graphql_query(get_review_threads_graphql_query, threads_variables)
+            threads_data = await self.execute_graphql_query(
+                get_review_threads_graphql_query, threads_variables
+            )
             review_threads_data = (
-                threads_data.get("data", {}).get("repository", {}).get("pullRequest", {}).get("reviewThreads", {})
+                threads_data.get("data", {})
+                .get("repository", {})
+                .get("pullRequest", {})
+                .get("reviewThreads", {})
             )
             review_threads = review_threads_data.get("nodes", [])
             page_info = review_threads_data.get("pageInfo", {})
 
-            thread_id = self._search_threads_for_root_comment(review_threads, root_comment_id)
+            thread_id = self._search_threads_for_root_comment(
+                review_threads, root_comment_id
+            )
 
             has_next_page = page_info.get("hasNextPage", False)
             after_cursor = page_info.get("endCursor")
 
         return thread_id
 
-    def _search_threads_for_root_comment(self, review_threads: list, root_comment_id: str) -> str | None:
+    def _search_threads_for_root_comment(
+        self, review_threads: list, root_comment_id: str
+    ) -> str | None:
         """Search through review threads to find the one containing the root comment."""
         for thread in review_threads:
             first_comments = thread.get("comments", {}).get("nodes", [])
@@ -131,9 +158,11 @@ class GitHubResolverMixin(GitHubMixinBase):
             all_thread_comments.extend(comments_nodes)
             has_next_page = page_info.get("hasNextPage", False)
             after_cursor = page_info.get("endCursor")
-        return self._process_raw_comments(all_thread_comments)
+        return all_thread_comments
 
-    async def get_review_thread_comments(self, comment_id: str, repository: str, pr_number: int) -> list[Comment]:
+    async def get_review_thread_comments(
+        self, comment_id: str, repository: str, pr_number: int
+    ) -> list[Comment]:
         """Get all comments in a review thread starting from a specific comment.
 
         Uses GraphQL to traverse the reply chain from the given comment up to the root
@@ -157,13 +186,18 @@ class GitHubResolverMixin(GitHubMixinBase):
 
         thread_id = await self._find_thread_id(root_comment_id, owner, repo, pr_number)
         if not thread_id:
-            logger.warning("Could not find review thread for comment %s, returning traversed comments", comment_id)
+            logger.warning(
+                "Could not find review thread for comment %s, returning traversed comments",
+                comment_id,
+            )
             return []
 
-        all_thread_comments = await self._get_all_thread_comments(thread_id)
-        return self._process_raw_comments(all_thread_comments)
+        raw_comments = await self._get_all_thread_comments(thread_id)
+        return self._process_raw_comments(raw_comments)
 
-    def _process_raw_comments(self, comments_data: list, max_comments: int = 10) -> list[Comment]:
+    def _process_raw_comments(
+        self, comments_data: list, max_comments: int = 10
+    ) -> list[Comment]:
         """Convert raw comment data to Comment objects."""
         comments: list[Comment] = []
         for comment in comments_data:
@@ -178,12 +212,16 @@ class GitHubResolverMixin(GitHubMixinBase):
                     body=self._truncate_comment(comment.get("body", "")),
                     author=author,
                     created_at=(
-                        datetime.fromisoformat(comment.get("createdAt", "").replace("Z", "+00:00"))
+                        datetime.fromisoformat(
+                            comment.get("createdAt", "").replace("Z", "+00:00")
+                        )
                         if comment.get("createdAt")
                         else datetime.fromtimestamp(0)
                     ),
                     updated_at=(
-                        datetime.fromisoformat(comment.get("updatedAt", "").replace("Z", "+00:00"))
+                        datetime.fromisoformat(
+                            comment.get("updatedAt", "").replace("Z", "+00:00")
+                        )
                         if comment.get("updatedAt")
                         else datetime.fromtimestamp(0)
                     ),

@@ -43,8 +43,8 @@ class InvariantAnalyzer(SecurityAnalyzer):
         self.trace = []
         self.input = []
         self.sid = sid if sid is not None else str(uuid.uuid4())
-        self.docker_client = None
-        self.container = None
+        self.docker_client: docker.DockerClient | None = None
+        self.container: docker.models.containers.Container | None = None
 
     def _setup_client_and_server(self, client: InvariantClient | None) -> None:
         """Set up the invariant client and API server."""
@@ -84,9 +84,17 @@ class InvariantAnalyzer(SecurityAnalyzer):
 
     def _setup_container(self) -> None:
         """Set up or create Docker container."""
-        if running_containers := self.docker_client.containers.list(filters={"name": self.container_name}):
+        docker_client = self.docker_client
+        if docker_client is None:
+            self.container = None
+            return
+        if running_containers := docker_client.containers.list(
+            filters={"name": self.container_name}
+        ):
             self.container = running_containers[0]
-        elif all_containers := self.docker_client.containers.list(all=True, filters={"name": self.container_name}):
+        elif all_containers := docker_client.containers.list(
+            all=True, filters={"name": self.container_name}
+        ):
             self.container = all_containers[0]
             all_containers[0].start()
         else:
@@ -98,6 +106,8 @@ class InvariantAnalyzer(SecurityAnalyzer):
         from forge.runtime.utils import find_available_tcp_port
 
         self.api_port = find_available_tcp_port()
+        if self.docker_client is None:
+            return
         self.container = self.docker_client.containers.run(
             self.image_name,
             name=self.container_name,
@@ -109,11 +119,19 @@ class InvariantAnalyzer(SecurityAnalyzer):
     def _wait_for_container_ready(self) -> None:
         """Wait for container to be ready."""
         elapsed = 0
-        while self.container is not None and getattr(self.container, "status", None) != "running":
+        while (
+            self.container is not None
+            and getattr(self.container, "status", None) != "running"
+        ):
             try:
+                if self.docker_client is None:
+                    self.container = None
+                    break
                 self.container = self.docker_client.containers.get(self.container_name)
             except Exception:
-                logger.debug("Failed to get invariant container status; falling back to ephemeral port")
+                logger.debug(
+                    "Failed to get invariant container status; falling back to ephemeral port"
+                )
                 self.container = None
                 break
             elapsed += 1
@@ -123,13 +141,20 @@ class InvariantAnalyzer(SecurityAnalyzer):
                 getattr(self.container, "status", None),
             )
             if elapsed > self.timeout:
+                logger.warning(
+                    "Invariant container did not start within timeout (%ss)", self.timeout
+                )
                 break
 
     def _get_api_port(self) -> None:
         """Get API port from container or fallback."""
         if self.container is not None:
             try:
-                self.api_port = int(self.container.attrs["NetworkSettings"]["Ports"]["8000/tcp"][0]["HostPort"])
+                self.api_port = int(
+                    self.container.attrs["NetworkSettings"]["Ports"]["8000/tcp"][0][
+                        "HostPort"
+                    ]
+                )
             except Exception:
                 from forge.runtime.utils import find_available_tcp_port
 
@@ -146,56 +171,64 @@ class InvariantAnalyzer(SecurityAnalyzer):
     def _initialize_monitor(self, policy: str | None) -> None:
         """Initialize the monitor with policy."""
         if policy is None:
-            policy, _ = self.client.Policy.get_template()
-        if policy is None:
-            policy = ""
+            template_policy, template_error = self.client.Policy.get_template()
+            if template_error:
+                logger.warning("Failed to fetch invariant policy template: %s", template_error)
+                policy = ""
+            else:
+                policy = template_policy or ""
         self.monitor = self.client.Monitor.from_string(policy)
 
     async def close(self) -> None:
         """Stop underlying container resources if they are still running."""
-        if getattr(self, "container", None) is not None:
+        container = getattr(self, "container", None)
+        if container is not None:
             try:
-                self.container.stop()
+                container.stop()
             except Exception:
-                logger.debug("Failed to stop invariant container during close", exc_info=False)
+                logger.debug(
+                    "Failed to stop invariant container during close", exc_info=False
+                )
 
     def get_risk(self, results: list[str]) -> ActionSecurityRisk:
         """Extract security risk level from analysis results.
-        
+
         Args:
             results: List of analysis result strings
-            
+
         Returns:
             Highest security risk level found, or LOW if none found
 
         """
-        mapping = {"high": ActionSecurityRisk.HIGH, "medium": ActionSecurityRisk.MEDIUM, "low": ActionSecurityRisk.LOW}
+        mapping = {
+            "high": ActionSecurityRisk.HIGH,
+            "medium": ActionSecurityRisk.MEDIUM,
+            "low": ActionSecurityRisk.LOW,
+        }
         regex = "(?<=risk=)\\w+"
         risks: list[ActionSecurityRisk] = []
         for result in results:
             m = re.search(regex, result)
             if m and m.group() in mapping:
                 risks.append(mapping[m.group()])
-        return max(risks, default=ActionSecurityRisk.LOW)
+        if risks:
+            return max(risks)
+        return ActionSecurityRisk.LOW
 
     async def security_risk(self, action: Action) -> ActionSecurityRisk:
         """Evaluate action against policy monitor and return highest risk level."""
         logger.debug("Calling security_risk on InvariantAnalyzer")
         new_elements = parse_element(self.trace, action)
-        input_data = [model_dump_with_options(e, exclude_none=True) for e in new_elements]
+        input_data = [
+            model_dump_with_options(e, exclude_none=True) for e in new_elements
+        ]
         self.trace.extend(new_elements)
-        check_result = self.monitor.check(self.input, input_data)
-        try:
-            if isinstance(check_result, tuple) and len(check_result) == 2:
-                result, err = check_result
-            else:
-                logger.debug("Unexpected monitor.check return type; normalizing", exc_info=False)
-                result, err = ([], None)
-        except Exception:
-            logger.debug("Exception while processing monitor.check result", exc_info=False)
-            return ActionSecurityRisk.UNKNOWN
+        result, err = self.monitor.check(self.input, input_data)
         self.input.extend(input_data)
         if err:
             logger.warning("Error checking policy: %s", err)
             return ActionSecurityRisk.UNKNOWN
+        if result is None:
+            logger.debug("Monitor returned no violations; treating as LOW risk")
+            result = []
         return self.get_risk(result)

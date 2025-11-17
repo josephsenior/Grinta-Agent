@@ -11,12 +11,14 @@ from forge.runtime.plugins.requirement import Plugin, PluginRequirement
 @dataclass
 class AgentSkillsRequirement(PluginRequirement):
     """Plugin requirement metadata describing agent skill capabilities."""
+
     name: str = "agent_skills"
     documentation: str = agentskills.DOCUMENTATION
 
 
 class AgentSkillsPlugin(Plugin):
     """Placeholder plugin entry for agent skill toolkits (no runtime behavior)."""
+
     name: str = "agent_skills"
 
     async def initialize(self, username: str) -> None:

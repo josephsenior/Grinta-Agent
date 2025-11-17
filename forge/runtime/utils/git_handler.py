@@ -94,11 +94,16 @@ class GitHandler:
             try:
                 return json.loads(result.content)
             except Exception:
-                logger.exception("GitHandler:get_git_changes:error", extra={"content": result.content})
+                logger.exception(
+                    "GitHandler:get_git_changes:error",
+                    extra={"content": result.content},
+                )
                 return None
         if self.git_changes_cmd != GIT_CHANGES_CMD:
             return None
-        logger.info("GitHandler:get_git_changes: adding git_changes script to runtime...")
+        logger.info(
+            "GitHandler:get_git_changes: adding git_changes script to runtime..."
+        )
         script_file = self._create_python_script_file(git_changes.__file__)
         self.git_changes_cmd = f"python3 {script_file}"
         return self.get_git_changes()

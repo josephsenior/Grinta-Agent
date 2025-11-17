@@ -14,7 +14,7 @@ Execution Path:
 from __future__ import annotations
 
 import json
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 from .cache import get_cached
 
@@ -37,7 +37,6 @@ def _fuzzy_score(needle: str, hay: str) -> float:
 
 
 def _wrap_simple_passthrough(tool_name: str):
-
     async def _inner(mcp_clients, args: dict[str, Any], call_tool_func) -> dict:
         return await call_tool_func(tool_name, args)
 
@@ -66,10 +65,12 @@ async def _get_components_list(call_tool_func) -> list[str]:
     return components
 
 
-def _score_and_filter_components(components: list[str], query: str, fuzzy: bool) -> list[tuple[float, str]]:
+def _score_and_filter_components(
+    components: Sequence[Any], query: str, fuzzy: bool
+) -> list[tuple[float, str]]:
     """Score components based on query and filter by threshold."""
     query_l = query.lower()
-    scored = []
+    scored: list[tuple[float, str]] = []
 
     for name in components:
         if not isinstance(name, str):
@@ -94,7 +95,14 @@ async def search_components(mcp_clients, args: dict[str, Any], call_tool_func) -
     """Return ranked list of component names matching query using local cache and fuzzy scoring."""
     query = args.get("query")
     if not query:
-        return {"content": [{"type": "text", "text": json.dumps({"error": "query parameter required"})}]}
+        return {
+            "content": [
+                {
+                    "type": "text",
+                    "text": json.dumps({"error": "query parameter required"}),
+                }
+            ]
+        }
 
     limit = int(args.get("limit", 10))
     fuzzy = bool(args.get("fuzzy", True))
@@ -108,7 +116,9 @@ async def search_components(mcp_clients, args: dict[str, Any], call_tool_func) -
     # Build response
     top = [n for _, n in scored[:limit]]
     payload = {"query": query, "results": top, "total_matches": len(scored)}
-    return {"content": [{"type": "text", "text": json.dumps(payload, ensure_ascii=False)}]}
+    return {
+        "content": [{"type": "text", "text": json.dumps(payload, ensure_ascii=False)}]
+    }
 
 
 WRAPPER_TOOL_REGISTRY: dict[str, Callable] = {
@@ -134,10 +144,12 @@ def wrapper_tool_params(available_server_tools: list[str]) -> list[dict]:
                         "properties": {
                             "query": {
                                 "type": "string",
-                                "description": "Search string (substring or fuzzy)."},
+                                "description": "Search string (substring or fuzzy).",
+                            },
                             "limit": {
                                 "type": "integer",
-                                "description": "Max results to return (default 10)."},
+                                "description": "Max results to return (default 10).",
+                            },
                             "fuzzy": {
                                 "type": "boolean",
                                 "description": "Enable fuzzy subsequence matching (default true).",
@@ -158,8 +170,14 @@ def wrapper_tool_params(available_server_tools: list[str]) -> list[dict]:
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "name": {"type": "string", "description": "Exact component name"},
-                            "refresh": {"type": "boolean", "description": "If true, bypass cache"},
+                            "name": {
+                                "type": "string",
+                                "description": "Exact component name",
+                            },
+                            "refresh": {
+                                "type": "boolean",
+                                "description": "If true, bypass cache",
+                            },
                         },
                         "required": ["name"],
                     },
@@ -176,8 +194,14 @@ def wrapper_tool_params(available_server_tools: list[str]) -> list[dict]:
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "name": {"type": "string", "description": "Exact block name"},
-                            "refresh": {"type": "boolean", "description": "If true, bypass cache"},
+                            "name": {
+                                "type": "string",
+                                "description": "Exact block name",
+                            },
+                            "refresh": {
+                                "type": "boolean",
+                                "description": "If true, bypass cache",
+                            },
                         },
                         "required": ["name"],
                     },

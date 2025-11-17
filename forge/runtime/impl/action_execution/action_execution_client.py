@@ -71,7 +71,9 @@ def _is_retryable_error(exception):
         bool: True if the exception is retryable, False otherwise.
 
     """
-    return isinstance(exception, (httpx.RemoteProtocolError, httpcore.RemoteProtocolError))
+    return isinstance(
+        exception, (httpx.RemoteProtocolError, httpcore.RemoteProtocolError)
+    )
 
 
 class ActionExecutionClient(Runtime):
@@ -84,7 +86,7 @@ class ActionExecutionClient(Runtime):
     def __init__(
         self,
         config: ForgeConfig,
-        event_stream: EventStream,
+        event_stream: EventStream | None,
         llm_registry: LLMRegistry,
         sid: str = "default",
         plugins: list[PluginRequirement] | None = None,
@@ -118,10 +120,10 @@ class ActionExecutionClient(Runtime):
     @property
     def action_execution_server_url(self) -> str:
         """Get action execution server URL (must be implemented by subclass).
-        
+
         Returns:
             Server URL
-            
+
         Raises:
             NotImplementedError: Must be implemented by subclass
 
@@ -133,10 +135,14 @@ class ActionExecutionClient(Runtime):
         retry=retry_if_exception(_is_retryable_error),
         stop=stop_after_attempt(5) | stop_if_should_exit(),
         wait=wait_exponential(multiplier=1, min=4, max=15),
-        before_sleep=tenacity_before_sleep_factory("runtime.action_execution.send_request"),
+        before_sleep=tenacity_before_sleep_factory(
+            "runtime.action_execution.send_request"
+        ),
         after=tenacity_after_factory("runtime.action_execution.send_request"),
     )
-    def _send_action_server_request(self, method: str, url: str, **kwargs) -> httpx.Response:
+    def _send_action_server_request(
+        self, method: str, url: str, **kwargs
+    ) -> httpx.Response:
         """Send a request to the action execution server.
 
         Args:
@@ -155,12 +161,14 @@ class ActionExecutionClient(Runtime):
 
     def check_if_alive(self) -> None:
         """Check if action execution server is alive and responding.
-        
+
         Raises:
             Exception: If server not responding or unhealthy
 
         """
-        response = self._send_action_server_request("GET", f"{self.action_execution_server_url}/alive", timeout=5)
+        response = self._send_action_server_request(
+            "GET", f"{self.action_execution_server_url}/alive", timeout=5
+        )
         assert response.is_closed
 
     def list_files(self, path: str = "", recursive: bool = False) -> list[str]:
@@ -196,7 +204,9 @@ class ActionExecutionClient(Runtime):
                 params=params,
                 timeout=30,
             ) as response:
-                with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as temp_file:
+                with tempfile.NamedTemporaryFile(
+                    suffix=".zip", delete=False
+                ) as temp_file:
                     for chunk in response.iter_bytes():
                         temp_file.write(chunk)
                     temp_file.flush()
@@ -205,7 +215,9 @@ class ActionExecutionClient(Runtime):
             msg = "Copy operation timed out"
             raise TimeoutError(msg) from e
 
-    def copy_to(self, host_src: str, sandbox_dest: str, recursive: bool = False) -> None:
+    def copy_to(
+        self, host_src: str, sandbox_dest: str, recursive: bool = False
+    ) -> None:
         """Copy file or directory from host to sandbox.
 
         Args:
@@ -230,7 +242,9 @@ class ActionExecutionClient(Runtime):
             else:
                 file_to_upload = open(host_src, "rb")
 
-            self._upload_file_to_sandbox(file_to_upload, sandbox_dest, recursive, host_src)
+            self._upload_file_to_sandbox(
+                file_to_upload, sandbox_dest, recursive, host_src
+            )
         finally:
             self._cleanup_copy_resources(file_to_upload, temp_zip_path)
 
@@ -265,7 +279,9 @@ class ActionExecutionClient(Runtime):
                 os.unlink(temp_zip_path)
             raise
 
-    def _upload_file_to_sandbox(self, file_handle, sandbox_dest: str, recursive: bool, host_src: str) -> None:
+    def _upload_file_to_sandbox(
+        self, file_handle, sandbox_dest: str, recursive: bool, host_src: str
+    ) -> None:
         """Upload file to sandbox via API.
 
         Args:
@@ -286,9 +302,14 @@ class ActionExecutionClient(Runtime):
             timeout=300,
         )
 
-        self.log("debug", f"Copy completed: host:{host_src} -> runtime:{sandbox_dest}. Response: {response.text}")
+        self.log(
+            "debug",
+            f"Copy completed: host:{host_src} -> runtime:{sandbox_dest}. Response: {response.text}",
+        )
 
-    def _cleanup_copy_resources(self, file_to_upload, temp_zip_path: str | None) -> None:
+    def _cleanup_copy_resources(
+        self, file_to_upload, temp_zip_path: str | None
+    ) -> None:
         """Cleanup resources after copy operation.
 
         Args:
@@ -303,11 +324,13 @@ class ActionExecutionClient(Runtime):
             try:
                 os.unlink(temp_zip_path)
             except Exception as e:
-                self.log("error", f"Failed to delete temporary zip file {temp_zip_path}: {e}")
+                self.log(
+                    "error", f"Failed to delete temporary zip file {temp_zip_path}: {e}"
+                )
 
     def get_vscode_token(self) -> str:
         """Get VS Code authentication token from server.
-        
+
         Returns:
             VS Code token or empty string if not available
 
@@ -345,12 +368,18 @@ class ActionExecutionClient(Runtime):
 
         if (
             hasattr(action, "confirmation_state")
-            and action.confirmation_state == ActionConfirmationStatus.AWAITING_CONFIRMATION
+            and action.confirmation_state
+            == ActionConfirmationStatus.AWAITING_CONFIRMATION
         ):
             return NullObservation("")
 
-        if getattr(action, "confirmation_state", None) == ActionConfirmationStatus.REJECTED:
-            return UserRejectObservation("Action has been rejected by the user! Waiting for further user input.")
+        if (
+            getattr(action, "confirmation_state", None)
+            == ActionConfirmationStatus.REJECTED
+        ):
+            return UserRejectObservation(
+                "Action has been rejected by the user! Waiting for further user input."
+            )
 
         return None
 
@@ -360,11 +389,11 @@ class ActionExecutionClient(Runtime):
         if action_type not in ACTION_TYPE_TO_CLASS:
             msg = f"Action {action_type} does not exist."
             raise ValueError(msg)
-        
+
         # Agent-level actions that should not be executed by runtime
         agent_level_actions = {
             "change_agent_state",
-            "message", 
+            "message",
             "recall",
             "think",
             "finish",
@@ -373,24 +402,23 @@ class ActionExecutionClient(Runtime):
             "condensation",
             "condensation_request",
             "task_tracking",
-            "system"
+            "system",
         }
-        
+
         if action_type in agent_level_actions:
             # These actions are handled by the agent system, not the runtime
             return
-            
+
         if not hasattr(self, action_type):
             msg = f"Action {action_type} is not supported in the current runtime."
             raise ValueError(msg)
 
     def _execute_action_on_server(self, action: Action) -> Observation:
         """Execute action on the action execution server."""
-        execution_action_body: dict[str, Any] = {"action": event_to_dict(action)}
-        timeout = action.timeout if action.timeout is not None else self.config.sandbox.timeout
+        execution_action_body: dict[str, Any] = {"event": event_to_dict(action)}
+        timeout = action.timeout
         if timeout is None:
-            msg = "Expected action timeout to be set before execution."
-            raise RuntimeError(msg)
+            timeout = self.config.sandbox.timeout
 
         response = self._send_action_server_request(
             "POST",
@@ -408,15 +436,18 @@ class ActionExecutionClient(Runtime):
 
     def send_action_for_execution(self, action: Action) -> Observation:
         """Send action to execution server and return observation.
-        
+
         Args:
             action: Action to execute
-            
+
         Returns:
             Observation with execution results
 
         """
-        if isinstance(action, FileEditAction) and action.impl_source == FileEditSource.LLM_BASED_EDIT:
+        if (
+            isinstance(action, FileEditAction)
+            and action.impl_source == FileEditSource.LLM_BASED_EDIT
+        ):
             return self.llm_based_edit(action)
 
         self._validate_action_timeout(action)
@@ -473,7 +504,9 @@ class ActionExecutionClient(Runtime):
         """Execute interactive browser command via action execution server."""
         return self.send_action_for_execution(action)
 
-    def get_mcp_config(self, extra_stdio_servers: list[MCPStdioServerConfig] | None = None) -> MCPConfig:
+    def get_mcp_config(
+        self, extra_stdio_servers: list[MCPStdioServerConfig] | None = None
+    ) -> MCPConfig:
         """Get MCP configuration with optional extra stdio servers.
 
         Args:
@@ -485,12 +518,15 @@ class ActionExecutionClient(Runtime):
         """
         import sys
 
-        if sys.platform == "win32":
+        platform_name = sys.platform
+        if platform_name == "win32":
             self.log("debug", "MCP is disabled on Windows, returning empty config")
             return MCPConfig(sse_servers=[], stdio_servers=[])
 
         updated_mcp_config = self.config.mcp.model_copy()
-        current_stdio_servers = self._merge_stdio_servers(updated_mcp_config.stdio_servers, extra_stdio_servers)
+        current_stdio_servers = self._merge_stdio_servers(
+            updated_mcp_config.stdio_servers, extra_stdio_servers
+        )
         new_servers = self._identify_new_servers(current_stdio_servers)
 
         if new_servers:
@@ -508,7 +544,9 @@ class ActionExecutionClient(Runtime):
 
         return updated_mcp_config
 
-    def _merge_stdio_servers(self, base_servers: list, extra_servers: list | None) -> list[MCPStdioServerConfig]:
+    def _merge_stdio_servers(
+        self, base_servers: list, extra_servers: list | None
+    ) -> list[MCPStdioServerConfig]:
         """Merge base and extra stdio servers.
 
         Args:
@@ -524,7 +562,9 @@ class ActionExecutionClient(Runtime):
             current.extend(extra_servers)
         return current
 
-    def _identify_new_servers(self, current_servers: list[MCPStdioServerConfig]) -> list[MCPStdioServerConfig]:
+    def _identify_new_servers(
+        self, current_servers: list[MCPStdioServerConfig]
+    ) -> list[MCPStdioServerConfig]:
         """Identify new servers not in last update.
 
         Args:
@@ -534,8 +574,13 @@ class ActionExecutionClient(Runtime):
             List of new servers
 
         """
-        new_servers = [s for s in current_servers if s not in self._last_updated_mcp_stdio_servers]
-        self.log("debug", f"adding {len(new_servers)} new stdio servers to MCP config: {new_servers}")
+        new_servers = [
+            s for s in current_servers if s not in self._last_updated_mcp_stdio_servers
+        ]
+        self.log(
+            "debug",
+            f"adding {len(new_servers)} new stdio servers to MCP config: {new_servers}",
+        )
         return new_servers
 
     def _update_mcp_servers(self, new_servers: list, current_servers: list) -> None:
@@ -551,11 +596,14 @@ class ActionExecutionClient(Runtime):
             if server not in combined_servers:
                 combined_servers.append(server)
 
-        stdio_tools = [model_dump_with_options(server, mode="json") for server in combined_servers]
+        stdio_tools = [
+            model_dump_with_options(server, mode="json") for server in combined_servers
+        ]
         stdio_tools.sort(key=lambda x: x.get("name", ""))
 
         self.log(
-            "debug", f"Updating MCP server with {len(new_servers)} new stdio servers (total: {len(combined_servers)})",
+            "debug",
+            f"Updating MCP server with {len(new_servers)} new stdio servers (total: {len(combined_servers)})",
         )
 
         response = self._send_action_server_request(
@@ -581,19 +629,25 @@ class ActionExecutionClient(Runtime):
             self.log("warning", f"Failed to update MCP server: {response.text}")
         else:
             if result.get("router_error_log"):
-                self.log("warning", f"Some MCP servers failed to be added: {result['router_error_log']}")
+                self.log(
+                    "warning",
+                    f"Some MCP servers failed to be added: {result['router_error_log']}",
+                )
 
             self._last_updated_mcp_stdio_servers = combined_servers.copy()
-            self.log("debug", f"Successfully updated MCP stdio servers, now tracking {len(combined_servers)} servers")
+            self.log(
+                "debug",
+                f"Successfully updated MCP stdio servers, now tracking {len(combined_servers)} servers",
+            )
 
         self.log("info", f"Updated MCP config: {self.config.mcp.sse_servers}")
 
     async def call_tool_mcp(self, action: MCPAction) -> Observation:
         """Call MCP tool via action execution server.
-        
+
         Args:
             action: MCP action to execute
-            
+
         Returns:
             Observation from MCP tool execution
 
@@ -602,14 +656,18 @@ class ActionExecutionClient(Runtime):
 
         from forge.events.observation import ErrorObservation
 
-        if sys.platform == "win32":
+        platform_name = sys.platform
+        if platform_name == "win32":
             self.log("info", "MCP functionality is disabled on Windows")
             return ErrorObservation("MCP functionality is not available on Windows")
         from forge.mcp_client.utils import call_tool_mcp as call_tool_mcp_handler
         from forge.mcp_client.utils import create_mcp_clients
 
         updated_mcp_config = self.get_mcp_config()
-        self.log("debug", f"Creating MCP clients with servers: {updated_mcp_config.sse_servers}")
+        self.log(
+            "debug",
+            f"Creating MCP clients with servers: {updated_mcp_config.sse_servers}",
+        )
         mcp_clients = await create_mcp_clients(
             updated_mcp_config.sse_servers,
             updated_mcp_config.shttp_servers,

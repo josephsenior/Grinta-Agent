@@ -7,7 +7,9 @@ import pandas as pd
 import toml
 from datasets import load_dataset
 import forge.agenthub
-from evaluation.benchmarks.swe_bench.resource.mapping import get_instance_resource_factor
+from evaluation.benchmarks.swe_bench.resource.mapping import (
+    get_instance_resource_factor,
+)
 from evaluation.utils.shared import (
     EvalException,
     EvalMetadata,
@@ -25,7 +27,12 @@ from evaluation.utils.shared import (
     update_llm_config_for_completions_logging,
 )
 from forge.controller.state.state import State
-from forge.core.config import AgentConfig, ForgeConfig, get_evaluation_parser, get_llm_config_arg
+from forge.core.config import (
+    AgentConfig,
+    ForgeConfig,
+    get_evaluation_parser,
+    get_llm_config_arg,
+)
 from forge.core.logger import forge_logger as logger
 from forge.core.main import create_runtime, run_controller
 from forge.events.action import CmdRunAction, MessageAction
@@ -38,7 +45,10 @@ from forge.utils.shutdown_listener import sleep_if_should_continue
 USE_HINT_TEXT = os.environ.get("USE_HINT_TEXT", "false").lower() == "true"
 RUN_WITH_BROWSING = os.environ.get("RUN_WITH_BROWSING", "false").lower() == "true"
 INDEX_BASE_DIR = os.environ.get("INDEX_BASE_DIR", "")
-AGENT_CLS_TO_FAKE_USER_RESPONSE_FN = {"CodeActAgent": codeact_user_response, "LocAgent": codeact_user_response}
+AGENT_CLS_TO_FAKE_USER_RESPONSE_FN = {
+    "CodeActAgent": codeact_user_response,
+    "LocAgent": codeact_user_response,
+}
 
 
 def _get_swebench_workspace_dir_name(instance: pd.Series) -> str:
@@ -57,15 +67,19 @@ def get_instruction(instance: pd.Series, metadata: EvalMetadata):
     """
     _get_swebench_workspace_dir_name(instance)
     instruction = f"""\nConsider the following issue description:\n\n<issue_description>\n{
-        instance.problem_statement}\n</issue_description>\n\nYour objective is to localize the specific files, classes or functions, and lines of code that need modification or contain key information to resolve the issue.\n\nFollow these steps to localize the issue:\n## Step 1: Categorize and Extract Key Problem Information\n - Classify the problem statement into the following categories:\n    Problem description, error trace, code to reproduce the bug, and additional context.\n - Identify modules in the "{
-        instance.instance_id.split('_')[0]}" package mentioned in each category.\n - Use extracted keywords and line numbers to search for relevant code references for additional context.\n\n## Step 2: Locate Referenced Modules\n- Accurately determine specific modules\n    - Explore the repo to familiarize yourself with its structure.\n    - Analyze the described execution flow to identify specific modules or components being referenced.\n- Pay special attention to distinguishing between modules with similar names using context and described execution flow.\n- Output Format for collected relevant modules:\n    - Use the format: 'file_path:QualifiedName'\n    - E.g., for a function `calculate_sum` in the `MathUtils` class located in `src/helpers/math_helpers.py`, represent it as: 'src/helpers/math_helpers.py:MathUtils.calculate_sum'.\n\n## Step 3: Analyze and Reproducing the Problem\n- Clarify the Purpose of the Issue\n    - If expanding capabilities: Identify where and how to incorporate new behavior, fields, or modules.\n    - If addressing unexpected behavior: Focus on localizing modules containing potential bugs.\n- Reconstruct the execution flow\n    - Identify main entry points triggering the issue.\n    - Trace function calls, class interactions, and sequences of events.\n    - Identify potential breakpoints causing the issue.\n    Important: Keep the reconstructed flow focused on the problem, avoiding irrelevant details.\n\n## Step 4: Locate Areas for Modification\n- Locate specific files, functions, or lines of code requiring changes or containing critical information for resolving the issue.\n- Consider upstream and downstream dependencies that may affect or be affected by the issue.\n- If applicable, identify where to introduce new fields, functions, or variables.\n- Think Thoroughly: List multiple potential solutions and consider edge cases that could impact the resolution.\n\n## Output Format for Final Results:\nYour final output should list the locations requiring modification, wrapped with triple backticks ```\nEach location should include the file path, class name (if applicable), function name, or line numbers, ordered by importance.\nYour answer would better include about 5 files.\n\n### Examples:\n```\nfull_path1/file1.py\nline: 10\nclass: MyClass1\nfunction: my_function1\n\nfull_path2/file2.py\nline: 76\nfunction: MyClass2.my_function2\n\nfull_path3/file3.py\nline: 24\nline: 156\nfunction: my_function3\n```\n\nReturn just the location(s)\n\nNote: Your thinking should be thorough and so it's fine if it's very long.\n"""
+        instance.problem_statement
+    }\n</issue_description>\n\nYour objective is to localize the specific files, classes or functions, and lines of code that need modification or contain key information to resolve the issue.\n\nFollow these steps to localize the issue:\n## Step 1: Categorize and Extract Key Problem Information\n - Classify the problem statement into the following categories:\n    Problem description, error trace, code to reproduce the bug, and additional context.\n - Identify modules in the "{
+        instance.instance_id.split("_")[0]
+    }" package mentioned in each category.\n - Use extracted keywords and line numbers to search for relevant code references for additional context.\n\n## Step 2: Locate Referenced Modules\n- Accurately determine specific modules\n    - Explore the repo to familiarize yourself with its structure.\n    - Analyze the described execution flow to identify specific modules or components being referenced.\n- Pay special attention to distinguishing between modules with similar names using context and described execution flow.\n- Output Format for collected relevant modules:\n    - Use the format: 'file_path:QualifiedName'\n    - E.g., for a function `calculate_sum` in the `MathUtils` class located in `src/helpers/math_helpers.py`, represent it as: 'src/helpers/math_helpers.py:MathUtils.calculate_sum'.\n\n## Step 3: Analyze and Reproducing the Problem\n- Clarify the Purpose of the Issue\n    - If expanding capabilities: Identify where and how to incorporate new behavior, fields, or modules.\n    - If addressing unexpected behavior: Focus on localizing modules containing potential bugs.\n- Reconstruct the execution flow\n    - Identify main entry points triggering the issue.\n    - Trace function calls, class interactions, and sequences of events.\n    - Identify potential breakpoints causing the issue.\n    Important: Keep the reconstructed flow focused on the problem, avoiding irrelevant details.\n\n## Step 4: Locate Areas for Modification\n- Locate specific files, functions, or lines of code requiring changes or containing critical information for resolving the issue.\n- Consider upstream and downstream dependencies that may affect or be affected by the issue.\n- If applicable, identify where to introduce new fields, functions, or variables.\n- Think Thoroughly: List multiple potential solutions and consider edge cases that could impact the resolution.\n\n## Output Format for Final Results:\nYour final output should list the locations requiring modification, wrapped with triple backticks ```\nEach location should include the file path, class name (if applicable), function name, or line numbers, ordered by importance.\nYour answer would better include about 5 files.\n\n### Examples:\n```\nfull_path1/file1.py\nline: 10\nclass: MyClass1\nfunction: my_function1\n\nfull_path2/file2.py\nline: 76\nfunction: MyClass2.my_function2\n\nfull_path3/file3.py\nline: 24\nline: 156\nfunction: my_function3\n```\n\nReturn just the location(s)\n\nNote: Your thinking should be thorough and so it's fine if it's very long.\n"""
     instruction += "IMPORTANT: You should ONLY interact with the environment provided to you AND NEVER ASK FOR HUMAN HELP.\nDon't include any lambda functions!\nYou should NOT modify any files!\n"
     if RUN_WITH_BROWSING:
         instruction += "\n<IMPORTANT!>\nYou SHOULD NEVER attempt to browse the web.\n</IMPORTANT!>\n"
     return instruction
 
 
-DEFAULT_DOCKER_IMAGE_PREFIX = os.environ.get("EVAL_DOCKER_IMAGE_PREFIX", "docker.io/xingyaoww/")
+DEFAULT_DOCKER_IMAGE_PREFIX = os.environ.get(
+    "EVAL_DOCKER_IMAGE_PREFIX", "docker.io/xingyaoww/"
+)
 logger.info("Default docker image prefix: %s", DEFAULT_DOCKER_IMAGE_PREFIX)
 
 
@@ -83,8 +97,12 @@ def get_instance_docker_image(instance_id: str, official_image: bool = False) ->
 
 
 def get_config(instance: pd.Series, metadata: EvalMetadata) -> ForgeConfig:
-    use_official_image = "verified" in metadata.dataset.lower() or "lite" in metadata.dataset.lower()
-    base_container_image = get_instance_docker_image(instance["instance_id"], use_official_image)
+    use_official_image = (
+        "verified" in metadata.dataset.lower() or "lite" in metadata.dataset.lower()
+    )
+    base_container_image = get_instance_docker_image(
+        instance["instance_id"], use_official_image
+    )
     logger.info(
         "Using instance container image: %s. Please make sure this image exists. Submit an issue on https://github.com/All-Hands-AI/Forge if you run into any issues.",
         base_container_image,
@@ -100,7 +118,9 @@ def get_config(instance: pd.Series, metadata: EvalMetadata) -> ForgeConfig:
     oh_aci_li_cmd = "/Forge/micromamba/bin/micromamba run -n Forge poetry run pip install Forge-aci[llama]"
     sandbox_config.runtime_extra_deps = oh_aci_li_cmd
     workspace_dir_name = _get_swebench_workspace_dir_name(instance)
-    sandbox_config.runtime_startup_env_vars = {"REPO_PATH": f"/workspace/{workspace_dir_name}/"}
+    sandbox_config.runtime_startup_env_vars = {
+        "REPO_PATH": f"/workspace/{workspace_dir_name}/"
+    }
     config = get_FORGE_config_for_eval(
         metadata=metadata,
         enable_browser=RUN_WITH_BROWSING,
@@ -136,13 +156,16 @@ def initialize_runtime(runtime: Runtime, instance: pd.Series):
     obs: CmdOutputObservation
     action = CmdRunAction(
         command=f"""echo 'export SWE_INSTANCE_ID={
-            instance['instance_id']}' >> ~/.bashrc && echo 'export PIP_CACHE_DIR=~/.cache/pip' >> ~/.bashrc && echo "alias git='git --no-pager'" >> ~/.bashrc"""
+            instance["instance_id"]
+        }' >> ~/.bashrc && echo 'export PIP_CACHE_DIR=~/.cache/pip' >> ~/.bashrc && echo "alias git='git --no-pager'" >> ~/.bashrc"""
     )
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert_and_raise(obs.exit_code == 0, f"Failed to export SWE_INSTANCE_ID: {str(obs)}")
+    assert_and_raise(
+        obs.exit_code == 0, f"Failed to export SWE_INSTANCE_ID: {str(obs)}"
+    )
     action = CmdRunAction(command="export USER=$(whoami); echo USER=${USER} ")
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
@@ -155,17 +178,23 @@ def initialize_runtime(runtime: Runtime, instance: pd.Series):
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert_and_raise(obs.exit_code == 0, f"Failed to create /swe_util/eval_data/instances: {str(obs)}")
+    assert_and_raise(
+        obs.exit_code == 0,
+        f"Failed to create /swe_util/eval_data/instances: {str(obs)}",
+    )
     swe_instance_json_name = "swe-bench-instance.json"
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_file_path = os.path.join(temp_dir, swe_instance_json_name)
-        with open(temp_file_path, "w", encoding='utf-8') as f:
+        with open(temp_file_path, "w", encoding="utf-8") as f:
             if not isinstance(instance, dict):
                 json.dump([instance.to_dict()], f)
             else:
                 json.dump([instance], f)
         runtime.copy_to(temp_file_path, "/swe_util/eval_data/instances/")
-        runtime.copy_to(str(os.path.join(script_dir, "scripts/setup/instance_swe_entry.sh")), "/swe_util/")
+        runtime.copy_to(
+            str(os.path.join(script_dir, "scripts/setup/instance_swe_entry.sh")),
+            "/swe_util/",
+        )
     action = CmdRunAction(command="cat ~/.bashrc")
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
@@ -185,20 +214,28 @@ def initialize_runtime(runtime: Runtime, instance: pd.Series):
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert_and_raise(obs.exit_code == 0, f"Failed to source /swe_util/instance_swe_entry.sh: {str(obs)}")
+    assert_and_raise(
+        obs.exit_code == 0,
+        f"Failed to source /swe_util/instance_swe_entry.sh: {str(obs)}",
+    )
     action = CmdRunAction(command=f"cd /workspace/{workspace_dir_name}")
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert_and_raise(obs.exit_code == 0, f"Failed to cd to /workspace/{workspace_dir_name}: {str(obs)}")
+    assert_and_raise(
+        obs.exit_code == 0,
+        f"Failed to cd to /workspace/{workspace_dir_name}: {str(obs)}",
+    )
     action = CmdRunAction(command="git reset --hard")
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert_and_raise(obs.exit_code == 0, f"Failed to git reset --hard: {str(obs)}")
-    action = CmdRunAction(command='for remote_name in $(git remote); do git remote remove "${remote_name}"; done')
+    action = CmdRunAction(
+        command='for remote_name in $(git remote); do git remote remove "${remote_name}"; done'
+    )
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
@@ -206,21 +243,34 @@ def initialize_runtime(runtime: Runtime, instance: pd.Series):
     assert_and_raise(obs.exit_code == 0, f"Failed to remove git remotes: {str(obs)}")
     action = CmdRunAction(command="mkdir _index_data/graph_index_v2.3")
     obs = runtime.run_action(action)
-    graph_index_file_path = os.path.join(INDEX_BASE_DIR, "graph_index_v2.3", f"{instance['instance_id']}.pkl")
+    graph_index_file_path = os.path.join(
+        INDEX_BASE_DIR, "graph_index_v2.3", f"{instance['instance_id']}.pkl"
+    )
     if INDEX_BASE_DIR and os.path.exists(graph_index_file_path):
         logger.info(
             "Copying graph index from %s to /workspace/%s/_index_data/graph_index_v2.3",
             graph_index_file_path,
             workspace_dir_name,
         )
-        runtime.copy_to(graph_index_file_path, f"/workspace/{workspace_dir_name}/_index_data/graph_index_v2.3")
+        runtime.copy_to(
+            graph_index_file_path,
+            f"/workspace/{workspace_dir_name}/_index_data/graph_index_v2.3",
+        )
         action = CmdRunAction(
             command=f"mv _index_data/graph_index_v2.3/{instance['instance_id']}.pkl _index_data/graph_index_v2.3/code_graph.pkl"
         )
         obs = runtime.run_action(action)
-        bm25_index_dir = os.path.join(INDEX_BASE_DIR, "BM25_index", instance["instance_id"])
-        runtime.copy_to(bm25_index_dir, f"/workspace/{workspace_dir_name}/_index_data", recursive=True)
-        action = CmdRunAction(command=f"mv _index_data/{instance['instance_id']} _index_data/bm25_index")
+        bm25_index_dir = os.path.join(
+            INDEX_BASE_DIR, "BM25_index", instance["instance_id"]
+        )
+        runtime.copy_to(
+            bm25_index_dir,
+            f"/workspace/{workspace_dir_name}/_index_data",
+            recursive=True,
+        )
+        action = CmdRunAction(
+            command=f"mv _index_data/{instance['instance_id']} _index_data/bm25_index"
+        )
         action.set_hard_timeout(600)
         logger.info(action, extra={"msg_type": "ACTION"})
         obs = runtime.run_action(action)
@@ -325,7 +375,7 @@ def _cleanup_nested_git_repos(runtime: Runtime) -> None:
 
     assert_and_raise(
         isinstance(obs, CmdOutputObservation) and obs.exit_code == 0,
-        f"Failed to find git repositories: {str(obs)}"
+        f"Failed to find git repositories: {str(obs)}",
     )
 
     # Remove nested git directories
@@ -358,7 +408,7 @@ def _stage_git_changes(runtime: Runtime) -> None:
 
     assert_and_raise(
         isinstance(obs, CmdOutputObservation) and obs.exit_code == 0,
-        f"Failed to git add -A: {str(obs)}"
+        f"Failed to git add -A: {str(obs)}",
     )
 
 
@@ -368,7 +418,9 @@ def _get_git_patch_with_retry(runtime: Runtime, instance: pd.Series) -> str:
     git_patch = None
 
     while n_retries < 5:
-        action = CmdRunAction(command=f"git diff --no-color --cached {instance['base_commit']}")
+        action = CmdRunAction(
+            command=f"git diff --no-color --cached {instance['base_commit']}"
+        )
         action.set_hard_timeout(max(300 + 100 * n_retries, 600))
         logger.info(action, extra={"msg_type": "ACTION"})
         obs = runtime.run_action(action)
@@ -402,7 +454,10 @@ def _handle_git_diff_observation(obs) -> bool:
 
 
 def process_instance(
-    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True, runtime_failure_count: int = 0
+    instance: pd.Series,
+    metadata: EvalMetadata,
+    reset_logger: bool = True,
+    runtime_failure_count: int = 0,
 ) -> EvalOutput:
     config = get_config(instance, metadata)
     if reset_logger:
@@ -430,14 +485,20 @@ def process_instance(
                 config=config,
                 initial_user_action=MessageAction(content=instruction),
                 runtime=runtime,
-                fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[metadata.agent_class],
+                fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[
+                    metadata.agent_class
+                ],
             )
         )
         if is_fatal_evaluation_error(state.last_error):
             raise EvalException("Fatal error detected: " + state.last_error)
         return_val = complete_runtime(runtime, instance)
         git_patch = return_val["git_patch"]
-        logger.info("Got git diff for instance %s:\n--------\n%s\n--------", instance.instance_id, git_patch)
+        logger.info(
+            "Got git diff for instance %s:\n--------\n%s\n--------",
+            instance.instance_id,
+            git_patch,
+        )
     finally:
         runtime.close()
     test_result = {"git_patch": git_patch}
@@ -460,11 +521,13 @@ def process_instance(
 def filter_dataset(dataset: pd.DataFrame, filter_column: str) -> pd.DataFrame:
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.toml")
     if os.path.exists(file_path):
-        with open(file_path, "r", encoding='utf-8') as file:
+        with open(file_path, "r", encoding="utf-8") as file:
             data = toml.load(file)
             if "selected_ids" in data:
                 selected_ids = data["selected_ids"]
-                logger.info('Filtering %s tasks from "selected_ids"...', len(selected_ids))
+                logger.info(
+                    'Filtering %s tasks from "selected_ids"...', len(selected_ids)
+                )
                 subset = dataset[dataset[filter_column].isin(selected_ids)]
                 logger.info("Retained %s tasks after filtering", subset.shape[0])
                 return subset
@@ -494,14 +557,25 @@ if __name__ == "__main__":
         default="princeton-nlp/SWE-bench",
         help="data set to evaluate on, either full-test or lite-test",
     )
-    parser.add_argument("--split", type=str, default="test", help="split to evaluate on")
+    parser.add_argument(
+        "--split", type=str, default="test", help="split to evaluate on"
+    )
     args, _ = parser.parse_known_args()
     dataset = load_dataset(args.dataset, split=args.split)  # nosec B615 - Safe: evaluation benchmark dataset
     swe_bench_tests = filter_dataset(dataset.to_pandas(), "instance_id")
-    logger.info("Loaded dataset %s with split %s: %s tasks", args.dataset, args.split, len(swe_bench_tests))
+    logger.info(
+        "Loaded dataset %s with split %s: %s tasks",
+        args.dataset,
+        args.split,
+        len(swe_bench_tests),
+    )
     if "SWE-Gym" in args.dataset:
-        swe_bench_tests = swe_bench_tests[~swe_bench_tests["instance_id"].isin(SWEGYM_EXCLUDE_IDS)]
-        logger.info("%s tasks left after excluding SWE-Gym excluded tasks", len(swe_bench_tests))
+        swe_bench_tests = swe_bench_tests[
+            ~swe_bench_tests["instance_id"].isin(SWEGYM_EXCLUDE_IDS)
+        ]
+        logger.info(
+            "%s tasks left after excluding SWE-Gym excluded tasks", len(swe_bench_tests)
+        )
     llm_config = None
     if args.llm_config:
         llm_config = get_llm_config_arg(args.llm_config)
@@ -511,7 +585,9 @@ if __name__ == "__main__":
         raise ValueError(f"Could not find LLM config: --llm_config {args.llm_config}")
     details = {}
     _agent_cls = forge.agenthub.Agent.get_cls(args.agent_cls)
-    dataset_descrption = args.dataset.replace("/", "__") + "-" + args.split.replace("/", "__")
+    dataset_descrption = (
+        args.dataset.replace("/", "__") + "-" + args.split.replace("/", "__")
+    )
     metadata = make_metadata(
         llm_config,
         dataset_descrption,
@@ -524,7 +600,11 @@ if __name__ == "__main__":
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
     logger.info("### OUTPUT FILE: %s ###", output_file)
     instances = prepare_dataset(swe_bench_tests, output_file, args.eval_n_limit)
-    if len(instances) > 0 and (not isinstance(instances["PASS_TO_PASS"][instances["PASS_TO_PASS"].index[0]], str)):
+    if len(instances) > 0 and (
+        not isinstance(
+            instances["PASS_TO_PASS"][instances["PASS_TO_PASS"].index[0]], str
+        )
+    ):
         for col in ["PASS_TO_PASS", "FAIL_TO_PASS"]:
             instances[col] = instances[col].apply(lambda x: str(x))
     run_evaluation(

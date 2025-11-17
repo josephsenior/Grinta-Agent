@@ -1,8 +1,25 @@
-import axios, { AxiosError, AxiosResponse } from "axios";
+import axios, {
+  AxiosError,
+  AxiosResponse,
+  InternalAxiosRequestConfig,
+} from "axios";
+import { tokenStorage } from "../utils/auth/token-storage";
 
 export const Forge = axios.create({
   baseURL: `${window.location.protocol}//${import.meta.env.VITE_BACKEND_BASE_URL || window?.location.host}`,
 });
+
+// Request interceptor to add auth token
+Forge.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    const token = tokenStorage.getToken();
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error: AxiosError) => Promise.reject(error),
+);
 
 // Helper function to check if a response contains an email verification error
 const checkForEmailVerificationError = (data: unknown): boolean => {
@@ -62,6 +79,19 @@ Forge.interceptors.response.use(
       window.location.pathname !== "/settings/user"
     ) {
       window.location.reload();
+    }
+
+    // Check if it's a 401 error (unauthorized - token expired or invalid)
+    if (error.response?.status === 401) {
+      // Don't redirect if already on auth pages
+      const isAuthPage = window.location.pathname.startsWith("/auth/");
+      if (!isAuthPage) {
+        tokenStorage.clear();
+        // Only redirect if not already on login page
+        if (window.location.pathname !== "/auth/login") {
+          window.location.href = "/auth/login";
+        }
+      }
     }
 
     // Check if it's a 503 error (runtime container crashed/unavailable)

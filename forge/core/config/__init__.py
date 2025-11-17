@@ -18,6 +18,7 @@ from forge.core.config.mcp_config import MCPConfig
 from forge.core.config.forge_config import ForgeConfig
 from forge.core.config.sandbox_config import SandboxConfig
 from forge.core.config.security_config import SecurityConfig
+from forge.core.config.runtime_pool_config import RuntimePoolConfig
 from forge.core.config.utils import (
     finalize_config,
     get_agent_config_arg,
@@ -30,18 +31,23 @@ from forge.core.config.utils import (
 )
 
 
-
 class AppConfig(ForgeConfig):
     """Backward-compatible alias for ForgeConfig exposing mutable class attributes."""
 
     # Explicitly expose commonly patched fields so test suites using monkeypatch work.
     workspace_base: str | None = ForgeConfig.model_fields["workspace_base"].default
-    workspace_mount_path: str | None = ForgeConfig.model_fields["workspace_mount_path"].default
+    workspace_mount_path: str | None = ForgeConfig.model_fields[
+        "workspace_mount_path"
+    ].default
 
 
 # Ensure attributes exist at class level for patching frameworks
 setattr(AppConfig, "workspace_base", ForgeConfig.model_fields["workspace_base"].default)
-setattr(AppConfig, "workspace_mount_path", ForgeConfig.model_fields["workspace_mount_path"].default)
+setattr(
+    AppConfig,
+    "workspace_mount_path",
+    ForgeConfig.model_fields["workspace_mount_path"].default,
+)
 
 __all__ = [
     "OH_DEFAULT_AGENT",
@@ -53,6 +59,7 @@ __all__ = [
     "LLMConfig",
     "MCPConfig",
     "ForgeConfig",
+    "RuntimePoolConfig",
     "SandboxConfig",
     "SecurityConfig",
     "finalize_config",

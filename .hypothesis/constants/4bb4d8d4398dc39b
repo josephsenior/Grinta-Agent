@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\routes\analytics.py
+# hypothesis_version: 6.147.0
+
+[0.0, 0.1, 100, 1000, 2020, '/costs/breakdown', '/dashboard', '/models', '/prompt-optimization', '/summary', 'accumulated_cost', 'active_tests', 'agent', 'avg_improvement', 'avg_token_cost', 'cache_read_tokens', 'cache_write_tokens', 'completion_tokens', 'composite_score', 'conversation_id', 'cost', 'cost_savings', 'costs', 'enabled', 'error', 'generated_at', 'last_updated', 'latency', 'model', 'month', 'optimization_rate', 'optimized_prompts', 'optimizer', 'period', 'prompt_optimization', 'prompt_optimizer', 'prompt_tokens', 'pytest', 'registry', 'requests', 'response_latencies', 'response_time', 'response_times', 'service_id', 'today', 'token_usages', 'tokens', 'total_prompts', 'total_variants', 'tracker', 'unknown', 'utf-8', 'week']

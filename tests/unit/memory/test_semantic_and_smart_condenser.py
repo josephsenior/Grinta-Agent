@@ -37,12 +37,18 @@ def test_semantic_condenser_basic_flow():
     events = []
     for idx in range(8):
         if idx % 3 == 0:
-            event = make_event(MessageAction(content=f"Question {idx}", wait_for_response=False), idx, source="user")
+            event = make_event(
+                MessageAction(content=f"Question {idx}", wait_for_response=False),
+                idx,
+                source="user",
+            )
         else:
             event = make_event(Observation(content=f"Observation {idx}"), idx)
         events.append(event)
 
-    condenser = ConcreteSemanticCondenser(keep_first=2, max_size=4, importance_threshold=0.2)
+    condenser = ConcreteSemanticCondenser(
+        keep_first=2, max_size=4, importance_threshold=0.2
+    )
     condensation = condenser.get_condensation(build_view(events))
     assert condensation.action is not None
 
@@ -89,7 +95,9 @@ def test_semantic_condenser_under_limit_returns_empty():
 def test_semantic_condenser_select_top_importance():
     from forge.events.event import Event
 
-    condenser = ConcreteSemanticCondenser(max_size=2, keep_first=0, importance_threshold=0.2)
+    condenser = ConcreteSemanticCondenser(
+        max_size=2, keep_first=0, importance_threshold=0.2
+    )
     scored = [condenser._score_events([make_event(Event(), i)])[0] for i in range(4)]
     for idx, item in enumerate(scored):
         item.importance_score = 1.0 - idx * 0.2
@@ -111,7 +119,9 @@ def test_semantic_condenser_scores_action_keywords():
     event = make_event(DummyAction(), 99)
     score, reasons = condenser._score_action_event(event)
     assert score == pytest.approx(1.5)
-    assert {"file_operation", "delegation", "completion", "setup_command"} <= set(reasons)
+    assert {"file_operation", "delegation", "completion", "setup_command"} <= set(
+        reasons
+    )
 
 
 def test_semantic_condenser_scores_observation_details():
@@ -151,11 +161,17 @@ def test_semantic_condenser_select_events_respects_max_size():
     from forge.events.event import Event
     from forge.memory.condenser.impl.semantic_condenser import EventImportance
 
-    condenser = ConcreteSemanticCondenser(max_size=3, keep_first=1, importance_threshold=0.4)
+    condenser = ConcreteSemanticCondenser(
+        max_size=3, keep_first=1, importance_threshold=0.4
+    )
     scored = []
     for idx in range(8):
         event = make_event(Event(), idx)
-        scored.append(EventImportance(event=event, importance_score=1.0 - idx * 0.05, reasons=["importance"]))
+        scored.append(
+            EventImportance(
+                event=event, importance_score=1.0 - idx * 0.05, reasons=["importance"]
+            )
+        )
     keep_ids = condenser._select_events_to_keep(scored)
     assert len(keep_ids) <= 3
 
@@ -167,8 +183,12 @@ class DummyLLM:
 
     def completion(self, messages, temperature):
         self.calls += 1
-        scores = json.dumps([0.9 for _ in messages[0]["content"].splitlines() if "[" in _])
-        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=scores))])
+        scores = json.dumps(
+            [0.9 for _ in messages[0]["content"].splitlines() if "[" in _]
+        )
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content=scores))]
+        )
 
 
 def test_smart_condenser_recency_and_threshold():
@@ -185,12 +205,20 @@ def test_smart_condenser_recency_and_threshold():
         if idx == 2:
             event = make_event(ErrorObservation(content="Critical failure"), idx)
         elif idx % 4 == 0:
-            event = make_event(MessageAction(content=f"Message {idx}"), idx, source="user")
+            event = make_event(
+                MessageAction(content=f"Message {idx}"), idx, source="user"
+            )
         else:
             event = make_event(DummyAction(), idx)
         events.append(event)
 
-    condenser = SmartCondenser(llm=None, max_size=5, keep_first=1, importance_threshold=0.7, recency_bonus_window=3)
+    condenser = SmartCondenser(
+        llm=None,
+        max_size=5,
+        keep_first=1,
+        importance_threshold=0.7,
+        recency_bonus_window=3,
+    )
     view = build_view(events)
     assert condenser.should_condense(view)
     condensation = condenser.get_condensation(view)
@@ -203,8 +231,17 @@ def test_smart_condenser_llm_scoring(monkeypatch):
 
     llm = DummyLLM()
     llm.config = SimpleNamespace(model="stub")
-    events = [make_event(MessageAction(content=f"Event {i}"), i, source="user") for i in range(10)]
-    condenser = SmartCondenser(llm=llm, max_size=3, keep_first=0, importance_threshold=0.8, recency_bonus_window=2)
+    events = [
+        make_event(MessageAction(content=f"Event {i}"), i, source="user")
+        for i in range(10)
+    ]
+    condenser = SmartCondenser(
+        llm=llm,
+        max_size=3,
+        keep_first=0,
+        importance_threshold=0.8,
+        recency_bonus_window=2,
+    )
     condensation = condenser.get_condensation(build_view(events))
     assert llm.calls > 0
     assert condensation.action is not None
@@ -248,7 +285,9 @@ def test_smart_condenser_heuristic_scoring_covers_branches():
     observation = make_event(LongObservation(), 4)
 
     condenser = SmartCondenser(llm=None)
-    scored = condenser._heuristic_scoring([user_message, error_obs, action, observation])
+    scored = condenser._heuristic_scoring(
+        [user_message, error_obs, action, observation]
+    )
     assert scored[user_message.id] == 0.9
     assert scored[error_obs.id] == 0.8
     assert scored[action.id] == 0.7
@@ -263,9 +302,7 @@ def test_smart_condenser_parse_llm_scores_handles_markdown():
     events = [make_event(MessageAction(content=f"Event {i}"), i) for i in range(2)]
     response = SimpleNamespace(
         choices=[
-            SimpleNamespace(
-                message=SimpleNamespace(content="```json\n[0.5, 0.2]\n```")
-            )
+            SimpleNamespace(message=SimpleNamespace(content="```json\n[0.5, 0.2]\n```"))
         ]
     )
     scores = condenser._parse_llm_scores(response, events)
@@ -279,7 +316,9 @@ def test_smart_condenser_parse_llm_scores_fallback_on_error(monkeypatch):
 
     condenser = SmartCondenser(llm=None)
     events = [make_event(MessageAction(content=f"Event {i}"), i) for i in range(2)]
-    response = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content="not json"))])
+    response = SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content="not json"))]
+    )
     scores = condenser._parse_llm_scores(response, events)
     assert all(0.0 <= value <= 1.0 for value in scores.values())
 
@@ -300,7 +339,13 @@ def test_smart_condenser_preserves_action_observation_pairs():
     action = make_event(DummyAction(), 10)
     observation = make_event(DummyObservation(cause=action.id), 11)
     events = [action, observation]
-    condenser = SmartCondenser(llm=None, recency_bonus_window=1, importance_threshold=0.1, max_size=2, keep_first=0)
+    condenser = SmartCondenser(
+        llm=None,
+        recency_bonus_window=1,
+        importance_threshold=0.1,
+        max_size=2,
+        keep_first=0,
+    )
     keep = condenser._preserve_action_observation_pairs(events, {action.id})
     assert action.id in keep and observation.id in keep
 
@@ -317,4 +362,3 @@ def test_smart_condenser_from_config_uses_registry(monkeypatch):
     condenser = SmartCondenser.from_config(config, registry)
     registry.get_llm_config.assert_called_once_with("llm-name")
     assert condenser.llm is stub_llm
-

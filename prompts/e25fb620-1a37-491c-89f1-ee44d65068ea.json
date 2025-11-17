@@ -1,0 +1,14 @@
+{
+  "id": "e25fb620-1a37-491c-89f1-ee44d65068ea",
+  "title": "Usage Test",
+  "description": null,
+  "category": "coding",
+  "content": "Test content",
+  "variables": [],
+  "tags": [],
+  "is_favorite": false,
+  "usage_count": 2,
+  "created_at": "2025-11-13 20:54:59.628732",
+  "updated_at": "2025-11-13 21:21:53.085435",
+  "metadata": {}
+}

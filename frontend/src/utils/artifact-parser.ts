@@ -29,38 +29,6 @@ import {
 // MAIN PARSER
 // ============================================================================
 
-export function parseArtifact(
-  rawData: unknown,
-  role: AgentRole,
-): ParsedArtifact {
-  const timestamp = new Date().toISOString();
-
-  try {
-    const data = unwrapRawData(rawData);
-    const parser = ROLE_PARSERS[role];
-
-    if (!parser) {
-      throw new Error(`Unknown role: ${role}`);
-    }
-
-    return {
-      role,
-      data: parser(data),
-      timestamp,
-    };
-  } catch (error) {
-    console.error("Artifact parse error:", error);
-    return buildParseErrorResult(role, timestamp, error);
-  }
-}
-
-const ROLE_PARSERS: Record<AgentRole, (data: unknown) => ArtifactData> = {
-  product_manager: (data) => parsePMSpec(data) as ArtifactData,
-  architect: (data) => parseArchitectSpec(data) as ArtifactData,
-  engineer: (data) => parseEngineerSpec(data) as ArtifactData,
-  qa: (data) => parseQASpec(data) as ArtifactData,
-};
-
 function unwrapRawData(rawData: unknown) {
   if (
     rawData &&
@@ -71,8 +39,8 @@ function unwrapRawData(rawData: unknown) {
     if (typeof rawValue === "string") {
       try {
         return JSON.parse(rawValue);
-      } catch (parseError) {
-        console.warn("Failed to parse __raw__ field, using original data");
+      } catch {
+        // fall back to original raw data
       }
     }
   }
@@ -94,8 +62,253 @@ function buildParseErrorResult(
 }
 
 // ============================================================================
+// NORMALIZATION UTILITIES
+// ============================================================================
+
+let idCounter = 0;
+
+function generateId(): string {
+  idCounter += 1;
+  return `artifact_${Date.now()}_${idCounter}`;
+}
+
+function normalizePriority(
+  priority: unknown,
+): "high" | "medium" | "low" | "critical" {
+  if (typeof priority !== "string") {
+    return "medium";
+  }
+
+  const p = priority.toLowerCase();
+  if (p === "critical" || p === "p0") return "critical";
+  if (p === "high" || p === "p1") return "high";
+  if (p === "low" || p === "p3") return "low";
+  return "medium";
+}
+
+function normalizeStatus(
+  status: unknown,
+): "pending" | "in_progress" | "complete" | "blocked" {
+  if (typeof status !== "string") {
+    return "pending";
+  }
+
+  const normalized = status.toLowerCase().replace(/[_-]/g, "");
+  if (
+    normalized === "complete" ||
+    normalized === "done" ||
+    normalized === "completed"
+  ) {
+    return "complete";
+  }
+  if (
+    normalized === "inprogress" ||
+    normalized === "active" ||
+    normalized === "working"
+  ) {
+    return "in_progress";
+  }
+  if (normalized === "blocked" || normalized === "stuck") {
+    return "blocked";
+  }
+  return "pending";
+}
+
+function normalizeTestStatus(
+  status: unknown,
+): "passed" | "failed" | "skipped" | "pending" {
+  if (typeof status !== "string") {
+    return "pending";
+  }
+
+  const normalized = status.toLowerCase();
+  if (
+    normalized === "passed" ||
+    normalized === "pass" ||
+    normalized === "success"
+  ) {
+    return "passed";
+  }
+  if (
+    normalized === "failed" ||
+    normalized === "fail" ||
+    normalized === "error"
+  ) {
+    return "failed";
+  }
+  if (normalized === "skipped" || normalized === "skip") {
+    return "skipped";
+  }
+  return "pending";
+}
+
+function normalizeEstimate(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value === "number") return String(value);
+  if (typeof value === "string") return value;
+  return undefined;
+}
+
+function normalizeToStringOrUndefined(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function normalizeToNumberOrUndefined(value: unknown): number | undefined {
+  if (value == null) return undefined;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return undefined;
+}
+
+function normalizeComponentType(
+  value: unknown,
+): "service" | "database" | "cache" | "queue" | "api" | "client" {
+  if (typeof value !== "string") return "service";
+  const normalized = value.toLowerCase();
+  if (normalized.includes("db") || normalized.includes("database"))
+    return "database";
+  if (normalized.includes("cache")) return "cache";
+  if (normalized.includes("queue")) return "queue";
+  if (normalized.includes("api")) return "api";
+  if (normalized.includes("client")) return "client";
+  return "service";
+}
+
+function normalizeHttpMethod(
+  value: unknown,
+): "GET" | "POST" | "PUT" | "PATCH" | "DELETE" {
+  if (typeof value !== "string") return "GET";
+  const method = value.toUpperCase();
+  if (method === "POST") return "POST";
+  if (method === "PUT") return "PUT";
+  if (method === "PATCH") return "PATCH";
+  if (method === "DELETE") return "DELETE";
+  return "GET";
+}
+
+function normalizeFileNodeType(
+  value: unknown,
+): "file" | "folder" | "directory" {
+  if (typeof value !== "string") {
+    return "file";
+  }
+  const normalized = value.toLowerCase();
+  if (
+    normalized === "folder" ||
+    normalized === "directory" ||
+    normalized === "dir"
+  ) {
+    return "folder";
+  }
+  if (normalized === "file") {
+    return "file";
+  }
+  return "file";
+}
+
+function normalizeTestType(
+  value: unknown,
+): "unit" | "integration" | "e2e" | "performance" | "security" {
+  if (typeof value !== "string") return "unit";
+  const normalized = value.toLowerCase();
+  if (normalized === "integration") return "integration";
+  if (normalized === "e2e") return "e2e";
+  if (normalized === "performance") return "performance";
+  if (normalized === "security") return "security";
+  return "unit";
+}
+
+function normalizeSeverity(
+  value: unknown,
+): "critical" | "high" | "medium" | "low" | "info" {
+  if (typeof value !== "string") return "info";
+  const normalized = value.toLowerCase();
+  if (normalized === "critical") return "critical";
+  if (normalized === "high") return "high";
+  if (normalized === "medium") return "medium";
+  if (normalized === "low") return "low";
+  return "info";
+}
+
+function normalizeConfidence(value: unknown): "high" | "medium" | "low" {
+  if (typeof value !== "string") {
+    return "medium";
+  }
+  const normalized = value.toLowerCase();
+  if (normalized === "high") return "high";
+  if (normalized === "low") return "low";
+  return "medium";
+}
+
+function normalizeNumberMetric(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return 0;
+}
+
+// ============================================================================
 // PRODUCT MANAGER PARSER
 // ============================================================================
+
+function resolveFirstString(
+  source: Record<string, unknown>,
+  keys: string[],
+  fallback?: string,
+) {
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value;
+    }
+  }
+  return fallback;
+}
+
+function createUserStory(story: unknown): UserStory {
+  const s = story as Record<string, unknown>;
+  const title = resolveFirstString(s, ["title", "name"], "Untitled Story");
+  const description = resolveFirstString(s, ["description", "desc"]);
+  const asA = resolveFirstString(s, ["as_a", "user_type"]);
+  const iWant = resolveFirstString(s, ["i_want", "want"]);
+  const soThat = resolveFirstString(s, ["so_that", "benefit"]);
+  const estimate = resolveFirstString(s, ["estimate", "story_points"]);
+
+  return {
+    id: (s.id as string) || (s.story_id as string) || generateId(),
+    title,
+    story: s.story as string,
+    description,
+    as_a: asA,
+    i_want: iWant,
+    so_that: soThat,
+    priority: normalizePriority(s.priority),
+    estimate: normalizeEstimate(estimate),
+    status: normalizeStatus(s.status),
+    tags: Array.isArray(s.tags) ? (s.tags as unknown[]).map(String) : [],
+  } as UserStory;
+}
 
 function parsePMSpec(data: unknown): PMSpecArtifact {
   if (!data || typeof data !== "object") {
@@ -162,45 +375,6 @@ function parsePMSpec(data: unknown): PMSpecArtifact {
 
   return artifact;
 }
-
-function createUserStory(story: unknown): UserStory {
-  const s = story as Record<string, unknown>;
-  const title = resolveFirstString(s, ["title", "name"], "Untitled Story");
-  const description = resolveFirstString(s, ["description", "desc"]);
-  const asA = resolveFirstString(s, ["as_a", "user_type"]);
-  const iWant = resolveFirstString(s, ["i_want", "want"]);
-  const soThat = resolveFirstString(s, ["so_that", "benefit"]);
-  const estimate = resolveFirstString(s, ["estimate", "story_points"]);
-
-  return {
-    id: (s.id as string) || (s.story_id as string) || generateId(),
-    title,
-    story: s.story as string,
-    description,
-    as_a: asA,
-    i_want: iWant,
-    so_that: soThat,
-    priority: normalizePriority(s.priority),
-    estimate: normalizeEstimate(estimate),
-    status: normalizeStatus(s.status),
-    tags: Array.isArray(s.tags) ? (s.tags as unknown[]).map(String) : [],
-  } as UserStory;
-}
-
-function resolveFirstString(
-  source: Record<string, unknown>,
-  keys: string[],
-  fallback?: string,
-) {
-  for (const key of keys) {
-    const value = source[key];
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value;
-    }
-  }
-  return fallback;
-}
-
 // ============================================================================
 // ARCHITECT PARSER
 // ============================================================================
@@ -394,18 +568,53 @@ function parseArchitectSpec(data: unknown): ArchitectSpecArtifact {
 // ENGINEER PARSER
 // ============================================================================
 
+function parseFileNode(node: unknown): FileNode {
+  if (!node || typeof node !== "object") {
+    return {
+      name: "unknown",
+      path: "/",
+      type: "file",
+    };
+  }
+
+  const record = node as Record<string, unknown>;
+  const children = Array.isArray(record.children)
+    ? (record.children as unknown[]).map((child: unknown) =>
+        parseFileNode(child),
+      )
+    : undefined;
+  let linesOfCode: number | undefined;
+
+  if (typeof record.lines_of_code === "number") {
+    linesOfCode = record.lines_of_code;
+  } else if (typeof record.loc === "number") {
+    linesOfCode = record.loc;
+  }
+
+  return {
+    name: (record.name as string) || "unknown",
+    path: (record.path as string) || "/",
+    type: normalizeFileNodeType(record.type),
+    description: record.description as string | undefined,
+    purpose: record.purpose as string | undefined,
+    children,
+    language: record.language as string | undefined,
+    lines_of_code: linesOfCode,
+  };
+}
+
 function parseEngineerSpec(data: unknown): EngineerSpecArtifact {
   if (!data || typeof data !== "object") {
     return {};
   }
 
   const artifact: EngineerSpecArtifact = {};
-  const obj = data as Record<string, any>;
+  const obj = data as Record<string, unknown>;
 
   // Parse file structure
   if (Array.isArray(obj.file_structure)) {
-    artifact.file_structure = obj.file_structure.map((node: any) =>
-      parseFileNode(node),
+    artifact.file_structure = (obj.file_structure as unknown[]).map(
+      (node: unknown) => parseFileNode(node),
     );
   }
 
@@ -414,6 +623,14 @@ function parseEngineerSpec(data: unknown): EngineerSpecArtifact {
     artifact.implementation_plan = (obj.implementation_plan as unknown[]).map(
       (step: unknown, index: number) => {
         const st = step as Record<string, unknown>;
+        let estimatedTime: string | undefined;
+
+        if (st.estimated_time != null) {
+          estimatedTime = String(st.estimated_time);
+        } else if (st.time != null) {
+          estimatedTime = String(st.time);
+        }
+
         return {
           step_number: (st.step_number as number) || index + 1,
           title:
@@ -428,12 +645,7 @@ function parseEngineerSpec(data: unknown): EngineerSpecArtifact {
           commands: Array.isArray(st.commands)
             ? (st.commands as unknown[]).map(String)
             : [],
-          estimated_time:
-            st.estimated_time != null
-              ? String(st.estimated_time)
-              : st.time != null
-                ? String(st.time)
-                : undefined,
+          estimated_time: estimatedTime,
           dependencies: Array.isArray(st.dependencies)
             ? (st.dependencies as unknown[]).map(String)
             : [],
@@ -485,66 +697,16 @@ function parseEngineerSpec(data: unknown): EngineerSpecArtifact {
     );
   }
 
-  artifact.estimated_effort = obj.estimated_effort;
+  artifact.estimated_effort = normalizeToStringOrUndefined(
+    obj.estimated_effort,
+  );
 
   return artifact;
-}
-
-function parseFileNode(node: unknown): FileNode {
-  if (!node || typeof node !== "object") {
-    return {
-      name: "unknown",
-      path: "/",
-      type: "file",
-    };
-  }
-
-  const n = node as Record<string, unknown>;
-
-  return {
-    name: (n.name as string) || "unknown",
-    path: (n.path as string) || "/",
-    type: normalizeFileNodeType(n.type),
-    description: n.description as string | undefined,
-    purpose: n.purpose as string | undefined,
-    children: Array.isArray(n.children)
-      ? (n.children as unknown[]).map((child: unknown) => parseFileNode(child))
-      : undefined,
-    language: n.language as string | undefined,
-    lines_of_code:
-      typeof n.lines_of_code === "number"
-        ? (n.lines_of_code as number)
-        : typeof n.loc === "number"
-          ? (n.loc as number)
-          : undefined,
-  };
 }
 
 // ============================================================================
 // QA PARSER
 // ============================================================================
-
-function parseQASpec(data: unknown): QASpecArtifact {
-  if (!data || typeof data !== "object") {
-    return {};
-  }
-
-  const artifact: QASpecArtifact = {};
-  const obj = data as Record<string, any>;
-
-  artifact.test_scenarios = parseTestScenarios(obj.test_scenarios);
-  artifact.test_results = parseTestResults(obj.test_results);
-  artifact.code_coverage = parseCodeCoverage(obj.code_coverage);
-  artifact.security_findings = parseSecurityFindings(obj.security_findings);
-  artifact.performance_metrics = parsePerformanceMetrics(
-    obj.performance_metrics,
-  );
-  artifact.lint_status = parseLintStatus(obj.lint_status);
-  artifact.lint_details = parseLintDetails(obj.lint_details);
-  artifact.quality_score = obj.quality_score;
-
-  return artifact;
-}
 
 function parseTestScenarios(value: unknown): QASpecArtifact["test_scenarios"] {
   if (!Array.isArray(value)) {
@@ -553,24 +715,37 @@ function parseTestScenarios(value: unknown): QASpecArtifact["test_scenarios"] {
 
   return (value as unknown[])
     .filter((scenario) => isTestScenario(scenario))
-    .map((scenario: any) => ({
-      id: scenario.id || generateId(),
-      title: scenario.title || scenario.name || "Untitled Test",
-      description:
-        typeof scenario.description === "string"
-          ? scenario.description
-          : undefined,
-      scenario:
-        typeof scenario.scenario === "string" ? scenario.scenario : undefined,
-      priority: normalizePriority(scenario.priority),
-      type: normalizeTestType(scenario.type),
-      tags: Array.isArray(scenario.tags) ? scenario.tags.map(String) : [],
-      steps: Array.isArray(scenario.steps) ? scenario.steps.map(String) : [],
-      expected_result: normalizeToStringOrUndefined(
-        scenario.expected_result ?? scenario.expected,
-      ),
-      status: normalizeTestStatus(scenario.status),
-    }));
+    .map((scenario) => {
+      const record = scenario as Record<string, unknown>;
+      const title = resolveFirstString(
+        record,
+        ["title", "name"],
+        "Untitled Test",
+      );
+
+      return {
+        id: typeof record.id === "string" ? record.id : generateId(),
+        title,
+        description:
+          typeof record.description === "string"
+            ? record.description
+            : undefined,
+        scenario:
+          typeof record.scenario === "string" ? record.scenario : undefined,
+        priority: normalizePriority(record.priority),
+        type: normalizeTestType(record.type),
+        tags: Array.isArray(record.tags)
+          ? (record.tags as unknown[]).map(String)
+          : [],
+        steps: Array.isArray(record.steps)
+          ? (record.steps as unknown[]).map(String)
+          : [],
+        expected_result: normalizeToStringOrUndefined(
+          record.expected_result ?? record.expected,
+        ),
+        status: normalizeTestStatus(record.status),
+      };
+    });
 }
 
 function parseTestResults(value: unknown): QASpecArtifact["test_results"] {
@@ -580,10 +755,10 @@ function parseTestResults(value: unknown): QASpecArtifact["test_results"] {
 
   const results = value as Record<string, unknown>;
   return {
-    passed: (results.passed as number) || 0,
-    failed: (results.failed as number) || 0,
-    skipped: (results.skipped as number) || 0,
-    total: (results.total as number) || 0,
+    passed: typeof results.passed === "number" ? results.passed : 0,
+    failed: typeof results.failed === "number" ? results.failed : 0,
+    skipped: typeof results.skipped === "number" ? results.skipped : 0,
+    total: typeof results.total === "number" ? results.total : 0,
   };
 }
 
@@ -610,17 +785,30 @@ function parseSecurityFindings(
 
   return (value as unknown[])
     .filter((finding) => isSecurityFinding(finding))
-    .map((finding: any) => ({
-      severity: normalizeSeverity(finding.severity),
-      title: finding.title || finding.name || "Security Issue",
-      description:
-        typeof finding.description === "string"
-          ? finding.description
-          : undefined,
-      file: typeof finding.file === "string" ? finding.file : undefined,
-      line: typeof finding.line === "number" ? finding.line : undefined,
-      recommendation: finding.recommendation || finding.fix,
-    }));
+    .map((finding) => {
+      const record = finding as Record<string, unknown>;
+      const title = resolveFirstString(
+        record,
+        ["title", "name"],
+        "Security Issue",
+      );
+      const recommendation = resolveFirstString(record, [
+        "recommendation",
+        "fix",
+      ]);
+
+      return {
+        severity: normalizeSeverity(record.severity),
+        title,
+        description:
+          typeof record.description === "string"
+            ? record.description
+            : undefined,
+        file: typeof record.file === "string" ? record.file : undefined,
+        line: typeof record.line === "number" ? record.line : undefined,
+        recommendation,
+      };
+    });
 }
 
 function parsePerformanceMetrics(
@@ -652,169 +840,40 @@ function parseLintDetails(value: unknown): QASpecArtifact["lint_details"] {
     return undefined;
   }
 
-  return value.map((detail) =>
+  return (value as unknown[]).map((detail) =>
     typeof detail === "string" ? detail : String(detail),
   );
 }
 
-function normalizeNumberMetric(value: unknown): number {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
+function parseQASpec(data: unknown): QASpecArtifact {
+  if (!data || typeof data !== "object") {
+    return {};
   }
 
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) {
-      return parsed;
-    }
-  }
+  const artifact: QASpecArtifact = {};
+  const obj = data as Record<string, unknown>;
 
-  return 0;
+  artifact.test_scenarios = parseTestScenarios(obj.test_scenarios);
+  artifact.test_results = parseTestResults(obj.test_results);
+  artifact.code_coverage = parseCodeCoverage(obj.code_coverage);
+  artifact.security_findings = parseSecurityFindings(obj.security_findings);
+  artifact.performance_metrics = parsePerformanceMetrics(
+    obj.performance_metrics,
+  );
+  artifact.lint_status = parseLintStatus(obj.lint_status);
+  artifact.lint_details = parseLintDetails(obj.lint_details);
+  artifact.quality_score = normalizeToNumberOrUndefined(obj.quality_score);
+
+  return artifact;
 }
 
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
 
-function normalizePriority(
-  priority: any,
-): "high" | "medium" | "low" | "critical" {
-  if (typeof priority !== "string") return "medium";
-
-  const p = priority.toLowerCase();
-  if (p === "critical" || p === "p0") return "critical";
-  if (p === "high" || p === "p1") return "high";
-  if (p === "low" || p === "p3") return "low";
-  return "medium";
-}
-
-function normalizeStatus(
-  status: any,
-): "pending" | "in_progress" | "complete" | "blocked" {
-  if (typeof status !== "string") return "pending";
-
-  const s = status.toLowerCase().replace(/[_-]/g, "");
-  if (s === "complete" || s === "done" || s === "completed") return "complete";
-  if (s === "inprogress" || s === "active" || s === "working")
-    return "in_progress";
-  if (s === "blocked" || s === "stuck") return "blocked";
-  return "pending";
-}
-
-function normalizeTestStatus(
-  status: any,
-): "passed" | "failed" | "skipped" | "pending" {
-  if (typeof status !== "string") return "pending";
-
-  const s = status.toLowerCase();
-  if (s === "passed" || s === "pass" || s === "success") return "passed";
-  if (s === "failed" || s === "fail" || s === "error") return "failed";
-  if (s === "skipped" || s === "skip") return "skipped";
-  return "pending";
-}
-
-let idCounter = 0;
-function generateId(): string {
-  return `artifact_${Date.now()}_${++idCounter}`;
-}
-
-// -----------------
-// Normalizers
-// -----------------
-function normalizeEstimate(v: unknown): string | undefined {
-  if (v == null) return undefined;
-  if (typeof v === "number") return String(v);
-  if (typeof v === "string") return v;
-  return undefined;
-}
-
-function normalizeToStringOrUndefined(v: unknown): string | undefined {
-  if (v == null) return undefined;
-  if (typeof v === "string") return v;
-  try {
-    return JSON.stringify(v);
-  } catch {
-    return String(v);
-  }
-}
-
-function normalizeComponentType(
-  v: unknown,
-): "service" | "database" | "cache" | "queue" | "api" | "client" {
-  if (typeof v !== "string") return "service";
-  const s = v.toLowerCase();
-  if (s.includes("db") || s.includes("database")) return "database";
-  if (s.includes("cache")) return "cache";
-  if (s.includes("queue")) return "queue";
-  if (s.includes("api")) return "api";
-  if (s.includes("client")) return "client";
-  return "service";
-}
-
-function normalizeHttpMethod(
-  v: unknown,
-): "GET" | "POST" | "PUT" | "PATCH" | "DELETE" {
-  if (typeof v !== "string") return "GET";
-  const m = v.toUpperCase();
-  if (m === "POST") return "POST";
-  if (m === "PUT") return "PUT";
-  if (m === "PATCH") return "PATCH";
-  if (m === "DELETE") return "DELETE";
-  return "GET";
-}
-
-function normalizeFileNodeType(v: unknown): "file" | "folder" | "directory" {
-  if (typeof v !== "string") return "file";
-  const s = v.toLowerCase();
-  if (s === "folder" || s === "directory" || s === "dir") return "folder";
-  if (s === "file") return "file";
-  return "file";
-}
-
-function normalizeTestType(
-  v: unknown,
-): "unit" | "integration" | "e2e" | "performance" | "security" {
-  if (typeof v !== "string") return "unit";
-  const s = v.toLowerCase();
-  if (s === "integration") return "integration";
-  if (s === "e2e") return "e2e";
-  if (s === "performance") return "performance";
-  if (s === "security") return "security";
-  return "unit";
-}
-
-function normalizeSeverity(
-  v: unknown,
-): "critical" | "high" | "medium" | "low" | "info" {
-  if (typeof v !== "string") return "info";
-  const s = v.toLowerCase();
-  if (s === "critical") return "critical";
-  if (s === "high") return "high";
-  if (s === "medium") return "medium";
-  if (s === "low") return "low";
-  return "info";
-}
-
-function normalizeConfidence(v: unknown): "high" | "medium" | "low" {
-  if (typeof v !== "string") return "medium";
-  const s = v.toLowerCase();
-  if (s === "high") return "high";
-  if (s === "low") return "low";
-  return "medium";
-}
-
 // ============================================================================
 // VALIDATION
 // ============================================================================
-
-export function validateArtifact(artifact: ParsedArtifact): boolean {
-  if (!artifact?.role || artifact.error) {
-    return false;
-  }
-
-  const validator = ARTIFACT_VALIDATORS[artifact.role];
-  return validator ? validator(artifact.data) : false;
-}
 
 type ArtifactValidator = (data: unknown) => boolean;
 
@@ -857,3 +916,46 @@ const ARTIFACT_VALIDATORS: Partial<
     );
   },
 };
+
+export function validateArtifact(artifact: ParsedArtifact): boolean {
+  if (!artifact?.role || artifact.error) {
+    return false;
+  }
+
+  const validator = ARTIFACT_VALIDATORS[artifact.role];
+  return validator ? validator(artifact.data) : false;
+}
+
+const ROLE_PARSERS: Record<AgentRole, (data: unknown) => ArtifactData> = {
+  product_manager: (data) => parsePMSpec(data) as ArtifactData,
+  architect: (data) => parseArchitectSpec(data) as ArtifactData,
+  engineer: (data) => parseEngineerSpec(data) as ArtifactData,
+  qa: (data) => parseQASpec(data) as ArtifactData,
+};
+
+export function parseArtifact(
+  rawData: unknown,
+  role: AgentRole,
+): ParsedArtifact {
+  const timestamp = new Date().toISOString();
+  const parser = ROLE_PARSERS[role];
+
+  if (!parser) {
+    return buildParseErrorResult(
+      role,
+      timestamp,
+      new Error(`Unknown role: ${role}`),
+    );
+  }
+
+  try {
+    const data = parser(unwrapRawData(rawData));
+    return {
+      role,
+      data,
+      timestamp,
+    };
+  } catch (error) {
+    return buildParseErrorResult(role, timestamp, error);
+  }
+}

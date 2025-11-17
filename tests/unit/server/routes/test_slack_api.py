@@ -25,8 +25,12 @@ def test_client(tmp_path):
     # Mock config
     with patch("forge.server.routes.slack.FORGE_config") as mock_config:
         mock_config.SLACK_CLIENT_ID = "test-client-id"
-        mock_config.SLACK_CLIENT_SECRET = MagicMock(get_secret_value=lambda: "test-client-secret")
-        mock_config.SLACK_SIGNING_SECRET = MagicMock(get_secret_value=lambda: "test-signing-secret")
+        mock_config.SLACK_CLIENT_SECRET = MagicMock(
+            get_secret_value=lambda: "test-client-secret"
+        )
+        mock_config.SLACK_SIGNING_SECRET = MagicMock(
+            get_secret_value=lambda: "test-signing-secret"
+        )
 
         # Create temporary workspace
         workspace_dir = tmp_path / "workspace"
@@ -37,7 +41,11 @@ def test_client(tmp_path):
         mock_app_config.workspace_base = str(workspace_dir)
 
         slack_store = SlackStore(mock_app_config)
-        with patch("forge.server.routes.slack.get_slack_store", autospec=True, return_value=slack_store):
+        with patch(
+            "forge.server.routes.slack.get_slack_store",
+            autospec=True,
+            return_value=slack_store,
+        ):
             fastapi_app = FastAPI()
             fastapi_app.include_router(app)
             with TestClient(fastapi_app) as client:
@@ -239,6 +247,7 @@ def test_slack_store_operations(tmp_path):
         slack_user_id="U456",
         slack_workspace_id="T123",
         FORGE_user_id="user1",
+        user_token="xoxp-user",
     )
     slack_store.save_user_link(user_link)
 
@@ -252,11 +261,14 @@ def test_slack_store_operations(tmp_path):
         slack_thread_ts="1234567890.123456",
         slack_workspace_id="T123",
         conversation_id=uuid.uuid4().hex,
+        repository="owner/repo",
         created_by_slack_user_id="U456",
     )
     slack_store.save_conversation_link(conv_link)
 
-    retrieved_conv = slack_store.get_conversation_link("T123", "C789", "1234567890.123456")
+    retrieved_conv = slack_store.get_conversation_link(
+        "T123", "C789", "1234567890.123456"
+    )
     assert retrieved_conv is not None
     assert retrieved_conv.slack_channel_id == "C789"
 
@@ -286,4 +298,3 @@ def test_oauth_state_lifecycle(tmp_path):
 
     # Verify deletion
     assert slack_store.get_oauth_state(state) is None
-

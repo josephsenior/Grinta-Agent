@@ -36,7 +36,9 @@ def test_workspace_context_recall(memory_instance):
 
     mem, stream = memory_instance
 
-    mem.repo_microagents["repo"] = SimpleNamespace(content="Repo instructions", metadata=SimpleNamespace(mcp_tools=None))
+    mem.repo_microagents["repo"] = SimpleNamespace(
+        content="Repo instructions", metadata=SimpleNamespace(mcp_tools=None)
+    )
     mem.knowledge_microagents["agent"] = SimpleNamespace(
         name="agent",
         match_trigger=lambda query: "keyword" if "keyword" in query else None,
@@ -44,7 +46,11 @@ def test_workspace_context_recall(memory_instance):
     )
     mem.set_repository_info("repo", "/repo", "main")
     mem.set_runtime_info(
-        runtime=SimpleNamespace(runtime_initialized=True, web_hosts=["localhost"], additional_agent_instructions=None),
+        runtime=SimpleNamespace(
+            runtime_initialized=True,
+            web_hosts=["localhost"],
+            additional_agent_instructions=None,
+        ),
         custom_secrets_descriptions={"SECRET": "desc"},
         working_dir="/work",
     )
@@ -105,4 +111,3 @@ async def test_set_runtime_status(memory_instance, monkeypatch):
     mem.set_runtime_status(SimpleNamespace(name="ERROR"), "failure")
     await event.wait()
     assert received["values"][2] == "failure"
-

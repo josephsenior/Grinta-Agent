@@ -35,7 +35,8 @@ def format_task_dict(example, use_knowledge):
     task = {
         "instance_id": example["instance_id"],
         "task_inst": example["task_inst"],
-        "dataset_path": "/benchmark/datasets/" + example["dataset_folder_tree"].split("\n")[0][4:],
+        "dataset_path": "/benchmark/datasets/"
+        + example["dataset_folder_tree"].split("\n")[0][4:],
         "dataset_folder_tree": example["dataset_folder_tree"],
         "dataset_preview": example["dataset_preview"],
         "pred_program_name": "pred_" + example["gold_program_name"],
@@ -47,12 +48,18 @@ def format_task_dict(example, use_knowledge):
 
 def get_config(metadata: EvalMetadata, instance_id: str) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
-    sandbox_config.base_container_image = "docker.io/xingyaoww/Forge-eval-scienceagentbench"
+    sandbox_config.base_container_image = (
+        "docker.io/xingyaoww/Forge-eval-scienceagentbench"
+    )
     config = get_FORGE_config_for_eval(
-        metadata=metadata, runtime=os.environ.get("RUNTIME", "docker"), sandbox_config=sandbox_config
+        metadata=metadata,
+        runtime=os.environ.get("RUNTIME", "docker"),
+        sandbox_config=sandbox_config,
     )
     config.set_llm_config(
-        update_llm_config_for_completions_logging(metadata.llm_config, metadata.eval_output_dir, instance_id)
+        update_llm_config_for_completions_logging(
+            metadata.llm_config, metadata.eval_output_dir, instance_id
+        )
     )
     return config
 
@@ -108,7 +115,9 @@ def complete_runtime(runtime: Runtime, instance: pd.Series) -> dict[str, Any]:
     return test_result
 
 
-def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True) -> EvalOutput:
+def process_instance(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True
+) -> EvalOutput:
     instance_id = instance.instance_id.replace("/", "__")
     config = get_config(metadata, instance_id)
     if reset_logger:
@@ -117,11 +126,16 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
     else:
         logger.info("Starting evaluation for instance %s.", instance_id)
     instruction = f"You are an expert Python programming assistant that helps scientist users to write high-quality code to solve their tasks.\nGiven a user request, you are expected to write a complete program that accomplishes the requested task and save any outputs to `/workspace/pred_results/` in the correct format.\n\nHere's the user request you need to work on:\n{
-        instance.task_inst}\n\nYou can access the dataset at `{
-        instance.dataset_path}`. Here is the directory structure of the dataset:\n```\n{
-            instance.dataset_folder_tree}\n```\nHere are some helpful previews for the dataset file(s):\n{
-                instance.dataset_preview}\n\nPlease save your program as `/workspace/pred_programs/{
-                    instance.pred_program_name}`.\nThen, please run the program to check and fix any errors.\nPlease do NOT run the program in the background.\nIf the program uses some packages that are incompatible, please figure out alternative implementations and do NOT restart the environment.\n\n"
+        instance.task_inst
+    }\n\nYou can access the dataset at `{
+        instance.dataset_path
+    }`. Here is the directory structure of the dataset:\n```\n{
+        instance.dataset_folder_tree
+    }\n```\nHere are some helpful previews for the dataset file(s):\n{
+        instance.dataset_preview
+    }\n\nPlease save your program as `/workspace/pred_programs/{
+        instance.pred_program_name
+    }`.\nThen, please run the program to check and fix any errors.\nPlease do NOT run the program in the background.\nIf the program uses some packages that are incompatible, please figure out alternative implementations and do NOT restart the environment.\n\n"
     runtime = create_runtime(config)
     call_async_from_sync(runtime.connect)
     initialize_runtime(runtime, instance)
@@ -130,7 +144,9 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
             config=config,
             initial_user_action=MessageAction(content=instruction),
             runtime=runtime,
-            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN.get(metadata.agent_class),
+            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN.get(
+                metadata.agent_class
+            ),
         )
     )
     test_result = complete_runtime(runtime, instance)
@@ -159,10 +175,11 @@ if __name__ == "__main__":
         help="use expert-provided knowledge or not",
     )
     args, _ = parser.parse_known_args()
-    sab_dataset = load_dataset(
-        "osunlp/ScienceAgentBench", split="validation"
-    )  # nosec B615 - Safe: evaluation benchmark dataset
-    dataset_processed = [format_task_dict(example, args.use_knowledge == "true") for example in tqdm(sab_dataset)]
+    sab_dataset = load_dataset("osunlp/ScienceAgentBench", split="validation")  # nosec B615 - Safe: evaluation benchmark dataset
+    dataset_processed = [
+        format_task_dict(example, args.use_knowledge == "true")
+        for example in tqdm(sab_dataset)
+    ]
     dataset = pd.DataFrame(dataset_processed)
     llm_config = None
     if args.llm_config:
@@ -171,9 +188,16 @@ if __name__ == "__main__":
     if llm_config is None:
         raise ValueError(f"Could not find LLM config: --llm_config {args.llm_config}")
     metadata = make_metadata(
-        llm_config, "ScienceAgentBench", args.agent_cls, args.max_iterations, args.eval_note, args.eval_output_dir
+        llm_config,
+        "ScienceAgentBench",
+        args.agent_cls,
+        args.max_iterations,
+        args.eval_note,
+        args.eval_output_dir,
     )
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
     dataset["instance_id"] = dataset["instance_id"].apply(str)
     instances = prepare_dataset(dataset, output_file, args.eval_n_limit)
-    run_evaluation(instances, metadata, output_file, args.eval_num_workers, process_instance)
+    run_evaluation(
+        instances, metadata, output_file, args.eval_num_workers, process_instance
+    )

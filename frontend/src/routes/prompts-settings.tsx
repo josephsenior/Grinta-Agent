@@ -30,87 +30,6 @@ import type { CreatePromptRequest, PromptTemplate } from "#/types/prompt";
 import { PromptCategory, PROMPT_CATEGORY_LABELS } from "#/types/prompt";
 import { useDebounce } from "#/hooks/use-debounce";
 
-function PromptsSettingsScreen() {
-  const controller = usePromptsSettingsController();
-  const {
-    t,
-    stats,
-    isLoading,
-    filteredPrompts,
-    searchQuery,
-    setSearchQuery,
-    selectedCategory,
-    setSelectedCategory,
-    showFavoritesOnly,
-    toggleFavoritesOnly,
-    handleExport,
-    handleImport,
-    handleCreatePrompt,
-    handleEditPrompt,
-    handleDeletePrompt,
-    handleUsePrompt,
-    handleToggleFavorite,
-    handleUpdatePrompt,
-    isModalOpen,
-    openCreateModal,
-    closeModal,
-    editingPrompt,
-    toast,
-    exportIsPending,
-    importIsPending,
-  } = controller;
-
-  return (
-    <div className="px-11 py-9 flex flex-col gap-6">
-      <PromptsHeader
-        t={t}
-        onExport={handleExport}
-        onImport={handleImport}
-        onCreate={openCreateModal}
-        exportDisabled={exportIsPending}
-        importDisabled={importIsPending}
-      />
-
-      {stats && <PromptsStatsSection stats={stats} t={t} />}
-
-      <PromptsFilters
-        t={t}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        selectedCategory={selectedCategory}
-        onCategoryChange={setSelectedCategory}
-        showFavoritesOnly={showFavoritesOnly}
-        toggleFavoritesOnly={toggleFavoritesOnly}
-      />
-
-      <PromptsGridSection
-        isLoading={isLoading}
-        filteredPrompts={filteredPrompts}
-        searchQuery={searchQuery}
-        showFavoritesOnly={showFavoritesOnly}
-        selectedCategory={selectedCategory}
-        onCreate={openCreateModal}
-        onEdit={handleEditPrompt}
-        onDelete={handleDeletePrompt}
-        onUse={handleUsePrompt}
-        onToggleFavorite={handleToggleFavorite}
-        t={t}
-      />
-
-      <PromptFormModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        onSubmit={editingPrompt ? handleUpdatePrompt : handleCreatePrompt}
-        initialData={editingPrompt}
-      />
-
-      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
-    </div>
-  );
-}
-
-export default PromptsSettingsScreen;
-
 function usePromptsSettingsController() {
   const { t } = useTranslation();
   const toast = useToast();
@@ -192,7 +111,9 @@ function usePromptsSettingsController() {
 
   const handleDeletePrompt = React.useCallback(
     (promptId: string) => {
-      if (!confirm(t("PROMPTS$DELETE_CONFIRM"))) {
+      // eslint-disable-next-line no-alert
+      const shouldDelete = window.confirm(t("PROMPTS$DELETE_CONFIRM"));
+      if (!shouldDelete) {
         return;
       }
       deleteMutation.mutate(promptId, {
@@ -268,6 +189,7 @@ function usePromptsSettingsController() {
         );
       } catch (error) {
         toast.error(t("PROMPTS$IMPORT_ERROR"));
+        // eslint-disable-next-line no-console
         console.error("Import error:", error);
       }
     };
@@ -347,7 +269,7 @@ function PromptsHeader({
         <button
           type="button"
           onClick={onExport}
-          className="flex items-center gap-2 px-4 py-2 text-foreground-secondary hover:text-foreground border border-violet-500/20 rounded hover:bg-background"
+          className="flex items-center gap-2 px-4 py-2 text-foreground-secondary hover:text-foreground border border-white/10 rounded-xl hover:bg-white/5"
           disabled={exportDisabled}
         >
           <Download className="w-4 h-4" />
@@ -356,7 +278,7 @@ function PromptsHeader({
         <button
           type="button"
           onClick={onImport}
-          className="flex items-center gap-2 px-4 py-2 text-foreground-secondary hover:text-foreground border border-violet-500/20 rounded hover:bg-background"
+          className="flex items-center gap-2 px-4 py-2 text-foreground-secondary hover:text-foreground border border-white/10 rounded-xl hover:bg-white/5"
           disabled={importDisabled}
         >
           <Upload className="w-4 h-4" />
@@ -365,45 +287,12 @@ function PromptsHeader({
         <button
           type="button"
           onClick={onCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark"
+          className="flex items-center gap-2 px-6 py-2.5 bg-white text-black font-semibold rounded-xl hover:bg-white/90"
         >
           <Plus className="w-4 h-4" />
           {t("PROMPTS$NEW_PROMPT")}
         </button>
       </div>
-    </div>
-  );
-}
-
-function PromptsStatsSection({
-  stats,
-  t,
-}: {
-  stats: NonNullable<ReturnType<typeof usePromptStats>["data"]>;
-  t: ReturnType<typeof useTranslation>["t"];
-}) {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <StatsCard
-        title={t("PROMPTS$TOTAL_PROMPTS")}
-        value={stats.total_prompts}
-        icon={<TrendingUp className="w-4 h-4 text-primary" />}
-      />
-      <StatsCard
-        title={t("PROMPTS$FAVORITES")}
-        value={stats.total_favorites}
-        icon={<Star className="w-4 h-4 text-yellow-500" />}
-      />
-      <StatsCard
-        title={t("PROMPTS$CATEGORIES")}
-        value={Object.keys(stats.prompts_by_category).length}
-        icon={<Filter className="w-4 h-4 text-blue-500" />}
-      />
-      <StatsCard
-        title={t("PROMPTS$TOTAL_TAGS")}
-        value={stats.total_tags}
-        badge={`#${stats.total_tags}`}
-      />
     </div>
   );
 }
@@ -420,12 +309,49 @@ function StatsCard({
   badge?: string;
 }) {
   return (
-    <div className="p-4 bg-black border border-violet-500/20 rounded-lg">
-      <div className="flex items-center justify-between">
-        <span className="text-foreground-secondary text-sm">{title}</span>
-        {badge ? <span className="text-xs text-green-500">{badge}</span> : icon}
+    <div className="p-3 bg-black/60 border border-white/10 rounded-lg">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs text-foreground-secondary">{title}</span>
+        {badge ? (
+          <span className="text-xs text-foreground-tertiary">{badge}</span>
+        ) : (
+          icon
+        )}
       </div>
-      <p className="text-2xl font-semibold text-foreground mt-2">{value}</p>
+      <p className="text-lg font-semibold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function PromptsStatsSection({
+  stats,
+  t,
+}: {
+  stats: NonNullable<ReturnType<typeof usePromptStats>["data"]>;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <StatsCard
+        title={t("PROMPTS$TOTAL_PROMPTS")}
+        value={stats.total_prompts}
+        icon={<TrendingUp className="w-3 h-3 text-foreground-tertiary" />}
+      />
+      <StatsCard
+        title={t("PROMPTS$FAVORITES")}
+        value={stats.total_favorites}
+        icon={<Star className="w-3 h-3 text-foreground-tertiary" />}
+      />
+      <StatsCard
+        title={t("PROMPTS$CATEGORIES")}
+        value={Object.keys(stats.prompts_by_category).length}
+        icon={<Filter className="w-3 h-3 text-foreground-tertiary" />}
+      />
+      <StatsCard
+        title={t("PROMPTS$TOTAL_TAGS")}
+        value={stats.total_tags}
+        badge={`#${stats.total_tags}`}
+      />
     </div>
   );
 }
@@ -456,7 +382,7 @@ function PromptsFilters({
           value={searchQuery}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder={t("PROMPTS$SEARCH_PLACEHOLDER")}
-          className="w-full pl-10 pr-4 py-2 bg-background border border-violet-500/20 rounded text-foreground focus:outline-none focus:border-border-active"
+          className="w-full pl-10 pr-4 py-2 bg-black/60 border border-white/10 rounded-xl text-foreground focus:outline-none focus:border-white/20"
         />
       </div>
 
@@ -465,7 +391,7 @@ function PromptsFilters({
         onChange={(event) =>
           onCategoryChange(event.target.value as PromptCategory | "all")
         }
-        className="px-4 py-2 bg-background border border-violet-500/20 rounded text-foreground focus:outline-none focus:border-border-active"
+        className="px-4 py-2 bg-black/60 border border-white/10 rounded-xl text-foreground focus:outline-none focus:border-white/20"
       >
         <option value="all">{t("PROMPTS$ALL_CATEGORIES")}</option>
         {Object.entries(PROMPT_CATEGORY_LABELS).map(([value, label]) => (
@@ -480,8 +406,8 @@ function PromptsFilters({
         onClick={toggleFavoritesOnly}
         className={`flex items-center gap-2 px-4 py-2 border rounded transition-colors ${
           showFavoritesOnly
-            ? "bg-primary text-white border-primary"
-            : "bg-background text-foreground-secondary border-violet-500/20 hover:bg-black"
+            ? "bg-white text-black border-white"
+            : "bg-black/60 text-foreground-secondary border-white/10 hover:bg-white/5"
         }`}
       >
         <Star className={`w-4 h-4 ${showFavoritesOnly ? "fill-white" : ""}`} />
@@ -534,7 +460,7 @@ function PromptsGridSection({
           <button
             type="button"
             onClick={onCreate}
-            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark"
+            className="px-6 py-2.5 bg-white text-black font-semibold rounded-xl hover:bg-white/90"
           >
             {t("PROMPTS$CREATE_FIRST")}
           </button>
@@ -558,3 +484,86 @@ function PromptsGridSection({
     </div>
   );
 }
+
+function PromptsSettingsScreen() {
+  const controller = usePromptsSettingsController();
+  const {
+    t,
+    stats,
+    isLoading,
+    filteredPrompts,
+    searchQuery,
+    setSearchQuery,
+    selectedCategory,
+    setSelectedCategory,
+    showFavoritesOnly,
+    toggleFavoritesOnly,
+    handleExport,
+    handleImport,
+    handleCreatePrompt,
+    handleEditPrompt,
+    handleDeletePrompt,
+    handleUsePrompt,
+    handleToggleFavorite,
+    handleUpdatePrompt,
+    isModalOpen,
+    openCreateModal,
+    closeModal,
+    editingPrompt,
+    toast,
+    exportIsPending,
+    importIsPending,
+  } = controller;
+
+  return (
+    <div className="p-6 sm:p-8 lg:p-10 flex flex-col gap-6 lg:gap-8">
+      <div className="mx-auto max-w-6xl w-full space-y-6 lg:space-y-8">
+        <PromptsHeader
+          t={t}
+          onExport={handleExport}
+          onImport={handleImport}
+          onCreate={openCreateModal}
+          exportDisabled={exportIsPending}
+          importDisabled={importIsPending}
+        />
+
+        {stats && <PromptsStatsSection stats={stats} t={t} />}
+
+        <PromptsFilters
+          t={t}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+          showFavoritesOnly={showFavoritesOnly}
+          toggleFavoritesOnly={toggleFavoritesOnly}
+        />
+
+        <PromptsGridSection
+          isLoading={isLoading}
+          filteredPrompts={filteredPrompts}
+          searchQuery={searchQuery}
+          showFavoritesOnly={showFavoritesOnly}
+          selectedCategory={selectedCategory}
+          onCreate={openCreateModal}
+          onEdit={handleEditPrompt}
+          onDelete={handleDeletePrompt}
+          onUse={handleUsePrompt}
+          onToggleFavorite={handleToggleFavorite}
+          t={t}
+        />
+
+        <PromptFormModal
+          isOpen={isModalOpen}
+          onClose={closeModal}
+          onSubmit={editingPrompt ? handleUpdatePrompt : handleCreatePrompt}
+          initialData={editingPrompt}
+        />
+
+        <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
+      </div>
+    </div>
+  );
+}
+
+export default PromptsSettingsScreen;

@@ -1,0 +1,91 @@
+"""Base Pydantic schemas for Forge events with versioning support."""
+
+from __future__ import annotations
+
+from datetime import datetime
+from enum import Enum
+from typing import Any, Optional
+from uuid import UUID
+
+from pydantic import BaseModel, Field, field_validator, ConfigDict
+
+
+class EventVersion(str, Enum):
+    """Schema version for event serialization."""
+
+    V1 = "1.0.0"
+    V2 = "2.0.0"  # Reserved for future use
+
+
+class EventSource(str, Enum):
+    """Canonical originator categories for events."""
+
+    AGENT = "agent"
+    USER = "user"
+    ENVIRONMENT = "environment"
+
+
+class EventMetadata(BaseModel):
+    """Metadata attached to all events."""
+
+    event_id: Optional[int] = Field(None, description="Unique event identifier")
+    sequence: Optional[int] = Field(None, description="Event sequence number for ordering")
+    timestamp: Optional[datetime] = Field(None, description="Event timestamp in ISO format")
+    source: Optional[EventSource] = Field(None, description="Event source (AGENT, USER, ENVIRONMENT)")
+    cause: Optional[int] = Field(None, description="ID of event that caused this event")
+    hidden: bool = Field(False, description="Whether this event is hidden from the UI")
+    timeout: Optional[float] = Field(None, description="Timeout value in seconds")
+    response_id: Optional[str] = Field(None, description="LLM response ID for this event")
+    trace_id: Optional[str] = Field(None, description="Distributed tracing ID")
+
+    model_config = ConfigDict(
+        use_enum_values=True,
+        json_encoders={datetime: lambda v: v.isoformat() if v else None},
+    )
+
+
+def _create_default_event_metadata() -> EventMetadata:
+    """Factory used to provide default metadata instances for events."""
+    return EventMetadata.model_construct()
+
+
+class BaseEventSchema(BaseModel):
+    """Base schema for all Forge events with versioning support."""
+
+    schema_version: EventVersion = Field(
+        EventVersion.V1, description="Schema version for this event"
+    )
+    metadata: EventMetadata = Field(
+        default_factory=_create_default_event_metadata, description="Event metadata"
+    )
+
+    model_config = ConfigDict(
+        use_enum_values=True,
+        json_encoders={datetime: lambda v: v.isoformat() if v else None},
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize event to dictionary."""
+        return self.model_dump(mode="json", exclude_none=True)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> BaseEventSchema:
+        """Deserialize event from dictionary."""
+        return cls.model_validate(data)
+
+
+class EventSchemaV1(BaseEventSchema):
+    """Version 1.0.0 of the event schema.
+
+    This is the current production schema version.
+    """
+
+    schema_version: EventVersion = Field(EventVersion.V1, frozen=True)
+
+    @field_validator("schema_version", mode="before")
+    @classmethod
+    def validate_version(cls, v: Any) -> EventVersion:
+        """Ensure schema version is V1."""
+        if isinstance(v, str):
+            return EventVersion(v)
+        return EventVersion.V1

@@ -16,8 +16,8 @@ You now have **enterprise-level API versioning** that allows safe evolution with
 
 **Files Created:**
 ```python
-Forge/server/versioning.py       # 200+ lines - Complete versioning system
-Forge/server/constants.py        # Version constants and config
+forge/server/versioning.py       # 200+ lines - Complete versioning system
+forge/server/constants.py        # Version constants and config
 ```
 
 **Features:**
@@ -85,7 +85,7 @@ const { data } = await Forge.get(`${this.getBase()}/settings`);
 
 **Files Modified:**
 ```python
-Forge/server/app.py              # Added versioning middleware
+forge/server/app.py              # Added versioning middleware
 ```
 
 **Integration:**
@@ -157,7 +157,7 @@ docs/api-versioning-implementation-complete.md  # This file
 
 ### **Backend:**
 ```python
-# Forge/server/constants.py
+# forge/server/constants.py
 ENFORCE_API_VERSIONING = False  # ← Beta mode (flexible)
 
 # After launch, set to True:

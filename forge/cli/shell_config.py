@@ -22,9 +22,15 @@ class ShellConfigManager:
     """Manages shell configuration files and aliases across different shells."""
 
     ALIAS_TEMPLATES = {
-        "bash": Template('\n# Forge CLI aliases\nalias Forge="{{ command }}"\nalias oh="{{ command }}"\n'),
-        "zsh": Template('\n# Forge CLI aliases\nalias Forge="{{ command }}"\nalias oh="{{ command }}"\n'),
-        "fish": Template('\n# Forge CLI aliases\nalias Forge="{{ command }}"\nalias oh="{{ command }}"\n'),
+        "bash": Template(
+            '\n# Forge CLI aliases\nalias Forge="{{ command }}"\nalias oh="{{ command }}"\n'
+        ),
+        "zsh": Template(
+            '\n# Forge CLI aliases\nalias Forge="{{ command }}"\nalias oh="{{ command }}"\n'
+        ),
+        "fish": Template(
+            '\n# Forge CLI aliases\nalias Forge="{{ command }}"\nalias oh="{{ command }}"\n'
+        ),
         "powershell": Template(
             "\n# Forge CLI aliases\nfunction Forge { {{ command }} $args }\nfunction oh { {{ command }} $args }\n",
         ),
@@ -49,7 +55,9 @@ class ShellConfigManager:
         "powershell": ["^\\s*function\\s+Forge\\s*\\{", "^\\s*function\\s+oh\\s*\\{"],
     }
 
-    def __init__(self, command: str = "uvx --python 3.12 --from forge-ai Forge") -> None:
+    def __init__(
+        self, command: str = "uvx --python 3.12 --from forge-ai Forge"
+    ) -> None:
         """Initialize the shell config manager.
 
         Args:
@@ -94,7 +102,9 @@ class ShellConfigManager:
                     return config_path
             return home / self.SHELL_CONFIG_PATTERNS[shell][0]
         if self.is_windows:
-            return home / "Documents" / "PowerShell" / "Microsoft.PowerShell_profile.ps1"
+            return (
+                home / "Documents" / "PowerShell" / "Microsoft.PowerShell_profile.ps1"
+            )
         bashrc = home / ".bashrc"
         return bashrc if bashrc.exists() else home / ".bash_profile"
 
@@ -136,7 +146,9 @@ class ShellConfigManager:
         try:
             with open(config_path, encoding="utf-8", errors="ignore") as f:
                 content = f.read()
-            return any(re.search(pattern, content, re.MULTILINE) for pattern in patterns)
+            return any(
+                re.search(pattern, content, re.MULTILINE) for pattern in patterns
+            )
         except Exception:
             return False
 
@@ -157,7 +169,9 @@ class ShellConfigManager:
         try:
             config_path.parent.mkdir(parents=True, exist_ok=True)
             shell_type = self.get_shell_type_from_path(config_path)
-            template = self.ALIAS_TEMPLATES.get(shell_type, self.ALIAS_TEMPLATES["bash"])
+            template = self.ALIAS_TEMPLATES.get(
+                shell_type, self.ALIAS_TEMPLATES["bash"]
+            )
             aliases_content = template.render(command=self.command)
             with open(config_path, "a", encoding="utf-8") as f:
                 f.write(aliases_content)
@@ -179,9 +193,15 @@ class ShellConfigManager:
 
     def _get_bash_reload_command(self, config_path: Path) -> str:
         """Get reload command for bash shell."""
-        return "source ~/.bash_profile" if ".bash_profile" in str(config_path) else "source ~/.bashrc"
+        return (
+            "source ~/.bash_profile"
+            if ".bash_profile" in str(config_path)
+            else "source ~/.bashrc"
+        )
 
-    def _get_reload_command_by_shell_type(self, shell_type: str, config_path: Path) -> str:
+    def _get_reload_command_by_shell_type(
+        self, shell_type: str, config_path: Path
+    ) -> str:
         """Get reload command based on shell type."""
         if shell_type == "fish":
             return self._get_fish_reload_command()

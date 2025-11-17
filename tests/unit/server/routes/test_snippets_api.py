@@ -4,6 +4,7 @@ import json
 import os
 from datetime import datetime, timedelta
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from fastapi import HTTPException
@@ -48,6 +49,16 @@ def make_snippet(snippet_id="s1", **overrides) -> CodeSnippet:
     )
     base.update(overrides)
     return CodeSnippet(**base)
+
+
+def _response_bytes(body: Any) -> bytes:
+    if isinstance(body, memoryview):
+        return body.tobytes()
+    if isinstance(body, (bytes, bytearray)):
+        return bytes(body)
+    if body is None:
+        return b""
+    raise TypeError(f"Unsupported response body type: {type(body)!r}")
 
 
 def test_get_snippets_dir(snippets_workspace):
@@ -131,7 +142,9 @@ def test_apply_list_filters(snippets_workspace):
 def test_sort_and_paginate(snippets_workspace):
     snippets = [
         make_snippet("a", title="B", usage_count=1, updated_at=datetime.now()),
-        make_snippet("b", title="A", usage_count=5, updated_at=datetime.now() - timedelta(days=1)),
+        make_snippet(
+            "b", title="A", usage_count=5, updated_at=datetime.now() - timedelta(days=1)
+        ),
     ]
     by_usage = snippets_routes._sort_snippets(snippets, "usage")
     assert by_usage[0].id == "b"
@@ -149,7 +162,11 @@ async def test_list_snippets(snippets_workspace):
 
 @pytest.mark.asyncio
 async def test_list_snippets_error(monkeypatch):
-    monkeypatch.setattr(snippets_routes, "_load_all_snippets", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(
+        snippets_routes,
+        "_load_all_snippets",
+        lambda: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
     with pytest.raises(HTTPException):
         await snippets_routes.list_snippets()
 
@@ -163,7 +180,11 @@ async def test_create_snippet(snippets_workspace):
 
 @pytest.mark.asyncio
 async def test_create_snippet_error(monkeypatch):
-    monkeypatch.setattr(snippets_routes, "_save_snippet", lambda snippet: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(
+        snippets_routes,
+        "_save_snippet",
+        lambda snippet: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
     with pytest.raises(HTTPException):
         await snippets_routes.create_snippet(CreateSnippetRequest(title="Err", code=""))
 
@@ -172,24 +193,45 @@ async def test_create_snippet_error(monkeypatch):
 async def test_search_snippets(snippets_workspace):
     snippet = make_snippet("search", tags=["alpha"], code="print('alpha')")
     snippets_routes._save_snippet(snippet)
-    request = SearchSnippetsRequest(query="alpha", language=SnippetLanguage.PYTHON)
+    request = SearchSnippetsRequest(
+        query="alpha", language=SnippetLanguage.PYTHON, limit=100, offset=0
+    )
     results = await snippets_routes.search_snippets(request)
     assert results and results[0].id == "search"
 
 
 @pytest.mark.asyncio
 async def test_search_snippets_error(monkeypatch):
-    monkeypatch.setattr(snippets_routes, "_load_all_snippets", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(
+        snippets_routes,
+        "_load_all_snippets",
+        lambda: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
     with pytest.raises(HTTPException):
-        await snippets_routes.search_snippets(SearchSnippetsRequest(query="x"))
+        await snippets_routes.search_snippets(
+            SearchSnippetsRequest(query="x", limit=100, offset=0)
+        )
 
 
 def test_filter_helpers(snippets_workspace):
     snippets = [
-        make_snippet("f1", language=SnippetLanguage.PYTHON, category=SnippetCategory.API, is_favorite=True),
-        make_snippet("f2", language=SnippetLanguage.JAVA, category=SnippetCategory.UTILITY, is_favorite=False, tags=["tag"]),
+        make_snippet(
+            "f1",
+            language=SnippetLanguage.PYTHON,
+            category=SnippetCategory.API,
+            is_favorite=True,
+        ),
+        make_snippet(
+            "f2",
+            language=SnippetLanguage.JAVA,
+            category=SnippetCategory.UTILITY,
+            is_favorite=False,
+            tags=["tag"],
+        ),
     ]
-    assert len(snippets_routes._filter_by_language(snippets, SnippetLanguage.PYTHON)) == 1
+    assert (
+        len(snippets_routes._filter_by_language(snippets, SnippetLanguage.PYTHON)) == 1
+    )
     assert len(snippets_routes._filter_by_category(snippets, SnippetCategory.API)) == 1
     assert len(snippets_routes._filter_by_favorite(snippets, True)) == 1
     assert len(snippets_routes._filter_by_tags(snippets, ["tag"])) == 1
@@ -205,15 +247,25 @@ async def test_get_snippet_stats(snippets_workspace):
 
 @pytest.mark.asyncio
 async def test_get_snippet_stats_error(monkeypatch):
-    monkeypatch.setattr(snippets_routes, "_load_all_snippets", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(
+        snippets_routes,
+        "_load_all_snippets",
+        lambda: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
     with pytest.raises(HTTPException):
         await snippets_routes.get_snippet_stats()
 
 
 def test_count_helpers(snippets_workspace):
     snippet = make_snippet("count")
-    assert snippets_routes._count_snippets_by_language([snippet])[snippet.language.value] == 1
-    assert snippets_routes._count_snippets_by_category([snippet])[snippet.category.value] == 1
+    assert (
+        snippets_routes._count_snippets_by_language([snippet])[snippet.language.value]
+        == 1
+    )
+    assert (
+        snippets_routes._count_snippets_by_category([snippet])[snippet.category.value]
+        == 1
+    )
     assert snippets_routes._count_favorites([snippet]) == 1
     assert snippets_routes._count_unique_tags([snippet]) == len(set(snippet.tags))
     assert snippets_routes._get_most_used_snippets([snippet])[0][0] == snippet.id
@@ -223,12 +275,17 @@ def test_count_helpers(snippets_workspace):
 async def test_export_snippets(snippets_workspace):
     snippets_routes._save_snippet(make_snippet("exp"))
     response = await snippets_routes.export_snippets()
-    assert json.loads(response.body)["metadata"]["total_snippets"] >= 1
+    body = _response_bytes(response.body)
+    assert json.loads(body)["metadata"]["total_snippets"] >= 1
 
 
 @pytest.mark.asyncio
 async def test_export_snippets_error(monkeypatch):
-    monkeypatch.setattr(snippets_routes, "_load_all_snippets", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(
+        snippets_routes,
+        "_load_all_snippets",
+        lambda: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
     with pytest.raises(HTTPException):
         await snippets_routes.export_snippets()
 
@@ -240,15 +297,25 @@ def test_build_collection(snippets_workspace):
 
 
 def test_create_export_response(snippets_workspace):
-    collection = SnippetCollection(name="test", snippets=[make_snippet("resp")])
+    collection = SnippetCollection(
+        name="test",
+        description="Test collection",
+        version="1.0.0",
+        snippets=[make_snippet("resp")],
+    )
     response = snippets_routes._create_export_response(collection)
-    assert "snippets" in response.body.decode("utf-8")
+    assert "snippets" in _response_bytes(response.body).decode("utf-8")
 
 
 @pytest.mark.asyncio
 async def test_import_snippets(snippets_workspace):
     snippet = make_snippet("imp")
-    collection = SnippetCollection(name="test", snippets=[snippet])
+    collection = SnippetCollection(
+        name="test",
+        description="Test collection",
+        version="1.0.0",
+        snippets=[snippet],
+    )
     result = await snippets_routes.import_snippets(collection)
     assert result["imported"] == 1
 
@@ -258,15 +325,29 @@ async def test_import_snippets_updates(snippets_workspace):
     snippet = make_snippet("update")
     snippets_routes._save_snippet(snippet)
     snippet.code = "print('updated')"
-    collection = SnippetCollection(name="test", snippets=[snippet])
+    collection = SnippetCollection(
+        name="test",
+        description="Test collection",
+        version="1.0.0",
+        snippets=[snippet],
+    )
     result = await snippets_routes.import_snippets(collection)
     assert result["updated"] == 1
 
 
 @pytest.mark.asyncio
 async def test_import_snippets_error(monkeypatch):
-    monkeypatch.setattr(snippets_routes, "_save_snippet", lambda snippet: (_ for _ in ()).throw(RuntimeError("boom")))
-    collection = SnippetCollection(name="bad", snippets=[make_snippet("bad")])
+    monkeypatch.setattr(
+        snippets_routes,
+        "_save_snippet",
+        lambda snippet: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+    collection = SnippetCollection(
+        name="bad",
+        description="Bad collection",
+        version="1.0.0",
+        snippets=[make_snippet("bad")],
+    )
     with pytest.raises(HTTPException):
         await snippets_routes.import_snippets(collection)
 
@@ -276,7 +357,8 @@ async def test_mark_snippet_used(snippets_workspace):
     snippet = make_snippet("used", usage_count=0)
     snippets_routes._save_snippet(snippet)
     response = await snippets_routes.mark_snippet_used("used")
-    assert json.loads(response.body)["usage_count"] == 1
+    body = _response_bytes(response.body)
+    assert json.loads(body)["usage_count"] == 1
 
 
 @pytest.mark.asyncio
@@ -290,7 +372,11 @@ async def test_mark_snippet_used_missing(snippets_workspace):
 async def test_mark_snippet_used_error(monkeypatch, snippets_workspace):
     snippet = make_snippet("err")
     snippets_routes._save_snippet(snippet)
-    monkeypatch.setattr(snippets_routes, "_save_snippet", lambda snippet: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(
+        snippets_routes,
+        "_save_snippet",
+        lambda snippet: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
     with pytest.raises(HTTPException):
         await snippets_routes.mark_snippet_used("err")
 
@@ -320,7 +406,11 @@ async def test_get_snippet_missing(snippets_workspace):
 
 @pytest.mark.asyncio
 async def test_get_snippet_error(monkeypatch):
-    monkeypatch.setattr(snippets_routes, "_load_snippet", lambda snippet_id: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(
+        snippets_routes,
+        "_load_snippet",
+        lambda snippet_id: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
     with pytest.raises(HTTPException):
         await snippets_routes.get_snippet("bad")
 
@@ -345,7 +435,11 @@ async def test_update_snippet_missing(snippets_workspace):
 async def test_update_snippet_error(monkeypatch, snippets_workspace):
     snippet = make_snippet("upd_err")
     snippets_routes._save_snippet(snippet)
-    monkeypatch.setattr(snippets_routes, "_save_snippet", lambda snippet: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(
+        snippets_routes,
+        "_save_snippet",
+        lambda snippet: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
     with pytest.raises(HTTPException):
         await snippets_routes.update_snippet("upd_err", UpdateSnippetRequest(title="y"))
 
@@ -369,7 +463,10 @@ async def test_delete_snippet_missing(snippets_workspace):
 async def test_delete_snippet_error(monkeypatch, snippets_workspace):
     snippet = make_snippet("del_err")
     snippets_routes._save_snippet(snippet)
-    monkeypatch.setattr(snippets_routes, "_delete_snippet_file", lambda snippet_id: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(
+        snippets_routes,
+        "_delete_snippet_file",
+        lambda snippet_id: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
     with pytest.raises(HTTPException):
         await snippets_routes.delete_snippet("del_err")
-

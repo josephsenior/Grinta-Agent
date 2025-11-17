@@ -8,8 +8,8 @@ from typing import Dict, Any
 
 # Optimized tool descriptions
 OPTIMIZED_TOOL_DESCRIPTIONS = {
-    'think': {
-        'description': """Use this tool to engage in deep analytical thinking and problem-solving. This tool is essential for complex reasoning, strategic planning, and systematic analysis.
+    "think": {
+        "description": """Use this tool to engage in deep analytical thinking and problem-solving. This tool is essential for complex reasoning, strategic planning, and systematic analysis.
 
 **When to use:**
 - Analyzing complex problems that require multi-step reasoning
@@ -27,16 +27,15 @@ OPTIMIZED_TOOL_DESCRIPTIONS = {
 - Use this tool before making significant changes or decisions
 
 The tool logs your thought process transparently without executing code or making changes, providing visibility into your analytical approach.""",
-        'parameters': {
-            'thought': {
-                'description': 'Your detailed analytical thought process. Include reasoning steps, considerations, tradeoffs, and conclusions. Be specific and thorough.',
-                'type': 'string'
+        "parameters": {
+            "thought": {
+                "description": "Your detailed analytical thought process. Include reasoning steps, considerations, tradeoffs, and conclusions. Be specific and thorough.",
+                "type": "string",
             }
-        }
+        },
     },
-    
-    'execute_bash': {
-        'description': """Execute bash commands in a persistent shell environment with advanced capabilities and safety features.
+    "execute_bash": {
+        "description": """Execute bash commands in a persistent shell environment with advanced capabilities and safety features.
 
 **Core Capabilities:**
 - Persistent shell session with maintained environment variables and working directory
@@ -65,31 +64,30 @@ The tool logs your thought process transparently without executing code or makin
 - Verify directory existence before creating files/directories
 - Use appropriate timeout values to prevent hanging processes
 - Redirect output for long-running commands to avoid truncation""",
-        'parameters': {
-            'command': {
-                'description': 'The bash command to execute. Use && or ; to chain multiple commands. Can be empty to retrieve logs from running process, or control commands like C-c to interrupt.',
-                'type': 'string'
+        "parameters": {
+            "command": {
+                "description": "The bash command to execute. Use && or ; to chain multiple commands. Can be empty to retrieve logs from running process, or control commands like C-c to interrupt.",
+                "type": "string",
             },
-            'is_input': {
-                'description': 'Set to true to send input to a running process, false to execute a new bash command. Use when previous command returned exit code -1.',
-                'type': 'string',
-                'enum': ['true', 'false']
+            "is_input": {
+                "description": "Set to true to send input to a running process, false to execute a new bash command. Use when previous command returned exit code -1.",
+                "type": "string",
+                "enum": ["true", "false"],
             },
-            'timeout': {
-                'description': 'Hard timeout in seconds for command execution. Use for commands that may run longer than the default soft timeout.',
-                'type': 'number'
+            "timeout": {
+                "description": "Hard timeout in seconds for command execution. Use for commands that may run longer than the default soft timeout.",
+                "type": "number",
             },
-            'security_risk': {
-                'description': 'Assess the security risk level of this command. Choose based on potential system impact and data access.',
-                'type': 'string',
-                'enum': ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
-                'default': 'LOW'
-            }
-        }
+            "security_risk": {
+                "description": "Assess the security risk level of this command. Choose based on potential system impact and data access.",
+                "type": "string",
+                "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+                "default": "LOW",
+            },
+        },
     },
-    
-    'finish': {
-        'description': """Complete the current task and provide a comprehensive summary of work accomplished.
+    "finish": {
+        "description": """Complete the current task and provide a comprehensive summary of work accomplished.
 
 **When to use:**
 - When the primary task has been successfully completed
@@ -110,16 +108,15 @@ The tool logs your thought process transparently without executing code or makin
 - Provide actionable next steps if applicable
 - Ensure all requested deliverables are complete
 - Use clear, professional language""",
-        'parameters': {
-            'message': {
-                'description': 'A comprehensive summary of the completed work, including accomplishments, key findings, and any recommendations for next steps.',
-                'type': 'string'
+        "parameters": {
+            "message": {
+                "description": "A comprehensive summary of the completed work, including accomplishments, key findings, and any recommendations for next steps.",
+                "type": "string",
             }
-        }
+        },
     },
-    
-    'browse_interactive': {
-        'description': """Interact with web browsers to navigate, extract information, and perform web-based tasks.
+    "browse_interactive": {
+        "description": """Interact with web browsers to navigate, extract information, and perform web-based tasks.
 
 **Capabilities:**
 - Navigate to URLs and follow links
@@ -143,24 +140,32 @@ The tool logs your thought process transparently without executing code or makin
 - Handle errors gracefully with fallback strategies
 - Verify results before proceeding to next steps
 - Respect website terms of service and rate limits""",
-        'parameters': {
-            'browser_actions': {
-                'description': 'A list of browser actions to perform, such as navigation, clicking, form filling, or data extraction.',
-                'type': 'array',
-                'items': {
-                    'type': 'object',
-                    'properties': {
-                        'action': {'type': 'string', 'description': 'The action to perform (navigate, click, fill, extract, etc.)'},
-                        'target': {'type': 'string', 'description': 'The target element or URL for the action'},
-                        'value': {'type': 'string', 'description': 'The value to use for the action (optional)'}
-                    }
-                }
+        "parameters": {
+            "browser_actions": {
+                "description": "A list of browser actions to perform, such as navigation, clicking, form filling, or data extraction.",
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "description": "The action to perform (navigate, click, fill, extract, etc.)",
+                        },
+                        "target": {
+                            "type": "string",
+                            "description": "The target element or URL for the action",
+                        },
+                        "value": {
+                            "type": "string",
+                            "description": "The value to use for the action (optional)",
+                        },
+                    },
+                },
             }
-        }
+        },
     },
-    
-    'str_replace_editor': {
-        'description': """Edit files using precise string replacement operations with safety checks and validation.
+    "str_replace_editor": {
+        "description": """Edit files using precise string replacement operations with safety checks and validation.
 
 **Core Features:**
 - Exact string matching with optional regex support
@@ -190,28 +195,36 @@ The tool logs your thought process transparently without executing code or makin
 - Always review changes before applying
 - Use regex patterns for complex matching
 - Keep replacement operations atomic and focused""",
-        'parameters': {
-            'file_path': {
-                'description': 'The absolute path to the file to edit.',
-                'type': 'string'
+        "parameters": {
+            "file_path": {
+                "description": "The absolute path to the file to edit.",
+                "type": "string",
             },
-            'replacements': {
-                'description': 'List of string replacement operations to perform.',
-                'type': 'array',
-                'items': {
-                    'type': 'object',
-                    'properties': {
-                        'old_string': {'type': 'string', 'description': 'The exact string to replace'},
-                        'new_string': {'type': 'string', 'description': 'The replacement string'},
-                        'use_regex': {'type': 'boolean', 'description': 'Whether to use regex matching'}
-                    }
-                }
-            }
-        }
+            "replacements": {
+                "description": "List of string replacement operations to perform.",
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "old_string": {
+                            "type": "string",
+                            "description": "The exact string to replace",
+                        },
+                        "new_string": {
+                            "type": "string",
+                            "description": "The replacement string",
+                        },
+                        "use_regex": {
+                            "type": "boolean",
+                            "description": "Whether to use regex matching",
+                        },
+                    },
+                },
+            },
+        },
     },
-    
-    'ipython_run_cell': {
-        'description': """Execute Python code in an interactive IPython environment with persistent state and rich output.
+    "ipython_run_cell": {
+        "description": """Execute Python code in an interactive IPython environment with persistent state and rich output.
 
 **Features:**
 - Persistent Python environment across executions
@@ -236,51 +249,55 @@ The tool logs your thought process transparently without executing code or makin
 - Use appropriate data structures for your task
 - Leverage Python's rich ecosystem of libraries
 - Test code incrementally with small cells""",
-        'parameters': {
-            'code': {
-                'description': 'Python code to execute in the IPython environment. Can include imports, function definitions, data processing, and output statements.',
-                'type': 'string'
+        "parameters": {
+            "code": {
+                "description": "Python code to execute in the IPython environment. Can include imports, function definitions, data processing, and output statements.",
+                "type": "string",
             }
-        }
-    }
+        },
+    },
 }
+
 
 def get_optimized_description(tool_name: str) -> Dict[str, Any]:
     """Get optimized description for a specific tool.
-    
+
     Args:
         tool_name: Name of the tool
-        
+
     Returns:
         Dictionary containing optimized description and parameters
 
     """
     return OPTIMIZED_TOOL_DESCRIPTIONS.get(tool_name, {})
 
+
 def get_all_optimized_descriptions() -> Dict[str, Dict[str, Any]]:
     """Get all optimized tool descriptions.
-    
+
     Returns:
         Dictionary mapping tool names to their optimized descriptions
 
     """
     return OPTIMIZED_TOOL_DESCRIPTIONS.copy()
 
-def create_tool_variant_content(tool_name: str, description: str, 
-                              parameters: Dict[str, Any]) -> str:
+
+def create_tool_variant_content(
+    tool_name: str, description: str, parameters: Dict[str, Any]
+) -> str:
     """Create variant content for a tool.
-    
+
     Args:
         tool_name: Name of the tool
         description: Tool description
         parameters: Tool parameters
-        
+
     Returns:
         Formatted variant content
 
     """
     content = f"DESCRIPTION: {description}\n\n"
-    
+
     if parameters:
         content += "PARAMETERS:\n"
         for param_name, param_info in parameters.items():
@@ -290,5 +307,5 @@ def create_tool_variant_content(tool_name: str, description: str,
                     content += f"  {key}: {value}\n"
             else:
                 content += f"  description: {param_info}\n"
-    
+
     return content

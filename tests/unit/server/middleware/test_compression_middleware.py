@@ -10,10 +10,15 @@ import pytest
 from starlette.requests import Request
 from starlette.responses import Response
 
-from forge.server.middleware.compression import CompressionMiddleware, ResponseSizeOptimizer
+from forge.server.middleware.compression import (
+    CompressionMiddleware,
+    ResponseSizeOptimizer,
+)
 
 
-def _make_request(path: str, method: str = "GET", headers: dict[str, str] | None = None) -> Request:
+def _make_request(
+    path: str, method: str = "GET", headers: dict[str, str] | None = None
+) -> Request:
     headers_list = []
     headers = headers or {}
     for key, value in headers.items():
@@ -124,7 +129,9 @@ def test_should_compress_checks(monkeypatch):
     assert not middleware._should_compress(request, response)
 
     # No gzip accepted
-    request_no_gzip = _make_request("/api/data", headers={"accept-encoding": "identity"})
+    request_no_gzip = _make_request(
+        "/api/data", headers={"accept-encoding": "identity"}
+    )
     response.headers["content-type"] = "application/json"
     assert not middleware._should_compress(request_no_gzip, response)
 
@@ -139,7 +146,9 @@ def test_should_compress_checks(monkeypatch):
 @pytest.mark.asyncio
 async def test_compress_response_handles_exception(monkeypatch, caplog):
     middleware = CompressionMiddleware()
-    response = Response(content=b"{" + b" " * 2048 + b"}", media_type="application/json")
+    response = Response(
+        content=b"{" + b" " * 2048 + b"}", media_type="application/json"
+    )
 
     def boom(*args, **kwargs):  # pylint: disable=unused-argument
         raise RuntimeError("boom")
@@ -159,12 +168,18 @@ def test_response_size_optimizer_optimize_list():
     assert all("value" in item for item in optimized)
 
     default_optimized = ResponseSizeOptimizer.optimize_list_response(items)
-    assert all(key not in ResponseSizeOptimizer.EXCLUDE_FIELDS for item in default_optimized for key in item.keys())
+    assert all(
+        key not in ResponseSizeOptimizer.EXCLUDE_FIELDS
+        for item in default_optimized
+        for key in item.keys()
+    )
 
 
 def test_response_size_optimizer_paginate():
     items = list(range(10))
-    result = ResponseSizeOptimizer.paginate_response(items, page=2, page_size=3, max_page_size=5)
+    result = ResponseSizeOptimizer.paginate_response(
+        items, page=2, page_size=3, max_page_size=5
+    )
     assert result["items"] == [3, 4, 5]
     meta = result["pagination"]
     assert meta["page"] == 2

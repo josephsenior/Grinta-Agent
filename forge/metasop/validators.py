@@ -79,12 +79,14 @@ def _extract_bracket_block(s: str, opener: str, closer: str) -> str | None:
         elif ch == closer:
             depth -= 1
             if depth == 0:
-                return s[start: i + 1]
+                return s[start : i + 1]
 
     return None
 
 
-def validate_json(content: str, schema: dict[str, Any]) -> tuple[bool, dict[str, Any] | None, str | None]:
+def validate_json(
+    content: str, schema: dict[str, Any]
+) -> tuple[bool, dict[str, Any] | None, str | None]:
     """Validate a JSON string against a schema; attempt to repair if needed.
 
     Returns: (ok, data, error)

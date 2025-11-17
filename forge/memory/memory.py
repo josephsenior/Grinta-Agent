@@ -7,13 +7,17 @@ import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import forge
 from forge.core.logger import forge_logger as logger
 from forge.events.action.agent import RecallAction
 from forge.events.event import Event, EventSource, RecallType
-from forge.events.observation.agent import MicroagentKnowledge, RecallObservation
+from forge.events.observation.agent import (
+    MicroagentKnowledge,
+    RecallObservation,
+    RecallFailureObservation,
+)
 from forge.events.observation.empty import NullObservation
 from forge.events.stream import EventStream, EventStreamSubscriber
 from forge.microagent import (
@@ -29,7 +33,9 @@ if TYPE_CHECKING:
     from forge.core.config.mcp_config import MCPConfig
     from forge.runtime.base import Runtime
 
-GLOBAL_MICROAGENTS_DIR = os.path.join(os.path.dirname(os.path.dirname(forge.__file__)), "microagents")
+GLOBAL_MICROAGENTS_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(forge.__file__)), "microagents"
+)
 USER_MICROAGENTS_DIR = Path.home() / ".Forge" / "microagents"
 
 
@@ -46,13 +52,20 @@ class Memory:
     repo_microagents: dict[str, RepoMicroagent]
     knowledge_microagents: dict[str, KnowledgeMicroagent]
 
-    def __init__(self, event_stream: EventStream, sid: str, status_callback: Callable | None = None) -> None:
+    def __init__(
+        self,
+        event_stream: EventStream,
+        sid: str,
+        status_callback: Callable | None = None,
+    ) -> None:
         """Subscribe to the event stream and load microagents for the given session ID."""
         self.event_stream = event_stream
         self.sid = sid or str(uuid.uuid4())
         self.status_callback = status_callback
         self.loop = None
-        self.event_stream.subscribe(EventStreamSubscriber.MEMORY, self.on_event, self.sid)
+        self.event_stream.subscribe(
+            EventStreamSubscriber.MEMORY, self.on_event, self.sid
+        )
         self.repo_microagents = {}
         self.knowledge_microagents = {}
         self.repository_info: RepositoryInfo | None = None
@@ -63,36 +76,139 @@ class Memory:
 
     def on_event(self, event: Event) -> None:
         """Handle an event from the event stream."""
-        asyncio.get_event_loop().run_until_complete(self._on_event(event))
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop:
+            loop.create_task(self._on_event(event))
+            return
+
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop is not None and loop.is_running():
+            loop.create_task(self._on_event(event))
+        else:
+            if loop is None:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            loop.run_until_complete(self._on_event(event))
 
     async def _on_event(self, event: Event) -> None:
         """Handle an event from the event stream asynchronously."""
         try:
-            if isinstance(event, RecallAction):
-                if event.source == EventSource.USER and event.recall_type == RecallType.WORKSPACE_CONTEXT:
-                    logger.debug("Workspace context recall")
-                    workspace_obs: RecallObservation | NullObservation | None = None
-                    workspace_obs = self._on_workspace_context_recall(event)
-                    if workspace_obs is None:
-                        workspace_obs = NullObservation(content="")
-                    workspace_obs.cause = event.id
-                    self.event_stream.add_event(workspace_obs, EventSource.ENVIRONMENT)
-                    return
-                if event.source in [EventSource.USER, EventSource.AGENT] and event.recall_type == RecallType.KNOWLEDGE:
-                    logger.debug("Microagent knowledge recall from %s message", event.source)
-                    microagent_obs: RecallObservation | NullObservation | None = None
-                    microagent_obs = self._on_microagent_recall(event)
-                    if microagent_obs is None:
-                        microagent_obs = NullObservation(content="")
-                    microagent_obs.cause = event.id
-                    self.event_stream.add_event(microagent_obs, EventSource.ENVIRONMENT)
-                    return
-        except Exception as e:
-            error_str = f"Error: {e.__class__.__name__!s}"
-            logger.error(error_str)
-            logger.info('MEMORY: about to call set_runtime_status with ERROR_MEMORY (msg="%s")', error_str)
-            self.set_runtime_status(RuntimeStatus.ERROR_MEMORY, error_str)
-            return
+            if not isinstance(event, RecallAction):
+                return
+            observation = await self._process_recall_with_retry(event)
+            if observation is None:
+                observation = cast(
+                    RecallObservation, self._build_failure_observation(event)
+                )
+            observation.cause = event.id
+            self.event_stream.add_event(observation, EventSource.ENVIRONMENT)
+        except Exception as exc:
+            await self._handle_recall_exception(event, exc)
+
+    async def _process_recall_with_retry(
+        self, event: RecallAction, max_attempts: int = 3
+    ) -> RecallObservation | None:
+        attempt = 0
+        while attempt < max_attempts:
+            attempt += 1
+            try:
+                result = self._process_recall_once(event, attempt)
+                if result is not None:
+                    return result
+                break
+            except Exception as exc:  # pragma: no cover - defensive
+                if not self._is_transient_error(exc):
+                    logger.warning(
+                        "Permanent recall error encountered on attempt %s: %s",
+                        attempt,
+                        exc,
+                    )
+                    break
+                await self._backoff_retry(attempt, exc)
+        return None
+
+    def _process_recall_once(
+        self,
+        event: RecallAction,
+        attempt: int,
+    ) -> RecallObservation | None:
+        if event.recall_type == RecallType.WORKSPACE_CONTEXT and event.source == EventSource.USER:
+            logger.debug("Workspace context recall (attempt %s)", attempt)
+            return self._on_workspace_context_recall(event)
+        if event.recall_type == RecallType.KNOWLEDGE and event.source in (
+            EventSource.USER,
+            EventSource.AGENT,
+        ):
+            logger.debug(
+                "Microagent knowledge recall from %s message (attempt %s)",
+                event.source,
+                attempt,
+            )
+            return self._on_microagent_recall(event)
+        return None
+
+    async def _backoff_retry(self, attempt: int, exc: Exception) -> None:
+        backoff = min(0.8, 0.2 * (2 ** (attempt - 1)))
+        jitter = 0.05 * attempt
+        sleep_time = backoff + jitter
+        logger.warning(
+            "Transient recall attempt %s failed: %s; backoff %.2fs",
+            attempt,
+            exc,
+            sleep_time,
+        )
+        await asyncio.sleep(sleep_time)
+
+    def _build_failure_observation(self, event: RecallAction) -> RecallFailureObservation:
+        return RecallFailureObservation(
+            recall_type=event.recall_type,
+            error_message="Recall failed after retries",
+            content="Recall failure",
+        )
+
+    async def _handle_recall_exception(self, event: Event, exc: Exception) -> None:
+        error_str = f"Recall error: {exc.__class__.__name__}: {exc}"[:500]
+        logger.error(error_str)
+        self.set_runtime_status(RuntimeStatus.ERROR_MEMORY, error_str)
+        failure_obs = RecallFailureObservation(
+            recall_type=getattr(event, "recall_type", None),
+            error_message=error_str,
+            content=error_str,
+        )
+        failure_obs.cause = getattr(event, "id", None)
+        try:
+            self.event_stream.add_event(failure_obs, EventSource.ENVIRONMENT)
+        except Exception:
+            pass
+
+    @staticmethod
+    def _is_transient_error(e: Exception) -> bool:
+        """Best-effort classification of transient recall errors for retry policy."""
+        transient_types = (
+            TimeoutError,
+            ConnectionError,
+        )
+        if isinstance(e, transient_types):
+            return True
+        msg = str(e).lower()
+        return any(
+            key in msg
+            for key in (
+                "timeout",
+                "rate limit",
+                "temporarily unavailable",
+                "try again",
+                "connection reset",
+            )
+        )
 
     def _collect_repo_instructions(self) -> str:
         """Collect repository instructions from all repo microagents."""
@@ -103,14 +219,20 @@ class Memory:
             repo_instructions += microagent.content
         return repo_instructions
 
-    def _should_create_recall_observation(self, repo_instructions: str, microagent_knowledge: list) -> bool:
+    def _should_create_recall_observation(
+        self,
+        repo_instructions: str,
+        microagent_knowledge: list[MicroagentKnowledge],
+    ) -> bool:
         """Check if we should create a recall observation based on available data."""
-        return (
-            self.repository_info
-            or self.runtime_info
-            or repo_instructions
-            or microagent_knowledge
-            or self.conversation_instructions
+        return any(
+            [
+                self.repository_info is not None,
+                self.runtime_info is not None,
+                bool(repo_instructions),
+                bool(microagent_knowledge),
+                self.conversation_instructions is not None,
+            ],
         )
 
     def _get_repo_info_fields(self) -> dict[str, str]:
@@ -123,7 +245,8 @@ class Memory:
             ),
             "repo_directory": (
                 self.repository_info.repo_directory
-                if self.repository_info and self.repository_info.repo_directory is not None
+                if self.repository_info
+                and self.repository_info.repo_directory is not None
                 else ""
             ),
             "repo_branch": (
@@ -133,31 +256,40 @@ class Memory:
             ),
         }
 
-    def _get_runtime_info_fields(self) -> dict[str, any]:
+    def _get_runtime_info_fields(self) -> dict[str, Any]:
         """Get runtime information fields."""
+        runtime_hosts: dict[str, int] = {}
+        additional_instructions = ""
+        custom_secrets: dict[str, str] = {}
+        working_dir = ""
+        date = ""
+
+        if self.runtime_info is not None:
+            runtime_hosts = self.runtime_info.available_hosts
+            additional_instructions = self.runtime_info.additional_agent_instructions
+            custom_secrets = self.runtime_info.custom_secrets_descriptions
+            working_dir = self.runtime_info.working_dir
+            date = self.runtime_info.date
+
         return {
-            "runtime_hosts": (
-                self.runtime_info.available_hosts
-                if self.runtime_info and self.runtime_info.available_hosts is not None
-                else {}
-            ),
-            "additional_agent_instructions": (
-                self.runtime_info.additional_agent_instructions
-                if self.runtime_info and self.runtime_info.additional_agent_instructions is not None
-                else ""
-            ),
-            "date": self.runtime_info.date if self.runtime_info is not None else "",
-            "custom_secrets_descriptions": (
-                self.runtime_info.custom_secrets_descriptions if self.runtime_info is not None else {}
-            ),
-            "working_dir": self.runtime_info.working_dir if self.runtime_info else "",
+            "runtime_hosts": runtime_hosts,
+            "additional_agent_instructions": additional_instructions,
+            "date": date,
+            "custom_secrets_descriptions": custom_secrets,
+            "working_dir": working_dir,
         }
 
     def _get_conversation_instructions(self) -> str:
         """Get conversation instructions content."""
-        return self.conversation_instructions.content if self.conversation_instructions is not None else ""
+        return (
+            self.conversation_instructions.content
+            if self.conversation_instructions is not None
+            else ""
+        )
 
-    def _on_workspace_context_recall(self, event: RecallAction) -> RecallObservation | None:
+    def _on_workspace_context_recall(
+        self, event: RecallAction
+    ) -> RecallObservation | None:
         """Add repository and runtime information to the stream as a RecallObservation.
 
         This method collects information from all available repo microagents and concatenates their contents.
@@ -170,7 +302,9 @@ class Memory:
         microagent_knowledge = self._find_microagent_knowledge(event.query)
 
         # Check if we should create a recall observation
-        if not self._should_create_recall_observation(repo_instructions, microagent_knowledge):
+        if not self._should_create_recall_observation(
+            repo_instructions, microagent_knowledge
+        ):
             return None
 
         # Get all required fields
@@ -222,16 +356,24 @@ class Memory:
             if trigger := microagent.match_trigger(query):
                 logger.info("Microagent '%s' triggered by keyword '%s'", name, trigger)
                 recalled_content.append(
-                    MicroagentKnowledge(name=microagent.name, trigger=trigger, content=microagent.content),
+                    MicroagentKnowledge(
+                        name=microagent.name,
+                        trigger=trigger,
+                        content=microagent.content,
+                    ),
                 )
         return recalled_content
 
-    def load_user_workspace_microagents(self, user_microagents: list[BaseMicroagent]) -> None:
+    def load_user_workspace_microagents(
+        self, user_microagents: list[BaseMicroagent]
+    ) -> None:
         """This method loads microagents from a user's cloned repo or workspace directory.
 
         This is typically called from agent_session or setup once the workspace is cloned.
         """
-        logger.info("Loading user workspace microagents: %s", [m.name for m in user_microagents])
+        logger.info(
+            "Loading user workspace microagents: %s", [m.name for m in user_microagents]
+        )
         for user_microagent in user_microagents:
             if isinstance(user_microagent, KnowledgeMicroagent):
                 self.knowledge_microagents[user_microagent.name] = user_microagent
@@ -240,7 +382,9 @@ class Memory:
 
     def _load_global_microagents(self) -> None:
         """Loads microagents from the global microagents_dir."""
-        repo_agents, knowledge_agents = load_microagents_from_dir(GLOBAL_MICROAGENTS_DIR)
+        repo_agents, knowledge_agents = load_microagents_from_dir(
+            GLOBAL_MICROAGENTS_DIR
+        )
         for name, agent_knowledge in knowledge_agents.items():
             self.knowledge_microagents[name] = agent_knowledge
         for name, agent_repo in repo_agents.items():
@@ -253,13 +397,19 @@ class Memory:
         """
         try:
             os.makedirs(USER_MICROAGENTS_DIR, exist_ok=True)
-            repo_agents, knowledge_agents = load_microagents_from_dir(USER_MICROAGENTS_DIR)
+            repo_agents, knowledge_agents = load_microagents_from_dir(
+                USER_MICROAGENTS_DIR
+            )
             for name, agent_knowledge in knowledge_agents.items():
                 self.knowledge_microagents[name] = agent_knowledge
             for name, agent_repo in repo_agents.items():
                 self.repo_microagents[name] = agent_repo
         except Exception as e:
-            logger.warning("Failed to load user microagents from %s: %s", USER_MICROAGENTS_DIR, str(e))
+            logger.warning(
+                "Failed to load user microagents from %s: %s",
+                USER_MICROAGENTS_DIR,
+                str(e),
+            )
 
     def get_microagent_mcp_tools(self) -> list[MCPConfig]:
         """Get MCP tools from all repo microagents (always active).
@@ -272,22 +422,58 @@ class Memory:
         for agent in self.repo_microagents.values():
             if agent.metadata.mcp_tools:
                 mcp_configs.append(agent.metadata.mcp_tools)
-                logger.debug("Found MCP tools in repo microagent %s: %s", agent.name, agent.metadata.mcp_tools)
+                logger.debug(
+                    "Found MCP tools in repo microagent %s: %s",
+                    agent.name,
+                    agent.metadata.mcp_tools,
+                )
         return mcp_configs
 
-    def set_repository_info(self, repo_name: str, repo_directory: str, branch_name: str | None = None) -> None:
+    def set_repository_info(
+        self, repo_name: str, repo_directory: str, branch_name: str | None = None
+    ) -> None:
         """Store repository info so we can reference it in an observation."""
         if repo_name or repo_directory:
-            self.repository_info = RepositoryInfo(repo_name, repo_directory, branch_name)
+            self.repository_info = RepositoryInfo(
+                repo_name, repo_directory, branch_name
+            )
         else:
             self.repository_info = None
 
-    def set_runtime_info(self, runtime: Runtime, custom_secrets_descriptions: dict[str, str], working_dir: str) -> None:
+    def set_runtime_info(
+        self,
+        runtime: Runtime,
+        custom_secrets_descriptions: dict[str, str],
+        working_dir: str,
+    ) -> None:
         """Store runtime info (web hosts, ports, etc.)."""
         utc_now = datetime.now(timezone.utc)
         date = str(utc_now.date())
-        web_hosts = getattr(runtime, "web_hosts", []) or []
-        additional_instructions = getattr(runtime, "additional_agent_instructions", None)
+
+        web_hosts_attr = getattr(runtime, "web_hosts", None)
+        web_hosts: dict[str, int] = {}
+        if isinstance(web_hosts_attr, dict):
+            web_hosts = {
+                str(host): int(port)
+                for host, port in web_hosts_attr.items()
+                if isinstance(host, (str, int)) and isinstance(port, int)
+            }
+
+        additional_instructions_attr = getattr(
+            runtime, "additional_agent_instructions", None
+        )
+        additional_instructions_result: Any
+        if callable(additional_instructions_attr):
+            additional_instructions_result = additional_instructions_attr()
+        else:
+            additional_instructions_result = additional_instructions_attr
+
+        if isinstance(additional_instructions_result, str):
+            additional_instructions = additional_instructions_result
+        elif additional_instructions_result is None:
+            additional_instructions = ""
+        else:
+            additional_instructions = str(additional_instructions_result)
 
         if web_hosts or additional_instructions:
             self.runtime_info = RuntimeInfo(
@@ -304,33 +490,55 @@ class Memory:
                 working_dir=working_dir,
             )
 
-    def set_conversation_instructions(self, conversation_instructions: str | None) -> None:
+    def set_conversation_instructions(
+        self, conversation_instructions: str | None
+    ) -> None:
         """Set contextual information for conversation.
 
         This is information the agent may require.
         """
-        self.conversation_instructions = ConversationInstructions(content=conversation_instructions or "")
+        self.conversation_instructions = ConversationInstructions(
+            content=conversation_instructions or ""
+        )
 
     def set_runtime_status(self, status: RuntimeStatus, message: str) -> None:
         """Sends an error message if the callback function was provided."""
         if self.status_callback:
             try:
-                logger.info('MEMORY.set_runtime_status ENTER (status=%s, message="%s")', status, message)
+                logger.info(
+                    'MEMORY.set_runtime_status ENTER (status=%s, message="%s")',
+                    status,
+                    message,
+                )
                 if self.loop is None:
                     self.loop = asyncio.get_running_loop()
                 try:
-                    asyncio.run_coroutine_threadsafe(self._set_runtime_status("error", status, message), self.loop)
+                    asyncio.run_coroutine_threadsafe(
+                        self._set_runtime_status("error", status, message), self.loop
+                    )
                 except RuntimeError:
                     try:
-                        logger.info("MEMORY.set_runtime_status: calling status_callback synchronously")
+                        logger.info(
+                            "MEMORY.set_runtime_status: calling status_callback synchronously"
+                        )
                         self.status_callback("error", status, message)
-                        logger.info("MEMORY.set_runtime_status: status_callback returned")
+                        logger.info(
+                            "MEMORY.set_runtime_status: status_callback returned"
+                        )
                     except Exception:
-                        asyncio.create_task(self._set_runtime_status("error", status, message))
+                        asyncio.create_task(
+                            self._set_runtime_status("error", status, message)
+                        )
             except (RuntimeError, KeyError) as e:
-                logger.error("Error sending status message: %s", e.__class__.__name__, stack_info=False)
+                logger.error(
+                    "Error sending status message: %s",
+                    e.__class__.__name__,
+                    stack_info=False,
+                )
 
-    async def _set_runtime_status(self, msg_type: str, runtime_status: RuntimeStatus, message: str) -> None:
+    async def _set_runtime_status(
+        self, msg_type: str, runtime_status: RuntimeStatus, message: str
+    ) -> None:
         """Sends a status message to the client."""
         if self.status_callback:
             logger.info(

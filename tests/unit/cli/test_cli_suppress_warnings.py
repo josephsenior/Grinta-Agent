@@ -15,7 +15,9 @@ class TestWarningSuppressionCLI:
         captured_output = StringIO()
         with patch("sys.stderr", captured_output):
             warnings.warn(
-                "Pydantic serializer warnings: PydanticSerializationUnexpectedValue", UserWarning, stacklevel=2
+                "Pydantic serializer warnings: PydanticSerializationUnexpectedValue",
+                UserWarning,
+                stacklevel=2,
             )
         output = captured_output.getvalue()
         assert "Pydantic serializer warnings" not in output
@@ -26,7 +28,9 @@ class TestWarningSuppressionCLI:
         captured_output = StringIO()
         with patch("sys.stderr", captured_output):
             warnings.warn(
-                "Call to deprecated method get_events. (Use search_events instead)", DeprecationWarning, stacklevel=2
+                "Call to deprecated method get_events. (Use search_events instead)",
+                DeprecationWarning,
+                stacklevel=2,
             )
         output = captured_output.getvalue()
         assert "deprecated method" not in output
@@ -36,7 +40,11 @@ class TestWarningSuppressionCLI:
         suppress_cli_warnings()
         captured_output = StringIO()
         with patch("sys.stderr", captured_output):
-            warnings.warn("Expected 9 fields but got 5: Expected `Message`", UserWarning, stacklevel=2)
+            warnings.warn(
+                "Expected 9 fields but got 5: Expected `Message`",
+                UserWarning,
+                stacklevel=2,
+            )
         output = captured_output.getvalue()
         assert "Expected 9 fields" not in output
 
@@ -45,7 +53,11 @@ class TestWarningSuppressionCLI:
         suppress_cli_warnings()
         captured_output = StringIO()
         with patch("sys.stderr", captured_output):
-            warnings.warn("This is a regular warning that should appear", UserWarning, stacklevel=2)
+            warnings.warn(
+                "This is a regular warning that should appear",
+                UserWarning,
+                stacklevel=2,
+            )
         output = captured_output.getvalue()
         assert "regular warning" in output
 
@@ -58,7 +70,9 @@ class TestWarningSuppressionCLI:
         importlib.reload(forge.cli.suppress_warnings)
         captured_output = StringIO()
         with patch("sys.stderr", captured_output):
-            warnings.warn("Pydantic serializer warnings: test", UserWarning, stacklevel=2)
+            warnings.warn(
+                "Pydantic serializer warnings: test", UserWarning, stacklevel=2
+            )
         output = captured_output.getvalue()
         assert "Pydantic serializer warnings" not in output
 
@@ -68,5 +82,7 @@ class TestWarningSuppressionCLI:
         suppress_cli_warnings()
         filters = warnings.filters
         filter_messages = [f[1] for f in filters if f[1] is not None]
-        assert any(("Pydantic serializer warnings" in str(msg) for msg in filter_messages))
+        assert any(
+            ("Pydantic serializer warnings" in str(msg) for msg in filter_messages)
+        )
         assert any(("deprecated method" in str(msg) for msg in filter_messages))

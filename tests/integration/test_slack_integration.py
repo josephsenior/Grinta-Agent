@@ -34,21 +34,25 @@ class TestSlackIntegration:
         """Test that install endpoint requires SLACK_CLIENT_ID."""
         with patch("forge.server.routes.slack.config") as mock_config:
             mock_config.SLACK_CLIENT_ID = None
-            
+
             response = test_client.get("/api/slack/install?user_id=test-user")
-            
+
             assert response.status_code == 501
             assert "not configured" in response.json()["detail"]
 
     def test_install_endpoint_returns_oauth_url(self, test_client, mock_slack_store):
         """Test that install endpoint returns valid OAuth URL."""
-        with patch("forge.server.routes.slack.config") as mock_config, \
-             patch("forge.server.routes.slack.get_slack_store", return_value=mock_slack_store):
-            
+        with (
+            patch("forge.server.routes.slack.config") as mock_config,
+            patch(
+                "forge.server.routes.slack.get_slack_store",
+                return_value=mock_slack_store,
+            ),
+        ):
             mock_config.SLACK_CLIENT_ID = "test-client-id"
-            
+
             response = test_client.get("/api/slack/install?user_id=test-user")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert "url" in data
@@ -58,10 +62,14 @@ class TestSlackIntegration:
     def test_oauth_callback_validates_state(self, test_client, mock_slack_store):
         """Test that OAuth callback validates state."""
         mock_slack_store.get_oauth_state = MagicMock(return_value=None)
-        
-        with patch("forge.server.routes.slack.get_slack_store", return_value=mock_slack_store):
-            response = test_client.get("/api/slack/callback?code=test-code&state=invalid-state")
-            
+
+        with patch(
+            "forge.server.routes.slack.get_slack_store", return_value=mock_slack_store
+        ):
+            response = test_client.get(
+                "/api/slack/callback?code=test-code&state=invalid-state"
+            )
+
             assert response.status_code == 400
 
     @pytest.mark.integration
@@ -86,17 +94,21 @@ class TestSlackIntegration:
             ),
         ]
         mock_slack_store.list_workspaces = MagicMock(return_value=mock_workspaces)
-        
-        with patch("forge.server.routes.slack.get_slack_store", return_value=mock_slack_store):
+
+        with patch(
+            "forge.server.routes.slack.get_slack_store", return_value=mock_slack_store
+        ):
             response = test_client.get("/api/slack/workspaces?user_id=user-1")
-            
+
             assert response.status_code == 200
             data = response.json()
             # The endpoint filters by user_id, so we should only get user-1's workspaces
             assert len(data["workspaces"]) == 1
             assert data["workspaces"][0]["team_id"] == "T1"
 
-    def test_uninstall_workspace_requires_ownership(self, test_client, mock_slack_store):
+    def test_uninstall_workspace_requires_ownership(
+        self, test_client, mock_slack_store
+    ):
         """Test that uninstall requires user to own the workspace."""
         mock_workspace = SlackWorkspace(
             id="W1",
@@ -107,13 +119,19 @@ class TestSlackIntegration:
             installed_by_user_id="owner-user",
         )
         mock_slack_store.get_workspace = MagicMock(return_value=mock_workspace)
-        
-        with patch("forge.server.routes.slack.get_slack_store", return_value=mock_slack_store):
-            response = test_client.delete("/api/slack/workspaces/T1?user_id=different-user")
-            
+
+        with patch(
+            "forge.server.routes.slack.get_slack_store", return_value=mock_slack_store
+        ):
+            response = test_client.delete(
+                "/api/slack/workspaces/T1?user_id=different-user"
+            )
+
             assert response.status_code == 404
 
-    def test_uninstall_workspace_succeeds_for_owner(self, test_client, mock_slack_store):
+    def test_uninstall_workspace_succeeds_for_owner(
+        self, test_client, mock_slack_store
+    ):
         """Test that uninstall succeeds for workspace owner."""
         mock_workspace = SlackWorkspace(
             id="W1",
@@ -124,10 +142,12 @@ class TestSlackIntegration:
             installed_by_user_id="owner-user",
         )
         mock_slack_store.get_workspace = MagicMock(return_value=mock_workspace)
-        
-        with patch("forge.server.routes.slack.get_slack_store", return_value=mock_slack_store):
+
+        with patch(
+            "forge.server.routes.slack.get_slack_store", return_value=mock_slack_store
+        ):
             response = test_client.delete("/api/slack/workspaces/T1?user_id=owner-user")
-            
+
             assert response.status_code == 200
             assert response.json()["ok"] is True
             mock_slack_store.delete_workspace.assert_called_once_with("T1")
@@ -138,9 +158,9 @@ class TestSlackIntegration:
             "type": "url_verification",
             "challenge": "test-challenge-12345",
         }
-        
+
         response = test_client.post("/api/slack/events", json=challenge_body)
-        
+
         assert response.status_code == 200
         assert response.json()["challenge"] == "test-challenge-12345"
 
@@ -150,23 +170,28 @@ class TestSlackIntegration:
             "type": "event_callback",
             "event": {"type": "app_mention", "text": "test"},
         }
-        
-        with patch("forge.server.routes.slack.get_slack_store", return_value=mock_slack_store), \
-             patch("forge.server.routes.slack.verify_slack_signature", return_value=False):
-            
+
+        with (
+            patch(
+                "forge.server.routes.slack.get_slack_store",
+                return_value=mock_slack_store,
+            ),
+            patch(
+                "forge.server.routes.slack.verify_slack_signature", return_value=False
+            ),
+        ):
             response = test_client.post("/api/slack/events", json=event_body)
-            
+
             assert response.status_code == 401
 
     def test_cleanup_endpoint_removes_listener(self, test_client):
         """Test that cleanup endpoint removes event listener."""
         from forge.server.routes.slack import _slack_event_listeners
-        
+
         # Add a test listener
         _slack_event_listeners["test-conv-id"] = (MagicMock(), "C123", "123.456")
-        
+
         response = test_client.post("/api/slack/cleanup/test-conv-id")
-        
+
         assert response.status_code == 200
         assert "test-conv-id" not in _slack_event_listeners
-

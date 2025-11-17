@@ -53,7 +53,13 @@ FNCALL_TOOLS: list[ChatCompletionToolParam] = [
                 "properties": {
                     "command": {
                         "description": "The commands to run. Allowed options are: `view`, `create`, `str_replace`, `insert`, `undo_edit`.",
-                        "enum": ["view", "create", "str_replace", "insert", "undo_edit"],
+                        "enum": [
+                            "view",
+                            "create",
+                            "str_replace",
+                            "insert",
+                            "undo_edit",
+                        ],
                         "type": "string",
                     },
                     "path": {
@@ -123,13 +129,19 @@ def test_malformed_parameter_parsing_recovery():
 
     This simulates a tool call to str_replace_editor where the 'command' parameter is malformed.
     """
-    from forge.llm.fn_call_converter import convert_non_fncall_messages_to_fncall_messages
+    from forge.llm.fn_call_converter import (
+        convert_non_fncall_messages_to_fncall_messages,
+    )
 
     assistant_message = {
         "role": "assistant",
         "content": "<function=str_replace_editor>\n<parameter=command=str_replace</parameter>\n<parameter=path>/repo/app.py</parameter>\n<parameter=old_str>foo</parameter>\n<parameter=new_str>bar</parameter>\n</function>",
     }
-    messages = [{"role": "system", "content": "test"}, {"role": "user", "content": "do edit"}, assistant_message]
+    messages = [
+        {"role": "system", "content": "test"},
+        {"role": "user", "content": "do edit"},
+        assistant_message,
+    ]
     converted = convert_non_fncall_messages_to_fncall_messages(messages, FNCALL_TOOLS)
     last = converted[-1]
     assert last["role"] == "assistant"
@@ -170,15 +182,25 @@ def test_get_example_for_tools_single_tool():
                 "description": "Execute a bash command in the terminal.",
                 "parameters": {
                     "type": "object",
-                    "properties": {"command": {"type": "string", "description": "The bash command to execute."}},
+                    "properties": {
+                        "command": {
+                            "type": "string",
+                            "description": "The bash command to execute.",
+                        }
+                    },
                     "required": ["command"],
                 },
             },
         }
     ]
     example = get_example_for_tools(tools)
-    assert example.startswith("Here's a running example of how to perform a task with the provided tools.")
-    assert "USER: Create a list of numbers from 1 to 10, and display them in a web page at port 5000." in example
+    assert example.startswith(
+        "Here's a running example of how to perform a task with the provided tools."
+    )
+    assert (
+        "USER: Create a list of numbers from 1 to 10, and display them in a web page at port 5000."
+        in example
+    )
     assert refine_prompt(TOOL_EXAMPLES["execute_bash"]["check_dir"]) in example
     assert refine_prompt(TOOL_EXAMPLES["execute_bash"]["run_server"]) in example
     assert refine_prompt(TOOL_EXAMPLES["execute_bash"]["kill_server"]) in example
@@ -192,12 +214,20 @@ def test_get_example_for_tools_single_tool_is_finish():
     tools = [
         {
             "type": "function",
-            "function": {"name": "finish", "description": "Finish the interaction when the task is complete."},
+            "function": {
+                "name": "finish",
+                "description": "Finish the interaction when the task is complete.",
+            },
         }
     ]
     example = get_example_for_tools(tools)
-    assert example.startswith("Here's a running example of how to perform a task with the provided tools.")
-    assert "USER: Create a list of numbers from 1 to 10, and display them in a web page at port 5000." in example
+    assert example.startswith(
+        "Here's a running example of how to perform a task with the provided tools."
+    )
+    assert (
+        "USER: Create a list of numbers from 1 to 10, and display them in a web page at port 5000."
+        in example
+    )
     assert TOOL_EXAMPLES["finish"]["example"] in example
     assert TOOL_EXAMPLES["execute_bash"]["check_dir"] not in example
     assert TOOL_EXAMPLES["str_replace_editor"]["create_file"] not in example
@@ -214,7 +244,12 @@ def test_get_example_for_tools_multiple_tools():
                 "description": "Execute a bash command in the terminal.",
                 "parameters": {
                     "type": "object",
-                    "properties": {"command": {"type": "string", "description": "The bash command to execute."}},
+                    "properties": {
+                        "command": {
+                            "type": "string",
+                            "description": "The bash command to execute.",
+                        }
+                    },
                     "required": ["command"],
                 },
             },
@@ -230,9 +265,18 @@ def test_get_example_for_tools_multiple_tools():
                         "command": {
                             "type": "string",
                             "description": "The commands to run.",
-                            "enum": ["view", "create", "str_replace", "insert", "undo_edit"],
+                            "enum": [
+                                "view",
+                                "create",
+                                "str_replace",
+                                "insert",
+                                "undo_edit",
+                            ],
                         },
-                        "path": {"type": "string", "description": "Absolute path to file or directory."},
+                        "path": {
+                            "type": "string",
+                            "description": "Absolute path to file or directory.",
+                        },
                     },
                     "required": ["command", "path"],
                 },
@@ -240,8 +284,13 @@ def test_get_example_for_tools_multiple_tools():
         },
     ]
     example = get_example_for_tools(tools)
-    assert example.startswith("Here's a running example of how to perform a task with the provided tools.")
-    assert "USER: Create a list of numbers from 1 to 10, and display them in a web page at port 5000." in example
+    assert example.startswith(
+        "Here's a running example of how to perform a task with the provided tools."
+    )
+    assert (
+        "USER: Create a list of numbers from 1 to 10, and display them in a web page at port 5000."
+        in example
+    )
     assert refine_prompt(TOOL_EXAMPLES["execute_bash"]["check_dir"]) in example
     assert refine_prompt(TOOL_EXAMPLES["execute_bash"]["run_server"]) in example
     assert refine_prompt(TOOL_EXAMPLES["execute_bash"]["kill_server"]) in example
@@ -261,7 +310,12 @@ def test_get_example_for_tools_multiple_tools_with_finish():
                 "description": "Execute a bash command in the terminal.",
                 "parameters": {
                     "type": "object",
-                    "properties": {"command": {"type": "string", "description": "The bash command to execute."}},
+                    "properties": {
+                        "command": {
+                            "type": "string",
+                            "description": "The bash command to execute.",
+                        }
+                    },
                     "required": ["command"],
                 },
             },
@@ -277,9 +331,18 @@ def test_get_example_for_tools_multiple_tools_with_finish():
                         "command": {
                             "type": "string",
                             "description": "The commands to run.",
-                            "enum": ["view", "create", "str_replace", "insert", "undo_edit"],
+                            "enum": [
+                                "view",
+                                "create",
+                                "str_replace",
+                                "insert",
+                                "undo_edit",
+                            ],
                         },
-                        "path": {"type": "string", "description": "Absolute path to file or directory."},
+                        "path": {
+                            "type": "string",
+                            "description": "Absolute path to file or directory.",
+                        },
                     },
                     "required": ["command", "path"],
                 },
@@ -293,21 +356,37 @@ def test_get_example_for_tools_multiple_tools_with_finish():
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "code": {"type": "string", "description": "The Python code that interacts with the browser."}
+                        "code": {
+                            "type": "string",
+                            "description": "The Python code that interacts with the browser.",
+                        }
                     },
                     "required": ["code"],
                 },
             },
         },
-        {"type": "function", "function": {"name": "finish", "description": "Finish the interaction."}},
+        {
+            "type": "function",
+            "function": {"name": "finish", "description": "Finish the interaction."},
+        },
     ]
     example = get_example_for_tools(tools)
-    assert example.startswith("Here's a running example of how to perform a task with the provided tools.")
-    assert "USER: Create a list of numbers from 1 to 10, and display them in a web page at port 5000." in example
+    assert example.startswith(
+        "Here's a running example of how to perform a task with the provided tools."
+    )
+    assert (
+        "USER: Create a list of numbers from 1 to 10, and display them in a web page at port 5000."
+        in example
+    )
     assert refine_prompt(TOOL_EXAMPLES["execute_bash"]["check_dir"]).strip() in example
     assert refine_prompt(TOOL_EXAMPLES["execute_bash"]["run_server"]).strip() in example
-    assert refine_prompt(TOOL_EXAMPLES["execute_bash"]["kill_server"]).strip() in example
-    assert refine_prompt(TOOL_EXAMPLES["execute_bash"]["run_server_again"]).strip() in example
+    assert (
+        refine_prompt(TOOL_EXAMPLES["execute_bash"]["kill_server"]).strip() in example
+    )
+    assert (
+        refine_prompt(TOOL_EXAMPLES["execute_bash"]["run_server_again"]).strip()
+        in example
+    )
     assert TOOL_EXAMPLES["str_replace_editor"]["create_file"] in example
     assert TOOL_EXAMPLES["str_replace_editor"]["edit_file"] in example
     assert TOOL_EXAMPLES["browser"]["view_page"] in example
@@ -318,11 +397,18 @@ def test_get_example_for_tools_all_tools():
     """Test that get_example_for_tools generates correct example with all tools."""
     tools = FNCALL_TOOLS
     example = get_example_for_tools(tools)
-    assert example.startswith("Here's a running example of how to perform a task with the provided tools.")
-    assert "USER: Create a list of numbers from 1 to 10, and display them in a web page at port 5000." in example
+    assert example.startswith(
+        "Here's a running example of how to perform a task with the provided tools."
+    )
+    assert (
+        "USER: Create a list of numbers from 1 to 10, and display them in a web page at port 5000."
+        in example
+    )
     assert refine_prompt(TOOL_EXAMPLES["execute_bash"]["check_dir"]).strip() in example
     assert refine_prompt(TOOL_EXAMPLES["execute_bash"]["run_server"]).strip() in example
-    assert refine_prompt(TOOL_EXAMPLES["execute_bash"]["kill_server"]).strip() in example
+    assert (
+        refine_prompt(TOOL_EXAMPLES["execute_bash"]["kill_server"]).strip() in example
+    )
     assert TOOL_EXAMPLES["str_replace_editor"]["create_file"].strip() in example
     assert TOOL_EXAMPLES["str_replace_editor"]["edit_file"].strip() in example
     assert TOOL_EXAMPLES["finish"]["example"] in example
@@ -381,12 +467,20 @@ FNCALL_MESSAGES = [
         "name": "execute_bash",
     },
     {
-        "content": [{"type": "text", "text": "I see there's a symlink. Let's explore the actual directory:"}],
+        "content": [
+            {
+                "type": "text",
+                "text": "I see there's a symlink. Let's explore the actual directory:",
+            }
+        ],
         "role": "assistant",
         "tool_calls": [
             {
                 "index": 1,
-                "function": {"arguments": '{"command": "ls -la /testbed"}', "name": "execute_bash"},
+                "function": {
+                    "arguments": '{"command": "ls -la /testbed"}',
+                    "name": "execute_bash",
+                },
                 "id": "toolu_02",
                 "type": "function",
             }
@@ -399,7 +493,12 @@ FNCALL_MESSAGES = [
         "name": "execute_bash",
     },
     {
-        "content": [{"type": "text", "text": "Let's look at the source code file mentioned in the PR description:"}],
+        "content": [
+            {
+                "type": "text",
+                "text": "Let's look at the source code file mentioned in the PR description:",
+            }
+        ],
         "role": "assistant",
         "tool_calls": [
             {
@@ -474,7 +573,15 @@ NON_FNCALL_MESSAGES = [
             }
         ],
     },
-    {"role": "user", "content": [{"type": "text", "text": "EXECUTION RESULT of [execute_bash]:\nSOME OBSERVATION"}]},
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "text",
+                "text": "EXECUTION RESULT of [execute_bash]:\nSOME OBSERVATION",
+            }
+        ],
+    },
     {
         "role": "assistant",
         "content": [
@@ -496,7 +603,10 @@ NON_FNCALL_MESSAGES = [
 ]
 FNCALL_RESPONSE_MESSAGE = {
     "content": [
-        {"type": "text", "text": "Let me search for the `_format_float` method mentioned in the PR description:"}
+        {
+            "type": "text",
+            "text": "Let me search for the `_format_float` method mentioned in the PR description:",
+        }
     ],
     "role": "assistant",
     "tool_calls": [
@@ -595,21 +705,30 @@ def test_convert_tool_call_to_string(tool_calls, expected):
 
 
 def test_convert_fncall_messages_to_non_fncall_messages():
-    converted_non_fncall = convert_fncall_messages_to_non_fncall_messages(FNCALL_MESSAGES, FNCALL_TOOLS)
+    converted_non_fncall = convert_fncall_messages_to_non_fncall_messages(
+        FNCALL_MESSAGES, FNCALL_TOOLS
+    )
     assert isinstance(converted_non_fncall, list)
     assert len(converted_non_fncall) == len(NON_FNCALL_MESSAGES)
     for exp, act in zip(NON_FNCALL_MESSAGES, converted_non_fncall):
         assert exp.get("role") == act.get("role")
     sys_msg = converted_non_fncall[0]
     if isinstance(sys_msg.get("content"), list):
-        texts = "".join([c.get("text", "") for c in sys_msg["content"] if c.get("type") == "text"])
+        texts = "".join(
+            [c.get("text", "") for c in sys_msg["content"] if c.get("type") == "text"]
+        )
     else:
         texts = sys_msg.get("content", "")
-    assert "You have access to the following functions" in texts or "---- BEGIN FUNCTION" in texts
+    assert (
+        "You have access to the following functions" in texts
+        or "---- BEGIN FUNCTION" in texts
+    )
 
 
 def test_convert_non_fncall_messages_to_fncall_messages():
-    converted = convert_non_fncall_messages_to_fncall_messages(NON_FNCALL_MESSAGES, FNCALL_TOOLS)
+    converted = convert_non_fncall_messages_to_fncall_messages(
+        NON_FNCALL_MESSAGES, FNCALL_TOOLS
+    )
     print(json.dumps(converted, indent=2))
     assert isinstance(converted, list)
     assert len(converted) == len(FNCALL_MESSAGES)
@@ -617,7 +736,9 @@ def test_convert_non_fncall_messages_to_fncall_messages():
         assert exp.get("role") == act.get("role")
     sys_content = converted[0].get("content")
     if isinstance(sys_content, list):
-        sys_text = "".join([c.get("text", "") for c in sys_content if c.get("type") == "text"])
+        sys_text = "".join(
+            [c.get("text", "") for c in sys_content if c.get("type") == "text"]
+        )
     else:
         sys_text = sys_content or ""
     assert "---- BEGIN FUNCTION" in sys_text
@@ -637,7 +758,9 @@ def test_two_way_conversion_nonfn_to_fn_to_nonfn():
 def _test_nonfn_to_fncall_conversion():
     """Test conversion from non-fncall messages to fncall messages."""
     non_fncall_copy = copy.deepcopy(NON_FNCALL_MESSAGES)
-    converted_fncall = convert_non_fncall_messages_to_fncall_messages(NON_FNCALL_MESSAGES, FNCALL_TOOLS)
+    converted_fncall = convert_non_fncall_messages_to_fncall_messages(
+        NON_FNCALL_MESSAGES, FNCALL_TOOLS
+    )
 
     # Verify original messages unchanged
     assert non_fncall_copy == NON_FNCALL_MESSAGES
@@ -652,7 +775,9 @@ def _test_nonfn_to_fncall_conversion():
 def _test_fncall_to_nonfn_conversion():
     """Test conversion from fncall messages to non-fncall messages."""
     fncall_copy = copy.deepcopy(FNCALL_MESSAGES)
-    converted_non_fncall = convert_fncall_messages_to_non_fncall_messages(FNCALL_MESSAGES, FNCALL_TOOLS)
+    converted_non_fncall = convert_fncall_messages_to_non_fncall_messages(
+        FNCALL_MESSAGES, FNCALL_TOOLS
+    )
 
     # Verify original messages unchanged
     assert fncall_copy == FNCALL_MESSAGES
@@ -684,9 +809,16 @@ def _verify_nonfn_conversion_results(converted_non_fncall):
 
 def _verify_tool_calls_contain_expected_tools(converted_fncall):
     """Verify that tool calls contain expected tools."""
-    first_tool_calls = [m for m in converted_fncall if m.get("role") == "assistant" and m.get("tool_calls")]
+    first_tool_calls = [
+        m
+        for m in converted_fncall
+        if m.get("role") == "assistant" and m.get("tool_calls")
+    ]
 
-    tool_call_text = json.dumps([tc for m in first_tool_calls for tc in m.get("tool_calls", [])], ensure_ascii=False)
+    tool_call_text = json.dumps(
+        [tc for m in first_tool_calls for tc in m.get("tool_calls", [])],
+        ensure_ascii=False,
+    )
     expected_tools = ["str_replace_editor", "execute_bash"]
 
     assert any(tool in tool_call_text for tool in expected_tools)
@@ -695,24 +827,35 @@ def _verify_tool_calls_contain_expected_tools(converted_fncall):
 def _verify_system_text_contains_function_info(converted_non_fncall):
     """Verify that system text contains function information."""
     sys_texts = "".join(
-        [c.get("text", "") for c in converted_non_fncall[0].get("content", []) if c.get("type") == "text"]
+        [
+            c.get("text", "")
+            for c in converted_non_fncall[0].get("content", [])
+            if c.get("type") == "text"
+        ]
     )
 
-    expected_indicators = ["You have access to the following functions", "---- BEGIN FUNCTION"]
+    expected_indicators = [
+        "You have access to the following functions",
+        "---- BEGIN FUNCTION",
+    ]
 
     assert any(indicator in sys_texts for indicator in expected_indicators)
 
 
 def test_two_way_conversion_fn_to_nonfn_to_fn():
     fncall_copy = copy.deepcopy(FNCALL_MESSAGES)
-    converted_non_fncall = convert_fncall_messages_to_non_fncall_messages(FNCALL_MESSAGES, FNCALL_TOOLS)
+    converted_non_fncall = convert_fncall_messages_to_non_fncall_messages(
+        FNCALL_MESSAGES, FNCALL_TOOLS
+    )
     assert fncall_copy == FNCALL_MESSAGES
     assert isinstance(converted_non_fncall, list)
     assert len(converted_non_fncall) == len(NON_FNCALL_MESSAGES)
     for exp, act in zip(NON_FNCALL_MESSAGES, converted_non_fncall):
         assert exp.get("role") == act.get("role")
     non_fncall_copy = copy.deepcopy(NON_FNCALL_MESSAGES)
-    converted_fncall = convert_non_fncall_messages_to_fncall_messages(NON_FNCALL_MESSAGES, FNCALL_TOOLS)
+    converted_fncall = convert_non_fncall_messages_to_fncall_messages(
+        NON_FNCALL_MESSAGES, FNCALL_TOOLS
+    )
     assert non_fncall_copy == NON_FNCALL_MESSAGES
     assert isinstance(converted_fncall, list)
     assert len(converted_fncall) == len(FNCALL_MESSAGES)
@@ -721,17 +864,23 @@ def test_two_way_conversion_fn_to_nonfn_to_fn():
 
 
 def test_infer_fncall_on_noncall_model():
-    messages_for_llm_inference = convert_fncall_messages_to_non_fncall_messages(FNCALL_MESSAGES, FNCALL_TOOLS)
+    messages_for_llm_inference = convert_fncall_messages_to_non_fncall_messages(
+        FNCALL_MESSAGES, FNCALL_TOOLS
+    )
     assert isinstance(messages_for_llm_inference, list)
     assert len(messages_for_llm_inference) == len(NON_FNCALL_MESSAGES)
     for exp, act in zip(NON_FNCALL_MESSAGES, messages_for_llm_inference):
         assert exp.get("role") == act.get("role")
     response_message_from_llm_inference = NON_FNCALL_RESPONSE_MESSAGE
     all_nonfncall_messages = NON_FNCALL_MESSAGES + [response_message_from_llm_inference]
-    converted_fncall_messages = convert_non_fncall_messages_to_fncall_messages(all_nonfncall_messages, FNCALL_TOOLS)
+    converted_fncall_messages = convert_non_fncall_messages_to_fncall_messages(
+        all_nonfncall_messages, FNCALL_TOOLS
+    )
     assert isinstance(converted_fncall_messages, list)
     assert len(converted_fncall_messages) == len(FNCALL_MESSAGES) + 1
-    for exp, act in zip(FNCALL_MESSAGES + [FNCALL_RESPONSE_MESSAGE], converted_fncall_messages):
+    for exp, act in zip(
+        FNCALL_MESSAGES + [FNCALL_RESPONSE_MESSAGE], converted_fncall_messages
+    ):
         assert exp.get("role") == act.get("role")
     assert "tool_calls" in converted_fncall_messages[-1]
     assert (
@@ -746,50 +895,132 @@ def test_convert_from_multiple_tool_calls_to_single_tool_call_messages():
             "role": "assistant",
             "content": "Let me help you with that.",
             "tool_calls": [
-                {"id": "call1", "type": "function", "function": {"name": "func1", "arguments": "{}"}},
-                {"id": "call2", "type": "function", "function": {"name": "func2", "arguments": "{}"}},
+                {
+                    "id": "call1",
+                    "type": "function",
+                    "function": {"name": "func1", "arguments": "{}"},
+                },
+                {
+                    "id": "call2",
+                    "type": "function",
+                    "function": {"name": "func2", "arguments": "{}"},
+                },
             ],
         },
-        {"role": "tool", "tool_call_id": "call1", "content": "Result 1", "name": "func1"},
-        {"role": "tool", "tool_call_id": "call2", "content": "Result 2", "name": "func2"},
+        {
+            "role": "tool",
+            "tool_call_id": "call1",
+            "content": "Result 1",
+            "name": "func1",
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "call2",
+            "content": "Result 2",
+            "name": "func2",
+        },
         {
             "role": "assistant",
             "content": "Test again",
             "tool_calls": [
-                {"id": "call3", "type": "function", "function": {"name": "func3", "arguments": "{}"}},
-                {"id": "call4", "type": "function", "function": {"name": "func4", "arguments": "{}"}},
+                {
+                    "id": "call3",
+                    "type": "function",
+                    "function": {"name": "func3", "arguments": "{}"},
+                },
+                {
+                    "id": "call4",
+                    "type": "function",
+                    "function": {"name": "func4", "arguments": "{}"},
+                },
             ],
         },
-        {"role": "tool", "tool_call_id": "call3", "content": "Result 3", "name": "func3"},
-        {"role": "tool", "tool_call_id": "call4", "content": "Result 4", "name": "func4"},
+        {
+            "role": "tool",
+            "tool_call_id": "call3",
+            "content": "Result 3",
+            "name": "func3",
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "call4",
+            "content": "Result 4",
+            "name": "func4",
+        },
     ]
     expected_output = [
         {
             "role": "assistant",
             "content": "Let me help you with that.",
-            "tool_calls": [{"id": "call1", "type": "function", "function": {"name": "func1", "arguments": "{}"}}],
+            "tool_calls": [
+                {
+                    "id": "call1",
+                    "type": "function",
+                    "function": {"name": "func1", "arguments": "{}"},
+                }
+            ],
         },
-        {"role": "tool", "tool_call_id": "call1", "content": "Result 1", "name": "func1"},
+        {
+            "role": "tool",
+            "tool_call_id": "call1",
+            "content": "Result 1",
+            "name": "func1",
+        },
         {
             "role": "assistant",
             "content": "",
-            "tool_calls": [{"id": "call2", "type": "function", "function": {"name": "func2", "arguments": "{}"}}],
+            "tool_calls": [
+                {
+                    "id": "call2",
+                    "type": "function",
+                    "function": {"name": "func2", "arguments": "{}"},
+                }
+            ],
         },
-        {"role": "tool", "tool_call_id": "call2", "content": "Result 2", "name": "func2"},
+        {
+            "role": "tool",
+            "tool_call_id": "call2",
+            "content": "Result 2",
+            "name": "func2",
+        },
         {
             "role": "assistant",
             "content": "Test again",
-            "tool_calls": [{"id": "call3", "type": "function", "function": {"name": "func3", "arguments": "{}"}}],
+            "tool_calls": [
+                {
+                    "id": "call3",
+                    "type": "function",
+                    "function": {"name": "func3", "arguments": "{}"},
+                }
+            ],
         },
-        {"role": "tool", "tool_call_id": "call3", "content": "Result 3", "name": "func3"},
+        {
+            "role": "tool",
+            "tool_call_id": "call3",
+            "content": "Result 3",
+            "name": "func3",
+        },
         {
             "role": "assistant",
             "content": "",
-            "tool_calls": [{"id": "call4", "type": "function", "function": {"name": "func4", "arguments": "{}"}}],
+            "tool_calls": [
+                {
+                    "id": "call4",
+                    "type": "function",
+                    "function": {"name": "func4", "arguments": "{}"},
+                }
+            ],
         },
-        {"role": "tool", "tool_call_id": "call4", "content": "Result 4", "name": "func4"},
+        {
+            "role": "tool",
+            "tool_call_id": "call4",
+            "content": "Result 4",
+            "name": "func4",
+        },
     ]
-    result = convert_from_multiple_tool_calls_to_single_tool_call_messages(input_messages)
+    result = convert_from_multiple_tool_calls_to_single_tool_call_messages(
+        input_messages
+    )
     assert result == expected_output
 
 
@@ -799,11 +1030,24 @@ def test_convert_from_multiple_tool_calls_to_single_tool_call_messages_incomplet
             "role": "assistant",
             "content": "Let me help you with that.",
             "tool_calls": [
-                {"id": "call1", "type": "function", "function": {"name": "func1", "arguments": "{}"}},
-                {"id": "call2", "type": "function", "function": {"name": "func2", "arguments": "{}"}},
+                {
+                    "id": "call1",
+                    "type": "function",
+                    "function": {"name": "func1", "arguments": "{}"},
+                },
+                {
+                    "id": "call2",
+                    "type": "function",
+                    "function": {"name": "func2", "arguments": "{}"},
+                },
             ],
         },
-        {"role": "tool", "tool_call_id": "call1", "content": "Result 1", "name": "func1"},
+        {
+            "role": "tool",
+            "tool_call_id": "call1",
+            "content": "Result 1",
+            "name": "func1",
+        },
     ]
     with pytest.raises(FunctionCallConversionError):
         convert_from_multiple_tool_calls_to_single_tool_call_messages(input_messages)
@@ -814,17 +1058,35 @@ def test_convert_from_multiple_tool_calls_no_changes_needed():
         {
             "role": "assistant",
             "content": "Let me help you with that.",
-            "tool_calls": [{"id": "call1", "type": "function", "function": {"name": "func1", "arguments": "{}"}}],
+            "tool_calls": [
+                {
+                    "id": "call1",
+                    "type": "function",
+                    "function": {"name": "func1", "arguments": "{}"},
+                }
+            ],
         },
-        {"role": "tool", "tool_call_id": "call1", "content": "Result 1", "name": "func1"},
+        {
+            "role": "tool",
+            "tool_call_id": "call1",
+            "content": "Result 1",
+            "name": "func1",
+        },
     ]
-    result = convert_from_multiple_tool_calls_to_single_tool_call_messages(input_messages)
+    result = convert_from_multiple_tool_calls_to_single_tool_call_messages(
+        input_messages
+    )
     assert result == input_messages
 
 
 def test_convert_from_multiple_tool_calls_no_tool_calls():
-    input_messages = [{"role": "user", "content": "Hello"}, {"role": "assistant", "content": "Hi there!"}]
-    result = convert_from_multiple_tool_calls_to_single_tool_call_messages(input_messages)
+    input_messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there!"},
+    ]
+    result = convert_from_multiple_tool_calls_to_single_tool_call_messages(
+        input_messages
+    )
     assert result == input_messages
 
 
@@ -843,17 +1105,29 @@ def test_convert_fncall_messages_with_cache_control():
     assert result[0]["role"] == "user"
     assert "cache_control" in result[0]["content"][-1]
     assert result[0]["content"][-1]["cache_control"] == {"type": "ephemeral"}
-    assert result[0]["content"][0]["text"] == "EXECUTION RESULT of [test_tool]:\ntest content"
+    assert (
+        result[0]["content"][0]["text"]
+        == "EXECUTION RESULT of [test_tool]:\ntest content"
+    )
 
 
 def test_convert_fncall_messages_without_cache_control():
     """Test that tool messages without cache_control work as expected."""
-    messages = [{"role": "tool", "name": "test_tool", "content": [{"type": "text", "text": "test content"}]}]
+    messages = [
+        {
+            "role": "tool",
+            "name": "test_tool",
+            "content": [{"type": "text", "text": "test content"}],
+        }
+    ]
     result = convert_fncall_messages_to_non_fncall_messages(messages, [])
     assert len(result) == 1
     assert result[0]["role"] == "user"
     assert "cache_control" not in result[0]["content"][-1]
-    assert result[0]["content"][0]["text"] == "EXECUTION RESULT of [test_tool]:\ntest content"
+    assert (
+        result[0]["content"][0]["text"]
+        == "EXECUTION RESULT of [test_tool]:\ntest content"
+    )
 
 
 def test_convert_fncall_messages_with_image_url():
@@ -864,7 +1138,10 @@ def test_convert_fncall_messages_with_image_url():
             "name": "browser",
             "content": [
                 {"type": "text", "text": "some browser tool results"},
-                {"type": "image_url", "image_url": {"url": "data:image/gif;base64,R0lGODlhAQABAAAAACw="}},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": "data:image/gif;base64,R0lGODlhAQABAAAAACw="},
+                },
             ],
         }
     ]
@@ -873,6 +1150,8 @@ def test_convert_fncall_messages_with_image_url():
     assert converted_messages[0]["role"] == "user"
     assert len(converted_messages[0]["content"]) == len(messages[0]["content"])
     assert (
-        next((c for c in converted_messages[0]["content"] if c["type"] == "text"))["text"]
+        next((c for c in converted_messages[0]["content"] if c["type"] == "text"))[
+            "text"
+        ]
         == f"EXECUTION RESULT of [{messages[0]['name']}]:\n{messages[0]['content'][0]['text']}"
     )

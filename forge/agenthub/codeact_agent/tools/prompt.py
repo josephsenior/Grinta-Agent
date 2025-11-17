@@ -1,7 +1,12 @@
-"""Helpers for adapting tool prompts to the current platform."""
+"""Helpers for adapting tool prompts to the current platform.
+
+The unit tests patch `forge.agenthub.codeact_agent.tools.prompt.sys.platform`.
+Importing `sys` here exposes the module attribute so that patching succeeds
+without raising `AttributeError`.
+"""
 
 import re
-import sys
+import sys  # noqa: F401 - imported for monkeypatch compatibility
 
 
 def refine_prompt(prompt: str):
@@ -17,7 +22,12 @@ def refine_prompt(prompt: str):
         The refined prompt text.
 
     """
-    if sys.platform == "win32":
-        result = re.sub(r"\bexecute_bash\b", "execute_powershell", prompt, flags=re.IGNORECASE)
-        return re.sub(r"(?<!execute_)(?<!_)\bbash\b", "powershell", result, flags=re.IGNORECASE)
+    # Use sys.platform (not platform.system) so tests can monkeypatch
+    if sys.platform.lower().startswith("win"):
+        result = re.sub(
+            r"\bexecute_bash\b", "execute_powershell", prompt, flags=re.IGNORECASE
+        )
+        return re.sub(
+            r"(?<!execute_)(?<!_)\bbash\b", "powershell", result, flags=re.IGNORECASE
+        )
     return prompt

@@ -22,7 +22,9 @@ BATCH_SIZE = 5
 
 
 def run_cmd(cmd: List[str], cwd: Path = ROOT) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    return subprocess.run(
+        cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+    )
 
 
 def enumerate_d205() -> List[Path]:
@@ -49,14 +51,16 @@ def enumerate_d205() -> List[Path]:
 
 
 def chunk(it: List[Path], n: int) -> List[List[Path]]:
-    return [it[i: i + n] for i in range(0, len(it), n)]
+    return [it[i : i + n] for i in range(0, len(it), n)]
 
 
 def run_batch(batch: List[Path]) -> bool:
     print(f"\nProcessing batch ({len(batch)} files):")
     for p in batch:
         print(" -", p.relative_to(ROOT))
-    dry_cmd = [sys.executable, str(FIXER), "--dry-run"] + [str(p.relative_to(ROOT)) for p in batch]
+    dry_cmd = [sys.executable, str(FIXER), "--dry-run"] + [
+        str(p.relative_to(ROOT)) for p in batch
+    ]
     print("Running dry-run:", " ".join(dry_cmd))
     dry = run_cmd(dry_cmd)
     print(dry.stdout)
@@ -80,8 +84,12 @@ def run_batch(batch: List[Path]) -> bool:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--batch-size", type=int, default=5, help="number of files per batch")
-    parser.add_argument("--yes", action="store_true", help="auto-apply fixes without pause")
+    parser.add_argument(
+        "--batch-size", type=int, default=5, help="number of files per batch"
+    )
+    parser.add_argument(
+        "--yes", action="store_true", help="auto-apply fixes without pause"
+    )
     args = parser.parse_args()
     files = enumerate_d205()
     if not files:
@@ -96,7 +104,9 @@ def main() -> None:
             print(f"Batch {i} failed and was reverted — will skip to next batch.")
             continue
         fixed += len(batch)
-    print(f"\nDone. Processed {len(files)} files in {len(batches)} batches. Attempted fixes for {fixed} files.")
+    print(
+        f"\nDone. Processed {len(files)} files in {len(batches)} batches. Attempted fixes for {fixed} files."
+    )
 
 
 if __name__ == "__main__":

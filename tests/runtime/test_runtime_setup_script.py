@@ -16,10 +16,18 @@ def test_initialize_repository_for_runtime(temp_dir, runtime_cls, run_as_Forge):
     """Test that the initialize_repository_for_runtime function works."""
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     mock_repo = Repository(
-        id="1232", full_name="All-Hands-AI/Forge", git_provider=ProviderType.GITHUB, is_public=True
+        id="1232",
+        full_name="All-Hands-AI/Forge",
+        git_provider=ProviderType.GITHUB,
+        is_public=True,
     )
-    with patch("forge.runtime.base.ProviderHandler.verify_repo_provider", return_value=mock_repo):
-        repository_dir = initialize_repository_for_runtime(runtime, selected_repository="All-Hands-AI/Forge")
+    with patch(
+        "forge.runtime.base.ProviderHandler.verify_repo_provider",
+        return_value=mock_repo,
+    ):
+        repository_dir = initialize_repository_for_runtime(
+            runtime, selected_repository="All-Hands-AI/Forge"
+        )
     assert repository_dir is not None
     assert repository_dir == "forge"
 
@@ -29,7 +37,9 @@ def test_maybe_run_setup_script(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     setup_script = ".Forge/setup.sh"
     write_obs = runtime.write(
-        FileWriteAction(path=setup_script, content="#!/bin/bash\necho 'Hello World' >> README.md\n")
+        FileWriteAction(
+            path=setup_script, content="#!/bin/bash\necho 'Hello World' >> README.md\n"
+        )
     )
     assert isinstance(write_obs, FileWriteObservation)
     runtime.maybe_run_setup_script()
@@ -41,11 +51,17 @@ def test_maybe_run_setup_script(temp_dir, runtime_cls, run_as_Forge):
 def test_maybe_run_setup_script_with_long_timeout(temp_dir, runtime_cls, run_as_Forge):
     """Test that setup script is executed when it exists (long timeout path)."""
     runtime, config = _load_runtime(
-        temp_dir, runtime_cls, run_as_Forge, runtime_startup_env_vars={"NO_CHANGE_TIMEOUT_SECONDS": "1"}
+        temp_dir,
+        runtime_cls,
+        run_as_Forge,
+        runtime_startup_env_vars={"NO_CHANGE_TIMEOUT_SECONDS": "1"},
     )
     setup_script = ".Forge/setup.sh"
     write_obs = runtime.write(
-        FileWriteAction(path=setup_script, content="#!/bin/bash\nsleep 3 && echo 'Hello World' >> README.md\n")
+        FileWriteAction(
+            path=setup_script,
+            content="#!/bin/bash\nsleep 3 && echo 'Hello World' >> README.md\n",
+        )
     )
     assert isinstance(write_obs, FileWriteObservation)
     runtime.maybe_run_setup_script()

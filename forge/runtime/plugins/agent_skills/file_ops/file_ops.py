@@ -99,7 +99,9 @@ def _lint_file(file_path: str) -> tuple[str | None, int | None]:
     if not lint_error:
         return (None, None)
     first_error_line = lint_error[0].line if lint_error else None
-    error_text = "ERRORS:\n" + "\n".join([f"{file_path}:{err.line}:{err.column}: {err.message}" for err in lint_error])
+    error_text = "ERRORS:\n" + "\n".join(
+        [f"{file_path}:{err.line}:{err.column}: {err.message}" for err in lint_error]
+    )
     return (error_text, first_error_line)
 
 
@@ -120,7 +122,9 @@ def _read_file_content(file_path: str) -> list[str]:
         return content.splitlines(True)
 
 
-def _calculate_window_bounds(current_line: int, total_lines: int, window: int, ignore_window: bool) -> tuple[int, int]:
+def _calculate_window_bounds(
+    current_line: int, total_lines: int, window: int, ignore_window: bool
+) -> tuple[int, int]:
     """Calculate the start and end bounds for the window display.
 
     Args:
@@ -151,7 +155,9 @@ def _calculate_window_bounds(current_line: int, total_lines: int, window: int, i
     return start, end
 
 
-def _format_window_output(lines: list[str], start: int, end: int, total_lines: int) -> str:
+def _format_window_output(
+    lines: list[str], start: int, end: int, total_lines: int
+) -> str:
     """Format the window output with line numbers and context indicators.
 
     Args:
@@ -219,7 +225,9 @@ def _print_window(
     CURRENT_LINE = _clamp(targeted_line, 1, total_lines)
 
     # Calculate window bounds
-    start, end = _calculate_window_bounds(CURRENT_LINE, total_lines, window, ignore_window)
+    start, end = _calculate_window_bounds(
+        CURRENT_LINE, total_lines, window, ignore_window
+    )
 
     # Format and output
     output = _format_window_output(lines, start, end, total_lines)
@@ -238,7 +246,9 @@ def _cur_file_header(current_file: str | None, total_lines: int) -> str:
     return f"[File: {os.path.abspath(current_file)} ({total_lines} lines total)]\n"
 
 
-def open_file(path: str, line_number: int | None = 1, context_lines: int | None = WINDOW) -> None:
+def open_file(
+    path: str, line_number: int | None = 1, context_lines: int | None = WINDOW
+) -> None:
     """Opens a file in the editor and optionally positions at a specific line.
 
     The function displays a limited window of content, centered around the specified line
@@ -299,7 +309,9 @@ def goto_line(line_number: int) -> None:
         return
     CURRENT_LINE = _clamp(line_number, 1, total_lines)
     output = _cur_file_header(CURRENT_FILE, total_lines)
-    output += _print_window(CURRENT_FILE, CURRENT_LINE, WINDOW, return_str=True, ignore_window=False)
+    output += _print_window(
+        CURRENT_FILE, CURRENT_LINE, WINDOW, return_str=True, ignore_window=False
+    )
     if not output.endswith("\n"):
         output += "\n"
     print(output, end="")
@@ -320,7 +332,9 @@ def scroll_down() -> None:
         total_lines = max(1, sum(1 for _ in file))
     CURRENT_LINE = _clamp(CURRENT_LINE + WINDOW, 1, total_lines)
     output = _cur_file_header(CURRENT_FILE, total_lines)
-    output += _print_window(CURRENT_FILE, CURRENT_LINE, WINDOW, return_str=True, ignore_window=True)
+    output += _print_window(
+        CURRENT_FILE, CURRENT_LINE, WINDOW, return_str=True, ignore_window=True
+    )
     if not output.endswith("\n"):
         output += "\n"
     print(output, end="")
@@ -341,7 +355,9 @@ def scroll_up() -> None:
         total_lines = max(1, sum(1 for _ in file))
     CURRENT_LINE = _clamp(CURRENT_LINE - WINDOW, 1, total_lines)
     output = _cur_file_header(CURRENT_FILE, total_lines)
-    output += _print_window(CURRENT_FILE, CURRENT_LINE, WINDOW, return_str=True, ignore_window=True)
+    output += _print_window(
+        CURRENT_FILE, CURRENT_LINE, WINDOW, return_str=True, ignore_window=True
+    )
     if not output.endswith("\n"):
         output += "\n"
     print(output, end="")
@@ -367,7 +383,9 @@ def search_dir(search_term: str, dir_path: str = "./") -> None:
     _print_search_results(search_term, dir_path, matches)
 
 
-def _find_matches_in_directory(search_term: str, dir_path: str) -> list[tuple[str, int, str]]:
+def _find_matches_in_directory(
+    search_term: str, dir_path: str
+) -> list[tuple[str, int, str]]:
     """Find all matches of search term in directory.
 
     Args:
@@ -391,7 +409,9 @@ def _find_matches_in_directory(search_term: str, dir_path: str) -> list[tuple[st
     return matches
 
 
-def _search_file_for_term(file_path: str, search_term: str) -> list[tuple[str, int, str]]:
+def _search_file_for_term(
+    file_path: str, search_term: str
+) -> list[tuple[str, int, str]]:
     """Search a single file for search term.
 
     Args:
@@ -415,7 +435,9 @@ def _search_file_for_term(file_path: str, search_term: str) -> list[tuple[str, i
     return matches
 
 
-def _print_search_results(search_term: str, dir_path: str, matches: list[tuple[str, int, str]]) -> None:
+def _print_search_results(
+    search_term: str, dir_path: str, matches: list[tuple[str, int, str]]
+) -> None:
     """Print search results to console.
 
     Args:
@@ -430,7 +452,9 @@ def _print_search_results(search_term: str, dir_path: str, matches: list[tuple[s
 
     num_files = len({match[0] for match in matches})
     if num_files >= 999:
-        print(f'More than 999 files matched for "{search_term}" in {dir_path}. Please narrow your search.')
+        print(
+            f'More than 999 files matched for "{search_term}" in {dir_path}. Please narrow your search.'
+        )
         return
 
     print(f'[Found {len(matches)} matches for "{search_term}" in {dir_path}]')
@@ -493,4 +517,12 @@ def find_file(file_name: str, dir_path: str = "./") -> None:
         print(f'[No matches found for "{file_name}" in {dir_path}]')
 
 
-__all__ = ["find_file", "goto_line", "open_file", "scroll_down", "scroll_up", "search_dir", "search_file"]
+__all__ = [
+    "find_file",
+    "goto_line",
+    "open_file",
+    "scroll_down",
+    "scroll_up",
+    "search_dir",
+    "search_file",
+]

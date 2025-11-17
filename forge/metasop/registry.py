@@ -35,7 +35,11 @@ def _infer_capabilities_from_goal(goal: str) -> list[str]:
         (["plan", "spec", "product"], "write_spec"),
     ]
 
-    return [capability for keywords, capability in capability_keywords if any(kw in goal_lower for kw in keywords)]
+    return [
+        capability
+        for keywords, capability in capability_keywords
+        if any(kw in goal_lower for kw in keywords)
+    ]
 
 
 def _load_profile_from_file(filepath: Path) -> RoleProfile:

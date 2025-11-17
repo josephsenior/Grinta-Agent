@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\runtime\utils\command.py
+# hypothesis_version: 6.147.0
+
+[1000, '"', '$', '&', "'", '(', ')', '--no-enable-browser', '--plugins', '--user-id', '--username', '--working-dir', '-m', '-n', '-u', ';', '<', '>', '\\', '`', 'app_config %s', 'forge', 'override_user_id %s', 'poetry', 'python', 'root', 'run', 'sandbox_config %s', '|']

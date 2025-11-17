@@ -36,7 +36,9 @@ def _process_string_tokens(new_tokens):
             i += 1
 
     # Add remaining tokens
-    remaining_tokens = new_tokens[len(new_tokens) - 2:] if len(new_tokens) >= 2 else new_tokens
+    remaining_tokens = (
+        new_tokens[len(new_tokens) - 2 :] if len(new_tokens) >= 2 else new_tokens
+    )
     new_tokens_final.extend(remaining_tokens)
 
     return new_tokens_final

@@ -70,7 +70,10 @@ def test_convert_tool_call_to_string_success(sample_tools) -> None:
     tool_call = {
         "id": "call-1",
         "type": "function",
-        "function": {"name": converter.EXECUTE_BASH_TOOL_NAME, "arguments": json.dumps({"command": "ls", "count": "3"})},
+        "function": {
+            "name": converter.EXECUTE_BASH_TOOL_NAME,
+            "arguments": json.dumps({"command": "ls", "count": "3"}),
+        },
     }
     result = converter.convert_tool_call_to_string(tool_call)
     assert "<function=execute_bash>" in result
@@ -126,12 +129,20 @@ def test_process_system_and_user_messages(sample_tools) -> None:
     assert system["content"].endswith("SUFFIX")
 
     user_message, first_flag = converter._process_user_message(
-        "First", sample_tools, add_in_context_learning_example=True, first_user_message_encountered=False
+        "First",
+        sample_tools,
+        add_in_context_learning_example=True,
+        first_user_message_encountered=False,
     )
     assert first_flag is True
-    assert converter.IN_CONTEXT_LEARNING_EXAMPLE_PREFIX(sample_tools).strip() in user_message["content"]
+    assert (
+        converter.IN_CONTEXT_LEARNING_EXAMPLE_PREFIX(sample_tools).strip()
+        in user_message["content"]
+    )
 
-    list_content = converter._process_system_message([{"type": "text", "text": "msg"}], " SUFFIX")["content"]
+    list_content = converter._process_system_message(
+        [{"type": "text", "text": "msg"}], " SUFFIX"
+    )["content"]
     assert list_content[-1]["text"].endswith("SUFFIX")
 
 
@@ -161,38 +172,68 @@ def test_process_system_message_invalid_type() -> None:
         converter._process_system_message({"bad": "value"}, "suffix")
 
 
-def test_convert_fncall_messages_to_non_fncall_messages(sample_tools, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_convert_fncall_messages_to_non_fncall_messages(
+    sample_tools, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(converter, "convert_tools_to_description", lambda tools: "Desc")
     messages = [
         {"role": "system", "content": "System prompt"},
         {"role": "user", "content": "Hi"},
-        {"role": "assistant", "content": "<function=finish>\n<parameter=message>Done</parameter>\n</function>"},
-        {"role": "tool", "name": "execute_bash", "content": "result", "cache_control": {"type": "ephemeral"}},
+        {
+            "role": "assistant",
+            "content": "<function=finish>\n<parameter=message>Done</parameter>\n</function>",
+        },
+        {
+            "role": "tool",
+            "name": "execute_bash",
+            "content": "result",
+            "cache_control": {"type": "ephemeral"},
+        },
     ]
-    converted = converter.convert_fncall_messages_to_non_fncall_messages(messages, sample_tools)
+    converted = converter.convert_fncall_messages_to_non_fncall_messages(
+        messages, sample_tools
+    )
     assert "You have access to the following functions" in converted[0]["content"]
     assert converted[1]["content"].startswith("Here's a running example")
-    assert converted[2]["content"] == "<function=finish>\n<parameter=message>Done</parameter>\n</function>"
+    assert (
+        converted[2]["content"]
+        == "<function=finish>\n<parameter=message>Done</parameter>\n</function>"
+    )
     assert converted[3]["content"][0]["text"].startswith("EXECUTION RESULT")
 
 
-def test_convert_non_fncall_messages_to_fncall_messages_roundtrip(sample_tools, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_convert_non_fncall_messages_to_fncall_messages_roundtrip(
+    sample_tools, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(converter, "convert_tools_to_description", lambda tools: "Desc")
     messages = [
-        {"role": "system", "content": "System prompt" + converter.SYSTEM_PROMPT_SUFFIX_TEMPLATE.format(description="Desc")},
+        {
+            "role": "system",
+            "content": "System prompt"
+            + converter.SYSTEM_PROMPT_SUFFIX_TEMPLATE.format(description="Desc"),
+        },
         {"role": "user", "content": "payload"},
-        {"role": "assistant", "content": "<function=execute_bash>\n<parameter=command>ls</parameter>\n</function>"},
+        {
+            "role": "assistant",
+            "content": "<function=execute_bash>\n<parameter=command>ls</parameter>\n</function>",
+        },
         {"role": "user", "content": "EXECUTION RESULT of [execute_bash]:\nresult"},
     ]
-    converted = converter.convert_non_fncall_messages_to_fncall_messages(deepcopy(messages), sample_tools)
+    converted = converter.convert_non_fncall_messages_to_fncall_messages(
+        deepcopy(messages), sample_tools
+    )
     assert converted[2]["tool_calls"][0]["function"]["arguments"]
     assert converted[3]["role"] == "tool"
 
 
-def test_convert_non_fncall_messages_to_fncall_messages_errors(sample_tools, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_convert_non_fncall_messages_to_fncall_messages_errors(
+    sample_tools, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(converter, "convert_tools_to_description", lambda tools: "Desc")
     bad_messages = [{"role": "assistant", "content": "<function=unknown></function>"}]
-    converted = converter.convert_non_fncall_messages_to_fncall_messages(bad_messages, sample_tools)
+    converted = converter.convert_non_fncall_messages_to_fncall_messages(
+        bad_messages, sample_tools
+    )
     assert converted[0]["content"] == "<function=unknown></function>"
 
 
@@ -202,14 +243,24 @@ def test_convert_from_multiple_tool_calls_handles_splitting() -> None:
             "role": "assistant",
             "content": "Thinking",
             "tool_calls": [
-                {"id": "toolu_1", "type": "function", "function": {"name": "fn", "arguments": "{}"}},
-                {"id": "toolu_2", "type": "function", "function": {"name": "fn", "arguments": "{}"}},
+                {
+                    "id": "toolu_1",
+                    "type": "function",
+                    "function": {"name": "fn", "arguments": "{}"},
+                },
+                {
+                    "id": "toolu_2",
+                    "type": "function",
+                    "function": {"name": "fn", "arguments": "{}"},
+                },
             ],
         },
         {"role": "tool", "tool_call_id": "toolu_1", "content": "done"},
         {"role": "tool", "tool_call_id": "toolu_2", "content": "done2"},
     ]
-    converted = converter.convert_from_multiple_tool_calls_to_single_tool_call_messages(messages)
+    converted = converter.convert_from_multiple_tool_calls_to_single_tool_call_messages(
+        messages
+    )
     assistant_messages = [msg for msg in converted if msg["role"] == "assistant"]
     assert len(assistant_messages) == 2
 
@@ -220,13 +271,23 @@ def test_convert_from_multiple_tool_calls_detects_pending() -> None:
             "role": "assistant",
             "content": "",
             "tool_calls": [
-                {"id": "toolu_1", "type": "function", "function": {"name": "fn", "arguments": "{}"}},
-                {"id": "toolu_2", "type": "function", "function": {"name": "fn", "arguments": "{}"}},
+                {
+                    "id": "toolu_1",
+                    "type": "function",
+                    "function": {"name": "fn", "arguments": "{}"},
+                },
+                {
+                    "id": "toolu_2",
+                    "type": "function",
+                    "function": {"name": "fn", "arguments": "{}"},
+                },
             ],
         }
     ]
     with pytest.raises(converter.FunctionCallConversionError):
-        converter.convert_from_multiple_tool_calls_to_single_tool_call_messages(messages)
+        converter.convert_from_multiple_tool_calls_to_single_tool_call_messages(
+            messages
+        )
 
 
 def test_convert_from_multiple_tool_calls_ignore_flag() -> None:
@@ -235,18 +296,33 @@ def test_convert_from_multiple_tool_calls_ignore_flag() -> None:
             "role": "assistant",
             "content": "",
             "tool_calls": [
-                {"id": "toolu_1", "type": "function", "function": {"name": "fn", "arguments": "{}"}},
-                {"id": "toolu_2", "type": "function", "function": {"name": "fn", "arguments": "{}"}},
+                {
+                    "id": "toolu_1",
+                    "type": "function",
+                    "function": {"name": "fn", "arguments": "{}"},
+                },
+                {
+                    "id": "toolu_2",
+                    "type": "function",
+                    "function": {"name": "fn", "arguments": "{}"},
+                },
             ],
         }
     ]
-    result = converter.convert_from_multiple_tool_calls_to_single_tool_call_messages(messages, ignore_final_tool_result=True)
+    result = converter.convert_from_multiple_tool_calls_to_single_tool_call_messages(
+        messages, ignore_final_tool_result=True
+    )
     assert not result  # no conversion without tool results
 
 
 def test_process_other_message_branch() -> None:
-    messages = [{"role": "assistant", "content": "", "tool_calls": []}, {"role": "system", "content": "info"}]
-    converted = converter.convert_from_multiple_tool_calls_to_single_tool_call_messages(messages)
+    messages = [
+        {"role": "assistant", "content": "", "tool_calls": []},
+        {"role": "system", "content": "info"},
+    ]
+    converted = converter.convert_from_multiple_tool_calls_to_single_tool_call_messages(
+        messages
+    )
     assert any(msg["role"] == "system" for msg in converted)
 
 
@@ -256,35 +332,59 @@ def test_process_tool_message_assertion() -> None:
             "role": "assistant",
             "content": "",
             "tool_calls": [
-                {"id": "toolu_1", "type": "function", "function": {"name": "fn", "arguments": "{}"}},
-                {"id": "toolu_2", "type": "function", "function": {"name": "fn", "arguments": "{}"}},
+                {
+                    "id": "toolu_1",
+                    "type": "function",
+                    "function": {"name": "fn", "arguments": "{}"},
+                },
+                {
+                    "id": "toolu_2",
+                    "type": "function",
+                    "function": {"name": "fn", "arguments": "{}"},
+                },
             ],
         },
         {"role": "tool", "tool_call_id": "missing", "content": "data"},
     ]
     with pytest.raises(TypeError):
-        converter.convert_from_multiple_tool_calls_to_single_tool_call_messages(messages)
+        converter.convert_from_multiple_tool_calls_to_single_tool_call_messages(
+            messages
+        )
 
 
 def test_extract_and_validate_params_enforces_constraints(sample_tools) -> None:
     matching_tool = sample_tools[0]["function"]
     fn_body = "<parameter=command>echo</parameter>\n<parameter=count>5</parameter>\n<parameter=options>[1,2]</parameter>\n<parameter=mode>fast</parameter>\n"
-    matches = converter.re.finditer(converter.FN_PARAM_REGEX_PATTERN, fn_body, converter.re.DOTALL)
-    params = converter._extract_and_validate_params(matching_tool, matches, matching_tool["name"])
+    matches = converter.re.finditer(
+        converter.FN_PARAM_REGEX_PATTERN, fn_body, converter.re.DOTALL
+    )
+    params = converter._extract_and_validate_params(
+        matching_tool, matches, matching_tool["name"]
+    )
     assert params["count"] == 5
     assert params["options"] == [1, 2]
 
-    bad_fn_body = "<parameter=command>echo</parameter>\n<parameter=mode>invalid</parameter>"
-    matches = converter.re.finditer(converter.FN_PARAM_REGEX_PATTERN, bad_fn_body, converter.re.DOTALL)
+    bad_fn_body = (
+        "<parameter=command>echo</parameter>\n<parameter=mode>invalid</parameter>"
+    )
+    matches = converter.re.finditer(
+        converter.FN_PARAM_REGEX_PATTERN, bad_fn_body, converter.re.DOTALL
+    )
     with pytest.raises(converter.FunctionCallValidationError):
-        converter._extract_and_validate_params(matching_tool, matches, matching_tool["name"])
+        converter._extract_and_validate_params(
+            matching_tool, matches, matching_tool["name"]
+        )
 
 
 def test_extract_and_validate_params_missing_required(sample_tools) -> None:
     matching_tool = sample_tools[0]["function"]
-    matches = converter.re.finditer(converter.FN_PARAM_REGEX_PATTERN, "", converter.re.DOTALL)
+    matches = converter.re.finditer(
+        converter.FN_PARAM_REGEX_PATTERN, "", converter.re.DOTALL
+    )
     with pytest.raises(converter.FunctionCallValidationError):
-        converter._extract_and_validate_params(matching_tool, matches, matching_tool["name"])
+        converter._extract_and_validate_params(
+            matching_tool, matches, matching_tool["name"]
+        )
 
 
 def test_fix_stopword_and_normalize_tags() -> None:
@@ -293,7 +393,10 @@ def test_fix_stopword_and_normalize_tags() -> None:
     assert fixed.endswith("</function>")
 
     malformed = "<parameter=name=value</parameter>"
-    assert converter._normalize_parameter_tags(malformed) == "<parameter=name>value</parameter>"
+    assert (
+        converter._normalize_parameter_tags(malformed)
+        == "<parameter=name>value</parameter>"
+    )
 
 
 def test_remove_in_context_learning_examples(sample_tools) -> None:
@@ -326,10 +429,14 @@ def test_trim_content_before_function() -> None:
     trimmed = converter._trim_content_before_function(content)
     assert trimmed[0]["text"] == "Thought"
 
-    assert converter._trim_content_before_function("Thought<function=call>") == "Thought"
+    assert (
+        converter._trim_content_before_function("Thought<function=call>") == "Thought"
+    )
 
 
-def test_process_assistant_message_for_conversion(sample_tools, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_process_assistant_message_for_conversion(
+    sample_tools, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(converter, "convert_tools_to_description", lambda tools: "Desc")
     content = "<function=execute_bash>\n<parameter=command>ls</parameter>\n</function>"
     converted_messages: list[dict] = []
@@ -391,4 +498,3 @@ def test_validate_enum_constraint_error(sample_tools) -> None:
     matching_tool = sample_tools[0]["function"]
     with pytest.raises(converter.FunctionCallValidationError):
         converter._validate_enum_constraint("mode", "invalid", matching_tool, "fn")
-

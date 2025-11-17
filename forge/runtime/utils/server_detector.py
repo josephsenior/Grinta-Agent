@@ -16,6 +16,15 @@ import socket
 from dataclasses import dataclass
 
 import requests
+import asyncio
+from typing import Literal, Any, cast
+
+try:
+    import aiohttp as _aiohttp  # type: ignore[import]
+except Exception:  # pragma: no cover - optional dependency
+    _aiohttp = None  # type: ignore[assignment]
+
+aiohttp: Any | None = _aiohttp
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +47,14 @@ class DetectedServer:
 # Server start patterns - matches common dev server outputs
 SERVER_START_PATTERNS = [
     # Generic patterns
-    (r"(?:Server|App|Application|Development\s+server).*(?:listening|running|started).*(?:port|:)\s*(\d+)", "http"),
-    (r"(?:Local|Network):\s*https?://(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d+)", "http"),
+    (
+        r"(?:Server|App|Application|Development\s+server).*(?:listening|running|started).*(?:port|:)\s*(\d+)",
+        "http",
+    ),
+    (
+        r"(?:Local|Network):\s*https?://(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d+)",
+        "http",
+    ),
     # Vite
     (r"Local:\s+https?://localhost:(\d+)", "http"),
     (r"VITE.*ready.*:(\d+)", "http"),
@@ -56,7 +71,10 @@ SERVER_START_PATTERNS = [
     (r"(?:Express|Server|App).*listening.*port\s+(\d+)", "http"),
     (r"Server running at\s+https?://(?:localhost|127\.0\.0\.1):(\d+)", "http"),
     # Django
-    (r"Starting development server at\s+https?://(?:localhost|127\.0\.0\.1):(\d+)", "http"),
+    (
+        r"Starting development server at\s+https?://(?:localhost|127\.0\.0\.1):(\d+)",
+        "http",
+    ),
     # Flask
     (r"Running on\s+https?://(?:localhost|127\.0\.0\.1):(\d+)", "http"),
     # Python http.server
@@ -90,7 +108,9 @@ def extract_port_from_output(output: str) -> tuple[int, str, str] | None:
 
                     # Validate port is in valid range (1024-65535, excluding system ports)
                     if 1024 <= port <= 65535:
-                        logger.info(f"Detected server start: port={port}, line='{line.strip()}'")
+                        logger.info(
+                            f"Detected server start: port={port}, line='{line.strip()}'"
+                        )
                         return (port, protocol, line.strip())
                 except (ValueError, IndexError):
                     continue
@@ -133,7 +153,9 @@ def health_check_http(port: int, host: str = "localhost", timeout: float = 2.0) 
         'healthy' if responds with 2xx/3xx, 'unhealthy' if 4xx/5xx or no response
 
     """
-    url = f"http://{host}:{port}"
+    scheme_host = "localhost" if host in ("localhost", "127.0.0.1") else host
+    scheme = "http" if scheme_host in ("localhost", "127.0.0.1") else "https"
+    url = f"{scheme}://{scheme_host}:{port}"
     try:
         response = requests.get(url, timeout=timeout, allow_redirects=False)
         # Accept 2xx, 3xx, and even 404 (single-page apps often show 404 for API routes)
@@ -143,6 +165,44 @@ def health_check_http(port: int, host: str = "localhost", timeout: float = 2.0) 
         logger.warning(f"Health check failed: {url} returned {response.status_code}")
         return "unhealthy"
     except requests.RequestException as e:
+        logger.debug(f"Health check failed: {url} - {type(e).__name__}")
+        return "unhealthy"
+
+
+async def health_check_http_async(
+    port: int,
+    host: str = "localhost",
+    timeout: float = 2.0,
+) -> Literal["healthy", "unhealthy"]:
+    """Async HTTP health check using aiohttp when available.
+
+    Falls back to running the sync requests-based check in a thread if aiohttp is unavailable.
+
+    Args:
+        port: Port number to check
+        host: Host to check
+        timeout: HTTP request timeout
+
+    Returns:
+        'healthy' or 'unhealthy'
+
+    """
+    url = f"http://{host}:{port}"
+    if aiohttp is None:
+        # Run sync check in a thread to avoid blocking event loop
+        sync_result = await asyncio.to_thread(health_check_http, port, host, timeout)
+        return "healthy" if sync_result == "healthy" else "unhealthy"
+    timeout_cfg = aiohttp.ClientTimeout(total=timeout)
+    try:
+        async with aiohttp.ClientSession(timeout=timeout_cfg) as session:
+            async with session.get(url, allow_redirects=False) as resp:
+                status = resp.status
+                if status < 500:
+                    logger.info(f"Health check passed: {url} returned {status}")
+                    return "healthy"
+                logger.warning(f"Health check failed: {url} returned {status}")
+                return "unhealthy"
+    except Exception as e:  # Broad except to mirror sync function behavior
         logger.debug(f"Health check failed: {url} - {type(e).__name__}")
         return "unhealthy"
 

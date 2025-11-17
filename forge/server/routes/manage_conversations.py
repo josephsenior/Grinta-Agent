@@ -18,6 +18,8 @@ from fastapi.responses import JSONResponse
 from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel, ConfigDict, Field
 
+from forge.server.utils.responses import success, error
+
 from forge.core.config.llm_config import LLMConfig
 from forge.core.logger import forge_logger as logger
 from forge.core.pydantic_compat import model_dump_json
@@ -25,7 +27,6 @@ from forge.events.action import ChangeAgentStateAction, NullAction
 from forge.events.event_filter import EventFilter
 from forge.events.event_store import EventStore
 from forge.events.observation import AgentStateChangedObservation, NullObservation
-from forge.integrations.provider import PROVIDER_TOKEN_TYPE, ProviderHandler
 from forge.metasop.router import run_metasop_for_conversation
 from forge.runtime import get_runtime_cls
 from forge.runtime.runtime_status import RuntimeStatus
@@ -45,6 +46,8 @@ from forge.server.shared import (
     config,
     conversation_manager,
     file_store,
+    get_conversation_manager,
+    get_conversation_manager_impl,
 )
 from forge.server.types import LLMAuthenticationError, MissingSettingsError
 from forge.server.user_auth import (
@@ -57,7 +60,11 @@ from forge.server.user_auth import (
 )
 from forge.server.user_auth.user_auth import AuthType
 from forge.server.utils import get_conversation as get_conversation_metadata
-from forge.server.utils import get_conversation_store, validate_conversation_id
+from forge.server.utils import (
+    get_conversation_store,
+    resolve_conversation_store,
+    validate_conversation_id,
+)
 from forge.storage.data_models.conversation_metadata import (
     ConversationMetadata,
     ConversationTrigger,
@@ -87,9 +94,11 @@ if TYPE_CHECKING:
     from forge.storage.conversation.conversation_store import ConversationStore
     from forge.storage.data_models.settings import Settings
     from forge.storage.settings.settings_store import SettingsStore
+    from forge.server.conversation_manager.conversation_manager import ConversationManager
 
 app: APIRouter
 if "pytest" in sys.modules:
+
     class NoOpAPIRouter(APIRouter):
         """Router stub used in tests to short-circuit FastAPI route registration."""
 
@@ -99,18 +108,22 @@ if "pytest" in sys.modules:
 
     app = cast(APIRouter, NoOpAPIRouter())
 else:
-    app = APIRouter()
+    app = APIRouter(prefix="/api")
 
 
-async def _resolve_conversation_store(conversation_store: Any | None, user_id: str | None = None):
+async def _resolve_conversation_store(
+    conversation_store: Any | None, user_id: str | None = None
+):
     if conversation_store is not None:
         return conversation_store
     if user_id is not None:
         return await ConversationStoreImpl.get_instance(config, user_id)
-    return await get_conversation_store(None)
+    return await resolve_conversation_store(None)
 
 
-def _filter_conversations_by_age(conversations: list[ConversationMetadata], max_age_seconds: int) -> list:
+def _filter_conversations_by_age(
+    conversations: list[ConversationMetadata], max_age_seconds: int
+) -> list:
     """Filter conversations by age, removing those older than max_age_seconds.
 
     Args:
@@ -126,7 +139,9 @@ def _filter_conversations_by_age(conversations: list[ConversationMetadata], max_
     for conversation in conversations:
         if not hasattr(conversation, "created_at"):
             continue
-        age_seconds = (now - conversation.created_at.replace(tzinfo=timezone.utc)).total_seconds()
+        age_seconds = (
+            now - conversation.created_at.replace(tzinfo=timezone.utc)
+        ).total_seconds()
         if age_seconds > max_age_seconds:
             continue
         filtered_results.append(conversation)
@@ -150,10 +165,19 @@ async def _build_conversation_result_set(
         ConversationInfoResultSet with the processed conversations
 
     """
-    conversation_ids = {conversation.conversation_id for conversation in filtered_conversations}
-    connection_ids_to_conversation_ids = await conversation_manager.get_connections(filter_to_sids=conversation_ids)
-    agent_loop_info = await conversation_manager.get_agent_loop_info(filter_to_sids=conversation_ids)
-    agent_loop_info_by_conversation_id = {info.conversation_id: info for info in agent_loop_info}
+    manager = _require_conversation_manager()
+    conversation_ids = {
+        conversation.conversation_id for conversation in filtered_conversations
+    }
+    connection_ids_to_conversation_ids = await manager.get_connections(
+        filter_to_sids=conversation_ids
+    )
+    agent_loop_info = await manager.get_agent_loop_info(
+        filter_to_sids=conversation_ids
+    )
+    agent_loop_info_by_conversation_id = {
+        info.conversation_id: info for info in agent_loop_info
+    }
     return ConversationInfoResultSet(
         results=await wait_all(
             _get_conversation_info(
@@ -162,7 +186,9 @@ async def _build_conversation_result_set(
                     conversation_id == conversation.conversation_id
                     for conversation_id in connection_ids_to_conversation_ids.values()
                 ),
-                agent_loop_info=agent_loop_info_by_conversation_id.get(conversation.conversation_id),
+                agent_loop_info=agent_loop_info_by_conversation_id.get(
+                    conversation.conversation_id
+                ),
             )
             for conversation in filtered_conversations
         ),
@@ -172,6 +198,7 @@ async def _build_conversation_result_set(
 
 class InitSessionRequest(BaseModel):
     """Request payload for creating or resuming a conversation session."""
+
     repository: str | None = None
     git_provider: ProviderType | None = None
     selected_branch: str | None = None
@@ -193,6 +220,7 @@ InitSessionRequest.model_rebuild()
 
 class ConversationResponse(BaseModel):
     """Standard response payload for conversation management endpoints."""
+
     status: str
     conversation_id: str
     message: str | None = None
@@ -201,6 +229,7 @@ class ConversationResponse(BaseModel):
 
 class ProvidersSetModel(BaseModel):
     """Wrapper for optional provider list supplied when starting a conversation."""
+
     providers_set: list[ProviderType] | None = None
 
 
@@ -325,14 +354,14 @@ def _validate_remote_api_request(
             return error
 
     """
-    if conversation_trigger == ConversationTrigger.REMOTE_API_KEY and not initial_user_msg:
-        return JSONResponse(
-            content={
-                "status": "error",
-                "message": "Missing initial user message",
-                "msg_id": "CONFIGURATION$MISSING_USER_MESSAGE",
-            },
+    if (
+        conversation_trigger == ConversationTrigger.REMOTE_API_KEY
+        and not initial_user_msg
+    ):
+        return error(
+            message="Missing initial user message",
             status_code=status.HTTP_400_BAD_REQUEST,
+            error_code="CONFIGURATION$MISSING_USER_MESSAGE",
         )
     return None
 
@@ -364,7 +393,9 @@ async def _verify_repository_access(
     """
     if not repository:
         return
-    provider_handler = ProviderHandler(provider_tokens)
+    provider_handler = ProviderHandler(
+        cast(MappingProxyType[ProviderType, ProviderToken], provider_tokens)
+    )
     await provider_handler.verify_repo_provider(repository, git_provider)
 
 
@@ -423,12 +454,20 @@ async def _handle_metasop_conversation(
         msg = "Failed to initialize conversation"
         raise RuntimeError(msg)
 
-    with contextlib.suppress(Exception):
-        await conversation_manager.sio.emit(
-            "oh_event",
-            {"status_update": True, "type": "info", "message": "Starting MetaSOP orchestration…"},
-            to=f"room:{conversation_id}",
-        )
+    manager = _get_conversation_manager_instance()
+    if manager is not None:
+        sio = getattr(manager, "sio", None)
+        if sio is not None:
+            with contextlib.suppress(Exception):
+                await sio.emit(
+                    "oh_event",
+                    {
+                        "status_update": True,
+                        "type": "info",
+                        "message": "Starting MetaSOP orchestration…",
+                    },
+                    to=f"room:{conversation_id}",
+                )
 
     asyncio.create_task(
         run_metasop_for_conversation(
@@ -556,14 +595,16 @@ def _handle_conversation_errors(e: Exception) -> JSONResponse:
 
     """
     if isinstance(e, MissingSettingsError):
-        return JSONResponse(
-            content={"status": "error", "message": str(e), "msg_id": "CONFIGURATION$SETTINGS_NOT_FOUND"},
+        return error(
+            message=str(e),
             status_code=status.HTTP_400_BAD_REQUEST,
+            error_code="CONFIGURATION$SETTINGS_NOT_FOUND",
         )
     if isinstance(e, LLMAuthenticationError):
-        return JSONResponse(
-            content={"status": "error", "message": str(e), "msg_id": RuntimeStatus.ERROR_LLM_AUTHENTICATION.value},
+        return error(
+            message=str(e),
             status_code=status.HTTP_400_BAD_REQUEST,
+            error_code=RuntimeStatus.ERROR_LLM_AUTHENTICATION.value,
         )
     raise e
 
@@ -577,7 +618,7 @@ def _apply_conversation_overrides(
     initial_user_msg: str | None,
 ) -> tuple[str | None, ProviderType | None, str | None]:
     """Apply conversation overrides from triggers.
-    
+
     Args:
         repository: Original repository
         git_provider: Original git provider
@@ -585,7 +626,7 @@ def _apply_conversation_overrides(
         override_git_provider: Override git provider
         suggested_task: Suggested task object
         initial_user_msg: Initial user message
-        
+
     Returns:
         Tuple of (repository, git_provider, initial_user_msg)
 
@@ -596,26 +637,44 @@ def _apply_conversation_overrides(
         git_provider = override_git_provider
     if suggested_task:
         initial_user_msg = suggested_task.get_prompt_for_task()
-    
+
     return repository, git_provider, initial_user_msg
 
-def _normalize_provider_tokens(provider_tokens: PROVIDER_TOKEN_TYPE | None) -> PROVIDER_TOKEN_TYPE:
+
+def _normalize_provider_tokens(
+    provider_tokens: PROVIDER_TOKEN_TYPE | None,
+) -> PROVIDER_TOKEN_TYPE:
     """Normalize provider tokens into a MappingProxyType keyed by ProviderType."""
     if provider_tokens is None:
         return cast(PROVIDER_TOKEN_TYPE, MappingProxyType({}))
     if isinstance(provider_tokens, MappingProxyType):
         return provider_tokens
-    converted_tokens: dict[ProviderType, ProviderToken] = {}
-    for key, token in dict(provider_tokens).items():
-        if isinstance(key, ProviderType):
-            provider_key = key
-        else:
-            try:
-                provider_key = ProviderType(key)
-            except (ValueError, TypeError):
-                continue
-        converted_tokens[provider_key] = token
-    return cast(PROVIDER_TOKEN_TYPE, MappingProxyType(converted_tokens))
+    return cast(
+        PROVIDER_TOKEN_TYPE,
+        MappingProxyType(dict(provider_tokens)),
+    )
+
+
+def _get_conversation_manager_instance() -> "ConversationManager | None":
+    """Best-effort fetch of the global conversation manager."""
+    manager: Any = conversation_manager
+    if manager is not None:
+        return manager
+    try:
+        return get_conversation_manager()
+    except Exception:
+        return None
+
+
+def _require_conversation_manager() -> "ConversationManager":
+    """Fetch the global conversation manager or raise an HTTP error."""
+    manager = _get_conversation_manager_instance()
+    if manager is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Conversation manager is not initialized",
+        )
+    return manager
 
 
 def _prepare_conversation_params(
@@ -624,12 +683,12 @@ def _prepare_conversation_params(
     user_secrets: UserSecrets | None,
 ) -> tuple[str, PROVIDER_TOKEN_TYPE, UserSecrets]:
     """Prepare conversation parameters with defaults.
-    
+
     Args:
         user_id: User ID
         provider_tokens: Provider tokens
         user_secrets: User secrets
-        
+
     Returns:
         Tuple of (user_id, provider_tokens, user_secrets)
 
@@ -642,11 +701,14 @@ def _prepare_conversation_params(
         user_secrets or UserSecrets(),
     )
 
-@app.post("/conversations")
+
+@app.post("/conversations", response_model=ConversationResponse)
 async def new_conversation(
     data: InitSessionRequest,
     user_id: Annotated[str | None, Depends(get_user_id)] = None,
-    provider_tokens: Annotated[PROVIDER_TOKEN_TYPE | None, Depends(get_provider_tokens)] = None,
+    provider_tokens: Annotated[
+        PROVIDER_TOKEN_TYPE | None, Depends(get_provider_tokens)
+    ] = None,
     user_secrets: Annotated[UserSecrets | None, Depends(get_user_secrets)] = None,
     auth_type: Annotated[AuthType | None, Depends(get_auth_type)] = None,
 ) -> ConversationResponse | JSONResponse:
@@ -669,18 +731,26 @@ async def new_conversation(
         conversation_instructions,
     ) = _extract_request_data(data)
 
-    conversation_trigger, override_repo, override_git_provider = _determine_conversation_trigger(
-        suggested_task,
-        create_microagent,
-        auth_type,
+    conversation_trigger, override_repo, override_git_provider = (
+        _determine_conversation_trigger(
+            suggested_task,
+            create_microagent,
+            auth_type,
+        )
     )
 
     repository, git_provider, initial_user_msg = _apply_conversation_overrides(
-        repository, git_provider, override_repo, override_git_provider,
-        suggested_task, initial_user_msg
+        repository,
+        git_provider,
+        override_repo,
+        override_git_provider,
+        suggested_task,
+        initial_user_msg,
     )
 
-    if error_response := _validate_remote_api_request(conversation_trigger, initial_user_msg or ""):
+    if error_response := _validate_remote_api_request(
+        conversation_trigger, initial_user_msg or ""
+    ):
         return error_response
 
     user_id, provider_tokens, user_secrets = _prepare_conversation_params(
@@ -716,12 +786,19 @@ async def new_conversation(
 @app.get("/conversations/test")
 async def test_conversations_endpoint() -> JSONResponse:
     """Test endpoint to verify routing is working."""
-    return JSONResponse(content={"status": "test_working", "message": "conversations endpoint is accessible"})
+    return JSONResponse(
+        content={
+            "status": "test_working",
+            "message": "conversations endpoint is accessible",
+        }
+    )
+
 
 @app.get("/conversations/simple")
 async def simple_conversations_endpoint() -> dict:
     """Simple endpoint without dependencies to test routing."""
     return {"status": "simple_working", "count": 1}
+
 
 async def _search_conversations_impl(
     *,
@@ -741,6 +818,8 @@ async def _search_conversations_impl(
         limit: Maximum results per page
         conversation_store: Optional conversation store override
         user_id: Identifier used to scope results to the requesting user
+        selected_repository: Optional repository to filter results by
+        conversation_trigger: Optional ConversationTrigger to filter results by
 
     Returns:
         Pagination-aware result set of conversations
@@ -758,10 +837,10 @@ async def _search_conversations_impl(
         conversation_trigger,
     )
     store = await _resolve_conversation_store(conversation_store, user_id)
-    
+
     # Return empty list for development
     # return ConversationInfoResultSet(results=[], next_page_id=None)
-    
+
     conversation_metadata_result_set = await store.search(page_id, limit)
     logger.info(
         "conversation_store.search returned %d conversations",
@@ -773,12 +852,20 @@ async def _search_conversations_impl(
     )
     final_filtered_results = []
     for conversation in filtered_results:
-        if selected_repository is not None and conversation.selected_repository != selected_repository:
+        if (
+            selected_repository is not None
+            and conversation.selected_repository != selected_repository
+        ):
             continue
-        if conversation_trigger is not None and conversation.trigger != conversation_trigger:
+        if (
+            conversation_trigger is not None
+            and conversation.trigger != conversation_trigger
+        ):
             continue
         final_filtered_results.append(conversation)
-    return await _build_conversation_result_set(final_filtered_results, conversation_metadata_result_set.next_page_id)
+    return await _build_conversation_result_set(
+        final_filtered_results, conversation_metadata_result_set.next_page_id
+    )
 
 
 @app.get("/conversations", response_model=None)
@@ -820,9 +907,12 @@ async def get_conversation_details(
     except FileNotFoundError:
         return None
 
-    agent_loop_info_list = await conversation_manager.get_agent_loop_info(filter_to_sids={conversation_id})
+    manager = _require_conversation_manager()
+    agent_loop_info_list = await manager.get_agent_loop_info(
+        filter_to_sids={conversation_id}
+    )
     agent_loop_info = agent_loop_info_list[0] if agent_loop_info_list else None
-    connections = await conversation_manager.get_connections(conversation_id)
+    connections = await manager.get_connections(conversation_id)
     num_connections = len(connections) if connections else 0
 
     return await _get_conversation_info(conversation, num_connections, agent_loop_info)
@@ -851,8 +941,9 @@ async def delete_conversation_entry(
         await store.get_metadata(conversation_id)
     except FileNotFoundError:
         return False
-    if await conversation_manager.is_agent_loop_running(conversation_id):
-        await conversation_manager.close_session(conversation_id)
+    manager = _require_conversation_manager()
+    if await manager.is_agent_loop_running(conversation_id):
+        await manager.close_session(conversation_id)
     runtime_cls = get_runtime_cls(config.runtime)
     await runtime_cls.delete(conversation_id)
     await store.delete_metadata(conversation_id)
@@ -882,27 +973,33 @@ async def get_prompt(
     metadata: Annotated[ConversationMetadata, Depends(get_conversation_metadata)],
 ):
     """Generate a prompt for remembering conversation context at specific event.
-    
+
     Args:
         event_id: Event ID to generate context from
         conversation_id: Conversation identifier
         user_settings: User settings store dependency
         metadata: Conversation metadata dependency
-        
+
     Returns:
         JSON response with generated prompt
-        
+
     Raises:
         ValueError: If settings not found
 
     """
-    event_store = EventStore(sid=conversation_id, file_store=file_store, user_id=metadata.user_id)
+    event_store = EventStore(
+        sid=conversation_id, file_store=file_store, user_id=metadata.user_id
+    )
     stringified_events = _get_contextual_events(event_store, event_id)
     settings = await user_settings.load()
     if settings is None:
         msg = "Settings not found"
         raise ValueError(msg)
-    llm_config = LLMConfig(model=settings.llm_model or "", api_key=settings.llm_api_key, base_url=settings.llm_base_url)
+    llm_config = LLMConfig(
+        model=settings.llm_model or "",
+        api_key=settings.llm_api_key,
+        base_url=settings.llm_base_url,
+    )
     prompt_template = generate_prompt_template(stringified_events)
     prompt = generate_prompt(llm_config, prompt_template, conversation_id)
     return JSONResponse({"status": "success", "prompt": prompt})
@@ -919,12 +1016,16 @@ def generate_prompt_template(events: str) -> str:
 
     """
     # nosec B701 - Template rendering for prompts (not HTML), autoescape enabled
-    env = Environment(loader=FileSystemLoader("Forge/microagent/prompts"), autoescape=True)
+    env = Environment(
+        loader=FileSystemLoader("Forge/microagent/prompts"), autoescape=True
+    )
     template = env.get_template("generate_remember_prompt.j2")
     return template.render(events=events)
 
 
-def generate_prompt(llm_config: LLMConfig, prompt_template: str, conversation_id: str) -> str:
+def generate_prompt(
+    llm_config: LLMConfig, prompt_template: str, conversation_id: str
+) -> str:
     """Generate a prompt using LLM configuration and template.
 
     Args:
@@ -943,13 +1044,18 @@ def generate_prompt(llm_config: LLMConfig, prompt_template: str, conversation_id
             "content": "Please generate a prompt for the AI to update the special file based on the events provided.",
         },
     ]
-    raw_prompt = ConversationManagerImpl.request_llm_completion(
+    manager_impl = ConversationManagerImpl or get_conversation_manager_impl()
+    if manager_impl is None:
+        raise RuntimeError("Conversation manager implementation unavailable")
+    raw_prompt = manager_impl.request_llm_completion(
         "remember_prompt",
         conversation_id,
         llm_config,
         messages,
     )
-    if prompt := re.search("<update_prompt>(.*?)</update_prompt>", raw_prompt, re.DOTALL):
+    if prompt := re.search(
+        "<update_prompt>(.*?)</update_prompt>", raw_prompt, re.DOTALL
+    ):
         return prompt[1].strip()
     msg = "No valid prompt found in the response."
     raise ValueError(msg)
@@ -961,7 +1067,9 @@ async def _get_conversation_info(
     agent_loop_info: AgentLoopInfo | None,
 ) -> ConversationInfo | None:
     try:
-        title = conversation.title or get_default_conversation_title(conversation.conversation_id)
+        title = conversation.title or get_default_conversation_title(
+            conversation.conversation_id
+        )
         return ConversationInfo(
             trigger=conversation.trigger,
             conversation_id=conversation.conversation_id,
@@ -989,21 +1097,25 @@ async def _get_conversation_info(
         return None
 
 
-@app.post("/conversations/{conversation_id}/start")
+@app.post("/conversations/{conversation_id}/start", response_model=ConversationResponse)
 async def start_conversation(
     providers_set: ProvidersSetModel,
     conversation_id: str = Depends(validate_conversation_id),
     user_id: str = Depends(get_user_id),
-    provider_tokens: Annotated[PROVIDER_TOKEN_TYPE | None, Depends(get_provider_tokens)] = None,
+    provider_tokens: Annotated[
+        PROVIDER_TOKEN_TYPE | None, Depends(get_provider_tokens)
+    ] = None,
     settings: Settings = Depends(get_user_settings),
-    conversation_store: Annotated[Optional[Any], Depends(get_conversation_store)] = None,
+    conversation_store: Annotated[
+        Optional[Any], Depends(get_conversation_store)
+    ] = None,
 ) -> ConversationResponse | JSONResponse:
     """Start an agent loop for a conversation.
 
     This endpoint calls the conversation_manager's maybe_start_agent_loop method
     to start a conversation. If the conversation is already running, it will
     return the existing agent loop info.
-    
+
     The request body is optional and can contain:
     - providers_set: List of provider strings (e.g., ["github", "gitlab"])
     """
@@ -1015,7 +1127,7 @@ async def start_conversation(
     normalized_tokens = _normalize_provider_tokens(provider_tokens)
     logger.info("conversation_store loaded: %s", store is not None)
     logger.info("providers_set received: %s", providers_set.providers_set)
-    
+
     # Extract providers_set from the model
     providers_list = providers_set.providers_set or []
     logger.info("Final providers_set: %s", providers_list)
@@ -1023,17 +1135,20 @@ async def start_conversation(
         try:
             await store.get_metadata(conversation_id)
         except Exception:
-            return JSONResponse(
-                content={"status": "error", "conversation_id": conversation_id},
+            return error(
+                message="Conversation not found",
                 status_code=status.HTTP_404_NOT_FOUND,
+                error_code="CONVERSATION_NOT_FOUND",
+                conversation_id=conversation_id,
             )
+        manager = _require_conversation_manager()
         conversation_init_data = await setup_init_conversation_settings(
             user_id,
             conversation_id,
             providers_list,
             normalized_tokens,
         )
-        agent_loop_info = await conversation_manager.maybe_start_agent_loop(
+        agent_loop_info = await manager.maybe_start_agent_loop(
             sid=conversation_id,
             settings=conversation_init_data,
             user_id=user_id,
@@ -1050,18 +1165,15 @@ async def start_conversation(
             str(e),
             extra={"session_id": conversation_id},
         )
-        return JSONResponse(
-            content={
-                "status": "error",
-                "conversation_id": conversation_id,
-                "message": f"Failed to start conversation: {
-                    e!s}",
-            },
+        return error(
+            message=f"Failed to start conversation: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error_code="START_CONVERSATION_ERROR",
+            conversation_id=conversation_id,
         )
 
 
-@app.post("/conversations/{conversation_id}/stop")
+@app.post("/conversations/{conversation_id}/stop", response_model=ConversationResponse)
 async def stop_conversation(
     conversation_id: Annotated[str, Depends(validate_conversation_id)],
     user_id: Annotated[str, Depends(get_user_id)],
@@ -1073,19 +1185,25 @@ async def stop_conversation(
     """
     logger.info("Stopping conversation: %s", conversation_id)
     try:
-        agent_loop_info = await conversation_manager.get_agent_loop_info(
+        manager = _require_conversation_manager()
+        agent_loop_info = await manager.get_agent_loop_info(
             user_id=user_id,
             filter_to_sids={conversation_id},
         )
-        conversation_status = agent_loop_info[0].status if agent_loop_info else ConversationStatus.STOPPED
-        if conversation_status not in (ConversationStatus.STARTING, ConversationStatus.RUNNING):
+        conversation_status = (
+            agent_loop_info[0].status if agent_loop_info else ConversationStatus.STOPPED
+        )
+        if conversation_status not in (
+            ConversationStatus.STARTING,
+            ConversationStatus.RUNNING,
+        ):
             return ConversationResponse(
                 status="ok",
                 conversation_id=conversation_id,
                 message="Conversation was not running",
                 conversation_status=conversation_status,
             )
-        await conversation_manager.close_session(conversation_id)
+        await manager.close_session(conversation_id)
         return ConversationResponse(
             status="ok",
             conversation_id=conversation_id,
@@ -1099,14 +1217,11 @@ async def stop_conversation(
             str(e),
             extra={"session_id": conversation_id},
         )
-        return JSONResponse(
-            content={
-                "status": "error",
-                "conversation_id": conversation_id,
-                "message": f"Failed to stop conversation: {
-                    e!s}",
-            },
+        return error(
+            message=f"Failed to stop conversation: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error_code="STOP_CONVERSATION_ERROR",
+            conversation_id=conversation_id,
         )
 
 
@@ -1124,7 +1239,12 @@ def _get_contextual_events(event_store: EventStore, event_id: int) -> str:
     context_size = 4
     agent_event_filter = EventFilter(
         exclude_hidden=True,
-        exclude_types=(NullAction, NullObservation, ChangeAgentStateAction, AgentStateChangedObservation),
+        exclude_types=(
+            NullAction,
+            NullObservation,
+            ChangeAgentStateAction,
+            AgentStateChangedObservation,
+        ),
     )
     context_before = event_store.search_events(
         start_id=event_id,
@@ -1132,7 +1252,9 @@ def _get_contextual_events(event_store: EventStore, event_id: int) -> str:
         reverse=True,
         limit=context_size,
     )
-    context_after = event_store.search_events(start_id=event_id + 1, filter=agent_event_filter, limit=context_size + 1)
+    context_after = event_store.search_events(
+        start_id=event_id + 1, filter=agent_event_filter, limit=context_size + 1
+    )
     ordered_context_before = list(context_before)
     ordered_context_before.reverse()
     all_events = itertools.chain(ordered_context_before, context_after)
@@ -1142,16 +1264,20 @@ def _get_contextual_events(event_store: EventStore, event_id: int) -> str:
 class UpdateConversationRequest(BaseModel):
     """Request model for updating conversation metadata."""
 
-    title: str = Field(..., min_length=1, max_length=200, description="New conversation title")
+    title: str = Field(
+        ..., min_length=1, max_length=200, description="New conversation title"
+    )
     model_config = ConfigDict(extra="forbid")
 
 
-@app.patch("/conversations/{conversation_id}")
+@app.patch("/conversations/{conversation_id}", response_model=bool)
 async def update_conversation(
     data: UpdateConversationRequest,
     conversation_id: Annotated[str, Depends(validate_conversation_id)],
     user_id: Annotated[str | None, Depends(get_user_id)],
-    conversation_store: Annotated[Optional[Any], Depends(get_conversation_store)] = None,
+    conversation_store: Annotated[
+        Optional[Any], Depends(get_conversation_store)
+    ] = None,
 ) -> bool | JSONResponse:
     """Update conversation metadata.
 
@@ -1188,13 +1314,10 @@ async def update_conversation(
                 metadata.user_id,
                 extra={"session_id": conversation_id, "user_id": user_id},
             )
-            return JSONResponse(
-                content={
-                    "status": "error",
-                    "message": "Permission denied: You can only update your own conversations",
-                    "msg_id": "AUTHORIZATION$PERMISSION_DENIED",
-                },
+            return error(
+                message="Permission denied: You can only update your own conversations",
                 status_code=status.HTTP_403_FORBIDDEN,
+                error_code="AUTHORIZATION$PERMISSION_DENIED",
             )
         original_title = metadata.title
         metadata.title = data.title.strip()
@@ -1203,16 +1326,20 @@ async def update_conversation(
             new_timestamp = metadata.last_updated_at + timedelta(microseconds=1)
         metadata.last_updated_at = new_timestamp
         await store.save_metadata(metadata)
-        try:
-            status_update_dict = {
-                "status_update": True,
-                "type": "info",
-                "message": conversation_id,
-                "conversation_title": metadata.title,
-            }
-            await conversation_manager.sio.emit("oh_event", status_update_dict, to=f"room:{conversation_id}")
-        except Exception as e:
-            logger.error("Error emitting title update event: %s", e)
+        manager = _get_conversation_manager_instance()
+        if manager is not None:
+            sio = getattr(manager, "sio", None)
+            if sio is not None:
+                try:
+                    status_update_dict = {
+                        "status_update": True,
+                        "type": "info",
+                        "message": conversation_id,
+                        "conversation_title": metadata.title,
+                    }
+                    await sio.emit("oh_event", status_update_dict, to=f"room:{conversation_id}")
+                except Exception as e:
+                    logger.error("Error emitting title update event: %s", e)
         logger.info(
             'Successfully updated conversation %s title from "%s" to "%s"',
             conversation_id,
@@ -1227,9 +1354,10 @@ async def update_conversation(
             conversation_id,
             extra={"session_id": conversation_id, "user_id": user_id},
         )
-        return JSONResponse(
-            content={"status": "error", "message": "Conversation not found", "msg_id": "CONVERSATION$NOT_FOUND"},
+        return error(
+            message="Conversation not found",
             status_code=status.HTTP_404_NOT_FOUND,
+            error_code="CONVERSATION$NOT_FOUND",
         )
     except Exception as e:
         logger.error(
@@ -1238,14 +1366,10 @@ async def update_conversation(
             str(e),
             extra={"session_id": conversation_id, "user_id": user_id},
         )
-        return JSONResponse(
-            content={
-                "status": "error",
-                "message": f"Failed to update conversation: {
-                    e!s}",
-                "msg_id": "CONVERSATION$UPDATE_ERROR",
-            },
+        return error(
+            message=f"Failed to update conversation: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error_code="CONVERSATION$UPDATE_ERROR",
         )
 
 
@@ -1286,8 +1410,12 @@ async def get_microagent_management_conversations(
     selected_repository: str,
     page_id: str | None = None,
     limit: int = 20,
-    conversation_store: Annotated[Optional[Any], Depends(get_conversation_store)] = None,
-    provider_tokens: Annotated[PROVIDER_TOKEN_TYPE | None, Depends(get_provider_tokens)] = None,
+    conversation_store: Annotated[
+        Optional[Any], Depends(get_conversation_store)
+    ] = None,
+    provider_tokens: Annotated[
+        PROVIDER_TOKEN_TYPE | None, Depends(get_provider_tokens)
+    ] = None,
 ) -> ConversationInfoResultSet:
     """Get conversations for the microagent management page with pagination support.
 
@@ -1304,7 +1432,9 @@ async def get_microagent_management_conversations(
     """
     store = await _resolve_conversation_store(conversation_store)
     normalized_tokens = _normalize_provider_tokens(provider_tokens)
-    provider_handler = ProviderHandler(normalized_tokens)
+    provider_handler = ProviderHandler(
+        cast(MappingProxyType[ProviderType, ProviderToken], normalized_tokens)
+    )
     conversation_metadata_result_set = await store.search(page_id, limit)
     filtered_results = _filter_conversations_by_age(
         conversation_metadata_result_set.results,
@@ -1331,4 +1461,6 @@ async def get_microagent_management_conversations(
         ):
             continue
         final_filtered_results.append(conversation)
-    return await _build_conversation_result_set(final_filtered_results, conversation_metadata_result_set.next_page_id)
+    return await _build_conversation_result_set(
+        final_filtered_results, conversation_metadata_result_set.next_page_id
+    )

@@ -14,7 +14,9 @@ if TYPE_CHECKING:
 class GitLabReposMixin(GitLabMixinBase):
     """Methods for interacting with GitLab repositories."""
 
-    def _parse_repository(self, repo: dict, link_header: str | None = None) -> Repository:
+    def _parse_repository(
+        self, repo: dict, link_header: str | None = None
+    ) -> Repository:
         """Parse a GitLab API project response into a Repository object.
 
         Args:
@@ -25,13 +27,20 @@ class GitLabReposMixin(GitLabMixinBase):
             Repository object
 
         """
+        full_name = repo.get("path_with_namespace")
+        if not isinstance(full_name, str):
+            fallback = repo.get("path")
+            full_name = str(fallback) if fallback is not None else ""
+
         return Repository(
             id=str(repo.get("id")),
-            full_name=repo.get("path_with_namespace"),
+            full_name=full_name,
             stargazers_count=repo.get("star_count"),
             git_provider=ProviderType.GITLAB,
             is_public=repo.get("visibility") == "public",
-            owner_type=OwnerType.ORGANIZATION if repo.get("namespace", {}).get("kind") == "group" else OwnerType.USER,
+            owner_type=OwnerType.ORGANIZATION
+            if repo.get("namespace", {}).get("kind") == "group"
+            else OwnerType.USER,
             link_header=link_header,
             main_branch=repo.get("default_branch"),
         )
@@ -102,9 +111,13 @@ class GitLabReposMixin(GitLabMixinBase):
             params["search_namespaces"] = True
         response, headers = await self._make_request(url, params)
         next_link: str = headers.get("Link", "")
-        return [self._parse_repository(repo, link_header=next_link) for repo in response]
+        return [
+            self._parse_repository(repo, link_header=next_link) for repo in response
+        ]
 
-    async def get_all_repositories(self, sort: str, app_mode: AppMode) -> list[Repository]:
+    async def get_all_repositories(
+        self, sort: str, app_mode: AppMode
+    ) -> list[Repository]:
         """Return up to 1000 repositories the user has membership access to."""
         MAX_REPOS = 1000
         PER_PAGE = 100
@@ -136,7 +149,9 @@ class GitLabReposMixin(GitLabMixinBase):
         all_repos = all_repos[:MAX_REPOS]
         return [self._parse_repository(repo) for repo in all_repos]
 
-    async def get_repository_details_from_repo_name(self, repository: str) -> Repository:
+    async def get_repository_details_from_repo_name(
+        self, repository: str
+    ) -> Repository:
         """Fetch repository metadata by fully-qualified path like group/subgroup/repo."""
         encoded_name = repository.replace("/", "%2F")
         url = f"{self.BASE_URL}/projects/{encoded_name}"

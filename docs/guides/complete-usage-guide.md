@@ -45,12 +45,12 @@ npm run dev                 # Frontend
 2. **Environment Configuration**
 ```bash
 # .env file
-FORGE_BACKEND_URL=http://localhost:8000
+FORGE_BACKEND_URL=http://localhost:3000
 FORGE_LLM_PROVIDER=openai
 FORGE_LLM_MODEL=gpt-4
 FORGE_ENABLE_PROMPT_OPTIMIZATION=true
-VITE_BACKEND_BASE_URL=http://localhost:8000
-VITE_WEBSOCKET_URL=ws://localhost:8000
+VITE_BACKEND_BASE_URL=http://localhost:3000
+VITE_WEBSOCKET_URL=http://localhost:3000/socket.io
 ```
 
 ### **First Project**
@@ -102,6 +102,8 @@ orchestrator = MetaSOPOrchestrator(
         enable_prompt_optimization=True,
         prompt_opt_ab_split=0.2,
         prompt_opt_min_samples=30,
+        prompt_opt_history_path="./metasop_optimization/history.json",
+        prompt_opt_history_auto_flush=False,
         role_optimization={
             "engineer": {"weight": 0.5, "focus": "execution"},
             "architect": {"weight": 0.4, "focus": "technical_depth"},
@@ -116,6 +118,8 @@ agent = CodeActAgent(
     config=AgentConfig(
         enable_prompt_optimization=True,
         prompt_opt_storage_path="./codeact_optimization",
+        prompt_opt_history_path="./codeact_optimization/history.json",
+        prompt_opt_history_auto_flush=False,
         prompt_opt_success_weight=0.4,
         prompt_opt_time_weight=0.3,
         prompt_opt_cost_weight=0.2
@@ -405,29 +409,32 @@ analytics = dashboard.get_detailed_analytics(
 
 ```bash
 # Check optimization status
-curl -X GET "http://localhost:8000/api/v1/prompt-optimization/status"
+curl -X GET "http://localhost:3000/api/prompt-optimization/status"
 
 # Get prompt performance
-curl -X GET "http://localhost:8000/api/v1/prompt-optimization/prompts/codeact_system/performance"
+curl -X GET "http://localhost:3000/api/prompt-optimization/prompts/codeact_system/metrics"
 
-# Trigger manual optimization
-curl -X POST "http://localhost:8000/api/v1/prompt-optimization/prompts/codeact_system/optimize" \
+# Trigger manual optimization (evolve)
+curl -X POST "http://localhost:3000/api/prompt-optimization/prompts/codeact_system/evolve" \
   -H "Content-Type: application/json" \
-  -d '{"force": true, "strategy": "multi_objective"}'
+  -d '{"priority": 10, "context": {"force": true, "strategy": "multi_objective"}}'
 ```
 
 ### **WebSocket Live Updates**
 
 ```typescript
 // Connect to live updates
-const ws = new WebSocket('ws://localhost:8000/ws/optimization');
+const socket = io('http://localhost:3000', {
+  path: '/socket.io',
+  query: { conversationId: 'your-conversation-id' }
+});
 
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  console.log('Live update:', data);
+socket.on('message', (event) => {
+  // Event is already parsed JSON
+  console.log('Live update:', event);
   
   // Update UI with real-time metrics
-  updateDashboard(data);
+  updateDashboard(event);
 };
 ```
 
@@ -581,7 +588,7 @@ for tool_id in tools:
         -H "Upgrade: websocket" \
         -H "Sec-WebSocket-Version: 13" \
         -H "Sec-WebSocket-Key: test" \
-        http://localhost:8000/ws/optimization
+        http://localhost:3000/socket.io
    ```
 
 ### **Performance Issues**

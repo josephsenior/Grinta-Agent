@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\memory\condenser\impl\structured_summary_condenser.py
+# hypothesis_version: 6.147.0
+
+[100, 10000, '# State Summary', '## Code Changes', '## Core Information', '## Testing Status', '## Version Control', 'No events summarized', 'completed_tasks', 'condenser', 'create_state_summary', 'description', 'function', 'metrics', 'name', 'object', 'parameters', 'pending_tasks', 'properties', 'required', 'response', 'string', 'tool_calls', 'type', 'user', 'user_context']

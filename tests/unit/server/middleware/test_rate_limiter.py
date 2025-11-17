@@ -27,7 +27,9 @@ def _make_request(
     client_host: str = "1.1.1.1",
 ) -> Request:
     headers = headers or {}
-    raw_headers = [(k.encode("latin-1"), v.encode("latin-1")) for k, v in headers.items()]
+    raw_headers = [
+        (k.encode("latin-1"), v.encode("latin-1")) for k, v in headers.items()
+    ]
     scope = {
         "type": "http",
         "http_version": "1.1",
@@ -204,7 +206,9 @@ class DummyRedis:
 def patch_redis(monkeypatch):
     dummy = DummyRedis()
     monkeypatch.setattr(rate_module, "REDIS_AVAILABLE", True)
-    monkeypatch.setattr(rate_module, "redis", SimpleNamespace(from_url=lambda *args, **kwargs: dummy))
+    monkeypatch.setattr(
+        rate_module, "redis", SimpleNamespace(from_url=lambda *args, **kwargs: dummy)
+    )
     return dummy
 
 
@@ -246,7 +250,11 @@ async def test_redis_rate_limiter_handles_error(monkeypatch):
             raise RuntimeError("fail")
 
     monkeypatch.setattr(rate_module, "REDIS_AVAILABLE", True)
-    monkeypatch.setattr(rate_module, "redis", SimpleNamespace(from_url=lambda *args, **kwargs: FailingRedis()))
+    monkeypatch.setattr(
+        rate_module,
+        "redis",
+        SimpleNamespace(from_url=lambda *args, **kwargs: FailingRedis()),
+    )
 
     async def call_next(request):
         return Response(content="ok")
@@ -285,7 +293,11 @@ async def test_redis_rate_limiter_connection_failure(monkeypatch, caplog):
             raise RuntimeError("no redis")
 
     monkeypatch.setattr(rate_module, "REDIS_AVAILABLE", True)
-    monkeypatch.setattr(rate_module, "redis", SimpleNamespace(from_url=lambda *args, **kwargs: FailingRedis()))
+    monkeypatch.setattr(
+        rate_module,
+        "redis",
+        SimpleNamespace(from_url=lambda *args, **kwargs: FailingRedis()),
+    )
 
     client = await limiter._get_redis_client()
     assert client is None
@@ -326,10 +338,132 @@ async def test_redis_rate_limiter_burst_limit(monkeypatch):
             pass
 
     monkeypatch.setattr(rate_module, "REDIS_AVAILABLE", True)
-    monkeypatch.setattr(rate_module, "redis", SimpleNamespace(from_url=lambda *args, **kwargs: BurstRedis()))
+    monkeypatch.setattr(
+        rate_module,
+        "redis",
+        SimpleNamespace(from_url=lambda *args, **kwargs: BurstRedis()),
+    )
 
     async def call_next(request):
         return Response(content="ok")
 
     response = await limiter(_make_request(), call_next)
     assert response.status_code == 429
+
+
+@pytest.mark.asyncio
+async def test_check_rate_limit_redis_success_records(monkeypatch):
+    limiter = RedisRateLimiter(requests_per_hour=5, burst_limit=5)
+    fixed_now = 1_000_000
+    monkeypatch.setattr(rate_module.time, "time", lambda: fixed_now)
+
+    class SuccessfulRedis:
+        def __init__(self):
+            self.count_calls = 0
+            self.zadd_args = None
+            self.expire_args = None
+
+        async def zremrangebyscore(self, *_, **__):
+            return None
+
+        async def zcount(self, *_, **__):
+            # First call is hour window, second is burst window
+            self.count_calls += 1
+            return 0
+
+        async def zadd(self, key, payload):
+            self.zadd_args = (key, payload)
+
+        async def expire(self, key, ttl):
+            self.expire_args = (key, ttl)
+
+    client = SuccessfulRedis()
+    span_calls: list[dict[str, object]] = []
+
+    def fake_span(key, **kwargs):
+        span_calls.append({"key": key, **kwargs})
+
+    monkeypatch.setattr(limiter, "_record_rate_limit_span", fake_span)
+
+    result = await limiter._check_rate_limit_redis(client, "user:test")
+
+    assert result is True
+    assert client.expire_args == (f"ratelimit:user:test", limiter.hour_window)
+    assert client.zadd_args is not None
+    assert len(span_calls) == 1
+    call = span_calls[0]
+    assert call["key"] == "user:test"
+    assert call["allowed"] is True
+    assert call["hour_count"] == 1
+    assert call["burst_count"] == 1
+    assert call.get("reason") is None
+    assert call.get("error") is None
+
+
+@pytest.mark.asyncio
+async def test_check_rate_limit_redis_hour_violation(monkeypatch):
+    limiter = RedisRateLimiter(requests_per_hour=1, burst_limit=10)
+    monkeypatch.setattr(rate_module.time, "time", lambda: 1_000_000)
+
+    class HourLimitedRedis:
+        def __init__(self):
+            self.count_calls = 0
+
+        async def zremrangebyscore(self, *_, **__):
+            return None
+
+        async def zcount(self, *_, **__):
+            if self.count_calls > 0:
+                pytest.fail("Burst window should not be checked after hour limit hit")
+            self.count_calls += 1
+            return limiter.requests_per_hour
+
+        async def zadd(self, *_, **__):
+            pytest.fail("Request should not be recorded when hour limit exceeded")
+
+        async def expire(self, *_, **__):
+            pytest.fail("Expire should not be invoked when blocked")
+
+    client = HourLimitedRedis()
+    span_calls: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        limiter,
+        "_record_rate_limit_span",
+        lambda key, **kwargs: span_calls.append({"key": key, **kwargs}),
+    )
+
+    result = await limiter._check_rate_limit_redis(client, "user:test")
+
+    assert result is False
+    assert len(span_calls) == 1
+    call = span_calls[0]
+    assert call["key"] == "user:test"
+    assert call["allowed"] is False
+    assert call["hour_count"] == limiter.requests_per_hour
+    assert call["burst_count"] is None
+    assert call.get("reason") == "hour_limit"
+    assert call.get("error") is None
+
+
+def test_instrument_failure_records_error(monkeypatch):
+    limiter = RedisRateLimiter()
+    calls: list[dict[str, object]] = []
+
+    def fake_span(key, **kwargs):
+        calls.append({"key": key, **kwargs})
+
+    monkeypatch.setattr(limiter, "_record_rate_limit_span", fake_span)
+
+    exc = RuntimeError("boom")
+    limiter._instrument_failure("user:test", exc)
+
+    assert calls == [
+        {
+            "key": "user:test",
+            "allowed": True,
+            "hour_count": None,
+            "burst_count": None,
+            "reason": "error",
+            "error": exc,
+        }
+    ]

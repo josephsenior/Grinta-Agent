@@ -11,7 +11,7 @@ def test_commit_message_with_quotes():
     with tempfile.TemporaryDirectory() as temp_dir:
         subprocess.run(["git", "init", temp_dir], check=True)
         test_file = os.path.join(temp_dir, "test.txt")
-        with open(test_file, "w", encoding='utf-8') as f:
+        with open(test_file, "w", encoding="utf-8") as f:
             f.write("test content")
         subprocess.run(["git", "-C", temp_dir, "add", "test.txt"], check=True)
         issue = Issue(
@@ -31,7 +31,10 @@ def test_commit_message_with_quotes():
         )
         make_commit(temp_dir, issue, "issue")
         result = subprocess.run(
-            ["git", "-C", temp_dir, "log", "-1", "--pretty=%B"], capture_output=True, text=True, check=True
+            ["git", "-C", temp_dir, "log", "-1", "--pretty=%B"],
+            capture_output=True,
+            text=True,
+            check=True,
         )
         commit_msg = result.stdout.strip()
         expected = "Fix issue #123: Issue with 'quotes' and \"double quotes\" and <class 'ValueError'>"
@@ -39,9 +42,7 @@ def test_commit_message_with_quotes():
 
 
 def test_pr_title_with_quotes(monkeypatch):
-
     class MockResponse:
-
         def __init__(self, status_code=201):
             self.status_code = status_code
             self.text = ""
@@ -56,11 +57,12 @@ def test_pr_title_with_quotes(monkeypatch):
         data = kwargs.get("json", {})
         title = data.get("title", "")
         expected = "Fix issue #123: Issue with 'quotes' and \"double quotes\" and <class 'ValueError'>"
-        assert title == expected, f"PR title was incorrectly escaped.\nExpected: {expected}\nGot: {title}"
+        assert title == expected, (
+            f"PR title was incorrectly escaped.\nExpected: {expected}\nGot: {title}"
+        )
         return MockResponse()
 
     class MockGetResponse:
-
         def __init__(self, status_code=200):
             self.status_code = status_code
             self.text = ""
@@ -74,7 +76,8 @@ def test_pr_title_with_quotes(monkeypatch):
     monkeypatch.setattr("httpx.post", mock_post)
     monkeypatch.setattr("httpx.get", lambda *args, **kwargs: MockGetResponse())
     monkeypatch.setattr(
-        "forge.resolver.interfaces.github.GithubIssueHandler.branch_exists", lambda *args, **kwargs: False
+        "forge.resolver.interfaces.github.GithubIssueHandler.branch_exists",
+        lambda *args, **kwargs: False,
     )
     original_run = subprocess.run
 
@@ -82,7 +85,9 @@ def test_pr_title_with_quotes(monkeypatch):
         logger.info("Running command: %s", args[0] if args else kwargs.get("args", []))
         if isinstance(args[0], list) and args[0][0] == "git":
             if "push" in args[0]:
-                return subprocess.CompletedProcess(args[0], returncode=0, stdout="", stderr="")
+                return subprocess.CompletedProcess(
+                    args[0], returncode=0, stdout="", stderr=""
+                )
             return original_run(*args, **kwargs)
         return original_run(*args, **kwargs)
 
@@ -90,14 +95,21 @@ def test_pr_title_with_quotes(monkeypatch):
     with tempfile.TemporaryDirectory() as temp_dir:
         logger.info("Initializing git repo...")
         subprocess.run(["git", "init", temp_dir], check=True)
-        subprocess.run(["git", "-C", temp_dir, "config", "user.name", "Test User"], check=True)
-        subprocess.run(["git", "-C", temp_dir, "config", "user.email", "test@example.com"], check=True)
+        subprocess.run(
+            ["git", "-C", temp_dir, "config", "user.name", "Test User"], check=True
+        )
+        subprocess.run(
+            ["git", "-C", temp_dir, "config", "user.email", "test@example.com"],
+            check=True,
+        )
         test_file = os.path.join(temp_dir, "test.txt")
-        with open(test_file, "w", encoding='utf-8') as f:
+        with open(test_file, "w", encoding="utf-8") as f:
             f.write("test content")
         logger.info("Adding and committing test file...")
         subprocess.run(["git", "-C", temp_dir, "add", "test.txt"], check=True)
-        subprocess.run(["git", "-C", temp_dir, "commit", "-m", "Initial commit"], check=True)
+        subprocess.run(
+            ["git", "-C", temp_dir, "commit", "-m", "Initial commit"], check=True
+        )
         logger.info("Creating test issue...")
         issue = Issue(
             owner="test-owner",

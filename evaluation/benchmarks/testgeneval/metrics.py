@@ -19,7 +19,10 @@ def bleu(gold: list[str], pred: list[str]) -> float:
     if not pred or not gold:
         return 0.0
     return 100.0 * nltk.translate.bleu_score.sentence_bleu(
-        [gold], pred, smoothing_function=nltk.translate.bleu_score.SmoothingFunction().method2, auto_reweigh=True
+        [gold],
+        pred,
+        smoothing_function=nltk.translate.bleu_score.SmoothingFunction().method2,
+        auto_reweigh=True,
     )
 
 
@@ -52,7 +55,9 @@ def corpus_bleu(golds: list[list[str]], preds: list[list[str]]) -> float:
     )
 
 
-def edit_sim(gold: Union[str, list[str]], pred: Union[str, list[str]], sep: str = " ") -> float:
+def edit_sim(
+    gold: Union[str, list[str]], pred: Union[str, list[str]], sep: str = " "
+) -> float:
     """Calculate char-level edit similarity, in the range of 0~100.
 
     :param gold: gold sentence or list of gold tokens
@@ -70,7 +75,9 @@ def edit_sim(gold: Union[str, list[str]], pred: Union[str, list[str]], sep: str 
 
 
 def batch_edit_sim(
-    golds: list[Union[str, list[str]]], preds: list[Union[str, list[str]]], sep: str = " "
+    golds: list[Union[str, list[str]]],
+    preds: list[Union[str, list[str]]],
+    sep: str = " ",
 ) -> list[float]:
     """Calculate char-level edit similarity for a batch of sentences.
 
@@ -111,7 +118,9 @@ def batch_exact_match(golds: list[T], preds: list[T]) -> list[float]:
     return [exact_match(gold, pred) for gold, pred in zip(golds, preds)]
 
 
-def rouge_l(gold: Union[str, list[str]], pred: Union[str, list[str]], sep: str = " ") -> dict[str, float]:
+def rouge_l(
+    gold: Union[str, list[str]], pred: Union[str, list[str]], sep: str = " "
+) -> dict[str, float]:
     """Calculate ROUGE-L F1, precision, and recall scores, in the range of 0~100.
 
     :param gold: gold sentence or list of gold tokens
@@ -133,7 +142,9 @@ def rouge_l(gold: Union[str, list[str]], pred: Union[str, list[str]], sep: str =
 
 
 def batch_rouge_l(
-    golds: list[Union[str, list[str]]], preds: list[Union[str, list[str]]], sep: str = " "
+    golds: list[Union[str, list[str]]],
+    preds: list[Union[str, list[str]]],
+    sep: str = " ",
 ) -> dict[str, list[float]]:
     """Calculate ROUGE-L F1, precision, and recall scores for a batch of sentences.
 
@@ -148,7 +159,9 @@ def batch_rouge_l(
     return {x: [score[x] for score in scores] for x in ["p", "r", "f"]}
 
 
-def accuracy(gold: list[str], pred: list[str], ignore: Optional[Sequence[str]] = None) -> float:
+def accuracy(
+    gold: list[str], pred: list[str], ignore: Optional[Sequence[str]] = None
+) -> float:
     """Calculate token-level accuracy, in the range of 0~100.
 
     If gold and pred are not the same length, the longer one would be truncated.
@@ -177,7 +190,9 @@ def accuracy(gold: list[str], pred: list[str], ignore: Optional[Sequence[str]] =
 
 
 def batch_accuracy(
-    golds: list[list[str]], preds: list[list[str]], ignore: Optional[Sequence[str]] = None
+    golds: list[list[str]],
+    preds: list[list[str]],
+    ignore: Optional[Sequence[str]] = None,
 ) -> list[float]:
     """Calculate token-level accuracy for a batch of sentences.
 
@@ -191,7 +206,9 @@ def batch_accuracy(
     return [accuracy(gold, pred, ignore) for gold, pred in zip(golds, preds)]
 
 
-def first_match_to_topk(first_match_list: list[int], k_values: list[int]) -> dict[int, list[float]]:
+def first_match_to_topk(
+    first_match_list: list[int], k_values: list[int]
+) -> dict[int, list[float]]:
     """Calculate top-k accuracy with the first match ranks (1-indexed).
 
     :param first_match: first match ranks (1-indexed)

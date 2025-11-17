@@ -32,7 +32,7 @@ from .models import (
 
 __all__ = [
     "ContextPlaybook",
-    "BulletPoint", 
+    "BulletPoint",
     "BulletSection",
     "ACEGenerator",
     "ACEReflector",

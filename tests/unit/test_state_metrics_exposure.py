@@ -7,7 +7,6 @@ from forge.llm.metrics import Metrics
 
 
 class FakeEventStream:
-
     def __init__(self):
         self.sid = "test-sid"
         self.file_store = None
@@ -24,7 +23,6 @@ class FakeEventStream:
 
 
 class FakeRuntime:
-
     def __init__(self):
         self.event_stream = FakeEventStream()
 
@@ -36,7 +34,6 @@ class FakeRuntime:
 
 
 class DummyState:
-
     def __init__(self, conversation_stats):
         self.conversation_stats = conversation_stats
         self.metrics = Metrics()
@@ -46,7 +43,6 @@ class DummyState:
 
 
 class FakeController:
-
     def __init__(self, state):
         self._state = state
 
@@ -61,7 +57,6 @@ class FakeController:
 
 
 class FakeConversationStats:
-
     def __init__(self, cost: float = 1.23):
         self._m = Metrics()
         self._m.add_cost(cost)
@@ -80,7 +75,9 @@ def test_state_tracker_save_state_consolidates_metrics(tmp_path):
     from forge.storage.memory import InMemoryFileStore
 
     store = InMemoryFileStore({})
-    conv_stats = ConversationStats(file_store=store, conversation_id="cid", user_id=None)
+    conv_stats = ConversationStats(
+        file_store=store, conversation_id="cid", user_id=None
+    )
     m = Metrics()
     m.add_cost(0.5)
     conv_stats.service_to_metrics["svc"] = m
@@ -111,7 +108,6 @@ def test_run_controller_exposes_aggregated_metrics_in_state():
         return (None, fake_conv_stats, config)
 
     def fake_create_agent(config, llm_registry):
-
         class _AgentCfg:
             enable_mcp = False
 
@@ -128,7 +124,14 @@ def test_run_controller_exposes_aggregated_metrics_in_state():
 
         return _Agent()
 
-    def fake_create_runtime(config, llm_registry, sid=None, headless_mode=True, agent=None, git_provider_tokens=None):
+    def fake_create_runtime(
+        config,
+        llm_registry,
+        sid=None,
+        headless_mode=True,
+        agent=None,
+        git_provider_tokens=None,
+    ):
         return FakeRuntime()
 
     def fake_create_memory(
@@ -143,25 +146,37 @@ def test_run_controller_exposes_aggregated_metrics_in_state():
     ):
         return object()
 
-    def fake_create_controller(agent, runtime, config, conversation_stats, headless_mode=True, replay_events=None):
+    def fake_create_controller(
+        agent,
+        runtime,
+        config,
+        conversation_stats,
+        headless_mode=True,
+        replay_events=None,
+    ):
         state = DummyState(conversation_stats)
         return (FakeController(state), None)
 
-    with patch(
-        "forge.core.main.create_registry_and_conversation_stats",
-        side_effect=fake_create_registry_and_conversation_stats,
-    ), patch("forge.core.main.create_agent", side_effect=fake_create_agent), patch(
-        "forge.core.main.create_runtime", side_effect=fake_create_runtime
-    ), patch(
-        "forge.core.main.create_memory", side_effect=fake_create_memory
-    ), patch(
-        "forge.core.main.create_controller", side_effect=fake_create_controller
-    ), patch(
-        "forge.core.main.run_agent_until_done", side_effect=lambda *args, **kwargs: None
+    with (
+        patch(
+            "forge.core.main.create_registry_and_conversation_stats",
+            side_effect=fake_create_registry_and_conversation_stats,
+        ),
+        patch("forge.core.main.create_agent", side_effect=fake_create_agent),
+        patch("forge.core.main.create_runtime", side_effect=fake_create_runtime),
+        patch("forge.core.main.create_memory", side_effect=fake_create_memory),
+        patch("forge.core.main.create_controller", side_effect=fake_create_controller),
+        patch(
+            "forge.core.main.run_agent_until_done",
+            side_effect=lambda *args, **kwargs: None,
+        ),
     ):
         state = asyncio.run(
             run_controller(
-                config=cfg, initial_user_action=MessageAction(content="hi"), sid="sid", fake_user_response_fn=None
+                config=cfg,
+                initial_user_action=MessageAction(content="hi"),
+                sid="sid",
+                fake_user_response_fn=None,
             )
         )
     assert state is not None

@@ -68,7 +68,9 @@ def patched_managers(monkeypatch: pytest.MonkeyPatch):
 
 def test_llm_config_model_post_init_populates_key_and_base_url(patched_managers):
     api_manager, provider_manager = patched_managers
-    config = LLMConfig(model="gpt-4o", base_url="https://example.com/", custom_llm_provider="custom")
+    config = LLMConfig(
+        model="gpt-4o", base_url="https://example.com/", custom_llm_provider="custom"
+    )
     assert config.api_key.get_secret_value() == "manager-key"
     assert config.base_url == "https://example.com"
     assert api_manager.set_env_calls and api_manager.set_env_calls[0][0] == "gpt-4o"
@@ -84,15 +86,21 @@ def test_llm_config_respects_suppress_env_export(monkeypatch: pytest.MonkeyPatch
     assert cfg.api_key.get_secret_value() == "direct-key"
 
 
-def test_llm_config_sets_azure_defaults(monkeypatch: pytest.MonkeyPatch, patched_managers):
+def test_llm_config_sets_azure_defaults(
+    monkeypatch: pytest.MonkeyPatch, patched_managers
+):
     api_manager, _ = patched_managers
     cfg = LLMConfig(model="azure/gpt4", api_key=SecretStr("sk-azure-key"))
     assert cfg.api_version == "2024-12-01-preview"
 
 
-def test_llm_config_reasoning_effort_not_overridden_for_gemini(monkeypatch: pytest.MonkeyPatch, patched_managers):
+def test_llm_config_reasoning_effort_not_overridden_for_gemini(
+    monkeypatch: pytest.MonkeyPatch, patched_managers
+):
     api_manager, _ = patched_managers
-    cfg = LLMConfig(model="gemini-2.5-pro", api_key=SecretStr("google-key"), reasoning_effort=None)
+    cfg = LLMConfig(
+        model="gemini-2.5-pro", api_key=SecretStr("google-key"), reasoning_effort=None
+    )
     # gemini models keep explicit None (no default high)
     assert cfg.reasoning_effort is None
 
@@ -102,4 +110,3 @@ def test_suppress_llm_env_export_context_restores_flag():
     with suppress_llm_env_export():
         assert llm_module._SUPPRESS_ENV_EXPORT is True
     assert llm_module._SUPPRESS_ENV_EXPORT is False
-

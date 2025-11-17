@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from forge.core.schema.agent import AgentState
+from forge.core.schemas import AgentState
 from forge.storage.data_models.conversation_status import ConversationStatus
 from forge.integrations.service_types import ProviderType
 from forge.runtime.runtime_status import RuntimeStatus

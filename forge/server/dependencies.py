@@ -12,7 +12,9 @@ _SESSION_API_KEY = os.getenv("SESSION_API_KEY")
 _SESSION_API_KEY_HEADER = APIKeyHeader(name="X-Session-API-Key", auto_error=False)
 
 
-def check_session_api_key(session_api_key: str | None = Depends(_SESSION_API_KEY_HEADER)) -> None:
+def check_session_api_key(
+    session_api_key: str | None = Depends(_SESSION_API_KEY_HEADER),
+) -> None:
     """Check the session API key and throw an exception if incorrect.
 
     Having this as a dependency means it appears in OpenAPI Docs.
@@ -23,9 +25,9 @@ def check_session_api_key(session_api_key: str | None = Depends(_SESSION_API_KEY
 
 def get_dependencies() -> list[DependsParam]:
     """Get list of FastAPI dependencies for request validation.
-    
+
     Returns API key check dependency if session API key is configured.
-    
+
     Returns:
         List of Depends objects for dependency injection
 

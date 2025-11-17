@@ -92,7 +92,9 @@ class MultipleChoiceTask(Task):
         for i in wrong_option_list:
             if self.compare_w_digits(i, answer) or i in answer:
                 return False
-        return bool(self.compare_w_digits(correct_option, answer) or correct_option in answer)
+        return bool(
+            self.compare_w_digits(correct_option, answer) or correct_option in answer
+        )
 
     def extract_options(self, prompt: str) -> dict:
         prompt = prompt.split("Options: ")[-1]
@@ -170,7 +172,8 @@ class TheoremqaTask(Task):
     def __init__(self, id: str, prompt: str, reference: str, **kwargs):
         super().__init__(**kwargs)
         self._prompt = f"Answer the following question with a number, a list of numbers or True or False. {
-            prompt.strip()}"
+            prompt.strip()
+        }"
         self._reference = reference
         self._id = id
         self._answer_type = kwargs.get("answer_type")
@@ -206,7 +209,10 @@ class TheoremqaTask(Task):
         patterns = [
             (r"[-+]?(?:[\d,]*\.*\d+) [^0-9 ]+$", r"([-+]?(?:[\d,]*\.*\d+)) [^0-9 ]+$"),
             (r"[^0-9 ]+ [-+]?(?:[\d,]*\.*\d+)$", r"[^0-9 ]+ ([-+]?(?:[\d,]*\.*\d+))$"),
-            (r"[-+]?(?:[\d,]*\.*\d+)[^\d]{1,2}$", r"([-+]?(?:[\d,]*\.*\d+))[^\d]{1,2}$"),
+            (
+                r"[-+]?(?:[\d,]*\.*\d+)[^\d]{1,2}$",
+                r"([-+]?(?:[\d,]*\.*\d+))[^\d]{1,2}$",
+            ),
             (r"[^-+\d]{1,2}(?:[\d,]*\.*\d+)$", r"[^-+\d]{1,2}((?:[\d,]*\.*\d+))$"),
         ]
 
@@ -233,7 +239,11 @@ class TheoremqaTask(Task):
         """Handle multiple choice options (a, b, c, d)."""
         options = ["a", "b", "c", "d"]
         for option in options:
-            if f"{option})" in prediction or f"{option} )" in prediction or prediction.lower().strip() == option:
+            if (
+                f"{option})" in prediction
+                or f"{option} )" in prediction
+                or prediction.lower().strip() == option
+            ):
                 prediction = f"({option})"
                 break
 
@@ -250,7 +260,9 @@ class TheoremqaTask(Task):
         try:
             prediction = ast.literal_eval(prediction)  # nosec B307 - Safe: parsing controlled output
         except Exception:
-            LOGGER.warning(f"[TASK] Failed to convert the answer: {prediction}\n{traceback.format_exc()}")
+            LOGGER.warning(
+                f"[TASK] Failed to convert the answer: {prediction}\n{traceback.format_exc()}"
+            )
             return None
 
         return self._normalize_result_types(prediction)

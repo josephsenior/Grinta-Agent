@@ -48,19 +48,19 @@ Forge is a production-grade AI coding agent system built on a 5-layer architectu
                        │
 ┌──────────────────────▼──────────────────────────────────┐
 │  Layer 5: Runtime & Execution (Docker Sandbox)          │
-│  • Action execution server                              │
-│  • Docker-based isolation                               │
-│  • File operations (read, write, edit)                  │
-│  • Browser automation                                   │
+│  • RuntimeOrchestrator (acquire/release)                │
+│  • Warm/Single-use pools with per-key policies          │
+│  • Watchdog for idle/stuck termination                  │
+│  • Scaling advisories + Prometheus telemetry            │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ## Data Flow: User Request → Agent Response
 
 ```
-User sends message via WebSocket
+User sends message via Socket.IO
    ↓
-Message received by server (Forge/server/listen.py)
+Message received by server (forge/server/listen_socket.py)
    ↓
 Event published to EventStream
    ↓
@@ -80,7 +80,7 @@ Observation added to State
    ↓
 State update event published to EventStream
    ↓
-WebSocket sends update to frontend
+Socket.IO emits update to frontend
    ↓
 UI updates in real-time
 ```
@@ -155,6 +155,20 @@ async for event in event_stream.subscribe(event_id):
 | State | AgentStateChangeEvent | Agent lifecycle |
 | Errors | ErrorObservation | Error handling |
 
+#### Typed Event Contracts
+
+- **Versioned Schemas:** All actions and observations now conform to explicit Pydantic schemas in `forge/core/schemas/`. Every payload published to the `EventStream` carries an `EventSchemaV1` header so we can evolve contracts without breaking consumers.
+- **Action Models:** `CodeAct` emits canonical action schemas (read/write/edit/run, etc.) complete with metadata (confirmation state, security risk). Consumers can deserialize via `forge.core.schemas.serialization.deserialize_event`.
+- **Observation Models:** Runtime responses (command output, file edits, errors) serialize to typed observation schemas with optional command metadata, improving replay/debug tooling.
+- **Migration Ready:** `EventVersion` keeps the door open for future schema upgrades. `migrate_schema_version` provides forward/backward compatibility between versions.
+- **Shared Tests:** Unit tests in `tests/unit/core/schemas/` guarantee every schema stays aligned with real runtime objects.
+
+#### Telemetry Integration
+
+- **Tool Telemetry:** `ToolTelemetry` ingests action/observation schemas and records structured metrics (Prometheus counters + in-memory ring buffer), giving us consistent plan/verify/execute/observe traces.
+- **Middleware Pipeline:** `TelemetryMiddleware` attaches the schema contracts as we step through the plan → verify → execute → observe pipeline, ensuring instrumentation stays in lock-step with event semantics.
+- **Diagnostics:** Recorded events include schema snapshots for each invocation, massively reducing time-to-debug when a production run misbehaves.
+
 **Benefits:**
 - Decoupled components (agents don't know about UI)
 - Real-time updates (WebSocket subscribers)
@@ -198,6 +212,41 @@ def step(state: State) -> Action:
     # 5. Return action for execution
     return action
 ```
+
+#### Controller Service Layer (New)
+
+To keep the `AgentController` lean and production-focused, the controller now delegates key responsibilities to dedicated services:
+
+| Service | Responsibility | Key Files |
+|---------|----------------|-----------|
+| `LifecycleService` | State tracker setup, event subscriptions, state persistence wiring | `forge/controller/services/lifecycle_service.py` |
+| `AutonomyService` | Autonomy level configuration, safety/task validators, circuit-breaker configuration | `forge/controller/services/autonomy_service.py` |
+| `TelemetryService` | Tool pipeline assembly, telemetry emission for blocked actions | `forge/controller/services/telemetry_service.py` |
+| `RetryService` | Background retry queue orchestration with graceful Redis fallbacks | `forge/controller/services/retry_service.py` |
+| `CircuitBreakerService` | Centralizes circuit breaker checks and error/stuck bookkeeping | `forge/controller/services/circuit_breaker_service.py` |
+| `StuckDetectionService` | Wraps the Tree-sitter based stuck detector and delegates | `forge/controller/services/stuck_detection_service.py` |
+
+`AgentController` composes these services in `__init__`, so new production safeguards can be added without expanding the controller’s surface area. When integrating new behavior, prefer creating a service over extending the controller directly.
+
+##### Controller Health Snapshot (New)
+
+To avoid digging through logs when a run misbehaves, Forge now exposes a consolidated controller health snapshot at `/api/monitoring/controller/{sid}/health`. The endpoint introspects the live `AgentController` and reports:
+
+- core agent state (current `AgentState`, last error, iteration & budget usage vs. their limits)
+- safety services (`RetryService`, `CircuitBreakerService`, `StuckDetectionService`) including pending retries and breaker counters
+- event-stream backpressure metrics for the session’s `EventStream`
+- warnings array (e.g., `iteration_limit_reached`, `retry_pending`, `stuck_detector_triggered`)
+
+This endpoint powers dashboards/alerts and mirrors the prompt-optimization health snapshot so operators can inspect safeguards across both tiers.
+
+##### Runtime / Process Manager Health (New)
+
+Under the hood, every runtime shell registers long-running processes with `ProcessManager`. We now expose the manager’s telemetry (active processes, forced kills, lifetime stats) through the monitoring API so production ops can detect sandboxes that leak or get stuck. Each controller health snapshot includes runtime/process warnings when available, and `/api/monitoring/processes/health` returns a global view (see Runtime section).
+
+Optional middlewares can be toggled via `agent_config`:
+
+- `enable_planning_middleware` adds the `PlanningMiddleware`, which inspects tasks before execution and surfaces a complexity score for the task tracker.
+- `enable_reflection_middleware` adds the `ReflectionMiddleware`, invoking self-checks before edits/commands (honoring `enable_reflection`).
 
 **Available Actions:**
 - `FileEditAction` - Edit files with structure-aware parsing
@@ -245,15 +294,15 @@ Result returned safely
 **Prometheus Metrics (30+):**
 
 ```
-# Sample metrics from forge/metasop/metrics.py
-
-metasop_steps_executed          # Total steps executed
-metasop_steps_failed            # Failed steps
-metasop_total_tokens            # Token consumption
-metasop_model_total_tokens{model="claude-4"}  # Per-model tokens
-metasop_step_duration_ms_p95    # p95 latency
-metasop_cache_hits              # Cache efficiency
-metasop_retry_attempts          # Retry patterns
+# Runtime & Guardrail highlights
+forge_runtime_watchdog_watched{kind="docker"}    # Live sandboxes by kind
+forge_runtime_pool_idle_reclaim_total            # TTL-driven warm reclaims
+forge_runtime_pool_eviction_total                # Capacity evictions
+forge_runtime_scaling_signals_overprovision      # Idle-reclaim spikes
+forge_runtime_scaling_signals_capacity_exhausted # Eviction spikes
+metasop_guardrail_concurrency_total              # Active step concurrency
+metasop_guardrail_concurrency_peak               # Peak concurrency
+metasop_guardrail_runtime_avg_ms                 # Avg per-step runtime
 ```
 
 **Alerting Rules (6):**
@@ -300,21 +349,26 @@ Cache-Control: no-cache, no-store, must-revalidate
 
 ### Backend
 - **Framework:** FastAPI (async, high performance)
+- **Server:** Uvicorn with httptools
+- **Real-time:** Socket.IO (Python socketio library)
 - **LLM Integration:** LiteLLM (200+ models)
-- **Database:** SQLAlchemy (async)
-- **WebSocket:** FastAPI WebSocket
+- **Database:** SQLAlchemy (async) with conversation storage
 - **Containerization:** Docker
 - **Monitoring:** Prometheus + Grafana
 - **Logging:** Structured JSON logging
+- **Entry Point:** `forge/server/__main__.py` → `forge.server.listen:app`
+- **Default Port:** 3000 (configurable via `port` environment variable)
 
 ### Frontend
 - **Framework:** React 18 with TypeScript
 - **State:** Redux Toolkit + React Query
 - **Styling:** Tailwind CSS
-- **Real-time:** WebSocket client
+- **Real-time:** Socket.IO client (socket.io-client)
 - **Icons:** Lucide React
 - **Animations:** Framer Motion
 - **Build:** Vite
+- **Dev Server:** Port 5173 (Vite default)
+- **Production:** Served from backend on port 3000
 
 ### Infrastructure
 - **Runtime:** Docker containers
@@ -386,4 +440,25 @@ For deep dives into specific components:
 - **CodeAct Agent:** See `Forge/agenthub/codeact_agent/README.md`
 - **Security:** See `Forge/security/README.md`
 - **Frontend:** See `frontend/README.md`
+
+## Updated Controller Composition (2025)
+
+| Service | Responsibility | Key Files |
+|---------|----------------|-----------|
+| `LifecycleService` | State tracker setup, event subscriptions, replay context | `forge/controller/services/lifecycle_service.py` |
+| `IterationGuardService` | Iteration/budget ceilings, graceful shutdown | `forge/controller/services/iteration_guard_service.py` |
+| `StepGuardService` | Per-step circuit breaker and stuck detection hooks | `forge/controller/services/step_guard_service.py` |
+| `PendingActionService` | Track pending actions and timeouts | `forge/controller/services/pending_action_service.py` |
+| `ConfirmationService` | Replay/live action sourcing, autonomy policy | `forge/controller/services/confirmation_service.py` |
+| `ObservationService` | Observation logging and metrics prep | `forge/controller/services/observation_service.py` |
+| `TelemetryService` | Tool middleware, blocked-action telemetry | `forge/controller/services/telemetry_service.py` |
+| `RecoveryService` | Exception classification, retries, `controller_recovery` events | `forge/controller/services/recovery_service.py` |
+| `DelegateService` | Delegate spawn/teardown and bookkeeping | `forge/controller/services/delegate_service.py` |
+| `DelegateRuntimeProvider` | Acquire/release dedicated runtimes for delegates; bridge events | `forge/controller/services/delegate_runtime_provider.py` |
+| `GuardrailService` (MetaSOP) | Concurrency caps and per-step runtime telemetry | `forge/metasop/guardrail_service.py` |
+
+## Event Pipeline Hardening
+
+- EventStream now enqueues first, with async durability via `DurableEventWriter`; secrets are masked recursively with precompiled patterns.
+- EventServiceServer provides in‑process publish/subscribe/replay with RPC metrics for totals, failures, and latency.
 

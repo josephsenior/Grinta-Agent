@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\utils\tenacity_metrics.py
+# hypothesis_version: 6.147.0
+
+['attempt', 'attempt_index', 'attempt_number', 'error', 'exception', 'max_attempts', 'operation', 'outcome', 'retry_failure', 'retry_success', 'status', 'stop', 'successful']

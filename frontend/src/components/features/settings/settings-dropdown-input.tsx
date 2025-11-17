@@ -82,7 +82,7 @@ export function SettingsDropdownInput({
     <label className={cn("flex flex-col gap-2.5", wrapperClassName)}>
       {label && (
         <div className="flex items-center gap-1">
-          <span className="text-sm">{label}</span>
+          <span className="text-sm font-medium text-foreground">{label}</span>
           {showOptionalTag && <OptionalTag />}
         </div>
       )}

@@ -1,3 +1,303 @@
+# mypy: ignore-errors
+
+import sys
+import os
+import site
+import importlib
+
+
+def _sanitize_sys_path():
+    repo_root = os.path.abspath(os.path.dirname(__file__))
+    sys.path[:] = _filtered_sys_path(repo_root)
+    _insert_site_packages()
+    _prioritize_repo_root(repo_root)
+    _preload_pydantic_root_model()
+    _prefer_installed_mcp()
+
+
+def _filtered_sys_path(repo_root: str) -> list[str]:
+    tests_root = os.path.normcase(os.path.join(repo_root, "tests"))
+    filtered: list[str] = []
+    for path in sys.path:
+        if not path:
+            filtered.append(path)
+            continue
+        normalized = os.path.normcase(os.path.abspath(path))
+        if _should_skip_test_path(normalized, tests_root):
+            continue
+        filtered.append(path)
+    return filtered
+
+
+def _should_skip_test_path(path: str, tests_root: str) -> bool:
+    if not path.startswith(tests_root):
+        return False
+    return os.path.isdir(os.path.join(path, "mcp"))
+
+
+def _insert_site_packages() -> None:
+    for directory in reversed(_site_package_dirs()):
+        if directory and directory not in sys.path:
+            sys.path.insert(0, directory)
+
+
+def _site_package_dirs() -> list[str]:
+    dirs: list[str] = []
+    try:
+        dirs.extend(site.getsitepackages())
+    except Exception:
+        pass
+    try:
+        user_dir = site.getusersitepackages()
+        if user_dir:
+            dirs.append(user_dir)
+    except Exception:
+        pass
+    return dirs
+
+
+def _prioritize_repo_root(repo_root: str) -> None:
+    if repo_root in sys.path:
+        sys.path.remove(repo_root)
+    sys.path.insert(0, repo_root)
+
+
+def _preload_pydantic_root_model() -> None:
+    try:
+        import pydantic.root_model  # type: ignore  # noqa: F401
+    except Exception:
+        pass
+
+
+def _prefer_installed_mcp() -> None:
+    try:
+        real_mcp = importlib.import_module("mcp")
+    except ModuleNotFoundError:
+        return
+    _restrict_mcp_path(real_mcp)
+    sys.modules["mcp"] = real_mcp
+
+
+def _restrict_mcp_path(module: object) -> None:
+    if not hasattr(module, "__path__"):
+        return
+    paths = [p for p in module.__path__ if "site-packages" in p]  # type: ignore[attr-defined]
+    if paths:
+        module.__path__ = paths  # type: ignore[attr-defined]
+
+
+_sanitize_sys_path()
+try:
+    # Diagnostic: dump sanitized sys.path for pytest collection debugging.
+    with open(os.path.join(os.path.dirname(__file__), "tmp_sys_path_after_sanitize.txt"), "w", encoding="utf-8") as f:
+        for p in sys.path:
+            f.write(p + "\n")
+except Exception:
+    pass
+try:
+    # Diagnostic: dump currently loaded `forge` modules (if any) to help
+    # diagnose import shadowing during pytest collection.
+    with open(os.path.join(os.path.dirname(__file__), "tmp_forge_sysmodules_initial.txt"), "w", encoding="utf-8") as f:
+        for k in sorted(sys.modules.keys()):
+            if k.startswith("forge"):
+                mod = sys.modules.get(k)
+                f.write(f"{k}: {getattr(mod, '__file__', None)}\n")
+except Exception:
+    pass
+
+"""Early Docker SDK shim for collection safety.
+
+This provides a robust stub when `docker` is missing or lacks expected
+attributes (e.g., `docker.models`, `docker.errors`). The goal is to avoid
+import-time AttributeErrors during test collection on hosts without Docker
+installed. Actual runtime tests are skipped later when Docker isn't available.
+"""
+try:
+    import types as _types
+    import importlib as _importlib
+
+    def _ensure_docker_shim():
+        try:
+            _docker_mod = _importlib.import_module("docker")  # type: ignore
+        except Exception:
+            _docker_mod = None
+
+        # Build a stub module if missing or incomplete
+        if _docker_mod is None or not hasattr(_docker_mod, "models") or not hasattr(_docker_mod, "errors"):
+            docker = _types.ModuleType("docker")
+
+            # errors submodule with common exceptions used in code/tests
+            errors = _types.ModuleType("docker.errors")
+            class DockerException(Exception):
+                pass
+            class APIError(DockerException):
+                pass
+            class NotFound(DockerException):
+                pass
+            class ImageNotFound(NotFound):
+                pass
+            errors.DockerException = DockerException
+            errors.APIError = APIError
+            errors.NotFound = NotFound
+            errors.ImageNotFound = ImageNotFound
+
+            # models submodule with containers and images
+            models = _types.ModuleType("docker.models")
+            containers_mod = _types.ModuleType("docker.models.containers")
+            images_mod = _types.ModuleType("docker.models.images")
+
+            class Container:
+                def logs(self, *args, **kwargs):
+                    return iter(())
+            containers_mod.Container = Container
+
+            class Image:
+                pass
+            images_mod.Image = Image
+
+            # minimal client returned by from_env
+            class _ContainersClient:
+                def list(self, *args, **kwargs):
+                    return []
+                def get(self, *args, **kwargs):
+                    raise NotFound("container not found")
+
+            class _ImagesClient:
+                def get(self, *args, **kwargs):
+                    raise ImageNotFound("image not found")
+
+            class _DockerClient:
+                def __init__(self):
+                    self.containers = _ContainersClient()
+                    self.images = _ImagesClient()
+                def close(self):
+                    return None
+
+            def from_env(*args, **kwargs):
+                # Return a minimal client; tests often monkeypatch this anyway
+                return _DockerClient()
+
+            # Wire up the module tree
+            docker.errors = errors
+            docker.models = models
+            models.containers = containers_mod
+            models.images = images_mod
+            docker.from_env = from_env
+
+            # Register in sys.modules for both package and submodules
+            sys.modules.setdefault("docker", docker)
+            sys.modules.setdefault("docker.errors", errors)
+            sys.modules.setdefault("docker.models", models)
+            sys.modules.setdefault("docker.models.containers", containers_mod)
+            sys.modules.setdefault("docker.models.images", images_mod)
+            return
+
+        # If a real docker module exists but lacks some attributes, patch them in
+        if not hasattr(_docker_mod, "errors"):
+            errors = _types.ModuleType("docker.errors")
+            class DockerException(Exception):
+                pass
+            class APIError(DockerException):
+                pass
+            class NotFound(DockerException):
+                pass
+            class ImageNotFound(NotFound):
+                pass
+            errors.DockerException = DockerException
+            errors.APIError = APIError
+            errors.NotFound = NotFound
+            errors.ImageNotFound = ImageNotFound
+            setattr(_docker_mod, "errors", errors)
+            sys.modules.setdefault("docker.errors", errors)
+
+        if not hasattr(_docker_mod, "models"):
+            models = _types.ModuleType("docker.models")
+            setattr(_docker_mod, "models", models)
+            sys.modules.setdefault("docker.models", models)
+
+        # Ensure nested models submodules exist
+        models_mod = getattr(_docker_mod, "models")
+        if not hasattr(models_mod, "containers"):
+            containers_mod = _types.ModuleType("docker.models.containers")
+            class Container:
+                def logs(self, *args, **kwargs):
+                    return iter(())
+            containers_mod.Container = Container
+            setattr(models_mod, "containers", containers_mod)
+            sys.modules.setdefault("docker.models.containers", containers_mod)
+        if not hasattr(models_mod, "images"):
+            images_mod = _types.ModuleType("docker.models.images")
+            class Image:
+                pass
+            images_mod.Image = Image
+            setattr(models_mod, "images", images_mod)
+            sys.modules.setdefault("docker.models.images", images_mod)
+
+        if not hasattr(_docker_mod, "from_env"):
+            class _DockerClient:
+                def __init__(self):
+                    self.containers = _types.SimpleNamespace(list=lambda *a, **k: [], get=lambda *a, **k: (_ for _ in ()).throw(getattr(_docker_mod.errors, "NotFound")("container not found")))
+                    self.images = _types.SimpleNamespace(get=lambda *a, **k: (_ for _ in ()).throw(getattr(_docker_mod.errors, "ImageNotFound")("image not found")))
+                def close(self):
+                    return None
+            setattr(_docker_mod, "from_env", lambda *a, **k: _DockerClient())
+
+    _ensure_docker_shim()
+except Exception:
+    pass
+
+# Provide minimal LiteLLM type shims early in import lifecycle.
+# Some environments/litellm versions may not export these names.
+try:
+    import litellm as _litellm_mod  # type: ignore
+
+    if not hasattr(_litellm_mod, "ChatCompletionToolParamFunctionChunk"):
+        class _ChatCompletionToolParamFunctionChunk(dict):
+            def __init__(self, name: str, description: str | None = None, parameters: dict | None = None, strict: bool | None = None, **kwargs):
+                data = {"name": name}
+                if description is not None:
+                    data["description"] = description
+                if parameters is not None:
+                    data["parameters"] = parameters
+                if strict is not None:
+                    data["strict"] = strict
+                data.update(kwargs)
+                super().__init__(data)
+            def __getattr__(self, key):
+                return self[key]
+            def __setattr__(self, key, value):
+                self[key] = value
+
+        setattr(_litellm_mod, "ChatCompletionToolParamFunctionChunk", _ChatCompletionToolParamFunctionChunk)
+
+    if not hasattr(_litellm_mod, "ChatCompletionToolParam"):
+        class _ChatCompletionToolParam(dict):
+            def __init__(self, function=None, type: str | None = None, **kwargs):
+                data = {"type": type, "function": function}
+                data.update(kwargs)
+                super().__init__(data)
+            def __getattr__(self, key):
+                return self[key]
+            def __setattr__(self, key, value):
+                self[key] = value
+
+        setattr(_litellm_mod, "ChatCompletionToolParam", _ChatCompletionToolParam)
+
+    if not hasattr(_litellm_mod, "ModelInfo"):
+        class _ModelInfo(dict):
+            pass
+        setattr(_litellm_mod, "ModelInfo", _ModelInfo)
+
+    if not hasattr(_litellm_mod, "PromptTokensDetails"):
+        class _PromptTokensDetails:
+            def __init__(self, cached_tokens: int | None = None, **kwargs):
+                self.cached_tokens = cached_tokens
+        setattr(_litellm_mod, "PromptTokensDetails", _PromptTokensDetails)
+except Exception:
+    # If litellm truly isn't importable, tests that need it will skip or stub.
+    pass
+
+# Note: A more complete Docker shim is already established above; remove older minimal shim.
 import asyncio
 import inspect
 import pathlib
@@ -60,7 +360,9 @@ def _docker_available() -> bool:
     try:
         import subprocess
 
-        res = subprocess.run(["docker", "info"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        res = subprocess.run(
+            ["docker", "info"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
         return res.returncode == 0
     except Exception:
         return False
@@ -70,6 +372,35 @@ def pytest_configure(config):
     markers = ["docker", "windows", "optional", "heavy", "integration", "benchmark"]
     for m in markers:
         config.addinivalue_line("markers", f"{m}: mark test as {m}")
+
+
+def _clear_forge_modules() -> None:
+    """Aggressively clear any cached 'forge' modules before collecting a test.
+
+    Some tests in this repository manipulate sys.modules at import time to stub
+    out submodules (e.g., forge.events.observation). To prevent cross-module
+    contamination during collection, clear any previously imported forge modules
+    so each test module starts from a clean import state.
+    """
+    # Avoid clearing modules that register global side effects (e.g., Prometheus metrics)
+    # which cannot be re-registered safely across repeated imports during collection.
+    EXCLUDE_PREFIXES = (
+        "forge.services.event_service",
+    )
+    try:
+        for name in list(sys.modules.keys()):
+            if name == "forge" or name.startswith("forge."):
+                if any(name == p or name.startswith(p + ".") for p in EXCLUDE_PREFIXES):
+                    continue
+                sys.modules.pop(name, None)
+    except Exception:
+        pass
+
+
+def pytest_collectstart(collector):
+    # Called before starting collection of a node (including test modules).
+    # Reset forge imports to avoid sys.modules pollution from previously imported tests.
+    _clear_forge_modules()
 
 
 @pytest.fixture
@@ -116,23 +447,47 @@ def _add_markers_to_item(item, parts):
 
 def pytest_collection_modifyitems(config, items):
     """Modify test items by adding markers and applying skips."""
-    # Add markers based on file paths
+    _apply_path_markers(items)
+    context = _CollectionContext(
+        docker_available=_docker_available(),
+        is_windows=sys.platform.startswith("win"),
+        run_tty_tests=os.environ.get("FORGE_RUN_TTY_TESTS", "0") == "1",
+    )
+    _apply_skip_markers(items, context)
+
+
+def _apply_path_markers(items):
     for item in items:
-        path = pathlib.Path(item.fspath)
-        parts = {p.lower() for p in path.parts}
+        parts = {part.lower() for part in pathlib.Path(item.fspath).parts}
         _add_markers_to_item(item, parts)
 
-    # Apply conditional skips
-    docker_ok = _docker_available()
-    is_windows = sys.platform.startswith("win")
-    run_tty_tests = os.environ.get("FORGE_RUN_TTY_TESTS", "0") == "1"
+
+class _CollectionContext:
+    def __init__(self, docker_available: bool, is_windows: bool, run_tty_tests: bool):
+        self.docker_available = docker_available
+        self.is_windows = is_windows
+        self.run_tty_tests = run_tty_tests
+
+
+def _apply_skip_markers(items, context: "_CollectionContext") -> None:
     for item in items:
-        if "docker" in item.keywords and (not docker_ok):
-            item.add_marker(pytest.mark.skip(reason="docker not available"))
-        if "windows" in item.keywords and (not is_windows):
-            item.add_marker(pytest.mark.skip(reason="windows-specific test (not running on non-windows host)"))
-        if "tty" in item.keywords and (not run_tty_tests):
-            item.add_marker(pytest.mark.skip(reason="tty tests disabled; set FORGE_RUN_TTY_TESTS=1 to enable"))
+        for reason in _skip_reasons(item, context):
+            item.add_marker(pytest.mark.skip(reason=reason))
+
+
+def _skip_reasons(item, context: "_CollectionContext") -> Iterator[str]:
+    if "docker" in item.keywords and not context.docker_available:
+        yield "docker not available"
+    if "windows" in item.keywords and not context.is_windows:
+        yield "windows-specific test (not running on non-windows host)"
+    if "tty" in item.keywords and not context.run_tty_tests:
+        yield "tty tests disabled; set FORGE_RUN_TTY_TESTS=1 to enable"
+    if not context.docker_available and _is_runtime_test(item):
+        yield "runtime tests skipped: docker not available"
+
+
+def _is_runtime_test(item) -> bool:
+    return "runtime" in pathlib.Path(item.fspath).parts
 
 
 @pytest.fixture(autouse=True)
@@ -230,7 +585,9 @@ def stub_win32_output_on_windows(monkeypatch):
             def write_raw(self, data: bytes):
                 return None
 
-        monkeypatch.setattr("prompt_toolkit.output.win32.Win32Output", _DummyWin32Output, raising=False)
+        monkeypatch.setattr(
+            "prompt_toolkit.output.win32.Win32Output", _DummyWin32Output, raising=False
+        )
         try:
             from prompt_toolkit.output.defaults import DummyOutput
 
@@ -326,6 +683,7 @@ def mock_litellm() -> Iterator[None]:
         messages = _extract_messages(args, kwargs)
         model = kwargs.get("model")
         if kwargs.get("stream"):
+
             async def _async_gen():
                 for chunk in _stream_generator(messages, model):
                     yield chunk
@@ -343,7 +701,9 @@ def mock_litellm() -> Iterator[None]:
     monkeypatcher.setattr(litellm, "acompletion", _acompletion_stub)
     monkeypatcher.setattr(litellm, "stream", _streaming_stub, raising=False)
     monkeypatcher.setattr(litellm, "streaming", _streaming_stub, raising=False)
-    monkeypatcher.setattr(forge_llm_module, "litellm_completion", _completion_stub, raising=False)
+    monkeypatcher.setattr(
+        forge_llm_module, "litellm_completion", _completion_stub, raising=False
+    )
     try:
         yield
     finally:
@@ -377,6 +737,7 @@ try:
     from tests.runtime.conftest import _close_test_runtime as _runtime_close  # type: ignore
     from tests.runtime.conftest import _load_runtime as _runtime_load  # type: ignore
 except Exception:  # pragma: no cover - optional dependency for runtime tests
+
     def _load_runtime(*args, **kwargs):  # type: ignore[override]
         pytest.skip("runtime test helpers are unavailable in this environment")
 

@@ -5,16 +5,20 @@
 
 import os
 import re
-from typing import TYPE_CHECKING, Annotated
+import random
+import contextlib
+from dataclasses import dataclass
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING, Annotated, Any, TypeVar
 
 # Import Field early to ensure it's in the global namespace
-from pydantic import Field
+from pydantic import Field, SecretStr
 
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.server.dependencies import get_http_request
 
-from forge.core.logger import forge_logger as logger
+from forge.core.logger import forge_logger as logger, get_trace_context
 from forge.integrations.bitbucket.bitbucket_service import BitBucketServiceImpl
 from forge.integrations.github.github_service import GithubServiceImpl
 from forge.integrations.gitlab.gitlab_service import GitLabServiceImpl
@@ -31,28 +35,207 @@ from forge.server.user_auth import (
 if TYPE_CHECKING:
     from forge.storage.data_models.conversation_metadata import ConversationMetadata
 
+
 # Lazy import to avoid circular dependency issues during config loading
 def get_conversation_store():
     """Return conversation store implementation lazily to avoid import cycles."""
     from forge.server.shared import ConversationStoreImpl
+
     return ConversationStoreImpl
+
 
 def get_server_config():
     """Return server configuration module lazily to avoid circular import."""
     from forge.server.shared import server_config
+
     return server_config
+
 
 def get_config():
     """Return Forge configuration without importing at module import time."""
     from forge.server.shared import config
+
     return config
 
 
 server_config = get_server_config()
 
-mcp_server = FastMCP("mcp", stateless_http=True, dependencies=None, mask_error_details=True)
+mcp_server = FastMCP(
+    "mcp", stateless_http=True, dependencies=None, mask_error_details=True
+)
+
+# Optional OpenTelemetry setup for MCP instrumentation
+_OTEL_MCP_ENABLED = os.getenv(
+    "OTEL_INSTRUMENT_MCP", os.getenv("OTEL_ENABLED", "false")
+).lower() in (
+    "true",
+    "1",
+    "yes",
+)
+_mcp_tracer: Any | None = None
+_SPAN_KIND: Any | None = None
+try:
+    if _OTEL_MCP_ENABLED:
+        from opentelemetry import trace as _otel_trace  # type: ignore
+        from opentelemetry.trace import SpanKind  # type: ignore
+
+        _mcp_tracer = _otel_trace.get_tracer("forge.mcp")
+        _SPAN_KIND = SpanKind
+except Exception:  # pragma: no cover - optional dependency
+    _mcp_tracer = None
+    _SPAN_KIND = None
 HOST = f"https://{os.getenv('WEB_HOST', 'app.all-hands.dev').strip()}"
 CONVERSATION_URL = HOST + "/conversations/{}"
+
+ServiceT = TypeVar("ServiceT", bound=GitService)
+ReturnT = TypeVar("ReturnT")
+
+
+@dataclass
+class _McpRequestContext:
+    conversation_id: str | None
+    provider_tokens: dict[ProviderType, ProviderToken] | None
+    access_token: SecretStr | None
+    user_id: str | None
+
+
+async def _request_context() -> _McpRequestContext:
+    request = get_http_request()
+    headers = request.headers
+    conversation_id = headers.get("X-Forge-ServerConversation-ID", None)
+    provider_tokens_raw = await get_provider_tokens(request)
+    provider_tokens = (
+        dict(provider_tokens_raw) if provider_tokens_raw is not None else None
+    )
+    access_token = await get_access_token(request)
+    user_id = await get_user_id(request)
+    return _McpRequestContext(
+        conversation_id=conversation_id,
+        provider_tokens=provider_tokens,
+        access_token=access_token,
+        user_id=user_id,
+    )
+
+
+def _provider_token(
+    context: _McpRequestContext, provider: ProviderType
+) -> ProviderToken:
+    if not context.provider_tokens:
+        return ProviderToken()
+    return context.provider_tokens.get(provider, ProviderToken())
+
+
+def _build_service(
+    service_cls: type[ServiceT],
+    token: ProviderToken,
+    external_auth_id: str | None,
+    external_auth_token: SecretStr | None,
+) -> ServiceT:
+    return service_cls(
+        user_id=token.user_id,
+        external_auth_id=external_auth_id,
+        external_auth_token=external_auth_token,
+        token=token.token,
+        base_domain=token.host,
+    )
+
+
+async def _append_conversation_link(
+    service: GitService,
+    conversation_id: str | None,
+    body: str | None,
+) -> str:
+    body = body or ""
+    try:
+        return await get_conversation_link(service, conversation_id, body)
+    except Exception as exc:
+        logger.warning("Failed to append conversation link: %s", exc)
+        return body
+
+
+def _otel_sample_rate() -> float:
+    try:
+        return float(
+            os.getenv("OTEL_SAMPLE_MCP", os.getenv("OTEL_SAMPLE_DEFAULT", "1.0"))
+        )
+    except Exception:
+        return 1.0
+
+
+def _span_context_manager():
+    if _mcp_tracer is None:
+        return contextlib.nullcontext()
+    sample_rate = max(0.0, min(1.0, _otel_sample_rate()))
+    if random.random() >= sample_rate:
+        return contextlib.nullcontext()
+    span_kind = _SPAN_KIND
+    if span_kind is None:
+        return contextlib.nullcontext()
+    return _mcp_tracer.start_as_current_span("mcp.request", kind=span_kind.CLIENT)
+
+
+def _set_span_attributes(
+    span,
+    tool_name: str,
+    resource: str,
+    conversation_id: str | None,
+) -> None:
+    try:
+        span.set_attribute("tool.name", tool_name)
+        span.set_attribute("tool.kind", "mcp")
+        span.set_attribute("mcp.server.name", "mcp")
+        span.set_attribute("mcp.method", tool_name)
+        span.set_attribute("mcp.resource", resource)
+        if conversation_id:
+            span.set_attribute("conversation.id", conversation_id)
+        ctx = get_trace_context()
+        trace_id = ctx.get("trace_id")
+        if trace_id:
+            span.set_attribute("forge.trace_id", str(trace_id))
+    except Exception:
+        pass
+
+
+@contextlib.contextmanager
+def _mcp_span(tool_name: str, resource: str, conversation_id: str | None):
+    span_ref = None
+    with _span_context_manager() as span:
+        span_ref = span
+        if span_ref is not None:
+            _set_span_attributes(span_ref, tool_name, resource, conversation_id)
+        try:
+            yield span_ref
+        except Exception as exc:
+            if span_ref is not None:
+                try:
+                    span_ref.record_exception(exc)
+                    span_ref.set_attribute("error", True)
+                except Exception:
+                    pass
+            raise
+
+
+async def _maybe_save_metadata(
+    user_id: str | None, conversation_id: str | None, response: str
+) -> None:
+    if conversation_id:
+        await save_pr_metadata(user_id, conversation_id, response)
+
+
+async def _execute_with_tracing(
+    tool_name: str,
+    resource: str,
+    conversation_id: str | None,
+    action: Callable[[], Awaitable[ReturnT]],
+    error_prefix: str,
+) -> ReturnT:
+    try:
+        with _mcp_span(tool_name, resource, conversation_id):
+            return await action()
+    except Exception as exc:
+        error = f"{error_prefix}: {exc}"
+        logger.error(error)
+        raise ToolError(error) from exc
 
 
 async def get_conversation_link(
@@ -86,12 +269,16 @@ async def get_conversation_link(
     user = await service.get_user()
     username = user.login
     conversation_url = CONVERSATION_URL.format(conversation_id)
-    conversation_link = f"@{username} can click here to [continue refining the PR]({conversation_url})"
+    conversation_link = (
+        f"@{username} can click here to [continue refining the PR]({conversation_url})"
+    )
     body += f"\n\n{conversation_link}"
     return body
 
 
-async def save_pr_metadata(user_id: str | None, conversation_id: str, tool_result: str) -> None:
+async def save_pr_metadata(
+    user_id: str | None, conversation_id: str, tool_result: str
+) -> None:
     """Extract PR/MR number from tool output and update conversation metadata.
 
     Parses GitHub pull request or GitLab merge request numbers from tool
@@ -113,8 +300,12 @@ async def save_pr_metadata(user_id: str | None, conversation_id: str, tool_resul
             but not re-raised; warnings logged if PR number extraction fails.
 
     """
-    conversation_store = await get_conversation_store().get_instance(get_config(), user_id)
-    conversation: ConversationMetadata = await conversation_store.get_metadata(conversation_id)
+    conversation_store = await get_conversation_store().get_instance(
+        get_config(), user_id
+    )
+    conversation: ConversationMetadata = await conversation_store.get_metadata(
+        conversation_id
+    )
     pull_pattern = "pull/(\\d+)"
     merge_request_pattern = "merge_requests/(\\d+)"
     pr_number = None
@@ -125,22 +316,30 @@ async def save_pr_metadata(user_id: str | None, conversation_id: str, tool_resul
     elif match_merge_request:
         pr_number = int(match_merge_request[1])
     if pr_number:
-        logger.info("Saving PR number: %s for conversation %s", pr_number, conversation_id)
+        logger.info(
+            "Saving PR number: %s for conversation %s", pr_number, conversation_id
+        )
         conversation.pr_number.append(pr_number)
     else:
-        logger.warning("Failed to extract PR number for conversation %s", conversation_id)
+        logger.warning(
+            "Failed to extract PR number for conversation %s", conversation_id
+        )
     await conversation_store.save_metadata(conversation)
 
 
 @mcp_server.tool()
 async def create_pr(
-    repo_name: Annotated[str, Field(description="GitHub repository ({{owner}}/{{repo}})")],
+    repo_name: Annotated[
+        str, Field(description="GitHub repository ({{owner}}/{{repo}})")
+    ],
     source_branch: Annotated[str, Field(description="Source branch on repo")],
     target_branch: Annotated[str, Field(description="Target branch on repo")],
     title: Annotated[str, Field(description="PR Title")],
     body: Annotated[str | None, Field(description="PR body")],
     draft: Annotated[bool, Field(description="Whether PR opened is a draft")] = True,
-    labels: Annotated[list[str] | None, Field(description="Labels to apply to the PR")] = None,
+    labels: Annotated[
+        list[str] | None, Field(description="Labels to apply to the PR")
+    ] = None,
 ) -> str:
     """Create a pull request in GitHub repository.
 
@@ -178,25 +377,14 @@ async def create_pr(
 
     """
     logger.info("Calling Forge MCP create_pr")
-    request = get_http_request()
-    headers = request.headers
-    conversation_id = headers.get("X-Forge-ServerConversation-ID", None)
-    provider_tokens = await get_provider_tokens(request)
-    access_token = await get_access_token(request)
-    user_id = await get_user_id(request)
-    github_token = provider_tokens.get(ProviderType.GITHUB, ProviderToken()) if provider_tokens else ProviderToken()
-    github_service = GithubServiceImpl(
-        user_id=github_token.user_id,
-        external_auth_id=user_id,
-        external_auth_token=access_token,
-        token=github_token.token,
-        base_domain=github_token.host,
+    context = await _request_context()
+    github_token = _provider_token(context, ProviderType.GITHUB)
+    github_service = _build_service(
+        GithubServiceImpl, github_token, context.user_id, context.access_token
     )
-    try:
-        body = await get_conversation_link(github_service, conversation_id, body or "")
-    except Exception as e:
-        logger.warning("Failed to append conversation link: %s", e)
-    try:
+    body = await _append_conversation_link(github_service, context.conversation_id, body)
+
+    async def _perform_request() -> str:
         response = await github_service.create_pr(
             repo_name=repo_name,
             source_branch=source_branch,
@@ -206,22 +394,36 @@ async def create_pr(
             draft=draft,
             labels=labels,
         )
-        if conversation_id:
-            await save_pr_metadata(user_id, conversation_id, response)
-    except Exception as e:
-        error = f"Error creating pull request: {e}"
-        raise ToolError(str(error)) from e
-    return response
+        await _maybe_save_metadata(context.user_id, context.conversation_id, response)
+        return response
+
+    return await _execute_with_tracing(
+        tool_name="create_pr",
+        resource="github/pr",
+        conversation_id=context.conversation_id,
+        action=_perform_request,
+        error_prefix="Error creating pull request",
+    )
 
 
 @mcp_server.tool()
 async def create_mr(
-    id: Annotated[int | str, Field(description="GitLab repository (ID or URL-encoded path of the project)")],
+    id: Annotated[
+        int | str,
+        Field(description="GitLab repository (ID or URL-encoded path of the project)"),
+    ],
     source_branch: Annotated[str, Field(description="Source branch on repo")],
     target_branch: Annotated[str, Field(description="Target branch on repo")],
-    title: Annotated[str, Field(description="MR Title. Start title with `DRAFT:` or `WIP:` if applicable.")],
+    title: Annotated[
+        str,
+        Field(
+            description="MR Title. Start title with `DRAFT:` or `WIP:` if applicable."
+        ),
+    ],
     description: Annotated[str | None, Field(description="MR description")],
-    labels: Annotated[list[str] | None, Field(description="Labels to apply to the MR")] = None,
+    labels: Annotated[
+        list[str] | None, Field(description="Labels to apply to the MR")
+    ] = None,
 ) -> str:
     """Create a merge request in GitLab repository.
 
@@ -258,25 +460,16 @@ async def create_mr(
 
     """
     logger.info("Calling Forge MCP create_mr")
-    request = get_http_request()
-    headers = request.headers
-    conversation_id = headers.get("X-Forge-ServerConversation-ID", None)
-    provider_tokens = await get_provider_tokens(request)
-    access_token = await get_access_token(request)
-    user_id = await get_user_id(request)
-    github_token = provider_tokens.get(ProviderType.GITLAB, ProviderToken()) if provider_tokens else ProviderToken()
-    gitlab_service = GitLabServiceImpl(
-        user_id=github_token.user_id,
-        external_auth_id=user_id,
-        external_auth_token=access_token,
-        token=github_token.token,
-        base_domain=github_token.host,
+    context = await _request_context()
+    gitlab_token = _provider_token(context, ProviderType.GITLAB)
+    gitlab_service = _build_service(
+        GitLabServiceImpl, gitlab_token, context.user_id, context.access_token
     )
-    try:
-        description = await get_conversation_link(gitlab_service, conversation_id, description or "")
-    except Exception as e:
-        logger.warning("Failed to append conversation link: %s", e)
-    try:
+    description = await _append_conversation_link(
+        gitlab_service, context.conversation_id, description
+    )
+
+    async def _perform_request() -> str:
         response = await gitlab_service.create_mr(
             id=id,
             source_branch=source_branch,
@@ -285,20 +478,31 @@ async def create_mr(
             description=description,
             labels=labels,
         )
-        if conversation_id:
-            await save_pr_metadata(user_id, conversation_id, response)
-    except Exception as e:
-        error = f"Error creating merge request: {e}"
-        raise ToolError(str(error)) from e
-    return response
+        await _maybe_save_metadata(context.user_id, context.conversation_id, response)
+        return response
+
+    return await _execute_with_tracing(
+        tool_name="create_mr",
+        resource="gitlab/mr",
+        conversation_id=context.conversation_id,
+        action=_perform_request,
+        error_prefix="Error creating merge request",
+    )
 
 
 @mcp_server.tool()
 async def create_bitbucket_pr(
-    repo_name: Annotated[str, Field(description="Bitbucket repository (workspace/repo_slug)")],
+    repo_name: Annotated[
+        str, Field(description="Bitbucket repository (workspace/repo_slug)")
+    ],
     source_branch: Annotated[str, Field(description="Source branch on repo")],
     target_branch: Annotated[str, Field(description="Target branch on repo")],
-    title: Annotated[str, Field(description="PR Title. Start title with `DRAFT:` or `WIP:` if applicable.")],
+    title: Annotated[
+        str,
+        Field(
+            description="PR Title. Start title with `DRAFT:` or `WIP:` if applicable."
+        ),
+    ],
     description: Annotated[str | None, Field(description="PR description")],
 ) -> str:
     """Create a pull request in Bitbucket Cloud repository.
@@ -334,27 +538,16 @@ async def create_bitbucket_pr(
 
     """
     logger.info("Calling Forge MCP create_bitbucket_pr")
-    request = get_http_request()
-    headers = request.headers
-    conversation_id = headers.get("X-Forge-ServerConversation-ID", None)
-    provider_tokens = await get_provider_tokens(request)
-    access_token = await get_access_token(request)
-    user_id = await get_user_id(request)
-    bitbucket_token = (
-        provider_tokens.get(ProviderType.BITBUCKET, ProviderToken()) if provider_tokens else ProviderToken()
+    context = await _request_context()
+    bitbucket_token = _provider_token(context, ProviderType.BITBUCKET)
+    bitbucket_service = _build_service(
+        BitBucketServiceImpl, bitbucket_token, context.user_id, context.access_token
     )
-    bitbucket_service = BitBucketServiceImpl(
-        user_id=bitbucket_token.user_id,
-        external_auth_id=user_id,
-        external_auth_token=access_token,
-        token=bitbucket_token.token,
-        base_domain=bitbucket_token.host,
+    description = await _append_conversation_link(
+        bitbucket_service, context.conversation_id, description
     )
-    try:
-        description = await get_conversation_link(bitbucket_service, conversation_id, description or "")
-    except Exception as e:
-        logger.warning("Failed to append conversation link: %s", e)
-    try:
+
+    async def _perform_request() -> str:
         response = await bitbucket_service.create_pr(
             repo_name=repo_name,
             source_branch=source_branch,
@@ -362,10 +555,13 @@ async def create_bitbucket_pr(
             title=title,
             body=description,
         )
-        if conversation_id:
-            await save_pr_metadata(user_id, conversation_id, response)
-    except Exception as e:
-        error = f"Error creating pull request: {e}"
-        logger.error(error)
-        raise ToolError(str(error)) from e
-    return response
+        await _maybe_save_metadata(context.user_id, context.conversation_id, response)
+        return response
+
+    return await _execute_with_tracing(
+        tool_name="create_bitbucket_pr",
+        resource="bitbucket/pr",
+        conversation_id=context.conversation_id,
+        action=_perform_request,
+        error_prefix="Error creating pull request",
+    )

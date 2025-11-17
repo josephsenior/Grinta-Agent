@@ -394,13 +394,13 @@ Hydration failed because the server rendered HTML didn't match the client
 
 **Symptoms:**
 ```
-WebSocket connection to 'ws://localhost:3001' failed
+Socket.IO connection to 'http://localhost:3000/socket.io' failed
 ```
 
 **Solutions:**
 1. Verify backend is running:
    ```bash
-   curl http://localhost:3001/health
+   curl http://localhost:3000/health
    ```
 
 2. Check CORS configuration:
@@ -415,7 +415,7 @@ WebSocket connection to 'ws://localhost:3001' failed
 3. Verify WebSocket URL:
    ```bash
    # In frontend .env
-   VITE_WEBSOCKET_URL=ws://localhost:3001
+   VITE_WEBSOCKET_URL=http://localhost:3000/socket.io
    ```
 
 ---

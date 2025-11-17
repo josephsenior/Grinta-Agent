@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+import builtins
 import json
 import sys
 from datetime import datetime
 from types import ModuleType, SimpleNamespace
-import builtins
+from typing import Any, Mapping, cast
 
 import pytest
 from fastapi import HTTPException
+from pydantic import SecretStr
 
 from forge.server.routes import database_connections as db_routes
 from forge.server.routes.database_connections import (
@@ -20,22 +22,25 @@ from forge.server.routes.database_connections import (
     TestConnectionRequest,
     TestConnectionResponse,
 )
+from forge.storage.settings.settings_store import SettingsStore
 
 
 class FakeSettings:
-    def __init__(self, connections=None):
-        self.DATABASE_CONNECTIONS = connections if connections is not None else []
+    def __init__(self, connections: list[dict[str, Any]] | None = None):
+        self.DATABASE_CONNECTIONS: list[dict[str, Any]] = (
+            connections if connections is not None else []
+        )
 
 
 class FakeSettingsStore:
-    def __init__(self, settings):
-        self._settings = settings
-        self.saved_settings = None
+    def __init__(self, settings: Any | None):
+        self._settings: Any | None = settings
+        self.saved_settings: Any | None = None
 
-    async def load(self):
+    async def load(self) -> Any | None:
         return self._settings
 
-    async def save(self, settings):
+    async def save(self, settings: Any) -> None:
         self.saved_settings = settings
 
 
@@ -63,10 +68,11 @@ async def test_create_connection_success(monkeypatch):
         type=DatabaseType.POSTGRESQL,
         host="localhost",
         port=5432,
-        password="secret",
+        password=SecretStr("secret"),
     )
     response = await db_routes.create_connection(connection, store)
     assert response["status"] == "success"
+    assert store.saved_settings is not None
     assert store.saved_settings.DATABASE_CONNECTIONS[0]["password"] == "secret"
 
 
@@ -75,7 +81,9 @@ async def test_create_connection_no_settings():
     store = FakeSettingsStore(None)
     with pytest.raises(HTTPException) as exc:
         await db_routes.create_connection(
-            DatabaseConnectionModel(name="test", type=DatabaseType.REDIS, host="x", port=1),
+            DatabaseConnectionModel(
+                name="test", type=DatabaseType.REDIS, host="x", port=1
+            ),
             store,
         )
     assert exc.value.status_code == 500
@@ -100,10 +108,13 @@ async def test_create_connection_initializes_collection():
 
 @pytest.mark.asyncio
 async def test_update_connection_updates_entry():
-    connection = DatabaseConnectionModel(name="source", type=DatabaseType.REDIS, host="x", port=1)
+    connection = DatabaseConnectionModel(
+        name="source", type=DatabaseType.REDIS, host="x", port=1
+    )
     settings = FakeSettings(connections=[connection.model_dump()])
     store = FakeSettingsStore(settings)
     await db_routes.update_connection(connection.id, {"host": "new"}, store)
+    assert store.saved_settings is not None
     assert store.saved_settings.DATABASE_CONNECTIONS[0]["host"] == "new"
 
 
@@ -129,7 +140,9 @@ async def test_update_connection_missing_attribute():
 
 @pytest.mark.asyncio
 async def test_delete_connection_success():
-    connection = DatabaseConnectionModel(name="source", type=DatabaseType.REDIS, host="x", port=1)
+    connection = DatabaseConnectionModel(
+        name="source", type=DatabaseType.REDIS, host="x", port=1
+    )
     settings = FakeSettings(connections=[connection.model_dump()])
     store = FakeSettingsStore(settings)
     response = await db_routes.delete_connection(connection.id, store)
@@ -171,7 +184,9 @@ def _block_import(monkeypatch, module_name: str) -> None:
 
 def test_validate_query_security():
     # Ensure no exception is raised for dangerous patterns (warnings only)
-    db_routes._validate_query_security("SELECT * FROM users; DROP TABLE accounts; -- comment")
+    db_routes._validate_query_security(
+        "SELECT * FROM users; DROP TABLE accounts; -- comment"
+    )
 
 
 def test_validate_query_security_many_statements():
@@ -193,7 +208,9 @@ async def test_test_connection_dispatches_postgresql(monkeypatch):
         return expected
 
     monkeypatch.setattr(db_routes, "_test_postgresql", fake_pg)
-    request = TestConnectionRequest(type=DatabaseType.POSTGRESQL, host="x", port=1, database="d", username="u")
+    request = TestConnectionRequest(
+        type=DatabaseType.POSTGRESQL, host="x", port=1, database="d", username="u"
+    )
     response = await db_routes.test_connection(request)
     assert response is expected
 
@@ -206,7 +223,9 @@ async def test_test_connection_dispatches_mongodb(monkeypatch):
         return expected
 
     monkeypatch.setattr(db_routes, "_test_mongodb", fake_mongo)
-    request = TestConnectionRequest(type=DatabaseType.MONGODB, host="x", port=1, connection_string="mongodb://")
+    request = TestConnectionRequest(
+        type=DatabaseType.MONGODB, host="x", port=1, connection_string="mongodb://"
+    )
     response = await db_routes.test_connection(request)
     assert response is expected
 
@@ -219,7 +238,9 @@ async def test_test_connection_dispatches_mysql(monkeypatch):
         return expected
 
     monkeypatch.setattr(db_routes, "_test_mysql", fake_mysql)
-    request = TestConnectionRequest(type=DatabaseType.MYSQL, host="x", port=1, database="d", username="u")
+    request = TestConnectionRequest(
+        type=DatabaseType.MYSQL, host="x", port=1, database="d", username="u"
+    )
     response = await db_routes.test_connection(request)
     assert response is expected
 
@@ -243,7 +264,9 @@ async def test_test_connection_handles_exception(monkeypatch):
         raise RuntimeError("boom")
 
     monkeypatch.setattr(db_routes, "_test_postgresql", failing_pg)
-    request = TestConnectionRequest(type=DatabaseType.POSTGRESQL, host="x", port=1, database="d", username="u")
+    request = TestConnectionRequest(
+        type=DatabaseType.POSTGRESQL, host="x", port=1, database="d", username="u"
+    )
     response = await db_routes.test_connection(request)
     assert response.success is False
     assert "boom" in response.message
@@ -251,14 +274,18 @@ async def test_test_connection_handles_exception(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_postgresql_missing_database():
-    request = TestConnectionRequest(type=DatabaseType.POSTGRESQL, host="x", port=5432, username="u")
+    request = TestConnectionRequest(
+        type=DatabaseType.POSTGRESQL, host="x", port=5432, username="u"
+    )
     response = await db_routes._test_postgresql(request)
     assert response.success is False
 
 
 @pytest.mark.asyncio
 async def test_postgresql_missing_username():
-    request = TestConnectionRequest(type=DatabaseType.POSTGRESQL, host="x", port=5432, database="db")
+    request = TestConnectionRequest(
+        type=DatabaseType.POSTGRESQL, host="x", port=5432, database="db"
+    )
     response = await db_routes._test_postgresql(request)
     assert response.success is False
 
@@ -292,7 +319,7 @@ async def test_postgresql_success(monkeypatch):
     async def connect(**kwargs):
         return DummyConn()
 
-    module.connect = connect
+    setattr(module, "connect", connect)
     monkeypatch.setitem(sys.modules, "asyncpg", module)
 
     request = TestConnectionRequest(
@@ -301,7 +328,7 @@ async def test_postgresql_success(monkeypatch):
         port=5432,
         database="db",
         username="user",
-        password="pw",
+        password=SecretStr("pw"),
     )
     response = await db_routes._test_postgresql(request)
     assert response.success is True
@@ -314,7 +341,7 @@ async def test_postgresql_failure(monkeypatch):
     async def connect(**kwargs):
         raise RuntimeError("down")
 
-    module.connect = connect
+    setattr(module, "connect", connect)
     monkeypatch.setitem(sys.modules, "asyncpg", module)
 
     request = TestConnectionRequest(
@@ -340,7 +367,9 @@ async def test_mongodb_import_error(monkeypatch):
     _remove_module(monkeypatch, "motor")
     _remove_module(monkeypatch, "motor.motor_asyncio")
     _block_import(monkeypatch, "motor.motor_asyncio")
-    request = TestConnectionRequest(type=DatabaseType.MONGODB, host="x", port=27017, connection_string="mongodb://")
+    request = TestConnectionRequest(
+        type=DatabaseType.MONGODB, host="x", port=27017, connection_string="mongodb://"
+    )
     response = await db_routes._test_mongodb(request)
     assert response.success is False
 
@@ -365,13 +394,15 @@ async def test_mongodb_success(monkeypatch):
         def close(self):
             self.closed = True
 
-    module.AsyncIOMotorClient = DummyClient
+    setattr(module, "AsyncIOMotorClient", DummyClient)
     motor_pkg = ModuleType("motor")
-    motor_pkg.motor_asyncio = module
+    setattr(motor_pkg, "motor_asyncio", module)
     monkeypatch.setitem(sys.modules, "motor", motor_pkg)
     monkeypatch.setitem(sys.modules, "motor.motor_asyncio", module)
 
-    request = TestConnectionRequest(type=DatabaseType.MONGODB, host="x", port=27017, connection_string="mongodb://")
+    request = TestConnectionRequest(
+        type=DatabaseType.MONGODB, host="x", port=27017, connection_string="mongodb://"
+    )
     response = await db_routes._test_mongodb(request)
     assert response.success is True
 
@@ -395,13 +426,15 @@ async def test_mongodb_failure(monkeypatch):
         def close(self):
             pass
 
-    module.AsyncIOMotorClient = DummyClient
+    setattr(module, "AsyncIOMotorClient", DummyClient)
     motor_pkg = ModuleType("motor")
-    motor_pkg.motor_asyncio = module
+    setattr(motor_pkg, "motor_asyncio", module)
     monkeypatch.setitem(sys.modules, "motor", motor_pkg)
     monkeypatch.setitem(sys.modules, "motor.motor_asyncio", module)
 
-    request = TestConnectionRequest(type=DatabaseType.MONGODB, host="x", port=27017, connection_string="mongodb://")
+    request = TestConnectionRequest(
+        type=DatabaseType.MONGODB, host="x", port=27017, connection_string="mongodb://"
+    )
     response = await db_routes._test_mongodb(request)
     assert response.success is False
 
@@ -412,7 +445,9 @@ async def test_mysql_missing_fields():
     result = await db_routes._test_mysql(request)
     assert result.success is False
 
-    request = TestConnectionRequest(type=DatabaseType.MYSQL, host="x", port=3306, database="db")
+    request = TestConnectionRequest(
+        type=DatabaseType.MYSQL, host="x", port=3306, database="db"
+    )
     result = await db_routes._test_mysql(request)
     assert result.success is False
 
@@ -462,7 +497,7 @@ async def test_mysql_success(monkeypatch):
     async def connect(**kwargs):
         return DummyConn()
 
-    module.connect = connect
+    setattr(module, "connect", connect)
     monkeypatch.setitem(sys.modules, "aiomysql", module)
 
     request = TestConnectionRequest(
@@ -483,7 +518,7 @@ async def test_mysql_failure(monkeypatch):
     async def connect(**kwargs):
         raise RuntimeError("down")
 
-    module.connect = connect
+    setattr(module, "connect", connect)
     monkeypatch.setitem(sys.modules, "aiomysql", module)
 
     request = TestConnectionRequest(
@@ -526,9 +561,9 @@ async def test_redis_success(monkeypatch):
         async def close(self):
             self.closed = True
 
-    module.Redis = DummyRedis
+    setattr(module, "Redis", DummyRedis)
     redis_pkg = ModuleType("redis")
-    redis_pkg.asyncio = module
+    setattr(redis_pkg, "asyncio", module)
     monkeypatch.setitem(sys.modules, "redis", redis_pkg)
     monkeypatch.setitem(sys.modules, "redis.asyncio", module)
 
@@ -556,9 +591,9 @@ async def test_redis_failure(monkeypatch):
         async def close(self):
             pass
 
-    module.Redis = DummyRedis
+    setattr(module, "Redis", DummyRedis)
     redis_pkg = ModuleType("redis")
-    redis_pkg.asyncio = module
+    setattr(redis_pkg, "asyncio", module)
     monkeypatch.setitem(sys.modules, "redis", redis_pkg)
     monkeypatch.setitem(sys.modules, "redis.asyncio", module)
 
@@ -569,7 +604,9 @@ async def test_redis_failure(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_get_schema_postgresql(monkeypatch):
-    connection = DatabaseConnectionModel(name="c", type=DatabaseType.POSTGRESQL, host="h", port=1)
+    connection = DatabaseConnectionModel(
+        name="c", type=DatabaseType.POSTGRESQL, host="h", port=1
+    )
     settings = FakeSettings(connections=[connection.model_dump()])
     store = FakeSettingsStore(settings)
 
@@ -578,6 +615,7 @@ async def test_get_schema_postgresql(monkeypatch):
 
     monkeypatch.setattr(db_routes, "_get_postgresql_schema", fake_schema)
     response = await db_routes.get_schema(connection.id, store)
+    assert response.tables is not None
     assert response.tables[0]["name"] == "t"
 
 
@@ -602,7 +640,9 @@ async def test_get_schema_missing_attribute():
 
 @pytest.mark.asyncio
 async def test_get_schema_mongodb(monkeypatch):
-    connection = DatabaseConnectionModel(name="c", type=DatabaseType.MONGODB, host="h", port=1)
+    connection = DatabaseConnectionModel(
+        name="c", type=DatabaseType.MONGODB, host="h", port=1
+    )
     conn_dict = connection.model_dump()
     conn_dict["type"] = "mongodb"
     settings = FakeSettings(connections=[conn_dict])
@@ -613,12 +653,15 @@ async def test_get_schema_mongodb(monkeypatch):
 
     monkeypatch.setattr(db_routes, "_get_mongodb_schema", fake_mongo_schema)
     response = await db_routes.get_schema(connection.id, store)
+    assert response.collections is not None
     assert response.collections[0]["name"] == "users"
 
 
 @pytest.mark.asyncio
 async def test_get_schema_redis(monkeypatch):
-    connection = DatabaseConnectionModel(name="c", type=DatabaseType.REDIS, host="h", port=1)
+    connection = DatabaseConnectionModel(
+        name="c", type=DatabaseType.REDIS, host="h", port=1
+    )
     conn_dict = connection.model_dump()
     conn_dict["type"] = "redis"
     settings = FakeSettings(connections=[conn_dict])
@@ -629,12 +672,15 @@ async def test_get_schema_redis(monkeypatch):
 
     monkeypatch.setattr(db_routes, "_get_redis_schema", fake_redis_schema)
     response = await db_routes.get_schema(connection.id, store)
+    assert response.keys is not None
     assert response.keys[0]["key"] == "a"
 
 
 @pytest.mark.asyncio
 async def test_get_schema_unsupported(monkeypatch):
-    connection = DatabaseConnectionModel(name="c", type=DatabaseType.MYSQL, host="h", port=1)
+    connection = DatabaseConnectionModel(
+        name="c", type=DatabaseType.MYSQL, host="h", port=1
+    )
     settings = FakeSettings(connections=[{"id": connection.id, "type": "unknown"}])
     store = FakeSettingsStore(settings)
     with pytest.raises(HTTPException) as exc:
@@ -644,7 +690,11 @@ async def test_get_schema_unsupported(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_get_sql_schema_import_error(monkeypatch):
-    monkeypatch.setattr(db_routes, "_get_postgresql_schema", lambda conn: (_ for _ in ()).throw(ImportError("missing")))
+    monkeypatch.setattr(
+        db_routes,
+        "_get_postgresql_schema",
+        lambda conn: (_ for _ in ()).throw(ImportError("missing")),
+    )
     response = await db_routes._get_sql_schema({"type": "postgresql"})
     assert response.tables == []
 
@@ -656,6 +706,7 @@ async def test_get_sql_schema_mysql(monkeypatch):
 
     monkeypatch.setattr(db_routes, "_get_mysql_schema", fake_mysql_schema)
     response = await db_routes._get_sql_schema({"type": "mysql"})
+    assert response.tables is not None
     assert response.tables[0]["name"] == "t"
 
 
@@ -699,7 +750,17 @@ async def test_get_postgresql_schema_success(monkeypatch):
     monkeypatch.setattr(db_routes, "_fetch_table_list", fake_fetch_table_list)
     monkeypatch.setattr(db_routes, "_build_table_schemas", fake_build_table_schemas)
 
-    result = await db_routes._get_postgresql_schema({"host": "h", "port": 1, "database": "d", "username": "u", "password": "p", "ssl": False})
+    result = await db_routes._get_postgresql_schema(
+        {
+            "host": "h",
+            "port": 1,
+            "database": "d",
+            "username": "u",
+            "password": "p",
+            "ssl": False,
+        }
+    )
+    assert result.tables is not None
     assert result.tables[0]["name"] == "users"
 
 
@@ -710,9 +771,16 @@ async def test_connect_to_postgresql(monkeypatch):
     async def connect(**kwargs):
         return "conn"
 
-    module.connect = connect
+    setattr(module, "connect", connect)
     monkeypatch.setitem(sys.modules, "asyncpg", module)
-    connection = {"host": "h", "port": 1, "database": "d", "username": "u", "password": "p", "ssl": False}
+    connection = {
+        "host": "h",
+        "port": 1,
+        "database": "d",
+        "username": "u",
+        "password": "p",
+        "ssl": False,
+    }
     result = await db_routes._connect_to_postgresql(connection)
     assert result == "conn"
 
@@ -721,7 +789,16 @@ async def test_connect_to_postgresql(monkeypatch):
 async def test_get_postgresql_schema_import_error(monkeypatch):
     _remove_module(monkeypatch, "asyncpg")
     _block_import(monkeypatch, "asyncpg")
-    result = await db_routes._get_postgresql_schema({"host": "h", "port": 1, "database": "d", "username": "u", "password": "p", "ssl": False})
+    result = await db_routes._get_postgresql_schema(
+        {
+            "host": "h",
+            "port": 1,
+            "database": "d",
+            "username": "u",
+            "password": "p",
+            "ssl": False,
+        }
+    )
     assert result.tables == []
 
 
@@ -733,8 +810,18 @@ async def test_get_mysql_schema_returns_empty():
 
 def test_build_column_list():
     columns_result = [
-        {"column_name": "id", "data_type": "int", "is_nullable": "NO", "column_default": None},
-        {"column_name": "user_id", "data_type": "int", "is_nullable": "YES", "column_default": None},
+        {
+            "column_name": "id",
+            "data_type": "int",
+            "is_nullable": "NO",
+            "column_default": None,
+        },
+        {
+            "column_name": "user_id",
+            "data_type": "int",
+            "is_nullable": "YES",
+            "column_default": None,
+        },
     ]
     pk_columns = {"id"}
     fk_map = {"user_id": {"table": "users", "column": "id"}}
@@ -768,7 +855,14 @@ async def test_build_table_schemas(monkeypatch):
 async def test_build_single_table_schema(monkeypatch):
     async def fake_fetch_table_metadata(conn, table_name):
         return (
-            [{"column_name": "id", "data_type": "int", "is_nullable": "NO", "column_default": None}],
+            [
+                {
+                    "column_name": "id",
+                    "data_type": "int",
+                    "is_nullable": "NO",
+                    "column_default": None,
+                }
+            ],
             {"id"},
             {},
             {},
@@ -779,7 +873,9 @@ async def test_build_single_table_schema(monkeypatch):
 
     monkeypatch.setattr(db_routes, "_fetch_table_metadata", fake_fetch_table_metadata)
     monkeypatch.setattr(db_routes, "_get_table_row_count", fake_row_count)
-    monkeypatch.setattr(db_routes, "_build_column_list", lambda columns, pk, fk: [{"name": "id"}])
+    monkeypatch.setattr(
+        db_routes, "_build_column_list", lambda columns, pk, fk: [{"name": "id"}]
+    )
     schema = await db_routes._build_single_table_schema(None, "users")
     assert schema["rowCount"] == 5
 
@@ -814,7 +910,12 @@ async def test_fetch_table_metadata(monkeypatch):
 
     monkeypatch.setattr(db_routes, "_fetch_and_group_indexes", fake_fetch_and_group)
 
-    columns_result, pk_columns, fk_map, indexes_map = await db_routes._fetch_table_metadata(DummyConn(), "users")
+    (
+        columns_result,
+        pk_columns,
+        fk_map,
+        indexes_map,
+    ) = await db_routes._fetch_table_metadata(DummyConn(), "users")
     assert columns_result[0]["column_name"] == "id"
     assert "id" in pk_columns
     assert fk_map["user_id"]["table"] == "users"
@@ -914,7 +1015,7 @@ async def test_get_mongodb_schema(monkeypatch):
         def close(self):
             self.closed = True
 
-    module.AsyncIOMotorClient = DummyClient
+    setattr(module, "AsyncIOMotorClient", DummyClient)
     monkeypatch.setitem(sys.modules, "motor.motor_asyncio", module)
 
     connection = {"type": "mongodb", "connection_string": "mongodb://"}
@@ -958,9 +1059,9 @@ async def test_get_mongodb_schema_handles_errors(monkeypatch):
         def close(self):
             pass
 
-    module.AsyncIOMotorClient = DummyClient
+    setattr(module, "AsyncIOMotorClient", DummyClient)
     motor_pkg = ModuleType("motor")
-    motor_pkg.motor_asyncio = module
+    setattr(motor_pkg, "motor_asyncio", module)
     monkeypatch.setitem(sys.modules, "motor", motor_pkg)
     monkeypatch.setitem(sys.modules, "motor.motor_asyncio", module)
 
@@ -1002,14 +1103,15 @@ async def test_get_mongodb_schema_count_documents_error(monkeypatch):
         def close(self):
             pass
 
-    module.AsyncIOMotorClient = DummyClient
+    setattr(module, "AsyncIOMotorClient", DummyClient)
     motor_pkg = ModuleType("motor")
-    motor_pkg.motor_asyncio = module
+    setattr(motor_pkg, "motor_asyncio", module)
     monkeypatch.setitem(sys.modules, "motor", motor_pkg)
     monkeypatch.setitem(sys.modules, "motor.motor_asyncio", module)
 
     connection = {"type": "mongodb", "connection_string": "mongodb://"}
     response = await db_routes._get_mongodb_schema(connection)
+    assert response.collections is not None
     assert response.collections[0]["documentCount"] is None
 
 
@@ -1048,15 +1150,16 @@ async def test_get_redis_schema(monkeypatch):
         async def close(self):
             self.closed = True
 
-    module.Redis = DummyRedis
+    setattr(module, "Redis", DummyRedis)
     redis_pkg = ModuleType("redis")
-    redis_pkg.asyncio = module
+    setattr(redis_pkg, "asyncio", module)
     monkeypatch.setitem(sys.modules, "redis", redis_pkg)
     monkeypatch.setitem(sys.modules, "redis.asyncio", module)
 
     connection = {"type": "redis", "host": "localhost", "port": 6379}
     response = await db_routes._get_redis_schema(connection)
-    assert response.keys and response.keys[0]["key"] == "key1"
+    assert response.keys is not None
+    assert response.keys[0]["key"] == "key1"
 
 
 @pytest.mark.asyncio
@@ -1084,14 +1187,15 @@ async def test_get_redis_schema_limits_keys(monkeypatch):
         async def close(self):
             pass
 
-    module.Redis = DummyRedis
+    setattr(module, "Redis", DummyRedis)
     redis_pkg = ModuleType("redis")
-    redis_pkg.asyncio = module
+    setattr(redis_pkg, "asyncio", module)
     monkeypatch.setitem(sys.modules, "redis", redis_pkg)
     monkeypatch.setitem(sys.modules, "redis.asyncio", module)
 
     connection = {"type": "redis", "host": "localhost", "port": 6379}
     response = await db_routes._get_redis_schema(connection)
+    assert response.keys is not None
     assert len(response.keys) == 100
 
 
@@ -1100,7 +1204,9 @@ async def test_get_redis_schema_missing_driver(monkeypatch):
     _remove_module(monkeypatch, "redis")
     _remove_module(monkeypatch, "redis.asyncio")
     _block_import(monkeypatch, "redis.asyncio")
-    response = await db_routes._get_redis_schema({"type": "redis", "host": "h", "port": 1})
+    response = await db_routes._get_redis_schema(
+        {"type": "redis", "host": "h", "port": 1}
+    )
     assert response.keys == []
 
 
@@ -1108,7 +1214,7 @@ async def test_get_redis_schema_missing_driver(monkeypatch):
 async def test_get_connection_by_id_success():
     connection = {"id": "abc", "type": "postgresql"}
     store = FakeSettingsStore(FakeSettings(connections=[connection]))
-    loaded = await db_routes._get_connection_by_id("abc", store)
+    loaded = await db_routes._get_connection_by_id("abc", cast(SettingsStore, store))
     assert loaded["id"] == "abc"
 
 
@@ -1116,7 +1222,7 @@ async def test_get_connection_by_id_success():
 async def test_get_connection_by_id_missing():
     store = FakeSettingsStore(FakeSettings(connections=[]))
     with pytest.raises(HTTPException):
-        await db_routes._get_connection_by_id("missing", store)
+        await db_routes._get_connection_by_id("missing", cast(SettingsStore, store))
 
 
 @pytest.mark.asyncio
@@ -1126,7 +1232,7 @@ async def test_get_connection_by_id_missing_attribute():
 
     store = FakeSettingsStore(EmptySettings())
     with pytest.raises(HTTPException):
-        await db_routes._get_connection_by_id("missing", store)
+        await db_routes._get_connection_by_id("missing", cast(SettingsStore, store))
 
 
 def test_validate_query_request(monkeypatch):
@@ -1148,25 +1254,33 @@ async def test_dispatch_query_by_type(monkeypatch):
         return db_routes.QueryResult(success=True)
 
     monkeypatch.setattr(db_routes, "_execute_sql_query", fake_sql)
-    result = await db_routes._dispatch_query_by_type({"type": "postgresql"}, QueryRequest(query="q"))
+    result = await db_routes._dispatch_query_by_type(
+        {"type": "postgresql"}, QueryRequest(query="q")
+    )
     assert result.success is True
 
     async def fake_mongo(conn, req):
         return db_routes.QueryResult(success=True)
 
     monkeypatch.setattr(db_routes, "_execute_mongodb_query", fake_mongo)
-    result_mongo = await db_routes._dispatch_query_by_type({"type": "mongodb"}, QueryRequest(query="{}"))
+    result_mongo = await db_routes._dispatch_query_by_type(
+        {"type": "mongodb"}, QueryRequest(query="{}")
+    )
     assert result_mongo.success is True
 
     async def fake_redis(conn, req):
         return db_routes.QueryResult(success=True)
 
     monkeypatch.setattr(db_routes, "_execute_redis_command", fake_redis)
-    result_redis = await db_routes._dispatch_query_by_type({"type": "redis"}, QueryRequest(query="PING"))
+    result_redis = await db_routes._dispatch_query_by_type(
+        {"type": "redis"}, QueryRequest(query="PING")
+    )
     assert result_redis.success is True
 
     with pytest.raises(HTTPException):
-        await db_routes._dispatch_query_by_type({"type": "unknown"}, QueryRequest(query="q"))
+        await db_routes._dispatch_query_by_type(
+            {"type": "unknown"}, QueryRequest(query="q")
+        )
 
 
 @pytest.mark.asyncio
@@ -1181,7 +1295,11 @@ async def test_execute_query_success(monkeypatch):
     monkeypatch.setattr(db_routes, "_validate_query_request", lambda req: None)
     monkeypatch.setattr(db_routes, "_dispatch_query_by_type", fake_dispatch)
 
-    result = await db_routes.execute_query("abc", QueryRequest(query="SELECT 1"), FakeSettingsStore(None))
+    result = await db_routes.execute_query(
+        "abc",
+        QueryRequest(query="SELECT 1"),
+        cast(SettingsStore, FakeSettingsStore(None)),
+    )
     assert result.success is True
 
 
@@ -1197,8 +1315,13 @@ async def test_execute_query_error(monkeypatch):
     monkeypatch.setattr(db_routes, "_validate_query_request", lambda req: None)
     monkeypatch.setattr(db_routes, "_dispatch_query_by_type", failing_dispatch)
 
-    result = await db_routes.execute_query("abc", QueryRequest(query="SELECT 1"), FakeSettingsStore(None))
+    result = await db_routes.execute_query(
+        "abc",
+        QueryRequest(query="SELECT 1"),
+        cast(SettingsStore, FakeSettingsStore(None)),
+    )
     assert result.success is False
+    assert result.error is not None
     assert "boom" in result.error
 
 
@@ -1215,20 +1338,27 @@ async def test_execute_postgresql_query_import_error(monkeypatch):
         "password": "p",
         "ssl": False,
     }
-    result = await db_routes._execute_postgresql_query(connection, QueryRequest(query="SELECT 1"))
+    result = await db_routes._execute_postgresql_query(
+        connection, QueryRequest(query="SELECT 1")
+    )
     assert result.success is False
 
 
 @pytest.mark.asyncio
 async def test_execute_mysql_query_not_implemented():
-    result = await db_routes._execute_mysql_query({"type": "mysql"}, QueryRequest(query="SELECT 1"))
+    result = await db_routes._execute_mysql_query(
+        {"type": "mysql"}, QueryRequest(query="SELECT 1")
+    )
     assert result.success is False
+    assert result.error is not None
     assert "not yet implemented" in result.error
 
 
 @pytest.mark.asyncio
 async def test_execute_sql_query_unsupported():
-    result = await db_routes._execute_sql_query({"type": "sqlite"}, QueryRequest(query="SELECT 1"))
+    result = await db_routes._execute_sql_query(
+        {"type": "sqlite"}, QueryRequest(query="SELECT 1")
+    )
     assert result.success is False
 
 
@@ -1250,7 +1380,7 @@ async def test_execute_postgresql_query_success(monkeypatch):
     async def connect(**kwargs):
         return DummyConn()
 
-    module.connect = connect
+    setattr(module, "connect", connect)
     monkeypatch.setitem(sys.modules, "asyncpg", module)
 
     async def fake_connect(connection):
@@ -1267,7 +1397,9 @@ async def test_execute_postgresql_query_success(monkeypatch):
         "password": "p",
         "ssl": False,
     }
-    result = await db_routes._execute_postgresql_query(connection, QueryRequest(query="SELECT 1"))
+    result = await db_routes._execute_postgresql_query(
+        connection, QueryRequest(query="SELECT 1")
+    )
     assert result.success is True
     assert result.columns == ["id", "name"]
 
@@ -1287,7 +1419,7 @@ async def test_execute_postgresql_query_timeout(monkeypatch):
     async def connect(**kwargs):
         return DummyConn()
 
-    module.connect = connect
+    setattr(module, "connect", connect)
     monkeypatch.setitem(sys.modules, "asyncpg", module)
 
     async def fake_connect(connection):
@@ -1304,7 +1436,9 @@ async def test_execute_postgresql_query_timeout(monkeypatch):
         "password": "p",
         "ssl": False,
     }
-    result = await db_routes._execute_postgresql_query(connection, QueryRequest(query="SELECT 1"))
+    result = await db_routes._execute_postgresql_query(
+        connection, QueryRequest(query="SELECT 1")
+    )
     assert result.success is False
 
 
@@ -1322,7 +1456,7 @@ async def test_execute_postgresql_query_general_exception(monkeypatch):
     async def connect(**kwargs):
         return DummyConn()
 
-    module.connect = connect
+    setattr(module, "connect", connect)
     monkeypatch.setitem(sys.modules, "asyncpg", module)
 
     async def fake_connect(connection):
@@ -1338,8 +1472,11 @@ async def test_execute_postgresql_query_general_exception(monkeypatch):
         "password": "p",
         "ssl": False,
     }
-    result = await db_routes._execute_postgresql_query(connection, QueryRequest(query="SELECT 1"))
+    result = await db_routes._execute_postgresql_query(
+        connection, QueryRequest(query="SELECT 1")
+    )
     assert result.success is False
+    assert result.error is not None
     assert "boom" in result.error
 
 
@@ -1406,11 +1543,13 @@ async def test_execute_mongodb_query_success(monkeypatch):
         def close(self):
             self.closed = True
 
-    module.AsyncIOMotorClient = DummyClient
+    setattr(module, "AsyncIOMotorClient", DummyClient)
     monkeypatch.setitem(sys.modules, "motor.motor_asyncio", module)
 
     connection = {"connection_string": "mongodb://"}
-    result = await db_routes._execute_mongodb_query(connection, QueryRequest(query=json.dumps({"collection": "users"})))
+    result = await db_routes._execute_mongodb_query(
+        connection, QueryRequest(query=json.dumps({"collection": "users"}))
+    )
     assert result.success is True
 
 
@@ -1437,9 +1576,9 @@ async def test_execute_mongodb_query_decode_error(monkeypatch):
         def close(self):
             pass
 
-    module.AsyncIOMotorClient = DummyClient
+    setattr(module, "AsyncIOMotorClient", DummyClient)
     motor_pkg = ModuleType("motor")
-    motor_pkg.motor_asyncio = module
+    setattr(motor_pkg, "motor_asyncio", module)
     monkeypatch.setitem(sys.modules, "motor", motor_pkg)
     monkeypatch.setitem(sys.modules, "motor.motor_asyncio", module)
     result = await db_routes._execute_mongodb_query({}, QueryRequest(query="not-json"))
@@ -1460,20 +1599,27 @@ async def test_execute_mongodb_query_missing_collection(monkeypatch):
             return SimpleNamespace(name="db")
 
         def __getitem__(self, item):
-            return SimpleNamespace(find=lambda *_args, **_kwargs: SimpleNamespace(limit=lambda self, value: self))
+            return SimpleNamespace(
+                find=lambda *_args, **_kwargs: SimpleNamespace(
+                    limit=lambda self, value: self
+                )
+            )
 
         def close(self):
             pass
 
-    module.AsyncIOMotorClient = DummyClient
+    setattr(module, "AsyncIOMotorClient", DummyClient)
     motor_pkg = ModuleType("motor")
-    motor_pkg.motor_asyncio = module
+    setattr(motor_pkg, "motor_asyncio", module)
     monkeypatch.setitem(sys.modules, "motor", motor_pkg)
     monkeypatch.setitem(sys.modules, "motor.motor_asyncio", module)
 
     connection = {"connection_string": "mongodb://"}
-    result = await db_routes._execute_mongodb_query(connection, QueryRequest(query=json.dumps({})))
+    result = await db_routes._execute_mongodb_query(
+        connection, QueryRequest(query=json.dumps({}))
+    )
     assert result.success is False
+    assert result.error is not None
     assert "collection" in result.error
 
 
@@ -1512,9 +1658,9 @@ async def test_execute_mongodb_query_timeout(monkeypatch):
         def close(self):
             pass
 
-    module.AsyncIOMotorClient = DummyClient
+    setattr(module, "AsyncIOMotorClient", DummyClient)
     motor_pkg = ModuleType("motor")
-    motor_pkg.motor_asyncio = module
+    setattr(motor_pkg, "motor_asyncio", module)
     monkeypatch.setitem(sys.modules, "motor", motor_pkg)
     monkeypatch.setitem(sys.modules, "motor.motor_asyncio", module)
 
@@ -1523,8 +1669,11 @@ async def test_execute_mongodb_query_timeout(monkeypatch):
 
     monkeypatch.setattr(asyncio, "wait_for", raise_timeout)
     connection = {"connection_string": "mongodb://"}
-    result = await db_routes._execute_mongodb_query(connection, QueryRequest(query=json.dumps({"collection": "users"})))
+    result = await db_routes._execute_mongodb_query(
+        connection, QueryRequest(query=json.dumps({"collection": "users"}))
+    )
     assert result.success is False
+    assert result.error is not None
     assert "timed out" in result.error
 
 
@@ -1553,10 +1702,19 @@ async def test_execute_redis_command_success(monkeypatch):
 
     monkeypatch.setattr(db_routes, "_create_redis_client", fake_create)
     monkeypatch.setattr(db_routes, "_parse_redis_command", lambda query: ("PING", []))
-    monkeypatch.setattr(db_routes, "_build_redis_result", lambda result, exec_time: db_routes.QueryResult(success=True, data=[{"result": result}], columns=["result"], executionTime=exec_time))
-    module.Redis = lambda **kwargs: DummyClient()
+    monkeypatch.setattr(
+        db_routes,
+        "_build_redis_result",
+        lambda result, exec_time: db_routes.QueryResult(
+            success=True,
+            data=[{"result": result}],
+            columns=["result"],
+            executionTime=exec_time,
+        ),
+    )
+    setattr(module, "Redis", lambda **kwargs: DummyClient())
     redis_pkg = ModuleType("redis")
-    redis_pkg.asyncio = module
+    setattr(redis_pkg, "asyncio", module)
     monkeypatch.setitem(sys.modules, "redis", redis_pkg)
     monkeypatch.setitem(sys.modules, "redis.asyncio", module)
 
@@ -1582,14 +1740,15 @@ async def test_execute_redis_command_exception(monkeypatch):
 
     monkeypatch.setattr(db_routes, "_create_redis_client", fake_create)
     monkeypatch.setattr(db_routes, "_parse_redis_command", lambda query: ("PING", []))
-    module.Redis = lambda **kwargs: DummyClient()
+    setattr(module, "Redis", lambda **kwargs: DummyClient())
     redis_pkg = ModuleType("redis")
-    redis_pkg.asyncio = module
+    setattr(redis_pkg, "asyncio", module)
     monkeypatch.setitem(sys.modules, "redis", redis_pkg)
     monkeypatch.setitem(sys.modules, "redis.asyncio", module)
 
     result = await db_routes._execute_redis_command({}, QueryRequest(query="PING"))
     assert result.success is False
+    assert result.error is not None
     assert "fail" in result.error
 
 
@@ -1602,10 +1761,13 @@ def test_parse_redis_command():
 
 def test_build_redis_result():
     result_none = db_routes._build_redis_result(None, 1.0)
+    assert result_none.data is not None
     assert result_none.data[0]["result"] == "nil"
     result_list = db_routes._build_redis_result([1, 2], 1.0)
     assert result_list.rowCount == 2
     result_dict = db_routes._build_redis_result({"a": 1}, 1.0)
+    assert result_dict.data is not None
     assert result_dict.data[0]["key"] == "a"
     result_scalar = db_routes._build_redis_result("OK", 1.0)
+    assert result_scalar.data is not None
     assert result_scalar.data[0]["result"] == "OK"

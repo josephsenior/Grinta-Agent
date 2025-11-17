@@ -1,0 +1,27 @@
+{
+  "id": "d2cc1ac7-2ded-4da4-97c3-bb7184732d9d",
+  "title": "Render Test",
+  "description": null,
+  "category": "coding",
+  "content": "Hello {{name}}, your task is: {{task}}",
+  "variables": [
+    {
+      "name": "name",
+      "description": "User name",
+      "default_value": null,
+      "required": true
+    },
+    {
+      "name": "task",
+      "description": "Task description",
+      "default_value": null,
+      "required": true
+    }
+  ],
+  "tags": [],
+  "is_favorite": false,
+  "usage_count": 1,
+  "created_at": "2025-11-13 21:19:16.166320",
+  "updated_at": "2025-11-13 21:21:53.020149",
+  "metadata": {}
+}

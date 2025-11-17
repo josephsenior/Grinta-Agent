@@ -594,7 +594,7 @@ export default function PricingPage(): React.ReactElement {
                   </tr>
                 </thead>
                 <tbody>
-                  {FEATURE_COMPARISON.map((category, catIndex) => (
+                  {FEATURE_COMPARISON.map((category) => (
                     <React.Fragment key={category.category}>
                       {/* Category header */}
                       <tr className="bg-background-secondary/50">
@@ -662,6 +662,7 @@ export default function PricingPage(): React.ReactElement {
                 className="glass-modern border-border/50 hover:border-brand-500/30 transition-all duration-300 overflow-hidden"
               >
                 <button
+                  type="button"
                   onClick={() => toggleFAQ(index)}
                   className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-background-tertiary/20 transition-colors"
                 >

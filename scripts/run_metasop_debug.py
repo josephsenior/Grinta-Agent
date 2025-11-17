@@ -25,7 +25,9 @@ def call_endpoint(message=None):
     if message:
         data["message"] = message
     req = urllib.request.Request(
-        URL, data=json.dumps(data).encode("utf-8"), headers={"Content-Type": "application/json"}
+        URL,
+        data=json.dumps(data).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
     )
     with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310 - Safe: accessing localhost API in debug script
         return resp.read().decode("utf-8")

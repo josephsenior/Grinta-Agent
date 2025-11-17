@@ -3,7 +3,13 @@ import httpx
 import pytest
 from pydantic import SecretStr
 from forge.integrations.github.github_service import GitHubService
-from forge.integrations.service_types import AuthenticationError, OwnerType, ProviderType, Repository, User
+from forge.integrations.service_types import (
+    AuthenticationError,
+    OwnerType,
+    ProviderType,
+    Repository,
+    User,
+)
 from forge.server.types import AppMode
 
 
@@ -80,8 +86,9 @@ async def test_github_get_repositories_with_user_owner_type():
             "owner": {"type": "User"},
         },
     ]
-    with patch.object(service, "_fetch_paginated_repos", return_value=mock_repo_data), patch.object(
-        service, "get_installations", return_value=[123]
+    with (
+        patch.object(service, "_fetch_paginated_repos", return_value=mock_repo_data),
+        patch.object(service, "get_installations", return_value=[123]),
     ):
         repositories = await service.get_all_repositories("pushed", AppMode.SAAS)
         assert len(repositories) == 2
@@ -111,8 +118,9 @@ async def test_github_get_repositories_with_organization_owner_type():
             "owner": {"type": "Organization"},
         },
     ]
-    with patch.object(service, "_fetch_paginated_repos", return_value=mock_repo_data), patch.object(
-        service, "get_installations", return_value=[123]
+    with (
+        patch.object(service, "_fetch_paginated_repos", return_value=mock_repo_data),
+        patch.object(service, "get_installations", return_value=[123]),
     ):
         repositories = await service.get_all_repositories("pushed", AppMode.SAAS)
         assert len(repositories) == 2
@@ -142,12 +150,15 @@ async def test_github_get_repositories_mixed_owner_types():
             "owner": {"type": "Organization"},
         },
     ]
-    with patch.object(service, "_fetch_paginated_repos", return_value=mock_repo_data), patch.object(
-        service, "get_installations", return_value=[123]
+    with (
+        patch.object(service, "_fetch_paginated_repos", return_value=mock_repo_data),
+        patch.object(service, "get_installations", return_value=[123]),
     ):
         repositories = await service.get_all_repositories("pushed", AppMode.SAAS)
         assert len(repositories) == 2
-        user_repo = next((repo for repo in repositories if "user-repo" in repo.full_name))
+        user_repo = next(
+            (repo for repo in repositories if "user-repo" in repo.full_name)
+        )
         org_repo = next((repo for repo in repositories if "org-repo" in repo.full_name))
         assert user_repo.owner_type == OwnerType.USER
         assert org_repo.owner_type == OwnerType.ORGANIZATION
@@ -172,10 +183,17 @@ async def test_github_get_repositories_owner_type_fallback():
             "stargazers_count": 5,
             "owner": {"type": "Bot"},
         },
-        {"id": 789, "full_name": "test-user/third-repo", "private": False, "stargazers_count": 15, "owner": {}},
+        {
+            "id": 789,
+            "full_name": "test-user/third-repo",
+            "private": False,
+            "stargazers_count": 15,
+            "owner": {},
+        },
     ]
-    with patch.object(service, "_fetch_paginated_repos", return_value=mock_repo_data), patch.object(
-        service, "get_installations", return_value=[123]
+    with (
+        patch.object(service, "_fetch_paginated_repos", return_value=mock_repo_data),
+        patch.object(service, "get_installations", return_value=[123]),
     ):
         repositories = await service.get_all_repositories("pushed", AppMode.SAAS)
         for repo in repositories:
@@ -186,7 +204,9 @@ async def test_github_get_repositories_owner_type_fallback():
 async def test_github_search_repositories_with_organizations():
     """Test that search_repositories includes user organizations in the search scope."""
     service = GitHubService(user_id="test-user", token=SecretStr("test-token"))
-    mock_user = User(id="123", login="testuser", avatar_url="https://example.com/avatar.jpg")
+    mock_user = User(
+        id="123", login="testuser", avatar_url="https://example.com/avatar.jpg"
+    )
     mock_search_response = {
         "items": [
             {
@@ -201,9 +221,17 @@ async def test_github_search_repositories_with_organizations():
             }
         ]
     }
-    with patch.object(service, "get_user", return_value=mock_user), patch.object(
-        service, "get_user_organizations", return_value=["All-Hands-AI", "example-org"]
-    ), patch.object(service, "_make_request", return_value=(mock_search_response, {})) as mock_request:
+    with (
+        patch.object(service, "get_user", return_value=mock_user),
+        patch.object(
+            service,
+            "get_user_organizations",
+            return_value=["All-Hands-AI", "example-org"],
+        ),
+        patch.object(
+            service, "_make_request", return_value=(mock_search_response, {})
+        ) as mock_request,
+    ):
         repositories = await service.search_repositories(
             query="forge", per_page=10, sort="stars", order="desc", public=False
         )
@@ -226,7 +254,10 @@ async def test_github_search_repositories_with_organizations():
 async def test_github_get_user_organizations():
     """Test that get_user_organizations fetches user's organizations."""
     service = GitHubService(user_id="test-user", token=SecretStr("test-token"))
-    mock_orgs_response = [{"login": "All-Hands-AI", "id": 1}, {"login": "example-org", "id": 2}]
+    mock_orgs_response = [
+        {"login": "All-Hands-AI", "id": 1},
+        {"login": "example-org", "id": 2},
+    ]
     with patch.object(service, "_make_request", return_value=(mock_orgs_response, {})):
         orgs = await service.get_user_organizations()
         assert orgs == ["All-Hands-AI", "example-org"]
@@ -246,9 +277,13 @@ async def test_github_service_base_url_configuration():
     """Test that BASE_URL is correctly configured based on base_domain."""
     service = GitHubService(user_id=None, token=SecretStr("test-token"))
     assert service.BASE_URL == "https://api.github.com"
-    service = GitHubService(user_id=None, token=SecretStr("test-token"), base_domain="github.enterprise.com")
+    service = GitHubService(
+        user_id=None, token=SecretStr("test-token"), base_domain="github.enterprise.com"
+    )
     assert service.BASE_URL == "https://github.enterprise.com/api/v3"
-    service = GitHubService(user_id=None, token=SecretStr("test-token"), base_domain="github.com")
+    service = GitHubService(
+        user_id=None, token=SecretStr("test-token"), base_domain="github.com"
+    )
     assert service.BASE_URL == "https://api.github.com"
 
 
@@ -264,7 +299,11 @@ async def test_github_service_graphql_url_enterprise_server():
     mock_client.__aenter__.return_value = mock_client
     mock_client.__aexit__.return_value = None
     with patch("httpx.AsyncClient", return_value=mock_client):
-        service = GitHubService(user_id=None, token=SecretStr("test-token"), base_domain="github.enterprise.com")
+        service = GitHubService(
+            user_id=None,
+            token=SecretStr("test-token"),
+            base_domain="github.enterprise.com",
+        )
         query = "query { viewer { login } }"
         variables = {}
         await service.execute_graphql_query(query, variables)

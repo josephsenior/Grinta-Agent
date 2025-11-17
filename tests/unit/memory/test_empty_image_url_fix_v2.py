@@ -38,12 +38,19 @@ def test_empty_image_url_handling():
                     assert url != "", "Empty image URL should be filtered out"
                     assert url is not None, "None image URL should be filtered out"
                     if url:
-                        assert url.startswith("data:"), f"Invalid image URL format: {url}"
+                        assert url.startswith("data:"), (
+                            f"Invalid image URL format: {url}"
+                        )
             elif hasattr(content, "text"):
-                if "No visual information" in content.text or "has been filtered" in content.text:
+                if (
+                    "No visual information" in content.text
+                    or "has been filtered" in content.text
+                ):
                     has_notification_text = True
     assert not has_image_content, "Should not have ImageContent for empty images"
-    assert has_notification_text, "Should have notification text about missing visual information"
+    assert has_notification_text, (
+        "Should have notification text about missing visual information"
+    )
 
 
 def test_valid_image_url_handling():
@@ -76,7 +83,9 @@ def test_valid_image_url_handling():
                 assert len(content.image_urls) > 0, "Should have at least one image URL"
                 for url in content.image_urls:
                     assert url != "", "Image URL should not be empty"
-                    assert url.startswith("data:image/"), f"Invalid image URL format: {url}"
+                    assert url.startswith("data:image/"), (
+                        f"Invalid image URL format: {url}"
+                    )
     assert found_image_content, "Should have found ImageContent with valid URLs"
 
 
@@ -107,9 +116,13 @@ def test_mixed_image_url_handling():
         for content in message.content:
             if isinstance(content, ImageContent):
                 found_image_content = True
-                assert len(content.image_urls) == 1, f"Should have exactly one image URL, got {len(content.image_urls)}"
+                assert len(content.image_urls) == 1, (
+                    f"Should have exactly one image URL, got {len(content.image_urls)}"
+                )
                 url = content.image_urls[0]
-                assert url == valid_base64_image, f"Should use the valid image URL: {url}"
+                assert url == valid_base64_image, (
+                    f"Should use the valid image URL: {url}"
+                )
     assert found_image_content, "Should have found ImageContent with valid URL"
 
 
@@ -117,7 +130,9 @@ def test_ipython_empty_image_url_handling():
     """Test that empty image URLs in IPython observations are properly filtered with notification text."""
     from forge.events.observation.commands import IPythonRunCellObservation
 
-    ipython_obs = IPythonRunCellObservation(content="Some output", code='print("hello")', image_urls=["", None, ""])
+    ipython_obs = IPythonRunCellObservation(
+        content="Some output", code='print("hello")', image_urls=["", None, ""]
+    )
     agent_config = AgentConfig(enable_som_visual_browsing=True)
     prompt_manager = PromptManager(prompt_dir="Forge/agenthub/codeact_agent/prompts")
     conv_memory = ConversationMemory(agent_config, prompt_manager)
@@ -149,7 +164,9 @@ def test_ipython_mixed_image_url_handling():
 
     valid_base64_image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
     ipython_obs = IPythonRunCellObservation(
-        content="Some output", code='print("hello")', image_urls=["", valid_base64_image, None]
+        content="Some output",
+        code='print("hello")',
+        image_urls=["", valid_base64_image, None],
     )
     agent_config = AgentConfig(enable_som_visual_browsing=True)
     prompt_manager = PromptManager(prompt_dir="Forge/agenthub/codeact_agent/prompts")
@@ -169,9 +186,13 @@ def test_ipython_mixed_image_url_handling():
         for content in message.content:
             if isinstance(content, ImageContent):
                 found_image_content = True
-                assert len(content.image_urls) == 1, f"Should have exactly one image URL, got {len(content.image_urls)}"
+                assert len(content.image_urls) == 1, (
+                    f"Should have exactly one image URL, got {len(content.image_urls)}"
+                )
                 url = content.image_urls[0]
-                assert url == valid_base64_image, f"Should use the valid image URL: {url}"
+                assert url == valid_base64_image, (
+                    f"Should use the valid image URL: {url}"
+                )
             elif hasattr(content, "text"):
                 if "invalid or empty image(s) were filtered" in content.text:
                     has_notification_text = True

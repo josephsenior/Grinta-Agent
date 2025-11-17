@@ -25,7 +25,13 @@ def mock_logger(monkeypatch):
 
 @pytest.fixture
 def default_config():
-    return LLMConfig(model="gpt-4o", api_key="test_key", num_retries=2, retry_min_wait=1, retry_max_wait=2)
+    return LLMConfig(
+        model="gpt-4o",
+        api_key="test_key",
+        num_retries=2,
+        retry_min_wait=1,
+        retry_max_wait=2,
+    )
 
 
 def test_llm_init_with_default_config(default_config):
@@ -96,7 +102,10 @@ def test_metrics_merge_accumulated_token_usage():
 
 @patch("forge.llm.llm.litellm.get_model_info")
 def test_llm_init_with_model_info(mock_get_model_info, default_config):
-    mock_get_model_info.return_value = {"max_input_tokens": 8000, "max_output_tokens": 2000}
+    mock_get_model_info.return_value = {
+        "max_input_tokens": 8000,
+        "max_output_tokens": 2000,
+    }
     llm = LLM(default_config, service_id="test-service")
     llm.init_model_info()
     assert llm.config.max_input_tokens == 8000
@@ -171,7 +180,10 @@ def test_llm_init_with_metrics():
 @patch("time.time")
 def test_response_latency_tracking(mock_time, mock_litellm_completion):
     mock_time.side_effect = [1000.0, 1002.5]
-    mock_response = {"id": "test-response-123", "choices": [{"message": {"content": "Test response"}}]}
+    mock_response = {
+        "id": "test-response-123",
+        "choices": [{"message": {"content": "Test response"}}],
+    }
     mock_litellm_completion.return_value = mock_response
     config = LLMConfig(model="gpt-4o", api_key="test_key")
     llm = LLM(config, service_id="test-service")
@@ -193,7 +205,10 @@ def test_response_latency_tracking(mock_time, mock_litellm_completion):
 @patch("forge.llm.llm.litellm.get_model_info")
 def test_llm_init_with_openrouter_model(mock_get_model_info, default_config):
     default_config.model = "openrouter/gpt-4o-mini"
-    mock_get_model_info.return_value = {"max_input_tokens": 7000, "max_output_tokens": 1500}
+    mock_get_model_info.return_value = {
+        "max_input_tokens": 7000,
+        "max_output_tokens": 1500,
+    }
     llm = LLM(default_config, service_id="test-service")
     llm.init_model_info()
     assert llm.config.max_input_tokens == 7000
@@ -206,29 +221,43 @@ def test_stop_parameter_handling(mock_litellm_completion, default_config):
     """Test that stop parameter is only added for supported models."""
     from litellm.types.utils import ModelResponse
 
-    mock_response = ModelResponse(id="test-id", choices=[{"message": {"content": "Test response"}}], model="test-model")
+    mock_response = ModelResponse(
+        id="test-id",
+        choices=[{"message": {"content": "Test response"}}],
+        model="test-model",
+    )
     mock_litellm_completion.return_value = mock_response
     default_config.model = "custom-model"
     llm = LLM(default_config, service_id="test-service")
     llm.completion(
         messages=[{"role": "user", "content": "Hello!"}],
-        tools=[{"type": "function", "function": {"name": "test", "description": "test"}}],
+        tools=[
+            {"type": "function", "function": {"name": "test", "description": "test"}}
+        ],
     )
     assert "stop" in mock_litellm_completion.call_args[1]
     default_config.model = "xai/grok-4-0709"
     llm = LLM(default_config, service_id="test-service")
     llm.completion(
         messages=[{"role": "user", "content": "Hello!"}],
-        tools=[{"type": "function", "function": {"name": "test", "description": "test"}}],
+        tools=[
+            {"type": "function", "function": {"name": "test", "description": "test"}}
+        ],
     )
     assert "stop" not in mock_litellm_completion.call_args[1]
 
 
 @patch("forge.llm.llm.litellm_completion")
-def test_completion_with_mocked_logger(mock_litellm_completion, default_config, mock_logger):
-    mock_litellm_completion.return_value = {"choices": [{"message": {"content": "Test response"}}]}
+def test_completion_with_mocked_logger(
+    mock_litellm_completion, default_config, mock_logger
+):
+    mock_litellm_completion.return_value = {
+        "choices": [{"message": {"content": "Test response"}}]
+    }
     llm = LLM(config=default_config, service_id="test-service")
-    response = llm.completion(messages=[{"role": "user", "content": "Hello!"}], stream=False)
+    response = llm.completion(
+        messages=[{"role": "user", "content": "Hello!"}], stream=False
+    )
     assert response["choices"][0]["message"]["content"] == "Test response"
     assert mock_litellm_completion.call_count == 1
     mock_logger.debug.assert_called()
@@ -239,13 +268,21 @@ def test_completion_with_mocked_logger(mock_litellm_completion, default_config, 
     [(RateLimitError, {"llm_provider": "test_provider", "model": "test_model"}, 2)],
 )
 @patch("forge.llm.llm.litellm_completion")
-def test_completion_retries(mock_litellm_completion, default_config, exception_class, extra_args, expected_retries):
+def test_completion_retries(
+    mock_litellm_completion,
+    default_config,
+    exception_class,
+    extra_args,
+    expected_retries,
+):
     mock_litellm_completion.side_effect = [
         exception_class("Test error message", **extra_args),
         {"choices": [{"message": {"content": "Retry successful"}}]},
     ]
     llm = LLM(config=default_config, service_id="test-service")
-    response = llm.completion(messages=[{"role": "user", "content": "Hello!"}], stream=False)
+    response = llm.completion(
+        messages=[{"role": "user", "content": "Hello!"}], stream=False
+    )
     assert response["choices"][0]["message"]["content"] == "Retry successful"
     assert mock_litellm_completion.call_count == expected_retries
 
@@ -254,20 +291,24 @@ def test_completion_retries(mock_litellm_completion, default_config, exception_c
 def test_completion_rate_limit_wait_time(mock_litellm_completion, default_config):
     with patch("time.sleep") as mock_sleep:
         mock_litellm_completion.side_effect = [
-            RateLimitError("Rate limit exceeded", llm_provider="test_provider", model="test_model"),
+            RateLimitError(
+                "Rate limit exceeded", llm_provider="test_provider", model="test_model"
+            ),
             {"choices": [{"message": {"content": "Retry successful"}}]},
         ]
         llm = LLM(config=default_config, service_id="test-service")
-        response = llm.completion(messages=[{"role": "user", "content": "Hello!"}], stream=False)
+        response = llm.completion(
+            messages=[{"role": "user", "content": "Hello!"}], stream=False
+        )
         assert response["choices"][0]["message"]["content"] == "Retry successful"
         assert mock_litellm_completion.call_count == 2
         mock_sleep.assert_called_once()
         wait_time = mock_sleep.call_args[0][0]
         assert (
             default_config.retry_min_wait <= wait_time <= default_config.retry_max_wait
-        ), f"Expected wait time between {
-            default_config.retry_min_wait} and {
-            default_config.retry_max_wait} seconds, but got {wait_time}"
+        ), f"Expected wait time between {default_config.retry_min_wait} and {
+            default_config.retry_max_wait
+        } seconds, but got {wait_time}"
 
 
 @patch("forge.llm.llm.litellm_completion")
@@ -281,7 +322,6 @@ def test_completion_operation_cancelled(mock_litellm_completion, default_config)
 
 @patch("forge.llm.llm.litellm_completion")
 def test_completion_keyboard_interrupt(mock_litellm_completion, default_config):
-
     def side_effect(*args, **kwargs):
         raise KeyboardInterrupt("Simulated KeyboardInterrupt")
 
@@ -289,7 +329,9 @@ def test_completion_keyboard_interrupt(mock_litellm_completion, default_config):
     llm = LLM(config=default_config, service_id="test-service")
     with pytest.raises(OperationCancelled):
         try:
-            llm.completion(messages=[{"role": "user", "content": "Hello!"}], stream=False)
+            llm.completion(
+                messages=[{"role": "user", "content": "Hello!"}], stream=False
+            )
         except KeyboardInterrupt:
             raise OperationCancelled("Operation cancelled due to KeyboardInterrupt")
     assert mock_litellm_completion.call_count == 1
@@ -306,7 +348,9 @@ def test_completion_keyboard_interrupt_handler(mock_litellm_completion, default_
 
     mock_litellm_completion.side_effect = side_effect
     llm = LLM(config=default_config, service_id="test-service")
-    result = llm.completion(messages=[{"role": "user", "content": "Hello!"}], stream=False)
+    result = llm.completion(
+        messages=[{"role": "user", "content": "Hello!"}], stream=False
+    )
     assert mock_litellm_completion.call_count == 1
     assert result["choices"][0]["message"]["content"] == "Simulated interrupt response"
     assert _should_exit
@@ -314,7 +358,9 @@ def test_completion_keyboard_interrupt_handler(mock_litellm_completion, default_
 
 
 @patch("forge.llm.llm.litellm_completion")
-def test_completion_retry_with_llm_no_response_error_zero_temp(mock_litellm_completion, default_config):
+def test_completion_retry_with_llm_no_response_error_zero_temp(
+    mock_litellm_completion, default_config
+):
     """Test that the retry decorator properly handles LLMNoResponseError by:.
 
     1. First call to llm_completion uses temperature=0 and throws LLMNoResponseError
@@ -326,12 +372,20 @@ def test_completion_retry_with_llm_no_response_error_zero_temp(mock_litellm_comp
         if temperature == 0:
             raise LLMNoResponseError("LLM did not return a response")
         else:
-            return {"choices": [{"message": {"content": f"Response with temperature={temperature}"}}]}
+            return {
+                "choices": [
+                    {"message": {"content": f"Response with temperature={temperature}"}}
+                ]
+            }
 
     mock_litellm_completion.side_effect = side_effect
     llm = LLM(config=default_config, service_id="test-service")
-    response = llm.completion(messages=[{"role": "user", "content": "Hello!"}], stream=False, temperature=0)
-    assert response["choices"][0]["message"]["content"] == "Response with temperature=1.0"
+    response = llm.completion(
+        messages=[{"role": "user", "content": "Hello!"}], stream=False, temperature=0
+    )
+    assert (
+        response["choices"][0]["message"]["content"] == "Response with temperature=1.0"
+    )
     assert mock_litellm_completion.call_count == 2
     first_call_kwargs = mock_litellm_completion.call_args_list[0][1]
     assert first_call_kwargs.get("temperature") == 0
@@ -340,7 +394,9 @@ def test_completion_retry_with_llm_no_response_error_zero_temp(mock_litellm_comp
 
 
 @patch("forge.llm.llm.litellm_completion")
-def test_completion_retry_with_llm_no_response_error_nonzero_temp(mock_litellm_completion, default_config):
+def test_completion_retry_with_llm_no_response_error_nonzero_temp(
+    mock_litellm_completion, default_config
+):
     """Test that the retry decorator works for LLMNoResponseError when initial temperature is non-zero,.
 
     and keeps the original temperature on retry.
@@ -350,10 +406,16 @@ def test_completion_retry_with_llm_no_response_error_nonzero_temp(mock_litellm_c
     2. The temperature remains unchanged (not set to 0.2)
     3. After all retries are exhausted, the error is raised
     """
-    mock_litellm_completion.side_effect = LLMNoResponseError("LLM did not return a response")
+    mock_litellm_completion.side_effect = LLMNoResponseError(
+        "LLM did not return a response"
+    )
     llm = LLM(config=default_config, service_id="test-service")
     with pytest.raises(LLMNoResponseError):
-        llm.completion(messages=[{"role": "user", "content": "Hello!"}], stream=False, temperature=0.7)
+        llm.completion(
+            messages=[{"role": "user", "content": "Hello!"}],
+            stream=False,
+            temperature=0.7,
+        )
     assert mock_litellm_completion.call_count == default_config.num_retries
     for call in mock_litellm_completion.call_args_list:
         assert call[1].get("temperature") == 0.7
@@ -366,7 +428,10 @@ def test_gemini_25_pro_function_calling(mock_httpx_get, mock_get_model_info):
 
     This includes testing various model name formats with different prefixes.
     """
-    mock_get_model_info.return_value = {"max_input_tokens": 8000, "max_output_tokens": 2000}
+    mock_get_model_info.return_value = {
+        "max_input_tokens": 8000,
+        "max_output_tokens": 2000,
+    }
     mock_response = MagicMock()
     mock_response.json.return_value = {
         "data": [
@@ -393,9 +458,9 @@ def test_gemini_25_pro_function_calling(mock_httpx_get, mock_get_model_info):
     for model_name, expected_support in test_cases:
         config = LLMConfig(model=model_name, api_key="test_key")
         llm = LLM(config, service_id="test-service")
-        assert (
-            llm.is_function_calling_active() == expected_support
-        ), f"Expected function calling support to be {expected_support} for model {model_name}"
+        assert llm.is_function_calling_active() == expected_support, (
+            f"Expected function calling support to be {expected_support} for model {model_name}"
+        )
 
 
 @patch("forge.llm.llm.litellm_completion")
@@ -416,12 +481,25 @@ def test_completion_retry_with_llm_no_response_error_nonzero_temp_successful_ret
         if mock_litellm_completion.call_count == 1:
             raise LLMNoResponseError("LLM did not return a response")
         else:
-            return {"choices": [{"message": {"content": f"Successful response with temperature={temperature}"}}]}
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": f"Successful response with temperature={temperature}"
+                        }
+                    }
+                ]
+            }
 
     mock_litellm_completion.side_effect = side_effect
     llm = LLM(config=default_config, service_id="test-service")
-    response = llm.completion(messages=[{"role": "user", "content": "Hello!"}], stream=False, temperature=0.7)
-    assert response["choices"][0]["message"]["content"] == "Successful response with temperature=0.7"
+    response = llm.completion(
+        messages=[{"role": "user", "content": "Hello!"}], stream=False, temperature=0.7
+    )
+    assert (
+        response["choices"][0]["message"]["content"]
+        == "Successful response with temperature=0.7"
+    )
     assert mock_litellm_completion.call_count == 2
     first_call_kwargs = mock_litellm_completion.call_args_list[0][1]
     assert first_call_kwargs.get("temperature") == 0.7
@@ -430,7 +508,9 @@ def test_completion_retry_with_llm_no_response_error_nonzero_temp_successful_ret
 
 
 @patch("forge.llm.llm.litellm_completion")
-def test_completion_retry_with_llm_no_response_error_successful_retry(mock_litellm_completion, default_config):
+def test_completion_retry_with_llm_no_response_error_successful_retry(
+    mock_litellm_completion, default_config
+):
     """Test that the retry decorator works for LLMNoResponseError with zero temperature.
 
     and successfully retries with temperature=0.2.
@@ -445,12 +525,25 @@ def test_completion_retry_with_llm_no_response_error_successful_retry(mock_litel
         if mock_litellm_completion.call_count == 1:
             raise LLMNoResponseError("LLM did not return a response")
         else:
-            return {"choices": [{"message": {"content": f"Successful response with temperature={temperature}"}}]}
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": f"Successful response with temperature={temperature}"
+                        }
+                    }
+                ]
+            }
 
     mock_litellm_completion.side_effect = side_effect
     llm = LLM(config=default_config, service_id="test-service")
-    response = llm.completion(messages=[{"role": "user", "content": "Hello!"}], stream=False, temperature=0)
-    assert response["choices"][0]["message"]["content"] == "Successful response with temperature=1.0"
+    response = llm.completion(
+        messages=[{"role": "user", "content": "Hello!"}], stream=False, temperature=0
+    )
+    assert (
+        response["choices"][0]["message"]["content"]
+        == "Successful response with temperature=1.0"
+    )
     assert mock_litellm_completion.call_count == 2
     first_call_kwargs = mock_litellm_completion.call_args_list[0][1]
     assert first_call_kwargs.get("temperature") == 0
@@ -460,10 +553,14 @@ def test_completion_retry_with_llm_no_response_error_successful_retry(mock_litel
 
 @patch("forge.llm.llm.litellm_completion")
 def test_completion_with_litellm_mock(mock_litellm_completion, default_config):
-    mock_response = {"choices": [{"message": {"content": "This is a mocked response."}}]}
+    mock_response = {
+        "choices": [{"message": {"content": "This is a mocked response."}}]
+    }
     mock_litellm_completion.return_value = mock_response
     test_llm = LLM(config=default_config, service_id="test-service")
-    response = test_llm.completion(messages=[{"role": "user", "content": "Hello!"}], stream=False, drop_params=True)
+    response = test_llm.completion(
+        messages=[{"role": "user", "content": "Hello!"}], stream=False, drop_params=True
+    )
     assert response["choices"][0]["message"]["content"] == "This is a mocked response."
     mock_litellm_completion.assert_called_once()
     call_args = mock_litellm_completion.call_args[1]
@@ -481,7 +578,9 @@ def test_llm_gemini_thinking_parameter(mock_litellm_completion, default_config):
     gemini_config = copy.deepcopy(default_config)
     gemini_config.model = "gemini-2.5-pro"
     gemini_config.reasoning_effort = "low"
-    mock_litellm_completion.return_value = {"choices": [{"message": {"content": "Test response"}}]}
+    mock_litellm_completion.return_value = {
+        "choices": [{"message": {"content": "Test response"}}]
+    }
     llm = LLM(config=gemini_config, service_id="test-service")
     llm.completion(messages=[{"role": "user", "content": "Hello!"}])
     mock_litellm_completion.assert_called_once()
@@ -499,11 +598,15 @@ def test_get_token_count_with_dict_messages(mock_token_counter, default_config):
     messages = [{"role": "user", "content": "Hello!"}]
     token_count = llm.get_token_count(messages)
     assert token_count == 42
-    mock_token_counter.assert_called_once_with(model=default_config.model, messages=messages, custom_tokenizer=None)
+    mock_token_counter.assert_called_once_with(
+        model=default_config.model, messages=messages, custom_tokenizer=None
+    )
 
 
 @patch("forge.llm.llm.litellm.token_counter")
-def test_get_token_count_with_message_objects(mock_token_counter, default_config, mock_logger):
+def test_get_token_count_with_message_objects(
+    mock_token_counter, default_config, mock_logger
+):
     llm = LLM(default_config, service_id="test-service")
     message_obj = Message(role="user", content=[TextContent(text="Hello!")])
     message_dict = {"role": "user", "content": "Hello!"}
@@ -516,7 +619,9 @@ def test_get_token_count_with_message_objects(mock_token_counter, default_config
 
 @patch("forge.llm.llm.litellm.token_counter")
 @patch("forge.llm.llm.create_pretrained_tokenizer")
-def test_get_token_count_with_custom_tokenizer(mock_create_tokenizer, mock_token_counter, default_config):
+def test_get_token_count_with_custom_tokenizer(
+    mock_create_tokenizer, mock_token_counter, default_config
+):
     mock_tokenizer = MagicMock()
     mock_create_tokenizer.return_value = mock_tokenizer
     mock_token_counter.return_value = 42
@@ -527,18 +632,24 @@ def test_get_token_count_with_custom_tokenizer(mock_create_tokenizer, mock_token
     token_count = llm.get_token_count(messages)
     assert token_count == 42
     mock_create_tokenizer.assert_called_once_with("custom/tokenizer")
-    mock_token_counter.assert_called_once_with(model=config.model, messages=messages, custom_tokenizer=mock_tokenizer)
+    mock_token_counter.assert_called_once_with(
+        model=config.model, messages=messages, custom_tokenizer=mock_tokenizer
+    )
 
 
 @patch("forge.llm.llm.litellm.token_counter")
-def test_get_token_count_error_handling(mock_token_counter, default_config, mock_logger):
+def test_get_token_count_error_handling(
+    mock_token_counter, default_config, mock_logger
+):
     mock_token_counter.side_effect = Exception("Token counting failed")
     llm = LLM(default_config, service_id="test-service")
     messages = [{"role": "user", "content": "Hello!"}]
     token_count = llm.get_token_count(messages)
     assert token_count == 0
     mock_token_counter.assert_called_once()
-    mock_logger.error.assert_called_once_with("Error getting token count for\n model gpt-4o\nToken counting failed")
+    mock_logger.error.assert_called_once_with(
+        "Error getting token count for\n model gpt-4o\nToken counting failed"
+    )
 
 
 @patch("forge.llm.llm.litellm_completion")
@@ -691,11 +802,19 @@ def test_completion_with_log_completions(mock_litellm_completion, default_config
     with tempfile.TemporaryDirectory() as temp_dir:
         default_config.log_completions = True
         default_config.log_completions_folder = temp_dir
-        mock_response = {"choices": [{"message": {"content": "This is a mocked response."}}]}
+        mock_response = {
+            "choices": [{"message": {"content": "This is a mocked response."}}]
+        }
         mock_litellm_completion.return_value = mock_response
         test_llm = LLM(config=default_config, service_id="test-service")
-        response = test_llm.completion(messages=[{"role": "user", "content": "Hello!"}], stream=False, drop_params=True)
-        assert response["choices"][0]["message"]["content"] == "This is a mocked response."
+        response = test_llm.completion(
+            messages=[{"role": "user", "content": "Hello!"}],
+            stream=False,
+            drop_params=True,
+        )
+        assert (
+            response["choices"][0]["message"]["content"] == "This is a mocked response."
+        )
         try:
             files = list(Path(temp_dir).iterdir())
         except FileNotFoundError:
@@ -706,7 +825,11 @@ def test_completion_with_log_completions(mock_litellm_completion, default_config
 @patch("httpx.get")
 def test_llm_base_url_auto_protocol_patch(mock_get):
     """Test that LLM base_url without protocol is automatically fixed with 'http://'."""
-    config = LLMConfig(model="litellm_proxy/test-model", api_key="fake-key", base_url="  api.example.com  ")
+    config = LLMConfig(
+        model="litellm_proxy/test-model",
+        api_key="fake-key",
+        base_url="  api.example.com  ",
+    )
     mock_get.return_value.status_code = 200
     mock_get.return_value.json.return_value = {"model": "fake"}
     llm = LLM(config=config, service_id="test-service")
@@ -756,7 +879,9 @@ def test_sambanova_deepseek_model_max_output_tokens():
 
 def test_max_output_tokens_override_in_config():
     """Test that max_output_tokens can be overridden in the config."""
-    config = LLMConfig(model="claude-sonnet-4-20250514", api_key="test_key", max_output_tokens=2048)
+    config = LLMConfig(
+        model="claude-sonnet-4-20250514", api_key="test_key", max_output_tokens=2048
+    )
     llm = LLM(config, service_id="test-service")
     assert llm.config.max_output_tokens == 2048
 
@@ -787,14 +912,18 @@ def test_non_gemini_model_gets_high_reasoning_effort():
 
 def test_explicit_reasoning_effort_preserved():
     """Test that explicitly set reasoning_effort is preserved."""
-    config = LLMConfig(model="gemini-2.5-pro", api_key="test_key", reasoning_effort="medium")
+    config = LLMConfig(
+        model="gemini-2.5-pro", api_key="test_key", reasoning_effort="medium"
+    )
     assert config.reasoning_effort == "medium"
 
 
 @patch("forge.llm.llm.litellm_completion")
 def test_gemini_none_reasoning_effort_uses_thinking_budget(mock_completion):
     """Test that Gemini with reasoning_effort=None uses thinking budget."""
-    config = LLMConfig(model="gemini-2.5-pro", api_key="test_key", reasoning_effort=None)
+    config = LLMConfig(
+        model="gemini-2.5-pro", api_key="test_key", reasoning_effort=None
+    )
     mock_completion.return_value = {
         "choices": [{"message": {"content": "Test response"}}],
         "usage": {"prompt_tokens": 10, "completion_tokens": 5},
@@ -811,7 +940,9 @@ def test_gemini_none_reasoning_effort_uses_thinking_budget(mock_completion):
 @patch("forge.llm.llm.litellm_completion")
 def test_gemini_low_reasoning_effort_uses_thinking_budget(mock_completion):
     """Test that Gemini with reasoning_effort='low' uses thinking budget."""
-    config = LLMConfig(model="gemini-2.5-pro", api_key="test_key", reasoning_effort="low")
+    config = LLMConfig(
+        model="gemini-2.5-pro", api_key="test_key", reasoning_effort="low"
+    )
     mock_completion.return_value = {
         "choices": [{"message": {"content": "Test response"}}],
         "usage": {"prompt_tokens": 10, "completion_tokens": 5},
@@ -828,7 +959,9 @@ def test_gemini_low_reasoning_effort_uses_thinking_budget(mock_completion):
 @patch("forge.llm.llm.litellm_completion")
 def test_gemini_medium_reasoning_effort_passes_through(mock_completion):
     """Test that Gemini with reasoning_effort='medium' passes through to litellm."""
-    config = LLMConfig(model="gemini-2.5-pro", api_key="test_key", reasoning_effort="medium")
+    config = LLMConfig(
+        model="gemini-2.5-pro", api_key="test_key", reasoning_effort="medium"
+    )
     mock_completion.return_value = {
         "choices": [{"message": {"content": "Test response"}}],
         "usage": {"prompt_tokens": 10, "completion_tokens": 5},
@@ -844,7 +977,12 @@ def test_gemini_medium_reasoning_effort_passes_through(mock_completion):
 @patch("forge.llm.llm.litellm_completion")
 def test_opus_41_keeps_temperature_top_p(mock_completion):
     mock_completion.return_value = {"choices": [{"message": {"content": "ok"}}]}
-    config = LLMConfig(model="anthropic/claude-opus-4-1-20250805", api_key="k", temperature=0.7, top_p=0.9)
+    config = LLMConfig(
+        model="anthropic/claude-opus-4-1-20250805",
+        api_key="k",
+        temperature=0.7,
+        top_p=0.9,
+    )
     llm = LLM(config, service_id="svc")
     llm.completion(messages=[{"role": "user", "content": "hi"}])
     call_kwargs = mock_completion.call_args[1]
@@ -855,7 +993,12 @@ def test_opus_41_keeps_temperature_top_p(mock_completion):
 @patch("forge.llm.llm.litellm_completion")
 def test_opus_4_keeps_temperature_top_p(mock_completion):
     mock_completion.return_value = {"choices": [{"message": {"content": "ok"}}]}
-    config = LLMConfig(model="anthropic/claude-opus-4-20250514", api_key="k", temperature=0.7, top_p=0.9)
+    config = LLMConfig(
+        model="anthropic/claude-opus-4-20250514",
+        api_key="k",
+        temperature=0.7,
+        top_p=0.9,
+    )
     llm = LLM(config, service_id="svc")
     llm.completion(messages=[{"role": "user", "content": "hi"}])
     call_kwargs = mock_completion.call_args[1]
@@ -876,14 +1019,18 @@ def test_opus_41_disables_thinking(mock_completion):
 @patch("forge.llm.llm.litellm.get_model_info")
 def test_is_caching_prompt_active_anthropic_prefixed(mock_get_model_info):
     mock_get_model_info.side_effect = Exception("skip")
-    config = LLMConfig(model="anthropic/claude-3-7-sonnet", api_key="k", caching_prompt=True)
+    config = LLMConfig(
+        model="anthropic/claude-3-7-sonnet", api_key="k", caching_prompt=True
+    )
     llm = LLM(config, service_id="svc")
     assert llm.is_caching_prompt_active() is True
 
 
 @patch("forge.llm.llm.httpx.get")
 @patch("forge.llm.llm.litellm.get_model_info")
-def test_openhands_provider_rewrite_and_caching_prompt(mock_get_model_info, mock_httpx_get):
+def test_openhands_provider_rewrite_and_caching_prompt(
+    mock_get_model_info, mock_httpx_get
+):
     mock_httpx_get.return_value = type(
         "Resp",
         (),
@@ -892,14 +1039,23 @@ def test_openhands_provider_rewrite_and_caching_prompt(mock_get_model_info, mock
                 "data": [
                     {
                         "model_name": "claude-3.7-sonnet",
-                        "model_info": {"max_input_tokens": 200000, "max_output_tokens": 64000, "supports_vision": True},
+                        "model_info": {
+                            "max_input_tokens": 200000,
+                            "max_output_tokens": 64000,
+                            "supports_vision": True,
+                        },
                     }
                 ]
             }
         },
     )()
-    mock_get_model_info.return_value = {"max_input_tokens": 200000, "max_output_tokens": 64000}
-    config = LLMConfig(model="Openhands/claude-3.7-sonnet", api_key="k", caching_prompt=True)
+    mock_get_model_info.return_value = {
+        "max_input_tokens": 200000,
+        "max_output_tokens": 64000,
+    }
+    config = LLMConfig(
+        model="Openhands/claude-3.7-sonnet", api_key="k", caching_prompt=True
+    )
     llm = LLM(config, service_id="svc")
     assert llm.config.model.startswith("litellm_proxy/claude-3.7-sonnet")
     assert llm.is_caching_prompt_active() is True
@@ -908,7 +1064,9 @@ def test_openhands_provider_rewrite_and_caching_prompt(mock_get_model_info, mock
 @patch("forge.llm.llm.litellm_completion")
 def test_gemini_high_reasoning_effort_passes_through(mock_completion):
     """Test that Gemini with reasoning_effort='high' passes through to litellm."""
-    config = LLMConfig(model="gemini-2.5-pro", api_key="test_key", reasoning_effort="high")
+    config = LLMConfig(
+        model="gemini-2.5-pro", api_key="test_key", reasoning_effort="high"
+    )
     mock_completion.return_value = {
         "choices": [{"message": {"content": "Test response"}}],
         "usage": {"prompt_tokens": 10, "completion_tokens": 5},
@@ -938,7 +1096,9 @@ def test_non_gemini_uses_reasoning_effort(mock_completion):
 @pytest.mark.asyncio
 async def test_async_reasoning_effort_passthrough(mock_acompletion):
     mock_acompletion.return_value = {"choices": [{"message": {"content": "ok"}}]}
-    config = LLMConfig(model="o3", api_key="k", temperature=0.7, top_p=0.9, reasoning_effort="low")
+    config = LLMConfig(
+        model="o3", api_key="k", temperature=0.7, top_p=0.9, reasoning_effort="low"
+    )
     llm = AsyncLLM(config, service_id="svc")
     await llm.async_completion(messages=[{"role": "user", "content": "hi"}])
     call_kwargs = mock_acompletion.call_args[1]
@@ -950,20 +1110,21 @@ async def test_async_reasoning_effort_passthrough(mock_acompletion):
 @patch("forge.llm.streaming_llm.AsyncLLM._call_acompletion")
 @pytest.mark.asyncio
 async def test_streaming_reasoning_effort_passthrough(mock_call):
-
     async def fake_stream(*args, **kwargs):
-
         class Dummy:
-
             async def __aiter__(self):
                 yield {"choices": [{"delta": {"content": "x"}}]}
 
         return Dummy()
 
     mock_call.side_effect = fake_stream
-    config = LLMConfig(model="o3", api_key="k", temperature=0.7, top_p=0.9, reasoning_effort="low")
+    config = LLMConfig(
+        model="o3", api_key="k", temperature=0.7, top_p=0.9, reasoning_effort="low"
+    )
     sllm = StreamingLLM(config, service_id="svc")
-    async for _ in sllm.async_streaming_completion(messages=[{"role": "user", "content": "hi"}]):
+    async for _ in sllm.async_streaming_completion(
+        messages=[{"role": "user", "content": "hi"}]
+    ):
         break
     call_kwargs = mock_call.call_args[1]
     assert call_kwargs.get("reasoning_effort") == "low"

@@ -8,13 +8,17 @@ parser = argparse.ArgumentParser(description="Calculate average reward.")
 parser.add_argument("output_path", type=str, help="path to output.jsonl")
 args = parser.parse_args()
 if __name__ == "__main__":
-    env_ids = [id for id in gym.envs.registry.keys() if id.startswith("browsergym/visualwebarena")]
+    env_ids = [
+        id
+        for id in gym.envs.registry.keys()
+        if id.startswith("browsergym/visualwebarena")
+    ]
     total_num = len(env_ids)
     logger.info("Total number of tasks: %d", total_num)
     total_reward = 0
     total_cost = 0
     actual_num = 0
-    with open(args.output_path, "r", encoding='utf-8') as f:
+    with open(args.output_path, "r", encoding="utf-8") as f:
         for line in f:
             data = json.loads(line)
             actual_num += 1

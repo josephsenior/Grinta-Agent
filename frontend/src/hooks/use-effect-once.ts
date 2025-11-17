@@ -4,15 +4,12 @@ import React from "react";
 // ONCE. In Strict mode, React will run all useEffect's twice,
 // which will trigger a WebSocket connection and then immediately
 // close it, causing the "closed before could connect" error.
-export const useEffectOnce = (callback: () => void) => {
-  const isUsedRef = React.useRef(false);
+export const useEffectOnce = (callback: () => void | (() => void)) => {
+  const callbackRef = React.useRef(callback);
 
   React.useEffect(() => {
-    if (isUsedRef.current) {
-      return;
-    }
+    callbackRef.current = callback;
+  }, [callback]);
 
-    isUsedRef.current = true;
-    callback();
-  }, [isUsedRef.current]);
+  React.useEffect(() => callbackRef.current(), []);
 };

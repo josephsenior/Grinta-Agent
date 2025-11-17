@@ -8,6 +8,8 @@ import shutil
 import sys
 import uuid
 from dataclasses import dataclass
+import re
+import shlex
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
@@ -25,11 +27,13 @@ if TYPE_CHECKING:
 @dataclass
 class VSCodeRequirement(PluginRequirement):
     """Plugin requirement metadata declaring support for the VSCode web IDE."""
+
     name: str = "vscode"
 
 
 class VSCodePlugin(Plugin):
     """Runtime plugin that launches an OpenVSCode server inside the sandbox."""
+
     name: str = "vscode"
     vscode_port: int | None = None
     vscode_connection_token: str | None = None
@@ -37,10 +41,14 @@ class VSCodePlugin(Plugin):
 
     def _check_platform_support(self) -> bool:
         """Check if platform supports VSCode plugin."""
-        if os.name == "nt" or sys.platform == "win32":
+        os_name: str = os.name
+        platform_name: str = sys.platform
+        if os_name == "nt" or platform_name == "win32":
             self.vscode_port = None
             self.vscode_connection_token = None
-            logger.warning("VSCode plugin is not supported on Windows. Plugin will be disabled.")
+            logger.warning(
+                "VSCode plugin is not supported on Windows. Plugin will be disabled."
+            )
             return False
         return True
 
@@ -58,7 +66,9 @@ class VSCodePlugin(Plugin):
     def _get_base_path_flag(self, runtime_id: str | None) -> str:
         """Get base path flag for VSCode server."""
         if explicit_base := os.getenv("OPENVSCODE_SERVER_BASE_PATH"):
-            explicit_base = explicit_base if explicit_base.startswith("/") else f"/{explicit_base}"
+            explicit_base = (
+                explicit_base if explicit_base.startswith("/") else f"/{explicit_base}"
+            )
             return f" --server-base-path {explicit_base.rstrip('/')}"
 
         runtime_url = os.getenv("RUNTIME_URL", "")
@@ -70,11 +80,27 @@ class VSCodePlugin(Plugin):
 
         return ""
 
-    def _build_vscode_command(self, username: str, workspace_path: str, base_path_flag: str) -> str:
+    def _build_vscode_command(
+        self, username: str, workspace_path: str, base_path_flag: str
+    ) -> str:
         """Build command to start VSCode server."""
-        return f"su - {username} -s /bin/bash << 'EOF'\nsudo chown -R {username}:{username} /Forge/.openvscode-server\ncd {workspace_path}\nexec /Forge/.openvscode-server/bin/openvscode-server --host 0.0.0.0 --connection-token {
-            self.vscode_connection_token} --port {
-            self.vscode_port} --disable-workspace-trust{base_path_flag}\nEOF"
+        # Validate and sanitize dynamic values before interpolation
+        if not re.fullmatch(r"[a-z_][a-z0-9_-]{0,31}", username):
+            raise ValueError("Invalid username for VSCode server startup")
+        safe_workspace = shlex.quote(workspace_path)
+        safe_base_path_flag = ""
+        if base_path_flag and re.fullmatch(r"\s*--server-base-path\s+/[A-Za-z0-9/_-]+\s*", base_path_flag):
+            safe_base_path_flag = base_path_flag
+        token = shlex.quote(str(self.vscode_connection_token))
+        port = str(int(self.vscode_port)) if self.vscode_port is not None else "0"
+        return (
+            f"su - {username} -s /bin/bash << 'EOF'\n"
+            f"sudo chown -R {username}:{username} /Forge/.openvscode-server\n"
+            f"cd {safe_workspace}\n"
+            f"exec /Forge/.openvscode-server/bin/openvscode-server --host 0.0.0.0 "
+            f"--connection-token {token} --port {port} --disable-workspace-trust{safe_base_path_flag}\n"
+            f"EOF"
+        )
 
     async def _wait_for_server_start(self) -> str:
         """Wait for VSCode server to start and return output."""
@@ -104,13 +130,18 @@ class VSCodePlugin(Plugin):
         try:
             self.vscode_port = int(os.environ["VSCODE_PORT"])
         except (KeyError, ValueError):
-            logger.warning("VSCODE_PORT environment variable not set or invalid. VSCode plugin will be disabled.")
+            logger.warning(
+                "VSCODE_PORT environment variable not set or invalid. VSCode plugin will be disabled."
+            )
             return
 
         self.vscode_connection_token = str(uuid.uuid4())
 
         if not check_port_available(self.vscode_port):
-            logger.warning("Port %s is not available. VSCode plugin will be disabled.", self.vscode_port)
+            logger.warning(
+                "Port %s is not available. VSCode plugin will be disabled.",
+                self.vscode_port,
+            )
             return
 
         # Build and execute command
@@ -118,7 +149,9 @@ class VSCodePlugin(Plugin):
         base_path_flag = self._get_base_path_flag(runtime_id)
         cmd = self._build_vscode_command(username, workspace_path, base_path_flag)
 
-        self.gateway_process = await asyncio.create_subprocess_shell(
+        self.gateway_process = await asyncio.create_subprocess_exec(
+            "/bin/bash",
+            "-lc",
             cmd,
             stderr=asyncio.subprocess.STDOUT,
             stdout=asyncio.subprocess.PIPE,
@@ -126,7 +159,9 @@ class VSCodePlugin(Plugin):
 
         # Wait for server to start
         output = await self._wait_for_server_start()
-        logger.debug("VSCode server started at port %s. Output: %s", self.vscode_port, output)
+        logger.debug(
+            "VSCode server started at port %s. Output: %s", self.vscode_port, output
+        )
 
     def _setup_vscode_settings(self) -> None:
         """Set up VSCode settings by creating the .vscode directory in the workspace.

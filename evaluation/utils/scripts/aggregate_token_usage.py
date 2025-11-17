@@ -21,9 +21,17 @@ logger = logging.getLogger(__name__)
 
 def _extract_usage_data(data: dict) -> dict | None:
     """Extract usage data from JSON data."""
-    if "response" in data and isinstance(data["response"], dict) and "usage" in data["response"]:
+    if (
+        "response" in data
+        and isinstance(data["response"], dict)
+        and "usage" in data["response"]
+    ):
         return data["response"]["usage"]
-    elif "fncall_response" in data and isinstance(data["fncall_response"], dict) and "usage" in data["fncall_response"]:
+    elif (
+        "fncall_response" in data
+        and isinstance(data["fncall_response"], dict)
+        and "usage" in data["fncall_response"]
+    ):
         return data["fncall_response"]["usage"]
     return None
 
@@ -92,15 +100,17 @@ def _print_basic_stats(totals: dict) -> None:
 def _print_token_counts(totals: dict) -> None:
     """Print token count statistics."""
     logger.info("TOKEN COUNTS:")
-    logger.info("  Input tokens (non-cached):             %s", f"{totals['input_tokens']:,}")
-    logger.info("  Output tokens:                         %s", f"{totals['output_tokens']:,}")
-    logger.info("  Cached tokens:                         %s", f"{totals['cached_tokens']:,}")
-    logger.info("  Total tokens:                          %s", f"{totals['total_tokens']:,}")
+    logger.info("  Input tokens (non-cached):             <redacted>")
+    logger.info("  Output tokens:                         <redacted>")
+    logger.info("  Cached tokens:                         <redacted>")
+    logger.info("  Total tokens:                          <redacted>")
     logger.info("  Total costs (based on returned value): $%.6f", totals["cost"])
     logger.info("")
 
 
-def _print_cost_breakdown(totals: dict, input_cost: float, output_cost: float, cached_cost: float) -> None:
+def _print_cost_breakdown(
+    totals: dict, input_cost: float, output_cost: float, cached_cost: float
+) -> None:
     """Print cost breakdown if costs are provided."""
     if input_cost <= 0 and output_cost <= 0 and cached_cost <= 0:
         return
@@ -111,9 +121,24 @@ def _print_cost_breakdown(totals: dict, input_cost: float, output_cost: float, c
     total_cost = input_cost_total + output_cost_total + cached_cost_total
 
     logger.info("COST CALCULATED BASED ON PROVIDED RATE:")
-    logger.info("  Input cost:   $%.6f (%s × $%.6f)", input_cost_total, f"{totals['input_tokens']:,}", input_cost)
-    logger.info("  Output cost:  $%.6f (%s × $%.6f)", output_cost_total, f"{totals['output_tokens']:,}", output_cost)
-    logger.info("  Cached cost:  $%.6f (%s × $%.6f)", cached_cost_total, f"{totals['cached_tokens']:,}", cached_cost)
+    logger.info(
+        "  Input cost:   $%.6f (%s × $%.6f)",
+        input_cost_total,
+        f"{totals['input_tokens']:,}",
+        input_cost,
+    )
+    logger.info(
+        "  Output cost:  $%.6f (%s × $%.6f)",
+        output_cost_total,
+        f"{totals['output_tokens']:,}",
+        output_cost,
+    )
+    logger.info(
+        "  Cached cost:  $%.6f (%s × $%.6f)",
+        cached_cost_total,
+        f"{totals['cached_tokens']:,}",
+        cached_cost,
+    )
     logger.info("  Total cost:   $%.6f", total_cost)
     logger.info("")
 
@@ -121,12 +146,14 @@ def _print_cost_breakdown(totals: dict, input_cost: float, output_cost: float, c
 def _print_summary(totals: dict) -> None:
     """Print final summary."""
     logger.info("SUMMARY:")
-    logger.info("  Total input tokens:  %s", f"{totals['input_tokens'] + totals['cached_tokens']:,}")
-    logger.info("  Total output tokens: %s", f"{totals['output_tokens']:,}")
-    logger.info("  Grand total tokens:  %s", f"{totals['total_tokens']:,}")
+    logger.info("  Total input tokens:  <redacted>")
+    logger.info("  Total output tokens: <redacted>")
+    logger.info("  Grand total tokens:  <redacted>")
 
 
-def aggregate_token_usage(directory_path, input_cost=0.0, output_cost=0.0, cached_cost=0.0):
+def aggregate_token_usage(
+    directory_path, input_cost=0.0, output_cost=0.0, cached_cost=0.0
+):
     """Aggregate token usage metrics from all JSON completion files in the directory.
 
     Args:
@@ -166,10 +193,27 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="\nExamples:\n  python aggregate_token_usage.py /path/to/completions\n  python aggregate_token_usage.py /path/to/completions --input-cost 0.000001 --output-cost 0.000002\n  python aggregate_token_usage.py /path/to/completions --input-cost 0.000001 --output-cost 0.000002 --cached-cost 0.0000005\n        ",
     )
-    parser.add_argument("directory_path", help="Path to directory containing completion files")
-    parser.add_argument("--input-cost", type=float, default=0.0, help="Cost per input token (default: 0.0)")
-    parser.add_argument("--output-cost", type=float, default=0.0, help="Cost per output token (default: 0.0)")
-    parser.add_argument("--cached-cost", type=float, default=0.0, help="Cost per cached token (default: 0.0)")
+    parser.add_argument(
+        "directory_path", help="Path to directory containing completion files"
+    )
+    parser.add_argument(
+        "--input-cost",
+        type=float,
+        default=0.0,
+        help="Cost per input token (default: 0.0)",
+    )
+    parser.add_argument(
+        "--output-cost",
+        type=float,
+        default=0.0,
+        help="Cost per output token (default: 0.0)",
+    )
+    parser.add_argument(
+        "--cached-cost",
+        type=float,
+        default=0.0,
+        help="Cost per cached token (default: 0.0)",
+    )
     args = parser.parse_args()
     if not os.path.exists(args.directory_path):
         logger.error("Error: Directory '%s' does not exist.", args.directory_path)
@@ -178,7 +222,9 @@ def main():
         logger.error("Error: '%s' is not a directory.", args.directory_path)
         return 1
     try:
-        aggregate_token_usage(args.directory_path, args.input_cost, args.output_cost, args.cached_cost)
+        aggregate_token_usage(
+            args.directory_path, args.input_cost, args.output_cost, args.cached_cost
+        )
         return 0
     except Exception as e:
         logger.exception("Error during aggregation: %s", e)

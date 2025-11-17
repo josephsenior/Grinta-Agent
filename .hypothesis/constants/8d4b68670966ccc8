@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\mcp_client\wrappers.py
+# hypothesis_version: 6.147.0
+
+[0.15, 0.4, 0.6, 1.0, 'Exact block name', 'Exact component name', 'boolean', 'content', 'description', 'error', 'function', 'fuzzy', 'get_block', 'get_block_cached', 'get_component', 'get_component_cached', 'integer', 'limit', 'list_components', 'name', 'object', 'parameters', 'properties', 'query', 'refresh', 'required', 'results', 'search_components', 'string', 'text', 'total_matches', 'type']

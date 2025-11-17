@@ -72,7 +72,9 @@ def _validate_query_security(query: str) -> None:
 
     # Additional safety checks
     if query.count(";") > 5:
-        logger.warning(f"Query contains multiple statements ({query.count(';')}): {query[:100]}")
+        logger.warning(
+            f"Query contains multiple statements ({query.count(';')}): {query[:100]}"
+        )
 
     if "*" in query and ("LIMIT" not in query_upper and "TOP" not in query_upper):
         logger.warning(f"Query uses SELECT * without LIMIT: {query[:100]}")
@@ -211,7 +213,9 @@ async def delete_connection(
 
     # Filter out the connection to delete
     original_count = len(settings.DATABASE_CONNECTIONS)
-    settings.DATABASE_CONNECTIONS = [c for c in settings.DATABASE_CONNECTIONS if c["id"] != connection_id]
+    settings.DATABASE_CONNECTIONS = [
+        c for c in settings.DATABASE_CONNECTIONS if c["id"] != connection_id
+    ]
 
     if len(settings.DATABASE_CONNECTIONS) == original_count:
         raise HTTPException(status_code=404, detail="Connection not found")
@@ -232,19 +236,19 @@ async def test_connection(request: TestConnectionRequest) -> TestConnectionRespo
     to actually test the connection.
     """
     try:
-        # Basic validation
-        if request.type == DatabaseType.POSTGRESQL:
-            return await _test_postgresql(request)
-        if request.type == DatabaseType.MONGODB:
-            return await _test_mongodb(request)
-        if request.type == DatabaseType.MYSQL:
-            return await _test_mysql(request)
-        if request.type == DatabaseType.REDIS:
-            return await _test_redis(request)
-        return TestConnectionResponse(
-            success=False,
-            message=f"Unsupported database type: {request.type}",
-        )
+        handler_map = {
+            DatabaseType.POSTGRESQL: _test_postgresql,
+            DatabaseType.MONGODB: _test_mongodb,
+            DatabaseType.MYSQL: _test_mysql,
+            DatabaseType.REDIS: _test_redis,
+        }
+        handler = handler_map.get(request.type)
+        if handler is None:
+            return TestConnectionResponse(
+                success=False,
+                message=f"Unsupported database type: {request.type}",
+            )
+        return await handler(request)
     except Exception as e:
         logger.error(f"Error testing connection: {e!s}")
         return TestConnectionResponse(
@@ -588,7 +592,9 @@ async def _get_postgresql_schema(connection: dict) -> SchemaResponse:
         logger.warning("asyncpg not installed, returning empty schema")
         return SchemaResponse(tables=[])
 
-    logger.info(f"Fetching PostgreSQL schema from {connection['host']}:{connection['port']}/{connection['database']}")
+    logger.info(
+        f"Fetching PostgreSQL schema from {connection['host']}:{connection['port']}/{connection['database']}"
+    )
 
     conn = await _connect_to_postgresql(connection)
 
@@ -651,7 +657,9 @@ async def _build_single_table_schema(conn, table_name: str) -> dict:
         Table schema dictionary
 
     """
-    columns_result, pk_columns, fk_map, indexes_map = await _fetch_table_metadata(conn, table_name)
+    columns_result, pk_columns, fk_map, indexes_map = await _fetch_table_metadata(
+        conn, table_name
+    )
     row_count = await _get_table_row_count(conn, table_name)
     columns = _build_column_list(columns_result, pk_columns, fk_map)
 
@@ -776,7 +784,9 @@ async def _get_table_row_count(conn, table_name: str) -> int | None:
         return None
 
 
-def _build_column_list(columns_result: list, pk_columns: set, fk_map: dict) -> list[dict]:
+def _build_column_list(
+    columns_result: list, pk_columns: set, fk_map: dict
+) -> list[dict]:
     """Build list of column info dictionaries.
 
     Args:
@@ -987,7 +997,9 @@ async def execute_query(
         return QueryResult(success=False, error=str(e), executionTime=0.0)
 
 
-async def _get_connection_by_id(connection_id: str, settings_store: SettingsStore) -> dict:
+async def _get_connection_by_id(
+    connection_id: str, settings_store: SettingsStore
+) -> dict:
     """Get database connection by ID.
 
     Args:
@@ -1044,7 +1056,9 @@ def _validate_query_request(request: QueryRequest) -> None:
         )
 
 
-async def _dispatch_query_by_type(connection: dict, request: QueryRequest) -> QueryResult:
+async def _dispatch_query_by_type(
+    connection: dict, request: QueryRequest
+) -> QueryResult:
     """Dispatch query to appropriate handler based on database type.
 
     Args:
@@ -1086,7 +1100,9 @@ async def _execute_sql_query(connection: dict, request: QueryRequest) -> QueryRe
     )
 
 
-async def _execute_postgresql_query(connection: dict, request: QueryRequest) -> QueryResult:
+async def _execute_postgresql_query(
+    connection: dict, request: QueryRequest
+) -> QueryResult:
     """Execute real PostgreSQL query using asyncpg.
 
     Args:
@@ -1102,7 +1118,9 @@ async def _execute_postgresql_query(connection: dict, request: QueryRequest) -> 
     try:
         import asyncpg  # type: ignore[import-not-found, import-untyped]
     except ImportError:
-        return QueryResult(success=False, error="asyncpg not installed. Run: poetry add asyncpg")
+        return QueryResult(
+            success=False, error="asyncpg not installed. Run: poetry add asyncpg"
+        )
 
     logger.info(f"Executing PostgreSQL query: {request.query[:100]}...")
     start_time = time.time()
@@ -1150,7 +1168,9 @@ def _build_query_result_from_rows(rows, execution_time: float) -> QueryResult:
         # Convert special types to JSON-serializable
         for row in data:
             for key, value in row.items():
-                if value is not None and not isinstance(value, (str, int, float, bool, type(None))):
+                if value is not None and not isinstance(
+                    value, (str, int, float, bool, type(None))
+                ):
                     row[key] = str(value)
 
         return QueryResult(
@@ -1221,7 +1241,7 @@ async def _execute_mongodb_query(
                 if not collection_name:
                     return QueryResult(
                         success=False,
-                        error="Query must include 'collection' field. Example: {\"collection\": \"users\", \"filter\": {}, \"limit\": 10}",
+                        error='Query must include \'collection\' field. Example: {"collection": "users", "filter": {}, "limit": 10}',
                     )
 
                 collection = db[collection_name]
@@ -1294,7 +1314,9 @@ async def _execute_redis_command(
     try:
         import redis.asyncio as redis  # noqa: F401
     except ImportError:
-        return QueryResult(success=False, error="redis not installed. Run: poetry add redis")
+        return QueryResult(
+            success=False, error="redis not installed. Run: poetry add redis"
+        )
 
     logger.info(f"Executing Redis command: {request.query[:100]}...")
     start_time = time.time()
@@ -1304,7 +1326,9 @@ async def _execute_redis_command(
 
         try:
             command, args = _parse_redis_command(request.query)
-            result = await asyncio.wait_for(client.execute_command(command, *args), timeout=30.0)
+            result = await asyncio.wait_for(
+                client.execute_command(command, *args), timeout=30.0
+            )
             execution_time = round((time.time() - start_time) * 1000, 2)
 
             return _build_redis_result(result, execution_time)

@@ -1,11 +1,11 @@
 """Tools for fetching entity contents and searching repository snippets."""
 
-from litellm import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from forge.llm.tool_types import make_function_chunk, make_tool_param
 
 _SEARCH_ENTITY_DESCRIPTION = "\nSearches the codebase to retrieve the complete implementations of specified entities based on the provided entity names.\nThe tool can handle specific entity queries such as function names, class names, or file paths.\n\n**Usage Example:**\n# Search for a specific function implementation\nget_entity_contents(['src/my_file.py:MyClass.func_name'])\n\n# Search for a file's complete content\nget_entity_contents(['src/my_file.py'])\n\n**Entity Name Format:**\n- To specify a function or class, use the format: `file_path:QualifiedName`\n  (e.g., 'src/helpers/math_helpers.py:MathUtils.calculate_sum').\n- To search for a file's content, use only the file path (e.g., 'src/my_file.py').\n"
-SearchEntityTool = ChatCompletionToolParam(
+SearchEntityTool = make_tool_param(
     type="function",
-    function=ChatCompletionToolParamFunctionChunk(
+    function=make_function_chunk(
         name="get_entity_contents",
         description=_SEARCH_ENTITY_DESCRIPTION,
         parameters={
@@ -22,9 +22,9 @@ SearchEntityTool = ChatCompletionToolParam(
     ),
 )
 _SEARCH_REPO_DESCRIPTION = 'Searches the codebase to retrieve relevant code snippets based on given queries(terms or line numbers).\n** Note:\n- Either `search_terms` or `line_nums` must be provided to perform a search.\n- If `search_terms` are provided, it searches for code snippets based on each term:\n- If `line_nums` is provided, it searches for code snippets around the specified lines within the file defined by `file_path_or_pattern`.\n\n** Example Usage:\n# Search for code content contain keyword `order`, `bill`\nsearch_code_snippets(search_terms=["order", "bill"])\n\n# Search for a class\nsearch_code_snippets(search_terms=["MyClass"])\n\n# Search for context around specific lines (10 and 15) within a file\nsearch_code_snippets(line_nums=[10, 15], file_path_or_pattern=\'src/example.py\')\n'
-SearchRepoTool = ChatCompletionToolParam(
+SearchRepoTool = make_tool_param(
     type="function",
-    function=ChatCompletionToolParamFunctionChunk(
+    function=make_function_chunk(
         name="search_code_snippets",
         description=_SEARCH_REPO_DESCRIPTION,
         parameters={

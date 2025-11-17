@@ -10,7 +10,9 @@ from swebench.harness.run_evaluation import APPLY_PATCH_FAIL, APPLY_PATCH_PASS
 from swebench.harness.test_spec import SWEbenchInstance, TestSpec, make_test_spec
 from swebench.harness.utils import load_swebench_dataset
 from tqdm import tqdm
-from evaluation.benchmarks.swe_bench.resource.mapping import get_instance_resource_factor
+from evaluation.benchmarks.swe_bench.resource.mapping import (
+    get_instance_resource_factor,
+)
 from evaluation.benchmarks.swe_bench.run_infer import get_instance_docker_image
 from evaluation.utils.shared import (
     EvalMetadata,
@@ -58,7 +60,9 @@ def get_config(metadata: EvalMetadata, instance: pd.Series) -> ForgeConfig:
     sandbox_config.remote_runtime_resource_factor = get_instance_resource_factor(
         dataset_name=metadata.dataset, instance_id=instance["instance_id"]
     )
-    return get_FORGE_config_for_eval(runtime=os.environ.get("RUNTIME", "docker"), sandbox_config=sandbox_config)
+    return get_FORGE_config_for_eval(
+        runtime=os.environ.get("RUNTIME", "docker"), sandbox_config=sandbox_config
+    )
 
 
 def _setup_logging_and_config(
@@ -66,7 +70,9 @@ def _setup_logging_and_config(
 ) -> tuple[ForgeConfig, str, str, TestSpec]:
     """Setup logging and get configuration."""
     if reset_logger:
-        assert log_dir is not None, "Can't reset logger without a provided log directory."
+        assert log_dir is not None, (
+            "Can't reset logger without a provided log directory."
+        )
         os.makedirs(log_dir, exist_ok=True)
         reset_logger_for_multiprocessing(logger, instance.instance_id, log_dir)
     else:
@@ -94,13 +100,19 @@ def _initialize_test_result(instance: pd.Series) -> None:
     }
 
 
-def _handle_empty_patch(instance: pd.Series, instance_id: str, metadata: EvalMetadata) -> EvalOutput:
+def _handle_empty_patch(
+    instance: pd.Series, instance_id: str, metadata: EvalMetadata
+) -> EvalOutput:
     """Handle case where model patch is empty."""
     instance["test_result"]["report"]["empty_generation"] = True
-    return EvalOutput(instance_id=instance_id, test_result=instance["test_result"], metadata=metadata)
+    return EvalOutput(
+        instance_id=instance_id, test_result=instance["test_result"], metadata=metadata
+    )
 
 
-def _adjust_runtime_config(config: ForgeConfig, runtime_failure_count: int, instance_id: str) -> None:
+def _adjust_runtime_config(
+    config: ForgeConfig, runtime_failure_count: int, instance_id: str
+) -> None:
     """Adjust runtime configuration based on failure count."""
     if runtime_failure_count > 0:
         config.sandbox.remote_runtime_resource_factor = min(
@@ -118,12 +130,12 @@ def _setup_runtime_and_files(runtime, model_patch: str, test_spec: TestSpec) -> 
     """Setup runtime and copy necessary files."""
     with tempfile.TemporaryDirectory() as temp_dir:
         patch_file_path = os.path.join(temp_dir, "patch.diff")
-        with open(patch_file_path, "w", encoding='utf-8') as f:
+        with open(patch_file_path, "w", encoding="utf-8") as f:
             f.write(model_patch)
         runtime.copy_to(patch_file_path, "/tmp")  # nosec B108 - Safe: controlled evaluation runtime
 
         eval_script_path = os.path.join(temp_dir, "eval.sh")
-        with open(eval_script_path, "w", encoding='utf-8') as f:
+        with open(eval_script_path, "w", encoding="utf-8") as f:
             f.write(test_spec.eval_script)
         runtime.copy_to(eval_script_path, "/tmp")  # nosec B108 - Safe: controlled evaluation runtime
 
@@ -151,12 +163,17 @@ def _apply_patch(runtime, instance_id: str) -> str:
 
 
 def _handle_patch_failure(
-    instance: pd.Series, instance_id: str, apply_patch_output: str, metadata: EvalMetadata
+    instance: pd.Series,
+    instance_id: str,
+    apply_patch_output: str,
+    metadata: EvalMetadata,
 ) -> EvalOutput:
     """Handle case where patch application fails."""
     logger.info("[%s] %s:\n%s", instance_id, APPLY_PATCH_FAIL, apply_patch_output)
     instance["test_result"]["report"]["failed_apply_patch"] = True
-    return EvalOutput(instance_id=instance_id, test_result=instance["test_result"], metadata=metadata)
+    return EvalOutput(
+        instance_id=instance_id, test_result=instance["test_result"], metadata=metadata
+    )
 
 
 def _run_evaluation_with_timeout(runtime, instance_id: str) -> tuple[bool, str]:
@@ -179,18 +196,31 @@ def _run_evaluation_with_timeout(runtime, instance_id: str) -> tuple[bool, str]:
     while True:
         seconds_elapsed = time.time() - start_time
         if seconds_elapsed > timeout:
-            logger.info("[%s] Evaluation timed out after %s seconds", instance_id, timeout)
+            logger.info(
+                "[%s] Evaluation timed out after %s seconds", instance_id, timeout
+            )
             return False, ""
 
         check_action = CmdRunAction(command=f"ps -p {pid} > /dev/null; echo $?")
         check_action.set_hard_timeout(300)
         check_obs = runtime.run_action(check_action)
 
-        if isinstance(check_obs, CmdOutputObservation) and check_obs.content.split()[-1].strip() == "1":
-            logger.info("[%s] Evaluation process completed after %s seconds", instance_id, seconds_elapsed)
+        if (
+            isinstance(check_obs, CmdOutputObservation)
+            and check_obs.content.split()[-1].strip() == "1"
+        ):
+            logger.info(
+                "[%s] Evaluation process completed after %s seconds",
+                instance_id,
+                seconds_elapsed,
+            )
             break
 
-        logger.info("[%s] [%ss] Evaluation still running, waiting...", instance_id, seconds_elapsed)
+        logger.info(
+            "[%s] [%ss] Evaluation still running, waiting...",
+            instance_id,
+            seconds_elapsed,
+        )
         time.sleep(30)
 
     # Get test output
@@ -222,7 +252,7 @@ def _grade_evaluation(
         os.makedirs(log_dir, exist_ok=True)
         test_output_path = os.path.join(log_dir, "test_output.txt")
 
-        with open(test_output_path, "w", encoding='utf-8') as f:
+        with open(test_output_path, "w", encoding="utf-8") as f:
             f.write(test_output)
 
         try:
@@ -234,7 +264,11 @@ def _grade_evaluation(
             )
             report = _report[instance_id]
             logger.info(
-                "[%s] report: %s\nResult for %s: resolved: %s", instance_id, report, instance_id, report["resolved"]
+                "[%s] report: %s\nResult for %s: resolved: %s",
+                instance_id,
+                report,
+                instance_id,
+                report["resolved"],
             )
             instance["test_result"]["report"]["resolved"] = report["resolved"]
         except Exception as e:
@@ -267,7 +301,9 @@ def process_instance(
         AssertionError: if the `reset_logger` flag is set without a provided log directory.
     """
     # Setup logging and configuration
-    config, instance_id, model_patch, test_spec = _setup_logging_and_config(instance, metadata, reset_logger, log_dir)
+    config, instance_id, model_patch, test_spec = _setup_logging_and_config(
+        instance, metadata, reset_logger, log_dir
+    )
 
     # Initialize test result structure
     _initialize_test_result(instance)
@@ -292,71 +328,110 @@ def process_instance(
 
         # Handle patch application results
         if "APPLY_PATCH_FAIL" in apply_patch_output:
-            return _handle_patch_failure(instance, instance_id, apply_patch_output, metadata)
+            return _handle_patch_failure(
+                instance, instance_id, apply_patch_output, metadata
+            )
         elif "APPLY_PATCH_PASS" in apply_patch_output:
-            logger.info("[%s] %s:\n%s", instance_id, APPLY_PATCH_PASS, apply_patch_output)
+            logger.info(
+                "[%s] %s:\n%s", instance_id, APPLY_PATCH_PASS, apply_patch_output
+            )
 
             # Run evaluation with timeout
             success, test_output = _run_evaluation_with_timeout(runtime, instance_id)
 
             if success:
                 instance["test_result"]["test_output"] = test_output
-                _grade_evaluation(instance, instance_id, test_output, test_spec, model_patch, metadata)
+                _grade_evaluation(
+                    instance, instance_id, test_output, test_spec, model_patch, metadata
+                )
             else:
                 instance["test_result"]["report"]["test_timeout"] = True
                 instance["test_result"]["report"]["error_eval"] = True
 
-            return EvalOutput(instance_id=instance_id, test_result=instance["test_result"], metadata=metadata)
+            return EvalOutput(
+                instance_id=instance_id,
+                test_result=instance["test_result"],
+                metadata=metadata,
+            )
         else:
-            logger.info("[%s] Unexpected output when applying patch:\n%s", instance_id, apply_patch_output)
-            raise RuntimeError(instance_id, f"Unexpected output when applying patch:\n{apply_patch_output}", logger)
+            logger.info(
+                "[%s] Unexpected output when applying patch:\n%s",
+                instance_id,
+                apply_patch_output,
+            )
+            raise RuntimeError(
+                instance_id,
+                f"Unexpected output when applying patch:\n{apply_patch_output}",
+                logger,
+            )
     finally:
         runtime.close()
 
 
 if __name__ == "__main__":
     parser = get_evaluation_parser()
-    parser.add_argument("--input-file", type=str, help="Path to input predictions file", required=True)
+    parser.add_argument(
+        "--input-file", type=str, help="Path to input predictions file", required=True
+    )
     parser.add_argument(
         "--dataset",
         type=str,
         default="princeton-nlp/SWE-bench",
         help="data set to evaluate on, either full-test or lite-test",
     )
-    parser.add_argument("--split", type=str, default="test", help="split to evaluate on")
+    parser.add_argument(
+        "--split", type=str, default="test", help="split to evaluate on"
+    )
     args, _ = parser.parse_known_args()
-    full_dataset: list[SWEbenchInstance] = load_swebench_dataset(args.dataset, args.split)
-    instance_id_to_instance = {instance["instance_id"]: instance for instance in full_dataset}
-    logger.info("Loaded dataset %s with split %s to run inference on.", args.dataset, args.split)
+    full_dataset: list[SWEbenchInstance] = load_swebench_dataset(
+        args.dataset, args.split
+    )
+    instance_id_to_instance = {
+        instance["instance_id"]: instance for instance in full_dataset
+    }
+    logger.info(
+        "Loaded dataset %s with split %s to run inference on.", args.dataset, args.split
+    )
     assert args.input_file.endswith(".jsonl"), "Input file must be a jsonl file."
     required_fields = ["instance_id", "model_patch", "test_result"]
-    with open(args.input_file, encoding='utf-8') as f:
+    with open(args.input_file, encoding="utf-8") as f:
         predictions = pd.DataFrame.from_records(
             [
                 {k: v for k, v in json.loads(line).items() if k in required_fields}
                 for line in tqdm(f, desc="Loading predictions")
             ]
         )
-    assert "instance_id" in predictions.columns, "Input file must contain instance_id column."
+    assert "instance_id" in predictions.columns, (
+        "Input file must contain instance_id column."
+    )
     if "model_patch" not in predictions.columns and (
-        "test_result" in predictions.columns and "model_patch" in predictions["test_result"].iloc[0]
+        "test_result" in predictions.columns
+        and "model_patch" in predictions["test_result"].iloc[0]
     ):
-        raise ValueError("Input file must contain model_patch column OR test_result column with model_patch field.")
-    assert len(predictions["instance_id"].unique()) == len(predictions), "instance_id column must be unique."
+        raise ValueError(
+            "Input file must contain model_patch column OR test_result column with model_patch field."
+        )
+    assert len(predictions["instance_id"].unique()) == len(predictions), (
+        "instance_id column must be unique."
+    )
     if "model_patch" not in predictions.columns:
-        predictions["model_patch"] = predictions["test_result"].apply(lambda x: x.get("git_patch", ""))
-    assert {"instance_id", "model_patch"}.issubset(
-        set(predictions.columns)
-    ), "Input file must contain instance_id and model_patch columns."
+        predictions["model_patch"] = predictions["test_result"].apply(
+            lambda x: x.get("git_patch", "")
+        )
+    assert {"instance_id", "model_patch"}.issubset(set(predictions.columns)), (
+        "Input file must contain instance_id and model_patch columns."
+    )
     predictions["model_patch"] = predictions["model_patch"].apply(process_git_patch)
-    predictions["instance"] = predictions["instance_id"].apply(lambda x: instance_id_to_instance[x])
+    predictions["instance"] = predictions["instance_id"].apply(
+        lambda x: instance_id_to_instance[x]
+    )
     predictions["test_spec"] = predictions["instance"].apply(make_test_spec)
     output_file = args.input_file.replace(".jsonl", ".swebench_eval.jsonl")
     instances = prepare_dataset(predictions, output_file, args.eval_n_limit)
     metadata: EvalMetadata | None = None
     metadata_filepath = os.path.join(os.path.dirname(args.input_file), "metadata.json")
     if os.path.exists(metadata_filepath):
-        with open(metadata_filepath, "r", encoding='utf-8') as metadata_file:
+        with open(metadata_filepath, "r", encoding="utf-8") as metadata_file:
             data = metadata_file.read()
             metadata = EvalMetadata.model_validate_json(data)
     else:
@@ -366,10 +441,14 @@ if __name__ == "__main__":
             max_iterations=1,
             eval_output_dir=os.path.dirname(args.input_file),
             start_time=time.strftime("%Y-%m-%d %H:%M:%S"),
-            git_commit=subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("utf-8").strip(),
+            git_commit=subprocess.check_output(["git", "rev-parse", "HEAD"])
+            .decode("utf-8")
+            .strip(),
             dataset=args.dataset,
         )
-    process_instance_func = partial(process_instance, log_dir=output_file.replace(".jsonl", ".logs"))
+    process_instance_func = partial(
+        process_instance, log_dir=output_file.replace(".jsonl", ".logs")
+    )
     run_evaluation(
         instances,
         metadata=metadata,
@@ -385,6 +464,14 @@ if __name__ == "__main__":
 
     report = {}
     for field in fields:
-        count = evaluated_predictions.apply(count_report_field, args=(field,), axis=1).sum()
+        count = evaluated_predictions.apply(
+            count_report_field, args=(field,), axis=1
+        ).sum()
         report[field] = count
-        logger.info("# %s: %s / %s. (%s)", field, count, len(evaluated_predictions), count / len(evaluated_predictions))
+        logger.info(
+            "# %s: %s / %s. (%s)",
+            field,
+            count,
+            len(evaluated_predictions),
+            count / len(evaluated_predictions),
+        )

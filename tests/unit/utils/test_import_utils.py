@@ -4,7 +4,6 @@ from forge.utils.import_utils import get_impl
 
 
 class Shape:
-
     @abstractmethod
     def get_area(self):
         """Get the area of this shape."""

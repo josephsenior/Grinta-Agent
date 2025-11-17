@@ -32,8 +32,8 @@ def split_by_regex(items: list[str], regex: re.Pattern[str]) -> list[list[str]]:
         splits.append(items)
         return splits
     splits.append(items[: indices[0]])
-    splits.extend(items[indices[i]: indices[i + 1]] for i in range(len(indices) - 1))
-    splits.append(items[indices[-1]:])
+    splits.extend(items[indices[i] : indices[i + 1]] for i in range(len(indices) - 1))
+    splits.append(items[indices[-1] :])
     return splits
 
 

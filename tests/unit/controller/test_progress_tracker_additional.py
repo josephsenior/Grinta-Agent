@@ -13,7 +13,6 @@ from forge.events.observation import CmdOutputObservation
 
 def build_state(iteration: int, history: list) -> SimpleNamespace:
     """Create a lightweight state object for tracker tests."""
-
     return SimpleNamespace(
         iteration_flag=SimpleNamespace(current_value=iteration),
         history=history,
@@ -22,13 +21,14 @@ def build_state(iteration: int, history: list) -> SimpleNamespace:
 
 def test_progress_tracker_tracks_metrics():
     """ProgressTracker.update should compute metrics and record milestones."""
-
     tracker = ProgressTracker(max_iterations=10)
 
     history = [
         FileEditAction(path="main.py"),
         CmdRunAction(command="pytest -q"),
-        CmdOutputObservation(content="ok", command="pytest -q", metadata={"exit_code": 0}),
+        CmdOutputObservation(
+            content="ok", command="pytest -q", metadata={"exit_code": 0}
+        ),
     ]
     state = build_state(iteration=3, history=history)
 
@@ -44,7 +44,6 @@ def test_progress_tracker_tracks_metrics():
 
 def test_progress_tracker_detects_stagnation():
     """If no new milestones are reached, stagnation iterations should grow."""
-
     tracker = ProgressTracker(max_iterations=5)
 
     # First update establishes progress
@@ -52,7 +51,9 @@ def test_progress_tracker_detects_stagnation():
         iteration=1,
         history=[
             CmdRunAction(command="pytest"),
-            CmdOutputObservation(content="ok", command="pytest", metadata={"exit_code": 0}),
+            CmdOutputObservation(
+                content="ok", command="pytest", metadata={"exit_code": 0}
+            ),
         ],
     )
     tracker.update(state_progress)
@@ -65,11 +66,12 @@ def test_progress_tracker_detects_stagnation():
 
 def test_progress_tracker_estimate_completion_when_velocity_positive():
     """Estimated completion time should be populated when velocity is non-zero."""
-
     tracker = ProgressTracker(max_iterations=100)
     history = [
         CmdRunAction(command="echo hi"),
-        CmdOutputObservation(content="done", command="echo hi", metadata={"exit_code": 0}),
+        CmdOutputObservation(
+            content="done", command="echo hi", metadata={"exit_code": 0}
+        ),
     ]
     state = build_state(iteration=20, history=history)
     metrics = tracker.update(state)
@@ -82,10 +84,8 @@ def test_progress_tracker_estimate_completion_when_velocity_positive():
 
 def test_progress_tracker_handles_no_actions():
     """Tracker should handle empty history without crashing."""
-
     tracker = ProgressTracker(max_iterations=5)
     state = build_state(iteration=0, history=[])
     metrics = tracker.update(state)
     assert metrics.completion_percentage >= 0
     assert metrics.milestones_reached == []
-

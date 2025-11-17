@@ -21,7 +21,9 @@ def test_reranker_handles_missing_dependency(monkeypatch):
     def failing_import(*args, **kwargs):
         raise ImportError("fail")
 
-    monkeypatch.setattr("forge.memory.enhanced_vector_store.CrossEncoder", failing_import, raising=False)
+    monkeypatch.setattr(
+        "forge.memory.enhanced_vector_store.CrossEncoder", failing_import, raising=False
+    )
     results = reranker.rerank("query", [{"excerpt": "text"}], top_k=1)
     assert results == [{"excerpt": "text"}]
 
@@ -33,8 +35,17 @@ def test_enhanced_vector_store_search_with_cache(monkeypatch):
         def __init__(self, *args, **kwargs):
             self.records = []
 
-        def add(self, step_id, role, artifact_hash, rationale, content_text, metadata=None):
-            self.records.append({"step_id": step_id, "role": role, "excerpt": content_text, **(metadata or {})})
+        def add(
+            self, step_id, role, artifact_hash, rationale, content_text, metadata=None
+        ):
+            self.records.append(
+                {
+                    "step_id": step_id,
+                    "role": role,
+                    "excerpt": content_text,
+                    **(metadata or {}),
+                }
+            )
 
         def search(self, query, k, filter_metadata=None):
             return self.records[:k]
@@ -44,10 +55,21 @@ def test_enhanced_vector_store_search_with_cache(monkeypatch):
 
     import forge.memory.enhanced_vector_store as evs
 
-    monkeypatch.setattr("forge.memory.cloud_vector_store.AdaptiveVectorStore", lambda *args, **kwargs: DummyBackend(), raising=False)
-    monkeypatch.setattr(evs, "ReRanker", lambda *args, **kwargs: SimpleNamespace(enabled=False), raising=False)
+    monkeypatch.setattr(
+        "forge.memory.cloud_vector_store.AdaptiveVectorStore",
+        lambda *args, **kwargs: DummyBackend(),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        evs,
+        "ReRanker",
+        lambda *args, **kwargs: SimpleNamespace(enabled=False),
+        raising=False,
+    )
 
-    store = EnhancedVectorStore(collection_name="test", enable_cache=True, enable_reranking=False)
+    store = EnhancedVectorStore(
+        collection_name="test", enable_cache=True, enable_reranking=False
+    )
     store.add("1", "user", None, None, "hello world", metadata={"role": "user"})
     first = store.search("hello", k=1)
     assert first and first[0]["step_id"] == "1"
@@ -68,8 +90,17 @@ def test_enhanced_vector_store_stats(monkeypatch):
 
     import forge.memory.enhanced_vector_store as evs
 
-    monkeypatch.setattr("forge.memory.cloud_vector_store.AdaptiveVectorStore", lambda *a, **k: backend, raising=False)
-    monkeypatch.setattr(evs, "ReRanker", lambda *args, **kwargs: SimpleNamespace(enabled=True, model_name="stub"), raising=False)
+    monkeypatch.setattr(
+        "forge.memory.cloud_vector_store.AdaptiveVectorStore",
+        lambda *a, **k: backend,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        evs,
+        "ReRanker",
+        lambda *args, **kwargs: SimpleNamespace(enabled=True, model_name="stub"),
+        raising=False,
+    )
 
     store = EnhancedVectorStore(enable_cache=True, enable_reranking=True)
     stats = store.stats()
@@ -96,7 +127,9 @@ def test_reranker_handles_generic_exception(monkeypatch):
     from forge.memory.enhanced_vector_store import ReRanker
 
     reranker = ReRanker()
-    reranker._model = SimpleNamespace(predict=lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("boom")))
+    reranker._model = SimpleNamespace(
+        predict=lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("boom"))
+    )
     reranker.enabled = True
     results = reranker.rerank("query", [{"excerpt": "a"}], top_k=1)
     assert results == [{"excerpt": "a"}]
@@ -127,8 +160,17 @@ def test_enhanced_vector_store_search_no_cache(monkeypatch):
 
     import forge.memory.enhanced_vector_store as evs
 
-    monkeypatch.setattr("forge.memory.cloud_vector_store.AdaptiveVectorStore", lambda *a, **k: backend, raising=False)
-    monkeypatch.setattr(evs, "ReRanker", lambda *args, **kwargs: SimpleNamespace(enabled=False), raising=False)
+    monkeypatch.setattr(
+        "forge.memory.cloud_vector_store.AdaptiveVectorStore",
+        lambda *a, **k: backend,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        evs,
+        "ReRanker",
+        lambda *args, **kwargs: SimpleNamespace(enabled=False),
+        raising=False,
+    )
 
     store = EnhancedVectorStore(enable_cache=False, enable_reranking=False)
     assert store.search("query") == []
@@ -150,7 +192,10 @@ def test_vector_memory_store_wrapper(monkeypatch):
         def stats(self):
             return {"backend": "stub"}
 
-    monkeypatch.setattr("forge.memory.enhanced_vector_store.EnhancedVectorStore", lambda *a, **k: StubStore())
+    monkeypatch.setattr(
+        "forge.memory.enhanced_vector_store.EnhancedVectorStore",
+        lambda *a, **k: StubStore(),
+    )
 
     wrapper = VectorMemoryStore()
     wrapper.add("1", "user", None, "why", "content")

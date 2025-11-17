@@ -148,7 +148,9 @@ async def test_request_tracing_warns_on_slow_request(monkeypatch):
 
 def test_request_id_filter_injects_id():
     _request_id_ctx_var.set("req-1")
-    record = logging.LogRecord("name", logging.INFO, __file__, 1, "msg", args=(), exc_info=None)
+    record = logging.LogRecord(
+        "name", logging.INFO, __file__, 1, "msg", args=(), exc_info=None
+    )
     log_filter = RequestIDFilter()
     assert log_filter.filter(record)
     assert record.request_id == "req-1"
@@ -157,7 +159,9 @@ def test_request_id_filter_injects_id():
 
 def test_enhanced_json_formatter_adds_fields():
     formatter = EnhancedJSONFormatter()
-    record = logging.LogRecord("name", logging.INFO, "file.py", 10, "test", args=(), exc_info=None)
+    record = logging.LogRecord(
+        "name", logging.INFO, "file.py", 10, "test", args=(), exc_info=None
+    )
     record.request_id = "req-2"
     log_record = {}
     formatter.add_fields(log_record, record, {})

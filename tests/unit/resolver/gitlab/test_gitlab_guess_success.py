@@ -5,7 +5,10 @@ from forge.events.action.message import MessageAction
 from forge.llm import LLM
 from forge.resolver.interfaces.gitlab import GitlabIssueHandler, GitlabPRHandler
 from forge.resolver.interfaces.issue import Issue
-from forge.resolver.interfaces.issue_definitions import ServiceContextIssue, ServiceContextPR
+from forge.resolver.interfaces.issue_definitions import (
+    ServiceContextIssue,
+    ServiceContextPR,
+)
 
 
 def test_guess_success_multiline_explanation():
@@ -29,7 +32,9 @@ def test_guess_success_multiline_explanation():
         )
     ]
     with patch.object(LLM, "completion", return_value=mock_response) as mock_completion:
-        handler = ServiceContextIssue(GitlabIssueHandler("test", "test", "test"), llm_config)
+        handler = ServiceContextIssue(
+            GitlabIssueHandler("test", "test", "test"), llm_config
+        )
         success, _, explanation = handler.guess_success(issue, history)
         assert success is True
         assert "The PR successfully addressed the issue by:" in explanation
@@ -75,7 +80,9 @@ def test_pr_handler_guess_success_with_thread_comments():
 
 def test_pr_handler_guess_success_only_review_comments():
     llm_config = LLMConfig(model="test", api_key="test")
-    handler = ServiceContextPR(GitlabPRHandler("test-owner", "test-repo", "test-token"), llm_config)
+    handler = ServiceContextPR(
+        GitlabPRHandler("test-owner", "test-repo", "test-token"), llm_config
+    )
     issue = Issue(
         owner="test-owner",
         repo="test-repo",
@@ -102,7 +109,9 @@ def test_pr_handler_guess_success_only_review_comments():
         success, success_list, explanation = handler.guess_success(issue, history)
         assert success is True
         assert success_list == [True]
-        assert '["The changes successfully address the review comments."]' in explanation
+        assert (
+            '["The changes successfully address the review comments."]' in explanation
+        )
 
 
 def test_pr_handler_guess_success_no_comments():

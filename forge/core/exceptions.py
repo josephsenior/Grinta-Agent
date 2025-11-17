@@ -133,7 +133,9 @@ class LLMResponseError(Exception):
 
     """
 
-    def __init__(self, message: str = "Failed to retrieve action from LLM response") -> None:
+    def __init__(
+        self, message: str = "Failed to retrieve action from LLM response"
+    ) -> None:
         """Initialize the error with information about the extraction failure."""
         super().__init__(message)
 
@@ -259,7 +261,9 @@ class BrowserInitException(Exception):
 
     """
 
-    def __init__(self, message: str = "Failed to initialize browser environment") -> None:
+    def __init__(
+        self, message: str = "Failed to initialize browser environment"
+    ) -> None:
         """Initialize the error with details about the initialization failure."""
         super().__init__(message)
 

@@ -8,7 +8,7 @@ import shutil
 import pytest
 
 from forge.controller.checkpoint_manager import CheckpointManager
-from forge.core.schema import AgentState
+from forge.core.schemas import AgentState
 
 
 class _DummyFlag:
@@ -17,7 +17,9 @@ class _DummyFlag:
 
 
 class _DummyState:
-    def __init__(self, iteration: int, agent_state: AgentState, last_error: str = "") -> None:
+    def __init__(
+        self, iteration: int, agent_state: AgentState, last_error: str = ""
+    ) -> None:
         self.iteration_flag = _DummyFlag(iteration)
         self.agent_state = agent_state
         self.last_error = last_error
@@ -160,4 +162,3 @@ async def test_delete_checkpoint_error_is_handled(monkeypatch, tmp_path):
 
     monkeypatch.setattr(shutil, "rmtree", failing_rmtree)
     await manager._delete_checkpoint(checkpoint)
-

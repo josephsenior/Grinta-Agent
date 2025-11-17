@@ -41,8 +41,14 @@ def test_get_openrouter_models_success(monkeypatch):
         def json(self):
             return {
                 "data": [
-                    {"id": "openrouter/free-model", "pricing": {"prompt": "0", "completion": "0"}},
-                    {"id": "openrouter/paid-model", "pricing": {"prompt": "1", "completion": "1"}},
+                    {
+                        "id": "openrouter/free-model",
+                        "pricing": {"prompt": "0", "completion": "0"},
+                    },
+                    {
+                        "id": "openrouter/paid-model",
+                        "pricing": {"prompt": "1", "completion": "1"},
+                    },
                 ]
             }
 
@@ -52,7 +58,11 @@ def test_get_openrouter_models_success(monkeypatch):
 
 
 def test_get_openrouter_models_fallback(monkeypatch):
-    monkeypatch.setattr(llm.httpx, "get", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("fail")))
+    monkeypatch.setattr(
+        llm.httpx,
+        "get",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("fail")),
+    )
     models = llm._get_openrouter_models()
     assert "openrouter/meta-llama/llama-3.3-70b-instruct:free" in models
 
@@ -67,16 +77,27 @@ def test_get_litellm_models(monkeypatch):
 
 def test_get_bedrock_models(monkeypatch):
     config = DummyForgeConfig()
-    monkeypatch.setattr(llm.bedrock, "list_foundation_models", lambda *args, **kwargs: ["model-a"])
+    monkeypatch.setattr(
+        llm.bedrock, "list_foundation_models", lambda *args, **kwargs: ["model-a"]
+    )
     assert llm._get_bedrock_models(config) == ["model-a"]
 
-    config._llm_config = DummyLLMConfig(model="none", aws_region_name=None, aws_access_key_id=None, aws_secret_access_key=None)
+    config._llm_config = DummyLLMConfig(
+        model="none",
+        aws_region_name=None,
+        aws_access_key_id=None,
+        aws_secret_access_key=None,
+    )
     assert llm._get_bedrock_models(config) == []
 
 
 def test_get_ollama_models(monkeypatch):
     config = DummyForgeConfig()
-    config.llms = {"default": DummyLLMConfig(model="ollama/llama", ollama_base_url="http://localhost:11434")}
+    config.llms = {
+        "default": DummyLLMConfig(
+            model="ollama/llama", ollama_base_url="http://localhost:11434"
+        )
+    }
 
     class FakeResponse:
         def json(self):
@@ -85,14 +106,20 @@ def test_get_ollama_models(monkeypatch):
     monkeypatch.setattr(llm.httpx, "get", lambda *args, **kwargs: FakeResponse())
     assert llm._get_ollama_models(config) == ["ollama/llama2"]
 
-    monkeypatch.setattr(llm.httpx, "get", lambda *args, **kwargs: (_ for _ in ()).throw(llm.httpx.HTTPError("fail")))
+    monkeypatch.setattr(
+        llm.httpx,
+        "get",
+        lambda *args, **kwargs: (_ for _ in ()).throw(llm.httpx.HTTPError("fail")),
+    )
     assert llm._get_ollama_models(config) == []
 
 
 def test_openhands_models_and_deduplicate() -> None:
     models = llm._get_openhands_proprietary_models()
     assert "Openhands/claude-sonnet-4-20250514" in models
-    deduped = llm._deduplicate_and_prioritize(["openrouter/model", "gpt-4", "openrouter/model"])
+    deduped = llm._deduplicate_and_prioritize(
+        ["openrouter/model", "gpt-4", "openrouter/model"]
+    )
     assert deduped[0].startswith("openrouter/")
     assert "gpt-4" in deduped
 
@@ -103,8 +130,9 @@ def test_get_supported_llm_models(monkeypatch):
     monkeypatch.setattr(llm, "_get_openrouter_models", lambda: ["openrouter/free"])
     monkeypatch.setattr(llm, "_get_bedrock_models", lambda cfg: ["bedrock/model"])
     monkeypatch.setattr(llm, "_get_ollama_models", lambda cfg: ["ollama/model"])
-    monkeypatch.setattr(llm, "_get_openhands_proprietary_models", lambda: ["Openhands/custom"])
+    monkeypatch.setattr(
+        llm, "_get_openhands_proprietary_models", lambda: ["Openhands/custom"]
+    )
     models = llm.get_supported_llm_models(config)
     assert models[0] == "openrouter/free"
     assert {"bedrock/model", "ollama/model", "Openhands/custom"} <= set(models)
-

@@ -12,7 +12,7 @@ from typing import Any
 
 @functools.lru_cache(maxsize=128)
 def load_file(filepath: str) -> str:
-    with open(filepath, "r", encoding='utf-8') as f:
+    with open(filepath, "r", encoding="utf-8") as f:
         content = f.read()
     return content
 
@@ -20,7 +20,9 @@ def load_file(filepath: str) -> str:
 "Check the correctness of a program by running a test suite.\n\nModified from: https://github.com/openai/human-eval/blob/master/human_eval/execution.py\n"
 
 
-def unsafe_execute(result: Any, solution_code: str, test_code: str, timeout: float = 10):
+def unsafe_execute(
+    result: Any, solution_code: str, test_code: str, timeout: float = 10
+):
     with create_tempdir():
         import os
         import shutil
@@ -46,7 +48,10 @@ def unsafe_execute(result: Any, solution_code: str, test_code: str, timeout: flo
 
 
 def check_correctness(
-    solution_code: str, test_code: str, timeout: float = 10, completion_id: int | None = None
+    solution_code: str,
+    test_code: str,
+    timeout: float = 10,
+    completion_id: int | None = None,
 ) -> dict:
     """Evaluates the functional correctness of a completion by running the test.
 
@@ -57,19 +62,22 @@ def check_correctness(
     """
     manager = multiprocessing.Manager()
     result = manager.list()
-    p = multiprocessing.Process(target=unsafe_execute, args=(result, solution_code, test_code, timeout))
+    p = multiprocessing.Process(
+        target=unsafe_execute, args=(result, solution_code, test_code, timeout)
+    )
     p.start()
     p.join(timeout=timeout + 1)
     if p.is_alive():
         p.kill()
     if not result:
         result.append("timed out")
-    return dict(success=result[0] == "passed", result=result[0], completion_id=completion_id)
+    return dict(
+        success=result[0] == "passed", result=result[0], completion_id=completion_id
+    )
 
 
 @contextlib.contextmanager
 def time_limit(seconds: float):
-
     def signal_handler(signum, frame):
         raise TimeoutException("Timed out!")
 
@@ -153,10 +161,16 @@ def reliability_guard(maximum_memory_bytes: int | None = None):
     if maximum_memory_bytes is not None:
         import resource
 
-        resource.setrlimit(resource.RLIMIT_AS, (maximum_memory_bytes, maximum_memory_bytes))
-        resource.setrlimit(resource.RLIMIT_DATA, (maximum_memory_bytes, maximum_memory_bytes))
+        resource.setrlimit(
+            resource.RLIMIT_AS, (maximum_memory_bytes, maximum_memory_bytes)
+        )
+        resource.setrlimit(
+            resource.RLIMIT_DATA, (maximum_memory_bytes, maximum_memory_bytes)
+        )
         if platform.uname().system != "Darwin":
-            resource.setrlimit(resource.RLIMIT_STACK, (maximum_memory_bytes, maximum_memory_bytes))
+            resource.setrlimit(
+                resource.RLIMIT_STACK, (maximum_memory_bytes, maximum_memory_bytes)
+            )
     faulthandler.disable()
     import builtins
 

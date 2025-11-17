@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, Any
-from types import MappingProxyType
+from typing import TYPE_CHECKING, Annotated, Any, Mapping
 
 from fastapi import APIRouter, Depends, status, FastAPI
 from fastapi.responses import JSONResponse
@@ -66,6 +65,7 @@ app = _SecretsAppProxy(router)
 # 🚀 PERFORMANCE FIX: Cache migration status to avoid repeated writes
 _migration_done_cache: dict[str, bool] = {}
 
+
 async def invalidate_legacy_secrets_store(
     settings: Settings,
     settings_store: SettingsStore,
@@ -75,15 +75,17 @@ async def invalidate_legacy_secrets_store(
 
     This function moves the values from Settings to UserSecrets, and deletes the values in Settings.
     While this function in called multiple times, the migration only ever happens once.
-    
+
     🚀 PERFORMANCE FIX: Added caching to prevent repeated database writes on every request.
     """
     # 🚀 FIX: Check cache first to avoid repeated migrations
-    user_id = str(getattr(settings, 'user_id', 'default'))
+    user_id = str(getattr(settings, "user_id", "default"))
     if _migration_done_cache.get(user_id, False):
         return None  # Migration already done for this user
-    
-    provider_tokens_map = getattr(getattr(settings, "secrets_store", None), "provider_tokens", None)
+
+    provider_tokens_map = getattr(
+        getattr(settings, "secrets_store", None), "provider_tokens", None
+    )
     if provider_tokens_map:
         user_secrets = UserSecrets(
             provider_tokens=provider_tokens_map,
@@ -94,12 +96,12 @@ async def invalidate_legacy_secrets_store(
             update={"secrets_store": UserSecrets()},
         )
         await settings_store.store(invalidated_secrets_settings)
-        
+
         # 🚀 FIX: Mark migration as done for this user
         _migration_done_cache[user_id] = True
-        
+
         return user_secrets
-    
+
     # 🚀 FIX: Even if no tokens, mark as checked to avoid repeated calls
     _migration_done_cache[user_id] = True
     return None
@@ -110,19 +112,100 @@ def process_token_validation_result(
     token_type: ProviderType,
 ) -> str:
     """Validate provider token type matches expected type.
-    
+
     Args:
         confirmed_token_type: Validated token type from provider
         token_type: Expected token type
-        
+
     Returns:
         Error message if validation fails, empty string otherwise
 
     """
-    expected = token_type.value if isinstance(token_type, ProviderType) else str(token_type)
+    expected = (
+        token_type.value if isinstance(token_type, ProviderType) else str(token_type)
+    )
     if not confirmed_token_type or confirmed_token_type != token_type:
         return f"Invalid token. Please make sure it is a valid {expected} token."
     return ""
+
+
+def _coerce_provider_type(token_type_key: str | ProviderType) -> ProviderType:
+    return (
+        token_type_key
+        if isinstance(token_type_key, ProviderType)
+        else ProviderType(token_type_key)
+    )
+
+
+def _provider_key(provider_type: ProviderType) -> str:
+    return provider_type.value
+
+
+async def _validate_incoming_token(
+    token_value: ProviderToken, provider_type: ProviderType
+) -> str:
+    if not token_value.token:
+        return ""
+    confirmed_token_type = await validate_provider_token(
+        token_value.token,
+        token_value.host,
+    )
+    return process_token_validation_result(confirmed_token_type, provider_type)
+
+
+async def _validate_existing_host_conflict(
+    existing_token: ProviderToken | None,
+    incoming_token: ProviderToken,
+    provider_type: ProviderType,
+) -> str:
+    if (
+        existing_token is None
+        or existing_token.host == incoming_token.host
+        or not existing_token.token
+    ):
+        return ""
+    confirmed_token_type = await validate_provider_token(
+        existing_token.token,
+        incoming_token.host,
+    )
+    return process_token_validation_result(confirmed_token_type, provider_type)
+
+
+def _incoming_token_provided(token_value: ProviderToken) -> bool:
+    if not token_value.token:
+        return False
+    getter = getattr(token_value.token, "get_secret_value", None)
+    secret_value = (
+        getter() if callable(getter) else token_value.token  # type: ignore[arg-type]
+    )
+    return bool(secret_value and str(secret_value).strip())
+
+
+def _resolved_provider_token(
+    incoming_token: ProviderToken,
+    existing_token: ProviderToken | None,
+) -> ProviderToken:
+    if existing_token and not _incoming_token_provided(incoming_token):
+        return existing_token
+    new_host = incoming_token.host or (existing_token.host if existing_token else None)
+    return incoming_token.model_copy(update={"host": new_host})
+
+
+def _merge_provider_tokens(
+    incoming_tokens: dict[str, ProviderToken] | None,
+    existing_tokens: Mapping[ProviderType, ProviderToken] | None,
+) -> dict[ProviderType, ProviderToken]:
+    if not incoming_tokens:
+        return {}
+    existing = dict(existing_tokens or {})
+    merged: dict[ProviderType, ProviderToken] = {}
+    for provider_key, token_value in incoming_tokens.items():
+        provider_type = _coerce_provider_type(provider_key)
+        merged[provider_type] = _resolved_provider_token(
+            token_value,
+            existing.get(provider_type),
+        )
+    return merged
 
 
 async def check_provider_tokens(
@@ -130,104 +213,88 @@ async def check_provider_tokens(
     existing_provider_tokens: PROVIDER_TOKEN_TYPE | None,
 ) -> tuple[str, dict[str, ProviderToken]]:
     """Check and validate incoming provider tokens.
-    
+
     Validates tokens against provider APIs and checks host compatibility.
-    
+
     Args:
         incoming_provider_tokens: New provider tokens to validate
         existing_provider_tokens: Currently stored provider tokens
-        
+
     Returns:
         Error message if validation fails, empty string if all valid
 
     """
-    msg = ""
     normalized_tokens: dict[str, ProviderToken] = {}
-    if incoming_provider_tokens.provider_tokens:
-        for token_type_key, token_value in incoming_provider_tokens.provider_tokens.items():
-            provider_type = (
-                ProviderType(token_type_key) if isinstance(token_type_key, str) else token_type_key
-            )
-            key_str = provider_type.value if isinstance(provider_type, ProviderType) else str(provider_type)
-            normalized_tokens[key_str] = token_value
-            if token_value.token:
-                confirmed_token_type = await validate_provider_token(
-                    token_value.token,
-                    token_value.host,
-                )
-                msg = process_token_validation_result(confirmed_token_type, provider_type)
-            existing_token = existing_provider_tokens.get(provider_type, None) if existing_provider_tokens else None
-            if existing_token and existing_token.host != token_value.host and existing_token.token:
-                confirmed_token_type = await validate_provider_token(
-                    existing_token.token,
-                    token_value.host,
-                )
-                if not confirmed_token_type or confirmed_token_type != provider_type:
-                    msg = process_token_validation_result(
-                        confirmed_token_type,
-                        provider_type,
-                    )
-    return msg, normalized_tokens
+    incoming_tokens = incoming_provider_tokens.provider_tokens or {}
+    existing_tokens = existing_provider_tokens or {}
+
+    for token_type_key, token_value in incoming_tokens.items():
+        provider_type = _coerce_provider_type(token_type_key)
+        normalized_tokens[_provider_key(provider_type)] = token_value
+
+        msg = await _validate_incoming_token(token_value, provider_type)
+        if msg:
+            return msg, normalized_tokens
+
+        existing_token = existing_tokens.get(provider_type)
+        msg = await _validate_existing_host_conflict(
+            existing_token,
+            token_value,
+            provider_type,
+        )
+        if msg:
+            return msg, normalized_tokens
+
+    return "", normalized_tokens
 
 
 @router.post("/add-git-providers")
 async def store_provider_tokens(
     provider_info: POSTProviderModel,
     secrets_store: Annotated[Any, Depends(get_secrets_store)],
-    provider_tokens: Annotated[PROVIDER_TOKEN_TYPE | None, Depends(get_provider_tokens)],
+    provider_tokens: Annotated[
+        PROVIDER_TOKEN_TYPE | None, Depends(get_provider_tokens)
+    ],
 ) -> JSONResponse:
     """Store or update git provider authentication tokens.
-    
+
     Validates and stores provider tokens (GitHub, GitLab, Bitbucket, etc.).
-    
+
     Args:
         provider_info: Provider information and tokens to store
         secrets_store: Secrets storage dependency
         provider_tokens: Existing provider tokens
-        
+
     Returns:
         JSON response with success/error message
 
     """
-    provider_err_msg, normalized_input_tokens = await check_provider_tokens(provider_info, provider_tokens)
+    provider_err_msg, normalized_input_tokens = await check_provider_tokens(
+        provider_info, provider_tokens
+    )
     if provider_err_msg:
         # nosec B628 - Not logging credentials, just error message
-        logger.info(
-            "Returning 401 Unauthorized - Provider token error: %s",
-            provider_err_msg,
-        )
+        logger.info("Returning 401 Unauthorized - Provider token error")
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"error": provider_err_msg},
         )
     try:
         user_secrets = await secrets_store.load() or UserSecrets()
-        normalized_tokens: dict[ProviderType, ProviderToken] = {}
-        existing_tokens = user_secrets.provider_tokens or MappingProxyType({})
-        incoming_tokens = normalized_input_tokens or {}
-        for provider_key, token_value in incoming_tokens.items():
-            provider_type = ProviderType(provider_key) if isinstance(provider_key, str) else provider_key
-            incoming = token_value
-            existing_token = existing_tokens.get(provider_type)
-            incoming_token_value = (
-                incoming.token.get_secret_value() if incoming.token else ""
-            )
-            new_host = token_value.host or (existing_token.host if existing_token else None)
-            if existing_token and (incoming_token_value is None or not incoming_token_value.strip()):
-                incoming = existing_token
-            normalized_tokens[provider_type] = incoming.model_copy(update={"host": new_host})
-
-        updated_secrets = user_secrets.model_copy(update={"provider_tokens": normalized_tokens})
+        merged_tokens = _merge_provider_tokens(
+            normalized_input_tokens,
+            user_secrets.provider_tokens,
+        )
+        updated_secrets = user_secrets.model_copy(
+            update={"provider_tokens": merged_tokens}
+        )
         await secrets_store.store(updated_secrets)
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={"message": "Git providers stored"},
         )
-    except Exception as e:
-        logger.warning(
-            "Something went wrong storing git providers: %s",
-            e,
-        )  # nosec B608 - Generic error
+    except Exception:
+        logger.warning("Something went wrong storing git providers")  # nosec B608
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"error": "Something went wrong storing git providers"},
@@ -239,10 +306,10 @@ async def unset_provider_tokens(
     secrets_store: Annotated[Any, Depends(get_secrets_store)],
 ) -> JSONResponse:
     """Remove all git provider authentication tokens.
-    
+
     Args:
         secrets_store: Secrets storage dependency
-        
+
     Returns:
         JSON response with success/error message
 
@@ -256,11 +323,8 @@ async def unset_provider_tokens(
             status_code=status.HTTP_200_OK,
             content={"message": "Unset Git provider tokens"},
         )
-    except Exception as e:
-        logger.warning(
-            "Something went wrong unsetting tokens: %s",
-            e,
-        )  # nosec B608 - Generic error, no credentials
+    except Exception:
+        logger.warning("Something went wrong unsetting tokens")  # nosec B608
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"error": "Something went wrong unsetting tokens"},
@@ -272,10 +336,10 @@ async def load_custom_secrets_names(
     user_secrets: Annotated[UserSecrets | None, Depends(get_user_secrets)],
 ) -> GETCustomSecrets | JSONResponse:
     """Get list of custom secret names and descriptions (without values).
-    
+
     Args:
         user_secrets: User secrets dependency
-        
+
     Returns:
         List of custom secrets metadata or error response
 
@@ -292,11 +356,8 @@ async def load_custom_secrets_names(
                 )
                 custom_secrets.append(custom_secret)
         return GETCustomSecrets(custom_secrets=custom_secrets)
-    except Exception as e:
-        logger.warning(
-            "Failed to load secret names: %s",
-            e,
-        )  # nosec B608 - Generic error, no credentials
+    except Exception:
+        logger.warning("Failed to load secret names")  # nosec B608
         logger.info(
             "Returning 401 Unauthorized - Failed to get secret names",
         )  # nosec B608 - Generic message
@@ -312,18 +373,20 @@ async def create_custom_secret(
     secrets_store: Annotated[Any, Depends(get_secrets_store)],
 ) -> JSONResponse:
     """Create a new custom secret.
-    
+
     Args:
         incoming_secret: Secret data (name, value, description)
         secrets_store: Secrets storage dependency
-        
+
     Returns:
         JSON response with success/error message
 
     """
     try:
         existing_secrets = await secrets_store.load()
-        custom_secrets = dict(existing_secrets.custom_secrets) if existing_secrets else {}
+        custom_secrets = (
+            dict(existing_secrets.custom_secrets) if existing_secrets else {}
+        )
         secret_name = incoming_secret.name
         secret_value = incoming_secret.value
         secret_description = incoming_secret.description
@@ -338,18 +401,17 @@ async def create_custom_secret(
         )
         updated_user_secrets = UserSecrets(
             custom_secrets=custom_secrets,
-            provider_tokens=(existing_secrets.provider_tokens if existing_secrets else {}),
+            provider_tokens=(
+                existing_secrets.provider_tokens if existing_secrets else {}
+            ),
         )
         await secrets_store.store(updated_user_secrets)
         return JSONResponse(
             status_code=status.HTTP_201_CREATED,
             content={"message": "Secret created successfully"},
         )
-    except Exception as e:
-        logger.warning(
-            "Something went wrong creating secret: %s",
-            e,
-        )  # nosec B608 - Generic error
+    except Exception:
+        logger.warning("Something went wrong creating secret")  # nosec B608
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"error": "Something went wrong creating secret"},
@@ -363,14 +425,14 @@ async def update_custom_secret(
     secrets_store: Annotated[Any, Depends(get_secrets_store)],
 ) -> JSONResponse:
     """Update an existing custom secret's name and/or description.
-    
+
     Secret value is preserved. Allows renaming if new name doesn't conflict.
-    
+
     Args:
         secret_id: ID of secret to update
         incoming_secret: Updated name and description
         secrets_store: Secrets storage dependency
-        
+
     Returns:
         JSON response with success/error message
 
@@ -405,11 +467,8 @@ async def update_custom_secret(
             status_code=status.HTTP_200_OK,
             content={"message": "Secret updated successfully"},
         )
-    except Exception as e:
-        logger.warning(
-            "Something went wrong updating secret: %s",
-            e,
-        )  # nosec B608 - Generic error
+    except Exception:
+        logger.warning("Something went wrong updating secret")  # nosec B608
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"error": "Something went wrong updating secret"},
@@ -422,11 +481,11 @@ async def delete_custom_secret(
     secrets_store: Annotated[Any, Depends(get_secrets_store)],
 ) -> JSONResponse:
     """Delete a custom secret by ID.
-    
+
     Args:
         secret_id: ID of secret to delete
         secrets_store: Secrets storage dependency
-        
+
     Returns:
         JSON response with success/error message
 
@@ -450,11 +509,8 @@ async def delete_custom_secret(
             status_code=status.HTTP_200_OK,
             content={"message": "Secret deleted successfully"},
         )
-    except Exception as e:
-        logger.warning(
-            "Something went wrong deleting secret: %s",
-            e,
-        )  # nosec B608 - Generic error
+    except Exception:
+        logger.warning("Something went wrong deleting secret")  # nosec B608
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"error": "Something went wrong deleting secret"},

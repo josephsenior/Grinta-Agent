@@ -21,7 +21,8 @@ from forge.integrations.service_types import ProviderType
 from forge.server.services.conversation_service import (
     setup_init_conversation_settings,
 )
-from forge.server.shared import conversation_manager, sio
+from forge.server.shared import conversation_manager, get_conversation_manager, sio
+from forge.server.middleware.socketio_connection_manager import get_connection_manager
 from forge.storage.conversation.conversation_validator import (
     create_conversation_validator,
 )
@@ -31,8 +32,18 @@ from forge.storage.conversation.conversation_validator import (
 
 def debug_show_events() -> None:
     """Debug function to display all registered Socket.IO events."""
-    for event_name in ["connect", "disconnect", "oh_user_action", "oh_action", "test_event"]:
-        if hasattr(sio, "handlers") and "/" in sio.handlers and event_name in sio.handlers["/"]:
+    for event_name in [
+        "connect",
+        "disconnect",
+        "oh_user_action",
+        "oh_action",
+        "test_event",
+    ]:
+        if (
+            hasattr(sio, "handlers")
+            and "/" in sio.handlers
+            and event_name in sio.handlers["/"]
+        ):
             pass
         else:
             pass
@@ -48,7 +59,9 @@ def _parse_latest_event_id(query_params: dict) -> int:
     try:
         return int(latest_event_id_str)
     except ValueError:
-        logger.debug("Invalid latest_event_id value: %s, defaulting to -1", latest_event_id_str)
+        logger.debug(
+            "Invalid latest_event_id value: %s, defaulting to -1", latest_event_id_str
+        )
         return -1
 
 
@@ -62,7 +75,9 @@ def _parse_providers_set(query_params: dict) -> list[ProviderType]:
     return [ProviderType(p) for p in providers_list]
 
 
-def _validate_connection_params(conversation_id: str | None, query_params: dict) -> None:
+def _validate_connection_params(
+    conversation_id: str | None, query_params: dict
+) -> None:
     """Validate connection parameters."""
     if not conversation_id:
         logger.error("No conversation_id in query params")
@@ -74,74 +89,111 @@ def _validate_connection_params(conversation_id: str | None, query_params: dict)
 
 
 async def _replay_events(
-    async_store: AsyncEventStoreWrapper,
-    connection_id: str
+    async_store: AsyncEventStoreWrapper, connection_id: str
 ) -> AgentStateChangedObservation | None:
     """Replay events from store and return agent state if found.
-    
+
     Args:
         async_store: Event store wrapper
         connection_id: Connection ID to emit to
-        
+
     Returns:
         AgentStateChangedObservation if found, None otherwise
 
     """
     agent_state_changed = None
     event_count = 0
-    
+
     async for event in async_store:
         event_count += 1
         logger.debug("oh_event: %s", event.__class__.__name__)
-        
+
         if isinstance(event, (NullAction, NullObservation, RecallAction)):
             continue
-        
+
         if isinstance(event, AgentStateChangedObservation):
-            logger.info(f"DEBUG: Found AgentStateChangedObservation: {event.agent_state}")
+            logger.info(
+                f"DEBUG: Found AgentStateChangedObservation: {event.agent_state}"
+            )
             agent_state_changed = event
         else:
             await sio.emit("oh_event", event_to_dict(event), to=connection_id)
-    
+
     logger.info(f"DEBUG: Replayed {event_count} events")
     return agent_state_changed
+
+
+def _get_conversation_manager_instance():
+    """Get conversation manager instance, initializing if needed."""
+    manager = conversation_manager
+    if manager is None:  # type: ignore[unreachable]
+        try:
+            return get_conversation_manager()
+        except Exception:
+            return None
+    return manager
+
 
 async def _send_agent_state(
     agent_state_changed: AgentStateChangedObservation | None,
     conversation_id: str,
-    connection_id: str
+    connection_id: str,
 ) -> bool:
     """Send agent state to connection.
-    
+
     Args:
         agent_state_changed: Agent state observation if found
         conversation_id: Conversation ID
         connection_id: Connection ID
-        
+
     Returns:
         True if state was sent
 
     """
     if agent_state_changed:
-        logger.info(f"DEBUG: Found agent state in event stream: {agent_state_changed.agent_state}")
+        logger.info(
+            f"DEBUG: Found agent state in event stream: {agent_state_changed.agent_state}"
+        )
+        # Update connection activity
+        conn_manager = get_connection_manager()
+        conn_manager.update_activity(connection_id)
         await sio.emit("oh_event", event_to_dict(agent_state_changed), to=connection_id)
         return True
-    
+
+    manager = _get_conversation_manager_instance()
+    if manager is None:
+        logger.error("Conversation manager is not initialized")
+        return False
+
     try:
-        agent_loop_info_list = await conversation_manager.get_agent_loop_info(filter_to_sids={conversation_id})
+        agent_loop_info_list = await manager.get_agent_loop_info(
+            filter_to_sids={conversation_id}
+        )
         if agent_loop_info_list and len(agent_loop_info_list) > 0:
             agent_loop_info = agent_loop_info_list[0]
             if agent_loop_info.agent_state:
-                current_state_event = AgentStateChangedObservation("", agent_loop_info.agent_state, "Connection established")
-                logger.info(f"DEBUG: Sending current agent state {agent_loop_info.agent_state} to new connection {connection_id}")
-                await sio.emit("oh_event", event_to_dict(current_state_event), to=connection_id)
+                current_state_event = AgentStateChangedObservation(
+                    "", agent_loop_info.agent_state, "Connection established"
+                )
+                logger.info(
+                    f"DEBUG: Sending current agent state {agent_loop_info.agent_state} to new connection {connection_id}"
+                )
+                # Update connection activity
+                conn_manager = get_connection_manager()
+                conn_manager.update_activity(connection_id)
+                await sio.emit(
+                    "oh_event", event_to_dict(current_state_event), to=connection_id
+                )
                 return True
             else:
-                logger.warning(f"DEBUG: No agent state found in agent_loop_info for conversation {conversation_id}")
+                logger.warning(
+                    f"DEBUG: No agent state found in agent_loop_info for conversation {conversation_id}"
+                )
     except Exception as e:
         logger.error(f"Error getting agent state from conversation manager: {e}")
-    
+
     return False
+
 
 async def _replay_event_stream(
     event_store: EventStore,
@@ -150,24 +202,45 @@ async def _replay_event_stream(
     conversation_id: str,
 ) -> None:
     """Replay event stream to new connection."""
-    logger.info("🚨 *** REPLAY START: Replaying event stream for conversation %s with connection_id %s...", conversation_id, connection_id)
-    logger.info(f"DEBUG: Event store current ID: {event_store.cur_id}, latest_event_id: {latest_event_id}")
-    
+    logger.info(
+        "🚨 *** REPLAY START: Replaying event stream for conversation %s with connection_id %s...",
+        conversation_id,
+        connection_id,
+    )
+    logger.info(
+        f"DEBUG: Event store current ID: {event_store.cur_id}, latest_event_id: {latest_event_id}"
+    )
+
     async_store = AsyncEventStoreWrapper(event_store, latest_event_id + 1)
     agent_state_changed = await _replay_events(async_store, connection_id)
-    
-    agent_state_sent = await _send_agent_state(agent_state_changed, conversation_id, connection_id)
-    
+
+    agent_state_sent = await _send_agent_state(
+        agent_state_changed, conversation_id, connection_id
+    )
+
     # Fallback: If we still haven't sent an agent state, send a default one
     if not agent_state_sent:
-        logger.info(f"DEBUG: No agent state found, sending default AWAITING_USER_INPUT state to connection {connection_id}")
+        logger.info(
+            f"DEBUG: No agent state found, sending default AWAITING_USER_INPUT state to connection {connection_id}"
+        )
         try:
             # Use the already imported AgentStateChangedObservation from the top of the file
-            default_state_event = AgentStateChangedObservation("", "awaiting_user_input", "Default state on connection")
-            await sio.emit("oh_event", event_to_dict(default_state_event), to=connection_id)
-            logger.info(f"DEBUG: Sent default agent state to connection {connection_id}")
+            default_state_event = AgentStateChangedObservation(
+                "", "awaiting_user_input", "Default state on connection"
+            )
+            # Update connection activity
+            conn_manager = get_connection_manager()
+            conn_manager.update_activity(connection_id)
+            await sio.emit(
+                "oh_event", event_to_dict(default_state_event), to=connection_id
+            )
+            logger.info(
+                f"DEBUG: Sent default agent state to connection {connection_id}"
+            )
         except Exception as e:
-            logger.error(f"Failed to send default agent state to connection {connection_id}: {e}")
+            logger.error(
+                f"Failed to send default agent state to connection {connection_id}: {e}"
+            )
 
     logger.info("Finished replaying event stream for conversation %s", conversation_id)
 
@@ -175,20 +248,22 @@ async def _replay_event_stream(
 @sio.event
 async def connect(connection_id: str, environ: dict, *args) -> None:
     """Handle Socket.IO client connection.
-    
+
     Authenticates user, validates conversation access, replays events, and joins conversation.
-    
+
     Args:
         connection_id: Unique connection identifier
         environ: WSGI environment dictionary with request data
         *args: Additional arguments provided by Socket.IO for compatibility
-        
+
     Raises:
         ConnectionRefusedError: If authentication or validation fails
 
     """
     try:
-        logger.info("*** DEBUG: connect handler called with connection_id: %s", connection_id)
+        logger.info(
+            "*** DEBUG: connect handler called with connection_id: %s", connection_id
+        )
         logger.info("sio:connect: %s", connection_id)
         query_params = parse_qs(environ.get("QUERY_STRING", ""))
 
@@ -197,7 +272,11 @@ async def connect(connection_id: str, environ: dict, *args) -> None:
         conversation_id = query_params.get("conversation_id", [None])[0]
         providers_set = _parse_providers_set(query_params)
 
-        logger.info("Socket request for conversation %s with connection_id %s", conversation_id, connection_id)
+        logger.info(
+            "Socket request for conversation %s with connection_id %s",
+            conversation_id,
+            connection_id,
+        )
 
         # Validate connection
         _validate_connection_params(conversation_id, query_params)
@@ -206,23 +285,62 @@ async def connect(connection_id: str, environ: dict, *args) -> None:
         cookies_str = environ.get("HTTP_COOKIE", "")
         authorization_header = environ.get("HTTP_AUTHORIZATION")
         conversation_validator = create_conversation_validator()
-        user_id = await conversation_validator.validate(conversation_id, cookies_str, authorization_header)
-        logger.info("User %s is allowed to connect to conversation %s", user_id, conversation_id)
+        user_id = await conversation_validator.validate(
+            conversation_id, cookies_str, authorization_header
+        )
+        logger.info(
+            "User %s is allowed to connect to conversation %s", user_id, conversation_id
+        )
+
+        # Register connection with connection manager
+        conn_manager = get_connection_manager()
+        try:
+            conn_info = conn_manager.register_connection(
+                sid=connection_id,
+                user_id=user_id,
+                conversation_id=conversation_id,
+            )
+            logger.info(f"Connection registered: {connection_id}")
+        except ValueError as e:
+            logger.warning(f"Connection limit exceeded: {e}")
+            raise ConnectionRefusedError(str(e)) from e
+
+        # Deliver any queued messages
+        try:
+            delivered = await conn_manager.deliver_queued_messages(connection_id, sio)
+            if delivered > 0:
+                logger.info(f"Delivered {delivered} queued messages to {connection_id}")
+        except Exception as e:
+            logger.error(f"Error delivering queued messages: {e}")
 
         # Create event store
+        manager = _get_conversation_manager_instance()
+        if manager is None:
+            msg = "Conversation manager is not initialized"
+            raise ConnectionRefusedError(msg)
         try:
-            event_store = EventStore(conversation_id, conversation_manager.file_store, user_id)
+            event_store = EventStore(
+                conversation_id, manager.file_store, user_id
+            )
         except FileNotFoundError as e:
-            logger.error("Failed to create EventStore for conversation %s: %s", conversation_id, e)
+            logger.error(
+                "Failed to create EventStore for conversation %s: %s",
+                conversation_id,
+                e,
+            )
             msg = f"Failed to access conversation events: {e}"
             raise ConnectionRefusedError(msg) from e
 
         # Replay events
-        await _replay_event_stream(event_store, latest_event_id, connection_id, conversation_id)
+        await _replay_event_stream(
+            event_store, latest_event_id, connection_id, conversation_id
+        )
 
         # Join conversation
-        conversation_init_data = await setup_init_conversation_settings(user_id, conversation_id, providers_set)
-        agent_loop_info = await conversation_manager.join_conversation(
+        conversation_init_data = await setup_init_conversation_settings(
+            user_id, conversation_id, providers_set
+        )
+        agent_loop_info = await manager.join_conversation(
             conversation_id,
             connection_id,
             conversation_init_data,
@@ -232,7 +350,11 @@ async def connect(connection_id: str, environ: dict, *args) -> None:
             msg = "Failed to join conversation"
             raise ConnectionRefusedError(msg)
 
-        logger.info("Successfully joined conversation %s with connection_id %s", conversation_id, connection_id)
+        logger.info(
+            "Successfully joined conversation %s with connection_id %s",
+            conversation_id,
+            connection_id,
+        )
     except ConnectionRefusedError:
         asyncio.create_task(sio.disconnect(connection_id))
         raise
@@ -249,10 +371,10 @@ async def connect(connection_id: str, environ: dict, *args) -> None:
 @sio.event
 async def oh_user_action(connection_id: str, data: dict[str, Any]) -> None:
     """Handle user action from Socket.IO client.
-    
+
     Detects MetaSOP messages (starting with 'sop:') and routes to MetaSOP orchestration,
     otherwise sends to regular agent event stream.
-    
+
     Args:
         connection_id: Client connection identifier
         data: Action data dictionary
@@ -272,74 +394,97 @@ async def oh_user_action(connection_id: str, data: dict[str, Any]) -> None:
     logger.info("Checking MetaSOP: action=%s, content=%s", data.get("action"), content)
 
     if data.get("action") == "message" and content.strip().lower().startswith("sop:"):
-
         logger.info("MetaSOP message detected! content=%s", content)
 
         # Get conversation ID from connection
-        sid = conversation_manager._local_connection_id_to_session_id.get(connection_id)
-        logger.info("MetaSOP message detected in conversation %s, connection_id=%s", sid, connection_id)
-
-        if sid:
-            # Get the session to access LLM registry
-            session = conversation_manager._local_agent_loops_by_sid.get(sid)
+        manager = _get_conversation_manager_instance()
+        if manager is None:
+            logger.warning("Conversation manager not initialized, falling back to regular agent")
+        else:
+            sid = getattr(manager, "_local_connection_id_to_session_id", {}).get(connection_id)
             logger.info(
-                "Session found: %s, has_llm_registry: %s",
-                session is not None,
-                hasattr(session, "llm_registry") if session else False,
+                "MetaSOP message detected in conversation %s, connection_id=%s",
+                sid,
+                connection_id,
             )
 
-            if session and hasattr(session, "llm_registry"):
-                # Import here to avoid circular imports
-                from forge.metasop.router import run_metasop_for_conversation
-
-                logger.info("Triggering MetaSOP orchestration for conversation %s", sid)
-                # Trigger MetaSOP orchestration with the session's LLM registry
-                asyncio.create_task(
-                    run_metasop_for_conversation(
-                        conversation_id=sid,
-                        user_id=session.user_id,
-                        raw_message=data["args"]["content"],
-                        repo_root=None,
-                        llm_registry=session.llm_registry,
-                    ),
+            if sid:
+                # Get the session to access LLM registry
+                session = getattr(manager, "_local_agent_loops_by_sid", {}).get(sid)
+                logger.info(
+                    "Session found: %s, has_llm_registry: %s",
+                    session is not None,
+                    hasattr(session, "llm_registry") if session else False,
                 )
-                return  # Don't send to regular agent
-            logger.warning("No active session found for conversation %s, falling back to regular agent", sid)
-        else:
-            logger.warning("No conversation ID found for connection %s", connection_id)
+
+                if session and hasattr(session, "llm_registry"):
+                    # Import here to avoid circular imports
+                    from forge.metasop.router import run_metasop_for_conversation
+
+                    logger.info("Triggering MetaSOP orchestration for conversation %s", sid)
+                    # Trigger MetaSOP orchestration with the session's LLM registry
+                    asyncio.create_task(
+                        run_metasop_for_conversation(
+                            conversation_id=sid,
+                            user_id=session.user_id,
+                            raw_message=data["args"]["content"],
+                            repo_root=None,
+                            llm_registry=session.llm_registry,
+                        ),
+                    )
+                    return  # Don't send to regular agent
+                logger.warning(
+                    "No active session found for conversation %s, falling back to regular agent",
+                    sid,
+                )
+            else:
+                logger.warning("No conversation ID found for connection %s", connection_id)
 
     # Only send to regular agent if MetaSOP didn't handle it
-    await conversation_manager.send_to_event_stream(connection_id, data)
+    manager = _get_conversation_manager_instance()
+    if manager is not None:
+        await manager.send_to_event_stream(connection_id, data)
 
 
 @sio.event
 async def oh_action(connection_id: str, data: dict[str, Any]) -> None:
     """Handle agent action from Socket.IO client.
-    
+
     Args:
-        connection_id: Client connection identifier  
+        connection_id: Client connection identifier
         data: Action data dictionary
 
     """
-    await conversation_manager.send_to_event_stream(connection_id, data)
+    manager = _get_conversation_manager_instance()
+    if manager is not None:
+        await manager.send_to_event_stream(connection_id, data)
 
 
 @sio.event
 async def disconnect(connection_id: str) -> None:
     """Handle Socket.IO client disconnection.
-    
+
     Args:
-        connection_id: Client connection identifier
+        connection_id: Unique connection identifier
 
     """
-    logger.info("Socket.IO disconnection: connection_id=%s", connection_id)
-    await conversation_manager.disconnect_from_session(connection_id)
+    logger.info("sio:disconnect: %s", connection_id)
+    
+    # Unregister connection from connection manager
+    conn_manager = get_connection_manager()
+    conn_manager.unregister_connection(connection_id)
+    logger.info(f"Connection unregistered: {connection_id}")
+    
+    # Disconnect from session
+    manager = _get_conversation_manager_instance()
+    if manager is not None:
+        await manager.disconnect_from_session(connection_id)
 
 
 @sio.event
 async def test_event(connection_id: str, data: dict[str, Any]) -> None:
     """Handle test event (no-op).
-    
+
     Args:
         connection_id: Client connection identifier
         data: Event data
@@ -361,12 +506,12 @@ def _invalid_session_api_key(query_params: dict[str, list[Any]]):
     session_api_key = os.getenv("SESSION_API_KEY")
     if not session_api_key:
         return False
-    
+
     # Handle missing key or "null" string from frontend
     query_api_keys = query_params.get("session_api_key", [])
     if not query_api_keys or query_api_keys[0] in (None, "null", "undefined", ""):
         return True  # Invalid if API key is required but not provided
-    
+
     return query_api_keys[0] != session_api_key
 
 

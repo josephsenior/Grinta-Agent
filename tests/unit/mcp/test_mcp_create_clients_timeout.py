@@ -8,7 +8,9 @@ from forge.mcp_client.utils import create_mcp_clients
 @pytest.mark.asyncio
 async def test_create_mcp_clients_timeout_with_invalid_url():
     """Test that create_mcp_clients properly times out when given an invalid URL."""
-    server = MCPSSEServerConfig(url="http://non-existent-domain-that-will-timeout.invalid")
+    server = MCPSSEServerConfig(
+        url="http://non-existent-domain-that-will-timeout.invalid"
+    )
     original_connect_connect_http = MCPClient.connect_http
 
     async def connect_http_with_short_timeout(self, server_url, timeout=30.0):
@@ -20,7 +22,9 @@ async def test_create_mcp_clients_timeout_with_invalid_url():
         clients = await create_mcp_clients([server], [])
         end_time = asyncio.get_event_loop().time()
         assert len(clients) == 0
-        assert end_time - start_time < 5.0, "Operation took too long, timeout may not be working"
+        assert end_time - start_time < 5.0, (
+            "Operation took too long, timeout may not be working"
+        )
     finally:
         MCPClient.connect_http = original_connect_connect_http
 
@@ -40,6 +44,8 @@ async def test_create_mcp_clients_with_unreachable_host():
         clients = await create_mcp_clients([unreachable_url], [])
         end_time = asyncio.get_event_loop().time()
         assert len(clients) == 0
-        assert end_time - start_time < 5.0, "Operation took too long, timeout may not be working"
+        assert end_time - start_time < 5.0, (
+            "Operation took too long, timeout may not be working"
+        )
     finally:
         MCPClient.connect_http = original_connect_http

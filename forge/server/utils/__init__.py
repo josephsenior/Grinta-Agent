@@ -32,7 +32,10 @@ def validate_conversation_id(conversation_id: str) -> str:
 
     """
     if len(conversation_id) > 100:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Conversation ID is too long")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Conversation ID is too long",
+        )
     if "\x00" in conversation_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -51,13 +54,15 @@ def validate_conversation_id(conversation_id: str) -> str:
     return conversation_id
 
 
-async def get_conversation_store(request: Request | None = None) -> ConversationStore | None:
-    """Get or create ConversationStore instance for request.
+async def resolve_conversation_store(
+    request: Request | None = None,
+) -> ConversationStore | None:
+    """Resolve a conversation store instance for the given request.
 
-    Caches instance in request state for reuse.
+    Caches instance in request state for reuse when a request is provided.
 
     Args:
-        request: HTTP request
+        request: HTTP request, if available
 
     Returns:
         ConversationStore instance or None
@@ -66,13 +71,20 @@ async def get_conversation_store(request: Request | None = None) -> Conversation
     if request is None:
         return await ConversationStoreImpl.get_instance(config, None)
 
-    conversation_store: ConversationStore | None = getattr(request.state, "conversation_store", None)
+    conversation_store: ConversationStore | None = getattr(
+        request.state, "conversation_store", None
+    )
     if conversation_store:
         return conversation_store
     user_id = await get_user_id(request)
     conversation_store = await ConversationStoreImpl.get_instance(config, user_id)
     request.state.conversation_store = conversation_store
     return conversation_store
+
+
+async def get_conversation_store(request: Request) -> ConversationStore | None:
+    """FastAPI dependency that returns the conversation store for the active request."""
+    return await resolve_conversation_store(request)
 
 
 async def generate_unique_conversation_id(conversation_store: ConversationStore) -> str:
@@ -107,9 +119,13 @@ async def get_conversation_metadata(
         ) from e
 
 
-async def get_conversation(conversation_id: str, user_id: str | None = Depends(get_user_id)):
+async def get_conversation(
+    conversation_id: str, user_id: str | None = Depends(get_user_id)
+):
     """Grabs conversation id set by middleware. Adds the conversation_id to the openapi schema."""
-    logger.info(f"get_conversation called with conversation_id={conversation_id}, user_id={user_id}")
+    logger.info(
+        f"get_conversation called with conversation_id={conversation_id}, user_id={user_id}"
+    )
 
     # First check if conversation exists in conversation store
     conversation_store = await ConversationStoreImpl.get_instance(config, user_id)
@@ -120,17 +136,30 @@ async def get_conversation(conversation_id: str, user_id: str | None = Depends(g
             conversation_id,
             extra={"session_id": conversation_id, "user_id": user_id},
         )
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Conversation {conversation_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Conversation {conversation_id} not found",
+        )
 
     # Get the ServerConversation from conversation manager
-    conversation = await conversation_manager.attach_to_conversation(conversation_id, user_id)
+    if conversation_manager is None:  # type: ignore[unreachable]
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Conversation manager is not initialized",
+        )
+    conversation = await conversation_manager.attach_to_conversation(
+        conversation_id, user_id
+    )
     if not conversation:
         logger.warning(
             "get_conversation: conversation %s not found, attach_to_conversation returned None",
             conversation_id,
             extra={"session_id": conversation_id, "user_id": user_id},
         )
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Conversation {conversation_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Conversation {conversation_id} not found",
+        )
     try:
         yield conversation
     finally:

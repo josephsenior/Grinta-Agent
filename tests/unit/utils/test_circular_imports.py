@@ -32,11 +32,16 @@ class TestCircularImports(unittest.TestCase):
         }
         if circular_imports := self._find_circular_imports(module_paths):
             circular_import_str = "\n".join(
-                [f"{module1} -> {module2} -> {module1}" for module1, module2 in circular_imports]
+                [
+                    f"{module1} -> {module2} -> {module1}"
+                    for module1, module2 in circular_imports
+                ]
             )
             self.fail(f"Circular imports detected:\n{circular_import_str}")
 
-    def _find_circular_imports(self, module_paths: dict[str, str]) -> list[tuple[str, str]]:
+    def _find_circular_imports(
+        self, module_paths: dict[str, str]
+    ) -> list[tuple[str, str]]:
         """Find circular imports between modules.
 
         Args:
@@ -48,12 +53,13 @@ class TestCircularImports(unittest.TestCase):
         module_imports = {}
         for module_name, file_path in module_paths.items():
             if os.path.exists(file_path):
-                with open(file_path, "r", encoding='utf-8') as f:
+                with open(file_path, "r", encoding="utf-8") as f:
                     source_code = f.read()
                 import_lines = [
                     line.strip()
                     for line in source_code.split("\n")
-                    if line.strip().startswith(("import ", "from ")) and (not line.strip().startswith("# "))
+                    if line.strip().startswith(("import ", "from "))
+                    and (not line.strip().startswith("# "))
                 ]
                 imported_modules = []
                 for line in import_lines:
@@ -89,24 +95,48 @@ class TestCircularImports(unittest.TestCase):
         """
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
         prompt_path = os.path.join(project_root, "Forge/utils/prompt.py")
-        bash_path = os.path.join(project_root, "Forge/agenthub/codeact_agent/tools/bash.py")
-        tools_prompt_path = os.path.join(project_root, "Forge/agenthub/codeact_agent/tools/prompt.py")
-        if not all((os.path.exists(path) for path in [prompt_path, bash_path, tools_prompt_path])):
+        bash_path = os.path.join(
+            project_root, "Forge/agenthub/codeact_agent/tools/bash.py"
+        )
+        tools_prompt_path = os.path.join(
+            project_root, "Forge/agenthub/codeact_agent/tools/prompt.py"
+        )
+        if not all(
+            (
+                os.path.exists(path)
+                for path in [prompt_path, bash_path, tools_prompt_path]
+            )
+        ):
             self.skipTest("One or more required files do not exist")
-        with open(prompt_path, "r", encoding='utf-8') as f:
+        with open(prompt_path, "r", encoding="utf-8") as f:
             prompt_code = f.read()
-        with open(bash_path, "r", encoding='utf-8') as f:
+        with open(bash_path, "r", encoding="utf-8") as f:
             bash_code = f.read()
-        with open(tools_prompt_path, "r", encoding='utf-8') as f:
+        with open(tools_prompt_path, "r", encoding="utf-8") as f:
             tools_prompt_code = f.read()
         prompt_imports_bash = (
-            re.search("from forge\\.agenthub\\.codeact_agent\\.tools\\.bash import", prompt_code) is not None
+            re.search(
+                "from forge\\.agenthub\\.codeact_agent\\.tools\\.bash import",
+                prompt_code,
+            )
+            is not None
         )
         bash_imports_tools_prompt = (
-            re.search("from forge\\.agenthub\\.codeact_agent\\.tools\\.prompt import", bash_code) is not None
+            re.search(
+                "from forge\\.agenthub\\.codeact_agent\\.tools\\.prompt import",
+                bash_code,
+            )
+            is not None
         )
-        tools_prompt_imports_prompt = re.search("from forge\\.utils\\.prompt import", tools_prompt_code) is not None
-        if prompt_imports_bash and bash_imports_tools_prompt and tools_prompt_imports_prompt:
+        tools_prompt_imports_prompt = (
+            re.search("from forge\\.utils\\.prompt import", tools_prompt_code)
+            is not None
+        )
+        if (
+            prompt_imports_bash
+            and bash_imports_tools_prompt
+            and tools_prompt_imports_prompt
+        ):
             self.fail(
                 "Circular import pattern detected:\nforge.utils.prompt imports from forge.agenthub.codeact_agent.tools.bash\nforge.agenthub.codeact_agent.tools.bash imports from forge.agenthub.codeact_agent.tools.prompt\nforge.agenthub.codeact_agent.tools.prompt imports from forge.utils.prompt"
             )
@@ -125,19 +155,29 @@ class TestCircularImports(unittest.TestCase):
         module_paths = {
             "forge.server.shared": os.path.join(project_root, "Forge/server/shared.py"),
             "forge.server.conversation_manager.conversation_manager": os.path.join(
-                project_root, "Forge/server/conversation_manager/conversation_manager.py"
+                project_root,
+                "Forge/server/conversation_manager/conversation_manager.py",
             ),
             "forge.server.session.agent_session": os.path.join(
                 project_root, "Forge/server/session/agent_session.py"
             ),
-            "forge.server.session.__init__": os.path.join(project_root, "Forge/server/session/__init__.py"),
-            "forge.server.session.session": os.path.join(project_root, "Forge/server/session/session.py"),
+            "forge.server.session.__init__": os.path.join(
+                project_root, "Forge/server/session/__init__.py"
+            ),
+            "forge.server.session.session": os.path.join(
+                project_root, "Forge/server/session/session.py"
+            ),
         }
         if circular_imports := self._find_circular_imports(module_paths):
             circular_import_str = "\n".join(
-                [f"{module1} -> {module2} -> {module1}" for module1, module2 in circular_imports]
+                [
+                    f"{module1} -> {module2} -> {module1}"
+                    for module1, module2 in circular_imports
+                ]
             )
-            self.fail(f"Circular imports detected in server modules:\n{circular_import_str}")
+            self.fail(
+                f"Circular imports detected in server modules:\n{circular_import_str}"
+            )
 
     def test_detect_circular_imports_in_mcp_modules(self):
         """Test for circular imports in the MCP modules that were involved in the stack trace.
@@ -155,9 +195,14 @@ class TestCircularImports(unittest.TestCase):
         }
         if circular_imports := self._find_circular_imports(module_paths):
             circular_import_str = "\n".join(
-                [f"{module1} -> {module2} -> {module1}" for module1, module2 in circular_imports]
+                [
+                    f"{module1} -> {module2} -> {module1}"
+                    for module1, module2 in circular_imports
+                ]
             )
-            self.fail(f"Circular imports detected in MCP modules:\n{circular_import_str}")
+            self.fail(
+                f"Circular imports detected in MCP modules:\n{circular_import_str}"
+            )
 
     def test_detect_complex_circular_import_chains(self):
         """Test for complex circular import chains involving multiple modules.
@@ -171,7 +216,9 @@ class TestCircularImports(unittest.TestCase):
         import_graph = self._build_import_graph(module_paths)
 
         if circular_chains := self._find_circular_chains(import_graph):
-            circular_chain_str = "\n".join([" -> ".join(chain) for chain in circular_chains])
+            circular_chain_str = "\n".join(
+                [" -> ".join(chain) for chain in circular_chains]
+            )
             self.fail(f"Complex circular import chains detected:\n{circular_chain_str}")
 
     def _get_project_root(self):
@@ -218,12 +265,14 @@ class TestCircularImports(unittest.TestCase):
         import_graph = {}
         for module_name, file_path in module_paths.items():
             imported_modules = self._extract_imported_modules(file_path)
-            import_graph[module_name] = [m for m in imported_modules if m in module_paths]
+            import_graph[module_name] = [
+                m for m in imported_modules if m in module_paths
+            ]
         return import_graph
 
     def _extract_imported_modules(self, file_path):
         """Extract imported modules from a file."""
-        with open(file_path, "r", encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             source_code = f.read()
 
         import_lines = self._get_import_lines(source_code)
@@ -242,7 +291,8 @@ class TestCircularImports(unittest.TestCase):
         return [
             line.strip()
             for line in source_code.split("\n")
-            if line.strip().startswith(("import ", "from ")) and not line.strip().startswith("# ")
+            if line.strip().startswith(("import ", "from "))
+            and not line.strip().startswith("# ")
         ]
 
     def _parse_import_statement(self, line):
@@ -260,7 +310,9 @@ class TestCircularImports(unittest.TestCase):
         module_part = line[5:].split(" import ")[0].strip()
         return [module_part] if module_part.startswith("forge.") else []
 
-    def _find_circular_chains(self, import_graph: dict[str, list[str]]) -> list[list[str]]:
+    def _find_circular_chains(
+        self, import_graph: dict[str, list[str]]
+    ) -> list[list[str]]:
         """Find circular import chains in the import graph.
 
         Args:

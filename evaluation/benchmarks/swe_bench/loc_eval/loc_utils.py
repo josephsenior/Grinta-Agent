@@ -33,7 +33,8 @@ class LocalizationInfo:
             "instance_id": self.instance_id,
             "files": self.files,
             "file_line_ranges": {
-                file: [[start, end] for start, end in ranges] for file, ranges in self.file_line_ranges.items()
+                file: [[start, end] for start, end in ranges]
+                for file, ranges in self.file_line_ranges.items()
             },
             "functions": self.functions,
             "classes": self.classes,
@@ -42,7 +43,8 @@ class LocalizationInfo:
                 for file, mapping in self.line_to_function.items()
             },
             "line_to_class": {
-                file: {str(line): cls for line, cls in mapping.items()} for file, mapping in self.line_to_class.items()
+                file: {str(line): cls for line, cls in mapping.items()}
+                for file, mapping in self.line_to_class.items()
             },
             "total_lines_changed": self.total_lines_changed,
             "total_files_changed": self.total_files_changed,
@@ -62,7 +64,9 @@ class LocalizationInfo:
         return cls(
             instance_id=data["instance_id"],
             files=data["files"],
-            file_line_ranges={file: list(ranges) for file, ranges in data["file_line_ranges"].items()},
+            file_line_ranges={
+                file: list(ranges) for file, ranges in data["file_line_ranges"].items()
+            },
             functions=data["functions"],
             classes=data["classes"],
             line_to_function={
@@ -87,7 +91,11 @@ class LocMeta:
     Works with both standalone Docker containers and Forge runtime.
     """
 
-    def __init__(self, dataset_name: str = "princeton-nlp/SWE-bench_Verified", split: str = "test"):
+    def __init__(
+        self,
+        dataset_name: str = "princeton-nlp/SWE-bench_Verified",
+        split: str = "test",
+    ):
         """Initialize LocMeta with a SWE-Bench dataset.
 
         Args:
@@ -110,11 +118,11 @@ class LocMeta:
         """
         try:
             self.logger.info(f"Loading dataset: {self.dataset_name}")
-            self.dataset = load_dataset(
-                self.dataset_name, split=self.split
-            )  # nosec B615 - Safe: evaluation benchmark dataset
+            self.dataset = load_dataset(self.dataset_name, split=self.split)  # nosec B615 - Safe: evaluation benchmark dataset
             self.df = pd.DataFrame(self.dataset)
-            self.instance_lookup = {row["instance_id"]: idx for idx, row in self.df.iterrows()}
+            self.instance_lookup = {
+                row["instance_id"]: idx for idx, row in self.df.iterrows()
+            }
             self.logger.info(f"Successfully loaded {len(self.df)} instances")
             self.logger.info(f"Available columns: {list(self.df.columns)}")
         except Exception as e:
@@ -154,18 +162,28 @@ class LocMeta:
             actual_instance_id = instance.get("instance_id", "unknown")
         self.logger.info(f"Parsing localization for instance: {actual_instance_id}")
         if patch_content := instance.get("patch", ""):
-            patch_loc_info = self._parse_patch_localization(patch_content, actual_instance_id)
+            patch_loc_info = self._parse_patch_localization(
+                patch_content, actual_instance_id
+            )
         else:
-            self.logger.warning(f"No patch content found for instance {actual_instance_id}")
+            self.logger.warning(
+                f"No patch content found for instance {actual_instance_id}"
+            )
             patch_loc_info = self._empty_localization_info(actual_instance_id)
         if patch_content := instance.get("test_patch", ""):
-            test_patch_loc_info = self._parse_patch_localization(patch_content, actual_instance_id)
+            test_patch_loc_info = self._parse_patch_localization(
+                patch_content, actual_instance_id
+            )
         else:
-            self.logger.warning(f"No test patch content found for instance {actual_instance_id}")
+            self.logger.warning(
+                f"No test patch content found for instance {actual_instance_id}"
+            )
             test_patch_loc_info = self._empty_localization_info(actual_instance_id)
         return {"patch": patch_loc_info, "test_patch": test_patch_loc_info}
 
-    def _parse_file_patch_lines(self, file_patch: str) -> tuple[list[tuple[int, int]], int, int]:
+    def _parse_file_patch_lines(
+        self, file_patch: str
+    ) -> tuple[list[tuple[int, int]], int, int]:
         """Parse line ranges and count changes from a single file patch.
 
         Args:
@@ -179,7 +197,9 @@ class LocMeta:
         num_hunks = 0
         lines = file_patch.split("\n")
         for line in lines:
-            if hunk_match := re.match("@@\\s+-(\\d+)(?:,(\\d+))?\\s+\\+(\\d+)(?:,(\\d+))?\\s+@@", line):
+            if hunk_match := re.match(
+                "@@\\s+-(\\d+)(?:,(\\d+))?\\s+\\+(\\d+)(?:,(\\d+))?\\s+@@", line
+            ):
                 num_hunks += 1
                 new_start = int(hunk_match[3])
                 new_count = int(hunk_match[4]) if hunk_match[4] else 1
@@ -188,7 +208,9 @@ class LocMeta:
                     lines_changed += new_count
         return (line_ranges, lines_changed, num_hunks)
 
-    def _parse_code_structures_from_patch(self, file_patch: str, file_path: str) -> tuple[list[str], list[str]]:
+    def _parse_code_structures_from_patch(
+        self, file_patch: str, file_path: str
+    ) -> tuple[list[str], list[str]]:
         """Extract function and class names from patch context (fallback method).
 
         Args:
@@ -206,18 +228,28 @@ class LocMeta:
         for line in lines:
             if hunk_match := re.match("@@.*?@@\\s*(.*)", line):
                 if context := hunk_match[1].strip():
-                    if func_match := re.search("def\\s+([a-zA-Z_][a-zA-Z0-9_]*)", context):
+                    if func_match := re.search(
+                        "def\\s+([a-zA-Z_][a-zA-Z0-9_]*)", context
+                    ):
                         functions.add(func_match[1])
-                    if class_match := re.search("class\\s+([a-zA-Z_][a-zA-Z0-9_]*)", context):
+                    if class_match := re.search(
+                        "class\\s+([a-zA-Z_][a-zA-Z0-9_]*)", context
+                    ):
                         classes.add(class_match[1])
             stripped_line = line.lstrip("+-@ ")
-            if func_match := re.match("def\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(", stripped_line):
+            if func_match := re.match(
+                "def\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(", stripped_line
+            ):
                 functions.add(func_match[1])
-            if class_match := re.match("class\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*[\\(:]", stripped_line):
+            if class_match := re.match(
+                "class\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*[\\(:]", stripped_line
+            ):
                 classes.add(class_match[1])
         return (list(functions), list(classes))
 
-    def _parse_patch_localization(self, patch_content: str, instance_id: str) -> LocalizationInfo:
+    def _parse_patch_localization(
+        self, patch_content: str, instance_id: str
+    ) -> LocalizationInfo:
         """Parse localization information from a git patch (improved method).
 
         Args:
@@ -238,11 +270,15 @@ class LocMeta:
         file_patches = self._split_patch_by_files(patch_content)
         for file_path, file_patch in file_patches.items():
             files.append(file_path)
-            line_ranges, lines_changed, num_hunks = self._parse_file_patch_lines(file_patch)
+            line_ranges, lines_changed, num_hunks = self._parse_file_patch_lines(
+                file_patch
+            )
             file_line_ranges[file_path] = line_ranges
             total_lines_changed += lines_changed
             hunks_per_file[file_path] = num_hunks
-            file_functions, file_classes = self._extract_code_structures_from_patch(file_patch, file_path)
+            file_functions, file_classes = self._extract_code_structures_from_patch(
+                file_patch, file_path
+            )
             functions[file_path] = file_functions
             classes[file_path] = file_classes
             line_func_map = {}
@@ -270,7 +306,9 @@ class LocMeta:
             hunks_per_file=hunks_per_file,
         )
 
-    def _extract_code_structures_from_patch(self, file_patch: str, file_path: str) -> tuple[list[str], list[str]]:
+    def _extract_code_structures_from_patch(
+        self, file_patch: str, file_path: str
+    ) -> tuple[list[str], list[str]]:
         """Extract function and class names from patch context and content.
 
         Args:
@@ -323,7 +361,9 @@ class LocMeta:
 
     def _is_context_line(self, line: str) -> bool:
         """Check if line is a context line."""
-        return line.strip() and not line.startswith(("@@", "diff", "---", "+++", "index"))
+        return line.strip() and not line.startswith(
+            ("@@", "diff", "---", "+++", "index")
+        )
 
     def _process_hunk_header(self, line: str, functions: set, classes: set) -> None:
         """Process hunk header line for code structures."""
@@ -333,12 +373,16 @@ class LocMeta:
             if context:
                 self._extract_from_hunk_context(context, functions, classes)
 
-    def _extract_from_hunk_context(self, context: str, functions: set, classes: set) -> None:
+    def _extract_from_hunk_context(
+        self, context: str, functions: set, classes: set
+    ) -> None:
         """Extract functions and classes from hunk context."""
         self._extract_functions_from_text(context, functions, "hunk context")
         self._extract_classes_from_text(context, classes, "hunk context")
 
-    def _process_patch_content_line(self, line: str, functions: set, classes: set) -> None:
+    def _process_patch_content_line(
+        self, line: str, functions: set, classes: set
+    ) -> None:
         """Process patch content line for code structures."""
         stripped_line = line[1:].strip()
         self._extract_functions_from_text(stripped_line, functions, "patch content")
@@ -350,7 +394,9 @@ class LocMeta:
         self._extract_functions_from_text(stripped_line, functions, "context line")
         self._extract_classes_from_text(stripped_line, classes, "context line")
 
-    def _extract_functions_from_text(self, text: str, functions: set, source: str) -> None:
+    def _extract_functions_from_text(
+        self, text: str, functions: set, source: str
+    ) -> None:
         """Extract function names from text."""
         # Regular function patterns
         patterns = [
@@ -367,7 +413,10 @@ class LocMeta:
 
     def _extract_classes_from_text(self, text: str, classes: set, source: str) -> None:
         """Extract class names from text."""
-        patterns = [r"class\s+([a-zA-Z_][a-zA-Z0-9_]*)", r"class\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*[\(:]"]
+        patterns = [
+            r"class\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+            r"class\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*[\(:]",
+        ]
 
         for pattern in patterns:
             if match := re.search(pattern, text):
@@ -377,7 +426,9 @@ class LocMeta:
 
     def _log_final_results(self, file_path: str, functions: set, classes: set) -> None:
         """Log final extraction results."""
-        self.logger.info(f"Final results for {file_path}: functions={list(functions)}, classes={list(classes)}")
+        self.logger.info(
+            f"Final results for {file_path}: functions={list(functions)}, classes={list(classes)}"
+        )
 
     def _parse_patch_localization_with_runtime(
         self, patch_content: str, instance_id: str, runtime: Runtime
@@ -405,19 +456,27 @@ class LocMeta:
         file_patches = self._split_patch_by_files(patch_content)
         for file_path, file_patch in file_patches.items():
             files.append(file_path)
-            line_ranges, lines_changed, num_hunks = self._parse_file_patch_lines(file_patch)
+            line_ranges, lines_changed, num_hunks = self._parse_file_patch_lines(
+                file_patch
+            )
             file_line_ranges[file_path] = line_ranges
             total_lines_changed += lines_changed
             hunks_per_file[file_path] = num_hunks
             affected_lines = []
             for start, end in line_ranges:
                 affected_lines.extend(range(start, end + 1))
-            if affected_lines and (file_path.endswith(".py") or file_path.endswith(".pyx")):
-                file_functions, file_classes, line_func_map, line_class_map = self._analyze_source_code_with_runtime(
-                    runtime, file_path, affected_lines
+            if affected_lines and (
+                file_path.endswith(".py") or file_path.endswith(".pyx")
+            ):
+                file_functions, file_classes, line_func_map, line_class_map = (
+                    self._analyze_source_code_with_runtime(
+                        runtime, file_path, affected_lines
+                    )
                 )
             else:
-                file_functions, file_classes = self._extract_code_structures_from_patch(file_patch, file_path)
+                file_functions, file_classes = self._extract_code_structures_from_patch(
+                    file_patch, file_path
+                )
                 line_func_map, line_class_map = ({}, {})
             functions[file_path] = file_functions
             classes[file_path] = file_classes
@@ -453,12 +512,18 @@ class LocMeta:
             instance = self.get_instance_by_id(actual_instance_id)
         else:
             actual_instance_id = instance.get("instance_id", "unknown")
-        self.logger.info(f"Parsing localization with runtime for instance: {actual_instance_id}")
+        self.logger.info(
+            f"Parsing localization with runtime for instance: {actual_instance_id}"
+        )
         patch_content = instance.get("patch", "")
         if not patch_content:
-            self.logger.warning(f"No patch content found for instance {actual_instance_id}")
+            self.logger.warning(
+                f"No patch content found for instance {actual_instance_id}"
+            )
             return self._empty_localization_info(actual_instance_id)
-        return self._parse_patch_localization_with_runtime(patch_content, actual_instance_id, runtime)
+        return self._parse_patch_localization_with_runtime(
+            patch_content, actual_instance_id, runtime
+        )
 
     def _analyze_source_code_with_runtime(
         self, runtime: Runtime, file_path: str, affected_lines: list[int]
@@ -479,7 +544,9 @@ class LocMeta:
                 return ([], [], {}, {})
             from forge.events.action import CmdRunAction
 
-            check_action = CmdRunAction(command=f'test -f "{file_path}" && echo "EXISTS" || echo "NOT_EXISTS"')
+            check_action = CmdRunAction(
+                command=f'test -f "{file_path}" && echo "EXISTS" || echo "NOT_EXISTS"'
+            )
             obs = runtime.run_action(check_action)
             if "NOT_EXISTS" in obs.content:
                 self.logger.warning(f"File not found: {file_path}")
@@ -491,14 +558,22 @@ class LocMeta:
                 return ([], [], {}, {})
             file_content = obs.content
             if file_path.endswith(".py"):
-                return self._parse_python_content_with_line_mapping(file_content, affected_lines)
+                return self._parse_python_content_with_line_mapping(
+                    file_content, affected_lines
+                )
             else:
-                return self._parse_cython_content_with_line_mapping(file_content, affected_lines)
+                return self._parse_cython_content_with_line_mapping(
+                    file_content, affected_lines
+                )
         except Exception as e:
-            self.logger.warning(f"Failed to analyze source code with runtime for {file_path}: {e}")
+            self.logger.warning(
+                f"Failed to analyze source code with runtime for {file_path}: {e}"
+            )
             return ([], [], {}, {})
 
-    def _extract_cython_classes_and_functions(self, lines: list[str]) -> tuple[set[str], set[str]]:
+    def _extract_cython_classes_and_functions(
+        self, lines: list[str]
+    ) -> tuple[set[str], set[str]]:
         """Extract classes and functions from Cython lines using regex patterns."""
         functions = set()
         classes = set()
@@ -558,13 +633,22 @@ class LocMeta:
 
         return None
 
-    def _update_function_scope(self, current_function: str | None, line: str) -> str | None:
+    def _update_function_scope(
+        self, current_function: str | None, line: str
+    ) -> str | None:
         """Update function scope based on current line."""
-        if current_function and line and (not line[0].isspace()) and (not line.startswith("#")):
+        if (
+            current_function
+            and line
+            and (not line[0].isspace())
+            and (not line.startswith("#"))
+        ):
             return None
         return current_function
 
-    def _update_class_scope(self, current_class: str | None, line: str, stripped_line: str) -> str | None:
+    def _update_class_scope(
+        self, current_class: str | None, line: str, stripped_line: str
+    ) -> str | None:
         """Update class scope based on current line."""
         if (
             current_class
@@ -578,7 +662,9 @@ class LocMeta:
             return None
         return current_class
 
-    def _find_nearest_function_and_class(self, lines: list[str], line_num: int) -> tuple[str | None, str | None]:
+    def _find_nearest_function_and_class(
+        self, lines: list[str], line_num: int
+    ) -> tuple[str | None, str | None]:
         """Find the nearest function and class for a given line number."""
         nearest_function = None
         nearest_class = None
@@ -587,7 +673,9 @@ class LocMeta:
             if i < len(lines):
                 line = lines[i].strip()
 
-                nearest_function = self._check_for_function_definition(line, nearest_function)
+                nearest_function = self._check_for_function_definition(
+                    line, nearest_function
+                )
                 nearest_class = self._check_for_class_definition(line, nearest_class)
 
                 # Stop if we found both or reached the beginning
@@ -596,20 +684,27 @@ class LocMeta:
 
         return nearest_function, nearest_class
 
-    def _check_for_function_definition(self, line: str, current_function: str | None) -> str | None:
+    def _check_for_function_definition(
+        self, line: str, current_function: str | None
+    ) -> str | None:
         """Check if line contains a function definition."""
         if current_function:
             return current_function
 
         func_match = (
-            re.match("(?:async\\s+|c?p?def\\s+(?:[^(]*\\s+)?)?def\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(", line)
+            re.match(
+                "(?:async\\s+|c?p?def\\s+(?:[^(]*\\s+)?)?def\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(",
+                line,
+            )
             or re.match("cdef\\s+[^(]*\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(", line)
             or re.match("cpdef\\s+[^(]*\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(", line)
         )
 
         return func_match.group(1) if func_match else None
 
-    def _check_for_class_definition(self, line: str, current_class: str | None) -> str | None:
+    def _check_for_class_definition(
+        self, line: str, current_class: str | None
+    ) -> str | None:
         """Check if line contains a class definition."""
         if current_class:
             return current_class
@@ -626,7 +721,9 @@ class LocMeta:
 
         for line_num in affected_lines:
             if line_num <= len(lines):
-                nearest_function, nearest_class = self._find_nearest_function_and_class(lines, line_num)
+                nearest_function, nearest_class = self._find_nearest_function_and_class(
+                    lines, line_num
+                )
 
                 if nearest_function:
                     line_to_function[line_num] = nearest_function
@@ -656,7 +753,9 @@ class LocMeta:
             functions, classes = self._extract_cython_classes_and_functions(lines)
 
             # Map affected lines to their nearest functions and classes
-            line_to_function, line_to_class = self._map_affected_lines_to_functions_and_classes(lines, affected_lines)
+            line_to_function, line_to_class = (
+                self._map_affected_lines_to_functions_and_classes(lines, affected_lines)
+            )
 
             return (list(functions), list(classes), line_to_function, line_to_class)
         except Exception as e:
@@ -684,7 +783,6 @@ class LocMeta:
             line_to_node = {}
 
             class NodeVisitor(ast.NodeVisitor):
-
                 def __init__(self):
                     self.current_class = None
                     self.class_stack = []
@@ -751,7 +849,6 @@ class LocMeta:
             line_to_class = {}
 
             class Analyzer(ast.NodeVisitor):
-
                 def __init__(self):
                     self.current_class = None
                     self.function_stack = []
@@ -812,8 +909,12 @@ class LocMeta:
 
         for line in lines:
             if self._is_diff_git_line(line):
-                self._handle_diff_git_line(line, file_patches, current_file, current_patch_lines)
-                current_file, current_patch_lines = self._extract_file_from_diff_git(line)
+                self._handle_diff_git_line(
+                    line, file_patches, current_file, current_patch_lines
+                )
+                current_file, current_patch_lines = self._extract_file_from_diff_git(
+                    line
+                )
             elif self._is_file_header_line(line):
                 current_file, current_patch_lines = self._handle_file_header_line(
                     line, current_file, current_patch_lines
@@ -832,7 +933,11 @@ class LocMeta:
         return line.startswith("diff --git")
 
     def _handle_diff_git_line(
-        self, line: str, file_patches: dict, current_file: str | None, current_patch_lines: list
+        self,
+        line: str,
+        file_patches: dict,
+        current_file: str | None,
+        current_patch_lines: list,
     ) -> None:
         """Handle diff --git line by saving current file patch."""
         if current_file and current_patch_lines:
@@ -858,7 +963,9 @@ class LocMeta:
         current_patch_lines.append(line)
         return current_file, current_patch_lines
 
-    def _extract_file_from_header_line(self, line: str, current_patch_lines: list) -> tuple[str | None, list]:
+    def _extract_file_from_header_line(
+        self, line: str, current_patch_lines: list
+    ) -> tuple[str | None, list]:
         """Extract file path from header line."""
         match = re.search("[+-]{3}\\s+(?:a/|b/)?(.+?)(?:\\s|$)", line)
         if match and not match[1].startswith("/dev/null"):
@@ -874,7 +981,9 @@ class LocMeta:
         else:
             return None, []
 
-    def _empty_localization_info(self, instance_id: str = "unknown") -> LocalizationInfo:
+    def _empty_localization_info(
+        self, instance_id: str = "unknown"
+    ) -> LocalizationInfo:
         """Return an empty LocalizationInfo object.
 
         Args:
@@ -906,8 +1015,12 @@ class LocMeta:
             return {}
         return {
             "total_instances": len(self.df),
-            "repositories": self.df["repo"].nunique() if "repo" in self.df.columns else 0,
-            "avg_patch_length": self.df["patch"].str.len().mean() if "patch" in self.df.columns else 0,
+            "repositories": self.df["repo"].nunique()
+            if "repo" in self.df.columns
+            else 0,
+            "avg_patch_length": self.df["patch"].str.len().mean()
+            if "patch" in self.df.columns
+            else 0,
             "columns": list(self.df.columns),
         }
 

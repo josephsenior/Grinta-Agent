@@ -20,7 +20,8 @@
     "baseUrl": ".",
     "types": ["@react-router/node", "vite/client", "@testing-library/jest-dom", "vitest/globals", "jest"],
     "paths": {
-      "test-utils": ["./test-utils"],
+      "test-utils": ["./test-utils.ts", "./test-utils.tsx", "./test-utils"],
+      "#test-utils": ["./test-utils.ts", "./test-utils.tsx", "./test-utils"],
       "#/*": ["./src/*"],
       "./+types/*": [
         "./.react-router/types/src/routes/+types/*",
@@ -32,8 +33,8 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
-    "__tests__/**/*.ts",
-    "__tests__/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
     "types/**/*.d.ts",
     "vitest.setup.ts",
     "vite.config.ts",
@@ -44,5 +45,5 @@
     "**/.client/**/*.tsx",
     ".react-router/types/**/*"
   ],
-  "exclude": []
+  "exclude": ["tests/legacy/**"]
 }

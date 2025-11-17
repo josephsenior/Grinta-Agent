@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\conversation_manager\standalone_conversation_manager.py
+# hypothesis_version: 6.147.0
+
+[0.0, '/', '_close_session:%s', 'accumulated_cost', 'closed_session:%s', 'closing_session:%s', 'command', 'conversation_title', 'error', 'error_cleaning_stale', 'exit_code', 'git branch', 'git checkout', 'git merge', 'git rebase', 'git reset', 'git switch', 'id', 'info', 'llm_metrics', 'message', 'oh_event', 'runtime_status', 'session_id', 'status_update', 'type', 'unknown', 'user_id']

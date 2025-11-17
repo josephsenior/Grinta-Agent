@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 class ExperimentConfig(BaseModel):
     """Model for optional experiment configuration overrides."""
+
     config: dict[str, str] | None = None
 
 
@@ -48,7 +49,9 @@ class ExperimentManager:
         return conversation_settings
 
     @staticmethod
-    def run_config_variant_test(user_id: str, conversation_id: str, config: ForgeConfig) -> ForgeConfig:
+    def run_config_variant_test(
+        user_id: str, conversation_id: str, config: ForgeConfig
+    ) -> ForgeConfig:
         """Apply experiment config overrides to agent config if present."""
         exp_config = load_experiment_config(conversation_id)
         if exp_config and exp_config.config:
@@ -56,7 +59,9 @@ class ExperimentManager:
             try:
                 for attr, value in exp_config.config.items():
                     if hasattr(agent_cfg, attr):
-                        logger.info("Set attrib %s to %s for %s", attr, value, conversation_id)
+                        logger.info(
+                            "Set attrib %s to %s for %s", attr, value, conversation_id
+                        )
                         setattr(agent_cfg, attr, value)
             except Exception as e:
                 logger.warning("Error processing exp config: %s", e)

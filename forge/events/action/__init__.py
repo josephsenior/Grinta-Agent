@@ -1,5 +1,9 @@
 """Action event definitions emitted by Forge agents."""
 
+from __future__ import annotations
+
+from forge.events.action._canonical import canonicalize
+
 from forge.events.action.action import (
     Action,
     ActionConfirmationStatus,
@@ -23,7 +27,34 @@ from forge.events.action.files import (
     FileWriteAction,
 )
 from forge.events.action.mcp import MCPAction
-from forge.events.action.message import MessageAction, StreamingChunkAction, SystemMessageAction
+from forge.events.action.message import (
+    MessageAction,
+    StreamingChunkAction,
+    SystemMessageAction,
+)
+
+canonicalize("Action", Action)
+canonicalize("ActionConfirmationStatus", ActionConfirmationStatus)
+canonicalize("ActionSecurityRisk", ActionSecurityRisk)
+canonicalize("AgentDelegateAction", AgentDelegateAction)
+canonicalize("AgentFinishAction", AgentFinishAction)
+canonicalize("AgentRejectAction", AgentRejectAction)
+canonicalize("AgentThinkAction", AgentThinkAction)
+canonicalize("BrowseInteractiveAction", BrowseInteractiveAction)
+canonicalize("BrowseURLAction", BrowseURLAction)
+canonicalize("ChangeAgentStateAction", ChangeAgentStateAction)
+canonicalize("CmdRunAction", CmdRunAction)
+canonicalize("FileEditAction", FileEditAction)
+canonicalize("FileReadAction", FileReadAction)
+canonicalize("FileWriteAction", FileWriteAction)
+canonicalize("IPythonRunCellAction", IPythonRunCellAction)
+canonicalize("MCPAction", MCPAction)
+canonicalize("MessageAction", MessageAction)
+canonicalize("NullAction", NullAction)
+canonicalize("RecallAction", RecallAction)
+canonicalize("StreamingChunkAction", StreamingChunkAction)
+canonicalize("SystemMessageAction", SystemMessageAction)
+canonicalize("TaskTrackingAction", TaskTrackingAction)
 
 __all__ = [
     "Action",

@@ -4,7 +4,10 @@ import safeToast from "#/utils/safe-hot-toast";
 import { calculateToastDuration } from "./toast-duration";
 import { normalizeToastMessage } from "./toast-normalize";
 import { extractUserFriendlyError, formatClientError } from "./format-error";
-import type { UserFriendlyErrorData } from "#/components/shared/error/user-friendly-error";
+import type {
+  ErrorAction,
+  UserFriendlyErrorData,
+} from "#/components/shared/error/user-friendly-error";
 
 const TOAST_STYLE: CSSProperties = {
   background: "#454545",
@@ -83,7 +86,7 @@ export const displaySuccessToast = (message: unknown) => {
  */
 export const displayDetailedErrorToast = (
   error: UserFriendlyErrorData,
-  onAction?: (action: any) => void,
+  _onAction?: (action: ErrorAction) => void,
 ) => {
   const message = `${error.icon || "❌"} ${error.title}\n\n${error.message}`;
   const duration = calculateToastDuration(message, 8000); // Longer for detailed errors

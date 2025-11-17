@@ -1,84 +1,133 @@
-import importlib
+from __future__ import annotations
+
+import importlib.util
 import sys
 import types
-from types import SimpleNamespace
+from pathlib import Path
+from typing import Any, cast
 
 import pytest
-if "tenacity.stop.stop_base" not in sys.modules:
-    stub_tenacity = types.ModuleType("tenacity.stop.stop_base")
-    stub_tenacity.StopBase = type("StopBase", (), {})
-    sys.modules["tenacity.stop.stop_base"] = stub_tenacity
 
 
-
-@pytest.fixture()
-def command_module(monkeypatch):
-    original_logger = sys.modules.get("forge.core.logger")
-    stub_logger = types.ModuleType("forge.core.logger")
+if "forge.core.logger" not in sys.modules:
+    logger_stub = types.ModuleType("forge.core.logger")
 
     class DummyLogger:
-        def __getattr__(self, name):
-            return lambda *args, **kwargs: None
+        def __init__(self):
+            self.debug_calls = []
+            self.warning_calls = []
 
-    stub_logger.forge_logger = DummyLogger()
-    monkeypatch.setitem(sys.modules, "forge.core.logger", stub_logger)
+        def debug(self, msg, *args):
+            self.debug_calls.append((msg, args))
 
-    module = importlib.import_module("forge.runtime.utils.command")
-    yield module
+        def warning(self, msg, *args):
+            self.warning_calls.append((msg, args))
 
-    sys.modules.pop("forge.runtime.utils.command", None)
-    if original_logger is not None:
-        sys.modules["forge.core.logger"] = original_logger
-    else:
-        sys.modules.pop("forge.core.logger", None)
-
-
-def test_build_plugin_args(command_module):
-    plugin_args = command_module._build_plugin_args([SimpleNamespace(name="alpha"), SimpleNamespace(name="beta")])
-    assert plugin_args == ["--plugins", "alpha", "beta"]
-
-    assert command_module._build_plugin_args([]) == []
+    cast_logger = cast(Any, logger_stub)
+    cast_logger.forge_logger = DummyLogger()
+    sys.modules["forge.core.logger"] = logger_stub
 
 
-def test_build_browsergym_args_validation(command_module):
-    args = command_module._build_browsergym_args("env-id --flag")
-    assert args == ["--browsergym-eval-env", "env-id", "--flag"]
-
-    assert command_module._build_browsergym_args(None) == []
-    assert command_module._build_browsergym_args("bad;rm -rf /") == ["--browsergym-eval-env", "-rf", "/"]
-
-
-def test_validate_and_get_username(command_module):
-    assert command_module._validate_and_get_username(None, True) == "forge"
-    assert command_module._validate_and_get_username("safe_user", False) == "safe_user"
-
-    result = command_module._validate_and_get_username("bad user", False)
-    assert result == "root"
+MODULE_PATH = (
+    Path(__file__).resolve().parents[4] / "forge" / "runtime" / "utils" / "command.py"
+)
+spec = importlib.util.spec_from_file_location(
+    "forge.runtime.utils.command", MODULE_PATH
+)
+assert spec and spec.loader
+command_mod = importlib.util.module_from_spec(spec)
+sys.modules["forge.runtime.utils.command"] = command_mod
+spec.loader.exec_module(command_mod)
 
 
-def test_get_action_execution_server_startup_command(command_module):
-    plugins = [SimpleNamespace(name="example")]
-    sandbox = SimpleNamespace(browsergym_eval_env="env-a env-b")
-    app_config = SimpleNamespace(
+def test_build_plugin_args():
+    plugins = [types.SimpleNamespace(name="alpha"), types.SimpleNamespace(name="beta")]
+    assert command_mod._build_plugin_args(plugins) == ["--plugins", "alpha", "beta"]
+    assert command_mod._build_plugin_args([]) == []
+    assert command_mod._build_plugin_args(None) == []
+
+
+@pytest.mark.parametrize(
+    ("part", "expected"),
+    [("SAFE_VALUE", True), ("bad;value", False), ("", False)],
+)
+def test_validate_env_part(part, expected):
+    assert command_mod._validate_env_part(part) is expected
+
+
+def test_build_browsergym_args_filters_invalid():
+    env = "level easy;"
+    assert command_mod._build_browsergym_args(env) == ["--browsergym-eval-env", "level"]
+
+
+def test_build_browsergym_args_all_invalid():
+    env = "bad;value"
+    assert command_mod._build_browsergym_args(env) == []
+
+
+def test_build_browsergym_args_empty():
+    assert command_mod._build_browsergym_args("") == []
+    assert command_mod._build_browsergym_args(None) == []
+
+
+def test_validate_and_get_username_defaults(monkeypatch):
+    logger = types.SimpleNamespace(warning_messages=[])
+
+    def warning(msg, *args):
+        logger.warning_messages.append(msg)
+
+    monkeypatch.setattr(
+        command_mod, "logger", types.SimpleNamespace(warning=warning), raising=False
+    )
+    assert command_mod._validate_and_get_username(None, True) == "forge"
+    assert command_mod._validate_and_get_username(None, False) == "root"
+    assert command_mod._validate_and_get_username("user", False) == "user"
+    assert command_mod._validate_and_get_username("bad user", True) == "forge"
+    assert logger.warning_messages, "warning expected for invalid username"
+
+
+def make_config(
+    run_as_forge=True,
+    enable_browser=True,
+    browsergym_env="mode easy",
+    workspace="/tmp/workspace",
+):
+    sandbox = types.SimpleNamespace(browsergym_eval_env=browsergym_env)
+    return types.SimpleNamespace(
         sandbox=sandbox,
-        run_as_Forge=True,
-        workspace_mount_path_in_sandbox="/sandbox/workspace",
-        enable_browser=False,
+        run_as_Forge=run_as_forge,
+        workspace_mount_path_in_sandbox=workspace,
+        enable_browser=enable_browser,
     )
 
-    cmd = command_module.get_action_execution_server_startup_command(
-        server_port=8080,
+
+def test_get_action_execution_server_startup_command(monkeypatch):
+    config = make_config()
+    plugins = [types.SimpleNamespace(name="alpha")]
+    cmd = command_mod.get_action_execution_server_startup_command(
+        server_port=12345,
         plugins=plugins,
-        app_config=app_config,
-        python_prefix=["python3"],
-        override_user_id=42,
-        override_username="bad name",
-        main_module="module.main",
-        python_executable="python",
+        app_config=config,
+        python_prefix=["python"],
+        override_user_id=None,
     )
-
-    assert cmd[:5] == ["python3", "python", "-u", "-m", "module.main"]
+    assert cmd[:5] == ["python", "python", "-u", "-m", command_mod.DEFAULT_MAIN_MODULE]
     assert "--plugins" in cmd
-    assert "--no-enable-browser" in cmd
-    assert cmd[cmd.index("--username") + 1] == "forge"
+    assert "--browsergym-eval-env" in cmd
+    assert "--no-enable-browser" not in cmd
 
+
+def test_get_action_execution_server_startup_command_disable_browser(monkeypatch):
+    config = make_config(run_as_forge=False, enable_browser=False, browsergym_env=None)
+    cmd = command_mod.get_action_execution_server_startup_command(
+        server_port=54321,
+        plugins=[],
+        app_config=config,
+        python_prefix=["python"],
+        override_user_id=99,
+        override_username="admin",
+        python_executable="py",
+    )
+    assert "--no-enable-browser" in cmd
+    assert "--user-id" in cmd and cmd[cmd.index("--user-id") + 1] == "99"
+    assert "--username" in cmd and cmd[cmd.index("--username") + 1] == "admin"

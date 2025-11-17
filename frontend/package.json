@@ -111,6 +111,8 @@
     "lint:fix": "eslint src --ext .ts,.tsx,.js --fix && prettier --write src/**/*.{ts,tsx}",
     "prepare": "cd .. && husky frontend/.husky",
     "typecheck": "react-router typegen && tsc",
+    "clear-routes": "node scripts/clear-react-router-cache.mjs",
+    "rebuild-routes": "npm run clear-routes && react-router typegen",
     "check-translation-completeness": "node scripts/check-translation-completeness.cjs"
   },
   "lint-staged": {

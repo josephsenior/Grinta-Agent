@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\middleware\compression.py
+# hypothesis_version: 6.147.0
+
+[100, 300, 1024, 3600, 31536000, '/', '/api/conversations', '/api/mcp-marketplace', '/api/memories', '/api/microagents', '/api/prompts', '/api/settings', '/assets/', '/favicon.ico', '/fonts/', '/icons/', '/images/', '/manifest.json', '0', 'Accept-Encoding', 'Cache-Control', 'Content-Encoding', 'Content-Length', 'ETag', 'Expires', 'GET', 'Pragma', 'Vary', '__v', 'accept-encoding', 'application/json', 'application/xml', 'body', 'content-encoding', 'content-length', 'content-type', 'created_at', 'gzip', 'has_next', 'has_prev', 'items', 'no-cache', 'page', 'page_size', 'pagination', 'text/', 'total_items', 'total_pages', 'updated_at']

@@ -11,12 +11,16 @@ class Task(ABC):
     """Base class for a task instance."""
 
     task_name: str = "base"
-    in_context_example_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "in_context_examples")
+    in_context_example_dir = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "in_context_examples"
+    )
 
     def __init__(self, **kwargs) -> None:
         self.loaded_history = kwargs.get("loaded_history", None)
         task_dir = os.path.join(self.in_context_example_dir, self.task_name)
-        self._in_context_example = {"with_tool": load_file(os.path.join(task_dir, "with_tool.txt"))}
+        self._in_context_example = {
+            "with_tool": load_file(os.path.join(task_dir, "with_tool.txt"))
+        }
         self.metadata = {}
 
     @property
@@ -25,7 +29,9 @@ class Task(ABC):
         assert hasattr(self, "_id"), "Task does not have an id."
         return self._id
 
-    def in_context_example(self, use_tool: bool = True, with_feedback: bool = False) -> str:
+    def in_context_example(
+        self, use_tool: bool = True, with_feedback: bool = False
+    ) -> str:
         """Return the in-context example for the task."""
         if use_tool and (not with_feedback):
             return self._in_context_example["with_tool"]
@@ -61,7 +67,7 @@ class Task(ABC):
     def load_tasks(cls, path: str) -> tuple[list["Task"], int]:
         """Load all the tasks from a given jsonl file."""
         assert path.endswith(".jsonl") or path.endswith(".json")
-        with open(path, "r", encoding='utf-8') as f:
+        with open(path, "r", encoding="utf-8") as f:
             tasks = [cls(**json.loads(line)) for line in f.readlines()]
         LOGGER.info(f"Loaded {len(tasks)} tasks from {path}")
         return (tasks, len(tasks))

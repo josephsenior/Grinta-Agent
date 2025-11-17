@@ -20,7 +20,9 @@ from forge.events.action.message import SystemMessageAction
 from forge.events.event import RecallType
 from forge.events.observation import CmdOutputObservation, RecallObservation
 from forge.memory.condenser.condenser import Condensation, View
-from forge.memory.condenser.impl.conversation_window_condenser import ConversationWindowCondenser
+from forge.memory.condenser.impl.conversation_window_condenser import (
+    ConversationWindowCondenser,
+)
 
 
 def create_events(event_data):
@@ -77,15 +79,34 @@ def test_basic_truncation(condenser_fixture):
     events = create_events(
         [
             {"type": SystemMessageAction, "content": "System Prompt"},
-            {"type": MessageAction, "content": "User Task 1", "source": EventSource.USER},
+            {
+                "type": MessageAction,
+                "content": "User Task 1",
+                "source": EventSource.USER,
+            },
             {"type": RecallAction, "query": "User Task 1"},
             {"type": RecallObservation, "content": "Recall result", "cause_id": 3},
             {"type": CmdRunAction, "command": "ls"},
-            {"type": CmdOutputObservation, "content": "file1", "command": "ls", "cause_id": 5},
+            {
+                "type": CmdOutputObservation,
+                "content": "file1",
+                "command": "ls",
+                "cause_id": 5,
+            },
             {"type": CmdRunAction, "command": "pwd"},
-            {"type": CmdOutputObservation, "content": "/dir", "command": "pwd", "cause_id": 7},
+            {
+                "type": CmdOutputObservation,
+                "content": "/dir",
+                "command": "pwd",
+                "cause_id": 7,
+            },
             {"type": CmdRunAction, "command": "cat file1"},
-            {"type": CmdOutputObservation, "content": "content", "command": "cat file1", "cause_id": 9},
+            {
+                "type": CmdOutputObservation,
+                "content": "content",
+                "command": "cat file1",
+                "cause_id": 9,
+            },
         ]
     )
     view = View(events=events)
@@ -101,15 +122,34 @@ def test_no_system_message(condenser_fixture):
     condenser = condenser_fixture
     events = create_events(
         [
-            {"type": MessageAction, "content": "User Task 1", "source": EventSource.USER},
+            {
+                "type": MessageAction,
+                "content": "User Task 1",
+                "source": EventSource.USER,
+            },
             {"type": RecallAction, "query": "User Task 1"},
             {"type": RecallObservation, "content": "Recall result", "cause_id": 2},
             {"type": CmdRunAction, "command": "ls"},
-            {"type": CmdOutputObservation, "content": "file1", "command": "ls", "cause_id": 4},
+            {
+                "type": CmdOutputObservation,
+                "content": "file1",
+                "command": "ls",
+                "cause_id": 4,
+            },
             {"type": CmdRunAction, "command": "pwd"},
-            {"type": CmdOutputObservation, "content": "/dir", "command": "pwd", "cause_id": 6},
+            {
+                "type": CmdOutputObservation,
+                "content": "/dir",
+                "command": "pwd",
+                "cause_id": 6,
+            },
             {"type": CmdRunAction, "command": "cat file1"},
-            {"type": CmdOutputObservation, "content": "content", "command": "cat file1", "cause_id": 8},
+            {
+                "type": CmdOutputObservation,
+                "content": "content",
+                "command": "cat file1",
+                "cause_id": 8,
+            },
         ]
     )
     view = View(events=events)
@@ -126,14 +166,33 @@ def test_no_recall_observation(condenser_fixture):
     events = create_events(
         [
             {"type": SystemMessageAction, "content": "System Prompt"},
-            {"type": MessageAction, "content": "User Task 1", "source": EventSource.USER},
+            {
+                "type": MessageAction,
+                "content": "User Task 1",
+                "source": EventSource.USER,
+            },
             {"type": RecallAction, "query": "User Task 1"},
             {"type": CmdRunAction, "command": "ls"},
-            {"type": CmdOutputObservation, "content": "file1", "command": "ls", "cause_id": 4},
+            {
+                "type": CmdOutputObservation,
+                "content": "file1",
+                "command": "ls",
+                "cause_id": 4,
+            },
             {"type": CmdRunAction, "command": "pwd"},
-            {"type": CmdOutputObservation, "content": "/dir", "command": "pwd", "cause_id": 6},
+            {
+                "type": CmdOutputObservation,
+                "content": "/dir",
+                "command": "pwd",
+                "cause_id": 6,
+            },
             {"type": CmdRunAction, "command": "cat file1"},
-            {"type": CmdOutputObservation, "content": "content", "command": "cat file1", "cause_id": 8},
+            {
+                "type": CmdOutputObservation,
+                "content": "content",
+                "command": "cat file1",
+                "cause_id": 8,
+            },
         ]
     )
     view = View(events=events)
@@ -150,11 +209,20 @@ def test_short_history_no_truncation(condenser_fixture):
     events = create_events(
         [
             {"type": SystemMessageAction, "content": "System Prompt"},
-            {"type": MessageAction, "content": "User Task 1", "source": EventSource.USER},
+            {
+                "type": MessageAction,
+                "content": "User Task 1",
+                "source": EventSource.USER,
+            },
             {"type": RecallAction, "query": "User Task 1"},
             {"type": RecallObservation, "content": "Recall result", "cause_id": 3},
             {"type": CmdRunAction, "command": "ls"},
-            {"type": CmdOutputObservation, "content": "file1", "command": "ls", "cause_id": 5},
+            {
+                "type": CmdOutputObservation,
+                "content": "file1",
+                "command": "ls",
+                "cause_id": 5,
+            },
         ]
     )
     view = View(events=events)
@@ -171,7 +239,11 @@ def test_only_essential_events(condenser_fixture):
     events = create_events(
         [
             {"type": SystemMessageAction, "content": "System Prompt"},
-            {"type": MessageAction, "content": "User Task 1", "source": EventSource.USER},
+            {
+                "type": MessageAction,
+                "content": "User Task 1",
+                "source": EventSource.USER,
+            },
             {"type": RecallAction, "query": "User Task 1"},
             {"type": RecallObservation, "content": "Recall result", "cause_id": 3},
         ]
@@ -190,15 +262,37 @@ def test_dangling_observations_at_cut_point(condenser_fixture):
     events = create_events(
         [
             {"type": SystemMessageAction, "content": "System Prompt"},
-            {"type": MessageAction, "content": "User Task 1", "source": EventSource.USER},
+            {
+                "type": MessageAction,
+                "content": "User Task 1",
+                "source": EventSource.USER,
+            },
             {"type": RecallAction, "query": "User Task 1"},
             {"type": RecallObservation, "content": "Recall result", "cause_id": 3},
-            {"type": CmdOutputObservation, "content": "dangle1", "command": "cmd_unknown"},
-            {"type": CmdOutputObservation, "content": "dangle2", "command": "cmd_unknown"},
+            {
+                "type": CmdOutputObservation,
+                "content": "dangle1",
+                "command": "cmd_unknown",
+            },
+            {
+                "type": CmdOutputObservation,
+                "content": "dangle2",
+                "command": "cmd_unknown",
+            },
             {"type": CmdRunAction, "command": "cmd1"},
-            {"type": CmdOutputObservation, "content": "obs1", "command": "cmd1", "cause_id": 7},
+            {
+                "type": CmdOutputObservation,
+                "content": "obs1",
+                "command": "cmd1",
+                "cause_id": 7,
+            },
             {"type": CmdRunAction, "command": "cmd2"},
-            {"type": CmdOutputObservation, "content": "obs2", "command": "cmd2", "cause_id": 9},
+            {
+                "type": CmdOutputObservation,
+                "content": "obs2",
+                "command": "cmd2",
+                "cause_id": 9,
+            },
         ]
     )
     view = View(events=events)
@@ -215,15 +309,29 @@ def test_only_dangling_observations_in_recent_slice(condenser_fixture):
     events = create_events(
         [
             {"type": SystemMessageAction, "content": "System Prompt"},
-            {"type": MessageAction, "content": "User Task 1", "source": EventSource.USER},
+            {
+                "type": MessageAction,
+                "content": "User Task 1",
+                "source": EventSource.USER,
+            },
             {"type": RecallAction, "query": "User Task 1"},
             {"type": RecallObservation, "content": "Recall result", "cause_id": 3},
-            {"type": CmdOutputObservation, "content": "dangle1", "command": "cmd_unknown"},
-            {"type": CmdOutputObservation, "content": "dangle2", "command": "cmd_unknown"},
+            {
+                "type": CmdOutputObservation,
+                "content": "dangle1",
+                "command": "cmd_unknown",
+            },
+            {
+                "type": CmdOutputObservation,
+                "content": "dangle2",
+                "command": "cmd_unknown",
+            },
         ]
     )
     view = View(events=events)
-    with patch("forge.memory.condenser.impl.conversation_window_condenser.logger.warning") as mock_log_warning:
+    with patch(
+        "forge.memory.condenser.impl.conversation_window_condenser.logger.warning"
+    ) as mock_log_warning:
         condensation = condenser.get_condensation(view)
         assert isinstance(condensation, Condensation)
         assert isinstance(condensation.action, CondensationAction)
@@ -250,16 +358,34 @@ def test_multiple_user_messages(condenser_fixture):
     events = create_events(
         [
             {"type": SystemMessageAction, "content": "System Prompt"},
-            {"type": MessageAction, "content": "User Task 1", "source": EventSource.USER},
+            {
+                "type": MessageAction,
+                "content": "User Task 1",
+                "source": EventSource.USER,
+            },
             {"type": RecallAction, "query": "User Task 1"},
             {"type": RecallObservation, "content": "Recall result 1", "cause_id": 3},
             {"type": CmdRunAction, "command": "cmd1"},
-            {"type": CmdOutputObservation, "content": "obs1", "command": "cmd1", "cause_id": 5},
-            {"type": MessageAction, "content": "User Task 2", "source": EventSource.USER},
+            {
+                "type": CmdOutputObservation,
+                "content": "obs1",
+                "command": "cmd1",
+                "cause_id": 5,
+            },
+            {
+                "type": MessageAction,
+                "content": "User Task 2",
+                "source": EventSource.USER,
+            },
             {"type": RecallAction, "query": "User Task 2"},
             {"type": RecallObservation, "content": "Recall result 2", "cause_id": 8},
             {"type": CmdRunAction, "command": "cmd2"},
-            {"type": CmdOutputObservation, "content": "obs2", "command": "cmd2", "cause_id": 10},
+            {
+                "type": CmdOutputObservation,
+                "content": "obs2",
+                "command": "cmd2",
+                "cause_id": 10,
+            },
         ]
     )
     view = View(events=events)

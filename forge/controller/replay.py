@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
+from typing import Any
+
 from forge.core.logger import forge_logger as logger
 from forge.events.action.action import Action
 from forge.events.action.message import MessageAction
@@ -36,7 +39,9 @@ class ReplayManager:
             for index in range(len(replay_events) - 1):
                 event = replay_events[index]
                 if isinstance(event, MessageAction) and event.wait_for_response:
-                    logger.info("Replay events contains wait_for_response message action, ignoring wait_for_response")
+                    logger.info(
+                        "Replay events contains wait_for_response message action, ignoring wait_for_response"
+                    )
                     event.wait_for_response = False
         self.replay_events = replay_events
         self.replay_mode = bool(replay_events)
@@ -66,37 +71,37 @@ class ReplayManager:
 
     def step(self) -> Action:
         """Get next action from replay trajectory.
-        
+
         Returns:
             Next action to replay
 
         """
         assert self.replay_events is not None
         event = self.replay_events[self.replay_index]
-        assert isinstance(event, Action)
+        if not isinstance(event, Action):
+            raise RuntimeError(
+                f"Unexpected non-action event in replay at index {self.replay_index}: {type(event).__name__}"
+            )
         self.replay_index += 1
         return event
 
     @staticmethod
-    def get_replay_events(trajectory: list[dict]) -> list[Event]:
+    def get_replay_events(trajectory: Iterable[Mapping[str, Any]]) -> list[Event]:
         """Convert trajectory list to event objects for replay.
-        
+
         Args:
             trajectory: List of event dictionaries
-            
+
         Returns:
             List of event objects
-            
+
         Raises:
             ValueError: If trajectory format is invalid
 
         """
-        if not isinstance(trajectory, list):
-            msg = f"Expected a list in {trajectory}, got {type(trajectory).__name__}"
-            raise ValueError(msg)
-        replay_events = []
+        replay_events: list[Event] = []
         for item in trajectory:
-            event = event_from_dict(item)
+            event = event_from_dict(dict(item))
             if event.source == EventSource.ENVIRONMENT:
                 continue
             event._id = None

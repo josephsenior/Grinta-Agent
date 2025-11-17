@@ -11,6 +11,7 @@ from pathlib import Path
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse, JSONResponse
+from forge.server.utils.responses import error
 from starlette.background import BackgroundTask
 
 from forge.core.exceptions import AgentRuntimeUnavailableError
@@ -24,6 +25,7 @@ from forge.server.dependencies import get_dependencies
 from forge.server.file_config import FILES_TO_IGNORE
 from forge.server.files import POSTUploadFilesModel
 from forge.server.user_auth import get_user_id
+from forge.server.shared import conversation_manager, get_conversation_manager
 from forge.server.utils import get_conversation, get_conversation_store
 from forge.utils.async_utils import call_sync_from_async
 
@@ -39,20 +41,28 @@ if TYPE_CHECKING:
 
         config: Any  # pragma: no cover - protocol attribute
 
-        def list_files(self, path: str | None = None) -> list[str]:  # pragma: no cover - protocol method
+        def list_files(
+            self, path: str | None = None
+        ) -> list[str]:  # pragma: no cover - protocol method
             ...
 
-        def copy_from(self, path: str) -> str | os.PathLike[str]:  # pragma: no cover - protocol method
+        def copy_from(
+            self, path: str
+        ) -> str | os.PathLike[str]:  # pragma: no cover - protocol method
             ...
 
-        def get_git_diff(self, path: str, cwd: str) -> dict[str, Any]:  # pragma: no cover - protocol method
+        def get_git_diff(
+            self, path: str, cwd: str
+        ) -> dict[str, Any]:  # pragma: no cover - protocol method
             ...
 
         def run_action(self, action: Any) -> Any:  # pragma: no cover - protocol method
             ...
 
+
 app: APIRouter
 if "pytest" in sys.modules:
+
     class NoOpAPIRouter(APIRouter):
         """Router stub used during tests to skip FastAPI registration."""
 
@@ -68,7 +78,10 @@ if "pytest" in sys.modules:
         ),
     )
 else:
-    app = APIRouter(prefix="/api/conversations/{conversation_id}/files", dependencies=get_dependencies())
+    app = APIRouter(
+        prefix="/api/conversations/{conversation_id}/files",
+        dependencies=get_dependencies(),
+    )
 
 
 def _unlink_path(path: Path) -> None:
@@ -78,32 +91,52 @@ def _unlink_path(path: Path) -> None:
 
 def _sanitize_file_path(file_path: str) -> str:
     """Sanitize file path to prevent path traversal attacks.
-    
+
     Args:
         file_path: The file path to sanitize
-        
+
     Returns:
         str: Sanitized file path
-        
+
     Raises:
         ValueError: If the path contains directory traversal sequences
 
     """
     if not file_path:
         raise ValueError("File path cannot be empty")
-    
+
     # Normalize the path and check for directory traversal
     normalized_path = posixpath.normpath(file_path)
-    
+
     # Check for directory traversal attempts
     if ".." in normalized_path or normalized_path.startswith("/"):
         raise ValueError(f"Invalid file path: {file_path}")
-    
+
     # Ensure path doesn't start with current or parent directory markers
     if normalized_path.startswith("./") or normalized_path.startswith("../"):
         raise ValueError(f"Invalid file path: {file_path}")
-        
+
     return normalized_path
+
+
+def _get_conversation_manager_instance():
+    manager: Any = conversation_manager
+    if manager is not None:
+        return manager
+    try:
+        return get_conversation_manager()
+    except Exception:
+        return None
+
+
+def _require_conversation_manager():
+    manager = _get_conversation_manager_instance()
+    if manager is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Conversation manager is not initialized",
+        )
+    return manager
 
 
 @app.get(
@@ -140,7 +173,9 @@ async def list_files(
 
     """
     if not conversation.runtime:
-        logger.debug("list-files request received before runtime ready; returning empty list")
+        logger.debug(
+            "list-files request received before runtime ready; returning empty list"
+        )
         return []
     runtime = cast("RuntimeFileOps", conversation.runtime)
     try:
@@ -148,15 +183,17 @@ async def list_files(
     except (httpx.ConnectError, ConnectionRefusedError) as e:
         # Runtime container is unavailable (crashed or stopped)
         logger.error("Runtime container unavailable when listing files: %s", e)
-        return JSONResponse(
+        return error(
+            message="Runtime container is unavailable. Please start a new conversation.",
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"error": "Runtime container is unavailable. Please start a new conversation."},
+            error_code="RUNTIME_UNAVAILABLE",
         )
     except AgentRuntimeUnavailableError as e:
         logger.error("Error listing files: %s", e)
-        return JSONResponse(
+        return error(
+            message=f"Error listing files: {e}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"error": f"Error listing files: {e}"},
+            error_code="LIST_FILES_ERROR",
         )
     if path:
         file_list = [os.path.join(path, f) for f in file_list]
@@ -202,19 +239,23 @@ async def select_file(
         sanitized_file = _sanitize_file_path(file)
     except ValueError as e:
         logger.warning("Invalid file path provided: %s", file)
-        return JSONResponse(
+        return error(
+            message=str(e),
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": str(e)},
+            error_code="INVALID_FILE_PATH",
         )
-    
+
     # Check if runtime is ready before accessing it
     if not conversation.runtime:
-        logger.warning("select-file request received before runtime ready for file: %s", file)
-        return JSONResponse(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"error": "Runtime not ready yet, please try again"},
+        logger.warning(
+            "select-file request received before runtime ready for file: %s", file
         )
-    
+        return error(
+            message="Runtime not ready yet, please try again",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            error_code="RUNTIME_NOT_READY",
+        )
+
     runtime = cast("RuntimeFileOps", conversation.runtime)
     file = os.path.join(runtime.config.workspace_mount_path_in_sandbox, sanitized_file)
     read_action = FileReadAction(file)
@@ -223,15 +264,17 @@ async def select_file(
     except (httpx.ConnectError, ConnectionRefusedError) as e:
         # Runtime container is unavailable (crashed or stopped)
         logger.error("Runtime container unavailable when opening file %s: %s", file, e)
-        return JSONResponse(
+        return error(
+            message="Runtime container is unavailable. Please start a new conversation.",
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"error": "Runtime container is unavailable. Please start a new conversation."},
+            error_code="RUNTIME_UNAVAILABLE",
         )
     except AgentRuntimeUnavailableError as e:
         logger.error("Error opening file %s: %s", file, e)
-        return JSONResponse(
+        return error(
+            message=f"Error opening file: {e}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"error": f"Error opening file: {e}"},
+            error_code="FILE_OPEN_ERROR",
         )
     if isinstance(observation, FileReadObservation):
         content = observation.content
@@ -239,17 +282,20 @@ async def select_file(
     if isinstance(observation, ErrorObservation):
         logger.error("Error opening file %s: %s", file, observation)
         if "ERROR_BINARY_FILE" in observation.message:
-            return JSONResponse(
+            return error(
+                message=f"Unable to open binary file: {file}",
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                content={"error": f"Unable to open binary file: {file}"},
+                error_code="BINARY_FILE_ERROR",
             )
-        return JSONResponse(
+        return error(
+            message=f"Error opening file: {observation}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"error": f"Error opening file: {observation}"},
+            error_code="FILE_OBSERVATION_ERROR",
         )
-    return JSONResponse(
+    return error(
+        message=f"Unexpected observation type: {type(observation)}",
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"error": f"Unexpected observation type: {type(observation)}"},
+        error_code="UNEXPECTED_OBSERVATION",
     )
 
 
@@ -282,7 +328,11 @@ def zip_current_workspace(
             zip_file_path = Path(runtime.copy_from(path))
         except AgentRuntimeUnavailableError as e:
             logger.error("Error zipping workspace: %s", e)
-            return JSONResponse(status_code=500, content={"error": f"Error zipping workspace: {e}"})
+            return error(
+                message=f"Error zipping workspace: {e}",
+                status_code=500,
+                error_code="ZIP_ERROR",
+            )
         return FileResponse(
             path=str(zip_file_path),
             filename="workspace.zip",
@@ -326,38 +376,48 @@ async def git_changes(
         Response: [{"path": "src/main.py", "status": "modified"}, ...]
 
     """
+    manager = _require_conversation_manager()
     try:
-        from forge.server.shared import conversation_manager
-        conversation = await conversation_manager.attach_to_conversation(conversation_id, "dev-user")
+        conversation = await manager.attach_to_conversation(
+            conversation_id, "dev-user"
+        )
         if not conversation:
-            return JSONResponse(content={"error": "Conversation not found"}, status_code=404)
-        
+            return JSONResponse(
+                content={"error": "Conversation not found"}, status_code=404
+            )
+
         runtime = cast("RuntimeFileOps", conversation.runtime)
         cwd = runtime.config.workspace_mount_path_in_sandbox
         logger.info("Getting git changes in %s", cwd)
-        
+
         # Check if the workspace directory exists
         if not os.path.exists(cwd):
             logger.warning("Workspace directory %s does not exist", cwd)
             return JSONResponse(status_code=200, content=[])
-        
+
         try:
             changes = await call_sync_from_async(get_git_changes, cwd)
-            await conversation_manager.detach_from_conversation(conversation)
-            
+            await manager.detach_from_conversation(conversation)
+
             if changes is None:
-                return JSONResponse(status_code=404, content={"error": "Not a git repository"})
+                return JSONResponse(
+                    status_code=404, content={"error": "Not a git repository"}
+                )
             return changes
         except FileNotFoundError as e:
             if "git" in str(e):
-                logger.warning("Git not available in container, returning empty changes list")
-                await conversation_manager.detach_from_conversation(conversation)
+                logger.warning(
+                    "Git not available in container, returning empty changes list"
+                )
+                await manager.detach_from_conversation(conversation)
                 return JSONResponse(status_code=200, content=[])
             else:
                 raise
     except AgentRuntimeUnavailableError as e:
         logger.error("Runtime unavailable: %s", e)
-        return JSONResponse(status_code=500, content={"error": f"Error getting changes: {e}"})
+        return JSONResponse(
+            status_code=500, content={"error": f"Error getting changes: {e}"}
+        )
     except Exception as e:
         logger.error("Error getting changes: %s", e)
         return JSONResponse(status_code=500, content={"error": str(e)})
@@ -388,9 +448,10 @@ async def git_diff(
     # Validate path parameter
     if not path or not isinstance(path, str) or not path.strip():
         logger.warning("Invalid path parameter provided to git_diff endpoint: %s", path)
-        return JSONResponse(
+        return error(
+            message="Path parameter is required and must be a non-empty string",
             status_code=422,
-            content={"error": "Path parameter is required and must be a non-empty string"},
+            error_code="INVALID_PATH",
         )
 
     try:
@@ -398,9 +459,10 @@ async def git_diff(
         sanitized_path = _sanitize_file_path(path.strip())
     except ValueError as e:
         logger.warning("Invalid file path provided to git_diff: %s", path)
-        return JSONResponse(
+        return error(
+            message=str(e),
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": str(e)},
+            error_code="INVALID_FILE_PATH",
         )
 
     runtime = cast("RuntimeFileOps", conversation.runtime)
@@ -409,11 +471,18 @@ async def git_diff(
         return await call_sync_from_async(runtime.get_git_diff, sanitized_path, cwd)
     except AgentRuntimeUnavailableError as e:
         logger.error("Error getting diff: %s", e)
-        return JSONResponse(status_code=500, content={"error": f"Error getting diff: {e}"})
+        return error(
+            message=f"Error getting diff: {e}",
+            status_code=500,
+            error_code="GIT_DIFF_ERROR",
+        )
 
 
 @app.post("/upload-files", response_model=POSTUploadFilesModel)
-async def upload_files(files: list[UploadFile], conversation: ServerConversation = Depends(get_conversation)):
+async def upload_files(
+    files: list[UploadFile],
+    conversation: ServerConversation = Depends(get_conversation),
+):
     """Upload files to the workspace.
 
     Args:
@@ -434,11 +503,15 @@ async def upload_files(files: list[UploadFile], conversation: ServerConversation
         except ValueError as e:
             skipped_files.append({"name": file.filename, "reason": str(e)})
             continue
-            
-        file_path = os.path.join(runtime.config.workspace_mount_path_in_sandbox, sanitized_filename)
+
+        file_path = os.path.join(
+            runtime.config.workspace_mount_path_in_sandbox, sanitized_filename
+        )
         try:
             file_content = await file.read()
-            write_action = FileWriteAction(path=file_path, content=file_content.decode("utf-8", errors="replace"))
+            write_action = FileWriteAction(
+                path=file_path, content=file_content.decode("utf-8", errors="replace")
+            )
             await call_sync_from_async(runtime.run_action, write_action)
             uploaded_files.append(file_path)
         except Exception as e:

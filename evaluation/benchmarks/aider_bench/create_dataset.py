@@ -3,7 +3,13 @@ from pathlib import Path
 from datasets import Dataset
 
 tests = sorted(os.listdir("practice/"))
-dataset = {"instance_id": [], "instance_name": [], "instruction": [], "signature": [], "test": []}
+dataset = {
+    "instance_id": [],
+    "instance_name": [],
+    "instruction": [],
+    "signature": [],
+    "test": [],
+}
 for i, test in enumerate(tests):
     testdir = Path(f"practice/{test}/")
     dataset["instance_id"].append(i)

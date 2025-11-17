@@ -1,9 +1,12 @@
 """Utilities for streaming runtime container logs through callback functions."""
 
-import threading
-from typing import Callable
+from __future__ import annotations
 
-import docker
+import threading
+from typing import Any, Callable, TYPE_CHECKING
+
+if TYPE_CHECKING:  # Only for type checkers; avoid runtime docker dependency
+    from docker.models.containers import Container
 
 
 class LogStreamer:
@@ -13,7 +16,11 @@ class LogStreamer:
     through the provided logging function.
     """
 
-    def __init__(self, container: docker.models.containers.Container, logFn: Callable[[str, str], None]) -> None:
+    def __init__(
+        self,
+        container: Any,
+        logFn: Callable[[str, str], None],
+    ) -> None:
         """Start streaming logs from the given container using the supplied logger."""
         self.log = logFn
         self.stdout_thread = None
@@ -44,7 +51,11 @@ class LogStreamer:
 
     def __del__(self) -> None:
         """Ensure background thread stops if the streamer is garbage collected."""
-        if hasattr(self, "stdout_thread") and self.stdout_thread and self.stdout_thread.is_alive():
+        if (
+            hasattr(self, "stdout_thread")
+            and self.stdout_thread
+            and self.stdout_thread.is_alive()
+        ):
             self.close(timeout=5)
 
     def close(self, timeout: float = 5.0) -> None:

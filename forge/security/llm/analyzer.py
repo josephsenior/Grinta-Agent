@@ -25,7 +25,11 @@ class LLMRiskAnalyzer(SecurityAnalyzer):
         if not hasattr(action, "security_risk"):
             return ActionSecurityRisk.UNKNOWN
         security_risk = action.security_risk
-        if security_risk in {ActionSecurityRisk.LOW, ActionSecurityRisk.MEDIUM, ActionSecurityRisk.HIGH}:
+        if security_risk in {
+            ActionSecurityRisk.LOW,
+            ActionSecurityRisk.MEDIUM,
+            ActionSecurityRisk.HIGH,
+        }:
             return security_risk
         if security_risk == ActionSecurityRisk.UNKNOWN:
             return ActionSecurityRisk.UNKNOWN

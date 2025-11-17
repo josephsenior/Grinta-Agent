@@ -81,10 +81,14 @@ class _StubStrategy:
 # ---------------------------------------------------------------------------
 
 
-def _setup_registry_tracker_optimizer() -> tuple[PromptRegistry, PerformanceTracker, PromptOptimizer]:
+def _setup_registry_tracker_optimizer() -> tuple[
+    PromptRegistry, PerformanceTracker, PromptOptimizer
+]:
     registry = PromptRegistry()
     tracker = PerformanceTracker()
-    config = OptimizationConfig(enable_evolution=True, evolution_threshold=0.0, min_samples_for_switch=1)
+    config = OptimizationConfig(
+        enable_evolution=True, evolution_threshold=0.0, min_samples_for_switch=1
+    )
     optimizer = PromptOptimizer(registry, tracker, config)
     return registry, tracker, optimizer
 
@@ -140,7 +144,9 @@ def test_prompt_evolver_generates_variants(monkeypatch: pytest.MonkeyPatch) -> N
 
 def test_prompt_evolver_helper_methods() -> None:
     registry, tracker, optimizer = _setup_registry_tracker_optimizer()
-    variant = PromptVariant(content="Prompt", category=PromptCategory.CUSTOM, prompt_id="prompt")
+    variant = PromptVariant(
+        content="Prompt", category=PromptCategory.CUSTOM, prompt_id="prompt"
+    )
     registry.register_variant(variant)
 
     tracker.record_performance(
@@ -156,21 +162,44 @@ def test_prompt_evolver_helper_methods() -> None:
 
     evolver = PromptEvolver(_StubLLM(), registry, tracker, optimizer=optimizer)
     analysis = evolver._analyze_prompt_performance(variant)
-    assert analysis["recommended_strategy"] in {"refinement", "simplification", "specialization", "expansion"}
+    assert analysis["recommended_strategy"] in {
+        "refinement",
+        "simplification",
+        "specialization",
+        "expansion",
+    }
 
     errors, issues = evolver._categorize_errors(
         [
-            PromptPerformance(variant_id=variant.id, prompt_id=variant.prompt_id, category=variant.category, success=False, execution_time=1.0, error_message="JSON parse error"),
-            PromptPerformance(variant_id=variant.id, prompt_id=variant.prompt_id, category=variant.category, success=False, execution_time=1.0, error_message="Validation failure"),
+            PromptPerformance(
+                variant_id=variant.id,
+                prompt_id=variant.prompt_id,
+                category=variant.category,
+                success=False,
+                execution_time=1.0,
+                error_message="JSON parse error",
+            ),
+            PromptPerformance(
+                variant_id=variant.id,
+                prompt_id=variant.prompt_id,
+                category=variant.category,
+                success=False,
+                execution_time=1.0,
+                error_message="Validation failure",
+            ),
         ]
     )
     assert errors["parsing_error"] >= 1
     assert "JSON parse error"[:100] in issues
 
-    json_variants = evolver._try_parse_json_array('Here is output: ["one", "two"] and more')
+    json_variants = evolver._try_parse_json_array(
+        'Here is output: ["one", "two"] and more'
+    )
     assert json_variants == ["one", "two"]
 
-    text_variants = evolver._parse_text_variants("- Variant 1 with extended description text\n- Variant 2 with more details\n")
+    text_variants = evolver._parse_text_variants(
+        "- Variant 1 with extended description text\n- Variant 2 with more details\n"
+    )
     assert any("Variant 1" in variant for variant in text_variants)
 
 
@@ -208,7 +237,9 @@ def test_prompt_evolver_prompt_generation_and_fallback() -> None:
     assert all(fallback_refined)
     assert all(fallback_default)
 
-    parsed_json = evolver._parse_evolution_response('{"variants": ["keep"]}', "refinement")
+    parsed_json = evolver._parse_evolution_response(
+        '{"variants": ["keep"]}', "refinement"
+    )
     assert isinstance(parsed_json, list)
 
 
@@ -254,10 +285,26 @@ def test_prompt_evolver_history_and_statistics(monkeypatch: pytest.MonkeyPatch) 
     registry, tracker, optimizer = _setup_registry_tracker_optimizer()
     prompt_id = "history-prompt"
 
-    base_variant = PromptVariant(content="Base", category=PromptCategory.CUSTOM, prompt_id=prompt_id)
+    base_variant = PromptVariant(
+        content="Base", category=PromptCategory.CUSTOM, prompt_id=prompt_id
+    )
     registry.register_variant(base_variant)
-    tracker.record_execution(base_variant.id, prompt_id, PromptCategory.CUSTOM, success=True, execution_time=2.0, token_cost=1.0)
-    tracker.record_execution(base_variant.id, prompt_id, PromptCategory.CUSTOM, success=False, execution_time=3.0, token_cost=1.5)
+    tracker.record_execution(
+        base_variant.id,
+        prompt_id,
+        PromptCategory.CUSTOM,
+        success=True,
+        execution_time=2.0,
+        token_cost=1.0,
+    )
+    tracker.record_execution(
+        base_variant.id,
+        prompt_id,
+        PromptCategory.CUSTOM,
+        success=False,
+        execution_time=3.0,
+        token_cost=1.5,
+    )
 
     evolver = PromptEvolver(_StubLLM(), registry, tracker, optimizer=optimizer)
 
@@ -272,15 +319,27 @@ def test_prompt_evolver_history_and_statistics(monkeypatch: pytest.MonkeyPatch) 
     evolved_variant.successful_executions = 7
     evolved_variant.failed_executions = 3
     registry.register_variant(evolved_variant)
-    tracker.record_execution(evolved_variant.id, prompt_id, PromptCategory.CUSTOM, success=True, execution_time=1.5, token_cost=0.8)
+    tracker.record_execution(
+        evolved_variant.id,
+        prompt_id,
+        PromptCategory.CUSTOM,
+        success=True,
+        execution_time=1.5,
+        token_cost=0.8,
+    )
 
     history = evolver.get_evolution_history(prompt_id)
     assert history
 
     strategy_counts = evolver._count_strategies([evolved_variant])
     assert strategy_counts["expansion"] == 1
-    success_rate = evolver._calculate_strategy_success_rate("expansion", [evolved_variant])
-    assert success_rate == evolved_variant.successful_executions / evolved_variant.total_executions
+    success_rate = evolver._calculate_strategy_success_rate(
+        "expansion", [evolved_variant]
+    )
+    assert (
+        success_rate
+        == evolved_variant.successful_executions / evolved_variant.total_executions
+    )
     evolver._calculate_strategy_success_rates(strategy_counts, [evolved_variant])
 
     monkeypatch.setattr(optimizer, "should_evolve_prompt", lambda pid: True)
@@ -334,10 +393,14 @@ async def test_prompt_evolver_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_strategy_manager_selection_and_insights(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_strategy_manager_selection_and_insights(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     manager = AdvancedStrategyManager()
     # Deterministic exploration behaviour
-    monkeypatch.setattr("forge.prompt_optimization.advanced.strategy_manager.random.random", lambda: 0.0)
+    monkeypatch.setattr(
+        "forge.prompt_optimization.advanced.strategy_manager.random.random", lambda: 0.0
+    )
 
     context = {
         "content": "Generate optimized code quickly with high accuracy and low latency.",
@@ -353,7 +416,9 @@ def test_strategy_manager_selection_and_insights(monkeypatch: pytest.MonkeyPatch
     assert selection.confidence >= 0.0
     assert selection.strategy_type in StrategyType
 
-    manager.update_strategy_performance(selection.selected_strategy, success=True, score=0.9, context=context)
+    manager.update_strategy_performance(
+        selection.selected_strategy, success=True, score=0.9, context=context
+    )
 
     insights = manager.get_strategy_insights()
     assert insights["total_selections"] == 1
@@ -375,8 +440,20 @@ def test_ensemble_strategy_combines_results(monkeypatch: pytest.MonkeyPatch) -> 
         PromptVariant(content="Variant B", category=PromptCategory.CUSTOM),
     ]
     metrics = {
-        variants[0].id: PromptMetrics(success_rate=0.8, avg_execution_time=1.5, error_rate=0.1, avg_token_cost=10.0, sample_count=10),
-        variants[1].id: PromptMetrics(success_rate=0.7, avg_execution_time=1.0, error_rate=0.05, avg_token_cost=8.0, sample_count=8),
+        variants[0].id: PromptMetrics(
+            success_rate=0.8,
+            avg_execution_time=1.5,
+            error_rate=0.1,
+            avg_token_cost=10.0,
+            sample_count=10,
+        ),
+        variants[1].id: PromptMetrics(
+            success_rate=0.7,
+            avg_execution_time=1.0,
+            error_rate=0.05,
+            avg_token_cost=8.0,
+            sample_count=8,
+        ),
     }
 
     result = ensemble.optimize({"confidence": 0.9}, variants, metrics)
@@ -406,22 +483,40 @@ def test_strategy_manager_internal_helpers(monkeypatch: pytest.MonkeyPatch) -> N
     assert 0 <= score <= 1
 
     assert manager._satisfies_constraints("hierarchical", {"max_memory": 900}) is False
-    assert manager._satisfies_constraints("multi_objective_custom", {"max_time": 1}) is False
-    assert manager._satisfies_constraints("balanced_multi", {"min_accuracy": 0.9}) is False
+    assert (
+        manager._satisfies_constraints("multi_objective_custom", {"max_time": 1})
+        is False
+    )
+    assert (
+        manager._satisfies_constraints("balanced_multi", {"min_accuracy": 0.9}) is False
+    )
 
     alternatives = manager._get_alternatives({"a": 0.1, "b": 0.2}, "a")
     assert alternatives[0][0] == "b"
 
-    reasoning = manager._generate_selection_reasoning("context_aware", {"context_aware": 0.9}, context_analysis)
+    reasoning = manager._generate_selection_reasoning(
+        "context_aware", {"context_aware": 0.9}, context_analysis
+    )
     assert "context-aware" in reasoning.lower()
 
     similar = manager._contexts_similar(
-        {"complexity": "high", "domain": "software", "task_type": "generation", "urgency": "high"},
-        {"complexity": "high", "domain": "software", "task_type": "generation", "urgency": "high"},
+        {
+            "complexity": "high",
+            "domain": "software",
+            "task_type": "generation",
+            "urgency": "high",
+        },
+        {
+            "complexity": "high",
+            "domain": "software",
+            "task_type": "generation",
+            "urgency": "high",
+        },
     )
     assert similar is True
 
-    manager.update_strategy_performance("balanced_multi", success=False, score=0.1, context=context_analysis)
+    manager.update_strategy_performance(
+        "balanced_multi", success=False, score=0.1, context=context_analysis
+    )
     create_default = manager.create_ensemble_strategy()
     assert isinstance(create_default, EnsembleStrategy)
-

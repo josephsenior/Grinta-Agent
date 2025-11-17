@@ -13,20 +13,22 @@ from forge.storage.files import FileStore
 
 class S3ObjectDict(TypedDict):
     """TypedDict representing minimal S3 object metadata returned by list APIs."""
+
     Key: str
-    __test__ = False
 
 
 class GetObjectOutputDict(TypedDict):
     """TypedDict representing response body of S3 get_object call."""
+
     Body: Any
-    __test__ = False
 
 
 class ListObjectsV2OutputDict(TypedDict):
     """TypedDict representing response payload of list_objects_v2."""
+
     Contents: list[S3ObjectDict] | None
-    __test__ = False
+
+
 
 
 class S3FileStore(FileStore):
@@ -51,17 +53,19 @@ class S3FileStore(FileStore):
 
     def write(self, path: str, contents: str | bytes) -> None:
         """Write to S3 bucket.
-        
+
         Args:
             path: Object key path
             contents: Content to write
-            
+
         Raises:
             FileNotFoundError: On access denied or bucket not found
 
         """
         try:
-            as_bytes = contents.encode("utf-8") if isinstance(contents, str) else contents
+            as_bytes = (
+                contents.encode("utf-8") if isinstance(contents, str) else contents
+            )
             self.client.put_object(Bucket=self.bucket, Key=path, Body=as_bytes)
         except botocore.exceptions.ClientError as e:
             if e.response["Error"]["Code"] == "AccessDenied":
@@ -70,24 +74,28 @@ class S3FileStore(FileStore):
             if e.response["Error"]["Code"] == "NoSuchBucket":
                 msg = f"Error: The bucket '{self.bucket}' does not exist."
                 raise FileNotFoundError(msg) from e
-            msg = f"Error: Failed to write to bucket '{self.bucket}' at path {path}: {e}"
+            msg = (
+                f"Error: Failed to write to bucket '{self.bucket}' at path {path}: {e}"
+            )
             raise FileNotFoundError(msg) from e
 
     def read(self, path: str) -> str:
         """Read from S3 bucket.
-        
+
         Args:
             path: Object key path
-            
+
         Returns:
             File content as string
-            
+
         Raises:
             FileNotFoundError: If object not found
 
         """
         try:
-            response: GetObjectOutputDict = self.client.get_object(Bucket=self.bucket, Key=path)
+            response: GetObjectOutputDict = self.client.get_object(
+                Bucket=self.bucket, Key=path
+            )
             with response["Body"] as stream:
                 return str(stream.read().decode("utf-8"))
         except botocore.exceptions.ClientError as e:
@@ -96,22 +104,27 @@ class S3FileStore(FileStore):
                 raise FileNotFoundError(msg) from e
             if e.response["Error"]["Code"] == "NoSuchKey":
                 msg = f"Error: The object key '{path}' does not exist in bucket '{
-                    self.bucket}'."
+                    self.bucket
+                }'."
                 raise FileNotFoundError(
                     msg,
                 ) from e
-            msg = f"Error: Failed to read from bucket '{self.bucket}' at path {path}: {e}"
+            msg = (
+                f"Error: Failed to read from bucket '{self.bucket}' at path {path}: {e}"
+            )
             raise FileNotFoundError(msg) from e
         except Exception as e:
-            msg = f"Error: Failed to read from bucket '{self.bucket}' at path {path}: {e}"
+            msg = (
+                f"Error: Failed to read from bucket '{self.bucket}' at path {path}: {e}"
+            )
             raise FileNotFoundError(msg) from e
 
     def list(self, path: str) -> list[str]:
         """List objects in S3 bucket at given prefix.
-        
+
         Args:
             path: Directory prefix
-            
+
         Returns:
             List of object keys
 
@@ -122,7 +135,9 @@ class S3FileStore(FileStore):
             path += "/"
         results: set[str] = set()
         prefix_len = len(path)
-        response: ListObjectsV2OutputDict = self.client.list_objects_v2(Bucket=self.bucket, Prefix=path)
+        response: ListObjectsV2OutputDict = self.client.list_objects_v2(
+            Bucket=self.bucket, Prefix=path
+        )
         contents = response.get("Contents")
         if not contents:
             return []
@@ -140,7 +155,7 @@ class S3FileStore(FileStore):
 
     def delete(self, path: str) -> None:
         """Delete objects from S3 bucket.
-        
+
         Args:
             path: Object key or prefix to delete
 
@@ -149,7 +164,9 @@ class S3FileStore(FileStore):
             if not path or path == "/":
                 path = ""
             path = path.removesuffix("/")
-            response = self.client.list_objects_v2(Bucket=self.bucket, Prefix=f"{path}/")
+            response = self.client.list_objects_v2(
+                Bucket=self.bucket, Prefix=f"{path}/"
+            )
             for content in response.get("Contents") or []:
                 self.client.delete_object(Bucket=self.bucket, Key=content["Key"])
             self.client.delete_object(Bucket=self.bucket, Key=path)
@@ -162,14 +179,19 @@ class S3FileStore(FileStore):
                 raise FileNotFoundError(msg) from e
             if e.response["Error"]["Code"] == "NoSuchKey":
                 msg = f"Error: The object key '{path}' does not exist in bucket '{
-                    self.bucket}'."
+                    self.bucket
+                }'."
                 raise FileNotFoundError(
                     msg,
                 ) from e
-            msg = f"Error: Failed to delete key '{path}' from bucket '{self.bucket}': {e}"
+            msg = (
+                f"Error: Failed to delete key '{path}' from bucket '{self.bucket}': {e}"
+            )
             raise FileNotFoundError(msg) from e
         except Exception as e:
-            msg = f"Error: Failed to delete key '{path}' from bucket '{self.bucket}: {e}"
+            msg = (
+                f"Error: Failed to delete key '{path}' from bucket '{self.bucket}: {e}"
+            )
             raise FileNotFoundError(msg) from e
 
     def _ensure_url_scheme(self, secure: bool, url: str | None) -> str | None:

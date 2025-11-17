@@ -75,53 +75,21 @@ function buildProviderTokens(values: ProviderFormValues) {
   };
 }
 
-function GitSettingsScreen() {
-  const {
-    t,
-    isLoading,
-    formAction,
-    providerInputs,
-    showGithubIntegration,
-    showSlackIntegration,
-    showProjectManagement,
-    config,
-    formIsClean,
-    isPending,
-  } = useGitSettingsController();
-
+function IntegrationSection({
+  title,
+  content,
+  className,
+}: {
+  title: string;
+  content: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <form
-      data-testid="git-settings-screen"
-      action={formAction}
-      className="flex flex-col h-full justify-between"
-    >
-      {!isLoading && (
-        <div className="p-9 flex flex-col">
-          <GitIntegrationsHeader
-            showGithub={showGithubIntegration}
-            showSlack={showSlackIntegration}
-            config={config}
-            t={t}
-          />
-
-          {showProjectManagement && (
-            <div className="mt-6">
-              <ProjectManagementIntegration />
-            </div>
-          )}
-
-          <GitProviderInputs providerInputs={providerInputs} t={t} />
-        </div>
-      )}
-
-      {isLoading && <GitSettingInputsSkeleton />}
-
-      <GitSettingsFooter
-        formIsClean={formIsClean}
-        isPending={isPending}
-        t={t}
-      />
-    </form>
+    <div className={cn("pb-1 flex flex-col", className)}>
+      <h3 className="text-xl font-medium text-white">{title}</h3>
+      {content}
+      <div className="w-1/2 border-b border-white/10 mt-2" />
+    </div>
   );
 }
 
@@ -157,24 +125,6 @@ function GitIntegrationsHeader({
         />
       )}
     </>
-  );
-}
-
-function IntegrationSection({
-  title,
-  content,
-  className,
-}: {
-  title: string;
-  content: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={cn("pb-1 flex flex-col", className)}>
-      <h3 className="text-xl font-medium text-white">{title}</h3>
-      {content}
-      <div className="w-1/2 border-b border-violet-500/20 mt-2" />
-    </div>
   );
 }
 
@@ -379,6 +329,56 @@ function useGitSettingsController() {
     formIsClean,
     isPending,
   } as const;
+}
+
+function GitSettingsScreen() {
+  const {
+    t,
+    isLoading,
+    formAction,
+    providerInputs,
+    showGithubIntegration,
+    showSlackIntegration,
+    showProjectManagement,
+    config,
+    formIsClean,
+    isPending,
+  } = useGitSettingsController();
+
+  return (
+    <form
+      data-testid="git-settings-screen"
+      action={formAction}
+      className="flex flex-col h-full justify-between"
+    >
+      {!isLoading && (
+        <div className="p-9 flex flex-col">
+          <GitIntegrationsHeader
+            showGithub={showGithubIntegration}
+            showSlack={showSlackIntegration}
+            config={config}
+            t={t}
+          />
+
+          {showProjectManagement && (
+            <div className="mt-6">
+              <ProjectManagementIntegration />
+            </div>
+          )}
+
+          <GitProviderInputs providerInputs={providerInputs} t={t} />
+        </div>
+      )}
+
+      {isLoading && <GitSettingInputsSkeleton />}
+
+      <GitSettingsFooter
+        formIsClean={formIsClean}
+        isPending={isPending}
+        t={t}
+      />
+    </form>
+  );
 }
 
 export default GitSettingsScreen;

@@ -20,11 +20,20 @@ class MockRuntime(Runtime):
 
     def __init__(self, *args, **kwargs):
         if "llm_registry" not in kwargs and len(args) < 3:
-            config = kwargs.get("config") if "config" in kwargs else args[0] if args else ForgeConfig()
+            config = (
+                kwargs.get("config")
+                if "config" in kwargs
+                else (args[0] if args else ForgeConfig())
+            )
+            if config is None or not isinstance(config, ForgeConfig):
+                config = ForgeConfig()
+                kwargs["config"] = config
             kwargs["llm_registry"] = LLMRegistry(config=config)
         super().__init__(*args, **kwargs)
         self.run_action_calls = []
-        self._execute_shell_fn_git_handler = MagicMock(return_value=MagicMock(exit_code=0, stdout="", stderr=""))
+        self._execute_shell_mock = MagicMock(
+            return_value=MagicMock(exit_code=0, stdout="", stderr="")
+        )
 
     async def connect(self):
         pass
@@ -53,11 +62,16 @@ class MockRuntime(Runtime):
     def copy_from(self, path):
         return ""
 
-    def copy_to(self, path, content):
+    def copy_to(
+        self, host_src: str, sandbox_dest: str, recursive: bool = False
+    ) -> None:
         pass
 
-    def list_files(self, path):
+    def list_files(self, path: str, recursive: bool = False) -> list[str]:
         return []
+
+    def _execute_shell_fn_git_handler(self, *args, **kwargs):
+        return self._execute_shell_mock(*args, **kwargs)
 
     def run_action(self, action: Action) -> Observation:
         self.run_action_calls.append(action)
@@ -69,7 +83,9 @@ class MockRuntime(Runtime):
     def edit(self, action):
         return NullObservation(content="")
 
-    def get_mcp_config(self, extra_stdio_servers: list[MCPStdioServerConfig] | None = None):
+    def get_mcp_config(
+        self, extra_stdio_servers: list[MCPStdioServerConfig] | None = None
+    ):
         return MCPConfig()
 
 
@@ -82,7 +98,9 @@ def temp_dir(tmp_path_factory: pytest.TempPathFactory) -> str:
 def runtime(temp_dir):
     """Fixture for runtime testing."""
     config = ForgeConfig()
-    git_provider_tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=SecretStr("test_token"))})
+    git_provider_tokens = MappingProxyType(
+        {ProviderType.GITHUB: ProviderToken(token=SecretStr("test_token"))}
+    )
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
     llm_registry = LLMRegistry(config=config)
@@ -97,12 +115,16 @@ def runtime(temp_dir):
 
 
 def mock_repo_and_patch(monkeypatch, provider=ProviderType.GITHUB, is_public=True):
-    repo = Repository(id="123", full_name="owner/repo", git_provider=provider, is_public=is_public)
+    repo = Repository(
+        id="123", full_name="owner/repo", git_provider=provider, is_public=is_public
+    )
 
     async def mock_verify_repo_provider(*_args, **_kwargs):
         return repo
 
-    monkeypatch.setattr(ProviderHandler, "verify_repo_provider", mock_verify_repo_provider)
+    monkeypatch.setattr(
+        ProviderHandler, "verify_repo_provider", mock_verify_repo_provider
+    )
     return repo
 
 
@@ -124,7 +146,9 @@ async def test_export_latest_git_provider_tokens_no_token_ref(temp_dir):
     config = ForgeConfig()
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
-    runtime = MockRuntime(config=config, event_stream=event_stream, sid="test", user_id="test_user")
+    runtime = MockRuntime(
+        config=config, event_stream=event_stream, sid="test", user_id="test_user"
+    )
     cmd = CmdRunAction(command='echo "hello"')
     await runtime._export_latest_git_provider_tokens(cmd)
     assert not event_stream.secrets
@@ -159,7 +183,10 @@ async def test_export_latest_git_provider_tokens_multiple_refs(temp_dir):
     )
     cmd = CmdRunAction(command="echo $GITHUB_TOKEN && echo $GITLAB_TOKEN")
     await runtime._export_latest_git_provider_tokens(cmd)
-    assert event_stream.secrets == {"github_token": "github_token", "gitlab_token": "gitlab_token"}
+    assert event_stream.secrets == {
+        "github_token": "github_token",
+        "gitlab_token": "gitlab_token",
+    }
 
 
 @pytest.mark.asyncio
@@ -169,7 +196,11 @@ async def test_export_latest_git_provider_tokens_token_update(runtime, monkeypat
     await runtime._export_latest_git_provider_tokens(cmd)
     monkeypatch.setenv("WEB_HOST", "example.com")
     new_token = "new_test_token"
-    with patch.object(ProviderHandler, "_get_latest_provider_token", new=AsyncMock(return_value=SecretStr(new_token))):
+    with patch.object(
+        ProviderHandler,
+        "_get_latest_provider_token",
+        new=AsyncMock(return_value=SecretStr(new_token)),
+    ):
         await runtime._export_latest_git_provider_tokens(cmd)
     assert runtime.event_stream.secrets == {"github_token": new_token}
 
@@ -181,14 +212,17 @@ async def test_clone_or_init_repo_no_repo_init_git_in_empty_workspace(temp_dir):
     config.init_git_in_empty_workspace = True
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
-    runtime = MockRuntime(config=config, event_stream=event_stream, sid="test", user_id=None)
+    runtime = MockRuntime(
+        config=config, event_stream=event_stream, sid="test", user_id=None
+    )
     result = await runtime.clone_or_init_repo(None, None, None)
     assert len(runtime.run_action_calls) == 1
     assert isinstance(runtime.run_action_calls[0], CmdRunAction)
     assert (
         runtime.run_action_calls[0].command
         == f"git init && git config --global --add safe.directory {
-            runtime.workspace_root}"
+            runtime.workspace_root
+        }"
     )
     assert result == ""
 
@@ -200,7 +234,9 @@ async def test_clone_or_init_repo_no_repo_no_user_id_with_workspace_base(temp_di
     config.workspace_base = "/some/path"
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
-    runtime = MockRuntime(config=config, event_stream=event_stream, sid="test", user_id=None)
+    runtime = MockRuntime(
+        config=config, event_stream=event_stream, sid="test", user_id=None
+    )
     result = await runtime.clone_or_init_repo(None, None, None)
     assert len(runtime.run_action_calls) == 0
     assert result == ""
@@ -212,11 +248,19 @@ async def test_clone_or_init_repo_auth_error(temp_dir):
     config = ForgeConfig()
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
-    runtime = MockRuntime(config=config, event_stream=event_stream, sid="test", user_id="test_user")
-    with patch.object(ProviderHandler, "verify_repo_provider", side_effect=AuthenticationError("Auth failed")):
+    runtime = MockRuntime(
+        config=config, event_stream=event_stream, sid="test", user_id="test_user"
+    )
+    with patch.object(
+        ProviderHandler,
+        "verify_repo_provider",
+        side_effect=AuthenticationError("Auth failed"),
+    ):
         with pytest.raises(Exception) as excinfo:
             await runtime.clone_or_init_repo(None, "owner/repo", None)
-        assert "Git provider authentication issue when getting remote URL" in str(excinfo.value)
+        assert "Git provider authentication issue when getting remote URL" in str(
+            excinfo.value
+        )
 
 
 @pytest.mark.asyncio
@@ -225,7 +269,9 @@ async def test_clone_or_init_repo_github_with_token(temp_dir, monkeypatch):
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
     github_token = "github_test_token"
-    git_provider_tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=SecretStr(github_token))})
+    git_provider_tokens = MappingProxyType(
+        {ProviderType.GITHUB: ProviderToken(token=SecretStr(github_token))}
+    )
     runtime = MockRuntime(
         config=config,
         event_stream=event_stream,
@@ -239,7 +285,9 @@ async def test_clone_or_init_repo_github_with_token(temp_dir, monkeypatch):
     assert isinstance(runtime.run_action_calls[0], CmdRunAction)
     assert isinstance(runtime.run_action_calls[1], CmdRunAction)
     clone_cmd = runtime.run_action_calls[0].command
-    assert f"git clone https://{github_token}@github.com/owner/repo.git repo" in clone_cmd
+    assert (
+        f"git clone https://{github_token}@github.com/owner/repo.git repo" in clone_cmd
+    )
     checkout_cmd = runtime.run_action_calls[1].command
     assert "cd repo" in checkout_cmd
     assert "git checkout -b Forge-workspace-" in checkout_cmd
@@ -252,7 +300,9 @@ async def test_clone_or_init_repo_github_no_token(temp_dir, monkeypatch):
     config = ForgeConfig()
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
-    runtime = MockRuntime(config=config, event_stream=event_stream, sid="test", user_id="test_user")
+    runtime = MockRuntime(
+        config=config, event_stream=event_stream, sid="test", user_id="test_user"
+    )
     mock_repo_and_patch(monkeypatch, provider=ProviderType.GITHUB)
     result = await runtime.clone_or_init_repo(None, "owner/repo", None)
     assert len(runtime.run_action_calls) == 2
@@ -272,7 +322,9 @@ async def test_clone_or_init_repo_gitlab_with_token(temp_dir, monkeypatch):
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
     gitlab_token = "gitlab_test_token"
-    git_provider_tokens = MappingProxyType({ProviderType.GITLAB: ProviderToken(token=SecretStr(gitlab_token))})
+    git_provider_tokens = MappingProxyType(
+        {ProviderType.GITLAB: ProviderToken(token=SecretStr(gitlab_token))}
+    )
     runtime = MockRuntime(
         config=config,
         event_stream=event_stream,
@@ -286,7 +338,10 @@ async def test_clone_or_init_repo_gitlab_with_token(temp_dir, monkeypatch):
     assert isinstance(runtime.run_action_calls[0], CmdRunAction)
     assert isinstance(runtime.run_action_calls[1], CmdRunAction)
     clone_cmd = runtime.run_action_calls[0].command
-    assert f"git clone https://oauth2:{gitlab_token}@gitlab.com/owner/repo.git repo" in clone_cmd
+    assert (
+        f"git clone https://oauth2:{gitlab_token}@gitlab.com/owner/repo.git repo"
+        in clone_cmd
+    )
     checkout_cmd = runtime.run_action_calls[1].command
     assert "cd repo" in checkout_cmd
     assert "git checkout -b Forge-workspace-" in checkout_cmd
@@ -299,7 +354,9 @@ async def test_clone_or_init_repo_with_branch(temp_dir, monkeypatch):
     config = ForgeConfig()
     file_store = get_file_store("local", temp_dir)
     event_stream = EventStream("abc", file_store)
-    runtime = MockRuntime(config=config, event_stream=event_stream, sid="test", user_id="test_user")
+    runtime = MockRuntime(
+        config=config, event_stream=event_stream, sid="test", user_id="test_user"
+    )
     mock_repo_and_patch(monkeypatch, provider=ProviderType.GITHUB)
     result = await runtime.clone_or_init_repo(None, "owner/repo", "feature-branch")
     assert len(runtime.run_action_calls) == 2

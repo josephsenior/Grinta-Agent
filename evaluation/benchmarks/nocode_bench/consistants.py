@@ -1,4 +1,11 @@
-DOCPATH_PATTERNS = ["docs/", "^CHANGES\\.rst$", "doc/", "ChangeLog", "^changelog/", "^CHANGES$"]
+DOCPATH_PATTERNS = [
+    "docs/",
+    "^CHANGES\\.rst$",
+    "doc/",
+    "ChangeLog",
+    "^changelog/",
+    "^CHANGES$",
+]
 MATPLOTLIB_CONFIG = (
     {
         k: {
@@ -30,8 +37,16 @@ MATPLOTLIB_CONFIG = (
     }
 )
 for k in ["3.8", "3.9"]:
-    MATPLOTLIB_CONFIG[k]["install"] = 'python -m pip install --no-build-isolation -e ".[dev]"'
-SYMPY_CONFIG = {"1.0": {"conda_env": "sympy_10", "install": "pip install -e .", "test_cmd": "bin/test -C -v"}}
+    MATPLOTLIB_CONFIG[k]["install"] = (
+        'python -m pip install --no-build-isolation -e ".[dev]"'
+    )
+SYMPY_CONFIG = {
+    "1.0": {
+        "conda_env": "sympy_10",
+        "install": "pip install -e .",
+        "test_cmd": "bin/test -C -v",
+    }
+}
 REQUESTS_CONFIG = {
     k: {
         "conda_env": "requests_227",
@@ -49,7 +64,11 @@ REQUESTS_CONFIG = {
 }
 PYTEST_CONFIG = dict(
     {
-        k: {"conda_env": "pytest_33", "install": "pip install -e .", "test_cmd": "pytest -v --color=no"}
+        k: {
+            "conda_env": "pytest_33",
+            "install": "pip install -e .",
+            "test_cmd": "pytest -v --color=no",
+        }
         for k in ["4.4", "4.1", "3.7", "3.4", "3.3"]
     }
 )
@@ -75,7 +94,9 @@ PYLINT_CONFIG = {
 } | {
     k: {
         "conda_env": "pylint_210",
-        "pre_install": ["sed -i 's/setuptools==[0-9.]\\+/setuptools==58.0.0/' requirements_test_min.txt"],
+        "pre_install": [
+            "sed -i 's/setuptools==[0-9.]\\+/setuptools==58.0.0/' requirements_test_min.txt"
+        ],
         "install": "pip install -r requirements_test.txt",
         "test_cmd": "pytest -rA --color=no",
     }
@@ -318,7 +339,11 @@ SKLEARN_CONFIG = (
 )
 SEABORN_CONFIG = dict(
     {
-        k: {"conda_env": "seaborn_010", "install": "pip install -e .[dev]", "test_cmd": "pytest --color=no -rA"}
+        k: {
+            "conda_env": "seaborn_010",
+            "install": "pip install -e .[dev]",
+            "test_cmd": "pytest --color=no -rA",
+        }
         for k in ["0.3", "0.4", "0.5", "0.6", "0.11", "0.12", "0.13", "0.14"]
     }
 )

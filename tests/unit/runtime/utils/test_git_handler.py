@@ -13,7 +13,6 @@ from forge.runtime.utils.git_handler import CommandResult, GitHandler
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Windows is not supported")
 class TestGitHandler(unittest.TestCase):
-
     def setUp(self):
         self.test_dir = tempfile.mkdtemp()
         self.origin_dir = os.path.join(self.test_dir, "origin")
@@ -22,7 +21,9 @@ class TestGitHandler(unittest.TestCase):
         os.makedirs(self.local_dir, exist_ok=True)
         self.executed_commands = []
         self.created_files = []
-        self.git_handler = GitHandler(execute_shell_fn=self._execute_command, create_file_fn=self._create_file)
+        self.git_handler = GitHandler(
+            execute_shell_fn=self._execute_command, create_file_fn=self._create_file
+        )
         self.git_handler.set_cwd(self.local_dir)
         self.git_handler.git_changes_cmd = f"python3 {git_changes.__file__}"
         self.git_handler.git_diff_cmd = f'python3 {git_diff.__file__} "{{file_path}}"'
@@ -36,7 +37,13 @@ class TestGitHandler(unittest.TestCase):
         # Convert string command to list if needed
         if isinstance(cmd, str):
             cmd = cmd.split()
-        result = subprocess.run(args=cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
+        result = subprocess.run(
+            args=cmd,
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=cwd,
+        )
         stderr = result.stderr or b""
         stdout = result.stdout or b""
         return CommandResult((stderr + stdout).decode(), result.returncode)
@@ -53,19 +60,26 @@ class TestGitHandler(unittest.TestCase):
         """
         result = self._execute_command(cmd, cwd)
         if result.exit_code != 0:
-            raise RuntimeError(f"command_error:{cmd};{result.exit_code};{result.content}")
+            raise RuntimeError(
+                f"command_error:{cmd};{result.exit_code};{result.content}"
+            )
 
     def _create_file(self, path, content):
         """Mock function for creating files."""
         self.created_files.append((path, content))
         try:
-            with open(path, "w", encoding='utf-8') as f:
+            with open(path, "w", encoding="utf-8") as f:
                 f.write(content)
             return 0
         except Exception:
             return -1
 
-    def write_file(self, dir: str, name: str, additional_content: tuple[str, ...] = ("Line 1", "Line 2", "Line 3")):
+    def write_file(
+        self,
+        dir: str,
+        name: str,
+        additional_content: tuple[str, ...] = ("Line 1", "Line 2", "Line 3"),
+    ):
         with open(os.path.join(dir, name), "w") as f:
             f.write(name)
             for line in additional_content:
@@ -76,7 +90,9 @@ class TestGitHandler(unittest.TestCase):
     def _setup_git_repos(self):
         """Set up real git repositories for testing."""
         self.run_command("git init --initial-branch=main", self.origin_dir)
-        self._execute_command("git config user.email 'test@example.com'", self.origin_dir)
+        self._execute_command(
+            "git config user.email 'test@example.com'", self.origin_dir
+        )
         self._execute_command("git config user.name 'Test User'", self.origin_dir)
         self.write_file(self.origin_dir, "unchanged.txt")
         self.write_file(self.origin_dir, "committed_modified.txt")
@@ -87,13 +103,17 @@ class TestGitHandler(unittest.TestCase):
         self.write_file(self.origin_dir, "unstaged_delete.txt")
         self.run_command("git add . && git commit -m 'Initial Commit'", self.origin_dir)
         self.run_command(f'git clone "{self.origin_dir}" "{self.local_dir}"')
-        self._execute_command("git config user.email 'test@example.com'", self.local_dir)
+        self._execute_command(
+            "git config user.email 'test@example.com'", self.local_dir
+        )
         self._execute_command("git config user.name 'Test User'", self.local_dir)
         self.run_command("git checkout -b feature-branch", self.local_dir)
         self.write_file(self.local_dir, "committed_modified.txt", ("Line 4",))
         self.write_file(self.local_dir, "committed_add.txt")
         os.remove(os.path.join(self.local_dir, "committed_delete.txt"))
-        self.run_command("git add . && git commit -m 'First batch of changes'", self.local_dir)
+        self.run_command(
+            "git add . && git commit -m 'First batch of changes'", self.local_dir
+        )
         self.write_file(self.local_dir, "staged_modified.txt", ("Line 4",))
         self.write_file(self.local_dir, "staged_add.txt")
         os.remove(os.path.join(self.local_dir, "staged_delete.txt"))
@@ -103,9 +123,9 @@ class TestGitHandler(unittest.TestCase):
         os.remove(os.path.join(self.local_dir, "unstaged_delete.txt"))
 
     def setup_nested(self):
-        nested_1 = Path(self.local_dir, "nested 1")
-        nested_1.mkdir()
-        nested_1 = str(nested_1)
+        nested_1_path = Path(self.local_dir, "nested 1")
+        nested_1_path.mkdir()
+        nested_1 = str(nested_1_path)
         self.run_command("git init --initial-branch=main", nested_1)
         self._execute_command("git config user.email 'test@example.com'", nested_1)
         self._execute_command("git config user.name 'Test User'", nested_1)
@@ -113,9 +133,9 @@ class TestGitHandler(unittest.TestCase):
         self.run_command("git add .", nested_1)
         self.run_command('git commit -m "Initial Commit"', nested_1)
         self.write_file(nested_1, "staged_add.txt")
-        nested_2 = Path(self.local_dir, "nested_2")
-        nested_2.mkdir()
-        nested_2 = str(nested_2)
+        nested_2_path = Path(self.local_dir, "nested_2")
+        nested_2_path.mkdir()
+        nested_2 = str(nested_2_path)
         self.run_command("git init --initial-branch=main", nested_2)
         self._execute_command("git config user.email 'test@example.com'", nested_2)
         self._execute_command("git config user.name 'Test User'", nested_2)
@@ -205,12 +225,17 @@ class TestGitHandler(unittest.TestCase):
     def test_get_git_diff_unstaged_add(self):
         """Test that get_git_diff delegates to the git_diff module."""
         diff = self.git_handler.get_git_diff("unstaged_add.txt")
-        expected_diff = {"original": "", "modified": "unstaged_add.txt\nLine 1\nLine 2\nLine 3"}
+        expected_diff = {
+            "original": "",
+            "modified": "unstaged_add.txt\nLine 1\nLine 2\nLine 3",
+        }
         assert diff == expected_diff
 
     def test_get_git_changes_fallback(self):
         """Test that get_git_changes falls back to creating a script file when needed."""
-        with patch("forge.runtime.utils.git_handler.GIT_CHANGES_CMD", "non-existant-command"):
+        with patch(
+            "forge.runtime.utils.git_handler.GIT_CHANGES_CMD", "non-existant-command"
+        ):
             self.git_handler.git_changes_cmd = git_handler.GIT_CHANGES_CMD
             changes = self.git_handler.get_git_changes()
             expected_changes = [
@@ -228,7 +253,9 @@ class TestGitHandler(unittest.TestCase):
 
     def test_get_git_diff_fallback(self):
         """Test that get_git_diff delegates to the git_diff module."""
-        with patch("forge.runtime.utils.git_handler.GIT_DIFF_CMD", "non-existant-command"):
+        with patch(
+            "forge.runtime.utils.git_handler.GIT_DIFF_CMD", "non-existant-command"
+        ):
             self.git_handler.git_diff_cmd = git_handler.GIT_DIFF_CMD
             diff = self.git_handler.get_git_diff("unchanged.txt")
             expected_diff = {

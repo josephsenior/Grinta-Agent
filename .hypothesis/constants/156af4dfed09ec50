@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\knowledge_base\manager.py
+# hypothesis_version: 6.147.0
+
+[0.0, 0.7, 200, 500, 1000, 1024, 'chunk_index', 'collection_id', 'collections', 'content', 'document', 'document_count', 'document_id', 'filename', 'id', 'metadata', 'name', 'score', 'size_mb', 'text/plain', 'total_collections', 'total_documents', 'total_size_bytes', 'total_size_mb']

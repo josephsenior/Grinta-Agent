@@ -1,12 +1,17 @@
 import pytest
-from forge.utils.chunk_localizer import Chunk, create_chunks, get_top_k_chunk_matches, normalized_lcs
+from forge.utils.chunk_localizer import (
+    Chunk,
+    create_chunks,
+    get_top_k_chunk_matches,
+    normalized_lcs,
+)
 
 
 def test_chunk_creation():
     chunk = Chunk(text="test chunk", line_range=(1, 1))
     assert chunk.text == "test chunk"
     assert chunk.line_range == (1, 1)
-    assert chunk.normalized_lcs is None
+    assert chunk.normalized_lcs == 0.0
 
 
 def test_chunk_visualization(capsys):
@@ -145,6 +150,8 @@ def test_create_chunks_with_supported_language(monkeypatch):
     class DummyParser:
         pass
 
-    monkeypatch.setattr("forge.utils.chunk_localizer.get_parser", lambda language: DummyParser())
+    monkeypatch.setattr(
+        "forge.utils.chunk_localizer.get_parser", lambda language: DummyParser()
+    )
     with pytest.raises(NotImplementedError):
         create_chunks("line1\nline2", language="python")

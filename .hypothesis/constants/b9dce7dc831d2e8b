@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\core\config\agent_config.py
+# hypothesis_version: 6.147.0
+
+['CodeActAgent', 'agent', 'condenser_config', 'ignore', 'llm_config', 'llm_draft_config', 'name', 'system_prompt.j2']

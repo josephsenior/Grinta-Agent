@@ -5,6 +5,7 @@ This server has no authentication and only listens to localhost traffic.
 
 import os
 import threading
+import sys
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -16,7 +17,9 @@ from forge.runtime.utils.file_viewer import generate_file_viewer_html
 
 def create_app() -> FastAPI:
     """Create the FastAPI application."""
-    app = FastAPI(title="File Viewer Server", openapi_url=None, docs_url=None, redoc_url=None)
+    app = FastAPI(
+        title="File Viewer Server", openapi_url=None, docs_url=None, redoc_url=None
+    )
 
     @app.get("/")
     async def root() -> dict[str, str]:
@@ -42,16 +45,28 @@ def create_app() -> FastAPI:
                 status_code=403,
             )
         if not os.path.isabs(path):
-            return HTMLResponse(content=f"<h1>Error: Path must be absolute</h1><p>{path}</p>", status_code=400)
+            return HTMLResponse(
+                content=f"<h1>Error: Path must be absolute</h1><p>{path}</p>",
+                status_code=400,
+            )
         if not os.path.exists(path):
-            return HTMLResponse(content=f"<h1>Error: File not found</h1><p>{path}</p>", status_code=404)
+            return HTMLResponse(
+                content=f"<h1>Error: File not found</h1><p>{path}</p>", status_code=404
+            )
         if os.path.isdir(path):
-            return HTMLResponse(content=f"<h1>Error: Path is a directory</h1><p>{path}</p>", status_code=400)
+            return HTMLResponse(
+                content=f"<h1>Error: Path is a directory</h1><p>{path}</p>",
+                status_code=400,
+            )
         try:
-            html_content = generate_file_viewer_html(path)
+            html_generator = getattr(sys.modules[__name__], "generate_file_viewer_html")
+            html_content = html_generator(path)
             return HTMLResponse(content=html_content)
         except Exception as e:
-            return HTMLResponse(content=f"<h1>Error viewing file</h1><p>{path}</p><p>{e!s}</p>", status_code=500)
+            return HTMLResponse(
+                content=f"<h1>Error viewing file</h1><p>{path}</p><p>{e!s}</p>",
+                status_code=500,
+            )
 
     return app
 

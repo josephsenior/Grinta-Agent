@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -20,7 +22,7 @@ def logs_dir(tmp_path, monkeypatch):
     return logs
 
 
-def _write_metasop_file(logs_dir, payload):
+def _write_metasop_file(logs_dir: Path, payload: dict[str, Any]) -> Path:
     last_run_file = logs_dir / "metasop_last_run.json"
     last_run_file.write_text(json.dumps(payload), encoding="utf-8")
     return last_run_file
@@ -36,13 +38,18 @@ async def test_get_orchestration_data_not_found(monkeypatch, tmp_path):
 
 @pytest.mark.asyncio
 async def test_get_orchestration_data_success(logs_dir):
-    payload = {
+    payload: dict[str, Any] = {
         "ok": True,
         "summary": "Successful run",
         "artifacts": {"step1": {"content": {}}},
         "report": {
             "events": [
-                {"step_id": "pm_spec", "role": "PM", "status": "executed", "retries": 1},
+                {
+                    "step_id": "pm_spec",
+                    "role": "PM",
+                    "status": "executed",
+                    "retries": 1,
+                },
                 {"step_id": "eng_impl", "role": "Engineer", "status": "failed"},
             ],
         },
@@ -88,8 +95,14 @@ def test_generate_mermaid_diagram_no_events():
 
 
 def test_generate_mermaid_diagram_error(monkeypatch):
-    monkeypatch.setattr(metasop_routes, "_get_node_style_class", lambda status: (_ for _ in ()).throw(RuntimeError()))
-    diagram = metasop_routes._generate_mermaid_diagram({"events": [{"status": "executed"}]}, {})
+    monkeypatch.setattr(
+        metasop_routes,
+        "_get_node_style_class",
+        lambda status: (_ for _ in ()).throw(RuntimeError()),
+    )
+    diagram = metasop_routes._generate_mermaid_diagram(
+        {"events": [{"status": "executed"}]}, {}
+    )
     assert "MetaSOP" in diagram
 
 
@@ -104,7 +117,7 @@ def test_generate_default_diagram():
 
 @pytest.mark.asyncio
 async def test_get_step_artifact_success(logs_dir):
-    payload = {"artifacts": {"step1": {"content": "artifact"}}}
+    payload: dict[str, Any] = {"artifacts": {"step1": {"content": "artifact"}}}
     _write_metasop_file(logs_dir, payload)
 
     response = await metasop_routes.get_step_artifact("cid", "step1")
@@ -122,7 +135,7 @@ async def test_get_step_artifact_no_file(monkeypatch, tmp_path):
 
 @pytest.mark.asyncio
 async def test_get_step_artifact_missing_step(logs_dir):
-    payload = {"artifacts": {}}
+    payload: dict[str, Any] = {"artifacts": {}}
     _write_metasop_file(logs_dir, payload)
     with pytest.raises(HTTPException) as exc:
         await metasop_routes.get_step_artifact("cid", "missing")
@@ -131,10 +144,14 @@ async def test_get_step_artifact_missing_step(logs_dir):
 
 @pytest.mark.asyncio
 async def test_get_step_artifact_internal_error(monkeypatch, logs_dir):
-    payload = {"artifacts": {"step1": {}}}
+    payload: dict[str, Any] = {"artifacts": {"step1": {}}}
     _write_metasop_file(logs_dir, payload)
 
-    monkeypatch.setattr(metasop_routes.json, "loads", lambda *_: (_ for _ in ()).throw(ValueError("bad json")))
+    monkeypatch.setattr(
+        metasop_routes.json,
+        "loads",
+        lambda *_: (_ for _ in ()).throw(ValueError("bad json")),
+    )
     with pytest.raises(HTTPException) as exc:
         await metasop_routes.get_step_artifact("cid", "step1")
     assert exc.value.status_code == 500
@@ -142,7 +159,7 @@ async def test_get_step_artifact_internal_error(monkeypatch, logs_dir):
 
 @pytest.mark.asyncio
 async def test_pass_to_codeact_success(logs_dir):
-    artifacts = {
+    artifacts: dict[str, Any] = {
         "pm_spec": {"content": {"user_stories": "Story"}},
         "arch_design": {"content": {"architecture": "Microservices"}},
         "engineer_impl": {
@@ -155,11 +172,13 @@ async def test_pass_to_codeact_success(logs_dir):
         },
         "ui_design": {"content": {"component_hierarchy": "App"}},
     }
-    payload = {"artifacts": artifacts}
+    payload: dict[str, Any] = {"artifacts": artifacts}
     _write_metasop_file(logs_dir, payload)
 
     response = await metasop_routes.pass_to_codeact(
-        metasop_routes.PassToCodeActRequest(conversation_id="cid", user_request="Build", repo_root="/repo")
+        metasop_routes.PassToCodeActRequest(
+            conversation_id="cid", user_request="Build", repo_root="/repo"
+        )
     )
     data = json.loads(response.body)
     assert data["success"] is True
@@ -171,26 +190,42 @@ async def test_pass_to_codeact_success(logs_dir):
 async def test_pass_to_codeact_no_file(monkeypatch, tmp_path):
     monkeypatch.setattr(metasop_routes, "Path", lambda p: tmp_path / p)
     with pytest.raises(HTTPException) as exc:
-        await metasop_routes.pass_to_codeact(metasop_routes.PassToCodeActRequest(conversation_id="cid", user_request="Do"))
+        await metasop_routes.pass_to_codeact(
+            metasop_routes.PassToCodeActRequest(
+                conversation_id="cid", user_request="Do"
+            )
+        )
     assert exc.value.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_pass_to_codeact_no_artifacts(logs_dir):
-    payload = {"artifacts": {}}
+    payload: dict[str, Any] = {"artifacts": {}}
     _write_metasop_file(logs_dir, payload)
     with pytest.raises(HTTPException) as exc:
-        await metasop_routes.pass_to_codeact(metasop_routes.PassToCodeActRequest(conversation_id="cid", user_request="Do"))
+        await metasop_routes.pass_to_codeact(
+            metasop_routes.PassToCodeActRequest(
+                conversation_id="cid", user_request="Do"
+            )
+        )
     assert exc.value.status_code == 400
 
 
 @pytest.mark.asyncio
 async def test_pass_to_codeact_internal_error(monkeypatch, logs_dir):
-    payload = {"artifacts": {"pm_spec": {}}}
+    payload: dict[str, Any] = {"artifacts": {"pm_spec": {}}}
     _write_metasop_file(logs_dir, payload)
-    monkeypatch.setattr(metasop_routes, "_format_artifacts_for_codeact", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("fail")))
+    monkeypatch.setattr(
+        metasop_routes,
+        "_format_artifacts_for_codeact",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("fail")),
+    )
     with pytest.raises(HTTPException) as exc:
-        await metasop_routes.pass_to_codeact(metasop_routes.PassToCodeActRequest(conversation_id="cid", user_request="Do"))
+        await metasop_routes.pass_to_codeact(
+            metasop_routes.PassToCodeActRequest(
+                conversation_id="cid", user_request="Do"
+            )
+        )
     assert exc.value.status_code == 500
 
 
@@ -200,7 +235,12 @@ def test_format_pm_artifact():
 
 
 def test_format_arch_artifact():
-    artifact = {"content": {"architecture": "Layered", "technical_decisions": [{"decision": "DB", "rationale": "Scale"}]}}
+    artifact = {
+        "content": {
+            "architecture": "Layered",
+            "technical_decisions": [{"decision": "DB", "rationale": "Scale"}],
+        }
+    }
     lines = metasop_routes._format_arch_artifact(artifact)
     assert any("Layered" in line for line in lines)
 
@@ -208,7 +248,11 @@ def test_format_arch_artifact():
 def test_format_engineer_artifact():
     artifact = {
         "content": {
-            "file_structure": {"name": "src", "type": "folder", "children": [{"name": "app.py"}]},
+            "file_structure": {
+                "name": "src",
+                "type": "folder",
+                "children": [{"name": "app.py"}],
+            },
             "implementation_plan": "Plan",
             "dependencies": ["pytest"],
             "technical_decisions": [{"decision": "API", "rationale": "REST"}],
@@ -222,12 +266,20 @@ def test_format_engineer_artifact():
 
 
 def test_format_ui_artifact():
-    lines = metasop_routes._format_ui_artifact({"content": {"component_hierarchy": "App"}})
+    lines = metasop_routes._format_ui_artifact(
+        {"content": {"component_hierarchy": "App"}}
+    )
     assert any("UI Designer" in line for line in lines)
 
 
 def test_format_run_commands():
-    lines = metasop_routes._format_run_commands({"setup_commands": ["npm install"], "test_commands": [], "dev_commands": ["npm run dev"]})
+    lines = metasop_routes._format_run_commands(
+        {
+            "setup_commands": ["npm install"],
+            "test_commands": [],
+            "dev_commands": ["npm run dev"],
+        }
+    )
     joined = "\n".join(lines)
     assert "npm install" in joined and "npm run dev" in joined
 
@@ -244,7 +296,9 @@ def test_format_artifacts_for_codeact_full():
         "engineer_impl": {"content": {}},
         "ui_design": {"content": {"component_hierarchy": "App"}},
     }
-    prompt = metasop_routes._format_artifacts_for_codeact(artifacts, "Do work", repo_root="/repo")
+    prompt = metasop_routes._format_artifacts_for_codeact(
+        artifacts, "Do work", repo_root="/repo"
+    )
     assert "Original Request" in prompt
     assert "Layered" in prompt
 

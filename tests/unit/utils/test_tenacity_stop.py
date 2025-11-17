@@ -11,4 +11,3 @@ def test_stop_if_should_exit(monkeypatch):
 
     monkeypatch.setattr("forge.utils.tenacity_stop.should_exit", lambda: True)
     assert stopper(SimpleNamespace()) is True
-

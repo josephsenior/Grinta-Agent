@@ -19,7 +19,9 @@ class BrowsingResponseParser(ResponseParser):
         self.action_parsers = [BrowsingActionParserMessage()]
         self.default_parser = BrowsingActionParserBrowseInteractive()
 
-    def parse(self, response: str | dict[str, list[dict[str, dict[str, str | None]]]]) -> Action:
+    def parse(
+        self, response: str | dict[str, list[dict[str, dict[str, str | None]]]]
+    ) -> Action:
         """Parse LLM response into a browsing action.
 
         Args:
@@ -35,7 +37,9 @@ class BrowsingResponseParser(ResponseParser):
             action_str = self.parse_response(response)
         return self.parse_action(action_str)
 
-    def parse_response(self, response: dict[str, list[dict[str, dict[str, str | None]]]]) -> str:
+    def parse_response(
+        self, response: dict[str, list[dict[str, dict[str, str | None]]]]
+    ) -> str:
         """Extract an action string from a structured LLM response.
 
         Args:
@@ -107,7 +111,11 @@ class BrowsingActionParserMessage(ActionParser):
 
         """
         msg = f'send_msg_to_user("""{action_str}""")'
-        return BrowseInteractiveAction(browser_actions=msg, thought=action_str, browsergym_send_msg_to_user=action_str)
+        return BrowseInteractiveAction(
+            browser_actions=msg,
+            thought=action_str,
+            browsergym_send_msg_to_user=action_str,
+        )
 
 
 class BrowsingActionParserBrowseInteractive(ActionParser):
@@ -141,23 +149,55 @@ class BrowsingActionParserBrowseInteractive(ActionParser):
 
         """
         parts = action_str.split("```")
-        browser_actions = parts[1].strip() if parts[1].strip() != "" else parts[0].strip()
-        thought = parts[0].strip() if parts[1].strip() != "" else ""
-        msg_content = ""
-        for sub_action in browser_actions.split("\n"):
-            if "send_msg_to_user(" in sub_action:
-                try:
-                    tree = ast.parse(sub_action)
-                    args = tree.body[0].value.args
-                    msg_content = args[0].value
-                except SyntaxError:
-                    logger.error("Error parsing action: %s", sub_action)
-                    if match := re.search("send_msg_to_user\\(([\"\\'])(.*?)\\1\\)", sub_action):
-                        msg_content = match[2]
-                    else:
-                        msg_content = ""
+        browser_actions, thought = self._extract_browser_actions_and_thought(parts)
+        msg_content = self._extract_send_msg_to_user(browser_actions)
         return BrowseInteractiveAction(
             browser_actions=browser_actions,
             thought=thought,
             browsergym_send_msg_to_user=msg_content,
         )
+
+    def _extract_browser_actions_and_thought(self, parts: list[str]) -> tuple[str, str]:
+        if len(parts) < 2:
+            segment = parts[0].strip() if parts else ""
+            return segment, ""
+        code_block = parts[1].strip()
+        if code_block:
+            return code_block, parts[0].strip()
+        return parts[0].strip(), ""
+
+    def _extract_send_msg_to_user(self, browser_actions: str) -> str:
+        message = ""
+        for sub_action in browser_actions.splitlines():
+            if "send_msg_to_user(" not in sub_action:
+                continue
+            parsed = self._message_from_ast(sub_action)
+            if parsed is not None:
+                message = parsed
+                continue
+            parsed = self._message_from_regex(sub_action)
+            message = parsed or ""
+        return message
+
+    def _message_from_ast(self, sub_action: str) -> str | None:
+        try:
+            tree = ast.parse(sub_action)
+        except SyntaxError:
+            logger.error("Error parsing action: %s", sub_action)
+            return None
+
+        stmt = tree.body[0] if tree.body else None
+        call_node = stmt.value if isinstance(stmt, ast.Expr) else None
+        first_arg = (
+            call_node.args[0]
+            if isinstance(call_node, ast.Call) and call_node.args
+            else None
+        )
+        if isinstance(first_arg, ast.Constant) and isinstance(first_arg.value, str):
+            return first_arg.value
+        return None
+
+    def _message_from_regex(self, sub_action: str) -> str | None:
+        if match := re.search(r"send_msg_to_user\(([\"'])(.*?)\1\)", sub_action):
+            return match[2]
+        return None

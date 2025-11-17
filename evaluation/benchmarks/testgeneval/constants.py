@@ -41,8 +41,12 @@ PASS_TO_PASS = "PASS_TO_PASS"
 PASS_TO_FAIL = "PASS_TO_FAIL"
 TEST_PYTEST = "coverage run -m pytest --no-header -rA --tb=no -p no:cacheprovider"
 TEST_PYTEST_VERBOSE = "coverage run -m pytest -rA --tb=long -p no:cacheprovider"
-TEST_ASTROPY_PYTEST = "coverage run -m pytest -rA -vv -o console_output_style=classic --tb=no"
-TEST_DJANGO = "coverage run ./tests/runtests.py --verbosity 2 --settings=test_sqlite --parallel 1"
+TEST_ASTROPY_PYTEST = (
+    "coverage run -m pytest -rA -vv -o console_output_style=classic --tb=no"
+)
+TEST_DJANGO = (
+    "coverage run ./tests/runtests.py --verbosity 2 --settings=test_sqlite --parallel 1"
+)
 TEST_DJANGO_NO_PARALLEL = "coverage run ./tests/runtests.py --verbosity 2"
 TEST_SEABORN = "coverage run -m pytest --no-header -rA"
 TEST_SEABORN_VERBOSE = "coverage run -m pytest -rA --tb=long"
@@ -137,7 +141,11 @@ SPECS_DJANGO = (
         for k in ["1.7", "1.8", "1.9", "1.10", "1.11", "2.0", "2.1", "2.2"]
     }
     | {
-        k: {"python": "3.5", "install": "python setup.py install", "test_cmd": TEST_DJANGO}
+        k: {
+            "python": "3.5",
+            "install": "python setup.py install",
+            "test_cmd": TEST_DJANGO,
+        }
         for k in ["1.4", "1.5", "1.6"]
     }
     | {
@@ -185,7 +193,12 @@ SPECS_DJANGO = (
 )
 SPECS_DJANGO["1.9"]["test_cmd"] = TEST_DJANGO_NO_PARALLEL
 SPECS_REQUESTS = {
-    k: {"python": "3.9", "packages": "pytest", "install": "python -m pip install .", "test_cmd": TEST_PYTEST}
+    k: {
+        "python": "3.9",
+        "packages": "pytest",
+        "install": "python -m pip install .",
+        "test_cmd": TEST_PYTEST,
+    }
     for k in ["0.7", "0.8", "0.9", "0.11", "0.13", "0.14", "1.1", "1.2", "2.0", "2.2"]
     + ["2.3", "2.4", "2.5", "2.7", "2.8", "2.9", "2.10", "2.11", "2.12", "2.17"]
     + ["2.18", "2.19", "2.22", "2.26", "2.25", "2.27", "2.31", "3.0"]
@@ -246,7 +259,11 @@ SPECS_SEABORN = {
     for k in ["0.12", "0.13", "0.14"]
 }
 SPECS_PYTEST = {
-    k: {"python": "3.9", "install": "python -m pip install -e .", "test_cmd": TEST_PYTEST}
+    k: {
+        "python": "3.9",
+        "install": "python -m pip install -e .",
+        "test_cmd": TEST_PYTEST,
+    }
     for k in [
         "4.4",
         "4.5",
@@ -426,7 +443,9 @@ SPECS_MATPLOTLIB = (
         k: {
             "python": "3.5",
             "install": "python setup.py build; python setup.py install",
-            "pre_install": ["apt-get -y update && apt-get -y upgrade && && apt-get install -y imagemagick ffmpeg"],
+            "pre_install": [
+                "apt-get -y update && apt-get -y upgrade && && apt-get install -y imagemagick ffmpeg"
+            ],
             "pip_packages": ["pytest"],
             "execute_test_as_nonroot": True,
             "test_cmd": TEST_PYTEST,
@@ -435,7 +454,9 @@ SPECS_MATPLOTLIB = (
     }
 )
 for k in ["3.8", "3.9"]:
-    SPECS_MATPLOTLIB[k]["install"] = 'python -m pip install --no-build-isolation -e ".[dev]"'
+    SPECS_MATPLOTLIB[k]["install"] = (
+        'python -m pip install --no-build-isolation -e ".[dev]"'
+    )
 SPECS_SPHINX = {
     k: {
         "python": "3.9",
@@ -591,10 +612,27 @@ SPECS_PYLINT = {
         "install": "python -m pip install -e .",
         "test_cmd": TEST_PYTEST,
     }
-    for k in ["2.10", "2.11", "2.13", "2.14", "2.15", "2.16", "2.17", "2.8", "2.9", "3.0", "3.1", "3.2", "3.3", "4.0"]
+    for k in [
+        "2.10",
+        "2.11",
+        "2.13",
+        "2.14",
+        "2.15",
+        "2.16",
+        "2.17",
+        "2.8",
+        "2.9",
+        "3.0",
+        "3.1",
+        "3.2",
+        "3.3",
+        "4.0",
+    ]
 }
 SPECS_PYLINT["2.8"]["pip_packages"] = ["pyenchant==3.2"]
-SPECS_PYLINT["2.8"]["pre_install"] = ["apt-get update && apt-get install -y libenchant-2-dev hunspell-en-us"]
+SPECS_PYLINT["2.8"]["pre_install"] = [
+    "apt-get update && apt-get install -y libenchant-2-dev hunspell-en-us"
+]
 SPECS_PYLINT |= {
     k: {**SPECS_PYLINT[k], "pip_packages": ["astroid==3.0.0a6", "setuptools"]}
     for k in ["3.0", "3.1", "3.2", "3.3", "4.0"]
@@ -621,7 +659,17 @@ SPECS_XARRAY = {
         "no_use_env": True,
         "test_cmd": TEST_PYTEST,
     }
-    for k in ["0.12", "0.18", "0.19", "0.20", "2022.03", "2022.06", "2022.09", "2023.07", "2024.05"]
+    for k in [
+        "0.12",
+        "0.18",
+        "0.19",
+        "0.20",
+        "2022.03",
+        "2022.06",
+        "2022.09",
+        "2023.07",
+        "2024.05",
+    ]
 }
 SPECS_SQLFLUFF = {
     k: {
@@ -651,7 +699,11 @@ SPECS_SQLFLUFF = {
     ]
 }
 SPECS_DBT_CORE = {
-    k: {"python": "3.9", "packages": "requirements.txt", "install": "python -m pip install -e ."}
+    k: {
+        "python": "3.9",
+        "packages": "requirements.txt",
+        "install": "python -m pip install -e .",
+    }
     for k in [
         "0.13",
         "0.14",
@@ -673,7 +725,12 @@ SPECS_DBT_CORE = {
     ]
 }
 SPECS_PYVISTA = {
-    k: {"python": "3.9", "install": "python -m pip install -e .", "pip_packages": ["pytest"], "test_cmd": TEST_PYTEST}
+    k: {
+        "python": "3.9",
+        "install": "python -m pip install -e .",
+        "pip_packages": ["pytest"],
+        "test_cmd": TEST_PYTEST,
+    }
     for k in ["0.20", "0.21", "0.22", "0.23"]
 } | {
     k: {
@@ -707,11 +764,33 @@ SPECS_PYVISTA = {
     ]
 }
 SPECS_ASTROID = {
-    k: {"python": "3.9", "install": "python -m pip install -e .", "pip_packages": ["pytest"], "test_cmd": TEST_PYTEST}
-    for k in ["2.10", "2.12", "2.13", "2.14", "2.15", "2.16", "2.5", "2.6", "2.7", "2.8", "2.9", "3.0"]
+    k: {
+        "python": "3.9",
+        "install": "python -m pip install -e .",
+        "pip_packages": ["pytest"],
+        "test_cmd": TEST_PYTEST,
+    }
+    for k in [
+        "2.10",
+        "2.12",
+        "2.13",
+        "2.14",
+        "2.15",
+        "2.16",
+        "2.5",
+        "2.6",
+        "2.7",
+        "2.8",
+        "2.9",
+        "3.0",
+    ]
 }
 SPECS_MARSHMALLOW = {
-    k: {"python": "3.9", "install": "python -m pip install -e '.[dev]'", "test_cmd": TEST_PYTEST}
+    k: {
+        "python": "3.9",
+        "install": "python -m pip install -e '.[dev]'",
+        "test_cmd": TEST_PYTEST,
+    }
     for k in [
         "2.18",
         "2.19",
@@ -749,7 +828,19 @@ SPECS_PYDICOM = {
         "pip_packages": ["pytest"],
         "test_cmd": TEST_PYTEST,
     }
-    for k in ["1.0", "1.1", "1.2", "1.3", "1.4", "2.0", "2.1", "2.2", "2.3", "2.4", "3.0"]
+    for k in [
+        "1.0",
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "2.0",
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4",
+        "3.0",
+    ]
 }
 SPECS_PYDICOM |= {k: {**SPECS_PYDICOM[k], "python": "3.8"} for k in ["1.4", "2.0"]}
 SPECS_PYDICOM |= {k: {**SPECS_PYDICOM[k], "python": "3.9"} for k in ["2.1", "2.2"]}
@@ -782,7 +873,10 @@ MAP_REPO_TO_INSTALL = {}
 MAP_REPO_TO_REQS_PATHS = {
     "dbt-labs/dbt-core": ["dev-requirements.txt", "dev_requirements.txt"],
     "django/django": ["tests/requirements/py3.txt"],
-    "matplotlib/matplotlib": ["requirements/dev/dev-requirements.txt", "requirements/testing/travis_all.txt"],
+    "matplotlib/matplotlib": [
+        "requirements/dev/dev-requirements.txt",
+        "requirements/testing/travis_all.txt",
+    ],
     "pallets/flask": ["requirements/dev.txt"],
     "pylint-dev/pylint": ["requirements_test.txt"],
     "pyvista/pyvista": ["requirements_test.txt", "requirements.txt"],
@@ -824,7 +918,19 @@ class PatchType(Enum):
     __test__ = False
 
 
-NON_TEST_EXTS = [".json", ".png", "csv", ".txt", ".md", ".jpg", ".jpeg", ".pkl", ".yml", ".yaml", ".toml"]
+NON_TEST_EXTS = [
+    ".json",
+    ".png",
+    "csv",
+    ".txt",
+    ".md",
+    ".jpg",
+    ".jpeg",
+    ".pkl",
+    ".yml",
+    ".yaml",
+    ".toml",
+]
 SWE_BENCH_URL_RAW = "https://raw.githubusercontent.com/"
 USE_X86 = {
     "astropy__astropy-7973",

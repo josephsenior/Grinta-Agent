@@ -52,9 +52,13 @@ def mcp_module():
 
 
 @pytest.mark.asyncio
-async def test_get_conversation_link_returns_body_when_not_saas(monkeypatch, mcp_module):
+async def test_get_conversation_link_returns_body_when_not_saas(
+    monkeypatch, mcp_module
+):
     monkeypatch.setattr(mcp_module.server_config, "app_mode", mcp_module.AppMode.OSS)
-    service = SimpleNamespace(get_user=_async_wrap(lambda: SimpleNamespace(login="user")))
+    service = SimpleNamespace(
+        get_user=_async_wrap(lambda: SimpleNamespace(login="user"))
+    )
     body = await mcp_module.get_conversation_link(service, "cid", "body")
     assert body == "body"
 
@@ -62,7 +66,9 @@ async def test_get_conversation_link_returns_body_when_not_saas(monkeypatch, mcp
 @pytest.mark.asyncio
 async def test_get_conversation_link_appends_link(monkeypatch, mcp_module):
     monkeypatch.setattr(mcp_module.server_config, "app_mode", mcp_module.AppMode.SAAS)
-    service = SimpleNamespace(get_user=_async_wrap(lambda: SimpleNamespace(login="user")))
+    service = SimpleNamespace(
+        get_user=_async_wrap(lambda: SimpleNamespace(login="user"))
+    )
     body = await mcp_module.get_conversation_link(service, "cid", "body")
     assert "continue refining the PR" in body
 
@@ -82,7 +88,9 @@ async def test_save_pr_metadata_extracts_pr(monkeypatch, mcp_module):
 
     monkeypatch.setattr(mcp_module, "get_conversation_store", lambda: DummyStoreImpl)
     monkeypatch.setattr(mcp_module, "get_config", lambda: "config")
-    await mcp_module.save_pr_metadata("user", "cid", "https://github.com/org/repo/pull/42")
+    await mcp_module.save_pr_metadata(
+        "user", "cid", "https://github.com/org/repo/pull/42"
+    )
     assert conversation.pr_number == [42]
 
 
@@ -120,7 +128,9 @@ async def test_save_pr_metadata_extracts_merge_request(monkeypatch, mcp_module):
 
     monkeypatch.setattr(mcp_module, "get_conversation_store", lambda: DummyStoreImpl)
     monkeypatch.setattr(mcp_module, "get_config", lambda: "config")
-    await mcp_module.save_pr_metadata("user", "cid", "https://gitlab.com/org/repo/merge_requests/7")
+    await mcp_module.save_pr_metadata(
+        "user", "cid", "https://gitlab.com/org/repo/merge_requests/7"
+    )
     assert conversation.pr_number == [7]
 
 
@@ -137,8 +147,20 @@ def _build_request(headers=None):
 async def test_create_pr_success(monkeypatch, mcp_module):
     request = _build_request({"X-Forge-ServerConversation-ID": "cid"})
     monkeypatch.setattr(mcp_module, "get_http_request", lambda: request)
-    monkeypatch.setattr(mcp_module, "get_provider_tokens", _async_wrap(lambda req: {ProviderType.GITHUB: SimpleNamespace(token=None, user_id="user", host=None)}))
-    monkeypatch.setattr(mcp_module, "get_access_token", _async_wrap(lambda req: "access"))
+    monkeypatch.setattr(
+        mcp_module,
+        "get_provider_tokens",
+        _async_wrap(
+            lambda req: {
+                ProviderType.GITHUB: SimpleNamespace(
+                    token=None, user_id="user", host=None
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        mcp_module, "get_access_token", _async_wrap(lambda req: "access")
+    )
     monkeypatch.setattr(mcp_module, "get_user_id", _async_wrap(lambda req: "user"))
 
     github_service = SimpleNamespace(
@@ -146,9 +168,15 @@ async def test_create_pr_success(monkeypatch, mcp_module):
         create_pr=_async_wrap(lambda **kwargs: "https://github.com/org/repo/pull/1"),
     )
 
-    monkeypatch.setattr(mcp_module, "GithubServiceImpl", lambda **kwargs: github_service)
-    monkeypatch.setattr(mcp_module, "save_pr_metadata", _async_wrap(lambda *args, **kwargs: None))
-    result = await mcp_module.create_pr("org/repo", "feature", "main", "Title", "Body", draft=False, labels=["bug"])
+    monkeypatch.setattr(
+        mcp_module, "GithubServiceImpl", lambda **kwargs: github_service
+    )
+    monkeypatch.setattr(
+        mcp_module, "save_pr_metadata", _async_wrap(lambda *args, **kwargs: None)
+    )
+    result = await mcp_module.create_pr(
+        "org/repo", "feature", "main", "Title", "Body", draft=False, labels=["bug"]
+    )
     assert result.endswith("/pull/1")
 
 
@@ -156,14 +184,22 @@ async def test_create_pr_success(monkeypatch, mcp_module):
 async def test_create_pr_handles_errors(monkeypatch, mcp_module):
     request = _build_request()
     monkeypatch.setattr(mcp_module, "get_http_request", lambda: request)
-    monkeypatch.setattr(mcp_module, "get_provider_tokens", _async_wrap(lambda req: None))
-    monkeypatch.setattr(mcp_module, "get_access_token", _async_wrap(lambda req: "access"))
+    monkeypatch.setattr(
+        mcp_module, "get_provider_tokens", _async_wrap(lambda req: None)
+    )
+    monkeypatch.setattr(
+        mcp_module, "get_access_token", _async_wrap(lambda req: "access")
+    )
     monkeypatch.setattr(mcp_module, "get_user_id", _async_wrap(lambda req: "user"))
     github_service = SimpleNamespace(
         get_user=_async_wrap(lambda: SimpleNamespace(login="GHUser")),
-        create_pr=_async_wrap(lambda **kwargs: (_ for _ in ()).throw(RuntimeError("boom"))),
+        create_pr=_async_wrap(
+            lambda **kwargs: (_ for _ in ()).throw(RuntimeError("boom"))
+        ),
     )
-    monkeypatch.setattr(mcp_module, "GithubServiceImpl", lambda **kwargs: github_service)
+    monkeypatch.setattr(
+        mcp_module, "GithubServiceImpl", lambda **kwargs: github_service
+    )
 
     with pytest.raises(mcp_module.ToolError):
         await mcp_module.create_pr("org/repo", "feature", "main", "Title", "Body")
@@ -173,16 +209,38 @@ async def test_create_pr_handles_errors(monkeypatch, mcp_module):
 async def test_create_pr_conversation_link_warning(monkeypatch, mcp_module):
     request = _build_request({"X-Forge-ServerConversation-ID": "cid"})
     monkeypatch.setattr(mcp_module, "get_http_request", lambda: request)
-    monkeypatch.setattr(mcp_module, "get_provider_tokens", _async_wrap(lambda req: {ProviderType.GITHUB: SimpleNamespace(token=None, user_id="user", host=None)}))
-    monkeypatch.setattr(mcp_module, "get_access_token", _async_wrap(lambda req: "access"))
+    monkeypatch.setattr(
+        mcp_module,
+        "get_provider_tokens",
+        _async_wrap(
+            lambda req: {
+                ProviderType.GITHUB: SimpleNamespace(
+                    token=None, user_id="user", host=None
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        mcp_module, "get_access_token", _async_wrap(lambda req: "access")
+    )
     monkeypatch.setattr(mcp_module, "get_user_id", _async_wrap(lambda req: "user"))
     github_service = SimpleNamespace(
         get_user=_async_wrap(lambda: SimpleNamespace(login="GHUser")),
         create_pr=_async_wrap(lambda **kwargs: "https://github.com/org/repo/pull/1"),
     )
-    monkeypatch.setattr(mcp_module, "GithubServiceImpl", lambda **kwargs: github_service)
-    monkeypatch.setattr(mcp_module, "save_pr_metadata", _async_wrap(lambda *args, **kwargs: None))
-    monkeypatch.setattr(mcp_module, "get_conversation_link", _async_wrap(lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("boom"))))
+    monkeypatch.setattr(
+        mcp_module, "GithubServiceImpl", lambda **kwargs: github_service
+    )
+    monkeypatch.setattr(
+        mcp_module, "save_pr_metadata", _async_wrap(lambda *args, **kwargs: None)
+    )
+    monkeypatch.setattr(
+        mcp_module,
+        "get_conversation_link",
+        _async_wrap(
+            lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("boom"))
+        ),
+    )
     result = await mcp_module.create_pr("org/repo", "feature", "main", "Title", "Body")
     assert result.endswith("/pull/1")
 
@@ -191,15 +249,33 @@ async def test_create_pr_conversation_link_warning(monkeypatch, mcp_module):
 async def test_create_mr_success(monkeypatch, mcp_module):
     request = _build_request({"X-Forge-ServerConversation-ID": "cid"})
     monkeypatch.setattr(mcp_module, "get_http_request", lambda: request)
-    monkeypatch.setattr(mcp_module, "get_provider_tokens", _async_wrap(lambda req: {ProviderType.GITLAB: SimpleNamespace(token=None, user_id="user", host=None)}))
-    monkeypatch.setattr(mcp_module, "get_access_token", _async_wrap(lambda req: "access"))
+    monkeypatch.setattr(
+        mcp_module,
+        "get_provider_tokens",
+        _async_wrap(
+            lambda req: {
+                ProviderType.GITLAB: SimpleNamespace(
+                    token=None, user_id="user", host=None
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        mcp_module, "get_access_token", _async_wrap(lambda req: "access")
+    )
     monkeypatch.setattr(mcp_module, "get_user_id", _async_wrap(lambda req: "user"))
     gitlab_service = SimpleNamespace(
         get_user=_async_wrap(lambda: SimpleNamespace(login="GLUser")),
-        create_mr=_async_wrap(lambda **kwargs: "https://gitlab.com/org/repo/merge_requests/2"),
+        create_mr=_async_wrap(
+            lambda **kwargs: "https://gitlab.com/org/repo/merge_requests/2"
+        ),
     )
-    monkeypatch.setattr(mcp_module, "GitLabServiceImpl", lambda **kwargs: gitlab_service)
-    monkeypatch.setattr(mcp_module, "save_pr_metadata", _async_wrap(lambda *args, **kwargs: None))
+    monkeypatch.setattr(
+        mcp_module, "GitLabServiceImpl", lambda **kwargs: gitlab_service
+    )
+    monkeypatch.setattr(
+        mcp_module, "save_pr_metadata", _async_wrap(lambda *args, **kwargs: None)
+    )
     result = await mcp_module.create_mr("org/repo", "feature", "main", "Title", "Desc")
     assert "/merge_requests/2" in result
 
@@ -208,14 +284,22 @@ async def test_create_mr_success(monkeypatch, mcp_module):
 async def test_create_mr_handles_errors(monkeypatch, mcp_module):
     request = _build_request()
     monkeypatch.setattr(mcp_module, "get_http_request", lambda: request)
-    monkeypatch.setattr(mcp_module, "get_provider_tokens", _async_wrap(lambda req: None))
-    monkeypatch.setattr(mcp_module, "get_access_token", _async_wrap(lambda req: "access"))
+    monkeypatch.setattr(
+        mcp_module, "get_provider_tokens", _async_wrap(lambda req: None)
+    )
+    monkeypatch.setattr(
+        mcp_module, "get_access_token", _async_wrap(lambda req: "access")
+    )
     monkeypatch.setattr(mcp_module, "get_user_id", _async_wrap(lambda req: "user"))
     gitlab_service = SimpleNamespace(
         get_user=_async_wrap(lambda: SimpleNamespace(login="GLUser")),
-        create_mr=_async_wrap(lambda **kwargs: (_ for _ in ()).throw(RuntimeError("boom"))),
+        create_mr=_async_wrap(
+            lambda **kwargs: (_ for _ in ()).throw(RuntimeError("boom"))
+        ),
     )
-    monkeypatch.setattr(mcp_module, "GitLabServiceImpl", lambda **kwargs: gitlab_service)
+    monkeypatch.setattr(
+        mcp_module, "GitLabServiceImpl", lambda **kwargs: gitlab_service
+    )
     with pytest.raises(mcp_module.ToolError):
         await mcp_module.create_mr("org/repo", "feature", "main", "Title", "Desc")
 
@@ -224,16 +308,40 @@ async def test_create_mr_handles_errors(monkeypatch, mcp_module):
 async def test_create_mr_conversation_link_warning(monkeypatch, mcp_module):
     request = _build_request({"X-Forge-ServerConversation-ID": "cid"})
     monkeypatch.setattr(mcp_module, "get_http_request", lambda: request)
-    monkeypatch.setattr(mcp_module, "get_provider_tokens", _async_wrap(lambda req: {ProviderType.GITLAB: SimpleNamespace(token=None, user_id="user", host=None)}))
-    monkeypatch.setattr(mcp_module, "get_access_token", _async_wrap(lambda req: "access"))
+    monkeypatch.setattr(
+        mcp_module,
+        "get_provider_tokens",
+        _async_wrap(
+            lambda req: {
+                ProviderType.GITLAB: SimpleNamespace(
+                    token=None, user_id="user", host=None
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        mcp_module, "get_access_token", _async_wrap(lambda req: "access")
+    )
     monkeypatch.setattr(mcp_module, "get_user_id", _async_wrap(lambda req: "user"))
     gitlab_service = SimpleNamespace(
         get_user=_async_wrap(lambda: SimpleNamespace(login="GLUser")),
-        create_mr=_async_wrap(lambda **kwargs: "https://gitlab.com/org/repo/merge_requests/2"),
+        create_mr=_async_wrap(
+            lambda **kwargs: "https://gitlab.com/org/repo/merge_requests/2"
+        ),
     )
-    monkeypatch.setattr(mcp_module, "GitLabServiceImpl", lambda **kwargs: gitlab_service)
-    monkeypatch.setattr(mcp_module, "save_pr_metadata", _async_wrap(lambda *args, **kwargs: None))
-    monkeypatch.setattr(mcp_module, "get_conversation_link", _async_wrap(lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("boom"))))
+    monkeypatch.setattr(
+        mcp_module, "GitLabServiceImpl", lambda **kwargs: gitlab_service
+    )
+    monkeypatch.setattr(
+        mcp_module, "save_pr_metadata", _async_wrap(lambda *args, **kwargs: None)
+    )
+    monkeypatch.setattr(
+        mcp_module,
+        "get_conversation_link",
+        _async_wrap(
+            lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("boom"))
+        ),
+    )
     result = await mcp_module.create_mr("org/repo", "feature", "main", "Title", "Desc")
     assert "/merge_requests/2" in result
 
@@ -242,16 +350,36 @@ async def test_create_mr_conversation_link_warning(monkeypatch, mcp_module):
 async def test_create_bitbucket_pr_success(monkeypatch, mcp_module):
     request = _build_request({"X-Forge-ServerConversation-ID": "cid"})
     monkeypatch.setattr(mcp_module, "get_http_request", lambda: request)
-    monkeypatch.setattr(mcp_module, "get_provider_tokens", _async_wrap(lambda req: {ProviderType.BITBUCKET: SimpleNamespace(token=None, user_id="user", host=None)}))
-    monkeypatch.setattr(mcp_module, "get_access_token", _async_wrap(lambda req: "access"))
+    monkeypatch.setattr(
+        mcp_module,
+        "get_provider_tokens",
+        _async_wrap(
+            lambda req: {
+                ProviderType.BITBUCKET: SimpleNamespace(
+                    token=None, user_id="user", host=None
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        mcp_module, "get_access_token", _async_wrap(lambda req: "access")
+    )
     monkeypatch.setattr(mcp_module, "get_user_id", _async_wrap(lambda req: "user"))
     bitbucket_service = SimpleNamespace(
         get_user=_async_wrap(lambda: SimpleNamespace(login="BBUser")),
-        create_pr=_async_wrap(lambda **kwargs: "https://bitbucket.org/workspace/repo/pull-requests/3"),
+        create_pr=_async_wrap(
+            lambda **kwargs: "https://bitbucket.org/workspace/repo/pull-requests/3"
+        ),
     )
-    monkeypatch.setattr(mcp_module, "BitBucketServiceImpl", lambda **kwargs: bitbucket_service)
-    monkeypatch.setattr(mcp_module, "save_pr_metadata", _async_wrap(lambda *args, **kwargs: None))
-    result = await mcp_module.create_bitbucket_pr("workspace/repo", "feature", "main", "Title", "Desc")
+    monkeypatch.setattr(
+        mcp_module, "BitBucketServiceImpl", lambda **kwargs: bitbucket_service
+    )
+    monkeypatch.setattr(
+        mcp_module, "save_pr_metadata", _async_wrap(lambda *args, **kwargs: None)
+    )
+    result = await mcp_module.create_bitbucket_pr(
+        "workspace/repo", "feature", "main", "Title", "Desc"
+    )
     assert "pull-requests/3" in result
 
 
@@ -259,31 +387,67 @@ async def test_create_bitbucket_pr_success(monkeypatch, mcp_module):
 async def test_create_bitbucket_pr_handles_errors(monkeypatch, mcp_module):
     request = _build_request()
     monkeypatch.setattr(mcp_module, "get_http_request", lambda: request)
-    monkeypatch.setattr(mcp_module, "get_provider_tokens", _async_wrap(lambda req: None))
-    monkeypatch.setattr(mcp_module, "get_access_token", _async_wrap(lambda req: "access"))
+    monkeypatch.setattr(
+        mcp_module, "get_provider_tokens", _async_wrap(lambda req: None)
+    )
+    monkeypatch.setattr(
+        mcp_module, "get_access_token", _async_wrap(lambda req: "access")
+    )
     monkeypatch.setattr(mcp_module, "get_user_id", _async_wrap(lambda req: "user"))
     bitbucket_service = SimpleNamespace(
         get_user=_async_wrap(lambda: SimpleNamespace(login="BBUser")),
-        create_pr=_async_wrap(lambda **kwargs: (_ for _ in ()).throw(RuntimeError("boom"))),
+        create_pr=_async_wrap(
+            lambda **kwargs: (_ for _ in ()).throw(RuntimeError("boom"))
+        ),
     )
-    monkeypatch.setattr(mcp_module, "BitBucketServiceImpl", lambda **kwargs: bitbucket_service)
+    monkeypatch.setattr(
+        mcp_module, "BitBucketServiceImpl", lambda **kwargs: bitbucket_service
+    )
     with pytest.raises(mcp_module.ToolError):
-        await mcp_module.create_bitbucket_pr("workspace/repo", "feature", "main", "Title", "Desc")
+        await mcp_module.create_bitbucket_pr(
+            "workspace/repo", "feature", "main", "Title", "Desc"
+        )
 
 
 @pytest.mark.asyncio
 async def test_create_bitbucket_pr_conversation_link_warning(monkeypatch, mcp_module):
     request = _build_request({"X-Forge-ServerConversation-ID": "cid"})
     monkeypatch.setattr(mcp_module, "get_http_request", lambda: request)
-    monkeypatch.setattr(mcp_module, "get_provider_tokens", _async_wrap(lambda req: {ProviderType.BITBUCKET: SimpleNamespace(token=None, user_id="user", host=None)}))
-    monkeypatch.setattr(mcp_module, "get_access_token", _async_wrap(lambda req: "access"))
+    monkeypatch.setattr(
+        mcp_module,
+        "get_provider_tokens",
+        _async_wrap(
+            lambda req: {
+                ProviderType.BITBUCKET: SimpleNamespace(
+                    token=None, user_id="user", host=None
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        mcp_module, "get_access_token", _async_wrap(lambda req: "access")
+    )
     monkeypatch.setattr(mcp_module, "get_user_id", _async_wrap(lambda req: "user"))
     bitbucket_service = SimpleNamespace(
         get_user=_async_wrap(lambda: SimpleNamespace(login="BBUser")),
-        create_pr=_async_wrap(lambda **kwargs: "https://bitbucket.org/workspace/repo/pull-requests/3"),
+        create_pr=_async_wrap(
+            lambda **kwargs: "https://bitbucket.org/workspace/repo/pull-requests/3"
+        ),
     )
-    monkeypatch.setattr(mcp_module, "BitBucketServiceImpl", lambda **kwargs: bitbucket_service)
-    monkeypatch.setattr(mcp_module, "save_pr_metadata", _async_wrap(lambda *args, **kwargs: None))
-    monkeypatch.setattr(mcp_module, "get_conversation_link", _async_wrap(lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("boom"))))
-    result = await mcp_module.create_bitbucket_pr("workspace/repo", "feature", "main", "Title", "Desc")
+    monkeypatch.setattr(
+        mcp_module, "BitBucketServiceImpl", lambda **kwargs: bitbucket_service
+    )
+    monkeypatch.setattr(
+        mcp_module, "save_pr_metadata", _async_wrap(lambda *args, **kwargs: None)
+    )
+    monkeypatch.setattr(
+        mcp_module,
+        "get_conversation_link",
+        _async_wrap(
+            lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("boom"))
+        ),
+    )
+    result = await mcp_module.create_bitbucket_pr(
+        "workspace/repo", "feature", "main", "Title", "Desc"
+    )
     assert "pull-requests/3" in result

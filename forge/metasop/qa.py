@@ -67,7 +67,9 @@ def _detect_pytest_commands(root: str, cmds: list[list[str]]) -> None:
 
     """
     if shutil.which("pytest"):
-        has_config = os.path.exists(os.path.join(root, "pyproject.toml")) or os.path.exists(
+        has_config = os.path.exists(
+            os.path.join(root, "pyproject.toml")
+        ) or os.path.exists(
             os.path.join(root, "pytest.ini"),
         )
         if has_config:
@@ -100,8 +102,15 @@ def _detect_npm_commands(root: str, cmds: list[list[str]]) -> None:
 
 
 def _run_cmd(cmd: list[str], repo_root: str | None) -> dict[str, Any]:
-    res = subprocess.run(cmd, check=False, cwd=repo_root or None, capture_output=True, text=True)
-    return {"cmd": cmd, "returncode": res.returncode, "stdout": res.stdout[-12000:], "stderr": res.stderr[-12000:]}
+    res = subprocess.run(
+        cmd, check=False, cwd=repo_root or None, capture_output=True, text=True
+    )
+    return {
+        "cmd": cmd,
+        "returncode": res.returncode,
+        "stdout": res.stdout[-12000:],
+        "stderr": res.stderr[-12000:],
+    }
 
 
 def _run_detected_commands(repo_root: str | None) -> tuple[list[dict[str, Any]], bool]:
@@ -294,7 +303,9 @@ def run_pytest(repo_root: str | None) -> Artifact:
     return Artifact(step_id="qa_verify", role="QA", content=shaped)
 
 
-def shape_failure_report(events: list[dict], metadata: dict[str, Any]) -> dict[str, Any]:
+def shape_failure_report(
+    events: list[dict], metadata: dict[str, Any]
+) -> dict[str, Any]:
     """Normalize QA failure report payload for downstream logging/analytics."""
     return {
         "failures": 1 if "FAILED" in events[0]["stdout"] or events[0]["stderr"] else 0,

@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\core\config\permissions_config.py
+# hypothesis_version: 6.147.0
+
+[3.0, 5.0, 7.0, 10.0, 15.0, 100, 200, 500, '**/.env', '**/id_ed25519*', '**/id_rsa*', '/etc/**', '/proc/**', '/sys/**', ':(){ :|:& };:', 'balanced', 'browser', 'cargo', 'chmod\\s+', 'chown\\s+', 'critical', 'dd', 'extra', 'file_delete', 'file_read', 'file_write', 'forbid', 'fork', 'full', 'git', 'git_branch_delete', 'git_force_push', 'high', 'low', 'main', 'master', 'medium', 'mkfs', 'network', 'npm', 'package', 'pip', 'pnpm', 'poetry', 'prod', 'production', 'rm -rf /', 'rm\\s+-rf', 'shell', 'sudo\\s+', 'sudo_command', 'supervised', 'system', 'yarn', '~/.ssh/**']

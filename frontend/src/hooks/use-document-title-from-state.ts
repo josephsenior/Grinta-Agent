@@ -15,12 +15,16 @@ export function useDocumentTitleFromState(suffix = "Forge") {
     if (conversation?.title) {
       lastValidTitleRef.current = conversation.title;
       document.title = `${conversation.title} | ${suffix}`;
+    } else if (lastValidTitleRef.current) {
+      document.title = `${lastValidTitleRef.current} | ${suffix}`;
     } else {
       document.title = suffix;
     }
 
     return () => {
-      document.title = suffix;
+      if (!document.title || document.title.endsWith(`| ${suffix}`)) {
+        document.title = suffix;
+      }
     };
   }, [conversation?.title, suffix]);
 }

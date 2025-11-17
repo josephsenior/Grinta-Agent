@@ -105,7 +105,9 @@ def _serialize_retrieval_hits(hits: list[dict[str, Any]], trunc_fn) -> list[dict
         {
             "id": h.get("step_id") or h.get("id"),
             "score": h.get("score"),
-            "excerpt": trunc_fn(h.get("excerpt") or h.get("rationale") or h.get("content") or ""),
+            "excerpt": trunc_fn(
+                h.get("excerpt") or h.get("rationale") or h.get("content") or ""
+            ),
         }
         for h in hits
     ]

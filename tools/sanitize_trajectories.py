@@ -22,7 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from typing import Iterable
+from typing import Any, Iterable, cast
 
 
 def find_candidate_files(paths: Iterable[str]) -> list[str]:
@@ -32,7 +32,13 @@ def find_candidate_files(paths: Iterable[str]) -> list[str]:
             files.append(path)
         elif os.path.isdir(path):
             for root, _, filenames in os.walk(path):
-                files.extend((os.path.join(root, fn) for fn in filenames if fn.lower().endswith((".json", ".jsonl"))))
+                files.extend(
+                    (
+                        os.path.join(root, fn)
+                        for fn in filenames
+                        if fn.lower().endswith((".json", ".jsonl"))
+                    )
+                )
     return files
 
 
@@ -142,7 +148,10 @@ def _process_jsonl_content(raw: str) -> tuple[list, list, bool]:
     sanitized = [s for s in sanitized if s is not None]
 
     changed = len(sanitized) != len(parsed) or any(
-        (json.dumps(p, sort_keys=True) != json.dumps(s, sort_keys=True) for p, s in zip(parsed, sanitized))
+        (
+            json.dumps(p, sort_keys=True) != json.dumps(s, sort_keys=True)
+            for p, s in zip(parsed, sanitized)
+        )
     )
 
     return parsed, sanitized, changed
@@ -155,7 +164,7 @@ def _write_jsonl_file(path: str, sanitized: list) -> None:
             f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
 
-def _process_trajectory_data(data: dict) -> tuple[dict, bool]:
+def _process_trajectory_data(data: dict[str, Any]) -> tuple[dict[str, Any], bool]:
     """Process data with trajectory field."""
     original = json.dumps(data, sort_keys=True)
     sanitized_traj = sanitize_json_content(data["trajectory"])
@@ -173,11 +182,18 @@ def _write_json_file(path: str, data: dict | None) -> None:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def _process_regular_json_data(data: dict) -> tuple[dict | None, bool]:
+def _process_regular_json_data(
+    data: dict[str, Any],
+) -> tuple[dict[str, Any] | None, bool]:
     """Process regular JSON data."""
-    sanitized = sanitize_json_content(data)
-    changed = sanitized is None or json.dumps(sanitized, sort_keys=True) != json.dumps(data, sort_keys=True)
-    return sanitized, changed
+    sanitized_obj = sanitize_json_content(data)
+    sanitized_dict = (
+        cast(dict[str, Any], sanitized_obj) if isinstance(sanitized_obj, dict) else None
+    )
+    changed = sanitized_dict is None or json.dumps(
+        sanitized_dict, sort_keys=True
+    ) != json.dumps(data, sort_keys=True)
+    return sanitized_dict, changed
 
 
 def _process_jsonl_file(raw: str, path: str, apply: bool) -> bool:
@@ -192,7 +208,11 @@ def _process_json_file(raw: str, path: str, apply: bool) -> bool:
     """Process JSON file and return changed status."""
     data = json.loads(raw)
 
-    if isinstance(data, dict) and "trajectory" in data and isinstance(data["trajectory"], list):
+    if (
+        isinstance(data, dict)
+        and "trajectory" in data
+        and isinstance(data["trajectory"], list)
+    ):
         # Process trajectory data
         data, changed = _process_trajectory_data(data)
         if changed and apply:
@@ -253,9 +273,17 @@ def main(argv: list[str] | None = None) -> int:
 def _parse_arguments(argv: list[str] | None) -> argparse.Namespace:
     """Parse command line arguments."""
     p = argparse.ArgumentParser()
-    p.add_argument("--paths", "-p", nargs="+", default=["tests/runtime/trajs"], help="Paths to scan")
+    p.add_argument(
+        "--paths",
+        "-p",
+        nargs="+",
+        default=["tests/runtime/trajs"],
+        help="Paths to scan",
+    )
     p.add_argument("--apply", action="store_true", help="Write changes to disk")
-    p.add_argument("--dry-run", action="store_true", help="Show changes without writing")
+    p.add_argument(
+        "--dry-run", action="store_true", help="Show changes without writing"
+    )
     return p.parse_args(argv)
 
 

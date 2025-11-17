@@ -9,15 +9,18 @@ from pydantic import BaseModel, Field
 
 class RoleProfile(BaseModel):
     """Profile defining a role's capabilities and constraints in MetaSOP.
-    
+
     Specifies the skills, constraints, and capabilities for a role (PM, Architect,
     Engineer, QA, etc.) in the orchestration workflow.
     """
+
     name: str
     goal: str
     skills: list[str] = Field(default_factory=list)
     output_format: str | None = None
-    constraints: list[str | dict[str, Any]] = Field(default_factory=list)  # Accept strings or dicts
+    constraints: list[str | dict[str, Any]] = Field(
+        default_factory=list
+    )  # Accept strings or dicts
     capabilities: list[str] = Field(
         default_factory=list,
         description="Declarative capability tags for policy gating (e.g., write_code, run_tests, design_ui)",
@@ -27,6 +30,7 @@ class RoleProfile(BaseModel):
 
 class StepOutputSpec(BaseModel):
     """Specification for step output validation schema."""
+
     schema_file: str = Field(
         alias="schema",
         description="Path to JSON schema file relative to metasop/templates/schemas",
@@ -38,10 +42,11 @@ class StepOutputSpec(BaseModel):
 
 class SopStep(BaseModel):
     """Single step in a Standard Operating Procedure (SOP).
-    
+
     Defines a task to be executed by a specific role with dependencies,
     conditions, and output validation requirements.
     """
+
     id: str
     role: str
     task: str
@@ -52,12 +57,16 @@ class SopStep(BaseModel):
         default=None,
         description="Resource lock category: read_only | write | test | network (reserved).",
     )
-    priority: int = Field(default=100, description="Relative priority for future scheduling (lower = earlier).")
+    priority: int = Field(
+        default=100,
+        description="Relative priority for future scheduling (lower = earlier).",
+    )
     __test__ = False
 
 
 class SopTemplate(BaseModel):
     """Template defining a complete SOP with multiple steps."""
+
     name: str
     steps: list[SopStep]
     __test__ = False
@@ -65,6 +74,7 @@ class SopTemplate(BaseModel):
 
 class Artifact(BaseModel):
     """Output artifact produced by a step execution."""
+
     step_id: str
     role: str
     content: dict[str, Any]
@@ -73,6 +83,7 @@ class Artifact(BaseModel):
 
 class StepTrace(BaseModel):
     """Execution trace and metrics for a step."""
+
     step_id: str
     role: str
     prompt_tokens: int | None = None
@@ -103,6 +114,7 @@ class ExpectedOutcome(BaseModel):
 
 class VerificationResult(BaseModel):
     """Result of step output verification against expected criteria."""
+
     status: str
     observed_metrics: dict[str, Any] = Field(default_factory=dict)
     notes: str | None = None
@@ -111,6 +123,7 @@ class VerificationResult(BaseModel):
 
 class StepResult(BaseModel):
     """Result of step execution with success status and optional artifact."""
+
     ok: bool
     artifact: Artifact | None = None
     trace: StepTrace | None = None
@@ -125,10 +138,11 @@ class StepResult(BaseModel):
 
 class OrchestrationContext(BaseModel):
     """Context for MetaSOP orchestration run.
-    
+
     Contains run metadata, user request, repository path, and optional
     LLM registry for step execution.
     """
+
     run_id: str
     user_request: str = Field(max_length=100000, description="User's request text")
     repo_root: str | None = None

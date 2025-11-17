@@ -10,7 +10,10 @@ import pandas as pd
 from datasets import load_dataset
 from PIL import Image
 from evaluation.benchmarks.gaia.scorer import question_scorer
-from evaluation.benchmarks.gaia.utils import image_to_jpg_base64_url, image_to_png_base64_url
+from evaluation.benchmarks.gaia.utils import (
+    image_to_jpg_base64_url,
+    image_to_png_base64_url,
+)
 from evaluation.utils.shared import (
     EvalMetadata,
     EvalOutput,
@@ -25,7 +28,12 @@ from evaluation.utils.shared import (
     run_evaluation,
 )
 from forge.controller.state.state import State
-from forge.core.config import ForgeConfig, get_evaluation_parser, get_llm_config_arg, load_from_toml
+from forge.core.config import (
+    ForgeConfig,
+    get_evaluation_parser,
+    get_llm_config_arg,
+    load_from_toml,
+)
 from forge.core.config.utils import get_agent_config_arg
 from forge.core.logger import forge_logger as logger
 from forge.core.main import create_runtime, run_controller
@@ -45,7 +53,9 @@ AGENT_CLS_TO_INST_SUFFIX = {
 def get_config(metadata: EvalMetadata) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = "nikolaik/python-nodejs:python3.12-nodejs22"
-    config = get_FORGE_config_for_eval(metadata=metadata, sandbox_config=sandbox_config, runtime="docker")
+    config = get_FORGE_config_for_eval(
+        metadata=metadata, sandbox_config=sandbox_config, runtime="docker"
+    )
     config.set_llm_config(metadata.llm_config)
     if metadata.agent_config:
         config.set_agent_config(metadata.agent_config, metadata.agent_class)
@@ -70,7 +80,9 @@ def _setup_workspace(runtime: Runtime) -> None:
 def _handle_zip_file(runtime: Runtime, instance: pd.Series, metadata) -> None:
     """Handle zip file extraction."""
     instance["file_name"].split(".")[-1]
-    src_file = os.path.join(DATASET_CACHE_DIR, "2023", metadata.data_split, instance["file_name"])
+    src_file = os.path.join(
+        DATASET_CACHE_DIR, "2023", metadata.data_split, instance["file_name"]
+    )
     assert os.path.exists(src_file)
 
     temp_dir = os.path.join(DATASET_CACHE_DIR, "2023", metadata.data_split, "tmp_file")
@@ -90,13 +102,17 @@ def _handle_zip_file(runtime: Runtime, instance: pd.Series, metadata) -> None:
 def _handle_regular_file(runtime: Runtime, instance: pd.Series, metadata) -> None:
     """Handle regular file copying."""
     extension_name = instance["file_name"].split(".")[-1]
-    src_file = os.path.join(DATASET_CACHE_DIR, "2023", metadata.data_split, instance["file_name"])
+    src_file = os.path.join(
+        DATASET_CACHE_DIR, "2023", metadata.data_split, instance["file_name"]
+    )
     assert os.path.exists(src_file)
 
     dest_file = "/workspace"
     runtime.copy_to(src_file, dest_file)
 
-    action = CmdRunAction(command=f"mv /workspace/{instance['file_name']} /workspace/file.{extension_name}")
+    action = CmdRunAction(
+        command=f"mv /workspace/{instance['file_name']} /workspace/file.{extension_name}"
+    )
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     assert obs.exit_code == 0
@@ -121,7 +137,9 @@ def _setup_environment(runtime: Runtime) -> None:
     obs = runtime.run_action(action)
     assert obs.exit_code == 0
 
-    action = CmdRunAction(command="apt-get update && apt-get install -y ffmpeg && apt-get install -y ffprobe")
+    action = CmdRunAction(
+        command="apt-get update && apt-get install -y ffmpeg && apt-get install -y ffprobe"
+    )
     runtime.run_action(action)
 
 
@@ -144,7 +162,9 @@ def initialize_runtime(runtime: Runtime, instance: pd.Series):
     logger.info("%s END Runtime Initialization Fn %s", "-" * 50, "-" * 50)
 
 
-def _setup_logging(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool) -> None:
+def _setup_logging(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool
+) -> None:
     """Setup logging for the evaluation instance."""
     if reset_logger:
         log_dir = os.path.join(metadata.eval_output_dir, "infer_logs")
@@ -172,7 +192,9 @@ def _build_base_instruction(instance: pd.Series) -> str:
 def _get_zip_file_instruction(instance: pd.Series, metadata: EvalMetadata) -> str:
     """Get instruction text for zip file contents."""
     filenames = []
-    src_file = os.path.join(DATASET_CACHE_DIR, "2023", metadata.data_split, instance["file_name"])
+    src_file = os.path.join(
+        DATASET_CACHE_DIR, "2023", metadata.data_split, instance["file_name"]
+    )
     with zipfile.ZipFile(src_file, "r") as zip_ref:
         filenames = zip_ref.namelist()
     filenames = [f"/workspace/{file}" for file in filenames]
@@ -180,10 +202,16 @@ def _get_zip_file_instruction(instance: pd.Series, metadata: EvalMetadata) -> st
     return f"To solve this task you will have to use the attached files provided in the workspace at locations: {filenames}\n\n"
 
 
-def _handle_image_file(instance: pd.Series, metadata: EvalMetadata, extension_name: str) -> tuple[str, list]:
+def _handle_image_file(
+    instance: pd.Series, metadata: EvalMetadata, extension_name: str
+) -> tuple[str, list]:
     """Handle image file processing and return instruction addition and image URLs."""
-    src_file = os.path.join(DATASET_CACHE_DIR, "2023", metadata.data_split, instance["file_name"])
-    instruction_addition = "Image: To solve this task you will have to use the image shown below.\n\n"
+    src_file = os.path.join(
+        DATASET_CACHE_DIR, "2023", metadata.data_split, instance["file_name"]
+    )
+    instruction_addition = (
+        "Image: To solve this task you will have to use the image shown below.\n\n"
+    )
     image = Image.open(src_file)
 
     if extension_name == "jpg":
@@ -195,7 +223,11 @@ def _handle_image_file(instance: pd.Series, metadata: EvalMetadata, extension_na
 
 
 def _add_file_instructions(
-    instruction: str, dest_file: str | None, extension_name: str | None, instance: pd.Series, metadata: EvalMetadata
+    instruction: str,
+    dest_file: str | None,
+    extension_name: str | None,
+    instance: pd.Series,
+    metadata: EvalMetadata,
 ) -> tuple[str, list]:
     """Add file-specific instructions to the main instruction."""
     image_urls = []
@@ -206,7 +238,9 @@ def _add_file_instructions(
         elif extension_name == "zip":
             instruction += _get_zip_file_instruction(instance, metadata)
         else:
-            instruction_addition, image_urls = _handle_image_file(instance, metadata, extension_name)
+            instruction_addition, image_urls = _handle_image_file(
+                instance, metadata, extension_name
+            )
             instruction += instruction_addition
 
     return instruction, image_urls
@@ -217,7 +251,9 @@ def _add_standard_instructions(instruction: str, metadata: EvalMetadata) -> str:
     instruction += "IMPORTANT: When seeking information from a website, REFRAIN from arbitrary URL navigation. You should utilize the designated search engine tool with precise keywords to obtain relevant URLs or use the specific website's search interface. DO NOT navigate directly to specific URLs as they may not exist.\n\nFor example: if you want to search for a research paper on Arxiv, either use the search engine tool with specific keywords or navigate to arxiv.org and then use its interface.\n"
     instruction += "IMPORTANT: You should NEVER ask for Human Help.\n"
     instruction += "IMPORTANT: Please encapsulate your final answer (answer ONLY) within <solution> and </solution>. Your answer will be evaluated using string matching approaches so it important that you STRICTLY adhere to the output formatting instructions specified in the task (e.g., alphabetization, sequencing, units, rounding, decimal places, etc.)\n"
-    instruction += "For example: The answer to the question is <solution> 42 </solution>.\n"
+    instruction += (
+        "For example: The answer to the question is <solution> 42 </solution>.\n"
+    )
     instruction += "IMPORTANT: Your final answer should be a number OR as few words as possible OR a comma separated list of numbers and/or strings. If you are asked for a number, express it numerically (i.e., with digits rather than words), do not use commas, and do not include units such as $ or percent signs unless specified otherwise. If you are asked for a string, don't use articles, neither abbreviations (e.g. for cities). If you are asked for a comma separated list, apply the above rules depending of whether the element to be put in the list is a number or a string.\n"
     instruction += AGENT_CLS_TO_INST_SUFFIX.get(metadata.agent_class, "")
     return instruction
@@ -246,11 +282,19 @@ def _extract_model_answer(state: State) -> str:
 
 
 def _create_eval_output(
-    instance: pd.Series, metadata: EvalMetadata, state: State, model_answer: str, model_answer_raw: str
+    instance: pd.Series,
+    metadata: EvalMetadata,
+    state: State,
+    model_answer: str,
+    model_answer_raw: str,
 ) -> EvalOutput:
     """Create the final evaluation output."""
-    logger.info("Final message: %s | Ground truth: %s", model_answer, instance["Final answer"])
-    score = question_scorer(model_answer=model_answer, ground_truth=instance["Final answer"])
+    logger.info(
+        "Final message: %s | Ground truth: %s", model_answer, instance["Final answer"]
+    )
+    score = question_scorer(
+        model_answer=model_answer, ground_truth=instance["Final answer"]
+    )
     test_result = {
         "score": score,
         "model_answer_raw": model_answer_raw,
@@ -272,7 +316,9 @@ def _create_eval_output(
     )
 
 
-def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True) -> EvalOutput:
+def process_instance(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True
+) -> EvalOutput:
     """Process a single evaluation instance."""
     config = get_config(metadata)
     _setup_logging(instance, metadata, reset_logger)
@@ -280,7 +326,9 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
 
     instruction = _build_base_instruction(instance)
     logger.info("Instruction: %s", instruction)
-    instruction, image_urls = _add_file_instructions(instruction, dest_file, extension_name, instance, metadata)
+    instruction, image_urls = _add_file_instructions(
+        instruction, dest_file, extension_name, instance, metadata
+    )
     instruction = _add_standard_instructions(instruction, metadata)
     logger.info("Instruction:\n%s", instruction, extra={"msg_type": "OBSERVATION"})
 
@@ -291,9 +339,13 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
     state: State | None = asyncio.run(
         run_controller(
             config=config,
-            initial_user_action=MessageAction(content=instruction, image_urls=image_urls),
+            initial_user_action=MessageAction(
+                content=instruction, image_urls=image_urls
+            ),
             runtime=runtime,
-            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[metadata.agent_class],
+            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[
+                metadata.agent_class
+            ],
         )
     )
 
@@ -309,8 +361,15 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
 
 if __name__ == "__main__":
     parser = get_evaluation_parser()
-    parser.add_argument("--level", type=str, help="gaia level to evaluate, eg. 2023_level1")
-    parser.add_argument("--data-split", type=str, help="data split to evaluate, eg. test", default="validation")
+    parser.add_argument(
+        "--level", type=str, help="gaia level to evaluate, eg. 2023_level1"
+    )
+    parser.add_argument(
+        "--data-split",
+        type=str,
+        help="data split to evaluate, eg. test",
+        default="validation",
+    )
     args, _ = parser.parse_known_args()
     agent_config = None
     if args.agent_config:
@@ -331,7 +390,10 @@ if __name__ == "__main__":
         eval_note=args.eval_note,
         eval_output_dir=args.eval_output_dir,
         data_split=args.data_split,
-        details={"gaia-level": args.level, "mcp-servers": ["tavily"] if toml_config.search_api_key else []},
+        details={
+            "gaia-level": args.level,
+            "mcp-servers": ["tavily"] if toml_config.search_api_key else [],
+        },
         agent_config=agent_config,
     )
     dataset = load_dataset("gaia-benchmark/GAIA", args.level)  # nosec B615 - Safe: evaluation benchmark dataset

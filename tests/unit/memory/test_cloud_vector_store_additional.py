@@ -151,18 +151,23 @@ def qdrant_stub(monkeypatch, chroma_and_sentence_stubs):
     qdrant_client_module = ModuleType("qdrant_client")
     qdrant_client_module.QdrantClient = lambda **kwargs: DummyClient()
     monkeypatch.setitem(sys.modules, "qdrant_client", qdrant_client_module)
-    monkeypatch.setitem(sys.modules, "qdrant_client.http", ModuleType("qdrant_client.http"))
+    monkeypatch.setitem(
+        sys.modules, "qdrant_client.http", ModuleType("qdrant_client.http")
+    )
     monkeypatch.setitem(sys.modules, "qdrant_client.http.models", models_module)
     monkeypatch.setitem(sys.modules, "requests", ModuleType("requests"))
 
     yield
 
 
-@pytest.mark.parametrize("rationale,content,expected", [
-    ("reasoning", "main content", "reasoning\nmain content"),
-    (None, "main content", "main content"),
-    ("why", "", "why"),
-])
+@pytest.mark.parametrize(
+    "rationale,content,expected",
+    [
+        ("reasoning", "main content", "reasoning\nmain content"),
+        (None, "main content", "main content"),
+        ("why", "", "why"),
+    ],
+)
 def test_prepare_text_static_method(rationale, content, expected):
     from forge.memory.cloud_vector_store import ChromaDBBackend
 
@@ -298,7 +303,12 @@ def test_qdrant_backend_hf_api_fallback(qdrant_stub, monkeypatch):
         def json(self):
             return []
 
-    monkeypatch.setattr(sys.modules["requests"], "post", lambda *args, **kwargs: Response(), raising=False)
+    monkeypatch.setattr(
+        sys.modules["requests"],
+        "post",
+        lambda *args, **kwargs: Response(),
+        raising=False,
+    )
 
     from forge.memory.cloud_vector_store import QdrantCloudBackend
 
@@ -328,7 +338,9 @@ def test_qdrant_backend_hf_api_exception_fallback(qdrant_stub, monkeypatch):
     assert vector
 
 
-def test_adaptive_vector_store_falls_back_to_chromadb(monkeypatch, chroma_and_sentence_stubs):
+def test_adaptive_vector_store_falls_back_to_chromadb(
+    monkeypatch, chroma_and_sentence_stubs
+):
     import forge.memory.cloud_vector_store as module
 
     class FailingQdrant:

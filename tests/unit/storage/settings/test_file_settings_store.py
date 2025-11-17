@@ -31,7 +31,8 @@ def reset_settings_cache():
 @pytest.mark.asyncio
 async def test_load_nonexistent_data(file_settings_store):
     with patch(
-        "forge.storage.data_models.settings.load_FORGE_config", MagicMock(return_value=ForgeConfig())
+        "forge.storage.data_models.settings.load_FORGE_config",
+        MagicMock(return_value=ForgeConfig()),
     ):
         file_settings_store.file_store.read.side_effect = FileNotFoundError()
         assert await file_settings_store.load() is None
@@ -51,7 +52,9 @@ async def test_store_and_load_data(file_settings_store):
     )
     await file_settings_store.store(init_data)
     expected_json = init_data.model_dump_json(context={"expose_secrets": True})
-    file_settings_store.file_store.write.assert_called_once_with("settings.json", expected_json)
+    file_settings_store.file_store.write.assert_called_once_with(
+        "settings.json", expected_json
+    )
     file_settings_store.file_store.read.return_value = expected_json
     loaded_data = await file_settings_store.load()
     assert loaded_data is not None
@@ -63,7 +66,10 @@ async def test_store_and_load_data(file_settings_store):
     assert loaded_data.llm_model == init_data.llm_model
     assert loaded_data.llm_api_key
     assert init_data.llm_api_key
-    assert loaded_data.llm_api_key.get_secret_value() == init_data.llm_api_key.get_secret_value()
+    assert (
+        loaded_data.llm_api_key.get_secret_value()
+        == init_data.llm_api_key.get_secret_value()
+    )
     assert loaded_data.llm_base_url == init_data.llm_base_url
 
 
@@ -88,7 +94,9 @@ async def test_load_uses_cache(file_settings_store, monkeypatch: pytest.MonkeyPa
 
 
 @pytest.mark.asyncio
-async def test_store_invalidates_cache(file_settings_store, monkeypatch: pytest.MonkeyPatch):
+async def test_store_invalidates_cache(
+    file_settings_store, monkeypatch: pytest.MonkeyPatch
+):
     init_data = Settings(agent="invalidate-agent")
     json_payload = init_data.model_dump_json(context={"expose_secrets": True})
     file_settings_store.file_store.read.return_value = json_payload
@@ -112,7 +120,9 @@ async def test_store_invalidates_cache(file_settings_store, monkeypatch: pytest.
 @pytest.mark.asyncio
 async def test_get_instance():
     config = ForgeConfig(file_store="local", file_store_path="/test/path")
-    with patch("forge.storage.settings.file_settings_store.get_file_store") as mock_get_store:
+    with patch(
+        "forge.storage.settings.file_settings_store.get_file_store"
+    ) as mock_get_store:
         mock_store = MagicMock(spec=FileStore)
         mock_get_store.return_value = mock_store
         store = await FileSettingsStore.get_instance(config, None)

@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\agenthub\codeact_agent\tools\ipython.py
+# hypothesis_version: 6.147.0
+
+['code', 'description', 'enum', 'execute_ipython_cell', 'function', 'object', 'properties', 'required', 'security_risk', 'string', 'type']

@@ -33,5 +33,3 @@ def test_base_critic_subclass_evaluate_records_inputs() -> None:
     assert result.score == 1.0
     assert result.message == "Looks good."
     assert critic.invocations == [(["event-1"], "diff")]
-
-

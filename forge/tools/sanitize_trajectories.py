@@ -23,7 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from pathlib import Path
 
 if TYPE_CHECKING:
@@ -124,18 +124,19 @@ def _sanitize_primitive(obj: object) -> object | None:
     return None if obj == "null" else obj
 
 
-def _read_file_content(path: str) -> str | None:
+def _read_file_content(path: str | Path) -> str | None:
     """Read file content and return it, or None if failed."""
     try:
+        path = str(path)
         with open(path, encoding="utf-8") as f:
             return f.read()
     except Exception:
         return None
 
 
-def _is_jsonl_file(path: str) -> bool:
+def _is_jsonl_file(path: str | Path) -> bool:
     """Check if file is a JSONL file."""
-    return path.lower().endswith(".jsonl")
+    return str(path).lower().endswith(".jsonl")
 
 
 def _process_jsonl_content(raw: str) -> tuple[list, list, bool]:
@@ -146,7 +147,10 @@ def _process_jsonl_content(raw: str) -> tuple[list, list, bool]:
     sanitized = [s for s in sanitized if s is not None]
 
     changed = len(sanitized) != len(parsed) or any(
-        (json.dumps(p, sort_keys=True) != json.dumps(s, sort_keys=True) for p, s in zip(parsed, sanitized)),
+        (
+            json.dumps(p, sort_keys=True) != json.dumps(s, sort_keys=True)
+            for p, s in zip(parsed, sanitized)
+        ),
     )
 
     return parsed, sanitized, changed
@@ -158,7 +162,7 @@ def _write_jsonl_file(path: str, sanitized: list) -> None:
         f.writelines(json.dumps(item, ensure_ascii=False) + "\n" for item in sanitized)
 
 
-def _process_trajectory_data(data: dict) -> tuple[dict, bool]:
+def _process_trajectory_data(data: dict[str, Any]) -> tuple[dict[str, Any], bool]:
     """Process data with trajectory field."""
     original = json.dumps(data, sort_keys=True)
     sanitized_traj = sanitize_json_content(data["trajectory"])
@@ -176,40 +180,51 @@ def _write_json_file(path: str, data: dict | None) -> None:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def _process_regular_json_data(data: dict) -> tuple[dict | None, bool]:
+def _process_regular_json_data(
+    data: dict[str, Any],
+) -> tuple[dict[str, Any] | None, bool]:
     """Process regular JSON data."""
-    sanitized = sanitize_json_content(data)
-    changed = sanitized is None or json.dumps(sanitized, sort_keys=True) != json.dumps(data, sort_keys=True)
+    sanitized_raw = sanitize_json_content(data)
+    if sanitized_raw is not None and not isinstance(sanitized_raw, dict):
+        raise ValueError("Sanitization must produce a dictionary or None")
+    sanitized = sanitized_raw
+    changed = sanitized is None or json.dumps(sanitized, sort_keys=True) != json.dumps(
+        data, sort_keys=True
+    )
     return sanitized, changed
 
 
-def _process_jsonl_file(raw: str, path: str, apply: bool) -> bool:
+def _process_jsonl_file(raw: str, path: str | Path, apply: bool) -> bool:
     """Process JSONL file and return changed status."""
     _parsed, sanitized, changed = _process_jsonl_content(raw)
     if changed and apply:
-        _write_jsonl_file(path, sanitized)
+        _write_jsonl_file(str(path), sanitized)
     return changed
 
 
-def _process_json_file(raw: str, path: str, apply: bool) -> bool:
+def _process_json_file(raw: str, path: str | Path, apply: bool) -> bool:
     """Process JSON file and return changed status."""
     data = json.loads(raw)
 
-    if isinstance(data, dict) and "trajectory" in data and isinstance(data["trajectory"], list):
+    if (
+        isinstance(data, dict)
+        and "trajectory" in data
+        and isinstance(data["trajectory"], list)
+    ):
         # Process trajectory data
         data, changed = _process_trajectory_data(data)
         if changed and apply:
-            _write_json_file(path, data)
+            _write_json_file(str(path), data)
     else:
         # Process regular JSON data
         sanitized, changed = _process_regular_json_data(data)
         if changed and apply:
-            _write_json_file(path, sanitized)
+            _write_json_file(str(path), sanitized)
 
     return changed
 
 
-def process_file(path: str, apply: bool = False) -> bool:
+def process_file(path: str | Path, apply: bool = False) -> bool:
     """Process a file; return True if file was changed (or would be changed in dry-run).
 
     If apply=True, write changes back to disk. Otherwise just report.
@@ -236,7 +251,9 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_arguments(argv)
 
     # Find candidate files
-    files = find_candidate_files(args.paths)
+    files: list[Path] = []
+    for candidate in args.paths:
+        files.extend(find_candidate_files(Path(candidate)))
     if not files:
         return 0
 
@@ -252,13 +269,21 @@ def main(argv: list[str] | None = None) -> int:
 def _parse_arguments(argv: list[str] | None) -> argparse.Namespace:
     """Parse command line arguments."""
     p = argparse.ArgumentParser()
-    p.add_argument("--paths", "-p", nargs="+", default=["tests/runtime/trajs"], help="Paths to scan")
+    p.add_argument(
+        "--paths",
+        "-p",
+        nargs="+",
+        default=["tests/runtime/trajs"],
+        help="Paths to scan",
+    )
     p.add_argument("--apply", action="store_true", help="Write changes to disk")
-    p.add_argument("--dry-run", action="store_true", help="Show changes without writing")
+    p.add_argument(
+        "--dry-run", action="store_true", help="Show changes without writing"
+    )
     return p.parse_args(argv)
 
 
-def _process_files(files: list[str], apply: bool) -> list[str]:
+def _process_files(files: list[Path], apply: bool) -> list[str]:
     """Process all candidate files."""
     changed_files: list[str] = []
 
@@ -271,11 +296,19 @@ def _process_files(files: list[str], apply: bool) -> list[str]:
     return changed_files
 
 
-def _print_summary(files: list[str], changed_files: list[str]) -> None:
+def _print_summary(files: list[Path], changed_files: list[str]) -> None:
     """Print summary of processing results."""
     if changed_files:
-        for _f in changed_files[:20]:
-            pass
+        preview = "\n".join(f"  - {path}" for path in changed_files[:20])
+        print("Changed files:")
+        print(preview)
+        remaining = max(0, len(changed_files) - 20)
+        if remaining:
+            print(f"  ... and {remaining} more")
+    else:
+        print("No files required sanitization.")
+
+    print(f"Scanned {len(files)} files; {len(changed_files)} were modified.")
 
 
 if __name__ == "__main__":

@@ -44,11 +44,11 @@ def build_pm_example() -> dict[str, Any]:
                     "Password must be minimum 8 characters with mixed case and numbers",
                     "System validates email format before accepting",
                     "User receives confirmation email after registration",
-                    "User can immediately login after registration"
+                    "User can immediately login after registration",
                 ],
                 "dependencies": [],
                 "estimated_complexity": "medium",
-                "user_value": "Enables users to create secure personal accounts and access personalized features"
+                "user_value": "Enables users to create secure personal accounts and access personalized features",
             },
             {
                 "id": "US-002",
@@ -61,42 +61,42 @@ def build_pm_example() -> dict[str, Any]:
                     "User can edit name, bio, and avatar image",
                     "Changes save immediately with visual confirmation",
                     "Email changes require re-verification",
-                    "Profile displays correctly on mobile and desktop"
+                    "Profile displays correctly on mobile and desktop",
                 ],
                 "dependencies": ["US-001"],
                 "estimated_complexity": "small",
-                "user_value": "Users can personalize their account and maintain accurate information"
-            }
+                "user_value": "Users can personalize their account and maintain accurate information",
+            },
         ],
         "acceptance_criteria": [
             {
                 "id": "AC-GLOBAL-1",
                 "criteria": "All features must work on latest Chrome, Firefox, Safari, and Edge browsers",
-                "description": "Cross-browser compatibility requirement to ensure broad accessibility"
+                "description": "Cross-browser compatibility requirement to ensure broad accessibility",
             },
             {
                 "id": "AC-GLOBAL-2",
                 "criteria": "Application must be fully responsive on mobile devices (320px+) and desktop (1024px+)",
-                "description": "Mobile-first design requirement for optimal user experience across devices"
+                "description": "Mobile-first design requirement for optimal user experience across devices",
             },
             {
                 "id": "AC-GLOBAL-3",
                 "criteria": "Page load time must be under 2 seconds on 4G connection",
-                "description": "Performance requirement to ensure good user experience"
-            }
+                "description": "Performance requirement to ensure good user experience",
+            },
         ],
         "ui_multi_section": True,
         "ui_sections": 3,
         "assumptions": [
             "Users have valid email addresses for registration",
             "Email delivery service is configured and operational",
-            "Users understand basic web navigation patterns"
+            "Users understand basic web navigation patterns",
         ],
         "out_of_scope": [
             "Social media login (OAuth) integration",
             "Two-factor authentication",
-            "Password recovery via SMS"
-        ]
+            "Password recovery via SMS",
+        ],
     }
 
 
@@ -130,16 +130,16 @@ A modern web application following a 3-tier architecture with clear separation o
                     "type": "object",
                     "properties": {
                         "page": {"type": "integer"},
-                        "limit": {"type": "integer"}
-                    }
+                        "limit": {"type": "integer"},
+                    },
                 },
                 "response_schema": {
                     "type": "object",
                     "properties": {
                         "users": {"type": "array"},
-                        "total": {"type": "integer"}
-                    }
-                }
+                        "total": {"type": "integer"},
+                    },
+                },
             },
             {
                 "path": "/api/v1/users",
@@ -151,41 +151,41 @@ A modern web application following a 3-tier architecture with clear separation o
                     "properties": {
                         "email": {"type": "string"},
                         "password": {"type": "string"},
-                        "name": {"type": "string"}
-                    }
+                        "name": {"type": "string"},
+                    },
                 },
                 "response_schema": {
                     "type": "object",
                     "properties": {
                         "id": {"type": "string"},
                         "email": {"type": "string"},
-                        "created_at": {"type": "string"}
-                    }
-                }
-            }
+                        "created_at": {"type": "string"},
+                    },
+                },
+            },
         ],
         "decisions": [
             {
                 "decision": "Use JWT for authentication",
                 "reason": "Stateless authentication enables horizontal scaling and works well with SPAs. Industry standard with good library support.",
-                "tradeoffs": "Tokens cannot be easily revoked before expiration. Requires secure key management and HTTPS."
+                "tradeoffs": "Tokens cannot be easily revoked before expiration. Requires secure key management and HTTPS.",
             },
             {
                 "decision": "RESTful API design",
                 "reason": "Well-understood, widely supported, and easy to consume by various clients. Clear resource-based URL structure.",
-                "tradeoffs": "May require multiple round trips for complex operations. Not as efficient as GraphQL for nested data."
-            }
+                "tradeoffs": "May require multiple round trips for complex operations. Not as efficient as GraphQL for nested data.",
+            },
         ],
         "next_tasks": [
             {
                 "role": "Engineer",
-                "task": "Implement user authentication API endpoints with JWT token generation and validation"
+                "task": "Implement user authentication API endpoints with JWT token generation and validation",
             },
             {
                 "role": "Engineer",
-                "task": "Set up database schema and migrations for user management"
-            }
-        ]
+                "task": "Set up database schema and migrations for user management",
+            },
+        ],
     }
 
 
@@ -201,11 +201,11 @@ def build_structured_messages(
 ) -> list[dict[str, str]]:
     """Create chat messages instructing the LLM to output JSON only that conforms to schema."""
     constraints_text = "\n".join(f"- {c}" for c in constraints)
-    
+
     # Use realistic examples for architect and PM, minimal for others
     is_architect = schema_name == "architect.schema.json"
     is_pm = schema_name == "pm_spec.schema.json"
-    
+
     if is_architect:
         example = build_architect_example()
         example_note = """
@@ -232,19 +232,21 @@ Example of a COMPLETE PM response:"""
     else:
         example = build_minimal_example_from_schema(schema)
         example_note = "\nMinimal example:"
-    
+
     system = f"You are {role_name}.\nGoal: {role_goal}.\nConstraints:\n{constraints_text}\n\nYou MUST return STRICT JSON ONLY (no markdown, no commentary) conforming to the schema '{schema_name}'."
-    
+
     if is_architect:
         system += "\n\nAs an architect, you must provide COMPLETE, DETAILED designs with actual content - empty arrays are NOT acceptable."
     elif is_pm:
         system += "\n\nAs a product manager, you must write REAL acceptance criteria with actual requirements - NEVER use generic placeholders like 'Criteria 1' or 'Criteria 2'."
-    
+
     context_parts = [f"TASK: {sop_task}", f"USER_REQUEST: {user_request}"]
     if extra_context:
         with contextlib.suppress(Exception):
-            context_parts.append(f"CONTEXT: {json.dumps(extra_context, ensure_ascii=False)}")
-    
+            context_parts.append(
+                f"CONTEXT: {json.dumps(extra_context, ensure_ascii=False)}"
+            )
+
     user = (
         "\n".join(context_parts)
         + "\nReturn JSON ONLY with COMPLETE content for all required fields."

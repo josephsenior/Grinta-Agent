@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\core\message.py
+# hypothesis_version: 6.147.0
+
+['__iter__', 'arguments', 'assistant', 'cache_control', 'content', 'ephemeral', 'function', 'id', 'image_url', 'model_rebuild', 'name', 'plain', 'pop', 'role', 'system', 'text', 'tool', 'tool_call_id', 'tool_calls', 'type', 'url', 'user']

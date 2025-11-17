@@ -14,7 +14,8 @@ from forge.events.observation import (
 )
 
 pytestmark = pytest.mark.skipif(
-    os.environ.get("TEST_RUNTIME") == "cli", reason="CLIRuntime does not support browsing actions"
+    os.environ.get("TEST_RUNTIME") == "cli",
+    reason="CLIRuntime does not support browsing actions",
 )
 
 
@@ -49,7 +50,14 @@ def parse_axtree_content(content: str) -> dict[str, str]:
 def find_element_by_text(axtree_elements: dict[str, str], text: str) -> str | None:
     """Find an element bid by searching for text in the element description."""
     text = text.lower().strip()
-    return next((bid for bid, description in axtree_elements.items() if text in description.lower()), None)
+    return next(
+        (
+            bid
+            for bid, description in axtree_elements.items()
+            if text in description.lower()
+        ),
+        None,
+    )
 
 
 def find_element_by_id(axtree_elements: dict[str, str], element_id: str) -> str | None:
@@ -58,13 +66,16 @@ def find_element_by_id(axtree_elements: dict[str, str], element_id: str) -> str 
         (
             bid
             for bid, description in axtree_elements.items()
-            if f'id="{element_id}"' in description or f"id='{element_id}'" in description
+            if f'id="{element_id}"' in description
+            or f"id='{element_id}'" in description
         ),
         None,
     )
 
 
-def find_element_by_tag_and_attributes(axtree_elements: dict[str, str], tag: str, **attributes) -> str | None:
+def find_element_by_tag_and_attributes(
+    axtree_elements: dict[str, str], tag: str, **attributes
+) -> str | None:
     """Find an element bid by tag name and attributes."""
     tag = tag.lower()
     for bid, description in axtree_elements.items():
@@ -85,7 +96,9 @@ def find_element_by_tag_and_attributes(axtree_elements: dict[str, str], tag: str
 
 
 def test_browser_disabled(temp_dir, runtime_cls, run_as_Forge):
-    runtime, _ = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=False)
+    runtime, _ = _load_runtime(
+        temp_dir, runtime_cls, run_as_Forge, enable_browser=False
+    )
     action_cmd = CmdRunAction(command="python3 -m http.server 8000 > server.log 2>&1 &")
     logger.info(action_cmd, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_cmd)
@@ -100,7 +113,9 @@ def test_browser_disabled(temp_dir, runtime_cls, run_as_Forge):
 
 
 def test_simple_browse(temp_dir, runtime_cls, run_as_Forge):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
+    runtime, config = _load_runtime(
+        temp_dir, runtime_cls, run_as_Forge, enable_browser=True
+    )
     action_cmd = CmdRunAction(command="python3 -m http.server 8000 > server.log 2>&1 &")
     logger.info(action_cmd, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_cmd)
@@ -142,9 +157,9 @@ def _create_navigation_test_pages(temp_dir):
     page1_path = os.path.join(temp_dir, "page1.html")
     page2_path = os.path.join(temp_dir, "page2.html")
 
-    with open(page1_path, "w", encoding='utf-8') as f:
+    with open(page1_path, "w", encoding="utf-8") as f:
         f.write(page1_content)
-    with open(page2_path, "w", encoding='utf-8') as f:
+    with open(page2_path, "w", encoding="utf-8") as f:
         f.write(page2_content)
 
     return page1_path, page2_path
@@ -187,7 +202,9 @@ def _test_goto_page1(runtime):
 
 def _test_noop_action(runtime):
     """Test noop action."""
-    action_browse = BrowseInteractiveAction(browser_actions="noop(500)", return_axtree=False)
+    action_browse = BrowseInteractiveAction(
+        browser_actions="noop(500)", return_axtree=False
+    )
     logger.info(action_browse, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_browse)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
@@ -215,7 +232,9 @@ def _test_goto_page2(runtime):
 
 def _test_go_back(runtime):
     """Test go back action."""
-    action_browse = BrowseInteractiveAction(browser_actions="go_back()", return_axtree=False)
+    action_browse = BrowseInteractiveAction(
+        browser_actions="go_back()", return_axtree=False
+    )
     logger.info(action_browse, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_browse)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
@@ -228,7 +247,9 @@ def _test_go_back(runtime):
 
 def _test_go_forward(runtime):
     """Test go forward action."""
-    action_browse = BrowseInteractiveAction(browser_actions="go_forward()", return_axtree=False)
+    action_browse = BrowseInteractiveAction(
+        browser_actions="go_forward()", return_axtree=False
+    )
     logger.info(action_browse, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_browse)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
@@ -241,7 +262,9 @@ def _test_go_forward(runtime):
 
 def test_browser_navigation_actions(temp_dir, runtime_cls, run_as_Forge):
     """Test browser navigation actions: goto, go_back, go_forward, noop."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
+    runtime, config = _load_runtime(
+        temp_dir, runtime_cls, run_as_Forge, enable_browser=True
+    )
     try:
         # Create test pages
         page1_path, page2_path = _create_navigation_test_pages(temp_dir)
@@ -266,7 +289,7 @@ def _create_test_form_file(temp_dir):
     """Create HTML test form file."""
     form_content = '\n        <!DOCTYPE html>\n        <html>\n        <head><title>Test Form</title></head>\n        <body>\n            <h1>Test Form</h1>\n            <form id="test-form">\n                <input type="text" id="text-input" name="text" placeholder="Enter text">\n                <textarea id="textarea-input" name="message" placeholder="Enter message"></textarea>\n                <select id="select-input" name="option">\n                    <option value="">Select an option</option>\n                    <option value="option1">Option 1</option>\n                    <option value="option2">Option 2</option>\n                    <option value="option3">Option 3</option>\n                </select>\n                <button type="button" id="test-button">Test Button</button>\n                <input type="submit" id="submit-button" value="Submit">\n            </form>\n            <div id="result"></div>\n            <script>\n                document.getElementById(\'test-button\').onclick = function() {\n                    document.getElementById(\'result\').innerHTML = \'Button clicked!\';\n                };\n            </script>\n        </body>\n        </html>\n        '
     form_path = os.path.join(temp_dir, "form.html")
-    with open(form_path, "w", encoding='utf-8') as f:
+    with open(form_path, "w", encoding="utf-8") as f:
         f.write(form_content)
     return form_path
 
@@ -310,32 +333,26 @@ def _find_form_elements(obs):
     assert (
         text_input_bid is not None
     ), f"Could not find text input element in axtree. Available elements: {
-        dict(
-            list(
-                axtree_elements.items())[
-                :5])}"
+        dict(list(axtree_elements.items())[:5])
+    }"
     assert (
         textarea_bid is not None
     ), f"Could not find textarea element in axtree. Available elements: {
-        dict(
-            list(
-                axtree_elements.items())[
-                :5])}"
+        dict(list(axtree_elements.items())[:5])
+    }"
     assert (
         button_bid is not None
     ), f"Could not find button element in axtree. Available elements: {
-        dict(
-            list(
-                axtree_elements.items())[
-                :5])}"
+        dict(list(axtree_elements.items())[:5])
+    }"
     assert (
         select_bid is not None
     ), f"Could not find select element in axtree. Available elements: {
-        dict(
-            list(
-                axtree_elements.items())[
-                :5])}"
-    assert text_input_bid != button_bid, "Text input bid should be different from button bid"
+        dict(list(axtree_elements.items())[:5])
+    }"
+    assert text_input_bid != button_bid, (
+        "Text input bid should be different from button bid"
+    )
 
     return text_input_bid, textarea_bid, select_bid, button_bid
 
@@ -350,28 +367,29 @@ def _test_fill_actions(runtime, text_input_bid, textarea_bid):
     obs = runtime.run_action(action_browse)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert isinstance(obs, BrowserOutputObservation)
-    assert not obs.error, f"Browser action failed with error: {obs.last_browser_action_error}"
+    assert not obs.error, (
+        f"Browser action failed with error: {obs.last_browser_action_error}"
+    )
 
     updated_axtree_elements = parse_axtree_content(obs.content)
-    assert (
-        text_input_bid in updated_axtree_elements
-    ), f"Text input element {text_input_bid} should be present in updated axtree. Available elements: {
-        list(
-            updated_axtree_elements.keys())[
-            :10]}"
+    assert text_input_bid in updated_axtree_elements, f"Text input element {
+        text_input_bid
+    } should be present in updated axtree. Available elements: {
+        list(updated_axtree_elements.keys())[:10]
+    }"
     text_input_desc = updated_axtree_elements[text_input_bid]
-    assert (
-        "Hello World" in text_input_desc or "'Hello World'" in text_input_desc
-    ), f"Text input should contain 'Hello World' but description is: {text_input_desc}"
-    assert (
-        textarea_bid in updated_axtree_elements
-    ), f"Textarea element {textarea_bid} should be present in updated axtree. Available elements: {
-        list(
-            updated_axtree_elements.keys())[
-            :10]}"
+    assert "Hello World" in text_input_desc or "'Hello World'" in text_input_desc, (
+        f"Text input should contain 'Hello World' but description is: {text_input_desc}"
+    )
+    assert textarea_bid in updated_axtree_elements, f"Textarea element {
+        textarea_bid
+    } should be present in updated axtree. Available elements: {
+        list(updated_axtree_elements.keys())[:10]
+    }"
     textarea_desc = updated_axtree_elements[textarea_bid]
     assert (
-        "This is a test message" in textarea_desc or "'This is a test message'" in textarea_desc
+        "This is a test message" in textarea_desc
+        or "'This is a test message'" in textarea_desc
     ), f"Textarea should contain test message but description is: {textarea_desc}"
     return obs
 
@@ -385,44 +403,47 @@ def _test_select_option(runtime, select_bid):
     obs = runtime.run_action(action_browse)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert isinstance(obs, BrowserOutputObservation)
-    assert not obs.error, f"Select option action failed: {obs.last_browser_action_error}"
+    assert not obs.error, (
+        f"Select option action failed: {obs.last_browser_action_error}"
+    )
 
     updated_axtree_elements = parse_axtree_content(obs.content)
-    assert (
-        select_bid in updated_axtree_elements
-    ), f"Select element {select_bid} should be present in updated axtree. Available elements: {
-        list(
-            updated_axtree_elements.keys())[
-            :10]}"
+    assert select_bid in updated_axtree_elements, f"Select element {
+        select_bid
+    } should be present in updated axtree. Available elements: {
+        list(updated_axtree_elements.keys())[:10]
+    }"
     select_desc = updated_axtree_elements[select_bid]
-    assert (
-        "option2" in select_desc or "Option 2" in select_desc
-    ), f"Select element should show 'option2' as selected but description is: {select_desc}"
+    assert "option2" in select_desc or "Option 2" in select_desc, (
+        f"Select element should show 'option2' as selected but description is: {select_desc}"
+    )
     return obs
 
 
 def _test_button_click(runtime, button_bid):
     """Test clicking a button."""
-    action_browse = BrowseInteractiveAction(browser_actions=f'click("{button_bid}")', return_axtree=True)
+    action_browse = BrowseInteractiveAction(
+        browser_actions=f'click("{button_bid}")', return_axtree=True
+    )
     obs = runtime.run_action(action_browse)
     assert isinstance(obs, BrowserOutputObservation)
     assert not obs.error, f"Click action failed: {obs.last_browser_action_error}"
 
     updated_axtree_elements = parse_axtree_content(obs.content)
-    result_found = any(("Button clicked!" in desc for desc in updated_axtree_elements.values()))
-    assert (
-        result_found
-    ), f"Button click should have triggered JavaScript to show 'Button clicked!' but not found in: {
-        dict(
-            list(
-                updated_axtree_elements.items())[
-                :10])}"
+    result_found = any(
+        ("Button clicked!" in desc for desc in updated_axtree_elements.values())
+    )
+    assert result_found, f"Button click should have triggered JavaScript to show 'Button clicked!' but not found in: {
+        dict(list(updated_axtree_elements.items())[:10])
+    }"
     return obs
 
 
 def _test_clear_action(runtime, text_input_bid):
     """Test clearing form field."""
-    action_browse = BrowseInteractiveAction(browser_actions=f'clear("{text_input_bid}")', return_axtree=True)
+    action_browse = BrowseInteractiveAction(
+        browser_actions=f'clear("{text_input_bid}")', return_axtree=True
+    )
     obs = runtime.run_action(action_browse)
     assert isinstance(obs, BrowserOutputObservation)
     assert not obs.error, f"Clear action failed: {obs.last_browser_action_error}"
@@ -430,12 +451,16 @@ def _test_clear_action(runtime, text_input_bid):
     updated_axtree_elements = parse_axtree_content(obs.content)
     assert text_input_bid in updated_axtree_elements
     text_input_desc = updated_axtree_elements[text_input_bid]
+    assert "Hello World" not in text_input_desc, (
+        f"Text input should be cleared but still contains text: {text_input_desc}"
+    )
     assert (
-        "Hello World" not in text_input_desc
-    ), f"Text input should be cleared but still contains text: {text_input_desc}"
-    assert (
-        "Enter text" in text_input_desc or "textbox" in text_input_desc.lower() or text_input_desc.strip() == ""
-    ), f"Cleared text input should show placeholder or be empty but description is: {text_input_desc}"
+        "Enter text" in text_input_desc
+        or "textbox" in text_input_desc.lower()
+        or text_input_desc.strip() == ""
+    ), (
+        f"Cleared text input should show placeholder or be empty but description is: {text_input_desc}"
+    )
     return obs
 
 
@@ -450,7 +475,9 @@ def _cleanup_test_server(runtime):
 
 def test_browser_form_interactions(temp_dir, runtime_cls, run_as_Forge):
     """Test browser form interaction actions: fill, click, select_option, clear."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
+    runtime, config = _load_runtime(
+        temp_dir, runtime_cls, run_as_Forge, enable_browser=True
+    )
     try:
         # Create test form file
         form_path = _create_test_form_file(temp_dir)
@@ -482,7 +509,7 @@ def _create_scroll_test_page(temp_dir):
     """Create HTML page for scroll testing."""
     scroll_content = '\n        <!DOCTYPE html>\n        <html>\n        <head>\n            <title>Scroll Test</title>\n            <style>\n                body { margin: 0; padding: 20px; }\n                .content { height: 2000px; background: linear-gradient(to bottom, #ff0000, #0000ff); }\n                .hover-target {\n                    width: 200px; height: 100px; background: #ccc; margin: 20px;\n                    border: 2px solid #000; cursor: pointer;\n                }\n                .hover-target:hover { background: #ffff00; }\n                #focus-input { margin: 20px; padding: 10px; font-size: 16px; }\n            </style>\n        </head>\n        <body>\n            <h1>Interactive Test Page</h1>\n            <div class="hover-target" id="hover-div">Hover over me</div>\n            <input type="text" id="focus-input" placeholder="Focus me and type">\n            <div class="content">\n                <p>This is a long scrollable page...</p>\n                <p style="margin-top: 500px;">Middle content</p>\n                <p style="margin-top: 500px;" id="bottom-content">Bottom content</p>\n            </div>\n        </body>\n        </html>\n        '
     scroll_path = os.path.join(temp_dir, "scroll.html")
-    with open(scroll_path, "w", encoding='utf-8') as f:
+    with open(scroll_path, "w", encoding="utf-8") as f:
         f.write(scroll_content)
     return scroll_path
 
@@ -503,7 +530,9 @@ def _navigate_to_scroll_page(runtime):
 
 def _test_scroll_action(runtime):
     """Test scroll action."""
-    action_browse = BrowseInteractiveAction(browser_actions="scroll(0, 300)", return_axtree=True)
+    action_browse = BrowseInteractiveAction(
+        browser_actions="scroll(0, 300)", return_axtree=True
+    )
     logger.info(action_browse, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_browse)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
@@ -511,8 +540,7 @@ def _test_scroll_action(runtime):
     assert not obs.error, f"Scroll action failed: {obs.last_browser_action_error}"
     assert (
         "scroll(0, 300)" in obs.last_browser_action
-    ), f"Expected scroll action in browser history but got: {
-        obs.last_browser_action}"
+    ), f"Expected scroll action in browser history but got: {obs.last_browser_action}"
     return obs
 
 
@@ -524,23 +552,21 @@ def _find_interactive_elements(obs):
     assert (
         hover_div_bid is not None
     ), f"Could not find hover div element in axtree. Available elements: {
-        dict(
-            list(
-                axtree_elements.items())[
-                :5])}"
+        dict(list(axtree_elements.items())[:5])
+    }"
     assert (
         focus_input_bid is not None
     ), f"Could not find focus input element in axtree. Available elements: {
-        dict(
-            list(
-                axtree_elements.items())[
-                :5])}"
+        dict(list(axtree_elements.items())[:5])
+    }"
     return hover_div_bid, focus_input_bid
 
 
 def _test_hover_action(runtime, hover_div_bid):
     """Test hover action."""
-    action_browse = BrowseInteractiveAction(browser_actions=f'hover("{hover_div_bid}")', return_axtree=True)
+    action_browse = BrowseInteractiveAction(
+        browser_actions=f'hover("{hover_div_bid}")', return_axtree=True
+    )
     logger.info(action_browse, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_browse)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
@@ -551,7 +577,9 @@ def _test_hover_action(runtime, hover_div_bid):
 
 def _test_focus_action(runtime, focus_input_bid):
     """Test focus action."""
-    action_browse = BrowseInteractiveAction(browser_actions=f'focus("{focus_input_bid}")', return_axtree=True)
+    action_browse = BrowseInteractiveAction(
+        browser_actions=f'focus("{focus_input_bid}")', return_axtree=True
+    )
     logger.info(action_browse, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_browse)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
@@ -560,7 +588,8 @@ def _test_focus_action(runtime, focus_input_bid):
     assert (
         obs.focused_element_bid == focus_input_bid
     ), f"Expected focused element to be {focus_input_bid}, but got {
-        obs.focused_element_bid}"
+        obs.focused_element_bid
+    }"
     return obs
 
 
@@ -576,16 +605,15 @@ def _test_fill_action(runtime, focus_input_bid):
     assert not obs.error, f"Fill action failed: {obs.last_browser_action_error}"
 
     updated_axtree_elements = parse_axtree_content(obs.content)
-    assert (
-        focus_input_bid in updated_axtree_elements
-    ), f"Focus input element {focus_input_bid} should be present in updated axtree. Available elements: {
-        list(
-            updated_axtree_elements.keys())[
-            :10]}"
+    assert focus_input_bid in updated_axtree_elements, f"Focus input element {
+        focus_input_bid
+    } should be present in updated axtree. Available elements: {
+        list(updated_axtree_elements.keys())[:10]
+    }"
     input_desc = updated_axtree_elements[focus_input_bid]
-    assert (
-        "TestValue123" in input_desc or "'TestValue123'" in input_desc
-    ), f"Input should contain 'TestValue123' but description is: {input_desc}"
+    assert "TestValue123" in input_desc or "'TestValue123'" in input_desc, (
+        f"Input should contain 'TestValue123' but description is: {input_desc}"
+    )
     return obs
 
 
@@ -601,39 +629,43 @@ def _test_press_action(runtime, focus_input_bid):
     assert not obs.error, f"Press action failed: {obs.last_browser_action_error}"
 
     updated_axtree_elements = parse_axtree_content(obs.content)
-    assert (
-        focus_input_bid in updated_axtree_elements
-    ), f"Focus input element {focus_input_bid} should be present in updated axtree. Available elements: {
-        list(
-            updated_axtree_elements.keys())[
-            :10]}"
+    assert focus_input_bid in updated_axtree_elements, f"Focus input element {
+        focus_input_bid
+    } should be present in updated axtree. Available elements: {
+        list(updated_axtree_elements.keys())[:10]
+    }"
     input_desc = updated_axtree_elements[focus_input_bid]
-    assert (
-        "TestValue12" in input_desc or "'TestValue12'" in input_desc
-    ), f"Input should contain 'TestValue12' after backspace but description is: {input_desc}"
+    assert "TestValue12" in input_desc or "'TestValue12'" in input_desc, (
+        f"Input should contain 'TestValue12' after backspace but description is: {input_desc}"
+    )
     return obs
 
 
 def _test_multiple_actions_sequence(runtime):
     """Test multiple actions in sequence."""
     action_browse = BrowseInteractiveAction(
-        browser_actions="\nscroll(0, -200)\nnoop(1000)\nscroll(0, 400)\n".strip(), return_axtree=False
+        browser_actions="\nscroll(0, -200)\nnoop(1000)\nscroll(0, 400)\n".strip(),
+        return_axtree=False,
     )
     logger.info(action_browse, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_browse)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert isinstance(obs, BrowserOutputObservation)
-    assert not obs.error, f"Multiple actions sequence failed: {obs.last_browser_action_error}"
+    assert not obs.error, (
+        f"Multiple actions sequence failed: {obs.last_browser_action_error}"
+    )
     assert (
-        "scroll(0, 400)" in obs.last_browser_action or "noop(1000)" in obs.last_browser_action
-    ), f"Expected final action from sequence but got: {
-        obs.last_browser_action}"
+        "scroll(0, 400)" in obs.last_browser_action
+        or "noop(1000)" in obs.last_browser_action
+    ), f"Expected final action from sequence but got: {obs.last_browser_action}"
     return obs
 
 
 def test_browser_interactive_actions(temp_dir, runtime_cls, run_as_Forge):
     """Test browser interactive actions: scroll, hover, fill, press, focus."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
+    runtime, config = _load_runtime(
+        temp_dir, runtime_cls, run_as_Forge, enable_browser=True
+    )
     try:
         # Create scroll test page
         scroll_path = _create_scroll_test_page(temp_dir)
@@ -667,7 +699,7 @@ def _create_test_files(temp_dir):
     """Create test files for upload testing."""
     test_file_content = "This is a test file for upload testing."
     test_file_path = os.path.join(temp_dir, "upload_test.txt")
-    with open(test_file_path, "w", encoding='utf-8') as f:
+    with open(test_file_path, "w", encoding="utf-8") as f:
         f.write(test_file_content)
 
     upload_content = """<!DOCTYPE html>
@@ -695,7 +727,7 @@ def _create_test_files(temp_dir):
 </html>"""
 
     upload_path = os.path.join(temp_dir, "upload.html")
-    with open(upload_path, "w", encoding='utf-8') as f:
+    with open(upload_path, "w", encoding="utf-8") as f:
         f.write(upload_content)
 
     return test_file_path, upload_path
@@ -752,10 +784,8 @@ def _find_upload_elements(obs):
     assert (
         file_input_bid is not None
     ), f"Could not find file input element in axtree. Available elements: {
-        dict(
-            list(
-                axtree_elements.items())[
-                :10])}"
+        dict(list(axtree_elements.items())[:10])
+    }"
 
     return file_input_bid, upload_button_bid
 
@@ -763,7 +793,8 @@ def _find_upload_elements(obs):
 def _perform_file_upload(runtime, file_input_bid):
     """Perform the file upload action."""
     action_browse = BrowseInteractiveAction(
-        browser_actions=f'upload_file("{file_input_bid}", "/workspace/upload_test.txt")', return_axtree=True
+        browser_actions=f'upload_file("{file_input_bid}", "/workspace/upload_test.txt")',
+        return_axtree=True,
     )
     logger.info(action_browse, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_browse)
@@ -778,16 +809,17 @@ def _perform_file_upload(runtime, file_input_bid):
 def _verify_upload_success(obs, file_input_bid):
     """Verify that the file upload was successful."""
     updated_axtree_elements = parse_axtree_content(obs.content)
-    assert (
-        file_input_bid in updated_axtree_elements
-    ), f"File input element {file_input_bid} should be present in updated axtree. Available elements: {
-        list(
-            updated_axtree_elements.keys())[
-            :10]}"
+    assert file_input_bid in updated_axtree_elements, f"File input element {
+        file_input_bid
+    } should be present in updated axtree. Available elements: {
+        list(updated_axtree_elements.keys())[:10]
+    }"
 
     file_input_desc = updated_axtree_elements[file_input_bid]
     assert (
-        "upload_test.txt" in file_input_desc or "upload_test" in file_input_desc or "txt" in file_input_desc
+        "upload_test.txt" in file_input_desc
+        or "upload_test" in file_input_desc
+        or "txt" in file_input_desc
     ), f"File input should show selected file but description is: {file_input_desc}"
 
 
@@ -796,7 +828,9 @@ def _test_upload_button_click(runtime, upload_button_bid):
     if not upload_button_bid:
         return
 
-    action_browse = BrowseInteractiveAction(browser_actions=f'click("{upload_button_bid}")', return_axtree=True)
+    action_browse = BrowseInteractiveAction(
+        browser_actions=f'click("{upload_button_bid}")', return_axtree=True
+    )
     logger.info(action_browse, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_browse)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
@@ -806,15 +840,14 @@ def _test_upload_button_click(runtime, upload_button_bid):
 
     final_axtree_elements = parse_axtree_content(obs.content)
     result_found = any(
-        ("File selected:" in desc or "upload_test.txt" in desc for desc in final_axtree_elements.values())
+        (
+            "File selected:" in desc or "upload_test.txt" in desc
+            for desc in final_axtree_elements.values()
+        )
     )
-    assert (
-        result_found
-    ), f"JavaScript upload handler should have updated the page but no result found in: {
-        dict(
-            list(
-                final_axtree_elements.items())[
-                :10])}"
+    assert result_found, f"JavaScript upload handler should have updated the page but no result found in: {
+        dict(list(final_axtree_elements.items())[:10])
+    }"
 
 
 def _cleanup_server(runtime):
@@ -827,7 +860,9 @@ def _cleanup_server(runtime):
 
 def test_browser_file_upload(temp_dir, runtime_cls, run_as_Forge):
     """Test browser file upload action."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
+    runtime, config = _load_runtime(
+        temp_dir, runtime_cls, run_as_Forge, enable_browser=True
+    )
     try:
         # Create test files
         test_file_path, upload_path = _create_test_files(temp_dir)
@@ -856,7 +891,9 @@ def test_browser_file_upload(temp_dir, runtime_cls, run_as_Forge):
 
 
 def test_read_pdf_browse(temp_dir, runtime_cls, run_as_Forge):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
+    runtime, config = _load_runtime(
+        temp_dir, runtime_cls, run_as_Forge, enable_browser=True
+    )
     try:
         from reportlab.lib.pagesizes import letter
         from reportlab.pdfgen import canvas
@@ -885,7 +922,9 @@ def test_read_pdf_browse(temp_dir, runtime_cls, run_as_Forge):
         assert obs.exit_code == 0
         server_url = obs.content.strip()
         pdf_url = f"{server_url}/view?path=/workspace/test_document.pdf"
-        action_browse = BrowseInteractiveAction(browser_actions=f'goto("{pdf_url}")', return_axtree=False)
+        action_browse = BrowseInteractiveAction(
+            browser_actions=f'goto("{pdf_url}")', return_axtree=False
+        )
         logger.info(action_browse, extra={"msg_type": "ACTION"})
         obs = runtime.run_action(action_browse)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
@@ -893,7 +932,10 @@ def test_read_pdf_browse(temp_dir, runtime_cls, run_as_Forge):
         observation_text = str(obs)
         assert "[Action executed successfully.]" in observation_text
         assert "Canvas" in observation_text
-        assert "Screenshot saved to: /workspace/.browser_screenshots/screenshot_" in observation_text
+        assert (
+            "Screenshot saved to: /workspace/.browser_screenshots/screenshot_"
+            in observation_text
+        )
         action_cmd = CmdRunAction(command="ls /workspace/.browser_screenshots")
         logger.info(action_cmd, extra={"msg_type": "ACTION"})
         obs = runtime.run_action(action_cmd)
@@ -907,7 +949,9 @@ def test_read_pdf_browse(temp_dir, runtime_cls, run_as_Forge):
 
 
 def test_read_png_browse(temp_dir, runtime_cls, run_as_Forge):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
+    runtime, config = _load_runtime(
+        temp_dir, runtime_cls, run_as_Forge, enable_browser=True
+    )
     try:
         from PIL import Image, ImageDraw
 
@@ -933,7 +977,9 @@ def test_read_png_browse(temp_dir, runtime_cls, run_as_Forge):
         assert obs.exit_code == 0
         server_url = obs.content.strip()
         png_url = f"{server_url}/view?path=/workspace/test_image.png"
-        action_browse = BrowseInteractiveAction(browser_actions=f'goto("{png_url}")', return_axtree=False)
+        action_browse = BrowseInteractiveAction(
+            browser_actions=f'goto("{png_url}")', return_axtree=False
+        )
         logger.info(action_browse, extra={"msg_type": "ACTION"})
         obs = runtime.run_action(action_browse)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
@@ -941,7 +987,10 @@ def test_read_png_browse(temp_dir, runtime_cls, run_as_Forge):
         observation_text = str(obs)
         assert "[Action executed successfully.]" in observation_text
         assert "File Viewer - test_image.png" in observation_text
-        assert "Screenshot saved to: /workspace/.browser_screenshots/screenshot_" in observation_text
+        assert (
+            "Screenshot saved to: /workspace/.browser_screenshots/screenshot_"
+            in observation_text
+        )
         action_cmd = CmdRunAction(command="ls /workspace/.browser_screenshots")
         logger.info(action_cmd, extra={"msg_type": "ACTION"})
         obs = runtime.run_action(action_cmd)
@@ -956,7 +1005,9 @@ def test_read_png_browse(temp_dir, runtime_cls, run_as_Forge):
 
 def test_download_file(temp_dir, runtime_cls, run_as_Forge):
     """Test downloading a file using the browser."""
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
+    runtime, config = _load_runtime(
+        temp_dir, runtime_cls, run_as_Forge, enable_browser=True
+    )
 
     try:
         # Setup test files
@@ -1019,7 +1070,7 @@ def _create_html_test_page(temp_dir, test_file_name, sandbox_dir, runtime):
         </html>
         """
     html_file_path = os.path.join(temp_dir, "download_test.html")
-    with open(html_file_path, "w", encoding='utf-8') as f:
+    with open(html_file_path, "w", encoding="utf-8") as f:
         f.write(html_content)
     runtime.copy_to(html_file_path, sandbox_dir)
 

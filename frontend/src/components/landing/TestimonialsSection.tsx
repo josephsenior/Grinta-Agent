@@ -1,45 +1,20 @@
 import React from "react";
 import { Star, Quote } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "#/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
+import { testimonials as testimonialsData } from "#/content/landing";
 
 export default function TestimonialsSection(): React.ReactElement {
-  const { t } = useTranslation();
-
-  const testimonials = [
-    {
-      name: "Sarah Chen",
-      role: "Senior Developer",
-      company: "TechCorp",
-      avatar: null, // Use fallback initials instead of external images
-      content:
-        "Forge Pro has revolutionized our development workflow. What used to take days now takes hours. The code quality is consistently excellent.",
-      rating: 5,
-    },
-    {
-      name: "Marcus Johnson",
-      role: "CTO",
-      company: "StartupXYZ",
-      avatar: null, // Use fallback initials instead of external images
-      content:
-        "The AI understands our codebase better than some of our junior developers. It's like having a senior engineer available 24/7.",
-      rating: 5,
-    },
-    {
-      name: "Elena Rodriguez",
-      role: "Lead Engineer",
-      company: "InnovateLab",
-      avatar: null, // Use fallback initials instead of external images
-      content:
-        "Forge Pro's ability to generate production-ready code with comprehensive tests is unmatched. It's become an essential part of our stack.",
-      rating: 5,
-    },
-  ];
+  const testimonials = testimonialsData.map((testimonial) => ({
+    ...testimonial,
+    avatar: null,
+    rating: 5,
+  }));
 
   return (
-    <section className="py-20 px-6 relative">
-      <div className="max-w-7xl mx-auto">
+    <section className="relative py-24 px-6">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(139,92,246,0.15),_transparent_55%)]" />
+      <div className="relative max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16 max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 mb-6">
@@ -48,22 +23,22 @@ export default function TestimonialsSection(): React.ReactElement {
             <div className="w-2 h-2 bg-accent-500 rounded-full shadow-lg shadow-accent-500/50" />
           </div>
 
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            <span className="text-foreground">What Developers Say</span>
+          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
+            What our beta partners report from production workloads.
           </h2>
 
           <p className="text-lg text-foreground-secondary max-w-3xl mx-auto leading-relaxed">
-            Join thousands of developers who have transformed their workflow
-            with Forge Pro
+            Every quote comes from a current pilot sending Forge into their
+            regulated repos.
           </p>
         </div>
 
         {/* Testimonials Grid */}
-        <div className="features-grid">
+        <div className="grid gap-6 md:grid-cols-3">
           {testimonials.map((testimonial, index) => (
             <Card
               key={index}
-              className="card-modern group transition-all duration-300 hover:shadow-lg"
+              className="card-modern group transition-all duration-300 hover:shadow-2xl border-white/10 bg-background-primary/80"
             >
               <CardContent className="p-6 space-y-4">
                 {/* Quote Icon */}
@@ -80,8 +55,8 @@ export default function TestimonialsSection(): React.ReactElement {
                 </div>
 
                 {/* Content */}
-                <p className="text-sm leading-relaxed text-foreground opacity-95 font-medium">
-                  "{testimonial.content}"
+                <p className="text-sm leading-relaxed text-foreground-secondary font-medium">
+                  “{testimonial.quote}”
                 </p>
 
                 {/* Author */}
@@ -105,7 +80,7 @@ export default function TestimonialsSection(): React.ReactElement {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="font-bold text-sm text-foreground">
+                    <div className="font-bold text-sm text-white">
                       {testimonial.name}
                     </div>
                     <div className="text-xs text-foreground opacity-70 font-medium">
@@ -123,7 +98,7 @@ export default function TestimonialsSection(): React.ReactElement {
           <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full glass border border-brand-500/30 shadow-lg hover:border-brand-500/50 hover:shadow-brand-500/20 transition-all duration-300">
             <div className="w-2 h-2 bg-success-500 rounded-full animate-pulse shadow-lg shadow-success-500/50" />
             <span className="text-foreground font-medium">
-              Join 10,000+ developers building with Forge Pro
+              Join 140+ teams already piloting Forge
             </span>
           </div>
         </div>

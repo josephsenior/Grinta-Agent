@@ -11,7 +11,7 @@ from forge.metasop.metrics import get_metrics_registry
 
 def test_retry_success_increments_metrics() -> None:
     """Test that successful retries increment metrics correctly.
-    
+
     Verifies that retry_attempts and retry_successes counters are incremented
     when a flaky function eventually succeeds after retry.
     """
@@ -21,11 +21,12 @@ def test_retry_success_increments_metrics() -> None:
     before_successes = snap_before.get("retry_successes", 0)
     state = {"calls": 0}
 
-    def flaky() -> NoReturn:
+    def flaky() -> str:
         """Fail once to simulate recovery and trigger success metrics."""
         state["calls"] += 1
-        # Simulate flaky behavior: fail on first call, succeed on retry
-        raise ValueError("temporary") if state["calls"] == 1 else None
+        if state["calls"] == 1:
+            raise ValueError("temporary")
+        return "ok"
 
     res = retry(flaky, max_attempts=3, base_delay=0.01, max_delay=0.02)
     assert res == "ok"
@@ -36,7 +37,7 @@ def test_retry_success_increments_metrics() -> None:
 
 def test_retry_failure_increments_metrics() -> None:
     """Test that failed retries increment failure metrics correctly.
-    
+
     Verifies that retry_attempts and retry_failures counters are incremented
     when a function fails all retry attempts.
     """

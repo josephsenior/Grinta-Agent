@@ -13,7 +13,10 @@ def get_memory_usage():
 def test_json_encoder_memory_leak():
     gc.collect()
     initial_memory = get_memory_usage()
-    large_data = {"datetime": datetime.now(), "nested": [{"timestamp": datetime.now()} for _ in range(1000)]}
+    large_data = {
+        "datetime": datetime.now(),
+        "nested": [{"timestamp": datetime.now()} for _ in range(1000)],
+    }
     memory_samples = []
     for _ in range(10):
         for _ in range(100):
@@ -24,7 +27,11 @@ def test_json_encoder_memory_leak():
     max_memory = max(memory_samples)
     min_memory = min(memory_samples)
     memory_variation = max_memory - min_memory
-    assert memory_variation < 2 * 1024 * 1024, f"Memory usage unstable: {memory_variation} bytes variation"
+    assert memory_variation < 2 * 1024 * 1024, (
+        f"Memory usage unstable: {memory_variation} bytes variation"
+    )
     final_memory = memory_samples[-1]
     memory_increase = final_memory - initial_memory
-    assert memory_increase < 2 * 1024 * 1024, f"Memory leak detected: {memory_increase} bytes increase"
+    assert memory_increase < 2 * 1024 * 1024, (
+        f"Memory leak detected: {memory_increase} bytes increase"
+    )

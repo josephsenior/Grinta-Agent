@@ -63,7 +63,9 @@ def check_keyword_parameters(function_name, correct_code, test_code):
     return _validate_keyword_parameters(correct_param_list, test_param_list)
 
 
-def _validate_keyword_parameters(correct_param_list: list[str], test_param_list: list[str]) -> bool:
+def _validate_keyword_parameters(
+    correct_param_list: list[str], test_param_list: list[str]
+) -> bool:
     """Validate that keyword parameters are correctly used."""
     for correct_param in correct_param_list:
         if "=" in correct_param:
@@ -75,7 +77,9 @@ def _validate_keyword_parameters(correct_param_list: list[str], test_param_list:
 
 def _has_keyword_parameter(test_param_list: list[str], param_name: str) -> bool:
     """Check if a keyword parameter exists in the test parameter list."""
-    return any(param_name in test_param and "=" in test_param for test_param in test_param_list)
+    return any(
+        param_name in test_param and "=" in test_param for test_param in test_param_list
+    )
 
 
 def with_correct(answer_code: str, model_output: str) -> bool:
@@ -93,23 +97,39 @@ def with_correct(answer_code: str, model_output: str) -> bool:
         return False
 
 
-def compute_line_score_k(answer: str, model_output: list, k: int, model_filled_code, core_line):
+def compute_line_score_k(
+    answer: str, model_output: list, k: int, model_filled_code, core_line
+):
     n = len(model_output)
-    c = sum((bool(re.search(f"\\b{re.escape(answer)}\\b", code)) for code in model_output))
+    c = sum(
+        (bool(re.search(f"\\b{re.escape(answer)}\\b", code)) for code in model_output)
+    )
     return 1.0 if n - c < k else 1 - math.comb(n - c, k) / math.comb(n, k)
 
 
 def compute_block_score_k(
-    answer: str, model_output: list, k: int, model_filled_code, core_line_in_core_block, core_line_in_output_clear
+    answer: str,
+    model_output: list,
+    k: int,
+    model_filled_code,
+    core_line_in_core_block,
+    core_line_in_output_clear,
 ):
     n = len(model_output)
-    c = sum((bool(re.search(f"\\b{re.escape(answer)}\\b", code)) for code in model_output))
+    c = sum(
+        (bool(re.search(f"\\b{re.escape(answer)}\\b", code)) for code in model_output)
+    )
     return 1.0 if n - c < k else 1 - math.comb(n - c, k) / math.comb(n, k)
 
 
 def compute_score_k(answer: str, model_output: list, k: int):
     n = len(model_output)
-    c = sum((bool(re.search(f"\\b{re.escape(answer)}\\b", code) and is_code_valid(code)) for code in model_output))
+    c = sum(
+        (
+            bool(re.search(f"\\b{re.escape(answer)}\\b", code) and is_code_valid(code))
+            for code in model_output
+        )
+    )
     return 1.0 if n - c < k else 1 - math.comb(n - c, k) / math.comb(n, k)
 
 
@@ -128,15 +148,28 @@ for model in model_list:
         answer = data["core_token"]
         model_output = ast.literal_eval(data["model_output_clear"])  # nosec B307
         if task == "line":
-            model_filled_code = [data["masked_code"].replace("<mask>", i) for i in model_output]
+            model_filled_code = [
+                data["masked_code"].replace("<mask>", i) for i in model_output
+            ]
             core_line = data["core_line"]
-            score_list.append(compute_line_score_k(answer, model_output, k, model_filled_code, core_line))
+            score_list.append(
+                compute_line_score_k(
+                    answer, model_output, k, model_filled_code, core_line
+                )
+            )
         else:
             model_filled_code = ast.literal_eval(data["model_output_clear"])  # nosec B307
             core_line = data["core_line"]
             core_line_in_output_clear = data["core_line_in_output_clear"]
             score_list.append(
-                compute_block_score_k(answer, model_output, k, model_filled_code, core_line, core_line_in_output_clear)
+                compute_block_score_k(
+                    answer,
+                    model_output,
+                    k,
+                    model_filled_code,
+                    core_line,
+                    core_line_in_output_clear,
+                )
             )
     final_score = sum(score_list) / len(score_list)
     print(f"{model}, {task} completion task, em@{k} score: {final_score}")

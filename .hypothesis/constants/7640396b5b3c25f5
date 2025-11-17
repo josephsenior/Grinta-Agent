@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\core\config\provider_config.py
+# hypothesis_version: 6.147.0
+
+['AIza', 'ANTHROPIC_API_KEY', 'COHERE_API_KEY', 'DEEPINFRA_API_KEY', 'FIREWORKS_API_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'LLM_API_KEY', 'MISTRAL_API_KEY', 'OPENAI_API_KEY', 'OPENROUTER_API_KEY', 'PERPLEXITY_API_KEY', 'REPLICATE_API_KEY', 'TOGETHER_API_KEY', 'anthropic', 'api_key', 'api_version', 'base_url', 'co-', 'cohere', 'custom_llm_provider', 'deepinfra', 'drop_params', 'fireworks', 'fk-', 'forbidden', 'forge', 'google', 'groq', 'gsk_', 'http://', 'https://', 'max_tokens', 'mistral', 'mistral-', 'model', 'ollama', 'openai', 'openhands', 'openrouter', 'optional', 'perplexity', 'pplx-', 'r8_', 'replicate', 'required', 'seed', 'sk-', 'sk-ant-', 'sk-or-', 'stream', 'temperature', 'timeout', 'together', 'top_p', 'unknown']

@@ -11,4 +11,10 @@ from forge.memory.view import View
 # Import impl to trigger condenser registrations
 from forge.memory.condenser import impl  # noqa: F401
 
-__all__ = ["CONDENSER_REGISTRY", "Condensation", "Condenser", "get_condensation_metadata", "View"]
+__all__ = [
+    "CONDENSER_REGISTRY",
+    "Condensation",
+    "Condenser",
+    "get_condensation_metadata",
+    "View",
+]

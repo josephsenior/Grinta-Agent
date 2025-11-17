@@ -36,7 +36,9 @@ def test_generate_success(playbook):
 
     generator = ACEGenerator(llm=llm, context_playbook=playbook)
 
-    result = generator.generate(query="Validate user input for login flow", task_type="general")
+    result = generator.generate(
+        query="Validate user input for login flow", task_type="general"
+    )
 
     assert result.success is True
     assert result.trajectory.content.startswith("Step 1")
@@ -83,7 +85,9 @@ def test_generate_with_feedback(playbook):
     )
 
     generator = ACEGenerator(llm=llm, context_playbook=playbook)
-    initial_result = generator.generate(query="Validate user input for login", task_type="metasop", role="engineer")
+    initial_result = generator.generate(
+        query="Validate user input for login", task_type="metasop", role="engineer"
+    )
 
     # Mark the bullet as helpful to influence feedback prompt creation
     playbook.update_bullet(bullet_id="ctx-00000", helpful=True)
@@ -96,7 +100,9 @@ def test_generate_with_feedback(playbook):
     )
 
     assert feedback_result.success is True
-    assert feedback_result.trajectory.generation_metadata["feedback_incorporated"] is True
+    assert (
+        feedback_result.trajectory.generation_metadata["feedback_incorporated"] is True
+    )
     assert "Improved attempt" in feedback_result.trajectory.content
 
     assert feedback_result.tokens_used == 55
@@ -118,7 +124,9 @@ def test_generate_retry_then_success(monkeypatch, playbook):
     monkeypatch.setattr("time.sleep", lambda _: None)
 
     generator = ACEGenerator(llm=llm, context_playbook=playbook)
-    result = generator.generate(query="Retry scenario", task_type="general", max_retries=2)
+    result = generator.generate(
+        query="Retry scenario", task_type="general", max_retries=2
+    )
 
     assert result.success is True
     assert result.trajectory.content == "Recovered content"
@@ -171,7 +179,9 @@ def test_generate_with_feedback_failure_path(monkeypatch, playbook):
         tokens_used=10,
         retries=0,
     )
-    monkeypatch.setattr(generator, "_generate_with_retries", Mock(side_effect=RuntimeError("boom")))
+    monkeypatch.setattr(
+        generator, "_generate_with_retries", Mock(side_effect=RuntimeError("boom"))
+    )
 
     result = generator.generate_with_feedback(
         query="Retry with feedback",

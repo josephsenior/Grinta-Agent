@@ -41,7 +41,7 @@ from forge import forge
 
 # Initialize client
 client = Forge(
-    base_url="http://localhost:8000",
+    base_url="http://localhost:3000",
     api_key="your-api-key"  # Optional
 )
 
@@ -61,7 +61,7 @@ print(response.content)
 
 ```bash
 # Set environment variables
-export FORGE_BASE_URL=http://localhost:8000
+export FORGE_BASE_URL=http://localhost:3000
 export FORGE_API_KEY=your-api-key
 ```
 
@@ -449,7 +449,7 @@ class Variant:
 
 ```python
 client = Forge(
-    base_url="http://localhost:8000",
+    base_url="http://localhost:3000",
     timeout=60,  # Request timeout in seconds
 )
 ```
@@ -473,7 +473,7 @@ client = Forge(
 
 ```python
 client = Forge(
-    base_url="http://localhost:8000",
+    base_url="http://localhost:3000",
     headers={
         "X-Custom-Header": "value",
     }
@@ -497,7 +497,7 @@ http_client = httpx.Client(
 )
 
 client = Forge(
-    base_url="http://localhost:8000",
+    base_url="http://localhost:3000",
     http_client=http_client,
 )
 ```

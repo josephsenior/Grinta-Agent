@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-import pytest
 import json
+from types import MappingProxyType
+from typing import Any, Callable, Mapping, MutableMapping, cast
+from unittest.mock import AsyncMock
 
+import pytest
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
-from unittest.mock import AsyncMock
 
 from forge.integrations.provider import ProviderToken
 from forge.integrations.service_types import ProviderType
@@ -46,19 +48,31 @@ def restore_config():
         sandbox.remote_runtime_resource_factor = original_resource_factor
 
 
-def _apply_overrides(client: TestClient, overrides: dict) -> None:
+def _apply_overrides(
+    client: TestClient, overrides: Mapping[Any, Callable[..., Any]]
+) -> None:
+    app = cast(FastAPI, client.app)
     for dep, func in overrides.items():
-        client.app.dependency_overrides[dep] = func
+        app.dependency_overrides[dep] = func
 
 
-def _clear_overrides(client: TestClient, overrides: dict) -> None:
+def _clear_overrides(
+    client: TestClient, overrides: Mapping[Any, Callable[..., Any]]
+) -> None:
+    app = cast(FastAPI, client.app)
     for dep in overrides:
-        client.app.dependency_overrides.pop(dep, None)
+        app.dependency_overrides.pop(dep, None)
 
 
-def test_load_settings_returns_cached_response(settings_api_client: TestClient, monkeypatch):
+def test_load_settings_returns_cached_response(
+    settings_api_client: TestClient, monkeypatch
+):
     async def override_provider_tokens():
-        return {ProviderType.GITHUB: ProviderToken(token=SecretStr("token"), host="github.com")}
+        return {
+            ProviderType.GITHUB: ProviderToken(
+                token=SecretStr("token"), host="github.com"
+            )
+        }
 
     async def override_settings_store():
         return AsyncMock()
@@ -133,7 +147,9 @@ def test_load_settings_returns_default_when_missing(settings_api_client: TestCli
         _clear_overrides(settings_api_client, overrides)
 
 
-def test_load_settings_handles_exception_returns_default(settings_api_client: TestClient, monkeypatch):
+def test_load_settings_handles_exception_returns_default(
+    settings_api_client: TestClient, monkeypatch
+):
     async def override_provider_tokens():
         return {}
 
@@ -172,10 +188,14 @@ def test_load_settings_handles_exception_returns_default(settings_api_client: Te
 def test_build_provider_tokens_set_prefers_user_secrets():
     user_secrets = UserSecrets(
         provider_tokens={
-            ProviderType.GITLAB: ProviderToken(token=SecretStr("gl"), host="gitlab.com"),
+            ProviderType.GITLAB: ProviderToken(
+                token=SecretStr("gl"), host="gitlab.com"
+            ),
         }
     )
-    incoming = {ProviderType.GITHUB: ProviderToken(token=SecretStr("gh"), host="github.com")}
+    incoming = MappingProxyType(
+        {ProviderType.GITHUB: ProviderToken(token=SecretStr("gh"), host="github.com")}
+    )
     result = settings_routes._build_provider_tokens_set(user_secrets, incoming)
     assert ProviderType.GITLAB in result
     assert ProviderType.GITHUB not in result
@@ -189,7 +209,9 @@ def test_build_settings_response_masks_keys():
         search_api_key=SecretStr("search"),
         sandbox_api_key=SecretStr("sandbox"),
     )
-    provider_tokens = {ProviderType.GITHUB: "github.com"}
+    provider_tokens: dict[ProviderType, str | None] = {
+        ProviderType.GITHUB: "github.com"
+    }
     response = settings_routes._build_settings_response(settings, provider_tokens)
     assert isinstance(response, GETSettingsModel)
     assert response.llm_api_key is None
@@ -209,10 +231,14 @@ def _patch_api_key_manager(monkeypatch, *, provider: str, api_key: SecretStr | N
         "set_environment_variables",
         lambda self, model, key: None,
     )
+
+    def _mock_get_api_key(self, model: str, key: str | None) -> SecretStr | None:
+        return api_key
+
     monkeypatch.setattr(
         settings_routes.api_key_manager.__class__,
         "get_api_key_for_model",
-        (lambda self, model, key: api_key) if api_key is not None else (lambda self, model, key: None),
+        _mock_get_api_key,
     )
 
 
@@ -230,7 +256,9 @@ def test_reset_settings_returns_gone(settings_api_client: TestClient):
 
 
 @pytest.mark.asyncio
-async def test_store_settings_preserves_placeholder_api_key(monkeypatch, restore_config):
+async def test_store_settings_preserves_placeholder_api_key(
+    monkeypatch, restore_config
+):
     existing_settings = Settings(
         llm_model="openai/gpt-4",
         llm_api_key=SecretStr("keep-me"),
@@ -252,7 +280,9 @@ async def test_store_settings_preserves_placeholder_api_key(monkeypatch, restore
         return settings
 
     monkeypatch.setattr(settings_routes, "store_llm_settings", fake_store_llm)
-    _patch_api_key_manager(monkeypatch, provider="openai", api_key=existing_settings.llm_api_key)
+    _patch_api_key_manager(
+        monkeypatch, provider="openai", api_key=existing_settings.llm_api_key
+    )
 
     class DummyCache:
         def __init__(self):
@@ -262,11 +292,14 @@ async def test_store_settings_preserves_placeholder_api_key(monkeypatch, restore
             self.invalidated.append(user_id)
 
     dummy_cache = DummyCache()
-    monkeypatch.setattr("forge.core.cache.get_async_smart_cache", AsyncMock(return_value=dummy_cache))
+    monkeypatch.setattr(
+        "forge.core.cache.get_async_smart_cache", AsyncMock(return_value=dummy_cache)
+    )
 
     response = await settings_routes.store_settings(incoming, settings_store)
     assert response.status_code == status.HTTP_200_OK
     stored_settings = settings_store.store.await_args[0][0]
+    assert stored_settings.llm_api_key is not None
     assert stored_settings.llm_api_key.get_secret_value() == "keep-me"
     assert config.git_user_name == "new-name"
     assert config.git_user_email == "new@example.com"
@@ -297,12 +330,17 @@ async def test_store_settings_no_api_key_preserves_existing_and_clears_invalid_b
         return settings
 
     monkeypatch.setattr(settings_routes, "store_llm_settings", fake_store_llm)
-    _patch_api_key_manager(monkeypatch, provider="openrouter", api_key=existing_settings.llm_api_key)
-    monkeypatch.setattr("forge.core.cache.get_async_smart_cache", AsyncMock(return_value=AsyncMock()))
+    _patch_api_key_manager(
+        monkeypatch, provider="openrouter", api_key=existing_settings.llm_api_key
+    )
+    monkeypatch.setattr(
+        "forge.core.cache.get_async_smart_cache", AsyncMock(return_value=AsyncMock())
+    )
 
     response = await settings_routes.store_settings(incoming, settings_store)
     assert response.status_code == status.HTTP_200_OK
     stored_settings = settings_store.store.await_args[0][0]
+    assert stored_settings.llm_api_key is not None
     assert stored_settings.llm_api_key.get_secret_value() == "existing-key"
     assert stored_settings.llm_base_url is None
 
@@ -319,7 +357,9 @@ async def test_store_settings_failure_returns_500(monkeypatch):
 
     monkeypatch.setattr(settings_routes, "store_llm_settings", fake_store_llm)
     _patch_api_key_manager(monkeypatch, provider="openai", api_key=None)
-    monkeypatch.setattr("forge.core.cache.get_async_smart_cache", AsyncMock(return_value=AsyncMock()))
+    monkeypatch.setattr(
+        "forge.core.cache.get_async_smart_cache", AsyncMock(return_value=AsyncMock())
+    )
 
     response = await settings_routes.store_settings(incoming, settings_store)
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -336,6 +376,7 @@ def test_convert_to_settings_openrouter_fix(monkeypatch):
     )
     result = settings_routes.convert_to_settings(settings)
     assert result.llm_base_url in ("", None)
+    assert result.llm_api_key is not None
     assert result.llm_api_key.get_secret_value() == "openrouter-secret"
 
 
@@ -413,7 +454,9 @@ async def test_store_settings_placeholder_without_existing(monkeypatch):
 
     monkeypatch.setattr(settings_routes, "store_llm_settings", passthrough)
     _patch_api_key_manager(monkeypatch, provider="openai", api_key=None)
-    monkeypatch.setattr("forge.core.cache.get_async_smart_cache", AsyncMock(return_value=AsyncMock()))
+    monkeypatch.setattr(
+        "forge.core.cache.get_async_smart_cache", AsyncMock(return_value=AsyncMock())
+    )
 
     response = await settings_routes.store_settings(incoming, settings_store)
     assert response.status_code == status.HTTP_200_OK
@@ -432,19 +475,23 @@ async def test_store_settings_fallback_sets_environment(monkeypatch, restore_con
     settings_store.load = AsyncMock(return_value=None)
     settings_store.store = AsyncMock()
 
-    call_log: list[tuple[str, str, str]] = []
+    call_log: list[tuple[str, str, str | None]] = []
 
     def set_env(self, model: str, key: SecretStr | None) -> None:
         value = key.get_secret_value() if isinstance(key, SecretStr) else key
         call_log.append(("set", model, value))
 
-    monkeypatch.setattr(settings_routes.api_key_manager.__class__, "set_environment_variables", set_env)
+    monkeypatch.setattr(
+        settings_routes.api_key_manager.__class__, "set_environment_variables", set_env
+    )
     monkeypatch.setattr(
         settings_routes.api_key_manager.__class__,
         "get_api_key_for_model",
         lambda self, model, key: None,
     )
-    monkeypatch.setattr("forge.core.cache.get_async_smart_cache", AsyncMock(return_value=AsyncMock()))
+    monkeypatch.setattr(
+        "forge.core.cache.get_async_smart_cache", AsyncMock(return_value=AsyncMock())
+    )
 
     async def passthrough(settings: Settings, *_args):
         return settings
@@ -472,7 +519,9 @@ async def test_store_settings_clears_invalid_base_url(monkeypatch):
 
     monkeypatch.setattr(settings_routes, "store_llm_settings", passthrough)
     _patch_api_key_manager(monkeypatch, provider="openai", api_key=None)
-    monkeypatch.setattr("forge.core.cache.get_async_smart_cache", AsyncMock(return_value=AsyncMock()))
+    monkeypatch.setattr(
+        "forge.core.cache.get_async_smart_cache", AsyncMock(return_value=AsyncMock())
+    )
 
     response = await settings_routes.store_settings(incoming, settings_store)
     assert response.status_code == status.HTTP_200_OK
@@ -481,10 +530,12 @@ async def test_store_settings_clears_invalid_base_url(monkeypatch):
 
 
 def test_convert_to_settings_converts_string_keys():
-    settings = Settings(
-        llm_model="model",
-        llm_api_key="plain-key",
-        search_api_key="search-key",
+    settings = Settings.model_validate(
+        {
+            "llm_model": "model",
+            "llm_api_key": "plain-key",
+            "search_api_key": "search-key",
+        }
     )
     result = settings_routes.convert_to_settings(settings)
     assert isinstance(result.llm_api_key, SecretStr)

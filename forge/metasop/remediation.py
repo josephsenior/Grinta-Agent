@@ -150,7 +150,12 @@ def summarize_remediation(plan: RemediationPlan | None) -> dict | None:
         "failure_type": plan.failure_type,
         "summary": plan.summary,
         "actions": [
-            {"kind": a.kind, "description": a.description, "priority": a.priority, "params": a.params}
+            {
+                "kind": a.kind,
+                "description": a.description,
+                "priority": a.priority,
+                "params": a.params,
+            }
             for a in sorted(plan.actions, key=lambda x: x.priority)
         ],
         "references": plan.references,

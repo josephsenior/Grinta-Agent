@@ -21,15 +21,24 @@ from forge.core.logger import forge_logger as logger
 
 DEFAULT_TTL_SECONDS = 600
 try:
-    MAX_CACHE_ENTRY_BYTES = int(os.getenv("FORGE_MCP_CACHE_MAX_ENTRY_BYTES", str(5 * 1024 * 1024)))
+    MAX_CACHE_ENTRY_BYTES = int(
+        os.getenv("FORGE_MCP_CACHE_MAX_ENTRY_BYTES", str(5 * 1024 * 1024))
+    )
 except ValueError:
     MAX_CACHE_ENTRY_BYTES = 5 * 1024 * 1024
-_CACHEABLE_TOOLS = {"list_components", "list_blocks", "get_component", "get_block", "get_component_metadata"}
+_CACHEABLE_TOOLS = {
+    "list_components",
+    "list_blocks",
+    "get_component",
+    "get_block",
+    "get_component_metadata",
+}
 
 
 @dataclass
 class CacheEntry:
     """Internal cache entry containing value, expiry timestamp, and serialized size."""
+
     value: dict
     expires_at: float
     size: int
@@ -45,7 +54,11 @@ def is_cacheable(tool_name: str) -> bool:
 
 def _stable_args_json(args: dict) -> str:
     """Serialize arguments deterministically, dropping refresh/no_cache flags."""
-    filtered = {k: v for k, v in sorted(args.items(), key=lambda kv: kv[0]) if k not in {"refresh", "no_cache"}}
+    filtered = {
+        k: v
+        for k, v in sorted(args.items(), key=lambda kv: kv[0])
+        if k not in {"refresh", "no_cache"}
+    }
     return json.dumps(filtered, separators=(",", ":"), ensure_ascii=False)
 
 
@@ -70,22 +83,32 @@ def get_cached(tool_name: str, args: dict) -> dict | None:
     return entry.value
 
 
-def set_cache(tool_name: str, args: dict, result_dict: dict, ttl: int = DEFAULT_TTL_SECONDS) -> None:
+def set_cache(
+    tool_name: str, args: dict, result_dict: dict, ttl: int = DEFAULT_TTL_SECONDS
+) -> None:
     """Store result_dict in cache when tool is cacheable and payload acceptable."""
     if not is_cacheable(tool_name):
         return
     if args.get("refresh") or args.get("no_cache"):
         return
     if result_dict.get("isError") or (
-        isinstance(result_dict.get("content"), dict) and result_dict["content"].get("isError")
+        isinstance(result_dict.get("content"), dict)
+        and result_dict["content"].get("isError")
     ):
         return
     raw = json.dumps(result_dict, ensure_ascii=False).encode("utf-8")
     if len(raw) > MAX_CACHE_ENTRY_BYTES:
-        logger.debug("Skipping cache set for %s (size %d > limit %d)", tool_name, len(raw), MAX_CACHE_ENTRY_BYTES)
+        logger.debug(
+            "Skipping cache set for %s (size %d > limit %d)",
+            tool_name,
+            len(raw),
+            MAX_CACHE_ENTRY_BYTES,
+        )
         return
     key = build_cache_key(tool_name, args)
-    _tool_cache[key] = CacheEntry(value=result_dict, expires_at=time.time() + ttl, size=len(raw))
+    _tool_cache[key] = CacheEntry(
+        value=result_dict, expires_at=time.time() + ttl, size=len(raw)
+    )
 
 
 def clear_cache(prefix: str | None = None) -> int:
@@ -93,7 +116,7 @@ def clear_cache(prefix: str | None = None) -> int:
 
     Returns number of entries removed.
     """
-    to_delete = []
+    to_delete: list[str] = []
     if prefix:
         to_delete.extend(k for k in _tool_cache if k.startswith(f"{prefix}::"))
     else:

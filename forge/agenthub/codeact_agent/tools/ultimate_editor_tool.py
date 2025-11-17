@@ -1,6 +1,7 @@
 """Ultimate Editor tool providing structure-aware editing for the CodeAct agent."""
 
 from litellm import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from ._compat import build_tool_param
 
 from forge.agenthub.codeact_agent.tools.security_utils import (
     RISK_LEVELS,
@@ -66,106 +67,106 @@ Commands: edit_function, rename_symbol, find_symbol, replace_range, normalize_in
 """
 
 
-def create_ultimate_editor_tool(use_short_description: bool = False) -> ChatCompletionToolParam:
+def create_ultimate_editor_tool(
+    use_short_description: bool = False,
+) -> ChatCompletionToolParam:
     """Create the Ultimate Editor tool for the CodeAct agent.
-    
+
     Args:
         use_short_description: Whether to use short or detailed description
-        
+
     Returns:
         ChatCompletionToolParam with the Ultimate Editor configuration
 
     """
     description = (
-        _SHORT_ULTIMATE_EDITOR_DESCRIPTION 
-        if use_short_description 
+        _SHORT_ULTIMATE_EDITOR_DESCRIPTION
+        if use_short_description
         else _DETAILED_ULTIMATE_EDITOR_DESCRIPTION
     )
-    
-    return ChatCompletionToolParam(
-        type="function",
-        function=ChatCompletionToolParamFunctionChunk(
-            name="ultimate_editor",
-            description=description,
-            parameters={
-                "type": "object",
-                "properties": {
-                    "command": {
-                        "description": "The command to execute",
-                        "enum": [
-                            "edit_function",
-                            "rename_symbol",
-                            "find_symbol",
-                            "replace_range",
-                            "normalize_indent"
-                        ],
-                        "type": "string",
-                    },
-                    "file_path": {
-                        "description": "Absolute path to the file (e.g., '/workspace/file.py')",
-                        "type": "string",
-                    },
-                    # edit_function parameters
-                    "function_name": {
-                        "description": "Name of the function to edit (for edit_function command)",
-                        "type": "string",
-                    },
-                    "new_body": {
-                        "description": "New function body (for edit_function command). Will be auto-indented.",
-                        "type": "string",
-                    },
-                    # rename_symbol parameters
-                    "old_name": {
-                        "description": "Current symbol name (for rename_symbol command)",
-                        "type": "string",
-                    },
-                    "new_name": {
-                        "description": "New symbol name (for rename_symbol command)",
-                        "type": "string",
-                    },
-                    # find_symbol parameters
-                    "symbol_name": {
-                        "description": "Symbol name to find (for find_symbol command). Supports dot notation like 'Class.method'",
-                        "type": "string",
-                    },
-                    "symbol_type": {
-                        "description": "Optional symbol type filter (for find_symbol command)",
-                        "enum": ["function", "class", "method"],
-                        "type": "string",
-                    },
-                    # replace_range parameters
-                    "start_line": {
-                        "description": "Start line number (1-indexed, for replace_range command)",
-                        "type": "integer",
-                    },
-                    "end_line": {
-                        "description": "End line number (1-indexed, inclusive, for replace_range command)",
-                        "type": "integer",
-                    },
-                    "new_code": {
-                        "description": "New code to insert (for replace_range command). Will be auto-indented.",
-                        "type": "string",
-                    },
-                    # normalize_indent parameters
-                    "style": {
-                        "description": "Target indentation style (for normalize_indent command)",
-                        "enum": ["spaces", "tabs"],
-                        "type": "string",
-                    },
-                    "size": {
-                        "description": "Indent size for spaces (2, 4, or 8, for normalize_indent command)",
-                        "enum": [2, 4, 8],
-                        "type": "integer",
-                    },
-                    # Security
-                    "security_risk": {
-                        "type": "string",
-                        "description": SECURITY_RISK_DESC,
-                        "enum": RISK_LEVELS
-                    },
-                },
-                "required": ["command", "file_path", "security_risk"],
-            },
-        ),
-    )
 
+    return build_tool_param(
+        ChatCompletionToolParam,
+        ChatCompletionToolParamFunctionChunk,
+        name="ultimate_editor",
+        description=description,
+        parameters={
+            "type": "object",
+            "properties": {
+                "command": {
+                    "description": "The command to execute",
+                    "enum": [
+                        "edit_function",
+                        "rename_symbol",
+                        "find_symbol",
+                        "replace_range",
+                        "normalize_indent",
+                    ],
+                    "type": "string",
+                },
+                "file_path": {
+                    "description": "Absolute path to the file (e.g., '/workspace/file.py')",
+                    "type": "string",
+                },
+                # edit_function parameters
+                "function_name": {
+                    "description": "Name of the function to edit (for edit_function command)",
+                    "type": "string",
+                },
+                "new_body": {
+                    "description": "New function body (for edit_function command). Will be auto-indented.",
+                    "type": "string",
+                },
+                # rename_symbol parameters
+                "old_name": {
+                    "description": "Current symbol name (for rename_symbol command)",
+                    "type": "string",
+                },
+                "new_name": {
+                    "description": "New symbol name (for rename_symbol command)",
+                    "type": "string",
+                },
+                # find_symbol parameters
+                "symbol_name": {
+                    "description": "Symbol name to find (for find_symbol command). Supports dot notation like 'Class.method'",
+                    "type": "string",
+                },
+                "symbol_type": {
+                    "description": "Optional symbol type filter (for find_symbol command)",
+                    "enum": ["function", "class", "method"],
+                    "type": "string",
+                },
+                # replace_range parameters
+                "start_line": {
+                    "description": "Start line number (1-indexed, for replace_range command)",
+                    "type": "integer",
+                },
+                "end_line": {
+                    "description": "End line number (1-indexed, inclusive, for replace_range command)",
+                    "type": "integer",
+                },
+                "new_code": {
+                    "description": "New code to insert (for replace_range command). Will be auto-indented.",
+                    "type": "string",
+                },
+                # normalize_indent parameters
+                "style": {
+                    "description": "Target indentation style (for normalize_indent command)",
+                    "enum": ["spaces", "tabs"],
+                    "type": "string",
+                },
+                "size": {
+                    "description": "Indent size for spaces (2, 4, or 8, for normalize_indent command)",
+                    "enum": [2, 4, 8],
+                    "type": "integer",
+                },
+                # Security
+                "security_risk": {
+                    "type": "string",
+                    "description": SECURITY_RISK_DESC,
+                    "enum": RISK_LEVELS,
+                },
+            },
+            "required": ["command", "file_path", "security_risk"],
+        },
+    )

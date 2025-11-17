@@ -41,18 +41,24 @@ This guide covers setting up Forge for development and contributing to the proje
 
 1. **Start the backend:**
    ```bash
-   python -m Forge.server
+   python -m forge.server
    ```
+   
+   The backend will start on `http://localhost:3000` by default (configurable via `port` environment variable). The backend serves both the REST API and the frontend SPA from the same port.
 
-2. **Start the frontend (in another terminal):**
+2. **Start the frontend (in another terminal, for development):**
    ```bash
    cd frontend
    npm run dev
    ```
+   
+   This will start the frontend dev server on `http://localhost:5173` (Vite default).
 
 3. **Access the application:**
-   - Frontend: http://localhost:3001
-   - Backend API: http://localhost:8000
+   - **Production mode:** http://localhost:3000 (backend serves built frontend)
+   - **Development mode:** http://localhost:5173 (Vite dev server with hot reload)
+   - **Backend API:** http://localhost:3000/api/*
+   - **API Docs:** http://localhost:3000/docs
 
 ## Testing
 
@@ -161,7 +167,7 @@ Forge maintains "Forge" as the internal Python package name for backward compati
 ```bash
 # Enable debug logging
 export DEBUG=1
-python -m Forge.server
+python -m forge.server
 ```
 
 ### Frontend Debugging

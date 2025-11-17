@@ -17,26 +17,45 @@ from __future__ import annotations
 import logging
 import re
 from enum import Enum
+from forge.core.exceptions import (
+    FunctionCallValidationError,
+    FunctionCallNotExistsError,
+)
 
-from forge.core.exceptions import FunctionCallValidationError, FunctionCallNotExistsError
-
-# Import for checking authentication errors
+# Define a flexible AuthenticationError we can reliably detect
 try:
-    from litellm import exceptions as _litellm_exceptions
+    from litellm import exceptions as litellm_exceptions  # type: ignore
+except (ImportError, AttributeError):  # pragma: no cover - optional dependency
+    litellm_exceptions = None  # type: ignore
 
-    class _FlexibleAuthenticationError(_litellm_exceptions.AuthenticationError):  # type: ignore[misc]
-        """Compatibility wrapper that accepts simplified constructor signatures."""
 
-        def __init__(self, *args, **kwargs):
-            if len(args) == 1 and not kwargs:
-                super().__init__(llm_provider="unknown", model="unknown", message=args[0])  # type: ignore[arg-type]
-            else:
-                super().__init__(*args, **kwargs)
+class AuthenticationError(Exception):
+    """Flexible authentication error.
 
-    _litellm_exceptions.AuthenticationError = _FlexibleAuthenticationError  # type: ignore[attr-defined]
-    AuthenticationError = _FlexibleAuthenticationError
-except ImportError:
-    AuthenticationError = Exception  # Fallback if not available
+    Supports both a simple string message and the litellm-style signature
+    (llm_provider, model, original_exception).
+    """
+
+    def __init__(self, *args, **kwargs):
+        if len(args) == 1 and not kwargs:
+            super().__init__(args[0])
+            self.llm_provider = None
+            self.model = None
+            self.original = None
+            return
+        if len(args) >= 3:
+            provider, model, original = args[0], args[1], args[2]
+            super().__init__(str(original) if original is not None else "Authentication error")
+            self.llm_provider = provider
+            self.model = model
+            self.original = original
+            return
+        # Fallback to keyword-based initialization
+        msg = args[0] if args else kwargs.get("message", "Authentication error")
+        super().__init__(msg)
+        self.llm_provider = kwargs.get("llm_provider")
+        self.model = kwargs.get("model")
+        self.original = kwargs.get("original")
 from forge.events.action import (
     Action,
     AgentThinkAction,
@@ -74,9 +93,6 @@ class ErrorRecoveryStrategy:
 
     Note: LLM errors are already handled by LLM RetryMixin.
     """
-
-    # Make ErrorType accessible as a class attribute
-    ErrorType = ErrorType
 
     # Error message patterns for classification
     RUNTIME_CRASH_PATTERNS = [
@@ -145,7 +161,9 @@ class ErrorRecoveryStrategy:
         error_type = ErrorRecoveryStrategy._classify_by_message_patterns(error_str)
 
         if error_type == ErrorType.UNKNOWN_ERROR:
-            logger.debug(f"Error type '{type(error).__name__}' could not be classified: {error_str[:100]}")
+            logger.debug(
+                f"Error type '{type(error).__name__}' could not be classified: {error_str[:100]}"
+            )
 
         return error_type
 
@@ -166,7 +184,9 @@ class ErrorRecoveryStrategy:
             return ErrorType.PERMISSION_ERROR
         if isinstance(error, TimeoutError):
             return ErrorType.TIMEOUT_ERROR
-        if isinstance(error, (FileNotFoundError, IsADirectoryError, NotADirectoryError)):
+        if isinstance(
+            error, (FileNotFoundError, IsADirectoryError, NotADirectoryError)
+        ):
             return ErrorType.FILESYSTEM_ERROR
         if isinstance(error, (FunctionCallValidationError, FunctionCallNotExistsError)):
             return ErrorType.TOOL_CALL_ERROR
@@ -183,15 +203,25 @@ class ErrorRecoveryStrategy:
             ErrorType enum value
 
         """
-        if ErrorRecoveryStrategy._matches_patterns(error_str, ErrorRecoveryStrategy.RUNTIME_CRASH_PATTERNS):
+        if ErrorRecoveryStrategy._matches_patterns(
+            error_str, ErrorRecoveryStrategy.RUNTIME_CRASH_PATTERNS
+        ):
             return ErrorType.RUNTIME_CRASH
-        if ErrorRecoveryStrategy._matches_patterns(error_str, ErrorRecoveryStrategy.NETWORK_ERROR_PATTERNS):
+        if ErrorRecoveryStrategy._matches_patterns(
+            error_str, ErrorRecoveryStrategy.NETWORK_ERROR_PATTERNS
+        ):
             return ErrorType.NETWORK_ERROR
-        if ErrorRecoveryStrategy._matches_patterns(error_str, ErrorRecoveryStrategy.FILESYSTEM_ERROR_PATTERNS):
+        if ErrorRecoveryStrategy._matches_patterns(
+            error_str, ErrorRecoveryStrategy.FILESYSTEM_ERROR_PATTERNS
+        ):
             return ErrorRecoveryStrategy._classify_filesystem_error(error_str)
-        if ErrorRecoveryStrategy._matches_patterns(error_str, ErrorRecoveryStrategy.TOOL_CALL_ERROR_PATTERNS):
+        if ErrorRecoveryStrategy._matches_patterns(
+            error_str, ErrorRecoveryStrategy.TOOL_CALL_ERROR_PATTERNS
+        ):
             return ErrorType.TOOL_CALL_ERROR
-        if ErrorRecoveryStrategy._matches_patterns(error_str, ErrorRecoveryStrategy.TIMEOUT_ERROR_PATTERNS):
+        if ErrorRecoveryStrategy._matches_patterns(
+            error_str, ErrorRecoveryStrategy.TIMEOUT_ERROR_PATTERNS
+        ):
             return ErrorType.TIMEOUT_ERROR
 
         return ErrorType.UNKNOWN_ERROR
@@ -240,11 +270,13 @@ class ErrorRecoveryStrategy:
 
         """
         error_str = str(error)
-        
+
         # Do not attempt recovery actions that require LLM calls if there's an authentication error
         # This prevents infinite loops where tool call errors trigger recovery actions that fail due to auth issues
         if isinstance(error, AuthenticationError):
-            logger.info("Skipping recovery actions for AuthenticationError - requires user intervention")
+            logger.info(
+                "Skipping recovery actions for AuthenticationError - requires user intervention"
+            )
             return []
 
         recovery_map = {
@@ -355,17 +387,29 @@ class ErrorRecoveryStrategy:
     def _recover_tool_call_error(error_str: str) -> list[Action]:
         """Recover from tool call/parameter errors."""
         # Check if error might be related to authentication issues
-        auth_indicators = ['authentication', 'api key', 'unauthorized', 'invalid credentials', 'authenticate']
+        auth_indicators = [
+            "authentication",
+            "api key",
+            "unauthorized",
+            "invalid credentials",
+            "authenticate",
+        ]
         if any(indicator in error_str.lower() for indicator in auth_indicators):
-            logger.info("Tool call error appears to be authentication-related, skipping recovery actions that require LLM calls")
+            logger.info(
+                "Tool call error appears to be authentication-related, skipping recovery actions that require LLM calls"
+            )
             return []
-        
+
         # To prevent infinite loops, we should avoid creating any actions that would trigger LLM calls
         # because tool call errors often happen during LLM processing, and creating more actions
         # (like AgentThinkAction or MessageAction) would cause more LLM calls and potentially more tool call errors.
-        logger.error(f"Tool call parameter error: {error_str[:200]}{'...' if len(error_str) > 200 else ''}")
-        logger.info("Skipping recovery actions for tool call error to prevent infinite loop")
-        
+        logger.error(
+            f"Tool call parameter error: {error_str[:200]}{'...' if len(error_str) > 200 else ''}"
+        )
+        logger.info(
+            "Skipping recovery actions for tool call error to prevent infinite loop"
+        )
+
         # Return empty list to prevent any recovery actions that could trigger more LLM calls
         return []
 
@@ -394,7 +438,9 @@ class ErrorRecoveryStrategy:
             AgentThinkAction(
                 thought=f"Permission denied for {file_path}. Checking current permissions...",
             ),
-            CmdRunAction(command=f"ls -l {file_path} 2>/dev/null || echo 'File not accessible'"),
+            CmdRunAction(
+                command=f"ls -l {file_path} 2>/dev/null || echo 'File not accessible'"
+            ),
             MessageAction(
                 content=f"Permission error for {file_path}. "
                 "Will try an alternative approach that doesn't require special permissions.",
@@ -409,7 +455,9 @@ class ErrorRecoveryStrategy:
                 thought="Disk full error detected. Checking disk usage and cleaning up temporary files...",
             ),
             CmdRunAction(command="df -h"),
-            CmdRunAction(command="du -sh /tmp/* 2>/dev/null | sort -hr | head -10 || true"),
+            CmdRunAction(
+                command="du -sh /tmp/* 2>/dev/null | sort -hr | head -10 || true"
+            ),
             CmdRunAction(command="rm -rf /tmp/tmp* /tmp/pip* 2>/dev/null || true"),
             MessageAction(
                 content="Disk space exhausted. Attempted to clean temporary files. "

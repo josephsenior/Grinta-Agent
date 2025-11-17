@@ -1,6 +1,7 @@
 """Tests for GitLab alternative directory support for microagents."""
 
 import tempfile
+from types import MappingProxyType
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import pytest
@@ -25,10 +26,14 @@ class MockRuntime(Runtime):
         event_stream.file_store = file_store
         llm_registry = LLMRegistry(config)
         super().__init__(
-            config=config, event_stream=event_stream, llm_registry=llm_registry, sid="test", git_provider_tokens={}
+            config=config,
+            event_stream=event_stream,
+            llm_registry=llm_registry,
+            sid="test",
+            git_provider_tokens=MappingProxyType({}),
         )
         self._workspace_root = workspace_root
-        self._logs = []
+        self._logs: list[tuple[str, str]] = []
 
     @property
     def workspace_root(self) -> Path:
@@ -63,59 +68,58 @@ class MockRuntime(Runtime):
             from forge.microagent.types import MicroagentMetadata, MicroagentType
 
             agent = RepoMicroagent(
-                name=f"mock_{
-                    md_file.stem}",
+                name=f"mock_{md_file.stem}",
                 content=f"Mock content from {md_file}",
-                metadata=MicroagentMetadata(
-                    name=f"mock_{
-                        md_file.stem}"
-                ),
+                metadata=MicroagentMetadata(name=f"mock_{md_file.stem}"),
                 source=str(md_file),
                 type=MicroagentType.REPO_KNOWLEDGE,
             )
             microagents.append(agent)
         return microagents
 
-    def connect(self):
-        pass
+    async def connect(self) -> None:
+        return None
 
     def run(self, action):
         from forge.events.observation import CmdOutputObservation
 
-        return CmdOutputObservation(content="", exit_code=0)
+        command = getattr(action, "command", "")
+        return CmdOutputObservation(content="", command=command, exit_code=0)
 
     def run_ipython(self, action):
-        from forge.events.observation import IPythonRunCellObservation
+        from forge.events.observation import NullObservation
 
-        return IPythonRunCellObservation(content="", code="")
+        return NullObservation("")
 
     def edit(self, action):
-        from forge.events.observation import FileEditObservation
+        from forge.events.observation import NullObservation
 
-        return FileEditObservation(content="", path="")
+        return NullObservation("")
 
     def browse(self, action):
-        from forge.events.observation import BrowserObservation
+        from forge.events.observation import NullObservation
 
-        return BrowserObservation(content="", url="", screenshot="")
+        return NullObservation("")
 
     def browse_interactive(self, action):
-        from forge.events.observation import BrowserObservation
+        from forge.events.observation import NullObservation
 
-        return BrowserObservation(content="", url="", screenshot="")
+        return NullObservation("")
 
     def write(self, action):
-        from forge.events.observation import FileWriteObservation
+        from forge.events.observation import NullObservation
 
-        return FileWriteObservation(content="", path="")
+        return NullObservation("")
 
-    def copy_to(self, host_src, sandbox_dest, recursive=False):
-        pass
+    def copy_to(
+        self, host_src: str, sandbox_dest: str, recursive: bool = False
+    ) -> None:
+        return None
 
-    def copy_from(self, sandbox_src, host_dest, recursive=False):
-        pass
+    def copy_from(self, path: str) -> Path:
+        return Path(path)
 
-    def list_files(self, path=None):
+    def list_files(self, path: str, recursive: bool = False) -> list[str]:
         return []
 
     def get_mcp_config(self, extra_stdio_servers=None):
@@ -123,10 +127,10 @@ class MockRuntime(Runtime):
 
         return MCPConfig()
 
-    def call_tool_mcp(self, action):
+    async def call_tool_mcp(self, action):
         from forge.events.observation import MCPObservation
 
-        return MCPObservation(content="", tool="", result="")
+        return MCPObservation(content="", name="mock", arguments={})
 
 
 def create_test_microagents(base_dir: Path, config_dir_name: str = ".Forge"):
@@ -148,7 +152,12 @@ def temp_workspace():
 def test_is_gitlab_repository_github(temp_workspace):
     """Test that GitHub repositories are correctly identified as non-GitLab."""
     runtime = MockRuntime(temp_workspace)
-    mock_repo = Repository(id="123", full_name="owner/repo", git_provider=ProviderType.GITHUB, is_public=True)
+    mock_repo = Repository(
+        id="123",
+        full_name="owner/repo",
+        git_provider=ProviderType.GITHUB,
+        is_public=True,
+    )
     with patch("forge.runtime.base.ProviderHandler") as mock_handler_class:
         mock_handler = MagicMock()
         mock_handler_class.return_value = mock_handler
@@ -161,7 +170,12 @@ def test_is_gitlab_repository_github(temp_workspace):
 def test_is_gitlab_repository_gitlab(temp_workspace):
     """Test that GitLab repositories are correctly identified."""
     runtime = MockRuntime(temp_workspace)
-    mock_repo = Repository(id="456", full_name="owner/repo", git_provider=ProviderType.GITLAB, is_public=True)
+    mock_repo = Repository(
+        id="456",
+        full_name="owner/repo",
+        git_provider=ProviderType.GITLAB,
+        is_public=True,
+    )
     with patch("forge.runtime.base.ProviderHandler") as mock_handler_class:
         mock_handler = MagicMock()
         mock_handler_class.return_value = mock_handler

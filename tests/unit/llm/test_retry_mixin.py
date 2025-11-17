@@ -28,8 +28,12 @@ def test_retry_decorator_adjusts_temperature(monkeypatch) -> None:
     def fake_before_sleep_factory(name):
         raise RuntimeError("metrics unavailable")
 
-    monkeypatch.setattr("forge.llm.retry_mixin.tenacity_before_sleep_factory", fake_before_sleep_factory)
-    monkeypatch.setattr("forge.llm.retry_mixin.tenacity_after_factory", lambda name: None)
+    monkeypatch.setattr(
+        "forge.llm.retry_mixin.tenacity_before_sleep_factory", fake_before_sleep_factory
+    )
+    monkeypatch.setattr(
+        "forge.llm.retry_mixin.tenacity_after_factory", lambda name: None
+    )
 
     @dummy.retry_decorator(
         num_retries=2,
@@ -63,4 +67,3 @@ def test_log_retry_attempt_sets_metadata() -> None:
     dummy.log_retry_attempt(retry_state)
     assert getattr(exc, "retry_attempt") == 3
     assert getattr(exc, "max_retries") == 5
-

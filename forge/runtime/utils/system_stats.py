@@ -60,12 +60,19 @@ def get_system_stats() -> dict[str, object]:
         io_stats = {"read_bytes": 0, "write_bytes": 0}
     return {
         "cpu_percent": cpu_percent,
-        "memory": {"rss": memory_info.rss, "vms": memory_info.vms, "percent": memory_percent},
+        "memory": {
+            "rss": memory_info.rss,
+            "vms": memory_info.vms,
+            "percent": memory_percent,
+        },
         "disk": {
             "total": disk_usage.total,
             "used": disk_usage.used,
             "free": disk_usage.free,
             "percent": disk_usage.percent,
         },
-        "io": {"read_bytes": io_stats.get("read_bytes", 0), "write_bytes": io_stats.get("write_bytes", 0)},
+        "io": {
+            "read_bytes": io_stats.get("read_bytes", 0),
+            "write_bytes": io_stats.get("write_bytes", 0),
+        },
     }

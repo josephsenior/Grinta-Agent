@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\integrations\github\service\prs.py
+# hypothesis_version: 6.147.0
+
+['base', 'body', 'closed_at', 'draft', 'head', 'html_url', 'labels', 'merged', 'number', 'open', 'state', 'title']

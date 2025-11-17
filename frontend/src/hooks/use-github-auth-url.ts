@@ -11,5 +11,9 @@ export const useGitHubAuthUrl = (config: UseGitHubAuthUrlConfig) =>
   useAuthUrl({
     appMode: config.appMode,
     identityProvider: "github",
-    authUrl: config.authUrl,
+    authUrl:
+      config.authUrl ??
+      (config.gitHubClientId
+        ? `https://github.com/login/oauth/authorize?client_id=${config.gitHubClientId}`
+        : undefined),
   });

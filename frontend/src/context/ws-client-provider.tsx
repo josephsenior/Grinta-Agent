@@ -70,6 +70,273 @@ interface WsClientProviderProps {
   conversationId: string;
 }
 
+function detectPlaywrightRun(): boolean {
+  const hasProcessFlag =
+    typeof process !== "undefined" &&
+    (process as MaybeProcess).env?.PLAYWRIGHT === "1";
+  const hasViteFlag = Boolean(
+    (import.meta as MaybeImportMeta).env?.VITE_PLAYWRIGHT_STUB,
+  );
+  const windowFlag =
+    typeof window !== "undefined" &&
+    (window as WindowWithPlaywright).__Forge_PLAYWRIGHT === true;
+
+  return Boolean(hasProcessFlag || hasViteFlag || windowFlag);
+}
+
+function shouldEstablishConnection(
+  conversation: { status?: string; runtime_status?: unknown } | undefined,
+  isPlaywright: boolean,
+): boolean {
+  if (isPlaywright) {
+    return true;
+  }
+
+  if (!conversation) {
+    return false;
+  }
+
+  if (conversation.status === "RUNNING" || conversation.status === "STARTING") {
+    return true;
+  }
+
+  return Boolean(conversation.runtime_status);
+}
+
+function disconnectExistingSocket(ref: React.MutableRefObject<Socket | null>) {
+  const socket = ref.current;
+  if (socket?.connected) {
+    socket.disconnect();
+  }
+}
+
+function buildSocketQuery({
+  conversationId,
+  conversation,
+  providers,
+  lastEvent,
+}: {
+  conversationId: string;
+  conversation: { session_api_key?: string | null } | undefined;
+  providers: unknown;
+  lastEvent: Record<string, unknown> | null;
+}): Record<string, unknown> {
+  const latestEventId = (lastEvent as { id?: unknown } | null)?.id ?? -1;
+  const query: Record<string, unknown> = {
+    latest_event_id: latestEventId,
+    conversation_id: conversationId,
+    providers_set: providers,
+  };
+
+  if (conversation?.session_api_key) {
+    query.session_api_key = conversation.session_api_key;
+  }
+
+  return query;
+}
+
+function resolveSocketTarget(
+  conversation: { url?: string | null } | undefined,
+): { baseUrl: string; socketPath: string } {
+  if (conversation?.url && !conversation.url.startsWith("/")) {
+    const url = new URL(conversation.url);
+    const prefix = url.pathname.split("/api/conversations")[0] || "/";
+    const sanitized = prefix.replace(/\/$/, "");
+    return {
+      baseUrl: url.host,
+      socketPath: `${sanitized}/socket.io`,
+    };
+  }
+
+  const baseUrl =
+    (import.meta.env.VITE_BACKEND_BASE_URL as string | undefined) ||
+    "localhost:3000";
+
+  return { baseUrl, socketPath: "/socket.io" };
+}
+
+function createSocketConnection({
+  baseUrl,
+  socketPath,
+  query,
+}: {
+  baseUrl: string | null;
+  socketPath: string;
+  query: Record<string, unknown>;
+}): Socket {
+  return io(baseUrl ?? undefined, {
+    transports: ["websocket", "polling"],
+    path: socketPath,
+    query,
+    timeout: 20000,
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionAttempts: 5,
+    forceNew: true,
+    upgrade: true,
+    autoConnect: true,
+    rememberUpgrade: true,
+  });
+}
+
+function createSyntheticPlaywrightEvents(conversationId: string) {
+  const timestamp = new Date().toISOString();
+  return [
+    {
+      id: "pw-agent-state",
+      source: "system",
+      message: "AWAITING_USER_INPUT",
+      timestamp,
+      observation: "agent_state_change",
+      content: "",
+      extras: { agent_state: "AWAITING_USER_INPUT" },
+    },
+    {
+      id: "pw-session-ready",
+      source: "system",
+      message: "SESSION_READY",
+      timestamp,
+      observation: "session_ready",
+      content: "SESSION_READY",
+      extras: { conversation_id: conversationId },
+    },
+  ] as Record<string, unknown>[];
+}
+
+async function hydrateTrajectoryState({
+  conversationId,
+  setParsedEvents,
+  hydratedEventIdsRef,
+}: {
+  conversationId: string;
+  setParsedEvents: React.Dispatch<
+    React.SetStateAction<(ForgeAction | ForgeObservation)[]>
+  >;
+  hydratedEventIdsRef: React.MutableRefObject<Set<string>>;
+}) {
+  try {
+    const resp = await Forge.getTrajectory(conversationId);
+    const trajectory = resp?.trajectory ?? [];
+    if (!Array.isArray(trajectory) || trajectory.length === 0) {
+      return;
+    }
+
+    setParsedEvents((prev) =>
+      mergeTrajectoryEvents(prev, trajectory, hydratedEventIdsRef.current),
+    );
+  } catch (error) {
+    // Ignore trajectory hydration failures - UI can still operate with live socket
+    // no-op
+  }
+}
+
+function mergeTrajectoryEvents(
+  prev: (ForgeAction | ForgeObservation)[],
+  trajectory: unknown[],
+  hydratedIds: Set<string>,
+): (ForgeAction | ForgeObservation)[] {
+  const existingIds = new Set(
+    prev.map((event) => String(getProp(event, "id") ?? "")),
+  );
+  const merged = [...prev];
+
+  for (const rawItem of trajectory) {
+    const item = rawItem as Record<string, unknown>;
+    if (!item || typeof item !== "object") {
+      // eslint-disable-next-line no-console
+      console.debug("Skipping non-object trajectory item", { item });
+      continue;
+    }
+
+    logTrajectoryNullCandidate(item);
+    const id = extractTrajectoryId(item);
+    if (existingIds.has(id)) {
+      continue;
+    }
+
+    markItemAsHydrated(item, hydratedIds, id);
+    if (!isTrajectoryCandidate(item)) {
+      // eslint-disable-next-line no-console
+      console.debug("Skipping incomplete trajectory item", { id, item });
+      continue;
+    }
+
+    if (isForgeAction(item as unknown) || isForgeObservation(item as unknown)) {
+      merged.push(item as unknown as ForgeParsedEvent);
+      existingIds.add(id);
+    } else {
+      // eslint-disable-next-line no-console
+      console.debug("Skipping non-event trajectory item", { id, item });
+    }
+  }
+
+  return merged;
+}
+
+function logTrajectoryNullCandidate(item: Record<string, unknown>) {
+  try {
+    const candidate = extractTrajectoryMessageCandidate(item);
+    if (!candidate) {
+      return;
+    }
+
+    if (candidate.toUpperCase() === "NULL") {
+      // eslint-disable-next-line no-console
+      console.warn("Trajectory contains literal 'NULL'", {
+        id: getProp(item, "id"),
+        item,
+      });
+    }
+  } catch (error) {
+    // ignore logging failures
+  }
+}
+
+function extractTrajectoryMessageCandidate(item: Record<string, unknown>) {
+  const messageProp = getProp(item, "message");
+  const contentProp = getProp(item, "content");
+  const argsProp = getProp(item, "args") as Record<string, unknown> | undefined;
+
+  const candidates = [
+    typeof messageProp === "string" ? messageProp : undefined,
+    typeof contentProp === "string" ? contentProp : undefined,
+    typeof argsProp?.content === "string" ? argsProp.content : undefined,
+    typeof argsProp?.command === "string" ? argsProp.command : undefined,
+  ];
+
+  return candidates.find((value): value is string => Boolean(value));
+}
+
+function extractTrajectoryId(item: Record<string, unknown>): string {
+  const rawId = getProp(item, "id");
+  if (typeof rawId === "string" && rawId.trim().length > 0) {
+    return rawId;
+  }
+  if (typeof rawId === "number" && Number.isFinite(rawId)) {
+    return String(rawId);
+  }
+  return Math.random().toString(36).slice(2, 9);
+}
+
+function markItemAsHydrated(
+  item: Record<string, unknown>,
+  hydratedIds: Set<string>,
+  id: string,
+) {
+  try {
+    (item as Record<string, unknown>).__hydrated = true;
+  } catch (error) {
+    // ignore if flag cannot be set
+  }
+  hydratedIds.add(id);
+}
+
+function isTrajectoryCandidate(item: Record<string, unknown>): boolean {
+  return (
+    "id" in item && "source" in item && "message" in item && "timestamp" in item
+  );
+}
+
 export function updateStatusWhenErrorMessagePresent(data: unknown) {
   const isObject = (val: unknown): val is object =>
     !!val && typeof val === "object";
@@ -447,115 +714,6 @@ export function useWsClient() {
   return React.useContext(WsClientContext);
 }
 
-function detectPlaywrightRun(): boolean {
-  const hasProcessFlag =
-    typeof process !== "undefined" &&
-    (process as MaybeProcess).env?.PLAYWRIGHT === "1";
-  const hasViteFlag = Boolean(
-    (import.meta as MaybeImportMeta).env?.VITE_PLAYWRIGHT_STUB,
-  );
-  const windowFlag =
-    typeof window !== "undefined" &&
-    (window as WindowWithPlaywright).__Forge_PLAYWRIGHT === true;
-
-  return Boolean(hasProcessFlag || hasViteFlag || windowFlag);
-}
-
-function shouldEstablishConnection(
-  conversation: { status?: string; runtime_status?: unknown } | undefined,
-  isPlaywright: boolean,
-): boolean {
-  if (isPlaywright) {
-    return true;
-  }
-
-  if (!conversation) {
-    return false;
-  }
-
-  if (conversation.status === "RUNNING" || conversation.status === "STARTING") {
-    return true;
-  }
-
-  return Boolean(conversation.runtime_status);
-}
-
-function disconnectExistingSocket(ref: React.MutableRefObject<Socket | null>) {
-  const socket = ref.current;
-  if (socket?.connected) {
-    socket.disconnect();
-  }
-}
-
-function buildSocketQuery({
-  conversationId,
-  conversation,
-  providers,
-  lastEvent,
-}: {
-  conversationId: string;
-  conversation: { session_api_key?: string | null } | undefined;
-  providers: unknown;
-  lastEvent: Record<string, unknown> | null;
-}): Record<string, unknown> {
-  const latestEventId = (lastEvent as { id?: unknown } | null)?.id ?? -1;
-  const query: Record<string, unknown> = {
-    latest_event_id: latestEventId,
-    conversation_id: conversationId,
-    providers_set: providers,
-  };
-
-  if (conversation?.session_api_key) {
-    query.session_api_key = conversation.session_api_key;
-  }
-
-  return query;
-}
-
-function resolveSocketTarget(
-  conversation: { url?: string | null } | undefined,
-): { baseUrl: string; socketPath: string } {
-  if (conversation?.url && !conversation.url.startsWith("/")) {
-    const url = new URL(conversation.url);
-    const prefix = url.pathname.split("/api/conversations")[0] || "/";
-    const sanitized = prefix.replace(/\/$/, "");
-    return {
-      baseUrl: url.host,
-      socketPath: `${sanitized}/socket.io`,
-    };
-  }
-
-  const baseUrl =
-    (import.meta.env.VITE_BACKEND_BASE_URL as string | undefined) ||
-    "localhost:3000";
-
-  return { baseUrl, socketPath: "/socket.io" };
-}
-
-function createSocketConnection({
-  baseUrl,
-  socketPath,
-  query,
-}: {
-  baseUrl: string | null;
-  socketPath: string;
-  query: Record<string, unknown>;
-}): Socket {
-  return io(baseUrl ?? undefined, {
-    transports: ["websocket", "polling"],
-    path: socketPath,
-    query,
-    timeout: 20000,
-    reconnection: true,
-    reconnectionDelay: 1000,
-    reconnectionAttempts: 5,
-    forceNew: true,
-    upgrade: true,
-    autoConnect: true,
-    rememberUpgrade: true,
-  });
-}
-
 function registerSocketHandlers({
   socket,
   conversationId,
@@ -659,162 +817,4 @@ function setupPlaywrightSocket({
   } catch (error) {
     // ignore errors in test environment
   }
-}
-
-function createSyntheticPlaywrightEvents(conversationId: string) {
-  const timestamp = new Date().toISOString();
-  return [
-    {
-      id: "pw-agent-state",
-      source: "system",
-      message: "AWAITING_USER_INPUT",
-      timestamp,
-      observation: "agent_state_change",
-      content: "",
-      extras: { agent_state: "AWAITING_USER_INPUT" },
-    },
-    {
-      id: "pw-session-ready",
-      source: "system",
-      message: "SESSION_READY",
-      timestamp,
-      observation: "session_ready",
-      content: "SESSION_READY",
-      extras: { conversation_id: conversationId },
-    },
-  ] as Record<string, unknown>[];
-}
-
-async function hydrateTrajectoryState({
-  conversationId,
-  setParsedEvents,
-  hydratedEventIdsRef,
-}: {
-  conversationId: string;
-  setParsedEvents: React.Dispatch<
-    React.SetStateAction<(ForgeAction | ForgeObservation)[]>
-  >;
-  hydratedEventIdsRef: React.MutableRefObject<Set<string>>;
-}) {
-  try {
-    const resp = await Forge.getTrajectory(conversationId);
-    const trajectory = resp?.trajectory ?? [];
-    if (!Array.isArray(trajectory) || trajectory.length === 0) {
-      return;
-    }
-
-    setParsedEvents((prev) =>
-      mergeTrajectoryEvents(prev, trajectory, hydratedEventIdsRef.current),
-    );
-  } catch (error) {
-    // Ignore trajectory hydration failures - UI can still operate with live socket
-    // no-op
-  }
-}
-
-function mergeTrajectoryEvents(
-  prev: (ForgeAction | ForgeObservation)[],
-  trajectory: unknown[],
-  hydratedIds: Set<string>,
-): (ForgeAction | ForgeObservation)[] {
-  const existingIds = new Set(
-    prev.map((event) => String(getProp(event, "id") ?? "")),
-  );
-  const merged = [...prev];
-
-  for (const rawItem of trajectory) {
-    const item = rawItem as Record<string, unknown>;
-    if (!item || typeof item !== "object") {
-      // eslint-disable-next-line no-console
-      console.debug("Skipping non-object trajectory item", { item });
-      continue;
-    }
-
-    logTrajectoryNullCandidate(item);
-    const id = extractTrajectoryId(item);
-    if (existingIds.has(id)) {
-      continue;
-    }
-
-    markItemAsHydrated(item, hydratedIds, id);
-    if (!isTrajectoryCandidate(item)) {
-      // eslint-disable-next-line no-console
-      console.debug("Skipping incomplete trajectory item", { id, item });
-      continue;
-    }
-
-    if (isForgeAction(item as unknown) || isForgeObservation(item as unknown)) {
-      merged.push(item as unknown as ForgeParsedEvent);
-      existingIds.add(id);
-    } else {
-      // eslint-disable-next-line no-console
-      console.debug("Skipping non-event trajectory item", { id, item });
-    }
-  }
-
-  return merged;
-}
-
-function logTrajectoryNullCandidate(item: Record<string, unknown>) {
-  try {
-    const candidate = extractTrajectoryMessageCandidate(item);
-    if (!candidate) {
-      return;
-    }
-
-    if (candidate.toUpperCase() === "NULL") {
-      // eslint-disable-next-line no-console
-      console.warn("Trajectory contains literal 'NULL'", {
-        id: getProp(item, "id"),
-        item,
-      });
-    }
-  } catch (error) {
-    // ignore logging failures
-  }
-}
-
-function extractTrajectoryMessageCandidate(item: Record<string, unknown>) {
-  const messageProp = getProp(item, "message");
-  const contentProp = getProp(item, "content");
-  const argsProp = getProp(item, "args") as Record<string, unknown> | undefined;
-
-  const candidates = [
-    typeof messageProp === "string" ? messageProp : undefined,
-    typeof contentProp === "string" ? contentProp : undefined,
-    typeof argsProp?.content === "string" ? argsProp.content : undefined,
-    typeof argsProp?.command === "string" ? argsProp.command : undefined,
-  ];
-
-  return candidates.find((value): value is string => Boolean(value));
-}
-
-function extractTrajectoryId(item: Record<string, unknown>): string {
-  const rawId = getProp(item, "id");
-  if (typeof rawId === "string" && rawId.trim().length > 0) {
-    return rawId;
-  }
-  if (typeof rawId === "number" && Number.isFinite(rawId)) {
-    return String(rawId);
-  }
-  return Math.random().toString(36).slice(2, 9);
-}
-
-function markItemAsHydrated(
-  item: Record<string, unknown>,
-  hydratedIds: Set<string>,
-  id: string,
-) {
-  try {
-    (item as Record<string, unknown>).__hydrated = true;
-  } catch (error) {
-    // ignore if flag cannot be set
-  }
-  hydratedIds.add(id);
-}
-
-function isTrajectoryCandidate(item: Record<string, unknown>): boolean {
-  return (
-    "id" in item && "source" in item && "message" in item && "timestamp" in item
-  );
 }

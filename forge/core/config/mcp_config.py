@@ -132,7 +132,8 @@ class MCPStdioServerConfig(BaseModel):
                 return shlex.split(v)
             except ValueError as e:
                 msg = f"""Invalid argument format: {
-                    e!s}. Use shell-like format, e.g., "arg1 arg2" or '--config "value with spaces"'"""
+                    e!s
+                }. Use shell-like format, e.g., "arg1 arg2" or '--config "value with spaces"'"""
                 raise ValueError(
                     msg,
                 ) from e
@@ -186,12 +187,13 @@ class MCPStdioServerConfig(BaseModel):
 
 class MCPSHTTPServerConfig(BaseModel):
     """Configuration for HTTP-based MCP servers.
-    
+
     Attributes:
         url: URL of the MCP HTTP server
         api_key: Optional API key for authentication
 
     """
+
     url: str
     api_key: str | None = None
 
@@ -269,16 +271,20 @@ class MCPConfig(BaseModel):
         try:
             if "sse_servers" in data:
                 data["sse_servers"] = cls._normalize_servers(data["sse_servers"])
-                servers: list[MCPSSEServerConfig | MCPStdioServerConfig | MCPSHTTPServerConfig] = [
-                    MCPSSEServerConfig(**server) for server in data["sse_servers"]
-                ]
+                servers: list[
+                    MCPSSEServerConfig | MCPStdioServerConfig | MCPSHTTPServerConfig
+                ] = [MCPSSEServerConfig(**server) for server in data["sse_servers"]]
                 data["sse_servers"] = servers
             if "stdio_servers" in data:
-                servers = [MCPStdioServerConfig(**server) for server in data["stdio_servers"]]
+                servers = [
+                    MCPStdioServerConfig(**server) for server in data["stdio_servers"]
+                ]
                 data["stdio_servers"] = servers
             if "shttp_servers" in data:
                 data["shttp_servers"] = cls._normalize_servers(data["shttp_servers"])
-                servers = [MCPSHTTPServerConfig(**server) for server in data["shttp_servers"]]
+                servers = [
+                    MCPSHTTPServerConfig(**server) for server in data["shttp_servers"]
+                ]
                 data["shttp_servers"] = servers
             mcp_config = MCPConfig.model_validate(data)
             mcp_config.validate_servers()
@@ -294,10 +300,10 @@ class MCPConfig(BaseModel):
 
     def merge(self, other: MCPConfig):
         """Merge this config with another MCP config.
-        
+
         Args:
             other: MCP config to merge
-            
+
         Returns:
             New merged MCPConfig
 
@@ -330,7 +336,7 @@ class ForgeMCPConfig:
             tuple[MCPSHTTPServerConfig | None, list[MCPStdioServerConfig]]: A tuple containing the default SHTTP server configuration (or None) and a list of MCP stdio server configurations
 
         """
-        stdio_servers = []
+        stdio_servers: list[MCPStdioServerConfig] = []
         # Removed: Tavily search engine auto-configuration (use config.toml for DuckDuckGo instead)
         shttp_servers = MCPSHTTPServerConfig(url=f"http://{host}/mcp/mcp", api_key=None)
         return (shttp_servers, stdio_servers)

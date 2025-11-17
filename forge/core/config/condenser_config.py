@@ -48,8 +48,12 @@ class RecentEventsCondenserConfig(BaseModel):
     """Configuration for RecentEventsCondenser."""
 
     type: Literal["recent"] = Field(default="recent")
-    keep_first: int = Field(default=1, description="The number of initial events to condense.", ge=0)
-    max_events: int = Field(default=100, description="Maximum number of events to keep.", ge=1)
+    keep_first: int = Field(
+        default=1, description="The number of initial events to condense.", ge=0
+    )
+    max_events: int = Field(
+        default=100, description="Maximum number of events to keep.", ge=1
+    )
     model_config = ConfigDict(extra="forbid")
 
 
@@ -57,8 +61,14 @@ class LLMSummarizingCondenserConfig(BaseModel):
     """Configuration for LLMCondenser."""
 
     type: Literal["llm"] = Field(default="llm")
-    llm_config: "LLMConfig" = Field(..., description="Configuration for the LLM to use for condensing.")
-    keep_first: int = Field(default=1, description="Number of initial events to always keep in history.", ge=0)
+    llm_config: "LLMConfig" = Field(
+        ..., description="Configuration for the LLM to use for condensing."
+    )
+    keep_first: int = Field(
+        default=1,
+        description="Number of initial events to always keep in history.",
+        ge=0,
+    )
     max_size: int = Field(
         default=100,
         description="Maximum size of the condensed history before triggering forgetting.",
@@ -80,7 +90,11 @@ class AmortizedForgettingCondenserConfig(BaseModel):
         description="Maximum size of the condensed history before triggering forgetting.",
         ge=2,
     )
-    keep_first: int = Field(default=1, description="Number of initial events to always keep in history.", ge=0)
+    keep_first: int = Field(
+        default=1,
+        description="Number of initial events to always keep in history.",
+        ge=0,
+    )
     model_config = ConfigDict(extra="forbid")
 
 
@@ -88,13 +102,19 @@ class LLMAttentionCondenserConfig(BaseModel):
     """Configuration for LLMAttentionCondenser."""
 
     type: Literal["llm_attention"] = Field(default="llm_attention")
-    llm_config: "LLMConfig" = Field(..., description="Configuration for the LLM to use for attention.")
+    llm_config: "LLMConfig" = Field(
+        ..., description="Configuration for the LLM to use for attention."
+    )
     max_size: int = Field(
         default=100,
         description="Maximum size of the condensed history before triggering forgetting.",
         ge=2,
     )
-    keep_first: int = Field(default=1, description="Number of initial events to always keep in history.", ge=0)
+    keep_first: int = Field(
+        default=1,
+        description="Number of initial events to always keep in history.",
+        ge=0,
+    )
     model_config = ConfigDict(extra="forbid")
 
 
@@ -102,8 +122,14 @@ class StructuredSummaryCondenserConfig(BaseModel):
     """Configuration for StructuredSummaryCondenser instances."""
 
     type: Literal["structured"] = Field(default="structured")
-    llm_config: "LLMConfig" = Field(..., description="Configuration for the LLM to use for condensing.")
-    keep_first: int = Field(default=1, description="Number of initial events to always keep in history.", ge=0)
+    llm_config: "LLMConfig" = Field(
+        ..., description="Configuration for the LLM to use for condensing."
+    )
+    keep_first: int = Field(
+        default=1,
+        description="Number of initial events to always keep in history.",
+        ge=0,
+    )
     max_size: int = Field(
         default=100,
         description="Maximum size of the condensed history before triggering forgetting.",
@@ -141,9 +167,15 @@ class SmartCondenserConfig(BaseModel):
     """Configuration for SmartCondenser with LLM-assisted importance scoring."""
 
     type: Literal["smart"] = Field(default="smart")
-    llm_config: str | None = Field(default=None, description="LLM config name to use for importance scoring.")
-    max_size: int = Field(default=200, description="Maximum events before triggering condensation.", ge=2)
-    keep_first: int = Field(default=5, description="Number of initial events to always keep.", ge=0)
+    llm_config: LLMConfig | str | None = Field(
+        default=None, description="LLM config name to use for importance scoring."
+    )
+    max_size: int = Field(
+        default=200, description="Maximum events before triggering condensation.", ge=2
+    )
+    keep_first: int = Field(
+        default=5, description="Number of initial events to always keep.", ge=0
+    )
     importance_threshold: float = Field(
         default=0.6,
         description="Minimum importance score to keep event (0.0-1.0).",
@@ -173,7 +205,9 @@ CondenserConfig = (
 )
 
 
-def condenser_config_from_toml_section(data: dict, llm_configs: dict | None = None) -> dict[str, CondenserConfig]:
+def condenser_config_from_toml_section(
+    data: dict, llm_configs: dict | None = None
+) -> dict[str, CondenserConfig]:
     """Create a CondenserConfig instance from a toml dictionary representing the [condenser] section.
 
     For CondenserConfig, the handling is different since it's a union type. The type of condenser
@@ -221,7 +255,9 @@ def condenser_config_from_toml_section(data: dict, llm_configs: dict | None = No
             config = create_condenser_config(condenser_type, data)
         condenser_mapping["condenser"] = config
     except (ValidationError, ValueError) as e:
-        logger.FORGE_logger.warning(f"Invalid condenser configuration: {e}. Using NoOpCondenserConfig.")
+        logger.FORGE_logger.warning(
+            f"Invalid condenser configuration: {e}. Using NoOpCondenserConfig."
+        )
         config = NoOpCondenserConfig(type="noop")
         condenser_mapping["condenser"] = config
     return condenser_mapping

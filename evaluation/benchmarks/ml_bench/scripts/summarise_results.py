@@ -12,7 +12,7 @@ def extract_test_results(res_file_path: str) -> tuple[list[str], list[str]]:
     costs = []
     instance_ids = set()
     instances = []
-    with open(res_file_path, "r", encoding='utf-8') as file:
+    with open(res_file_path, "r", encoding="utf-8") as file:
         for line in file:
             data = json.loads(line.strip())
             success = data["metrics"]["success"]
@@ -47,7 +47,7 @@ def extract_test_results(res_file_path: str) -> tuple[list[str], list[str]]:
                 )
             costs.append(data["metrics"]["accumulated_cost"])
         instances.sort(key=lambda x: x["instance_id"])
-        with open(res_file_path, "w", encoding='utf-8') as file:
+        with open(res_file_path, "w", encoding="utf-8") as file:
             for instance in instances:
                 file.write(json.dumps(instance) + "\n")
         return (passed, failed, costs)
@@ -55,7 +55,9 @@ def extract_test_results(res_file_path: str) -> tuple[list[str], list[str]]:
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        logger.error("Usage: poetry run python summarise_results.py <path_to_output_jsonl_file>")
+        logger.error(
+            "Usage: poetry run python summarise_results.py <path_to_output_jsonl_file>"
+        )
         sys.exit(1)
     json_file_path = sys.argv[1]
     passed_tests, failed_tests, costs = extract_test_results(json_file_path)

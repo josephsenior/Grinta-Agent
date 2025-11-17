@@ -7,7 +7,15 @@ from forge.core.config import ForgeConfig
 from forge.core.logger import forge_logger as logger
 from forge.server.shared import config as shared_config
 
-FILES_TO_IGNORE = [".git/", ".DS_Store", "node_modules/", "__pycache__/", "lost+found/", ".vscode/", ".downloads/"]
+FILES_TO_IGNORE = [
+    ".git/",
+    ".DS_Store",
+    "node_modules/",
+    "__pycache__/",
+    "lost+found/",
+    ".vscode/",
+    ".downloads/",
+]
 
 
 def sanitize_filename(filename: str) -> str:
@@ -21,7 +29,9 @@ def sanitize_filename(filename: str) -> str:
     return filename
 
 
-def load_file_upload_config(config: ForgeConfig = shared_config) -> tuple[int, bool, list[str]]:
+def load_file_upload_config(
+    config: ForgeConfig = shared_config,
+) -> tuple[int, bool, list[str]]:
     """Load file upload configuration from the config object.
 
     This function retrieves the file upload settings from the global config object.
@@ -43,13 +53,20 @@ def load_file_upload_config(config: ForgeConfig = shared_config) -> tuple[int, b
     restrict_file_types = config.file_uploads_restrict_file_types
     allowed_extensions = config.file_uploads_allowed_extensions
     if not isinstance(max_file_size_mb, int) or max_file_size_mb < 0:
-        logger.warning("Invalid max_file_size_mb: %s. Setting to 0 (no limit).", max_file_size_mb)
+        logger.warning(
+            "Invalid max_file_size_mb: %s. Setting to 0 (no limit).", max_file_size_mb
+        )
         max_file_size_mb = 0
     if not isinstance(allowed_extensions, (list, set)) or not allowed_extensions:
-        logger.warning('Invalid allowed_extensions: %s. Setting to [".*"].', allowed_extensions)
+        logger.warning(
+            'Invalid allowed_extensions: %s. Setting to [".*"].', allowed_extensions
+        )
         allowed_extensions = [".*"]
     else:
-        allowed_extensions = [ext.lower() if ext.startswith(".") else f".{ext.lower()}" for ext in allowed_extensions]
+        allowed_extensions = [
+            ext.lower() if ext.startswith(".") else f".{ext.lower()}"
+            for ext in allowed_extensions
+        ]
     if not restrict_file_types:
         allowed_extensions = [".*"]
     logger.debug(

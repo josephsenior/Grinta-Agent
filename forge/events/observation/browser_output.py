@@ -10,5 +10,3 @@ from __future__ import annotations
 from .browse import BrowserOutputObservation  # noqa: F401
 
 __all__ = ["BrowserOutputObservation"]
-
-

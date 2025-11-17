@@ -2,18 +2,29 @@ from unittest.mock import MagicMock, patch
 from forge.core.config import LLMConfig
 from forge.resolver.interfaces.gitlab import GitlabIssueHandler, GitlabPRHandler
 from forge.resolver.interfaces.issue import ReviewThread
-from forge.resolver.interfaces.issue_definitions import ServiceContextIssue, ServiceContextPR
+from forge.resolver.interfaces.issue_definitions import (
+    ServiceContextIssue,
+    ServiceContextPR,
+)
 
 
 def test_get_converted_issues_initializes_review_comments():
     with patch("httpx.get") as mock_get:
         mock_issues_response = MagicMock()
-        mock_issues_response.json.return_value = [{"iid": 1, "title": "Test Issue", "description": "Test Body"}]
+        mock_issues_response.json.return_value = [
+            {"iid": 1, "title": "Test Issue", "description": "Test Body"}
+        ]
         mock_comments_response = MagicMock()
         mock_comments_response.json.return_value = []
-        mock_get.side_effect = [mock_issues_response, mock_comments_response, mock_comments_response]
+        mock_get.side_effect = [
+            mock_issues_response,
+            mock_comments_response,
+            mock_comments_response,
+        ]
         llm_config = LLMConfig(model="test", api_key="test")
-        handler = ServiceContextIssue(GitlabIssueHandler("test-owner", "test-repo", "test-token"), llm_config)
+        handler = ServiceContextIssue(
+            GitlabIssueHandler("test-owner", "test-repo", "test-token"), llm_config
+        )
         issues = handler.get_converted_issues(issue_numbers=[1])
         assert len(issues) == 1
         assert issues[0].review_comments is None
@@ -27,12 +38,20 @@ def test_get_converted_issues_initializes_review_comments():
 def test_get_converted_issues_handles_empty_body():
     with patch("httpx.get") as mock_get:
         mock_issues_response = MagicMock()
-        mock_issues_response.json.return_value = [{"iid": 1, "title": "Test Issue", "description": None}]
+        mock_issues_response.json.return_value = [
+            {"iid": 1, "title": "Test Issue", "description": None}
+        ]
         mock_comments_response = MagicMock()
         mock_comments_response.json.return_value = []
-        mock_get.side_effect = [mock_issues_response, mock_comments_response, mock_comments_response]
+        mock_get.side_effect = [
+            mock_issues_response,
+            mock_comments_response,
+            mock_comments_response,
+        ]
         llm_config = LLMConfig(model="test", api_key="test")
-        handler = ServiceContextIssue(GitlabIssueHandler("test-owner", "test-repo", "test-token"), llm_config)
+        handler = ServiceContextIssue(
+            GitlabIssueHandler("test-owner", "test-repo", "test-token"), llm_config
+        )
         issues = handler.get_converted_issues(issue_numbers=[1])
         assert len(issues) == 1
         assert issues[0].body == ""
@@ -47,7 +66,12 @@ def test_pr_handler_get_converted_issues_with_comments():
     with patch("httpx.get") as mock_get:
         mock_prs_response = MagicMock()
         mock_prs_response.json.return_value = [
-            {"iid": 1, "title": "Test PR", "description": "Test Body fixes #1", "source_branch": "test-branch"}
+            {
+                "iid": 1,
+                "title": "Test PR",
+                "description": "Test Body fixes #1",
+                "source_branch": "test-branch",
+            }
         ]
         mock_comments_response = MagicMock()
         mock_comments_response.json.return_value = [
@@ -75,7 +99,9 @@ def test_pr_handler_get_converted_issues_with_comments():
         with patch("httpx.post") as mock_post:
             mock_post.return_value = mock_graphql_response
             llm_config = LLMConfig(model="test", api_key="test")
-            handler = ServiceContextPR(GitlabPRHandler("test-owner", "test-repo", "test-token"), llm_config)
+            handler = ServiceContextPR(
+                GitlabPRHandler("test-owner", "test-repo", "test-token"), llm_config
+            )
             prs = handler.get_converted_issues(issue_numbers=[1])
             assert len(prs) == 1
             assert prs[0].thread_comments == ["First comment", "Second comment"]
@@ -85,7 +111,9 @@ def test_pr_handler_get_converted_issues_with_comments():
             assert prs[0].owner == "test-owner"
             assert prs[0].repo == "test-repo"
             assert prs[0].head_branch == "test-branch"
-            assert prs[0].closing_issues == ["This is additional context from an externally referenced issue."]
+            assert prs[0].closing_issues == [
+                "This is additional context from an externally referenced issue."
+            ]
 
 
 def test_get_issue_comments_with_specific_comment_id():
@@ -97,7 +125,9 @@ def test_get_issue_comments_with_specific_comment_id():
         ]
         mock_get.return_value = mock_comments_response
         llm_config = LLMConfig(model="test", api_key="test")
-        handler = ServiceContextIssue(GitlabIssueHandler("test-owner", "test-repo", "test-token"), llm_config)
+        handler = ServiceContextIssue(
+            GitlabIssueHandler("test-owner", "test-repo", "test-token"), llm_config
+        )
         specific_comment = handler.get_issue_comments(issue_number=1, comment_id=123)
         assert specific_comment == ["First comment"]
 
@@ -107,7 +137,12 @@ def test_pr_handler_get_converted_issues_with_specific_thread_comment():
     with patch("httpx.get") as mock_get:
         mock_prs_response = MagicMock()
         mock_prs_response.json.return_value = [
-            {"iid": 1, "title": "Test PR", "description": "Test Body", "source_branch": "test-branch"}
+            {
+                "iid": 1,
+                "title": "Test PR",
+                "description": "Test Body",
+                "source_branch": "test-branch",
+            }
         ]
         mock_comments_response = MagicMock()
         mock_comments_response.json.return_value = [
@@ -131,12 +166,16 @@ def test_pr_handler_get_converted_issues_with_specific_thread_comment():
                                                 {
                                                     "id": "GID/121",
                                                     "body": "Specific review comment",
-                                                    "position": {"filePath": "file1.txt"},
+                                                    "position": {
+                                                        "filePath": "file1.txt"
+                                                    },
                                                 },
                                                 {
                                                     "id": "GID/456",
                                                     "body": "Another review comment",
-                                                    "position": {"filePath": "file2.txt"},
+                                                    "position": {
+                                                        "filePath": "file2.txt"
+                                                    },
                                                 },
                                             ]
                                         },
@@ -160,8 +199,12 @@ def test_pr_handler_get_converted_issues_with_specific_thread_comment():
         with patch("httpx.post") as mock_post:
             mock_post.return_value = mock_graphql_response
             llm_config = LLMConfig(model="test", api_key="test")
-            handler = ServiceContextPR(GitlabPRHandler("test-owner", "test-repo", "test-token"), llm_config)
-            prs = handler.get_converted_issues(issue_numbers=[1], comment_id=specific_comment_id)
+            handler = ServiceContextPR(
+                GitlabPRHandler("test-owner", "test-repo", "test-token"), llm_config
+            )
+            prs = handler.get_converted_issues(
+                issue_numbers=[1], comment_id=specific_comment_id
+            )
             assert len(prs) == 1
             assert prs[0].thread_comments == ["First comment"]
             assert prs[0].review_comments is None
@@ -179,12 +222,27 @@ def test_pr_handler_get_converted_issues_with_specific_review_thread_comment():
     with patch("httpx.get") as mock_get:
         mock_prs_response = MagicMock()
         mock_prs_response.json.return_value = [
-            {"iid": 1, "title": "Test PR", "description": "Test Body", "source_branch": "test-branch"}
+            {
+                "iid": 1,
+                "title": "Test PR",
+                "description": "Test Body",
+                "source_branch": "test-branch",
+            }
         ]
         mock_comments_response = MagicMock()
         mock_comments_response.json.return_value = [
-            {"description": "First comment", "id": 120, "resolvable": True, "system": False},
-            {"description": "Second comment", "id": 124, "resolvable": True, "system": False},
+            {
+                "description": "First comment",
+                "id": 120,
+                "resolvable": True,
+                "system": False,
+            },
+            {
+                "description": "Second comment",
+                "id": 124,
+                "resolvable": True,
+                "system": False,
+            },
         ]
         mock_graphql_response = MagicMock()
         mock_graphql_response.json.return_value = {
@@ -203,12 +261,16 @@ def test_pr_handler_get_converted_issues_with_specific_review_thread_comment():
                                                 {
                                                     "id": f"GID/{specific_comment_id}",
                                                     "body": "Specific review comment",
-                                                    "position": {"filePath": "file1.txt"},
+                                                    "position": {
+                                                        "filePath": "file1.txt"
+                                                    },
                                                 },
                                                 {
                                                     "id": "GID/456",
                                                     "body": "Another review comment",
-                                                    "position": {"filePath": "file1.txt"},
+                                                    "position": {
+                                                        "filePath": "file1.txt"
+                                                    },
                                                 },
                                             ]
                                         },
@@ -232,8 +294,12 @@ def test_pr_handler_get_converted_issues_with_specific_review_thread_comment():
         with patch("httpx.post") as mock_post:
             mock_post.return_value = mock_graphql_response
             llm_config = LLMConfig(model="test", api_key="test")
-            handler = ServiceContextPR(GitlabPRHandler("test-owner", "test-repo", "test-token"), llm_config)
-            prs = handler.get_converted_issues(issue_numbers=[1], comment_id=specific_comment_id)
+            handler = ServiceContextPR(
+                GitlabPRHandler("test-owner", "test-repo", "test-token"), llm_config
+            )
+            prs = handler.get_converted_issues(
+                issue_numbers=[1], comment_id=specific_comment_id
+            )
             assert len(prs) == 1
             assert prs[0].thread_comments is None
             assert prs[0].review_comments is None
@@ -257,12 +323,27 @@ def test_pr_handler_get_converted_issues_with_specific_comment_and_issue_refs():
     with patch("httpx.get") as mock_get:
         mock_prs_response = MagicMock()
         mock_prs_response.json.return_value = [
-            {"iid": 1, "title": "Test PR fixes #3", "description": "Test Body", "source_branch": "test-branch"}
+            {
+                "iid": 1,
+                "title": "Test PR fixes #3",
+                "description": "Test Body",
+                "source_branch": "test-branch",
+            }
         ]
         mock_comments_response = MagicMock()
         mock_comments_response.json.return_value = [
-            {"description": "First comment", "id": 120, "resolvable": True, "system": False},
-            {"description": "Second comment", "id": 124, "resolvable": True, "system": False},
+            {
+                "description": "First comment",
+                "id": 120,
+                "resolvable": True,
+                "system": False,
+            },
+            {
+                "description": "Second comment",
+                "id": 124,
+                "resolvable": True,
+                "system": False,
+            },
         ]
         mock_graphql_response = MagicMock()
         mock_graphql_response.json.return_value = {
@@ -281,12 +362,16 @@ def test_pr_handler_get_converted_issues_with_specific_comment_and_issue_refs():
                                                 {
                                                     "id": f"GID/{specific_comment_id}",
                                                     "body": "Specific review comment that references #6",
-                                                    "position": {"filePath": "file1.txt"},
+                                                    "position": {
+                                                        "filePath": "file1.txt"
+                                                    },
                                                 },
                                                 {
                                                     "id": "GID/456",
                                                     "body": "Another review comment referencing #7",
-                                                    "position": {"filePath": "file2.txt"},
+                                                    "position": {
+                                                        "filePath": "file2.txt"
+                                                    },
                                                 },
                                             ]
                                         },
@@ -301,9 +386,13 @@ def test_pr_handler_get_converted_issues_with_specific_comment_and_issue_refs():
         mock_empty_response = MagicMock()
         mock_empty_response.json.return_value = []
         mock_external_issue_response_in_body = MagicMock()
-        mock_external_issue_response_in_body.json.return_value = {"description": "External context #1."}
+        mock_external_issue_response_in_body.json.return_value = {
+            "description": "External context #1."
+        }
         mock_external_issue_response_review_thread = MagicMock()
-        mock_external_issue_response_review_thread.json.return_value = {"description": "External context #2."}
+        mock_external_issue_response_review_thread.json.return_value = {
+            "description": "External context #2."
+        }
         mock_get.side_effect = [
             mock_prs_response,
             mock_empty_response,
@@ -316,8 +405,12 @@ def test_pr_handler_get_converted_issues_with_specific_comment_and_issue_refs():
         with patch("httpx.post") as mock_post:
             mock_post.return_value = mock_graphql_response
             llm_config = LLMConfig(model="test", api_key="test")
-            handler = ServiceContextPR(GitlabPRHandler("test-owner", "test-repo", "test-token"), llm_config)
-            prs = handler.get_converted_issues(issue_numbers=[1], comment_id=specific_comment_id)
+            handler = ServiceContextPR(
+                GitlabPRHandler("test-owner", "test-repo", "test-token"), llm_config
+            )
+            prs = handler.get_converted_issues(
+                issue_numbers=[1], comment_id=specific_comment_id
+            )
             assert len(prs) == 1
             assert prs[0].thread_comments is None
             assert prs[0].review_comments is None
@@ -327,7 +420,10 @@ def test_pr_handler_get_converted_issues_with_specific_comment_and_issue_refs():
                 prs[0].review_threads[0].comment
                 == "Specific review comment that references #6\n---\nlatest feedback:\nAnother review comment referencing #7\n"
             )
-            assert prs[0].closing_issues == ["External context #1.", "External context #2."]
+            assert prs[0].closing_issues == [
+                "External context #1.",
+                "External context #2.",
+            ]
             assert prs[0].number == 1
             assert prs[0].title == "Test PR fixes #3"
             assert prs[0].body == "Test Body"
@@ -340,12 +436,25 @@ def test_pr_handler_get_converted_issues_with_duplicate_issue_refs():
     with patch("httpx.get") as mock_get:
         mock_prs_response = MagicMock()
         mock_prs_response.json.return_value = [
-            {"iid": 1, "title": "Test PR", "description": "Test Body fixes #1", "source_branch": "test-branch"}
+            {
+                "iid": 1,
+                "title": "Test PR",
+                "description": "Test Body fixes #1",
+                "source_branch": "test-branch",
+            }
         ]
         mock_comments_response = MagicMock()
         mock_comments_response.json.return_value = [
-            {"body": "First comment addressing #1", "resolvable": True, "system": False},
-            {"body": "Second comment addressing #2", "resolvable": True, "system": False},
+            {
+                "body": "First comment addressing #1",
+                "resolvable": True,
+                "system": False,
+            },
+            {
+                "body": "Second comment addressing #2",
+                "resolvable": True,
+                "system": False,
+            },
         ]
         mock_graphql_response = MagicMock()
         mock_graphql_response.json.return_value = {
@@ -354,9 +463,13 @@ def test_pr_handler_get_converted_issues_with_duplicate_issue_refs():
         mock_empty_response = MagicMock()
         mock_empty_response.json.return_value = []
         mock_external_issue_response_in_body = MagicMock()
-        mock_external_issue_response_in_body.json.return_value = {"description": "External context #1."}
+        mock_external_issue_response_in_body.json.return_value = {
+            "description": "External context #1."
+        }
         mock_external_issue_response_in_comment = MagicMock()
-        mock_external_issue_response_in_comment.json.return_value = {"description": "External context #2."}
+        mock_external_issue_response_in_comment.json.return_value = {
+            "description": "External context #2."
+        }
         mock_get.side_effect = [
             mock_prs_response,
             mock_empty_response,
@@ -369,17 +482,25 @@ def test_pr_handler_get_converted_issues_with_duplicate_issue_refs():
         with patch("httpx.post") as mock_post:
             mock_post.return_value = mock_graphql_response
             llm_config = LLMConfig(model="test", api_key="test")
-            handler = ServiceContextPR(GitlabPRHandler("test-owner", "test-repo", "test-token"), llm_config)
+            handler = ServiceContextPR(
+                GitlabPRHandler("test-owner", "test-repo", "test-token"), llm_config
+            )
             prs = handler.get_converted_issues(issue_numbers=[1])
             assert len(prs) == 1
-            assert prs[0].thread_comments == ["First comment addressing #1", "Second comment addressing #2"]
+            assert prs[0].thread_comments == [
+                "First comment addressing #1",
+                "Second comment addressing #2",
+            ]
             assert prs[0].number == 1
             assert prs[0].title == "Test PR"
             assert prs[0].body == "Test Body fixes #1"
             assert prs[0].owner == "test-owner"
             assert prs[0].repo == "test-repo"
             assert prs[0].head_branch == "test-branch"
-            assert prs[0].closing_issues == ["External context #1.", "External context #2."]
+            assert prs[0].closing_issues == [
+                "External context #1.",
+                "External context #2.",
+            ]
 
 
 def test_pr_handler_filters_gitlab_threads_without_matching_comment_id():
@@ -418,14 +539,28 @@ def test_pr_handler_filters_gitlab_threads_without_matching_comment_id():
         }
     }
 
-    with patch.object(GitlabPRHandler, "download_issues", return_value=[issue_payload]), patch.object(
-        GitlabPRHandler, "_fetch_closing_issues", return_value=([], []),
-    ), patch.object(
-        GitlabPRHandler, "_fetch_pr_discussions", return_value=discussions_payload,
-    ), patch.object(
-        GitlabPRHandler, "_fetch_comment_page", return_value=[],
+    with (
+        patch.object(GitlabPRHandler, "download_issues", return_value=[issue_payload]),
+        patch.object(
+            GitlabPRHandler,
+            "_fetch_closing_issues",
+            return_value=([], []),
+        ),
+        patch.object(
+            GitlabPRHandler,
+            "_fetch_pr_discussions",
+            return_value=discussions_payload,
+        ),
+        patch.object(
+            GitlabPRHandler,
+            "_fetch_comment_page",
+            return_value=[],
+        ),
     ):
-        handler = ServiceContextPR(GitlabPRHandler("test-owner", "test-repo", "test-token"), LLMConfig(model="test"))
+        handler = ServiceContextPR(
+            GitlabPRHandler("test-owner", "test-repo", "test-token"),
+            LLMConfig(model="test"),
+        )
         prs = handler.get_converted_issues(issue_numbers=[1], comment_id=123)
         assert len(prs) == 1
         assert prs[0].review_threads == []
@@ -477,19 +612,38 @@ def test_pr_handler_get_converted_issues_no_comment_id():
         {"body": "Another review comment", "resolvable": True, "system": False},
     ]
 
-    with patch.object(GitlabPRHandler, "download_issues", return_value=[issue_payload]), patch.object(
-        GitlabPRHandler, "_fetch_closing_issues", return_value=([], []),
-    ), patch.object(
-        GitlabPRHandler, "_fetch_pr_discussions", return_value=discussions_payload,
-    ), patch.object(
-        GitlabPRHandler, "_fetch_comment_page", side_effect=[comments_page, []],
+    with (
+        patch.object(GitlabPRHandler, "download_issues", return_value=[issue_payload]),
+        patch.object(
+            GitlabPRHandler,
+            "_fetch_closing_issues",
+            return_value=([], []),
+        ),
+        patch.object(
+            GitlabPRHandler,
+            "_fetch_pr_discussions",
+            return_value=discussions_payload,
+        ),
+        patch.object(
+            GitlabPRHandler,
+            "_fetch_comment_page",
+            side_effect=[comments_page, []],
+        ),
     ):
         llm_config = LLMConfig(model="test", api_key="test")
-        handler = ServiceContextPR(GitlabPRHandler("test-owner", "test-repo", "test-token"), llm_config)
+        handler = ServiceContextPR(
+            GitlabPRHandler("test-owner", "test-repo", "test-token"), llm_config
+        )
         prs = handler.get_converted_issues(issue_numbers=[1])
         assert len(prs) == 1
-        assert prs[0].thread_comments == ["Specific review comment", "Another review comment"]
+        assert prs[0].thread_comments == [
+            "Specific review comment",
+            "Another review comment",
+        ]
         assert len(prs[0].review_threads) == 1
         assert isinstance(prs[0].review_threads[0], ReviewThread)
-        assert prs[0].review_threads[0].comment == "Specific review comment\n---\nlatest feedback:\nAnother review comment\n"
+        assert (
+            prs[0].review_threads[0].comment
+            == "Specific review comment\n---\nlatest feedback:\nAnother review comment\n"
+        )
         assert prs[0].review_threads[0].files == ["file1.txt", "file2.txt"]

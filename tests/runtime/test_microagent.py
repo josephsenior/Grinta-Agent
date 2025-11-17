@@ -10,7 +10,12 @@ from conftest import _close_test_runtime, _load_runtime
 from forge.core.config import MCPConfig
 from forge.core.config.mcp_config import MCPStdioServerConfig
 from forge.mcp_client.utils import add_mcp_tools_to_agent
-from forge.microagent.microagent import BaseMicroagent, KnowledgeMicroagent, RepoMicroagent, TaskMicroagent
+from forge.microagent.microagent import (
+    BaseMicroagent,
+    KnowledgeMicroagent,
+    RepoMicroagent,
+    TaskMicroagent,
+)
 from forge.microagent.types import MicroagentType
 
 
@@ -24,7 +29,9 @@ def _create_test_microagents(test_dir: str):
     (knowledge_dir / "knowledge.md").write_text(knowledge_agent)
     repo_agent = "---\nname: test_repo_agent\ntype: repo\nversion: 1.0.0\nagent: CodeActAgent\n---\n\n# Test Repository Agent\n\nRepository-specific test instructions.\n"
     (microagents_dir / "repo.md").write_text(repo_agent)
-    legacy_instructions = "# Legacy Instructions\n\nThese are legacy repository instructions.\n"
+    legacy_instructions = (
+        "# Legacy Instructions\n\nThese are legacy repository instructions.\n"
+    )
     (Path(test_dir) / ".FORGE_instructions").write_text(legacy_instructions)
 
 
@@ -34,7 +41,9 @@ def test_load_microagents_with_trailing_slashes(temp_dir, runtime_cls, run_as_Fo
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         loaded_agents = runtime.get_microagents_from_selected_repo(None)
-        knowledge_agents = [a for a in loaded_agents if isinstance(a, KnowledgeMicroagent)]
+        knowledge_agents = [
+            a for a in loaded_agents if isinstance(a, KnowledgeMicroagent)
+        ]
         repo_agents = [a for a in loaded_agents if isinstance(a, RepoMicroagent)]
         assert len(knowledge_agents) == 1
         agent = knowledge_agents[0]
@@ -57,7 +66,9 @@ def test_load_microagents_with_selected_repo(temp_dir, runtime_cls, run_as_Forge
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         loaded_agents = runtime.get_microagents_from_selected_repo("All-Hands-AI/Forge")
-        knowledge_agents = [a for a in loaded_agents if isinstance(a, KnowledgeMicroagent)]
+        knowledge_agents = [
+            a for a in loaded_agents if isinstance(a, KnowledgeMicroagent)
+        ]
         repo_agents = [a for a in loaded_agents if isinstance(a, RepoMicroagent)]
         assert len(knowledge_agents) == 1
         agent = knowledge_agents[0]
@@ -81,7 +92,9 @@ def test_load_microagents_with_missing_files(temp_dir, runtime_cls, run_as_Forge
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         loaded_agents = runtime.get_microagents_from_selected_repo(None)
-        knowledge_agents = [a for a in loaded_agents if isinstance(a, KnowledgeMicroagent)]
+        knowledge_agents = [
+            a for a in loaded_agents if isinstance(a, KnowledgeMicroagent)
+        ]
         repo_agents = [a for a in loaded_agents if isinstance(a, RepoMicroagent)]
         assert not knowledge_agents
         assert len(repo_agents) == 1
@@ -177,34 +190,51 @@ def test_default_tools_microagent_exists():
     parent_dir = os.path.dirname(project_root)
     microagents_dir = os.path.join(parent_dir, "microagents")
     default_tools_path = os.path.join(microagents_dir, "default-tools.md")
-    assert os.path.exists(default_tools_path), f"default-tools.md not found at {default_tools_path}"
-    with open(default_tools_path, "r", encoding='utf-8') as f:
+    assert os.path.exists(default_tools_path), (
+        f"default-tools.md not found at {default_tools_path}"
+    )
+    with open(default_tools_path, "r", encoding="utf-8") as f:
         content = f.read()
     assert "type: repo" in content, "default-tools.md should be a repo microagent"
     assert 'name: "fetch"' in content, "default-tools.md should have a fetch tool"
     assert 'command: "uvx"' in content, "default-tools.md should use uvx command"
-    assert 'args: ["mcp-server-fetch"]' in content, "default-tools.md should use mcp-server-fetch"
+    assert 'args: ["mcp-server-fetch"]' in content, (
+        "default-tools.md should use mcp-server-fetch"
+    )
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(sys.platform.startswith("win"), reason="MCP functionality is disabled on Windows")
+@pytest.mark.skipif(
+    sys.platform.startswith("win"), reason="MCP functionality is disabled on Windows"
+)
 async def test_add_mcp_tools_from_microagents():
     """Test that add_mcp_tools_to_agent adds tools from microagents."""
-    from forge.runtime.impl.action_execution.action_execution_client import ActionExecutionClient
+    from forge.runtime.impl.action_execution.action_execution_client import (
+        ActionExecutionClient,
+    )
 
     mock_agent = MagicMock()
     mock_runtime = MagicMock(spec=ActionExecutionClient)
     mock_memory = MagicMock()
-    mock_stdio_server = MCPStdioServerConfig(name="test-tool", command="test-command", args=["test-arg1", "test-arg2"])
+    mock_stdio_server = MCPStdioServerConfig(
+        name="test-tool", command="test-command", args=["test-arg1", "test-arg2"]
+    )
     mock_microagent_mcp_config = MCPConfig(stdio_servers=[mock_stdio_server])
     mock_memory.get_microagent_mcp_tools.return_value = [mock_microagent_mcp_config]
     mock_runtime.runtime_initialized = True
     mock_runtime.get_mcp_config.return_value = mock_microagent_mcp_config
     mock_tool = {
         "type": "function",
-        "function": {"name": "test-tool", "description": "Test tool description", "parameters": {}},
+        "function": {
+            "name": "test-tool",
+            "description": "Test tool description",
+            "parameters": {},
+        },
     }
-    with patch("forge.mcp.utils.fetch_mcp_tools_from_config", new=AsyncMock(return_value=[mock_tool])):
+    with patch(
+        "forge.mcp.utils.fetch_mcp_tools_from_config",
+        new=AsyncMock(return_value=[mock_tool]),
+    ):
         await add_mcp_tools_to_agent(mock_agent, mock_runtime, mock_memory)
         mock_memory.get_microagent_mcp_tools.assert_called_once()
         mock_runtime.get_mcp_config.assert_called_once()

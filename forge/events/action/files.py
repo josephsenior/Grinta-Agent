@@ -5,8 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
-from forge.core.schema import ActionType
+from forge.core.schemas import ActionType
 from forge.events.action.action import Action, ActionSecurityRisk
+from forge.events.action._canonical import canonicalize
 from forge.events.event import FileEditSource, FileReadSource
 
 
@@ -18,11 +19,11 @@ class FileReadAction(Action):
     Default lines 0:-1 (whole file).
     """
 
-    path: str
+    path: str = ""
     start: int = 0
     end: int = -1
     thought: str = ""
-    action: str = ActionType.READ
+    action: ClassVar[str] = ActionType.READ
     runnable: ClassVar[bool] = True
     security_risk: ActionSecurityRisk = ActionSecurityRisk.UNKNOWN
     impl_source: FileReadSource = FileReadSource.DEFAULT
@@ -44,12 +45,12 @@ class FileWriteAction(Action):
     Default lines 0:-1 (whole file).
     """
 
-    path: str
-    content: str
+    path: str = ""
+    content: str = ""
     start: int = 0
     end: int = -1
     thought: str = ""
-    action: str = ActionType.WRITE
+    action: ClassVar[str] = ActionType.WRITE
     runnable: ClassVar[bool] = True
     security_risk: ActionSecurityRisk = ActionSecurityRisk.UNKNOWN
 
@@ -60,12 +61,9 @@ class FileWriteAction(Action):
 
     def __repr__(self) -> str:
         """Return a readable summary of the write parameters."""
-        return f"**FileWriteAction**\nPath: {
-            self.path}\nRange: [L{
-            self.start}:L{
-            self.end}]\nThought: {
-                self.thought}\nContent:\n```\n{
-                    self.content}\n```\n"
+        return f"**FileWriteAction**\nPath: {self.path}\nRange: [L{self.start}:L{
+            self.end
+        }]\nThought: {self.thought}\nContent:\n```\n{self.content}\n```\n"
 
     __test__ = False
 
@@ -106,7 +104,7 @@ class FileEditAction(Action):
 
     """
 
-    path: str
+    path: str = ""
     command: str = ""
     file_text: str | None = None
     old_str: str | None = None
@@ -116,7 +114,7 @@ class FileEditAction(Action):
     start: int = 1
     end: int = -1
     thought: str = ""
-    action: str = ActionType.EDIT
+    action: ClassVar[str] = ActionType.EDIT
     runnable: ClassVar[bool] = True
     security_risk: ActionSecurityRisk = ActionSecurityRisk.UNKNOWN
     impl_source: FileEditSource = FileEditSource.OH_ACI
@@ -144,3 +142,8 @@ class FileEditAction(Action):
         return ret
 
     __test__ = False
+
+
+canonicalize("FileReadAction", FileReadAction)
+canonicalize("FileWriteAction", FileWriteAction)
+canonicalize("FileEditAction", FileEditAction)

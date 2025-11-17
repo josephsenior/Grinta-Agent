@@ -11,7 +11,9 @@ from forge.events.observation import (
 )
 
 
-def _build_action_and_observation_maps(events: list[Event]) -> tuple[dict[int, Action], dict[int, Observation]]:
+def _build_action_and_observation_maps(
+    events: list[Event],
+) -> tuple[dict[int, Action], dict[int, Observation]]:
     """Build maps of actions and observations from events."""
     action_map: dict[int, Action] = {}
     observation_map: dict[int, Observation] = {}

@@ -4,7 +4,7 @@ Uses Ultimate Editor for structure-aware code exploration.
 Tree-sitter parsing for symbol finding, navigation, and analysis.
 """
 
-from litellm import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from forge.llm.tool_types import make_function_chunk, make_tool_param
 
 
 _ULTIMATE_EXPLORER_DESCRIPTION = """Structure-aware code explorer powered by Tree-sitter (40+ languages)
@@ -50,16 +50,16 @@ get_symbol_context(file_path="/workspace/app.py", symbol_name="process_data")
 """
 
 
-def create_ultimate_explorer_tool() -> ChatCompletionToolParam:
+def create_ultimate_explorer_tool():
     """Create Ultimate Explorer tool for ReadOnlyAgent.
-    
+
     Returns:
         ChatCompletionToolParam with structure-aware exploration
 
     """
-    return ChatCompletionToolParam(
+    return make_tool_param(
         type="function",
-        function=ChatCompletionToolParamFunctionChunk(
+        function=make_function_chunk(
             name="ultimate_explorer",
             description=_ULTIMATE_EXPLORER_DESCRIPTION,
             parameters={
@@ -88,4 +88,3 @@ def create_ultimate_explorer_tool() -> ChatCompletionToolParam:
             },
         ),
     )
-

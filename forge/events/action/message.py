@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, ClassVar, TYPE_CHECKING
 
 import forge
-from forge.core.schema import ActionType
+from forge.core.schemas import ActionType
 from forge.events.action.action import Action, ActionSecurityRisk
+from forge.events.action._canonical import canonicalize
 
 
 @dataclass
 class MessageAction(Action):
     """Action to send a message (agent to user or user to agent).
-    
+
     Attributes:
         content: Message text content
         file_urls: URLs of attached files
@@ -21,11 +22,12 @@ class MessageAction(Action):
         wait_for_response: Whether to wait for user response
 
     """
-    content: str
+
+    content: str = ""
     file_urls: list[str] | None = None
     image_urls: list[str] | None = None
     wait_for_response: bool = False
-    action: str = ActionType.MESSAGE
+    action: ClassVar[str] = ActionType.MESSAGE
     security_risk: ActionSecurityRisk = ActionSecurityRisk.UNKNOWN
 
     @property
@@ -65,11 +67,11 @@ class SystemMessageAction(Action):
     This should be the first message in the event stream.
     """
 
-    content: str
+    content: str = ""
     tools: list[Any] | None = None
     FORGE_version: str | None = forge.__version__
     agent_class: str | None = None
-    action: ActionType = ActionType.SYSTEM
+    action: ClassVar[str] = ActionType.SYSTEM
 
     @property
     def message(self) -> str:
@@ -100,8 +102,8 @@ class StreamingChunkAction(Action):
     chunk: str = ""  # The new token/chunk text
     accumulated: str = ""  # All text accumulated so far
     is_final: bool = False  # True when streaming is complete
-    action: str = ActionType.STREAMING_CHUNK
-    runnable: bool = False  # Not executable, just informational
+    action: ClassVar[str] = ActionType.STREAMING_CHUNK
+    runnable: ClassVar[bool] = False  # Not executable, just informational
 
     def __str__(self) -> str:
         """Return a concise description of streaming progress."""
@@ -110,3 +112,8 @@ class StreamingChunkAction(Action):
         return f"**StreamingChunkAction** ({status}) - {char_count} chars"
 
     __test__ = False
+
+
+canonicalize("MessageAction", MessageAction)
+canonicalize("SystemMessageAction", SystemMessageAction)
+canonicalize("StreamingChunkAction", StreamingChunkAction)

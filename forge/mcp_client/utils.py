@@ -86,7 +86,9 @@ async def create_mcp_clients(
     """
     # Early returns for unsupported platforms or no servers
     if _is_windows_mcp_disabled():
-        logger.info("MCP functionality is disabled on Windows, skipping client creation")
+        logger.info(
+            "MCP functionality is disabled on Windows, skipping client creation"
+        )
         return []
 
     servers = _collect_all_servers(sse_servers, shttp_servers, stdio_servers)
@@ -132,7 +134,7 @@ async def _connect_stdio_server(server: MCPStdioServerConfig) -> MCPClient | Non
     if not shutil.which(server.command):
         logger.error(
             'Skipping MCP stdio server "%s": command "%s" not found. '
-            'Please install %s or remove this server from your configuration.',
+            "Please install %s or remove this server from your configuration.",
             server.name,
             server.command,
             server.command,
@@ -163,7 +165,9 @@ async def _connect_http_server(
     is_shttp = isinstance(server, MCPSHTTPServerConfig)
     connection_type = "SHTTP" if is_shttp else "SSE"
 
-    logger.info("Initializing MCP agent for %s with %s connection...", server, connection_type)
+    logger.info(
+        "Initializing MCP agent for %s with %s connection...", server, connection_type
+    )
     client = MCPClient()
 
     try:
@@ -175,7 +179,9 @@ async def _connect_http_server(
         return None
 
 
-def _log_successful_connection(client: MCPClient, server_identifier: str, connection_type: str) -> None:
+def _log_successful_connection(
+    client: MCPClient, server_identifier: str, connection_type: str
+) -> None:
     """Log successful MCP server connection with tool details."""
     tool_names = [tool.name for tool in client.tools]
     logger.debug(
@@ -245,7 +251,9 @@ def _serialize_result_to_json(result_dict: dict) -> str:
             return '{"error":"unserializable_result"}'
 
 
-async def _execute_wrapper_tool(action: MCPAction, mcp_clients: list[MCPClient]) -> MCPObservation:
+async def _execute_wrapper_tool(
+    action: MCPAction, mcp_clients: list[MCPClient]
+) -> MCPObservation:
     """Execute a wrapper tool and return observation."""
     try:
 
@@ -258,14 +266,20 @@ async def _execute_wrapper_tool(action: MCPAction, mcp_clients: list[MCPClient])
         wrapper_fn = WRAPPER_TOOL_REGISTRY[action.name]
         result_dict = await wrapper_fn(mcp_clients, action.arguments, _call_underlying)
         content_str = _serialize_result_to_json(result_dict)
-        return MCPObservation(content=content_str, name=action.name, arguments=action.arguments)
+        return MCPObservation(
+            content=content_str, name=action.name, arguments=action.arguments
+        )
     except Exception as e:
         logger.error("Wrapper tool %s failed: %s", action.name, e, exc_info=True)
         error_content = json.dumps({"isError": True, "error": str(e), "content": []})
-        return MCPObservation(content=error_content, name=action.name, arguments=action.arguments)
+        return MCPObservation(
+            content=error_content, name=action.name, arguments=action.arguments
+        )
 
 
-def _find_matching_mcp_client(mcp_clients: list[MCPClient], action_name: str) -> MCPClient:
+def _find_matching_mcp_client(
+    mcp_clients: list[MCPClient], action_name: str
+) -> MCPClient:
     """Find MCP client that supports the requested tool."""
     logger.debug("MCP clients: %s", mcp_clients)
     logger.debug("MCP action name: %s", action_name)
@@ -280,12 +294,16 @@ def _find_matching_mcp_client(mcp_clients: list[MCPClient], action_name: str) ->
     raise ValueError(msg)
 
 
-async def _execute_direct_tool(action: MCPAction, matching_client: MCPClient) -> MCPObservation:
+async def _execute_direct_tool(
+    action: MCPAction, matching_client: MCPClient
+) -> MCPObservation:
     """Execute a direct MCP tool call and return observation."""
     try:
         if cached := get_cached(action.name, action.arguments):
             logger.debug("Cache hit for MCP tool %s", action.name)
-            return MCPObservation(content=json.dumps(cached), name=action.name, arguments=action.arguments)
+            return MCPObservation(
+                content=json.dumps(cached), name=action.name, arguments=action.arguments
+            )
 
         # Call tool
         response = await matching_client.call_tool(action.name, action.arguments)
@@ -300,11 +318,15 @@ async def _execute_direct_tool(action: MCPAction, matching_client: MCPClient) ->
 
         # Serialize and return
         content_json = _serialize_result_to_json(result_dict)
-        return MCPObservation(content=content_json, name=action.name, arguments=action.arguments)
+        return MCPObservation(
+            content=content_json, name=action.name, arguments=action.arguments
+        )
     except McpError as e:
         logger.error("MCP error when calling tool %s: %s", action.name, e)
         error_content = json.dumps({"isError": True, "error": str(e), "content": []})
-        return MCPObservation(content=error_content, name=action.name, arguments=action.arguments)
+        return MCPObservation(
+            content=error_content, name=action.name, arguments=action.arguments
+        )
 
 
 async def call_tool_mcp(mcp_clients: list[MCPClient], action: MCPAction) -> Observation:
@@ -341,7 +363,11 @@ async def call_tool_mcp(mcp_clients: list[MCPClient], action: MCPAction) -> Obse
 
 async def _call_mcp_raw(mcp_clients: list[MCPClient], action) -> dict:
     matching_client = next(
-        (client for client in mcp_clients if action.name in [tool.name for tool in client.tools]),
+        (
+            client
+            for client in mcp_clients
+            if action.name in [tool.name for tool in client.tools]
+        ),
         None,
     )
     if not matching_client:
@@ -355,25 +381,35 @@ async def _call_mcp_raw(mcp_clients: list[MCPClient], action) -> dict:
     return result_dict
 
 
-async def add_mcp_tools_to_agent(agent: Agent, runtime: Runtime, memory: Memory) -> MCPConfig | None:
+async def add_mcp_tools_to_agent(
+    agent: Agent, runtime: Runtime, memory: Memory
+) -> MCPConfig | None:
     """Add MCP tools to an agent."""
     if _is_windows_mcp_disabled():
         logger.info("MCP functionality is disabled on Windows, skipping MCP tools")
         agent.set_mcp_tools([])
         return None
-    assert runtime.runtime_initialized, "Runtime must be initialized before adding MCP tools"
+    assert runtime.runtime_initialized, (
+        "Runtime must be initialized before adding MCP tools"
+    )
     extra_stdio_servers = []
     microagent_mcp_configs = memory.get_microagent_mcp_tools()
     for mcp_config in microagent_mcp_configs:
         if mcp_config.sse_servers:
-            logger.warning("Microagent MCP config contains SSE servers, it is not yet supported.")
+            logger.warning(
+                "Microagent MCP config contains SSE servers, it is not yet supported."
+            )
         if mcp_config.stdio_servers:
             for stdio_server in mcp_config.stdio_servers:
                 if stdio_server not in extra_stdio_servers:
                     extra_stdio_servers.append(stdio_server)
-                    logger.warning("Added microagent stdio server: %s", stdio_server.name)
+                    logger.warning(
+                        "Added microagent stdio server: %s", stdio_server.name
+                    )
     updated_mcp_config = runtime.get_mcp_config(extra_stdio_servers)
-    from forge.mcp.utils import fetch_mcp_tools_from_config as compat_fetch_mcp_tools_from_config
+    from forge.mcp.utils import (
+        fetch_mcp_tools_from_config as compat_fetch_mcp_tools_from_config,
+    )
 
     mcp_tools = await compat_fetch_mcp_tools_from_config(
         updated_mcp_config,

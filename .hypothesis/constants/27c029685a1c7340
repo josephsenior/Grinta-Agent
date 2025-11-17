@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\core\config\llm_config.py
+# hypothesis_version: 6.147.0
+
+[0.0, 1.0, 30000, '2024-12-01-preview', 'AWS_ACCESS_KEY_ID', 'AWS_REGION_NAME', 'OR_APP_NAME', 'OR_SITE_URL', 'azure', 'completions', 'custom_llm_provider', 'forbid', 'forge', 'gemini-2.5-pro', 'high', 'llm']

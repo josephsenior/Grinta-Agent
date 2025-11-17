@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\session\agent_session.py
+# hypothesis_version: 6.147.0
+
+['/', 'PROVIDER_TOKEN_TYPE', 'agent_session_start', 'agent_start', 'duration', 'error', 'finished', 'restored_state', 'runtime_connected', 'session_id', 'signal', 'started_at', 'success', 'user_id']

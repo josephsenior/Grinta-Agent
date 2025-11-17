@@ -42,7 +42,7 @@ class FileSecretsStore(SecretsStore):
 
     async def load(self) -> UserSecrets | None:
         """Load user secrets from storage.
-        
+
         Returns:
             UserSecrets object or None if not found
 
@@ -68,7 +68,7 @@ class FileSecretsStore(SecretsStore):
 
     async def store(self, secrets: UserSecrets) -> None:
         """Save user secrets to storage.
-        
+
         Args:
             secrets: UserSecrets to persist
 
@@ -77,13 +77,15 @@ class FileSecretsStore(SecretsStore):
         await call_sync_from_async(self.file_store.write, self.path, json_str)
 
     @classmethod
-    async def get_instance(cls, config: ForgeConfig, user_id: str | None) -> FileSecretsStore:
+    async def get_instance(
+        cls, config: ForgeConfig, user_id: str | None
+    ) -> FileSecretsStore:
         """Get FileSecretsStore singleton instance.
-        
+
         Args:
             config: Forge configuration
             user_id: Optional user ID
-            
+
         Returns:
             FileSecretsStore instance
 

@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import sys
+from typing import Callable
 
 logger = logging.getLogger("forge.eval.the_agent_company.summarise_results")
 
@@ -11,29 +12,24 @@ logger = logging.getLogger("forge.eval.the_agent_company.summarise_results")
 def calculate_cost(model: str, prompt_tokens: int, completion_tokens: int) -> float:
     """Calculate the cost of the model call."""
     model_lower = model.lower()
+    for signature, calculator in _MODEL_COST_CALCULATORS:
+        if signature in model_lower:
+            return calculator(prompt_tokens, completion_tokens)
+    raise ValueError(f"Unknown model: {model}")
 
-    if "claude-3-5-sonnet" in model_lower:
-        return _calculate_claude_cost(prompt_tokens, completion_tokens)
-    elif "gpt-4o" in model_lower:
-        return _calculate_gpt4o_cost(prompt_tokens, completion_tokens)
-    elif "gemini-1.5-pro" in model_lower:
-        return _calculate_gemini_15_pro_cost(prompt_tokens, completion_tokens)
-    elif "gemini-2.0-flash-exp" in model_lower:
-        return _calculate_gemini_20_flash_cost(prompt_tokens, completion_tokens)
-    elif "qwen2-72b" in model_lower:
-        return _calculate_qwen2_72b_cost(prompt_tokens, completion_tokens)
-    elif "qwen2p5-72b" in model_lower:
-        return _calculate_qwen2p5_72b_cost(prompt_tokens, completion_tokens)
-    elif "llama-v3p1-405b-instruct" in model_lower:
-        return _calculate_llama_405b_cost(prompt_tokens, completion_tokens)
-    elif "llama-v3p1-70b-instruct" in model_lower:
-        return _calculate_llama_70b_cost(prompt_tokens, completion_tokens)
-    elif "llama-v3p3-70b-instruct" in model_lower:
-        return _calculate_llama_70b_cost(prompt_tokens, completion_tokens)
-    elif "amazon.nova-pro-v1:0" in model_lower:
-        return _calculate_nova_pro_cost(prompt_tokens, completion_tokens)
-    else:
-        raise ValueError(f"Unknown model: {model}")
+
+_MODEL_COST_CALCULATORS: tuple[tuple[str, Callable[[int, int], float]], ...] = (
+    ("claude-3-5-sonnet", _calculate_claude_cost),
+    ("gpt-4o", _calculate_gpt4o_cost),
+    ("gemini-1.5-pro", _calculate_gemini_15_pro_cost),
+    ("gemini-2.0-flash-exp", _calculate_gemini_20_flash_cost),
+    ("qwen2-72b", _calculate_qwen2_72b_cost),
+    ("qwen2p5-72b", _calculate_qwen2p5_72b_cost),
+    ("llama-v3p1-405b-instruct", _calculate_llama_405b_cost),
+    ("llama-v3p1-70b-instruct", _calculate_llama_70b_cost),
+    ("llama-v3p3-70b-instruct", _calculate_llama_70b_cost),
+    ("amazon.nova-pro-v1:0", _calculate_nova_pro_cost),
+)
 
 
 def _calculate_claude_cost(prompt_tokens: int, completion_tokens: int) -> float:
@@ -54,7 +50,9 @@ def _calculate_gemini_15_pro_cost(prompt_tokens: int, completion_tokens: int) ->
     return cost
 
 
-def _calculate_gemini_20_flash_cost(prompt_tokens: int, completion_tokens: int) -> float:
+def _calculate_gemini_20_flash_cost(
+    prompt_tokens: int, completion_tokens: int
+) -> float:
     """Calculate Gemini 2.0 Flash cost with high token multiplier."""
     cost = 7.5e-08 * prompt_tokens + 3e-07 * completion_tokens
     if prompt_tokens > 128000:
@@ -97,7 +95,7 @@ def analyze_eval_json_file(filepath: str) -> tuple[int, int]:
         Tuple containing (total, result) from final_score
     """
     try:
-        with open(filepath, "r", encoding='utf-8') as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             data = json.load(f)
         final_score = data.get("final_score", {})
         return (final_score.get("total", 0), final_score.get("result", 0))
@@ -117,7 +115,7 @@ def analyze_traj_json_file(filepath: str) -> tuple[int, float]:
     """
     steps: int = 0
     cost: float = 0.0
-    with open(filepath, "r", encoding='utf-8') as f:
+    with open(filepath, "r", encoding="utf-8") as f:
         data = json.load(f)
         response_id = None
         for action in data:
@@ -135,7 +133,9 @@ def analyze_traj_json_file(filepath: str) -> tuple[int, float]:
     return (steps, cost)
 
 
-def analyze_folder(folder_path: str) -> tuple[dict[str, tuple[int, int]], dict[str, tuple[int, float]]]:
+def analyze_folder(
+    folder_path: str,
+) -> tuple[dict[str, tuple[int, int]], dict[str, tuple[int, float]]]:
     """Analyze all eval_*.json & traj_*.json files in the specified folder.
 
     Args:
@@ -239,26 +239,33 @@ def _print_results_table(detailed_results: list, traj_results: dict) -> None:
     logger.info("\n# Evaluation Results Report")
     logger.info("\n## Results per File")
     logger.info("\n*Sorted by score (⭐ indicates perfect completion)*\n")
-    logger.info("| Filename | Total | Result | Score | Steps | Cost (assuming no prompt caching)|")
+    logger.info(
+        "| Filename | Total | Result | Score | Steps | Cost (assuming no prompt caching)|"
+    )
     logger.info("|----------|--------|---------|-------|-------|------|")
 
     for task_name, total, result, score, is_perfect, task_nature in detailed_results:
         perfect_marker = " ⭐" if is_perfect else ""
         logger.info(
             "%s",
-            f"| {task_name} | {
-                total:,    } | {
-                result:,        } | {
-                score:.2f}{perfect_marker} | {
-                    traj_results[task_name][0]} | {
-                        traj_results[task_name][1]:.2f} |",
+            f"| {task_name} | {total:,    } | {result:,        } | {score:.2f}{
+                perfect_marker
+            } | {traj_results[task_name][0]} | {traj_results[task_name][1]:.2f} |",
         )
 
 
-def _print_summary(detailed_results: list, eval_results: dict, traj_results: dict) -> None:
+def _print_summary(
+    detailed_results: list, eval_results: dict, traj_results: dict
+) -> None:
     """Print summary statistics."""
-    perfect_completions = sum((bool(is_perfect) for _, _, _, _, is_perfect, _ in detailed_results))
-    overall_score = sum((score for _, _, _, score, _, _ in detailed_results)) / len(detailed_results) * 100
+    perfect_completions = sum(
+        (bool(is_perfect) for _, _, _, _, is_perfect, _ in detailed_results)
+    )
+    overall_score = (
+        sum((score for _, _, _, score, _, _ in detailed_results))
+        / len(detailed_results)
+        * 100
+    )
     avg_steps = sum((steps for steps, _ in traj_results.values())) / len(traj_results)
     avg_cost = sum((cost for _, cost in traj_results.values())) / len(traj_results)
 
@@ -283,7 +290,9 @@ def _print_statistics(detailed_results: list) -> None:
     highest_score = max((score for _, _, _, score, _, _ in detailed_results))
     lowest_score = min((score for _, _, _, score, _, _ in detailed_results))
     median_score = detailed_results[len(detailed_results) // 2][3]
-    avg_score = sum((score for _, _, _, score, _, _ in detailed_results)) / len(detailed_results)
+    avg_score = sum((score for _, _, _, score, _, _ in detailed_results)) / len(
+        detailed_results
+    )
 
     logger.info("\n## Statistics\n")
     logger.info("| Metric | Value |")
@@ -301,12 +310,21 @@ def _print_nature_category_stats(detailed_results: list) -> None:
     logger.info("|---------|--------|")
 
     for task_nature in ["sde", "pm", "ds", "admin", "hr", "finance", "other"]:
-        num_of_tasks = sum(nature_category == task_nature for _, _, _, _, _, nature_category in detailed_results)
+        num_of_tasks = sum(
+            nature_category == task_nature
+            for _, _, _, _, _, nature_category in detailed_results
+        )
         if num_of_tasks == 0:
             continue
 
         task_nature_score = (
-            sum((score for _, _, _, score, _, nature_category in detailed_results if nature_category == task_nature))
+            sum(
+                (
+                    score
+                    for _, _, _, score, _, nature_category in detailed_results
+                    if nature_category == task_nature
+                )
+            )
             / num_of_tasks
         )
         perfect_completions = sum(
@@ -323,7 +341,9 @@ def _print_nature_category_stats(detailed_results: list) -> None:
             num_of_tasks,
             perfect_completions / num_of_tasks * 100,
         )
-        logger.info("| Average Score for %s | %.2f%% |", task_nature, task_nature_score * 100)
+        logger.info(
+            "| Average Score for %s | %.2f%% |", task_nature, task_nature_score * 100
+        )
 
 
 def main():

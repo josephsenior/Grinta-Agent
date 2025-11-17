@@ -18,7 +18,6 @@ from forge.llm.metrics import Metrics, TokenUsage
 
 
 class TestGetLocalConfigTrustedDirs:
-
     @patch("forge.cli.utils._LOCAL_CONFIG_FILE_PATH")
     def test_config_file_does_not_exist(self, mock_config_path):
         mock_config_path.exists.return_value = False
@@ -28,8 +27,12 @@ class TestGetLocalConfigTrustedDirs:
 
     @patch("forge.cli.utils._LOCAL_CONFIG_FILE_PATH")
     @patch("builtins.open", new_callable=mock_open, read_data="invalid toml")
-    @patch("forge.cli.utils.toml.load", side_effect=toml.TomlDecodeError("error", "doc", 0))
-    def test_config_file_invalid_toml(self, mock_toml_load, mock_open_file, mock_config_path):
+    @patch(
+        "forge.cli.utils.toml.load", side_effect=toml.TomlDecodeError("error", "doc", 0)
+    )
+    def test_config_file_invalid_toml(
+        self, mock_toml_load, mock_open_file, mock_config_path
+    ):
         mock_config_path.exists.return_value = True
         result = get_local_config_trusted_dirs()
         assert result == []
@@ -38,7 +41,11 @@ class TestGetLocalConfigTrustedDirs:
         mock_toml_load.assert_called_once()
 
     @patch("forge.cli.utils._LOCAL_CONFIG_FILE_PATH")
-    @patch("builtins.open", new_callable=mock_open, read_data=toml.dumps({"sandbox": {"trusted_dirs": ["/path/one"]}}))
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data=toml.dumps({"sandbox": {"trusted_dirs": ["/path/one"]}}),
+    )
     @patch("forge.cli.utils.toml.load")
     def test_config_file_valid(self, mock_toml_load, mock_open_file, mock_config_path):
         mock_config_path.exists.return_value = True
@@ -50,9 +57,15 @@ class TestGetLocalConfigTrustedDirs:
         mock_toml_load.assert_called_once()
 
     @patch("forge.cli.utils._LOCAL_CONFIG_FILE_PATH")
-    @patch("builtins.open", new_callable=mock_open, read_data=toml.dumps({"other_section": {}}))
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data=toml.dumps({"other_section": {}}),
+    )
     @patch("forge.cli.utils.toml.load")
-    def test_config_file_missing_sandbox(self, mock_toml_load, mock_open_file, mock_config_path):
+    def test_config_file_missing_sandbox(
+        self, mock_toml_load, mock_open_file, mock_config_path
+    ):
         mock_config_path.exists.return_value = True
         mock_toml_load.return_value = {"other_section": {}}
         result = get_local_config_trusted_dirs()
@@ -62,9 +75,15 @@ class TestGetLocalConfigTrustedDirs:
         mock_toml_load.assert_called_once()
 
     @patch("forge.cli.utils._LOCAL_CONFIG_FILE_PATH")
-    @patch("builtins.open", new_callable=mock_open, read_data=toml.dumps({"sandbox": {"other_key": []}}))
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data=toml.dumps({"sandbox": {"other_key": []}}),
+    )
     @patch("forge.cli.utils.toml.load")
-    def test_config_file_missing_trusted_dirs(self, mock_toml_load, mock_open_file, mock_config_path):
+    def test_config_file_missing_trusted_dirs(
+        self, mock_toml_load, mock_open_file, mock_config_path
+    ):
         mock_config_path.exists.return_value = True
         mock_toml_load.return_value = {"sandbox": {"other_key": []}}
         result = get_local_config_trusted_dirs()
@@ -75,12 +94,13 @@ class TestGetLocalConfigTrustedDirs:
 
 
 class TestAddLocalConfigTrustedDir:
-
     @patch("forge.cli.utils._LOCAL_CONFIG_FILE_PATH")
     @patch("builtins.open", new_callable=mock_open)
     @patch("forge.cli.utils.toml.dump")
     @patch("forge.cli.utils.toml.load")
-    def test_add_to_non_existent_file(self, mock_toml_load, mock_toml_dump, mock_open_file, mock_config_path):
+    def test_add_to_non_existent_file(
+        self, mock_toml_load, mock_toml_dump, mock_open_file, mock_config_path
+    ):
         mock_config_path.exists.return_value = False
         mock_parent = MagicMock(spec=Path)
         mock_config_path.parent = mock_parent
@@ -93,10 +113,16 @@ class TestAddLocalConfigTrustedDir:
         mock_toml_load.assert_not_called()
 
     @patch("forge.cli.utils._LOCAL_CONFIG_FILE_PATH")
-    @patch("builtins.open", new_callable=mock_open, read_data=toml.dumps({"sandbox": {"trusted_dirs": ["/old/path"]}}))
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data=toml.dumps({"sandbox": {"trusted_dirs": ["/old/path"]}}),
+    )
     @patch("forge.cli.utils.toml.dump")
     @patch("forge.cli.utils.toml.load")
-    def test_add_to_existing_file(self, mock_toml_load, mock_toml_dump, mock_open_file, mock_config_path):
+    def test_add_to_existing_file(
+        self, mock_toml_load, mock_toml_dump, mock_open_file, mock_config_path
+    ):
         mock_config_path.exists.return_value = True
         mock_toml_load.return_value = {"sandbox": {"trusted_dirs": ["/old/path"]}}
         add_local_config_trusted_dir("/new/path")
@@ -109,10 +135,16 @@ class TestAddLocalConfigTrustedDir:
         mock_toml_dump.assert_called_once_with(expected_config, mock_open_file())
 
     @patch("forge.cli.utils._LOCAL_CONFIG_FILE_PATH")
-    @patch("builtins.open", new_callable=mock_open, read_data=toml.dumps({"sandbox": {"trusted_dirs": ["/old/path"]}}))
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data=toml.dumps({"sandbox": {"trusted_dirs": ["/old/path"]}}),
+    )
     @patch("forge.cli.utils.toml.dump")
     @patch("forge.cli.utils.toml.load")
-    def test_add_existing_dir(self, mock_toml_load, mock_toml_dump, mock_open_file, mock_config_path):
+    def test_add_existing_dir(
+        self, mock_toml_load, mock_toml_dump, mock_open_file, mock_config_path
+    ):
         mock_config_path.exists.return_value = True
         mock_toml_load.return_value = {"sandbox": {"trusted_dirs": ["/old/path"]}}
         add_local_config_trusted_dir("/old/path")
@@ -124,8 +156,12 @@ class TestAddLocalConfigTrustedDir:
     @patch("forge.cli.utils._LOCAL_CONFIG_FILE_PATH")
     @patch("builtins.open", new_callable=mock_open, read_data="invalid toml")
     @patch("forge.cli.utils.toml.dump")
-    @patch("forge.cli.utils.toml.load", side_effect=toml.TomlDecodeError("error", "doc", 0))
-    def test_add_to_invalid_toml(self, mock_toml_load, mock_toml_dump, mock_open_file, mock_config_path):
+    @patch(
+        "forge.cli.utils.toml.load", side_effect=toml.TomlDecodeError("error", "doc", 0)
+    )
+    def test_add_to_invalid_toml(
+        self, mock_toml_load, mock_toml_dump, mock_open_file, mock_config_path
+    ):
         mock_config_path.exists.return_value = True
         add_local_config_trusted_dir("/new/path")
         mock_config_path.exists.assert_called_once()
@@ -134,23 +170,38 @@ class TestAddLocalConfigTrustedDir:
         mock_toml_dump.assert_called_once_with(expected_config, mock_open_file())
 
     @patch("forge.cli.utils._LOCAL_CONFIG_FILE_PATH")
-    @patch("builtins.open", new_callable=mock_open, read_data=toml.dumps({"other_section": {}}))
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data=toml.dumps({"other_section": {}}),
+    )
     @patch("forge.cli.utils.toml.dump")
     @patch("forge.cli.utils.toml.load")
-    def test_add_to_missing_sandbox(self, mock_toml_load, mock_toml_dump, mock_open_file, mock_config_path):
+    def test_add_to_missing_sandbox(
+        self, mock_toml_load, mock_toml_dump, mock_open_file, mock_config_path
+    ):
         mock_config_path.exists.return_value = True
         mock_toml_load.return_value = {"other_section": {}}
         add_local_config_trusted_dir("/new/path")
         mock_config_path.exists.assert_called_once()
         mock_toml_load.assert_called_once()
-        expected_config = {"other_section": {}, "sandbox": {"trusted_dirs": ["/new/path"]}}
+        expected_config = {
+            "other_section": {},
+            "sandbox": {"trusted_dirs": ["/new/path"]},
+        }
         mock_toml_dump.assert_called_once_with(expected_config, mock_open_file())
 
     @patch("forge.cli.utils._LOCAL_CONFIG_FILE_PATH")
-    @patch("builtins.open", new_callable=mock_open, read_data=toml.dumps({"sandbox": {"other_key": []}}))
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data=toml.dumps({"sandbox": {"other_key": []}}),
+    )
     @patch("forge.cli.utils.toml.dump")
     @patch("forge.cli.utils.toml.load")
-    def test_add_to_missing_trusted_dirs(self, mock_toml_load, mock_toml_dump, mock_open_file, mock_config_path):
+    def test_add_to_missing_trusted_dirs(
+        self, mock_toml_load, mock_toml_dump, mock_open_file, mock_config_path
+    ):
         mock_config_path.exists.return_value = True
         mock_toml_load.return_value = {"sandbox": {"other_key": []}}
         add_local_config_trusted_dir("/new/path")
@@ -161,7 +212,6 @@ class TestAddLocalConfigTrustedDir:
 
 
 class TestUpdateUsageMetrics:
-
     def test_update_usage_metrics_no_llm_metrics(self):
         event = Event()
         usage_metrics = UsageMetrics()
@@ -220,7 +270,6 @@ class TestUpdateUsageMetrics:
 
 
 class TestModelAndProviderFunctions:
-
     def test_extract_model_and_provider_slash_format(self):
         model = "openai/gpt-4o"
         result = extract_model_and_provider(model)
@@ -306,7 +355,6 @@ class TestModelAndProviderFunctions:
 
 
 class TestUtilityFunctions:
-
     def test_is_number_with_digit(self):
         assert is_number("1") is True
         assert is_number("9") is True
@@ -333,7 +381,6 @@ class TestUtilityFunctions:
 
 
 class TestFileOperations:
-
     def test_read_file(self):
         mock_content = "test file content"
         with patch("builtins.open", mock_open(read_data=mock_content)):

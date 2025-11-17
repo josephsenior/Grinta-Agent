@@ -40,7 +40,6 @@ def event_stream(temp_dir):
 
 
 class TestStuckDetector:
-
     @pytest.fixture
     def stuck_detector(self):
         state = State(inputs={})
@@ -48,7 +47,9 @@ class TestStuckDetector:
         state.history = []
         return StuckDetector(state)
 
-    def _impl_syntax_error_events(self, state: State, error_message: str, random_line: bool, incidents: int = 4):
+    def _impl_syntax_error_events(
+        self, state: State, error_message: str, random_line: bool, incidents: int = 4
+    ):
         for i in range(incidents):
             ipython_action = IPythonRunCellAction(code=code_snippet)
             state.history.append(ipython_action)
@@ -62,7 +63,9 @@ class TestStuckDetector:
             )
             state.history.append(ipython_observation)
 
-    def _impl_unterminated_string_error_events(self, state: State, random_line: bool, incidents: int = 4):
+    def _impl_unterminated_string_error_events(
+        self, state: State, random_line: bool, incidents: int = 4
+    ):
         for i in range(incidents):
             ipython_action = IPythonRunCellAction(code=code_snippet)
             state.history.append(ipython_action)
@@ -84,17 +87,23 @@ class TestStuckDetector:
         state.history.append(observation)
         cmd_action = CmdRunAction(command="ls")
         state.history.append(cmd_action)
-        cmd_observation = CmdOutputObservation(command="ls", content="file1.txt\nfile2.txt")
+        cmd_observation = CmdOutputObservation(
+            command="ls", content="file1.txt\nfile2.txt"
+        )
         state.history.append(cmd_observation)
         assert stuck_detector.is_stuck(headless_mode=True) is False
 
-    def test_interactive_mode_resets_after_user_message(self, stuck_detector: StuckDetector):
+    def test_interactive_mode_resets_after_user_message(
+        self, stuck_detector: StuckDetector
+    ):
         state = stuck_detector.state
         for i in range(4):
             cmd_action = CmdRunAction(command="ls")
             cmd_action._id = i
             state.history.append(cmd_action)
-            cmd_observation = CmdOutputObservation(content="", command="ls", command_id=i)
+            cmd_observation = CmdOutputObservation(
+                content="", command="ls", command_id=i
+            )
             cmd_observation._cause = cmd_action._id
             state.history.append(cmd_observation)
         assert stuck_detector.is_stuck(headless_mode=True) is True
@@ -108,7 +117,9 @@ class TestStuckDetector:
             cmd_action = CmdRunAction(command="ls")
             cmd_action._id = i + 4
             state.history.append(cmd_action)
-            cmd_observation = CmdOutputObservation(content="", command="ls", command_id=i + 4)
+            cmd_observation = CmdOutputObservation(
+                content="", command="ls", command_id=i + 4
+            )
             cmd_observation._cause = cmd_action._id
             state.history.append(cmd_observation)
         assert stuck_detector.is_stuck(headless_mode=False) is False
@@ -116,7 +127,9 @@ class TestStuckDetector:
             cmd_action = CmdRunAction(command="ls")
             cmd_action._id = i + 6
             state.history.append(cmd_action)
-            cmd_observation = CmdOutputObservation(content="", command="ls", command_id=i + 6)
+            cmd_observation = CmdOutputObservation(
+                content="", command="ls", command_id=i + 6
+            )
             cmd_observation._cause = cmd_action._id
             state.history.append(cmd_observation)
         assert stuck_detector.is_stuck(headless_mode=False) is True
@@ -178,7 +191,9 @@ class TestStuckDetector:
         state.history.append(error_observation_1)
         cmd_action_2 = CmdRunAction(command="invalid_command")
         state.history.append(cmd_action_2)
-        error_observation_2 = ErrorObservation(content="Command still not found or another error")
+        error_observation_2 = ErrorObservation(
+            content="Command still not found or another error"
+        )
         state.history.append(error_observation_2)
         message_null_observation = NullObservation(content="")
         state.history.append(message_action)
@@ -193,25 +208,35 @@ class TestStuckDetector:
         state.history.append(error_observation_4)
         with patch("logging.Logger.warning") as mock_warning:
             assert stuck_detector.is_stuck(headless_mode=True) is True
-            mock_warning.assert_called_once_with("Action, ErrorObservation loop detected")
+            mock_warning.assert_called_once_with(
+                "Action, ErrorObservation loop detected"
+            )
 
     def test_is_stuck_invalid_syntax_error(self, stuck_detector: StuckDetector):
         state = stuck_detector.state
         self._impl_syntax_error_events(
-            state, error_message="SyntaxError: invalid syntax. Perhaps you forgot a comma?", random_line=False
+            state,
+            error_message="SyntaxError: invalid syntax. Perhaps you forgot a comma?",
+            random_line=False,
         )
         with patch("logging.Logger.warning"):
             assert stuck_detector.is_stuck(headless_mode=True) is True
 
-    def test_is_not_stuck_invalid_syntax_error_random_lines(self, stuck_detector: StuckDetector):
+    def test_is_not_stuck_invalid_syntax_error_random_lines(
+        self, stuck_detector: StuckDetector
+    ):
         state = stuck_detector.state
         self._impl_syntax_error_events(
-            state, error_message="SyntaxError: invalid syntax. Perhaps you forgot a comma?", random_line=True
+            state,
+            error_message="SyntaxError: invalid syntax. Perhaps you forgot a comma?",
+            random_line=True,
         )
         with patch("logging.Logger.warning"):
             assert stuck_detector.is_stuck(headless_mode=True) is False
 
-    def test_is_not_stuck_invalid_syntax_error_only_three_incidents(self, stuck_detector: StuckDetector):
+    def test_is_not_stuck_invalid_syntax_error_only_three_incidents(
+        self, stuck_detector: StuckDetector
+    ):
         state = stuck_detector.state
         self._impl_syntax_error_events(
             state,
@@ -224,35 +249,49 @@ class TestStuckDetector:
 
     def test_is_stuck_incomplete_input_error(self, stuck_detector: StuckDetector):
         state = stuck_detector.state
-        self._impl_syntax_error_events(state, error_message="SyntaxError: incomplete input", random_line=False)
+        self._impl_syntax_error_events(
+            state, error_message="SyntaxError: incomplete input", random_line=False
+        )
         with patch("logging.Logger.warning"):
             assert stuck_detector.is_stuck(headless_mode=True) is True
 
     def test_is_not_stuck_incomplete_input_error(self, stuck_detector: StuckDetector):
         state = stuck_detector.state
-        self._impl_syntax_error_events(state, error_message="SyntaxError: incomplete input", random_line=True)
+        self._impl_syntax_error_events(
+            state, error_message="SyntaxError: incomplete input", random_line=True
+        )
         with patch("logging.Logger.warning"):
             assert stuck_detector.is_stuck(headless_mode=True) is False
 
-    def test_is_not_stuck_ipython_unterminated_string_error_random_lines(self, stuck_detector: StuckDetector):
+    def test_is_not_stuck_ipython_unterminated_string_error_random_lines(
+        self, stuck_detector: StuckDetector
+    ):
         state = stuck_detector.state
         self._impl_unterminated_string_error_events(state, random_line=True)
         with patch("logging.Logger.warning"):
             assert stuck_detector.is_stuck(headless_mode=True) is False
 
-    def test_is_not_stuck_ipython_unterminated_string_error_only_two_incidents(self, stuck_detector: StuckDetector):
+    def test_is_not_stuck_ipython_unterminated_string_error_only_two_incidents(
+        self, stuck_detector: StuckDetector
+    ):
         state = stuck_detector.state
-        self._impl_unterminated_string_error_events(state, random_line=False, incidents=2)
+        self._impl_unterminated_string_error_events(
+            state, random_line=False, incidents=2
+        )
         with patch("logging.Logger.warning"):
             assert stuck_detector.is_stuck(headless_mode=True) is False
 
-    def test_is_stuck_ipython_unterminated_string_error(self, stuck_detector: StuckDetector):
+    def test_is_stuck_ipython_unterminated_string_error(
+        self, stuck_detector: StuckDetector
+    ):
         state = stuck_detector.state
         self._impl_unterminated_string_error_events(state, random_line=False)
         with patch("logging.Logger.warning"):
             assert stuck_detector.is_stuck(headless_mode=True) is True
 
-    def test_is_not_stuck_ipython_syntax_error_not_at_end(self, stuck_detector: StuckDetector):
+    def test_is_not_stuck_ipython_syntax_error_not_at_end(
+        self, stuck_detector: StuckDetector
+    ):
         state = stuck_detector.state
         ipython_action_1 = IPythonRunCellAction(code='print("hello')
         state.history.append(ipython_action_1)
@@ -286,7 +325,9 @@ class TestStuckDetector:
             assert stuck_detector.is_stuck(headless_mode=True) is False
             mock_warning.assert_not_called()
 
-    def test_is_stuck_repeating_action_observation_pattern(self, stuck_detector: StuckDetector):
+    def test_is_stuck_repeating_action_observation_pattern(
+        self, stuck_detector: StuckDetector
+    ):
         state = stuck_detector.state
         message_action = MessageAction(content="Come on", wait_for_response=False)
         message_action._source = EventSource.USER
@@ -295,19 +336,27 @@ class TestStuckDetector:
         state.history.append(message_observation)
         cmd_action_1 = CmdRunAction(command="ls")
         state.history.append(cmd_action_1)
-        cmd_observation_1 = CmdOutputObservation(command="ls", content="file1.txt\nfile2.txt")
+        cmd_observation_1 = CmdOutputObservation(
+            command="ls", content="file1.txt\nfile2.txt"
+        )
         state.history.append(cmd_observation_1)
         read_action_1 = FileReadAction(path="file1.txt")
         state.history.append(read_action_1)
-        read_observation_1 = FileReadObservation(content="File content", path="file1.txt")
+        read_observation_1 = FileReadObservation(
+            content="File content", path="file1.txt"
+        )
         state.history.append(read_observation_1)
         cmd_action_2 = CmdRunAction(command="ls")
         state.history.append(cmd_action_2)
-        cmd_observation_2 = CmdOutputObservation(command="ls", content="file1.txt\nfile2.txt")
+        cmd_observation_2 = CmdOutputObservation(
+            command="ls", content="file1.txt\nfile2.txt"
+        )
         state.history.append(cmd_observation_2)
         read_action_2 = FileReadAction(path="file1.txt")
         state.history.append(read_action_2)
-        read_observation_2 = FileReadObservation(content="File content", path="file1.txt")
+        read_observation_2 = FileReadObservation(
+            content="File content", path="file1.txt"
+        )
         state.history.append(read_observation_2)
         message_action = MessageAction(content="Come on", wait_for_response=False)
         message_action._source = EventSource.USER
@@ -316,11 +365,15 @@ class TestStuckDetector:
         state.history.append(message_null_observation)
         cmd_action_3 = CmdRunAction(command="ls")
         state.history.append(cmd_action_3)
-        cmd_observation_3 = CmdOutputObservation(command="ls", content="file1.txt\nfile2.txt")
+        cmd_observation_3 = CmdOutputObservation(
+            command="ls", content="file1.txt\nfile2.txt"
+        )
         state.history.append(cmd_observation_3)
         read_action_3 = FileReadAction(path="file1.txt")
         state.history.append(read_action_3)
-        read_observation_3 = FileReadObservation(content="File content", path="file1.txt")
+        read_observation_3 = FileReadObservation(
+            content="File content", path="file1.txt"
+        )
         state.history.append(read_observation_3)
         with patch("logging.Logger.warning") as mock_warning:
             assert stuck_detector.is_stuck(headless_mode=True) is True
@@ -336,11 +389,15 @@ class TestStuckDetector:
         state.history.append(hello_observation)
         cmd_action_1 = CmdRunAction(command="ls")
         state.history.append(cmd_action_1)
-        cmd_observation_1 = CmdOutputObservation(command="ls", content="file1.txt\nfile2.txt")
+        cmd_observation_1 = CmdOutputObservation(
+            command="ls", content="file1.txt\nfile2.txt"
+        )
         state.history.append(cmd_observation_1)
         read_action_1 = FileReadAction(path="file1.txt")
         state.history.append(read_action_1)
-        read_observation_1 = FileReadObservation(content="File content", path="file1.txt")
+        read_observation_1 = FileReadObservation(
+            content="File content", path="file1.txt"
+        )
         state.history.append(read_observation_1)
         cmd_action_2 = CmdRunAction(command="pwd")
         state.history.append(cmd_action_2)
@@ -348,7 +405,9 @@ class TestStuckDetector:
         state.history.append(cmd_observation_2)
         read_action_2 = FileReadAction(path="file2.txt")
         state.history.append(read_action_2)
-        read_observation_2 = FileReadObservation(content="Another file content", path="file2.txt")
+        read_observation_2 = FileReadObservation(
+            content="Another file content", path="file2.txt"
+        )
         state.history.append(read_observation_2)
         message_null_observation = NullObservation(content="")
         state.history.append(message_action)
@@ -359,7 +418,9 @@ class TestStuckDetector:
         state.history.append(cmd_observation_3)
         read_action_3 = FileReadAction(path="file2.txt")
         state.history.append(read_action_3)
-        read_observation_3 = FileReadObservation(content="Another file content", path="file2.txt")
+        read_observation_3 = FileReadObservation(
+            content="Another file content", path="file2.txt"
+        )
         state.history.append(read_observation_3)
         assert stuck_detector.is_stuck(headless_mode=True) is False
 
@@ -374,7 +435,9 @@ class TestStuckDetector:
         message_action_3 = MessageAction(content="How are you?")
         message_action_3._source = EventSource.USER
         state.history.append(message_action_3)
-        cmd_kill_action = CmdRunAction(command="echo 42", thought="I'm not stuck, he's stuck")
+        cmd_kill_action = CmdRunAction(
+            command="echo 42", thought="I'm not stuck, he's stuck"
+        )
         state.history.append(cmd_kill_action)
         message_action_4 = MessageAction(content="I'm doing well, thanks for asking.")
         message_action_4._source = EventSource.AGENT
@@ -408,11 +471,15 @@ class TestStuckDetector:
         message_observation = NullObservation(content="")
         state.history.append(message_observation)
         for _ in range(10):
-            condensation = AgentCondensationObservation(content="Trimming prompt to meet context window limitations")
+            condensation = AgentCondensationObservation(
+                content="Trimming prompt to meet context window limitations"
+            )
             state.history.append(condensation)
         with patch("logging.Logger.warning") as mock_warning:
             assert stuck_detector.is_stuck(headless_mode=True) is True
-            mock_warning.assert_called_once_with("Context window error loop detected - repeated condensation events")
+            mock_warning.assert_called_once_with(
+                "Context window error loop detected - repeated condensation events"
+            )
 
     def test_is_not_stuck_context_window_error_with_other_events(self, stuck_detector):
         """Test that we don't detect a loop when there are other events between condensation events."""
@@ -423,17 +490,23 @@ class TestStuckDetector:
         message_observation = NullObservation(content="")
         state.history.append(message_observation)
         for i in range(10):
-            condensation = AgentCondensationObservation(content="Trimming prompt to meet context window limitations")
+            condensation = AgentCondensationObservation(
+                content="Trimming prompt to meet context window limitations"
+            )
             state.history.append(condensation)
             if i < 9:
                 cmd_action = CmdRunAction(command=f"ls {i}")
                 state.history.append(cmd_action)
-                cmd_observation = CmdOutputObservation(command=f"ls {i}", content="file1.txt\nfile2.txt")
+                cmd_observation = CmdOutputObservation(
+                    command=f"ls {i}", content="file1.txt\nfile2.txt"
+                )
                 state.history.append(cmd_observation)
                 if i % 2 == 0:
                     read_action = FileReadAction(path=f"file{i}.txt")
                     state.history.append(read_action)
-                    read_observation = FileReadObservation(content=f"File content {i}", path=f"file{i}.txt")
+                    read_observation = FileReadObservation(
+                        content=f"File content {i}", path=f"file{i}.txt"
+                    )
                     state.history.append(read_observation)
         with patch("logging.Logger.warning") as mock_warning:
             assert stuck_detector.is_stuck(headless_mode=True) is False
@@ -448,7 +521,9 @@ class TestStuckDetector:
         message_observation = NullObservation(content="")
         state.history.append(message_observation)
         for _ in range(9):
-            condensation = AgentCondensationObservation(content="Trimming prompt to meet context window limitations")
+            condensation = AgentCondensationObservation(
+                content="Trimming prompt to meet context window limitations"
+            )
             state.history.append(condensation)
         with patch("logging.Logger.warning") as mock_warning:
             assert stuck_detector.is_stuck(headless_mode=True) is False
@@ -467,17 +542,23 @@ class TestStuckDetector:
         message_observation = NullObservation(content="")
         state.history.append(message_observation)
         for i in range(10):
-            condensation = AgentCondensationObservation(content="Trimming prompt to meet context window limitations")
+            condensation = AgentCondensationObservation(
+                content="Trimming prompt to meet context window limitations"
+            )
             state.history.append(condensation)
             if i < 9:
-                user_message = MessageAction(content=f"Please continue {i}", wait_for_response=False)
+                user_message = MessageAction(
+                    content=f"Please continue {i}", wait_for_response=False
+                )
                 user_message._source = EventSource.USER
                 state.history.append(user_message)
                 user_observation = NullObservation(content="")
                 state.history.append(user_observation)
         with patch("logging.Logger.warning") as mock_warning:
             assert stuck_detector.is_stuck(headless_mode=True) is True
-            mock_warning.assert_called_once_with("Context window error loop detected - repeated condensation events")
+            mock_warning.assert_called_once_with(
+                "Context window error loop detected - repeated condensation events"
+            )
 
     def test_is_not_stuck_context_window_error_in_non_headless(self, stuck_detector):
         """Test that in non-headless mode, we don't detect a loop if the condensation events.
@@ -488,7 +569,9 @@ class TestStuckDetector:
         """
         state = stuck_detector.state
         for _ in range(10):
-            condensation = AgentCondensationObservation(content="Trimming prompt to meet context window limitations")
+            condensation = AgentCondensationObservation(
+                content="Trimming prompt to meet context window limitations"
+            )
             state.history.append(condensation)
         user_message = MessageAction(content="Please continue", wait_for_response=False)
         user_message._source = EventSource.USER
@@ -497,18 +580,21 @@ class TestStuckDetector:
         state.history.append(user_observation)
         with patch("logging.Logger.warning") as mock_warning:
             assert stuck_detector.is_stuck(headless_mode=True) is True
-            mock_warning.assert_called_once_with("Context window error loop detected - repeated condensation events")
+            mock_warning.assert_called_once_with(
+                "Context window error loop detected - repeated condensation events"
+            )
             mock_warning.reset_mock()
             assert stuck_detector.is_stuck(headless_mode=False) is False
             mock_warning.assert_not_called()
 
 
 class TestAgentController:
-
     @pytest.fixture
     def controller(self):
         controller = Mock(spec=AgentController)
-        controller._is_stuck = AgentController._is_stuck.__get__(controller, AgentController)
+        controller._is_stuck = AgentController._is_stuck.__get__(
+            controller, AgentController
+        )
         controller.delegate = None
         controller.state = Mock()
         return controller

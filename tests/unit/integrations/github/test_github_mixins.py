@@ -15,7 +15,12 @@ from forge.server.types import AppMode
 
 
 class DummyResponse:
-    def __init__(self, status_code: int = 200, payload: dict | list | None = None, headers: dict | None = None):
+    def __init__(
+        self,
+        status_code: int = 200,
+        payload: dict | list | None = None,
+        headers: dict | None = None,
+    ):
         self.status_code = status_code
         self._payload = payload or {}
         self.headers = headers or {}
@@ -50,7 +55,9 @@ def test_github_provider_property() -> None:
 
 
 @pytest.mark.asyncio
-async def test_github_verify_access_calls_make_request(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_verify_access_calls_make_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     service._make_request = AsyncMock(return_value=({}, {}))
 
@@ -61,7 +68,9 @@ async def test_github_verify_access_calls_make_request(monkeypatch: pytest.Monke
 
 
 @pytest.mark.asyncio
-async def test_github_get_headers_fetches_latest_token(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_get_headers_fetches_latest_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=None)
     latest = SecretStr("latest-token")
     monkeypatch.setattr(service, "get_latest_token", AsyncMock(return_value=latest))
@@ -74,14 +83,20 @@ async def test_github_get_headers_fetches_latest_token(monkeypatch: pytest.Monke
 
 
 @pytest.mark.asyncio
-async def test_github_make_request_refreshes_and_preserves_link(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_make_request_refreshes_and_preserves_link(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("stale"))
     service.refresh = True
     response_401 = DummyResponse(status_code=401, payload={})
-    response_ok = DummyResponse(status_code=200, payload={"ok": True}, headers={"Link": '<next>; rel="next"'})
+    response_ok = DummyResponse(
+        status_code=200, payload={"ok": True}, headers={"Link": '<next>; rel="next"'}
+    )
     service.execute_request = AsyncMock(side_effect=[response_401, response_ok])
     monkeypatch.setattr(service, "_has_token_expired", lambda status: status == 401)
-    monkeypatch.setattr(service, "get_latest_token", AsyncMock(return_value=SecretStr("fresh")))
+    monkeypatch.setattr(
+        service, "get_latest_token", AsyncMock(return_value=SecretStr("fresh"))
+    )
 
     payload, headers = await service._make_request("https://example.com/api")
 
@@ -92,32 +107,42 @@ async def test_github_make_request_refreshes_and_preserves_link(monkeypatch: pyt
 
 
 @pytest.mark.asyncio
-async def test_github_make_request_handles_http_status_error(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_make_request_handles_http_status_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     request = httpx.Request("GET", "https://example.com")
     response = httpx.Response(status_code=401, request=request)
     error = httpx.HTTPStatusError("unauthorized", request=request, response=response)
     service.execute_request = AsyncMock(side_effect=error)
-    monkeypatch.setattr(service, "handle_http_status_error", lambda exc: RuntimeError("status"))
+    monkeypatch.setattr(
+        service, "handle_http_status_error", lambda exc: RuntimeError("status")
+    )
 
     with pytest.raises(RuntimeError):
         await service._make_request("https://example.com")
 
 
 @pytest.mark.asyncio
-async def test_github_make_request_handles_http_error(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_make_request_handles_http_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     request = httpx.Request("GET", "https://example.com")
     error = httpx.HTTPError("network")
     service.execute_request = AsyncMock(side_effect=error)
-    monkeypatch.setattr(service, "handle_http_error", lambda exc: RuntimeError("http-error"))
+    monkeypatch.setattr(
+        service, "handle_http_error", lambda exc: RuntimeError("http-error")
+    )
 
     with pytest.raises(RuntimeError):
         await service._make_request("https://example.com")
 
 
 @pytest.mark.asyncio
-async def test_github_execute_graphql_query_success(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_execute_graphql_query_success(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
 
     class GraphQLClient:
@@ -144,7 +169,9 @@ async def test_github_execute_graphql_query_success(monkeypatch: pytest.MonkeyPa
 
 
 @pytest.mark.asyncio
-async def test_github_execute_graphql_query_raises_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_execute_graphql_query_raises_unknown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
 
     class ErrorClient:
@@ -164,7 +191,9 @@ async def test_github_execute_graphql_query_raises_unknown(monkeypatch: pytest.M
 
 
 @pytest.mark.asyncio
-async def test_github_execute_graphql_query_handles_http_status_error(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_execute_graphql_query_handles_http_status_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
 
     class ErrorClient:
@@ -179,7 +208,9 @@ async def test_github_execute_graphql_query_handles_http_status_error(monkeypatc
             response = httpx.Response(status_code=500, request=request)
             raise httpx.HTTPStatusError("server", request=request, response=response)
 
-    monkeypatch.setattr(service, "handle_http_status_error", lambda exc: RuntimeError("graphql-status"))
+    monkeypatch.setattr(
+        service, "handle_http_status_error", lambda exc: RuntimeError("graphql-status")
+    )
     monkeypatch.setattr(httpx, "AsyncClient", ErrorClient)
 
     with pytest.raises(RuntimeError):
@@ -187,7 +218,9 @@ async def test_github_execute_graphql_query_handles_http_status_error(monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_github_execute_graphql_query_handles_http_error(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_execute_graphql_query_handles_http_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
 
     class ErrorClient:
@@ -201,7 +234,9 @@ async def test_github_execute_graphql_query_handles_http_error(monkeypatch: pyte
             request = httpx.Request("POST", "https://api.github.com/graphql")
             raise httpx.HTTPError("network")
 
-    monkeypatch.setattr(service, "handle_http_error", lambda exc: RuntimeError("graphql-http-error"))
+    monkeypatch.setattr(
+        service, "handle_http_error", lambda exc: RuntimeError("graphql-http-error")
+    )
     monkeypatch.setattr(httpx, "AsyncClient", ErrorClient)
 
     with pytest.raises(RuntimeError):
@@ -238,13 +273,25 @@ async def test_github_get_branches_paginates(monkeypatch: pytest.MonkeyPatch) ->
     service = GitHubService(token=SecretStr("token"))
     page1 = (
         [
-            {"name": "main", "commit": {"sha": "a", "commit": {"committer": {"date": "2024-01-01T00:00:00Z"}}}},
+            {
+                "name": "main",
+                "commit": {
+                    "sha": "a",
+                    "commit": {"committer": {"date": "2024-01-01T00:00:00Z"}},
+                },
+            },
         ],
         {"Link": '<next>; rel="next"'},
     )
     page2 = (
         [
-            {"name": "dev", "commit": {"sha": "b", "commit": {"committer": {"date": "2024-02-01T00:00:00Z"}}}},
+            {
+                "name": "dev",
+                "commit": {
+                    "sha": "b",
+                    "commit": {"committer": {"date": "2024-02-01T00:00:00Z"}},
+                },
+            },
         ],
         {},
     )
@@ -257,7 +304,9 @@ async def test_github_get_branches_paginates(monkeypatch: pytest.MonkeyPatch) ->
 
 
 @pytest.mark.asyncio
-async def test_github_get_branches_handles_empty_response(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_get_branches_handles_empty_response(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     service._make_request = AsyncMock(return_value=([], {}))
 
@@ -268,11 +317,19 @@ async def test_github_get_branches_handles_empty_response(monkeypatch: pytest.Mo
 
 
 @pytest.mark.asyncio
-async def test_github_get_paginated_branches_sets_next(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_get_paginated_branches_sets_next(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     response = (
         [
-            {"name": "main", "commit": {"sha": "a", "commit": {"committer": {"date": "2024-01-01T00:00:00Z"}}}},
+            {
+                "name": "main",
+                "commit": {
+                    "sha": "a",
+                    "commit": {"committer": {"date": "2024-01-01T00:00:00Z"}},
+                },
+            },
         ],
         {"Link": '<next>; rel="next"'},
     )
@@ -286,7 +343,9 @@ async def test_github_get_paginated_branches_sets_next(monkeypatch: pytest.Monke
 
 
 @pytest.mark.asyncio
-async def test_github_search_branches_processes_nodes(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_search_branches_processes_nodes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     graph_response = {
         "data": {
@@ -295,7 +354,11 @@ async def test_github_search_branches_processes_nodes(monkeypatch: pytest.Monkey
                     "nodes": [
                         {
                             "name": "feature",
-                            "target": {"__typename": "Commit", "oid": "abc", "committedDate": "2024-01-05T00:00:00Z"},
+                            "target": {
+                                "__typename": "Commit",
+                                "oid": "abc",
+                                "committedDate": "2024-01-05T00:00:00Z",
+                            },
                             "branchProtectionRule": {},
                         }
                     ]
@@ -303,7 +366,9 @@ async def test_github_search_branches_processes_nodes(monkeypatch: pytest.Monkey
             }
         }
     }
-    monkeypatch.setattr(service, "execute_graphql_query", AsyncMock(return_value=graph_response))
+    monkeypatch.setattr(
+        service, "execute_graphql_query", AsyncMock(return_value=graph_response)
+    )
 
     branches = await service.search_branches("owner/repo", "feat", per_page=10)
 
@@ -313,7 +378,9 @@ async def test_github_search_branches_processes_nodes(monkeypatch: pytest.Monkey
 
 
 @pytest.mark.asyncio
-async def test_github_search_branches_invalid_returns_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_search_branches_invalid_returns_empty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
 
     result = await service.search_branches("invalid", "", per_page=10)
@@ -322,9 +389,13 @@ async def test_github_search_branches_invalid_returns_empty(monkeypatch: pytest.
 
 
 @pytest.mark.asyncio
-async def test_github_execute_branch_search_query_handles_error(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_execute_branch_search_query_handles_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
-    monkeypatch.setattr(service, "execute_graphql_query", AsyncMock(side_effect=RuntimeError("boom")))
+    monkeypatch.setattr(
+        service, "execute_graphql_query", AsyncMock(side_effect=RuntimeError("boom"))
+    )
 
     result = await service._execute_branch_search_query("owner", "repo", "feat", 10)
 
@@ -332,7 +403,9 @@ async def test_github_execute_branch_search_query_handles_error(monkeypatch: pyt
 
 
 @pytest.mark.asyncio
-async def test_github_search_branches_missing_refs(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_search_branches_missing_refs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     monkeypatch.setattr(
         service,
@@ -346,7 +419,9 @@ async def test_github_search_branches_missing_refs(monkeypatch: pytest.MonkeyPat
 
 
 @pytest.mark.asyncio
-async def test_github_search_branches_missing_refs_nodes(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_search_branches_missing_refs_nodes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     monkeypatch.setattr(
         service,
@@ -360,9 +435,13 @@ async def test_github_search_branches_missing_refs_nodes(monkeypatch: pytest.Mon
 
 
 @pytest.mark.asyncio
-async def test_github_search_branches_returns_empty_when_query_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_search_branches_returns_empty_when_query_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
-    monkeypatch.setattr(service, "_execute_branch_search_query", AsyncMock(return_value=None))
+    monkeypatch.setattr(
+        service, "_execute_branch_search_query", AsyncMock(return_value=None)
+    )
 
     branches = await service.search_branches("owner/repo", "feature")
 
@@ -370,7 +449,9 @@ async def test_github_search_branches_returns_empty_when_query_fails(monkeypatch
 
 
 @pytest.mark.asyncio
-async def test_github_search_branches_missing_repo_parts(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_search_branches_missing_repo_parts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
 
     branches = await service.search_branches("invalid", "feat")
@@ -378,14 +459,21 @@ async def test_github_search_branches_missing_repo_parts(monkeypatch: pytest.Mon
     assert branches == []
 
 
-def _make_pr(state: str = "OPEN", mergeable: str = "MERGEABLE", status_state: str | None = None, review_state: str | None = None) -> dict:
+def _make_pr(
+    state: str = "OPEN",
+    mergeable: str = "MERGEABLE",
+    status_state: str | None = None,
+    review_state: str | None = None,
+) -> dict:
     pr = {
         "state": state,
         "mergeable": mergeable,
         "repository": {"nameWithOwner": "owner/repo"},
         "number": 1,
         "title": "PR Title",
-        "commits": {"nodes": [{"commit": {"statusCheckRollup": {"state": status_state}}}]},
+        "commits": {
+            "nodes": [{"commit": {"statusCheckRollup": {"state": status_state}}}]
+        },
         "reviews": {"nodes": []},
     }
     if review_state:
@@ -395,19 +483,29 @@ def _make_pr(state: str = "OPEN", mergeable: str = "MERGEABLE", status_state: st
 
 def test_github_determine_pr_task_type() -> None:
     service = GitHubService(token=SecretStr("token"))
-    assert service._determine_pr_task_type(_make_pr(mergeable="CONFLICTING")) == TaskType.MERGE_CONFLICTS
     assert (
-        service._determine_pr_task_type(_make_pr(status_state="FAILURE", mergeable="MERGEABLE")) == TaskType.FAILING_CHECKS
+        service._determine_pr_task_type(_make_pr(mergeable="CONFLICTING"))
+        == TaskType.MERGE_CONFLICTS
     )
     assert (
-        service._determine_pr_task_type(_make_pr(review_state="CHANGES_REQUESTED", mergeable="MERGEABLE"))
+        service._determine_pr_task_type(
+            _make_pr(status_state="FAILURE", mergeable="MERGEABLE")
+        )
+        == TaskType.FAILING_CHECKS
+    )
+    assert (
+        service._determine_pr_task_type(
+            _make_pr(review_state="CHANGES_REQUESTED", mergeable="MERGEABLE")
+        )
         == TaskType.UNRESOLVED_COMMENTS
     )
     assert service._determine_pr_task_type(_make_pr()) == TaskType.OPEN_PR
 
 
 @pytest.mark.asyncio
-async def test_github_process_pull_requests_creates_tasks(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_process_pull_requests_creates_tasks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     monkeypatch.setattr(
         service,
@@ -440,7 +538,9 @@ async def test_github_process_pull_requests_creates_tasks(monkeypatch: pytest.Mo
 
 
 @pytest.mark.asyncio
-async def test_github_process_issues_creates_tasks(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_process_issues_creates_tasks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     monkeypatch.setattr(
         service,
@@ -471,9 +571,13 @@ async def test_github_process_issues_creates_tasks(monkeypatch: pytest.MonkeyPat
 
 
 @pytest.mark.asyncio
-async def test_github_process_pull_requests_logs_on_error(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_process_pull_requests_logs_on_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
-    monkeypatch.setattr(service, "execute_graphql_query", AsyncMock(side_effect=RuntimeError("fail")))
+    monkeypatch.setattr(
+        service, "execute_graphql_query", AsyncMock(side_effect=RuntimeError("fail"))
+    )
     logged: list[str] = []
     monkeypatch.setattr(
         "forge.integrations.github.service.features.logger.info",
@@ -487,9 +591,13 @@ async def test_github_process_pull_requests_logs_on_error(monkeypatch: pytest.Mo
 
 
 @pytest.mark.asyncio
-async def test_github_process_issues_logs_on_error(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_process_issues_logs_on_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
-    monkeypatch.setattr(service, "execute_graphql_query", AsyncMock(side_effect=RuntimeError("fail")))
+    monkeypatch.setattr(
+        service, "execute_graphql_query", AsyncMock(side_effect=RuntimeError("fail"))
+    )
     logged: list[str] = []
     monkeypatch.setattr(
         "forge.integrations.github.service.features.logger.info",
@@ -505,8 +613,14 @@ async def test_github_process_issues_logs_on_error(monkeypatch: pytest.MonkeyPat
 @pytest.mark.asyncio
 async def test_github_microagent_helper_methods() -> None:
     service = GitHubService(token=SecretStr("token"))
-    assert await service._get_cursorrules_url("owner/repo") == "https://api.github.com/repos/owner/repo/contents/.cursorrules"
-    assert await service._get_microagents_directory_url("owner/repo", ".Forge") == "https://api.github.com/repos/owner/repo/contents/.Forge"
+    assert (
+        await service._get_cursorrules_url("owner/repo")
+        == "https://api.github.com/repos/owner/repo/contents/.cursorrules"
+    )
+    assert (
+        await service._get_microagents_directory_url("owner/repo", ".Forge")
+        == "https://api.github.com/repos/owner/repo/contents/.Forge"
+    )
     item = {"type": "file", "name": "agent.md"}
     assert service._is_valid_microagent_file(item) is True
     assert service._get_file_name_from_item(item) == "agent.md"
@@ -515,9 +629,13 @@ async def test_github_microagent_helper_methods() -> None:
 
 
 @pytest.mark.asyncio
-async def test_github_get_suggested_tasks_combines(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_get_suggested_tasks_combines(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
-    monkeypatch.setattr(service, "get_user", AsyncMock(return_value=SimpleNamespace(login="me")))
+    monkeypatch.setattr(
+        service, "get_user", AsyncMock(return_value=SimpleNamespace(login="me"))
+    )
     monkeypatch.setattr(
         service,
         "execute_graphql_query",
@@ -525,7 +643,11 @@ async def test_github_get_suggested_tasks_combines(monkeypatch: pytest.MonkeyPat
             side_effect=[
                 {
                     "data": {
-                        "user": {"pullRequests": {"nodes": [_make_pr(mergeable="CONFLICTING")]}}
+                        "user": {
+                            "pullRequests": {
+                                "nodes": [_make_pr(mergeable="CONFLICTING")]
+                            }
+                        }
                     }
                 },
                 {
@@ -550,15 +672,24 @@ async def test_github_get_suggested_tasks_combines(monkeypatch: pytest.MonkeyPat
     tasks = await service.get_suggested_tasks()
 
     assert len(tasks) == 2
-    assert {task.task_type for task in tasks} == {TaskType.MERGE_CONFLICTS, TaskType.OPEN_ISSUE}
+    assert {task.task_type for task in tasks} == {
+        TaskType.MERGE_CONFLICTS,
+        TaskType.OPEN_ISSUE,
+    }
 
 
 @pytest.mark.asyncio
-async def test_github_get_microagent_content_decodes(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_get_microagent_content_decodes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     encoded = base64.b64encode(b"# Title").decode("utf-8")
     service._make_request = AsyncMock(return_value=({"content": encoded}, {}))
-    monkeypatch.setattr(service, "_parse_microagent_content", lambda content, path: {"content": content, "path": path})
+    monkeypatch.setattr(
+        service,
+        "_parse_microagent_content",
+        lambda content, path: {"content": content, "path": path},
+    )
 
     result = await service.get_microagent_content("owner/repo", "microagents/file.md")
 
@@ -567,13 +698,20 @@ async def test_github_get_microagent_content_decodes(monkeypatch: pytest.MonkeyP
 
 
 @pytest.mark.asyncio
-async def test_github_fetch_paginated_repos_respects_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_fetch_paginated_repos_respects_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
-    response1 = ({"repositories": [{"id": 1}, {"id": 2}]}, {"Link": '<next>; rel="next"'})
+    response1 = (
+        {"repositories": [{"id": 1}, {"id": 2}]},
+        {"Link": '<next>; rel="next"'},
+    )
     response2 = ({"repositories": [{"id": 3}]}, {})
     service._make_request = AsyncMock(side_effect=[response1, response2])
 
-    repos = await service._fetch_paginated_repos("url", {}, max_repos=2, extract_key="repositories")
+    repos = await service._fetch_paginated_repos(
+        "url", {}, max_repos=2, extract_key="repositories"
+    )
 
     assert len(repos) == 2
     service._make_request.assert_awaited()
@@ -601,7 +739,9 @@ def test_github_parse_repository() -> None:
 @pytest.mark.asyncio
 async def test_github_get_installations_returns_string_ids() -> None:
     service = GitHubService(token=SecretStr("token"))
-    service._make_request = AsyncMock(return_value=({"installations": [{"id": 1}, {"id": 2}]}, {}))
+    service._make_request = AsyncMock(
+        return_value=({"installations": [{"id": 1}, {"id": 2}]}, {})
+    )
 
     ids = await service.get_installations()
 
@@ -609,29 +749,54 @@ async def test_github_get_installations_returns_string_ids() -> None:
 
 
 @pytest.mark.asyncio
-async def test_github_get_paginated_repos_installation(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_get_paginated_repos_installation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     service._make_request = AsyncMock(
         return_value=(
-            {"repositories": [{"id": 1, "full_name": "owner/repo", "private": False, "owner": {"type": "User"}}]},
+            {
+                "repositories": [
+                    {
+                        "id": 1,
+                        "full_name": "owner/repo",
+                        "private": False,
+                        "owner": {"type": "User"},
+                    }
+                ]
+            },
             {"Link": ""},
         )
     )
 
-    repos = await service.get_paginated_repos(page=1, per_page=30, sort="pushed", installation_id="42")
+    repos = await service.get_paginated_repos(
+        page=1, per_page=30, sort="pushed", installation_id="42"
+    )
 
     assert repos[0].full_name == "owner/repo"
     service._make_request.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_github_get_all_repositories_saas(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_get_all_repositories_saas(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     monkeypatch.setattr(service, "get_installations", AsyncMock(return_value=["1"]))
     monkeypatch.setattr(
         service,
         "_fetch_paginated_repos",
-        AsyncMock(return_value=[{"id": 1, "full_name": "owner/repo", "private": False, "owner": {"type": "User"}, "pushed_at": "2024-01-01T00:00:00Z"}]),
+        AsyncMock(
+            return_value=[
+                {
+                    "id": 1,
+                    "full_name": "owner/repo",
+                    "private": False,
+                    "owner": {"type": "User"},
+                    "pushed_at": "2024-01-01T00:00:00Z",
+                }
+            ]
+        ),
     )
 
     repos = await service.get_all_repositories("pushed", AppMode.SAAS)
@@ -641,12 +806,23 @@ async def test_github_get_all_repositories_saas(monkeypatch: pytest.MonkeyPatch)
 
 
 @pytest.mark.asyncio
-async def test_github_get_all_repositories_user(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_get_all_repositories_user(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     monkeypatch.setattr(
         service,
         "_fetch_paginated_repos",
-        AsyncMock(return_value=[{"id": 2, "full_name": "owner/repo2", "private": True, "owner": {"type": "User"}}]),
+        AsyncMock(
+            return_value=[
+                {
+                    "id": 2,
+                    "full_name": "owner/repo2",
+                    "private": True,
+                    "owner": {"type": "User"},
+                }
+            ]
+        ),
     )
 
     repos = await service.get_all_repositories("updated", AppMode.OSS)
@@ -655,16 +831,27 @@ async def test_github_get_all_repositories_user(monkeypatch: pytest.MonkeyPatch)
 
 
 @pytest.mark.asyncio
-async def test_github_get_paginated_repos_without_installation(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_get_paginated_repos_without_installation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     service._make_request = AsyncMock(
         return_value=(
-            [{"id": 3, "full_name": "owner/repo3", "private": False, "owner": {"type": "Organization"}}],
+            [
+                {
+                    "id": 3,
+                    "full_name": "owner/repo3",
+                    "private": False,
+                    "owner": {"type": "Organization"},
+                }
+            ],
             {"Link": '<next>; rel="next"'},
         )
     )
 
-    repos = await service.get_paginated_repos(page=2, per_page=20, sort="updated", installation_id=None)
+    repos = await service.get_paginated_repos(
+        page=2, per_page=20, sort="updated", installation_id=None
+    )
 
     service._make_request.assert_awaited_once()
     called_url, called_params = service._make_request.call_args.args
@@ -678,7 +865,9 @@ async def test_github_fetch_paginated_repos_breaks_on_empty() -> None:
     service = GitHubService(token=SecretStr("token"))
     service._make_request = AsyncMock(return_value=({}, {}))
 
-    repos = await service._fetch_paginated_repos("url", {}, max_repos=5, extract_key="repositories")
+    repos = await service._fetch_paginated_repos(
+        "url", {}, max_repos=5, extract_key="repositories"
+    )
 
     assert repos == []
 
@@ -695,7 +884,9 @@ async def test_github_fetch_paginated_repos_no_next_link() -> None:
 
 
 @pytest.mark.asyncio
-async def test_github_get_all_repositories_sorts_pushed(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_get_all_repositories_sorts_pushed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     monkeypatch.setattr(service, "get_installations", AsyncMock(return_value=["1"]))
     monkeypatch.setattr(
@@ -703,8 +894,20 @@ async def test_github_get_all_repositories_sorts_pushed(monkeypatch: pytest.Monk
         "_fetch_paginated_repos",
         AsyncMock(
             return_value=[
-                {"id": 1, "full_name": "owner/old", "private": False, "owner": {"type": "User"}, "pushed_at": "2023-01-01T00:00:00Z"},
-                {"id": 2, "full_name": "owner/new", "private": False, "owner": {"type": "User"}, "pushed_at": "2024-01-01T00:00:00Z"},
+                {
+                    "id": 1,
+                    "full_name": "owner/old",
+                    "private": False,
+                    "owner": {"type": "User"},
+                    "pushed_at": "2023-01-01T00:00:00Z",
+                },
+                {
+                    "id": 2,
+                    "full_name": "owner/new",
+                    "private": False,
+                    "owner": {"type": "User"},
+                    "pushed_at": "2024-01-01T00:00:00Z",
+                },
             ]
         ),
     )
@@ -715,14 +918,27 @@ async def test_github_get_all_repositories_sorts_pushed(monkeypatch: pytest.Monk
 
 
 @pytest.mark.asyncio
-async def test_github_get_all_repositories_stops_at_max(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_get_all_repositories_stops_at_max(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     large_payload = [
-        {"id": str(i), "full_name": f"owner/repo{i}", "private": False, "owner": {"type": "User"}}
+        {
+            "id": str(i),
+            "full_name": f"owner/repo{i}",
+            "private": False,
+            "owner": {"type": "User"},
+        }
         for i in range(1000)
     ]
-    monkeypatch.setattr(service, "get_installations", AsyncMock(return_value=["1", "2"]))
-    monkeypatch.setattr(service, "_fetch_paginated_repos", AsyncMock(side_effect=[large_payload, [{"id": "extra"}]]))
+    monkeypatch.setattr(
+        service, "get_installations", AsyncMock(return_value=["1", "2"])
+    )
+    monkeypatch.setattr(
+        service,
+        "_fetch_paginated_repos",
+        AsyncMock(side_effect=[large_payload, [{"id": "extra"}]]),
+    )
 
     repos = await service.get_all_repositories("updated", AppMode.SAAS)
 
@@ -731,7 +947,9 @@ async def test_github_get_all_repositories_stops_at_max(monkeypatch: pytest.Monk
 
 
 @pytest.mark.asyncio
-async def test_github_get_user_organizations_handles_error(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_get_user_organizations_handles_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     service._make_request = AsyncMock(side_effect=RuntimeError("boom"))
 
@@ -741,7 +959,9 @@ async def test_github_get_user_organizations_handles_error(monkeypatch: pytest.M
 
 
 @pytest.mark.asyncio
-async def test_github_get_user_organizations_success(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_get_user_organizations_success(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     service._make_request = AsyncMock(return_value=([{"login": "org"}], {}))
 
@@ -758,7 +978,9 @@ def test_github_fuzzy_match_org_name() -> None:
 
 def test_github_build_public_search_params() -> None:
     service = GitHubService(token=SecretStr("token"))
-    params, is_public = service._build_public_search_params("https://github.com/org/repo", {})
+    params, is_public = service._build_public_search_params(
+        "https://github.com/org/repo", {}
+    )
     assert is_public is True
     assert "org/repo" in params["q"]
 
@@ -773,7 +995,9 @@ def test_github_build_public_search_params_invalid() -> None:
 @pytest.mark.asyncio
 async def test_github_search_user_repositories(monkeypatch: pytest.MonkeyPatch) -> None:
     service = GitHubService(token=SecretStr("token"))
-    service._make_request = AsyncMock(return_value=({"items": [{"full_name": "owner/repo"}]}, {}))
+    service._make_request = AsyncMock(
+        return_value=({"items": [{"full_name": "owner/repo"}]}, {})
+    )
     user = SimpleNamespace(login="octocat")
 
     results = await service._search_user_repositories("url", "repo", {}, user)
@@ -783,29 +1007,43 @@ async def test_github_search_user_repositories(monkeypatch: pytest.MonkeyPatch) 
 
 
 @pytest.mark.asyncio
-async def test_github_search_user_repositories_handles_exception(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_search_user_repositories_handles_exception(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     service._make_request = AsyncMock(side_effect=RuntimeError("fail"))
 
-    results = await service._search_user_repositories("url", "repo", {}, SimpleNamespace(login="me"))
+    results = await service._search_user_repositories(
+        "url", "repo", {}, SimpleNamespace(login="me")
+    )
 
     assert results == []
 
 
 @pytest.mark.asyncio
-async def test_github_search_organization_repositories_handles_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_search_organization_repositories_handles_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
-    service._make_request = AsyncMock(side_effect=[({"items": [{"full_name": "org/repo"}]}, {}), RuntimeError("boom")])
+    service._make_request = AsyncMock(
+        side_effect=[({"items": [{"full_name": "org/repo"}]}, {}), RuntimeError("boom")]
+    )
 
-    results = await service._search_organization_repositories("url", "repo", {}, ["org1", "org2"])
+    results = await service._search_organization_repositories(
+        "url", "repo", {}, ["org1", "org2"]
+    )
 
     assert {"full_name": "org/repo"} in results
 
 
 @pytest.mark.asyncio
-async def test_github_search_fuzzy_matched_orgs(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_search_fuzzy_matched_orgs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
-    service._make_request = AsyncMock(return_value=({"items": [{"full_name": "org/repo"}]}, {}))
+    service._make_request = AsyncMock(
+        return_value=({"items": [{"full_name": "org/repo"}]}, {})
+    )
 
     repos = await service._search_fuzzy_matched_orgs("url", "org", {}, ["org"])
 
@@ -813,7 +1051,9 @@ async def test_github_search_fuzzy_matched_orgs(monkeypatch: pytest.MonkeyPatch)
 
 
 @pytest.mark.asyncio
-async def test_github_search_fuzzy_matched_orgs_handles_exception(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_search_fuzzy_matched_orgs_handles_exception(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     service._make_request = AsyncMock(side_effect=RuntimeError("fail"))
     monkeypatch.setattr(service, "_fuzzy_match_org_name", lambda query, org: True)
@@ -830,55 +1070,102 @@ async def test_github_search_fuzzy_matched_orgs_handles_exception(monkeypatch: p
 
 
 @pytest.mark.asyncio
-async def test_github_search_repositories_public_invalid_returns_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_search_repositories_public_invalid_returns_empty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
 
-    repos = await service.search_repositories("invalid", per_page=5, sort="stars", order="desc", public=True)
+    repos = await service.search_repositories(
+        "invalid", per_page=5, sort="stars", order="desc", public=True
+    )
 
     assert repos == []
 
 
 @pytest.mark.asyncio
-async def test_github_search_repositories_public_success(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_search_repositories_public_success(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
-    service._make_request = AsyncMock(return_value=({"items": [{"id": 1, "full_name": "owner/repo"}]}, {}))
+    service._make_request = AsyncMock(
+        return_value=({"items": [{"id": 1, "full_name": "owner/repo"}]}, {})
+    )
 
-    repos = await service.search_repositories("https://github.com/org/repo", per_page=5, sort="stars", order="desc", public=True)
+    repos = await service.search_repositories(
+        "https://github.com/org/repo",
+        per_page=5,
+        sort="stars",
+        order="desc",
+        public=True,
+    )
 
     assert repos[0].full_name == "owner/repo"
 
 
 @pytest.mark.asyncio
-async def test_github_search_repositories_with_slash(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_search_repositories_with_slash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
-    service._make_request = AsyncMock(return_value=({"items": [{"id": 1, "full_name": "owner/repo"}]}, {}))
+    service._make_request = AsyncMock(
+        return_value=({"items": [{"id": 1, "full_name": "owner/repo"}]}, {})
+    )
 
-    repos = await service.search_repositories("owner/repo", per_page=5, sort="updated", order="desc", public=False)
+    repos = await service.search_repositories(
+        "owner/repo", per_page=5, sort="updated", order="desc", public=False
+    )
 
     service._make_request.assert_awaited_once()
     assert repos[0].full_name == "owner/repo"
 
 
 @pytest.mark.asyncio
-async def test_github_search_repositories_combines_sources(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_search_repositories_combines_sources(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
-    monkeypatch.setattr(service, "get_user", AsyncMock(return_value=SimpleNamespace(login="me")))
-    monkeypatch.setattr(service, "get_user_organizations", AsyncMock(return_value=["org"]))
-    monkeypatch.setattr(service, "_search_user_repositories", AsyncMock(return_value=[{"id": 1, "full_name": "me/repo"}]))
-    monkeypatch.setattr(service, "_search_organization_repositories", AsyncMock(return_value=[{"id": 2, "full_name": "org/repo"}]))
-    monkeypatch.setattr(service, "_search_fuzzy_matched_orgs", AsyncMock(return_value=[{"id": 3, "full_name": "fuzzy/repo"}]))
+    monkeypatch.setattr(
+        service, "get_user", AsyncMock(return_value=SimpleNamespace(login="me"))
+    )
+    monkeypatch.setattr(
+        service, "get_user_organizations", AsyncMock(return_value=["org"])
+    )
+    monkeypatch.setattr(
+        service,
+        "_search_user_repositories",
+        AsyncMock(return_value=[{"id": 1, "full_name": "me/repo"}]),
+    )
+    monkeypatch.setattr(
+        service,
+        "_search_organization_repositories",
+        AsyncMock(return_value=[{"id": 2, "full_name": "org/repo"}]),
+    )
+    monkeypatch.setattr(
+        service,
+        "_search_fuzzy_matched_orgs",
+        AsyncMock(return_value=[{"id": 3, "full_name": "fuzzy/repo"}]),
+    )
 
-    repos = await service.search_repositories("repo", per_page=5, sort="stars", order="desc", public=False)
+    repos = await service.search_repositories(
+        "repo", per_page=5, sort="stars", order="desc", public=False
+    )
 
     assert [repo.full_name for repo in repos] == ["me/repo", "org/repo", "fuzzy/repo"]
 
 
 @pytest.mark.asyncio
-async def test_github_get_repository_details_from_repo_name(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_get_repository_details_from_repo_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
     service._make_request = AsyncMock(
         return_value=(
-            {"id": 1, "full_name": "owner/repo", "private": False, "owner": {"type": "User"}},
+            {
+                "id": 1,
+                "full_name": "owner/repo",
+                "private": False,
+                "owner": {"type": "User"},
+            },
             {},
         )
     )
@@ -886,4 +1173,3 @@ async def test_github_get_repository_details_from_repo_name(monkeypatch: pytest.
     repo = await service.get_repository_details_from_repo_name("owner/repo")
 
     assert repo.full_name == "owner/repo"
-

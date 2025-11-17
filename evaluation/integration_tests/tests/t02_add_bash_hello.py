@@ -19,11 +19,19 @@ class Test(BaseIntegrationTest):
         action = CmdRunAction(command="cat /workspace/hello.sh")
         obs = runtime.run_action(action)
         if obs.exit_code != 0:
-            return TestResult(success=False, reason=f"Failed to cat /workspace/hello.sh: {obs.content}.")
+            return TestResult(
+                success=False,
+                reason=f"Failed to cat /workspace/hello.sh: {obs.content}.",
+            )
         action = CmdRunAction(command="bash /workspace/hello.sh")
         obs = runtime.run_action(action)
         if obs.exit_code != 0:
-            return TestResult(success=False, reason=f"Failed to execute /workspace/hello.sh: {obs.content}.")
+            return TestResult(
+                success=False,
+                reason=f"Failed to execute /workspace/hello.sh: {obs.content}.",
+            )
         if obs.content.strip() != "hello":
-            return TestResult(success=False, reason=f'Script did not print "hello": {obs.content}.')
+            return TestResult(
+                success=False, reason=f'Script did not print "hello": {obs.content}.'
+            )
         return TestResult(success=True)

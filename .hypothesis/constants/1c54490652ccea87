@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\core\config\forge_config.py
+# hypothesis_version: 6.147.0
+
+[864000, '.*', '/tmp/cache', 'Forge@all-hands.dev', 'agent', 'docker', 'forbid', 'forge', 'llm', 'local', 'simple', '~/.Forge']

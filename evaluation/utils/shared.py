@@ -56,7 +56,9 @@ class EvalOutput(BaseModel):
     test_result: dict[str, Any]
     instruction: str | None = None
     metadata: EvalMetadata | None = None
-    history: list[dict[str, Any]] | list[tuple[dict[str, Any], dict[str, Any]]] | None = None
+    history: (
+        list[dict[str, Any]] | list[tuple[dict[str, Any], dict[str, Any]]] | None
+    ) = None
     metrics: dict[str, Any] | None = None
     error: str | None = None
     instance: dict[str, Any] | None = None
@@ -106,12 +108,16 @@ def _build_base_message(encapsulate_solution: bool) -> str:
     return f"Please continue working on the task on whatever approach you think is suitable.\nWhen you think you have solved the question, please use the finish tool and include your final answer in the message parameter of the finish tool.\n{encaps_str}IMPORTANT: YOU SHOULD NEVER ASK FOR HUMAN HELP.\n"
 
 
-def _check_for_parsed_answer(state: State, try_parse: Callable[[Action], str] | None) -> bool:
+def _check_for_parsed_answer(
+    state: State, try_parse: Callable[[Action], str] | None
+) -> bool:
     """Check if there's a parsed answer from the last action."""
     if try_parse is None:
         return False
 
-    last_action = next((event for event in reversed(state.history) if isinstance(event, Action)), None)
+    last_action = next(
+        (event for event in reversed(state.history) if isinstance(event, Action)), None
+    )
     if last_action is None:
         return False
 
@@ -124,12 +130,18 @@ def _should_add_give_up_message(state: State) -> bool:
     if not state.history:
         return False
 
-    user_msgs = [event for event in state.history if isinstance(event, MessageAction) and event.source == "user"]
+    user_msgs = [
+        event
+        for event in state.history
+        if isinstance(event, MessageAction) and event.source == "user"
+    ]
     return len(user_msgs) >= 2
 
 
 def codeact_user_response(
-    state: State, encapsulate_solution: bool = False, try_parse: Callable[[Action], str] | None = None
+    state: State,
+    encapsulate_solution: bool = False,
+    try_parse: Callable[[Action], str] | None = None,
 ) -> str:
     msg = _build_base_message(encapsulate_solution)
 
@@ -138,7 +150,10 @@ def codeact_user_response(
             return "/exit"
 
         if _should_add_give_up_message(state):
-            return msg + 'If you want to give up, use the "finish" tool to finish the interaction.\n'
+            return (
+                msg
+                + 'If you want to give up, use the "finish" tool to finish the interaction.\n'
+            )
 
     return msg
 
@@ -168,10 +183,15 @@ def make_metadata(
     model_path = model_name.replace(":", "_").replace("@", "-")
     eval_note = f"_N_{eval_note}" if eval_note else ""
     eval_output_path = os.path.join(
-        eval_output_dir, dataset_name, agent_class, f"{model_path}_maxiter_{max_iterations}{eval_note}"
+        eval_output_dir,
+        dataset_name,
+        agent_class,
+        f"{model_path}_maxiter_{max_iterations}{eval_note}",
     )
     pathlib.Path(eval_output_path).mkdir(parents=True, exist_ok=True)
-    pathlib.Path(os.path.join(eval_output_path, "logs")).mkdir(parents=True, exist_ok=True)
+    pathlib.Path(os.path.join(eval_output_path, "logs")).mkdir(
+        parents=True, exist_ok=True
+    )
     logger.info("Using evaluation output directory: %s", eval_output_path)
     metadata = EvalMetadata(
         agent_class=agent_class,
@@ -180,7 +200,9 @@ def make_metadata(
         max_iterations=max_iterations,
         eval_output_dir=eval_output_path,
         start_time=time.strftime("%Y-%m-%d %H:%M:%S"),
-        git_commit=subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("utf-8").strip(),
+        git_commit=subprocess.check_output(["git", "rev-parse", "HEAD"])
+        .decode("utf-8")
+        .strip(),
         dataset=dataset_name,
         data_split=data_split,
         details=details,
@@ -201,17 +223,23 @@ def prepare_dataset(
     eval_ids: list[str] | None = None,
     skip_num: int | None = None,
 ):
-    assert (
-        "instance_id" in dataset.columns
-    ), "Expected 'instance_id' column in the dataset. You should define your own unique identifier for each instance and use it as the 'instance_id' column."
+    assert "instance_id" in dataset.columns, (
+        "Expected 'instance_id' column in the dataset. You should define your own unique identifier for each instance and use it as the 'instance_id' column."
+    )
     id_column = "instance_id"
     logger.info("Writing evaluation output to %s", output_file)
 
     finished_ids = _load_finished_instances(output_file, id_column)
-    dataset = _filter_dataset_by_criteria(dataset, eval_ids, skip_num, eval_n_limit, id_column)
+    dataset = _filter_dataset_by_criteria(
+        dataset, eval_ids, skip_num, eval_n_limit, id_column
+    )
     new_dataset = _create_serializable_dataset(dataset, finished_ids, id_column)
 
-    logger.info("Finished instances: %s, Remaining instances: %s", len(finished_ids), len(new_dataset))
+    logger.info(
+        "Finished instances: %s, Remaining instances: %s",
+        len(finished_ids),
+        len(new_dataset),
+    )
     return pd.DataFrame(new_dataset)
 
 
@@ -219,16 +247,24 @@ def _load_finished_instances(output_file: str, id_column: str) -> set[str]:
     """Load finished instance IDs from output file."""
     finished_ids: set[str] = set()
     if os.path.exists(output_file):
-        with open(output_file, "r", encoding='utf-8') as f:
+        with open(output_file, "r", encoding="utf-8") as f:
             for line in f:
                 data = json.loads(line)
                 finished_ids.add(str(data[id_column]))
-        logger.warning("\nOutput file %s already exists. Loaded %s finished instances.", output_file, len(finished_ids))
+        logger.warning(
+            "\nOutput file %s already exists. Loaded %s finished instances.",
+            output_file,
+            len(finished_ids),
+        )
     return finished_ids
 
 
 def _filter_dataset_by_criteria(
-    dataset: pd.DataFrame, eval_ids: list[str] | None, skip_num: int | None, eval_n_limit: int, id_column: str
+    dataset: pd.DataFrame,
+    eval_ids: list[str] | None,
+    skip_num: int | None,
+    eval_n_limit: int,
+    id_column: str,
 ) -> pd.DataFrame:
     """Filter dataset based on evaluation criteria."""
     if eval_ids:
@@ -240,7 +276,9 @@ def _filter_dataset_by_criteria(
     return dataset
 
 
-def _filter_by_specific_ids(dataset: pd.DataFrame, eval_ids: list[str], id_column: str) -> pd.DataFrame:
+def _filter_by_specific_ids(
+    dataset: pd.DataFrame, eval_ids: list[str], id_column: str
+) -> pd.DataFrame:
     """Filter dataset to specific instance IDs."""
     eval_ids_converted = [dataset[id_column].dtype.type(id) for id in eval_ids]
     dataset = dataset[dataset[id_column].isin(eval_ids_converted)]
@@ -248,25 +286,41 @@ def _filter_by_specific_ids(dataset: pd.DataFrame, eval_ids: list[str], id_colum
     return dataset
 
 
-def _filter_by_skip_and_limit(dataset: pd.DataFrame, skip_num: int, eval_n_limit: int) -> pd.DataFrame:
+def _filter_by_skip_and_limit(
+    dataset: pd.DataFrame, skip_num: int, eval_n_limit: int
+) -> pd.DataFrame:
     """Filter dataset by skip number and limit."""
     skip_num = min(skip_num, len(dataset))
     dataset = dataset.iloc[skip_num:]
-    logger.info("Starting evaluation with skipping first %s instances (%s instances to run).", skip_num, len(dataset))
+    logger.info(
+        "Starting evaluation with skipping first %s instances (%s instances to run).",
+        skip_num,
+        len(dataset),
+    )
     if eval_n_limit and eval_n_limit > 0:
-        dataset = dataset.sample(min(eval_n_limit, len(dataset)), random_state=42, replace=False)
-        logger.info("Randomly sampling %s unique instances with random seed 42.", eval_n_limit)
+        dataset = dataset.sample(
+            min(eval_n_limit, len(dataset)), random_state=42, replace=False
+        )
+        logger.info(
+            "Randomly sampling %s unique instances with random seed 42.", eval_n_limit
+        )
     return dataset
 
 
 def _filter_by_limit_only(dataset: pd.DataFrame, eval_n_limit: int) -> pd.DataFrame:
     """Filter dataset by limit only."""
-    dataset = dataset.sample(min(eval_n_limit, len(dataset)), random_state=42, replace=False)
-    logger.info("Randomly sampling %s unique instances with random seed 42.", eval_n_limit)
+    dataset = dataset.sample(
+        min(eval_n_limit, len(dataset)), random_state=42, replace=False
+    )
+    logger.info(
+        "Randomly sampling %s unique instances with random seed 42.", eval_n_limit
+    )
     return dataset
 
 
-def _create_serializable_dataset(dataset: pd.DataFrame, finished_ids: set[str], id_column: str) -> list[dict]:
+def _create_serializable_dataset(
+    dataset: pd.DataFrame, finished_ids: set[str], id_column: str
+) -> list[dict]:
     """Create serializable dataset excluding finished instances."""
 
     def make_serializable(instance_dict: dict) -> dict:
@@ -293,7 +347,11 @@ def update_progress(result: EvalOutput, pbar: tqdm, output_fp: TextIO):
     pbar.update(1)
     pbar.set_description(f"Instance {result.instance_id}")
     pbar.set_postfix_str(f"Test Result: {str(result.test_result)[:300]}...")
-    logger.info("Finished evaluation for instance %s: %s...\n", result.instance_id, str(result.test_result)[:300])
+    logger.info(
+        "Finished evaluation for instance %s: %s...\n",
+        result.instance_id,
+        str(result.test_result)[:300],
+    )
     output_fp.write(result.model_dump_json() + "\n")
     output_fp.flush()
 
@@ -327,9 +385,11 @@ def log_skipped_maximum_retries_exceeded(instance, metadata, error, max_retries=
         instance.instance_id,
     )
     if metadata and metadata.eval_output_dir:
-        retries_file_path = os.path.join(metadata.eval_output_dir, "maximum_retries_exceeded.jsonl")
+        retries_file_path = os.path.join(
+            metadata.eval_output_dir, "maximum_retries_exceeded.jsonl"
+        )
         try:
-            with open(retries_file_path, "a", encoding='utf-8') as f:
+            with open(retries_file_path, "a", encoding="utf-8") as f:
                 import json
 
                 error_entry = {
@@ -338,14 +398,17 @@ def log_skipped_maximum_retries_exceeded(instance, metadata, error, max_retries=
                     "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
                 }
                 f.write(json.dumps(error_entry) + "\n")
-            logger.info("Added instance %s to %s", instance.instance_id, retries_file_path)
+            logger.info(
+                "Added instance %s to %s", instance.instance_id, retries_file_path
+            )
         except Exception as write_error:
-            logger.error("Failed to write to maximum_retries_exceeded.jsonl: %s", write_error)
+            logger.error(
+                "Failed to write to maximum_retries_exceeded.jsonl: %s", write_error
+            )
     return EvalOutput(
         instance_id=instance.instance_id,
         test_result={},
-        error=f"Maximum retries ({max_retries}) reached: {
-            str(error)}",
+        error=f"Maximum retries ({max_retries}) reached: {str(error)}",
         status="error",
     )
 
@@ -356,9 +419,13 @@ def check_maximum_retries_exceeded(eval_output_dir):
 
     retries_file_path = os.path.join(eval_output_dir, "maximum_retries_exceeded.jsonl")
     if os.path.exists(retries_file_path):
-        logger.info("ATTENTION: Some instances reached maximum error retries and were skipped.")
+        logger.info(
+            "ATTENTION: Some instances reached maximum error retries and were skipped."
+        )
         logger.info("These instances are listed in: %s", retries_file_path)
-        logger.info("Fix these instances and run evaluation again with EVAL_SKIP_MAXIMUM_RETRIES_EXCEEDED=false")
+        logger.info(
+            "Fix these instances and run evaluation again with EVAL_SKIP_MAXIMUM_RETRIES_EXCEEDED=false"
+        )
 
 
 def _process_instance_wrapper(
@@ -390,12 +457,15 @@ def _process_instance_wrapper(
                 "-" * 10
                 + "\n"
                 + f"Timeout ({timeout_seconds} seconds) in instance [{
-                    instance.instance_id}], Stopped evaluation for this instance."
+                    instance.instance_id
+                }], Stopped evaluation for this instance."
                 + "\n"
                 + "-" * 10
             )
             logger.exception(e)
-            return EvalOutput(instance_id=instance.instance_id, test_result={}, error=error)
+            return EvalOutput(
+                instance_id=instance.instance_id, test_result={}, error=error
+            )
         except Exception as e:
             error = str(e)
             stacktrace = traceback.format_exc()
@@ -408,11 +478,20 @@ def _process_instance_wrapper(
                     + f"[Encountered after {max_retries} retries. Please check the logs and report the issue.]"
                     + "-" * 10
                 )
-                skip_errors = os.environ.get("EVAL_SKIP_MAXIMUM_RETRIES_EXCEEDED", "false").lower() == "true"
+                skip_errors = (
+                    os.environ.get(
+                        "EVAL_SKIP_MAXIMUM_RETRIES_EXCEEDED", "false"
+                    ).lower()
+                    == "true"
+                )
                 if skip_errors:
-                    return log_skipped_maximum_retries_exceeded(instance, metadata, e, max_retries)
+                    return log_skipped_maximum_retries_exceeded(
+                        instance, metadata, e, max_retries
+                    )
                 logger.exception(e)
-                raise RuntimeError(f"Maximum error retries reached for instance {instance.instance_id}") from e
+                raise RuntimeError(
+                    f"Maximum error retries reached for instance {instance.instance_id}"
+                ) from e
             msg = (
                 "-" * 10
                 + "\n"
@@ -427,7 +506,8 @@ def _process_instance_wrapper(
             if is_fatal_runtime_error(_error_str):
                 runtime_failure_count += 1
                 msg += f"Runtime disconnected error detected for instance {
-                    instance.instance_id}, runtime failure count: {runtime_failure_count}"
+                    instance.instance_id
+                }, runtime failure count: {runtime_failure_count}"
                 msg += "\n" + "-" * 10 + "\n"
             logger.error(msg)
             time.sleep(5)
@@ -443,7 +523,9 @@ def run_evaluation(
     metadata: EvalMetadata | None,
     output_file: str,
     num_workers: int,
-    process_instance_func: Callable[[pd.Series, EvalMetadata, bool], Awaitable[EvalOutput]],
+    process_instance_func: Callable[
+        [pd.Series, EvalMetadata, bool], Awaitable[EvalOutput]
+    ],
     max_retries: int = 5,
     timeout_seconds: int | None = None,
 ):
@@ -460,15 +542,24 @@ def run_evaluation(
         logger.info("Evaluation started with %s workers.", num_workers)
     total_instances = len(dataset)
     pbar = tqdm(total=total_instances, desc="Instances processed")
-    with open(output_file, "a", encoding='utf-8') as output_fp:
+    with open(output_file, "a", encoding="utf-8") as output_fp:
         try:
             if use_multiprocessing:
                 with mp.Pool(num_workers) as pool:
                     args_iter = (
-                        (process_instance_func, instance, metadata, True, max_retries, timeout_seconds)
+                        (
+                            process_instance_func,
+                            instance,
+                            metadata,
+                            True,
+                            max_retries,
+                            timeout_seconds,
+                        )
                         for _, instance in dataset.iterrows()
                     )
-                    results = pool.imap_unordered(_process_instance_wrapper_mp, args_iter)
+                    results = pool.imap_unordered(
+                        _process_instance_wrapper_mp, args_iter
+                    )
                     for result in results:
                         update_progress(result, pbar, output_fp)
             else:
@@ -489,7 +580,9 @@ def run_evaluation(
         check_maximum_retries_exceeded(metadata.eval_output_dir)
 
 
-def reset_logger_for_multiprocessing(logger: logging.Logger, instance_id: str, log_dir: str):
+def reset_logger_for_multiprocessing(
+    logger: logging.Logger, instance_id: str, log_dir: str
+):
     """Reset the logger for multiprocessing.
 
     Save logs to a separate file for each process, instead of trying to write to the
@@ -500,7 +593,9 @@ def reset_logger_for_multiprocessing(logger: logging.Logger, instance_id: str, l
         logger.removeHandler(handler)
     console_handler = get_console_handler(log_level=logging.INFO)
     console_handler.setFormatter(
-        logging.Formatter(f"Instance {instance_id} - %(asctime)s - %(levelname)s - %(message)s")
+        logging.Formatter(
+            f"Instance {instance_id} - %(asctime)s - %(levelname)s - %(message)s"
+        )
     )
     logger.addHandler(console_handler)
     logger.info(
@@ -511,7 +606,9 @@ def reset_logger_for_multiprocessing(logger: logging.Logger, instance_id: str, l
     console_handler.setLevel(logging.WARNING)
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
     file_handler = logging.FileHandler(log_file)
-    file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    )
     file_handler.setLevel(logging.INFO)
     logger.addHandler(file_handler)
 
@@ -521,12 +618,20 @@ def update_llm_config_for_completions_logging(
 ) -> LLMConfig:
     """Update the LLM config for logging completions."""
     if llm_config.log_completions:
-        llm_config.log_completions_folder = os.path.join(eval_output_dir, "llm_completions", instance_id)
-        logger.info("Logging LLM completions for instance %s to %s", instance_id, llm_config.log_completions_folder)
+        llm_config.log_completions_folder = os.path.join(
+            eval_output_dir, "llm_completions", instance_id
+        )
+        logger.info(
+            "Logging LLM completions for instance %s to %s",
+            instance_id,
+            llm_config.log_completions_folder,
+        )
     return llm_config
 
 
-def compatibility_for_eval_history_pairs(history: list[Event]) -> list[tuple[dict, dict]]:
+def compatibility_for_eval_history_pairs(
+    history: list[Event],
+) -> list[tuple[dict, dict]]:
     """Convert event history to compatible format for evaluation.
 
     Args:
@@ -536,7 +641,8 @@ def compatibility_for_eval_history_pairs(history: list[Event]) -> list[tuple[dic
         list[tuple[dict, dict]]: List of action-observation pairs as dictionaries.
     """
     return [
-        (event_to_dict(action), event_to_dict(observation)) for action, observation in get_pairs_from_events(history)
+        (event_to_dict(action), event_to_dict(observation))
+        for action, observation in get_pairs_from_events(history)
     ]
 
 

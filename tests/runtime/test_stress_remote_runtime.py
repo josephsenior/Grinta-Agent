@@ -36,7 +36,12 @@ from forge.controller.state.state import State
 from forge.core.config import AgentConfig, LLMConfig, ForgeConfig, SandboxConfig
 from forge.core.logger import forge_logger as logger
 from forge.core.main import create_runtime, run_controller
-from forge.events.action import CmdRunAction, FileEditAction, FileWriteAction, MessageAction
+from forge.events.action import (
+    CmdRunAction,
+    FileEditAction,
+    FileWriteAction,
+    MessageAction,
+)
 from forge.events.observation import CmdOutputObservation
 from forge.events.serialization.event import event_to_dict
 from forge.llm import LLM
@@ -56,19 +61,25 @@ def get_config() -> ForgeConfig:
             use_host_network=False,
             timeout=300,
             api_key=os.environ.get("ALLHANDS_API_KEY", None),
-            remote_runtime_api_url=os.environ.get("SANDBOX_REMOTE_RUNTIME_API_URL", None),
+            remote_runtime_api_url=os.environ.get(
+                "SANDBOX_REMOTE_RUNTIME_API_URL", None
+            ),
             keep_runtime_alive=False,
             remote_runtime_resource_factor=1,
         ),
         workspace_base=None,
         workspace_mount_path=None,
     )
-    agent_config = AgentConfig(enable_jupyter=False, enable_browsing=False, enable_llm_editor=False)
+    agent_config = AgentConfig(
+        enable_jupyter=False, enable_browsing=False, enable_llm_editor=False
+    )
     config.set_agent_config(agent_config)
     return config
 
 
-@pytest.mark.skipif(TEST_IN_CI, reason="This test should only be run locally, not in CI.")
+@pytest.mark.skipif(
+    TEST_IN_CI, reason="This test should only be run locally, not in CI."
+)
 def test_stress_remote_runtime_eval(n_eval_workers: int = 64):
     """Mimic evaluation setting to test remote runtime in a multi-processing setting."""
 
@@ -95,14 +106,16 @@ def test_stress_remote_runtime_eval(n_eval_workers: int = 64):
         assert_and_raise(obs.exit_code == 0, f"Failed to create /dummy_dir: {str(obs)}")
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_file_path = os.path.join(temp_dir, "dummy_file")
-            with open(temp_file_path, "w", encoding='utf-8') as f:
+            with open(temp_file_path, "w", encoding="utf-8") as f:
                 f.write("dummy content")
             runtime.copy_to(temp_file_path, "/dummy_dir/")
         logger.info("-" * 30)
         logger.info("END Runtime Initialization Fn")
         logger.info("-" * 30)
 
-    def _process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True) -> EvalOutput:
+    def _process_instance(
+        instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True
+    ) -> EvalOutput:
         config = get_config()
         if reset_logger:
             log_dir = os.path.join(metadata.eval_output_dir, "infer_logs")
@@ -115,7 +128,8 @@ def test_stress_remote_runtime_eval(n_eval_workers: int = 64):
             _initialize_runtime(runtime)
             instruction = "dummy instruction"
             agent = Agent.get_cls(metadata.agent_class)(
-                llm=LLM(config=metadata.llm_config), config=config.get_agent_config(metadata.agent_class)
+                llm=LLM(config=metadata.llm_config),
+                config=config.get_agent_config(metadata.agent_class),
             )
 
             def next_command(*args, **kwargs):
@@ -127,7 +141,9 @@ def test_stress_remote_runtime_eval(n_eval_workers: int = 64):
                     config=config,
                     initial_user_action=MessageAction(content=instruction),
                     runtime=runtime,
-                    fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[metadata.agent_class],
+                    fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[
+                        metadata.agent_class
+                    ],
                     agent=agent,
                 )
             )
@@ -166,13 +182,19 @@ def test_stress_remote_runtime_eval(n_eval_workers: int = 64):
         eval_output_dir="./dummy_eval_output_dir",
         details={},
     )
-    dummy_instance = pd.DataFrame({"instance_id": [f"dummy_instance_{i}" for i in range(300)]})
+    dummy_instance = pd.DataFrame(
+        {"instance_id": [f"dummy_instance_{i}" for i in range(300)]}
+    )
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
-    instances = prepare_dataset(dummy_instance, output_file, eval_n_limit=len(dummy_instance))
+    instances = prepare_dataset(
+        dummy_instance, output_file, eval_n_limit=len(dummy_instance)
+    )
     run_evaluation(instances, metadata, output_file, n_eval_workers, _process_instance)
 
 
-@pytest.mark.skipif(TEST_IN_CI, reason="This test should only be run locally, not in CI.")
+@pytest.mark.skipif(
+    TEST_IN_CI, reason="This test should only be run locally, not in CI."
+)
 def _setup_stress_test_runtime():
     """Setup runtime for stress testing."""
     config = get_config()
@@ -194,7 +216,9 @@ def _collect_system_memory_stats(runtime, i):
     mem_parts = mem_obs.content.strip().split(",")
     for part in mem_parts:
         key, value = part.strip().split(":")
-        iteration_stats[f"memory_{key.lower()}"] = float(value.replace("MB", "").strip())
+        iteration_stats[f"memory_{key.lower()}"] = float(
+            value.replace("MB", "").strip()
+        )
 
     return iteration_stats
 
@@ -202,11 +226,17 @@ def _collect_system_memory_stats(runtime, i):
 def _collect_process_memory_stats(runtime, i):
     """Collect process memory statistics."""
     # Top 5 memory-consuming processes
-    mem_action = CmdRunAction("ps aux | awk '{printf \"%8.1f MB  %s\\n\", $6/1024, $0}' | sort -nr | head -n 5")
+    mem_action = CmdRunAction(
+        "ps aux | awk '{printf \"%8.1f MB  %s\\n\", $6/1024, $0}' | sort -nr | head -n 5"
+    )
     mem_obs = runtime.run_action(mem_action)
     assert mem_obs.exit_code == 0
     _top_processes = [i.strip() for i in mem_obs.content.strip().split("\n")]
-    logger.info("Top 5 memory-consuming processes (iteration %s):\n%s", i, "- " + "\n- ".join(_top_processes))
+    logger.info(
+        "Top 5 memory-consuming processes (iteration %s):\n%s",
+        i,
+        "- " + "\n- ".join(_top_processes),
+    )
 
     iteration_stats = {"top_processes": _top_processes}
 
@@ -228,7 +258,11 @@ def _collect_process_memory_stats(runtime, i):
     )
     mem_obs = runtime.run_action(mem_action)
     assert mem_obs.exit_code == 0
-    logger.info("Action execution server memory usage (iteration %s): %s MB", i, mem_obs.content.strip())
+    logger.info(
+        "Action execution server memory usage (iteration %s): %s MB",
+        i,
+        mem_obs.content.strip(),
+    )
     try:
         iteration_stats["action_server_memory_mb"] = float(mem_obs.content.strip())
     except (ValueError, AttributeError):
@@ -311,7 +345,9 @@ def test_stress_remote_runtime_long_output_with_soft_and_hard_timeout():
         runtime.close()
 
 
-@pytest.mark.skipif(TEST_IN_CI, reason="This test should only be run locally, not in CI.")
+@pytest.mark.skipif(
+    TEST_IN_CI, reason="This test should only be run locally, not in CI."
+)
 def test_stress_runtime_memory_limits():
     """Test runtime behavior under resource constraints."""
     config = get_config()
@@ -324,16 +360,23 @@ def test_stress_runtime_memory_limits():
             "mem_swappiness": 0,
             "oom_kill_disable": False,
         }
-    config.sandbox.runtime_startup_env_vars = {"RUNTIME_MAX_MEMORY_GB": "3", "RUNTIME_MEMORY_MONITOR": "true"}
+    config.sandbox.runtime_startup_env_vars = {
+        "RUNTIME_MAX_MEMORY_GB": "3",
+        "RUNTIME_MEMORY_MONITOR": "true",
+    }
     try:
         runtime = create_runtime(config, headless_mode=True)
         call_async_from_sync(runtime.connect)
-        action = CmdRunAction(command="sudo apt-get update && sudo apt-get install -y stress-ng")
+        action = CmdRunAction(
+            command="sudo apt-get update && sudo apt-get install -y stress-ng"
+        )
         logger.info(action, extra={"msg_type": "ACTION"})
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert obs.exit_code == 0
-        action = CmdRunAction(command="stress-ng --vm 1 --vm-bytes 6G --timeout 1m --metrics")
+        action = CmdRunAction(
+            command="stress-ng --vm 1 --vm-bytes 6G --timeout 1m --metrics"
+        )
         action.set_hard_timeout(120)
         logger.info(action, extra={"msg_type": "ACTION"})
         obs = runtime.run_action(action)
@@ -344,7 +387,9 @@ def test_stress_runtime_memory_limits():
         runtime.close()
 
 
-@pytest.mark.skipif(TEST_IN_CI, reason="This test should only be run locally, not in CI.")
+@pytest.mark.skipif(
+    TEST_IN_CI, reason="This test should only be run locally, not in CI."
+)
 def test_stress_runtime_memory_limits_with_repeated_file_edit():
     """Test runtime behavior under resource constraints with repeated file edits."""
     config = get_config()
@@ -357,7 +402,10 @@ def test_stress_runtime_memory_limits_with_repeated_file_edit():
             "mem_swappiness": 0,
             "oom_kill_disable": False,
         }
-    config.sandbox.runtime_startup_env_vars = {"RUNTIME_MAX_MEMORY_GB": "3", "RUNTIME_MEMORY_MONITOR": "true"}
+    config.sandbox.runtime_startup_env_vars = {
+        "RUNTIME_MAX_MEMORY_GB": "3",
+        "RUNTIME_MEMORY_MONITOR": "true",
+    }
     try:
         runtime = create_runtime(config, headless_mode=True)
         call_async_from_sync(runtime.connect)
@@ -367,10 +415,15 @@ def test_stress_runtime_memory_limits_with_repeated_file_edit():
         obs = runtime.run_action(write_action)
         for i in range(1000):
             edit_action = FileEditAction(
-                command="str_replace", path=test_file, old_str=f"content_{i:03d}", new_str=f"-content_{i:03d}"
+                command="str_replace",
+                path=test_file,
+                old_str=f"content_{i:03d}",
+                new_str=f"-content_{i:03d}",
             )
             obs = runtime.run_action(edit_action)
-            assert f"The file {test_file} has been edited" in obs.content, f"Edit failed at iteration {i}"
+            assert f"The file {test_file} has been edited" in obs.content, (
+                f"Edit failed at iteration {i}"
+            )
             logger.info("finished iteration %s", i)
         action = FileEditAction(command="view", path=test_file)
         obs = runtime.run_action(action)

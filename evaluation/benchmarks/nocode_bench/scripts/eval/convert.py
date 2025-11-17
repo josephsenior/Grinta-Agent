@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 def main(output_jsonl: str):
-    with open(output_jsonl, "r", encoding='utf-8') as f:
+    with open(output_jsonl, "r", encoding="utf-8") as f:
         for line in f:
             try:
                 output = json.loads(line)
@@ -25,7 +25,10 @@ def main(output_jsonl: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--output_jsonl", type=str, required=True, help="Path to the prediction file (.../outputs.jsonl)"
+        "--output_jsonl",
+        type=str,
+        required=True,
+        help="Path to the prediction file (.../outputs.jsonl)",
     )
     args = parser.parse_args()
     main(args.output_jsonl)

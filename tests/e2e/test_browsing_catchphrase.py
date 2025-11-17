@@ -101,7 +101,12 @@ def _launch_conversation(page: Page) -> None:
 
 
 def _send_prompt(page: Page, prompt: str) -> None:
-    selectors = ['[data-testid="chat-input"] textarea', '[data-testid="message-input"]', "textarea", "form textarea"]
+    selectors = [
+        '[data-testid="chat-input"] textarea',
+        '[data-testid="message-input"]',
+        "textarea",
+        "form textarea",
+    ]
     message_input = None
     for sel in selectors:
         try:
@@ -147,7 +152,11 @@ def _send_prompt(page: Page, prompt: str) -> None:
 
 def _wait_for_browsing_event(page: Page, timeout_s: int = 240) -> None:
     start = time.time()
-    browse_indicators = ["Interactive browsing in progress", "Browsing the web", "Browsing completed"]
+    browse_indicators = [
+        "Interactive browsing in progress",
+        "Browsing the web",
+        "Browsing completed",
+    ]
     while time.time() - start < timeout_s:
         for text in browse_indicators:
             try:
@@ -183,13 +192,17 @@ def _wait_for_catchphrase(page: Page, timeout_s: int = 300) -> None:
         except Exception:
             pass
         try:
-            if page.get_by_text("Code Less, Make More", exact=False).is_visible(timeout=1000):
+            if page.get_by_text("Code Less, Make More", exact=False).is_visible(
+                timeout=1000
+            ):
                 _screenshot(page, "catchphrase_found_global")
                 return
         except Exception:
             pass
         page.wait_for_timeout(2000)
-    raise AssertionError("Agent did not return the expected catchphrase within time limit")
+    raise AssertionError(
+        "Agent did not return the expected catchphrase within time limit"
+    )
 
 
 def test_browsing_catchphrase(page: Page):

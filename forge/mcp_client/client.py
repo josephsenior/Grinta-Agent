@@ -48,7 +48,6 @@ class MCPClient(BaseModel):
                 name=tool.name,
                 description=tool.description,
                 inputSchema=tool.inputSchema,
-                session=self.client,
             )
             self.tool_map[tool.name] = server_tool
             self.tools.append(server_tool)
@@ -90,7 +89,9 @@ class MCPClient(BaseModel):
             self._handle_connection_error(server_url, server, e, is_mcp_error=False)
             raise
 
-    def _build_http_headers(self, api_key: str | None, conversation_id: str | None) -> dict:
+    def _build_http_headers(
+        self, api_key: str | None, conversation_id: str | None
+    ) -> dict:
         """Build HTTP headers for connection.
 
         Args:
@@ -130,7 +131,9 @@ class MCPClient(BaseModel):
             return StreamableHttpTransport(url=server_url, headers=headers or None)
         return SSETransport(url=server_url, headers=headers or None)
 
-    def _handle_connection_error(self, server_url: str, server, error: Exception, is_mcp_error: bool = False) -> None:
+    def _handle_connection_error(
+        self, server_url: str, server, error: Exception, is_mcp_error: bool = False
+    ) -> None:
         """Handle connection errors.
 
         Args:
@@ -152,14 +155,20 @@ class MCPClient(BaseModel):
             exception_details=str(error),
         )
 
-    async def connect_stdio(self, server: MCPStdioServerConfig, timeout: float = 30.0) -> None:
+    async def connect_stdio(
+        self, server: MCPStdioServerConfig, timeout: float = 30.0
+    ) -> None:
         """Connect to MCP server using stdio transport."""
         try:
-            transport = StdioTransport(command=server.command, args=server.args or [], env=server.env)
+            transport = StdioTransport(
+                command=server.command, args=server.args or [], env=server.env
+            )
             self.client = Client(transport, timeout=timeout)
             await self._initialize_and_list_tools()
         except Exception as e:
-            server_name = getattr(server, "name", f"{server.command} {' '.join(server.args or [])}")
+            server_name = getattr(
+                server, "name", f"{server.command} {' '.join(server.args or [])}"
+            )
             error_msg = f"Failed to connect to stdio server {server_name}: {e}"
             logger.error(error_msg)
             mcp_error_collector.add_error(

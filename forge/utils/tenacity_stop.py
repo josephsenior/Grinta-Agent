@@ -23,4 +23,14 @@ class stop_if_should_exit(stop_base):
             bool: True if retry should stop, False otherwise.
 
         """
-        return bool(should_exit())
+        # Resolve from the canonical module to ensure monkeypatches always apply
+        from importlib import import_module
+        mod = import_module("forge.utils.tenacity_stop")
+        # Consider both the canonical module and this module's binding
+        local = globals().get("should_exit")
+        try:
+            if mod.should_exit():
+                return True
+        except Exception:
+            pass
+        return bool(local()) if callable(local) else False

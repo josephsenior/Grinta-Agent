@@ -101,7 +101,9 @@ def _prepare_file_for_patch(old_path: str | None, newline: str | None) -> list[s
     return _read_file_content(old_path, newline) if old_path else []
 
 
-def _apply_file_changes(diff, split_content: list[str], new_path: str, newline: str | None) -> None:
+def _apply_file_changes(
+    diff, split_content: list[str], new_path: str, newline: str | None
+) -> None:
     """Apply changes to a file."""
     if diff.changes is None:
         logger.warning("No changes to apply for %s", new_path)
@@ -152,13 +154,19 @@ def apply_patch(repo_dir: str, patch: str) -> None:
             newline = "\n"
             split_content = []
 
+        if new_path is None:
+            logger.warning("Skipping diff with unknown target path: %s", diff.header)
+            continue
+
         # Apply changes
         _apply_file_changes(diff, split_content, new_path, newline)
 
     logger.info("Patch applied successfully")
 
 
-def initialize_repo(output_dir: str, issue_number: int, issue_type: str, base_commit: str | None = None) -> str:
+def initialize_repo(
+    output_dir: str, issue_number: int, issue_type: str, base_commit: str | None = None
+) -> str:
     """Initialize the repository.
 
     Args:
@@ -210,15 +218,35 @@ def make_commit(
 
     """
     result = subprocess.run(
-        ["git", "-C", repo_dir, "config", "user.name"], check=False, shell=False, capture_output=True, text=True,
+        ["git", "-C", repo_dir, "config", "user.name"],
+        check=False,
+        shell=False,
+        capture_output=True,
+        text=True,
     )
     if not result.stdout.strip():
-        subprocess.run(["git", "-C", repo_dir, "config", "user.name", git_user_name], shell=False, check=True)
-        subprocess.run(["git", "-C", repo_dir, "config", "user.email", git_user_email], shell=False, check=True)
-        subprocess.run(["git", "-C", repo_dir, "config", "alias.git", "git --no-pager"], shell=False, check=True)
+        subprocess.run(
+            ["git", "-C", repo_dir, "config", "user.name", git_user_name],
+            shell=False,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", repo_dir, "config", "user.email", git_user_email],
+            shell=False,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", repo_dir, "config", "alias.git", "git --no-pager"],
+            shell=False,
+            check=True,
+        )
         logger.info("Git user configured as %s <%s>", git_user_name, git_user_email)
     result = subprocess.run(
-        ["git", "-C", repo_dir, "add", "."], check=False, shell=False, capture_output=True, text=True,
+        ["git", "-C", repo_dir, "add", "."],
+        check=False,
+        shell=False,
+        capture_output=True,
+        text=True,
     )
     if result.returncode != 0:
         logger.error("Error adding files: %s", result.stderr)
@@ -232,12 +260,17 @@ def make_commit(
         text=True,
     )
     if not status_result.stdout.strip():
-        logger.error("No changes to commit for issue #%s. Skipping commit.", issue.number)
+        logger.error(
+            "No changes to commit for issue #%s. Skipping commit.", issue.number
+        )
         msg = "ERROR: Forge failed to make code changes."
         raise RuntimeError(msg)
     commit_message = f"Fix {issue_type} #{issue.number}: {issue.title}"
     result = subprocess.run(
-        ["git", "-C", repo_dir, "commit", "-m", commit_message], check=False, capture_output=True, text=True,
+        ["git", "-C", repo_dir, "commit", "-m", commit_message],
+        check=False,
+        capture_output=True,
+        text=True,
     )
     if result.returncode != 0:
         msg = f"Failed to commit changes: {result}"
@@ -269,16 +302,29 @@ def _create_issue_handler(
 ) -> ServiceContextIssue:
     """Create the appropriate issue handler for the platform."""
     if platform == ProviderType.GITHUB:
-        return ServiceContextIssue(GithubIssueHandler(issue.owner, issue.repo, token, username, base_domain), None)
+        return ServiceContextIssue(
+            GithubIssueHandler(issue.owner, issue.repo, token, username, base_domain),
+            None,
+        )
     if platform == ProviderType.GITLAB:
-        return ServiceContextIssue(GitlabIssueHandler(issue.owner, issue.repo, token, username, base_domain), None)
+        return ServiceContextIssue(
+            GitlabIssueHandler(issue.owner, issue.repo, token, username, base_domain),
+            None,
+        )
     if platform == ProviderType.BITBUCKET:
-        return ServiceContextIssue(BitbucketIssueHandler(issue.owner, issue.repo, token, username, base_domain), None)
+        return ServiceContextIssue(
+            BitbucketIssueHandler(
+                issue.owner, issue.repo, token, username, base_domain
+            ),
+            None,
+        )
     msg = f"Unsupported platform: {platform}"
     raise ValueError(msg)
 
 
-def _determine_base_branch(handler: ServiceContextIssue, target_branch: str | None) -> str:
+def _determine_base_branch(
+    handler: ServiceContextIssue, target_branch: str | None
+) -> str:
     """Determine the base branch for the pull request."""
     if not target_branch:
         return handler.get_default_branch_name()
@@ -291,7 +337,10 @@ def _determine_base_branch(handler: ServiceContextIssue, target_branch: str | No
 def _create_and_checkout_branch(patch_dir: str, branch_name: str) -> None:
     """Create and checkout a new branch."""
     result = subprocess.run(
-        ["git", "-C", patch_dir, "checkout", "-b", branch_name], check=False, capture_output=True, text=True,
+        ["git", "-C", patch_dir, "checkout", "-b", branch_name],
+        check=False,
+        capture_output=True,
+        text=True,
     )
     if result.returncode != 0:
         logger.error("Error creating new branch: %s", result.stderr)
@@ -312,7 +361,10 @@ def _push_changes(
 
     push_url = handler.get_clone_url()
     result = subprocess.run(
-        ["git", "-C", patch_dir, "push", push_url, branch_name], check=False, capture_output=True, text=True,
+        ["git", "-C", patch_dir, "push", push_url, branch_name],
+        check=False,
+        capture_output=True,
+        text=True,
     )
     if result.returncode != 0:
         logger.error("Error pushing changes: %s", result.stderr)
@@ -320,7 +372,9 @@ def _push_changes(
         raise RuntimeError(msg)
 
 
-def _build_pr_content(issue: Issue, pr_title: str | None, additional_message: str | None) -> tuple[str, str]:
+def _build_pr_content(
+    issue: Issue, pr_title: str | None, additional_message: str | None
+) -> tuple[str, str]:
     """Build the pull request title and body."""
     final_pr_title = pr_title or f"Fix issue #{issue.number}: {issue.title}"
     pr_body = f"This pull request fixes #{issue.number}."
@@ -447,12 +501,23 @@ def send_pull_request(
             reviewer,
         )
 
-    logger.info("%s created: %s\n\n--- Title: %s\n\n--- Body:\n%s", pr_type, url, final_pr_title, pr_body)
+    logger.info(
+        "%s created: %s\n\n--- Title: %s\n\n--- Body:\n%s",
+        pr_type,
+        url,
+        final_pr_title,
+        pr_body,
+    )
     return url
 
 
 def _create_issue_handler_with_llm(
-    issue: Issue, token: str, username: str | None, platform: ProviderType, llm_config: LLMConfig, base_domain: str,
+    issue: Issue,
+    token: str,
+    username: str | None,
+    platform: ProviderType,
+    llm_config: LLMConfig,
+    base_domain: str,
 ) -> ServiceContextIssue:
     """Create appropriate issue handler with LLM config based on platform."""
     if platform == ProviderType.GITHUB:
@@ -466,24 +531,34 @@ def _create_issue_handler_with_llm(
     )
 
 
-def _push_changes_to_remote(patch_dir: str, handler: ServiceContextIssue, issue: Issue) -> None:
+def _push_changes_to_remote(
+    patch_dir: str, handler: ServiceContextIssue, issue: Issue
+) -> None:
     """Push changes to remote repository."""
+    head_branch = issue.head_branch or ""
+    if not head_branch:
+        msg = "Issue head branch is not specified"
+        raise ValueError(msg)
     push_command = [
         "git",
         "-C",
         patch_dir,
         "push",
         f"{handler.get_authorize_url()}{issue.owner}/{issue.repo}.git",
-        issue.head_branch,
+        head_branch,
     ]
-    result = subprocess.run(push_command, check=False, shell=False, capture_output=True, text=True)
+    result = subprocess.run(
+        push_command, check=False, shell=False, capture_output=True, text=True
+    )
     if result.returncode != 0:
         logger.error("Error pushing changes: %s", result.stderr)
         msg = "Failed to push changes to the remote repository"
         raise RuntimeError(msg)
 
 
-def _build_pr_comment_from_explanations(explanations: list, llm_config: LLMConfig | None) -> str:
+def _build_pr_comment_from_explanations(
+    explanations: list, llm_config: LLMConfig | None
+) -> str:
     """Build PR comment from explanation list, optionally using LLM to summarize."""
     comment_message = "Forge made the following changes to resolve the issues:\n\n"
     for explanation in explanations:
@@ -492,7 +567,10 @@ def _build_pr_comment_from_explanations(explanations: list, llm_config: LLMConfi
     if llm_config is not None:
         llm = LLM(llm_config, service_id="resolver")
         with open(
-            os.path.join(os.path.dirname(__file__), "prompts/resolve/pr-changes-summary.jinja"), encoding="utf-8",
+            os.path.join(
+                os.path.dirname(__file__), "prompts/resolve/pr-changes-summary.jinja"
+            ),
+            encoding="utf-8",
         ) as f:
             template = jinja2.Template(f.read())
         prompt = template.render(comment_message=comment_message)
@@ -503,7 +581,9 @@ def _build_pr_comment_from_explanations(explanations: list, llm_config: LLMConfi
 
 
 def _generate_comment_message(
-    comment_message: str | None, additional_message: str | None, llm_config: LLMConfig,
+    comment_message: str | None,
+    additional_message: str | None,
+    llm_config: LLMConfig,
 ) -> str | None:
     """Generate comment message from additional message if main message not provided."""
     if comment_message or not additional_message:
@@ -513,19 +593,22 @@ def _generate_comment_message(
         if explanations := json.loads(additional_message):
             return _build_pr_comment_from_explanations(explanations, llm_config)
     except (json.JSONDecodeError, TypeError):
-        return (
-            f"A new Forge update is available, but failed to parse or summarize the changes:\n{additional_message}"
-        )
+        return f"A new Forge update is available, but failed to parse or summarize the changes:\n{additional_message}"
 
     return comment_message
 
 
-def _reply_to_threads(handler: ServiceContextIssue, issue: Issue, additional_message: str) -> None:
+def _reply_to_threads(
+    handler: ServiceContextIssue, issue: Issue, additional_message: str
+) -> None:
     """Reply to individual threads with explanations."""
     try:
         explanations = json.loads(additional_message)
+        thread_ids: list[str] = list(issue.thread_ids or [])
         for count, reply_comment in enumerate(explanations):
-            comment_id = issue.thread_ids[count]
+            if count >= len(thread_ids):
+                break
+            comment_id = thread_ids[count]
             handler.reply_to_comment(issue.number, comment_id, reply_comment)
     except (json.JSONDecodeError, TypeError):
         msg = f"Error occurred when replying to threads; success explanations {additional_message}"
@@ -544,10 +627,14 @@ def update_existing_pull_request(
     base_domain: str | None = None,
 ) -> str:
     """Update an existing pull request with the new patches."""
-    base_domain = base_domain or ("github.com" if platform == ProviderType.GITHUB else "gitlab.com")
+    base_domain = base_domain or (
+        "github.com" if platform == ProviderType.GITHUB else "gitlab.com"
+    )
 
     # Create handler and push changes
-    handler = _create_issue_handler_with_llm(issue, token, username, platform, llm_config, base_domain)
+    handler = _create_issue_handler_with_llm(
+        issue, token, username, platform, llm_config, base_domain
+    )
     _push_changes_to_remote(patch_dir, handler, issue)
 
     # Get PR URL
@@ -589,7 +676,10 @@ def process_single_issue(
     if base_domain is None:
         base_domain = "github.com" if platform == ProviderType.GITHUB else "gitlab.com"
     if not resolver_output.success and (not send_on_failure):
-        logger.info("Issue %s was not successfully resolved. Skipping PR creation.", resolver_output.issue.number)
+        logger.info(
+            "Issue %s was not successfully resolved. Skipping PR creation.",
+            resolver_output.issue.number,
+        )
         return
     issue_type = resolver_output.issue_type
     if issue_type == "issue":
@@ -610,7 +700,13 @@ def process_single_issue(
         msg = f"Invalid issue type: {issue_type}"
         raise ValueError(msg)
     apply_patch(patched_repo_dir, resolver_output.git_patch)
-    make_commit(patched_repo_dir, resolver_output.issue, issue_type, git_user_name, git_user_email)
+    make_commit(
+        patched_repo_dir,
+        resolver_output.issue,
+        issue_type,
+        git_user_name,
+        git_user_email,
+    )
     if issue_type == "pr":
         update_existing_pull_request(
             issue=resolver_output.issue,
@@ -675,13 +771,27 @@ def _create_argument_parser() -> argparse.ArgumentParser:
         Configured ArgumentParser
 
     """
-    parser = argparse.ArgumentParser(description="Send a pull request to Github or Gitlab.")
-    parser.add_argument(
-        "--selected-repo", type=str, default=None, help="repository to send pull request in form of `owner/repo`.",
+    parser = argparse.ArgumentParser(
+        description="Send a pull request to Github or Gitlab."
     )
-    parser.add_argument("--token", type=str, default=None, help="token to access the repository.")
-    parser.add_argument("--username", type=str, default=None, help="username to access the repository.")
-    parser.add_argument("--output-dir", type=str, default="output", help="Output directory to write the results.")
+    parser.add_argument(
+        "--selected-repo",
+        type=str,
+        default=None,
+        help="repository to send pull request in form of `owner/repo`.",
+    )
+    parser.add_argument(
+        "--token", type=str, default=None, help="token to access the repository."
+    )
+    parser.add_argument(
+        "--username", type=str, default=None, help="username to access the repository."
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="output",
+        help="Output directory to write the results.",
+    )
     parser.add_argument(
         "--pr-type",
         type=str,
@@ -706,9 +816,18 @@ def _create_argument_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Send a pull request even if the issue was not successfully resolved.",
     )
-    parser.add_argument("--llm-model", type=str, default=None, help="LLM model to use for summarizing changes.")
-    parser.add_argument("--llm-api-key", type=str, default=None, help="API key for the LLM model.")
-    parser.add_argument("--llm-base-url", type=str, default=None, help="Base URL for the LLM model.")
+    parser.add_argument(
+        "--llm-model",
+        type=str,
+        default=None,
+        help="LLM model to use for summarizing changes.",
+    )
+    parser.add_argument(
+        "--llm-api-key", type=str, default=None, help="API key for the LLM model."
+    )
+    parser.add_argument(
+        "--llm-base-url", type=str, default=None, help="Base URL for the LLM model."
+    )
     parser.add_argument(
         "--target-branch",
         type=str,
@@ -716,18 +835,28 @@ def _create_argument_parser() -> argparse.ArgumentParser:
         help="Target branch to create the pull request against (defaults to repository default branch)",
     )
     parser.add_argument(
-        "--reviewer", type=str, help="GitHub or GitLab username of the person to request review from", default=None,
+        "--reviewer",
+        type=str,
+        help="GitHub or GitLab username of the person to request review from",
+        default=None,
     )
-    parser.add_argument("--pr-title", type=str, help="Custom title for the pull request", default=None)
+    parser.add_argument(
+        "--pr-title", type=str, help="Custom title for the pull request", default=None
+    )
     parser.add_argument(
         "--base-domain",
         type=str,
         default=None,
         help='Base domain for the git server (defaults to "github.com" for GitHub and "gitlab.com" for GitLab)',
     )
-    parser.add_argument("--git-user-name", type=str, default="forge", help="Git user name for commits")
     parser.add_argument(
-        "--git-user-email", type=str, default="Forge@all-hands.dev", help="Git user email for commits",
+        "--git-user-name", type=str, default="forge", help="Git user name for commits"
+    )
+    parser.add_argument(
+        "--git-user-email",
+        type=str,
+        default="Forge@all-hands.dev",
+        help="Git user email for commits",
     )
     return parser
 
@@ -745,28 +874,13 @@ def _build_config_from_args(args) -> dict:
         ValueError: If required values missing
 
     """
-    token = args.token or os.getenv("GITHUB_TOKEN") or os.getenv("GITLAB_TOKEN")
-    if not token:
-        msg = "token is not set, set via --token or GITHUB_TOKEN or GITLAB_TOKEN environment variable."
-        raise ValueError(msg)
-
-    username = args.username or os.getenv("GIT_USERNAME")
-    if not username:
-        msg = "username is required."
-        raise ValueError(msg)
-
-    platform = call_async_from_sync(identify_token, GENERAL_TIMEOUT, token, args.base_domain)
-
-    api_key = args.llm_api_key or os.environ.get("LLM_API_KEY")
-    llm_config = LLMConfig(
-        model=args.llm_model or os.environ.get("LLM_MODEL"),
-        api_key=SecretStr(api_key) if api_key else None,
-        base_url=args.llm_base_url or os.environ.get("LLM_BASE_URL"),
+    token = _resolve_token(args)
+    username = _resolve_username(args)
+    platform = call_async_from_sync(
+        identify_token, GENERAL_TIMEOUT, token, args.base_domain
     )
-
-    output_path = os.path.join(args.output_dir, "output.jsonl")
-    issue_number = int(args.issue_number)
-    resolver_output = load_single_resolver_output(output_path, issue_number)
+    llm_config = _build_llm_config(args)
+    resolver_output = _load_resolver_output(args)
 
     return {
         "output_dir": args.output_dir,
@@ -785,6 +899,49 @@ def _build_config_from_args(args) -> dict:
         "git_user_name": args.git_user_name,
         "git_user_email": args.git_user_email,
     }
+
+
+def _resolve_token(args) -> str:
+    token = args.token or os.getenv("GITHUB_TOKEN") or os.getenv("GITLAB_TOKEN")
+    if not token:
+        msg = "token is not set, set via --token or GITHUB_TOKEN or GITLAB_TOKEN environment variable."
+        raise ValueError(msg)
+    return token
+
+
+def _resolve_username(args) -> str:
+    username = args.username or os.getenv("GIT_USERNAME")
+    if not username:
+        msg = "username is required."
+        raise ValueError(msg)
+    return username
+
+
+def _build_llm_config(args) -> LLMConfig:
+    api_key = args.llm_api_key or os.environ.get("LLM_API_KEY")
+    model = args.llm_model or os.environ.get("LLM_MODEL")
+    if not model:
+        msg = "LLM model must be provided via --llm-model or LLM_MODEL environment variable."
+        raise ValueError(msg)
+    return LLMConfig(
+        model=model,
+        api_key=SecretStr(api_key) if api_key else None,
+        base_url=args.llm_base_url or os.environ.get("LLM_BASE_URL"),
+    )
+
+
+def _load_resolver_output(args):
+    output_path = os.path.join(args.output_dir, "output.jsonl")
+    issue_number = _parse_issue_number(args.issue_number)
+    return load_single_resolver_output(output_path, issue_number)
+
+
+def _parse_issue_number(raw_issue: str | int) -> int:
+    try:
+        return int(raw_issue)
+    except (TypeError, ValueError) as exc:
+        msg = "issue-number must be an integer"
+        raise ValueError(msg) from exc
 
 
 def _validate_config(config: dict) -> None:

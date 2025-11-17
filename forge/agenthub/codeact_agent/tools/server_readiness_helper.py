@@ -37,14 +37,18 @@ def wait_for_server_ready(
             # Try to make a simple HEAD request to check if server is responding
             response = requests.head(url, timeout=timeout, allow_redirects=True)
             if response.status_code < 500:  # Accept any non-server-error response
-                logger.info(f"Server at {url} is ready (status: {response.status_code})")
+                logger.info(
+                    f"Server at {url} is ready (status: {response.status_code})"
+                )
                 return True
         except requests.exceptions.RequestException as e:
             logger.debug(f"Server at {url} not ready yet: {e}")
 
         time.sleep(check_interval)
 
-    logger.warning(f"Server at {url} did not become ready within {max_wait_time} seconds")
+    logger.warning(
+        f"Server at {url} did not become ready within {max_wait_time} seconds"
+    )
     return False
 
 

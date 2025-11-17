@@ -41,14 +41,16 @@ class ConversationStats:
 
     def save_metrics(self) -> None:
         """Save conversation metrics to persistent storage.
-        
+
         Combines restored and current metrics, serializes to JSON (base64 encoded),
         and writes to file store.
         """
         if not self.file_store:
             return
         with self._save_lock:
-            if duplicate_services := (set(self.restored_metrics.keys()) & set(self.service_to_metrics.keys())):
+            if duplicate_services := (
+                set(self.restored_metrics.keys()) & set(self.service_to_metrics.keys())
+            ):
                 logger.error(
                     "Duplicate service IDs found between restored and service metrics: %s. This should not happen as registered services should be removed from restored_metrics. Proceeding by preferring service_to_metrics values for duplicates.",
                     duplicate_services,
@@ -57,7 +59,8 @@ class ConversationStats:
                         "duplicate_services": list(duplicate_services),
                     },
                 )
-            combined_metrics = self.restored_metrics.copy()
+            combined_metrics: dict[str, Metrics | dict[str, Any] | Any] = {}
+            combined_metrics.update(self.restored_metrics)
             combined_metrics.update(self.service_to_metrics)
             serializable: dict[str, dict[str, Any]] = {}
             for sid, metrics in combined_metrics.items():
@@ -85,7 +88,7 @@ class ConversationStats:
 
     def maybe_restore_metrics(self) -> None:
         """Attempt to restore metrics from previous session.
-        
+
         Supports both new JSON format and legacy pickle format.
         Silently skips if no saved metrics exist.
         """
@@ -103,7 +106,8 @@ class ConversationStats:
 
                 logger.warning(
                     f"Loading legacy pickle data for conversation {
-                        self.conversation_id}. Will be migrated on next save.",
+                        self.conversation_id
+                    }. Will be migrated on next save.",
                 )
                 loaded = pickle.loads(decoded)  # nosec B301 - legacy support only
 
@@ -129,7 +133,7 @@ class ConversationStats:
 
     def get_combined_metrics(self) -> Metrics:
         """Get combined metrics across all services.
-        
+
         Returns:
             Merged metrics object with totals from all services
 
@@ -141,13 +145,13 @@ class ConversationStats:
 
     def get_metrics_for_service(self, service_id: str) -> Metrics:
         """Get metrics for specific LLM service.
-        
+
         Args:
             service_id: Service identifier
-            
+
         Returns:
             Metrics object for the service
-            
+
         Raises:
             KeyError: If service doesn't exist
 
@@ -159,7 +163,7 @@ class ConversationStats:
 
     def register_llm(self, event: RegistryEvent) -> None:
         """Register new LLM service and set up metrics tracking.
-        
+
         Args:
             event: Registry event containing LLM and service_id
 
@@ -218,7 +222,9 @@ class ConversationStats:
             )
 
         def _drop_zero_cost(d: dict[str, Metrics]) -> None:
-            to_delete = [k for k, v in d.items() if getattr(v, "accumulated_cost", 0) == 0]
+            to_delete = [
+                k for k, v in d.items() if getattr(v, "accumulated_cost", 0) == 0
+            ]
             for k in to_delete:
                 del d[k]
 

@@ -72,4 +72,3 @@ def test_circuit_breaker_reset_and_success():
     assert cb.consecutive_errors == 0
     assert cb.high_risk_action_count == 0
     assert cb.stuck_detection_count == 0
-

@@ -27,17 +27,23 @@ SUPPORTED_AGENT_CLS = {"CodeActAgent"}
 
 
 def get_config(metadata: EvalMetadata) -> ForgeConfig:
-    assert metadata.max_iterations == 1, "max_iterations must be 1 for browsing delegation evaluation."
+    assert metadata.max_iterations == 1, (
+        "max_iterations must be 1 for browsing delegation evaluation."
+    )
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = "python:3.12-bookworm"
-    config = get_FORGE_config_for_eval(metadata=metadata, runtime="docker", sandbox_config=sandbox_config)
+    config = get_FORGE_config_for_eval(
+        metadata=metadata, runtime="docker", sandbox_config=sandbox_config
+    )
     config.set_llm_config(metadata.llm_config)
     agent_config = config.get_agent_config(metadata.agent_class)
     agent_config.enable_prompt_extensions = False
     return config
 
 
-def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True) -> EvalOutput:
+def process_instance(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True
+) -> EvalOutput:
     config = get_config(metadata)
     if reset_logger:
         log_dir = os.path.join(metadata.eval_output_dir, "infer_logs")
@@ -50,7 +56,11 @@ NOTE: You should copy the "query" as is into the <execute_browse> tag. DO NOT ch
     runtime = create_runtime(config)
     call_async_from_sync(runtime.connect)
     state: State | None = asyncio.run(
-        run_controller(config=config, initial_user_action=MessageAction(content=instruction), runtime=runtime)
+        run_controller(
+            config=config,
+            initial_user_action=MessageAction(content=instruction),
+            runtime=runtime,
+        )
     )
     if state is None:
         raise ValueError("State should not be None.")
@@ -62,9 +72,15 @@ NOTE: You should copy the "query" as is into the <execute_browse> tag. DO NOT ch
         if action["action"] == "delegate":
             last_delegate_action = action
             instruction_for_delegate = action["args"]["inputs"]["task"]
-            instruction_for_delegate = re.search("I should start with: (.*)", instruction_for_delegate)[1]
-            edit_distance = nltk.edit_distance(instance.instruction, instruction_for_delegate)
-            is_exact_match = instance.instruction.strip() == instruction_for_delegate.strip()
+            instruction_for_delegate = re.search(
+                "I should start with: (.*)", instruction_for_delegate
+            )[1]
+            edit_distance = nltk.edit_distance(
+                instance.instruction, instruction_for_delegate
+            )
+            is_exact_match = (
+                instance.instruction.strip() == instruction_for_delegate.strip()
+            )
             result["edit_distance"] = edit_distance
             result["is_exact_match"] = is_exact_match
     return EvalOutput(
@@ -74,7 +90,11 @@ NOTE: You should copy the "query" as is into the <execute_browse> tag. DO NOT ch
         history=histories,
         metrics=metrics,
         error=state.last_error if state and state.last_error else None,
-        test_result={"query": instance.instruction, "action": last_delegate_action, "result": result},
+        test_result={
+            "query": instance.instruction,
+            "action": last_delegate_action,
+            "result": result,
+        },
     )
 
 
@@ -90,10 +110,19 @@ if __name__ == "__main__":
     if llm_config is None:
         raise ValueError(f"Could not find LLM config: --llm_config {args.llm_config}")
     metadata = make_metadata(
-        llm_config, "browsing_delegation", args.agent_cls, args.max_iterations, args.eval_note, args.eval_output_dir
+        llm_config,
+        "browsing_delegation",
+        args.agent_cls,
+        args.max_iterations,
+        args.eval_note,
+        args.eval_output_dir,
     )
     if metadata.agent_class not in SUPPORTED_AGENT_CLS:
-        raise ValueError(f"Agent class {metadata.agent_class} not supported with AgentDelegation.")
+        raise ValueError(
+            f"Agent class {metadata.agent_class} not supported with AgentDelegation."
+        )
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
     instances = prepare_dataset(dataset, output_file, args.eval_n_limit)
-    run_evaluation(instances, metadata, output_file, args.eval_num_workers, process_instance)
+    run_evaluation(
+        instances, metadata, output_file, args.eval_num_workers, process_instance
+    )

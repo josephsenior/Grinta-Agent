@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\file_config.py
+# hypothesis_version: 6.147.0
+
+[255, '.', '.*', '.DS_Store', '.downloads/', '.git/', '.vscode/', '[^\\w\\-_\\.]', '__pycache__/', 'lost+found/', 'node_modules/']

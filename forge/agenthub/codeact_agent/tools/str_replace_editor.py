@@ -1,6 +1,7 @@
 """Configuration for the string-replace editor tool used by CodeAct."""
 
-from litellm import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from litellm import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk  # noqa: F401
+from forge.agenthub.codeact_agent.tools._compat import build_tool_param
 
 from forge.agenthub.codeact_agent.tools.security_utils import (
     RISK_LEVELS,
@@ -12,7 +13,9 @@ _DETAILED_STR_REPLACE_EDITOR_DESCRIPTION = 'Custom editing tool for viewing, cre
 _SHORT_STR_REPLACE_EDITOR_DESCRIPTION = "Custom editing tool for viewing, creating and editing files in plain-text format\n* Editor state is ephemeral to the current agent session and should not be relied upon for cross-run persistence. For step-level caching or long-term persistence, rely on the orchestrator's cache.\n* If `path` is a file, `view` displays the result of applying `cat -n`. If `path` is a directory, `view` lists non-hidden files and directories up to 2 levels deep\n* The `create` command cannot be used if the specified `path` already exists as a file\n* If a `command` generates a long output, it will be truncated and marked with `<response clipped>`\n* The `undo_edit` command will revert the last edit made to the file at `path`\nNotes for using the `str_replace` command:\n* The `old_str` parameter should match EXACTLY one or more consecutive lines from the original file. Be mindful of whitespaces!\n* If the `old_str` parameter is not unique in the file, the replacement will not be performed. Make sure to include enough context in `old_str` to make it unique\n* The `new_str` parameter should contain the edited lines that should replace the `old_str`\n"
 
 
-def create_str_replace_editor_tool(use_short_description: bool = False) -> ChatCompletionToolParam:
+def create_str_replace_editor_tool(
+    use_short_description: bool = False,
+) -> ChatCompletionToolParam:
     """Create a string replacement editor tool for the agent.
 
     Args:
@@ -23,49 +26,58 @@ def create_str_replace_editor_tool(use_short_description: bool = False) -> ChatC
 
     """
     description = (
-        _SHORT_STR_REPLACE_EDITOR_DESCRIPTION if use_short_description else _DETAILED_STR_REPLACE_EDITOR_DESCRIPTION
+        _SHORT_STR_REPLACE_EDITOR_DESCRIPTION
+        if use_short_description
+        else _DETAILED_STR_REPLACE_EDITOR_DESCRIPTION
     )
-    return ChatCompletionToolParam(
-        type="function",
-        function=ChatCompletionToolParamFunctionChunk(
-            name=STR_REPLACE_EDITOR_TOOL_NAME,
-            description=description,
-            parameters={
-                "type": "object",
-                "properties": {
-                    "command": {
-                        "description": "The commands to run. Allowed options are: `view`, `create`, `str_replace`, `insert`, `undo_edit`.",
-                        "enum": ["view", "create", "str_replace", "insert", "undo_edit"],
-                        "type": "string",
-                    },
-                    "path": {
-                        "description": "Absolute path to file or directory, e.g. `/workspace/file.py` or `/workspace`.",
-                        "type": "string",
-                    },
-                    "file_text": {
-                        "description": "Required parameter of `create` command, with the content of the file to be created.",
-                        "type": "string",
-                    },
-                    "old_str": {
-                        "description": "Required parameter of `str_replace` command containing the string in `path` to replace.",
-                        "type": "string",
-                    },
-                    "new_str": {
-                        "description": "Optional parameter of `str_replace` command containing the new string (if not given, no string will be added). Required parameter of `insert` command containing the string to insert.",
-                        "type": "string",
-                    },
-                    "insert_line": {
-                        "description": "Required parameter of `insert` command. The `new_str` will be inserted AFTER the line `insert_line` of `path`.",
-                        "type": "integer",
-                    },
-                    "view_range": {
-                        "description": "Optional parameter of `view` command when `path` points to a file. If none is given, the full file is shown. If provided, the file will be shown in the indicated line number range, e.g. [11, 12] will show lines 11 and 12. Indexing at 1 to start. Setting `[start_line, -1]` shows all lines from `start_line` to the end of the file.",
-                        "items": {"type": "integer"},
-                        "type": "array",
-                    },
-                    "security_risk": {"type": "string", "description": SECURITY_RISK_DESC, "enum": RISK_LEVELS},
+    return build_tool_param(
+        name=STR_REPLACE_EDITOR_TOOL_NAME,
+        description=description,
+        parameters={
+            "type": "object",
+            "properties": {
+                "command": {
+                    "description": "The commands to run. Allowed options are: `view`, `create`, `str_replace`, `insert`, `undo_edit`.",
+                    "enum": [
+                        "view",
+                        "create",
+                        "str_replace",
+                        "insert",
+                        "undo_edit",
+                    ],
+                    "type": "string",
                 },
-                "required": ["command", "path", "security_risk"],
+                "path": {
+                    "description": "Absolute path to file or directory, e.g. `/workspace/file.py` or `/workspace`.",
+                    "type": "string",
+                },
+                "file_text": {
+                    "description": "Required parameter of `create` command, with the content of the file to be created.",
+                    "type": "string",
+                },
+                "old_str": {
+                    "description": "Required parameter of `str_replace` command containing the string in `path` to replace.",
+                    "type": "string",
+                },
+                "new_str": {
+                    "description": "Optional parameter of `str_replace` command containing the new string (if not given, no string will be added). Required parameter of `insert` command containing the string to insert.",
+                    "type": "string",
+                },
+                "insert_line": {
+                    "description": "Required parameter of `insert` command. The `new_str` will be inserted AFTER the line `insert_line` of `path`.",
+                    "type": "integer",
+                },
+                "view_range": {
+                    "description": "Optional parameter of `view` command when `path` points to a file. If none is given, the full file is shown. If provided, the file will be shown in the indicated line number range, e.g. [11, 12] will show lines 11 and 12. Indexing at 1 to start. Setting `[start_line, -1]` shows all lines from `start_line` to the end of the file.",
+                    "items": {"type": "integer"},
+                    "type": "array",
+                },
+                "security_risk": {
+                    "type": "string",
+                    "description": SECURITY_RISK_DESC,
+                    "enum": RISK_LEVELS,
+                },
             },
-        ),
+            "required": ["command", "path", "security_risk"],
+        },
     )

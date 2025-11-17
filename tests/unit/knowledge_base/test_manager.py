@@ -9,7 +9,10 @@ import pytest
 
 from forge.knowledge_base import manager as kb_manager_module
 from forge.knowledge_base.manager import KnowledgeBaseManager
-from forge.storage.data_models.knowledge_base import KnowledgeBaseCollection, KnowledgeBaseDocument
+from forge.storage.data_models.knowledge_base import (
+    KnowledgeBaseCollection,
+    KnowledgeBaseDocument,
+)
 
 
 @dataclass
@@ -46,8 +49,12 @@ class StubStore:
         self.documents_by_hash: dict[str, KnowledgeBaseDocument] = {}
 
     # Collection operations -------------------------------------------------
-    def create_collection(self, user_id: str, name: str, description: str | None = None) -> KnowledgeBaseCollection:
-        collection = KnowledgeBaseCollection(user_id=user_id, name=name, description=description)
+    def create_collection(
+        self, user_id: str, name: str, description: str | None = None
+    ) -> KnowledgeBaseCollection:
+        collection = KnowledgeBaseCollection(
+            user_id=user_id, name=name, description=description
+        )
         self.collections[collection.id] = collection
         self.collection_documents[collection.id] = []
         return collection
@@ -58,7 +65,12 @@ class StubStore:
     def list_collections(self, user_id: str) -> list[KnowledgeBaseCollection]:
         return [c for c in self.collections.values() if c.user_id == user_id]
 
-    def update_collection(self, collection_id: str, name: str | None = None, description: str | None = None):
+    def update_collection(
+        self,
+        collection_id: str,
+        name: str | None = None,
+        description: str | None = None,
+    ):
         collection = self.collections.get(collection_id)
         if not collection:
             return None
@@ -80,7 +92,9 @@ class StubStore:
     # Document operations ---------------------------------------------------
     def add_document(self, document: KnowledgeBaseDocument) -> KnowledgeBaseDocument:
         self.documents[document.id] = document
-        self.collection_documents.setdefault(document.collection_id, []).append(document.id)
+        self.collection_documents.setdefault(document.collection_id, []).append(
+            document.id
+        )
         self.documents_by_hash[document.content_hash] = document
 
         collection = self.collections[document.collection_id]
@@ -93,7 +107,9 @@ class StubStore:
 
     def list_documents(self, collection_id: str) -> list[KnowledgeBaseDocument]:
         doc_ids = self.collection_documents.get(collection_id, [])
-        return [self.documents[doc_id] for doc_id in doc_ids if doc_id in self.documents]
+        return [
+            self.documents[doc_id] for doc_id in doc_ids if doc_id in self.documents
+        ]
 
     def delete_document(self, document_id: str) -> bool:
         document = self.documents.pop(document_id, None)
@@ -149,7 +165,9 @@ def test_create_and_list_collections(monkeypatch: pytest.MonkeyPatch) -> None:
     assert updated.description == "desc"
 
 
-def test_delete_collection_removes_vector_store(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_delete_collection_removes_vector_store(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     kb, store, vector_stores = create_manager(monkeypatch)
     coll = kb.create_collection("Coll")
 
@@ -173,14 +191,21 @@ def test_add_document_chunks_and_deduplicates(monkeypatch: pytest.MonkeyPatch) -
 
     vector_store = vector_stores[collection.id]
     assert len(vector_store.add_calls) == 2
-    assert {call["metadata"]["chunk_index"] for call in vector_store.add_calls} == {0, 1}
+    assert {call["metadata"]["chunk_index"] for call in vector_store.add_calls} == {
+        0,
+        1,
+    }
 
     # Deduplication with identical content hash should return the original document
-    duplicate = kb.add_document(collection.id, filename="duplicate.txt", content=content)
+    duplicate = kb.add_document(
+        collection.id, filename="duplicate.txt", content=content
+    )
     assert duplicate is document
 
 
-def test_add_document_missing_collection_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_add_document_missing_collection_returns_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     kb, store, _ = create_manager(monkeypatch)
     assert kb.add_document("missing", filename="a.txt", content="hi") is None
 
@@ -196,12 +221,26 @@ def test_search_returns_ranked_results(monkeypatch: pytest.MonkeyPatch) -> None:
     # Prime vector store search results
     vector_stores[first.id].set_search_results(
         [
-            {"score": 0.9, "metadata": {"document_id": "doc-1", "filename": "one"}, "content": "chunk-one"},
-            {"score": 0.6, "metadata": {"document_id": "doc-2", "filename": "two"}, "content": "chunk-two"},
+            {
+                "score": 0.9,
+                "metadata": {"document_id": "doc-1", "filename": "one"},
+                "content": "chunk-one",
+            },
+            {
+                "score": 0.6,
+                "metadata": {"document_id": "doc-2", "filename": "two"},
+                "content": "chunk-two",
+            },
         ]
     )
     vector_stores[second.id].set_search_results(
-        [{"score": 0.8, "metadata": {"document_id": "doc-3", "filename": "three"}, "content": "chunk-three"}]
+        [
+            {
+                "score": 0.8,
+                "metadata": {"document_id": "doc-3", "filename": "three"},
+                "content": "chunk-three",
+            }
+        ]
     )
 
     results = kb.search("query", top_k=2, relevance_threshold=0.7)
@@ -210,7 +249,9 @@ def test_search_returns_ranked_results(monkeypatch: pytest.MonkeyPatch) -> None:
     assert results[1].document_id == "doc-3"
 
 
-def test_update_collection_missing_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_update_collection_missing_returns_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     kb, store, _ = create_manager(monkeypatch)
     assert kb.update_collection("missing", name="noop") is None
 
@@ -309,7 +350,9 @@ def test_delete_document_missing_returns_false(monkeypatch: pytest.MonkeyPatch) 
     assert kb.delete_document(foreign_doc.id) is False
 
 
-def test_search_skips_collections_without_access(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_search_skips_collections_without_access(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     kb, store, vector_stores = create_manager(monkeypatch)
     owned = kb.create_collection("Owned")
     foreign = store.create_collection(user_id="other", name="Other")
@@ -317,11 +360,15 @@ def test_search_skips_collections_without_access(monkeypatch: pytest.MonkeyPatch
 
     kb._get_vector_store(owned.id)
     vector_stores[owned.id].set_search_results(
-        [{"score": 0.9, "metadata": {"document_id": "doc", "filename": "file"}, "content": "chunk"}]
+        [
+            {
+                "score": 0.9,
+                "metadata": {"document_id": "doc", "filename": "file"},
+                "content": "chunk",
+            }
+        ]
     )
 
     results = kb.search("query", collection_ids=[owned.id, foreign.id])
     assert len(results) == 1
     assert results[0].collection_id == owned.id
-
-

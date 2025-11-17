@@ -13,6 +13,7 @@ class TestEnhancedMemoryCore:
     def test_vector_memory_store_imports(self):
         """Test that VectorMemoryStore can be imported."""
         from forge.metasop.vector_memory import VectorMemoryStore
+
         assert VectorMemoryStore is not None
 
     def test_vector_memory_store_initialization(self):
@@ -63,7 +64,7 @@ class TestEnhancedMemoryCore:
             role="engineer",
             artifact_hash=None,
             rationale="Test memory",
-            content_text="This is a test memory for verification."
+            content_text="This is a test memory for verification.",
         )
 
         # Search should work
@@ -85,11 +86,36 @@ class TestEnhancedMemoryCore:
 
         # Add distinct memories
         memories = [
-            ("mem_auth", "engineer", "Fixed authentication bug", "Modified auth.py to handle tokens"),
-            ("mem_ui", "engineer", "Created profile page", "Built ProfileView component with React"),
-            ("mem_qa", "qa", "Test authentication", "Verified token handling and refresh flow"),
-            ("mem_db", "engineer", "Optimized database", "Added indexes to improve query speed"),
-            ("mem_ws", "engineer", "Fixed WebSocket leak", "Cleanup event listeners properly"),
+            (
+                "mem_auth",
+                "engineer",
+                "Fixed authentication bug",
+                "Modified auth.py to handle tokens",
+            ),
+            (
+                "mem_ui",
+                "engineer",
+                "Created profile page",
+                "Built ProfileView component with React",
+            ),
+            (
+                "mem_qa",
+                "qa",
+                "Test authentication",
+                "Verified token handling and refresh flow",
+            ),
+            (
+                "mem_db",
+                "engineer",
+                "Optimized database",
+                "Added indexes to improve query speed",
+            ),
+            (
+                "mem_ws",
+                "engineer",
+                "Fixed WebSocket leak",
+                "Cleanup event listeners properly",
+            ),
         ]
 
         for step_id, role, rationale, content in memories:
@@ -124,7 +150,9 @@ class TestEnhancedMemoryCore:
         # If enhanced mode, should get better accuracy
         stats = store.stats()
         if stats.get("mode") == "enhanced":
-            assert accuracy >= 75, f"Enhanced mode should have >75% accuracy, got {accuracy:.0f}%"
+            assert accuracy >= 75, (
+                f"Enhanced mode should have >75% accuracy, got {accuracy:.0f}%"
+            )
 
     def test_stats_structure(self):
         """Test that stats return proper structure."""
@@ -198,9 +226,7 @@ class TestVectorOrLexicalStoreWrapper:
             from forge.metasop.strategies import VectorOrLexicalMemoryStore
 
             store = VectorOrLexicalMemoryStore(
-                vector_enabled=True,
-                dim=256,
-                max_records=500
+                vector_enabled=True, dim=256, max_records=500
             )
 
             assert store is not None

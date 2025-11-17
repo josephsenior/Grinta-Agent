@@ -8,7 +8,13 @@ import re
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import jinja2
-from litellm.exceptions import RateLimitError
+try:
+    from litellm.exceptions import RateLimitError as RateLimitErrorType  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    class _FallbackRateLimitError(Exception):
+        """Fallback error used when litellm is unavailable."""
+
+    RateLimitErrorType = _FallbackRateLimitError  # type: ignore[misc,assignment]
 
 from forge.llm.llm import LLM
 from forge.resolver.utils import extract_image_urls
@@ -25,16 +31,19 @@ if TYPE_CHECKING:
 
 class ServiceContext:
     """Base service context for issue resolution strategies.
-    
+
     Provides common functionality for interacting with issue tracking systems
     and managing LLM-based resolution strategies.
     """
+
     issue_type: ClassVar[str]
     default_git_patch: ClassVar[str] = "No changes made yet"
 
-    def __init__(self, strategy: IssueHandlerInterface, llm_config: LLMConfig | None) -> None:
+    def __init__(
+        self, strategy: IssueHandlerInterface, llm_config: LLMConfig | None
+    ) -> None:
         """Initialize service context with resolution strategy and LLM config.
-        
+
         Args:
             strategy: Issue handler implementation for specific platform
             llm_config: Optional LLM configuration for AI-assisted resolution
@@ -46,7 +55,7 @@ class ServiceContext:
 
     def set_strategy(self, strategy: IssueHandlerInterface) -> None:
         """Update the issue resolution strategy.
-        
+
         Args:
             strategy: New strategy implementation to use
 
@@ -56,15 +65,16 @@ class ServiceContext:
 
 class ServiceContextPR(ServiceContext):
     """Service context for pull request resolution workflows.
-    
+
     Handles PR-specific operations including review feedback processing,
     closing issue verification, and success evaluation.
     """
+
     issue_type: ClassVar[str] = "pr"
 
     def __init__(self, strategy: IssueHandlerInterface, llm_config: LLMConfig) -> None:
         """Initialize PR service context.
-        
+
         Args:
             strategy: Issue handler for PR operations
             llm_config: LLM configuration for AI-assisted resolution
@@ -74,7 +84,7 @@ class ServiceContextPR(ServiceContext):
 
     def get_clone_url(self) -> str:
         """Get repository clone URL for the PR.
-        
+
         Returns:
             Git clone URL string
 
@@ -83,7 +93,7 @@ class ServiceContextPR(ServiceContext):
 
     def download_issues(self) -> list[Any]:
         """Download associated issues for the PR.
-        
+
         Returns:
             List of issue data dictionaries
 
@@ -126,7 +136,7 @@ class ServiceContextPR(ServiceContext):
         self,
         issue: Issue,
         issues_context: str,
-        last_message: str,
+        last_message: str | None,
         git_patch: str | None,
     ) -> tuple[list[bool], list[str]]:
         """Check all feedback sources for success.
@@ -141,23 +151,32 @@ class ServiceContextPR(ServiceContext):
             Tuple of (success_list, explanation_list)
 
         """
-        success_list = []
-        explanation_list = []
+        success_list: list[bool] = []
+        explanation_list: list[str] = []
 
         if issue.review_threads:
             self._check_review_threads(
-                issue.review_threads, issues_context, last_message, git_patch, success_list, explanation_list,
+                issue.review_threads,
+                issues_context,
+                last_message,
+                git_patch,
+                success_list,
+                explanation_list,
             )
         elif issue.thread_comments:
             self._check_single_source(
-                lambda: self._check_thread_comments(issue.thread_comments, issues_context, last_message, git_patch),
+                lambda: self._check_thread_comments(
+                    issue.thread_comments, issues_context, last_message, git_patch
+                ),
                 "Missing thread comments, context or message",
                 success_list,
                 explanation_list,
             )
         elif issue.review_comments:
             self._check_single_source(
-                lambda: self._check_review_comments(issue.review_comments, issues_context, last_message, git_patch),
+                lambda: self._check_review_comments(
+                    issue.review_comments, issues_context, last_message, git_patch
+                ),
                 "Missing review comments, context or message",
                 success_list,
                 explanation_list,
@@ -169,7 +188,7 @@ class ServiceContextPR(ServiceContext):
         self,
         review_threads,
         issues_context: str,
-        last_message: str,
+        last_message: str | None,
         git_patch: str | None,
         success_list: list[bool],
         explanation_list: list[str],
@@ -216,7 +235,7 @@ class ServiceContextPR(ServiceContext):
         """
         try:
             success, explanation = check_func()
-        except RateLimitError:
+        except RateLimitErrorType:
             raise
         except Exception:
             success, explanation = (False, error_msg)
@@ -230,11 +249,11 @@ class ServiceContextPR(ServiceContext):
         comment_id: int | None = None,
     ) -> list[Issue]:
         """Get issues converted to internal format.
-        
+
         Args:
             issue_numbers: Optional list of specific issue numbers to retrieve
             comment_id: Optional comment ID to include
-            
+
         Returns:
             List of Issue objects in internal format
 
@@ -249,16 +268,16 @@ class ServiceContextPR(ServiceContext):
         repo_instruction: str | None = None,
     ) -> tuple[str, str, list[str]]:
         """Generate instructions for agent from issue and PR feedback.
-        
+
         Renders Jinja2 templates with issue context, review comments, review threads,
         and extracts any image URLs from the content.
-        
+
         Args:
             issue: Issue object with review data
             user_instructions_prompt_template: Template for user-specific instructions
             conversation_instructions_prompt_template: Template for conversation instructions
             repo_instruction: Optional repository-specific instructions
-            
+
         Returns:
             Tuple of (user_instruction, conversation_instructions, image_urls)
 
@@ -280,7 +299,9 @@ class ServiceContextPR(ServiceContext):
         review_thread_str = None
         review_thread_file_str = None
         if issue.review_threads:
-            review_threads = [review_thread.comment for review_thread in issue.review_threads]
+            review_threads = [
+                review_thread.comment for review_thread in issue.review_threads
+            ]
             review_thread_files = []
             for review_thread in issue.review_threads:
                 review_thread_files.extend(review_thread.files)
@@ -340,7 +361,7 @@ class ServiceContextPR(ServiceContext):
         self,
         thread_comments: list[str],
         issues_context: str,
-        last_message: str,
+        last_message: str | None,
         git_patch: str | None = None,
     ) -> tuple[bool, str]:
         """Check if thread comments feedback has been addressed."""
@@ -354,7 +375,7 @@ class ServiceContextPR(ServiceContext):
         prompt = template.render(
             issue_context=issues_context,
             thread_context=thread_context,
-            last_message=last_message,
+            last_message=last_message or "",
             git_patch=git_patch or self.default_git_patch,
         )
         return self._check_feedback_with_llm(prompt)
@@ -363,7 +384,7 @@ class ServiceContextPR(ServiceContext):
         self,
         review_comments: list[str],
         issues_context: str,
-        last_message: str,
+        last_message: str | None,
         git_patch: str | None = None,
     ) -> tuple[bool, str]:
         """Check if review comments feedback has been addressed."""
@@ -377,7 +398,7 @@ class ServiceContextPR(ServiceContext):
         prompt = template.render(
             issue_context=issues_context,
             review_context=review_context,
-            last_message=last_message,
+            last_message=last_message or "",
             git_patch=git_patch or self.default_git_patch,
         )
         return self._check_feedback_with_llm(prompt)
@@ -385,15 +406,18 @@ class ServiceContextPR(ServiceContext):
 
 class ServiceContextIssue(ServiceContext):
     """Service context for issue resolution workflows.
-    
+
     Handles issue-specific operations including branch management, PR creation,
     comments, and resolution verification.
     """
+
     issue_type: ClassVar[str] = "issue"
 
-    def __init__(self, strategy: IssueHandlerInterface, llm_config: LLMConfig | None) -> None:
+    def __init__(
+        self, strategy: IssueHandlerInterface, llm_config: LLMConfig | None
+    ) -> None:
         """Initialize issue service context.
-        
+
         Args:
             strategy: Issue handler for issue operations
             llm_config: Optional LLM configuration for AI-assisted resolution
@@ -487,16 +511,16 @@ class ServiceContextIssue(ServiceContext):
         repo_instruction: str | None = None,
     ) -> tuple[str, str, list[str]]:
         """Generate instructions for agent from issue details.
-        
+
         Renders Jinja2 templates with issue title, body, thread comments,
         and extracts any image URLs from the content.
-        
+
         Args:
             issue: Issue object with title, body, and comments
             user_instructions_prompt_template: Template for user-specific instructions
             conversation_instructions_prompt_template: Template for conversation instructions
             repo_instruction: Optional repository-specific instructions
-            
+
         Returns:
             Tuple of (user_instruction, conversation_instructions, image_urls)
 
@@ -537,7 +561,7 @@ class ServiceContextIssue(ServiceContext):
             issue: The issue to check
             history: The agent's history
             git_patch: Optional git patch showing the changes made
-            
+
         Returns:
             Tuple of (success, None, explanation)
 
@@ -573,11 +597,11 @@ class ServiceContextIssue(ServiceContext):
         comment_id: int | None = None,
     ) -> list[Issue]:
         """Get issues converted to internal format.
-        
+
         Args:
             issue_numbers: Optional list of specific issue numbers to retrieve
             comment_id: Optional comment ID to include
-            
+
         Returns:
             List of Issue objects in internal format
 

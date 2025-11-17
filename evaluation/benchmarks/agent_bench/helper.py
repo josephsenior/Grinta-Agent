@@ -17,7 +17,11 @@ def try_parse_answer(act) -> str | None:
     return agent_answer[0].strip() if agent_answer else None
 
 
-FAKE_RESPONSES = {"CodeActAgent": partial(codeact_user_response, encapsulate_solution=True, try_parse=try_parse_answer)}
+FAKE_RESPONSES = {
+    "CodeActAgent": partial(
+        codeact_user_response, encapsulate_solution=True, try_parse=try_parse_answer
+    )
+}
 INST_SUFFIXES: dict[str, str] = {
     "CodeActAgent": "When you think you have solved the question, please first send your answer to user through message and then exit.\n"
 }

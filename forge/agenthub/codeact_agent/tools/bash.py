@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from litellm import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from forge.llm.tool_types import make_function_chunk, make_tool_param
 
 from forge.agenthub.codeact_agent.tools.prompt import refine_prompt
 from forge.agenthub.codeact_agent.tools.security_utils import (
@@ -15,7 +15,7 @@ _DETAILED_BASH_DESCRIPTION = 'Execute a bash command in the terminal within a pe
 _SHORT_BASH_DESCRIPTION = 'Execute a bash command in the terminal.\n* Long running commands: For commands that may run indefinitely, it should be run in the background and the output should be redirected to a file, e.g. command = `python3 app.py > server.log 2>&1 &`. For commands that need to run for a specific duration, you can set the "timeout" argument to specify a hard timeout in seconds.\n* Interact with running process: If a bash command returns exit code `-1`, this means the process is not yet finished. By setting `is_input` to `true`, the assistant can interact with the running process and send empty `command` to retrieve any additional logs, or send additional text (set `command` to the text) to STDIN of the running process, or send command like `C-c` (Ctrl+C), `C-d` (Ctrl+D), `C-z` (Ctrl+Z) to interrupt the process.\n* One command at a time: You can only execute one bash command at a time. If you need to run multiple commands sequentially, you can use `&&` or `;` to chain them together.'
 
 
-def create_cmd_run_tool(use_short_description: bool = False) -> ChatCompletionToolParam:
+def create_cmd_run_tool(use_short_description: bool = False):
     """Create a bash command execution tool for the agent.
 
     Args:
@@ -25,10 +25,12 @@ def create_cmd_run_tool(use_short_description: bool = False) -> ChatCompletionTo
         ChatCompletionToolParam: The configured bash command tool.
 
     """
-    description = _SHORT_BASH_DESCRIPTION if use_short_description else _DETAILED_BASH_DESCRIPTION
-    return ChatCompletionToolParam(
+    description = (
+        _SHORT_BASH_DESCRIPTION if use_short_description else _DETAILED_BASH_DESCRIPTION
+    )
+    return make_tool_param(
         type="function",
-        function=ChatCompletionToolParamFunctionChunk(
+        function=make_function_chunk(
             name=EXECUTE_BASH_TOOL_NAME,
             description=refine_prompt(description),
             parameters={
@@ -43,11 +45,9 @@ def create_cmd_run_tool(use_short_description: bool = False) -> ChatCompletionTo
                     "is_input": {
                         "type": "string",
                         "description": refine_prompt(
-                                "If True, the command is an input to the running process. If False, the command is a bash command to be executed in the terminal. Default is False.",
+                            "If True, the command is an input to the running process. If False, the command is a bash command to be executed in the terminal. Default is False.",
                         ),
-                        "enum": [
-                            "true",
-                            "false"],
+                        "enum": ["true", "false"],
                     },
                     "timeout": {
                         "type": "number",

@@ -87,7 +87,9 @@ def test_load_microagents_with_trailing_slashes(temp_microagents_dir):
     knowledge_dir.mkdir(exist_ok=True)
     knowledge_agent = "---\n# type: knowledge\nversion: 1.0.0\nagent: CodeActAgent\ntriggers:\n  - trailing\n---\n\n# Trailing Slash Test\n\nTesting loading with trailing slashes.\n"
     (knowledge_dir / "trailing.md").write_text(knowledge_agent)
-    repo_agents, knowledge_agents = load_microagents_from_dir(f"{str(temp_microagents_dir)}/")
+    repo_agents, knowledge_agents = load_microagents_from_dir(
+        f"{str(temp_microagents_dir)}/"
+    )
     assert len(knowledge_agents) == 2
     agent_t = knowledge_agents["test_knowledge/trailing"]
     assert isinstance(agent_t, KnowledgeMicroagent)
@@ -115,9 +117,7 @@ def test_invalid_microagent_type(temp_microagents_dir):
 
 def test_cursorrules_file_load():
     """Test loading .cursorrules file as a RepoMicroagent."""
-    cursorrules_content = (
-        "Always use Python for new files.\nFollow the existing code style.\nAdd proper error handling."
-    )
+    cursorrules_content = "Always use Python for new files.\nFollow the existing code style.\nAdd proper error handling."
     cursorrules_path = Path(".cursorrules")
     agent = BaseMicroagent.load(cursorrules_path, file_content=cursorrules_content)
     assert isinstance(agent, RepoMicroagent)
@@ -173,7 +173,9 @@ def temp_microagents_dir_with_cursorrules():
         root = Path(temp_dir)
         microagents_dir = root / ".Forge" / "microagents"
         microagents_dir.mkdir(parents=True, exist_ok=True)
-        cursorrules_content = "Always use TypeScript for new files.\nFollow the existing code style."
+        cursorrules_content = (
+            "Always use TypeScript for new files.\nFollow the existing code style."
+        )
         (root / ".cursorrules").write_text(cursorrules_content)
         repo_agent = "---\n# type: repo\nversion: 1.0.0\nagent: CodeActAgent\n---\n\n# Test Repository Agent\n\nRepository-specific test instructions.\n"
         (microagents_dir / "repo.md").write_text(repo_agent)
@@ -199,7 +201,9 @@ def temp_dir_with_cursorrules_only():
     """Create a temporary directory with only .cursorrules file (no .Forge/microagents directory)."""
     with tempfile.TemporaryDirectory() as temp_dir:
         root = Path(temp_dir)
-        cursorrules_content = "Always use Python for new files.\nFollow PEP 8 style guidelines."
+        cursorrules_content = (
+            "Always use Python for new files.\nFollow PEP 8 style guidelines."
+        )
         (root / ".cursorrules").write_text(cursorrules_content)
         yield root
 
@@ -279,7 +283,9 @@ def temp_dir_with_both_cursorrules_and_agents():
     """Create a temporary directory with both .cursorrules and AGENTS.md files."""
     with tempfile.TemporaryDirectory() as temp_dir:
         root = Path(temp_dir)
-        cursorrules_content = "Always use Python for new files.\nFollow PEP 8 style guidelines."
+        cursorrules_content = (
+            "Always use Python for new files.\nFollow PEP 8 style guidelines."
+        )
         (root / ".cursorrules").write_text(cursorrules_content)
         agents_content = "# Development Guide\n\n## Setup commands\n\n- Install deps: `poetry install`\n- Run tests: `poetry run pytest`"
         (root / "AGENTS.md").write_text(agents_content)
@@ -288,7 +294,9 @@ def temp_dir_with_both_cursorrules_and_agents():
 
 def test_load_both_cursorrules_and_agents_md(temp_dir_with_both_cursorrules_and_agents):
     """Test loading both .cursorrules and AGENTS.md files when .Forge/microagents doesn't exist."""
-    microagents_dir = temp_dir_with_both_cursorrules_and_agents / ".Forge" / "microagents"
+    microagents_dir = (
+        temp_dir_with_both_cursorrules_and_agents / ".Forge" / "microagents"
+    )
     repo_agents, knowledge_agents = load_microagents_from_dir(microagents_dir)
     assert len(repo_agents) == 2
     assert "cursorrules" in repo_agents

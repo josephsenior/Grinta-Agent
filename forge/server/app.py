@@ -4,10 +4,13 @@ import contextlib
 import os
 import warnings
 from collections.abc import AsyncIterator
+import re
 from contextlib import asynccontextmanager
+import sys
 
 from fastapi.routing import Mount
-from forge.core.logger import forge_logger as logger
+from forge.core.logger import forge_logger as logger, get_trace_context
+from forge.core.tracing import initialize_tracing
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
@@ -37,6 +40,7 @@ from forge.server.middleware.cost_quota import (
     RedisCostQuotaMiddleware,
     QuotaPlan,
 )
+from forge.server.middleware.observability import RequestObservabilityMiddleware
 from forge.server.middleware.security_headers import (
     CSRFProtection,
     SecurityHeadersMiddleware,
@@ -55,6 +59,7 @@ from forge.server.routes.knowledge_base import router as knowledge_base_router
 from forge.server.routes.manage_conversations import (
     app as manage_conversation_api_router,
 )
+
 # Delay MCP import to avoid circular dependency issues during config loading
 # from forge.server.routes.mcp import mcp_server
 from forge.server.routes.memory import app as memory_router
@@ -70,11 +75,12 @@ from forge.server.routes.slack import router as slack_router
 from forge.server.routes.snippets import router as snippets_router
 from forge.server.routes.templates import app as templates_router
 from forge.server.routes.trajectory import app as trajectory_router
-from forge.server.shared import conversation_manager, server_config
+from forge.server.shared import conversation_manager, server_config, get_conversation_manager
 from forge.server.types import AppMode
 
 # Import MCP server late to ensure config is loaded first
 from forge.server.routes.mcp import mcp_server
+
 mcp_app = mcp_server.http_app(path="/mcp")
 
 
@@ -103,8 +109,49 @@ def combine_lifespans(*lifespans):
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Manage application-specific resources during startup/shutdown."""
-    async with conversation_manager:
+    # Startup
+    logger.info("Starting Forge server...")
+    
+    # Register shutdown handlers for graceful shutdown
+    from forge.server.graceful_shutdown import register_shutdown_handler
+
+    async def cleanup_conversations():
+        """Cleanup all active conversations on shutdown."""
+        try:
+            manager = await get_conversation_manager().__aenter__()
+            # Get all running conversations and stop them gracefully
+            running_sids = await manager.get_running_agent_loops()
+            logger.info(f"Stopping {len(running_sids)} active conversations...")
+            for sid in running_sids:
+                try:
+                    # Stop conversation gracefully
+                    await manager.close_session(sid)
+                except Exception as e:
+                    logger.error(f"Error stopping conversation {sid}: {e}", exc_info=True)
+        except Exception as e:
+            logger.error(f"Error during conversation cleanup: {e}", exc_info=True)
+
+    async def cleanup_socketio():
+        """Close Socket.IO connections gracefully."""
+        try:
+            from forge.server.shared import sio
+            logger.info("Closing Socket.IO connections...")
+            await sio.disconnect()
+        except Exception as e:
+            logger.error(f"Error closing Socket.IO: {e}", exc_info=True)
+
+    register_shutdown_handler(cleanup_conversations)
+    register_shutdown_handler(cleanup_socketio)
+
+    # Lazily initialize the conversation manager to avoid None during import time
+    async with get_conversation_manager():
+        logger.info("Forge server started successfully")
         yield
+        # Shutdown
+        logger.info("Shutting down Forge server...")
+        from forge.server.graceful_shutdown import graceful_shutdown
+
+        await graceful_shutdown()
 
 
 app = FastAPI(
@@ -137,21 +184,212 @@ app = FastAPI(
 )
 
 # Add security and performance middleware
-# Order matters: CORS -> versioning -> compression -> security headers -> CSRF -> rate limiting
+# Order matters: CORS -> auth -> versioning -> compression -> security headers -> CSRF -> rate limiting -> resource quotas
 
 # 0. CORS (should be first to handle cross-origin requests)
 # 🔒 SECURITY: Use LocalhostCORSMiddleware which always allows localhost/127.0.0.1
 # while still respecting configured origins for production
 from forge.server.middleware import LocalhostCORSMiddleware
+
 app.add_middleware(LocalhostCORSMiddleware)
 
-# 0.5. Request Tracing (add request IDs for debugging)
+# 0.25. Authentication (after CORS, before other middleware)
+# Optional: Enable JWT authentication if AUTH_ENABLED is set
+auth_enabled = os.getenv("AUTH_ENABLED", "false").lower() in ("true", "1", "yes")
+if auth_enabled:
+    from forge.server.middleware.auth import AuthMiddleware
+
+    app.add_middleware(AuthMiddleware)
+    logger.info("JWT authentication middleware enabled")
+
+# 0.5. Request ID (add unique request IDs for tracing)
+from forge.server.middleware.request_id import RequestIDMiddleware
+
+app.add_middleware(RequestIDMiddleware)
+
+# 0.6. Request Tracing (add request IDs for debugging)
 from forge.server.middleware.request_tracing import RequestTracingMiddleware
+
 app.add_middleware(BaseHTTPMiddleware, dispatch=RequestTracingMiddleware(enabled=True))
+
+# Initialize distributed tracing (defaults to enabled with console exporter)
+_tracing_enabled = os.getenv("TRACING_ENABLED", os.getenv("OTEL_ENABLED", "true")).lower() in (
+    "true",
+    "1",
+    "yes",
+)
+if _tracing_enabled:
+    try:
+        _tracing_sample_rate = float(
+            os.getenv("TRACING_SAMPLE_RATE", os.getenv("OTEL_SAMPLE_DEFAULT", "0.1"))
+        )
+    except Exception:
+        _tracing_sample_rate = 0.1
+    initialize_tracing(
+        service_name=os.getenv("TRACING_SERVICE_NAME", os.getenv("SERVICE_NAME", "forge-server")),
+        service_version=os.getenv("TRACING_SERVICE_VERSION", __version__),
+        exporter=os.getenv("TRACING_EXPORTER", os.getenv("OTEL_EXPORTER", "console")),
+        endpoint=os.getenv("TRACING_ENDPOINT", os.getenv("OTEL_EXPORTER_ENDPOINT")),
+        sample_rate=_tracing_sample_rate,
+        enabled=True,
+    )
+
+# Minimal OpenTelemetry spans around request lifecycle (optional)
+_otel_enabled = _tracing_enabled
+try:
+    _sample_http = float(
+        os.getenv("OTEL_SAMPLE_HTTP", os.getenv("OTEL_SAMPLE_DEFAULT", "0.1"))
+    )
+except Exception:
+    _sample_http = 1.0
+_sample_http = max(0.0, min(1.0, _sample_http))
+_route_override_raw = os.getenv("OTEL_SAMPLE_ROUTES", "").strip()
+_route_sample_patterns = []  # list of tuples (pattern, rate, is_prefix)
+if _route_override_raw:
+    for item in _route_override_raw.split(";"):
+        item = item.strip()
+        if not item:
+            continue
+        if ":" not in item:
+            continue
+        pattern, rate_str = item.split(":", 1)
+        pattern = pattern.strip()
+        try:
+            rate = float(rate_str.strip())
+        except Exception:
+            rate = 1.0
+        rate = max(0.0, min(1.0, rate))
+        is_prefix = pattern.endswith("*")
+        if is_prefix:
+            pattern = pattern[:-1]  # remove trailing * for matching
+        # Ignore invalid/empty patterns or ones not starting with '/'
+        if not pattern or not pattern.startswith("/"):
+            continue
+        _route_sample_patterns.append((pattern, rate, is_prefix))
+
+_route_regex_raw = os.getenv("OTEL_SAMPLE_ROUTES_REGEX", "").strip()
+_route_sample_regex = []  # list of tuples (compiled_regex, rate)
+if _route_regex_raw:
+    for item in _route_regex_raw.split(";"):
+        item = item.strip()
+        if not item:
+            continue
+        if ":" not in item:
+            continue
+        pattern, rate_str = item.split(":", 1)
+        pattern = pattern.strip()
+        try:
+            rate = float(rate_str.strip())
+        except Exception:
+            rate = 1.0
+        rate = max(0.0, min(1.0, rate))
+        if not pattern:
+            continue
+        try:
+            compiled = re.compile(pattern)
+        except Exception:
+            continue
+        _route_sample_regex.append((compiled, rate))
+
+
+def get_effective_http_sample(route_path: str) -> float:
+    """Return effective sampling probability for a given HTTP route.
+
+    Order of precedence:
+    1. First matching entry in `_route_sample_regex` (left-to-right regex matches) — fine-grained override.
+    2. First matching entry in `_route_sample_patterns` (exact or prefix `*`).
+    3. Fallback to base `_sample_http` from `OTEL_SAMPLE_HTTP` or `OTEL_SAMPLE_DEFAULT`.
+
+    Args:
+        route_path: The HTTP route path (e.g. "/api/conversations/123").
+
+    Returns:
+        Sampling probability in [0.0, 1.0].
+    """
+    try:
+        # Regex overrides take precedence
+        for cregex, rate in _route_sample_regex:
+            if cregex.search(route_path):
+                return rate
+        # Then exact/prefix patterns
+        for pattern, rate, is_prefix in _route_sample_patterns:
+            if (is_prefix and route_path.startswith(pattern)) or (
+                not is_prefix and route_path == pattern
+            ):
+                return rate
+    except Exception:
+        pass
+    return _sample_http
+
+
+if _otel_enabled:
+    try:  # pragma: no cover - optional instrumentation
+        from opentelemetry import trace
+        from opentelemetry.trace import SpanKind
+
+        tracer = trace.get_tracer("forge.server")
+
+        async def otel_wrapper(request: Request, call_next):
+            route_path = getattr(
+                getattr(request.scope.get("route", None), "path", None),
+                "__str__",
+                lambda: None,
+            )()
+            if not route_path:
+                route_path = request.url.path
+            # Determine effective sample rate using helper (regex > simple > base)
+            effective_rate = get_effective_http_sample(route_path)
+            # Head sampling: skip span creation if random() > effective_rate
+            import random
+
+            if random.random() > effective_rate:
+                return await call_next(request)
+            with tracer.start_as_current_span(
+                name=f"HTTP {request.method} {route_path}", kind=SpanKind.SERVER
+            ) as span:
+                span.set_attribute("http.method", request.method)
+                span.set_attribute("http.route", route_path)
+                span.set_attribute("http.target", request.url.path)
+                span.set_attribute("http.url", str(request.url))
+                span.set_attribute(
+                    "forge.request_id",
+                    getattr(getattr(request, "state", object()), "request_id", ""),
+                )
+                # Bridge thread-local orchestrator trace_id for correlation
+                try:
+                    ctx = get_trace_context()
+                    tid = ctx.get("trace_id") if isinstance(ctx, dict) else None
+                    if tid:
+                        span.set_attribute("forge.trace_id", str(tid))
+                except Exception:
+                    pass
+                try:
+                    response = await call_next(request)
+                    span.set_attribute("http.status_code", response.status_code)
+                except Exception as e:
+                    span.record_exception(e)
+                    span.set_attribute("error", True)
+                    raise
+                return response
+
+        app.add_middleware(BaseHTTPMiddleware, dispatch=otel_wrapper)
+    except Exception as e:  # pragma: no cover
+        logger.warning(f"OTEL instrumentation initialization failed: {e}")
 
 # 0.6. API Versioning (after request tracing, before other middleware)
 from forge.server.versioning import version_middleware
+
 app.add_middleware(BaseHTTPMiddleware, dispatch=version_middleware)
+
+# 0.65. Request Metrics (lightweight Prometheus-friendly counters/histogram)
+from forge.server.middleware import RequestMetricsMiddleware
+
+app.add_middleware(BaseHTTPMiddleware, dispatch=RequestMetricsMiddleware(enabled=True))
+from forge.server.middleware import RequestSizeLoggingMiddleware
+
+app.add_middleware(
+    BaseHTTPMiddleware, dispatch=RequestSizeLoggingMiddleware(enabled=True)
+)
 
 # 1. Compression (should be first to compress all responses)
 app.add_middleware(
@@ -160,29 +398,57 @@ app.add_middleware(
 )
 
 # 2. Security headers
+# CSP policy can be toggled via env: CSP_POLICY=permissive|strict
+# Default: strict in production-like environments, permissive otherwise
+env_hint = (
+    os.getenv("FORGE_ENV")
+    or os.getenv("ENV")
+    or os.getenv("PYTHON_ENV")
+    or os.getenv("NODE_ENV")
+    or "development"
+).lower()
+default_csp = (
+    "strict" if any(x in env_hint for x in ("prod", "production")) else "permissive"
+)
+csp_policy = os.getenv("CSP_POLICY", default_csp).lower()
+if csp_policy not in ("permissive", "strict"):
+    csp_policy = default_csp
 app.add_middleware(
     BaseHTTPMiddleware,
-    dispatch=SecurityHeadersMiddleware(enabled=True),
+    dispatch=SecurityHeadersMiddleware(enabled=True, csp_profile=csp_policy),
 )
 
 # 3. CSRF protection
-# 🔒 SECURITY: Disabled by default to maintain compatibility; enable via env var
-csrf_enabled = os.getenv("CSRF_PROTECTION_ENABLED", "false").lower() == "true"
+# 🔒 SECURITY: Default enabled in production-like environments; can be overridden
+default_csrf = "true" if any(x in env_hint for x in ("prod", "production")) else "false"
+csrf_enabled = os.getenv("CSRF_PROTECTION_ENABLED", default_csrf).lower() == "true"
 app.add_middleware(
     BaseHTTPMiddleware,
     dispatch=CSRFProtection(enabled=csrf_enabled),
 )
 
-# 4. Rate limiting & Cost quotas
-# Use Redis-backed rate limiter if REDIS_HOST is configured, otherwise in-memory
+# 4. Resource Quotas (before rate limiting to check quotas first)
+resource_quota_enabled = os.getenv("RESOURCE_QUOTA_ENABLED", "true").lower() == "true"
+if resource_quota_enabled:
+    from forge.server.middleware.resource_quota import ResourceQuotaMiddleware
+
+    app.add_middleware(ResourceQuotaMiddleware, enabled=True)
+    logger.info("Resource quota middleware enabled")
+
+# 4.5. Rate limiting & Cost quotas
+# Use Redis-backed rate limiter if REDIS_URL or REDIS_HOST is configured, otherwise in-memory
 rate_limiter_enabled = os.getenv("RATE_LIMITING_ENABLED", "true").lower() == "true"
 cost_quota_enabled = os.getenv("COST_QUOTA_ENABLED", "true").lower() == "true"
 
-if REDIS_AVAILABLE and os.getenv("REDIS_HOST"):
+# Auto-detect Redis URL from environment (REDIS_URL takes precedence over REDIS_HOST)
+redis_url = os.getenv("REDIS_URL")
+if not redis_url and os.getenv("REDIS_HOST"):
     redis_url = f"redis://{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PORT', '6379')}"
     if redis_password := os.getenv("REDIS_PASSWORD"):
         redis_url = f"redis://:{redis_password}@{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PORT', '6379')}"
 
+# Use Redis if available, otherwise fall back to in-memory
+if REDIS_AVAILABLE and redis_url:
     app.add_middleware(
         BaseHTTPMiddleware,
         dispatch=RedisRateLimiter(
@@ -190,16 +456,22 @@ if REDIS_AVAILABLE and os.getenv("REDIS_HOST"):
             enabled=rate_limiter_enabled,
         ),
     )
-    # Add Redis-backed cost quota middleware
+    # Add Redis-backed cost quota middleware with connection pooling and health checks
     if cost_quota_enabled:
-        logger.info("Using Redis cost quota middleware")
+        logger.info("Using Redis cost quota middleware with connection pooling")
         default_plan = QuotaPlan(os.getenv("DEFAULT_QUOTA_PLAN", "free"))
+        connection_pool_size = int(os.getenv("REDIS_POOL_SIZE", "10"))
+        connection_timeout = float(os.getenv("REDIS_TIMEOUT", "5.0"))
+        fallback_enabled = os.getenv("REDIS_QUOTA_FALLBACK", "true").lower() == "true"
         app.add_middleware(
             BaseHTTPMiddleware,
             dispatch=RedisCostQuotaMiddleware(
                 redis_url=redis_url,
                 enabled=True,
                 default_plan=default_plan,
+                connection_pool_size=connection_pool_size,
+                connection_timeout=connection_timeout,
+                fallback_enabled=fallback_enabled,
             ),
         )
 else:
@@ -207,9 +479,12 @@ else:
         BaseHTTPMiddleware,
         dispatch=EndpointRateLimiter(enabled=rate_limiter_enabled),
     )
-    # Add in-memory cost quota middleware
+    # Add in-memory cost quota middleware with graceful fallback message
     if cost_quota_enabled:
-        logger.info("Using in-memory cost quota middleware")
+        logger.info(
+            "Using in-memory cost quota middleware (Redis not available). "
+            "Set REDIS_URL to enable distributed quota tracking."
+        )
         default_plan = QuotaPlan(os.getenv("DEFAULT_QUOTA_PLAN", "free"))
         app.add_middleware(
             BaseHTTPMiddleware,
@@ -218,6 +493,15 @@ else:
                 default_plan=default_plan,
             ),
         )
+
+# 5. Observability middleware (requests metrics, SLO tracking, and alerting)
+observability_enabled = os.getenv("OBSERVABILITY_ENABLED", "true").lower() in ("true", "1", "yes")
+alerting_enabled = os.getenv("ALERTING_ENABLED", "false").lower() in ("true", "1", "yes")
+if observability_enabled:
+    app.add_middleware(
+        RequestObservabilityMiddleware,
+        alerting_enabled=alerting_enabled,
+    )
 
 
 @app.exception_handler(AuthenticationError)
@@ -233,12 +517,9 @@ async def authentication_error_handler(request: Request, exc: AuthenticationErro
 
     """
     from forge.server.utils.error_formatter import format_authentication_error
-    
+
     user_error = format_authentication_error(exc, context={"path": request.url.path})
-    return JSONResponse(
-        status_code=401,
-        content=user_error.to_dict()
-    )
+    return JSONResponse(status_code=401, content=user_error.to_dict())
 
 
 # Additional exception handlers for common errors
@@ -246,7 +527,7 @@ async def authentication_error_handler(request: Request, exc: AuthenticationErro
 async def llm_no_response_handler(request: Request, exc: LLMNoResponseError):
     """Handle LLM no response errors with user-friendly message."""
     from forge.server.utils.error_formatter import format_error_for_user
-    
+
     error_dict = format_error_for_user(exc, context={"path": request.url.path})
     return JSONResponse(status_code=503, content=error_dict)
 
@@ -255,7 +536,7 @@ async def llm_no_response_handler(request: Request, exc: LLMNoResponseError):
 async def context_window_handler(request: Request, exc: LLMContextWindowExceedError):
     """Handle context window exceeded with user-friendly message."""
     from forge.server.utils.error_formatter import format_error_for_user
-    
+
     error_dict = format_error_for_user(exc, context={"path": request.url.path})
     return JSONResponse(status_code=400, content=error_dict)
 
@@ -264,25 +545,29 @@ async def context_window_handler(request: Request, exc: LLMContextWindowExceedEr
 async def agent_stuck_handler(request: Request, exc: AgentStuckInLoopError):
     """Handle agent stuck in loop with user-friendly message."""
     from forge.server.utils.error_formatter import format_error_for_user
-    
+
     error_dict = format_error_for_user(exc, context={"path": request.url.path})
     return JSONResponse(status_code=409, content=error_dict)
 
 
 @app.exception_handler(AgentRuntimeUnavailableError)
-async def runtime_unavailable_handler(request: Request, exc: AgentRuntimeUnavailableError):
+async def runtime_unavailable_handler(
+    request: Request, exc: AgentRuntimeUnavailableError
+):
     """Handle runtime unavailable with user-friendly message."""
     from forge.server.utils.error_formatter import format_error_for_user
-    
+
     error_dict = format_error_for_user(exc, context={"path": request.url.path})
     return JSONResponse(status_code=503, content=error_dict)
 
 
 @app.exception_handler(FunctionCallValidationError)
-async def function_call_error_handler(request: Request, exc: FunctionCallValidationError):
+async def function_call_error_handler(
+    request: Request, exc: FunctionCallValidationError
+):
     """Handle function call errors with user-friendly message."""
     from forge.server.utils.error_formatter import format_error_for_user
-    
+
     error_dict = format_error_for_user(exc, context={"path": request.url.path})
     return JSONResponse(status_code=422, content=error_dict)
 
@@ -291,7 +576,7 @@ async def function_call_error_handler(request: Request, exc: FunctionCallValidat
 async def malformed_action_handler(request: Request, exc: LLMMalformedActionError):
     """Handle malformed action errors with user-friendly message."""
     from forge.server.utils.error_formatter import format_error_for_user
-    
+
     error_dict = format_error_for_user(exc, context={"path": request.url.path})
     return JSONResponse(status_code=422, content=error_dict)
 
@@ -300,14 +585,14 @@ async def malformed_action_handler(request: Request, exc: LLMMalformedActionErro
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
     """Handle all unhandled exceptions with user-friendly messages.
-    
+
     This is the safety net - formats any error gracefully for users.
     """
     from forge.server.utils.error_formatter import safe_format_error
-    
+
     # Log the raw error for debugging
     logger.exception(f"Unhandled exception: {type(exc).__name__}")
-    
+
     # Format for users
     error_dict = safe_format_error(exc, context={"path": request.url.path})
     return JSONResponse(status_code=500, content=error_dict)
@@ -316,6 +601,16 @@ async def generic_exception_handler(request: Request, exc: Exception):
 # Include all routers with v1 versioning tags
 # Note: Routes keep their current paths for backward compatibility during beta
 # Version headers are added via middleware
+# Authentication routes (before other routes for proper middleware order)
+from forge.server.routes.auth import router as auth_router
+
+app.include_router(auth_router, tags=["v1", "authentication"])
+
+# User management routes
+from forge.server.routes.user_management import router as user_management_router
+
+app.include_router(user_management_router, tags=["v1", "user-management"])
+
 app.include_router(public_api_router, tags=["v1", "public"])
 app.include_router(files_api_router, tags=["v1", "files"])
 app.include_router(security_api_router, tags=["v1", "security"])
@@ -340,3 +635,47 @@ if server_config.app_mode == AppMode.OSS:
     app.include_router(git_api_router, tags=["v1", "git"])
 app.include_router(trajectory_router, tags=["v1", "trajectory"])
 add_health_endpoints(app)
+
+# Optional: expose a lightweight debug endpoint for sampling configuration
+_sampling_debug_enabled = os.getenv("OTEL_DEBUG_SAMPLING", "false").lower() == "true"
+if _sampling_debug_enabled:
+    from typing import Optional
+    from fastapi import Query
+
+    @app.get(
+        "/api/monitoring/sampling_debug", tags=["v1", "monitoring"]
+    )  # pragma: no cover - covered via integration test
+    async def sampling_debug(
+        path: Optional[str] = Query(
+            default=None, description="Optional path to compute effective sample"
+        ),
+    ):
+        module = sys.modules[__name__]
+        try:
+            route_patterns = getattr(module, "_route_sample_patterns")
+            route_regex = getattr(module, "_route_sample_regex")
+            payload = {
+                "otel_enabled": getattr(module, "_otel_enabled"),
+                "base_http_sample": getattr(module, "_sample_http"),
+                "route_patterns": [
+                    {
+                        "pattern": pattern,
+                        "rate": rate,
+                        "type": ("prefix" if is_prefix else "exact"),
+                    }
+                    for pattern, rate, is_prefix in route_patterns
+                ],
+                "regex_patterns": [
+                    {"pattern": cregex.pattern, "rate": rate}
+                    for cregex, rate in route_regex
+                ],
+            }
+            if path:
+                effective_rate = getattr(module, "get_effective_http_sample")(path)
+                payload["effective_for"] = {
+                    "path": path,
+                    "effective_rate": effective_rate,
+                }
+            return JSONResponse(payload)
+        except Exception as e:
+            return JSONResponse({"error": str(e)}, status_code=500)

@@ -35,14 +35,14 @@ class ConversationValidator:
         authorization_header: str | None = None,
     ) -> str | None:
         """Validate conversation access and return user ID.
-        
+
         Default implementation performs no validation. Override for custom auth.
-        
+
         Args:
             conversation_id: Conversation ID to validate
             cookies_str: Cookie string from request
             authorization_header: Optional authorization header
-            
+
         Returns:
             User ID or None
 
@@ -51,14 +51,18 @@ class ConversationValidator:
         metadata = await self._ensure_metadata_exists(conversation_id, user_id)
         return metadata.user_id
 
-    async def _ensure_metadata_exists(self, conversation_id: str, user_id: str | None) -> ConversationMetadata:
+    async def _ensure_metadata_exists(
+        self, conversation_id: str, user_id: str | None
+    ) -> ConversationMetadata:
         config = load_FORGE_config()
         server_config = ServerConfig()
         conversation_store_class: type[ConversationStore] = get_impl(
             ConversationStore,
             server_config.conversation_store_class,
         )
-        conversation_store = await conversation_store_class.get_instance(config, user_id)
+        conversation_store = await conversation_store_class.get_instance(
+            config, user_id
+        )
         try:
             metadata = await conversation_store.get_metadata(conversation_id)
         except FileNotFoundError:
@@ -82,7 +86,7 @@ class ConversationValidator:
 
 def create_conversation_validator() -> ConversationValidator:
     """Create conversation validator from environment configuration.
-    
+
     Returns:
         ConversationValidator instance (default or custom implementation)
 
@@ -91,5 +95,7 @@ def create_conversation_validator() -> ConversationValidator:
         "FORGE_CONVERSATION_VALIDATOR_CLS",
         "forge.storage.conversation.conversation_validator.ConversationValidator",
     )
-    ConversationValidatorImpl = get_impl(ConversationValidator, conversation_validator_cls)
+    ConversationValidatorImpl = get_impl(
+        ConversationValidator, conversation_validator_cls
+    )
     return ConversationValidatorImpl()

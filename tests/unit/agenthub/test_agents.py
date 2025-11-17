@@ -1,9 +1,14 @@
-from typing import Union
+from typing import Any, Union, cast
 from unittest.mock import Mock
+
 import pytest
 from litellm import ChatCompletionMessageToolCall
+from pydantic import SecretStr
+
 from forge.agenthub.codeact_agent.codeact_agent import CodeActAgent
-from forge.agenthub.codeact_agent.function_calling import response_to_actions as codeact_response_to_actions
+from forge.agenthub.codeact_agent.function_calling import (
+    response_to_actions as codeact_response_to_actions,
+)
 from forge.agenthub.codeact_agent.tools import (
     BrowserTool,
     IPythonTool,
@@ -12,9 +17,16 @@ from forge.agenthub.codeact_agent.tools import (
     create_cmd_run_tool,
     create_str_replace_editor_tool,
 )
-from forge.agenthub.codeact_agent.tools.browser import _BROWSER_DESCRIPTION, _BROWSER_TOOL_DESCRIPTION
-from forge.agenthub.readonly_agent.function_calling import response_to_actions as readonly_response_to_actions
-from forge.agenthub.readonly_agent.readonly_agent import ReadOnlyAgent
+from forge.agenthub.codeact_agent.tools.browser import (
+    _BROWSER_DESCRIPTION,
+    _BROWSER_TOOL_DESCRIPTION,
+)
+from forge.agenthub.readonly_agent.function_calling import (
+    response_to_actions as readonly_response_to_actions,
+)
+from forge.agenthub.readonly_agent.readonly_agent_ultimate import (
+    UltimateReadOnlyAgent as ReadOnlyAgent,
+)
 from forge.agenthub.readonly_agent.tools import GlobTool, GrepTool
 from forge.controller.state.state import State
 from forge.core.config import AgentConfig, LLMConfig
@@ -32,7 +44,6 @@ from forge.memory.condenser import View
 
 @pytest.fixture
 def create_llm_registry():
-
     def _get_registry(llm_config):
         config = ForgeConfig()
         config.set_llm_config(llm_config)
@@ -45,14 +56,12 @@ def create_llm_registry():
 def agent_class(request):
     if request.param == "CodeActAgent":
         return CodeActAgent
-    from forge.agenthub.readonly_agent.readonly_agent import ReadOnlyAgent
-
     return ReadOnlyAgent
 
 
 @pytest.fixture
 def agent(agent_class, create_llm_registry) -> Union[CodeActAgent, ReadOnlyAgent]:
-    llm_config = LLMConfig(model="gpt-4o", api_key="test_key")
+    llm_config = LLMConfig(model="gpt-4o", api_key=SecretStr("test_key"))
     config = AgentConfig()
     agent = agent_class(config=config, llm_registry=create_llm_registry(llm_config))
     agent.llm = Mock()
@@ -62,12 +71,20 @@ def agent(agent_class, create_llm_registry) -> Union[CodeActAgent, ReadOnlyAgent
 
 
 def test_agent_with_default_config_has_default_tools(create_llm_registry):
-    llm_config = LLMConfig(model="gpt-4o", api_key="test_key")
+    llm_config = LLMConfig(model="gpt-4o", api_key=SecretStr("test_key"))
     config = AgentConfig()
-    codeact_agent = CodeActAgent(config=config, llm_registry=create_llm_registry(llm_config))
+    codeact_agent = CodeActAgent(
+        config=config, llm_registry=create_llm_registry(llm_config)
+    )
     assert len(codeact_agent.tools) > 0
     default_tool_names = [tool["function"]["name"] for tool in codeact_agent.tools]
-    required_tools = {"execute_bash", "execute_ipython_cell", "finish", "str_replace_editor", "think"}
+    required_tools = {
+        "execute_bash",
+        "execute_ipython_cell",
+        "finish",
+        "str_replace_editor",
+        "think",
+    }
     import platform
 
     if platform.system() != "Windows":
@@ -77,7 +94,7 @@ def test_agent_with_default_config_has_default_tools(create_llm_registry):
 
 @pytest.fixture
 def mock_state() -> State:
-    state = Mock(spec=State)
+    state = State()
     state.history = []
     state.extra_data = {}
     return state
@@ -114,7 +131,10 @@ def test_cmd_run_tool():
     assert CmdRunTool["function"]["name"] == "execute_bash"
     assert "command" in CmdRunTool["function"]["parameters"]["properties"]
     assert "security_risk" in CmdRunTool["function"]["parameters"]["properties"]
-    assert CmdRunTool["function"]["parameters"]["required"] == ["command", "security_risk"]
+    assert CmdRunTool["function"]["parameters"]["required"] == [
+        "command",
+        "security_risk",
+    ]
 
 
 def test_ipython_tool():
@@ -122,7 +142,10 @@ def test_ipython_tool():
     assert IPythonTool["function"]["name"] == "execute_ipython_cell"
     assert "code" in IPythonTool["function"]["parameters"]["properties"]
     assert "security_risk" in IPythonTool["function"]["parameters"]["properties"]
-    assert IPythonTool["function"]["parameters"]["required"] == ["code", "security_risk"]
+    assert IPythonTool["function"]["parameters"]["required"] == [
+        "code",
+        "security_risk",
+    ]
 
 
 def test_llm_based_file_edit_tool():
@@ -134,7 +157,11 @@ def test_llm_based_file_edit_tool():
     assert "start" in properties
     assert "end" in properties
     assert "security_risk" in properties
-    assert LLMBasedFileEditTool["function"]["parameters"]["required"] == ["path", "content", "security_risk"]
+    assert LLMBasedFileEditTool["function"]["parameters"]["required"] == [
+        "path",
+        "content",
+        "security_risk",
+    ]
 
 
 def test_str_replace_editor_tool():
@@ -149,16 +176,21 @@ def test_str_replace_editor_tool():
     assert "new_str" in properties
     assert "insert_line" in properties
     assert "security_risk" in properties
-    assert StrReplaceEditorTool["function"]["parameters"]["required"] == ["command", "path", "security_risk"]
+    assert StrReplaceEditorTool["function"]["parameters"]["required"] == [
+        "command",
+        "path",
+        "security_risk",
+    ]
 
 
 def _validate_browser_tool_basic_structure():
     """Validate basic structure of browser tool."""
-    assert BrowserTool["type"] == "function"
-    assert BrowserTool["function"]["name"] == "browser"
-    assert "code" in BrowserTool["function"]["parameters"]["properties"]
-    assert "security_risk" in BrowserTool["function"]["parameters"]["properties"]
-    assert BrowserTool["function"]["parameters"]["required"] == ["code", "security_risk"]
+    tool = cast(dict[str, Any], BrowserTool)
+    assert tool["type"] == "function"
+    assert tool["function"]["name"] == "browser"
+    assert "code" in tool["function"]["parameters"]["properties"]
+    assert "security_risk" in tool["function"]["parameters"]["properties"]
+    assert tool["function"]["parameters"]["required"] == ["code", "security_risk"]
 
 
 def _validate_browser_tool_description():
@@ -187,12 +219,13 @@ def _validate_browser_tool_description():
 
 def _validate_browser_tool_parameters():
     """Validate browser tool parameters structure."""
-    assert BrowserTool["function"]["description"] == _BROWSER_DESCRIPTION
-    assert BrowserTool["function"]["parameters"]["type"] == "object"
-    assert "code" in BrowserTool["function"]["parameters"]["properties"]
-    assert BrowserTool["function"]["parameters"]["required"] == ["code", "security_risk"]
-    assert BrowserTool["function"]["parameters"]["properties"]["code"]["type"] == "string"
-    assert "description" in BrowserTool["function"]["parameters"]["properties"]["code"]
+    tool = cast(dict[str, Any], BrowserTool)
+    assert tool["function"]["description"] == _BROWSER_DESCRIPTION
+    assert tool["function"]["parameters"]["type"] == "object"
+    assert "code" in tool["function"]["parameters"]["properties"]
+    assert tool["function"]["parameters"]["required"] == ["code", "security_risk"]
+    assert tool["function"]["parameters"]["properties"]["code"]["type"] == "string"
+    assert "description" in tool["function"]["parameters"]["properties"]["code"]
 
 
 def test_browser_tool():
@@ -239,50 +272,49 @@ def test_step_with_no_pending_actions(mock_state: State, create_llm_registry):
     llm.is_function_calling_active = Mock(return_value=True)
     llm.is_caching_prompt_active = Mock(return_value=False)
     llm.format_messages_for_llm = Mock(return_value=[])
-    llm_config = LLMConfig(model="gpt-4o", api_key="test_key")
+    llm_config = LLMConfig(model="gpt-4o", api_key=SecretStr("test_key"))
     config = AgentConfig()
     config.enable_prompt_extensions = False
     agent = CodeActAgent(config=config, llm_registry=create_llm_registry(llm_config))
     agent.llm = llm
-    mock_state.latest_user_message = None
-    mock_state.latest_user_message_id = None
-    mock_state.latest_user_message_timestamp = None
-    mock_state.latest_user_message_cause = None
-    mock_state.latest_user_message_timeout = None
-    mock_state.latest_user_message_llm_metrics = None
-    mock_state.latest_user_message_tool_call_metadata = None
     initial_user_message = MessageAction(content="Initial user message")
     initial_user_message._source = EventSource.USER
     mock_state.history = [initial_user_message]
-    mock_view = View(events=mock_state.history)
-    mock_state.view = mock_view
     action = agent.step(mock_state)
     assert isinstance(action, MessageAction)
     assert action.content == "Task completed"
 
 
 @pytest.mark.parametrize("agent_type", ["CodeActAgent", "ReadOnlyAgent"])
-def test_correct_tool_description_loaded_based_on_model_name(agent_type, create_llm_registry):
+def test_correct_tool_description_loaded_based_on_model_name(
+    agent_type, create_llm_registry
+):
     """Tests that the simplified tool descriptions are loaded for specific models."""
-    o3_mock_config = LLMConfig(model="mock_o3_model", api_key="test_key")
+    o3_mock_config = LLMConfig(model="mock_o3_model", api_key=SecretStr("test_key"))
     if agent_type == "CodeActAgent":
-        from forge.agenthub.codeact_agent.codeact_agent import CodeActAgent
-
-        agent_class = CodeActAgent
+        agent_cls = CodeActAgent
     else:
-        from forge.agenthub.readonly_agent.readonly_agent import ReadOnlyAgent
-
-        agent_class = ReadOnlyAgent
-    agent = agent_class(config=AgentConfig(), llm_registry=create_llm_registry(o3_mock_config))
+        agent_cls = ReadOnlyAgent
+    agent = agent_cls(
+        config=AgentConfig(), llm_registry=create_llm_registry(o3_mock_config)
+    )
     for tool in agent.tools:
         assert len(tool["function"]["description"]) < 2048
-    sonnect_mock_config = LLMConfig(model="mock_sonnet_model", api_key="test_key")
-    agent = agent_class(config=AgentConfig(), llm_registry=create_llm_registry(sonnect_mock_config))
+    sonnect_mock_config = LLMConfig(
+        model="mock_sonnet_model", api_key=SecretStr("test_key")
+    )
+    agent = agent_cls(
+        config=AgentConfig(), llm_registry=create_llm_registry(sonnect_mock_config)
+    )
     if agent_type == "CodeActAgent":
-        assert any((len(tool["function"]["description"]) > 1024 for tool in agent.tools))
+        assert any(
+            (len(tool["function"]["description"]) > 1024 for tool in agent.tools)
+        )
 
 
-def test_mismatched_tool_call_events_and_auto_add_system_message(agent, mock_state: State):
+def test_mismatched_tool_call_events_and_auto_add_system_message(
+    agent, mock_state: State
+):
     """Tests that the agent can convert mismatched tool call events (i.e., an observation with no corresponding action) into messages.
 
     This also tests that the system message is automatically added to the event stream if SystemMessageAction is not present.
@@ -296,7 +328,9 @@ def test_mismatched_tool_call_events_and_auto_add_system_message(agent, mock_sta
                     message=Mock(
                         role="assistant",
                         content="",
-                        tool_calls=[Mock(spec=ChatCompletionMessageToolCall, id="tool_call_0")],
+                        tool_calls=[
+                            Mock(spec=ChatCompletionMessageToolCall, id="tool_call_0")
+                        ],
                     )
                 )
             ],
@@ -362,7 +396,9 @@ def test_think_tool():
     assert ThinkTool["function"]["parameters"]["required"] == ["thought"]
 
 
-def test_enhance_messages_adds_newlines_between_consecutive_user_messages(agent: CodeActAgent):
+def test_enhance_messages_adds_newlines_between_consecutive_user_messages(
+    agent: CodeActAgent,
+):
     """Test that _enhance_messages adds newlines between consecutive user messages."""
     messages = [
         Message(role="user", content=[TextContent(text="First user message")]),
@@ -376,15 +412,29 @@ def test_enhance_messages_adds_newlines_between_consecutive_user_messages(agent:
                 TextContent(text="Fourth user message with image"),
             ],
         ),
-        Message(role="user", content=[ImageContent(image_urls=["https://example.com/another-image.jpg"])]),
+        Message(
+            role="user",
+            content=[
+                ImageContent(image_urls=["https://example.com/another-image.jpg"])
+            ],
+        ),
     ]
-    enhanced_messages = agent.conversation_memory._apply_user_message_formatting(messages)
-    assert enhanced_messages[1].content[0].text.startswith("\n\n")
-    assert enhanced_messages[1].content[0].text == "\n\nSecond user message"
-    assert not enhanced_messages[3].content[0].text.startswith("\n\n")
-    assert enhanced_messages[3].content[0].text == "Third user message"
-    assert enhanced_messages[4].content[1].text.startswith("\n\n")
-    assert enhanced_messages[4].content[1].text == "\n\nFourth user message with image"
+    enhanced_messages = agent.conversation_memory._apply_user_message_formatting(
+        messages
+    )
+    second_content = enhanced_messages[1].content[0]
+    assert isinstance(second_content, TextContent)
+    assert second_content.text.startswith("\n\n")
+    assert second_content.text == "\n\nSecond user message"
+    third_content = enhanced_messages[3].content[0]
+    assert isinstance(third_content, TextContent)
+    assert not third_content.text.startswith("\n\n")
+    assert third_content.text == "Third user message"
+    fourth_contents = enhanced_messages[4].content
+    assert len(fourth_contents) > 1
+    assert isinstance(fourth_contents[1], TextContent)
+    assert fourth_contents[1].text.startswith("\n\n")
+    assert fourth_contents[1].text == "\n\nFourth user message with image"
     assert len(enhanced_messages[5].content) == 1
     assert isinstance(enhanced_messages[5].content[0], ImageContent)
 
@@ -392,17 +442,20 @@ def test_enhance_messages_adds_newlines_between_consecutive_user_messages(agent:
 def test_get_system_message(create_llm_registry):
     """Test that the Agent.get_system_message method returns a SystemMessageAction."""
     config = AgentConfig()
-    llm_config = LLMConfig(model="gpt-4o", api_key="test_key")
+    llm_config = LLMConfig(model="gpt-4o", api_key=SecretStr("test_key"))
     agent = CodeActAgent(config=config, llm_registry=create_llm_registry(llm_config))
     result = agent.get_system_message()
     assert isinstance(result, SystemMessageAction)
     assert "You are Forge agent" in result.content
-    assert len(result.tools) > 0
-    assert any((tool["function"]["name"] == "execute_bash" for tool in result.tools))
+    tools = result.tools or []
+    assert len(tools) > 0
+    assert any(tool["function"]["name"] == "execute_bash" for tool in tools)
     assert result._source == EventSource.AGENT
 
 
-def test_step_raises_error_if_no_initial_user_message(agent: CodeActAgent, mock_state: State):
+def test_step_raises_error_if_no_initial_user_message(
+    agent: CodeActAgent, mock_state: State
+):
     """Tests that step raises ValueError if the initial user message is not found."""
     assistant_message = MessageAction(content="Assistant message")
     assistant_message._source = EventSource.AGENT

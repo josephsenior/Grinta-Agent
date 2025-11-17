@@ -110,7 +110,9 @@ class Condenser(ABC):
     def condensed_history(self, state: State) -> View | Condensation:
         """Condense the state's history."""
         model_name = self.llm.config.model if hasattr(self, "llm") else "unknown"
-        self._llm_metadata = state.to_llm_metadata(model_name=model_name, agent_name="condenser")
+        self._llm_metadata = state.to_llm_metadata(
+            model_name=model_name, agent_name="condenser"
+        )
         with self.metadata_batch(state):
             return self.condense(state.view)
 
@@ -121,7 +123,9 @@ class Condenser(ABC):
         This metadata is used to provide context about the condensation process and can be used by the LLM to understand how the history was condensed.
         """
         if not self._llm_metadata:
-            logger.warning("LLM metadata is empty. Ensure to set it in the condenser implementation.")
+            logger.warning(
+                "LLM metadata is empty. Ensure to set it in the condenser implementation."
+            )
         return self._llm_metadata
 
     @classmethod
@@ -143,7 +147,9 @@ class Condenser(ABC):
         CONDENSER_REGISTRY[configuration_type] = cls
 
     @classmethod
-    def from_config(cls, config: CondenserConfig, llm_registry: LLMRegistry) -> Condenser:
+    def from_config(
+        cls, config: CondenserConfig, llm_registry: LLMRegistry
+    ) -> Condenser:
         """Create a condenser from a configuration object.
 
         Args:

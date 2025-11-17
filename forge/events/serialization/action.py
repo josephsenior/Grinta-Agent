@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Mapping, cast
 
 from forge.core.exceptions import LLMMalformedActionError
+from forge.core.schemas import ActionType
 from forge.events.action.action import Action, ActionSecurityRisk
 from forge.events.action.agent import (
     AgentDelegateAction,
@@ -26,7 +27,11 @@ from forge.events.action.files import (
     FileWriteAction,
 )
 from forge.events.action.mcp import MCPAction
-from forge.events.action.message import MessageAction, StreamingChunkAction, SystemMessageAction
+from forge.events.action.message import (
+    MessageAction,
+    StreamingChunkAction,
+    SystemMessageAction,
+)
 
 actions = (
     NullAction,
@@ -74,11 +79,15 @@ def handle_action_deprecated_args(args: dict[str, Any]) -> dict[str, Any]:
     if "translated_ipython_code" in args:
         code = args.pop("translated_ipython_code")
         file_editor_prefix = "print(file_editor(**"
-        if code is not None and code.startswith(file_editor_prefix) and code.endswith("))"):
+        if (
+            code is not None
+            and code.startswith(file_editor_prefix)
+            and code.endswith("))")
+        ):
             try:
                 import ast
 
-                dict_str = code[len(file_editor_prefix): -2]
+                dict_str = code[len(file_editor_prefix) : -2]
                 file_args = ast.literal_eval(dict_str)
                 args |= file_args
             except (ValueError, SyntaxError):
@@ -88,7 +97,7 @@ def handle_action_deprecated_args(args: dict[str, Any]) -> dict[str, Any]:
     return args
 
 
-def _validate_action_dict(action: dict) -> None:
+def _validate_action_dict(action: object) -> dict[str, Any]:
     """Validate that action dict is valid and has required keys."""
     if not isinstance(action, dict):
         msg = "action must be a dictionary"
@@ -97,24 +106,23 @@ def _validate_action_dict(action: dict) -> None:
         msg = f"'action' key is not found in action={action!r}"
         raise LLMMalformedActionError(msg)
     if not isinstance(action["action"], str):
-        msg = f"'action['action']={
-            action['action']!r}' is not defined. Available actions: {
-            ACTION_TYPE_TO_CLASS.keys()}"
-        raise LLMMalformedActionError(
-            msg,
+        msg = (
+            f"'action['action']={action['action']!r}' is not defined. "
+            f"Available actions: {list(ACTION_TYPE_TO_CLASS.keys())}"
         )
+        raise LLMMalformedActionError(msg)
+    return cast(dict[str, Any], action)
 
 
 def _get_action_class(action_type: str):
     """Get action class from action type."""
     action_class = ACTION_TYPE_TO_CLASS.get(action_type)
     if action_class is None:
-        msg = f"'action['action']={
-            action_type!r}' is not defined. Available actions: {
-            ACTION_TYPE_TO_CLASS.keys()}"
-        raise LLMMalformedActionError(
-            msg,
+        msg = (
+            f"'action['action']={action_type!r}' is not defined. "
+            f"Available actions: {list(ACTION_TYPE_TO_CLASS.keys())}"
         )
+        raise LLMMalformedActionError(msg)
     return action_class
 
 
@@ -140,7 +148,12 @@ def _normalize_security_risk(args: dict) -> None:
             args.pop("security_risk")
 
 
-def _create_action_instance(action_class, args: dict, action: dict, timestamp: str | None) -> Action:
+def _create_action_instance(
+    action_class: type[Action],
+    args: dict[str, Any],
+    action: dict[str, Any],
+    timestamp: str | None,
+) -> Action:
     """Create action instance with timeout and timestamp if specified."""
     try:
         decoded_action = action_class(**args)
@@ -156,26 +169,15 @@ def _create_action_instance(action_class, args: dict, action: dict, timestamp: s
 
 
 def action_from_dict(action: dict) -> Action:
-    """Deserialize action from dictionary representation.
-    
-    Converts a dictionary containing action data into an Action instance,
-    validating the structure and handling argument processing.
-    
-    Args:
-        action: Dictionary with action type and arguments
-        
-    Returns:
-        Deserialized Action instance
-        
-    Raises:
-        LLMMalformedActionError: If action dict is invalid
-
-    """
-    _validate_action_dict(action)
-    action = action.copy()
+    """Deserialize action from dictionary representation."""
+    action = _validate_action_dict(action).copy()
     action_class = _get_action_class(action["action"])
     args = action.get("args", {})
     args, timestamp = _process_action_args(args)
-    decoded_action = _create_action_instance(action_class, args, action, timestamp)
-    assert isinstance(decoded_action, Action)
-    return decoded_action
+    action_name = action.get("action")
+    if action_name == ActionType.RUN_IPYTHON:
+        ipython_args = action.get("args")
+        if isinstance(ipython_args, dict) and "result" in ipython_args:
+            msg = "ipython action result should not be provided before the action run"
+            raise ValueError(msg)
+    return _create_action_instance(action_class, args, action, timestamp)

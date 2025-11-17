@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\integrations\github\service\resolver.py
+# hypothesis_version: 6.147.0
+
+['+00:00', '/', 'Link', 'Z', 'after', 'asc', 'author', 'body', 'commentId', 'comments', 'created', 'createdAt', 'data', 'direction', 'endCursor', 'first', 'hasNextPage', 'id', 'login', 'node', 'nodes', 'number', 'owner', 'page', 'pageInfo', 'per_page', 'pullRequest', 'rel="next"', 'replyTo', 'repo', 'repository', 'reviewThreads', 'sort', 'threadId', 'title', 'unknown', 'updatedAt', 'user']

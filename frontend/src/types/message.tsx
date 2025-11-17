@@ -59,7 +59,7 @@ export interface ObservationMessage {
   extras: {
     metadata: Record<string, unknown>;
     error_id: string;
-    [key: string]: string | Record<string, unknown>;
+    [key: string]: string | boolean | string[] | Record<string, unknown>;
   };
 
   // A friendly message that can be put in the chat log

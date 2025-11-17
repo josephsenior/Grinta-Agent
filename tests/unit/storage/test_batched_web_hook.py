@@ -7,7 +7,6 @@ from forge.storage.files import FileStore
 
 
 class MockFileStore(FileStore):
-
     def __init__(self):
         self.files = {}
 
@@ -26,7 +25,6 @@ class MockFileStore(FileStore):
 
 
 class TestBatchedWebHookFileStore:
-
     @pytest.fixture
     def mock_client(self):
         client = MagicMock(spec=httpx.Client)

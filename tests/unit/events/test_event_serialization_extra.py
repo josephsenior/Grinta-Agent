@@ -14,7 +14,12 @@ from forge.events.action.commands import CmdRunAction
 from forge.events.action.empty import NullAction
 from forge.events.event import Event, EventSource, RecallType
 from forge.events.observation.commands import CmdOutputMetadata, CmdOutputObservation
-from forge.events.serialization.event import event_from_dict, event_to_dict, event_to_trajectory, truncate_content
+from forge.events.serialization.event import (
+    event_from_dict,
+    event_to_dict,
+    event_to_trajectory,
+    truncate_content,
+)
 from forge.events.tool import ToolCallMetadata
 from forge.llm.metrics import Metrics
 
@@ -33,7 +38,9 @@ def test_event_to_dict_includes_timeout_and_security_risk() -> None:
     action.tool_call_metadata = ToolCallMetadata(
         function_name="fn",
         tool_call_id="call-1",
-        model_response=ModelResponse(id="1", choices=[], created=0, model="gpt-4", object="chat.completion"),
+        model_response=ModelResponse(
+            id="1", choices=[], created=0, model="gpt-4", object="chat.completion"
+        ),
         total_calls_in_response=1,
     )
 
@@ -144,10 +151,20 @@ def test_event_from_dict_populates_llm_metrics_and_metadata() -> None:
         "llm_metrics": {
             "accumulated_cost": 1.25,
             "max_budget_per_task": 3.0,
-            "costs": [{"model": "gpt", "cost": 0.5, "prompt_tokens": 10, "timestamp": 0.0}],
-            "response_latencies": [{"model": "gpt", "latency": 0.7, "response_id": "resp"}],
-            "token_usages": [{"model": "gpt", "prompt_tokens": 5, "completion_tokens": 7}],
-            "accumulated_token_usage": {"model": "gpt", "prompt_tokens": 5, "completion_tokens": 7},
+            "costs": [
+                {"model": "gpt", "cost": 0.5, "prompt_tokens": 10, "timestamp": 0.0}
+            ],
+            "response_latencies": [
+                {"model": "gpt", "latency": 0.7, "response_id": "resp"}
+            ],
+            "token_usages": [
+                {"model": "gpt", "prompt_tokens": 5, "completion_tokens": 7}
+            ],
+            "accumulated_token_usage": {
+                "model": "gpt",
+                "prompt_tokens": 5,
+                "completion_tokens": 7,
+            },
         },
         "tool_call_metadata": {"function_name": "fn"},
     }
@@ -163,4 +180,3 @@ def test_event_from_dict_populates_llm_metrics_and_metadata() -> None:
     assert metrics.accumulated_token_usage.prompt_tokens == 5
     # tool_call_metadata should be None when required fields missing
     assert event.tool_call_metadata is None
-

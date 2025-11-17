@@ -30,7 +30,9 @@ class WebHookFileStore(FileStore):
     base_url: str
     client: httpx.Client
 
-    def __init__(self, file_store: FileStore, base_url: str, client: httpx.Client | None = None) -> None:
+    def __init__(
+        self, file_store: FileStore, base_url: str, client: httpx.Client | None = None
+    ) -> None:
         """Initialize a WebHookFileStore.
 
         Args:

@@ -3,7 +3,7 @@ import time
 from unittest.mock import MagicMock
 import pytest
 from forge.cli.commands import handle_commands
-from forge.core.schema import AgentState
+from forge.core.schemas import AgentState
 from forge.core.schema.exit_reason import ExitReason
 
 
@@ -39,7 +39,12 @@ async def test_handle_exit_command_returns_intentional(monkeypatch):
     mock_usage_metrics.metrics.accumulated_token_usage.cache_read_tokens = 5678
     mock_usage_metrics.metrics.accumulated_token_usage.cache_write_tokens = 9012
     mock_usage_metrics.metrics.accumulated_token_usage.completion_tokens = 3456
-    close_repl, reload_microagents, new_session_requested, exit_reason = await handle_commands(
+    (
+        close_repl,
+        reload_microagents,
+        new_session_requested,
+        exit_reason,
+    ) = await handle_commands(
         "/exit",
         MagicMock(),
         mock_usage_metrics,

@@ -20,6 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from typing import Any, cast
 
 from forge.events.tool import ToolCallMetadata
 from forge.llm.metrics import Metrics
@@ -27,6 +28,7 @@ from forge.llm.metrics import Metrics
 
 class EventSource(str, Enum):
     """Canonical originator categories for events."""
+
     AGENT = "agent"
     USER = "user"
     ENVIRONMENT = "environment"
@@ -35,6 +37,7 @@ class EventSource(str, Enum):
 
 class FileEditSource(str, Enum):
     """Enumerates subsystems that can perform file edit operations."""
+
     LLM_BASED_EDIT = "llm_based_edit"
     OH_ACI = "oh_aci"
     __test__ = False
@@ -42,6 +45,7 @@ class FileEditSource(str, Enum):
 
 class FileReadSource(str, Enum):
     """Enumerates subsystems that can read files during execution."""
+
     OH_ACI = "oh_aci"
     DEFAULT = "default"
     __test__ = False
@@ -51,15 +55,14 @@ class RecallType(str, Enum):
     """The type of information that can be retrieved from microagents."""
 
     WORKSPACE_CONTEXT = "workspace_context"
-    "Workspace context (repo instructions, runtime, etc.)"
     KNOWLEDGE = "knowledge"
-    "A knowledge microagent."
     __test__ = False
 
 
 @dataclass
 class Event:
     """Base dataclass for stream events emitted by the runtime."""
+
     INVALID_ID = -1
 
     @property
@@ -142,6 +145,16 @@ class Event:
         self._cause = value
 
     @property
+    def hidden(self) -> bool:
+        """Return whether this event is hidden."""
+        return bool(getattr(self, "_hidden", False))
+
+    @hidden.setter
+    def hidden(self, value: bool) -> None:
+        """Set whether this event is hidden."""
+        self._hidden = value
+
+    @property
     def timeout(self) -> float | None:
         """Get timeout value in seconds."""
         if hasattr(self, "_timeout"):
@@ -175,13 +188,22 @@ class Event:
     @property
     def tool_call_metadata(self) -> ToolCallMetadata | None:
         """Get tool call metadata if this event involved tool calls."""
-        if hasattr(self, "_tool_call_metadata"):
-            metadata = self._tool_call_metadata
-            return metadata if isinstance(metadata, ToolCallMetadata) else None
+        if not hasattr(self, "_tool_call_metadata"):
+            return None
+        metadata_raw: Any = self._tool_call_metadata
+        # Be resilient to monkeypatched ToolCallMetadata classes in unit tests.
+        # Accept any object that exposes the expected attributes instead of requiring exact class identity.
+        if metadata_raw is None:
+            return None
+        if isinstance(metadata_raw, ToolCallMetadata):  # fast path
+            return metadata_raw
+        required_attrs = {"function_name", "tool_call_id", "total_calls_in_response"}
+        if all(hasattr(metadata_raw, attr) for attr in required_attrs):
+            return cast(ToolCallMetadata, metadata_raw)  # permissive acceptance for test doubles
         return None
 
     @tool_call_metadata.setter
-    def tool_call_metadata(self, value: ToolCallMetadata) -> None:
+    def tool_call_metadata(self, value: ToolCallMetadata | None) -> None:
         """Set tool call metadata."""
         self._tool_call_metadata = value
 

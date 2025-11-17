@@ -17,13 +17,19 @@ try:
         patch_score_weight_length = 0.25
 
     c1 = patch_scoring.PatchCandidate(
-        content="def foo():\n    return 1\n", diff="+def foo():\n+    return 1\n", meta={}
+        content="def foo():\n    return 1\n",
+        diff="+def foo():\n+    return 1\n",
+        meta={},
     )
     c2 = patch_scoring.PatchCandidate(
-        content="def foo():\n    return 2\n", diff="+def foo():\n+    return 2\n", meta={}
+        content="def foo():\n    return 2\n",
+        diff="+def foo():\n+    return 2\n",
+        meta={},
     )
     res = patch_scoring.score_candidates([c1, c2], S())
-    out = [{"composite": r.composite, "features": r.features, "raw": r.raw} for r in res]
+    out = [
+        {"composite": r.composite, "features": r.features, "raw": r.raw} for r in res
+    ]
     try:
         from forge.core.io import print_json_stdout
     except Exception:

@@ -10,16 +10,25 @@ if TYPE_CHECKING:
     from forge.core.config import ForgeConfig
     from forge.runtime.plugins import PluginRequirement
 
-DEFAULT_PYTHON_PREFIX = ["/Forge/micromamba/bin/micromamba", "run", "-n", "forge", "poetry", "run"]
+MICROMAMBA_ENV_NAME = "Forge"
+
+DEFAULT_PYTHON_PREFIX = [
+    "/Forge/micromamba/bin/micromamba",
+    "run",
+    "-n",
+    MICROMAMBA_ENV_NAME,
+    "poetry",
+    "run",
+]
 DEFAULT_MAIN_MODULE = "forge.runtime.action_execution_server"
 
 
 def _build_plugin_args(plugins: list[PluginRequirement] | None) -> list[str]:
     """Build plugin arguments for command.
-    
+
     Args:
         plugins: List of plugin requirements
-        
+
     Returns:
         Plugin arguments list
 
@@ -31,67 +40,84 @@ def _build_plugin_args(plugins: list[PluginRequirement] | None) -> list[str]:
 
 def _validate_env_part(part: str) -> bool:
     """Validate environment part for command injection.
-    
+
     Args:
         part: Environment part to validate
-        
+
     Returns:
         True if valid, False otherwise
 
     """
     if not part:
         return False
-    
-    dangerous_chars = [';', '&', '|', '`', '$', '(', ')', '<', '>', '"', "'", '\\']
+
+    dangerous_chars = [";", "&", "|", "`", "$", "(", ")", "<", ">", '"', "'", "\\"]
     return not any(char in part for char in dangerous_chars)
 
 
 def _build_browsergym_args(browsergym_eval_env: str | None) -> list[str]:
     """Build BrowserGym environment arguments with security validation.
-    
+
     Args:
         browsergym_eval_env: BrowserGym environment string
-        
+
     Returns:
         BrowserGym arguments list
 
     """
     if not browsergym_eval_env:
         return []
-    
+
     # Split and validate environment string to prevent command injection
     env_parts = browsergym_eval_env.split(" ")
-    validated_parts = [part.strip() for part in env_parts if _validate_env_part(part.strip())]
-    
+    validated_parts = [
+        part.strip() for part in env_parts if _validate_env_part(part.strip())
+    ]
+
     if validated_parts:
         return ["--browsergym-eval-env"] + validated_parts
-    
+
     return []
 
 
 def _validate_and_get_username(
-    override_username: str | None,
-    run_as_forge: bool
+    override_username: str | None, run_as_forge: bool
 ) -> str:
     """Validate and get username with security checks.
-    
+
     Args:
         override_username: Override username if provided
         run_as_forge: Whether to run as forge user
-        
+
     Returns:
         Validated username
 
     """
     default_username = "forge" if run_as_forge else "root"
     username = override_username or default_username
-    
+
     # Validate username to prevent command injection
-    dangerous_chars = [';', '&', '|', '`', '$', '(', ')', '<', '>', '"', "'", '\\', ' ', '\n', '\t']
+    dangerous_chars = [
+        ";",
+        "&",
+        "|",
+        "`",
+        "$",
+        "(",
+        ")",
+        "<",
+        ">",
+        '"',
+        "'",
+        "\\",
+        " ",
+        "\n",
+        "\t",
+    ]
     if any(char in username for char in dangerous_chars):
         logger.warning("Invalid characters in username, using default")
         return default_username
-    
+
     return username
 
 
@@ -125,13 +151,13 @@ def get_action_execution_server_startup_command(
     logger.debug("app_config %s", vars(app_config))
     logger.debug("sandbox_config %s", vars(sandbox_config))
     logger.debug("override_user_id %s", override_user_id)
-    
+
     # Build command components
     plugin_args = _build_plugin_args(plugins)
     browsergym_args = _build_browsergym_args(sandbox_config.browsergym_eval_env)
     username = _validate_and_get_username(override_username, app_config.run_as_Forge)
     user_id = override_user_id or (1000 if app_config.run_as_Forge else 0)
-    
+
     # Build base command
     base_cmd = [
         *python_prefix,
@@ -149,9 +175,9 @@ def get_action_execution_server_startup_command(
         str(user_id),
         *browsergym_args,
     ]
-    
+
     if not app_config.enable_browser:
         base_cmd.append("--no-enable-browser")
-    
+
     logger.debug("get_action_execution_server_startup_command: %s", base_cmd)
     return base_cmd

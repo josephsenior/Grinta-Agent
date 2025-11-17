@@ -1,7 +1,11 @@
 """Tests for MCP Error Collector functionality."""
 
 import time
-from forge.mcp_client.error_collector import MCPError, MCPErrorCollector, mcp_error_collector
+from forge.mcp_client.error_collector import (
+    MCPError,
+    MCPErrorCollector,
+    mcp_error_collector,
+)
 
 
 class TestMCPError:
@@ -27,7 +31,10 @@ class TestMCPError:
         """Test creating an MCP error without exception details."""
         timestamp = time.time()
         error = MCPError(
-            timestamp=timestamp, server_name="test-server", server_type="sse", error_message="Server unreachable"
+            timestamp=timestamp,
+            server_name="test-server",
+            server_type="sse",
+            error_message="Server unreachable",
         )
         assert error.timestamp == timestamp
         assert error.server_name == "test-server"

@@ -394,32 +394,26 @@ print(f"Cost: {result.cost:.3f}")
 
 ### **REST API**
 ```bash
-# Execute tool
-curl -X POST http://localhost:8000/api/tools/execute \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool_name": "think",
-    "parameters": {
-      "question": "How to implement user authentication?",
-      "steps": ["analyze_requirements", "choose_method", "implement"]
-    },
-    "context": {"domain": "web_development"}
-  }'
+# Note: Tools are executed through the agent, not via direct API calls
+# Tools are available to agents during conversation execution
 
-# Get tool performance
-curl http://localhost:8000/api/tools/performance/think
+# Get available models (which determine available tools)
+curl http://localhost:3000/api/options/models
 
-# Get available tools
-curl http://localhost:8000/api/tools/available
+# Get available agents
+curl http://localhost:3000/api/options/agents
 
-# Get tool metrics
-curl http://localhost:8000/api/tools/metrics
+# Monitor tool usage via monitoring endpoints
+curl http://localhost:3000/api/monitoring/metrics
 ```
 
 ### **WebSocket API**
 ```javascript
-// Connect to tool WebSocket
-const socket = io('ws://localhost:8000/tools');
+// Connect to Socket.IO (tools are used within conversations)
+const socket = io('http://localhost:3000', {
+  path: '/socket.io',
+  query: { conversationId: 'your-conversation-id' }
+});
 
 // Listen for tool execution results
 socket.on('tool_execution_result', (result) => {

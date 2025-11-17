@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\middleware\request_metrics.py
+# hypothesis_version: 6.147.0
+
+[0.0, 1000.0, 100, 250, 500, 1000, 2500, 5000, 10000, '0', 'body', 'by_method_status', 'content-length', 'exception', 'get', 'hist_buckets', 'hist_count', 'hist_sum', 'in_flight', 'le_inf', 'path', 'request_bytes_sum', 'request_count_total', 'response_bytes_sum', 'route']

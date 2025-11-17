@@ -3,22 +3,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import Any, ClassVar
 
-from forge.core.schema import ActionType
+from forge.core.schemas import ActionType
 from forge.events.action.action import Action
-
-if TYPE_CHECKING:
-    from forge.events.event import RecallType
+from forge.events.action._canonical import canonicalize
+from forge.events.event import RecallType
 
 
 @dataclass
 class ChangeAgentStateAction(Action):
     """Fake action, just to notify the client that a task state has changed."""
 
-    agent_state: str
+    agent_state: str = ""
     thought: str = ""
-    action: str = ActionType.CHANGE_AGENT_STATE
+    action: ClassVar[str] = ActionType.CHANGE_AGENT_STATE
 
     @property
     def message(self) -> str:
@@ -43,7 +42,8 @@ class AgentFinishAction(Action):
     final_thought: str = ""
     outputs: dict[str, Any] = field(default_factory=dict)
     thought: str = ""
-    action: str = ActionType.FINISH
+    force_finish: bool = False
+    action: ClassVar[str] = ActionType.FINISH
 
     @property
     def message(self) -> str:
@@ -66,7 +66,7 @@ class AgentThinkAction(Action):
     """
 
     thought: str = ""
-    action: str = ActionType.THINK
+    action: ClassVar[str] = ActionType.THINK
 
     @property
     def message(self) -> str:
@@ -79,9 +79,10 @@ class AgentThinkAction(Action):
 @dataclass
 class AgentRejectAction(Action):
     """An action where the agent rejects the task."""
+
     outputs: dict = field(default_factory=dict)
     thought: str = ""
-    action: str = ActionType.REJECT
+    action: ClassVar[str] = ActionType.REJECT
 
     @property
     def message(self) -> str:
@@ -97,10 +98,11 @@ class AgentRejectAction(Action):
 @dataclass
 class AgentDelegateAction(Action):
     """An action where the agent delegates task to another agent."""
-    agent: str
-    inputs: dict
+
+    agent: str = ""
+    inputs: dict = field(default_factory=dict)
     thought: str = ""
-    action: str = ActionType.DELEGATE
+    action: ClassVar[str] = ActionType.DELEGATE
 
     @property
     def message(self) -> str:
@@ -114,10 +116,10 @@ class AgentDelegateAction(Action):
 class RecallAction(Action):
     """This action is used for retrieving content, e.g., from the global directory or user workspace."""
 
-    recall_type: RecallType
+    recall_type: RecallType = RecallType.WORKSPACE_CONTEXT
     query: str = ""
     thought: str = ""
-    action: str = ActionType.RECALL
+    action: ClassVar[str] = ActionType.RECALL
 
     @property
     def message(self) -> str:
@@ -148,7 +150,7 @@ class CondensationAction(Action):
 
     """
 
-    action: str = ActionType.CONDENSATION
+    action: ClassVar[str] = ActionType.CONDENSATION
     forgotten_event_ids: list[int] | None = None
     "The IDs of the events that are being forgotten (removed from the `View` given to the LLM)."
     forgotten_events_start_id: int | None = None
@@ -163,11 +165,14 @@ class CondensationAction(Action):
     def _validate_field_polymorphism(self) -> bool:
         """Check if the optional fields are instantiated in a valid configuration."""
         using_event_ids = self.forgotten_event_ids is not None
-        using_event_range = self.forgotten_events_start_id is not None and self.forgotten_events_end_id is not None
-        forgotten_event_configuration = using_event_ids ^ using_event_range
-        summary_configuration = (self.summary is None and self.summary_offset is None) or (
-            self.summary is not None and self.summary_offset is not None
+        using_event_range = (
+            self.forgotten_events_start_id is not None
+            and self.forgotten_events_end_id is not None
         )
+        forgotten_event_configuration = using_event_ids ^ using_event_range
+        summary_configuration = (
+            self.summary is None and self.summary_offset is None
+        ) or (self.summary is not None and self.summary_offset is not None)
         return forgotten_event_configuration and summary_configuration
 
     def __post_init__(self):
@@ -186,7 +191,9 @@ class CondensationAction(Action):
             return self.forgotten_event_ids
         assert self.forgotten_events_start_id is not None
         assert self.forgotten_events_end_id is not None
-        return list(range(self.forgotten_events_start_id, self.forgotten_events_end_id + 1))
+        return list(
+            range(self.forgotten_events_start_id, self.forgotten_events_end_id + 1)
+        )
 
     @property
     def message(self) -> str:
@@ -205,7 +212,7 @@ class CondensationRequestAction(Action):
 
     """
 
-    action: str = ActionType.CONDENSATION_REQUEST
+    action: ClassVar[str] = ActionType.CONDENSATION_REQUEST
 
     @property
     def message(self) -> str:
@@ -227,7 +234,7 @@ class TaskTrackingAction(Action):
     command: str = "view"
     task_list: list[dict[str, Any]] = field(default_factory=list)
     thought: str = ""
-    action: str = ActionType.TASK_TRACKING
+    action: ClassVar[str] = ActionType.TASK_TRACKING
 
     @property
     def message(self) -> str:
@@ -238,3 +245,14 @@ class TaskTrackingAction(Action):
         if num_tasks == 1:
             return "Managing 1 task item."
         return f"Managing {num_tasks} task items."
+
+
+canonicalize("ChangeAgentStateAction", ChangeAgentStateAction)
+canonicalize("AgentFinishAction", AgentFinishAction)
+canonicalize("AgentThinkAction", AgentThinkAction)
+canonicalize("AgentRejectAction", AgentRejectAction)
+canonicalize("AgentDelegateAction", AgentDelegateAction)
+canonicalize("RecallAction", RecallAction)
+canonicalize("CondensationAction", CondensationAction)
+canonicalize("CondensationRequestAction", CondensationRequestAction)
+canonicalize("TaskTrackingAction", TaskTrackingAction)

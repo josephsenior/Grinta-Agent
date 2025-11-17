@@ -1,0 +1,7 @@
+[run]
+source = forge.audit
+branch = True
+
+[report]
+include = forge/audit/*
+

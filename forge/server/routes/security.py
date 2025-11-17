@@ -6,11 +6,16 @@ from forge.server.dependencies import get_dependencies
 from forge.server.session.conversation import ServerConversation
 from forge.server.utils import get_conversation
 
-app = APIRouter(prefix="/api/conversations/{conversation_id}/security", dependencies=get_dependencies())
+app = APIRouter(
+    prefix="/api/conversations/{conversation_id}/security",
+    dependencies=get_dependencies(),
+)
 
 
 @app.route("/security/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
-async def security_api(request: Request, conversation: ServerConversation = Depends(get_conversation)) -> Response:
+async def security_api(
+    request: Request, conversation: ServerConversation = Depends(get_conversation)
+) -> Response:
     r"""Catch-all proxy route for security analyzer API requests.
 
     Routes all HTTP requests (GET, POST, PUT, DELETE) for the security
@@ -46,5 +51,8 @@ async def security_api(request: Request, conversation: ServerConversation = Depe
 
     """
     if not conversation.security_analyzer:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Security analyzer not initialized")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Security analyzer not initialized",
+        )
     return await conversation.security_analyzer.handle_api_request(request)

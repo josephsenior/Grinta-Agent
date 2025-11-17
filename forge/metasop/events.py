@@ -9,7 +9,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 from forge.core.pydantic_compat import get_model_field_names, model_to_dict
 
@@ -35,6 +35,7 @@ class EventSource(str, Enum):
 
 class StepEventStatus(str, Enum):
     """Lifecycle statuses emitted for each orchestration step attempt."""
+
     skipped = "skipped"
     attempt = "attempt"
     executed = "executed"
@@ -60,7 +61,9 @@ class StepEvent(BaseModel):
     core keys are validated. Additional keys can be added via the `extra_data` map.
     """
 
-    event_version: int = Field(default=EVENT_VERSION, description="Schema version for consumers")
+    event_version: int = Field(
+        default=EVENT_VERSION, description="Schema version for consumers"
+    )
     step_id: str
     role: str
     status: StepEventStatus
@@ -87,7 +90,9 @@ class StepEvent(BaseModel):
     message: str | None = None
     meta: dict[str, Any] | None = None
     error: str | None = None
-    extra_data: dict[str, Any] | None = Field(default=None, description="Arbitrary extension map")
+    extra_data: dict[str, Any] | None = Field(
+        default=None, description="Arbitrary extension map"
+    )
     source: EventSource = Field(
         default=EventSource.orchestrator,
         description="Emitter/source of this event; consumers should treat 'orchestrator' as canonical",
@@ -98,10 +103,7 @@ class StepEvent(BaseModel):
     )
     __test__ = False
 
-    class Config:
-        """Pydantic configuration enforcing validation while allowing extras."""
-        validate_assignment = True
-        extra = "allow"
+    model_config = ConfigDict(validate_assignment=True, extra="allow")
 
     @field_validator("duration_ms")
     @classmethod
@@ -134,11 +136,17 @@ class EventEmitter:
         self.invalid_events: list[dict] = []
         self._stream_path: Path | None = None
         try:
-            metasop_cfg = getattr(getattr(config, "extended", None), "metasop", {}) if config else {}
+            metasop_cfg = (
+                getattr(getattr(config, "extended", None), "metasop", {})
+                if config
+                else {}
+            )
             if isinstance(metasop_cfg, dict) and metasop_cfg.get("log_events_jsonl"):
                 base_dir = Path.home() / ".Forge" / "runs"
                 base_dir.mkdir(parents=True, exist_ok=True)
-                self._stream_path = base_dir / f"metasop_events_{sop_name}_{int(time.time())}.jsonl"
+                self._stream_path = (
+                    base_dir / f"metasop_events_{sop_name}_{int(time.time())}.jsonl"
+                )
         except Exception:
             pass
 
@@ -167,21 +175,27 @@ class EventEmitter:
                 base_fields["status"] = StepEventStatus.warning
             else:
                 base_fields["status"] = (
-                    raw_status if isinstance(raw_status, StepEventStatus) else StepEventStatus(raw_status)
+                    raw_status
+                    if isinstance(raw_status, StepEventStatus)
+                    else StepEventStatus(raw_status)
                 )
         except Exception:
             base_fields["status"] = StepEventStatus.warning
 
         return self._create_step_event_from_fields(base_fields, event)
 
-    def _create_step_event_from_fields(self, base_fields: dict, original_event: dict) -> StepEvent:
+    def _create_step_event_from_fields(
+        self, base_fields: dict, original_event: dict
+    ) -> StepEvent:
         """Create a StepEvent from base fields, handling validation errors."""
         try:
             return StepEvent(**base_fields)
         except Exception as e:
             return self._handle_event_validation_error(base_fields, original_event, e)
 
-    def _handle_event_validation_error(self, base_fields: dict, original_event: dict, error: Exception) -> StepEvent:
+    def _handle_event_validation_error(
+        self, base_fields: dict, original_event: dict, error: Exception
+    ) -> StepEvent:
         """Handle event validation errors by creating a fallback StepEvent."""
         # Try to create a readable event string for logging
         event_str = self._get_event_string_for_logging(original_event)
@@ -214,12 +228,16 @@ class EventEmitter:
     def _log_event_validation_error(self, event_str: str, error: Exception) -> None:
         """Log event validation error."""
         with contextlib.suppress(Exception):
-            self._logger.exception("Event validation failed for event: %s -- error: %s", event_str, error)
+            self._logger.exception(
+                "Event validation failed for event: %s -- error: %s", event_str, error
+            )
 
     def _add_to_invalid_events(self, event: dict) -> None:
         """Add event to invalid events list."""
         try:
-            self.invalid_events.append(event if isinstance(event, dict) else {"event_repr": repr(event)})
+            self.invalid_events.append(
+                event if isinstance(event, dict) else {"event_repr": repr(event)}
+            )
         except Exception:
             with contextlib.suppress(Exception):
                 self.invalid_events.append({"event_repr": repr(event)})
@@ -232,7 +250,9 @@ class EventEmitter:
     def _log_event(self, payload: dict) -> None:
         """Log the event."""
         try:
-            self._logger.info(json.dumps({"metasop_event": payload}, ensure_ascii=False, default=str))
+            self._logger.info(
+                json.dumps({"metasop_event": payload}, ensure_ascii=False, default=str)
+            )
         except Exception:
             with contextlib.suppress(Exception):
                 self._logger.info(

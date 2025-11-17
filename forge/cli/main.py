@@ -14,7 +14,7 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Coroutine
 
 from prompt_toolkit import print_formatted_text
 from prompt_toolkit.formatted_text import HTML
@@ -56,7 +56,7 @@ from forge.core.config.mcp_config import ForgeMCPConfigImpl
 from forge.core.config.utils import finalize_config
 from forge.core.logger import forge_logger as logger
 from forge.core.loop import run_agent_until_done
-from forge.core.schema import AgentState
+from forge.core.schemas import AgentState
 from forge.core.schema.exit_reason import ExitReason
 from forge.core.setup import (
     create_agent,
@@ -125,15 +125,17 @@ class RuntimeComponents:
 class EventHandlers:
     """Event handlers."""
 
-    prompt_for_next_task: Callable[[str], None]
+    prompt_for_next_task: Callable[[str], Coroutine[Any, Any, None]]
     on_event: Callable[[Event], None]
-    on_event_async: Callable[[Event], None]
+    on_event_async: Callable[[Event], Coroutine[Any, Any, None]]
 
 
 def _save_session_state(controller: AgentController, event_stream) -> None:
     """Save the current session state."""
     end_state = controller.get_state()
-    end_state.save_to_session(event_stream.sid, event_stream.file_store, event_stream.user_id)
+    end_state.save_to_session(
+        event_stream.sid, event_stream.file_store, event_stream.user_id
+    )
 
 
 async def _cancel_pending_tasks(loop: asyncio.AbstractEventLoop) -> None:
@@ -147,7 +149,9 @@ async def _cancel_pending_tasks(loop: asyncio.AbstractEventLoop) -> None:
         task.cancel()
 
 
-async def _cleanup_resources(agent: Agent, runtime: Runtime, controller: AgentController) -> None:
+async def _cleanup_resources(
+    agent: Agent, runtime: Runtime, controller: AgentController
+) -> None:
     """Clean up agent, runtime, and controller resources."""
     agent.reset()
     runtime.close()
@@ -179,20 +183,28 @@ def _setup_runtime_components(
 ):
     """Set up runtime components including agent, runtime, and controller."""
     display_runtime_initialization_message(config.runtime)
-    loop.run_in_executor(None, display_initialization_animation, "Initializing...", is_loaded)
-    llm_registry, conversation_stats, config = create_registry_and_conversation_stats(config, sid, None)
+    loop.run_in_executor(
+        None, display_initialization_animation, "Initializing...", is_loaded
+    )
+    llm_registry, conversation_stats, config = create_registry_and_conversation_stats(
+        config, sid, None
+    )
     agent = create_agent(config, llm_registry)
-    runtime = create_runtime(config, llm_registry, sid=sid, headless_mode=True, agent=agent)
+    runtime = create_runtime(
+        config, llm_registry, sid=sid, headless_mode=True, agent=agent
+    )
 
     def stream_to_console(output: str) -> None:
         """Relay runtime shell output to CLI streaming UI."""
         update_streaming_output(output)
 
-    subscribe_result = runtime.subscribe_to_shell_stream(stream_to_console)
+    subscribe_result: Any = runtime.subscribe_to_shell_stream(stream_to_console)
     if asyncio.iscoroutine(subscribe_result):
         loop.create_task(subscribe_result)
 
-    controller, initial_state = create_controller(agent, runtime, config, conversation_stats)
+    controller, initial_state = create_controller(
+        agent, runtime, config, conversation_stats
+    )
     event_stream = runtime.event_stream
     usage_metrics = UsageMetrics()
     return RuntimeComponents(
@@ -208,12 +220,16 @@ def _setup_runtime_components(
     )
 
 
-async def _handle_awaiting_user_input(event, is_paused, reload_microagents, runtime, memory, prompt_for_next_task):
+async def _handle_awaiting_user_input(
+    event, is_paused, reload_microagents, runtime, memory, prompt_for_next_task
+):
     """Handle AWAITING_USER_INPUT and FINISHED states."""
     if is_paused.is_set():
         return reload_microagents
     if reload_microagents:
-        microagents: list[BaseMicroagent] = runtime.get_microagents_from_selected_repo(None)
+        microagents: list[BaseMicroagent] = runtime.get_microagents_from_selected_repo(
+            None
+        )
         memory.load_user_workspace_microagents(microagents)
         reload_microagents = False
     await prompt_for_next_task(event.agent_state)
@@ -233,7 +249,9 @@ async def _handle_awaiting_confirmation(
     if is_paused.is_set():
         return always_confirm_mode, auto_highrisk_confirm_mode
     if always_confirm_mode:
-        event_stream.add_event(ChangeAgentStateAction(AgentState.USER_CONFIRMED), EventSource.USER)
+        event_stream.add_event(
+            ChangeAgentStateAction(AgentState.USER_CONFIRMED), EventSource.USER
+        )
         return always_confirm_mode, auto_highrisk_confirm_mode
 
     pending_action = controller._pending_action
@@ -242,15 +260,27 @@ async def _handle_awaiting_confirmation(
         security_risk = pending_action.security_risk
 
     if auto_highrisk_confirm_mode and security_risk != ActionSecurityRisk.HIGH:
-        event_stream.add_event(ChangeAgentStateAction(AgentState.USER_CONFIRMED), EventSource.USER)
+        event_stream.add_event(
+            ChangeAgentStateAction(AgentState.USER_CONFIRMED), EventSource.USER
+        )
         return always_confirm_mode, auto_highrisk_confirm_mode
 
-    confirmation_status = await read_confirmation_input(config, security_risk=security_risk)
+    confirmation_status = await read_confirmation_input(
+        config, security_risk=security_risk
+    )
     if confirmation_status in ("yes", "always", "auto_highrisk"):
-        event_stream.add_event(ChangeAgentStateAction(AgentState.USER_CONFIRMED), EventSource.USER)
+        event_stream.add_event(
+            ChangeAgentStateAction(AgentState.USER_CONFIRMED), EventSource.USER
+        )
     else:
-        event_stream.add_event(ChangeAgentStateAction(AgentState.USER_REJECTED), EventSource.USER)
-        print_formatted_text(HTML("<skyblue>Okay, please tell me what I should do next/instead.</skyblue>"))
+        event_stream.add_event(
+            ChangeAgentStateAction(AgentState.USER_REJECTED), EventSource.USER
+        )
+        print_formatted_text(
+            HTML(
+                "<skyblue>Okay, please tell me what I should do next/instead.</skyblue>"
+            )
+        )
 
     if confirmation_status == "always":
         always_confirm_mode = True
@@ -260,7 +290,9 @@ async def _handle_awaiting_confirmation(
     return always_confirm_mode, auto_highrisk_confirm_mode
 
 
-async def _setup_memory_and_mcp(agent, runtime, event_stream, config, sid, repo_directory, conversation_instructions):
+async def _setup_memory_and_mcp(
+    agent, runtime, event_stream, config, sid, repo_directory, conversation_instructions
+):
     """Set up memory and MCP tools."""
     memory = create_memory(
         runtime=runtime,
@@ -275,10 +307,12 @@ async def _setup_memory_and_mcp(agent, runtime, event_stream, config, sid, repo_
     if agent.config.enable_mcp:
         mcp_error_collector.clear_errors()
         mcp_error_collector.enable_collection()
-        _, FORGE_mcp_stdio_servers = ForgeMCPConfigImpl.create_default_mcp_server_config(
-            config.mcp_host,
-            config,
-            None,
+        _, FORGE_mcp_stdio_servers = (
+            ForgeMCPConfigImpl.create_default_mcp_server_config(
+                config.mcp_host,
+                config,
+                None,
+            )
         )
         runtime.config.mcp.stdio_servers.extend(FORGE_mcp_stdio_servers)
         await add_mcp_tools_to_agent(agent, runtime, memory)
@@ -291,23 +325,27 @@ def _build_welcome_message(agent, config) -> str:
     """Build the welcome message including MCP server information."""
     welcome_message = ""
     if agent.config.enable_mcp:
-        total_mcp_servers = len(config.mcp.stdio_servers) + len(config.mcp.sse_servers) + len(config.mcp.shttp_servers)
+        total_mcp_servers = (
+            len(config.mcp.stdio_servers)
+            + len(config.mcp.sse_servers)
+            + len(config.mcp.shttp_servers)
+        )
         if total_mcp_servers > 0:
-            mcp_line = f"Using {
-                len(
-                    config.mcp.stdio_servers)} stdio MCP servers, {
-                len(
-                    config.mcp.sse_servers)} SSE MCP servers and {
-                len(
-                    config.mcp.shttp_servers)} SHTTP MCP servers."
+            mcp_line = f"Using {len(config.mcp.stdio_servers)} stdio MCP servers, {
+                len(config.mcp.sse_servers)
+            } SSE MCP servers and {len(config.mcp.shttp_servers)} SHTTP MCP servers."
             if agent.config.enable_mcp and mcp_error_collector.has_errors():
-                mcp_line += " ✗ MCP errors detected (type /mcp → select View errors to view)"
+                mcp_line += (
+                    " ✗ MCP errors detected (type /mcp → select View errors to view)"
+                )
             welcome_message += mcp_line + "\n\n"
     welcome_message += "What do you want to build?"
     return welcome_message
 
 
-def _handle_session_resumption(initial_state, config, task_content, welcome_message) -> tuple[str, str]:
+def _handle_session_resumption(
+    initial_state, config, task_content, welcome_message
+) -> tuple[str, str]:
     """Handle session resumption logic and return initial message and welcome message."""
     initial_message = task_content or ""
 
@@ -362,7 +400,9 @@ async def run_session(
     sid = conversation_id or generate_sid(config, session_name)
 
     # Setup runtime components
-    runtime_components = _setup_runtime_components(config, sid, loop, session_state.is_loaded)
+    runtime_components = _setup_runtime_components(
+        config, sid, loop, session_state.is_loaded
+    )
 
     # Create event handlers
     event_handlers = _create_event_handlers(
@@ -377,7 +417,9 @@ async def run_session(
 
     # Setup session
     repo_directory = (
-        initialize_repository_for_runtime(runtime_components.runtime, selected_repository=config.sandbox.selected_repo)
+        initialize_repository_for_runtime(
+            runtime_components.runtime, selected_repository=config.sandbox.selected_repo
+        )
         if config.sandbox.selected_repo
         else None
     )
@@ -409,8 +451,15 @@ async def run_session(
     )
 
     # Cleanup and return
-    await cleanup_session(loop, runtime_components.agent, runtime_components.runtime, runtime_components.controller)
-    return _display_session_result(session_state.exit_reason, session_state.new_session_requested)
+    await cleanup_session(
+        loop,
+        runtime_components.agent,
+        runtime_components.runtime,
+        runtime_components.controller,
+    )
+    return _display_session_result(
+        session_state.exit_reason, session_state.new_session_requested
+    )
 
 
 def _initialize_session_state() -> SessionState:
@@ -460,7 +509,9 @@ def _create_event_handlers(
         """Prompt for the next task from the user."""
         nonlocal session_state
         while True:
-            next_message = await read_prompt_input(config, agent_state, multiline=config.cli_multiline_input)
+            next_message = await read_prompt_input(
+                config, agent_state, multiline=config.cli_multiline_input
+            )
             if not next_message.strip():
                 continue
             (
@@ -488,7 +539,9 @@ def _create_event_handlers(
         update_usage_metrics(event, runtime_components.usage_metrics)
 
         if isinstance(event, AgentStateChangedObservation):
-            await _handle_agent_state_change(event, session_state, runtime_components, prompt_for_next_task)
+            await _handle_agent_state_change(
+                event, session_state, runtime_components, prompt_for_next_task
+            )
 
     def on_event(event: Event) -> None:
         """Handle events synchronously."""
@@ -505,7 +558,7 @@ async def _handle_agent_state_change(
     event: AgentStateChangedObservation,
     session_state: SessionState,
     runtime_components: RuntimeComponents,
-    prompt_for_next_task: Callable[[str], None],
+    prompt_for_next_task: Callable[[str], Coroutine[Any, Any, None]],
 ) -> None:
     """Handle agent state changes.
 
@@ -529,23 +582,28 @@ async def _handle_agent_state_change(
             prompt_for_next_task,
         )
     elif event.agent_state == AgentState.AWAITING_USER_CONFIRMATION:
-        session_state.always_confirm_mode, session_state.auto_highrisk_confirm_mode = (
-            await _handle_awaiting_confirmation(
-                event,
-                session_state.is_paused,
-                session_state.always_confirm_mode,
-                session_state.auto_highrisk_confirm_mode,
-                runtime_components.controller,
-                runtime_components.event_stream,
-                runtime_components.config,
-            )
+        (
+            session_state.always_confirm_mode,
+            session_state.auto_highrisk_confirm_mode,
+        ) = await _handle_awaiting_confirmation(
+            event,
+            session_state.is_paused,
+            session_state.always_confirm_mode,
+            session_state.auto_highrisk_confirm_mode,
+            runtime_components.controller,
+            runtime_components.event_stream,
+            runtime_components.config,
         )
     elif event.agent_state == AgentState.PAUSED:
         session_state.is_paused.clear()
         await prompt_for_next_task(event.agent_state)
     elif event.agent_state == AgentState.RUNNING:
         display_agent_running_message()
-        start_pause_listener(asyncio.get_event_loop(), session_state.is_paused, runtime_components.event_stream)
+        start_pause_listener(
+            asyncio.get_event_loop(),
+            session_state.is_paused,
+            runtime_components.event_stream,
+        )
 
 
 async def _setup_session(
@@ -566,7 +624,9 @@ async def _setup_session(
 
     """
     runtime_components.event_stream.subscribe(
-        EventStreamSubscriber.MAIN, event_handlers.on_event, runtime_components.sid,
+        EventStreamSubscriber.MAIN,
+        event_handlers.on_event,
+        runtime_components.sid,
     )
     await runtime_components.runtime.connect()
 
@@ -579,7 +639,8 @@ async def _setup_session(
         repo_directory,
         conversation_instructions,
     )
-    runtime_components.is_loaded.set()
+    if runtime_components.is_loaded:
+        runtime_components.is_loaded.set()
 
 
 def _initialize_session_display(
@@ -618,7 +679,9 @@ async def _handle_session_startup(
         event_handlers: The event handlers.
 
     """
-    welcome_message = _build_welcome_message(runtime_components.agent, runtime_components.runtime.config)
+    welcome_message = _build_welcome_message(
+        runtime_components.agent, runtime_components.runtime.config
+    )
     initial_message, welcome_message = _handle_session_resumption(
         runtime_components.initial_state,
         runtime_components.config,
@@ -629,12 +692,16 @@ async def _handle_session_startup(
 
     if initial_message:
         display_initial_user_prompt(initial_message)
-        runtime_components.event_stream.add_event(MessageAction(content=initial_message), EventSource.USER)
+        runtime_components.event_stream.add_event(
+            MessageAction(content=initial_message), EventSource.USER
+        )
     else:
         asyncio.create_task(event_handlers.prompt_for_next_task(""))
 
 
-def _display_session_result(exit_reason: ExitReason, new_session_requested: bool) -> bool:
+def _display_session_result(
+    exit_reason: ExitReason, new_session_requested: bool
+) -> bool:
     """Display the session result and return whether a new session was requested.
 
     Args:
@@ -652,7 +719,9 @@ def _display_session_result(exit_reason: ExitReason, new_session_requested: bool
     return new_session_requested
 
 
-async def run_setup_flow(config: ForgeConfig, settings_store: FileSettingsStore) -> None:
+async def run_setup_flow(
+    config: ForgeConfig, settings_store: FileSettingsStore
+) -> None:
     """Run the setup flow to configure initial settings.
 
     Returns:
@@ -660,10 +729,16 @@ async def run_setup_flow(config: ForgeConfig, settings_store: FileSettingsStore)
 
     """
     display_banner(session_id="setup")
-    print_formatted_text(HTML("<grey>No settings found. Starting initial setup...</grey>\n"))
+    print_formatted_text(
+        HTML("<grey>No settings found. Starting initial setup...</grey>\n")
+    )
     await modify_llm_settings_basic(config, settings_store)
     print_formatted_text("")
-    setup_search = cli_confirm(config, "Would you like to configure Search API settings (optional)?", ["Yes", "No"])
+    setup_search = cli_confirm(
+        config,
+        "Would you like to configure Search API settings (optional)?",
+        ["Yes", "No"],
+    )
     if setup_search == 0:
         from forge.cli.settings import modify_search_api_settings
 
@@ -683,36 +758,62 @@ def run_alias_setup_flow(config: ForgeConfig) -> None:
     print_formatted_text("")
     print_formatted_text(HTML("<gold>🚀 Welcome to Forge CLI!</gold>"))
     print_formatted_text("")
-    print_formatted_text(HTML("<grey>Would you like to set up convenient shell aliases?</grey>"))
-    print_formatted_text("")
-    print_formatted_text(HTML("<grey>This will add the following aliases to your shell profile:</grey>"))
-    print_formatted_text(HTML("<grey>  • <b>Forge</b> → uvx --python 3.12 --from forge-ai Forge</grey>"))
-    print_formatted_text(HTML("<grey>  • <b>oh</b> → uvx --python 3.12 --from forge-ai Forge</grey>"))
-    print_formatted_text("")
-    print_formatted_text(HTML("<ansiyellow>⚠️  Note: This requires uv to be installed first.</ansiyellow>"))
     print_formatted_text(
-        HTML("<ansiyellow>   Installation guide: https://docs.astral.sh/uv/getting-started/installation</ansiyellow>"),
+        HTML("<grey>Would you like to set up convenient shell aliases?</grey>")
     )
     print_formatted_text("")
-    choice = cli_confirm(config, "Set up shell aliases?", ["Yes, set up aliases", "No, skip this step"])
+    print_formatted_text(
+        HTML("<grey>This will add the following aliases to your shell profile:</grey>")
+    )
+    print_formatted_text(
+        HTML("<grey>  • <b>Forge</b> → uvx --python 3.12 --from forge-ai Forge</grey>")
+    )
+    print_formatted_text(
+        HTML("<grey>  • <b>oh</b> → uvx --python 3.12 --from forge-ai Forge</grey>")
+    )
+    print_formatted_text("")
+    print_formatted_text(
+        HTML(
+            "<ansiyellow>⚠️  Note: This requires uv to be installed first.</ansiyellow>"
+        )
+    )
+    print_formatted_text(
+        HTML(
+            "<ansiyellow>   Installation guide: https://docs.astral.sh/uv/getting-started/installation</ansiyellow>"
+        ),
+    )
+    print_formatted_text("")
+    choice = cli_confirm(
+        config, "Set up shell aliases?", ["Yes, set up aliases", "No, skip this step"]
+    )
     if choice == 0:
         if add_aliases_to_shell_config():
             print_formatted_text("")
-            print_formatted_text(HTML("<ansigreen>✅ Aliases added successfully!</ansigreen>"))
+            print_formatted_text(
+                HTML("<ansigreen>✅ Aliases added successfully!</ansigreen>")
+            )
             shell_manager = ShellConfigManager()
             reload_cmd = shell_manager.get_reload_command()
             print_formatted_text(
-                HTML(f"<grey>Run <b>{reload_cmd}</b> (or restart your terminal) to use the new aliases.</grey>"),
+                HTML(
+                    f"<grey>Run <b>{reload_cmd}</b> (or restart your terminal) to use the new aliases.</grey>"
+                ),
             )
         else:
             print_formatted_text("")
             print_formatted_text(
-                HTML("<ansired>❌ Failed to add aliases. You can set them up manually later.</ansired>"),
+                HTML(
+                    "<ansired>❌ Failed to add aliases. You can set them up manually later.</ansired>"
+                ),
             )
     else:
         mark_alias_setup_declined()
         print_formatted_text("")
-        print_formatted_text(HTML("<grey>Skipped alias setup. You can run this setup again anytime.</grey>"))
+        print_formatted_text(
+            HTML(
+                "<grey>Skipped alias setup. You can run this setup again anytime.</grey>"
+            )
+        )
     print_formatted_text("")
 
 
@@ -730,7 +831,9 @@ def _setup_logging(args) -> None:
 def _load_config_and_setup_vscode(args) -> ForgeConfig:
     """Load configuration and attempt VS Code extension installation."""
     if not os.path.exists(args.config_file):
-        home_config_file = os.path.join(os.path.expanduser("~"), ".Forge", "config.toml")
+        home_config_file = os.path.join(
+            os.path.expanduser("~"), ".Forge", "config.toml"
+        )
         logger.info(
             "Config file %s does not exist, using default config file in home directory: %s.",
             args.config_file,
@@ -742,7 +845,9 @@ def _load_config_and_setup_vscode(args) -> ForgeConfig:
     return config
 
 
-async def _initialize_settings(config: ForgeConfig) -> tuple[Settings | None, bool, FileSettingsStore]:
+async def _initialize_settings(
+    config: ForgeConfig,
+) -> tuple[Settings | None, bool, FileSettingsStore]:
     """Initialize settings and determine if banner should be shown."""
     settings_store = await FileSettingsStore.get_instance(config=config, user_id=None)
     settings = await settings_store.load()
@@ -782,12 +887,15 @@ def _configure_condenser(config, settings) -> None:
     if settings.enable_default_condenser:
         llm_config = config.get_llm_config()
         agent_config = config.get_agent_config(config.default_agent)
-        agent_config.condenser = LLMSummarizingCondenserConfig(llm_config=llm_config, type="llm")
+        agent_config.condenser = LLMSummarizingCondenserConfig(
+            llm_config=llm_config, type="llm"
+        )
         config.set_agent_config(agent_config)
         config.enable_default_condenser = True
     else:
         agent_config = config.get_agent_config(config.default_agent)
         from forge.core.config.condenser_config import NoOpCondenserConfig
+
         agent_config.condenser = NoOpCondenserConfig(type="noop")
         config.set_agent_config(agent_config)
         config.enable_default_condenser = False
@@ -818,7 +926,11 @@ def _apply_cli_defaults(config) -> None:
 
 def _handle_alias_setup(config, banner_shown: bool) -> None:
     """Handle alias setup if needed."""
-    if not aliases_exist_in_shell_config() and (not alias_setup_declined()) and sys.stdin.isatty():
+    if (
+        not aliases_exist_in_shell_config()
+        and (not alias_setup_declined())
+        and sys.stdin.isatty()
+    ):
         if not banner_shown:
             clear()
         run_alias_setup_flow(config)
@@ -838,7 +950,9 @@ def _prepare_task_string(args, config) -> str:
     )
 
 
-async def _run_sessions(loop, config, settings_store, current_dir: str, task_str: str, args) -> None:
+async def _run_sessions(
+    loop, config, settings_store, current_dir: str, task_str: str, args
+) -> None:
     """Run the main session and any additional sessions."""
     get_runtime_cls(config.runtime).setup(config)
 
@@ -857,7 +971,9 @@ async def _run_sessions(loop, config, settings_store, current_dir: str, task_str
     )
 
     while new_session_requested:
-        new_session_requested = await run_session(loop, config, settings_store, current_dir, None)
+        new_session_requested = await run_session(
+            loop, config, settings_store, current_dir, None
+        )
 
     get_runtime_cls(config.runtime).teardown(config)
 

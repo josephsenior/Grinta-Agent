@@ -72,10 +72,14 @@ async def test_wrapper_simple_passthrough(monkeypatch):
 async def test_search_components_uses_cache(monkeypatch):
     from forge.mcp_client import wrappers
 
-    monkeypatch.setattr("forge.mcp_client.wrappers.get_cached", lambda *args, **_: {"content": []})
+    monkeypatch.setattr(
+        "forge.mcp_client.wrappers.get_cached", lambda *args, **_: {"content": []}
+    )
 
     async def fake_call(tool_name, args):
-        raise AssertionError("call_tool_func should not be invoked when cache hit happens")
+        raise AssertionError(
+            "call_tool_func should not be invoked when cache hit happens"
+        )
 
     result = await wrappers.search_components([], {"query": "widget"}, fake_call)
     payload = json.loads(result["content"][0]["text"])
@@ -106,7 +110,9 @@ def test_score_and_filter_components_paths():
     fuzzy_results = wrappers._score_and_filter_components(components, "ex", fuzzy=True)
     assert [name for _, name in fuzzy_results] == ["Exact"]
 
-    exact_results = wrappers._score_and_filter_components(components, "partial", fuzzy=False)
+    exact_results = wrappers._score_and_filter_components(
+        components, "partial", fuzzy=False
+    )
     assert [name for _, name in exact_results] == ["partial-match"]
 
     assert wrappers._score_and_filter_components(["zzzz"], "a", fuzzy=True) == []
@@ -162,8 +168,11 @@ async def test_execute_wrapper_tool_success(monkeypatch):
         return {"wrapped": args, "record": record}
 
     dummy_tool = SimpleNamespace(name="underlying")
+
     async def underlying_call(name, args):
-        return SimpleNamespace(model_dump=lambda mode="json": {"name": name, "args": args})
+        return SimpleNamespace(
+            model_dump=lambda mode="json": {"name": name, "args": args}
+        )
 
     dummy_client = SimpleNamespace(
         tools=[dummy_tool],
@@ -187,10 +196,15 @@ async def test_execute_direct_tool_uses_cache(monkeypatch):
 
     dummy_tool = SimpleNamespace(name="list_components")
     dummy_client = SimpleNamespace(tools=[dummy_tool])
-    monkeypatch.setattr("forge.mcp_client.utils.get_cached", lambda *args, **kwargs: {"content": ["cached"]})
+    monkeypatch.setattr(
+        "forge.mcp_client.utils.get_cached",
+        lambda *args, **kwargs: {"content": ["cached"]},
+    )
     monkeypatch.setattr("sys.platform", "linux")
 
-    observation = await mcp_utils.call_tool_mcp([dummy_client], MCPAction(name="list_components", arguments={}))
+    observation = await mcp_utils.call_tool_mcp(
+        [dummy_client], MCPAction(name="list_components", arguments={})
+    )
     assert isinstance(observation, MCPObservation)
     assert json.loads(observation.content) == {"content": ["cached"]}
 
@@ -212,17 +226,24 @@ async def test_execute_direct_tool_sets_cache(monkeypatch):
         call_tool=fake_call,
     )
 
-    monkeypatch.setattr("forge.mcp_client.utils.get_cached", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        "forge.mcp_client.utils.get_cached", lambda *args, **kwargs: None
+    )
 
     def fake_set_cache(name, args, result):
         stored["result"] = result
         raise RuntimeError("fail after storing")
 
     monkeypatch.setattr("forge.mcp_client.utils.set_cache", fake_set_cache)
-    monkeypatch.setattr("forge.mcp_client.utils.model_dump_with_options", lambda *args, **kwargs: {"result": "fresh"})
+    monkeypatch.setattr(
+        "forge.mcp_client.utils.model_dump_with_options",
+        lambda *args, **kwargs: {"result": "fresh"},
+    )
     monkeypatch.setattr("sys.platform", "linux")
 
-    observation = await mcp_utils.call_tool_mcp([dummy_client], MCPAction(name="foo", arguments={"a": 1}))
+    observation = await mcp_utils.call_tool_mcp(
+        [dummy_client], MCPAction(name="foo", arguments={"a": 1})
+    )
     assert isinstance(observation, MCPObservation)
     assert stored["result"] == {"result": "fresh"}
 
@@ -269,7 +290,9 @@ def test_build_http_headers_and_transport(monkeypatch):
     http_server = MCPSHTTPServerConfig(url="https://example.com", api_key="abc")
     sse_server = MCPSSEServerConfig(url="https://example.com")
 
-    transport_http = client._create_http_transport(http_server, http_server.url, headers)
+    transport_http = client._create_http_transport(
+        http_server, http_server.url, headers
+    )
     transport_sse = client._create_http_transport(sse_server, sse_server.url, headers)
     from fastmcp.client.transports import StreamableHttpTransport, SSETransport
 
@@ -298,7 +321,9 @@ def test_mcp_client_handle_connection_error(monkeypatch):
     client = MCPClient()
     server = MCPSSEServerConfig(url="https://server")
     mcp_error_collector.clear_errors()
-    client._handle_connection_error("https://server", server, ValueError("bad"), is_mcp_error=False)
+    client._handle_connection_error(
+        "https://server", server, ValueError("bad"), is_mcp_error=False
+    )
     errors = mcp_error_collector.get_errors()
     assert errors and errors[0].server_type == "sse"
 
@@ -321,10 +346,14 @@ async def test_mcp_client_connect_http_success(monkeypatch):
         async def list_tools(self):
             self.list_tools_calls += 1
             return [
-                SimpleNamespace(name="one", description="d", inputSchema={"type": "object"}),
+                SimpleNamespace(
+                    name="one", description="d", inputSchema={"type": "object"}
+                ),
             ]
 
-    monkeypatch.setattr("forge.mcp_client.client.Client", lambda *args, **kwargs: DummyClient())
+    monkeypatch.setattr(
+        "forge.mcp_client.client.Client", lambda *args, **kwargs: DummyClient()
+    )
 
     client = MCPClient()
     await client.connect_http(MCPSSEServerConfig(url="https://server"))
@@ -343,7 +372,9 @@ async def test_mcp_client_connect_http_error(monkeypatch):
         async def __aexit__(self, *exc):
             return False
 
-    monkeypatch.setattr("forge.mcp_client.client.Client", lambda *args, **kwargs: FailingClient())
+    monkeypatch.setattr(
+        "forge.mcp_client.client.Client", lambda *args, **kwargs: FailingClient()
+    )
     client = MCPClient()
     with pytest.raises(RuntimeError):
         await client.connect_http(MCPSSEServerConfig(url="https://server"))
@@ -364,13 +395,20 @@ async def test_mcp_client_connect_stdio_failure(monkeypatch):
         async def list_tools(self):
             return []
 
-    monkeypatch.setattr("forge.mcp_client.client.Client", lambda *args, **kwargs: FailingClient())
-    monkeypatch.setattr("forge.mcp_client.client.StdioTransport", lambda *args, **kwargs: SimpleNamespace())
+    monkeypatch.setattr(
+        "forge.mcp_client.client.Client", lambda *args, **kwargs: FailingClient()
+    )
+    monkeypatch.setattr(
+        "forge.mcp_client.client.StdioTransport",
+        lambda *args, **kwargs: SimpleNamespace(),
+    )
 
     client = MCPClient()
 
     with pytest.raises(RuntimeError):
-        await client.connect_stdio(MCPStdioServerConfig(name="stdio", command="missing"))
+        await client.connect_stdio(
+            MCPStdioServerConfig(name="stdio", command="missing")
+        )
 
 
 @pytest.mark.asyncio
@@ -387,8 +425,12 @@ async def test_call_mcp_raw(monkeypatch):
         call_tool=fake_call,
     )
 
-    monkeypatch.setattr("forge.mcp_client.utils.get_cached", lambda *args, **kwargs: None)
-    monkeypatch.setattr("forge.mcp_client.utils.set_cache", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        "forge.mcp_client.utils.get_cached", lambda *args, **kwargs: None
+    )
+    monkeypatch.setattr(
+        "forge.mcp_client.utils.set_cache", lambda *args, **kwargs: None
+    )
 
     action = SimpleNamespace(name="foo", arguments={})
     result = await _call_mcp_raw([client], action)
@@ -438,10 +480,13 @@ async def test_add_mcp_tools_to_agent(monkeypatch):
             return []
 
     monkeypatch.setattr("sys.platform", "linux")
+
     async def fake_fetch(*args, **kwargs):
         return [{"function": {"name": "tool"}}]
 
-    monkeypatch.setattr("forge.mcp_client.utils.fetch_mcp_tools_from_config", fake_fetch)
+    monkeypatch.setattr(
+        "forge.mcp_client.utils.fetch_mcp_tools_from_config", fake_fetch
+    )
 
     agent = DummyAgent()
     runtime = DummyRuntime()
@@ -472,7 +517,9 @@ def test_wrappers_fuzzy_score_variations():
 async def test_get_components_list_fetches_when_uncached(monkeypatch):
     from forge.mcp_client.wrappers import _get_components_list
 
-    monkeypatch.setattr("forge.mcp_client.wrappers.get_cached", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        "forge.mcp_client.wrappers.get_cached", lambda *args, **kwargs: None
+    )
 
     async def fake_call(tool_name, args):
         return {"content": [{"type": "text", "text": json.dumps(["alpha", "beta"])}]}
@@ -514,7 +561,9 @@ def test_cache_clear_all(monkeypatch):
 def test_mcp_client_tool_to_param():
     from forge.mcp_client.tool import MCPClientTool
 
-    tool = MCPClientTool(name="demo", description="desc", inputSchema={"type": "object"})
+    tool = MCPClientTool(
+        name="demo", description="desc", inputSchema={"type": "object"}
+    )
     params = tool.to_param()
     assert params["function"]["name"] == "demo"
 
@@ -551,7 +600,9 @@ async def test_mcp_client_connect_http_mcp_error(monkeypatch):
         async def __aexit__(self, *exc):
             return False
 
-    monkeypatch.setattr("forge.mcp_client.client.Client", lambda *args, **kwargs: ErrorClient())
+    monkeypatch.setattr(
+        "forge.mcp_client.client.Client", lambda *args, **kwargs: ErrorClient()
+    )
 
     client = MCPClient()
     with pytest.raises(McpError):
@@ -570,15 +621,20 @@ async def test_mcp_client_call_tool_success_path(monkeypatch):
             return False
 
         async def list_tools(self):
-            return [SimpleNamespace(name="tool", description="d", inputSchema={"type": "object"})]
+            return [
+                SimpleNamespace(
+                    name="tool", description="d", inputSchema={"type": "object"}
+                )
+            ]
 
         async def call_tool_mcp(self, name, arguments):
             return {"result": arguments}
 
-    monkeypatch.setattr("forge.mcp_client.client.Client", lambda *args, **kwargs: DummySession())
+    monkeypatch.setattr(
+        "forge.mcp_client.client.Client", lambda *args, **kwargs: DummySession()
+    )
 
     client = MCPClient()
     await client.connect_http(SimpleNamespace(url="https://server", api_key=None))
     result = await client.call_tool("tool", {"value": 1})
     assert result == {"result": {"value": 1}}
-

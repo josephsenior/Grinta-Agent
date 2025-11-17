@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from json import JSONDecodeError
-from typing import TYPE_CHECKING, Annotated, cast
+from typing import TYPE_CHECKING, Annotated, Any, cast
 
 import os
 import sys
@@ -16,7 +16,11 @@ from forge.core.logger import forge_logger as logger
 from forge.core.pydantic_compat import model_to_dict
 from forge.events.event_store import EventStore
 from forge.events.serialization.event import event_to_dict
-from forge.server.shared import conversation_manager, file_store
+from forge.server.shared import (
+    event_service_adapter,
+    get_event_service_adapter,
+)
+from forge.server.shared import conversation_manager, file_store, get_conversation_manager
 from forge.microagent.types import InputMetadata
 from forge.server.user_auth import get_user_id
 from forge.server.utils import get_conversation, get_conversation_metadata
@@ -31,6 +35,7 @@ if TYPE_CHECKING:
 
 app: APIRouter
 if "pytest" in sys.modules:
+
     class NoOpAPIRouter(APIRouter):
         """Router stub used in tests to bypass actual FastAPI route wiring."""
 
@@ -41,6 +46,46 @@ if "pytest" in sys.modules:
     app = cast(APIRouter, NoOpAPIRouter())
 else:
     app = APIRouter()
+
+
+def _get_conversation_manager_instance():
+    manager: Any = conversation_manager
+    if manager is not None:
+        return manager
+    try:
+        return get_conversation_manager()
+    except Exception:
+        return None
+
+
+def _require_conversation_manager():
+    manager = _get_conversation_manager_instance()
+    if manager is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Conversation manager is not initialized",
+        )
+    return manager
+
+
+def _get_event_service_adapter_instance():
+    adapter: Any = event_service_adapter
+    if adapter is not None:
+        return adapter
+    try:
+        return get_event_service_adapter()
+    except Exception:
+        return None
+
+
+def _require_event_service_adapter():
+    adapter = _get_event_service_adapter_instance()
+    if adapter is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Event service adapter is not initialized",
+        )
+    return adapter
 
 
 @app.get("/simple-test")
@@ -58,17 +103,21 @@ async def get_remote_runtime_config(
     Currently, this is the session ID and runtime ID (if available).
     """
     # Manually get the conversation without dependency injection
+    manager = _require_conversation_manager()
     try:
-        from forge.server.shared import conversation_manager
-        conversation = await conversation_manager.attach_to_conversation(conversation_id, "dev-user")
+        conversation = await manager.attach_to_conversation(conversation_id, "dev-user")
         if conversation:
             runtime = conversation.runtime
             runtime_id = runtime.runtime_id if hasattr(runtime, "runtime_id") else None
             session_id = runtime.sid if hasattr(runtime, "sid") else None
-            await conversation_manager.detach_from_conversation(conversation)
-            return JSONResponse(content={"runtime_id": runtime_id, "session_id": session_id})
+            await manager.detach_from_conversation(conversation)
+            return JSONResponse(
+                content={"runtime_id": runtime_id, "session_id": session_id}
+            )
         else:
-            return JSONResponse(content={"error": "Conversation not found"}, status_code=404)
+            return JSONResponse(
+                content={"error": "Conversation not found"}, status_code=404
+            )
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
@@ -88,17 +137,21 @@ async def get_vscode_url(
         JSONResponse: A JSON response indicating the success of the operation.
 
     """
+    manager = _require_conversation_manager()
     try:
-        from forge.server.shared import conversation_manager
-        conversation = await conversation_manager.attach_to_conversation(conversation_id, "dev-user")
+        conversation = await manager.attach_to_conversation(conversation_id, "dev-user")
         if conversation:
             runtime: Runtime = conversation.runtime
             vscode_url = getattr(runtime, "vscode_url", None)
             logger.debug("Runtime type: %s", type(runtime))
             logger.debug("Runtime VSCode URL: %s", vscode_url)
-            await conversation_manager.detach_from_conversation(conversation)
-            return JSONResponse(status_code=status.HTTP_200_OK, content={"vscode_url": vscode_url})
-        return JSONResponse(content={"error": "Conversation not found"}, status_code=404)
+            await manager.detach_from_conversation(conversation)
+            return JSONResponse(
+                status_code=status.HTTP_200_OK, content={"vscode_url": vscode_url}
+            )
+        return JSONResponse(
+            content={"error": "Conversation not found"}, status_code=404
+        )
     except Exception as e:
         logger.error("Error getting VSCode URL: %s", e)
         return JSONResponse(
@@ -122,20 +175,25 @@ async def get_hosts(
         JSONResponse: A JSON response indicating the success of the operation.
 
     """
+    manager = _require_conversation_manager()
     try:
-        from forge.server.shared import conversation_manager
-        conversation = await conversation_manager.attach_to_conversation(conversation_id, "dev-user")
+        conversation = await manager.attach_to_conversation(conversation_id, "dev-user")
         if conversation:
             runtime: Runtime = conversation.runtime
             web_hosts = getattr(runtime, "web_hosts", None)
             logger.debug("Runtime type: %s", type(runtime))
             logger.debug("Runtime hosts: %s", web_hosts)
-            await conversation_manager.detach_from_conversation(conversation)
+            await manager.detach_from_conversation(conversation)
             return JSONResponse(status_code=200, content={"hosts": web_hosts})
-        return JSONResponse(content={"error": "Conversation not found"}, status_code=404)
+        return JSONResponse(
+            content={"error": "Conversation not found"}, status_code=404
+        )
     except Exception as e:
         logger.error("Error getting runtime hosts: %s", e)
-        return JSONResponse(status_code=500, content={"hosts": None, "error": f"Error getting runtime hosts: {e}"})
+        return JSONResponse(
+            status_code=500,
+            content={"hosts": None, "error": f"Error getting runtime hosts: {e}"},
+        )
 
 
 @app.get("/git/changes")
@@ -214,10 +272,20 @@ async def search_events(
 
     """
     if limit < 0 or limit > 100:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid limit")
-    event_store = EventStore(sid=conversation_id, file_store=file_store, user_id=user_id)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid limit"
+        )
+    event_store = EventStore(
+        sid=conversation_id, file_store=file_store, user_id=user_id
+    )
     events = list(
-        event_store.search_events(start_id=start_id, end_id=end_id, reverse=reverse, filter=filter, limit=limit + 1),
+        event_store.search_events(
+            start_id=start_id,
+            end_id=end_id,
+            reverse=reverse,
+            filter=filter,
+            limit=limit + 1,
+        ),
     )
     has_more = len(events) > limit
     if has_more:
@@ -227,7 +295,9 @@ async def search_events(
 
 
 @app.post("/events")
-async def add_event(request: Request, conversation: ServerConversation = Depends(get_conversation)):
+async def add_event(
+    request: Request, conversation: ServerConversation = Depends(get_conversation)
+):
     """Add an event to a conversation.
 
     Args:
@@ -242,12 +312,15 @@ async def add_event(request: Request, conversation: ServerConversation = Depends
         data = await request.json()
     except JSONDecodeError as e:
         raw = (await request.body()).decode("utf-8", errors="replace")
-        logger.error("Failed to parse JSON body for add_event: %s; raw body: %s", e, raw)
+        logger.error(
+            "Failed to parse JSON body for add_event: %s; raw body: %s", e, raw
+        )
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "Invalid JSON", "raw_body": raw[:2000]},
         )
-    await conversation_manager.send_event_to_conversation(conversation.sid, data)
+    manager = _require_conversation_manager()
+    await manager.send_event_to_conversation(conversation.sid, data)
     return JSONResponse({"success": True})
 
 
@@ -264,11 +337,13 @@ async def add_event_raw(
     JSON bodies (PowerShell curl, etc.) can still send messages to the
     conversation. The raw body becomes the action args.content.
     """
+    manager = _require_conversation_manager()
+    adapter = _require_event_service_adapter()
     try:
         raw = (await request.body()).decode("utf-8", errors="replace")
         if not raw:
             return JSONResponse(status_code=400, content={"error": "Empty body"})
-        conversation = await conversation_manager.attach_to_conversation(conversation_id, user_id)
+        conversation = await manager.attach_to_conversation(conversation_id, user_id)
         if not conversation and create:
             from forge.server.utils import get_conversation_store
             from forge.storage.data_models.conversation_metadata import (
@@ -281,9 +356,13 @@ async def add_event_raw(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     content={"error": "Conversation store unavailable"},
                 )
-            metadata = ConversationMetadata(conversation_id=conversation_id, selected_repository=None, title=f"Conversation {conversation_id}")
+            metadata = ConversationMetadata(
+                conversation_id=conversation_id,
+                selected_repository=None,
+                title=f"Conversation {conversation_id}",
+            )
             await conversation_store.save_metadata(metadata)
-            conversation = await conversation_manager.attach_to_conversation(conversation_id, user_id)
+            conversation = await manager.attach_to_conversation(conversation_id, user_id)
         if not conversation:
             return JSONResponse(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -294,18 +373,28 @@ async def add_event_raw(
             )
         data = {"action": "message", "args": {"content": raw}}
         try:
-            await conversation_manager.send_event_to_conversation(conversation.sid, data)
+            await manager.send_event_to_conversation(conversation.sid, data)
             return JSONResponse({"success": True, "dispatched_as": data})
         except RuntimeError as re:
             if str(re).startswith("no_conversation:"):
                 from forge.events.event import EventSource
                 from forge.events.serialization.event import event_from_dict
-                from forge.events.stream import EventStream
 
                 event_obj = event_from_dict(data.copy())
-                event_stream = EventStream(conversation_id, file_store, user_id)
+                adapter.start_session(
+                    session_id=conversation_id,
+                    user_id=user_id,
+                    labels={"source": "conversation_route"},
+                )
+                event_stream = adapter.get_event_stream(conversation_id)
                 event_stream.add_event(event_obj, EventSource.USER)
-                return JSONResponse({"success": True, "dispatched_as": data, "note": "persisted_to_event_store"})
+                return JSONResponse(
+                    {
+                        "success": True,
+                        "dispatched_as": data,
+                        "note": "persisted_to_event_store",
+                    }
+                )
             raise
     except Exception as e:
         logger.exception("Failed to handle raw event body: %s", e)
@@ -336,10 +425,15 @@ async def metasop_debug(request: Request):
             payload = {}
         message = payload.get("message") if isinstance(payload, dict) else None
         message = message or "sop: debug run"
-        conversation_id = payload.get("conversation_id") if isinstance(payload, dict) else None
+        conversation_id = (
+            payload.get("conversation_id") if isinstance(payload, dict) else None
+        )
 
         if not conversation_id:
-            return JSONResponse(status_code=400, content={"error": "conversation_id required in request body"})
+            return JSONResponse(
+                status_code=400,
+                content={"error": "conversation_id required in request body"},
+            )
 
         import asyncio
 
@@ -353,7 +447,9 @@ async def metasop_debug(request: Request):
                 repo_root=None,
             ),
         )
-        return JSONResponse({"started": True, "message": message, "conversation_id": conversation_id})
+        return JSONResponse(
+            {"started": True, "message": message, "conversation_id": conversation_id}
+        )
     except Exception as e:
         logger.exception("Error starting MetaSOP debug run: %s", e)
         return JSONResponse(status_code=500, content={"error": str(e)})
@@ -371,7 +467,9 @@ class MicroagentResponse(BaseModel):
 
 
 @app.get("/microagents")
-async def get_microagents(conversation: ServerConversation = Depends(get_conversation)) -> JSONResponse:
+async def get_microagents(
+    conversation: ServerConversation = Depends(get_conversation),
+) -> JSONResponse:
     """Get all microagents associated with the conversation.
 
     This endpoint returns all repository and knowledge microagents that are loaded for the conversation.
@@ -392,9 +490,15 @@ async def get_microagents(conversation: ServerConversation = Depends(get_convers
             content={"microagents": [model_to_dict(m) for m in microagents]},
         )
     except HTTPException as exc:
-        detail_obj = exc.detail
-        detail_data = detail_obj if isinstance(detail_obj, dict) else {"error": str(detail_obj)}
-        logger.warning("Error getting microagents: %s", detail_data.get("error", detail_data), exc_info=False)
+        detail_obj: Any = exc.detail
+        if not isinstance(detail_obj, dict):
+            detail_obj = {"error": str(detail_obj)}
+        detail_data = cast(dict[str, Any], detail_obj)
+        logger.warning(
+            "Error getting microagents: %s",
+            detail_data.get("error", detail_data),
+            exc_info=False,
+        )
         return JSONResponse(status_code=exc.status_code, content=detail_data)
     except Exception as e:
         logger.error("Error getting microagents: %s", e)
@@ -417,7 +521,8 @@ def _get_conversation_memory(conversation: ServerConversation) -> Memory:
         HTTPException: If session or memory not found
 
     """
-    agent_session = conversation_manager.get_agent_session(conversation.sid)
+    manager = _require_conversation_manager()
+    agent_session = manager.get_agent_session(conversation.sid)
     if not agent_session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -445,11 +550,15 @@ def _build_microagent_list(memory: Memory) -> list[MicroagentResponse]:
 
     """
     # Build repo microagents
-    repo_microagents = [_build_repo_microagent(name, r_agent) for name, r_agent in memory.repo_microagents.items()]
+    repo_microagents = [
+        _build_repo_microagent(name, r_agent)
+        for name, r_agent in memory.repo_microagents.items()
+    ]
 
     # Build knowledge microagents
     knowledge_microagents = [
-        _build_knowledge_microagent(name, k_agent) for name, k_agent in memory.knowledge_microagents.items()
+        _build_knowledge_microagent(name, k_agent)
+        for name, k_agent in memory.knowledge_microagents.items()
     ]
 
     return repo_microagents + knowledge_microagents

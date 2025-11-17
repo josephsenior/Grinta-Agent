@@ -9,9 +9,7 @@ from forge.core.pydantic_compat import get_model_field_names, model_to_dict
 
 
 def test_model_to_dict_prefers_model_dump():
-
     class V2Like:
-
         def __init__(self):
             self.a = 1
 
@@ -22,9 +20,7 @@ def test_model_to_dict_prefers_model_dump():
 
 
 def test_model_to_dict_falls_back_to_dict():
-
     class V1Like:
-
         def __init__(self):
             self.b = 2
 
@@ -40,7 +36,6 @@ def test_model_to_dict_passthrough_for_plain_dict():
 
 
 def test_get_model_field_names_prefers_model_fields():
-
     class V2Cls:
         model_fields = {"f1": None, "f2": None}
 
@@ -48,7 +43,6 @@ def test_get_model_field_names_prefers_model_fields():
 
 
 def test_get_model_field_names_falls_back_to___fields__():
-
     class V1Cls:
         __fields__ = {"g1": None}
 
@@ -56,7 +50,6 @@ def test_get_model_field_names_falls_back_to___fields__():
 
 
 def test_get_model_field_names_uses_annotations_last():
-
     class AnnCls:
         __annotations__ = {"h1": int}
 
@@ -64,7 +57,6 @@ def test_get_model_field_names_uses_annotations_last():
 
 
 def test_get_model_field_names_priority_order():
-
     class Mixed:
         model_fields = {"a": None}
         __fields__ = {"b": None}

@@ -29,7 +29,9 @@ def _write_template(base: Path, template: ConversationTemplate) -> None:
     templates_dir = base / "templates"
     templates_dir.mkdir(parents=True, exist_ok=True)
     file_path = templates_dir / f"{template.id}.json"
-    file_path.write_text(json.dumps(template.model_dump(), default=str), encoding="utf-8")
+    file_path.write_text(
+        json.dumps(template.model_dump(), default=str), encoding="utf-8"
+    )
 
 
 def test_get_templates_dir_creates_directory(temp_workspace):
@@ -284,7 +286,7 @@ async def test_delete_template_success_and_missing(temp_workspace):
     )
     _write_template(temp_workspace, template)
 
-    assert await templates_routes.delete_template("del") is None
+    await templates_routes.delete_template("del")
     assert not (templates_routes._get_templates_dir() / "del.json").exists()
 
     with pytest.raises(templates_routes.HTTPException) as exc:

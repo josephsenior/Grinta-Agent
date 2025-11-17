@@ -376,15 +376,30 @@ class ForgeClient {
     conversationInstructions?: string,
     createMicroagent?: CreateMicroagent,
   ): Promise<Conversation> {
-    const body = {
-      repository: selectedRepository,
-      git_provider,
-      selected_branch,
-      initial_user_msg: initialUserMsg,
-      suggested_task,
-      conversation_instructions: conversationInstructions,
-      create_microagent: createMicroagent,
-    };
+    // Build body, only including defined values to avoid sending undefined/null
+    const body: Record<string, unknown> = {};
+
+    if (selectedRepository !== undefined) {
+      body.repository = selectedRepository;
+    }
+    if (git_provider !== undefined) {
+      body.git_provider = git_provider;
+    }
+    if (selected_branch !== undefined) {
+      body.selected_branch = selected_branch;
+    }
+    if (initialUserMsg !== undefined) {
+      body.initial_user_msg = initialUserMsg;
+    }
+    if (suggested_task !== undefined) {
+      body.suggested_task = suggested_task;
+    }
+    if (conversationInstructions !== undefined) {
+      body.conversation_instructions = conversationInstructions;
+    }
+    if (createMicroagent !== undefined) {
+      body.create_microagent = createMicroagent;
+    }
 
     const { data } = await Forge.post<Conversation>(
       `${this.getBase()}/conversations`,

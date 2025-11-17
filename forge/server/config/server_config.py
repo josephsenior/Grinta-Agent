@@ -9,6 +9,7 @@ from forge.utils.import_utils import get_impl
 
 class ServerConfig(ServerConfigInterface):
     """Default OSS server configuration with environment-driven overrides."""
+
     config_cls = os.environ.get("FORGE_CONFIG_CLS", None)
     app_mode = AppMode.OSS
     posthog_client_key = "phc_3ESMmY9SgqEAGBB6sMGK5ayYHkeUuknH2vP6FmWH9RA"
@@ -19,9 +20,15 @@ class ServerConfig(ServerConfigInterface):
     enable_jira = os.environ.get("ENABLE_JIRA", "true") == "true"
     enable_jira_dc = os.environ.get("ENABLE_JIRA_DC", "true") == "true"
     enable_linear = os.environ.get("ENABLE_LINEAR", "true") == "true"
-    settings_store_class: str = "forge.storage.settings.file_settings_store.FileSettingsStore"
-    secret_store_class: str = "forge.storage.secrets.file_secrets_store.FileSecretsStore"
-    conversation_store_class: str = "forge.storage.conversation.file_conversation_store.FileConversationStore"
+    settings_store_class: str = (
+        "forge.storage.settings.file_settings_store.FileSettingsStore"
+    )
+    secret_store_class: str = (
+        "forge.storage.secrets.file_secrets_store.FileSecretsStore"
+    )
+    conversation_store_class: str = (
+        "forge.storage.conversation.file_conversation_store.FileConversationStore"
+    )
     conversation_manager_class: str = os.environ.get(
         "CONVERSATION_MANAGER_CLASS",
         "forge.server.conversation_manager.standalone_conversation_manager.StandaloneConversationManager",
@@ -53,10 +60,10 @@ class ServerConfig(ServerConfigInterface):
 
 def load_server_config() -> ServerConfig:
     """Load server configuration from environment.
-    
+
     Reads FORGE_CONFIG_CLS environment variable to determine config class,
     instantiates it, and verifies the configuration.
-    
+
     Returns:
         Loaded and verified ServerConfig instance
 

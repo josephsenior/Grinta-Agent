@@ -13,7 +13,6 @@ def test_print_json_stdout_happy_path(capsys):
 
 
 class NonSerializable:
-
     def __repr__(self):
         return "<NS>"
 

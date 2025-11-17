@@ -31,7 +31,10 @@ from forge.events.observation.files import (
 )
 from forge.events.observation.mcp import MCPObservation
 from forge.events.observation.observation import Observation
-from forge.events.serialization.observation import handle_observation_deprecated_extras, observation_from_dict
+from forge.events.serialization.observation import (
+    handle_observation_deprecated_extras,
+    observation_from_dict,
+)
 from forge.events.observation.reject import UserRejectObservation
 from forge.events.observation.server import ServerReadyObservation
 from forge.events.observation.success import SuccessObservation
@@ -98,11 +101,15 @@ def test_cmd_output_observation_initialization_and_properties():
 
 
 def test_observation_serialization_helpers_cover_edge_cases():
-    extras = handle_observation_deprecated_extras({"exit_code": 3, "command_id": 9, "formatted_output_and_error": "text"})
+    extras = handle_observation_deprecated_extras(
+        {"exit_code": 3, "command_id": 9, "formatted_output_and_error": "text"}
+    )
     assert isinstance(extras["metadata"], CmdOutputMetadata)
     assert extras["metadata"].exit_code == 3 and extras["metadata"].pid == 9
 
-    updated_metadata = handle_observation_deprecated_extras({"metadata": CmdOutputMetadata(), "exit_code": 5})
+    updated_metadata = handle_observation_deprecated_extras(
+        {"metadata": CmdOutputMetadata(), "exit_code": 5}
+    )
     assert updated_metadata["metadata"].exit_code == 5
 
     metadata_none = CmdOutputObservation._maybe_truncate("abcdef", max_size=5)
@@ -132,7 +139,9 @@ def test_observation_serialization_helpers_cover_edge_cases():
     with pytest.raises(KeyError):
         observation_from_dict({})
 
-    default_metadata_obs = observation_from_dict({"observation": "run", "content": "body", "extras": {"command": "ls"}})
+    default_metadata_obs = observation_from_dict(
+        {"observation": "run", "content": "body", "extras": {"command": "ls"}}
+    )
     assert isinstance(default_metadata_obs.metadata, CmdOutputMetadata)
 
 
@@ -145,7 +154,9 @@ def test_cmd_output_observation_truncation_behavior():
 
 
 def test_ipython_observation_reporting():
-    obs = IPythonRunCellObservation(content="result", code="print(1)", image_urls=["img1"])
+    obs = IPythonRunCellObservation(
+        content="result", code="print(1)", image_urls=["img1"]
+    )
     assert obs.success is True
     assert obs.error is False
     assert obs.message == "Code executed in IPython cell."
@@ -250,7 +261,9 @@ def test_observation_simple_messages_and_defaults():
 
 
 def test_recall_observation_formats_based_on_type():
-    knowledge = MicroagentKnowledge(name="python", trigger="py", content="Always use venv")
+    knowledge = MicroagentKnowledge(
+        name="python", trigger="py", content="Always use venv"
+    )
     recall_workspace = RecallObservation(
         content="workspace",
         recall_type=RecallType.WORKSPACE_CONTEXT,
@@ -278,7 +291,9 @@ def test_condensation_observation_outputs_content():
 
 
 def test_server_ready_observation_message_uses_health_status():
-    healthy = ServerReadyObservation(content="", port=8080, url="http://localhost:8080", health_status="healthy")
+    healthy = ServerReadyObservation(
+        content="", port=8080, url="http://localhost:8080", health_status="healthy"
+    )
     waiting = ServerReadyObservation(content="", port=8080, url="http://localhost:8080")
     assert healthy.message.startswith("✅")
     assert waiting.message.startswith("🔄")
@@ -296,4 +311,3 @@ def test_backward_compatibility_imports():
 
     assert browser_output.BrowserOutputObservation is BrowserOutputObservation
     assert cmd_output.CmdOutputObservation is CmdOutputObservation
-

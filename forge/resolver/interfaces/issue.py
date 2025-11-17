@@ -10,12 +10,14 @@ from pydantic import BaseModel
 
 class ReviewThread(BaseModel):
     """Model representing a review thread with comments and affected files."""
+
     comment: str
     files: list[str]
 
 
 class Issue(BaseModel):
     """Model representing an issue or pull request with all context."""
+
     owner: str
     repo: str
     number: int
@@ -44,7 +46,9 @@ class IssueHandlerInterface(ABC):
         pass
 
     @abstractmethod
-    def get_issue_comments(self, issue_number: int, comment_id: int | None = None) -> list[str] | None:
+    def get_issue_comments(
+        self, issue_number: int, comment_id: int | None = None
+    ) -> list[str] | None:
         """Get comments for an issue, optionally starting from a specific comment."""
         pass
 

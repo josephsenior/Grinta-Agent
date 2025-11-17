@@ -1,5 +1,11 @@
 import pytest
-from forge.runtime.utils.bash import escape_bash_special_chars, split_bash_commands
+from pathlib import Path
+from forge.runtime.utils.bash import (
+    escape_bash_special_chars,
+    split_bash_commands,
+)
+
+ROOT = Path(__file__).resolve().parents[4]
 
 
 def test_split_commands_util():
@@ -20,7 +26,9 @@ def test_split_commands_util():
         print("\nCMD")
         print(s)
     for i in range(len(cmds)):
-        assert split_cmds[i].strip() == cmds[i].strip(), f"At index {i}: {split_cmds[i]} != {cmds[i]}."
+        assert split_cmds[i].strip() == cmds[i].strip(), (
+            f"At index {i}: {split_cmds[i]} != {cmds[i]}."
+        )
 
 
 @pytest.mark.parametrize(
@@ -30,10 +38,19 @@ def test_split_commands_util():
         ("echo 'Hello, world!'", ["echo 'Hello, world!'"]),
         ("cd /tmp && touch test.txt", ["cd /tmp && touch test.txt"]),
         ("echo -e 'line1\\nline2\\nline3'", ["echo -e 'line1\\nline2\\nline3'"]),
-        ("grep 'pattern' file.txt | sort | uniq", ["grep 'pattern' file.txt | sort | uniq"]),
+        (
+            "grep 'pattern' file.txt | sort | uniq",
+            ["grep 'pattern' file.txt | sort | uniq"],
+        ),
         ("for i in {1..5}; do echo $i; done", ["for i in {1..5}; do echo $i; done"]),
-        ("echo 'Single quotes don\\'t escape'", ["echo 'Single quotes don\\'t escape'"]),
-        ('echo "Double quotes \\"do\\" escape"', ['echo "Double quotes \\"do\\" escape"']),
+        (
+            "echo 'Single quotes don\\'t escape'",
+            ["echo 'Single quotes don\\'t escape'"],
+        ),
+        (
+            'echo "Double quotes \\"do\\" escape"',
+            ['echo "Double quotes \\"do\\" escape"'],
+        ),
     ],
 )
 def test_single_commands(input_command, expected_output):
@@ -48,13 +65,21 @@ def test_heredoc():
 
 def test_backslash_continuation():
     input_commands = '\necho "This is a long command that spans multiple lines"\necho "Next command"\n'
-    expected_output = ['echo "This is a long command that spans multiple lines"', 'echo "Next command"']
+    expected_output = [
+        'echo "This is a long command that spans multiple lines"',
+        'echo "Next command"',
+    ]
     assert split_bash_commands(input_commands) == expected_output
 
 
 def test_comments():
-    input_commands = '\necho "Hello" # This is a comment\n# This is another comment\nls -l\n'
-    expected_output = ['echo "Hello" # This is a comment\n# This is another comment', "ls -l"]
+    input_commands = (
+        '\necho "Hello" # This is a comment\n# This is another comment\nls -l\n'
+    )
+    expected_output = [
+        'echo "Hello" # This is a comment\n# This is another comment',
+        "ls -l",
+    ]
     assert split_bash_commands(input_commands) == expected_output
 
 
@@ -69,7 +94,11 @@ def test_complex_quoting():
 
 
 def test_invalid_syntax():
-    invalid_inputs = ['echo "Unclosed quote', "echo 'Unclosed quote", "cat <<EOF\nUnclosed heredoc"]
+    invalid_inputs = [
+        'echo "Unclosed quote',
+        "echo 'Unclosed quote",
+        "cat <<EOF\nUnclosed heredoc",
+    ]
     for input_command in invalid_inputs:
         assert split_bash_commands(input_command) == [input_command]
 
@@ -129,7 +158,10 @@ def test_split_commands_with_heredoc():
 
 def test_split_commands_with_backslash_continuation():
     input_commands = '\necho "This is a long command that spans multiple lines"\necho "Next command"\n'
-    expected_output = ['echo "This is a long command that spans multiple lines"', 'echo "Next command"']
+    expected_output = [
+        'echo "This is a long command that spans multiple lines"',
+        'echo "Next command"',
+    ]
     result = split_bash_commands(input_commands)
     assert result == expected_output, f"Expected {expected_output}, got {result}"
 
@@ -142,21 +174,33 @@ def test_split_commands_with_empty_lines():
 
 
 def test_split_commands_with_comments():
-    input_commands = '\necho "Hello" # This is a comment\n# This is another comment\nls -l\n'
-    expected_output = ['echo "Hello" # This is a comment\n# This is another comment', "ls -l"]
+    input_commands = (
+        '\necho "Hello" # This is a comment\n# This is another comment\nls -l\n'
+    )
+    expected_output = [
+        'echo "Hello" # This is a comment\n# This is another comment',
+        "ls -l",
+    ]
     result = split_bash_commands(input_commands)
     assert result == expected_output, f"Expected {expected_output}, got {result}"
 
 
 def test_split_commands_with_complex_quoting():
     input_commands = '\necho "This is a \\"quoted\\" string"\necho "Mixed \'quotes\' in \\"double quotes\\""\n'
-    expected_output = ['echo "This is a \\"quoted\\" string"', 'echo "Mixed \'quotes\' in \\"double quotes\\""']
+    expected_output = [
+        'echo "This is a \\"quoted\\" string"',
+        'echo "Mixed \'quotes\' in \\"double quotes\\""',
+    ]
     result = split_bash_commands(input_commands)
     assert result == expected_output, f"Expected {expected_output}, got {result}"
 
 
 def test_split_commands_with_invalid_input():
-    invalid_inputs = ['echo "Unclosed quote', "echo 'Unclosed quote", "cat <<EOF\nUnclosed heredoc"]
+    invalid_inputs = [
+        'echo "Unclosed quote',
+        "echo 'Unclosed quote",
+        "cat <<EOF\nUnclosed heredoc",
+    ]
     for input_command in invalid_inputs:
         assert split_bash_commands(input_command) == [input_command]
 
@@ -170,7 +214,10 @@ def test_escape_bash_special_chars():
         ("cat \\< input.txt", "cat \\\\< input.txt"),
         ('echo "test \\; unchanged"', 'echo "test \\; unchanged"'),
         ("echo 'test \\| unchanged'", "echo 'test \\| unchanged'"),
-        ('echo "quoted \\;" \\; "more" \\| grep', 'echo "quoted \\;" \\\\; "more" \\\\| grep'),
+        (
+            'echo "quoted \\;" \\; "more" \\| grep',
+            'echo "quoted \\;" \\\\; "more" \\\\| grep',
+        ),
         ("cmd1 \\;\\|\\& cmd2", "cmd1 \\\\;\\\\|\\\\& cmd2"),
         ("echo test\\ntest", "echo test\\ntest"),
         ('echo "test\\ntest"', 'echo "test\\ntest"'),
@@ -180,11 +227,17 @@ def test_escape_bash_special_chars():
     ]
     for input_cmd, expected in test_cases:
         result = escape_bash_special_chars(input_cmd)
-        assert result == expected, f'Failed on input "{input_cmd}"\nExpected: "{expected}"\nGot: "{result}"'
+        assert result == expected, (
+            f'Failed on input "{input_cmd}"\nExpected: "{expected}"\nGot: "{result}"'
+        )
 
 
 def test_escape_bash_special_chars_with_invalid_syntax():
-    invalid_inputs = ['echo "unclosed quote', "echo 'unclosed quote", "cat <<EOF\nunclosed heredoc"]
+    invalid_inputs = [
+        'echo "unclosed quote',
+        "echo 'unclosed quote",
+        "cat <<EOF\nunclosed heredoc",
+    ]
     for input_cmd in invalid_inputs:
         result = escape_bash_special_chars(input_cmd)
         assert result == input_cmd, f"Failed to handle invalid input: {input_cmd}"
@@ -194,7 +247,9 @@ def test_escape_bash_special_chars_with_heredoc():
     input_cmd = "cat <<EOF\nline1 \\; not escaped\nline2 \\| not escaped\nEOF"
     expected = input_cmd
     result = escape_bash_special_chars(input_cmd)
-    assert result == expected, f"Failed to handle heredoc correctly\nExpected: {expected}\nGot: {result}"
+    assert result == expected, (
+        f"Failed to handle heredoc correctly\nExpected: {expected}\nGot: {result}"
+    )
 
 
 def test_escape_bash_special_chars_with_parameter_expansion():
@@ -211,7 +266,9 @@ def test_escape_bash_special_chars_with_parameter_expansion():
     ]
     for input_cmd, expected in test_cases:
         result = escape_bash_special_chars(input_cmd)
-        assert result == expected, f'Failed on input "{input_cmd}"\nExpected: "{expected}"\nGot: "{result}"'
+        assert result == expected, (
+            f'Failed on input "{input_cmd}"\nExpected: "{expected}"\nGot: "{result}"'
+        )
 
 
 def test_escape_bash_special_chars_with_command_substitution():
@@ -227,14 +284,19 @@ def test_escape_bash_special_chars_with_command_substitution():
     ]
     for input_cmd, expected in test_cases:
         result = escape_bash_special_chars(input_cmd)
-        assert result == expected, f'Failed on input "{input_cmd}"\nExpected: "{expected}"\nGot: "{result}"'
+        assert result == expected, (
+            f'Failed on input "{input_cmd}"\nExpected: "{expected}"\nGot: "{result}"'
+        )
 
 
 def test_escape_bash_special_chars_mixed_nodes():
     test_cases = [
         ("echo $HOME/$(pwd)", "echo $HOME/$(pwd)"),
         ("echo $HOME/$(pwd) \\; ls", "echo $HOME/$(pwd) \\\\; ls"),
-        ('echo "${HOME}/$(basename `pwd`) \\; next"', 'echo "${HOME}/$(basename `pwd`) \\; next"'),
+        (
+            'echo "${HOME}/$(basename `pwd`) \\; next"',
+            'echo "${HOME}/$(basename `pwd`) \\; next"',
+        ),
         ("VAR=${HOME} \\; echo $(pwd)", "VAR=${HOME} \\\\; echo $(pwd)"),
         (
             'find . -name "*.txt" -exec grep "${PATTERN:-default}" {} \\;',
@@ -247,7 +309,9 @@ def test_escape_bash_special_chars_mixed_nodes():
     ]
     for input_cmd, expected in test_cases:
         result = escape_bash_special_chars(input_cmd)
-        assert result == expected, f'Failed on input "{input_cmd}"\nExpected: "{expected}"\nGot: "{result}"'
+        assert result == expected, (
+            f'Failed on input "{input_cmd}"\nExpected: "{expected}"\nGot: "{result}"'
+        )
 
 
 def test_escape_bash_special_chars_with_chained_commands():
@@ -257,10 +321,18 @@ def test_escape_bash_special_chars_with_chained_commands():
         ("ls \\; pwd && echo test", "ls \\\\; pwd && echo test"),
         ("echo test && grep pattern \\| sort", "echo test && grep pattern \\\\| sort"),
         ("echo ${HOME} && ls \\; pwd", "echo ${HOME} && ls \\\\; pwd"),
-        ('echo "$(pwd)" && cat file \\> out.txt', 'echo "$(pwd)" && cat file \\\\> out.txt'),
+        (
+            'echo "$(pwd)" && cat file \\> out.txt',
+            'echo "$(pwd)" && cat file \\\\> out.txt',
+        ),
         ("cmd1 && cmd2 && cmd3", "cmd1 && cmd2 && cmd3"),
-        ("cmd1 \\; ls && cmd2 \\| grep && cmd3", "cmd1 \\\\; ls && cmd2 \\\\| grep && cmd3"),
+        (
+            "cmd1 \\; ls && cmd2 \\| grep && cmd3",
+            "cmd1 \\\\; ls && cmd2 \\\\| grep && cmd3",
+        ),
     ]
     for input_cmd, expected in test_cases:
         result = escape_bash_special_chars(input_cmd)
-        assert result == expected, f'Failed on input "{input_cmd}"\nExpected: "{expected}"\nGot: "{result}"'
+        assert result == expected, (
+            f'Failed on input "{input_cmd}"\nExpected: "{expected}"\nGot: "{result}"'
+        )

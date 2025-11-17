@@ -379,8 +379,20 @@ config = OptimizationConfig(
     success_weight=0.4,
     time_weight=0.3,
     cost_weight=0.2,
-    error_weight=0.1
+    error_weight=0.1,
+    storage_path="./.forge/prompt_opt",
+    prompt_history_path="./.forge/prompt_opt/history.json",
+    prompt_history_auto_flush=False,
 )
+
+# Collect health snapshot for monitoring/alerts
+from forge.prompt_optimization import collect_health_snapshot
+
+snapshot = collect_health_snapshot(
+    registry=registry,
+    tracker=tracker,
+)
+print(snapshot["tracker"]["store"])
 ```
 
 ---

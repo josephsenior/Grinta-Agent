@@ -31,7 +31,9 @@ class TestCliViMode:
 
         config = ForgeConfig(cli=CLIConfig(vi_mode=True))
         with patch("forge.cli.tui.KeyBindings", MagicMock()) as mock_key_bindings:
-            cli_confirm(config, "Test question", choices=["Choice 1", "Choice 2", "Choice 3"])
+            cli_confirm(
+                config, "Test question", choices=["Choice 1", "Choice 2", "Choice 3"]
+            )
             assert mock_key_bindings.call_count == 1
             mock_kb_instance = mock_key_bindings.return_value
             assert mock_kb_instance.add.call_count > 0
@@ -43,7 +45,9 @@ class TestCliViMode:
 
         config = ForgeConfig(cli=CLIConfig(vi_mode=False))
         with patch("forge.cli.tui.KeyBindings", MagicMock()) as mock_key_bindings:
-            cli_confirm(config, "Test question", choices=["Choice 1", "Choice 2", "Choice 3"])
+            cli_confirm(
+                config, "Test question", choices=["Choice 1", "Choice 2", "Choice 3"]
+            )
             assert mock_key_bindings.call_count == 1
             mock_kb_instance = mock_key_bindings.return_value
             for call in mock_kb_instance.add.call_args_list:
@@ -65,4 +69,6 @@ class TestCliViMode:
 
         config = ForgeConfig()
         load_from_env(config, os.environ)
-        assert config.cli.vi_mode is True, "vi_mode should be True when CLI_VI_MODE is set"
+        assert config.cli.vi_mode is True, (
+            "vi_mode should be True when CLI_VI_MODE is set"
+        )

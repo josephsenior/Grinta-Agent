@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\security\safety_config.py
+# hypothesis_version: 6.147.0
+
+['development', 'high', '~/.Forge/audit']

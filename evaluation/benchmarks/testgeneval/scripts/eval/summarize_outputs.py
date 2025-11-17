@@ -6,12 +6,16 @@ from forge.events.serialization import event_from_dict
 from forge.events.utils import get_pairs_from_events
 
 logger = logging.getLogger(__name__)
-ERROR_KEYWORDS = ["Agent encountered an error while processing the last action", "APIError", "Action execution failed"]
+ERROR_KEYWORDS = [
+    "Agent encountered an error while processing the last action",
+    "APIError",
+    "Action execution failed",
+]
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("output_file", type=str, help="The file to summarize")
     args = parser.parse_args()
-    with open(args.output_file, "r", encoding='utf-8') as file:
+    with open(args.output_file, "r", encoding="utf-8") as file:
         lines = file.readlines()
     num_lines = len(lines)
     num_error_lines = 0
@@ -63,13 +67,25 @@ if __name__ == "__main__":
                 error_counter[keyword] += 1
                 num_error_lines += 1
                 break
-    logger.info("Average coverage for %d (%.2f%%)", num_lines, coverage / num_lines * 100)
-    logger.info("Average mutation score for %d (%.2f%%)", num_lines, mutation_score / num_lines * 100)
     logger.info(
-        "Number of empty suite: %d / %d (%.2f%%)", num_empty_suite, num_lines, num_empty_suite / num_lines * 100
+        "Average coverage for %d (%.2f%%)", num_lines, coverage / num_lines * 100
     )
     logger.info(
-        "Number of error lines: %d / %d (%.2f%%)", num_error_lines, num_lines, num_error_lines / num_lines * 100
+        "Average mutation score for %d (%.2f%%)",
+        num_lines,
+        mutation_score / num_lines * 100,
+    )
+    logger.info(
+        "Number of empty suite: %d / %d (%.2f%%)",
+        num_empty_suite,
+        num_lines,
+        num_empty_suite / num_lines * 100,
+    )
+    logger.info(
+        "Number of error lines: %d / %d (%.2f%%)",
+        num_error_lines,
+        num_lines,
+        num_error_lines / num_lines * 100,
     )
     logger.info(
         "Number of agent stuck in loop: %d / %d (%.2f%%)",
@@ -82,9 +98,14 @@ if __name__ == "__main__":
     assert len(editor_cost) == num_lines
     logger.info("## Statistics")
     logger.info("Avg. num of turns per instance: %.2f", sum(num_turns) / num_lines)
-    logger.info("Avg. agent cost per instance: %.2f USD", sum(main_agent_cost) / num_lines)
+    logger.info(
+        "Avg. agent cost per instance: %.2f USD", sum(main_agent_cost) / num_lines
+    )
     logger.info("Avg. editor cost per instance: %.2f USD", sum(editor_cost) / num_lines)
-    logger.info("Avg. total cost per instance: %.2f USD", (sum(main_agent_cost) + sum(editor_cost)) / num_lines)
+    logger.info(
+        "Avg. total cost per instance: %.2f USD",
+        (sum(main_agent_cost) + sum(editor_cost)) / num_lines,
+    )
     logger.info("## Detailed error breakdown:")
     for error, count in error_counter.items():
         logger.info("%s: %d (%.2f%%)", error, count, count / num_lines * 100)

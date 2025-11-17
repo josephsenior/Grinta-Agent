@@ -45,7 +45,7 @@ import { ForgeClient } from '@Forge/sdk';
 
 // Create client
 const client = new ForgeClient({
-  baseUrl: 'http://localhost:8000',
+  baseUrl: 'http://localhost:3000',
   apiKey: process.env.FORGE_API_KEY,
 });
 
@@ -74,7 +74,7 @@ import { useForge } from '@Forge/sdk/react';
 
 function MyComponent() {
   const { client, conversation, messages, sendMessage, loading } = useForge({
-    baseUrl: 'http://localhost:8000',
+    baseUrl: 'http://localhost:3000',
   });
 
   const handleSend = async () => {
@@ -378,7 +378,7 @@ import { ForgeClient } from '@Forge/sdk';
 
 async function basicChat() {
   const client = new ForgeClient({
-    baseUrl: 'http://localhost:8000',
+    baseUrl: 'http://localhost:3000',
   });
 
   // Create conversation
@@ -404,7 +404,7 @@ import { ForgeClient } from '@Forge/sdk';
 
 async function streamingChat() {
   const client = new ForgeClient({
-    baseUrl: 'http://localhost:8000',
+    baseUrl: 'http://localhost:3000',
   });
 
   const conv = await client.conversations.create();
@@ -430,7 +430,7 @@ import { ForgeClient } from '@Forge/sdk';
 
 async function runMetaSOP() {
   const client = new ForgeClient({
-    baseUrl: 'http://localhost:8000',
+    baseUrl: 'http://localhost:3000',
   });
 
   const conv = await client.conversations.create();
@@ -531,7 +531,7 @@ import { ForgeClient, ForgeError } from '@Forge/sdk';
 
 async function handleErrors() {
   const client = new ForgeClient({
-    baseUrl: 'http://localhost:8000',
+    baseUrl: 'http://localhost:3000',
   });
 
   try {

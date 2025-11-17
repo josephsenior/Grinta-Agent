@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from forge.llm.llm_registry import LLMRegistry
 
 from forge.core.logger import forge_logger as logger
+from forge.core.config.llm_config import LLMConfig
 from forge.events.action import Action, MessageAction
 from forge.events.action.agent import CondensationAction
 from forge.events.event import Event, EventSource
@@ -47,7 +48,7 @@ class SmartCondenser(RollingCondenser):
 
     def __init__(
         self,
-        llm: LLM,
+        llm: LLM | None,
         max_size: int = 200,
         keep_first: int = 5,
         importance_threshold: float = 0.6,
@@ -125,7 +126,9 @@ class SmartCondenser(RollingCondenser):
             f"SmartCondenser: Keeping {len(events_to_keep)} events, forgetting {len(forgotten_event_ids)} events",
         )
 
-        return Condensation(action=CondensationAction(forgotten_event_ids=forgotten_event_ids))
+        return Condensation(
+            action=CondensationAction(forgotten_event_ids=forgotten_event_ids)
+        )
 
     def _identify_essential_events(self, events: list[Event]) -> set[int]:
         """Identify essential events that must always be kept.
@@ -145,7 +148,11 @@ class SmartCondenser(RollingCondenser):
 
         # Keep first user message
         first_user_msg = next(
-            (e for e in events if isinstance(e, MessageAction) and e.source == EventSource.USER),
+            (
+                e
+                for e in events
+                if isinstance(e, MessageAction) and e.source == EventSource.USER
+            ),
             None,
         )
         if first_user_msg:
@@ -157,7 +164,10 @@ class SmartCondenser(RollingCondenser):
             if isinstance(event, ErrorObservation):
                 error_content = event.content.lower()
                 # Keep critical errors
-                if any(keyword in error_content for keyword in ["critical", "crash", "fatal", "stuck"]):
+                if any(
+                    keyword in error_content
+                    for keyword in ["critical", "crash", "fatal", "stuck"]
+                ):
                     essential.add(event.id)
 
         return essential
@@ -177,7 +187,7 @@ class SmartCondenser(RollingCondenser):
             Dictionary mapping event ID to importance score (0.0-1.0)
 
         """
-        scores = {}
+        scores: dict[int, float] = {}
 
         # Filter out essential events (they're already kept)
         events_to_score = [e for e in events if e.id not in essential_ids]
@@ -192,7 +202,7 @@ class SmartCondenser(RollingCondenser):
         # Group events into batches for efficient LLM scoring
         batch_size = 20
         for i in range(0, len(events_to_score), batch_size):
-            batch = events_to_score[i: i + batch_size]
+            batch = events_to_score[i : i + batch_size]
             batch_scores = self._score_event_batch_with_llm(batch)
             scores.update(batch_scores)
 
@@ -208,7 +218,7 @@ class SmartCondenser(RollingCondenser):
             Event ID to importance score mapping
 
         """
-        scores = {}
+        scores: dict[int, float] = {}
 
         for event in events:
             score = 0.5  # Default medium importance
@@ -245,6 +255,10 @@ class SmartCondenser(RollingCondenser):
             Event ID to importance score mapping
 
         """
+        if self.llm is None:
+            logger.debug("SmartCondenser: LLM not configured; skipping batch scoring.")
+            return {}
+
         try:
             # Create scoring prompt
             prompt = self._create_scoring_prompt(events)
@@ -369,7 +383,7 @@ Respond ONLY with a JSON array of scores in order:
         keep_ids = essential_ids.copy()
 
         # Apply recency bonus to recent events
-        recent_events = events[-self.recency_bonus_window:]
+        recent_events = events[-self.recency_bonus_window :]
 
         for event in events:
             if event.id in essential_ids:
@@ -393,7 +407,7 @@ Respond ONLY with a JSON array of scores in order:
         keep_ids = self._preserve_action_observation_pairs(events, keep_ids)
 
         # Ensure we keep at least recent events even if scores are low
-        recent_ids = {e.id for e in events[-self.recency_bonus_window:]}
+        recent_ids = {e.id for e in events[-self.recency_bonus_window :]}
         keep_ids.update(recent_ids)
 
         return keep_ids
@@ -427,7 +441,11 @@ Respond ONLY with a JSON array of scores in order:
         return paired_ids
 
     def _pair_observation_for_action(
-        self, events: list[Event], action_idx: int, action: Action, paired_ids: set[int],
+        self,
+        events: list[Event],
+        action_idx: int,
+        action: Action,
+        paired_ids: set[int],
     ) -> None:
         """Find and pair observation for an action.
 
@@ -446,7 +464,11 @@ Respond ONLY with a JSON array of scores in order:
                 break
 
     def _pair_action_for_observation(
-        self, events: list[Event], obs_idx: int, observation: Observation, paired_ids: set[int],
+        self,
+        events: list[Event],
+        obs_idx: int,
+        observation: Observation,
+        paired_ids: set[int],
     ) -> None:
         """Find and pair action for an observation.
 
@@ -479,10 +501,18 @@ Respond ONLY with a JSON array of scores in order:
             Configured SmartCondenser instance
 
         """
-        llm = llm_registry.get_llm_config(config.llm_config) if config.llm_config else None
+        llm_instance: LLM | None = None
+        if config.llm_config:
+            if isinstance(config.llm_config, LLMConfig):
+                llm_config_obj = config.llm_config
+                service_id = f"smart_condenser_{llm_config_obj.model}"
+            else:
+                llm_config_obj = llm_registry.config.get_llm_config(config.llm_config)
+                service_id = f"smart_condenser_{config.llm_config}"
+            llm_instance = llm_registry.get_llm(service_id=service_id, config=llm_config_obj)
 
         return cls(
-            llm=llm,
+            llm=llm_instance,
             max_size=config.max_size,
             keep_first=config.keep_first,
             importance_threshold=getattr(config, "importance_threshold", 0.6),

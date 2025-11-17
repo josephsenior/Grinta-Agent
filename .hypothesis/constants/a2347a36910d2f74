@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\config\server_config.py
+# hypothesis_version: 6.147.0
+
+['APP_MODE', 'ENABLE_BILLING', 'ENABLE_JIRA', 'ENABLE_JIRA_DC', 'ENABLE_LINEAR', 'FEATURE_FLAGS', 'FORGE_CONFIG_CLS', 'GITHUB_APP_CLIENT_ID', 'GITHUB_CLIENT_ID', 'HIDE_LLM_SETTINGS', 'POSTHOG_CLIENT_KEY', 'false', 'true']

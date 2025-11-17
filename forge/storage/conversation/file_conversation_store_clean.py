@@ -46,7 +46,7 @@ class FileConversationStore(ConversationStore):
 
     async def save_metadata(self, metadata: ConversationMetadata) -> None:
         """Save conversation metadata to storage.
-        
+
         Args:
             metadata: Conversation metadata to save
 
@@ -57,13 +57,13 @@ class FileConversationStore(ConversationStore):
 
     async def get_metadata(self, conversation_id: str) -> ConversationMetadata:
         """Get conversation metadata by ID.
-        
+
         Args:
             conversation_id: Conversation ID
-            
+
         Returns:
             Conversation metadata object
-            
+
         Raises:
             FileNotFoundError: If metadata not found
 
@@ -81,35 +81,40 @@ class FileConversationStore(ConversationStore):
             return conversation_metadata_type_adapter.validate_python(json_obj)
         except (json.JSONDecodeError, FileNotFoundError) as e:
             # If metadata is corrupted or missing, create a new one
-            from forge.storage.data_models.conversation_metadata import ConversationMetadata
+            from forge.storage.data_models.conversation_metadata import (
+                ConversationMetadata,
+            )
             from datetime import datetime
             import uuid
+
             metadata = ConversationMetadata(
                 conversation_id=conversation_id,
                 selected_repository=None,
                 created_at=datetime.now(),
                 title="New Conversation",
-                user_id="dev-user"
+                user_id="dev-user",
             )
             await self.save_metadata(metadata)
             return metadata
 
     async def delete_metadata(self, conversation_id: str) -> None:
         """Delete conversation metadata and associated files.
-        
+
         Args:
             conversation_id: Conversation ID to delete
 
         """
-        path = str(Path(self.get_conversation_metadata_filename(conversation_id)).parent)
+        path = str(
+            Path(self.get_conversation_metadata_filename(conversation_id)).parent
+        )
         await call_sync_from_async(self.file_store.delete, path)
 
     async def exists(self, conversation_id: str) -> bool:
         """Check if conversation metadata exists.
-        
+
         Args:
             conversation_id: Conversation ID to check
-            
+
         Returns:
             True if conversation exists
 
@@ -121,13 +126,15 @@ class FileConversationStore(ConversationStore):
         except FileNotFoundError:
             return False
 
-    async def search(self, page_id: str | None = None, limit: int = 20) -> ConversationMetadataResultSet:
+    async def search(
+        self, page_id: str | None = None, limit: int = 20
+    ) -> ConversationMetadataResultSet:
         """Search conversations with pagination.
-        
+
         Args:
             page_id: Optional page ID for pagination
             limit: Maximum results per page
-            
+
         Returns:
             Result set with conversations and next page ID
 
@@ -136,7 +143,9 @@ class FileConversationStore(ConversationStore):
         metadata_dir = self.get_conversation_metadata_dir()
         try:
             conversation_ids = [
-                Path(path).name for path in self.file_store.list(metadata_dir) if not Path(path).name.startswith(".")
+                Path(path).name
+                for path in self.file_store.list(metadata_dir)
+                if not Path(path).name.startswith(".")
             ]
         except FileNotFoundError:
             return ConversationMetadataResultSet([])
@@ -148,7 +157,9 @@ class FileConversationStore(ConversationStore):
             try:
                 conversations.append(await self.get_metadata(conversation_id))
             except Exception:
-                logger.warning("Could not load conversation metadata: %s", conversation_id)
+                logger.warning(
+                    "Could not load conversation metadata: %s", conversation_id
+                )
         conversations.sort(key=_sort_key, reverse=True)
         conversations = conversations[start:end]
         next_page_id = offset_to_page_id(end, end < num_conversations)
@@ -156,7 +167,7 @@ class FileConversationStore(ConversationStore):
 
     def get_conversation_metadata_dir(self) -> str:
         """Get base directory for conversation metadata.
-        
+
         Returns:
             Base directory path
 
@@ -165,10 +176,10 @@ class FileConversationStore(ConversationStore):
 
     def get_conversation_metadata_filename(self, conversation_id: str) -> str:
         """Get metadata filename for conversation.
-        
+
         Args:
             conversation_id: Conversation ID
-            
+
         Returns:
             Full path to metadata file
 
@@ -176,13 +187,15 @@ class FileConversationStore(ConversationStore):
         return get_conversation_metadata_filename(conversation_id)
 
     @classmethod
-    async def get_instance(cls, config: ForgeConfig, user_id: str | None) -> FileConversationStore:
+    async def get_instance(
+        cls, config: ForgeConfig, user_id: str | None
+    ) -> FileConversationStore:
         """Get FileConversationStore singleton instance with cleanup scheduling.
-        
+
         Args:
             config: Forge configuration
             user_id: Optional user ID for scoping
-            
+
         Returns:
             FileConversationStore instance
 

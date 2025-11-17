@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\microagent\types.py
+# hypothesis_version: 6.147.0
+
+['1.0.0', 'CodeActAgent', 'default', 'knowledge', 'repo', 'task']

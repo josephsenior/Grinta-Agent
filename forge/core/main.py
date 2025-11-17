@@ -15,13 +15,15 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Protocol
+from typing import TYPE_CHECKING, Any, Callable, Protocol
 
 if TYPE_CHECKING:
     from forge.controller.agent import Agent
     from forge.controller.state.state import State
     from forge.events.action.action import Action
     from forge.events.event import Event
+    from forge.events.stream import EventStream
+    from forge.integrations.provider import PROVIDER_TOKEN_TYPE
     from forge.llm.llm_registry import LLMRegistry
     from forge.memory.memory import Memory
     from forge.runtime.base import Runtime
@@ -35,8 +37,9 @@ from forge.core.config import (
 )
 from forge.core.config.mcp_config import ForgeMCPConfigImpl, forgeMCPConfigImpl
 from forge.core.logger import forge_logger as logger
+from forge.core.diagnostics import verify_observability_dependencies
 from forge.core.loop import run_agent_until_done
-from forge.core.schema import AgentState
+from forge.core.schemas import AgentState
 from forge.core.setup import (
     create_agent,
     create_controller,
@@ -53,14 +56,21 @@ from forge.io import read_input, read_task
 from forge.mcp_client import add_mcp_tools_to_agent
 import contextlib
 
+from forge.runtime import (
+    RuntimeAcquireResult,
+    RuntimeOrchestrator,
+    runtime_orchestrator,
+)
 from forge.runtime.runtime_status import RuntimeStatus
 from forge.utils.async_utils import call_async_from_sync
 from forge.utils.utils import create_registry_and_conversation_stats
 
+_RUNTIME_ORCHESTRATOR: RuntimeOrchestrator = runtime_orchestrator
+
 
 class FakeUserResponseFunc(Protocol):
     """Protocol for fake user response functions in testing/evaluation.
-    
+
     Defines the interface for functions that simulate user responses
     during automated agent evaluation.
     """
@@ -80,28 +90,43 @@ def _setup_runtime_and_repo(
     llm_registry,
     agent,
     headless_mode: bool,
-) -> tuple[Runtime, str | None]:
+    *,
+    git_provider_tokens: PROVIDER_TOKEN_TYPE | None = None,
+    repo_initializer: Callable[[Runtime], str | None] | None = None,
+    event_stream: EventStream | None = None,
+    env_vars: dict[str, str] | None = None,
+    user_id: str | None = None,
+) -> RuntimeAcquireResult:
     """Setup runtime and repository directory."""
-    repo_tokens = get_provider_tokens()
-    runtime = create_runtime(
-        config_,
-        llm_registry,
-        sid=session_id,
-        headless_mode=headless_mode,
-        agent=agent,
-        git_provider_tokens=repo_tokens,
-    )
-    call_async_from_sync(runtime.connect)
+    repo_tokens = git_provider_tokens if git_provider_tokens is not None else get_provider_tokens()
 
-    repo_directory = None
-    if config_.sandbox.selected_repo:
-        repo_directory = initialize_repository_for_runtime(
+    def _default_repo_initializer(runtime: Runtime) -> str | None:
+        return initialize_repository_for_runtime(
             runtime,
             immutable_provider_tokens=repo_tokens,
             selected_repository=config_.sandbox.selected_repo,
         )
 
-    return runtime, repo_directory
+    repo_cb = repo_initializer
+    if repo_cb is None and config_.sandbox.selected_repo:
+        repo_cb = _default_repo_initializer
+
+    acquire_result = _RUNTIME_ORCHESTRATOR.acquire(
+        config_,
+        llm_registry,
+        session_id=session_id,
+        agent=agent,
+        headless_mode=headless_mode,
+        git_provider_tokens=repo_tokens,
+        repo_initializer=repo_cb,
+        event_stream=event_stream,
+        env_vars=env_vars,
+        user_id=user_id,
+    )
+    runtime = acquire_result.runtime
+    call_async_from_sync(runtime.connect)
+
+    return acquire_result
 
 
 async def _setup_memory_and_mcp(
@@ -115,6 +140,8 @@ async def _setup_memory_and_mcp(
 ) -> Memory:
     """Setup memory and MCP tools."""
     event_stream = runtime.event_stream
+    if event_stream is None:
+        raise RuntimeError("Runtime does not have an event stream")
 
     if memory is None:
         memory = create_memory(
@@ -128,10 +155,12 @@ async def _setup_memory_and_mcp(
         )
 
     if agent.config.enable_mcp:
-        _, FORGE_mcp_stdio_servers = ForgeMCPConfigImpl.create_default_mcp_server_config(
-            config_.mcp_host,
-            config_,
-            None,
+        _, FORGE_mcp_stdio_servers = (
+            ForgeMCPConfigImpl.create_default_mcp_server_config(
+                config_.mcp_host,
+                config_,
+                None,
+            )
         )
         runtime.config.mcp.stdio_servers.extend(FORGE_mcp_stdio_servers)
         await add_mcp_tools_to_agent(agent, runtime, memory)
@@ -139,7 +168,9 @@ async def _setup_memory_and_mcp(
     return memory
 
 
-def _setup_replay_events(config_: ForgeConfig, initial_action: Action) -> tuple[list[Event] | None, Action]:
+def _setup_replay_events(
+    config_: ForgeConfig, initial_action: Action
+) -> tuple[list[Event] | None, Action]:
     """Setup replay events if trajectory replay is enabled."""
     if config_.replay_trajectory_path:
         logger.info("Trajectory replay is enabled")
@@ -148,24 +179,41 @@ def _setup_replay_events(config_: ForgeConfig, initial_action: Action) -> tuple[
     return None, initial_action
 
 
-def _create_early_status_callback(controller) -> Callable[[str, RuntimeStatus, str], None]:
+def _create_early_status_callback(
+    controller,
+) -> Callable[[str, RuntimeStatus, str], None]:
     """Create the early status callback function."""
 
-    def _early_status_callback(msg_type: str, runtime_status: RuntimeStatus, msg: str) -> None:
+    def _early_status_callback(
+        msg_type: str, runtime_status: RuntimeStatus, msg: str
+    ) -> None:
         if msg_type == "error":
             logger.error(msg)
-            logger.info('MAIN._early_status_callback ENTER (runtime_status=%s, msg="%s")', runtime_status, msg)
+            logger.info(
+                'MAIN._early_status_callback ENTER (runtime_status=%s, msg="%s")',
+                runtime_status,
+                msg,
+            )
             try:
                 controller.state.last_error = msg
                 if runtime_status == RuntimeStatus.ERROR_MEMORY:
-                    logger.info("MAIN._early_status_callback: resetting iteration_flag.current_value to 0")
-                    controller.state.iteration_flag.current_value = 0
-                    setattr(controller.state, "_force_iteration_reset", True)
-                    setattr(controller, "_force_iteration_reset", True)
+                    logger.info(
+                        "MAIN._early_status_callback: recording memory error boundary at iteration %s",
+                        controller.state.iteration_flag.current_value,
+                    )
+                    setattr(
+                        controller.state,
+                        "_memory_error_boundary",
+                        controller.state.iteration_flag.current_value,
+                    )
             except Exception:
                 pass
-            with contextlib.suppress(Exception):
-                asyncio.create_task(controller.set_agent_state_to(AgentState.ERROR))
+            # Schedule safely across threads without requiring a running loop
+            try:
+                controller._run_or_schedule(controller.set_agent_state_to(AgentState.ERROR))
+            except Exception:
+                with contextlib.suppress(Exception):
+                    asyncio.create_task(controller.set_agent_state_to(AgentState.ERROR))
         else:
             logger.info(msg)
 
@@ -174,12 +222,16 @@ def _create_early_status_callback(controller) -> Callable[[str, RuntimeStatus, s
 
 def _validate_initial_action(initial_action: Action) -> None:
     """Validate that the initial action is properly formatted."""
-    if not hasattr(initial_action, "message") and (not hasattr(initial_action, "content")):
+    if not hasattr(initial_action, "message") and (
+        not hasattr(initial_action, "content")
+    ):
         msg = f"initial user actions must be an Action-like object, got {type(initial_action)}"
         raise AssertionError(msg)
 
 
-def _setup_initial_events(event_stream, initial_action: Action, initial_state: State | None) -> None:
+def _setup_initial_events(
+    event_stream, initial_action: Action, initial_state: State | None
+) -> None:
     """Setup initial events based on state and action."""
     loop = None
     try:
@@ -189,7 +241,8 @@ def _setup_initial_events(event_stream, initial_action: Action, initial_state: S
 
     if initial_state is not None and initial_state.last_error:
         error_message = MessageAction(
-            content="Let's get back on track. If you experienced errors before, do NOT resume your task. Ask me about it.", )
+            content="Let's get back on track. If you experienced errors before, do NOT resume your task. Ask me about it.",
+        )
         if loop is not None:
             loop.call_soon(event_stream.add_event, error_message, EventSource.USER)
         else:
@@ -211,12 +264,15 @@ def _create_event_handler(
 
     def on_event(event: Event) -> None:
         """Handle events and trigger completion on user input or agent finish.
-        
+
         Args:
             event: Event to process
 
         """
-        if isinstance(event, AgentStateChangedObservation) and event.agent_state == AgentState.AWAITING_USER_INPUT:
+        if (
+            isinstance(event, AgentStateChangedObservation)
+            and event.agent_state == AgentState.AWAITING_USER_INPUT
+        ):
             if exit_on_message:
                 message = "/exit"
             elif fake_user_response_fn is None:
@@ -248,7 +304,9 @@ def _initialize_session_components(
 ) -> tuple[str, LLMRegistry, ConversationStats, ForgeConfig, Agent]:
     """Initialize session and components."""
     session_id = session_id or generate_sid(config_)
-    llm_registry, conversation_stats, config_ = create_registry_and_conversation_stats(config_, session_id, None)
+    llm_registry, conversation_stats, config_ = create_registry_and_conversation_stats(
+        config_, session_id, None
+    )
     agent = create_agent(config_, llm_registry)
     return session_id, llm_registry, conversation_stats, config_, agent
 
@@ -260,30 +318,18 @@ def _setup_runtime_for_controller(
     headless_mode: bool,
     agent: Agent,
     runtime: Runtime | None,
-) -> tuple[Runtime, str | None]:
+) -> tuple[Runtime, str | None, RuntimeAcquireResult | None]:
     """Setup runtime for controller."""
     if runtime is not None:
-        return runtime, None
-    repo_tokens = get_provider_tokens()
-    runtime = create_runtime(
+        return runtime, None, None
+    acquire_result = _setup_runtime_and_repo(
         config_,
+        session_id,
         llm_registry,
-        sid=session_id,
-        headless_mode=headless_mode,
-        agent=agent,
-        git_provider_tokens=repo_tokens,
+        agent,
+        headless_mode,
     )
-    call_async_from_sync(runtime.connect)
-    repo_directory = (
-        initialize_repository_for_runtime(
-            runtime,
-            immutable_provider_tokens=repo_tokens,
-            selected_repository=config_.sandbox.selected_repo,
-        )
-        if config_.sandbox.selected_repo
-        else None
-    )
-    return runtime, repo_directory
+    return acquire_result.runtime, acquire_result.repo_directory, acquire_result
 
 
 async def run_controller(
@@ -299,46 +345,56 @@ async def run_controller(
     conversation_instructions: str | None = None,
     **legacy_kwargs,
 ) -> State | None:
-    """Main coroutine to run the agent controller with task input flexibility.
+    """Main coroutine to run the agent controller with task input flexibility."""
+    config_, initial_action, session_id, headless_mode = _normalize_run_controller_args(
+        config_, initial_action, session_id, headless_mode, legacy_kwargs
+    )
+    config_, initial_action = _validate_run_controller_inputs(
+        config_, initial_action
+    )
 
-    It's only used when you launch Forge backend directly via cmdline.
+    session_id, llm_registry, conversation_stats, config_, agent = (
+        _initialize_session_components(config_, session_id)
+    )
+    runtime, repo_directory, acquire_result = _setup_runtime_for_controller(
+        config_,
+        llm_registry,
+        session_id,
+        headless_mode,
+        agent,
+        runtime,
+    )
 
-    Args:
-        config_: The app config.
-        initial_action: An Action object containing initial user input
-        session_id: (optional) The session id. IMPORTANT: please don't set this unless you know what you're doing.
-            Set it to incompatible value will cause unexpected behavior on RemoteRuntime.
-        runtime: (optional) A runtime for the agent to run on.
-        exit_on_message: quit if agent asks for a message from user (optional)
-        fake_user_response_fn: An optional function that receives the current state
-            (could be None) and returns a fake user response.
-        headless_mode: Whether the agent is run in headless mode.
-        memory: Optional memory instance for the agent.
-        conversation_instructions: Optional conversation instructions.
-        **legacy_kwargs: Additional keyword arguments kept for backward compatibility.
+    try:
+        state = await _execute_controller_lifecycle(
+            config_=config_,
+            runtime=runtime,
+            session_id=session_id,
+            repo_directory=repo_directory,
+            agent=agent,
+            conversation_stats=conversation_stats,
+            initial_action=initial_action,
+            exit_on_message=exit_on_message,
+            fake_user_response_fn=fake_user_response_fn,
+            memory=memory,
+            conversation_instructions=conversation_instructions,
+        )
+        saved_controller = getattr(runtime, "controller", None)
+        if saved_controller is not None:
+            _save_trajectory(config_, session_id, saved_controller)
+        return state
+    finally:
+        if acquire_result is not None:
+            _RUNTIME_ORCHESTRATOR.release(acquire_result)
 
-    Returns:
-        The final state of the agent, or None if an error occurred.
 
-    Raises:
-        AssertionError: If initial_action is not an Action instance.
-        Exception: Various exceptions may be raised during execution and will be logged.
-
-    Notes:
-        - State persistence: If config_.file_store is set, the agent's state will be
-          saved between sessions.
-        - Trajectories: If config_.trajectories_path is set, execution history will be
-          saved as JSON for analysis.
-        - Budget control: Execution is limited by config_.max_iterations and
-          config_.max_budget_per_task.
-
-    Example:
-        >>> config = load_FORGE_config()
-        >>> action = MessageAction(content="Write a hello world program")
-        >>> state = await run_controller(config_=config, initial_action=action)
-
-    """
-    # Support legacy keyword arguments used throughout tests and external tools.
+def _normalize_run_controller_args(
+    config_: ForgeConfig | None,
+    initial_action: Action | None,
+    session_id: str | None,
+    headless_mode: bool,
+    legacy_kwargs: dict[str, Any],
+) -> tuple[ForgeConfig | None, Action | None, str | None, bool]:
     if config_ is None and "config" in legacy_kwargs:
         config_ = legacy_kwargs.pop("config")
     if initial_action is None and "initial_user_action" in legacy_kwargs:
@@ -349,29 +405,44 @@ async def run_controller(
         headless_mode = legacy_kwargs.pop("headless")
     if legacy_kwargs:
         unexpected = ", ".join(sorted(legacy_kwargs.keys()))
-        raise TypeError(f"run_controller() got unexpected keyword argument(s): {unexpected}")
+        raise TypeError(
+            f"run_controller() got unexpected keyword argument(s): {unexpected}"
+        )
+    return config_, initial_action, session_id, headless_mode
 
+
+def _validate_run_controller_inputs(
+    config_: ForgeConfig | None, initial_action: Action | None
+) -> tuple[ForgeConfig, Action]:
     if config_ is None:
-        raise TypeError("run_controller() missing required argument 'config_' (or legacy 'config')")
+        raise TypeError(
+            "run_controller() missing required argument 'config_' (or legacy 'config')"
+        )
     if initial_action is None:
-        raise TypeError("run_controller() missing required argument 'initial_action' (or legacy 'initial_user_action')")
+        raise TypeError(
+            "run_controller() missing required argument 'initial_action' (or legacy 'initial_user_action')"
+        )
+    return config_, initial_action
 
-    # Initialize session and components
-    session_id, llm_registry, conversation_stats, config_, agent = _initialize_session_components(config_, session_id)
 
-    # Setup runtime and repository
-    runtime, repo_directory = _setup_runtime_for_controller(
-        config_,
-        llm_registry,
-        session_id,
-        headless_mode,
-        agent,
-        runtime,
-    )
-
-    # Setup memory and MCP
+async def _execute_controller_lifecycle(
+    *,
+    config_: ForgeConfig,
+    runtime: Runtime,
+    session_id: str,
+    repo_directory: str | None,
+    agent: Agent,
+    conversation_stats: ConversationStats,
+    initial_action: Action,
+    exit_on_message: bool,
+    fake_user_response_fn: FakeUserResponseFunc | None,
+    memory: Memory | None,
+    conversation_instructions: str | None,
+) -> State:
     event_stream = runtime.event_stream
-    memory = await _setup_memory_and_mcp(
+    if event_stream is None:
+        raise RuntimeError("Runtime does not have an event stream")
+    resolved_memory = await _setup_memory_and_mcp(
         config_,
         runtime,
         session_id,
@@ -380,11 +451,7 @@ async def run_controller(
         conversation_instructions,
         agent,
     )
-
-    # Setup replay events
     replay_events, initial_action = _setup_replay_events(config_, initial_action)
-
-    # Create controller
     controller, initial_state = create_controller(
         agent,
         runtime,
@@ -392,13 +459,8 @@ async def run_controller(
         conversation_stats,
         replay_events=replay_events,
     )
-
-    # Setup status callback
-    _early_status_callback = _create_early_status_callback(controller)
-    with contextlib.suppress(Exception):
-        memory.status_callback = _early_status_callback
-
-    # Validate and setup initial events
+    setattr(runtime, "controller", controller)  # retain for trajectory saving
+    _attach_status_callback(resolved_memory, controller)
     _validate_initial_action(initial_action)
     logger.debug(
         "Agent Controller Initialized: Running agent %s, model %s, with actions: %s",
@@ -406,27 +468,71 @@ async def run_controller(
         agent.llm.config.model,
         initial_action,
     )
-
     _setup_initial_events(event_stream, initial_action, initial_state)
+    _subscribe_controller_events(
+        config_,
+        event_stream,
+        exit_on_message,
+        fake_user_response_fn,
+        controller,
+    )
+    await _run_agent_loop(controller, runtime, resolved_memory)
+    await _persist_controller_state(config_, controller, event_stream)
+    return _prepare_final_state(controller)
 
-    # Setup event handler and run agent
-    on_event = _create_event_handler(exit_on_message, fake_user_response_fn, config_, controller, event_stream)
+
+def _attach_status_callback(memory: Memory, controller) -> None:
+    _early_status_callback = _create_early_status_callback(controller)
+    with contextlib.suppress(Exception):
+        memory.status_callback = _early_status_callback
+
+
+def _subscribe_controller_events(
+    config_: ForgeConfig,
+    event_stream: EventStream,
+    exit_on_message: bool,
+    fake_user_response_fn: FakeUserResponseFunc | None,
+    controller,
+) -> None:
+    on_event = _create_event_handler(
+        config_, exit_on_message, fake_user_response_fn, controller, event_stream
+    )
     event_stream.subscribe(EventStreamSubscriber.MAIN, on_event, event_stream.sid)
-    end_states = [AgentState.FINISHED, AgentState.REJECTED, AgentState.ERROR, AgentState.PAUSED, AgentState.STOPPED]
 
+
+async def _run_agent_loop(controller, runtime: Runtime, memory: Memory) -> None:
+    end_states = [
+        AgentState.FINISHED,
+        AgentState.REJECTED,
+        AgentState.ERROR,
+        AgentState.PAUSED,
+        AgentState.STOPPED,
+    ]
     try:
         await run_agent_until_done(controller, runtime, memory, end_states)
-    except Exception as e:
-        logger.error("Exception in main loop: %s", e)
+    except Exception as exc:
+        logger.error("Exception in main loop: %s", exc)
 
-    # Save state and trajectory
-    if config_.file_store is not None and config_.file_store != "memory":
-        end_state = controller.get_state()
-        end_state.save_to_session(event_stream.sid, event_stream.file_store, event_stream.user_id)
 
+async def _persist_controller_state(
+    config_: ForgeConfig, controller, event_stream: EventStream
+) -> None:
+    if config_.file_store is None or config_.file_store == "memory":
+        return
+    end_state = controller.get_state()
+    end_state.save_to_session(
+        event_stream.sid,
+        event_stream.file_store,
+        event_stream.user_id,
+    )
     await controller.close(set_stop_state=False)
+
+
+def _prepare_final_state(controller) -> State:
     state = controller.get_state()
-    force_iteration_reset = getattr(controller, "_force_iteration_reset", False) or getattr(
+    force_iteration_reset = getattr(
+        controller, "_force_iteration_reset", False
+    ) or getattr(
         state,
         "_force_iteration_reset",
         False,
@@ -437,9 +543,6 @@ async def run_controller(
             state.iteration_flag.current_value,
         )
         state.iteration_flag.current_value = 0
-
-    _save_trajectory(config_, session_id, controller)
-
     return state
 
 
@@ -482,6 +585,7 @@ def load_replay_log(trajectory_path: str) -> tuple[list[Event] | None, Action]:
 if __name__ == "__main__":
     args = parse_arguments()
     config_main: ForgeConfig = setup_config_from_args(args)
+    verify_observability_dependencies(config_main)
     task_str = read_task(args, config_main.cli_multiline_input)
     initial_action_main: Action = NullAction()
     if config_main.replay_trajectory_path:
@@ -500,6 +604,8 @@ if __name__ == "__main__":
             config_=config_main,
             initial_action=initial_action_main,
             session_id=sid_main,
-            fake_user_response_fn=None if args.no_auto_continue else auto_continue_response,
+            fake_user_response_fn=None
+            if args.no_auto_continue
+            else auto_continue_response,
         ),
     )

@@ -1,4 +1,4 @@
-from forge.core.schema.observation import ObservationType
+from forge.core.schemas import ObservationType
 from forge.events.action.files import FileEditSource
 from forge.events.event import RecallType
 from forge.events.observation import (
@@ -10,24 +10,32 @@ from forge.events.observation import (
 )
 from forge.events.observation.agent import MicroagentKnowledge
 from forge.events.observation.commands import MAX_CMD_OUTPUT_SIZE
-from forge.events.serialization import event_from_dict, event_to_dict, event_to_trajectory
+from forge.events.serialization import (
+    event_from_dict,
+    event_to_dict,
+    event_to_trajectory,
+)
 from forge.events.serialization.observation import observation_from_dict
 
 
-def serialization_deserialization(original_observation_dict, cls, max_message_chars: int = 10000):
+def serialization_deserialization(
+    original_observation_dict, cls, max_message_chars: int = 10000
+):
     observation_instance = event_from_dict(original_observation_dict)
-    assert isinstance(
-        observation_instance, Observation
-    ), "The observation instance should be an instance of Observation."
-    assert isinstance(observation_instance, cls), f"The observation instance should be an instance of {cls}."
+    assert isinstance(observation_instance, Observation), (
+        "The observation instance should be an instance of Observation."
+    )
+    assert isinstance(observation_instance, cls), (
+        f"The observation instance should be an instance of {cls}."
+    )
     serialized_observation_dict = event_to_dict(observation_instance)
     serialized_observation_trajectory = event_to_trajectory(observation_instance)
-    assert (
-        serialized_observation_dict == original_observation_dict
-    ), "The serialized observation should match the original observation dict."
-    assert (
-        serialized_observation_trajectory == original_observation_dict
-    ), "The serialized observation trajectory should match the original observation dict."
+    assert serialized_observation_dict == original_observation_dict, (
+        "The serialized observation should match the original observation dict."
+    )
+    assert serialized_observation_trajectory == original_observation_dict, (
+        "The serialized observation trajectory should match the original observation dict."
+    )
 
 
 def test_observation_event_props_serialization_deserialization():
@@ -82,11 +90,17 @@ def test_command_output_observation_serialization_deserialization():
 
 
 def test_success_field_serialization():
-    obs = CmdOutputObservation(content="Command succeeded", command="ls -l", metadata=CmdOutputMetadata(exit_code=0))
+    obs = CmdOutputObservation(
+        content="Command succeeded",
+        command="ls -l",
+        metadata=CmdOutputMetadata(exit_code=0),
+    )
     serialized = event_to_dict(obs)
     assert serialized["success"] is True
     obs = CmdOutputObservation(
-        content="No such file or directory", command="ls -l", metadata=CmdOutputMetadata(exit_code=1)
+        content="No such file or directory",
+        command="ls -l",
+        metadata=CmdOutputMetadata(exit_code=1),
     )
     serialized = event_to_dict(obs)
     assert serialized["success"] is False
@@ -95,7 +109,9 @@ def test_success_field_serialization():
 def test_cmd_output_truncation():
     """Test that large command outputs are truncated during initialization."""
     large_content = "a" * 60000
-    obs = CmdOutputObservation(content=large_content, command="ls -R", metadata=CmdOutputMetadata(exit_code=0))
+    obs = CmdOutputObservation(
+        content=large_content, command="ls -R", metadata=CmdOutputMetadata(exit_code=0)
+    )
     assert len(obs.content) < 60000
     truncation_msg = "[... Observation truncated due to length ...]"
     assert truncation_msg in obs.content
@@ -109,7 +125,9 @@ def test_cmd_output_truncation():
 def test_cmd_output_no_truncation():
     """Test that small command outputs are not truncated."""
     small_content = "a" * 1000
-    obs = CmdOutputObservation(content=small_content, command="ls", metadata=CmdOutputMetadata(exit_code=0))
+    obs = CmdOutputObservation(
+        content=small_content, command="ls", metadata=CmdOutputMetadata(exit_code=0)
+    )
     assert len(obs.content) == 1000
     assert obs.content == small_content
 
@@ -121,7 +139,12 @@ def test_legacy_serialization():
         "timestamp": "2021-08-01T12:00:00",
         "observation": "run",
         "message": "Command `ls -l` executed with exit code 0.",
-        "extras": {"command": "ls -l", "hidden": False, "exit_code": 0, "command_id": 3},
+        "extras": {
+            "command": "ls -l",
+            "hidden": False,
+            "exit_code": 0,
+            "command_id": 3,
+        },
         "content": "foo.txt",
         "success": True,
     }
@@ -287,7 +310,9 @@ def test_microagent_observation_knowledge_microagent_serialization():
                 content="Always use virtual environments for Python projects.",
             ),
             MicroagentKnowledge(
-                name="git_workflow", trigger="git", content="Create a new branch for each feature or bugfix."
+                name="git_workflow",
+                trigger="git",
+                content="Create a new branch for each feature or bugfix.",
             ),
         ],
     )
@@ -324,15 +349,24 @@ def test_microagent_observation_environment_serialization():
     assert serialized["content"] == "Environment information"
     assert serialized["extras"]["recall_type"] == RecallType.WORKSPACE_CONTEXT.value
     assert serialized["extras"]["repo_name"] == "forge"
-    assert serialized["extras"]["runtime_hosts"] == {"127.0.0.1": 8080, "localhost": 5000}
-    assert serialized["extras"]["additional_agent_instructions"] == "You know it all about this runtime"
+    assert serialized["extras"]["runtime_hosts"] == {
+        "127.0.0.1": 8080,
+        "localhost": 5000,
+    }
+    assert (
+        serialized["extras"]["additional_agent_instructions"]
+        == "You know it all about this runtime"
+    )
     deserialized = observation_from_dict(serialized)
     assert deserialized.recall_type == RecallType.WORKSPACE_CONTEXT
     assert deserialized.repo_name == original.repo_name
     assert deserialized.repo_directory == original.repo_directory
     assert deserialized.repo_instructions == original.repo_instructions
     assert deserialized.runtime_hosts == original.runtime_hosts
-    assert deserialized.additional_agent_instructions == original.additional_agent_instructions
+    assert (
+        deserialized.additional_agent_instructions
+        == original.additional_agent_instructions
+    )
     assert deserialized.microagent_knowledge == []
 
 
@@ -358,13 +392,22 @@ def test_microagent_observation_combined_serialization():
     serialized = event_to_dict(original)
     assert serialized["extras"]["recall_type"] == RecallType.WORKSPACE_CONTEXT.value
     assert serialized["extras"]["repo_name"] == "forge"
-    assert serialized["extras"]["microagent_knowledge"][0]["name"] == "python_best_practices"
-    assert serialized["extras"]["additional_agent_instructions"] == "You know it all about this runtime"
+    assert (
+        serialized["extras"]["microagent_knowledge"][0]["name"]
+        == "python_best_practices"
+    )
+    assert (
+        serialized["extras"]["additional_agent_instructions"]
+        == "You know it all about this runtime"
+    )
     deserialized = observation_from_dict(serialized)
     assert deserialized.recall_type == RecallType.WORKSPACE_CONTEXT
     assert deserialized.repo_name == original.repo_name
     assert deserialized.repo_directory == original.repo_directory
     assert deserialized.repo_instructions == original.repo_instructions
     assert deserialized.runtime_hosts == original.runtime_hosts
-    assert deserialized.additional_agent_instructions == original.additional_agent_instructions
+    assert (
+        deserialized.additional_agent_instructions
+        == original.additional_agent_instructions
+    )
     assert deserialized.microagent_knowledge == original.microagent_knowledge

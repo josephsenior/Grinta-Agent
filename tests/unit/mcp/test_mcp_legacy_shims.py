@@ -39,4 +39,3 @@ async def test_legacy_call_tool_mcp_proxy(monkeypatch):
     assert fake_call.called
     assert fake_call.args == ("clients",)
     assert fake_call.kwargs == {"action": "action"}
-

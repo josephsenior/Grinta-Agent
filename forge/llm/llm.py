@@ -17,8 +17,9 @@ import copy
 import os
 import time
 import warnings
+import random
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, Callable, Optional, cast
 
 import httpx
 from tenacity import (
@@ -32,25 +33,28 @@ from forge.llm.metrics import Metrics
 from forge.llm.model_features import get_features
 from forge.utils.tenacity_stop import stop_if_should_exit
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    import litellm
 import contextlib
-
-from litellm import ModelInfo, PromptTokensDetails
-from litellm import completion as litellm_completion
-from litellm import completion_cost as litellm_completion_cost
-from litellm.exceptions import (
-    APIConnectionError,
-    ContentPolicyViolationError,
-    RateLimitError,
-    ServiceUnavailableError,
-)
-from litellm.types.utils import CostPerToken, ModelResponse, Usage
-from litellm.utils import create_pretrained_tokenizer
+import importlib
+try:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        litellm = importlib.import_module("litellm")  # type: ignore
+except Exception:
+    litellm = None  # type: ignore
+_LITELLM_COMPLETION = getattr(litellm, "completion", None) if litellm else None
+litellm_completion = _LITELLM_COMPLETION  # Backwards compatibility for tests
+_LITELLM_COMPLETION_COST = getattr(litellm, "completion_cost", None) if litellm else None
+try:
+    _exc_mod = importlib.import_module("litellm.exceptions")  # type: ignore
+    APIConnectionError = getattr(_exc_mod, "APIConnectionError", Exception)
+    ContentPolicyViolationError = getattr(_exc_mod, "ContentPolicyViolationError", Exception)
+    RateLimitError = getattr(_exc_mod, "RateLimitError", Exception)
+    ServiceUnavailableError = getattr(_exc_mod, "ServiceUnavailableError", Exception)
+except Exception:
+    APIConnectionError = ContentPolicyViolationError = RateLimitError = ServiceUnavailableError = Exception  # type: ignore
 
 from forge.core.exceptions import LLMNoResponseError
-from forge.core.logger import forge_logger as logger
+from forge.core.logger import forge_logger as logger, get_trace_context
 from forge.core.message import Message
 from forge.llm.debug_mixin import DebugMixin
 from forge.llm.fn_call_converter import (
@@ -77,28 +81,34 @@ def retry_decorator(**kwargs: Any) -> Callable:
         stop=stop_after_attempt(num_retries) | stop_if_should_exit(),
         reraise=True,
         retry=retry_if_exception_type(retry_exceptions),
-        wait=wait_exponential(multiplier=retry_multiplier, min=retry_min_wait, max=retry_max_wait),
+        wait=wait_exponential(
+            multiplier=retry_multiplier, min=retry_min_wait, max=retry_max_wait
+        ),
     )
 
 
 __all__ = ["LLM", "RateLimitError", "ContentPolicyViolationError"]
+# Resolve optional LiteLLM exception classes across versions
+_TimeoutExc = getattr(litellm, "Timeout", Exception)
+_InternalServerErrorExc = getattr(litellm, "InternalServerError", Exception)
+
 LLM_RETRY_EXCEPTIONS: tuple[type[Exception], ...] = (
     APIConnectionError,
     RateLimitError,
     ServiceUnavailableError,
-    litellm.Timeout,
-    litellm.InternalServerError,
+    _TimeoutExc,  # type: ignore[arg-type]
+    _InternalServerErrorExc,  # type: ignore[arg-type]
     LLMNoResponseError,
 )
 
 
 class LLM(RetryMixin, DebugMixin):
     """Language Model abstraction layer with multi-provider support via LiteLLM.
-    
+
     Provides a unified interface to 200+ LLM models from 30+ providers including
     OpenAI, Anthropic, Google, OpenRouter, xAI, and more. Handles retries, cost
     tracking, streaming, function calling, and provider-specific quirks.
-    
+
     Features:
         - Multi-provider support via LiteLLM (OpenAI, Claude, Gemini, Grok, etc.)
         - Automatic retry with exponential backoff
@@ -108,7 +118,7 @@ class LLM(RetryMixin, DebugMixin):
         - Prompt caching (Claude models)
         - Vision support (GPT-4V, Claude 3.5+, Gemini)
         - Metrics collection (tokens, latency, costs)
-    
+
     Example:
         >>> config = LLMConfig(
         ...     model='claude-sonnet-4-20250514',
@@ -121,7 +131,7 @@ class LLM(RetryMixin, DebugMixin):
         ... )
         >>> print(response.choices[0].message.content)
         >>> print(f'Cost: ${llm.metrics.accumulated_cost:.2f}')
-    
+
     Attributes:
         config: LLMConfig object with model, API key, and parameters
         service_id: Identifier for this LLM instance (for logging/metrics)
@@ -143,38 +153,23 @@ class LLM(RetryMixin, DebugMixin):
         self.cost_metric_supported: bool = True
         self.config: LLMConfig = copy.deepcopy(config)
         self.service_id = service_id
-        self.metrics: Metrics = metrics if metrics is not None else Metrics(model_name=config.model)
-        self.model_info: ModelInfo | None = None
+        self.metrics: Metrics = (
+            metrics if metrics is not None else Metrics(model_name=config.model)
+        )
+        self.model_info: dict[str, Any] | None = None
         self._function_calling_active: bool = False
         self.retry_listener = retry_listener
 
     def _setup_logging(self) -> None:
         """Setup logging configuration."""
         if self.config.log_completions:
-            if self.config.log_completions_folder is None:
-                msg = "log_completions_folder is required when log_completions is enabled"
+            folder = self.config.log_completions_folder
+            if not folder:
+                msg = (
+                    "log_completions_folder is required when log_completions is enabled"
+                )
                 raise RuntimeError(msg)
-            os.makedirs(self.config.log_completions_folder, exist_ok=True)
-
-    def _setup_model_info_and_capabilities(self) -> None:  # pragma: no cover
-        """Setup model info and log capabilities."""
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            self.init_model_info()
-
-        if self.vision_is_active():
-            logger.debug("LLM: model has vision enabled")
-        if self.is_caching_prompt_active():
-            logger.debug("LLM: caching prompt enabled")
-        if self.is_function_calling_active():
-            logger.debug("LLM: model supports function calling")
-
-    def _setup_tokenizer(self) -> None:  # pragma: no cover
-        """Setup custom tokenizer if configured."""
-        if self.config.custom_tokenizer is not None:
-            self.tokenizer = create_pretrained_tokenizer(self.config.custom_tokenizer)
-        else:
-            self.tokenizer = None
+            os.makedirs(folder, exist_ok=True)
 
     def _build_basic_kwargs(self) -> dict[str, Any]:
         """Build basic completion kwargs."""
@@ -185,7 +180,7 @@ class LLM(RetryMixin, DebugMixin):
 
         if self.config.top_k is not None:
             kwargs["top_k"] = self.config.top_k
-        
+
         if self.config.top_p is not None:
             kwargs["top_p"] = self.config.top_p
 
@@ -209,13 +204,13 @@ class LLM(RetryMixin, DebugMixin):
 
     def _initialize_model_info(self) -> None:  # pragma: no cover
         """Initialize model information.
-        
+
         Tries to call init_model_info if available, suppressing warnings.
         """
         try:
             with warnings.catch_warnings():
-                warnings.simplefilter('ignore')
-                if hasattr(self, 'init_model_info'):
+                warnings.simplefilter("ignore")
+                if hasattr(self, "init_model_info"):
                     self.init_model_info()
         except Exception as e:
             logger.debug(f"Could not initialize model info: {e}")
@@ -223,24 +218,30 @@ class LLM(RetryMixin, DebugMixin):
     def _check_vision_capability(self) -> None:  # pragma: no cover
         """Check if model has vision capability enabled."""
         try:
-            if hasattr(self, 'vision_is_active') and self.vision_is_active():
-                logger.debug('LLM: model has vision enabled')
+            if hasattr(self, "vision_is_active") and self.vision_is_active():
+                logger.debug("LLM: model has vision enabled")
         except Exception:
             pass
 
     def _check_caching_capability(self) -> None:  # pragma: no cover
         """Check if caching prompt is enabled."""
         try:
-            if hasattr(self, 'is_caching_prompt_active') and self.is_caching_prompt_active():
-                logger.debug('LLM: caching prompt enabled')
+            if (
+                hasattr(self, "is_caching_prompt_active")
+                and self.is_caching_prompt_active()
+            ):
+                logger.debug("LLM: caching prompt enabled")
         except Exception:
             pass
 
     def _check_function_calling_capability(self) -> None:  # pragma: no cover
         """Check if model supports function calling."""
         try:
-            if hasattr(self, 'is_function_calling_active') and self.is_function_calling_active():
-                logger.debug('LLM: model supports function calling')
+            if (
+                hasattr(self, "is_function_calling_active")
+                and self.is_function_calling_active()
+            ):
+                logger.debug("LLM: model supports function calling")
         except Exception:
             pass
 
@@ -253,9 +254,15 @@ class LLM(RetryMixin, DebugMixin):
 
     def _setup_tokenizer(self) -> None:  # pragma: no cover
         """Setup tokenizer if needed."""
-        # If using a custom tokenizer, make sure it's loaded and accessible in the format expected by litellm
         if self.config.custom_tokenizer is not None:
-            self.tokenizer = create_pretrained_tokenizer(self.config.custom_tokenizer)
+            try:
+                utils_mod = importlib.import_module("litellm.utils")  # type: ignore
+                create_tok = getattr(utils_mod, "create_pretrained_tokenizer", None)
+                self.tokenizer = (
+                    create_tok(self.config.custom_tokenizer) if create_tok else None
+                )
+            except Exception:
+                self.tokenizer = None
         else:
             self.tokenizer = None
 
@@ -328,10 +335,14 @@ class LLM(RetryMixin, DebugMixin):
         kwargs["aws_region_name"] = self.config.aws_region_name
 
         if self.config.aws_access_key_id:
-            kwargs["aws_access_key_id"] = self.config.aws_access_key_id.get_secret_value()
+            kwargs["aws_access_key_id"] = (
+                self.config.aws_access_key_id.get_secret_value()
+            )
 
         if self.config.aws_secret_access_key:
-            kwargs["aws_secret_access_key"] = self.config.aws_secret_access_key.get_secret_value()
+            kwargs["aws_secret_access_key"] = (
+                self.config.aws_secret_access_key.get_secret_value()
+            )
 
     def _configure_claude_settings(self, kwargs: dict[str, Any]) -> None:
         """Configure Claude-specific settings.
@@ -352,30 +363,23 @@ class LLM(RetryMixin, DebugMixin):
         if "claude-sonnet-4" in model_lower:
             if self.config.max_output_tokens is None:
                 self.config.max_output_tokens = 64000
-            if self.config.max_input_tokens is None or self.config.max_input_tokens > 200000:
+            if (
+                self.config.max_input_tokens is None
+                or self.config.max_input_tokens > 200000
+            ):
                 self.config.max_input_tokens = 200000
-
-    def _handle_openhands_model(self) -> None:
-        """Handle Openhands provider - rewrite to litellm_proxy (legacy Forge aliases supported)."""
-        for prefix in ("Openhands/", "openhands/", "Forge/"):
-            if self.config.model.startswith(prefix):
-                model_name = self.config.model.removeprefix(prefix)
-                self.config.model = f'litellm_proxy/{model_name}'
-                self.config.base_url = 'https://llm-proxy.app.all-hands.dev/'
-                logger.debug(
-                    f'Rewrote {prefix}{model_name} to {self.config.model} with base URL {self.config.base_url}'
-                )
-                break
 
     def _setup_environment_variables(self) -> None:
         """Setup environment variables for API key manager.
-        
+
         Forces environment variable setup before completion function.
         """
         from forge.core.config.api_key_manager import api_key_manager
-        
+
         if self.config.model:
-            api_key_manager.set_environment_variables(self.config.model, self.config.api_key)
+            api_key_manager.set_environment_variables(
+                self.config.model, self.config.api_key
+            )
             logger.debug(f"Set environment variables for model: {self.config.model}")
 
     def _extract_api_key(self) -> str | None:
@@ -398,7 +402,9 @@ class LLM(RetryMixin, DebugMixin):
             and self.config.api_key.get_secret_value().strip()
         ):
             api_key_value = self.config.api_key.get_secret_value()
-            logger.debug(f"Using config API key for completion: {api_key_value[:10]}...")
+            logger.debug(
+                f"Using config API key for completion: {api_key_value[:10]}..."
+            )
             return api_key_value
 
         # Try environment variables
@@ -409,16 +415,22 @@ class LLM(RetryMixin, DebugMixin):
             return env_key
 
         # Try API key manager as final fallback
-        correct_api_key = api_key_manager.get_api_key_for_model(self.config.model, self.config.api_key)
+        correct_api_key = api_key_manager.get_api_key_for_model(
+            self.config.model, self.config.api_key
+        )
         if (
             correct_api_key
             and correct_api_key.get_secret_value()
             and correct_api_key.get_secret_value().strip()
         ):
             api_key_value = correct_api_key.get_secret_value()
-            logger.debug(f"Using API key manager result for completion: {api_key_value[:10]}...")
+            logger.debug(
+                f"Using API key manager result for completion: {api_key_value[:10]}..."
+            )
         else:
-            logger.error(f"CRITICAL: No API key available anywhere for model: {self.config.model}")
+            logger.error(
+                f"CRITICAL: No API key available anywhere for model: {self.config.model}"
+            )
 
         return api_key_value
 
@@ -439,11 +451,19 @@ class LLM(RetryMixin, DebugMixin):
         if self.config.api_version is not None:
             base_completion_kwargs["api_version"] = self.config.api_version
         if self.config.custom_llm_provider is not None:
-            base_completion_kwargs["custom_llm_provider"] = self.config.custom_llm_provider
+            base_completion_kwargs["custom_llm_provider"] = (
+                self.config.custom_llm_provider
+            )
 
         all_params = {**base_completion_kwargs, **kwargs}
 
-        self._base_completion = partial(litellm_completion, **all_params)
+        # Resolve completion function lazily to handle environments where litellm doesn't export it at import time
+        completion_fn = litellm_completion or getattr(litellm, "completion", None)
+        if completion_fn is None:
+            def _missing_completion(*args, **kwargs):
+                raise RuntimeError("litellm.completion is unavailable in this environment")
+            completion_fn = _missing_completion
+        self._base_completion = partial(completion_fn, **all_params)
         self._completion_unwrapped = self._base_completion
         logger.debug(
             "Completed function setup for model: %s with %d validated parameters",
@@ -527,7 +547,9 @@ class LLM(RetryMixin, DebugMixin):
 
         return (messages, mock_function_calling, mock_fncall_tools, len(args) > 0)
 
-    def _extract_messages(self, args: tuple[Any, ...], kwargs: dict[str, Any]) -> list[dict]:
+    def _extract_messages(
+        self, args: tuple[Any, ...], kwargs: dict[str, Any]
+    ) -> list[dict]:
         """Extract and normalize messages from args and kwargs."""
         # Extract messages from args or kwargs
         if len(args) > 1:
@@ -540,13 +562,17 @@ class LLM(RetryMixin, DebugMixin):
             messages_kwarg = args[0] if args else []
 
         # Normalize to list
-        messages_list = messages_kwarg if isinstance(messages_kwarg, list) else [messages_kwarg]
+        messages_list = (
+            messages_kwarg if isinstance(messages_kwarg, list) else [messages_kwarg]
+        )
 
         # Convert Message objects to dicts if needed
         if messages_list and isinstance(messages_list[0], Message):
             from forge.core.pydantic_compat import model_dump_with_options
 
-            messages = [model_dump_with_options(m) for m in cast("list[Message]", messages_list)]
+            messages = [
+                model_dump_with_options(m) for m in cast("list[Message]", messages_list)
+            ]
         else:
             messages = cast("list[dict[str, Any]]", messages_list)
 
@@ -577,7 +603,9 @@ class LLM(RetryMixin, DebugMixin):
         kwargs["messages"] = converted_messages
 
         # Add stop words if supported
-        if get_features(self.config.model).supports_stop_words and (not self.config.disable_stop_word):
+        if get_features(self.config.model).supports_stop_words and (
+            not self.config.disable_stop_word
+        ):
             kwargs["stop"] = STOP_WORDS
 
         # Handle tool choice based on model
@@ -596,7 +624,9 @@ class LLM(RetryMixin, DebugMixin):
         retry_max_wait=60.0,
         retry_multiplier=2.0,
     )
-    def _log_completion_input(self, messages, mock_function_calling, mock_fncall_tools, kwargs) -> None:
+    def _log_completion_input(
+        self, messages, mock_function_calling, mock_fncall_tools, kwargs
+    ) -> None:
         """Log completion input if logging is enabled."""
         if not self.config.log_completions:
             return
@@ -606,14 +636,20 @@ class LLM(RetryMixin, DebugMixin):
         input_data = {
             "model": self.config.model,
             "messages": messages,
-            "kwargs": {k: v for k, v in kwargs.items() if k not in ["messages", "tools"]},
+            "kwargs": {
+                k: v for k, v in kwargs.items() if k not in ["messages", "tools"]
+            },
             "mock_function_calling": mock_function_calling,
         }
         if mock_fncall_tools:
             input_data["mock_fncall_tools"] = mock_fncall_tools
 
         with open(
-            os.path.join(self.config.log_completions_folder, f"input_{int(time.time())}.json"), "w", encoding="utf-8",
+            os.path.join(
+                self.config.log_completions_folder, f"input_{int(time.time())}.json"
+            ),
+            "w",
+            encoding="utf-8",
         ) as f:
             f.write(json.dumps(input_data, indent=2))
 
@@ -628,10 +664,16 @@ class LLM(RetryMixin, DebugMixin):
             "model": self.config.model,
             "messages": messages,
             "error": str(error),
-            "kwargs": {k: v for k, v in kwargs.items() if k not in ["messages", "tools"]},
+            "kwargs": {
+                k: v for k, v in kwargs.items() if k not in ["messages", "tools"]
+            },
         }
         with open(
-            os.path.join(self.config.log_completions_folder, f"error_{int(time.time())}.json"), "w", encoding="utf-8",
+            os.path.join(
+                self.config.log_completions_folder, f"error_{int(time.time())}.json"
+            ),
+            "w",
+            encoding="utf-8",
         ) as f:
             f.write(json.dumps(error_data, indent=2))
 
@@ -644,43 +686,202 @@ class LLM(RetryMixin, DebugMixin):
 
         output_data = {
             "model": self.config.model,
-            "response": response.model_dump() if hasattr(response, "model_dump") else response,
+            "response": response.model_dump()
+            if hasattr(response, "model_dump")
+            else response,
             "messages": messages,
-            "kwargs": {k: v for k, v in kwargs.items() if k not in ["messages", "tools"]},
+            "kwargs": {
+                k: v for k, v in kwargs.items() if k not in ["messages", "tools"]
+            },
         }
         with open(
-            os.path.join(self.config.log_completions_folder, f"output_{int(time.time())}.json"), "w", encoding="utf-8",
+            os.path.join(
+                self.config.log_completions_folder, f"output_{int(time.time())}.json"
+            ),
+            "w",
+            encoding="utf-8",
         ) as f:
             f.write(json.dumps(output_data, indent=2))
 
     def _apply_mock_function_calling(self, response, mock_fncall_tools) -> None:
         """Apply mock function calling to response if needed."""
         response.choices[0].message.tool_calls = []
-        response.choices[0].message.content = convert_non_fncall_messages_to_fncall_messages(
+        response.choices[
+            0
+        ].message.content = convert_non_fncall_messages_to_fncall_messages(
             [{"role": "assistant", "content": response.choices[0].message.content}],
             mock_fncall_tools,
         )[0]["content"]
 
+    def _should_enable_otel(self) -> bool:
+        enabled = os.getenv(
+            "OTEL_INSTRUMENT_LLM", os.getenv("OTEL_ENABLED", "false")
+        ).lower() in ("true", "1", "yes")
+        if not enabled:
+            return False
+        try:
+            sample_rate = float(
+                os.getenv("OTEL_SAMPLE_LLM", os.getenv("OTEL_SAMPLE_DEFAULT", "1.0"))
+            )
+        except Exception:
+            sample_rate = 1.0
+        if sample_rate >= 1.0:
+            return True
+        sample_rate = max(0.0, min(1.0, sample_rate))
+        return random.random() < sample_rate
+
+    def _start_span_context(self):
+        if not self._should_enable_otel():
+            return contextlib.nullcontext()
+        try:  # Lazy import so OTEL remains optional
+            from opentelemetry import trace as _otel_trace  # type: ignore
+            from opentelemetry.trace import SpanKind as _SpanKind  # type: ignore
+
+            tracer = _otel_trace.get_tracer("forge.llm")
+            return tracer.start_as_current_span(name="llm.call", kind=_SpanKind.CLIENT)
+        except Exception:
+            return contextlib.nullcontext()
+
+    def _set_span_request_attributes(
+        self, span: Any | None, is_streaming: bool
+    ) -> None:
+        if span is None:
+            return
+        try:
+            model = self.config.model
+            provider = (
+                self.config.custom_llm_provider
+                if getattr(self.config, "custom_llm_provider", None)
+                else (model.split("/", 1)[0] if "/" in model else "unknown")
+            )
+            span.set_attribute("llm.provider", provider)
+            span.set_attribute("llm.model", model)
+            if self.config.temperature is not None:
+                span.set_attribute("llm.temperature", float(self.config.temperature))
+            if self.config.top_p is not None:
+                span.set_attribute("llm.top_p", float(self.config.top_p))
+            if self.config.max_output_tokens is not None:
+                span.set_attribute("llm.max_tokens", int(self.config.max_output_tokens))
+            span.set_attribute("llm.streaming", bool(is_streaming))
+            ctx = get_trace_context()
+            if isinstance(ctx, dict) and ctx.get("trace_id"):
+                span.set_attribute("forge.trace_id", str(ctx["trace_id"]))
+        except Exception:
+            pass
+
+    def _record_span_exception(self, span: Any | None, error: Exception) -> None:
+        if span is None:
+            return
+        try:
+            span.record_exception(error)
+            span.set_attribute("error", True)
+        except Exception:
+            pass
+
+    def _wrap_stream_response(
+        self, iterator: Any, span: Any | None, start_time: float
+    ):
+        if span is None:
+            return iterator
+
+        def _stream():
+            try:
+                for chunk in iterator:
+                    yield chunk
+            except Exception as exc:
+                self._record_span_exception(span, exc)
+                raise
+            finally:
+                try:
+                    span.set_attribute(
+                        "llm.latency_ms", int((time.time() - start_time) * 1000)
+                    )
+                except Exception:
+                    pass
+
+        return _stream()
+
+    def _finalize_span_with_response(
+        self, span: Any | None, latency: float, response: dict, cur_cost: float
+    ) -> None:
+        span_to_update = self._resolve_span_to_update(span)
+        if span_to_update is None:
+            return
+        try:
+            self._annotate_span_with_usage(span_to_update, response.get("usage"))
+            span_to_update.set_attribute("llm.latency_ms", int(latency * 1000))
+            span_to_update.set_attribute("llm.cost.usd", float(cur_cost))
+        except Exception:
+            pass
+
+    def _resolve_span_to_update(self, span: Any | None) -> Any | None:
+        if span is None:
+            return None
+        try:
+            from opentelemetry import trace as _otel_trace  # type: ignore
+        except Exception:
+            return None
+        try:
+            current_span = _otel_trace.get_current_span()
+        except Exception:
+            current_span = span
+
+        span_to_update = current_span if current_span is not None else span
+        try:
+            if not getattr(span_to_update, "is_recording", lambda: False)():
+                return None
+            return span_to_update
+        except Exception:
+            return span
+
+    def _annotate_span_with_usage(
+        self, span_to_update: Any, usage: dict[str, Any] | None
+    ) -> None:
+        if not usage:
+            return
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
+        total_tokens = int(prompt_tokens) + int(completion_tokens)
+        span_to_update.set_attribute("llm.input_tokens", int(prompt_tokens))
+        span_to_update.set_attribute("llm.output_tokens", int(completion_tokens))
+        span_to_update.set_attribute("llm.total_tokens", int(total_tokens))
+        cache_hit_tokens, cache_write_tokens = self._extract_cache_tokens(usage)
+        if cache_hit_tokens:
+            span_to_update.set_attribute("llm.cache_hit_tokens", int(cache_hit_tokens))
+        if cache_write_tokens:
+            span_to_update.set_attribute(
+                "llm.cache_write_tokens", int(cache_write_tokens)
+            )
+
     def _completion_wrapper(self, *args: Any, **kwargs: Any) -> Any:
         """Wrapper for the litellm completion function. Logs the input and output of the completion function."""
-        messages, mock_function_calling, mock_fncall_tools, _has_extra_args = self._prepare_messages(args, kwargs)
+        messages, mock_function_calling, mock_fncall_tools, _has_extra_args = (
+            self._prepare_messages(args, kwargs)
+        )
 
         # Check if streaming is requested
         is_streaming = kwargs.get("stream", False)
 
-        # Execute completion
+        # Execute completion with optional OpenTelemetry span
         start_time = time.time()
 
-        try:
-            response = self._base_completion(*args, **kwargs)
-            latency = time.time() - start_time
+        span_cm = self._start_span_context()
+        span_holder: dict[str, Optional[Any]] = {"span": None}
 
-            # If streaming, return the iterator directly (caller handles chunks)
-            if is_streaming:
-                return response
+        try:
+            with span_cm as span:
+                span_holder["span"] = span
+                self._set_span_request_attributes(span, is_streaming)
+                response = self._base_completion(*args, **kwargs)
+                latency = time.time() - start_time
+
+                # If streaming, return iterator/generator; close span when exhausted if possible
+                if is_streaming:
+                    return self._wrap_stream_response(response, span, start_time)
 
         except Exception as e:
             self._log_completion_error(messages, e, kwargs)
+            self._record_span_exception(span_holder.get("span"), e)
             raise
 
         # Log output (only for non-streaming)
@@ -692,7 +893,10 @@ class LLM(RetryMixin, DebugMixin):
         if mock_function_calling and mock_fncall_tools:
             self._apply_mock_function_calling(response, mock_fncall_tools)
 
-        self._post_completion(response)
+        # Post completion: updates metrics and returns cost
+        cur_cost = self._post_completion(response)
+
+        self._finalize_span_with_response(span_holder.get("span"), latency, response, cur_cost)
 
         return response
 
@@ -725,7 +929,11 @@ class LLM(RetryMixin, DebugMixin):
                 headers={
                     "Authorization": f"Bearer {
                         (
-                            self.config.api_key.get_secret_value() if self.config.api_key else None)}",
+                            self.config.api_key.get_secret_value()
+                            if self.config.api_key
+                            else None
+                        )
+                    }",
                 },
             )
 
@@ -739,18 +947,28 @@ class LLM(RetryMixin, DebugMixin):
                 logger=logger,
             )
         except RetryError as e:
-            logger.info("Failed to fetch model info from LiteLLM proxy after retries: %s", e)
+            logger.info(
+                "Failed to fetch model info from LiteLLM proxy after retries: %s", e
+            )
             response = None
         try:
             resp_json = response.json()
             if "data" not in resp_json:
-                logger.info("No data field in model info response from LiteLLM proxy: %s", resp_json)
+                logger.info(
+                    "No data field in model info response from LiteLLM proxy: %s",
+                    resp_json,
+                )
             all_model_info = resp_json.get("data", [])
         except Exception as e:
             logger.info("Error parsing JSON response from LiteLLM proxy: %s", e)
             all_model_info = []
         current_model_info = next(
-            (info for info in all_model_info if info["model_name"] == self.config.model.removeprefix("litellm_proxy/")),
+            (
+                info
+                for info in all_model_info
+                if info["model_name"]
+                == self.config.model.removeprefix("litellm_proxy/")
+            ),
             None,
         )
         if current_model_info:
@@ -761,11 +979,15 @@ class LLM(RetryMixin, DebugMixin):
         """Try to get model info from litellm with different model name variations."""
         if not self.model_info:
             with contextlib.suppress(Exception):
-                self.model_info = litellm.get_model_info(self.config.model.split(":")[0])
+                self.model_info = litellm.get_model_info(
+                    self.config.model.split(":")[0]
+                )
 
         if not self.model_info:
             with contextlib.suppress(Exception):
-                self.model_info = litellm.get_model_info(self.config.model.split("/")[-1])
+                self.model_info = litellm.get_model_info(
+                    self.config.model.split("/")[-1]
+                )
 
     def _log_model_info(self) -> None:  # pragma: no cover
         """Log model information for debugging."""
@@ -773,13 +995,17 @@ class LLM(RetryMixin, DebugMixin):
 
         logger.debug(
             "Model info: %s",
-            json.dumps({"model": self.config.model, "base_url": self.config.base_url}, indent=2),
+            json.dumps(
+                {"model": self.config.model, "base_url": self.config.base_url}, indent=2
+            ),
         )
 
     def _configure_huggingface_model(self) -> None:
         """Configure Hugging Face model specific settings."""
         if self.config.model.startswith("huggingface"):
-            logger.debug("Setting top_p to 0.9 for Hugging Face model: %s", self.config.model)
+            logger.debug(
+                "Setting top_p to 0.9 for Hugging Face model: %s", self.config.model
+            )
             self.config.top_p = 0.9 if self.config.top_p == 1 else self.config.top_p
 
     def _configure_input_tokens(self) -> None:
@@ -795,12 +1021,19 @@ class LLM(RetryMixin, DebugMixin):
     def _configure_output_tokens(self) -> None:
         """Configure max output tokens from model info or defaults."""
         if self.config.max_output_tokens is None:
-            if any(model in self.config.model for model in ["claude-3-7-sonnet", "claude-3.7-sonnet"]):
+            if any(
+                model in self.config.model
+                for model in ["claude-3-7-sonnet", "claude-3.7-sonnet"]
+            ):
                 self.config.max_output_tokens = 64000
             elif self.model_info is not None:
-                if "max_output_tokens" in self.model_info and isinstance(self.model_info["max_output_tokens"], int):
+                if "max_output_tokens" in self.model_info and isinstance(
+                    self.model_info["max_output_tokens"], int
+                ):
                     self.config.max_output_tokens = self.model_info["max_output_tokens"]
-                elif "max_tokens" in self.model_info and isinstance(self.model_info["max_tokens"], int):
+                elif "max_tokens" in self.model_info and isinstance(
+                    self.model_info["max_tokens"], int
+                ):
                     self.config.max_output_tokens = self.model_info["max_tokens"]
 
     def _configure_function_calling(self) -> None:
@@ -837,7 +1070,7 @@ class LLM(RetryMixin, DebugMixin):
 
     def vision_is_active(self) -> bool:
         """Check if vision/image capabilities are active for this LLM.
-        
+
         Returns:
             True if vision is enabled and model supports it
 
@@ -858,7 +1091,10 @@ class LLM(RetryMixin, DebugMixin):
         return (
             litellm.supports_vision(self.config.model)
             or litellm.supports_vision(self.config.model.split("/")[-1])
-            or (self.model_info is not None and self.model_info.get("supports_vision", False))
+            or (
+                self.model_info is not None
+                and self.model_info.get("supports_vision", False)
+            )
         )
 
     def is_caching_prompt_active(self) -> bool:
@@ -892,17 +1128,26 @@ class LLM(RetryMixin, DebugMixin):
         latest_latency = self.metrics.response_latencies[-1]
         return f"Response Latency: {latest_latency.latency:.3f} seconds\n"
 
-    def _extract_cache_tokens(self, usage: Usage) -> tuple[int, int]:
-        """Extract cache hit and write tokens from usage."""
-        prompt_tokens_details: PromptTokensDetails = usage.get("prompt_tokens_details")
-        cache_hit_tokens = (
-            prompt_tokens_details.cached_tokens if prompt_tokens_details and prompt_tokens_details.cached_tokens else 0
-        )
+    def _extract_cache_tokens(self, usage: dict[str, Any]) -> tuple[int, int]:
+        """Extract cache hit and write tokens from usage safely across types."""
+        ptd = usage.get("prompt_tokens_details")
+        cache_hit_tokens = 0
+        try:
+            if isinstance(ptd, dict):
+                cache_hit_tokens = int(ptd.get("cached_tokens") or 0)
+            else:
+                cache_hit_tokens = int(getattr(ptd, "cached_tokens", 0) or 0)
+        except Exception:
+            cache_hit_tokens = 0
         model_extra = usage.get("model_extra", {})
-        cache_write_tokens = model_extra.get("cache_creation_input_tokens", 0)
+        cache_write_tokens = 0
+        try:
+            cache_write_tokens = int(model_extra.get("cache_creation_input_tokens", 0))
+        except Exception:
+            cache_write_tokens = 0
         return cache_hit_tokens, cache_write_tokens
 
-    def _build_token_stats(self, usage: Usage) -> str:
+    def _build_token_stats(self, usage: dict[str, Any]) -> str:
         """Build token usage statistics string."""
         prompt_tokens = usage.get("prompt_tokens", 0)
         completion_tokens = usage.get("completion_tokens", 0)
@@ -911,7 +1156,12 @@ class LLM(RetryMixin, DebugMixin):
         if prompt_tokens:
             stats += f"Input tokens: {prompt_tokens!s}"
         if completion_tokens:
-            stats += (" | " if prompt_tokens else "") + "Output tokens: " + str(completion_tokens) + "\n"
+            stats += (
+                (" | " if prompt_tokens else "")
+                + "Output tokens: "
+                + str(completion_tokens)
+                + "\n"
+            )
 
         cache_hit_tokens, cache_write_tokens = self._extract_cache_tokens(usage)
         if cache_hit_tokens:
@@ -921,7 +1171,7 @@ class LLM(RetryMixin, DebugMixin):
 
         return stats
 
-    def _update_metrics_from_usage(self, usage: Usage, response_id: str) -> None:
+    def _update_metrics_from_usage(self, usage: dict[str, Any], response_id: str) -> None:
         """Update metrics from usage information."""
         prompt_tokens = usage.get("prompt_tokens", 0)
         completion_tokens = usage.get("completion_tokens", 0)
@@ -941,7 +1191,7 @@ class LLM(RetryMixin, DebugMixin):
             response_id=response_id,
         )
 
-    def _post_completion(self, response: ModelResponse) -> float:
+    def _post_completion(self, response: dict[str, Any] | Any) -> float:
         """Post-process the completion response.
 
         Logs the cost and usage stats of the completion call.
@@ -956,7 +1206,7 @@ class LLM(RetryMixin, DebugMixin):
         stats += self._build_latency_stats()
 
         # Process usage information
-        usage: Usage | None = response.get("usage")
+        usage: dict[str, Any] | None = response.get("usage")
         response_id = response.get("id", "unknown")
         if usage:
             stats += self._build_token_stats(usage)
@@ -977,16 +1227,29 @@ class LLM(RetryMixin, DebugMixin):
             int: The number of tokens.
 
         """
-        if isinstance(messages, list) and len(messages) > 0 and isinstance(messages[0], Message):
-            logger.info("Message objects now include serialized tool calls in token counting")
+        token_messages: list[Any]
+        if (
+            isinstance(messages, list)
+            and len(messages) > 0
+            and isinstance(messages[0], Message)
+        ):
+            logger.info(
+                "Message objects now include serialized tool calls in token counting"
+            )
             assert isinstance(messages, list) and all(
                 isinstance(m, Message) for m in messages
             ), "Expected list of Message objects"
-            messages_typed: list[Message] = messages
-            messages = self.format_messages_for_llm(messages_typed)
+            messages_typed: list[Message] = cast(list[Message], messages)
+            token_messages = self.format_messages_for_llm(messages_typed)
+        else:
+            token_messages = cast(list[Any], messages)
         try:
             return int(
-                litellm.token_counter(model=self.config.model, messages=messages, custom_tokenizer=self.tokenizer),
+                litellm.token_counter(
+                    model=self.config.model,
+                    messages=token_messages,
+                    custom_tokenizer=self.tokenizer,
+                ),
             )
         except Exception as e:
             logger.error(
@@ -1030,43 +1293,86 @@ class LLM(RetryMixin, DebugMixin):
         """
         if not self.cost_metric_supported:
             return 0.0
-        extra_kwargs = {}
-        if self.config.input_cost_per_token is not None and self.config.output_cost_per_token is not None:
-            cost_per_token = CostPerToken(
-                input_cost_per_token=self.config.input_cost_per_token,
-                output_cost_per_token=self.config.output_cost_per_token,
-            )
-            logger.debug("Using custom cost per token: %s", cost_per_token)
-            extra_kwargs["custom_cost_per_token"] = cost_per_token
-        _hidden_params = getattr(response, "_hidden_params", {})
-        cost = _hidden_params.get("additional_headers", {}).get("llm_provider-x-litellm-response-cost", None)
-        if cost is not None:
-            cost = float(cost)
-            logger.debug("Got response_cost from response: %s", cost)
+
+        extra_kwargs = self._build_custom_cost_kwargs()
+        cost = self._extract_cost_from_response(response)
+
         try:
             if cost is None:
-                try:
-                    cost = litellm_completion_cost(completion_response=response, **extra_kwargs)
-                except Exception as e:
-                    logger.debug("Error getting cost from litellm: %s", e)
+                cost = self._compute_cost_via_litellm(response, extra_kwargs)
             if cost is None:
-                _model_name = "/".join(self.config.model.split("/")[1:])
-                cost = litellm_completion_cost(completion_response=response, model=_model_name, **extra_kwargs)
-                logger.debug("Using fallback model name %s to get cost: %s", _model_name, cost)
-            self.metrics.add_cost(float(cost))
-            return float(cost)
+                cost = self._compute_cost_with_fallback_model(response, extra_kwargs)
+            if cost is None:
+                raise ValueError("Unable to compute completion cost")
+            numeric_cost = float(cost)
+            self.metrics.add_cost(numeric_cost)
+            return numeric_cost
         except Exception:
             self.cost_metric_supported = False
             logger.debug("Cost calculation not supported for this model.")
         return 0.0
 
+    def _build_custom_cost_kwargs(self) -> dict[str, Any]:
+        if (
+            self.config.input_cost_per_token is None
+            or self.config.output_cost_per_token is None
+        ):
+            return {}
+        try:
+            types_mod = importlib.import_module("litellm.types.utils")  # type: ignore
+            CPT = getattr(types_mod, "CostPerToken", None)
+        except Exception:
+            CPT = None
+        if CPT is None:
+            return {}
+        cost_per_token = CPT(
+            input_cost_per_token=self.config.input_cost_per_token,
+            output_cost_per_token=self.config.output_cost_per_token,
+        )
+        logger.debug("Using custom cost per token")
+        return {"custom_cost_per_token": cost_per_token}
+
+    def _extract_cost_from_response(self, response: Any) -> float | None:
+        _hidden_params = getattr(response, "_hidden_params", {})
+        cost = _hidden_params.get("additional_headers", {}).get(
+            "llm_provider-x-litellm-response-cost", None
+        )
+        if cost is not None:
+            value = float(cost)
+            logger.debug("Got response_cost from response")
+            return value
+        return None
+
+    def _compute_cost_via_litellm(
+        self, response: Any, extra_kwargs: dict[str, Any]
+    ) -> float | None:
+        cost_fn = _LITELLM_COMPLETION_COST or getattr(litellm, "completion_cost", None)
+        if cost_fn is None:
+            return None
+        try:
+            return cost_fn(completion_response=response, **extra_kwargs)
+        except Exception as exc:
+            logger.debug("Error getting cost from litellm: %s", exc)
+            return None
+
+    def _compute_cost_with_fallback_model(
+        self, response: Any, extra_kwargs: dict[str, Any]
+    ) -> float | None:
+        cost_fn = _LITELLM_COMPLETION_COST or getattr(litellm, "completion_cost", None)
+        if cost_fn is None:
+            return None
+        model_name_parts = self.config.model.split("/")
+        model_name = "/".join(model_name_parts[1:]) if len(model_name_parts) > 1 else self.config.model
+        cost = cost_fn(completion_response=response, model=model_name, **extra_kwargs)
+        logger.debug("Using fallback model name %s to get cost: %s", model_name, cost)
+        return cost
+
     def __str__(self) -> str:
         """Return a concise description identifying the configured model and endpoint."""
         if self.config.api_version:
-            return f"LLM(model={
-                self.config.model}, api_version={
-                self.config.api_version}, base_url={
-                self.config.base_url})"
+            return f"LLM(model={self.config.model}, api_version={
+                self.config.api_version
+            }, base_url={self.config.base_url})"
         if self.config.base_url:
             return f"LLM(model={self.config.model}, base_url={self.config.base_url})"
         return f"LLM(model={self.config.model})"
@@ -1077,10 +1383,10 @@ class LLM(RetryMixin, DebugMixin):
 
     def format_messages_for_llm(self, messages: Message | list[Message]) -> list[dict]:
         """Format messages for LLM API with caching and vision flags.
-        
+
         Args:
             messages: Single message or list of messages to format
-            
+
         Returns:
             List of message dictionaries ready for LLM API
 

@@ -7,7 +7,11 @@ from textwrap import dedent
 
 import pytest
 
-from forge.events.observation.commands import CmdOutputMetadata, CmdOutputObservation, MAX_CMD_OUTPUT_SIZE
+from forge.events.observation.commands import (
+    CmdOutputMetadata,
+    CmdOutputObservation,
+    MAX_CMD_OUTPUT_SIZE,
+)
 
 
 def test_cmd_output_metadata_to_ps1_prompt_is_well_formed() -> None:
@@ -77,4 +81,3 @@ def test_cmd_output_observation_str_includes_metadata_json() -> None:
     repr_str = str(obs)
     assert "**CmdOutputObservation" in repr_str
     assert '"exit_code": 0' in repr_str
-

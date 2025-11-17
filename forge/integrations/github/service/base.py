@@ -77,7 +77,9 @@ class GitHubMixinBase(BaseGitService, HTTPClient):
         except httpx.HTTPError as e:
             raise self.handle_http_error(e) from e
 
-    async def execute_graphql_query(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
+    async def execute_graphql_query(
+        self, query: str, variables: dict[str, Any]
+    ) -> dict[str, Any]:
         """Execute GitHub GraphQL query and return parsed response."""
         try:
             async with httpx.AsyncClient() as client:

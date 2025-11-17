@@ -67,7 +67,9 @@ class JupyterKernel:
         self.kernel_id: str | None = None
         self.ws: tornado.websocket.WebSocketClientConnection | None = None
         self.convid = convid
-        logging.info(f"Jupyter kernel created for conversation {convid} at {url_suffix}")
+        logging.info(
+            f"Jupyter kernel created for conversation {convid} at {url_suffix}"
+        )
         self.heartbeat_interval = 10000
         self.heartbeat_callback: PeriodicCallback | None = None
         self.initialized = False
@@ -75,7 +77,7 @@ class JupyterKernel:
 
     async def initialize(self) -> None:
         """Initialize Jupyter execute server.
-        
+
         Sets up color scheme and prepares tools for execution.
         """
         await self.execute("%colors nocolor")
@@ -124,12 +126,16 @@ class JupyterKernel:
         if kernel_id is None:
             msg = "Kernel ID not initialized"
             raise ConnectionRefusedError(msg)
-        ws_req = HTTPRequest(url=f"{self.base_ws_url}/api/kernels/{url_escape(kernel_id)}/channels")
+        ws_req = HTTPRequest(
+            url=f"{self.base_ws_url}/api/kernels/{url_escape(kernel_id)}/channels"
+        )
         self.ws = await websocket_connect(ws_req)
         logging.info("Connected to kernel websocket")
         if self.heartbeat_callback:
             self.heartbeat_callback.stop()
-        self.heartbeat_callback = PeriodicCallback(self._send_heartbeat, self.heartbeat_interval)
+        self.heartbeat_callback = PeriodicCallback(
+            self._send_heartbeat, self.heartbeat_interval
+        )
         self.heartbeat_callback.start()
 
     def _create_execute_request(self, code: str, msg_id: str) -> dict:
@@ -178,7 +184,9 @@ class JupyterKernel:
         msg_type = msg_dict["msg_type"]
 
         if os.environ.get("DEBUG"):
-            logging.info(f"MSG TYPE: {msg_type.upper()}\nCONTENT: {msg_dict['content']}")
+            logging.info(
+                f"MSG TYPE: {msg_type.upper()}\nCONTENT: {msg_dict['content']}"
+            )
 
         if msg_type == "error":
             traceback = "\n".join(msg_dict["content"]["traceback"])
@@ -187,9 +195,13 @@ class JupyterKernel:
         if msg_type == "stream":
             outputs.append({"type": "text", "content": msg_dict["content"]["text"]})
         elif msg_type in ["execute_result", "display_data"]:
-            outputs.append({"type": "text", "content": msg_dict["content"]["data"]["text/plain"]})
+            outputs.append(
+                {"type": "text", "content": msg_dict["content"]["data"]["text/plain"]}
+            )
             if "image/png" in msg_dict["content"]["data"]:
-                image_url = f"data:image/png;base64,{msg_dict['content']['data']['image/png']}"
+                image_url = (
+                    f"data:image/png;base64,{msg_dict['content']['data']['image/png']}"
+                )
                 outputs.append({"type": "image", "content": image_url})
         elif msg_type == "execute_reply":
             return True
@@ -239,7 +251,9 @@ class JupyterKernel:
         )
         logging.info(f"Kernel interrupted: {interrupt_response}")
 
-    def _format_outputs(self, outputs: list[dict], execution_done: bool) -> dict[str, list[str] | str]:
+    def _format_outputs(
+        self, outputs: list[dict], execution_done: bool
+    ) -> dict[str, list[str] | str]:
         """Format the collected outputs into the final result.
 
         Args:
@@ -274,7 +288,9 @@ class JupyterKernel:
         before_sleep=tenacity_before_sleep_factory("runtime.jupyter.execute"),
         after=tenacity_after_factory("runtime.jupyter.execute"),
     )
-    async def execute(self, code: str, timeout: int = 120) -> dict[str, list[str] | str]:
+    async def execute(
+        self, code: str, timeout: int = 120
+    ) -> dict[str, list[str] | str]:
         """Execute code in the Jupyter kernel.
 
         Args:
@@ -313,7 +329,9 @@ class JupyterKernel:
         """Asynchronously shutdown Jupyter kernel and cleanup resources."""
         if self.kernel_id:
             client = AsyncHTTPClient()
-            await client.fetch(f"{self.base_url}/api/kernels/{self.kernel_id}", method="DELETE")
+            await client.fetch(
+                f"{self.base_url}/api/kernels/{self.kernel_id}", method="DELETE"
+            )
             self.kernel_id = None
             if self.ws:
                 self.ws.close()
@@ -325,7 +343,7 @@ class ExecuteHandler(tornado.web.RequestHandler):
 
     def initialize(self, jupyter_kernel: JupyterKernel) -> None:
         """Initialize Jupyter execute server with kernel reference.
-        
+
         Args:
             jupyter_kernel: Jupyter kernel instance to use
 
@@ -334,7 +352,7 @@ class ExecuteHandler(tornado.web.RequestHandler):
 
     async def post(self) -> None:
         """Handle POST request to execute Jupyter code.
-        
+
         Executes code in Jupyter kernel and returns output.
         """
         data = json_decode(self.request.body)
@@ -350,9 +368,9 @@ class ExecuteHandler(tornado.web.RequestHandler):
 
 def make_app() -> tornado.web.Application:
     """Create Tornado web application for Jupyter execution server.
-    
+
     Initializes Jupyter kernel and sets up execute endpoint handler.
-    
+
     Returns:
         Configured Tornado application
 
@@ -362,7 +380,9 @@ def make_app() -> tornado.web.Application:
         os.environ.get("JUPYTER_GATEWAY_KERNEL_ID", "default"),
     )
     asyncio.get_event_loop().run_until_complete(jupyter_kernel.initialize())
-    return tornado.web.Application([("/execute", ExecuteHandler, {"jupyter_kernel": jupyter_kernel})])
+    return tornado.web.Application(
+        [("/execute", ExecuteHandler, {"jupyter_kernel": jupyter_kernel})]
+    )
 
 
 if __name__ == "__main__":

@@ -23,7 +23,12 @@ from evaluation.utils.shared import (
     update_llm_config_for_completions_logging,
 )
 from forge.controller.state.state import State
-from forge.core.config import AgentConfig, ForgeConfig, get_evaluation_parser, get_llm_config_arg
+from forge.core.config import (
+    AgentConfig,
+    ForgeConfig,
+    get_evaluation_parser,
+    get_llm_config_arg,
+)
 from forge.core.logger import forge_logger as logger
 from forge.core.main import create_runtime, run_controller
 from forge.events.action import CmdRunAction, MessageAction
@@ -51,11 +56,15 @@ def get_instruction(instance: pd.Series, metadata: EvalMetadata):
     test_dir = instance["test"]["test_dir"]
     instruction = f"<uploaded_files>\n/workspace/{workspace_dir_name}\n</uploaded_files>\nI've uploaded a python code repository in the directory {workspace_dir_name}. Here is your task:\n\nHere is your task:\n\n  You need to complete the implementations for all functions (i.e., those with pass\n  statements) and pass the unit tests.\n\n  Do not change the names of existing functions or classes, as they may be referenced\n  from other code like unit tests, etc.\n\n  When you generate code, you must maintain the original formatting of the function\n  stubs (such as whitespaces), otherwise we will not able to search/replace blocks\n  for code modifications, and therefore you will receive a score of 0 for your generated\n  code.\n\nHere is the command to run the unit tests:\n<test_command>\n{test_cmd} {test_dir}\n</test_command>\n\nMake a local git commit for each agent step for all code changes. If there is not change in current step, do not make a commit."
     if RUN_WITH_BROWSING:
-        instruction += "<IMPORTANT!>\nYou SHOULD NEVER attempt to browse the web. </IMPORTANT!>\n"
+        instruction += (
+            "<IMPORTANT!>\nYou SHOULD NEVER attempt to browse the web. </IMPORTANT!>\n"
+        )
     return instruction
 
 
-DOCKER_IMAGE_PREFIX = os.environ.get("EVAL_DOCKER_IMAGE_PREFIX", "docker.io/wentingzhao/")
+DOCKER_IMAGE_PREFIX = os.environ.get(
+    "EVAL_DOCKER_IMAGE_PREFIX", "docker.io/wentingzhao/"
+)
 logger.info("Using docker image prefix: %s", DOCKER_IMAGE_PREFIX)
 
 
@@ -83,7 +92,9 @@ def get_config(instance: pd.Series, metadata: EvalMetadata) -> ForgeConfig:
             metadata.llm_config, metadata.eval_output_dir, instance["instance_id"]
         )
     )
-    agent_config = AgentConfig(enable_jupyter=False, enable_browsing=RUN_WITH_BROWSING, enable_llm_editor=False)
+    agent_config = AgentConfig(
+        enable_jupyter=False, enable_browsing=RUN_WITH_BROWSING, enable_llm_editor=False
+    )
     config.set_agent_config(agent_config)
     return config
 
@@ -98,7 +109,9 @@ def initialize_runtime(runtime: Runtime, instance: pd.Series):
     logger.info("-" * 30)
     workspace_dir_name = _get_commit0_workspace_dir_name(instance)
     obs: CmdOutputObservation
-    action = CmdRunAction(command=f"git clone -b commit0_combined https://github.com/{instance['repo']}.git")
+    action = CmdRunAction(
+        command=f"git clone -b commit0_combined https://github.com/{instance['repo']}.git"
+    )
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
@@ -112,13 +125,18 @@ def initialize_runtime(runtime: Runtime, instance: pd.Series):
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert_and_raise(obs.exit_code == 0, f"Failed to cd to /workspace/{workspace_dir_name}: {str(obs)}")
+    assert_and_raise(
+        obs.exit_code == 0,
+        f"Failed to cd to /workspace/{workspace_dir_name}: {str(obs)}",
+    )
     action = CmdRunAction(command="git checkout -b Forge")
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert_and_raise(obs.exit_code == 0, f"Failed to git checkout new branch Forge: {str(obs)}")
+    assert_and_raise(
+        obs.exit_code == 0, f"Failed to git checkout new branch Forge: {str(obs)}"
+    )
     action = CmdRunAction(command="/root/.cargo/bin/uv pip install commit0")
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
@@ -136,7 +154,10 @@ def _commit_git_changes(runtime: Runtime) -> None:
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert_and_raise(isinstance(obs, CmdOutputObservation) and obs.exit_code == 0, f"Failed to git add -A: {str(obs)}")
+    assert_and_raise(
+        isinstance(obs, CmdOutputObservation) and obs.exit_code == 0,
+        f"Failed to git add -A: {str(obs)}",
+    )
 
     action = CmdRunAction(command='git commit -m "Forge edits"')
     action.set_hard_timeout(600)
@@ -155,7 +176,9 @@ def _get_git_patch(runtime: Runtime, instance: pd.Series) -> str:
     git_patch = None
 
     while n_retries < 5:
-        action = CmdRunAction(command=f"git diff {instance['base_commit']} HEAD -- . ':(exclude)spec.pdf.bz2'")
+        action = CmdRunAction(
+            command=f"git diff {instance['base_commit']} HEAD -- . ':(exclude)spec.pdf.bz2'"
+        )
         action.set_hard_timeout(600 + 100 * n_retries)
         logger.info(action, extra={"msg_type": "ACTION"})
         obs = runtime.run_action(action)
@@ -183,19 +206,26 @@ def _run_tests_and_get_output(runtime: Runtime, instance: pd.Series) -> tuple[st
     test_dir = instance["test"]["test_dir"]
     action = CmdRunAction(
         command=f"{
-            instance['test']['test_cmd']} --json-report --json-report-file=report.json --continue-on-collection-errors {test_dir} > test_output.txt 2>&1"
+            instance['test']['test_cmd']
+        } --json-report --json-report-file=report.json --continue-on-collection-errors {
+            test_dir
+        } > test_output.txt 2>&1"
     )
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert_and_raise(isinstance(obs, CmdOutputObservation), f"Failed to run test command: {str(obs)}")
+    assert_and_raise(
+        isinstance(obs, CmdOutputObservation), f"Failed to run test command: {str(obs)}"
+    )
 
     action = CmdRunAction(command="cat test_output.txt")
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
-    assert_and_raise(isinstance(obs, CmdOutputObservation), f"Failed to read test output: {str(obs)}")
+    assert_and_raise(
+        isinstance(obs, CmdOutputObservation), f"Failed to read test output: {str(obs)}"
+    )
     test_output = obs.content.strip()
 
     action = CmdRunAction(command="echo $?")
@@ -203,14 +233,17 @@ def _run_tests_and_get_output(runtime: Runtime, instance: pd.Series) -> tuple[st
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     assert_and_raise(
-        isinstance(obs, CmdOutputObservation) and obs.exit_code == 0, f"Failed to save pytest exit code: {str(obs)}"
+        isinstance(obs, CmdOutputObservation) and obs.exit_code == 0,
+        f"Failed to save pytest exit code: {str(obs)}",
     )
     pytest_exit_code = obs.content.strip()
 
     return test_output, pytest_exit_code
 
 
-def _get_test_results(runtime: Runtime, instance: pd.Series, workspace_dir_name: str) -> dict:
+def _get_test_results(
+    runtime: Runtime, instance: pd.Series, workspace_dir_name: str
+) -> dict:
     """Get test results and compute evaluation metrics."""
     repo_name = instance["repo"].split("/")[1]
     repo_name = repo_name.replace(".", "-")
@@ -225,7 +258,9 @@ def _get_test_results(runtime: Runtime, instance: pd.Series, workspace_dir_name:
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
-    assert_and_raise(isinstance(obs, CmdOutputObservation), f"Failed to read test report: {str(obs)}")
+    assert_and_raise(
+        isinstance(obs, CmdOutputObservation), f"Failed to read test report: {str(obs)}"
+    )
     json_report = obs.content.strip()
 
     try:
@@ -258,7 +293,13 @@ def _get_test_results(runtime: Runtime, instance: pd.Series, workspace_dir_name:
         }
     except json.JSONDecodeError:
         logger.error("Failed to parse test report JSON")
-        return {"name": workspace_dir_name, "sum": 0, "passed": 0, "num_passed": 0, "num_tests": len(test_ids)}
+        return {
+            "name": workspace_dir_name,
+            "sum": 0,
+            "passed": 0,
+            "num_passed": 0,
+            "num_tests": len(test_ids),
+        }
 
 
 def _save_workspace_zip(runtime: Runtime, workspace_dir_name: str) -> str:
@@ -310,7 +351,9 @@ def complete_runtime(runtime: Runtime, instance: pd.Series) -> dict[str, Any]:
     }
 
 
-def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True) -> EvalOutput:
+def process_instance(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True
+) -> EvalOutput:
     config = get_config(instance, metadata)
     if reset_logger:
         log_dir = os.path.join(metadata.eval_output_dir, "infer_logs")
@@ -327,7 +370,9 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
                 config=config,
                 initial_user_action=MessageAction(content=instruction),
                 runtime=runtime,
-                fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[metadata.agent_class],
+                fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[
+                    metadata.agent_class
+                ],
             )
         )
         if (
@@ -343,11 +388,20 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
         pytest_exit_code = return_val["pytest_exit_code"]
         zip_file = return_val["zip_file"]
         repo_name = instance["repo"].split("/")[1]
-        zip_dest = os.path.join(metadata.eval_output_dir, "repos", repo_name, f"{repo_name}.zip")
-        patch_file = os.path.join(metadata.eval_output_dir, "repos", repo_name, f"{repo_name}_patch.diff")
-        test_output_file = os.path.join(metadata.eval_output_dir, "repos", repo_name, f"{repo_name}_test_output.txt")
+        zip_dest = os.path.join(
+            metadata.eval_output_dir, "repos", repo_name, f"{repo_name}.zip"
+        )
+        patch_file = os.path.join(
+            metadata.eval_output_dir, "repos", repo_name, f"{repo_name}_patch.diff"
+        )
+        test_output_file = os.path.join(
+            metadata.eval_output_dir, "repos", repo_name, f"{repo_name}_test_output.txt"
+        )
         pytest_exit_code_file = os.path.join(
-            metadata.eval_output_dir, "repos", repo_name, f"{repo_name}_pytest_exit_code.txt"
+            metadata.eval_output_dir,
+            "repos",
+            repo_name,
+            f"{repo_name}_pytest_exit_code.txt",
         )
         os.makedirs(os.path.dirname(zip_dest), exist_ok=True)
         os.rename(zip_file, zip_dest)
@@ -357,9 +411,13 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
             (pytest_exit_code_file, pytest_exit_code),
         ]
         for write_target in write_targets:
-            with open(write_target[0], "w", encoding='utf-8') as f:
+            with open(write_target[0], "w", encoding="utf-8") as f:
                 f.write(write_target[1])
-        logger.info("Got evaluation result for repo %s:\n--------\n%s\n--------", instance.instance_id, eval_result)
+        logger.info(
+            "Got evaluation result for repo %s:\n--------\n%s\n--------",
+            instance.instance_id,
+            eval_result,
+        )
     finally:
         runtime.close()
     test_result = {"eval_result": eval_result}
@@ -390,7 +448,10 @@ def commit0_setup(dataset: pd.DataFrame, repo_split: str) -> pd.DataFrame:
         Filtered dataset based on split type
     """
     filtered_dataset = pd.concat(
-        [dataset[dataset["repo"].str.split("/").str[1] == repo] for repo in SPLIT.get(repo_split, [])]
+        [
+            dataset[dataset["repo"].str.split("/").str[1] == repo]
+            for repo in SPLIT.get(repo_split, [])
+        ]
     )
     if "setup" in filtered_dataset.columns:
         filtered_dataset = filtered_dataset.drop("setup", axis=1)
@@ -406,8 +467,12 @@ if __name__ == "__main__":
         default="wentingzhao/commit0_combined",
         help="dataset to evaluate on, only test split exists for this HF dataset",
     )
-    parser.add_argument("--split", type=str, default="test", help="this is the HF dataset split")
-    parser.add_argument("--repo-split", type=str, default="lite", help="all, lite, or each repo name")
+    parser.add_argument(
+        "--split", type=str, default="test", help="this is the HF dataset split"
+    )
+    parser.add_argument(
+        "--repo-split", type=str, default="lite", help="all, lite, or each repo name"
+    )
     args, _ = parser.parse_known_args()
     dataset = load_dataset(args.dataset, split=args.split)  # nosec B615 - Safe: evaluation benchmark dataset
     commit0_datasets = commit0_setup(dataset.to_pandas(), args.repo_split)
@@ -421,7 +486,9 @@ if __name__ == "__main__":
         raise ValueError(f"Could not find LLM config: --llm_config {args.llm_config}")
     details = {}
     _agent_cls = forge.agenthub.Agent.get_cls(args.agent_cls)
-    dataset_descrption = args.dataset.replace("/", "__") + "-" + args.repo_split.replace("/", "__")
+    dataset_descrption = (
+        args.dataset.replace("/", "__") + "-" + args.repo_split.replace("/", "__")
+    )
     metadata = make_metadata(
         llm_config,
         dataset_descrption,
@@ -433,4 +500,11 @@ if __name__ == "__main__":
     )
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
     instances = prepare_dataset(commit0_datasets, output_file, args.eval_n_limit)
-    run_evaluation(instances, metadata, output_file, args.eval_num_workers, process_instance, timeout_seconds=120 * 60)
+    run_evaluation(
+        instances,
+        metadata,
+        output_file,
+        args.eval_num_workers,
+        process_instance,
+        timeout_seconds=120 * 60,
+    )

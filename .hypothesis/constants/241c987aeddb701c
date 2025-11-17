@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\agenthub\loc_agent\graph_cache.py
+# hypothesis_version: 6.147.0
+
+[100, 3600, './.Forge/graph_cache', '/', ':', '\\', '_', 'cached_at', 'cached_repos', 'distributed (Redis)', 'distributed_hits', 'distributed_misses', 'file_count', 'file_mtimes', 'files_tracked', 'forge:graph_cache', 'full_rebuilds', 'graph', 'hit_rate_percent', 'hits', 'local', 'metadata', 'misses', 'partial_updates', 'r', 'total_requests', 'utf-8', 'w']

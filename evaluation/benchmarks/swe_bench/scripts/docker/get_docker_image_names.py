@@ -30,7 +30,7 @@ def swebench_multimodal_instance_id_to_docker_image_name(instance_id: str) -> st
 dataset = load_dataset(args.dataset, split=args.split)  # nosec B615 - Safe: evaluation benchmark dataset
 instance_ids = dataset["instance_id"]
 print(f"Loading {len(instance_ids)} instances from {args.dataset} split {args.split}")
-with open(args.output, "w", encoding='utf-8') as f:
+with open(args.output, "w", encoding="utf-8") as f:
     for instance_id in instance_ids:
         if args.dataset in [
             "princeton-nlp/SWE-bench",
@@ -39,5 +39,7 @@ with open(args.output, "w", encoding='utf-8') as f:
         ]:
             f.write(swebench_instance_id_to_docker_image_name(instance_id) + "\n")
         else:
-            f.write(swebench_multimodal_instance_id_to_docker_image_name(instance_id) + "\n")
+            f.write(
+                swebench_multimodal_instance_id_to_docker_image_name(instance_id) + "\n"
+            )
 print(f"Saved {len(instance_ids)} images to {args.output}")

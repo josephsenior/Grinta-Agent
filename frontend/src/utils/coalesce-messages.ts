@@ -73,25 +73,23 @@ export function shouldAutoExpand(
   return false;
 }
 
-/**
- * Extracts a summary label from an event for compact display
- */
-export function getEventSummary(event: ForgeEvent): string {
-  if (isForgeAction(event)) {
-    const summary = summarizeActionEvent(event);
-    return summary ?? event.action ?? "Event";
-  }
-
-  if (isForgeObservation(event)) {
-    const summary = summarizeObservationEvent(event);
-    return summary ?? event.observation ?? "Event";
-  }
-
-  return "Event";
-}
-
 type ActionSummaryHandler = (event: ForgeAction) => string | null;
 type ObservationSummaryHandler = (event: ForgeObservation) => string | null;
+
+function toRecord(value: unknown): Record<string, unknown> | undefined {
+  if (typeof value === "object" && value !== null) {
+    return value as Record<string, unknown>;
+  }
+  return undefined;
+}
+
+function extractFilename(path: string): string {
+  if (!path) {
+    return "";
+  }
+  const parts = path.split("/");
+  return parts[parts.length - 1] || path;
+}
 
 const ACTION_SUMMARIZERS: Record<string, ActionSummaryHandler> = {
   run: summarizeRunAction,
@@ -185,17 +183,19 @@ function summarizeReadObservation(event: ForgeObservation): string | null {
   return `Read ${filename}`;
 }
 
-function toRecord(value: unknown): Record<string, unknown> | undefined {
-  if (typeof value === "object" && value !== null) {
-    return value as Record<string, unknown>;
+/**
+ * Extracts a summary label from an event for compact display
+ */
+export function getEventSummary(event: ForgeEvent): string {
+  if (isForgeAction(event)) {
+    const summary = summarizeActionEvent(event);
+    return summary ?? event.action ?? "Event";
   }
-  return undefined;
-}
 
-function extractFilename(path: string): string {
-  if (!path) {
-    return "";
+  if (isForgeObservation(event)) {
+    const summary = summarizeObservationEvent(event);
+    return summary ?? event.observation ?? "Event";
   }
-  const parts = path.split("/");
-  return parts[parts.length - 1] || path;
+
+  return "Event";
 }

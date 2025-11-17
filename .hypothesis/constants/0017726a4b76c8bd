@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\storage\data_models\slack_integration.py
+# hypothesis_version: 6.147.0
+
+['Bot OAuth token', 'Bot user ID', 'Channel ID', 'Event timestamp', 'Forge user ID', 'Message text', 'Message timestamp', 'Message type', 'Random state token', 'Slack channel ID', 'Slack team ID', 'Slack team name', 'Slack user ID', 'Slack workspace ID', 'Workspace ID', 'app_mention', 'message', 'thread_reply']

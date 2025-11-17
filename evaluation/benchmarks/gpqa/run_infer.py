@@ -50,7 +50,9 @@ ACTION_FORMAT = "\n<<FINAL_ANSWER||\n<insert correct answer here, must be one of
 def get_config(metadata: EvalMetadata) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = "python:3.12-bookworm"
-    config = get_FORGE_config_for_eval(metadata=metadata, runtime="docker", sandbox_config=sandbox_config)
+    config = get_FORGE_config_for_eval(
+        metadata=metadata, runtime="docker", sandbox_config=sandbox_config
+    )
     config.set_llm_config(metadata.llm_config)
     agent_config = config.get_agent_config(metadata.agent_class)
     agent_config.enable_prompt_extensions = False
@@ -58,7 +60,9 @@ def get_config(metadata: EvalMetadata) -> ForgeConfig:
 
 
 def gpqa_codeact_user_response(
-    state: State, encapsulate_solution: bool = False, try_parse: Callable[[Action], str] | None = None
+    state: State,
+    encapsulate_solution: bool = False,
+    try_parse: Callable[[Action], str] | None = None,
 ) -> str:
     return f'Please continue working on the task on whatever approach you think is suitable.\nFeel free to use all tools for calculations and solving the problem, and web-search for finding relevant facts during the process if needed\nIf you have finished reporting the answer in the expected format, (and only once that is done), please use the "finish" tool to finish the interaction.\nAgain you are being told a million times to first report the answer in the requested format (see again below for reference) before exiting. DO NOT EXIT WITHOUT REPORTING THE ANSWER FIRST.\nThat is, when you have decided on the answer report in the following format:\n{ACTION_FORMAT}\nIMPORTANT: YOU SHOULD NEVER ASK FOR HUMAN HELP TO SOLVE THIS TASK.\n'
 
@@ -122,7 +126,9 @@ def convert_instance_dict(instance):
     return out_instance_dict
 
 
-def _setup_logging(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool) -> None:
+def _setup_logging(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool
+) -> None:
     """Setup logging for the evaluation instance."""
     if reset_logger:
         log_dir = os.path.join(metadata.eval_output_dir, "infer_logs")
@@ -134,11 +140,16 @@ def _setup_logging(instance: pd.Series, metadata: EvalMetadata, reset_logger: bo
 def _build_instruction(instance: pd.Series) -> str:
     """Build the instruction for the GPQA question."""
     return f'\nWhat is the correct answer to this question:\n\n{
-        instance['question']}\n\n\nChoices:\n\n(A) {
-        instance['choices'][0]}\n\n(B) {
-            instance['choices'][1]}\n\n(C) {
-                instance['choices'][2]}\n\n(D) {
-                    instance['choices'][3]}\n\n\n\n\n\nMOST IMPORTANT: Format your response as follows:\n{ACTION_FORMAT}\n\nAdditional Instructions:\n- Do not try to solve the question in a single step. Break it down into smaller steps.\n- You should ONLY interact with the environment provided to you AND NEVER ASK FOR HUMAN HELP.\n\n- SUPER IMPORTANT: When you have reported the answer to the user in the requested format, (and only once that is done) in the next turn, please finish the interaction using the "finish" tool.\n- Again you are being told a million times to first report the answer in the requested format (see again below for reference) before exiting. DO NOT EXIT WITHOUT REPORTING THE ANSWER FIRST.\n    That is, when you have decided on the answer report in the following format:\n\n{ACTION_FORMAT}\n\nAgain do not quit without reporting the answer first.\nOk now its time to start solving the question. Good luck!\n'
+        instance["question"]
+    }\n\n\nChoices:\n\n(A) {instance["choices"][0]}\n\n(B) {
+        instance["choices"][1]
+    }\n\n(C) {instance["choices"][2]}\n\n(D) {
+        instance["choices"][3]
+    }\n\n\n\n\n\nMOST IMPORTANT: Format your response as follows:\n{
+        ACTION_FORMAT
+    }\n\nAdditional Instructions:\n- Do not try to solve the question in a single step. Break it down into smaller steps.\n- You should ONLY interact with the environment provided to you AND NEVER ASK FOR HUMAN HELP.\n\n- SUPER IMPORTANT: When you have reported the answer to the user in the requested format, (and only once that is done) in the next turn, please finish the interaction using the "finish" tool.\n- Again you are being told a million times to first report the answer in the requested format (see again below for reference) before exiting. DO NOT EXIT WITHOUT REPORTING THE ANSWER FIRST.\n    That is, when you have decided on the answer report in the following format:\n\n{
+        ACTION_FORMAT
+    }\n\nAgain do not quit without reporting the answer first.\nOk now its time to start solving the question. Good luck!\n'
 
 
 def _run_agent_evaluation(config, instruction: str, metadata: EvalMetadata) -> State:
@@ -150,7 +161,9 @@ def _run_agent_evaluation(config, instruction: str, metadata: EvalMetadata) -> S
             config=config,
             initial_user_action=MessageAction(content=instruction),
             runtime=runtime,
-            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN.get(metadata.agent_class),
+            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN.get(
+                metadata.agent_class
+            ),
         )
     )
     assert state is not None, "State should not be None."
@@ -170,14 +183,18 @@ def _check_final_answer_in_event(event, source: str) -> str | None:
     return None
 
 
-def _process_observation_for_answers(event: Observation, question_choices: dict, found_answers: dict) -> None:
+def _process_observation_for_answers(
+    event: Observation, question_choices: dict, found_answers: dict
+) -> None:
     """Process observation event to find answer options."""
     for option, option_text in question_choices.items():
         if option_text in event.content:
             found_answers[option] = True
 
 
-def _extract_agent_answer_from_history(state: State, question_choices: dict) -> tuple[str | None, dict]:
+def _extract_agent_answer_from_history(
+    state: State, question_choices: dict
+) -> tuple[str | None, dict]:
     """Extract the agent's answer from the state history."""
     found_answers = {"A": False, "B": False, "C": False, "D": False}
     final_message = None
@@ -197,12 +214,16 @@ def _extract_agent_answer_from_history(state: State, question_choices: dict) -> 
     return final_message, found_answers
 
 
-def _evaluate_answer(final_message: str | None, found_answers: dict, instance: pd.Series) -> bool:
+def _evaluate_answer(
+    final_message: str | None, found_answers: dict, instance: pd.Series
+) -> bool:
     """Evaluate the agent's answer and return the test result."""
     test_result = compare_answers(final_message, instance.correct_solution)
 
     if final_message is None:
-        if found_options := [option for option, found in found_answers.items() if found]:
+        if found_options := [
+            option for option, found in found_answers.items() if found
+        ]:
             _selected = random.choice(found_options)
             test_result = _selected == instance.correct_solution
             logger.info("#############################################")
@@ -224,7 +245,9 @@ def _log_evaluation_results(final_message: str | None, test_result: bool) -> Non
     logger.info("#############################################")
 
 
-def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True):
+def process_instance(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True
+):
     """Process a single GPQA evaluation instance."""
     config = get_config(metadata)
 
@@ -244,7 +267,9 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
         "C": instance["choices"][2],
         "D": instance["choices"][3],
     }
-    final_message, found_answers = _extract_agent_answer_from_history(state, question_choices)
+    final_message, found_answers = _extract_agent_answer_from_history(
+        state, question_choices
+    )
 
     # Evaluate answer
     test_result = _evaluate_answer(final_message, found_answers, instance)
@@ -261,7 +286,11 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
         history=compatibility_for_eval_history_pairs(state.history),
         metrics=metrics,
         error=state.last_error if state and state.last_error else None,
-        test_result={"result": test_result, "found_answers": found_answers, "last_message": final_message},
+        test_result={
+            "result": test_result,
+            "found_answers": found_answers,
+            "last_message": final_message,
+        },
     )
 
 
@@ -287,7 +316,9 @@ if __name__ == "__main__":
     gpqa_dataset = gpqa_dataset.to_pandas()
     gpqa_dataset["instance_id"] = gpqa_dataset.index
     if args.agent_cls != "CodeActAgent":
-        raise ValueError(f"Agent class {args.agent_cls} not supported for GPQA evaluation.")
+        raise ValueError(
+            f"Agent class {args.agent_cls} not supported for GPQA evaluation."
+        )
     metadata = make_metadata(
         llm_config=llm_config,
         dataset_name=args.data_split,

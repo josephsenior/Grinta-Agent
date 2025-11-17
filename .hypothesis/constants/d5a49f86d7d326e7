@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\core\config\mcp_config.py
+# hypothesis_version: 6.147.0
+
+[',', '=', 'FORGE_MCP_CONFIG_CLS', 'ForgeMCPConfig', 'ForgeMCPConfigImpl', 'MCPConfig', 'MCPSHTTPServerConfig', 'MCPSSEServerConfig', 'MCPStdioServerConfig', 'URL cannot be empty', '^[a-zA-Z0-9_-]+$', 'args', 'before', 'command', 'env', 'forbid', 'forgeMCPConfigImpl', 'http', 'https', 'mcp', 'name', 'shttp_servers', 'sse_servers', 'stdio_servers', 'url', 'ws', 'wss']

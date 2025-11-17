@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\dependencies.py
+# hypothesis_version: 6.147.0
+
+['SESSION_API_KEY', 'X-Session-API-Key']

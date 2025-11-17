@@ -12,7 +12,10 @@ def mock_docker_client():
         container_mock = MagicMock()
         container_mock.status = "running"
         container_mock.attrs = {
-            "Config": {"Env": ["port=12345", "VSCODE_PORT=54321"], "ExposedPorts": {"12345/tcp": {}, "54321/tcp": {}}}
+            "Config": {
+                "Env": ["port=12345", "VSCODE_PORT=54321"],
+                "ExposedPorts": {"12345/tcp": {}, "54321/tcp": {}},
+            }
         }
         mock_client.return_value.containers.get.return_value = container_mock
         mock_client.return_value.containers.run.return_value = container_mock
@@ -83,7 +86,9 @@ def test_volumes_multiple_mounts():
     runtime = DockerRuntime.__new__(DockerRuntime)
     runtime.config = MagicMock()
     runtime.config.runtime_mount = None
-    runtime.config.sandbox.volumes = "/host/path1:/container/path1,/host/path2:/container/path2:ro"
+    runtime.config.sandbox.volumes = (
+        "/host/path1:/container/path1,/host/path2:/container/path2:ro"
+    )
     runtime.config.workspace_mount_path = "/host/path1"
     runtime.config.workspace_mount_path_in_sandbox = "/container/path1"
     volumes = runtime._process_volumes()
@@ -101,9 +106,7 @@ def test_multiple_volumes():
 
     runtime = DockerRuntime.__new__(DockerRuntime)
     runtime.config = MagicMock()
-    runtime.config.sandbox.volumes = (
-        "/host/path1:/container/path1,/host/path2:/container/path2,/host/path3:/container/path3:ro"
-    )
+    runtime.config.sandbox.volumes = "/host/path1:/container/path1,/host/path2:/container/path2,/host/path3:/container/path3:ro"
     runtime.config.workspace_mount_path = "/host/path1"
     runtime.config.workspace_mount_path_in_sandbox = "/container/path1"
     volumes = runtime._process_volumes()

@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\memory\conversation_memory.py
+# hypothesis_version: 6.147.0
+
+['OBSERVATION:\n', 'Visual browsing: %s', 'agent', 'assistant', 'content', 'conversation_memory', 'disabled', 'enable_vector_memory', 'enabled', 'id', 'message', 'role', 'screenshot', 'set of marks', 'system', 'tool', 'tool_call_metadata', 'tool_calls', 'user']

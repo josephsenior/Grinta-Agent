@@ -131,10 +131,11 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
   let timeout: ReturnType<typeof setTimeout> | null = null;
 
   return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout);
+    if (timeout) {
+      clearTimeout(timeout);
+    }
     timeout = setTimeout(() => {
-      // call but ignore returned value
-      void func(...args);
+      func(...args);
     }, wait);
   };
 }
@@ -150,8 +151,7 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
 
   return (...args: Parameters<T>) => {
     if (!inThrottle) {
-      // call but ignore returned value
-      void func(...args);
+      func(...args);
       inThrottle = true;
       setTimeout(() => {
         inThrottle = false;

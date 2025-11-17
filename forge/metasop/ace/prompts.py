@@ -9,18 +9,18 @@ class ACEPromptManager:
 
     Adapts prompts from the research paper for Forge context.
     """
-    
+
     def __init__(self):
         """Load all prompt templates for generator, reflector, curator, and MetaSOP roles."""
         self.generator_prompts = self._load_generator_prompts()
         self.reflector_prompts = self._load_reflector_prompts()
         self.curator_prompts = self._load_curator_prompts()
         self.metasop_prompts = self._load_metasop_prompts()
-    
+
     def _load_generator_prompts(self) -> Dict[str, str]:
         """Load Generator prompts for different task types."""
         return {
-            'appworld': """
+            "appworld": """
 You are a super intelligent AI Assistant whose job is to achieve tasks completely autonomously.
 You will be given a curated playbook of strategies, patterns, and examples to help you solve the current task.
 
@@ -43,7 +43,7 @@ Instructions:
 
 Generate your solution:
 """,
-            'code_generation': """
+            "code_generation": """
 You are an expert code generator with access to a comprehensive playbook of strategies and insights.
 
 ACE Playbook:
@@ -64,7 +64,7 @@ Instructions:
 
 Generate your code solution:
 """,
-            'metasop': """
+            "metasop": """
 You are an expert {role} working on a software development task. You have access to a comprehensive playbook of strategies and insights.
 
 ACE Playbook:
@@ -85,7 +85,7 @@ Instructions:
 
 Generate your solution:
 """,
-            'general': """
+            "general": """
 You are an expert problem solver with access to a comprehensive knowledge base.
 
 ACE Playbook:
@@ -104,13 +104,13 @@ Instructions:
 8. Validate your solution before presenting it
 
 Generate your solution:
-"""
+""",
         }
-    
+
     def _load_reflector_prompts(self) -> Dict[str, str]:
         """Load Reflector prompts adapted from paper."""
         return {
-            'appworld': """
+            "appworld": """
 You are an expert AppWorld coding agent and educator. Your job is to diagnose the current trajectory: identify what went wrong (or could be better), grounded in execution feedback, API usage, unit test report, and ground truth when applicable.
 
 Instructions:
@@ -172,7 +172,7 @@ Answer in this exact JSON format:
     ]
 }}
 """,
-            'metasop': """
+            "metasop": """
 You are an expert software development analyst and educator. Your job is to diagnose the current step execution: identify what went wrong (or could be better), grounded in execution feedback, step traces, and expected outcomes.
 
 Instructions:
@@ -228,7 +228,7 @@ Answer in this exact JSON format:
     ]
 }}
 """,
-            'general': """
+            "general": """
 You are an expert analyst and educator. Your job is to diagnose the current execution: identify what went wrong (or could be better), grounded in execution feedback and results.
 
 Instructions:
@@ -276,13 +276,13 @@ Answer in this exact JSON format:
         {{"id": "ctx-00002", "tag": "harmful"}}
     ]
 }}
-"""
+""",
         }
-    
+
     def _load_curator_prompts(self) -> Dict[str, str]:
         """Load Curator prompts adapted from paper."""
         return {
-            'appworld': """
+            "appworld": """
 You are a master curator of knowledge. Your job is to identify what new insights should be added to an existing playbook based on a reflection from a previous attempt.
 
 Context:
@@ -337,7 +337,7 @@ RESPONSE FORMAT - Output ONLY this JSON structure (no markdown, no code blocks):
     ]
 }}
 """,
-            'metasop': """
+            "metasop": """
 You are a master curator of knowledge for software development workflows. Your job is to identify what new insights should be added to an existing playbook based on a reflection from a previous step execution.
 
 Context:
@@ -384,7 +384,7 @@ RESPONSE FORMAT - Output ONLY this JSON structure:
     ]
 }}
 """,
-            'general': """
+            "general": """
 You are a master curator of knowledge. Your job is to identify what new insights should be added to an existing playbook based on a reflection from a previous attempt.
 
 Instructions:
@@ -419,13 +419,13 @@ RESPONSE FORMAT - Output ONLY this JSON structure:
         }}
     ]
 }}
-"""
+""",
         }
-    
+
     def _load_metasop_prompts(self) -> Dict[str, str]:
         """Load MetaSOP-specific prompts for different roles."""
         return {
-            'product_manager': """
+            "product_manager": """
 You are a Product Manager with access to a comprehensive playbook of strategies and insights.
 
 ACE Playbook:
@@ -445,7 +445,7 @@ Instructions:
 
 Generate your product management solution:
 """,
-            'architect': """
+            "architect": """
 You are a Software Architect with access to a comprehensive playbook of strategies and insights.
 
 ACE Playbook:
@@ -465,7 +465,7 @@ Instructions:
 
 Generate your architectural solution:
 """,
-            'engineer': """
+            "engineer": """
 You are a Software Engineer / Technical Lead with access to a comprehensive playbook of strategies and insights.
 
 ACE Playbook:
@@ -490,7 +490,7 @@ Instructions:
 
 Generate your implementation blueprint (structure + plan, NO actual code):
 """,
-            'qa': """
+            "qa": """
 You are a QA Engineer with access to a comprehensive playbook of strategies and insights.
 
 ACE Playbook:
@@ -510,7 +510,7 @@ Instructions:
 
 Generate your QA solution:
 """,
-            'ui_designer': """
+            "ui_designer": """
 You are a UI/UX Designer with access to a comprehensive playbook of strategies and insights.
 
 ACE Playbook:
@@ -529,114 +529,131 @@ Instructions:
 8. Ensure designs are implementable and user-friendly
 
 Generate your design solution:
-"""
+""",
         }
-    
-    def get_generator_prompt(self, task_type: str, playbook_content: str, 
-                           task: str, role: Optional[str] = None) -> str:
+
+    def get_generator_prompt(
+        self,
+        task_type: str,
+        playbook_content: str,
+        task: str,
+        role: Optional[str] = None,
+    ) -> str:
         """Get formatted generator prompt."""
-        template = self.generator_prompts.get(task_type, self.generator_prompts['general'])
-        
-        if role and task_type == 'metasop':
+        template = self.generator_prompts.get(
+            task_type, self.generator_prompts["general"]
+        )
+
+        if role and task_type == "metasop":
             return template.format(
-                playbook_content=playbook_content,
-                task=task,
-                role=role
+                playbook_content=playbook_content, task=task, role=role
             )
         else:
-            return template.format(
-                playbook_content=playbook_content,
-                task=task
-            )
-    
-    def get_reflector_prompt(self, task_type: str, trajectory: str, 
-                           execution_result: str, playbook_content: str,
-                           ground_truth: Optional[str] = None, test_report: Optional[str] = None,
-                           role: Optional[str] = None, task: Optional[str] = None, 
-                           expected_outcome: Optional[str] = None) -> str:
+            return template.format(playbook_content=playbook_content, task=task)
+
+    def get_reflector_prompt(
+        self,
+        task_type: str,
+        trajectory: str,
+        execution_result: str,
+        playbook_content: str,
+        ground_truth: Optional[str] = None,
+        test_report: Optional[str] = None,
+        role: Optional[str] = None,
+        task: Optional[str] = None,
+        expected_outcome: Optional[str] = None,
+    ) -> str:
         """Get formatted reflector prompt."""
-        template = self.reflector_prompts.get(task_type, self.reflector_prompts['general'])
-        
-        if task_type == 'appworld':
+        template = self.reflector_prompts.get(
+            task_type, self.reflector_prompts["general"]
+        )
+
+        if task_type == "appworld":
             return template.format(
                 ground_truth_code=ground_truth or "Not provided",
                 test_report=test_report or "Not available",
                 playbook_content=playbook_content,
                 trajectory=trajectory,
-                execution_result=execution_result
+                execution_result=execution_result,
             )
-        elif task_type == 'metasop':
+        elif task_type == "metasop":
             return template.format(
                 role=role or "unknown",
                 task=task or "Unknown task",
                 expected_outcome=expected_outcome or "Not specified",
                 playbook_content=playbook_content,
                 trajectory=trajectory,
-                execution_result=execution_result
+                execution_result=execution_result,
             )
         else:
             return template.format(
                 playbook_content=playbook_content,
                 trajectory=trajectory,
-                execution_result=execution_result
+                execution_result=execution_result,
             )
-    
-    def get_curator_prompt(self, task_type: str, current_playbook: str,
-                          generated_attempt: str, reflection_insights: str,
-                          question_context: Optional[str] = None, role: Optional[str] = None,
-                          task: Optional[str] = None, expected_outcome: Optional[str] = None) -> str:
+
+    def get_curator_prompt(
+        self,
+        task_type: str,
+        current_playbook: str,
+        generated_attempt: str,
+        reflection_insights: str,
+        question_context: Optional[str] = None,
+        role: Optional[str] = None,
+        task: Optional[str] = None,
+        expected_outcome: Optional[str] = None,
+    ) -> str:
         """Get formatted curator prompt."""
-        template = self.curator_prompts.get(task_type, self.curator_prompts['general'])
-        
-        if task_type == 'appworld':
+        template = self.curator_prompts.get(task_type, self.curator_prompts["general"])
+
+        if task_type == "appworld":
             return template.format(
                 question_context=question_context or "Unknown context",
                 current_playbook=current_playbook,
                 final_generated_code=generated_attempt,
-                guidebook=reflection_insights
+                guidebook=reflection_insights,
             )
-        elif task_type == 'metasop':
+        elif task_type == "metasop":
             return template.format(
                 role=role or "unknown",
                 task=task or "Unknown task",
                 expected_outcome=expected_outcome or "Not specified",
                 current_playbook=current_playbook,
                 generated_attempt=generated_attempt,
-                reflection_insights=reflection_insights
+                reflection_insights=reflection_insights,
             )
         else:
             return template.format(
                 current_playbook=current_playbook,
                 generated_attempt=generated_attempt,
-                reflection_insights=reflection_insights
+                reflection_insights=reflection_insights,
             )
-    
-    def get_metasop_role_prompt(self, role: str, playbook_content: str, task: str) -> str:
+
+    def get_metasop_role_prompt(
+        self, role: str, playbook_content: str, task: str
+    ) -> str:
         """Get MetaSOP role-specific prompt."""
-        template = self.metasop_prompts.get(role, self.metasop_prompts['engineer'])
-        return template.format(
-            playbook_content=playbook_content,
-            task=task
-        )
-    
+        template = self.metasop_prompts.get(role, self.metasop_prompts["engineer"])
+        return template.format(playbook_content=playbook_content, task=task)
+
     def add_custom_prompt(self, component: str, task_type: str, prompt: str):
         """Add custom prompt for a specific component and task type."""
-        if component == 'generator':
+        if component == "generator":
             self.generator_prompts[task_type] = prompt
-        elif component == 'reflector':
+        elif component == "reflector":
             self.reflector_prompts[task_type] = prompt
-        elif component == 'curator':
+        elif component == "curator":
             self.curator_prompts[task_type] = prompt
-        elif component == 'metasop':
+        elif component == "metasop":
             self.metasop_prompts[task_type] = prompt
         else:
             logger.warning(f"Unknown component: {component}")
-    
+
     def get_available_prompts(self) -> Dict[str, List[str]]:
         """Get list of available prompt types."""
         return {
-            'generator': list(self.generator_prompts.keys()),
-            'reflector': list(self.reflector_prompts.keys()),
-            'curator': list(self.curator_prompts.keys()),
-            'metasop_roles': list(self.metasop_prompts.keys())
+            "generator": list(self.generator_prompts.keys()),
+            "reflector": list(self.reflector_prompts.keys()),
+            "curator": list(self.curator_prompts.keys()),
+            "metasop_roles": list(self.metasop_prompts.keys()),
         }

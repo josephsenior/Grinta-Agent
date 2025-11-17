@@ -10,12 +10,14 @@ from .hot_swapper import HotSwapper
 from .performance_predictor import PerformancePredictor
 from .real_time_monitor import RealTimeMonitor
 from .websocket_server import WebSocketOptimizationServer
+from .integration import RealTimeOptimizationSystem
 
 __all__ = [
-    'LiveOptimizer',
-    'StreamingOptimizationEngine', 
-    'HotSwapper',
-    'PerformancePredictor',
-    'RealTimeMonitor',
-    'WebSocketOptimizationServer'
+    "LiveOptimizer",
+    "StreamingOptimizationEngine",
+    "HotSwapper",
+    "PerformancePredictor",
+    "RealTimeMonitor",
+    "WebSocketOptimizationServer",
+    "RealTimeOptimizationSystem",
 ]

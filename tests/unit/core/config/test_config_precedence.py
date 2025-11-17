@@ -45,7 +45,9 @@ def temp_config_files(tmp_path):
 @patch("forge.core.config.utils.os.path.expanduser")
 def test_llm_config_precedence_cli_highest(mock_expanduser, temp_config_files):
     """Test that CLI parameters have the highest precedence."""
-    mock_expanduser.side_effect = lambda path: path.replace("~", temp_config_files["home_dir"])
+    mock_expanduser.side_effect = lambda path: path.replace(
+        "~", temp_config_files["home_dir"]
+    )
     mock_args = MagicMock()
     mock_args.config_file = temp_config_files["current_dir_toml"]
     mock_args.llm_config = "current-dir-llm"
@@ -56,13 +58,20 @@ def test_llm_config_precedence_cli_highest(mock_expanduser, temp_config_files):
     with patch("os.path.exists", return_value=True):
         config = setup_config_from_args(mock_args)
     assert config.get_llm_config().model == "current-dir-specific-model"
-    assert config.get_llm_config().api_key.get_secret_value() == "current-dir-specific-api-key"
+    assert (
+        config.get_llm_config().api_key.get_secret_value()
+        == "current-dir-specific-api-key"
+    )
 
 
 @patch("forge.core.config.utils.os.path.expanduser")
-def test_current_dir_toml_precedence_over_user_config(mock_expanduser, temp_config_files):
+def test_current_dir_toml_precedence_over_user_config(
+    mock_expanduser, temp_config_files
+):
     """Test that config.toml in current directory has precedence over ~/.Forge/config.toml."""
-    mock_expanduser.side_effect = lambda path: path.replace("~", temp_config_files["home_dir"])
+    mock_expanduser.side_effect = lambda path: path.replace(
+        "~", temp_config_files["home_dir"]
+    )
     mock_args = MagicMock()
     mock_args.config_file = temp_config_files["current_dir_toml"]
     mock_args.llm_config = None
@@ -79,24 +88,34 @@ def test_current_dir_toml_precedence_over_user_config(mock_expanduser, temp_conf
 @patch("forge.core.config.utils.os.path.expanduser")
 def test_get_llm_config_arg_precedence(mock_expanduser, temp_config_files):
     """Test that get_llm_config_arg prioritizes the specified config file."""
-    mock_expanduser.side_effect = lambda path: path.replace("~", temp_config_files["home_dir"])
+    mock_expanduser.side_effect = lambda path: path.replace(
+        "~", temp_config_files["home_dir"]
+    )
     with patch("os.path.exists", return_value=True):
-        llm_config = get_llm_config_arg("current-dir-llm", temp_config_files["current_dir_toml"])
+        llm_config = get_llm_config_arg(
+            "current-dir-llm", temp_config_files["current_dir_toml"]
+        )
     assert llm_config.model == "current-dir-specific-model"
     assert llm_config.api_key.get_secret_value() == "current-dir-specific-api-key"
     with patch("os.path.exists", return_value=False):
-        llm_config = get_llm_config_arg("user-llm", temp_config_files["current_dir_toml"])
+        llm_config = get_llm_config_arg(
+            "user-llm", temp_config_files["current_dir_toml"]
+        )
     assert llm_config is None
 
 
 @patch("forge.core.config.utils.os.path.expanduser")
 @patch("forge.cli.main.FileSettingsStore.get_instance")
 @patch("forge.cli.main.FileSettingsStore.load")
-def test_cli_main_settings_precedence(mock_load, mock_get_instance, mock_expanduser, temp_config_files):
+def test_cli_main_settings_precedence(
+    mock_load, mock_get_instance, mock_expanduser, temp_config_files
+):
     """Test that the CLI main.py correctly applies settings precedence."""
     from forge.cli.main import setup_config_from_args
 
-    mock_expanduser.side_effect = lambda path: path.replace("~", temp_config_files["home_dir"])
+    mock_expanduser.side_effect = lambda path: path.replace(
+        "~", temp_config_files["home_dir"]
+    )
     mock_settings = MagicMock()
     mock_settings.llm_model = "settings-store-model"
     mock_settings.llm_api_key = "settings-store-api-key"
@@ -122,11 +141,15 @@ def test_cli_main_settings_precedence(mock_load, mock_get_instance, mock_expandu
 @patch("forge.core.config.utils.os.path.expanduser")
 @patch("forge.cli.main.FileSettingsStore.get_instance")
 @patch("forge.cli.main.FileSettingsStore.load")
-def test_cli_with_l_parameter_precedence(mock_load, mock_get_instance, mock_expanduser, temp_config_files):
+def test_cli_with_l_parameter_precedence(
+    mock_load, mock_get_instance, mock_expanduser, temp_config_files
+):
     """Test that CLI -l parameter has highest precedence in CLI mode."""
     from forge.cli.main import setup_config_from_args
 
-    mock_expanduser.side_effect = lambda path: path.replace("~", temp_config_files["home_dir"])
+    mock_expanduser.side_effect = lambda path: path.replace(
+        "~", temp_config_files["home_dir"]
+    )
     mock_settings = MagicMock()
     mock_settings.llm_model = "settings-store-model"
     mock_settings.llm_api_key = "settings-store-api-key"
@@ -146,13 +169,18 @@ def test_cli_with_l_parameter_precedence(mock_load, mock_get_instance, mock_expa
     with patch("os.path.exists", return_value=True):
         config = setup_config_from_args(mock_args)
     assert config.get_llm_config().model == "current-dir-specific-model"
-    assert config.get_llm_config().api_key.get_secret_value() == "current-dir-specific-api-key"
+    assert (
+        config.get_llm_config().api_key.get_secret_value()
+        == "current-dir-specific-api-key"
+    )
 
 
 @patch("forge.core.config.utils.os.path.expanduser")
 @patch("forge.cli.main.FileSettingsStore.get_instance")
 @patch("forge.cli.main.FileSettingsStore.load")
-def test_cli_settings_json_not_override_config_toml(mock_load, mock_get_instance, mock_expanduser, temp_config_files):
+def test_cli_settings_json_not_override_config_toml(
+    mock_load, mock_get_instance, mock_expanduser, temp_config_files
+):
     """Test that settings.json doesn't override config.toml in CLI mode."""
     import importlib
     import sys
@@ -162,7 +190,9 @@ def test_cli_settings_json_not_override_config_toml(mock_load, mock_get_instance
         importlib.reload(sys.modules["forge.cli.main"])
     from forge.cli.main import setup_config_from_args
 
-    mock_expanduser.side_effect = lambda path: path.replace("~", temp_config_files["home_dir"])
+    mock_expanduser.side_effect = lambda path: path.replace(
+        "~", temp_config_files["home_dir"]
+    )
     mock_settings = MagicMock()
     mock_settings.llm_model = "settings-json-model"
     mock_settings.llm_api_key = "settings-json-api-key"
@@ -185,7 +215,9 @@ def test_cli_settings_json_not_override_config_toml(mock_load, mock_get_instance
     test_llm_config = test_config.get_llm_config()
     test_llm_config.model = "config-toml-model"
     test_llm_config.api_key = "config-toml-api-key"
-    if mock_args.llm_config or (not test_llm_config.model and (not test_llm_config.api_key)):
+    if mock_args.llm_config or (
+        not test_llm_config.model and (not test_llm_config.api_key)
+    ):
         test_llm_config.model = mock_settings.llm_model
         test_llm_config.api_key = mock_settings.llm_api_key
     assert test_llm_config.model == "config-toml-model"
@@ -228,7 +260,9 @@ def test_cli_args_none_uses_config_toml_values():
     config_from_toml = ForgeConfig()
     config_from_toml.default_agent = "ConfigTomlAgent"
     config_from_toml.max_iterations = 100
-    with patch("forge.core.config.utils.load_FORGE_config", return_value=config_from_toml):
+    with patch(
+        "forge.core.config.utils.load_FORGE_config", return_value=config_from_toml
+    ):
         config = setup_config_from_args(mock_args)
     assert config.default_agent == "ConfigTomlAgent"
     assert config.max_iterations == 100

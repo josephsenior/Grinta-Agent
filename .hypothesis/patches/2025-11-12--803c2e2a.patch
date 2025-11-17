@@ -1,0 +1,21 @@
+From HEAD Mon Sep 17 00:00:00 2001
+From: Hypothesis 6.147.0 <no-reply@hypothesis.works>
+Date: Wed, 12 Nov 2025 00:10:52
+Subject: [PATCH] Hypothesis: add explicit examples
+
+---
+--- ./tests\unit\server\test_http_sampling_overrides_fuzz.py
++++ ./tests\unit\server\test_http_sampling_overrides_fuzz.py
+@@ -80,6 +80,12 @@
+     sample_default=FLOAT_RATE,
+     route=ROUTE_PATH,
+ )
++@example(
++    prefix='/nTlb;',
++    sample_http=0.0,
++    sample_default=0.0,
++    route='/0',
++).via('discovered failure')
+ def test_prefix_match_applies(prefix, sample_http, sample_default, route):
+     simple = f"{prefix}*:1.0"
+     module = reload_app(simple, "", sample_http, sample_default)

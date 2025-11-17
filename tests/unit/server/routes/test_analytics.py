@@ -2,15 +2,59 @@ import base64
 import json
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
+from typing import Any, Callable, cast
 
 import pytest
 from pydantic import SecretStr
 
 from forge.server.routes import analytics as analytics_routes
+from forge.storage.conversation.conversation_store import ConversationStore
+from forge.storage.files import FileStore
 
 
 def _make_base64_json(data: dict) -> str:
     return base64.b64encode(json.dumps(data).encode("utf-8")).decode("utf-8")
+
+
+class LambdaFileStore(FileStore):
+    def __init__(self, reader: Callable[[str], str]):
+        self._reader = reader
+
+    def write(self, path: str, contents: str | bytes) -> None:
+        raise NotImplementedError
+
+    def read(self, path: str) -> str:
+        return self._reader(path)
+
+    def list(self, path: str) -> list[str]:
+        return []
+
+    def delete(self, path: str) -> None:
+        raise NotImplementedError
+
+
+class StubConversationStore(ConversationStore):
+    def __init__(self, search_fn: Callable[[str | None, int], list[Any]]):
+        self._search_fn = search_fn
+
+    async def save_metadata(self, metadata):  # type: ignore[override]
+        raise NotImplementedError
+
+    async def get_metadata(self, conversation_id):  # type: ignore[override]
+        raise NotImplementedError
+
+    async def delete_metadata(self, conversation_id):  # type: ignore[override]
+        raise NotImplementedError
+
+    async def exists(self, conversation_id: str) -> bool:
+        return False
+
+    async def search(self, page_id: str | None = None, limit: int = 20):  # type: ignore[override]
+        return SimpleNamespace(results=self._search_fn(page_id, limit))
+
+    @classmethod
+    async def get_instance(cls, config, user_id):  # type: ignore[override]
+        raise NotImplementedError
 
 
 def test_parse_period_variants():
@@ -30,7 +74,9 @@ def test_parse_period_variants():
 
 
 def test_load_metrics_from_file_json(monkeypatch):
-    file_store = SimpleNamespace(read=lambda filename: _make_base64_json({"service": {"cost": 1}}))
+    file_store = LambdaFileStore(
+        lambda filename: _make_base64_json({"service": {"cost": 1}})
+    )
     data = analytics_routes._load_metrics_from_file(file_store, "file.json")
     assert data == {"service": {"cost": 1}}
 
@@ -40,24 +86,21 @@ def test_load_metrics_from_file_pickle(monkeypatch):
 
     pickled = base64.b64encode(pickle.dumps({"legacy": True})).decode("utf-8")
 
-    class FakeFileStore:
-        def read(self, filename):
-            return pickled
-
-    data = analytics_routes._load_metrics_from_file(FakeFileStore(), "file.pickle")
+    file_store = LambdaFileStore(lambda filename: pickled)
+    data = analytics_routes._load_metrics_from_file(file_store, "file.pickle")
     assert data == {"legacy": True}
 
 
 def test_load_metrics_from_file_error(monkeypatch):
-    class FakeFileStore:
-        def read(self, filename):
-            raise IOError("boom")
+    def _raise(_filename: str) -> str:
+        raise IOError("boom")
 
-    assert analytics_routes._load_metrics_from_file(FakeFileStore(), "file") is None
+    file_store = LambdaFileStore(_raise)
+    assert analytics_routes._load_metrics_from_file(file_store, "file") is None
 
 
 def test_calculate_percentile():
-    values = [1, 2, 3, 4, 5]
+    values = [1.0, 2.0, 3.0, 4.0, 5.0]
     assert analytics_routes._calculate_percentile(values, 50) == 3
     assert analytics_routes._calculate_percentile(values, 99) == 5
     assert analytics_routes._calculate_percentile([], 50) == 0.0
@@ -67,20 +110,17 @@ def test_calculate_percentile():
 async def test_get_all_conversation_metrics_filters(monkeypatch):
     now = datetime.now()
     conv_in = SimpleNamespace(conversation_id="conv-in", created_at=now)
-    conv_out = SimpleNamespace(conversation_id="conv-out", created_at=now - timedelta(days=10))
+    conv_out = SimpleNamespace(
+        conversation_id="conv-out", created_at=now - timedelta(days=10)
+    )
 
-    class FakeConversationStore:
-        async def search(self, page_id=None, limit=None):
-            return SimpleNamespace(results=[conv_in, conv_out])
-
-    class FakeFileStore:
-        def __init__(self):
-            self.data = {
-                "file-conv-in": _make_base64_json({"svc": {"accumulated_cost": 2}}),
-            }
-
-        def read(self, filename):
-            return self.data.get(filename, _make_base64_json({}))
+    store = StubConversationStore(lambda _page_id, _limit: [conv_in, conv_out])
+    data_map = {
+        "file-conv-in": _make_base64_json({"svc": {"accumulated_cost": 2}}),
+    }
+    file_store = LambdaFileStore(
+        lambda filename: data_map.get(filename, _make_base64_json({}))
+    )
 
     monkeypatch.setattr(
         analytics_routes,
@@ -90,8 +130,8 @@ async def test_get_all_conversation_metrics_filters(monkeypatch):
 
     start, end = now - timedelta(days=1), now + timedelta(seconds=1)
     metrics, conversations = await analytics_routes._get_all_conversation_metrics(
-        FakeConversationStore(),
-        FakeFileStore(),
+        store,
+        file_store,
         user_id="user",
         start_date=start,
         end_date=end,
@@ -103,13 +143,12 @@ async def test_get_all_conversation_metrics_filters(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_get_all_conversation_metrics_handles_exception(monkeypatch):
-    class FailStore:
-        async def search(self, page_id=None, limit=None):
-            raise RuntimeError("fail")
+    def raise_search(_page_id: str | None, _limit: int) -> list[Any]:
+        raise RuntimeError("fail")
 
     metrics, conversations = await analytics_routes._get_all_conversation_metrics(
-        FailStore(),
-        SimpleNamespace(read=lambda _: _make_base64_json({})),
+        StubConversationStore(raise_search),
+        LambdaFileStore(lambda _: _make_base64_json({})),
         user_id="user",
         start_date=datetime.now(),
         end_date=datetime.now(),
@@ -120,11 +159,8 @@ async def test_get_all_conversation_metrics_handles_exception(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_fetch_conversations(monkeypatch):
-    class FakeStore:
-        async def search(self, page_id=None, limit=None):
-            return SimpleNamespace(results=[1, 2])
-
-    conversations = await analytics_routes._fetch_conversations(FakeStore(), "user")
+    store = StubConversationStore(lambda _page_id, _limit: [1, 2])
+    conversations = await analytics_routes._fetch_conversations(store, "user")
     assert conversations == [1, 2]
 
 
@@ -145,7 +181,7 @@ def test_load_conversation_metrics(monkeypatch):
         lambda conversation_id, user_id: "file-key",
     )
 
-    file_store = SimpleNamespace(read=lambda _: _make_base64_json({"svc": {"token": 1}}))
+    file_store = LambdaFileStore(lambda _: _make_base64_json({"svc": {"token": 1}}))
     conv = SimpleNamespace(conversation_id="conv1")
     metrics = analytics_routes._load_conversation_metrics(conv, "user", file_store)
     assert metrics[0]["conversation_id"] == "conv1"
@@ -155,14 +191,22 @@ def test_aggregate_helpers():
     all_metrics = [
         {
             "token_usages": [
-                {"model": "gpt", "prompt_tokens": 10, "completion_tokens": 5, "cache_read_tokens": 2, "cache_write_tokens": 1},
+                {
+                    "model": "gpt",
+                    "prompt_tokens": 10,
+                    "completion_tokens": 5,
+                    "cache_read_tokens": 2,
+                    "cache_write_tokens": 1,
+                },
             ],
             "costs": [{"model": "gpt", "cost": 1.2}],
-            "response_latencies": [{"latency": 0.3}]
+            "response_latencies": [{"latency": 0.3}],
         }
     ]
 
-    total_tokens, total_requests, model_stats = analytics_routes._aggregate_token_usage(all_metrics)
+    total_tokens, total_requests, model_stats = analytics_routes._aggregate_token_usage(
+        all_metrics
+    )
     assert total_tokens == 15 and total_requests == 1
     assert model_stats["gpt"].cache_hit_tokens == 2
 
@@ -180,26 +224,30 @@ def test_aggregate_helpers():
 async def test_get_analytics_dashboard_full(monkeypatch):
     conversations = [SimpleNamespace(conversation_id="conv", created_at=datetime.now())]
 
-    class FakeConversationStore:
-        async def search(self, page_id=None, limit=None):
-            return SimpleNamespace(results=conversations)
+    conversation_store = StubConversationStore(lambda _page_id, _limit: conversations)
 
-    file_store = SimpleNamespace(read=lambda _: _make_base64_json({
-        "svc": {
-            "accumulated_cost": 3,
-            "token_usages": [
-                {"model": "gpt", "prompt_tokens": 5, "completion_tokens": 5, "cache_read_tokens": 1, "cache_write_tokens": 1}
-            ],
-            "costs": [{"model": "gpt", "cost": 3}],
-            "response_latencies": [{"latency": 0.5}]
-        }
-    }))
-
-    monkeypatch.setattr(
-        analytics_routes,
-        "file_store",
-        file_store,
+    file_store = LambdaFileStore(
+        lambda _: _make_base64_json(
+            {
+                "svc": {
+                    "accumulated_cost": 3,
+                    "token_usages": [
+                        {
+                            "model": "gpt",
+                            "prompt_tokens": 5,
+                            "completion_tokens": 5,
+                            "cache_read_tokens": 1,
+                            "cache_write_tokens": 1,
+                        }
+                    ],
+                    "costs": [{"model": "gpt", "cost": 3}],
+                    "response_latencies": [{"latency": 0.5}],
+                }
+            }
+        )
     )
+
+    monkeypatch.setattr(analytics_routes, "file_store", file_store)
     monkeypatch.setattr(
         analytics_routes,
         "get_conversation_stats_filename",
@@ -209,7 +257,7 @@ async def test_get_analytics_dashboard_full(monkeypatch):
     result = await analytics_routes.get_analytics_dashboard(
         period="week",
         user_id="user",
-        conversation_store=FakeConversationStore(),
+        conversation_store=conversation_store,
     )
 
     assert result.summary.total_cost == 3
@@ -236,7 +284,7 @@ async def test_get_analytics_dashboard_exception(monkeypatch):
     result = await analytics_routes.get_analytics_dashboard(
         period="week",
         user_id="user",
-        conversation_store=SimpleNamespace(),
+        conversation_store=cast(ConversationStore, SimpleNamespace()),
     )
     assert result.summary.total_cost == 0
 
@@ -245,9 +293,7 @@ async def test_get_analytics_dashboard_exception(monkeypatch):
 async def test_get_analytics_summary_success(monkeypatch):
     conversations = [SimpleNamespace(conversation_id="conv", created_at=datetime.now())]
 
-    class FakeConversationStore:
-        async def search(self, page_id=None, limit=None):
-            return SimpleNamespace(results=conversations)
+    conversation_store = StubConversationStore(lambda _page_id, _limit: conversations)
 
     metrics_payload = {
         "svc": {
@@ -260,13 +306,19 @@ async def test_get_analytics_summary_success(monkeypatch):
         }
     }
 
-    monkeypatch.setattr(analytics_routes, "file_store", SimpleNamespace(read=lambda _: _make_base64_json(metrics_payload)))
-    monkeypatch.setattr(analytics_routes, "get_conversation_stats_filename", lambda *_: "file-key")
+    monkeypatch.setattr(
+        analytics_routes,
+        "file_store",
+        LambdaFileStore(lambda _: _make_base64_json(metrics_payload)),
+    )
+    monkeypatch.setattr(
+        analytics_routes, "get_conversation_stats_filename", lambda *_: "file-key"
+    )
 
     summary = await analytics_routes.get_analytics_summary(
         period="week",
         user_id="user",
-        conversation_store=FakeConversationStore(),
+        conversation_store=conversation_store,
     )
 
     assert summary.total_cost == 4
@@ -292,19 +344,21 @@ async def test_get_analytics_summary_exception(monkeypatch):
     summary = await analytics_routes.get_analytics_summary(
         period="week",
         user_id="user",
-        conversation_store=SimpleNamespace(),
+        conversation_store=cast(ConversationStore, SimpleNamespace()),
     )
     assert summary.total_cost == 0
 
 
 def test_calculate_totals_and_averages():
-    totals = analytics_routes._calculate_totals([
-        {
-            "accumulated_cost": 5,
-            "token_usages": [{"prompt_tokens": 1, "completion_tokens": 1}],
-            "response_latencies": [{"latency": 0.1}],
-        }
-    ])
+    totals = analytics_routes._calculate_totals(
+        [
+            {
+                "accumulated_cost": 5,
+                "token_usages": [{"prompt_tokens": 1, "completion_tokens": 1}],
+                "response_latencies": [{"latency": 0.1}],
+            }
+        ]
+    )
     assert totals["cost"] == 5
 
     averages = analytics_routes._calculate_averages(totals, 1)
@@ -316,7 +370,9 @@ def test_calculate_totals_and_averages():
 async def test_get_model_usage_success(monkeypatch):
     all_metrics = [
         {
-            "token_usages": [{"model": "gpt", "prompt_tokens": 1, "completion_tokens": 1}],
+            "token_usages": [
+                {"model": "gpt", "prompt_tokens": 1, "completion_tokens": 1}
+            ],
             "costs": [{"model": "gpt", "cost": 2}],
         }
     ]
@@ -325,7 +381,9 @@ async def test_get_model_usage_success(monkeypatch):
         return all_metrics, []
 
     monkeypatch.setattr(analytics_routes, "_get_all_conversation_metrics", fake_get)
-    stats = await analytics_routes.get_model_usage("week", "user", SimpleNamespace())
+    stats = await analytics_routes.get_model_usage(
+        "week", "user", cast(ConversationStore, SimpleNamespace())
+    )
     assert stats[0].total_cost == 2
 
 
@@ -341,15 +399,21 @@ async def test_get_model_usage_exception(monkeypatch):
         raise RuntimeError("boom")
 
     monkeypatch.setattr(analytics_routes, "_get_all_conversation_metrics", failing)
-    stats = await analytics_routes.get_model_usage("week", "user", SimpleNamespace())
+    stats = await analytics_routes.get_model_usage(
+        "week", "user", cast(ConversationStore, SimpleNamespace())
+    )
     assert stats == []
 
 
 def test_aggregate_model_metrics_helpers():
-    metrics = [{
-        "token_usages": [{"model": "gpt", "prompt_tokens": 1, "completion_tokens": 2}],
-        "costs": [{"model": "gpt", "cost": 3}],
-    }]
+    metrics = [
+        {
+            "token_usages": [
+                {"model": "gpt", "prompt_tokens": 1, "completion_tokens": 2}
+            ],
+            "costs": [{"model": "gpt", "cost": 3}],
+        }
+    ]
 
     stats, costs = analytics_routes._aggregate_model_metrics(metrics)
     analytics_routes._apply_costs_to_stats(stats, costs)
@@ -365,7 +429,9 @@ async def test_get_cost_breakdown_success(monkeypatch):
         return all_metrics, []
 
     monkeypatch.setattr(analytics_routes, "_get_all_conversation_metrics", fake_get)
-    breakdown = await analytics_routes.get_cost_breakdown("week", "user", SimpleNamespace())
+    breakdown = await analytics_routes.get_cost_breakdown(
+        "week", "user", cast(ConversationStore, SimpleNamespace())
+    )
     assert breakdown.total_cost == 1
     assert breakdown.by_model["gpt"] == 1
 
@@ -382,7 +448,9 @@ async def test_get_cost_breakdown_exception(monkeypatch):
         raise RuntimeError("boom")
 
     monkeypatch.setattr(analytics_routes, "_get_all_conversation_metrics", failing)
-    breakdown = await analytics_routes.get_cost_breakdown("week", "user", SimpleNamespace())
+    breakdown = await analytics_routes.get_cost_breakdown(
+        "week", "user", cast(ConversationStore, SimpleNamespace())
+    )
     assert breakdown.total_cost == 0
 
 
@@ -406,7 +474,9 @@ def test_process_prompt_metrics(monkeypatch):
             "variant": SimpleNamespace(composite_score=0.5, avg_token_cost=1),
         }
     )
-    optimized, variants, improvement, savings = analytics_routes._process_prompt_metrics("prompt", registry, tracker)
+    optimized, variants, improvement, savings = (
+        analytics_routes._process_prompt_metrics("prompt", registry, tracker)
+    )
     assert optimized == 1
     assert variants == 2
     assert improvement == 0.5
@@ -414,7 +484,12 @@ def test_process_prompt_metrics(monkeypatch):
 
 
 def test_process_prompt_metrics_no_registry():
-    assert analytics_routes._process_prompt_metrics("prompt", None, None) == (0, 0, 0.0, 0.0)
+    assert analytics_routes._process_prompt_metrics("prompt", None, None) == (
+        0,
+        0,
+        0.0,
+        0.0,
+    )
 
 
 def test_extract_optimization_data(monkeypatch):
@@ -428,10 +503,17 @@ def test_extract_optimization_data(monkeypatch):
         }
     )
     session = SimpleNamespace(
-        agent=SimpleNamespace(prompt_optimizer={"registry": registry, "tracker": tracker, "optimizer": object()}),
+        agent=SimpleNamespace(
+            prompt_optimizer={
+                "registry": registry,
+                "tracker": tracker,
+                "optimizer": object(),
+            }
+        ),
     )
 
     data = analytics_routes._extract_optimization_data(session)
+    assert data is not None
     assert data["enabled"] is True
     assert data["total_prompts"] == 1
 

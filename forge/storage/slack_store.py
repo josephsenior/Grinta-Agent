@@ -117,7 +117,9 @@ class SlackStore:
         """Get all Slack links for an Forge user."""
         user_links = self._read_json_file(self.user_links_file)
         return [
-            SlackUserLink(**data) for data in user_links.values() if data.get("FORGE_user_id") == FORGE_user_id
+            SlackUserLink(**data)
+            for data in user_links.values()
+            if data.get("FORGE_user_id") == FORGE_user_id
         ]
 
     def delete_user_link(self, workspace_id: str, slack_user_id: str) -> bool:

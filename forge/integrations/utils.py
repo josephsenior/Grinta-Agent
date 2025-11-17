@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pydantic import SecretStr
 
 from forge.core.logger import forge_logger as logger
 from forge.integrations.bitbucket.bitbucket_service import BitBucketService
@@ -10,11 +10,10 @@ from forge.integrations.github.github_service import GitHubService
 from forge.integrations.gitlab.gitlab_service import GitLabService
 from forge.integrations.provider import ProviderType
 
-if TYPE_CHECKING:
-    from pydantic import SecretStr
 
-
-async def validate_provider_token(token: SecretStr, base_domain: str | None = None) -> ProviderType | None:
+async def validate_provider_token(
+    token: SecretStr | None, base_domain: str | None = None
+) -> ProviderType | None:
     """Determine whether a token is for GitHub, GitLab, or Bitbucket by attempting to get user info.
 
     from the services.
@@ -53,5 +52,5 @@ async def validate_provider_token(token: SecretStr, base_domain: str | None = No
         return ProviderType.BITBUCKET
     except Exception as e:
         bitbucket_error = e
-    logger.debug("Failed to validate token: %s \n %s \n %s", github_error, gitlab_error, bitbucket_error)
+    logger.debug("Failed to validate token against supported providers")
     return None

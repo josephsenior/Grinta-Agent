@@ -76,7 +76,7 @@ def get_data(dataset, hardness):
     data_path = os.path.join(LOCAL_DATA_DIR, f"{dataset}-{hardness}.jsonl")
     if os.path.exists(data_path):
         print(f"Loading data from {data_path}")
-        with open(data_path, "r", encoding='utf-8') as f:
+        with open(data_path, "r", encoding="utf-8") as f:
             return json.load(f)
     else:
         print(
@@ -88,7 +88,7 @@ def get_data(dataset, hardness):
         if url.status_code == 200:
             lines = url.text.splitlines()
             data.extend((json.loads(line) for line in lines))
-            with open(data_path, "w", encoding='utf-8') as f:
+            with open(data_path, "w", encoding="utf-8") as f:
                 json.dump(data, f)
         print(f"Data saved to {data_path}")
     return data
@@ -102,7 +102,6 @@ def encode_question(question):
 
 
 def normalize_answer(s):
-
     def remove_articles(text):
         return re.sub("\\b(a|an|the|usd)\\b", " ", text)
 

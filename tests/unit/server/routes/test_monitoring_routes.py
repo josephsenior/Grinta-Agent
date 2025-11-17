@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime
 from types import SimpleNamespace
+from typing import Any, cast
 import sys
 import types
 
@@ -12,31 +13,33 @@ import pytest
 
 from fastapi import HTTPException, FastAPI
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocket
 
 from forge.server.routes import monitoring as monitoring_routes
 
 
 class DummyCache:
-    async def get_cache_stats(self):
+    async def get_cache_stats(self) -> dict[str, Any]:
         return {"redis_available": True, "cache_type": "redis", "cached_users": 7}
 
 
 class DummyWebSocket:
-    def __init__(self, fail_close: bool = False):
-        self.accepted = False
-        self.messages = []
-        self.closed = False
+    def __init__(self, fail_close: bool = False) -> None:
+        self.accepted: bool = False
+        self.messages: list[Any] = []
+        self.closed: bool = False
         self.fail_close = fail_close
+        self.client = SimpleNamespace(host="127.0.0.1")
 
-    async def accept(self):
+    async def accept(self) -> None:
         self.accepted = True
 
-    async def send_json(self, data):
+    async def send_json(self, data: Any) -> None:
         self.messages.append(data)
         if len(self.messages) >= 2:
             raise asyncio.CancelledError
 
-    async def close(self):
+    async def close(self) -> None:
         self.closed = True
         if self.fail_close:
             raise RuntimeError("close failed")
@@ -56,13 +59,18 @@ async def test_get_metrics_success(monkeypatch):
     monkeypatch.setattr(
         monitoring_routes,
         "conversation_manager",
-        SimpleNamespace(get_active_conversations=fake_get_active_conversations, sessions={"s": object()}),
+        SimpleNamespace(
+            get_active_conversations=fake_get_active_conversations,
+            sessions={"s": object()},
+        ),
     )
 
     async def fake_get_async_cache():
         return DummyCache()
 
-    fake_cache_module = types.SimpleNamespace(get_async_smart_cache=fake_get_async_cache)
+    fake_cache_module = types.SimpleNamespace(
+        get_async_smart_cache=fake_get_async_cache
+    )
     monkeypatch.setitem(sys.modules, "forge.core.cache", fake_cache_module)
 
     metrics = await monitoring_routes.get_metrics()
@@ -107,7 +115,9 @@ async def test_get_metrics_uses_sessions_fallback(monkeypatch):
     async def fake_get_async_cache():
         return DummyCache()
 
-    fake_cache_module = types.SimpleNamespace(get_async_smart_cache=fake_get_async_cache)
+    fake_cache_module = types.SimpleNamespace(
+        get_async_smart_cache=fake_get_async_cache
+    )
     monkeypatch.setitem(sys.modules, "forge.core.cache", fake_cache_module)
 
     metrics = await monitoring_routes.get_metrics()
@@ -151,7 +161,7 @@ async def test_live_metrics_stream_happy_path(monkeypatch):
     monkeypatch.setattr(monitoring_routes.asyncio, "sleep", cancel_soon)
 
     with pytest.raises(asyncio.CancelledError):
-        await monitoring_routes.live_metrics_stream(ws)
+        await monitoring_routes.live_metrics_stream(cast(WebSocket, ws))
 
     assert ws.accepted is True
     assert len(ws.messages) >= 1
@@ -172,9 +182,92 @@ async def test_live_metrics_stream_collect_error(monkeypatch):
     monkeypatch.setattr(monitoring_routes.asyncio, "sleep", cancel_soon)
 
     with pytest.raises(asyncio.CancelledError):
-        await monitoring_routes.live_metrics_stream(ws)
+        await monitoring_routes.live_metrics_stream(cast(WebSocket, ws))
 
     assert any("error" in msg for msg in ws.messages)
+
+
+def test_runtime_orchestrator_prom_lines(monkeypatch):
+    from forge.runtime import telemetry as telemetry_module
+
+    fake = telemetry_module.RuntimeTelemetry()
+    fake.record_acquire("local", reused=False)
+    fake.record_acquire("docker", reused=True)
+    fake.record_acquire("docker", reused=True)
+    fake.record_release("local")
+    fake.record_watchdog_termination("docker", "active_timeout")
+    fake.record_scaling_signal("capacity_exhausted|docker", severity="warning")
+    monkeypatch.setattr(telemetry_module, "runtime_telemetry", fake, raising=False)
+    monkeypatch.setattr(
+        monitoring_routes.runtime_orchestrator,
+        "pool_stats",
+        lambda: {"local": 1, "docker": 2},
+    )
+    monkeypatch.setattr(
+        monitoring_routes.runtime_orchestrator,
+        "delegate_stats",
+        lambda: {"local": 3},
+    )
+    monkeypatch.setattr(
+        monitoring_routes.runtime_orchestrator,
+        "idle_reclaim_stats",
+        lambda: {"docker": 2},
+    )
+    monkeypatch.setattr(
+        monitoring_routes.runtime_orchestrator,
+        "eviction_stats",
+        lambda: {"docker": 1},
+    )
+    monkeypatch.setattr(
+        monitoring_routes.runtime_watchdog,
+        "stats",
+        lambda: {"docker": 1},
+    )
+
+    lines = monitoring_routes._runtime_orchestrator_prom_lines()
+    joined = "\n".join(lines)
+    assert "forge_runtime_acquire_total 3" in joined
+    assert 'forge_runtime_reuse{kind="docker"} 2' in joined
+    assert "forge_runtime_release_total 1" in joined
+    assert 'forge_runtime_pool_size{kind="docker"} 2' in joined
+    assert "forge_runtime_pool_size_total 3" in joined
+    assert 'forge_runtime_delegate_fork{parent="local"} 3' in joined
+    assert "forge_runtime_watchdog_terminations_total 1" in joined
+    assert (
+        'forge_runtime_watchdog_terminations{kind="docker",reason="active_timeout"} 1'
+        in joined
+    )
+    assert (
+        'forge_runtime_scaling_signals{kind="docker",signal="capacity_exhausted"} 1'
+        in joined
+    )
+    assert 'forge_runtime_watchdog_watched{kind="docker"} 1' in joined
+    assert "forge_runtime_watchdog_watched_total 1" in joined
+    assert 'forge_runtime_pool_idle_reclaim{kind="docker"} 2' in joined
+    assert "forge_runtime_pool_idle_reclaim_total 2" in joined
+    assert 'forge_runtime_pool_eviction{kind="docker"} 1' in joined
+    assert "forge_runtime_pool_eviction_total 1" in joined
+    fake.reset()
+
+
+def test_config_schema_prom_lines(monkeypatch):
+    monkeypatch.setattr(
+        monitoring_routes.config_telemetry,
+        "snapshot",
+        lambda: {
+            "schema_missing": 1,
+            "schema_mismatch": {"1.0.0": 1},
+            "invalid_agents": {"agent.Bad": 1},
+            "invalid_base": 1,
+        },
+    )
+
+    lines = monitoring_routes._config_schema_prom_lines()
+    joined = "\n".join(lines)
+    assert "forge_agent_config_schema_missing_total 1" in joined
+    assert 'forge_agent_config_schema_mismatch{version="1.0.0"} 1' in joined
+    assert 'forge_agent_config_invalid_section{agent="agent.Bad"} 1' in joined
+    assert "forge_agent_config_invalid_base_total 1" in joined
 
 
 @pytest.mark.asyncio
@@ -203,7 +296,7 @@ async def test_live_metrics_stream_disconnect(monkeypatch):
 
     monkeypatch.setattr(monitoring_routes.asyncio, "sleep", raise_disconnect)
 
-    await monitoring_routes.live_metrics_stream(ws)
+    await monitoring_routes.live_metrics_stream(cast(WebSocket, ws))
     assert ws.accepted is True
 
 
@@ -221,4 +314,67 @@ async def test_live_metrics_stream_close_failure(monkeypatch):
 
     monkeypatch.setattr(monitoring_routes.asyncio, "sleep", raise_runtime)
 
-    await monitoring_routes.live_metrics_stream(ws)
+    await monitoring_routes.live_metrics_stream(cast(WebSocket, ws))
+
+
+def test_controller_health_endpoint(monkeypatch):
+    client = _make_test_client()
+    fake_controller = object()
+    monkeypatch.setattr(
+        monitoring_routes,
+        "conversation_manager",
+        SimpleNamespace(
+            get_agent_session=lambda sid: SimpleNamespace(controller=fake_controller)
+        ),
+    )
+    monkeypatch.setattr(
+        monitoring_routes,
+        "collect_controller_health",
+        lambda controller: {"controller_id": "abc", "ok": True},
+    )
+
+    resp = client.get("/api/monitoring/controller/test-session/health")
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+
+
+def test_controller_health_endpoint_missing_session(monkeypatch):
+    client = _make_test_client()
+    monkeypatch.setattr(
+        monitoring_routes,
+        "conversation_manager",
+        SimpleNamespace(get_agent_session=lambda sid: None),
+    )
+    resp = client.get("/api/monitoring/controller/missing-session/health")
+    assert resp.status_code == 404
+
+
+def test_controller_health_endpoint_no_controller(monkeypatch):
+    client = _make_test_client()
+    monkeypatch.setattr(
+        monitoring_routes,
+        "conversation_manager",
+        SimpleNamespace(
+            get_agent_session=lambda sid: SimpleNamespace(controller=None)
+        ),
+    )
+    resp = client.get("/api/monitoring/controller/no-controller/health")
+    assert resp.status_code == 404
+
+
+def test_process_manager_health_endpoint(monkeypatch):
+    client = _make_test_client()
+    fake_manager = SimpleNamespace(get_running_processes=lambda: [])
+    monkeypatch.setattr(
+        monitoring_routes,
+        "conversation_manager",
+        SimpleNamespace(process_manager=fake_manager),
+    )
+    monkeypatch.setattr(
+        monitoring_routes,
+        "get_process_manager_health_snapshot",
+        lambda active_processes=None: {"metrics": {"active_processes": 0}},
+    )
+    resp = client.get("/api/monitoring/processes/health")
+    assert resp.status_code == 200
+    assert resp.json()["metrics"]["active_processes"] == 0

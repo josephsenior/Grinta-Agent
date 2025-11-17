@@ -23,6 +23,7 @@ from forge.core.config.mcp_config import MCPConfig
 from forge.core.config.sandbox_config import SandboxConfig
 from forge.core.config.security_config import SecurityConfig
 from forge.core.config.condenser_config import CondenserConfig
+from forge.core.config.runtime_pool_config import RuntimePoolConfig
 
 
 class ForgeConfig(BaseModel):
@@ -84,9 +85,13 @@ class ForgeConfig(BaseModel):
     save_trajectory_path: str | None = Field(default=None)
     save_screenshots_in_trajectory: bool = Field(default=False)
     replay_trajectory_path: str | None = Field(default=None)
-    search_api_key: SecretStr | None = Field(default=None, description="API key for legacy search integrations")
+    search_api_key: SecretStr | None = Field(
+        default=None, description="API key for legacy search integrations"
+    )
     workspace_base: str | None = Field(default=None)
-    workspace_mount_path_in_sandbox: str = Field(default=DEFAULT_WORKSPACE_MOUNT_PATH_IN_SANDBOX)
+    workspace_mount_path_in_sandbox: str = Field(
+        default=DEFAULT_WORKSPACE_MOUNT_PATH_IN_SANDBOX
+    )
     workspace_mount_path: str | None = Field(default=None, deprecated=True)
     workspace_mount_rewrite: str | None = Field(default=None, deprecated=True)
     cache_dir: str = Field(default="/tmp/cache")  # nosec B108 - Safe: configurable cache directory
@@ -108,16 +113,168 @@ class ForgeConfig(BaseModel):
     mcp: MCPConfig = Field(default_factory=lambda: MCPConfig())
     kubernetes: KubernetesConfig = Field(default_factory=lambda: KubernetesConfig())
     cli: CLIConfig = Field(default_factory=lambda: CLIConfig())
-    git_user_name: str = Field(default="forge", description="Git user name for commits made by the agent")
+    git_user_name: str = Field(
+        default="forge", description="Git user name for commits made by the agent"
+    )
     git_user_email: str = Field(
         default="Forge@all-hands.dev",
         description="Git user email for commits made by the agent",
     )
+    # Redis configuration for distributed quota tracking
+    redis_url: str | None = Field(
+        default=None,
+        description="Redis connection URL for distributed quota tracking (defaults to REDIS_URL env var)",
+    )
+    redis_connection_pool_size: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+        description="Redis connection pool size",
+    )
+    redis_connection_timeout: float = Field(
+        default=5.0,
+        ge=1.0,
+        le=60.0,
+        description="Redis connection timeout in seconds",
+    )
+    redis_quota_fallback_enabled: bool = Field(
+        default=True,
+        description="Fall back to in-memory quota if Redis unavailable",
+    )
+    # Structured logging configuration
+    log_format: str = Field(
+        default="json",
+        description="Log format: 'json' or 'text'",
+    )
+    log_level: str = Field(
+        default="INFO",
+        description="Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL",
+    )
+    log_shipping_enabled: bool = Field(
+        default=False,
+        description="Enable log shipping to external services",
+    )
+    log_shipping_endpoint: str | None = Field(
+        default=None,
+        description="Log shipping endpoint (e.g., Datadog, ELK)",
+    )
+    log_shipping_api_key: SecretStr | None = Field(
+        default=None,
+        description="API key for log shipping service",
+    )
+    # Distributed tracing configuration
+    tracing_enabled: bool = Field(
+        default=True,
+        description="Enable distributed tracing",
+    )
+    tracing_exporter: str = Field(
+        default="console",
+        description="Tracing exporter: 'jaeger', 'zipkin', 'otlp', 'console'",
+    )
+    tracing_endpoint: str | None = Field(
+        default=None,
+        description="Tracing endpoint URL",
+    )
+    tracing_sample_rate: float = Field(
+        default=0.1,
+        ge=0.0,
+        le=1.0,
+        description="Trace sampling rate (0.0 to 1.0)",
+    )
+    tracing_service_name: str = Field(
+        default="forge",
+        description="Service name for tracing",
+    )
+    tracing_service_version: str = Field(
+        default="1.0.0",
+        description="Service version for tracing",
+    )
+    runtime_pool: RuntimePoolConfig = Field(
+        default_factory=RuntimePoolConfig,
+        description="Warm runtime pool policy configuration",
+    )
+    # Alert policies and SLO tracking
+    alerting_enabled: bool = Field(
+        default=False,
+        description="Enable alerting policies",
+    )
+    alerting_endpoint: str | None = Field(
+        default=None,
+        description="Alerting endpoint (e.g., PagerDuty, Slack)",
+    )
+    alerting_api_key: SecretStr | None = Field(
+        default=None,
+        description="API key for alerting service",
+    )
+    require_observability_dependencies: bool = Field(
+        default=False,
+        description=(
+            "When true, fail fast during startup if monitoring dependencies such as "
+            "Prometheus or Redis are unavailable. Can also be enabled via "
+            "FORGE_STRICT_OBSERVABILITY=1."
+        ),
+    )
+    slo_availability_target: float = Field(
+        default=0.99,
+        ge=0.0,
+        le=1.0,
+        description="Availability SLO target (0.0 to 1.0)",
+    )
+    slo_latency_p95_target_ms: float = Field(
+        default=1000.0,
+        ge=100.0,
+        description="P95 latency SLO target in milliseconds",
+    )
+    slo_error_rate_target: float = Field(
+        default=0.01,
+        ge=0.0,
+        le=1.0,
+        description="Error rate SLO target (0.0 to 1.0)",
+    )
+    # Retry queue configuration
+    retry_queue_enabled: bool = Field(
+        default=True,
+        description="Enable retry queue for failed operations",
+    )
+    retry_queue_backend: str = Field(
+        default="redis",
+        description="Retry queue backend: 'redis', 'memory', 'database'",
+    )
+    retry_queue_max_size: int = Field(
+        default=10000,
+        ge=100,
+        description="Maximum retry queue size",
+    )
+    retry_queue_max_retries: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="Maximum retries per operation",
+    )
+    retry_queue_retry_delay_seconds: float = Field(
+        default=60.0,
+        ge=1.0,
+        description="Initial retry delay in seconds",
+    )
+    retry_queue_max_delay_seconds: float = Field(
+        default=3600.0,
+        ge=60.0,
+        description="Maximum retry delay in seconds",
+    )
+    graceful_degradation_enabled: bool = Field(
+        default=True,
+        description="Enable graceful degradation on failures",
+    )
     # Slack integration settings
-    SLACK_CLIENT_ID: str | None = Field(default=None, description="Slack OAuth client ID")
-    SLACK_CLIENT_SECRET: SecretStr | None = Field(default=None, description="Slack OAuth client secret")
+    SLACK_CLIENT_ID: str | None = Field(
+        default=None, description="Slack OAuth client ID"
+    )
+    SLACK_CLIENT_SECRET: SecretStr | None = Field(
+        default=None, description="Slack OAuth client secret"
+    )
     SLACK_SIGNING_SECRET: SecretStr | None = Field(
-        default=None, description="Slack signing secret for webhook verification",
+        default=None,
+        description="Slack signing secret for webhook verification",
     )
     defaults_dict: ClassVar[dict] = {}
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
@@ -127,14 +284,16 @@ class ForgeConfig(BaseModel):
         if name in self.llms:
             return self.llms[name]
         if name is not None and name != "llm":
-            logger.FORGE_logger.warning(f"llm config group {name} not found, using default config")
+            logger.FORGE_logger.warning(
+                f"llm config group {name} not found, using default config"
+            )
         if "llm" not in self.llms:
             self.llms["llm"] = LLMConfig()
         return self.llms["llm"]
 
     def set_llm_config(self, value: LLMConfig, name: str = "llm") -> None:
         """Set LLM configuration by name.
-        
+
         Args:
             value: LLM configuration to set
             name: Configuration name (default "llm")
@@ -152,7 +311,7 @@ class ForgeConfig(BaseModel):
 
     def set_agent_config(self, value: AgentConfig, name: str = "agent") -> None:
         """Set agent configuration by name.
-        
+
         Args:
             value: Agent configuration to set
             name: Configuration name (default "agent")
@@ -166,23 +325,26 @@ class ForgeConfig(BaseModel):
 
     def get_llm_config_from_agent_config(self, agent_config: AgentConfig):
         """Get LLM configuration from agent configuration.
-        
+
         Args:
             agent_config: Agent configuration
-            
+
         Returns:
             LLM configuration for the agent
 
         """
-        llm_config_name = agent_config.llm_config if agent_config.llm_config is not None else "llm"
+        llm_spec = agent_config.llm_config
+        if isinstance(llm_spec, LLMConfig):
+            return llm_spec
+        llm_config_name = llm_spec if llm_spec is not None else "llm"
         return self.get_llm_config(llm_config_name)
 
     def get_llm_config_from_agent(self, name: str = "agent") -> LLMConfig:
         """Get LLM configuration for named agent.
-        
+
         Args:
             name: Agent name
-            
+
         Returns:
             LLM configuration for the agent
 
@@ -192,7 +354,7 @@ class ForgeConfig(BaseModel):
 
     def get_agent_configs(self) -> dict[str, AgentConfig]:
         """Get all agent configurations.
-        
+
         Returns:
             Dictionary mapping agent names to configurations
 

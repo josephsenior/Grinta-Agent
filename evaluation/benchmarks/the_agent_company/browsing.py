@@ -70,7 +70,9 @@ class InputAction(BrowserAction):
 
     def __init__(self, selector: Union[str, Selector], value: str):
         super().__init__(ActionType.FILL)
-        self.selector = selector if isinstance(selector, Selector) else Selector(selector)
+        self.selector = (
+            selector if isinstance(selector, Selector) else Selector(selector)
+        )
         self.value = value
 
     def to_instruction(self) -> str:
@@ -83,7 +85,9 @@ class ClickAction(BrowserAction):
 
     def __init__(self, selector: Union[str, Selector]):
         super().__init__(ActionType.CLICK)
-        self.selector = selector if isinstance(selector, Selector) else Selector(selector)
+        self.selector = (
+            selector if isinstance(selector, Selector) else Selector(selector)
+        )
 
     def to_instruction(self) -> str:
         return f'click("{self.selector}")'
@@ -126,7 +130,9 @@ def resolve_action(action: BrowserAction, content: str) -> BrowserAction:
 
     Returns a new action with resolved selectors.
     """
-    if isinstance(action, (InputAction, ClickAction)) and (not action.selector.is_anchor):
+    if isinstance(action, (InputAction, ClickAction)) and (
+        not action.selector.is_anchor
+    ):
         if anchor := find_matching_anchor(content, action.selector.value):
             new_selector = Selector(anchor, is_anchor=True)
             if isinstance(action, InputAction):
@@ -139,7 +145,12 @@ def resolve_action(action: BrowserAction, content: str) -> BrowserAction:
     return action
 
 
-def pre_login(runtime: Runtime, services: list[str], save_screenshots=True, screenshots_dir="screenshots"):
+def pre_login(
+    runtime: Runtime,
+    services: list[str],
+    save_screenshots=True,
+    screenshots_dir="screenshots",
+):
     """Logs in to all the websites that are needed for the evaluation.
 
     Once logged in, the sessions would be cached in the browser, so Forge
@@ -192,7 +203,10 @@ def pre_login(runtime: Runtime, services: list[str], save_screenshots=True, scre
     ]
     for website_name, login_actions in all_login_actions:
         if website_name not in services:
-            logger.info("Skipping login for %s because it's not in the list of services to reset", website_name)
+            logger.info(
+                "Skipping login for %s because it's not in the list of services to reset",
+                website_name,
+            )
             continue
         if save_screenshots:
             directory = os.path.join(screenshots_dir, website_name)
@@ -205,7 +219,9 @@ def pre_login(runtime: Runtime, services: list[str], save_screenshots=True, scre
                 action = resolve_action(action, obs.get_agent_obs_text())
             if not action:
                 logger.error("FAILED TO RESOLVE ACTION, %s", action)
-                raise Exception("FAILED TO RESOLVE ACTION, maybe the service is not available")
+                raise Exception(
+                    "FAILED TO RESOLVE ACTION, maybe the service is not available"
+                )
             instruction = action.to_instruction()
             browser_action = BrowseInteractiveAction(browser_actions=instruction)
             browser_action.set_hard_timeout(10000)
@@ -213,7 +229,9 @@ def pre_login(runtime: Runtime, services: list[str], save_screenshots=True, scre
             obs: BrowserOutputObservation = runtime.run_action(browser_action)
             logger.debug(obs, extra={"msg_type": "OBSERVATION"})
             if save_screenshots:
-                image_data = base64.b64decode(obs.screenshot.replace("data:image/png;base64,", ""))
+                image_data = base64.b64decode(
+                    obs.screenshot.replace("data:image/png;base64,", "")
+                )
                 with open(os.path.join(directory, f"{image_id}.png"), "wb") as file:
                     file.write(image_data)
                     image_id += 1

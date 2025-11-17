@@ -24,8 +24,10 @@ services:
       - SANDBOX_USER_ID=${SANDBOX_USER_ID:-1000}
       - WORKSPACE_MOUNT_PATH=${WORKSPACE_BASE:-$PWD/workspace}
       - CONFIG_FILE=/app/config.toml
+      - CSP_POLICY=strict
       - DOCKER_HOST_ADDR=host.docker.internal
       - SANDBOX_API_HOSTNAME=host.docker.internal
+      - SANDBOX_VOLUMES=${SANDBOX_VOLUMES:-}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - DESIRED_NUM_WARM_SERVERS=2
@@ -33,14 +35,24 @@ services:
       - SKIP_DEPENDENCY_CHECK=1
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - LLM_API_KEY=${LLM_API_KEY:-}
+      - FORGE_EVENT_SERVICE_GRPC=${FORGE_EVENT_SERVICE_GRPC:-false}
+      - FORGE_RUNTIME_SERVICE_GRPC=${FORGE_RUNTIME_SERVICE_GRPC:-false}
+      - FORGE_EVENT_SERVICE_ENDPOINT=${FORGE_EVENT_SERVICE_ENDPOINT:-}
+      - FORGE_RUNTIME_SERVICE_ENDPOINT=${FORGE_RUNTIME_SERVICE_ENDPOINT:-}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/monitoring/readiness"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     ports:
-      - '3000:3000'
+      - "3000:3000"
     extra_hosts:
-      - 'host.docker.internal:host-gateway'
+      - "host.docker.internal:host-gateway"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ~/.forge:/.forge
-      - ~/.Forge:/.Forge  # Legacy support for migration
+      - ~/.Forge:/.Forge # Legacy support for migration
       - ${WORKSPACE_BASE:-$PWD/workspace}:/opt/workspace_base
       - ./config.toml:/app/config.toml:ro
     depends_on:
@@ -51,4 +63,4 @@ services:
     tty: true
 
 volumes:
-  redis-data:
+  redis-data: {}

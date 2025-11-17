@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\security\invariant\analyzer.py
+# hypothesis_version: 6.147.0
+
+[180, '(?<=risk=)\\w+', '8000/tcp', 'HostPort', 'NetworkSettings', 'Ports', 'container', 'high', 'http://localhost', 'linux/amd64', 'low', 'medium', 'name', 'running', 'server', 'status']

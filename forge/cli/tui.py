@@ -13,7 +13,7 @@ import re
 import sys
 import threading
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from prompt_toolkit import PromptSession, print_formatted_text
 from prompt_toolkit.application import Application
@@ -38,7 +38,7 @@ from forge.cli.pt_style import (
     COLOR_GREY,
     get_cli_style,
 )
-from forge.core.schema import AgentState
+from forge.core.schemas import AgentState
 from forge.events import EventSource, EventStream
 from forge.events.action import (
     Action,
@@ -104,12 +104,12 @@ class UsageMetrics:
 class CustomDiffLexer(Lexer):
     """Custom lexer for the specific diff format."""
 
-    def lex_document(self, document: Document) -> StyleAndTextTuples:
+    def lex_document(self, document: Document) -> Callable[[int], StyleAndTextTuples]:
         """Lexically analyze document for syntax highlighting.
-        
+
         Args:
             document: Document to lex
-            
+
         Returns:
             List of (style, text) tuples
 
@@ -118,10 +118,10 @@ class CustomDiffLexer(Lexer):
 
         def get_line(lineno: int) -> StyleAndTextTuples:
             """Get styled line for diff display.
-            
+
             Args:
                 lineno: Line number to style
-                
+
             Returns:
                 Styled line tuples
 
@@ -140,7 +140,7 @@ class CustomDiffLexer(Lexer):
 
 def display_runtime_initialization_message(runtime: str) -> None:
     """Display initialization message for runtime.
-    
+
     Args:
         runtime: Runtime type ('local' or 'docker')
 
@@ -155,19 +155,26 @@ def display_runtime_initialization_message(runtime: str) -> None:
 
 def display_initialization_animation(text: str, is_loaded: asyncio.Event) -> None:
     """Display animated loading spinner during initialization.
-    
+
     Args:
         text: Text to display next to spinner
         is_loaded: Event that signals when loading is complete
 
     """
     ANIMATION_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+    FALLBACK_FRAMES = ["|", "/", "-", "\\"]
     i = 0
     while not is_loaded.is_set():
         sys.stdout.write("\n")
-        sys.stdout.write(
-            f"\x1b[s\x1b[J\x1b[38;2;255;215;0m[{ANIMATION_FRAMES[i % len(ANIMATION_FRAMES)]}] {text}\x1b[0m\x1b[u\x1b[1A",
+        frame = ANIMATION_FRAMES[i % len(ANIMATION_FRAMES)]
+        payload = (
+            f"\x1b[s\x1b[J\x1b[38;2;255;215;0m[{frame}] {text}\x1b[0m\x1b[u\x1b[1A"
         )
+        try:
+            sys.stdout.write(payload)
+        except UnicodeEncodeError:
+            safe_frame = FALLBACK_FRAMES[i % len(FALLBACK_FRAMES)]
+            sys.stdout.write(f"\r[{safe_frame}] {text}\r")
         sys.stdout.flush()
         time.sleep(0.1)
         i += 1
@@ -177,7 +184,7 @@ def display_initialization_animation(text: str, is_loaded: asyncio.Event) -> Non
 
 def display_banner(session_id: str) -> None:
     """Display Forge ASCII art banner and session info.
-    
+
     Args:
         session_id: Current session/conversation ID
 
@@ -196,21 +203,28 @@ def display_banner(session_id: str) -> None:
 
 def display_welcome_message(message: str = "") -> None:
     """Display welcome message with optional custom text.
-    
+
     Args:
         message: Optional custom welcome message
 
     """
-    print_formatted_text(HTML("<gold>Let's start building!</gold>\n"), style=DEFAULT_STYLE)
+    print_formatted_text(
+        HTML("<gold>Let's start building!</gold>\n"), style=DEFAULT_STYLE
+    )
     if message:
-        print_formatted_text(HTML(f"{message} <grey>Type /help for help</grey>"), style=DEFAULT_STYLE)
+        print_formatted_text(
+            HTML(f"{message} <grey>Type /help for help</grey>"), style=DEFAULT_STYLE
+        )
     else:
-        print_formatted_text(HTML("What do you want to build? <grey>Type /help for help</grey>"), style=DEFAULT_STYLE)
+        print_formatted_text(
+            HTML("What do you want to build? <grey>Type /help for help</grey>"),
+            style=DEFAULT_STYLE,
+        )
 
 
 def display_initial_user_prompt(prompt: str) -> None:
     """Display the initial user prompt in formatted style.
-    
+
     Args:
         prompt: User's initial prompt text
 
@@ -224,10 +238,18 @@ def display_mcp_errors() -> None:
     if not errors:
         print_formatted_text(HTML("<ansigreen>✓ No MCP errors detected</ansigreen>\n"))
         return
-    print_formatted_text(HTML(f"<ansired>✗ {len(errors)} MCP error(s) detected during startup:</ansired>\n"))
+    print_formatted_text(
+        HTML(
+            f"<ansired>✗ {len(errors)} MCP error(s) detected during startup:</ansired>\n"
+        )
+    )
     for i, error in enumerate(errors, 1):
-        timestamp = datetime.datetime.fromtimestamp(error.timestamp).strftime("%H:%M:%S")
-        error_text = f"[{timestamp}] {error.server_type.upper()} Server: {error.server_name}\n"
+        timestamp = datetime.datetime.fromtimestamp(error.timestamp).strftime(
+            "%H:%M:%S"
+        )
+        error_text = (
+            f"[{timestamp}] {error.server_type.upper()} Server: {error.server_name}\n"
+        )
         error_text += f"Error: {error.error_message}\n"
         if error.exception_details:
             error_text += f"Details: {error.exception_details}"
@@ -332,7 +354,9 @@ def display_message(message: str, is_agent_message: bool = False) -> None:
     try:
         html_content = _render_basic_markdown(message)
         if is_agent_message:
-            print_formatted_text(HTML(f'<style fg="{COLOR_AGENT_BLUE}">{html_content}</style>'))
+            print_formatted_text(
+                HTML(f'<style fg="{COLOR_AGENT_BLUE}">{html_content}</style>')
+            )
         else:
             print_formatted_text(HTML(html_content))
     except Exception:
@@ -342,7 +366,7 @@ def display_message(message: str, is_agent_message: bool = False) -> None:
             print_formatted_text(message)
 
 
-def _render_basic_markdown(text: str | None) -> str | None:
+def _render_basic_markdown(text: str | None) -> str:
     """Render a very small subset of markdown directly to prompt_toolkit HTML.
 
     Supported:
@@ -352,9 +376,7 @@ def _render_basic_markdown(text: str | None) -> str | None:
     Any existing HTML in input is escaped to avoid injection into the renderer.
     If input is None, return None.
     """
-    if text is None:
-        return None
-    if text == "":
+    if not text:
         return ""
     safe = html.escape(text)
     safe = re.sub("\\*\\*(.+?)\\*\\*", "<b>\\1</b>", safe)
@@ -363,7 +385,7 @@ def _render_basic_markdown(text: str | None) -> str | None:
 
 def display_error(error: str) -> None:
     """Display error message in a formatted frame.
-    
+
     Args:
         error: Error message to display
 
@@ -380,7 +402,7 @@ def display_error(error: str) -> None:
 
 def display_command(event: CmdRunAction) -> None:
     """Display command that will be or was executed.
-    
+
     Args:
         event: Command run action containing the command
 
@@ -397,15 +419,15 @@ def display_command(event: CmdRunAction) -> None:
 
 def display_command_output(output: str) -> None:
     """Display output from executed command.
-    
+
     Filters out interpreter prompts and decorative elements.
-    
+
     Args:
         output: Raw command output string
 
     """
     lines = output.split("\n")
-    formatted_lines = []
+    formatted_lines: list[str] = []
     for line in lines:
         if line.startswith(("[Python Interpreter", "Forge@")):
             continue
@@ -413,7 +435,12 @@ def display_command_output(output: str) -> None:
     if formatted_lines:
         formatted_lines.pop()
     container = Frame(
-        TextArea(text="".join(formatted_lines), read_only=True, style=COLOR_GREY, wrap_lines=True),
+        TextArea(
+            text="".join(formatted_lines),
+            read_only=True,
+            style=COLOR_GREY,
+            wrap_lines=True,
+        ),
         title="Command Output",
         style=f"fg:{COLOR_GREY}",
     )
@@ -423,7 +450,7 @@ def display_command_output(output: str) -> None:
 
 def display_file_edit(event: FileEditObservation) -> None:
     """Display file edit diff with syntax highlighting.
-    
+
     Args:
         event: File edit observation containing diff information
 
@@ -444,7 +471,7 @@ def display_file_edit(event: FileEditObservation) -> None:
 
 def display_file_read(event: FileReadObservation) -> None:
     """Display contents of file that was read.
-    
+
     Args:
         event: File read observation containing file content
 
@@ -514,7 +541,11 @@ def display_task_tracking_action(event: TaskTrackingAction) -> None:
                 title = task.get("title", "Untitled task")
                 task_id = task.get("id", f"task-{i}")
                 notes = task.get("notes", "")
-                status_indicator = {"todo": "⏳", "in_progress": "🔄", "done": "✅"}.get(status, "❓")
+                status_indicator = {
+                    "todo": "⏳",
+                    "in_progress": "🔄",
+                    "done": "✅",
+                }.get(status, "❓")
                 display_text += f"\n  {i}. {status_indicator} [{status.upper()}] {title} (ID: {task_id})"
                 if notes:
                     display_text += f"\n     Notes: {notes}"
@@ -531,7 +562,9 @@ def display_task_tracking_action(event: TaskTrackingAction) -> None:
 
 def display_task_tracking_observation(event: TaskTrackingObservation) -> None:
     """Display a TaskTracking observation in the CLI."""
-    content = event.content.strip() if event.content else "Task tracking operation completed"
+    content = (
+        event.content.strip() if event.content else "Task tracking operation completed"
+    )
     display_text = f"Result: {content}"
     container = Frame(
         TextArea(text=display_text, read_only=True, style=COLOR_GREY, wrap_lines=True),
@@ -547,15 +580,19 @@ def initialize_streaming_output() -> None:
     if not ENABLE_STREAMING:
         return
     global streaming_output_text_area
-    streaming_output_text_area = TextArea(text="", read_only=True, style=COLOR_GREY, wrap_lines=True)
-    container = Frame(streaming_output_text_area, title="Streaming Output", style=f"fg:{COLOR_GREY}")
+    streaming_output_text_area = TextArea(
+        text="", read_only=True, style=COLOR_GREY, wrap_lines=True
+    )
+    container = Frame(
+        streaming_output_text_area, title="Streaming Output", style=f"fg:{COLOR_GREY}"
+    )
     print_formatted_text("")
     print_container(container)
 
 
 def update_streaming_output(text: str) -> None:
     """Update the streaming output TextArea with new text.
-    
+
     Args:
         text: New text to append to streaming output
 
@@ -583,26 +620,42 @@ def display_help() -> None:
     )
     print_formatted_text(HTML("Interactive commands:"))
     commands_html = "".join(
-        (f"<gold><b>{command}</b></gold> - <grey>{description}</grey>\n" for command, description in COMMANDS.items()),
+        (
+            f"<gold><b>{command}</b></gold> - <grey>{description}</grey>\n"
+            for command, description in COMMANDS.items()
+        ),
     )
     print_formatted_text(HTML(commands_html))
-    print_formatted_text(HTML("<grey>Learn more at: https://docs.all-hands.dev/usage/getting-started</grey>"))
+    print_formatted_text(
+        HTML(
+            "<grey>Learn more at: https://docs.all-hands.dev/usage/getting-started</grey>"
+        )
+    )
 
 
 def display_usage_metrics(usage_metrics: UsageMetrics) -> None:
     """Display LLM usage metrics including cost and token counts.
-    
+
     Args:
         usage_metrics: Usage metrics tracker containing cost and token data
 
     """
     cost_str = f"${usage_metrics.metrics.accumulated_cost:.6f}"
-    input_tokens_str = f"{usage_metrics.metrics.accumulated_token_usage.prompt_tokens:,}"
-    cache_read_str = f"{usage_metrics.metrics.accumulated_token_usage.cache_read_tokens:,}"
-    cache_write_str = f"{usage_metrics.metrics.accumulated_token_usage.cache_write_tokens:,}"
-    output_tokens_str = f"{usage_metrics.metrics.accumulated_token_usage.completion_tokens:,}"
-    total_tokens_str = f"{usage_metrics.metrics.accumulated_token_usage.prompt_tokens +
-                          usage_metrics.metrics.accumulated_token_usage.completion_tokens:,}"
+    input_tokens_str = (
+        f"{usage_metrics.metrics.accumulated_token_usage.prompt_tokens:,}"
+    )
+    cache_read_str = (
+        f"{usage_metrics.metrics.accumulated_token_usage.cache_read_tokens:,}"
+    )
+    cache_write_str = (
+        f"{usage_metrics.metrics.accumulated_token_usage.cache_write_tokens:,}"
+    )
+    output_tokens_str = (
+        f"{usage_metrics.metrics.accumulated_token_usage.completion_tokens:,}"
+    )
+    total_tokens_str = f"{
+        usage_metrics.metrics.accumulated_token_usage.prompt_tokens
+        + usage_metrics.metrics.accumulated_token_usage.completion_tokens:,}"
     labels_and_values = [
         ("   Total Cost (USD):", cost_str),
         ("", ""),
@@ -615,7 +668,10 @@ def display_usage_metrics(usage_metrics: UsageMetrics) -> None:
     ]
     max_label_width = max((len(label) for label, _ in labels_and_values))
     max_value_width = max((len(value) for _, value in labels_and_values))
-    summary_lines = [f"{label:<{max_label_width}} {value:<{max_value_width}}" for label, value in labels_and_values]
+    summary_lines = [
+        f"{label:<{max_label_width}} {value:<{max_value_width}}"
+        for label, value in labels_and_values
+    ]
     summary_text = "\n".join(summary_lines)
     container = Frame(
         TextArea(text=summary_text, read_only=True, style=COLOR_GREY, wrap_lines=True),
@@ -627,10 +683,10 @@ def display_usage_metrics(usage_metrics: UsageMetrics) -> None:
 
 def get_session_duration(session_init_time: float) -> str:
     """Calculate formatted session duration string.
-    
+
     Args:
         session_init_time: Unix timestamp when session started
-        
+
     Returns:
         Formatted duration string (e.g., "2h 15m 30s")
 
@@ -644,7 +700,7 @@ def get_session_duration(session_init_time: float) -> str:
 
 def display_shutdown_message(usage_metrics: UsageMetrics, session_id: str) -> None:
     """Display shutdown message with final usage statistics.
-    
+
     Args:
         usage_metrics: Final usage metrics for the session
         session_id: Session/conversation ID that is closing
@@ -663,7 +719,7 @@ def display_shutdown_message(usage_metrics: UsageMetrics, session_id: str) -> No
 
 def display_status(usage_metrics: UsageMetrics, session_id: str) -> None:
     """Display current session status with uptime and usage metrics.
-    
+
     Args:
         usage_metrics: Current usage metrics
         session_id: Current session/conversation ID
@@ -680,19 +736,25 @@ def display_status(usage_metrics: UsageMetrics, session_id: str) -> None:
 def display_agent_running_message() -> None:
     """Display message indicating agent is actively running."""
     print_formatted_text("")
-    print_formatted_text(HTML("<gold>Agent running...</gold> <grey>(Press Ctrl-P to pause)</grey>"))
+    print_formatted_text(
+        HTML("<gold>Agent running...</gold> <grey>(Press Ctrl-P to pause)</grey>")
+    )
 
 
 def display_agent_state_change_message(agent_state: str) -> None:
     """Display message when agent state changes.
-    
+
     Args:
         agent_state: New agent state (PAUSED, FINISHED, AWAITING_USER_INPUT)
 
     """
     if agent_state == AgentState.PAUSED:
         print_formatted_text("")
-        print_formatted_text(HTML("<gold>Agent paused...</gold> <grey>(Enter /resume to continue)</grey>"))
+        print_formatted_text(
+            HTML(
+                "<gold>Agent paused...</gold> <grey>(Enter /resume to continue)</grey>"
+            )
+        )
     elif agent_state == AgentState.FINISHED:
         print_formatted_text("")
         print_formatted_text(HTML("<gold>Task completed...</gold>"))
@@ -706,7 +768,7 @@ class CommandCompleter(Completer):
 
     def __init__(self, agent_state: str) -> None:
         """Initialize command completer.
-        
+
         Args:
             agent_state: Current agent state (affects available commands)
 
@@ -714,13 +776,15 @@ class CommandCompleter(Completer):
         super().__init__()
         self.agent_state = agent_state
 
-    def get_completions(self, document: Document, complete_event: CompleteEvent) -> Generator[Completion, None, None]:
+    def get_completions(
+        self, document: Document, complete_event: CompleteEvent
+    ) -> Generator[Completion, None, None]:
         """Generate command completions for user input.
-        
+
         Args:
             document: Current document being edited
             complete_event: Completion trigger event
-            
+
         Yields:
             Completion suggestions matching user input
 
@@ -745,14 +809,16 @@ def create_prompt_session(config: ForgeConfig) -> PromptSession[str]:
     return PromptSession(style=DEFAULT_STYLE, vi_mode=config.cli.vi_mode)
 
 
-async def read_prompt_input(config: ForgeConfig, agent_state: str, multiline: bool = False) -> str:
+async def read_prompt_input(
+    config: ForgeConfig, agent_state: str, multiline: bool = False
+) -> str:
     """Read user input with optional multiline support and command completion.
-    
+
     Args:
         config: Forge configuration containing CLI settings
         agent_state: Current agent state for context-aware completion
         multiline: If True, enable multiline input with Ctrl-D to finish
-        
+
     Returns:
         User input string, or "/exit" if interrupted
 
@@ -771,7 +837,9 @@ async def read_prompt_input(config: ForgeConfig, agent_state: str, multiline: bo
             with patch_stdout():
                 print_formatted_text("")
                 message = await prompt_session.prompt_async(
-                    HTML("<gold>Enter your message and press Ctrl-D to finish:</gold>\n"),
+                    HTML(
+                        "<gold>Enter your message and press Ctrl-D to finish:</gold>\n"
+                    ),
                     multiline=True,
                     key_bindings=kb,
                 )
@@ -784,15 +852,17 @@ async def read_prompt_input(config: ForgeConfig, agent_state: str, multiline: bo
         return "/exit"
 
 
-async def read_confirmation_input(config: ForgeConfig, security_risk: ActionSecurityRisk) -> str:
+async def read_confirmation_input(
+    config: ForgeConfig, security_risk: ActionSecurityRisk
+) -> str:
     """Prompt user for action confirmation based on security risk level.
-    
+
     Presents different options based on whether the action is HIGH risk or not.
-    
+
     Args:
         config: Forge configuration
         security_risk: Security risk level of the action
-        
+
     Returns:
         User choice ("yes", "no", "always", "auto_highrisk")
 
@@ -815,15 +885,19 @@ async def read_confirmation_input(config: ForgeConfig, security_risk: ActionSecu
                 "Always proceed (don't ask again)",
             ]
             choice_mapping = {0: "yes", 1: "no", 2: "auto_highrisk", 3: "always"}
-        index = await asyncio.to_thread(cli_confirm, config, question, choices, 0, security_risk)
+        index = await asyncio.to_thread(
+            cli_confirm, config, question, choices, 0, security_risk
+        )
         return choice_mapping.get(index, "no")
     except (KeyboardInterrupt, EOFError):
         return "no"
 
 
-def start_pause_listener(loop: asyncio.AbstractEventLoop, done_event: asyncio.Event, event_stream) -> None:
+def start_pause_listener(
+    loop: asyncio.AbstractEventLoop, done_event: asyncio.Event, event_stream
+) -> None:
     """Start background listener for pause hotkey (Ctrl-P).
-    
+
     Args:
         loop: Event loop to create task in
         done_event: Event to signal when listener should stop
@@ -848,9 +922,9 @@ async def stop_pause_listener() -> None:
 
 async def process_agent_pause(done: asyncio.Event, event_stream: EventStream) -> None:
     """Process keyboard input for agent pause/resume control.
-    
+
     Listens for Ctrl-P, Ctrl-C, or Ctrl-D to pause the agent.
-    
+
     Args:
         done: Event signaling when to stop listening
         event_stream: Event stream to send pause commands to
@@ -864,7 +938,9 @@ async def process_agent_pause(done: asyncio.Event, event_stream: EventStream) ->
             if key_press.key in [Keys.ControlP, Keys.ControlC, Keys.ControlD]:
                 print_formatted_text("")
                 print_formatted_text(HTML("<gold>Pausing the agent...</gold>"))
-                event_stream.add_event(ChangeAgentStateAction(AgentState.PAUSED), EventSource.USER)
+                event_stream.add_event(
+                    ChangeAgentStateAction(AgentState.PAUSED), EventSource.USER
+                )
                 done.set()
 
     try:
@@ -895,7 +971,9 @@ def cli_confirm(
     layout = _create_layout(content_window, security_risk)
 
     # Run the application
-    app = Application(layout=layout, key_bindings=key_bindings, style=DEFAULT_STYLE, full_screen=False)
+    app: Application[int] = Application(
+        layout=layout, key_bindings=key_bindings, style=DEFAULT_STYLE, full_screen=False
+    )
     return app.run(in_thread=True)
 
 
@@ -920,12 +998,16 @@ def _create_content_window(
 
     def get_choice_text() -> list:
         """Format choice menu with selection highlighting.
-        
+
         Returns:
             List of styled text tuples for choice display
 
         """
-        question_style = "class:risk-high" if security_risk == ActionSecurityRisk.HIGH else "class:question"
+        question_style = (
+            "class:risk-high"
+            if security_risk == ActionSecurityRisk.HIGH
+            else "class:question"
+        )
         return [(question_style, f"{question}\n\n")] + [
             (
                 "class:selected" if i == selected[0] else "class:unselected",
@@ -934,7 +1016,11 @@ def _create_content_window(
             for i, choice in enumerate(choices)
         ]
 
-    return Window(FormattedTextControl(get_choice_text), always_hide_cursor=True, height=Dimension(max=8))
+    return Window(
+        FormattedTextControl(get_choice_text),
+        always_hide_cursor=True,
+        height=Dimension(max=8),
+    )
 
 
 def _create_key_bindings(
@@ -993,7 +1079,9 @@ def _create_layout(content_window: Window, security_risk: ActionSecurityRisk) ->
 
     """
     if security_risk == ActionSecurityRisk.HIGH:
-        return Layout(HSplit([Frame(content_window, title="HIGH RISK", style="fg:#FF0000 bold")]))
+        return Layout(
+            HSplit([Frame(content_window, title="HIGH RISK", style="fg:#FF0000 bold")])
+        )
     return Layout(HSplit([content_window]))
 
 

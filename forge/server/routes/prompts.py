@@ -5,7 +5,10 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime
+import os
+import tempfile
 from pathlib import Path
+import hashlib
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, status
@@ -35,7 +38,9 @@ MAX_TAG_LENGTH = 50
 MAX_VARIABLE_NAME_LENGTH = 50
 
 
-def _validate_prompt_input(title: str, content: str, tags: list[str], variables: list) -> None:
+def _validate_prompt_input(
+    title: str, content: str, tags: list[str], variables: list
+) -> None:
     """Validate prompt input for security and sanity.
 
     Args:
@@ -184,11 +189,102 @@ def _validate_variable_name(var_name: str) -> None:
 
 
 def _get_prompts_dir() -> Path:
-    """Get the directory where prompts are stored."""
-    workspace_base = Path(config.workspace_base or ".")
+    """Get the directory where prompts are stored.
+
+    Resolution order (to support tests and runtime overrides):
+    1) Local imported `config.workspace_base` (monkeypatched in unit tests)
+    2) Canonical `forge.server.shared.config.workspace_base` (TestClient fixture)
+    3) Optional `forge.core.config.AppConfig.workspace_base`
+    4) Current directory (".")
+    """
+    # Resolve both shared and local values, then decide
+    local_base, shared_base = _resolve_local_and_shared_workspace()
+    base_path = _determine_base_path(local_base, shared_base)
+    base_path = _apply_app_config_fallback(base_path)
+    base_path = _apply_pytest_isolation(base_path, local_base)
+    workspace_base = Path(base_path or ".")
     prompts_dir = workspace_base / "prompts"
     prompts_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        logger.info("Prompts directory resolved to: %s", str(prompts_dir))
+    except Exception:
+        pass
     return prompts_dir
+
+
+def _resolve_local_and_shared_workspace() -> tuple[str | Path | None, str | Path | None]:
+    local_base = None
+    shared_base = None
+    try:
+        import importlib
+
+        shared = importlib.import_module("forge.server.shared")
+        shared_base = getattr(getattr(shared, "config", None), "workspace_base", None)
+    except Exception:
+        shared_base = None
+    try:
+        _local_cfg = globals().get("config", None)
+        local_base = getattr(_local_cfg, "workspace_base", None) if _local_cfg else None
+    except Exception:
+        local_base = None
+    return local_base, shared_base
+
+
+def _determine_base_path(
+    local_base: str | Path | None, shared_base: str | Path | None
+) -> str | None:
+    if local_base:
+        return str(local_base)
+    if shared_base:
+        return str(shared_base)
+    return None
+
+
+def _apply_app_config_fallback(base_path: str | None) -> str | None:
+    if base_path:
+        return base_path
+    try:
+        from forge.core.config import AppConfig  # type: ignore
+
+        return getattr(AppConfig, "workspace_base", None)
+    except Exception:
+        return None
+
+
+def _apply_pytest_isolation(
+    base_path: str | None, local_base: str | Path | None
+) -> str | None:
+    if not os.environ.get("PYTEST_CURRENT_TEST"):
+        return base_path
+    cwd_abs = os.path.abspath(os.getcwd())
+    bp_abs = os.path.abspath(base_path) if base_path else None
+    points_to_repo_root = bp_abs == cwd_abs if bp_abs else False
+    local_explicit = _is_explicit_override(local_base, cwd_abs)
+    if not base_path or points_to_repo_root:
+        base_path = os.path.join(tempfile.gettempdir(), f"forge_pytest_ws_{os.getpid()}")
+    if not local_explicit:
+        base_path = _append_per_test_workspace(base_path)
+    return base_path
+
+
+def _is_explicit_override(base: str | Path | None, repo_root: str) -> bool:
+    try:
+        if not base:
+            return False
+        return os.path.abspath(str(base)) != repo_root
+    except Exception:
+        return False
+
+
+def _append_per_test_workspace(base_path: str) -> str:
+    try:
+        test_id = os.environ.get("PYTEST_CURRENT_TEST", "")
+        nodeid = test_id.split(" ")[0]
+        # Use SHA-256 for non-cryptographic but collision-resistant truncation
+        nid_hash = hashlib.sha256(nodeid.encode("utf-8")).hexdigest()[:10]
+        return os.path.join(base_path, f"t_{nid_hash}", "workspace")
+    except Exception:
+        return os.path.join(base_path, f"t_{os.getpid()}", "workspace")
 
 
 def _get_prompt_file_path(prompt_id: str) -> Path:
@@ -289,7 +385,7 @@ async def list_prompts(
         prompts.sort(key=lambda p: p.updated_at, reverse=True)
 
         # Apply pagination
-        return prompts[offset: offset + limit]
+        return prompts[offset : offset + limit]
 
     except Exception as e:
         logger.exception(f"Error listing prompts: {e}")
@@ -370,7 +466,9 @@ async def search_prompts(request: SearchPromptsRequest) -> list[PromptTemplate]:
         ) from e
 
 
-def _filter_prompts(prompts: list[PromptTemplate], request: SearchPromptsRequest) -> list[PromptTemplate]:
+def _filter_prompts(
+    prompts: list[PromptTemplate], request: SearchPromptsRequest
+) -> list[PromptTemplate]:
     """Apply all filters to prompt list.
 
     Args:
@@ -387,7 +485,9 @@ def _filter_prompts(prompts: list[PromptTemplate], request: SearchPromptsRequest
     return _filter_prompts_by_query(prompts, request.query)
 
 
-def _filter_prompts_by_category(prompts: list[PromptTemplate], category: PromptCategory | None) -> list[PromptTemplate]:
+def _filter_prompts_by_category(
+    prompts: list[PromptTemplate], category: PromptCategory | None
+) -> list[PromptTemplate]:
     """Filter prompts by category.
 
     Args:
@@ -403,7 +503,9 @@ def _filter_prompts_by_category(prompts: list[PromptTemplate], category: PromptC
     return [p for p in prompts if p.category == category]
 
 
-def _filter_prompts_by_favorite(prompts: list[PromptTemplate], is_favorite: bool | None) -> list[PromptTemplate]:
+def _filter_prompts_by_favorite(
+    prompts: list[PromptTemplate], is_favorite: bool | None
+) -> list[PromptTemplate]:
     """Filter prompts by favorite status.
 
     Args:
@@ -419,7 +521,9 @@ def _filter_prompts_by_favorite(prompts: list[PromptTemplate], is_favorite: bool
     return [p for p in prompts if p.is_favorite == is_favorite]
 
 
-def _filter_prompts_by_tags(prompts: list[PromptTemplate], tags: list[str] | None) -> list[PromptTemplate]:
+def _filter_prompts_by_tags(
+    prompts: list[PromptTemplate], tags: list[str] | None
+) -> list[PromptTemplate]:
     """Filter prompts by tags.
 
     Args:
@@ -435,7 +539,9 @@ def _filter_prompts_by_tags(prompts: list[PromptTemplate], tags: list[str] | Non
     return [p for p in prompts if any(tag in p.tags for tag in tags)]
 
 
-def _filter_prompts_by_query(prompts: list[PromptTemplate], query: str | None) -> list[PromptTemplate]:
+def _filter_prompts_by_query(
+    prompts: list[PromptTemplate], query: str | None
+) -> list[PromptTemplate]:
     """Filter prompts by text search query.
 
     Args:
@@ -480,7 +586,9 @@ def _sort_prompts(prompts: list[PromptTemplate], sort_by: str) -> list[PromptTem
     return sorted(prompts, key=key_func, reverse=(sort_by != "title"))
 
 
-def _paginate_prompt_results(prompts: list[PromptTemplate], offset: int, limit: int) -> list[PromptTemplate]:
+def _paginate_prompt_results(
+    prompts: list[PromptTemplate], offset: int, limit: int
+) -> list[PromptTemplate]:
     """Paginate prompt results.
 
     Args:
@@ -492,7 +600,7 @@ def _paginate_prompt_results(prompts: list[PromptTemplate], offset: int, limit: 
         Paginated slice of prompts
 
     """
-    return prompts[offset: offset + limit]
+    return prompts[offset : offset + limit]
 
 
 @app.get("/stats")

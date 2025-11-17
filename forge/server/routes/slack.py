@@ -24,7 +24,7 @@ from forge.server.routes.manage_conversations import (
     InitSessionRequest,
     new_conversation,
 )
-from forge.server.shared import config
+from forge.server.shared import config, conversation_manager, get_conversation_manager
 from forge.storage.data_models.slack_integration import (
     SlackConversationLink,
     SlackOutgoingMessage,
@@ -38,13 +38,37 @@ if TYPE_CHECKING:
 
 app = APIRouter()
 
+
+def _get_conversation_manager_instance():
+    manager: Any = conversation_manager
+    if manager is not None:
+        return manager
+    try:
+        return get_conversation_manager()
+    except Exception:
+        return None
+
+
+def _require_conversation_manager():
+    manager = _get_conversation_manager_instance()
+    if manager is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Conversation manager is not initialized",
+        )
+    return manager
+
 # Track active Slack → Forge conversation streams
-_slack_event_listeners: dict[str, tuple[SlackClient, str, str]] = {}  # conversation_id → (client, channel, thread_ts)
+_slack_event_listeners: dict[
+    str, tuple[SlackClient, str, str]
+] = {}  # conversation_id → (client, channel, thread_ts)
 
 # Backward compatibility for tests expecting FORGE_config
 FORGE_config = config
 
-_EMPTY_PROVIDER_TOKENS: PROVIDER_TOKEN_TYPE = cast(PROVIDER_TOKEN_TYPE, MappingProxyType({}))
+_EMPTY_PROVIDER_TOKENS: PROVIDER_TOKEN_TYPE = cast(
+    PROVIDER_TOKEN_TYPE, MappingProxyType({})
+)
 
 
 def create_slack_event_callback(
@@ -128,7 +152,7 @@ def create_slack_event_callback(
 
             elif isinstance(event, AgentStateChangedObservation):
                 # Agent state changed
-                from forge.core.schema.agent import AgentState
+                from forge.core.schemas import AgentState
 
                 if event.agent_state == AgentState.FINISHED:
                     text = ":tada: *Task completed!*"
@@ -164,7 +188,9 @@ def _resolve_slack_store() -> SlackStore:
     return get_slack_store()
 
 
-async def verify_slack_signature(request: Request, slack_signing_secret: str | None) -> bool:
+async def verify_slack_signature(
+    request: Request, slack_signing_secret: str | None
+) -> bool:
     """Verify Slack request signature.
 
     Args:
@@ -262,94 +288,35 @@ async def slack_oauth_callback(
     error: str | None = None,
     slack_store: SlackStore = Depends(_resolve_slack_store),
 ) -> Response:
-    """Handle Slack OAuth callback.
+    """Handle Slack OAuth callback."""
+    precheck_response = _handle_oauth_error_if_present(error)
+    if precheck_response is not None:
+        return precheck_response
 
-    Args:
-        code: OAuth authorization code
-        state: OAuth state for verification
-        error: OAuth error (if any)
-        slack_store: Slack store
-
-    Returns:
-        Redirect to app or error page
-
-    """
-    if error:
-        logger.error(f"Slack OAuth error: {error}")
-        return Response(content=f"Slack OAuth error: {error}", status_code=400)
-
-    if not code:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing OAuth code")
-
-    # Verify state
-    oauth_state = slack_store.get_oauth_state(state)
-    if not oauth_state:
+    if code is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid OAuth state",
+            detail="Missing OAuth code",
         )
 
-    if not SLACK_SDK_AVAILABLE:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Slack SDK not installed. Install with: pip install slack-sdk",
-        )
+    oauth_state = _validate_oauth_input(code, state, slack_store)
+    client = _create_slack_web_client()
 
     try:
-        from slack_sdk import WebClient  # type: ignore[import-not-found]
-
-        client = WebClient()
-
-        # Exchange code for token
-        response = client.oauth_v2_access(
-            client_id=FORGE_config.SLACK_CLIENT_ID,
-            client_secret=(FORGE_config.SLACK_CLIENT_SECRET.get_secret_value() if FORGE_config.SLACK_CLIENT_SECRET else None),
-            code=code,
-        )
-
-        if not response.get("ok"):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to exchange OAuth code",
-            )
-
-        # Save workspace
-        workspace = SlackWorkspace(
-            id=response["team"]["id"],
-            team_id=response["team"]["id"],
-            team_name=response["team"]["name"],
-            bot_token=response["access_token"],
-            bot_user_id=response["bot_user_id"],
-            installed_by_user_id=oauth_state.user_id,
-        )
+        oauth_payload = _exchange_oauth_code(client, code)
+        workspace = _workspace_from_oauth_response(oauth_payload, oauth_state.user_id)
         slack_store.save_workspace(workspace)
-
-        # Save user link if user token is provided
-        if "authed_user" in response and "id" in response["authed_user"]:
-            user_link = SlackUserLink(
-                slack_user_id=response["authed_user"]["id"],
-                slack_workspace_id=workspace.team_id,
-                FORGE_user_id=oauth_state.user_id,
-                user_token=response["authed_user"].get("access_token"),
-            )
-            slack_store.save_user_link(user_link)
-
-        # Clean up OAuth state
+        _maybe_save_user_link(slack_store, oauth_payload, workspace.team_id, oauth_state.user_id)
         slack_store.delete_oauth_state(state)
-
-        # Redirect to success page
-        redirect_url = oauth_state.redirect_url or "/settings/integrations"
-        return Response(
-            content=f'<html><body>Slack installed successfully! <a href="{redirect_url}">Return to Forge</a></body></html>',
-            media_type="text/html",
-        )
-
-    except Exception as e:
-        logger.error(f"Failed to complete Slack OAuth: {e}")
+        return _slack_oauth_success_response(oauth_state.redirect_url)
+    except HTTPException:
+        raise
+    except Exception as exc:  # pragma: no cover - defensive logging
+        logger.error(f"Failed to complete Slack OAuth: {exc}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
-        ) from e
+            detail=str(exc),
+        ) from exc
 
 
 @app.post("/events")
@@ -375,7 +342,11 @@ async def slack_events(
         return JSONResponse({"challenge": body.get("challenge")})
 
     # Verify signature
-    signing_secret = FORGE_config.SLACK_SIGNING_SECRET.get_secret_value() if FORGE_config.SLACK_SIGNING_SECRET else None
+    signing_secret = (
+        FORGE_config.SLACK_SIGNING_SECRET.get_secret_value()
+        if FORGE_config.SLACK_SIGNING_SECRET
+        else None
+    )
     if not await verify_slack_signature(request, signing_secret):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -414,7 +385,13 @@ async def handle_app_mention(event: dict[str, Any], slack_store: SlackStore) -> 
     logger.info(f"Handling app mention from user {user_id} in channel {channel_id}")
 
     if not all([team_id, channel_id, user_id, thread_ts]):
-        logger.error("Slack event missing required identifiers: team_id=%s channel_id=%s user_id=%s thread_ts=%s", team_id, channel_id, user_id, thread_ts)
+        logger.error(
+            "Slack event missing required identifiers: team_id=%s channel_id=%s user_id=%s thread_ts=%s",
+            team_id,
+            channel_id,
+            user_id,
+            thread_ts,
+        )
         return
 
     team_id = cast(str, team_id)
@@ -534,7 +511,9 @@ async def start_new_conversation(
                 ts=loading_ts,
                 text=f":x: Error starting conversation: {error_text}",
             )
-            logger.error("Failed to start conversation via Slack (response %s)", error_text)
+            logger.error(
+                "Failed to start conversation via Slack (response %s)", error_text
+            )
             return
 
         # Save conversation link
@@ -550,9 +529,11 @@ async def start_new_conversation(
 
         # Subscribe to agent events to stream updates to Slack
         from forge.events.stream import EventStreamSubscriber
-        from forge.server.shared import conversation_manager
 
-        agent_session = conversation_manager.get_agent_session(conversation_response.conversation_id)
+        manager = _require_conversation_manager()
+        agent_session = manager.get_agent_session(
+            conversation_response.conversation_id
+        )
         if agent_session:
             # Create event callback for streaming to Slack
             event_callback = create_slack_event_callback(
@@ -571,9 +552,15 @@ async def start_new_conversation(
                 )
 
                 # Track the listener for cleanup
-                _slack_event_listeners[conversation_response.conversation_id] = (client, channel_id, thread_ts)
+                _slack_event_listeners[conversation_response.conversation_id] = (
+                    client,
+                    channel_id,
+                    thread_ts,
+                )
 
-                logger.info(f"Subscribed to events for Slack conversation {conversation_response.conversation_id}")
+                logger.info(
+                    f"Subscribed to events for Slack conversation {conversation_response.conversation_id}"
+                )
             except ValueError as e:
                 # Subscription ID already exists, that's OK
                 logger.debug(f"Event subscription already exists: {e}")
@@ -583,7 +570,8 @@ async def start_new_conversation(
             channel=channel_id,
             ts=loading_ts,
             text=f":white_check_mark: Conversation started! I'll update you here as I work.\n\n*Or view live at:* https://app.all-hands.dev/conversations/{
-                conversation_response.conversation_id}",
+                conversation_response.conversation_id
+            }",
         )
 
         logger.info(
@@ -617,7 +605,6 @@ async def continue_conversation(
 
     """
     from forge.events.action import MessageAction
-    from forge.server.shared import conversation_manager
 
     client = SlackClient(workspace.bot_token)
 
@@ -643,7 +630,8 @@ async def continue_conversation(
             "message": clean_text,
         }
 
-        await conversation_manager.send_event_to_conversation(
+        manager = _require_conversation_manager()
+        await manager.send_event_to_conversation(
             conv_link.conversation_id,
             event_dict,
         )
@@ -653,7 +641,8 @@ async def continue_conversation(
             channel=conv_link.slack_channel_id,
             ts=loading_ts,
             text=f":white_check_mark: Message sent to conversation!\n\n*View progress at:* https://app.all-hands.dev/conversations/{
-                conv_link.conversation_id}",
+                conv_link.conversation_id
+            }",
         )
 
         logger.info(f"Continued conversation {conv_link.conversation_id} from Slack")
@@ -711,6 +700,103 @@ async def handle_thread_message(event: dict[str, Any], slack_store: SlackStore) 
     await continue_conversation(conv_link, text, workspace, slack_store)
 
 
+def _handle_oauth_error_if_present(error: str | None) -> Response | None:
+    if not error:
+        return None
+    logger.error(f"Slack OAuth error: {error}")
+    return Response(content=f"Slack OAuth error: {error}", status_code=400)
+
+
+def _validate_oauth_input(
+    code: str | None,
+    state: str,
+    slack_store: SlackStore,
+):
+    if not code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing OAuth code",
+        )
+
+    oauth_state = slack_store.get_oauth_state(state)
+    if not oauth_state:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid OAuth state",
+        )
+
+    if not SLACK_SDK_AVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Slack SDK not installed. Install with: pip install slack-sdk",
+        )
+    return oauth_state
+
+
+def _create_slack_web_client():
+    from slack_sdk import WebClient  # type: ignore[import-not-found]
+
+    return WebClient()
+
+
+def _exchange_oauth_code(client, code: str):
+    response = client.oauth_v2_access(
+        client_id=FORGE_config.SLACK_CLIENT_ID,
+        client_secret=(
+            FORGE_config.SLACK_CLIENT_SECRET.get_secret_value()
+            if FORGE_config.SLACK_CLIENT_SECRET
+            else None
+        ),
+        code=code,
+    )
+
+    if not response.get("ok"):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to exchange OAuth code",
+        )
+    return response
+
+
+def _workspace_from_oauth_response(response: dict[str, Any], user_id: str) -> SlackWorkspace:
+    return SlackWorkspace(
+        id=response["team"]["id"],
+        team_id=response["team"]["id"],
+        team_name=response["team"]["name"],
+        bot_token=response["access_token"],
+        bot_user_id=response["bot_user_id"],
+        installed_by_user_id=user_id,
+    )
+
+
+def _maybe_save_user_link(
+    slack_store: SlackStore,
+    response: dict[str, Any],
+    workspace_id: str,
+    user_id: str,
+) -> None:
+    authed_user = response.get("authed_user")
+    if not authed_user or "id" not in authed_user:
+        return
+
+    user_link = SlackUserLink(
+        slack_user_id=authed_user["id"],
+        slack_workspace_id=workspace_id,
+        FORGE_user_id=user_id,
+        user_token=authed_user.get("access_token"),
+    )
+    slack_store.save_user_link(user_link)
+
+
+def _slack_oauth_success_response(redirect_url: str | None) -> Response:
+    target = redirect_url or "/settings/integrations"
+    html = (
+        '<html><body>Slack installed successfully! '
+        f'<a href="{target}">Return to Forge</a></body></html>'
+    )
+    return Response(content=html, media_type="text/html")
+
+
 @app.get("/workspaces")
 async def list_workspaces(
     user_id: str,
@@ -731,7 +817,10 @@ async def list_workspaces(
 
     return JSONResponse(
         {
-            "workspaces": [{"team_id": ws.team_id, "team_name": ws.team_name} for ws in user_workspaces],
+            "workspaces": [
+                {"team_id": ws.team_id, "team_name": ws.team_name}
+                for ws in user_workspaces
+            ],
         },
     )
 

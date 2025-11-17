@@ -4,6 +4,7 @@ import { Card, CardContent } from "#/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "#/components/ui/tabs";
 import { Badge } from "#/components/ui/badge";
 import { useScrollReveal } from "#/hooks/use-scroll-reveal";
+import { interactiveDemo } from "#/content/landing";
 
 /**
  * Interactive demo section with bolt.new-style split-screen code editor
@@ -17,18 +18,7 @@ export default function InteractiveDemoSection(): React.ReactElement {
     triggerOnce: true,
   });
 
-  const fullCode = `import React from 'react';
-import { Button } from './components/ui/button';
-
-export default function App() {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Button variant="gradient">
-        Hello World
-      </Button>
-    </div>
-  );
-}`;
+  const fullCode = interactiveDemo.codeSample;
 
   // Typing animation for code
   useEffect(() => {
@@ -53,12 +43,7 @@ export default function App() {
   useEffect(() => {
     if (!isVisible || activeTab !== "terminal") return;
 
-    const outputs = [
-      "$ npm run dev",
-      "Starting development server...",
-      "✓ Compiled successfully",
-      "Server running on http://localhost:3000",
-    ];
+    const outputs = interactiveDemo.terminalLines;
 
     let index = 0;
     const addOutput = () => {
@@ -89,15 +74,12 @@ export default function App() {
             Live Demo
           </Badge>
 
-          <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight tracking-tight">
-            <span className="text-foreground block mb-2">See It In Action</span>
-            <span className="bg-gradient-to-r from-brand-500 via-accent-500 to-brand-600 bg-clip-text text-transparent gradient-shimmer block">
-              Real-Time Code Generation
-            </span>
+          <h2 className="text-4xl md:text-5xl font-semibold mb-6 text-white">
+            {interactiveDemo.title}
           </h2>
 
           <p className="text-lg text-foreground-secondary leading-relaxed">
-            Watch as AI writes production-ready code in real-time
+            {interactiveDemo.subtitle}
           </p>
         </div>
 

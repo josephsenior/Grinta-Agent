@@ -3,11 +3,15 @@
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
+from types import MappingProxyType
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from fastapi import HTTPException, Request, status
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
+
 from forge.integrations.provider import ProviderToken, ProviderType
 from forge.server.routes import prompts as prompts_routes
 from forge.server.app import app
@@ -28,9 +32,10 @@ class MockUserAuth(UserAuth):
 
     def __init__(self):
         self._settings = None
-        self._settings_store = MagicMock()
+        self._settings_store = MagicMock(spec=SettingsStore)
         self._settings_store.load = AsyncMock(return_value=None)
         self._settings_store.store = AsyncMock()
+        self._secrets_store = AsyncMock(spec=SecretsStore)
 
     async def get_user_id(self) -> str | None:
         return "test-user"
@@ -41,14 +46,16 @@ class MockUserAuth(UserAuth):
     async def get_access_token(self) -> SecretStr | None:
         return SecretStr("test-token")
 
-    async def get_provider_tokens(self) -> dict[ProviderType, ProviderToken] | None:
-        return None
+    async def get_provider_tokens(
+        self,
+    ) -> MappingProxyType[ProviderType, ProviderToken] | None:
+        return MappingProxyType({})
 
-    async def get_user_settings_store(self) -> SettingsStore | None:
-        return self._settings_store
+    async def get_user_settings_store(self) -> SettingsStore:
+        return cast(SettingsStore, self._settings_store)
 
-    async def get_secrets_store(self) -> SecretsStore | None:
-        return None
+    async def get_secrets_store(self) -> SecretsStore:
+        return cast(SecretsStore, self._secrets_store)
 
     async def get_user_secrets(self) -> UserSecrets | None:
         return None
@@ -63,21 +70,27 @@ def test_client(tmp_path):
     # Set up workspace directory
     workspace_dir = str(tmp_path / "workspace")
     os.makedirs(workspace_dir, exist_ok=True)
-    
-    with patch.dict(os.environ, {
-        "SESSION_API_KEY": "",
-        "CSRF_PROTECTION_ENABLED": "false",  # Disable CSRF for tests
-        "RATE_LIMITING_ENABLED": "false",  # Disable rate limiting for tests
-    }, clear=False), patch(
-        "forge.server.dependencies._SESSION_API_KEY", None
-    ), patch(
-        "forge.server.user_auth.user_auth.UserAuth.get_instance",
-        return_value=MockUserAuth(),
-    ), patch(
-        "forge.storage.settings.file_settings_store.FileSettingsStore.get_instance",
-        AsyncMock(return_value=FileSettingsStore(InMemoryFileStore())),
-    ), patch(
-        "forge.server.shared.config.workspace_base", workspace_dir
+
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "SESSION_API_KEY": "",
+                "CSRF_PROTECTION_ENABLED": "false",  # Disable CSRF for tests
+                "RATE_LIMITING_ENABLED": "false",  # Disable rate limiting for tests
+            },
+            clear=False,
+        ),
+        patch("forge.server.dependencies._SESSION_API_KEY", None),
+        patch(
+            "forge.server.user_auth.user_auth.UserAuth.get_instance",
+            return_value=MockUserAuth(),
+        ),
+        patch(
+            "forge.storage.settings.file_settings_store.FileSettingsStore.get_instance",
+            AsyncMock(return_value=FileSettingsStore(InMemoryFileStore())),
+        ),
+        patch("forge.server.shared.config.workspace_base", workspace_dir),
     ):
         with TestClient(app) as client:
             yield client
@@ -97,7 +110,9 @@ async def test_create_prompt(test_client):
         "content": "This is a test prompt: {{variable1}}",
         "description": "Test description",
         "category": "coding",
-        "variables": [{"name": "variable1", "description": "Test variable", "required": True}],
+        "variables": [
+            {"name": "variable1", "description": "Test variable", "required": True}
+        ],
         "tags": ["test", "example"],
     }
 
@@ -184,7 +199,11 @@ async def test_search_prompts(test_client):
     # Create test prompts
     test_client.post(
         "/api/prompts/",
-        json={"title": "Python Debugging", "content": "Debug code", "category": "debugging"},
+        json={
+            "title": "Python Debugging",
+            "content": "Debug code",
+            "category": "debugging",
+        },
     )
     test_client.post(
         "/api/prompts/",
@@ -196,7 +215,9 @@ async def test_search_prompts(test_client):
     )
 
     # Search for "debug" using POST /api/prompts/search endpoint
-    response = test_client.post("/api/prompts/search", json={"query": "debug", "limit": 100, "offset": 0})
+    response = test_client.post(
+        "/api/prompts/search", json={"query": "debug", "limit": 100, "offset": 0}
+    )
     assert response.status_code == 200
     data = response.json()
     assert len(data) >= 1
@@ -212,13 +233,17 @@ async def test_toggle_favorite_prompt(test_client):
     prompt_id = create_response.json()["id"]
 
     # Set favorite to true
-    response = test_client.patch(f"/api/prompts/{prompt_id}", json={"is_favorite": True})
+    response = test_client.patch(
+        f"/api/prompts/{prompt_id}", json={"is_favorite": True}
+    )
     assert response.status_code == 200
     data = response.json()
     assert data["is_favorite"] is True
 
     # Set favorite to false
-    response = test_client.patch(f"/api/prompts/{prompt_id}", json={"is_favorite": False})
+    response = test_client.patch(
+        f"/api/prompts/{prompt_id}", json={"is_favorite": False}
+    )
     assert response.status_code == 200
     data = response.json()
     assert data["is_favorite"] is False
@@ -234,7 +259,11 @@ async def test_export_import_prompts(test_client):
     )
     test_client.post(
         "/api/prompts/",
-        json={"title": "Export Test 2", "content": "Content 2", "category": "debugging"},
+        json={
+            "title": "Export Test 2",
+            "content": "Content 2",
+            "category": "debugging",
+        },
     )
 
     # Export
@@ -257,7 +286,12 @@ async def test_get_prompt_stats(test_client):
     # Create some prompts
     test_client.post(
         "/api/prompts/",
-        json={"title": "Stats Test 1", "content": "Content 1", "category": "coding", "is_favorite": True},
+        json={
+            "title": "Stats Test 1",
+            "content": "Content 1",
+            "category": "coding",
+            "is_favorite": True,
+        },
     )
     test_client.post(
         "/api/prompts/",
@@ -290,8 +324,8 @@ async def test_render_prompt_with_variables(test_client):
         "category": "coding",
         "variables": [
             {"name": "name", "description": "User name", "required": True},
-            {"name": "task", "description": "Task description", "required": True}
-        ]
+            {"name": "task", "description": "Task description", "required": True},
+        ],
     }
     create_response = test_client.post("/api/prompts/", json=prompt_data)
     prompt_id = create_response.json()["id"]
@@ -299,10 +333,7 @@ async def test_render_prompt_with_variables(test_client):
     # Render the prompt with variables
     render_data = {
         "prompt_id": prompt_id,
-        "variables": {
-            "name": "Alice",
-            "task": "Write a Python function"
-        }
+        "variables": {"name": "Alice", "task": "Write a Python function"},
     }
     response = test_client.post("/api/prompts/render", json=render_data)
     assert response.status_code == 200
@@ -316,7 +347,11 @@ async def test_render_prompt_with_variables(test_client):
 async def test_track_prompt_usage(test_client):
     """Test tracking prompt usage."""
     # Create a prompt
-    prompt_data = {"title": "Usage Test", "content": "Test content", "category": "coding"}
+    prompt_data = {
+        "title": "Usage Test",
+        "content": "Test content",
+        "category": "coding",
+    }
     create_response = test_client.post("/api/prompts/", json=prompt_data)
     prompt_id = create_response.json()["id"]
     initial_usage = create_response.json()["usage_count"]
@@ -339,19 +374,27 @@ def test_validate_prompt_helpers_raise():
     with pytest.raises(HTTPException):
         prompts_routes._validate_prompt_title(" ")
     with pytest.raises(HTTPException):
-        prompts_routes._validate_prompt_title("a" * (prompts_routes.MAX_PROMPT_TITLE_LENGTH + 1))
+        prompts_routes._validate_prompt_title(
+            "a" * (prompts_routes.MAX_PROMPT_TITLE_LENGTH + 1)
+        )
     with pytest.raises(HTTPException):
         prompts_routes._validate_prompt_content(" ")
     with pytest.raises(HTTPException):
-        prompts_routes._validate_prompt_content("a" * (prompts_routes.MAX_PROMPT_CONTENT_LENGTH + 1))
+        prompts_routes._validate_prompt_content(
+            "a" * (prompts_routes.MAX_PROMPT_CONTENT_LENGTH + 1)
+        )
     with pytest.raises(HTTPException):
-        prompts_routes._validate_prompt_tags([str(i) for i in range(prompts_routes.MAX_TAGS_PER_PROMPT + 1)])
+        prompts_routes._validate_prompt_tags(
+            [str(i) for i in range(prompts_routes.MAX_TAGS_PER_PROMPT + 1)]
+        )
     with pytest.raises(HTTPException):
         prompts_routes._validate_prompt_tags(["valid", "bad!"])
     with pytest.raises(HTTPException):
         prompts_routes._validate_variable_name("invalid-name")
     with pytest.raises(HTTPException):
-        prompts_routes._validate_variable_name("a" * (prompts_routes.MAX_VARIABLE_NAME_LENGTH + 1))
+        prompts_routes._validate_variable_name(
+            "a" * (prompts_routes.MAX_VARIABLE_NAME_LENGTH + 1)
+        )
 
 
 def test_filter_sort_paginate_helpers():
@@ -399,13 +442,18 @@ def test_filter_sort_paginate_helpers():
 
     prompts = [prompt1, prompt2, prompt3]
 
-    assert prompts_routes._filter_prompts_by_category(prompts, PromptCategory.CODING) == [prompt1, prompt3]
+    assert prompts_routes._filter_prompts_by_category(
+        prompts, PromptCategory.CODING
+    ) == [prompt1, prompt3]
     assert prompts_routes._filter_prompts_by_category(prompts, None) == prompts
 
     assert prompts_routes._filter_prompts_by_favorite(prompts, True) == [prompt1]
     assert prompts_routes._filter_prompts_by_favorite(prompts, None) == prompts
 
-    assert prompts_routes._filter_prompts_by_tags(prompts, ["analysis"]) == [prompt1, prompt3]
+    assert prompts_routes._filter_prompts_by_tags(prompts, ["analysis"]) == [
+        prompt1,
+        prompt3,
+    ]
     assert prompts_routes._filter_prompts_by_tags(prompts, None) == prompts
 
     query_filtered = prompts_routes._filter_prompts_by_query(prompts, "content")
@@ -448,6 +496,8 @@ def test_save_prompt_io_error(workspace_base, monkeypatch):
         content="content",
         variables=[],
         tags=[],
+        is_favorite=False,
+        usage_count=0,
     )
 
     def fake_open(*args, **kwargs):
@@ -476,7 +526,9 @@ def test_delete_prompt_file_error(workspace_base, monkeypatch):
 
 
 def test_render_prompt_not_found(test_client):
-    response = test_client.post("/api/prompts/render", json={"prompt_id": "missing", "variables": {}})
+    response = test_client.post(
+        "/api/prompts/render", json={"prompt_id": "missing", "variables": {}}
+    )
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -491,19 +543,25 @@ def test_delete_prompt_not_found(test_client):
 
 
 def test_list_prompts_handles_exception(test_client):
-    with patch.object(prompts_routes, "_load_all_prompts", side_effect=RuntimeError("boom")):
+    with patch.object(
+        prompts_routes, "_load_all_prompts", side_effect=RuntimeError("boom")
+    ):
         response = test_client.get("/api/prompts/")
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
 def test_search_prompts_handles_exception(test_client):
-    with patch.object(prompts_routes, "_load_all_prompts", side_effect=RuntimeError("boom")):
+    with patch.object(
+        prompts_routes, "_load_all_prompts", side_effect=RuntimeError("boom")
+    ):
         response = test_client.post("/api/prompts/search", json={"query": "x"})
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
 def test_get_prompt_stats_handles_exception(test_client):
-    with patch.object(prompts_routes, "_load_all_prompts", side_effect=RuntimeError("boom")):
+    with patch.object(
+        prompts_routes, "_load_all_prompts", side_effect=RuntimeError("boom")
+    ):
         response = test_client.get("/api/prompts/stats")
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -511,14 +569,26 @@ def test_get_prompt_stats_handles_exception(test_client):
 def test_export_prompts_filtered(test_client):
     test_client.post(
         "/api/prompts/",
-        json={"title": "Export Coding", "content": "content", "category": "coding", "is_favorite": True},
+        json={
+            "title": "Export Coding",
+            "content": "content",
+            "category": "coding",
+            "is_favorite": True,
+        },
     )
     test_client.post(
         "/api/prompts/",
-        json={"title": "Export Debug", "content": "content", "category": "debugging", "is_favorite": False},
+        json={
+            "title": "Export Debug",
+            "content": "content",
+            "category": "debugging",
+            "is_favorite": False,
+        },
     )
 
-    response = test_client.get("/api/prompts/export", params={"category": "coding", "is_favorite": True})
+    response = test_client.get(
+        "/api/prompts/export", params={"category": "coding", "is_favorite": True}
+    )
     assert response.status_code == 200
     export_data = response.json()
     assert len(export_data["prompts"]) == 1
@@ -621,6 +691,8 @@ def test_filter_prompts_query_none():
             tags=["alpha"],
             updated_at=now,
             created_at=now,
+            is_favorite=False,
+            usage_count=0,
         )
     ]
     assert prompts_routes._filter_prompts_by_query(prompts, None) == prompts
@@ -638,8 +710,12 @@ def test_load_all_prompts_skips_invalid_files(workspace_base):
         content="Content",
         variables=[],
         tags=[],
+        is_favorite=False,
+        usage_count=0,
     )
-    (prompts_dir / "good.json").write_text(valid_prompt.model_dump_json(), encoding="utf-8")
+    (prompts_dir / "good.json").write_text(
+        valid_prompt.model_dump_json(), encoding="utf-8"
+    )
 
     prompts = prompts_routes._load_all_prompts()
     assert len(prompts) == 1
@@ -649,11 +725,21 @@ def test_load_all_prompts_skips_invalid_files(workspace_base):
 def test_list_prompts_applies_filters(test_client):
     test_client.post(
         "/api/prompts/",
-        json={"title": "Coding Prompt", "content": "c", "category": "coding", "is_favorite": False},
+        json={
+            "title": "Coding Prompt",
+            "content": "c",
+            "category": "coding",
+            "is_favorite": False,
+        },
     )
     test_client.post(
         "/api/prompts/",
-        json={"title": "Debug Prompt", "content": "d", "category": "debugging", "is_favorite": True},
+        json={
+            "title": "Debug Prompt",
+            "content": "d",
+            "category": "debugging",
+            "is_favorite": True,
+        },
     )
 
     response = test_client.get(
@@ -675,7 +761,9 @@ def test_create_prompt_handles_save_error(test_client):
 
 
 def test_export_prompts_handles_exception(test_client):
-    with patch.object(prompts_routes, "_load_all_prompts", side_effect=Exception("boom")):
+    with patch.object(
+        prompts_routes, "_load_all_prompts", side_effect=Exception("boom")
+    ):
         response = test_client.get("/api/prompts/export")
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -761,7 +849,8 @@ def test_delete_prompt_handles_exception(test_client):
         json={"title": "Delete Err", "content": "content", "category": "coding"},
     )
     prompt_id = create_response.json()["id"]
-    with patch.object(prompts_routes, "_delete_prompt_file", side_effect=Exception("boom")):
+    with patch.object(
+        prompts_routes, "_delete_prompt_file", side_effect=Exception("boom")
+    ):
         response = test_client.delete(f"/api/prompts/{prompt_id}")
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-

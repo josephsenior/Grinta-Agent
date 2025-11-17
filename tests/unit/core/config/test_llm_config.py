@@ -22,7 +22,9 @@ def generic_llm_toml(tmp_path: pathlib.Path) -> str:
     return str(toml_file)
 
 
-def test_load_from_toml_llm_with_fallback(default_config: ForgeConfig, generic_llm_toml: str) -> None:
+def test_load_from_toml_llm_with_fallback(
+    default_config: ForgeConfig, generic_llm_toml: str
+) -> None:
     """Test that custom LLM configurations fallback non-overridden attributes.
 
     like 'num_retries' from the generic [llm] section.
@@ -46,7 +48,9 @@ def test_load_from_toml_llm_with_fallback(default_config: ForgeConfig, generic_l
     assert custom3.num_retries == 3
 
 
-def test_load_from_toml_llm_custom_overrides_all(default_config: ForgeConfig, tmp_path: pathlib.Path) -> None:
+def test_load_from_toml_llm_custom_overrides_all(
+    default_config: ForgeConfig, tmp_path: pathlib.Path
+) -> None:
     """Test that a custom LLM can fully override all attributes from the generic [llm] section."""
     toml_content = '\n[core]\nworkspace_base = "./workspace"\n\n[llm]\nmodel = "base-model"\napi_key = "base-api-key"\nnum_retries = 3\n\n[llm.custom_full]\nmodel = "full-custom-model"\napi_key = "full-custom-api-key"\nnum_retries = 10\n    '
     toml_file = tmp_path / "full_override_llm.toml"
@@ -62,7 +66,9 @@ def test_load_from_toml_llm_custom_overrides_all(default_config: ForgeConfig, tm
     assert custom_full.num_retries == 10
 
 
-def test_load_from_toml_llm_custom_partial_override(default_config: ForgeConfig, generic_llm_toml: str) -> None:
+def test_load_from_toml_llm_custom_partial_override(
+    default_config: ForgeConfig, generic_llm_toml: str
+) -> None:
     """Test that custom LLM configurations can partially override attributes.
 
     from the generic [llm] section while inheriting others.
@@ -78,7 +84,9 @@ def test_load_from_toml_llm_custom_partial_override(default_config: ForgeConfig,
     assert custom2.num_retries == 5
 
 
-def test_load_from_toml_llm_custom_no_override(default_config: ForgeConfig, generic_llm_toml: str) -> None:
+def test_load_from_toml_llm_custom_no_override(
+    default_config: ForgeConfig, generic_llm_toml: str
+) -> None:
     """Test that custom LLM configurations with no additional overrides.
 
     inherit all non-specified attributes from the generic [llm] section.
@@ -90,7 +98,9 @@ def test_load_from_toml_llm_custom_no_override(default_config: ForgeConfig, gene
     assert custom3.num_retries == 3
 
 
-def test_load_from_toml_llm_missing_generic(default_config: ForgeConfig, tmp_path: pathlib.Path) -> None:
+def test_load_from_toml_llm_missing_generic(
+    default_config: ForgeConfig, tmp_path: pathlib.Path
+) -> None:
     """Test that custom LLM configurations without a generic [llm] section.
 
     use only their own attributes and fallback to defaults for others.
@@ -105,7 +115,9 @@ def test_load_from_toml_llm_missing_generic(default_config: ForgeConfig, tmp_pat
     assert custom_only.num_retries == 5
 
 
-def test_load_from_toml_llm_invalid_config(default_config: ForgeConfig, tmp_path: pathlib.Path) -> None:
+def test_load_from_toml_llm_invalid_config(
+    default_config: ForgeConfig, tmp_path: pathlib.Path
+) -> None:
     """Test that invalid custom LLM configurations do not override the generic.
 
     and raise appropriate warnings.
@@ -124,11 +136,11 @@ def test_load_from_toml_llm_invalid_config(default_config: ForgeConfig, tmp_path
     assert custom_invalid.num_retries == 3
 
 
-def test_azure_model_api_version(default_config: ForgeConfig, tmp_path: pathlib.Path) -> None:
+def test_azure_model_api_version(
+    default_config: ForgeConfig, tmp_path: pathlib.Path
+) -> None:
     """Test that Azure models get the correct API version by default."""
-    toml_content = (
-        '\n[core]\nworkspace_base = "./workspace"\n\n[llm]\nmodel = "azure/o3-mini"\napi_key = "test-api-key"\n    '
-    )
+    toml_content = '\n[core]\nworkspace_base = "./workspace"\n\n[llm]\nmodel = "azure/o3-mini"\napi_key = "test-api-key"\n    '
     toml_file = tmp_path / "azure_llm.toml"
     toml_file.write_text(toml_content)
     load_from_toml(default_config, str(toml_file))

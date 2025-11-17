@@ -14,13 +14,13 @@ export function HelpLink({
   suffix,
 }: HelpLinkProps) {
   return (
-    <p data-testid={testId} className="text-xs">
+    <p data-testid={testId} className="text-xs text-foreground-secondary">
       {text}{" "}
       <a
         href={href}
         rel="noreferrer noopener"
         target="_blank"
-        className="underline underline-offset-2"
+        className="underline underline-offset-2 text-foreground hover:text-foreground-secondary transition-colors"
       >
         {linkText}
       </a>

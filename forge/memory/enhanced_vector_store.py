@@ -16,6 +16,7 @@ import hashlib
 import logging
 import time
 from collections import OrderedDict
+import asyncio
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -80,10 +81,12 @@ class QueryCache:
 class ReRanker:
     """Cross-encoder re-ranker for improved accuracy."""
 
-    def __init__(self, model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2") -> None:
+    def __init__(
+        self, model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    ) -> None:
         """Configure the reranker with the chosen cross-encoder model name."""
         self.model_name = model_name
-        self._model = None
+        self._model: Any | None = None
         self.enabled = True
 
     def _load_model(self) -> None:
@@ -95,13 +98,17 @@ class ReRanker:
                 logger.info(f"Loading re-ranker model: {self.model_name}")
                 self._model = CrossEncoder(self.model_name)
             except ImportError:
-                logger.warning("sentence-transformers not available, re-ranking disabled")
+                logger.warning(
+                    "sentence-transformers not available, re-ranking disabled"
+                )
                 self.enabled = False
             except Exception as e:
                 logger.warning(f"Failed to load re-ranker: {e}")
                 self.enabled = False
 
-    def rerank(self, query: str, candidates: list[dict[str, Any]], top_k: int = 5) -> list[dict[str, Any]]:
+    def rerank(
+        self, query: str, candidates: list[dict[str, Any]], top_k: int = 5
+    ) -> list[dict[str, Any]]:
         """Re-rank candidates using cross-encoder.
 
         Args:
@@ -121,14 +128,20 @@ class ReRanker:
             return candidates[:top_k]
 
         # Prepare pairs for cross-encoder
-        pairs = [(query, candidate.get("excerpt", "") or candidate.get("rationale", "")) for candidate in candidates]
+        pairs = [
+            (query, candidate.get("excerpt", "") or candidate.get("rationale", ""))
+            for candidate in candidates
+        ]
 
         # Get scores from cross-encoder
         try:
             scores = self._model.predict(pairs)
 
             # Combine with original candidates
-            reranked = [{**candidate, "rerank_score": float(score)} for candidate, score in zip(candidates, scores)]
+            reranked = [
+                {**candidate, "rerank_score": float(score)}
+                for candidate, score in zip(candidates, scores)
+            ]
 
             # Sort by rerank score
             reranked.sort(key=lambda x: x["rerank_score"], reverse=True)
@@ -175,16 +188,22 @@ class EnhancedVectorStore:
         # Import the base cloud store
         from .cloud_vector_store import AdaptiveVectorStore
 
-        self.backend = AdaptiveVectorStore(collection_name, force_backend=backend_type)
+        self.backend: AdaptiveVectorStore = AdaptiveVectorStore(
+            collection_name, force_backend=backend_type
+        )
 
         # Initialize cache
-        self.cache = QueryCache(max_size=cache_size, ttl=cache_ttl) if enable_cache else None
+        self.cache: QueryCache | None = (
+            QueryCache(max_size=cache_size, ttl=cache_ttl) if enable_cache else None
+        )
 
         # Initialize re-ranker
-        self.reranker = ReRanker() if enable_reranking else None
+        self.reranker: ReRanker | None = (
+            ReRanker() if enable_reranking else None
+        )
 
         # Configuration
-        self.config = {
+        self.config: dict[str, bool | int | float] = {
             "accuracy_weight": 0.80,
             "speed_weight": 0.20,
             "reranking_enabled": enable_reranking,
@@ -210,7 +229,26 @@ class EnhancedVectorStore:
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Add a document to the vector store."""
-        return self.backend.add(step_id, role, artifact_hash, rationale, content_text, metadata)
+        return self.backend.add(
+            step_id, role, artifact_hash, rationale, content_text, metadata
+        )
+
+    async def async_add(
+        self,
+        step_id: str,
+        role: str,
+        artifact_hash: str | None,
+        rationale: str | None,
+        content_text: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Async wrapper to add a document without blocking the event loop.
+
+        Offloads potentially CPU and I/O heavy operations to a worker thread.
+        """
+        await asyncio.to_thread(
+            self.add, step_id, role, artifact_hash, rationale, content_text, metadata
+        )
 
     def search(
         self,
@@ -243,14 +281,23 @@ class EnhancedVectorStore:
             cached_results = self.cache.get(query)
             if cached_results is not None:
                 # Apply k and filter if needed
-                filtered_results = self._apply_filters(cached_results, k, filter_metadata)
+                filtered_results = self._apply_filters(
+                    cached_results, k, filter_metadata
+                )
                 elapsed_ms = (time.time() - start_time) * 1000
                 logger.debug(f"Cache hit! Returned in {elapsed_ms:.1f}ms")
                 return filtered_results
 
         # Retrieve more candidates for re-ranking (higher recall)
-        initial_k = max(self.config["initial_k"], k * 2)
-        candidates = self.backend.search(query, k=initial_k, filter_metadata=filter_metadata)
+        initial_k_raw = self.config.get("initial_k", 20)
+        if isinstance(initial_k_raw, bool):
+            initial_k_raw = 20
+        elif not isinstance(initial_k_raw, int):
+            initial_k_raw = int(initial_k_raw)
+        initial_k = max(initial_k_raw, k * 2)
+        candidates = self.backend.search(
+            query, k=initial_k, filter_metadata=filter_metadata
+        )
 
         if not candidates:
             return []
@@ -271,6 +318,19 @@ class EnhancedVectorStore:
         )
 
         return results
+
+    async def async_search(
+        self,
+        query: str,
+        k: int = 5,
+        filter_metadata: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Async wrapper for search to avoid blocking the event loop.
+
+        Executes the synchronous search in a thread, preserving existing logic
+        including caching and optional re-ranking.
+        """
+        return await asyncio.to_thread(self.search, query, k, filter_metadata)
 
     def stats(self) -> dict[str, Any]:
         """Get comprehensive statistics."""
@@ -331,7 +391,11 @@ class EnhancedVectorStore:
 
         """
         if filter_metadata:
-            filtered = [r for r in results if all(r.get(key) == value for key, value in filter_metadata.items())]
+            filtered = [
+                r
+                for r in results
+                if all(r.get(key) == value for key, value in filter_metadata.items())
+            ]
             return filtered[:k]
         return results[:k]
 

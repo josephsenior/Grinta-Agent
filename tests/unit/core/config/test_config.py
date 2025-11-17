@@ -24,9 +24,9 @@ from forge.core.logger import forge_logger
 
 @pytest.fixture
 def setup_env():
-    with open("old_style_config.toml", "w", encoding='utf-8') as f:
+    with open("old_style_config.toml", "w", encoding="utf-8") as f:
         f.write('[default]\nLLM_MODEL="GPT-4"\n')
-    with open("new_style_config.toml", "w", encoding='utf-8') as f:
+    with open("new_style_config.toml", "w", encoding="utf-8") as f:
         f.write('[app]\nLLM_MODEL="GPT-3"\n')
     yield
     os.remove("old_style_config.toml")
@@ -54,8 +54,12 @@ def test_compat_env_to_config(monkeypatch, setup_env):
     finalize_config(config)
     assert config.sandbox.volumes == "/repos/Forge/workspace:/workspace:rw"
     expected_tail = os.path.normcase(os.path.join("repos", "forge", "workspace"))
-    assert os.path.normcase(os.path.normpath(config.workspace_base)).endswith(expected_tail)
-    assert os.path.normcase(os.path.normpath(config.workspace_mount_path)).endswith(expected_tail)
+    assert os.path.normcase(os.path.normpath(config.workspace_base)).endswith(
+        expected_tail
+    )
+    assert os.path.normcase(os.path.normpath(config.workspace_mount_path)).endswith(
+        expected_tail
+    )
     assert config.workspace_mount_path_in_sandbox == "/workspace"
     assert isinstance(config.get_llm_config(), LLMConfig)
     assert config.get_llm_config().api_key.get_secret_value() == "sk-proj-rgMV0..."
@@ -91,20 +95,33 @@ def test_load_from_new_style_toml(default_config, temp_toml_file):
     assert default_config.get_llm_config().model == "test-model"
     assert default_config.get_llm_config().api_key.get_secret_value() == "toml-api-key"
     assert default_config.get_agent_config().enable_prompt_extensions is True
-    assert default_config.get_llm_config_from_agent("CodeActAgent") == default_config.get_llm_config()
-    assert default_config.get_agent_config("CodeActAgent").enable_prompt_extensions is True
-    assert default_config.get_llm_config_from_agent("BrowsingAgent") == default_config.get_llm_config("cheap")
-    assert default_config.get_llm_config_from_agent("BrowsingAgent").model == "some-cheap-model"
-    assert default_config.get_agent_config("BrowsingAgent").enable_prompt_extensions is False
+    assert (
+        default_config.get_llm_config_from_agent("CodeActAgent")
+        == default_config.get_llm_config()
+    )
+    assert (
+        default_config.get_agent_config("CodeActAgent").enable_prompt_extensions is True
+    )
+    assert default_config.get_llm_config_from_agent(
+        "BrowsingAgent"
+    ) == default_config.get_llm_config("cheap")
+    assert (
+        default_config.get_llm_config_from_agent("BrowsingAgent").model
+        == "some-cheap-model"
+    )
+    assert (
+        default_config.get_agent_config("BrowsingAgent").enable_prompt_extensions
+        is False
+    )
     assert default_config.sandbox.volumes == "/opt/files2/workspace:/workspace:rw"
     assert default_config.sandbox.timeout == 1
     assert default_config.workspace_mount_path is None
     assert default_config.workspace_mount_path_in_sandbox is not None
     assert default_config.workspace_mount_path_in_sandbox == "/workspace"
     finalize_config(default_config)
-    assert os.path.normcase(os.path.normpath(default_config.workspace_mount_path)).endswith(
-        os.path.normcase(os.path.join("opt", "files2", "workspace"))
-    )
+    assert os.path.normcase(
+        os.path.normpath(default_config.workspace_mount_path)
+    ).endswith(os.path.normcase(os.path.join("opt", "files2", "workspace")))
     assert default_config.workspace_mount_path_in_sandbox == "/workspace"
 
 
@@ -149,9 +166,9 @@ def test_env_overrides_compat_toml(monkeypatch, default_config, temp_toml_file):
     assert default_config.sandbox.timeout == 1000
     assert default_config.sandbox.user_id == 1002
     finalize_config(default_config)
-    assert os.path.normcase(os.path.normpath(default_config.workspace_mount_path)).endswith(
-        os.path.normcase(os.path.join("tmp", "test"))
-    )
+    assert os.path.normcase(
+        os.path.normpath(default_config.workspace_mount_path)
+    ).endswith(os.path.normcase(os.path.join("tmp", "test")))
     assert default_config.workspace_mount_path_in_sandbox == "/workspace"
 
 
@@ -179,9 +196,9 @@ def test_env_overrides_sandbox_toml(monkeypatch, default_config, temp_toml_file)
     assert default_config.sandbox.timeout == 1000
     assert default_config.sandbox.user_id == 1002
     finalize_config(default_config)
-    assert os.path.normcase(os.path.normpath(default_config.workspace_mount_path)).endswith(
-        os.path.normcase(os.path.join("tmp", "test"))
-    )
+    assert os.path.normcase(
+        os.path.normpath(default_config.workspace_mount_path)
+    ).endswith(os.path.normcase(os.path.join("tmp", "test")))
     assert default_config.workspace_mount_path_in_sandbox == "/workspace"
 
 
@@ -196,9 +213,9 @@ def test_sandbox_config_from_toml(monkeypatch, default_config, temp_toml_file):
     finalize_config(default_config)
     assert default_config.get_llm_config().model == "test-model"
     assert default_config.sandbox.volumes == "/opt/files/workspace:/workspace:rw"
-    assert os.path.normcase(os.path.normpath(default_config.workspace_mount_path)).endswith(
-        os.path.normcase(os.path.join("opt", "files", "workspace"))
-    )
+    assert os.path.normcase(
+        os.path.normpath(default_config.workspace_mount_path)
+    ).endswith(os.path.normcase(os.path.join("opt", "files", "workspace")))
     assert default_config.workspace_mount_path_in_sandbox == "/workspace"
     assert default_config.sandbox.timeout == 1
     assert default_config.sandbox.base_container_image == "custom_image"
@@ -217,8 +234,14 @@ def test_load_from_env_with_list(monkeypatch, default_config):
     load_from_env(default_config, os.environ)
     assert isinstance(default_config.sandbox.runtime_extra_build_args, list)
     assert len(default_config.sandbox.runtime_extra_build_args) == 2
-    assert "--add-host=host.docker.internal:host-gateway" in default_config.sandbox.runtime_extra_build_args
-    assert "--build-arg=https_proxy=https://my-proxy:912" in default_config.sandbox.runtime_extra_build_args
+    assert (
+        "--add-host=host.docker.internal:host-gateway"
+        in default_config.sandbox.runtime_extra_build_args
+    )
+    assert (
+        "--build-arg=https_proxy=https://my-proxy:912"
+        in default_config.sandbox.runtime_extra_build_args
+    )
 
 
 def test_security_config_from_toml(default_config, temp_toml_file):
@@ -250,7 +273,9 @@ def test_defaults_dict_after_updates(default_config):
     updated_config.get_llm_config().api_key = "updated-api-key"
     updated_config.get_llm_config("llm").api_key = "updated-api-key"
     updated_config.get_llm_config_from_agent("agent").api_key = "updated-api-key"
-    updated_config.get_llm_config_from_agent("BrowsingAgent").api_key = "updated-api-key"
+    updated_config.get_llm_config_from_agent(
+        "BrowsingAgent"
+    ).api_key = "updated-api-key"
     updated_config.default_agent = "BrowsingAgent"
     defaults_after_updates = updated_config.defaults_dict
     assert defaults_after_updates["default_agent"]["default"] == "CodeActAgent"
@@ -264,10 +289,16 @@ def test_defaults_dict_after_updates(default_config):
 
 
 def test_sandbox_volumes(monkeypatch, default_config):
-    monkeypatch.setenv("SANDBOX_VOLUMES", "/host/path1:/container/path1,/host/path2:/container/path2:ro")
+    monkeypatch.setenv(
+        "SANDBOX_VOLUMES",
+        "/host/path1:/container/path1,/host/path2:/container/path2:ro",
+    )
     load_from_env(default_config, os.environ)
     finalize_config(default_config)
-    assert default_config.sandbox.volumes == "/host/path1:/container/path1,/host/path2:/container/path2:ro"
+    assert (
+        default_config.sandbox.volumes
+        == "/host/path1:/container/path1,/host/path2:/container/path2:ro"
+    )
     assert default_config.workspace_base is None
     assert default_config.workspace_mount_path is None
     assert default_config.workspace_mount_path_in_sandbox == "/workspace"
@@ -362,7 +393,9 @@ def test_load_from_toml_partial_invalid(default_config, temp_toml_file, caplog):
 def test_load_from_toml_security_invalid(default_config, temp_toml_file):
     """Test that invalid security configuration raises ValueError."""
     with open(temp_toml_file, "w", encoding="utf-8") as f:
-        f.write('\n[core]\ndebug = true\n\n[security]\ninvalid_security_field = "test"\n')
+        f.write(
+            '\n[core]\ndebug = true\n\n[security]\ninvalid_security_field = "test"\n'
+        )
     with pytest.raises(ValueError) as excinfo:
         load_from_toml(default_config, temp_toml_file)
     assert "Error in [security] section in config.toml" in str(excinfo.value)
@@ -379,7 +412,9 @@ def test_workspace_mount_path_default(default_config):
     assert default_config.workspace_mount_path is None
     default_config.workspace_base = "/home/user/project"
     finalize_config(default_config)
-    assert default_config.workspace_mount_path == os.path.abspath(default_config.workspace_base)
+    assert default_config.workspace_mount_path == os.path.abspath(
+        default_config.workspace_base
+    )
 
 
 def test_workspace_mount_rewrite(default_config, monkeypatch):
@@ -416,7 +451,9 @@ def test_sandbox_volumes_without_workspace(default_config):
 
 def test_sandbox_volumes_with_workspace_not_first(default_config):
     """Test that sandbox.volumes with /workspace mount not as first entry works correctly."""
-    default_config.sandbox.volumes = "/data:/data:ro,/home/user/mydir:/workspace:rw,/models:/models:ro"
+    default_config.sandbox.volumes = (
+        "/data:/data:ro,/home/user/mydir:/workspace:rw,/models:/models:ro"
+    )
     finalize_config(default_config)
     assert default_config.workspace_mount_path == "/home/user/mydir"
     assert default_config.workspace_mount_path_in_sandbox == "/workspace"
@@ -433,10 +470,15 @@ def test_agent_config_condenser_with_no_enabled():
 def test_sandbox_volumes_toml(default_config, temp_toml_file):
     """Test that volumes configuration under [sandbox] works correctly."""
     with open(temp_toml_file, "w", encoding="utf-8") as toml_file:
-        toml_file.write('\n[sandbox]\nvolumes = "/home/user/mydir:/workspace:rw,/data:/data:ro"\ntimeout = 1\n')
+        toml_file.write(
+            '\n[sandbox]\nvolumes = "/home/user/mydir:/workspace:rw,/data:/data:ro"\ntimeout = 1\n'
+        )
     load_from_toml(default_config, temp_toml_file)
     finalize_config(default_config)
-    assert default_config.sandbox.volumes == "/home/user/mydir:/workspace:rw,/data:/data:ro"
+    assert (
+        default_config.sandbox.volumes
+        == "/home/user/mydir:/workspace:rw,/data:/data:ro"
+    )
     assert default_config.workspace_mount_path == "/home/user/mydir"
     assert default_config.workspace_mount_path_in_sandbox == "/workspace"
     assert default_config.workspace_base == "/home/user/mydir"
@@ -446,7 +488,9 @@ def test_sandbox_volumes_toml(default_config, temp_toml_file):
 def test_condenser_config_from_toml_basic(default_config, temp_toml_file):
     """Test loading basic condenser configuration from TOML."""
     with open(temp_toml_file, "w", encoding="utf-8") as toml_file:
-        toml_file.write('\n[condenser]\ntype = "recent"\nkeep_first = 3\nmax_events = 15\n')
+        toml_file.write(
+            '\n[condenser]\ntype = "recent"\nkeep_first = 3\nmax_events = 15\n'
+        )
     load_from_toml(default_config, temp_toml_file)
     agent_config = default_config.get_agent_config()
     assert isinstance(agent_config.condenser_config, RecentEventsCondenserConfig)
@@ -478,8 +522,15 @@ def test_condenser_config_from_toml_with_llm_reference(default_config, temp_toml
     assert agent_config.condenser_config.llm_config.model == "gpt-4"
     from forge.core.config.condenser_config import condenser_config_from_toml_section
 
-    condenser_data = {"type": "llm", "llm_config": "condenser_llm", "keep_first": 2, "max_size": 50}
-    condenser_mapping = condenser_config_from_toml_section(condenser_data, default_config.llms)
+    condenser_data = {
+        "type": "llm",
+        "llm_config": "condenser_llm",
+        "keep_first": 2,
+        "max_size": 50,
+    }
+    condenser_mapping = condenser_config_from_toml_section(
+        condenser_data, default_config.llms
+    )
     assert "condenser" in condenser_mapping
     assert isinstance(condenser_mapping["condenser"], LLMSummarizingCondenserConfig)
     assert condenser_mapping["condenser"].keep_first == 2
@@ -487,15 +538,26 @@ def test_condenser_config_from_toml_with_llm_reference(default_config, temp_toml
     assert condenser_mapping["condenser"].llm_config.model == "gpt-4"
 
 
-def test_condenser_config_from_toml_with_missing_llm_reference(default_config, temp_toml_file):
+def test_condenser_config_from_toml_with_missing_llm_reference(
+    default_config, temp_toml_file
+):
     """Test loading condenser configuration with missing LLM reference from TOML."""
     with open(temp_toml_file, "w", encoding="utf-8") as toml_file:
-        toml_file.write('\n[condenser]\ntype = "llm"\nllm_config = "missing_llm"\nkeep_first = 2\nmax_size = 50\n')
+        toml_file.write(
+            '\n[condenser]\ntype = "llm"\nllm_config = "missing_llm"\nkeep_first = 2\nmax_size = 50\n'
+        )
     load_from_toml(default_config, temp_toml_file)
     from forge.core.config.condenser_config import condenser_config_from_toml_section
 
-    condenser_data = {"type": "llm", "llm_config": "missing_llm", "keep_first": 2, "max_size": 50}
-    condenser_mapping = condenser_config_from_toml_section(condenser_data, default_config.llms)
+    condenser_data = {
+        "type": "llm",
+        "llm_config": "missing_llm",
+        "keep_first": 2,
+        "max_size": 50,
+    }
+    condenser_mapping = condenser_config_from_toml_section(
+        condenser_data, default_config.llms
+    )
     assert "condenser" in condenser_mapping
     assert isinstance(condenser_mapping["condenser"], NoOpCondenserConfig)
     assert not hasattr(condenser_mapping["condenser"], "llm_config")
@@ -514,7 +576,9 @@ def test_condenser_config_from_toml_with_invalid_config(default_config, temp_tom
     assert isinstance(condenser_mapping["condenser"], NoOpCondenserConfig)
 
 
-def test_condenser_config_from_toml_with_validation_error(default_config, temp_toml_file):
+def test_condenser_config_from_toml_with_validation_error(
+    default_config, temp_toml_file
+):
     """Test loading condenser configuration with validation error from TOML."""
     with open(temp_toml_file, "w", encoding="utf-8") as toml_file:
         toml_file.write(
@@ -555,7 +619,9 @@ def test_default_condenser_explicit_toml_override(default_config, temp_toml_file
     """Test that explicit condenser in TOML takes precedence over the default."""
     default_config.enable_default_condenser = True
     with open(temp_toml_file, "w", encoding="utf-8") as toml_file:
-        toml_file.write('\n[condenser]\ntype = "recent"\nkeep_first = 3\nmax_events = 15\n')
+        toml_file.write(
+            '\n[condenser]\ntype = "recent"\nkeep_first = 3\nmax_events = 15\n'
+        )
     load_from_toml(default_config, temp_toml_file)
     agent_config = default_config.get_agent_config()
     assert isinstance(agent_config.condenser_config, RecentEventsCondenserConfig)
@@ -566,7 +632,9 @@ def test_default_condenser_explicit_toml_override(default_config, temp_toml_file
 def _test_llm_config_api_key_redaction():
     """Test that LLM config API keys are redacted in string representations."""
     llm_config = LLMConfig(
-        api_key="my_api_key", aws_access_key_id="my_access_key", aws_secret_access_key="my_secret_key"
+        api_key="my_api_key",
+        aws_access_key_id="my_access_key",
+        aws_secret_access_key="my_secret_key",
     )
     assert "my_api_key" not in repr(llm_config)
     assert "my_api_key" not in str(llm_config)
@@ -587,11 +655,16 @@ def _validate_llm_config_attributes():
         "custom_tokenizer",
     ]
     for attr_name in LLMConfig.model_fields.keys():
-        if not attr_name.startswith("__") and attr_name not in known_key_token_attrs_llm:
-            assert "key" not in attr_name.lower(), f"Unexpected attribute '{attr_name}' contains 'key' in LLMConfig"
-            assert (
-                "token" not in attr_name.lower() or "tokens" in attr_name.lower()
-            ), f"Unexpected attribute '{attr_name}' contains 'token' in LLMConfig"
+        if (
+            not attr_name.startswith("__")
+            and attr_name not in known_key_token_attrs_llm
+        ):
+            assert "key" not in attr_name.lower(), (
+                f"Unexpected attribute '{attr_name}' contains 'key' in LLMConfig"
+            )
+            assert "token" not in attr_name.lower() or "tokens" in attr_name.lower(), (
+                f"Unexpected attribute '{attr_name}' contains 'token' in LLMConfig"
+            )
 
 
 def _validate_agent_config_attributes():
@@ -600,20 +673,26 @@ def _validate_agent_config_attributes():
     _ = AgentConfig(enable_prompt_extensions=True, enable_browsing=False)
     for attr_name in AgentConfig.model_fields.keys():
         if not attr_name.startswith("__"):
-            assert "key" not in attr_name.lower(), f"Unexpected attribute '{attr_name}' contains 'key' in AgentConfig"
-            assert (
-                "token" not in attr_name.lower() or "tokens" in attr_name.lower()
-            ), f"Unexpected attribute '{attr_name}' contains 'token' in AgentConfig"
+            assert "key" not in attr_name.lower(), (
+                f"Unexpected attribute '{attr_name}' contains 'key' in AgentConfig"
+            )
+            assert "token" not in attr_name.lower() or "tokens" in attr_name.lower(), (
+                f"Unexpected attribute '{attr_name}' contains 'token' in AgentConfig"
+            )
 
 
 def _test_app_config_api_key_redaction():
     """Test that app config API keys are redacted in string representations."""
     llm_config = LLMConfig(
-        api_key="my_api_key", aws_access_key_id="my_access_key", aws_secret_access_key="my_secret_key"
+        api_key="my_api_key",
+        aws_access_key_id="my_access_key",
+        aws_secret_access_key="my_secret_key",
     )
     agent_config = AgentConfig(enable_prompt_extensions=True, enable_browsing=False)
     app_config = ForgeConfig(
-        llms={"llm": llm_config}, agents={"agent": agent_config}, search_api_key="my_search_api_key"
+        llms={"llm": llm_config},
+        agents={"agent": agent_config},
+        search_api_key="my_search_api_key",
     )
     assert "my_search_api_key" not in repr(app_config)
     assert "my_search_api_key" not in str(app_config)
@@ -623,13 +702,16 @@ def _validate_app_config_attributes():
     """Validate app config attributes don't contain unexpected key/token names."""
     known_key_token_attrs_app = ["search_api_key"]
     for attr_name in ForgeConfig.model_fields.keys():
-        if not attr_name.startswith("__") and attr_name not in known_key_token_attrs_app:
-            assert (
-                "key" not in attr_name.lower()
-            ), f"Unexpected attribute '{attr_name}' contains 'key' in ForgeConfig"
-            assert (
-                "token" not in attr_name.lower() or "tokens" in attr_name.lower()
-            ), f"Unexpected attribute '{attr_name}' contains 'token' in ForgeConfig"
+        if (
+            not attr_name.startswith("__")
+            and attr_name not in known_key_token_attrs_app
+        ):
+            assert "key" not in attr_name.lower(), (
+                f"Unexpected attribute '{attr_name}' contains 'key' in ForgeConfig"
+            )
+            assert "token" not in attr_name.lower() or "tokens" in attr_name.lower(), (
+                f"Unexpected attribute '{attr_name}' contains 'token' in ForgeConfig"
+            )
 
 
 def test_api_keys_repr_str():
@@ -653,7 +735,7 @@ def test_api_keys_repr_str():
 def test_max_iterations_and_max_budget_per_task_from_toml(temp_toml_file):
     temp_toml = "\n[core]\nmax_iterations = 42\nmax_budget_per_task = 4.7\n"
     config = ForgeConfig()
-    with open(temp_toml_file, "w", encoding='utf-8') as f:
+    with open(temp_toml_file, "w", encoding="utf-8") as f:
         f.write(temp_toml)
     load_from_toml(config, temp_toml_file)
     assert config.max_iterations == 42
@@ -662,7 +744,7 @@ def test_max_iterations_and_max_budget_per_task_from_toml(temp_toml_file):
 
 def test_get_llm_config_arg(temp_toml_file):
     temp_toml = '\n[core]\nmax_iterations = 100\nmax_budget_per_task = 4.0\n\n[llm.gpt3]\nmodel="gpt-3.5-turbo"\napi_key="redacted"\n\n[llm.gpt4o]\nmodel="gpt-4o"\napi_key="redacted"\n'
-    with open(temp_toml_file, "w", encoding='utf-8') as f:
+    with open(temp_toml_file, "w", encoding="utf-8") as f:
         f.write(temp_toml)
     llm_config = get_llm_config_arg("gpt3", temp_toml_file)
     assert llm_config.model == "gpt-3.5-turbo"
@@ -670,7 +752,7 @@ def test_get_llm_config_arg(temp_toml_file):
 
 def test_get_agent_configs(default_config, temp_toml_file):
     temp_toml = "\n[core]\nmax_iterations = 100\nmax_budget_per_task = 4.0\n\n[agent.CodeActAgent]\nenable_prompt_extensions = true\n\n[agent.BrowsingAgent]\nenable_jupyter = false\n"
-    with open(temp_toml_file, "w", encoding='utf-8') as f:
+    with open(temp_toml_file, "w", encoding="utf-8") as f:
         f.write(temp_toml)
     load_from_toml(default_config, temp_toml_file)
     codeact_config = default_config.get_agent_configs().get("CodeActAgent")
@@ -681,7 +763,7 @@ def test_get_agent_configs(default_config, temp_toml_file):
 
 def test_get_agent_config_arg(temp_toml_file):
     temp_toml = "\n[core]\nmax_iterations = 100\nmax_budget_per_task = 4.0\n\n[agent.CodeActAgent]\nenable_prompt_extensions = false\nenable_browsing = false\n\n[agent.BrowsingAgent]\nenable_prompt_extensions = true\nenable_jupyter = false\n"
-    with open(temp_toml_file, "w", encoding='utf-8') as f:
+    with open(temp_toml_file, "w", encoding="utf-8") as f:
         f.write(temp_toml)
     agent_config = get_agent_config_arg("CodeActAgent", temp_toml_file)
     assert not agent_config.enable_prompt_extensions
@@ -693,7 +775,7 @@ def test_get_agent_config_arg(temp_toml_file):
 
 def test_agent_config_custom_group_name(temp_toml_file):
     temp_toml = "\n[core]\nmax_iterations = 99\n\n[agent.group1]\nenable_prompt_extensions = true\n\n[agent.group2]\nenable_prompt_extensions = false\n"
-    with open(temp_toml_file, "w", encoding='utf-8') as f:
+    with open(temp_toml_file, "w", encoding="utf-8") as f:
         f.write(temp_toml)
     app_config = load_FORGE_config(config_file=temp_toml_file)
     assert app_config.max_iterations == 99
@@ -751,7 +833,9 @@ def test_agent_config_system_prompt_filename_default():
     assert config.system_prompt_filename == "system_prompt.j2"
 
 
-def test_agent_config_system_prompt_filename_toml_integration(default_config, temp_toml_file):
+def test_agent_config_system_prompt_filename_toml_integration(
+    default_config, temp_toml_file
+):
     """Test that system_prompt_filename is correctly loaded from TOML configuration."""
     with open(temp_toml_file, "w", encoding="utf-8") as toml_file:
         toml_file.write(

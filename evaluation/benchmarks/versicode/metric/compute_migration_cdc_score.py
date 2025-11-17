@@ -29,27 +29,35 @@ def is_correct_parameter_count(function_name, correct_code, test_code):
 
 
 def check_keyword_parameters(function_name, correct_code, test_code):
-    """Check whether keyword parameters are used correctly.
+    """Check whether keyword parameters are used correctly."""
+    correct_params = _extract_call_parameters(function_name, correct_code)
+    if not correct_params:
+        return False
+    test_params = _extract_call_parameters(function_name, test_code)
+    if not test_params:
+        return False
+    required_keywords = _keyword_parameter_names(correct_params)
+    return all(_has_keyword_argument(name, test_params) for name in required_keywords)
 
-    :param function_name:
-    :param correct_code:
-    :param test_code:
-    :return:
-    """
+
+def _extract_call_parameters(function_name: str, source_code: str):
     pattern = f"{function_name}\\((.*?)\\)"
-    if correct_match := re.search(pattern, correct_code):
-        correct_params = correct_match[1].strip()
-        correct_param_list = [p.strip() for p in correct_params.split(",") if p.strip()]
-        if test_match := re.search(pattern, test_code):
-            test_params = test_match[1].strip()
-            test_param_list = [p.strip() for p in test_params.split(",") if p.strip()]
-            for correct_param in correct_param_list:
-                if "=" in correct_param:
-                    param_name = correct_param.split("=")[0].strip()
-                    if not any((param_name in test_param and "=" in test_param for test_param in test_param_list)):
-                        return False
-            return True
-    return False
+    if match := re.search(pattern, source_code):
+        params = match[1].strip()
+        return [param.strip() for param in params.split(",") if param.strip()]
+    return []
+
+
+def _keyword_parameter_names(parameters):
+    return [
+        param.split("=")[0].strip()
+        for param in parameters
+        if "=" in param and param.split("=")[0].strip()
+    ]
+
+
+def _has_keyword_argument(name: str, arguments) -> bool:
+    return any(name in arg and "=" in arg for arg in arguments)
 
 
 def with_correct(answer_code: str, model_output: str) -> bool:
@@ -68,7 +76,12 @@ def with_correct(answer_code: str, model_output: str) -> bool:
 
 
 def compute_block_score_k(
-    answer: str, model_output: list, k: int, model_filled_code, core_line_in_core_block, core_line_in_output_clear
+    answer: str,
+    model_output: list,
+    k: int,
+    model_filled_code,
+    core_line_in_core_block,
+    core_line_in_output_clear,
 ):
     """cdc需要满足五个条件，em只需要满足第一个条件."""
     n = len(model_output)
@@ -76,14 +89,19 @@ def compute_block_score_k(
         (
             bool(
                 re.search(
-                    f"\\b{
-                        re.escape(answer)}\\b",
+                    f"\\b{re.escape(answer)}\\b",
                     code,
                 )
                 and is_code_valid(model_filled_code[index])
-                and is_correct_parameter_count(answer, core_line_in_core_block, core_line_in_output_clear[index])
-                and with_correct(core_line_in_core_block, core_line_in_output_clear[index])
-                and check_keyword_parameters(answer, core_line_in_core_block, core_line_in_output_clear[index])
+                and is_correct_parameter_count(
+                    answer, core_line_in_core_block, core_line_in_output_clear[index]
+                )
+                and with_correct(
+                    core_line_in_core_block, core_line_in_output_clear[index]
+                )
+                and check_keyword_parameters(
+                    answer, core_line_in_core_block, core_line_in_output_clear[index]
+                )
             )
             for index, code in enumerate(model_output)
         )
@@ -130,7 +148,12 @@ for model in model_list:
         core_line_in_output_clear = data["core_line_in_output_clear"]
         score_list.append(
             compute_block_score_k(
-                answer, model_filled_code, k, model_filled_code, core_line_in_core_block, core_line_in_output_clear
+                answer,
+                model_filled_code,
+                k,
+                model_filled_code,
+                core_line_in_core_block,
+                core_line_in_output_clear,
             )
         )
     final_score = sum(score_list) / len(score_list)

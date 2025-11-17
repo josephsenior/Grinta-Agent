@@ -1,6 +1,6 @@
 import pytest
 
-from forge.core.schema import ActionType
+from forge.core.schemas import ActionType
 from forge.events.action.action import ActionConfirmationStatus, ActionSecurityRisk
 from forge.events.action.agent import (
     AgentDelegateAction,
@@ -18,7 +18,11 @@ from forge.events.action.commands import CmdRunAction, IPythonRunCellAction
 from forge.events.action.empty import NullAction
 from forge.events.action.files import FileEditAction, FileReadAction, FileWriteAction
 from forge.events.action.mcp import MCPAction
-from forge.events.action.message import MessageAction, StreamingChunkAction, SystemMessageAction
+from forge.events.action.message import (
+    MessageAction,
+    StreamingChunkAction,
+    SystemMessageAction,
+)
 from forge.events.event import EventSource, FileEditSource, FileReadSource, RecallType
 
 
@@ -40,7 +44,9 @@ def test_basic_agent_actions_generate_expected_messages_and_strings():
     delegate_action = AgentDelegateAction(agent="assistant", inputs={"task": "plan"})
     assert delegate_action.message == "I'm asking assistant for help with this task."
 
-    recall_action = RecallAction(recall_type=RecallType.KNOWLEDGE, query="How to tests" * 5)
+    recall_action = RecallAction(
+        recall_type=RecallType.KNOWLEDGE, query="How to tests" * 5
+    )
     assert "Retrieving content" in recall_action.message
     assert "RecallAction" in str(recall_action)
 
@@ -54,7 +60,9 @@ def test_condensation_action_validations_and_forgotten_ids():
     assert summary_action.forgotten == [1, 2, 3]
     assert summary_action.message == "Summary: Summarized events"
 
-    range_action = CondensationAction(forgotten_events_start_id=3, forgotten_events_end_id=5)
+    range_action = CondensationAction(
+        forgotten_events_start_id=3, forgotten_events_end_id=5
+    )
     assert range_action.forgotten == [3, 4, 5]
     assert "Condenser is dropping" in range_action.message
 
@@ -71,7 +79,10 @@ def test_condensation_action_validations_and_forgotten_ids():
 
 def test_condensation_request_message_and_task_tracking_counts():
     request_action = CondensationRequestAction()
-    assert request_action.message == "Requesting a condensation of the conversation history."
+    assert (
+        request_action.message
+        == "Requesting a condensation of the conversation history."
+    )
 
     empty_tracking = TaskTrackingAction(task_list=[])
     assert empty_tracking.message == "Clearing the task list."
@@ -79,7 +90,9 @@ def test_condensation_request_message_and_task_tracking_counts():
     single_tracking = TaskTrackingAction(task_list=[{"title": "todo"}])
     assert single_tracking.message == "Managing 1 task item."
 
-    multi_tracking = TaskTrackingAction(task_list=[{"title": "todo"}, {"title": "done"}])
+    multi_tracking = TaskTrackingAction(
+        task_list=[{"title": "todo"}, {"title": "done"}]
+    )
     assert multi_tracking.message == "Managing 2 task items."
 
 
@@ -88,7 +101,9 @@ def test_browse_actions_include_context_in_message_and_string():
     assert browse_url.message.endswith("https://example.com")
     assert "BrowseURLAction" in str(browse_url)
 
-    browse_interactive = BrowseInteractiveAction(browser_actions="click('#submit')", thought="Submit form")
+    browse_interactive = BrowseInteractiveAction(
+        browser_actions="click('#submit')", thought="Submit form"
+    )
     assert "browser" in browse_interactive.message
     string_repr = str(browse_interactive)
     assert "BROWSER_ACTIONS" in string_repr
@@ -187,7 +202,9 @@ def test_mcp_action_formatting():
 
 
 def test_message_actions_support_attachments_and_wait_flag():
-    action = MessageAction(content="Hello world", image_urls=["img"], file_urls=["file"])
+    action = MessageAction(
+        content="Hello world", image_urls=["img"], file_urls=["file"]
+    )
     action._source = EventSource.USER
     assert action.message == "Hello world"
     action.images_urls = ["new.png"]
@@ -196,7 +213,9 @@ def test_message_actions_support_attachments_and_wait_flag():
     assert "IMAGE_URL: new.png" in output
     assert "FILE_URL: file" in output
 
-    system = SystemMessageAction(content="System prompt", tools=["tool-a"], agent_class="Builder")
+    system = SystemMessageAction(
+        content="System prompt", tools=["tool-a"], agent_class="Builder"
+    )
     system._source = EventSource.ENVIRONMENT
     assert system.message == "System prompt"
     assert "SystemMessageAction" in str(system)
@@ -212,4 +231,3 @@ def test_streaming_chunk_action_str_contains_state():
 def test_security_risk_enum_and_confirmation_status_are_ints():
     assert isinstance(ActionSecurityRisk.HIGH.value, int)
     assert ActionConfirmationStatus.REJECTED.value == "rejected"
-

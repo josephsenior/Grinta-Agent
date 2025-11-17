@@ -25,8 +25,8 @@ The WebSocket API provides real-time, bidirectional communication between the ba
 - Real-time monitoring data
 
 **Protocol**: Socket.IO (compatible with WebSocket)  
-**Endpoint**: `ws://localhost:3001/socket.io`  
-**Authentication**: Session-based
+**Endpoint**: `http://localhost:3000` (Socket.IO path: `/socket.io`)  
+**Authentication**: Session-based via query parameters
 
 ---
 
@@ -35,8 +35,10 @@ The WebSocket API provides real-time, bidirectional communication between the ba
 ### **Connection URL**
 
 ```
-ws://localhost:3001/socket.io?conversationId=<id>&token=<token>
+http://localhost:3000/socket.io?conversationId=<id>&session_api_key=<key>
 ```
+
+**Note:** The server runs on port 3000 by default. Socket.IO automatically handles the WebSocket upgrade.
 
 ### **Query Parameters**
 
@@ -50,10 +52,11 @@ ws://localhost:3001/socket.io?conversationId=<id>&token=<token>
 ```typescript
 import { io } from 'socket.io-client';
 
-const socket = io('http://localhost:3001', {
+const socket = io('http://localhost:3000', {
   path: '/socket.io',
   query: {
     conversationId: 'abc123',
+    session_api_key: 'your-session-key', // Optional, if required
   },
   transports: ['websocket', 'polling'],
   reconnection: true,
@@ -321,7 +324,7 @@ export function useWebSocket(conversationId: string) {
   const [events, setEvents] = useState<any[]>([]);
 
   useEffect(() => {
-    const newSocket = io('http://localhost:3001', {
+    const newSocket = io('http://localhost:3000', {
       path: '/socket.io',
       query: { conversationId },
       transports: ['websocket', 'polling'],
@@ -378,8 +381,9 @@ def on_message(data):
 
 # Connect
 sio.connect(
-    'http://localhost:3001',
+    'http://localhost:3000',
     socketio_path='/socket.io',
+    wait_timeout=10,
     headers={'conversationId': 'abc123'}
 )
 

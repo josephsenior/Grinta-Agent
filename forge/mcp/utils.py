@@ -33,4 +33,3 @@ async def fetch_mcp_tools_from_config(*args, **kwargs):
     )
 
     return await _fetch_mcp_tools_from_config(*args, **kwargs)
-

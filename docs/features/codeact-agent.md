@@ -363,27 +363,32 @@ print(f"Memory used: {response.memory_usage}")
 ### **REST API**
 ```bash
 # Run agent
-curl -X POST http://localhost:8000/api/agent/run \
+curl -X POST http://localhost:3000/api/conversations \
   -H "Content-Type: application/json" \
   -d '{
-    "prompt": "Create a user authentication system",
-    "context": {
-      "domain": "web_development",
-      "framework": "FastAPI"
-    }
+    "initial_user_msg": "Create a user authentication system",
+    "repository": "https://github.com/user/repo"
   }'
 
-# Get agent status
-curl http://localhost:8000/api/agent/status
+# Start agent loop
+curl -X POST http://localhost:3000/api/conversations/{conversation_id}/start \
+  -H "Content-Type: application/json" \
+  -d '{"providers_set": ["github"]}'
+
+# Get conversation status
+curl http://localhost:3000/api/conversations/{conversation_id}
 
 # Get performance metrics
-curl http://localhost:8000/api/agent/metrics
+curl http://localhost:3000/api/monitoring/agents/performance
 ```
 
 ### **WebSocket API**
 ```javascript
-// Connect to agent WebSocket
-const socket = io('ws://localhost:8000/agent');
+// Connect to Socket.IO
+const socket = io('http://localhost:3000', {
+  path: '/socket.io',
+  query: { conversationId: 'your-conversation-id' }
+});
 
 // Listen for responses
 socket.on('agent_response', (response) => {

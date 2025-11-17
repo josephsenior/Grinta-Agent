@@ -49,17 +49,35 @@ class IssueHandlerFactory:
         if self.issue_type == "issue":
             if self.platform == ProviderType.GITHUB:
                 return ServiceContextIssue(
-                    GithubIssueHandler(self.owner, self.repo, self.token, self.username, self.base_domain),
+                    GithubIssueHandler(
+                        self.owner,
+                        self.repo,
+                        self.token,
+                        self.username,
+                        self.base_domain,
+                    ),
                     self.llm_config,
                 )
             if self.platform == ProviderType.GITLAB:
                 return ServiceContextIssue(
-                    GitlabIssueHandler(self.owner, self.repo, self.token, self.username, self.base_domain),
+                    GitlabIssueHandler(
+                        self.owner,
+                        self.repo,
+                        self.token,
+                        self.username,
+                        self.base_domain,
+                    ),
                     self.llm_config,
                 )
             if self.platform == ProviderType.BITBUCKET:
                 return ServiceContextIssue(
-                    BitbucketIssueHandler(self.owner, self.repo, self.token, self.username, self.base_domain),
+                    BitbucketIssueHandler(
+                        self.owner,
+                        self.repo,
+                        self.token,
+                        self.username,
+                        self.base_domain,
+                    ),
                     self.llm_config,
                 )
             msg = f"Unsupported platform: {self.platform}"
@@ -67,17 +85,35 @@ class IssueHandlerFactory:
         if self.issue_type == "pr":
             if self.platform == ProviderType.GITHUB:
                 return ServiceContextPR(
-                    GithubPRHandler(self.owner, self.repo, self.token, self.username, self.base_domain),
+                    GithubPRHandler(
+                        self.owner,
+                        self.repo,
+                        self.token,
+                        self.username,
+                        self.base_domain,
+                    ),
                     self.llm_config,
                 )
             if self.platform == ProviderType.GITLAB:
                 return ServiceContextPR(
-                    GitlabPRHandler(self.owner, self.repo, self.token, self.username, self.base_domain),
+                    GitlabPRHandler(
+                        self.owner,
+                        self.repo,
+                        self.token,
+                        self.username,
+                        self.base_domain,
+                    ),
                     self.llm_config,
                 )
             if self.platform == ProviderType.BITBUCKET:
                 return ServiceContextPR(
-                    BitbucketPRHandler(self.owner, self.repo, self.token, self.username, self.base_domain),
+                    BitbucketPRHandler(
+                        self.owner,
+                        self.repo,
+                        self.token,
+                        self.username,
+                        self.base_domain,
+                    ),
                     self.llm_config,
                 )
             msg = f"Unsupported platform: {self.platform}"

@@ -22,7 +22,9 @@ TEST_IN_CI = os.getenv("TEST_IN_CI", "False").lower() in ["true", "1", "yes"]
 TEST_RUNTIME = os.getenv("TEST_RUNTIME", "docker").lower()
 RUN_AS_Forge = os.getenv("RUN_AS_Forge", "True").lower() in ["true", "1", "yes"]
 test_mount_path = ""
-project_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+project_dir = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 sandbox_test_folder = "/workspace"
 
 
@@ -70,9 +72,13 @@ def _reset_cwd() -> None:
 
 @pytest.fixture(autouse=True)
 def print_method_name(request):
-    print("\n\n########################################################################")
+    print(
+        "\n\n########################################################################"
+    )
     print(f"Running test: {request.node.name}")
-    print("########################################################################\n\n")
+    print(
+        "########################################################################\n\n"
+    )
 
 
 @pytest.fixture
@@ -88,7 +94,9 @@ def temp_dir(tmp_path_factory: TempPathFactory, request) -> str:
     Returns:
     - str: The temporary directory path that was created
     """
-    temp_dir = tmp_path_factory.mktemp(f"rt_{random.randint(100000, 999999)}", numbered=False)
+    temp_dir = tmp_path_factory.mktemp(
+        f"rt_{random.randint(100000, 999999)}", numbered=False
+    )
     logger.info("\n*** %s\n>> temp folder: %s\n", request.node.name, temp_dir)
     os.chmod(temp_dir, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
 
@@ -116,9 +124,13 @@ def get_runtime_classes() -> list[type[Runtime]]:
 
 
 def get_run_as_Forge() -> list[bool]:
-    print("\n\n########################################################################")
+    print(
+        "\n\n########################################################################"
+    )
     print("USER: " + "forge" if RUN_AS_Forge else "root")
-    print("########################################################################\n\n")
+    print(
+        "########################################################################\n\n"
+    )
     return [RUN_AS_Forge]
 
 
@@ -140,10 +152,14 @@ def runtime_setup_session():
 def runtime_cls(request):
     time.sleep(1)
     runtime_class = request.param
-    from forge.runtime.impl.docker.docker_runtime import DockerRuntime  # local import to avoid circular deps
+    from forge.runtime.impl.docker.docker_runtime import (
+        DockerRuntime,
+    )  # local import to avoid circular deps
 
-    if runtime_class is DockerRuntime:
-        pytest.skip("DockerRuntime tests temporarily disabled pending runtime image fixes")
+    if runtime_class is DockerRuntime and not os.getenv("FORCE_DOCKER_RUNTIME_TESTS"):
+        pytest.skip(
+            "DockerRuntime tests temporarily disabled pending runtime image fixes"
+        )
     return runtime_class
 
 
@@ -163,11 +179,15 @@ def base_container_image(request):
             request.param = None
         if request.param is None and hasattr(request.config, "sandbox"):
             try:
-                request.param = request.config.sandbox.getoption("--base_container_image")
+                request.param = request.config.sandbox.getoption(
+                    "--base_container_image"
+                )
             except ValueError:
                 request.param = None
         if request.param is None:
-            request.param = pytest.param("nikolaik/python-nodejs:python3.12-nodejs22", "golang:1.23-bookworm")
+            request.param = pytest.param(
+                "nikolaik/python-nodejs:python3.12-nodejs22", "golang:1.23-bookworm"
+            )
     print(f"Container image: {request.param}")
     return request.param
 
@@ -208,7 +228,9 @@ def _load_runtime(
     print(f"use_host_network: {config.sandbox.use_host_network}")
     print(f"workspace_base: {config.workspace_base}")
     print(f"workspace_mount_path: {config.workspace_mount_path}")
-    print(f"workspace_mount_path_in_sandbox: {config.workspace_mount_path_in_sandbox}\n")
+    print(
+        f"workspace_mount_path_in_sandbox: {config.workspace_mount_path_in_sandbox}\n"
+    )
     config.sandbox.browsergym_eval_env = browsergym_eval_env
     config.sandbox.enable_auto_lint = enable_auto_lint
     if runtime_startup_env_vars is not None:
@@ -227,11 +249,18 @@ def _load_runtime(
     )
     event_stream = EventStream(sid, file_store)
     llm_registry = LLMRegistry(config=ForgeConfig())
-    runtime = runtime_cls(config=config, event_stream=event_stream, llm_registry=llm_registry, sid=sid, plugins=plugins)
+    runtime = runtime_cls(
+        config=config,
+        event_stream=event_stream,
+        llm_registry=llm_registry,
+        sid=sid,
+        plugins=plugins,
+    )
     if isinstance(runtime, CLIRuntime):
         config.workspace_mount_path_in_sandbox = str(runtime.workspace_root)
         logger.info(
-            "Adjusted workspace_mount_path_in_sandbox for CLIRuntime to: %s", config.workspace_mount_path_in_sandbox
+            "Adjusted workspace_mount_path_in_sandbox for CLIRuntime to: %s",
+            config.workspace_mount_path_in_sandbox,
         )
     call_async_from_sync(runtime.connect)
     time.sleep(2)

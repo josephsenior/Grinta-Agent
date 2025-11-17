@@ -37,14 +37,18 @@ class FakeResponse(dict):
         self.choices = [SimpleNamespace(message=message)]
         if include_hidden:
             self._hidden_params = {
-                "additional_headers": {"llm_provider-x-litellm-response-cost": str(cost)}
+                "additional_headers": {
+                    "llm_provider-x-litellm-response-cost": str(cost)
+                }
             }
 
     def model_dump(self):
         return {"dumped": True}
 
 
-def _build_llm(monkeypatch: pytest.MonkeyPatch, *, include_hidden: bool = True, completion_cost=0.4):
+def _build_llm(
+    monkeypatch: pytest.MonkeyPatch, *, include_hidden: bool = True, completion_cost=0.4
+):
     """Create an LLM instance with heavy dependencies patched out."""
     features = SimpleNamespace(
         supports_reasoning_effort=True,
@@ -55,8 +59,18 @@ def _build_llm(monkeypatch: pytest.MonkeyPatch, *, include_hidden: bool = True, 
 
     monkeypatch.setattr(llm_module, "get_features", lambda model: features)
     monkeypatch.setattr(llm_module, "STOP_WORDS", ["STOP"])
-    monkeypatch.setattr(llm_module, "convert_fncall_messages_to_non_fncall_messages", lambda messages, tools, add_in_context_learning_example: [{"role": "user", "content": "converted"}])
-    monkeypatch.setattr(llm_module, "convert_non_fncall_messages_to_fncall_messages", lambda messages, tools: [{"content": "tool-call"}])
+    monkeypatch.setattr(
+        llm_module,
+        "convert_fncall_messages_to_non_fncall_messages",
+        lambda messages, tools, add_in_context_learning_example: [
+            {"role": "user", "content": "converted"}
+        ],
+    )
+    monkeypatch.setattr(
+        llm_module,
+        "convert_non_fncall_messages_to_fncall_messages",
+        lambda messages, tools: [{"content": "tool-call"}],
+    )
 
     last_call = {}
 
@@ -65,8 +79,12 @@ def _build_llm(monkeypatch: pytest.MonkeyPatch, *, include_hidden: bool = True, 
         return FakeResponse(include_hidden=include_hidden)
 
     monkeypatch.setattr(llm_module, "litellm_completion", fake_completion)
-    monkeypatch.setattr(llm_module, "litellm_completion_cost", lambda *args, **kwargs: completion_cost)
-    monkeypatch.setattr(llm_module.LLM, "retry_decorator", lambda self, **kwargs: (lambda func: func))
+    monkeypatch.setattr(
+        llm_module, "litellm_completion_cost", lambda *args, **kwargs: completion_cost
+    )
+    monkeypatch.setattr(
+        llm_module.LLM, "retry_decorator", lambda self, **kwargs: (lambda func: func)
+    )
     monkeypatch.setattr(llm_module, "logger", DummyLogger())
     monkeypatch.setattr(llm_module.litellm, "supports_vision", lambda model: True)
     monkeypatch.setattr(llm_module.litellm, "token_counter", lambda **kwargs: 7)
@@ -94,7 +112,9 @@ def _build_llm(monkeypatch: pytest.MonkeyPatch, *, include_hidden: bool = True, 
 def test_llm_completion_flow(monkeypatch: pytest.MonkeyPatch) -> None:
     llm, last_call, features = _build_llm(monkeypatch, completion_cost=0.4)
 
-    response = llm.completion(messages=[{"role": "user", "content": "hello"}], tools=[{"name": "tool"}])
+    response = llm.completion(
+        messages=[{"role": "user", "content": "hello"}], tools=[{"name": "tool"}]
+    )
     kwargs = last_call["kwargs"]
     assert kwargs["messages"][0]["content"] == "converted"
     assert kwargs["stop"] == ["STOP"]
@@ -119,7 +139,9 @@ def test_llm_completion_flow(monkeypatch: pytest.MonkeyPatch) -> None:
     assert llm.get_token_count([{"role": "user", "content": "ping"}]) == 7
 
 
-def test_completion_cost_fallback_disables_metrics(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_completion_cost_fallback_disables_metrics(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     llm, _, _ = _build_llm(monkeypatch, include_hidden=False, completion_cost=0.5)
 
     def raise_cost(*args, **kwargs):
@@ -131,4 +153,3 @@ def test_completion_cost_fallback_disables_metrics(monkeypatch: pytest.MonkeyPat
     cost = llm._completion_cost(response)
     assert cost == 0.0
     assert llm.cost_metric_supported is False
-

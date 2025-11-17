@@ -3,23 +3,25 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
-from forge.core.schema import ActionType
+from forge.core.schemas import ActionType
 from forge.events.action.action import Action, ActionSecurityRisk
+from forge.events.action._canonical import canonicalize
 
 
 @dataclass
 class BrowseURLAction(Action):
     """Action to navigate browser to a URL.
-    
+
     Attributes:
         url: URL to navigate to
         thought: Agent's reasoning for this action
         return_axtree: Whether to return accessibility tree
 
     """
-    url: str
+
+    url: str = ""
     thought: str = ""
-    action: str = ActionType.BROWSE
+    action: ClassVar[str] = ActionType.BROWSE
     runnable: ClassVar[bool] = True
     security_risk: ActionSecurityRisk = ActionSecurityRisk.UNKNOWN
     return_axtree: bool = False
@@ -43,9 +45,9 @@ class BrowseURLAction(Action):
 @dataclass
 class BrowseInteractiveAction(Action):
     """Action to interact with browser (click, type, etc.).
-    
+
     Uses BrowserGym actions to control the browser programmatically.
-    
+
     Attributes:
         browser_actions: BrowserGym action code to execute
         thought: Agent's reasoning for this action
@@ -53,10 +55,11 @@ class BrowseInteractiveAction(Action):
         return_axtree: Whether to return accessibility tree
 
     """
-    browser_actions: str
+
+    browser_actions: str = ""
     thought: str = ""
     browsergym_send_msg_to_user: str = ""
-    action: str = ActionType.BROWSE_INTERACTIVE
+    action: ClassVar[str] = ActionType.BROWSE_INTERACTIVE
     runnable: ClassVar[bool] = True
     security_risk: ActionSecurityRisk = ActionSecurityRisk.UNKNOWN
     return_axtree: bool = False
@@ -75,3 +78,7 @@ class BrowseInteractiveAction(Action):
         return ret
 
     __test__ = False
+
+
+canonicalize("BrowseURLAction", BrowseURLAction)
+canonicalize("BrowseInteractiveAction", BrowseInteractiveAction)

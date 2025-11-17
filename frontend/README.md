@@ -523,7 +523,7 @@ npx openapi-typescript http://localhost:3000/openapi.json -o frontend/src/api/sc
 
 ```bash
 # Check backend is running
-curl http://localhost:3000/api/health
+curl http://localhost:3000/api/monitoring/health
 
 # Check WebSocket URL in .env
 VITE_WS_URL=ws://localhost:3000

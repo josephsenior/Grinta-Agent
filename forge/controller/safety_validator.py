@@ -87,7 +87,9 @@ class SafetyValidator:
             f"mandatory_validation={config.enable_mandatory_validation}",
         )
 
-    async def validate(self, action: Action, context: ExecutionContext) -> ValidationResult:
+    async def validate(
+        self, action: Action, context: ExecutionContext
+    ) -> ValidationResult:
         """Validate an action for safety.
 
         This is the main entry point for safety validation. It analyzes the action,
@@ -115,7 +117,9 @@ class SafetyValidator:
             reason=assessment.reason,
             matched_patterns=assessment.matched_patterns,
             requires_review=self._requires_human_review(assessment),
-            blocked_reason=self._get_blocked_reason(assessment) if should_block else None,
+            blocked_reason=self._get_blocked_reason(assessment)
+            if should_block
+            else None,
         )
 
         # Log to audit trail
@@ -301,13 +305,18 @@ class SafetyValidator:
             message: Alert message to send
 
         """
+        url = getattr(self.config, "alert_webhook_url", None)
+        if not url:
+            logger.debug("No alert webhook URL configured; skipping webhook alert.")
+            return
+
         try:
             import aiohttp
 
             async with aiohttp.ClientSession() as session:
                 payload = {"text": message, "username": "Forge Security"}
                 async with session.post(
-                    self.config.alert_webhook_url,
+                    url,
                     json=payload,
                     timeout=aiohttp.ClientTimeout(total=5),
                 ) as response:

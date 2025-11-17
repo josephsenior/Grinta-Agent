@@ -5,7 +5,12 @@ import numpy as np
 import pandas as pd
 from pydantic import SecretStr
 from tqdm import tqdm
-from evaluation.utils.shared import EvalMetadata, EvalOutput, _process_instance_wrapper, _process_instance_wrapper_mp
+from evaluation.utils.shared import (
+    EvalMetadata,
+    EvalOutput,
+    _process_instance_wrapper,
+    _process_instance_wrapper_mp,
+)
 from forge.core.logger import forge_logger as logger
 
 
@@ -14,7 +19,11 @@ def update_progress_nc(result: EvalOutput, pbar: tqdm, output_fp: TextIO):
     pbar.update(1)
     pbar.set_description(f"Instance {result.instance_id}")
     pbar.set_postfix_str(f"Test Result: {str(result.test_result)[:300]}...")
-    logger.info("Finished evaluation for instance %s: %s...\n", result.instance_id, str(result.test_result)[:300])
+    logger.info(
+        "Finished evaluation for instance %s: %s...\n",
+        result.instance_id,
+        str(result.test_result)[:300],
+    )
 
     def make_serializable(obj):
         if isinstance(obj, pd.Series):
@@ -47,11 +56,17 @@ def update_progress_nc(result: EvalOutput, pbar: tqdm, output_fp: TextIO):
         output_fp.flush()
     except Exception as e:
         logger.error("Failed to write full result: %s", e)
-        fallback = {"instance_id": result.instance_id, "model_patch": result.test_result.get("git_patch", "")}
+        fallback = {
+            "instance_id": result.instance_id,
+            "model_patch": result.test_result.get("git_patch", ""),
+        }
         try:
             output_fp.write(json.dumps(fallback, ensure_ascii=False) + "\n")
             output_fp.flush()
-            logger.info("Wrote fallback result for instance %s: only instance_id and model_patch.", result.instance_id)
+            logger.info(
+                "Wrote fallback result for instance %s: only instance_id and model_patch.",
+                result.instance_id,
+            )
         except Exception as e2:
             logger.error("Failed to write fallback result: %s", e2)
 
@@ -73,7 +88,9 @@ def run_evaluation_nocode_bench(
     metadata: EvalMetadata | None,
     output_file: str,
     num_workers: int,
-    process_instance_func: Callable[[pd.Series, EvalMetadata, bool], Awaitable[EvalOutput]],
+    process_instance_func: Callable[
+        [pd.Series, EvalMetadata, bool], Awaitable[EvalOutput]
+    ],
     max_retries: int = 5,
     timeout_seconds: int | None = None,
 ):
@@ -101,15 +118,24 @@ def run_evaluation_nocode_bench(
         logger.info("Evaluation started with %s workers.", num_workers)
     total_instances = len(dataset)
     pbar = tqdm(total=total_instances, desc="Instances processed")
-    with open(output_file, "a", encoding='utf-8') as output_fp:
+    with open(output_file, "a", encoding="utf-8") as output_fp:
         try:
             if use_multiprocessing:
                 with mp.Pool(num_workers) as pool:
                     args_iter = (
-                        (process_instance_func, instance, metadata, True, max_retries, timeout_seconds)
+                        (
+                            process_instance_func,
+                            instance,
+                            metadata,
+                            True,
+                            max_retries,
+                            timeout_seconds,
+                        )
                         for _, instance in dataset.iterrows()
                     )
-                    results = pool.imap_unordered(_process_instance_wrapper_mp, args_iter)
+                    results = pool.imap_unordered(
+                        _process_instance_wrapper_mp, args_iter
+                    )
                     for result in results:
                         update_progress_nc(result, pbar, output_fp)
             else:

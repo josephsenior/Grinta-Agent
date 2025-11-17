@@ -24,18 +24,27 @@ def configure_logging():
 
 def run_sync_metasop(conv_id: str, message: str):
     configure_logging()
-    logging.getLogger("forge").debug(f"Starting synchronous MetaSOP run for conversation {conv_id}")
+    logging.getLogger("forge").debug(
+        f"Starting synchronous MetaSOP run for conversation {conv_id}"
+    )
     start = datetime.utcnow().isoformat()
     try:
         asyncio.run(
-            run_metasop_for_conversation(conversation_id=conv_id, user_id=None, raw_message=message, repo_root=None)
+            run_metasop_for_conversation(
+                conversation_id=conv_id,
+                user_id=None,
+                raw_message=message,
+                repo_root=None,
+            )
         )
     except Exception as e:
         logging.getLogger("forge").exception(f"MetaSOP run failed: {e}")
         raise
     finally:
         end = datetime.utcnow().isoformat()
-        logging.getLogger("forge").debug(f"Finished MetaSOP run (start={start}, end={end})")
+        logging.getLogger("forge").debug(
+            f"Finished MetaSOP run (start={start}, end={end})"
+        )
 
 
 if __name__ == "__main__":

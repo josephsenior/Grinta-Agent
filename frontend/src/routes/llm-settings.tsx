@@ -106,6 +106,272 @@ const mergeAdvancedSettings = (
   };
 };
 
+// ============================================================================
+// Helper Utilities
+// ============================================================================
+
+function applyPrimarySettings({
+  settings,
+  setCurrentSelectedModel,
+  setAgentValue,
+  setConfirmationModeEnabled,
+  setSelectedSecurityAnalyzer,
+  setEnableDefaultCondenser,
+  setCondenserMaxSize,
+}: {
+  settings: Settings;
+  setCurrentSelectedModel: (value: string | null) => void;
+  setAgentValue: (value: string) => void;
+  setConfirmationModeEnabled: (value: boolean) => void;
+  setSelectedSecurityAnalyzer: (value: string) => void;
+  setEnableDefaultCondenser: (value: boolean) => void;
+  setCondenserMaxSize: (value: number | null) => void;
+}) {
+  setCurrentSelectedModel(settings.LLM_MODEL ?? null);
+  setAgentValue(settings.AGENT ?? DEFAULT_SETTINGS.AGENT ?? "CodeActAgent");
+  setConfirmationModeEnabled(
+    settings.CONFIRMATION_MODE ?? DEFAULT_SETTINGS.CONFIRMATION_MODE,
+  );
+  setSelectedSecurityAnalyzer(
+    normalizeSecurityAnalyzerSelection(settings.SECURITY_ANALYZER),
+  );
+  setEnableDefaultCondenser(
+    settings.ENABLE_DEFAULT_CONDENSER ??
+      DEFAULT_SETTINGS.ENABLE_DEFAULT_CONDENSER,
+  );
+  setCondenserMaxSize(
+    settings.CONDENSER_MAX_SIZE ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE,
+  );
+}
+
+function applyAdvancedOverrides({
+  settings,
+  setAdvancedOverrides,
+}: {
+  settings: Settings;
+  setAdvancedOverrides: React.Dispatch<React.SetStateAction<Partial<Settings>>>;
+}) {
+  setAdvancedOverrides({
+    LLM_TEMPERATURE: settings.LLM_TEMPERATURE ?? null,
+    LLM_TOP_P: settings.LLM_TOP_P ?? null,
+    LLM_MAX_OUTPUT_TOKENS: settings.LLM_MAX_OUTPUT_TOKENS ?? null,
+    LLM_TIMEOUT: settings.LLM_TIMEOUT ?? null,
+    LLM_NUM_RETRIES: settings.LLM_NUM_RETRIES ?? null,
+    LLM_CACHING_PROMPT: settings.LLM_CACHING_PROMPT ?? null,
+    LLM_DISABLE_VISION: settings.LLM_DISABLE_VISION ?? null,
+    LLM_CUSTOM_LLM_PROVIDER: settings.LLM_CUSTOM_LLM_PROVIDER ?? null,
+  });
+}
+
+function initializeStateFromSettings({
+  settings,
+  setCurrentSelectedModel,
+  setAgentValue,
+  setConfirmationModeEnabled,
+  setSelectedSecurityAnalyzer,
+  setEnableDefaultCondenser,
+  setCondenserMaxSize,
+  setAdvancedOverrides,
+  setDirtyInputs,
+}: {
+  settings?: Settings;
+  setCurrentSelectedModel: (value: string | null) => void;
+  setAgentValue: (value: string) => void;
+  setConfirmationModeEnabled: (value: boolean) => void;
+  setSelectedSecurityAnalyzer: (value: string) => void;
+  setEnableDefaultCondenser: (value: boolean) => void;
+  setCondenserMaxSize: (value: number | null) => void;
+  setAdvancedOverrides: React.Dispatch<React.SetStateAction<Partial<Settings>>>;
+  setDirtyInputs: React.Dispatch<React.SetStateAction<DirtyInputs>>;
+}) {
+  if (!settings) {
+    return;
+  }
+
+  applyPrimarySettings({
+    settings,
+    setCurrentSelectedModel,
+    setAgentValue,
+    setConfirmationModeEnabled,
+    setSelectedSecurityAnalyzer,
+    setEnableDefaultCondenser,
+    setCondenserMaxSize,
+  });
+
+  applyAdvancedOverrides({ settings, setAdvancedOverrides });
+  setDirtyInputs(createDefaultDirtyInputs());
+}
+
+function updateViewFromSettings({
+  settings,
+  resources,
+  userToggledView,
+  setView,
+}: {
+  settings?: Settings;
+  resources?: ReturnType<typeof useAIConfigOptions>["data"];
+  userToggledView: boolean;
+  setView: React.Dispatch<React.SetStateAction<"basic" | "advanced">>;
+}) {
+  if (!settings || userToggledView) {
+    return;
+  }
+
+  if (hasAdvancedSettingsSet(settings)) {
+    setView("advanced");
+    return;
+  }
+
+  if (resources && isCustomModel(resources.models, settings.LLM_MODEL)) {
+    setView("advanced");
+    return;
+  }
+
+  setView("basic");
+}
+
+function onModelDirtyChange({
+  model,
+  settings,
+  markDirty,
+  setCurrentSelectedModel,
+}: {
+  model: string | null;
+  settings?: Settings;
+  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
+  setCurrentSelectedModel: (value: string | null) => void;
+}) {
+  const normalized = settings?.LLM_MODEL ?? DEFAULT_SETTINGS.LLM_MODEL;
+  const cleanModel = normalized.startsWith("openai/")
+    ? normalized.replace("openai/", "")
+    : normalized;
+  markDirty("model", model !== cleanModel);
+  setCurrentSelectedModel(model);
+}
+
+function onCustomModelDirtyChange({
+  model,
+  settings,
+  markDirty,
+  setCurrentSelectedModel,
+}: {
+  model: string;
+  settings?: Settings;
+  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
+  setCurrentSelectedModel: (value: string | null) => void;
+}) {
+  const current = settings?.LLM_MODEL ?? "";
+  const isDirty = model !== "" && model !== current;
+  markDirty("model", isDirty);
+  setCurrentSelectedModel(model);
+}
+
+function onAgentChange({
+  agent,
+  settings,
+  setAgentValue,
+  markDirty,
+}: {
+  agent: string;
+  settings?: Settings;
+  setAgentValue: (value: string) => void;
+  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
+}) {
+  setAgentValue(agent);
+  const current = settings?.AGENT ?? "";
+  const isDirty = agent !== "" && agent !== current;
+  markDirty("agent", isDirty);
+}
+
+function onConfirmationModeChange({
+  isToggled,
+  settings,
+  selectedSecurityAnalyzer,
+  setConfirmationModeEnabled,
+  setSelectedSecurityAnalyzer,
+  markDirty,
+}: {
+  isToggled: boolean;
+  settings?: Settings;
+  selectedSecurityAnalyzer: string;
+  setConfirmationModeEnabled: (value: boolean) => void;
+  setSelectedSecurityAnalyzer: (value: string) => void;
+  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
+}) {
+  setConfirmationModeEnabled(isToggled);
+  markDirty(
+    "confirmationMode",
+    isToggled !== (settings?.CONFIRMATION_MODE ?? false),
+  );
+
+  if (isToggled && !selectedSecurityAnalyzer) {
+    setSelectedSecurityAnalyzer(DEFAULT_SETTINGS.SECURITY_ANALYZER ?? "llm");
+    markDirty("securityAnalyzer", true);
+  }
+}
+
+function onCondenserMaxSizeChange({
+  value,
+  settings,
+  setCondenserMaxSize,
+  markDirty,
+}: {
+  value: string;
+  settings?: Settings;
+  setCondenserMaxSize: (value: number | null) => void;
+  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
+}) {
+  const parsed = value ? Number.parseInt(value, 10) : null;
+  const bounded =
+    parsed !== null && Number.isFinite(parsed) ? Math.max(20, parsed) : null;
+  setCondenserMaxSize(bounded);
+  const previous =
+    settings?.CONDENSER_MAX_SIZE ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE;
+  const next = bounded ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE;
+  markDirty("condenserMaxSize", next !== previous);
+}
+
+function onSecurityAnalyzerChange({
+  value,
+  settings,
+  setSelectedSecurityAnalyzer,
+  markDirty,
+}: {
+  value: string;
+  settings?: Settings;
+  setSelectedSecurityAnalyzer: (value: string) => void;
+  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
+}) {
+  setSelectedSecurityAnalyzer(value);
+  markDirty(
+    "securityAnalyzer",
+    value !== normalizeSecurityAnalyzerSelection(settings?.SECURITY_ANALYZER),
+  );
+}
+
+function onSecurityAnalyzerClear({
+  settings,
+  setSelectedSecurityAnalyzer,
+  markDirty,
+}: {
+  settings?: Settings;
+  setSelectedSecurityAnalyzer: (value: string) => void;
+  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
+}) {
+  setSelectedSecurityAnalyzer("");
+  markDirty(
+    "securityAnalyzer",
+    normalizeSecurityAnalyzerSelection(settings?.SECURITY_ANALYZER) !== "",
+  );
+}
+
+function buildPayloadForView(view: "basic" | "advanced", formData: FormData) {
+  if (view === "basic") {
+    return buildBasicPayload({ formData });
+  }
+  return buildAdvancedPayload({ formData });
+}
+
 function LlmSettingsScreen() {
   const { t } = useTranslation();
 
@@ -302,8 +568,8 @@ function LlmSettingsScreen() {
     });
   };
 
-  const handleAdvancedConfigChange = (config: Partial<Settings>) => {
-    setAdvancedOverrides((prev) => ({ ...prev, ...config }));
+  const handleAdvancedConfigChange = (updates: Partial<Settings>) => {
+    setAdvancedOverrides((prev) => ({ ...prev, ...updates }));
     markDirty("model", true);
   };
 
@@ -334,66 +600,68 @@ function LlmSettingsScreen() {
           onSubmit={handleSubmit}
           className="flex h-full flex-col justify-between"
         >
-          <div className="flex flex-col gap-6 p-9">
-            <SettingsSwitch
-              testId="advanced-settings-switch"
-              defaultIsToggled={view === "advanced"}
-              isToggled={view === "advanced"}
-              onToggle={handleToggleAdvancedSettings}
-            >
-              {t("SETTINGS$ADVANCED")}
-            </SettingsSwitch>
+          <div className="flex flex-col gap-6 lg:gap-8 p-6 sm:p-8 lg:p-10">
+            <div className="mx-auto max-w-6xl w-full space-y-6 lg:space-y-8">
+              <SettingsSwitch
+                testId="advanced-settings-switch"
+                defaultIsToggled={view === "advanced"}
+                isToggled={view === "advanced"}
+                onToggle={handleToggleAdvancedSettings}
+              >
+                {t("SETTINGS$ADVANCED")}
+              </SettingsSwitch>
 
-            {view === "basic" && (
-              <BasicSettingsSection
-                settings={settings}
-                modelsAndProviders={modelsAndProviders}
-                currentSelectedModel={currentSelectedModel}
-                isLoading={isLoading}
-                isFetching={isFetching}
-                onModelChange={handleModelIsDirty}
-                onApiKeyChange={handleApiKeyIsDirty}
-                onSearchApiKeyChange={handleSearchApiKeyIsDirty}
+              {view === "basic" && (
+                <BasicSettingsSection
+                  settings={settings}
+                  modelsAndProviders={modelsAndProviders}
+                  currentSelectedModel={currentSelectedModel}
+                  isLoading={isLoading}
+                  isFetching={isFetching}
+                  onModelChange={handleModelIsDirty}
+                  onApiKeyChange={handleApiKeyIsDirty}
+                  onSearchApiKeyChange={handleSearchApiKeyIsDirty}
+                  t={t}
+                />
+              )}
+
+              {view === "advanced" && (
+                <AdvancedSettingsSection
+                  settings={settings}
+                  advancedSettings={advancedSettings}
+                  currentSelectedModel={currentSelectedModel}
+                  agentValue={agentValue}
+                  agentOptions={agentOptions}
+                  appMode={config?.APP_MODE}
+                  enableDefaultCondenser={enableDefaultCondenser}
+                  condenserMaxSize={condenserMaxSize}
+                  onCustomModelChange={handleCustomModelIsDirty}
+                  onBaseUrlChange={handleBaseUrlIsDirty}
+                  onApiKeyChange={handleApiKeyIsDirty}
+                  onSearchApiKeyChange={handleSearchApiKeyIsDirty}
+                  onAgentChange={handleAgentChange}
+                  onAdvancedConfigChange={handleAdvancedConfigChange}
+                  onCondenserMaxSizeChange={handleCondenserMaxSizeChange}
+                  onEnableDefaultCondenserToggle={
+                    handleEnableDefaultCondenserChange
+                  }
+                  t={t}
+                />
+              )}
+
+              <ConfirmationSettingsSection
+                confirmationModeEnabled={confirmationModeEnabled}
+                selectedSecurityAnalyzer={selectedSecurityAnalyzer}
+                securityAnalyzerOptions={securityAnalyzerOptions}
+                onToggleConfirmationMode={handleConfirmationModeChange}
+                onSecurityAnalyzerChange={handleSecurityAnalyzerChange}
+                onSecurityAnalyzerInputClear={handleSecurityAnalyzerClear}
                 t={t}
               />
-            )}
-
-            {view === "advanced" && (
-              <AdvancedSettingsSection
-                settings={settings}
-                advancedSettings={advancedSettings}
-                currentSelectedModel={currentSelectedModel}
-                agentValue={agentValue}
-                agentOptions={agentOptions}
-                appMode={config?.APP_MODE}
-                enableDefaultCondenser={enableDefaultCondenser}
-                condenserMaxSize={condenserMaxSize}
-                onCustomModelChange={handleCustomModelIsDirty}
-                onBaseUrlChange={handleBaseUrlIsDirty}
-                onApiKeyChange={handleApiKeyIsDirty}
-                onSearchApiKeyChange={handleSearchApiKeyIsDirty}
-                onAgentChange={handleAgentChange}
-                onAdvancedConfigChange={handleAdvancedConfigChange}
-                onCondenserMaxSizeChange={handleCondenserMaxSizeChange}
-                onEnableDefaultCondenserToggle={
-                  handleEnableDefaultCondenserChange
-                }
-                t={t}
-              />
-            )}
-
-            <ConfirmationSettingsSection
-              confirmationModeEnabled={confirmationModeEnabled}
-              selectedSecurityAnalyzer={selectedSecurityAnalyzer}
-              securityAnalyzerOptions={securityAnalyzerOptions}
-              onToggleConfirmationMode={handleConfirmationModeChange}
-              onSecurityAnalyzerChange={handleSecurityAnalyzerChange}
-              onSecurityAnalyzerInputClear={handleSecurityAnalyzerClear}
-              t={t}
-            />
+            </div>
           </div>
 
-          <div className="flex justify-end gap-6 border-t border-border-secondary p-6">
+          <div className="flex justify-end gap-6 border-t border-white/10 bg-black/80 backdrop-blur-xl px-6 sm:px-8 lg:px-10 py-6">
             <BrandButton
               testId="submit-button"
               type="submit"
@@ -410,265 +678,3 @@ function LlmSettingsScreen() {
 }
 
 export default LlmSettingsScreen;
-
-function initializeStateFromSettings({
-  settings,
-  setCurrentSelectedModel,
-  setAgentValue,
-  setConfirmationModeEnabled,
-  setSelectedSecurityAnalyzer,
-  setEnableDefaultCondenser,
-  setCondenserMaxSize,
-  setAdvancedOverrides,
-  setDirtyInputs,
-}: {
-  settings?: Settings;
-  setCurrentSelectedModel: (value: string | null) => void;
-  setAgentValue: (value: string) => void;
-  setConfirmationModeEnabled: (value: boolean) => void;
-  setSelectedSecurityAnalyzer: (value: string) => void;
-  setEnableDefaultCondenser: (value: boolean) => void;
-  setCondenserMaxSize: (value: number | null) => void;
-  setAdvancedOverrides: React.Dispatch<React.SetStateAction<Partial<Settings>>>;
-  setDirtyInputs: React.Dispatch<React.SetStateAction<DirtyInputs>>;
-}) {
-  if (!settings) {
-    return;
-  }
-
-  applyPrimarySettings({
-    settings,
-    setCurrentSelectedModel,
-    setAgentValue,
-    setConfirmationModeEnabled,
-    setSelectedSecurityAnalyzer,
-    setEnableDefaultCondenser,
-    setCondenserMaxSize,
-  });
-
-  applyAdvancedOverrides({ settings, setAdvancedOverrides });
-  setDirtyInputs(createDefaultDirtyInputs());
-}
-
-function applyPrimarySettings({
-  settings,
-  setCurrentSelectedModel,
-  setAgentValue,
-  setConfirmationModeEnabled,
-  setSelectedSecurityAnalyzer,
-  setEnableDefaultCondenser,
-  setCondenserMaxSize,
-}: {
-  settings: Settings;
-  setCurrentSelectedModel: (value: string | null) => void;
-  setAgentValue: (value: string) => void;
-  setConfirmationModeEnabled: (value: boolean) => void;
-  setSelectedSecurityAnalyzer: (value: string) => void;
-  setEnableDefaultCondenser: (value: boolean) => void;
-  setCondenserMaxSize: (value: number | null) => void;
-}) {
-  setCurrentSelectedModel(settings.LLM_MODEL ?? null);
-  setAgentValue(settings.AGENT ?? DEFAULT_SETTINGS.AGENT ?? "CodeActAgent");
-  setConfirmationModeEnabled(
-    settings.CONFIRMATION_MODE ?? DEFAULT_SETTINGS.CONFIRMATION_MODE,
-  );
-  setSelectedSecurityAnalyzer(
-    normalizeSecurityAnalyzerSelection(settings.SECURITY_ANALYZER),
-  );
-  setEnableDefaultCondenser(
-    settings.ENABLE_DEFAULT_CONDENSER ??
-      DEFAULT_SETTINGS.ENABLE_DEFAULT_CONDENSER,
-  );
-  setCondenserMaxSize(
-    settings.CONDENSER_MAX_SIZE ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE,
-  );
-}
-
-function applyAdvancedOverrides({
-  settings,
-  setAdvancedOverrides,
-}: {
-  settings: Settings;
-  setAdvancedOverrides: React.Dispatch<React.SetStateAction<Partial<Settings>>>;
-}) {
-  setAdvancedOverrides({
-    LLM_TEMPERATURE: settings.LLM_TEMPERATURE ?? null,
-    LLM_TOP_P: settings.LLM_TOP_P ?? null,
-    LLM_MAX_OUTPUT_TOKENS: settings.LLM_MAX_OUTPUT_TOKENS ?? null,
-    LLM_TIMEOUT: settings.LLM_TIMEOUT ?? null,
-    LLM_NUM_RETRIES: settings.LLM_NUM_RETRIES ?? null,
-    LLM_CACHING_PROMPT: settings.LLM_CACHING_PROMPT ?? null,
-    LLM_DISABLE_VISION: settings.LLM_DISABLE_VISION ?? null,
-    LLM_CUSTOM_LLM_PROVIDER: settings.LLM_CUSTOM_LLM_PROVIDER ?? null,
-  });
-}
-
-function updateViewFromSettings({
-  settings,
-  resources,
-  userToggledView,
-  setView,
-}: {
-  settings?: Settings;
-  resources?: ReturnType<typeof useAIConfigOptions>["data"];
-  userToggledView: boolean;
-  setView: React.Dispatch<React.SetStateAction<"basic" | "advanced">>;
-}) {
-  if (!settings || userToggledView) {
-    return;
-  }
-
-  if (hasAdvancedSettingsSet(settings)) {
-    setView("advanced");
-    return;
-  }
-
-  if (resources && isCustomModel(resources.models, settings.LLM_MODEL)) {
-    setView("advanced");
-    return;
-  }
-
-  setView("basic");
-}
-
-function onModelDirtyChange({
-  model,
-  settings,
-  markDirty,
-  setCurrentSelectedModel,
-}: {
-  model: string | null;
-  settings?: Settings;
-  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
-  setCurrentSelectedModel: (value: string | null) => void;
-}) {
-  const normalized = settings?.LLM_MODEL ?? DEFAULT_SETTINGS.LLM_MODEL;
-  const cleanModel = normalized.startsWith("openai/")
-    ? normalized.replace("openai/", "")
-    : normalized;
-  markDirty("model", model !== cleanModel);
-  setCurrentSelectedModel(model);
-}
-
-function onCustomModelDirtyChange({
-  model,
-  settings,
-  markDirty,
-  setCurrentSelectedModel,
-}: {
-  model: string;
-  settings?: Settings;
-  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
-  setCurrentSelectedModel: (value: string | null) => void;
-}) {
-  const current = settings?.LLM_MODEL ?? "";
-  const isDirty = model !== "" && model !== current;
-  markDirty("model", isDirty);
-  setCurrentSelectedModel(model);
-}
-
-function onAgentChange({
-  agent,
-  settings,
-  setAgentValue,
-  markDirty,
-}: {
-  agent: string;
-  settings?: Settings;
-  setAgentValue: (value: string) => void;
-  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
-}) {
-  setAgentValue(agent);
-  const current = settings?.AGENT ?? "";
-  const isDirty = agent !== "" && agent !== current;
-  markDirty("agent", isDirty);
-}
-
-function onConfirmationModeChange({
-  isToggled,
-  settings,
-  selectedSecurityAnalyzer,
-  setConfirmationModeEnabled,
-  setSelectedSecurityAnalyzer,
-  markDirty,
-}: {
-  isToggled: boolean;
-  settings?: Settings;
-  selectedSecurityAnalyzer: string;
-  setConfirmationModeEnabled: (value: boolean) => void;
-  setSelectedSecurityAnalyzer: (value: string) => void;
-  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
-}) {
-  setConfirmationModeEnabled(isToggled);
-  markDirty(
-    "confirmationMode",
-    isToggled !== (settings?.CONFIRMATION_MODE ?? false),
-  );
-
-  if (isToggled && !selectedSecurityAnalyzer) {
-    setSelectedSecurityAnalyzer(DEFAULT_SETTINGS.SECURITY_ANALYZER ?? "llm");
-    markDirty("securityAnalyzer", true);
-  }
-}
-
-function onCondenserMaxSizeChange({
-  value,
-  settings,
-  setCondenserMaxSize,
-  markDirty,
-}: {
-  value: string;
-  settings?: Settings;
-  setCondenserMaxSize: (value: number | null) => void;
-  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
-}) {
-  const parsed = value ? Number.parseInt(value, 10) : null;
-  const bounded =
-    parsed !== null && Number.isFinite(parsed) ? Math.max(20, parsed) : null;
-  setCondenserMaxSize(bounded);
-  const previous =
-    settings?.CONDENSER_MAX_SIZE ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE;
-  const next = bounded ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE;
-  markDirty("condenserMaxSize", next !== previous);
-}
-
-function onSecurityAnalyzerChange({
-  value,
-  settings,
-  setSelectedSecurityAnalyzer,
-  markDirty,
-}: {
-  value: string;
-  settings?: Settings;
-  setSelectedSecurityAnalyzer: (value: string) => void;
-  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
-}) {
-  setSelectedSecurityAnalyzer(value);
-  markDirty(
-    "securityAnalyzer",
-    value !== normalizeSecurityAnalyzerSelection(settings?.SECURITY_ANALYZER),
-  );
-}
-
-function onSecurityAnalyzerClear({
-  settings,
-  setSelectedSecurityAnalyzer,
-  markDirty,
-}: {
-  settings?: Settings;
-  setSelectedSecurityAnalyzer: (value: string) => void;
-  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
-}) {
-  setSelectedSecurityAnalyzer("");
-  markDirty(
-    "securityAnalyzer",
-    normalizeSecurityAnalyzerSelection(settings?.SECURITY_ANALYZER) !== "",
-  );
-}
-
-function buildPayloadForView(view: "basic" | "advanced", formData: FormData) {
-  if (view === "basic") {
-    return buildBasicPayload({ formData });
-  }
-  return buildAdvancedPayload({ formData });
-}

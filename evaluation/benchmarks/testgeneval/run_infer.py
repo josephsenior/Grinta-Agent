@@ -11,7 +11,10 @@ import toml
 from datasets import load_dataset
 import forge.agenthub
 from evaluation.benchmarks.testgeneval.constants import MAP_REPO_VERSION_TO_SPECS
-from evaluation.benchmarks.testgeneval.prompt import CODEACT_TESTGEN_PROMPT, CODEACT_TESTGEN_PROMPT_ITERATE
+from evaluation.benchmarks.testgeneval.prompt import (
+    CODEACT_TESTGEN_PROMPT,
+    CODEACT_TESTGEN_PROMPT_ITERATE,
+)
 from evaluation.benchmarks.testgeneval.utils import get_test_directives
 from evaluation.utils.shared import (
     EvalException,
@@ -29,7 +32,13 @@ from evaluation.utils.shared import (
     update_llm_config_for_completions_logging,
 )
 from forge.controller.state.state import State
-from forge.core.config import AgentConfig, ForgeConfig, SandboxConfig, get_evaluation_parser, get_llm_config_arg
+from forge.core.config import (
+    AgentConfig,
+    ForgeConfig,
+    SandboxConfig,
+    get_evaluation_parser,
+    get_llm_config_arg,
+)
 from forge.core.logger import forge_logger as logger
 from forge.core.main import create_runtime, run_controller
 from forge.events.action import CmdRunAction, MessageAction
@@ -55,9 +64,18 @@ def _get_swebench_workspace_dir_name(instance: pd.Series) -> str:
 
 def get_instruction(instance: pd.Series, metadata: EvalMetadata):
     coverage_command = " ".join(
-        [MAP_REPO_VERSION_TO_SPECS[instance["repo"]][instance["version"]]["test_cmd"], *get_test_directives(instance)]
+        [
+            MAP_REPO_VERSION_TO_SPECS[instance["repo"]][instance["version"]][
+                "test_cmd"
+            ],
+            *get_test_directives(instance),
+        ]
     )
-    prompt_to_use = CODEACT_TESTGEN_PROMPT_ITERATE if instance["full_pred"] is not None else CODEACT_TESTGEN_PROMPT
+    prompt_to_use = (
+        CODEACT_TESTGEN_PROMPT_ITERATE
+        if instance["full_pred"] is not None
+        else CODEACT_TESTGEN_PROMPT
+    )
     instruction = prompt_to_use.format(
         code_file=os.path.join("/testbed", instance.code_file),
         test_file=os.path.join("/testbed", instance.test_file),
@@ -67,7 +85,9 @@ def get_instruction(instance: pd.Series, metadata: EvalMetadata):
         workspace_dir_name=_get_swebench_workspace_dir_name(instance),
     )
     if RUN_WITH_BROWSING:
-        instruction += "<IMPORTANT!>\nYou SHOULD NEVER attempt to browse the web. </IMPORTANT!>\n"
+        instruction += (
+            "<IMPORTANT!>\nYou SHOULD NEVER attempt to browse the web. </IMPORTANT!>\n"
+        )
     return instruction
 
 
@@ -94,15 +114,21 @@ def get_config(instance: pd.Series, metadata: EvalMetadata) -> ForgeConfig:
         timeout=300,
         platform="linux/amd64",
         api_key=os.environ.get("ALLHANDS_API_KEY", None),
-        remote_runtime_api_url=os.environ.get("SANDBOX_REMOTE_RUNTIME_API_URL", "http://localhost:8000"),
+        remote_runtime_api_url=os.environ.get(
+            "SANDBOX_REMOTE_RUNTIME_API_URL", "http://localhost:8000"
+        ),
         keep_runtime_alive=False,
         remote_runtime_init_timeout=3600,
     )
     config = get_FORGE_config_for_eval(
-        metadata=metadata, sandbox_config=sandbox_config, runtime=os.environ.get("RUNTIME", "docker")
+        metadata=metadata,
+        sandbox_config=sandbox_config,
+        runtime=os.environ.get("RUNTIME", "docker"),
     )
     config.set_llm_config(
-        update_llm_config_for_completions_logging(metadata.llm_config, metadata.eval_output_dir, instance["id"])
+        update_llm_config_for_completions_logging(
+            metadata.llm_config, metadata.eval_output_dir, instance["id"]
+        )
     )
     agent_config = AgentConfig(
         enable_jupyter=False,
@@ -128,13 +154,16 @@ def initialize_runtime(runtime: Runtime, instance: pd.Series):
     instance["instance_id"] = instance["instance_id_swebench"]
     action = CmdRunAction(
         command=f"""echo 'export SWE_INSTANCE_ID={
-            instance['instance_id_swebench']}' >> ~/.bashrc && echo 'export PIP_CACHE_DIR=~/.cache/pip' >> ~/.bashrc && echo "alias git='git --no-pager'" >> ~/.bashrc"""
+            instance["instance_id_swebench"]
+        }' >> ~/.bashrc && echo 'export PIP_CACHE_DIR=~/.cache/pip' >> ~/.bashrc && echo "alias git='git --no-pager'" >> ~/.bashrc"""
     )
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert_and_raise(obs.exit_code == 0, f"Failed to export SWE_INSTANCE_ID: {str(obs)}")
+    assert_and_raise(
+        obs.exit_code == 0, f"Failed to export SWE_INSTANCE_ID: {str(obs)}"
+    )
     action = CmdRunAction(command="export USER=$(whoami); echo USER=${USER} ")
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
@@ -147,12 +176,15 @@ def initialize_runtime(runtime: Runtime, instance: pd.Series):
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert_and_raise(obs.exit_code == 0, f"Failed to create /swe_util/eval_data/instances: {str(obs)}")
+    assert_and_raise(
+        obs.exit_code == 0,
+        f"Failed to create /swe_util/eval_data/instances: {str(obs)}",
+    )
     swe_instance_json_name = "swe-bench-instance.json"
     swe_prediction = "test_suite.py"
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_file_path = os.path.join(temp_dir, swe_instance_json_name)
-        with open(temp_file_path, "w", encoding='utf-8') as f:
+        with open(temp_file_path, "w", encoding="utf-8") as f:
             if not isinstance(instance, dict):
                 preprocessed_instance = _preprocess_instance(instance.to_dict())
             else:
@@ -161,22 +193,31 @@ def initialize_runtime(runtime: Runtime, instance: pd.Series):
         runtime.copy_to(temp_file_path, "/swe_util/eval_data/instances/")
         if instance["full_pred"] is not None:
             temp_file_path_pred = os.path.join(temp_dir, swe_prediction)
-            with open(temp_file_path_pred, "w", encoding='utf-8') as f:
+            with open(temp_file_path_pred, "w", encoding="utf-8") as f:
                 f.write(instance["full_pred"])
             runtime.copy_to(temp_file_path_pred, "/tmp")  # nosec B108 - Safe: controlled evaluation runtime
-            action = CmdRunAction(command=f"cp /tmp/test_suite.py /testbed/{instance['test_file']}")  # nosec B108
+            action = CmdRunAction(
+                command=f"cp /tmp/test_suite.py /testbed/{instance['test_file']}"
+            )  # nosec B108
             action.set_hard_timeout(600)
             logger.info(action, extra={"msg_type": "ACTION"})
             obs = runtime.run_action(action)
             logger.info(obs, extra={"msg_type": "OBSERVATION"})
-            assert_and_raise(obs.exit_code == 0, f"Failed to copy test file: {str(obs)}")
-            action = CmdRunAction(command='git -C /testbed add . && git -C /testbed commit -m "Add test file"')
+            assert_and_raise(
+                obs.exit_code == 0, f"Failed to copy test file: {str(obs)}"
+            )
+            action = CmdRunAction(
+                command='git -C /testbed add . && git -C /testbed commit -m "Add test file"'
+            )
             action.set_hard_timeout(600)
             logger.info(action, extra={"msg_type": "ACTION"})
             obs = runtime.run_action(action)
             logger.info(obs, extra={"msg_type": "OBSERVATION"})
             assert_and_raise(obs.exit_code == 0, f"Failed to cat ~/.bashrc: {str(obs)}")
-    runtime.copy_to(str(os.path.join(script_dir, "scripts/setup/instance_swe_entry.sh")), "/swe_util/")
+    runtime.copy_to(
+        str(os.path.join(script_dir, "scripts/setup/instance_swe_entry.sh")),
+        "/swe_util/",
+    )
     action = CmdRunAction(command="cat ~/.bashrc")
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
@@ -196,20 +237,28 @@ def initialize_runtime(runtime: Runtime, instance: pd.Series):
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert_and_raise(obs.exit_code == 0, f"Failed to source /swe_util/instance_swe_entry.sh: {str(obs)}")
+    assert_and_raise(
+        obs.exit_code == 0,
+        f"Failed to source /swe_util/instance_swe_entry.sh: {str(obs)}",
+    )
     action = CmdRunAction(command=f"cd /workspace/{workspace_dir_name}")
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert_and_raise(obs.exit_code == 0, f"Failed to cd to /workspace/{workspace_dir_name}: {str(obs)}")
+    assert_and_raise(
+        obs.exit_code == 0,
+        f"Failed to cd to /workspace/{workspace_dir_name}: {str(obs)}",
+    )
     action = CmdRunAction(command="git reset --hard")
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert_and_raise(obs.exit_code == 0, f"Failed to git reset --hard: {str(obs)}")
-    action = CmdRunAction(command='for remote_name in $(git remote); do git remote remove "${remote_name}"; done')
+    action = CmdRunAction(
+        command='for remote_name in $(git remote); do git remote remove "${remote_name}"; done'
+    )
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
@@ -238,7 +287,10 @@ def complete_runtime(runtime: Runtime, instance: pd.Series) -> dict[str, Any]:
         logger.info(action, extra={"msg_type": "ACTION"})
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
-        assert_and_raise(obs.exit_code == 0, f"Failed to cd to /workspace/{workspace_dir_name}: {str(obs)}")
+        assert_and_raise(
+            obs.exit_code == 0,
+            f"Failed to cd to /workspace/{workspace_dir_name}: {str(obs)}",
+        )
         action = CmdRunAction(command=f"cat {instance.test_file}")
         action.set_hard_timeout(600)
         logger.info(action, extra={"msg_type": "ACTION"})
@@ -246,8 +298,9 @@ def complete_runtime(runtime: Runtime, instance: pd.Series) -> dict[str, Any]:
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert_and_raise(
             obs.exit_code == 0,
-            f"Failed to find file: {
-                instance.test_file} in /workspace/{workspace_dir_name}",
+            f"Failed to find file: {instance.test_file} in /workspace/{
+                workspace_dir_name
+            }",
         )
         test_suite = obs.content.strip()
     except Exception:
@@ -260,7 +313,9 @@ def complete_runtime(runtime: Runtime, instance: pd.Series) -> dict[str, Any]:
     return {"test_suite": test_suite}
 
 
-def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True) -> EvalOutput:
+def process_instance(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True
+) -> EvalOutput:
     config = get_config(instance, metadata)
     start_time = time.time()
     if reset_logger:
@@ -278,19 +333,29 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
                 config=config,
                 initial_user_action=MessageAction(content=instruction),
                 runtime=runtime,
-                fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[metadata.agent_class],
+                fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[
+                    metadata.agent_class
+                ],
             )
         )
         if is_fatal_evaluation_error(state.last_error):
             raise EvalException("Fatal error detected: " + state.last_error)
         return_val = complete_runtime(runtime, instance)
         test_suite = return_val["test_suite"]
-        logger.info("Got test suite for instance %s:\n--------\n%s\n--------", instance.instance_id, test_suite)
+        logger.info(
+            "Got test suite for instance %s:\n--------\n%s\n--------",
+            instance.instance_id,
+            test_suite,
+        )
     finally:
         runtime.close()
     end_time = time.time()
     elapsed_time = end_time - start_time
-    logger.info("Evaluation for instance %s took %s seconds.", instance.instance_id, elapsed_time)
+    logger.info(
+        "Evaluation for instance %s took %s seconds.",
+        instance.instance_id,
+        elapsed_time,
+    )
     test_result = {"test_suite": test_suite, "elapsed_time": elapsed_time}
     if state is None:
         raise ValueError("State should not be None.")
@@ -311,11 +376,13 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
 def prepare_dataset_pre(dataset: pd.DataFrame, filter_column: str) -> pd.DataFrame:
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.toml")
     if os.path.exists(file_path):
-        with open(file_path, "r", encoding='utf-8') as file:
+        with open(file_path, "r", encoding="utf-8") as file:
             data = toml.load(file)
             if "selected_ids" in data:
                 selected_ids = data["selected_ids"]
-                logger.info('Filtering %s tasks from "selected_ids"...', len(selected_ids))
+                logger.info(
+                    'Filtering %s tasks from "selected_ids"...', len(selected_ids)
+                )
                 subset = dataset[dataset[filter_column].isin(selected_ids)]
                 logger.info("Retained %s tasks after filtering", subset.shape[0])
                 subset["instance_id_swebench"] = subset["instance_id"]
@@ -334,9 +401,17 @@ if __name__ == "__main__":
         default="kjain/testgenevallite",
         help="data set to evaluate on, either full-test or lite-test",
     )
-    parser.add_argument("--split", type=str, default="test", help="split to evaluate on")
-    parser.add_argument("--testfile_start", action="store_true", help="Whether to start from the 0 shot test file")
-    parser.add_argument("--zero_shot_path", type=str, help="Path to the zero shot test file predictions")
+    parser.add_argument(
+        "--split", type=str, default="test", help="split to evaluate on"
+    )
+    parser.add_argument(
+        "--testfile_start",
+        action="store_true",
+        help="Whether to start from the 0 shot test file",
+    )
+    parser.add_argument(
+        "--zero_shot_path", type=str, help="Path to the zero shot test file predictions"
+    )
     args, _ = parser.parse_known_args()
     if args.testfile_start and (not args.zero_shot_path):
         raise ValueError(
@@ -344,7 +419,7 @@ if __name__ == "__main__":
         )
     preds_map = {}
     if args.testfile_start:
-        with open(args.zero_shot_path, "r", encoding='utf-8') as f:
+        with open(args.zero_shot_path, "r", encoding="utf-8") as f:
             for line in f:
                 pred = json.loads(line)
                 preds_map[pred["id"]] = pred["preds"]["full"][0]
@@ -360,7 +435,9 @@ if __name__ == "__main__":
         raise ValueError(f"Could not find LLM config: --llm_config {args.llm_config}")
     details = {}
     _agent_cls = forge.agenthub.Agent.get_cls(args.agent_cls)
-    dataset_descrption = args.dataset.replace("/", "__") + "-" + args.split.replace("/", "__")
+    dataset_descrption = (
+        args.dataset.replace("/", "__") + "-" + args.split.replace("/", "__")
+    )
     metadata = make_metadata(
         llm_config,
         dataset_descrption,
@@ -373,5 +450,11 @@ if __name__ == "__main__":
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
     instances = prepare_dataset(testgeneval_filepairs, output_file, args.eval_n_limit)
     if not instances.empty:
-        instances["full_pred"] = instances["instance_id"].map(preds_map).apply(lambda x: x if pd.notna(x) else None)
-        run_evaluation(instances, metadata, output_file, args.eval_num_workers, process_instance)
+        instances["full_pred"] = (
+            instances["instance_id"]
+            .map(preds_map)
+            .apply(lambda x: x if pd.notna(x) else None)
+        )
+        run_evaluation(
+            instances, metadata, output_file, args.eval_num_workers, process_instance
+        )

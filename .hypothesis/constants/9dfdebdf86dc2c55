@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\runtime\builder\docker.py
+# hypothesis_version: 6.147.0
+
+[100, '+', '-', '--load', '--progress=plain', '.', '/tmp/.buildx-cache', ':', 'Already exists', 'Command output:\n%s', 'Command output: %s', 'Components', 'Download complete', 'Image %s %s locally', 'Image found locally.', 'Image pulled', 'Layer %s: %s %s', 'Name', 'Not Found', 'Podman', 'Version', 'apt-get update', 'build', 'buildx', 'current', 'default', 'docker', 'id', 'last_logged', 'not found', 'output', 'podman', 'progress', 'progressDetail', 'status', 'total', 'use', 'version']

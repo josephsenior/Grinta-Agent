@@ -35,7 +35,9 @@ class UserSecrets(BaseModel):
 
     provider_tokens: PROVIDER_TOKEN_TYPE_WITH_JSON_SCHEMA | None = None
     custom_secrets: CUSTOM_SECRETS_TYPE_WITH_JSON_SCHEMA = Field(default_factory=dict)
-    model_config = ConfigDict(frozen=True, validate_assignment=True, arbitrary_types_allowed=True)
+    model_config = ConfigDict(
+        frozen=True, validate_assignment=True, arbitrary_types_allowed=True
+    )
 
     @field_serializer("provider_tokens")
     def provider_tokens_serializer(
@@ -44,11 +46,11 @@ class UserSecrets(BaseModel):
         info: SerializationInfo,
     ) -> dict[str, dict[str, str | Any]]:
         """Serialize provider tokens with optional secret exposure.
-        
+
         Args:
             provider_tokens: Provider tokens to serialize
             info: Serialization info with context
-            
+
         Returns:
             Serialized tokens dictionary
 
@@ -58,22 +60,34 @@ class UserSecrets(BaseModel):
         for token_type, provider_token in provider_tokens.items():
             if not provider_token or not provider_token.token:
                 continue
-            token_type_str = token_type.value if isinstance(token_type, ProviderType) else str(token_type)
+            token_type_str = (
+                token_type.value
+                if isinstance(token_type, ProviderType)
+                else str(token_type)
+            )
             token = None
             token = (
-                provider_token.token.get_secret_value() if expose_secrets else pydantic_encoder(provider_token.token)
+                provider_token.token.get_secret_value()
+                if expose_secrets
+                else pydantic_encoder(provider_token.token)
             )
-            tokens[token_type_str] = {"token": token, "host": provider_token.host, "user_id": provider_token.user_id}
+            tokens[token_type_str] = {
+                "token": token,
+                "host": provider_token.host,
+                "user_id": provider_token.user_id,
+            }
         return tokens
 
     @field_serializer("custom_secrets")
-    def custom_secrets_serializer(self, custom_secrets: CUSTOM_SECRETS_TYPE, info: SerializationInfo):
+    def custom_secrets_serializer(
+        self, custom_secrets: CUSTOM_SECRETS_TYPE, info: SerializationInfo
+    ):
         """Serialize custom secrets with optional secret exposure.
-        
+
         Args:
             custom_secrets: Custom secrets to serialize
             info: Serialization info with context
-            
+
         Returns:
             Serialized secrets dictionary
 
@@ -93,7 +107,9 @@ class UserSecrets(BaseModel):
         return secrets
 
     @classmethod
-    def _convert_provider_tokens(cls, tokens: dict | MappingProxyType) -> MappingProxyType:
+    def _convert_provider_tokens(
+        cls, tokens: dict | MappingProxyType
+    ) -> MappingProxyType:
         """Convert provider tokens dictionary to MappingProxyType.
 
         Args:
@@ -119,7 +135,9 @@ class UserSecrets(BaseModel):
         return MappingProxyType(converted_tokens)
 
     @classmethod
-    def _convert_custom_secrets(cls, secrets: dict | MappingProxyType) -> MappingProxyType:
+    def _convert_custom_secrets(
+        cls, secrets: dict | MappingProxyType
+    ) -> MappingProxyType:
         """Convert custom secrets dictionary to MappingProxyType.
 
         Args:
@@ -147,7 +165,7 @@ class UserSecrets(BaseModel):
     @classmethod
     def convert_dict_to_mappingproxy(
         cls,
-        data: dict[str, dict[str, Any] | MappingProxyType] | PROVIDER_TOKEN_TYPE,
+        data: dict[str, dict[str, Any] | MappingProxyType] | PROVIDER_TOKEN_TYPE | None,
     ) -> dict[str, MappingProxyType | None]:
         """Custom deserializer to convert dictionary into MappingProxyType.
 
@@ -171,13 +189,17 @@ class UserSecrets(BaseModel):
 
         # Convert provider tokens if present
         if "provider_tokens" in data and data["provider_tokens"] is not None:
-            new_data["provider_tokens"] = cls._convert_provider_tokens(data["provider_tokens"])
+            new_data["provider_tokens"] = cls._convert_provider_tokens(
+                data["provider_tokens"]
+            )
         else:
             new_data["provider_tokens"] = MappingProxyType({})
 
         # Convert custom secrets if present
         if "custom_secrets" in data and data["custom_secrets"] is not None:
-            new_data["custom_secrets"] = cls._convert_custom_secrets(data["custom_secrets"])
+            new_data["custom_secrets"] = cls._convert_custom_secrets(
+                data["custom_secrets"]
+            )
         else:
             new_data["custom_secrets"] = MappingProxyType({})
 
@@ -217,20 +239,26 @@ class UserSecrets(BaseModel):
 
     def get_env_vars(self) -> dict[str, str]:
         """Get custom secrets as environment variables.
-        
+
         Returns:
             Dictionary mapping secret names to string values
 
         """
         secret_store = model_dump_with_options(self, context={"expose_secrets": True})
         custom_secrets = secret_store.get("custom_secrets", {})
-        return {secret_name: value["secret"] for secret_name, value in custom_secrets.items()}
+        return {
+            secret_name: value["secret"]
+            for secret_name, value in custom_secrets.items()
+        }
 
     def get_custom_secrets_descriptions(self) -> dict[str, str]:
         """Get descriptions for all custom secrets.
-        
+
         Returns:
             Dictionary mapping secret names to descriptions
 
         """
-        return {secret_name: secret.description for secret_name, secret in self.custom_secrets.items()}
+        return {
+            secret_name: secret.description
+            for secret_name, secret in self.custom_secrets.items()
+        }

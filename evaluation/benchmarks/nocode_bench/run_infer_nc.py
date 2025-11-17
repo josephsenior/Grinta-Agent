@@ -10,10 +10,17 @@ import toml
 from datasets import load_dataset
 from jinja2 import Environment, FileSystemLoader
 import forge.agenthub
-from evaluation.benchmarks.nocode_bench.binary_patch_utils import remove_binary_diffs, remove_binary_files_from_git
+from evaluation.benchmarks.nocode_bench.binary_patch_utils import (
+    remove_binary_diffs,
+    remove_binary_files_from_git,
+)
 from evaluation.benchmarks.nocode_bench.consistants import MAP_REPO_TO_CONFIG
-from evaluation.benchmarks.nocode_bench.resource.mapping import get_instance_resource_factor
-from evaluation.benchmarks.nocode_bench.scripts.utils.evaluation_utils import run_evaluation_nocode_bench
+from evaluation.benchmarks.nocode_bench.resource.mapping import (
+    get_instance_resource_factor,
+)
+from evaluation.benchmarks.nocode_bench.scripts.utils.evaluation_utils import (
+    run_evaluation_nocode_bench,
+)
 from evaluation.utils.shared import (
     EvalException,
     EvalMetadata,
@@ -30,14 +37,23 @@ from evaluation.utils.shared import (
     update_llm_config_for_completions_logging,
 )
 from forge.controller.state.state import State
-from forge.core.config import AgentConfig, ForgeConfig, get_evaluation_parser, get_llm_config_arg
+from forge.core.config import (
+    AgentConfig,
+    ForgeConfig,
+    get_evaluation_parser,
+    get_llm_config_arg,
+)
 from forge.core.config.condenser_config import NoOpCondenserConfig
 from forge.core.config.utils import get_condenser_config_arg
 from forge.core.logger import forge_logger as logger
 from forge.core.main import create_runtime, run_controller
 from forge.critic import AgentFinishedCritic
 from forge.events.action import CmdRunAction, FileReadAction, MessageAction
-from forge.events.observation import CmdOutputObservation, ErrorObservation, FileReadObservation
+from forge.events.observation import (
+    CmdOutputObservation,
+    ErrorObservation,
+    FileReadObservation,
+)
 from forge.events.serialization.event import event_from_dict, event_to_dict
 from forge.runtime.base import Runtime
 from forge.utils.async_utils import call_async_from_sync
@@ -79,20 +95,28 @@ def get_instruction(instance: pd.Series, metadata: EvalMetadata) -> MessageActio
     }
     instruction = template.render(context)
     if RUN_WITH_BROWSING:
-        instruction += "<IMPORTANT!>\nYou SHOULD NEVER attempt to browse the web. </IMPORTANT!>\n"
+        instruction += (
+            "<IMPORTANT!>\nYou SHOULD NEVER attempt to browse the web. </IMPORTANT!>\n"
+        )
     if "image_assets" in instance:
         assets = json.loads(instance["image_assets"])
-        assert "problem_statement" in assets, "problem_statement is required in image_assets"
+        assert "problem_statement" in assets, (
+            "problem_statement is required in image_assets"
+        )
         image_urls = assets["problem_statement"]
         return MessageAction(content=instruction, image_urls=image_urls)
     return MessageAction(content=instruction)
 
 
-DEFAULT_DOCKER_IMAGE_PREFIX = os.environ.get("EVAL_DOCKER_IMAGE_PREFIX", "docker.io/xingyaoww/")
+DEFAULT_DOCKER_IMAGE_PREFIX = os.environ.get(
+    "EVAL_DOCKER_IMAGE_PREFIX", "docker.io/xingyaoww/"
+)
 logger.info("Default docker image prefix: %s", DEFAULT_DOCKER_IMAGE_PREFIX)
 
 
-def get_instance_docker_image(instance_id: str, swebench_official_image: bool = False) -> str:
+def get_instance_docker_image(
+    instance_id: str, swebench_official_image: bool = False
+) -> str:
     if swebench_official_image:
         image_name = f"ncbench_{instance_id}:latest".lower()
         logger.debug("Using official NoCode-Bench image: %s", image_name)
@@ -119,7 +143,9 @@ def get_config(instance: pd.Series, metadata: EvalMetadata) -> ForgeConfig:
         dataset_name=metadata.dataset, instance_id=instance["instance_id"]
     )
     config = get_FORGE_config_for_eval(
-        metadata=metadata, runtime=os.environ.get("RUNTIME", "docker"), sandbox_config=sandbox_config
+        metadata=metadata,
+        runtime=os.environ.get("RUNTIME", "docker"),
+        sandbox_config=sandbox_config,
     )
     config.set_llm_config(
         update_llm_config_for_completions_logging(
@@ -168,13 +194,17 @@ def initialize_runtime(runtime: Runtime, instance: pd.Series, metadata: EvalMeta
     obs: CmdOutputObservation
     action = CmdRunAction(
         command=f"""echo 'export SWE_INSTANCE_ID={
-            instance['instance_id']}' >> ~/.bashrc && echo 'export PIP_CACHE_DIR=~/.cache/pip' >> ~/.bashrc && echo "alias git='git --no-pager'" >> ~/.bashrc && git config --global core.pager "" && git config --global diff.binary false"""
+            instance["instance_id"]
+        }' >> ~/.bashrc && echo 'export PIP_CACHE_DIR=~/.cache/pip' >> ~/.bashrc && echo "alias git='git --no-pager'" >> ~/.bashrc && git config --global core.pager "" && git config --global diff.binary false"""
     )
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert_and_raise(obs.exit_code == 0, f"Failed to export SWE_INSTANCE_ID and configure git: {str(obs)}")
+    assert_and_raise(
+        obs.exit_code == 0,
+        f"Failed to export SWE_INSTANCE_ID and configure git: {str(obs)}",
+    )
     action = CmdRunAction(command="export USER=$(whoami); echo USER=${USER} ")
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
@@ -187,23 +217,31 @@ def initialize_runtime(runtime: Runtime, instance: pd.Series, metadata: EvalMeta
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert_and_raise(obs.exit_code == 0, f"Failed to create /swe_util/eval_data/instances: {str(obs)}")
+    assert_and_raise(
+        obs.exit_code == 0,
+        f"Failed to create /swe_util/eval_data/instances: {str(obs)}",
+    )
     swe_instance_json_name = "swe-bench-instance.json"
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_file_path = os.path.join(temp_dir, swe_instance_json_name)
-        with open(temp_file_path, "w", encoding='utf-8') as f:
+        with open(temp_file_path, "w", encoding="utf-8") as f:
             if not isinstance(instance, dict):
                 instance_dict = make_serializable(instance)
             else:
                 instance_dict = dict(instance)
             if DATASET_TYPE == "nc_bench":
-                config = MAP_REPO_TO_CONFIG.get(instance["repo"], {}).get(instance["version"], [])
+                config = MAP_REPO_TO_CONFIG.get(instance["repo"], {}).get(
+                    instance["version"], []
+                )
                 docker_conda_env_name = config["conda_env"]
                 instance_dict["conda_env"] = docker_conda_env_name
             json.dump([instance_dict], f)
         runtime.copy_to(temp_file_path, "/swe_util/eval_data/instances/")
         entry_script_path = "instance_nc_entry.sh"
-        runtime.copy_to(str(os.path.join(script_dir, f"scripts/setup/{entry_script_path}")), "/swe_util/")
+        runtime.copy_to(
+            str(os.path.join(script_dir, f"scripts/setup/{entry_script_path}")),
+            "/swe_util/",
+        )
     action = CmdRunAction(command="cat ~/.bashrc")
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
@@ -223,20 +261,28 @@ def initialize_runtime(runtime: Runtime, instance: pd.Series, metadata: EvalMeta
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert_and_raise(obs.exit_code == 0, f"Failed to source /swe_util/{entry_script_path}: {str(obs)}")
+    assert_and_raise(
+        obs.exit_code == 0,
+        f"Failed to source /swe_util/{entry_script_path}: {str(obs)}",
+    )
     action = CmdRunAction(command=f"cd /workspace/{workspace_dir_name}")
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert_and_raise(obs.exit_code == 0, f"Failed to cd to /workspace/{workspace_dir_name}: {str(obs)}")
+    assert_and_raise(
+        obs.exit_code == 0,
+        f"Failed to cd to /workspace/{workspace_dir_name}: {str(obs)}",
+    )
     action = CmdRunAction(command="git reset --hard")
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert_and_raise(obs.exit_code == 0, f"Failed to git reset --hard: {str(obs)}")
-    action = CmdRunAction(command='for remote_name in $(git remote); do git remote remove "${remote_name}"; done')
+    action = CmdRunAction(
+        command='for remote_name in $(git remote); do git remote remove "${remote_name}"; done'
+    )
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
@@ -248,13 +294,18 @@ def initialize_runtime(runtime: Runtime, instance: pd.Series, metadata: EvalMeta
         logger.info(action, extra={"msg_type": "ACTION"})
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
-        assert_and_raise(obs.exit_code == 0, f"Expected to find python interpreter, but got: {str(obs)}")
+        assert_and_raise(
+            obs.exit_code == 0,
+            f"Expected to find python interpreter, but got: {str(obs)}",
+        )
     logger.info("-" * 30)
     logger.info("END Runtime Initialization Fn")
     logger.info("-" * 30)
 
 
-def _navigate_to_workspace(runtime: Runtime, workspace_dir_name: str) -> CmdOutputObservation:
+def _navigate_to_workspace(
+    runtime: Runtime, workspace_dir_name: str
+) -> CmdOutputObservation:
     """Navigate to the workspace directory with retry logic."""
     action = CmdRunAction(command=f"cd /workspace/{workspace_dir_name}")
     action.set_hard_timeout(600)
@@ -308,7 +359,8 @@ def _cleanup_nested_git_repos(runtime: Runtime) -> None:
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert_and_raise(
-        isinstance(obs, CmdOutputObservation) and obs.exit_code == 0, f"Failed to find git repositories: {str(obs)}"
+        isinstance(obs, CmdOutputObservation) and obs.exit_code == 0,
+        f"Failed to find git repositories: {str(obs)}",
     )
 
     if git_dirs := [p for p in obs.content.strip().split("\n") if p]:
@@ -331,7 +383,10 @@ def _stage_changes(runtime: Runtime) -> None:
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert_and_raise(isinstance(obs, CmdOutputObservation) and obs.exit_code == 0, f"Failed to git add -A: {str(obs)}")
+    assert_and_raise(
+        isinstance(obs, CmdOutputObservation) and obs.exit_code == 0,
+        f"Failed to git add -A: {str(obs)}",
+    )
 
     action = CmdRunAction(command=remove_binary_files_from_git())
     action.set_hard_timeout(600)
@@ -339,7 +394,8 @@ def _stage_changes(runtime: Runtime) -> None:
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert_and_raise(
-        isinstance(obs, CmdOutputObservation) and obs.exit_code == 0, f"Failed to remove binary files: {str(obs)}"
+        isinstance(obs, CmdOutputObservation) and obs.exit_code == 0,
+        f"Failed to remove binary files: {str(obs)}",
     )
 
 
@@ -349,7 +405,9 @@ def _generate_git_patch(runtime: Runtime, instance: pd.Series) -> str:
     git_patch = None
 
     while n_retries < 5:
-        action = CmdRunAction(command=f"git diff --no-color --cached {instance['base_commit']} > patch.diff")
+        action = CmdRunAction(
+            command=f"git diff --no-color --cached {instance['base_commit']} > patch.diff"
+        )
         action.set_hard_timeout(max(300 + 100 * n_retries, 600))
         logger.info(action, extra={"msg_type": "ACTION"})
         obs = runtime.run_action(action)
@@ -430,7 +488,10 @@ def complete_runtime(runtime: Runtime, instance: pd.Series) -> dict[str, Any]:
 
 
 def process_instance(
-    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True, runtime_failure_count: int = 0
+    instance: pd.Series,
+    metadata: EvalMetadata,
+    reset_logger: bool = True,
+    runtime_failure_count: int = 0,
 ) -> EvalOutput:
     config = get_config(instance, metadata)
     if reset_logger:
@@ -450,7 +511,9 @@ def process_instance(
         )
     metadata = copy.deepcopy(metadata)
     metadata.details["runtime_failure_count"] = runtime_failure_count
-    metadata.details["remote_runtime_resource_factor"] = config.sandbox.remote_runtime_resource_factor
+    metadata.details["remote_runtime_resource_factor"] = (
+        config.sandbox.remote_runtime_resource_factor
+    )
     runtime = create_runtime(config)
     call_async_from_sync(runtime.connect)
     try:
@@ -461,18 +524,26 @@ def process_instance(
                 config=config,
                 initial_user_action=message_action,
                 runtime=runtime,
-                fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[metadata.agent_class],
+                fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[
+                    metadata.agent_class
+                ],
             )
         )
         if is_fatal_evaluation_error(state.last_error):
             raise EvalException("Fatal error detected: " + state.last_error)
         if DATASET_TYPE == "SWE-bench-Live":
-            from evaluation.benchmarks.swe_bench.live_utils import complete_runtime as complete_runtime_fn
+            from evaluation.benchmarks.swe_bench.live_utils import (
+                complete_runtime as complete_runtime_fn,
+            )
         else:
             complete_runtime_fn = complete_runtime
         return_val = complete_runtime_fn(runtime, instance)
         git_patch = return_val["git_patch"]
-        logger.info("Got git diff for instance %s:\n--------\n%s\n--------", instance.instance_id, git_patch)
+        logger.info(
+            "Got git diff for instance %s:\n--------\n%s\n--------",
+            instance.instance_id,
+            git_patch,
+        )
     finally:
         runtime.close()
     test_result = {"git_patch": git_patch}
@@ -482,7 +553,9 @@ def process_instance(
     metrics = get_metrics(state)
     instruction = message_action.content
     if message_action.image_urls:
-        instruction += "\n\n<image_urls>" + "\n".join(message_action.image_urls) + "</image_urls>"
+        instruction += (
+            "\n\n<image_urls>" + "\n".join(message_action.image_urls) + "</image_urls>"
+        )
     return EvalOutput(
         instance_id=instance.instance_id,
         instruction=instruction,
@@ -498,11 +571,13 @@ def process_instance(
 def filter_dataset(dataset: pd.DataFrame, filter_column: str) -> pd.DataFrame:
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.toml")
     if os.path.exists(file_path):
-        with open(file_path, "r", encoding='utf-8') as file:
+        with open(file_path, "r", encoding="utf-8") as file:
             data = toml.load(file)
             if "selected_ids" in data:
                 selected_ids = data["selected_ids"]
-                logger.info('Filtering %s tasks from "selected_ids"...', len(selected_ids))
+                logger.info(
+                    'Filtering %s tasks from "selected_ids"...', len(selected_ids)
+                )
                 subset = dataset[dataset[filter_column].isin(selected_ids)]
                 logger.info("Retained %s tasks after filtering", subset.shape[0])
                 return subset
@@ -511,7 +586,9 @@ def filter_dataset(dataset: pd.DataFrame, filter_column: str) -> pd.DataFrame:
                 if isinstance(selected_repos, str):
                     selected_repos = [selected_repos]
                 assert isinstance(selected_repos, list)
-                logger.info('Filtering %s tasks from "selected_repos"...', selected_repos)
+                logger.info(
+                    'Filtering %s tasks from "selected_repos"...', selected_repos
+                )
                 subset = dataset[dataset["repo"].isin(selected_repos)]
                 logger.info("Retained %s tasks after filtering", subset.shape[0])
                 return subset
@@ -530,7 +607,9 @@ if __name__ == "__main__":
         default="NoCode-bench/NoCode-bench_Verified",
         help="data set to evaluate on, either full-test or lite-test",
     )
-    parser.add_argument("--split", type=str, default="test", help="split to evaluate on")
+    parser.add_argument(
+        "--split", type=str, default="test", help="split to evaluate on"
+    )
     parser.add_argument(
         "--mode",
         type=str,
@@ -542,7 +621,12 @@ if __name__ == "__main__":
     dataset = load_dataset(args.dataset, args.split)  # nosec B615 - Safe: evaluation benchmark dataset
     set_dataset_type(args.dataset)
     swe_bench_tests = filter_dataset(dataset.to_pandas(), "instance_id")
-    logger.info("Loaded dataset %s with split %s: %s tasks", args.dataset, args.split, len(swe_bench_tests))
+    logger.info(
+        "Loaded dataset %s with split %s: %s tasks",
+        args.dataset,
+        args.split,
+        len(swe_bench_tests),
+    )
     llm_config = None
     if args.llm_config:
         llm_config = get_llm_config_arg(args.llm_config)
@@ -554,13 +638,19 @@ if __name__ == "__main__":
     if condenser_name:
         condenser_config = get_condenser_config_arg(condenser_name)
         if condenser_config is None:
-            raise ValueError(f"Could not find Condenser config: EVAL_CONDENSER={condenser_name}")
+            raise ValueError(
+                f"Could not find Condenser config: EVAL_CONDENSER={condenser_name}"
+            )
     else:
         condenser_config = NoOpCondenserConfig()
-        logger.debug("No Condenser config provided via EVAL_CONDENSER, using NoOpCondenser.")
+        logger.debug(
+            "No Condenser config provided via EVAL_CONDENSER, using NoOpCondenser."
+        )
     details = {"mode": args.mode}
     _agent_cls = forge.agenthub.Agent.get_cls(args.agent_cls)
-    dataset_descrption = args.dataset.replace("/", "__") + "-" + args.split.replace("/", "__")
+    dataset_descrption = (
+        args.dataset.replace("/", "__") + "-" + args.split.replace("/", "__")
+    )
     metadata = make_metadata(
         llm_config,
         dataset_descrption,
@@ -573,11 +663,17 @@ if __name__ == "__main__":
     )
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
     print(f"### OUTPUT FILE: {output_file} ###")
-    ITERATIVE_EVAL_MODE = os.environ.get("ITERATIVE_EVAL_MODE", "false").lower() == "true"
-    ITERATIVE_EVAL_MODE_MAX_ATTEMPTS = int(os.environ.get("ITERATIVE_EVAL_MODE_MAX_ATTEMPTS", "3"))
+    ITERATIVE_EVAL_MODE = (
+        os.environ.get("ITERATIVE_EVAL_MODE", "false").lower() == "true"
+    )
+    ITERATIVE_EVAL_MODE_MAX_ATTEMPTS = int(
+        os.environ.get("ITERATIVE_EVAL_MODE_MAX_ATTEMPTS", "3")
+    )
     if not ITERATIVE_EVAL_MODE:
         instances = prepare_dataset(swe_bench_tests, output_file, args.eval_n_limit)
-        if len(instances) > 0 and (not isinstance(instances["PASS2PASS"][instances["PASS2PASS"].index[0]], str)):
+        if len(instances) > 0 and (
+            not isinstance(instances["PASS2PASS"][instances["PASS2PASS"].index[0]], str)
+        ):
             for col in ["PASS2PASS", "FAIL2PASS"]:
                 instances[col] = instances[col].apply(lambda x: str(x))
         run_evaluation_nocode_bench(
@@ -593,7 +689,9 @@ if __name__ == "__main__":
         critic = AgentFinishedCritic()
 
         def get_cur_output_file_path(attempt: int) -> str:
-            return f"{output_file.removesuffix('.jsonl')}.critic_attempt_{attempt}.jsonl"
+            return (
+                f"{output_file.removesuffix('.jsonl')}.critic_attempt_{attempt}.jsonl"
+            )
 
         eval_ids = None
         for attempt in range(1, ITERATIVE_EVAL_MODE_MAX_ATTEMPTS + 1):
@@ -605,13 +703,24 @@ if __name__ == "__main__":
                 ITERATIVE_EVAL_MODE_MAX_ATTEMPTS,
             )
             if attempt > 1 and metadata.llm_config.temperature == 0:
-                logger.info("Detected temperature is 0 for (>1) attempt %s. Setting temperature to 0.1...", attempt)
+                logger.info(
+                    "Detected temperature is 0 for (>1) attempt %s. Setting temperature to 0.1...",
+                    attempt,
+                )
                 metadata.llm_config.temperature = 0.1
-            instances = prepare_dataset(swe_bench_tests, cur_output_file, args.eval_n_limit, eval_ids=eval_ids)
-            if len(instances) > 0 and (not isinstance(instances["PASS2PASS"][instances["PASS2PASS"].index[0]], str)):
+            instances = prepare_dataset(
+                swe_bench_tests, cur_output_file, args.eval_n_limit, eval_ids=eval_ids
+            )
+            if len(instances) > 0 and (
+                not isinstance(
+                    instances["PASS2PASS"][instances["PASS2PASS"].index[0]], str
+                )
+            ):
                 for col in ["PASS2PASS", "FAIL2PASS"]:
                     instances[col] = instances[col].apply(lambda x: str(x))
-            logger.info("Evaluating %s instances for attempt %s...", len(instances), attempt)
+            logger.info(
+                "Evaluating %s instances for attempt %s...", len(instances), attempt
+            )
             run_evaluation_nocode_bench(
                 instances,
                 metadata,
@@ -628,32 +737,48 @@ if __name__ == "__main__":
                 len(instances),
                 attempt,
             )
-            with open(cur_output_file, "r", encoding='utf-8') as f:
+            with open(cur_output_file, "r", encoding="utf-8") as f:
                 for line in f:
                     instance = json.loads(line)
                     try:
-                        history = [event_from_dict(event) for event in instance["history"]]
-                        critic_result = critic.evaluate(history, instance["test_result"].get("git_patch", ""))
+                        history = [
+                            event_from_dict(event) for event in instance["history"]
+                        ]
+                        critic_result = critic.evaluate(
+                            history, instance["test_result"].get("git_patch", "")
+                        )
                         if not critic_result.success:
                             instances_failed.append(instance["instance_id"])
                     except Exception as e:
-                        logger.error("Error loading history for instance %s: %s", instance["instance_id"], e)
+                        logger.error(
+                            "Error loading history for instance %s: %s",
+                            instance["instance_id"],
+                            e,
+                        )
                         instances_failed.append(instance["instance_id"])
             logger.info(
-                "%s instances failed the current attempt %s: %s", len(instances_failed), attempt, instances_failed
+                "%s instances failed the current attempt %s: %s",
+                len(instances_failed),
+                attempt,
+                instances_failed,
             )
             eval_ids = instances_failed
             if len(instances_failed) == 0:
                 break
-        logger.info("Aggregating results from all attempts into the original output file...")
-        fout = open(output_file, "w", encoding='utf-8')
+        logger.info(
+            "Aggregating results from all attempts into the original output file..."
+        )
+        fout = open(output_file, "w", encoding="utf-8")
         added_instance_ids = set()
         for attempt in reversed(range(1, ITERATIVE_EVAL_MODE_MAX_ATTEMPTS + 1)):
             cur_output_file = get_cur_output_file_path(attempt)
             if not os.path.exists(cur_output_file):
-                logger.warning("Intermediate output file %s does not exist. Skipping...", cur_output_file)
+                logger.warning(
+                    "Intermediate output file %s does not exist. Skipping...",
+                    cur_output_file,
+                )
                 continue
-            with open(cur_output_file, "r", encoding='utf-8') as f:
+            with open(cur_output_file, "r", encoding="utf-8") as f:
                 for line in f:
                     instance = json.loads(line)
                     if (
@@ -668,4 +793,6 @@ if __name__ == "__main__":
                 len(added_instance_ids),
             )
         fout.close()
-        logger.info("Done! Total %s instances added to %s", len(added_instance_ids), output_file)
+        logger.info(
+            "Done! Total %s instances added to %s", len(added_instance_ids), output_file
+        )

@@ -33,7 +33,9 @@ def download_latest_vsix_from_github() -> str | None:
             timeout=10,
         ) as response:  # nosec B310 - Safe: accessing GitHub API with validated URL
             if response.status != 200:
-                logger.debug("GitHub API request failed with status: %s", response.status)
+                logger.debug(
+                    "GitHub API request failed with status: %s", response.status
+                )
                 return None
             releases = json.loads(response.read().decode())
             for release in releases:
@@ -48,9 +50,14 @@ def download_latest_vsix_from_github() -> str | None:
                                 timeout=30,
                             ) as download_response:  # nosec B310 - Safe: downloading from verified GitHub release URL
                                 if download_response.status != 200:
-                                    logger.debug("Failed to download .vsix with status: %s", download_response.status)
+                                    logger.debug(
+                                        "Failed to download .vsix with status: %s",
+                                        download_response.status,
+                                    )
                                     continue
-                                with tempfile.NamedTemporaryFile(delete=False, suffix=".vsix") as tmp_file:
+                                with tempfile.NamedTemporaryFile(
+                                    delete=False, suffix=".vsix"
+                                ) as tmp_file:
                                     tmp_file.write(download_response.read())
                                     return tmp_file.name
                     return None
@@ -66,7 +73,11 @@ def _detect_supported_editor() -> tuple[bool, bool]:
     is_windsurf = (
         os.environ.get("__CFBundleIdentifier") == "com.exafunction.windsurf"
         or "windsurf" in os.environ.get("PATH", "").lower()
-        or any("windsurf" in val.lower() for val in os.environ.values() if isinstance(val, str))
+        or any(
+            "windsurf" in val.lower()
+            for val in os.environ.values()
+            if isinstance(val, str)
+        )
     )
     return is_vscode_like, is_windsurf
 
@@ -78,7 +89,9 @@ def _get_editor_config(is_windsurf: bool) -> tuple[str, str, str]:
     return ("code", "VS Code", "vscode")
 
 
-def _setup_extension_flag_file(editor_name: str, flag_suffix: str) -> tuple[pathlib.Path, bool]:
+def _setup_extension_flag_file(
+    editor_name: str, flag_suffix: str
+) -> tuple[pathlib.Path, bool]:
     """Set up extension flag file and return (flag_file, should_continue)."""
     flag_dir = pathlib.Path.home() / ".Forge"
     flag_file = flag_dir / f".{flag_suffix}_extension_installed"
@@ -88,7 +101,9 @@ def _setup_extension_flag_file(editor_name: str, flag_suffix: str) -> tuple[path
         if flag_file.exists():
             return flag_file, False
     except OSError as e:
-        logger.debug(f"Could not create or check {editor_name} extension flag directory: {e}")
+        logger.debug(
+            f"Could not create or check {editor_name} extension flag directory: {e}"
+        )
         return flag_file, False
 
     return flag_file, True
@@ -108,7 +123,9 @@ def _handle_already_installed_extension(
     return False
 
 
-def _attempt_extension_installation(editor_command: str, editor_name: str, flag_file: pathlib.Path) -> bool:
+def _attempt_extension_installation(
+    editor_command: str, editor_name: str, flag_file: pathlib.Path
+) -> bool:
     """Attempt to install the extension using various methods."""
     if _attempt_bundled_install(editor_command, editor_name):
         _info(f"INFO: Bundled {editor_name} extension installed successfully.")
@@ -116,7 +133,9 @@ def _attempt_extension_installation(editor_command: str, editor_name: str, flag_
         return True
 
     if _attempt_github_install(editor_command, editor_name):
-        _info(f"INFO: Forge {editor_name} extension installed successfully from GitHub.")
+        _info(
+            f"INFO: Forge {editor_name} extension installed successfully from GitHub."
+        )
         _mark_installation_successful(flag_file, editor_name)
         return True
 
@@ -140,13 +159,17 @@ def attempt_vscode_extension_install() -> None:
 
     extension_id = "forge.Forge-vscode"
 
-    if _handle_already_installed_extension(editor_command, editor_name, extension_id, flag_file):
+    if _handle_already_installed_extension(
+        editor_command, editor_name, extension_id, flag_file
+    ):
         return
 
     if _attempt_extension_installation(editor_command, editor_name, flag_file):
         return
 
-    _info("INFO: Automatic installation failed. Please check the Forge documentation for manual installation instructions.")
+    _info(
+        "INFO: Automatic installation failed. Please check the Forge documentation for manual installation instructions."
+    )
     _info(f"INFO: Will retry installation next time you run Forge in {editor_name}.")
 
 
@@ -177,7 +200,12 @@ def _is_extension_installed(editor_command: str, extension_id: str) -> bool:
 
     """
     try:
-        process = subprocess.run([editor_command, "--list-extensions"], capture_output=True, text=True, check=False)
+        process = subprocess.run(
+            [editor_command, "--list-extensions"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
         if process.returncode == 0:
             installed_extensions = process.stdout.strip().split("\n")
             return extension_id in installed_extensions
@@ -214,13 +242,17 @@ def _attempt_github_install(editor_command: str, editor_name: str) -> bool:
         if process.returncode == 0:
             github_success = True
         else:
-            logger.debug("Failed to install .vsix from GitHub: %s", process.stderr.strip())
+            logger.debug(
+                "Failed to install .vsix from GitHub: %s", process.stderr.strip()
+            )
     finally:
         if os.path.exists(vsix_path_from_github):
             try:
                 os.remove(vsix_path_from_github)
             except OSError as e:
-                logger.debug("Failed to delete temporary file %s: %s", vsix_path_from_github, e)
+                logger.debug(
+                    "Failed to delete temporary file %s: %s", vsix_path_from_github, e
+                )
     return github_success
 
 
@@ -240,7 +272,9 @@ def _attempt_bundled_install(editor_command: str, editor_name: str) -> bool:
     try:
         vsix_filename = "Forge-vscode-0.0.1.vsix"
         with importlib.resources.as_file(
-            importlib.resources.files("forge").joinpath("integrations", "vscode", vsix_filename),
+            importlib.resources.files("forge").joinpath(
+                "integrations", "vscode", vsix_filename
+            ),
         ) as vsix_path:
             if vsix_path.exists():
                 process = subprocess.run(
@@ -251,15 +285,22 @@ def _attempt_bundled_install(editor_command: str, editor_name: str) -> bool:
                 )
                 if process.returncode == 0:
                     return True
-                logger.debug("Bundled .vsix installation failed: %s", process.stderr.strip())
+                logger.debug(
+                    "Bundled .vsix installation failed: %s", process.stderr.strip()
+                )
             else:
                 logger.debug("Bundled .vsix not found at %s.", vsix_path)
     except Exception as e:
-        logger.warning('Could not auto-install extension. Please make sure "code" command is in PATH. Error: %s', e)
+        logger.warning(
+            'Could not auto-install extension. Please make sure "code" command is in PATH. Error: %s',
+            e,
+        )
     return False
 
 
-def _attempt_marketplace_install(editor_command: str, editor_name: str, extension_id: str) -> bool:
+def _attempt_marketplace_install(
+    editor_command: str, editor_name: str, extension_id: str
+) -> bool:
     """Attempt to install the extension from the marketplace.
 
     This method is currently unused as the Forge extension is not yet published
@@ -289,5 +330,7 @@ def _attempt_marketplace_install(editor_command: str, editor_name: str, extensio
     except FileNotFoundError:
         return False
     except Exception as e:
-        logger.debug("An unexpected error occurred trying to install from the Marketplace: %s", e)
+        logger.debug(
+            "An unexpected error occurred trying to install from the Marketplace: %s", e
+        )
         return False

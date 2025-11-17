@@ -99,7 +99,9 @@ def _is_task_complete(state: State, try_parse: Callable) -> bool:
         True if task is complete
 
     """
-    last_action = next((event for event in reversed(state.history) if isinstance(event, Action)), None)
+    last_action = next(
+        (event for event in reversed(state.history) if isinstance(event, Action)), None
+    )
     ans = try_parse(last_action)
     return ans is not None
 
@@ -115,10 +117,17 @@ def _add_giveup_option(base_msg: str, state: State) -> str:
         Message with or without give-up option
 
     """
-    user_msgs = [event for event in state.history if isinstance(event, MessageAction) and event.source == "user"]
+    user_msgs = [
+        event
+        for event in state.history
+        if isinstance(event, MessageAction) and event.source == "user"
+    ]
 
     if len(user_msgs) >= 2:
-        return base_msg + "If you want to give up, run: <execute_bash> exit </execute_bash>.\n"
+        return (
+            base_msg
+            + "If you want to give up, run: <execute_bash> exit </execute_bash>.\n"
+        )
 
     return base_msg
 
@@ -135,7 +144,9 @@ def cleanup() -> None:
         process.join()
 
 
-def reset_logger_for_multiprocessing(logger: logging.Logger, instance_id: str, log_dir: str) -> None:
+def reset_logger_for_multiprocessing(
+    logger: logging.Logger, instance_id: str, log_dir: str
+) -> None:
     """Reset the logger for multiprocessing.
 
     Save logs to a separate file for each process, instead of trying to write to the
@@ -154,7 +165,9 @@ def reset_logger_for_multiprocessing(logger: logging.Logger, instance_id: str, l
         logger.removeHandler(handler)
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
     file_handler = logging.FileHandler(log_file)
-    file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    )
     logger.addHandler(file_handler)
 
 

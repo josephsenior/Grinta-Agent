@@ -24,23 +24,27 @@ class StreamingLLM(AsyncLLM):
         """
         # Build base completion parameters
         base_completion_kwargs = {
-            'model': self.config.model,
-            'api_key': self.config.api_key.get_secret_value() if self.config.api_key else None,
-            'max_tokens': self.config.max_output_tokens,
-            'timeout': self.config.timeout,
-            'temperature': self.config.temperature,
-            'top_p': self.config.top_p,
-            'drop_params': self.config.drop_params,
-            'stream': True,
+            "model": self.config.model,
+            "api_key": self.config.api_key.get_secret_value()
+            if self.config.api_key
+            else None,
+            "max_tokens": self.config.max_output_tokens,
+            "timeout": self.config.timeout,
+            "temperature": self.config.temperature,
+            "top_p": self.config.top_p,
+            "drop_params": self.config.drop_params,
+            "stream": True,
         }
-        
+
         # Add optional parameters if they exist
         if self.config.base_url is not None:
-            base_completion_kwargs['base_url'] = self.config.base_url
+            base_completion_kwargs["base_url"] = self.config.base_url
         if self.config.api_version is not None:
-            base_completion_kwargs['api_version'] = self.config.api_version
+            base_completion_kwargs["api_version"] = self.config.api_version
         if self.config.custom_llm_provider is not None:
-            base_completion_kwargs['custom_llm_provider'] = self.config.custom_llm_provider
+            base_completion_kwargs["custom_llm_provider"] = (
+                self.config.custom_llm_provider
+            )
         logger.debug(
             "Streaming LLM setup for %s with %d base parameters",
             self.config.model,
@@ -60,6 +64,8 @@ class StreamingLLM(AsyncLLM):
         Args:
             args: Positional arguments.
             kwargs: Keyword arguments.
+            allow_empty: If True, allow an empty messages list and return an
+                empty list instead of raising ValueError.
 
         Returns:
             list[dict[str, Any]]: Processed messages list.
@@ -77,7 +83,9 @@ class StreamingLLM(AsyncLLM):
         elif "messages" in kwargs:
             messages = kwargs["messages"]
 
-        message_list = messages if isinstance(messages, list) else [messages] if messages else []
+        message_list = (
+            messages if isinstance(messages, list) else [messages] if messages else []
+        )
         if not message_list:
             if allow_empty:
                 kwargs.setdefault("messages", [])
@@ -116,7 +124,9 @@ class StreamingLLM(AsyncLLM):
             self._post_completion(chunk)
             yield chunk
 
-    async def _async_streaming_completion_wrapper(self, *args: Any, **kwargs: Any) -> Any:
+    async def _async_streaming_completion_wrapper(
+        self, *args: Any, **kwargs: Any
+    ) -> Any:
         """Wrapper for async streaming completion with retry logic.
 
         Args:
@@ -161,7 +171,9 @@ class StreamingLLM(AsyncLLM):
         super().__init__(*args, **kwargs)
 
         # Create the base streaming completion function
-        self._base_async_streaming_completion = self._create_streaming_completion_partial()
+        self._base_async_streaming_completion = (
+            self._create_streaming_completion_partial()
+        )
 
         # Apply retry decorator to the streaming completion wrapper
         self._async_streaming_completion = self.retry_decorator(

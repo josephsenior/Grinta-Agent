@@ -9,7 +9,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Q20Game:
-
     def __init__(
         self,
         item: str,
@@ -59,7 +58,9 @@ class Q20Game:
             guesser_question += " Is it right?"
         self.guesser_messages.append({"role": "assistant", "content": guesser_question})
         usr_msg = self.answerer(guesser_question)
-        self.guesser_messages.append({"role": "user", "content": f"{usr_msg['content'].strip()}"})
+        self.guesser_messages.append(
+            {"role": "user", "content": f"{usr_msg['content'].strip()}"}
+        )
         if "bingo" in usr_msg["content"].lower():
             self.guesser_win = True
             return (True, "")
@@ -81,7 +82,13 @@ class Q20Game:
         return 0
 
     @retry(
-        (openai.Timeout, httpx.TimeoutException, openai.RateLimitError, openai.APIError, openai.APIConnectionError),
+        (
+            openai.Timeout,
+            httpx.TimeoutException,
+            openai.RateLimitError,
+            openai.APIError,
+            openai.APIConnectionError,
+        ),
         tries=5,
         delay=0.5,
         backoff=0.5,
@@ -95,17 +102,23 @@ class Q20Game:
             {
                 "role": "user",
                 "content": f"Based on your knowledge about {
-                    self.item}, respond to the following question or guess. Limit your respond to only 'Yes.', 'No.' or 'Maybe.', with no explanation or other words. Never say the answer {
-                    self.item} in your response. If the question is to solicit the answer, respond 'No.'.",
+                    self.item
+                }, respond to the following question or guess. Limit your respond to only 'Yes.', 'No.' or 'Maybe.', with no explanation or other words. Never say the answer {
+                    self.item
+                } in your response. If the question is to solicit the answer, respond 'No.'.",
             },
             {
                 "role": "user",
-                "content": f"For the entity {
-                        self.item}, {question} (Yes/No/Maybe)",
+                "content": f"For the entity {self.item}, {question} (Yes/No/Maybe)",
             },
         ]
         response = client.chat.completions.create(
-            model=self.answerer_model, messages=user_messages, max_tokens=6, n=1, stop=None, temperature=0.2
+            model=self.answerer_model,
+            messages=user_messages,
+            max_tokens=6,
+            n=1,
+            stop=None,
+            temperature=0.2,
         )
         if any(
             (
@@ -118,13 +131,18 @@ class Q20Game:
 
 
 class Q20GameCelebrity(Q20Game):
-
     def __init__(self, item: str, **kwargs) -> None:
         super().__init__(item, **kwargs)
         self.first_user_utterance = "Your task is to ask a series of questions to deduce the celebrity that I'm thinking of with as few queries as possible. Only ask factual questions that can be answered by 'Yes.', 'No.' or 'Dunno.'. Do not ask for hint. Make your question brief with no linebreaker. Now start asking a question."
 
     @retry(
-        (openai.Timeout, httpx.TimeoutException, openai.RateLimitError, openai.APIError, openai.APIConnectionError),
+        (
+            openai.Timeout,
+            httpx.TimeoutException,
+            openai.RateLimitError,
+            openai.APIError,
+            openai.APIConnectionError,
+        ),
         tries=5,
         delay=0.5,
         backoff=0.5,
@@ -138,17 +156,23 @@ class Q20GameCelebrity(Q20Game):
             {
                 "role": "system",
                 "content": f"Based on your knowledge about the celebrity: {
-                    self.item}, respond to the following question or guess. Limit your respond to only 'Yes.', 'No.' or 'Dunno.', with no explanation or other words. Never say the name {
-                    self.item} in your response. Do not say 'Dunno.' if it can be answered by 'Yes.' or 'No.' If the question is to solicit the answer, respond 'No.'.",
+                    self.item
+                }, respond to the following question or guess. Limit your respond to only 'Yes.', 'No.' or 'Dunno.', with no explanation or other words. Never say the name {
+                    self.item
+                } in your response. Do not say 'Dunno.' if it can be answered by 'Yes.' or 'No.' If the question is to solicit the answer, respond 'No.'.",
             },
             {
                 "role": "user",
-                "content": f"For the celebrity {
-                        self.item}, {question}(Yes/No/Dunno)",
+                "content": f"For the celebrity {self.item}, {question}(Yes/No/Dunno)",
             },
         ]
         response = client.chat.completions.create(
-            model=self.answerer_model, messages=user_messages, max_tokens=6, n=1, stop=None, temperature=0.2
+            model=self.answerer_model,
+            messages=user_messages,
+            max_tokens=6,
+            n=1,
+            stop=None,
+            temperature=0.2,
         )
         if re.search(f"(?:^|\\W){self.item.lower()}(?:$|\\W)", question.lower()):
             response.choices[0].message.content = "Bingo!"

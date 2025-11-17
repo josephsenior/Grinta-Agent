@@ -12,8 +12,21 @@ save_trajectory_path = "./trajectories"
 agent_mode = "simple"  # NOT "enterprise" - keep it simple for beta!
 
 [agent]
+schema_version = "2025-11-14"
 llm_config = 'llm'
 system_prompt_filename = "system_prompt_forge.j2"  # Your optimized prompt!
+
+[runtime_pool]
+enabled = true
+
+[runtime_pool.default]
+max_size = 2
+ttl_seconds = 600
+
+# Example override
+# [runtime_pool.overrides.docker]
+# max_size = 3
+# ttl_seconds = 900
 
 # ============================================================================
 # ENABLED: Core CodeAct Capabilities (Beta-Ready)

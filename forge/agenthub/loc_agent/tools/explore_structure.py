@@ -1,6 +1,6 @@
 """Tool definitions for exploring repository structure in LoCAgent."""
 
-from litellm import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from forge.llm.tool_types import make_function_chunk, make_tool_param
 
 _SIMPLIFIED_STRUCTURE_EXPLORER_DESCRIPTION = "\nA unified tool that traverses a pre-built code graph to retrieve dependency structure around specified entities,\nwith options to explore upstream or downstream, and control traversal depth and filters for entity and dependency types.\n"
 _SIMPLIFIED_TREE_EXAMPLE = "\nExample Usage:\n1. Exploring Downstream Dependencies:\n    ```\n    explore_tree_structure(\n        start_entities=['src/module_a.py:ClassA'],\n        direction='downstream',\n        traversal_depth=2,\n        dependency_type_filter=['invokes', 'imports']\n    )\n    ```\n2. Exploring the repository structure from the root directory (/) up to two levels deep:\n    ```\n    explore_tree_structure(\n      start_entities=['/'],\n      traversal_depth=2,\n      dependency_type_filter=['contains']\n    )\n    ```\n3. Generate Class Diagrams:\n    ```\n    explore_tree_structure(\n        start_entities=selected_entity_ids,\n        direction='both',\n        traverse_depth=-1,\n        dependency_type_filter=['inherits']\n    )\n    ```\n"
@@ -42,7 +42,9 @@ _STRUCTURE_EXPLORER_PARAMETERS = {
 }
 
 
-def create_explore_tree_structure_tool(use_simplified_description: bool = False) -> ChatCompletionToolParam:
+def create_explore_tree_structure_tool(
+    use_simplified_description: bool = False,
+):
     """Create tree structure exploration tool for function calling.
 
     Builds a tool definition for exploring code structure with either simplified
@@ -60,10 +62,14 @@ def create_explore_tree_structure_tool(use_simplified_description: bool = False)
         if use_simplified_description
         else _DETAILED_STRUCTURE_EXPLORER_DESCRIPTION
     )
-    example = _SIMPLIFIED_TREE_EXAMPLE if use_simplified_description else _DETAILED_TREE_EXAMPLE
-    return ChatCompletionToolParam(
+    example = (
+        _SIMPLIFIED_TREE_EXAMPLE
+        if use_simplified_description
+        else _DETAILED_TREE_EXAMPLE
+    )
+    return make_tool_param(
         type="function",
-        function=ChatCompletionToolParamFunctionChunk(
+        function=make_function_chunk(
             name="explore_tree_structure",
             description=description + example,
             parameters=_STRUCTURE_EXPLORER_PARAMETERS,

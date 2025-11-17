@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\integrations\github\service\features.py
+# hypothesis_version: 6.147.0
+
+['.md', 'CHANGES_REQUESTED', 'COMMENTED', 'CONFLICTING', 'FAILURE', 'README.md', 'commit', 'commits', 'content', 'data', 'file', 'issues', 'login', 'mergeable', 'name', 'nameWithOwner', 'nodes', 'number', 'pullRequests', 'repository', 'reviews', 'signal', 'state', 'statusCheckRollup', 'title', 'type', 'user', 'user_id', 'utf-8']

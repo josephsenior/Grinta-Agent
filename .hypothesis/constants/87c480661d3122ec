@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\routes\knowledge_base.py
+# hypothesis_version: 6.147.0
+
+[0.7, 204, 1024, '/api/knowledge-base', '/collections', '/search', '/stats', 'COLLECTION_NOT_FOUND', 'default', 'failed', 'knowledge-base', 'results', 'successful', 'text/plain', 'total', 'untitled', 'utf-8']

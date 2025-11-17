@@ -13,7 +13,9 @@ class SimplifiedEnv:
         self.task = task
         agent_action_count = {"propose_solution": 0, "use_tool": 0, "invalid_action": 0}
         if hasattr(self.agent_state, "propose_solution_count"):
-            agent_action_count["propose_solution"] = self.agent_state.propose_solution_count
+            agent_action_count["propose_solution"] = (
+                self.agent_state.propose_solution_count
+            )
         self.task_state = TaskState(agent_action_count=agent_action_count)
         self.task_config = task_config
 
@@ -22,10 +24,17 @@ class SimplifiedEnv:
         self.check_max_iteration()
         turn_info = (
             self.task_config["max_iterations"] - self.agent_state.iteration,
-            self.task_config["max_propose_solution"] - self.task_state.agent_action_count["propose_solution"],
+            self.task_config["max_propose_solution"]
+            - self.task_state.agent_action_count["propose_solution"],
         )
-        output = StepOutput(observation=observation, success=self.task_state.success, turn_info=turn_info)
-        self.agent_state.propose_solution_count = self.task_state.agent_action_count["propose_solution"]
+        output = StepOutput(
+            observation=observation,
+            success=self.task_state.success,
+            turn_info=turn_info,
+        )
+        self.agent_state.propose_solution_count = self.task_state.agent_action_count[
+            "propose_solution"
+        ]
         self.log_output(output)
         return self.task_state
 
@@ -51,7 +60,12 @@ class SimplifiedEnv:
     def parse_propose_solution(self, lm_message: str) -> dict:
         """Define the parsing logic."""
         lm_output = "\n" + lm_message + "\n"
-        if answer := "\n".join([i.strip() for i in re.findall("<solution>(.*?)</solution>", lm_output, re.DOTALL)]):
+        if answer := "\n".join(
+            [
+                i.strip()
+                for i in re.findall("<solution>(.*?)</solution>", lm_output, re.DOTALL)
+            ]
+        ):
             return {"answer": answer}
         else:
             raise ParseError("No answer found.")
@@ -73,7 +87,10 @@ class SimplifiedEnv:
         """
         if self.task_state.finished:
             return
-        if self.task_state.agent_action_count["propose_solution"] >= self.task_config["max_propose_solution"]:
+        if (
+            self.task_state.agent_action_count["propose_solution"]
+            >= self.task_config["max_propose_solution"]
+        ):
             self.task_state.finished = True
             self.task_state.success = False
             self.task_state.terminate_reason = "max_propose_steps"

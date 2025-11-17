@@ -28,7 +28,12 @@ def test_litellm_settings_debug_llm_disabled(reset_litellm):
 
 def test_litellm_settings_debug_llm_enabled(reset_litellm):
     """Test that litellm settings are properly configured when DEBUG_LLM is enabled and confirmed."""
-    with mock.patch.dict(os.environ, {"DEBUG_LLM": "true"}), mock.patch("builtins.input", return_value="y"):
+    with (
+        mock.patch.dict(
+            os.environ, {"DEBUG_LLM": "true", "DEBUG_LLM_PROMPT": "true"}
+        ),
+        mock.patch("builtins.input", return_value="y"),
+    ):
         import forge.core.logger
 
         importlib.reload(forge.core.logger)
@@ -38,9 +43,28 @@ def test_litellm_settings_debug_llm_enabled(reset_litellm):
 
 def test_litellm_settings_debug_llm_enabled_but_declined(reset_litellm):
     """Test that litellm settings remain disabled when DEBUG_LLM is enabled but user declines."""
-    with mock.patch.dict(os.environ, {"DEBUG_LLM": "true"}), mock.patch("builtins.input", return_value="n"):
+    with (
+        mock.patch.dict(
+            os.environ, {"DEBUG_LLM": "true", "DEBUG_LLM_PROMPT": "true"}
+        ),
+        mock.patch("builtins.input", return_value="n"),
+    ):
         import forge.core.logger
 
         importlib.reload(forge.core.logger)
         assert litellm.suppress_debug_info is True
         assert litellm.set_verbose is False
+
+
+def test_litellm_debug_llm_without_prompt_flag(reset_litellm):
+    """Ensure DEBUG_LLM does not block on input when prompt flag is absent."""
+    with (
+        mock.patch.dict(os.environ, {"DEBUG_LLM": "true", "DEBUG_LLM_PROMPT": "false"}),
+        mock.patch("builtins.input") as mock_input,
+    ):
+        import forge.core.logger
+
+        importlib.reload(forge.core.logger)
+        mock_input.assert_not_called()
+        assert litellm.suppress_debug_info is False
+        assert litellm.set_verbose is True

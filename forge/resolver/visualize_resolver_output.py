@@ -7,26 +7,40 @@ import json as _json
 import logging
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
+from typing import Any, Callable
 
 from forge.resolver.io_utils import load_single_resolver_output
 from forge.resolver.resolver_output import ResolverOutput
 
+ModelDumpWithOptions = Callable[[Any], dict[str, Any]]
+ModelDumpJson = Callable[[Any], str]
+PrintJsonStdout = Callable[..., None]
+
 try:
-    from forge.core.pydantic_compat import model_dump_json, model_dump_with_options
+    from forge.core.pydantic_compat import (
+        model_dump_json as _model_dump_json,
+        model_dump_with_options as _model_dump_with_options,
+    )
+
+    model_dump_with_options: ModelDumpWithOptions | None = _model_dump_with_options
+    model_dump_json: ModelDumpJson | None = _model_dump_json
 except Exception:
     model_dump_with_options = None
     model_dump_json = None
+
 try:
-    from forge.core.io import print_json_stdout
+    from forge.core.io import print_json_stdout as _print_json_stdout
+
+    print_json_stdout: PrintJsonStdout | None = _print_json_stdout
 except Exception:
     print_json_stdout = None
 logger = logging.getLogger(__name__)
 
 
-def _resolver_output_as_dict(resolver_output: ResolverOutput) -> dict:
+def _resolver_output_as_dict(resolver_output: Any) -> dict[str, Any]:
     """Convert a ResolverOutput dataclass into a JSON-serializable dict."""
     if is_dataclass(resolver_output):
-        data = asdict(resolver_output)
+        data = asdict(resolver_output)  # type: ignore[arg-type]
     elif hasattr(resolver_output, "model_dump"):
         data = resolver_output.model_dump()
     else:
@@ -50,7 +64,10 @@ def _try_model_dump_with_options(resolver_output) -> dict | None:
     try:
         return model_dump_with_options(resolver_output)
     except Exception:
-        logger.debug("model_dump_with_options raised; will try JSON string fallback", exc_info=True)
+        logger.debug(
+            "model_dump_with_options raised; will try JSON string fallback",
+            exc_info=True,
+        )
         return None
 
 
@@ -88,7 +105,9 @@ def _print_with_fallback(resolver_output) -> None:
                     print(_json.dumps(parsed, indent=2))
                     return
         except Exception:
-            logger.exception("model_dump_json fallback printing failed; falling back to resolver_output_as_dict")
+            logger.exception(
+                "model_dump_json fallback printing failed; falling back to resolver_output_as_dict"
+            )
 
     data = _resolver_output_as_dict(resolver_output)
 
@@ -99,7 +118,9 @@ def _print_with_fallback(resolver_output) -> None:
                 print_json_stdout(data, pretty=True)
                 return
             except Exception:
-                logger.exception("print_json_stdout failed; falling back to json.dumps()")
+                logger.exception(
+                    "print_json_stdout failed; falling back to json.dumps()"
+                )
         print(_json.dumps(data, indent=2))
         return
 
@@ -117,7 +138,9 @@ def _print_obj(obj: dict) -> None:
         print(_json.dumps(obj, indent=2))
 
 
-def visualize_resolver_output(*, issue_number: int, output_dir: str, vis_method: str = "json") -> None:
+def visualize_resolver_output(
+    *, issue_number: int, output_dir: str, vis_method: str = "json"
+) -> None:
     """Print resolver output tasks and suggestions in human-friendly format."""
     output_jsonl = Path(output_dir) / "output.jsonl"
     resolver_output = load_single_resolver_output(str(output_jsonl), issue_number)
@@ -139,8 +162,18 @@ def visualize_resolver_output(*, issue_number: int, output_dir: str, vis_method:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Visualize a patch.")
-    parser.add_argument("--issue-number", type=int, required=True, help="Issue number to send the pull request for.")
-    parser.add_argument("--output-dir", type=str, default="output", help="Output directory to write the results.")
+    parser.add_argument(
+        "--issue-number",
+        type=int,
+        required=True,
+        help="Issue number to send the pull request for.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="output",
+        help="Output directory to write the results.",
+    )
     parser.add_argument(
         "--vis-method",
         type=str,

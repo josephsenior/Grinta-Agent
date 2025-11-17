@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import asyncio
 from typing import Any
 
 from forge.memory.enhanced_vector_store import EnhancedVectorStore
@@ -169,6 +170,27 @@ class KnowledgeBaseManager:
         )
         return document
 
+    async def async_add_document(
+        self,
+        collection_id: str,
+        filename: str,
+        content: str,
+        mime_type: str = "text/plain",
+        metadata: dict[str, Any] | None = None,
+    ) -> KnowledgeBaseDocument | None:
+        """Async wrapper for adding a document without blocking.
+
+        Performs chunking and vector insertion in a thread to keep the event loop responsive.
+        """
+        return await asyncio.to_thread(
+            self.add_document,
+            collection_id,
+            filename,
+            content,
+            mime_type,
+            metadata,
+        )
+
     def _chunk_content(
         self,
         content: str,
@@ -301,6 +323,22 @@ class KnowledgeBaseManager:
         # Return top results
         return all_results[:top_k]
 
+    async def async_search(
+        self,
+        query: str,
+        collection_ids: list[str] | None = None,
+        top_k: int = 5,
+        relevance_threshold: float = 0.7,
+    ) -> list[KnowledgeBaseSearchResult]:
+        """Async wrapper for search, offloading blocking work to a thread."""
+        return await asyncio.to_thread(
+            self.search,
+            query,
+            collection_ids,
+            top_k,
+            relevance_threshold,
+        )
+
     def get_stats(self) -> dict[str, Any]:
         """Get knowledge base statistics."""
         collections = self.list_collections()
@@ -322,4 +360,3 @@ class KnowledgeBaseManager:
                 for c in collections
             ],
         }
-

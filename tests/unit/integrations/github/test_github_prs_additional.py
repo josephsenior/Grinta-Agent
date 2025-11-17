@@ -10,7 +10,9 @@ from forge.integrations.service_types import RequestMethod
 
 
 class StubGitHubService(GitHubService):
-    def __init__(self, responses: list[tuple[dict, dict]], token_value: str = "token") -> None:
+    def __init__(
+        self, responses: list[tuple[dict, dict]], token_value: str = "token"
+    ) -> None:
         super().__init__(token=SecretStr(token_value))
         self._responses = list(responses)
         self.calls: list[tuple[str, dict | None, RequestMethod]] = []
@@ -63,12 +65,17 @@ async def test_github_get_pr_details_and_state_checks() -> None:
     assert (await service.get_pr_details("owner/repo", 1))["state"] == "open"
     assert await service.is_pr_open("owner/repo", 1) is False  # state closed
     assert await service.is_pr_open("owner/repo", 1) is False  # merged true
-    assert await service.is_pr_open("owner/repo", 1) is True  # missing keys defaults to True
+    assert (
+        await service.is_pr_open("owner/repo", 1) is True
+    )  # missing keys defaults to True
 
 
 @pytest.mark.asyncio
-async def test_github_is_pr_open_handles_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_github_is_pr_open_handles_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = GitHubService(token=SecretStr("token"))
-    monkeypatch.setattr(service, "get_pr_details", AsyncMock(side_effect=RuntimeError("boom")))
+    monkeypatch.setattr(
+        service, "get_pr_details", AsyncMock(side_effect=RuntimeError("boom"))
+    )
     assert await service.is_pr_open("owner/repo", 123) is True
-

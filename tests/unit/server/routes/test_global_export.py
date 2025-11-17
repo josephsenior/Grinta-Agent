@@ -59,7 +59,10 @@ def test_save_json_files_creates_and_updates(temp_workspace):
     )
     assert imported == 1
     assert updated == 1
-    assert json.loads((data_dir / "existing.json").read_text(encoding="utf-8"))["content"] == 2
+    assert (
+        json.loads((data_dir / "existing.json").read_text(encoding="utf-8"))["content"]
+        == 2
+    )
 
 
 def test_save_json_files_logs_error(temp_workspace, monkeypatch):
@@ -110,6 +113,7 @@ async def test_import_all_data_success(monkeypatch):
 
     monkeypatch.setattr(export_routes, "_save_json_files", fake_save)
     payload = export_routes.GlobalExportData(
+        version="1.0.0",
         memories=[{"id": "m"}],
         prompts=[{"id": "p"}],
         snippets=[{"id": "s"}],
@@ -132,7 +136,7 @@ async def test_import_all_data_handles_exception(monkeypatch):
         raise RuntimeError("error")
 
     monkeypatch.setattr(export_routes, "_save_json_files", failing_save)
-    payload = export_routes.GlobalExportData(memories=[{"id": "m"}])
+    payload = export_routes.GlobalExportData(version="1.0.0", memories=[{"id": "m"}])
 
     with pytest.raises(HTTPException) as exc:
         await export_routes.import_all_data(payload)

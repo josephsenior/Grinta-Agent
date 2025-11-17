@@ -9,7 +9,9 @@ def get_all_sub_trees(root_node):
     while node_stack:
         cur_node, cur_depth = node_stack.pop()
         if cur_node.child_count > 0:
-            sub_tree_sexp_list.append([cur_node.sexp(), cur_depth, cur_node, cur_node.children[0].text])
+            sub_tree_sexp_list.append(
+                [cur_node.sexp(), cur_depth, cur_node, cur_node.children[0].text]
+            )
         else:
             sub_tree_sexp_list.append([cur_node.sexp(), cur_depth, cur_node, None])
         for child_node in cur_node.children:
@@ -49,7 +51,12 @@ def ast_check(candidate_subtree_list, base_tree_list):
         args_list = get_args(base_tree)
         if len(args_list) == 0:
             continue
-        ast_match = all((arg.decode().lstrip("'").rstrip("'") in candidate_tree.text.decode() for arg in args_list))
+        ast_match = all(
+            (
+                arg.decode().lstrip("'").rstrip("'") in candidate_tree.text.decode()
+                for arg in args_list
+            )
+        )
         if ast_match:
             return idx
     return -1
@@ -64,7 +71,7 @@ def ast_eval_tf(api_database, qa_pairs, ast_database, question_id, response):
         output = output[1].split("api_provider")[0]
         start = 0 if ":" not in output else output.index(":")
         end = -2 if ")" not in output else output.rindex(")")
-        api_call = output[start + 2: end + 1]
+        api_call = output[start + 2 : end + 1]
     ast_tree = ast_parse(api_call)
     ast_subtree_list = get_all_sub_trees(ast_tree)
     database_index = ast_check(ast_subtree_list, ast_database)

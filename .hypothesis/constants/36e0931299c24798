@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\routes\global_export.py
+# hypothesis_version: 6.147.0
+
+[500, '*.json', '.', '/', '/api/global-export', '1.0.0', 'Content-Disposition', 'id', 'imported', 'memories', 'prompts', 'snippets', 'templates', 'total_memories', 'total_prompts', 'total_snippets', 'total_templates', 'updated', 'utf-8', 'w']

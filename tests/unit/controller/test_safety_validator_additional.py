@@ -23,7 +23,6 @@ class DummyAnalysis(SimpleNamespace):
 @pytest.fixture
 def patched_validator(monkeypatch, tmp_path):
     """Create a SafetyValidator with patched dependencies."""
-
     assessments = DummyAnalysis(
         risk_level=ActionSecurityRisk.LOW,
         risk_category=RiskCategory.LOW,
@@ -42,7 +41,9 @@ def patched_validator(monkeypatch, tmp_path):
         async def log_action(self, **kwargs):
             return "audit-id"
 
-    monkeypatch.setattr("forge.controller.safety_validator.CommandAnalyzer", DummyAnalyzer)
+    monkeypatch.setattr(
+        "forge.controller.safety_validator.CommandAnalyzer", DummyAnalyzer
+    )
 
     config = SafetyConfig(
         enable_audit_logging=False,
@@ -59,7 +60,6 @@ def patched_validator(monkeypatch, tmp_path):
 
 def make_context(is_autonomous: bool = True) -> ExecutionContext:
     """Create a reusable execution context."""
-
     return ExecutionContext(
         session_id="session-1",
         iteration=3,
@@ -71,8 +71,7 @@ def make_context(is_autonomous: bool = True) -> ExecutionContext:
 
 @pytest.mark.asyncio
 async def test_validate_allows_safe_action(patched_validator):
-    """validate should permit actions when assessment is low risk."""
-
+    """Validate should permit actions when assessment is low risk."""
     validator, assessments, AuditLoggerStub = patched_validator
     validator.audit_logger = AuditLoggerStub()
     assessments.risk_level = ActionSecurityRisk.LOW
@@ -87,7 +86,6 @@ async def test_validate_allows_safe_action(patched_validator):
 @pytest.mark.asyncio
 async def test_validate_blocks_critical_risk(patched_validator):
     """Critical risk assessments should trigger blocks with detailed reasons."""
-
     validator, assessments, _ = patched_validator
     assessments.risk_category = RiskCategory.CRITICAL
     assessments.risk_level = ActionSecurityRisk.HIGH
@@ -106,7 +104,6 @@ async def test_validate_blocks_critical_risk(patched_validator):
 @pytest.mark.asyncio
 async def test_validate_blocks_high_risk_in_production(patched_validator):
     """High risk actions in production should be blocked when configured."""
-
     validator, assessments, _ = patched_validator
     assessments.risk_level = ActionSecurityRisk.HIGH
     assessments.risk_category = RiskCategory.HIGH
@@ -119,7 +116,6 @@ async def test_validate_blocks_high_risk_in_production(patched_validator):
 
 def test_format_alert_message_includes_details(patched_validator):
     """Alert message should include key context fields."""
-
     validator, assessments, _ = patched_validator
     assessments.risk_level = ActionSecurityRisk.HIGH
     assessments.reason = "Dangerous command"
@@ -132,7 +128,9 @@ def test_format_alert_message_includes_details(patched_validator):
         matched_patterns=[],
         blocked_reason="Dangerous command",
     )
-    message = validator._format_alert_message(CmdRunAction(command="danger"), context, result)
+    message = validator._format_alert_message(
+        CmdRunAction(command="danger"), context, result
+    )
     assert "Session: session-1" in message
     assert "Risk Level: HIGH" in message
 
@@ -140,13 +138,15 @@ def test_format_alert_message_includes_details(patched_validator):
 @pytest.mark.asyncio
 async def test_send_alert_uses_asyncio_create_task(patched_validator, monkeypatch):
     """_send_alert should dispatch webhook tasks when enabled."""
-
     validator, assessments, _ = patched_validator
     assessments.risk_level = ActionSecurityRisk.HIGH
     assessments.reason = "danger"
 
     scheduled = {}
-    monkeypatch.setattr("forge.controller.safety_validator.asyncio.create_task", lambda coro: scheduled.setdefault("task", coro))
+    monkeypatch.setattr(
+        "forge.controller.safety_validator.asyncio.create_task",
+        lambda coro: scheduled.setdefault("task", coro),
+    )
 
     context = make_context()
     validator.config.alert_webhook_url = "https://hook.example.com"
@@ -165,7 +165,6 @@ async def test_send_alert_uses_asyncio_create_task(patched_validator, monkeypatc
 @pytest.mark.asyncio
 async def test_log_to_audit_handles_exceptions(patched_validator, monkeypatch):
     """_log_to_audit should absorb errors from the audit logger."""
-
     validator, _, _ = patched_validator
 
     class FailingAuditLogger:
@@ -181,6 +180,7 @@ async def test_log_to_audit_handles_exceptions(patched_validator, monkeypatch):
         reason="ok",
         matched_patterns=[],
     )
-    audit_id = await validator._log_to_audit(CmdRunAction(command="ok"), make_context(), result)
+    audit_id = await validator._log_to_audit(
+        CmdRunAction(command="ok"), make_context(), result
+    )
     assert audit_id == "audit_error"
-

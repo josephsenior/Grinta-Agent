@@ -21,22 +21,22 @@ class ObservationMaskingCondenser(Condenser):
 
     def __init__(self, attention_window: int = 5) -> None:
         """Initialize a condenser that masks old observation values while keeping recent ones visible.
-        
+
         This condenser implements an attention window strategy that preserves the structure of the
         event sequence while masking (replacing with "<MASKED>") the content of observations that
         fall outside a recent attention window. This reduces token usage while maintaining event
         count for continuity, and is often used before LLM summarization to focus the LLM on
         recent context without forcing it to process old observations.
-        
+
         Args:
             attention_window: Number of most recent events to keep fully visible.
                              Observations before this window are replaced with "<MASKED>" placeholder.
                              Default 5 keeps the 5 most recent events unmasked.
-        
+
         Side Effects:
             - Initializes parent Condenser for metadata management
             - Stores attention_window parameter for use in condense() filtering
-        
+
         Notes:
             - Non-destructive: Events are masked, not removed (keeps event count for indexing)
             - Observation-specific: Only Observation instances are masked, other event types pass through
@@ -44,7 +44,7 @@ class ObservationMaskingCondenser(Condenser):
               AgentCondensationObservation with content "<MASKED>"
             - Use case: Chained before summarization to reduce LLM prompt size
             - Examples: attention_window=5 → mask observations at positions 0 through (len(view) - 5)
-        
+
         Example:
             >>> condenser = ObservationMaskingCondenser(attention_window=5)
             >>> condenser.attention_window
@@ -73,21 +73,23 @@ class ObservationMaskingCondenser(Condenser):
         """Instantiate condenser from configuration values."""
         from forge.core.pydantic_compat import model_dump_with_options
 
-        return ObservationMaskingCondenser(**model_dump_with_options(config, exclude={"type"}))
+        return ObservationMaskingCondenser(
+            **model_dump_with_options(config, exclude={"type"})
+        )
 
 
 # Lazy registration to avoid circular imports
 def _register_config():
     """Register ObservationMaskingCondenserConfig with the ObservationMaskingCondenser factory.
-    
+
     Defers import of ObservationMaskingCondenserConfig to avoid circular dependency between
     condenser implementations and their configuration classes. Called at module load time
     to enable from_config() factory method to instantiate condensers from config objects.
-    
+
     Side Effects:
         - Imports ObservationMaskingCondenserConfig from forge.core.config.condenser_config
         - Registers config class with ObservationMaskingCondenser.register_config() factory
-    
+
     Notes:
         - Must be called at module level after ObservationMaskingCondenser class definition
         - Pattern reused across all condenser implementations
@@ -95,6 +97,8 @@ def _register_config():
 
     """
     from forge.core.config.condenser_config import ObservationMaskingCondenserConfig
+
     ObservationMaskingCondenser.register_config(ObservationMaskingCondenserConfig)
+
 
 _register_config()

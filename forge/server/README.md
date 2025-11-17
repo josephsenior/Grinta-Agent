@@ -40,9 +40,10 @@ websocat ws://127.0.0.1:3000/ws
 ## Supported Environment Variables
 
 ```sh
-LLM_API_KEY=sk-... # Your Anthropic API Key
-LLM_MODEL=claude-3-5-sonnet-20241022 # Default model for the agent to use
-SANDBOX_VOLUMES=/path/to/your/workspace:/workspace:rw # Mount paths in format host_path:container_path:mode
+LLM_API_KEY=sk-...                      # Your Anthropic API Key
+LLM_MODEL=claude-3-5-sonnet-20241022    # Default model for the agent to use
+SANDBOX_VOLUMES=/abs/host/path:/workspace:rw \
+  /another/host/dir:/workspace/data:ro  # Comma-separated mounts: host:container[:mode]; mode defaults to rw
 ```
 
 ## API Schema

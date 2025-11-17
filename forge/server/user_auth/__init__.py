@@ -20,10 +20,10 @@ if TYPE_CHECKING:
 
 async def get_provider_tokens(request: Request) -> PROVIDER_TOKEN_TYPE | None:
     """Get provider authentication tokens from request.
-    
+
     Args:
         request: HTTP request
-        
+
     Returns:
         Provider tokens or None
 
@@ -34,10 +34,10 @@ async def get_provider_tokens(request: Request) -> PROVIDER_TOKEN_TYPE | None:
 
 async def get_access_token(request: Request) -> SecretStr | None:
     """Get external access token from request.
-    
+
     Args:
         request: HTTP request
-        
+
     Returns:
         Access token or None
 
@@ -48,10 +48,10 @@ async def get_access_token(request: Request) -> SecretStr | None:
 
 async def get_user_id(request: Request) -> str | None:
     """Get user ID from request.
-    
+
     Args:
         request: HTTP request
-        
+
     Returns:
         User ID or None
 
@@ -62,10 +62,10 @@ async def get_user_id(request: Request) -> str | None:
 
 async def get_user_settings(request: Request) -> Settings | None:
     """Get user settings from request.
-    
+
     Args:
         request: HTTP request
-        
+
     Returns:
         User settings or None
 
@@ -76,10 +76,10 @@ async def get_user_settings(request: Request) -> Settings | None:
 
 async def get_secrets_store(request: Request) -> SecretsStore:
     """Get secrets store from request.
-    
+
     Args:
         request: HTTP request
-        
+
     Returns:
         Secrets store instance
 
@@ -90,10 +90,10 @@ async def get_secrets_store(request: Request) -> SecretsStore:
 
 async def get_user_secrets(request: Request) -> UserSecrets | None:
     """Get user secrets from request.
-    
+
     Args:
         request: HTTP request
-        
+
     Returns:
         User secrets or None
 
@@ -104,10 +104,10 @@ async def get_user_secrets(request: Request) -> UserSecrets | None:
 
 async def get_user_settings_store(request: Request) -> SettingsStore | None:
     """Get user settings store from request.
-    
+
     Args:
         request: HTTP request
-        
+
     Returns:
         Settings store or None
 
@@ -118,10 +118,10 @@ async def get_user_settings_store(request: Request) -> SettingsStore | None:
 
 async def get_auth_type(request: Request) -> AuthType | None:
     """Get authentication type from request.
-    
+
     Args:
         request: HTTP request
-        
+
     Returns:
         Authentication type or None
 

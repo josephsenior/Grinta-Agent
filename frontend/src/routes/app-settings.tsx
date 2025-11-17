@@ -5,7 +5,6 @@ import { useSaveSettings } from "#/hooks/mutation/use-save-settings";
 import { useSettings } from "#/hooks/query/use-settings";
 import { AvailableLanguages } from "#/i18n";
 import { DEFAULT_SETTINGS } from "#/services/settings";
-import type { Settings } from "#/types/settings";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { SettingsSwitch } from "#/components/features/settings/settings-switch";
 import { SettingsInput } from "#/components/features/settings/settings-input";
@@ -48,6 +47,7 @@ interface AppSettingsController {
   settings: ReturnType<typeof useSettings>["data"];
   config: ReturnType<typeof useConfig>["data"];
   formAction: (formData: FormData) => void;
+  viewSettings: typeof DEFAULT_SETTINGS;
   handlers: {
     onLanguageChange: (value: string) => void;
     onAnalyticsToggle: (checked: boolean) => void;
@@ -61,14 +61,14 @@ interface AppSettingsController {
   formIsClean: boolean;
   isPending: boolean;
   shouldBeLoading: boolean;
-  viewSettings: Settings;
 }
 
 function useAppSettingsController(t: TFunction): AppSettingsController {
   const { mutate: saveSettings, isPending } = useSaveSettings();
   const { data: settings, isLoading } = useSettings();
   const { data: config } = useConfig();
-  const normalizedSettings = settings ?? DEFAULT_SETTINGS;
+  const normalizedSettings = (settings ??
+    DEFAULT_SETTINGS) as typeof DEFAULT_SETTINGS;
   const [dirtyFlags, setDirtyFlags] =
     React.useState<DirtyFlags>(INITIAL_DIRTY_FLAGS);
 
@@ -217,130 +217,161 @@ function AppSettingsScreen() {
   const controller = useAppSettingsController(t);
   const { settings, config, viewSettings } = controller;
 
+  const panelClass =
+    "relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 via-black/40 to-black/80 backdrop-blur-xl p-6 shadow-[0_40px_120px_rgba(0,0,0,0.45)]";
+
   return (
     <form
       data-testid="app-settings-screen"
       action={controller.formAction}
-      className="flex flex-col h-full"
+      className="flex flex-col"
     >
       {controller.shouldBeLoading && <AppSettingsInputsSkeleton />}
       {!controller.shouldBeLoading && settings && (
-        <div className="flex-1 p-6 bg-black">
-          <div className="max-w-4xl mx-auto space-y-8">
+        <div className="flex-1 p-6 sm:p-8 lg:p-10">
+          <div className="mx-auto max-w-6xl space-y-6 lg:space-y-8">
             {/* Language Settings */}
-            <div className="card-modern">
-              <h2 className="text-lg font-semibold text-foreground mb-4">
-                Language & Region
-              </h2>
-              <LanguageInput
-                name="language-input"
-                defaultKey={viewSettings.LANGUAGE}
-                onChange={controller.handlers.onLanguageChange}
-              />
+            <div className={panelClass}>
+              <div aria-hidden className="pointer-events-none absolute inset-0">
+                <div className="absolute inset-y-0 left-1/2 w-1/2 bg-gradient-to-r from-brand-500/5 via-accent-500/3 to-transparent blur-2xl" />
+              </div>
+              <div className="relative z-[1]">
+                <h2 className="text-xl font-semibold text-foreground mb-6">
+                  {t("SETTINGS$LANGUAGE_AND_REGION", "Language & Region")}
+                </h2>
+                <div className="grid gap-4">
+                  <div className="max-w-md">
+                    <LanguageInput
+                      name="language-input"
+                      defaultKey={viewSettings.LANGUAGE}
+                      onChange={controller.handlers.onLanguageChange}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Preferences */}
-            <div className="card-modern">
-              <h2 className="text-lg font-semibold text-foreground mb-6">
-                Preferences
-              </h2>
-              <div className="space-y-4">
-                <SettingsSwitch
-                  testId="enable-analytics-switch"
-                  name="enable-analytics-switch"
-                  defaultIsToggled={!!viewSettings.USER_CONSENTS_TO_ANALYTICS}
-                  onToggle={controller.handlers.onAnalyticsToggle}
-                >
-                  {t(I18nKey.ANALYTICS$SEND_ANONYMOUS_DATA)}
-                </SettingsSwitch>
-
-                <SettingsSwitch
-                  testId="enable-sound-notifications-switch"
-                  name="enable-sound-notifications-switch"
-                  defaultIsToggled={!!viewSettings.ENABLE_SOUND_NOTIFICATIONS}
-                  onToggle={controller.handlers.onSoundToggle}
-                >
-                  {t(I18nKey.SETTINGS$SOUND_NOTIFICATIONS)}
-                </SettingsSwitch>
-
-                {config?.APP_MODE === "saas" && (
+            <div className={panelClass}>
+              <div aria-hidden className="pointer-events-none absolute inset-0">
+                <div className="absolute inset-y-0 left-1/2 w-1/2 bg-gradient-to-r from-brand-500/5 via-accent-500/3 to-transparent blur-2xl" />
+              </div>
+              <div className="relative z-[1]">
+                <h2 className="text-xl font-semibold text-foreground mb-6">
+                  {t("SETTINGS$PREFERENCES", "Preferences")}
+                </h2>
+                <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
                   <SettingsSwitch
-                    testId="enable-proactive-conversations-switch"
-                    name="enable-proactive-conversations-switch"
-                    defaultIsToggled={
-                      !!viewSettings.ENABLE_PROACTIVE_CONVERSATION_STARTERS
-                    }
-                    onToggle={controller.handlers.onProactiveToggle}
+                    testId="enable-analytics-switch"
+                    name="enable-analytics-switch"
+                    defaultIsToggled={!!viewSettings.USER_CONSENTS_TO_ANALYTICS}
+                    onToggle={controller.handlers.onAnalyticsToggle}
                   >
-                    {t(I18nKey.SETTINGS$PROACTIVE_CONVERSATION_STARTERS)}
+                    {t(I18nKey.ANALYTICS$SEND_ANONYMOUS_DATA)}
                   </SettingsSwitch>
-                )}
 
-                {config?.APP_MODE === "saas" && (
                   <SettingsSwitch
-                    testId="enable-solvability-analysis-switch"
-                    name="enable-solvability-analysis-switch"
-                    defaultIsToggled={
-                      !!viewSettings.ENABLE_SOLVABILITY_ANALYSIS
-                    }
-                    onToggle={controller.handlers.onSolvabilityToggle}
+                    testId="enable-sound-notifications-switch"
+                    name="enable-sound-notifications-switch"
+                    defaultIsToggled={!!viewSettings.ENABLE_SOUND_NOTIFICATIONS}
+                    onToggle={controller.handlers.onSoundToggle}
                   >
-                    {t(I18nKey.SETTINGS$SOLVABILITY_ANALYSIS)}
+                    {t(I18nKey.SETTINGS$SOUND_NOTIFICATIONS)}
                   </SettingsSwitch>
-                )}
+
+                  {config?.APP_MODE === "saas" && (
+                    <SettingsSwitch
+                      testId="enable-proactive-conversations-switch"
+                      name="enable-proactive-conversations-switch"
+                      defaultIsToggled={
+                        !!viewSettings.ENABLE_PROACTIVE_CONVERSATION_STARTERS
+                      }
+                      onToggle={controller.handlers.onProactiveToggle}
+                    >
+                      {t(I18nKey.SETTINGS$PROACTIVE_CONVERSATION_STARTERS)}
+                    </SettingsSwitch>
+                  )}
+
+                  {config?.APP_MODE === "saas" && (
+                    <SettingsSwitch
+                      testId="enable-solvability-analysis-switch"
+                      name="enable-solvability-analysis-switch"
+                      defaultIsToggled={
+                        !!viewSettings.ENABLE_SOLVABILITY_ANALYSIS
+                      }
+                      onToggle={controller.handlers.onSolvabilityToggle}
+                    >
+                      {t(I18nKey.SETTINGS$SOLVABILITY_ANALYSIS)}
+                    </SettingsSwitch>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Budget Settings */}
-            <div className="card-modern">
-              <h2 className="text-lg font-semibold text-foreground mb-4">
-                Budget & Usage
-              </h2>
-              <SettingsInput
-                testId="max-budget-per-task-input"
-                name="max-budget-per-task-input"
-                type="number"
-                label={t(I18nKey.SETTINGS$MAX_BUDGET_PER_CONVERSATION)}
-                defaultValue={
-                  viewSettings.MAX_BUDGET_PER_TASK?.toString() || ""
-                }
-                onChange={controller.handlers.onBudgetChange}
-                placeholder={t(I18nKey.SETTINGS$MAXIMUM_BUDGET_USD)}
-                min={1}
-                step={1}
-                className="w-full max-w-md"
-              />
+            <div className={panelClass}>
+              <div aria-hidden className="pointer-events-none absolute inset-0">
+                <div className="absolute inset-y-0 left-1/2 w-1/2 bg-gradient-to-r from-brand-500/5 via-accent-500/3 to-transparent blur-2xl" />
+              </div>
+              <div className="relative z-[1]">
+                <h2 className="text-xl font-semibold text-foreground mb-6">
+                  {t("SETTINGS$BUDGET_AND_USAGE", "Budget & Usage")}
+                </h2>
+                <div className="grid gap-4">
+                  <div className="max-w-md">
+                    <SettingsInput
+                      testId="max-budget-per-task-input"
+                      name="max-budget-per-task-input"
+                      type="number"
+                      label={t(I18nKey.SETTINGS$MAX_BUDGET_PER_CONVERSATION)}
+                      defaultValue={
+                        viewSettings.MAX_BUDGET_PER_TASK?.toString() || ""
+                      }
+                      onChange={controller.handlers.onBudgetChange}
+                      placeholder={t(I18nKey.SETTINGS$MAXIMUM_BUDGET_USD)}
+                      min={1}
+                      step={1}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Git Settings */}
-            <div className="card-modern">
-              <h2 className="text-lg font-semibold text-foreground mb-2">
-                {t(I18nKey.SETTINGS$GIT_SETTINGS)}
-              </h2>
-              <p className="text-sm text-foreground-secondary mb-6">
-                {t(I18nKey.SETTINGS$GIT_SETTINGS_DESCRIPTION)}
-              </p>
-              <div className="space-y-4">
-                <SettingsInput
-                  testId="git-user-name-input"
-                  name="git-user-name-input"
-                  type="text"
-                  label={t(I18nKey.SETTINGS$GIT_USERNAME)}
-                  defaultValue={viewSettings.GIT_USER_NAME || ""}
-                  onChange={controller.handlers.onGitUserNameChange}
-                  placeholder="Username for git commits"
-                  className="w-full max-w-md"
-                />
-                <SettingsInput
-                  testId="git-user-email-input"
-                  name="git-user-email-input"
-                  type="email"
-                  label={t(I18nKey.SETTINGS$GIT_EMAIL)}
-                  defaultValue={viewSettings.GIT_USER_EMAIL || ""}
-                  onChange={controller.handlers.onGitUserEmailChange}
-                  placeholder="Email for git commits"
-                  className="w-full max-w-md"
-                />
+            <div className={panelClass}>
+              <div aria-hidden className="pointer-events-none absolute inset-0">
+                <div className="absolute inset-y-0 left-1/2 w-1/2 bg-gradient-to-r from-brand-500/5 via-accent-500/3 to-transparent blur-2xl" />
+              </div>
+              <div className="relative z-[1]">
+                <h2 className="text-xl font-semibold text-foreground mb-3">
+                  {t(I18nKey.SETTINGS$GIT_SETTINGS)}
+                </h2>
+                <p className="text-sm text-foreground-secondary mb-4">
+                  {t(I18nKey.SETTINGS$GIT_SETTINGS_DESCRIPTION)}
+                </p>
+                <div className="grid gap-6 md:grid-cols-2">
+                  <SettingsInput
+                    testId="git-user-name-input"
+                    name="git-user-name-input"
+                    type="text"
+                    label={t(I18nKey.SETTINGS$GIT_USERNAME)}
+                    defaultValue={viewSettings.GIT_USER_NAME || ""}
+                    onChange={controller.handlers.onGitUserNameChange}
+                    placeholder="Username for git commits"
+                    className="w-full"
+                  />
+                  <SettingsInput
+                    testId="git-user-email-input"
+                    name="git-user-email-input"
+                    type="email"
+                    label={t(I18nKey.SETTINGS$GIT_EMAIL)}
+                    defaultValue={viewSettings.GIT_USER_EMAIL || ""}
+                    onChange={controller.handlers.onGitUserEmailChange}
+                    placeholder="Email for git commits"
+                    className="w-full"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -348,20 +379,21 @@ function AppSettingsScreen() {
       )}
 
       {/* Fixed footer */}
-      <div className="flex-shrink-0 border-t border-violet-500/20 bg-black">
-        <div className="max-w-4xl mx-auto px-6 py-4">
-          <div className="flex justify-end">
-            <BrandButton
-              testId="submit-button"
-              variant="primary"
-              type="submit"
-              isDisabled={controller.isPending || controller.formIsClean}
-              className="px-6 py-2 gradient-brand hover:opacity-90 transition-opacity rounded-lg font-medium text-white disabled:opacity-50"
-            >
-              {!controller.isPending && t("SETTINGS$SAVE_CHANGES")}
-              {controller.isPending && t("SETTINGS$SAVING")}
-            </BrandButton>
-          </div>
+      <div className="flex-shrink-0 border-t border-white/10 bg-black/80 backdrop-blur-xl">
+        <div className="mx-auto max-w-5xl px-10 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <span className="text-sm text-foreground-secondary">
+            Unsaved changes apply instantly to your workspace.
+          </span>
+          <BrandButton
+            testId="submit-button"
+            variant="primary"
+            type="submit"
+            isDisabled={controller.isPending || controller.formIsClean}
+            className="px-6 py-2.5 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 transition-all rounded-xl font-semibold text-white shadow-lg shadow-brand-500/30 hover:shadow-xl hover:shadow-brand-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {!controller.isPending && t("SETTINGS$SAVE_CHANGES")}
+            {controller.isPending && t("SETTINGS$SAVING")}
+          </BrandButton>
         </div>
       </div>
     </form>

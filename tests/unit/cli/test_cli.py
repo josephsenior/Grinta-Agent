@@ -35,7 +35,9 @@ def mock_controller():
 
 
 @pytest.mark.asyncio
-async def test_cleanup_session_closes_resources(mock_agent, mock_runtime, mock_controller):
+async def test_cleanup_session_closes_resources(
+    mock_agent, mock_runtime, mock_controller
+):
     """Test that cleanup_session calls close methods on agent, runtime, and controller."""
     loop = asyncio.get_running_loop()
     await cli.cleanup_session(loop, mock_agent, mock_runtime, mock_controller)
@@ -45,7 +47,9 @@ async def test_cleanup_session_closes_resources(mock_agent, mock_runtime, mock_c
 
 
 @pytest.mark.asyncio
-async def test_cleanup_session_cancels_pending_tasks(mock_agent, mock_runtime, mock_controller):
+async def test_cleanup_session_cancels_pending_tasks(
+    mock_agent, mock_runtime, mock_controller
+):
     """Test that cleanup_session cancels other pending tasks."""
     loop = asyncio.get_running_loop()
     other_task_ran = False
@@ -76,7 +80,9 @@ async def test_cleanup_session_cancels_pending_tasks(mock_agent, mock_runtime, m
 
 
 @pytest.mark.asyncio
-async def test_cleanup_session_handles_exceptions(mock_agent, mock_runtime, mock_controller):
+async def test_cleanup_session_handles_exceptions(
+    mock_agent, mock_runtime, mock_controller
+):
     """Test that cleanup_session handles exceptions during cleanup gracefully."""
     loop = asyncio.get_running_loop()
     mock_controller.close.side_effect = Exception("Test cleanup error")
@@ -101,6 +107,7 @@ def mock_config():
     config.sandbox = MagicMock()
     config.sandbox.volumes = None
     config.model_name = "model"
+    config.default_agent = "CodeActAgent"
     return config
 
 
@@ -147,15 +154,23 @@ async def test_run_session_without_initial_action(
     mock_create_controller.return_value = (mock_controller, mock_controller_task)
     mock_memory = MagicMock()
     mock_create_memory.return_value = mock_memory
-    with patch("forge.cli.main.read_prompt_input", new_callable=AsyncMock) as mock_read_prompt:
+    with patch(
+        "forge.cli.main.read_prompt_input", new_callable=AsyncMock
+    ) as mock_read_prompt:
         mock_read_prompt.return_value = "/exit"
-        with patch("forge.cli.main.handle_commands", new_callable=AsyncMock) as mock_handle_commands:
+        with patch(
+            "forge.cli.main.handle_commands", new_callable=AsyncMock
+        ) as mock_handle_commands:
             mock_handle_commands.return_value = (True, False, False)
-            result = await cli.run_session(loop, mock_config, mock_settings_store, "/test/dir")
+            result = await cli.run_session(
+                loop, mock_config, mock_settings_store, "/test/dir"
+            )
     mock_display_runtime_init.assert_called_once_with("local")
     mock_display_animation.assert_called_once()
     mock_create_agent.assert_called_once()
-    assert mock_create_agent.call_args[0][0] == mock_config, "First parameter to create_agent should be mock_config"
+    assert mock_create_agent.call_args[0][0] == mock_config, (
+        "First parameter to create_agent should be mock_config"
+    )
     mock_add_mcp_tools.assert_called_once_with(mock_agent, mock_runtime, mock_memory)
     mock_create_runtime.assert_called_once()
     mock_create_controller.assert_called_once()
@@ -203,11 +218,21 @@ async def test_run_session_with_initial_action(
     mock_memory = AsyncMock()
     mock_create_memory.return_value = mock_memory
     initial_action_content = "Test initial message"
-    with patch("forge.cli.main.read_prompt_input", new_callable=AsyncMock) as mock_read_prompt:
+    with patch(
+        "forge.cli.main.read_prompt_input", new_callable=AsyncMock
+    ) as mock_read_prompt:
         mock_read_prompt.return_value = "/exit"
-        with patch("forge.cli.main.handle_commands", new_callable=AsyncMock) as mock_handle_commands:
+        with patch(
+            "forge.cli.main.handle_commands", new_callable=AsyncMock
+        ) as mock_handle_commands:
             mock_handle_commands.return_value = (True, False, False)
-            result = await cli.run_session(loop, mock_config, mock_settings_store, "/test/dir", initial_action_content)
+            result = await cli.run_session(
+                loop,
+                mock_config,
+                mock_settings_store,
+                "/test/dir",
+                initial_action_content,
+            )
     mock_runtime.event_stream.add_event.assert_called_once()
     call_args = mock_runtime.event_stream.add_event.call_args[0]
     assert isinstance(call_args[0], MessageAction)
@@ -491,10 +516,17 @@ async def test_run_session_with_name_attempts_state_restore(
     mock_initialize_repo.return_value = "/mocked/repo/dir"
     mock_create_memory.return_value = AsyncMock()
     await cli.run_session(
-        loop, mock_config, mock_settings_store, "/test/dir", task_content=None, session_name=test_session_name
+        loop,
+        mock_config,
+        mock_settings_store,
+        "/test/dir",
+        task_content=None,
+        session_name=test_session_name,
     )
     mock_generate_sid.assert_called_once_with(mock_config, test_session_name)
-    mock_restore_from_session.assert_called_once_with(expected_sid, mock_runtime.event_stream.file_store)
+    mock_restore_from_session.assert_called_once_with(
+        expected_sid, mock_runtime.event_stream.file_store
+    )
     mock_agent_controller_init.assert_called_once()
     args, kwargs = mock_agent_controller_init.call_args
     assert kwargs.get("initial_state") == mock_loaded_state
@@ -701,4 +733,7 @@ async def test_main_with_file_option(
     assert "The user has tagged a file '/path/to/test/file.txt'" in task_str
     assert "Please read and understand the following file content first:" in task_str
     assert "This is a test file content." in task_str
-    assert "After reviewing the file, please ask the user what they would like to do with it." in task_str
+    assert (
+        "After reviewing the file, please ask the user what they would like to do with it."
+        in task_str
+    )

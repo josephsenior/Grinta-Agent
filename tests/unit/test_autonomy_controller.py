@@ -69,7 +69,9 @@ class TestAutonomyController:
         assert controller.should_retry_on_error(import_error, attempts=0) is True
 
         # Non-import errors should not trigger retry (handled elsewhere)
-        rate_limit = RateLimitError("Rate limit exceeded", llm_provider="openai", model="gpt-4")
+        rate_limit = RateLimitError(
+            "Rate limit exceeded", llm_provider="openai", model="gpt-4"
+        )
         assert controller.should_retry_on_error(rate_limit, attempts=0) is False
 
     def test_no_retry_on_non_retryable_error(self):
@@ -113,7 +115,9 @@ class TestAutonomyController:
         config = make_config(auto_retry_on_error=True)
         controller = AutonomyController(config)
 
-        rate_limit = RateLimitError("Rate limit exceeded", llm_provider="openai", model="gpt-4")
+        rate_limit = RateLimitError(
+            "Rate limit exceeded", llm_provider="openai", model="gpt-4"
+        )
         assert controller.should_retry_on_error(rate_limit, attempts=0) is False
 
     def test_high_risk_detection(self):
@@ -131,7 +135,9 @@ class TestAutonomyController:
 
         for cmd in dangerous_commands:
             action = CmdRunAction(command=cmd)
-            assert controller._is_high_risk_action(action) is True, f"Failed to detect risk in: {cmd}"
+            assert controller._is_high_risk_action(action) is True, (
+                f"Failed to detect risk in: {cmd}"
+            )
 
         # Safe commands
         safe_commands = [
@@ -143,9 +149,10 @@ class TestAutonomyController:
 
         for cmd in safe_commands:
             action = CmdRunAction(command=cmd)
-            assert controller._is_high_risk_action(action) is False, f"False positive for: {cmd}"
+            assert controller._is_high_risk_action(action) is False, (
+                f"False positive for: {cmd}"
+            )
 
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

@@ -5,18 +5,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
-from forge.core.schema import ActionType
+from forge.core.schemas import ActionType
 from forge.events.action.action import (
     Action,
     ActionConfirmationStatus,
     ActionSecurityRisk,
 )
+from forge.events.action._canonical import canonicalize
 
 
 @dataclass
 class CmdRunAction(Action):
     """Action to run a shell command.
-    
+
     Attributes:
         command: Shell command to execute
         is_input: Whether command is user input (for stdin)
@@ -27,14 +28,15 @@ class CmdRunAction(Action):
         hidden: Whether to hide command from user
 
     """
-    command: str
+
+    command: str = ""
     is_input: bool = False
     thought: str = ""
     blocking: bool = False
     is_static: bool = False
     cwd: str | None = None
     hidden: bool = False
-    action: str = ActionType.RUN
+    action: ClassVar[str] = ActionType.RUN
     runnable: ClassVar[bool] = True
     confirmation_state: ActionConfirmationStatus = ActionConfirmationStatus.CONFIRMED
     security_risk: ActionSecurityRisk = ActionSecurityRisk.UNKNOWN
@@ -58,7 +60,7 @@ class CmdRunAction(Action):
 @dataclass
 class IPythonRunCellAction(Action):
     """Action to run Python code in Jupyter kernel.
-    
+
     Attributes:
         code: Python code to execute
         thought: Agent's reasoning for this action
@@ -66,10 +68,11 @@ class IPythonRunCellAction(Action):
         kernel_init_code: Code to run before executing main code
 
     """
-    code: str
+
+    code: str = ""
     thought: str = ""
     include_extra: bool = True
-    action: str = ActionType.RUN_IPYTHON
+    action: ClassVar[str] = ActionType.RUN_IPYTHON
     runnable: ClassVar[bool] = True
     confirmation_state: ActionConfirmationStatus = ActionConfirmationStatus.CONFIRMED
     security_risk: ActionSecurityRisk = ActionSecurityRisk.UNKNOWN
@@ -89,3 +92,7 @@ class IPythonRunCellAction(Action):
         return f"Running Python code interactively: {self.code}"
 
     __test__ = False
+
+
+canonicalize("CmdRunAction", CmdRunAction)
+canonicalize("IPythonRunCellAction", IPythonRunCellAction)

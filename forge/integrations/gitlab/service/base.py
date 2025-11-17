@@ -78,7 +78,9 @@ class GitLabMixinBase(BaseGitService, HTTPClient):
         except httpx.HTTPError as e:
             raise self.handle_http_error(e) from e
 
-    async def execute_graphql_query(self, query: str, variables: dict[str, Any] | None = None) -> Any:
+    async def execute_graphql_query(
+        self, query: str, variables: dict[str, Any] | None = None
+    ) -> Any:
         """Execute a GraphQL query against the GitLab GraphQL API.
 
         Args:
@@ -95,17 +97,26 @@ class GitLabMixinBase(BaseGitService, HTTPClient):
             async with httpx.AsyncClient() as client:
                 gitlab_headers = await self._get_headers()
                 gitlab_headers["Content-Type"] = "application/json"
-                payload = {"query": query, "variables": variables if variables is not None else {}}
-                response = await client.post(self.GRAPHQL_URL, headers=gitlab_headers, json=payload)
+                payload = {
+                    "query": query,
+                    "variables": variables if variables is not None else {},
+                }
+                response = await client.post(
+                    self.GRAPHQL_URL, headers=gitlab_headers, json=payload
+                )
                 if self.refresh and self._has_token_expired(response.status_code):
                     await self.get_latest_token()
                     gitlab_headers = await self._get_headers()
                     gitlab_headers["Content-Type"] = "application/json"
-                    response = await client.post(self.GRAPHQL_URL, headers=gitlab_headers, json=payload)
+                    response = await client.post(
+                        self.GRAPHQL_URL, headers=gitlab_headers, json=payload
+                    )
                 response.raise_for_status()
                 result = response.json()
                 if "errors" in result:
-                    error_message = result["errors"][0].get("message", "Unknown GraphQL error")
+                    error_message = result["errors"][0].get(
+                        "message", "Unknown GraphQL error"
+                    )
                     msg = f"GraphQL error: {error_message}"
                     raise UnknownException(msg)
                 return result.get("data")

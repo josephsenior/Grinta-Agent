@@ -2,20 +2,59 @@
  * Utility to convert MetaSOP JSON outputs to Mermaid diagram syntax
  */
 
+type UnknownRecord = Record<string, unknown>;
+
+const toRecord = (value: unknown): UnknownRecord | undefined =>
+  typeof value === "object" && value !== null
+    ? (value as UnknownRecord)
+    : undefined;
+
+const toArchitectJson = (value: unknown): ArchitectJson =>
+  toRecord(value) as ArchitectJson;
+
+const toDesignerJson = (value: unknown): DesignerJson =>
+  toRecord(value) as DesignerJson;
+
+const toNonEmptyString = (value: unknown): string | undefined => {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const toStringArray = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? (value as unknown[])
+        .map((entry) => toNonEmptyString(entry))
+        .filter((entry): entry is string => Boolean(entry))
+    : [];
+
+type ArchitectDecision = {
+  decision: string;
+  reason: string;
+  tradeoffs: string;
+};
+
+type ArchitectApi = {
+  path: string;
+  method: string;
+  request_schema?: UnknownRecord | null;
+};
+
+type ArchitectJson =
+  | {
+      design_doc?: string;
+      apis?: ArchitectApi[];
+      decisions?: ArchitectDecision[];
+    }
+  | null
+  | undefined;
+
 // Architect JSON to Mermaid Architecture Diagram
-export function generateArchitectureDiagram(architectJson: {
-  design_doc?: string;
-  apis?: Array<{
-    path: string;
-    method: string;
-    request_schema?: any;
-  }>;
-  decisions?: Array<{
-    decision: string;
-    reason: string;
-    tradeoffs: string;
-  }>;
-}): string {
+export function generateArchitectureDiagram(
+  architectJson: ArchitectJson,
+): string {
   if (!architectJson) return "";
 
   let mermaid = "graph TB\n";
@@ -46,13 +85,9 @@ export function generateArchitectureDiagram(architectJson: {
 }
 
 // API Sequence Diagram
-export function generateApiSequenceDiagram(architectJson: {
-  apis?: Array<{
-    path: string;
-    method: string;
-    request_schema?: any;
-  }>;
-}): string {
+export function generateApiSequenceDiagram(
+  architectJson: ArchitectJson,
+): string {
   if (!architectJson?.apis || architectJson.apis.length === 0) {
     return "";
   }
@@ -74,15 +109,22 @@ export function generateApiSequenceDiagram(architectJson: {
   return mermaid;
 }
 
+type DesignerAccessibilityItem = {
+  issue: string;
+  severity: string;
+  recommendation: string;
+};
+
+type DesignerJson =
+  | {
+      layout_plan?: string;
+      accessibility?: DesignerAccessibilityItem[];
+    }
+  | null
+  | undefined;
+
 // UI Designer JSON to Component Tree
-export function generateUiComponentDiagram(designerJson: {
-  layout_plan?: string;
-  accessibility?: Array<{
-    issue: string;
-    severity: string;
-    recommendation: string;
-  }>;
-}): string {
+export function generateUiComponentDiagram(designerJson: DesignerJson): string {
   if (!designerJson?.layout_plan) return "";
 
   let mermaid = "graph TD\n";
@@ -122,15 +164,15 @@ export function generateUiComponentDiagram(designerJson: {
 }
 
 // PM Spec to User Story Flow
-export function generateUserStoryFlow(pmJson: {
-  user_stories?: string[];
-  acceptance_criteria?: string[];
-}): string {
-  if (!pmJson?.user_stories || pmJson.user_stories.length === 0) {
+export function generateUserStoryFlow(artifactContent: unknown): string {
+  const pmJson = toRecord(artifactContent);
+  const userStories = toStringArray(pmJson?.user_stories);
+
+  if (userStories.length === 0) {
     return "";
   }
 
-  const sanitizedStories = pmJson.user_stories.map((story, index) => ({
+  const sanitizedStories = userStories.map((story, index) => ({
     nodeId: `story${index}`,
     label: story.substring(0, 50).replace(/"/g, "'"),
   }));
@@ -200,25 +242,86 @@ export function generateOrchestrationFlow(
 }
 
 // Generate ER Diagram from database schema
-export function generateERDiagram(schemaJson: {
-  tables?: Array<{
-    name: string;
-    columns?: Array<{
-      name: string;
-      type: string;
-      primary_key?: boolean;
-      foreign_key?: { table: string; column: string };
-    }>;
-  }>;
-}): string {
-  if (!schemaJson?.tables || schemaJson.tables.length === 0) {
+type SchemaColumn = {
+  name: string;
+  type: string;
+  primary_key: boolean;
+  foreign_key?: { table: string; column: string };
+};
+
+type SchemaTable = {
+  name: string;
+  columns: SchemaColumn[];
+};
+
+const toSchemaTables = (value: unknown): SchemaTable[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const tables: SchemaTable[] = [];
+
+  (value as unknown[]).forEach((table, tableIndex) => {
+    const tableRecord = toRecord(table);
+    if (!tableRecord) {
+      return;
+    }
+
+    const name =
+      toNonEmptyString(tableRecord.name) ?? `table_${tableIndex + 1}`;
+    const columnsValue = Array.isArray(tableRecord.columns)
+      ? (tableRecord.columns as unknown[])
+      : [];
+
+    const columns: SchemaColumn[] = [];
+    columnsValue.forEach((column) => {
+      const columnRecord = toRecord(column);
+      if (!columnRecord) {
+        return;
+      }
+
+      const columnName = toNonEmptyString(columnRecord.name);
+      if (!columnName) {
+        return;
+      }
+
+      const columnType = toNonEmptyString(columnRecord.type) ?? "string";
+      const foreignKeyRecord = toRecord(columnRecord.foreign_key);
+      const fkTable = toNonEmptyString(foreignKeyRecord?.table);
+      const fkColumn = toNonEmptyString(foreignKeyRecord?.column);
+
+      columns.push({
+        name: columnName,
+        type: columnType,
+        primary_key: Boolean(columnRecord.primary_key),
+        foreign_key:
+          fkTable && fkColumn
+            ? { table: fkTable, column: fkColumn }
+            : undefined,
+      });
+    });
+
+    tables.push({
+      name,
+      columns,
+    });
+  });
+
+  return tables;
+};
+
+export function generateERDiagram(artifactContent: unknown): string {
+  const schemaJson = toRecord(artifactContent);
+  const tables = toSchemaTables(schemaJson?.tables);
+
+  if (tables.length === 0) {
     return "";
   }
 
   let mermaid = "erDiagram\n";
 
   // Add tables and their columns
-  schemaJson.tables.forEach((table) => {
+  tables.forEach((table) => {
     mermaid += `  ${table.name} {\n`;
 
     if (table.columns) {
@@ -234,7 +337,7 @@ export function generateERDiagram(schemaJson: {
   });
 
   // Add relationships
-  schemaJson.tables.forEach((table) => {
+  tables.forEach((table) => {
     if (table.columns) {
       table.columns.forEach((col) => {
         if (col.foreign_key) {
@@ -247,19 +350,128 @@ export function generateERDiagram(schemaJson: {
   return mermaid;
 }
 
+type TimelineTaskStatus = "pending" | "active" | "done" | "crit";
+
+type TimelineTask = {
+  id: string;
+  name: string;
+  start_date?: string;
+  end_date?: string;
+  duration?: number;
+  status?: TimelineTaskStatus;
+  depends_on?: string[];
+};
+
+const TIMELINE_STATUS_VALUES: TimelineTaskStatus[] = [
+  "pending",
+  "active",
+  "done",
+  "crit",
+];
+
+const toTimelineStatus = (value: unknown): TimelineTaskStatus | undefined => {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  return TIMELINE_STATUS_VALUES.find((status) => status === value);
+};
+
+const toDurationNumber = (value: unknown): number | undefined => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return undefined;
+};
+
+const toTimelineTasks = (value: unknown): TimelineTask[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const tasks: TimelineTask[] = [];
+
+  (value as unknown[]).forEach((task, index) => {
+    const taskRecord = toRecord(task);
+    if (!taskRecord) {
+      return;
+    }
+
+    const name = toNonEmptyString(taskRecord.name);
+    if (!name) {
+      return;
+    }
+
+    const id = toNonEmptyString(taskRecord.id) ?? `task_${index + 1}`;
+
+    tasks.push({
+      id,
+      name,
+      start_date: toNonEmptyString(taskRecord.start_date),
+      end_date: toNonEmptyString(taskRecord.end_date),
+      duration: toDurationNumber(taskRecord.duration),
+      status: toTimelineStatus(taskRecord.status),
+      depends_on: toStringArray(taskRecord.depends_on),
+    });
+  });
+
+  return tasks;
+};
+
+type TimelineSection = {
+  label: string;
+  tasks: TimelineTask[];
+};
+
+const STATUS_TO_SECTION_LABEL: Array<{
+  status: TimelineTaskStatus;
+  label: string;
+}> = [
+  { status: "pending", label: "Planning" },
+  { status: "active", label: "In Progress" },
+  { status: "done", label: "Completed" },
+  { status: "crit", label: "Critical" },
+];
+
+const buildGanttSections = (tasks: TimelineTask[]): TimelineSection[] =>
+  STATUS_TO_SECTION_LABEL.map(({ status, label }) => ({
+    label,
+    tasks: tasks.filter((task) => task.status === status),
+  })).filter((section) => section.tasks.length > 0);
+
+const formatGanttTask = (task: TimelineTask): string => {
+  const name = task.name.substring(0, 40).replace(/"/g, "'");
+
+  let statusSegment = "";
+  if (task.status && ["done", "active", "crit"].includes(task.status)) {
+    statusSegment = `${task.status}, `;
+  }
+
+  let dependencySegment = "";
+  if (Array.isArray(task.depends_on) && task.depends_on.length > 0) {
+    dependencySegment = `, after ${task.depends_on[0]}`;
+  }
+
+  if (task.start_date && task.end_date) {
+    return `  ${name} :${statusSegment}${task.id}, ${task.start_date}, ${task.end_date}`;
+  }
+
+  const duration =
+    typeof task.duration === "number" ? `${task.duration}d` : "1d";
+  return `  ${name} :${statusSegment}${task.id}${dependencySegment}, ${duration}`;
+};
+
 // Generate Gantt Chart from project timeline
-export function generateGanttChart(timelineJson: {
-  tasks?: Array<{
-    id: string;
-    name: string;
-    start_date?: string;
-    end_date?: string;
-    duration?: number;
-    status?: "pending" | "active" | "done" | "crit";
-    depends_on?: string[];
-  }>;
-}): string {
-  if (!timelineJson?.tasks || timelineJson.tasks.length === 0) {
+export function generateGanttChart(artifactContent: unknown): string {
+  const timelineJson = toRecord(artifactContent);
+  const tasks = toTimelineTasks(timelineJson?.tasks);
+
+  if (tasks.length === 0) {
     return "";
   }
 
@@ -270,9 +482,9 @@ export function generateGanttChart(timelineJson: {
     "",
   ];
 
-  buildGanttSections(timelineJson.tasks).forEach(({ label, tasks }) => {
+  buildGanttSections(tasks).forEach(({ label, tasks: sectionTasks }) => {
     lines.push(`  section ${label}`);
-    tasks.forEach((task) => {
+    sectionTasks.forEach((task) => {
       lines.push(formatGanttTask(task));
     });
   });
@@ -280,82 +492,138 @@ export function generateGanttChart(timelineJson: {
   return `${lines.join("\n")}\n`;
 }
 
-type TimelineTask = NonNullable<
-  NonNullable<Parameters<typeof generateGanttChart>[0]["tasks"]>
->[number];
+const getVisibilitySymbol = (
+  visibility?: "public" | "private" | "protected",
+): string => {
+  if (visibility === "private") {
+    return "-";
+  }
+  if (visibility === "protected") {
+    return "#";
+  }
+  return "+";
+};
 
-const GANTT_SECTION_DEFINITIONS: Array<{
-  label: string;
-  status: TimelineTask["status"];
-}> = [
-  { label: "Planning", status: "pending" },
-  { label: "In Progress", status: "active" },
-  { label: "Completed", status: "done" },
-  { label: "Critical", status: "crit" },
-];
+const toVisibility = (
+  value: unknown,
+): "public" | "private" | "protected" | undefined => {
+  if (value === "public" || value === "private" || value === "protected") {
+    return value;
+  }
+  return undefined;
+};
 
-const buildGanttSections = (tasks: TimelineTask[]) =>
-  GANTT_SECTION_DEFINITIONS.map(({ label, status }) => ({
-    label,
-    tasks: tasks.filter((task) => task.status === status),
-  })).filter((section) => section.tasks.length > 0);
+type ClassProperty = {
+  name: string;
+  type: string;
+  visibility?: "public" | "private" | "protected";
+};
 
-const formatGanttTask = (task: TimelineTask): string => {
-  const name = task.name.substring(0, 40).replace(/"/g, "'");
-  const statusSegment =
-    task.status && ["done", "active", "crit"].includes(task.status)
-      ? `${task.status}, `
-      : "";
-  const depends =
-    task.depends_on && task.depends_on.length > 0
-      ? `, after ${task.depends_on[0]}`
-      : "";
+type ClassMethod = {
+  name: string;
+  return_type?: string;
+  visibility?: "public" | "private" | "protected";
+};
 
-  if (task.start_date && task.end_date) {
-    return `  ${name} :${statusSegment}${task.id}, ${task.start_date}, ${task.end_date}`;
+type ClassDefinition = {
+  name: string;
+  properties: ClassProperty[];
+  methods: ClassMethod[];
+  extends?: string;
+  implements?: string[];
+};
+
+const toClassDefinitions = (value: unknown): ClassDefinition[] => {
+  if (!Array.isArray(value)) {
+    return [];
   }
 
-  const duration = task.duration ? `${task.duration}d` : "1d";
-  return `  ${name} :${statusSegment}${task.id}${depends}, ${duration}`;
+  const classes: ClassDefinition[] = [];
+
+  (value as unknown[]).forEach((cls, index) => {
+    const clsRecord = toRecord(cls);
+    if (!clsRecord) {
+      return;
+    }
+
+    const name = toNonEmptyString(clsRecord.name) ?? `Class${index + 1}`;
+
+    const properties: ClassProperty[] = [];
+    if (Array.isArray(clsRecord.properties)) {
+      (clsRecord.properties as unknown[]).forEach((prop) => {
+        const propRecord = toRecord(prop);
+        if (!propRecord) {
+          return;
+        }
+
+        const propName = toNonEmptyString(propRecord.name);
+        if (!propName) {
+          return;
+        }
+
+        properties.push({
+          name: propName,
+          type: toNonEmptyString(propRecord.type) ?? "any",
+          visibility: toVisibility(propRecord.visibility),
+        });
+      });
+    }
+
+    const methods: ClassMethod[] = [];
+    if (Array.isArray(clsRecord.methods)) {
+      (clsRecord.methods as unknown[]).forEach((method) => {
+        const methodRecord = toRecord(method);
+        if (!methodRecord) {
+          return;
+        }
+
+        const methodName = toNonEmptyString(methodRecord.name);
+        if (!methodName) {
+          return;
+        }
+
+        methods.push({
+          name: methodName,
+          return_type: toNonEmptyString(methodRecord.return_type),
+          visibility: toVisibility(methodRecord.visibility),
+        });
+      });
+    }
+
+    const extendsValue = toNonEmptyString(clsRecord.extends);
+    const implementsValue = toStringArray(clsRecord.implements);
+
+    classes.push({
+      name,
+      properties,
+      methods,
+      extends: extendsValue,
+      implements: implementsValue.length > 0 ? implementsValue : undefined,
+    });
+  });
+
+  return classes;
 };
 
 // Generate Class Diagram from code structure
-export function generateClassDiagram(codeStructure: {
-  classes?: Array<{
-    name: string;
-    properties?: Array<{
-      name: string;
-      type: string;
-      visibility?: "public" | "private" | "protected";
-    }>;
-    methods?: Array<{
-      name: string;
-      return_type?: string;
-      visibility?: "public" | "private" | "protected";
-    }>;
-    extends?: string;
-    implements?: string[];
-  }>;
-}): string {
-  if (!codeStructure?.classes || codeStructure.classes.length === 0) {
+export function generateClassDiagram(artifactContent: unknown): string {
+  const codeStructure = toRecord(artifactContent);
+  const classes = toClassDefinitions(codeStructure?.classes);
+
+  if (classes.length === 0) {
     return "";
   }
 
   let mermaid = "classDiagram\n";
 
-  codeStructure.classes.forEach((cls) => {
+  classes.forEach((cls) => {
     // Class definition
     mermaid += `  class ${cls.name} {\n`;
 
     // Properties
     if (cls.properties) {
       cls.properties.forEach((prop) => {
-        const visibility =
-          prop.visibility === "private"
-            ? "-"
-            : prop.visibility === "protected"
-              ? "#"
-              : "+";
+        const visibility = getVisibilitySymbol(prop.visibility);
         mermaid += `    ${visibility}${prop.type} ${prop.name}\n`;
       });
     }
@@ -363,12 +631,7 @@ export function generateClassDiagram(codeStructure: {
     // Methods
     if (cls.methods) {
       cls.methods.forEach((method) => {
-        const visibility =
-          method.visibility === "private"
-            ? "-"
-            : method.visibility === "protected"
-              ? "#"
-              : "+";
+        const visibility = getVisibilitySymbol(method.visibility);
         const returnType = method.return_type || "void";
         mermaid += `    ${visibility}${method.name}() ${returnType}\n`;
       });
@@ -396,20 +659,27 @@ type MermaidDiagram = { type: string; mermaid: string };
 
 type DiagramStrategy = {
   type: string;
-  matches: (context: { role: string; artifactContent: any }) => boolean;
-  generate: (artifactContent: any) => string;
+  matches: (context: DiagramContext) => boolean;
+  generate: (artifactContent: unknown) => string;
+};
+
+type DiagramContext = {
+  role: string;
+  artifactContent: unknown;
 };
 
 const ROLE_STRATEGIES: DiagramStrategy[] = [
   {
     type: "architecture",
     matches: ({ role }) => role.includes("architect"),
-    generate: generateArchitectureDiagram,
+    generate: (artifactContent) =>
+      generateArchitectureDiagram(toArchitectJson(artifactContent)),
   },
   {
     type: "ui-components",
     matches: ({ role }) => role.includes("designer") || role.includes("ui"),
-    generate: generateUiComponentDiagram,
+    generate: (artifactContent) =>
+      generateUiComponentDiagram(toDesignerJson(artifactContent)),
   },
   {
     type: "user-stories",
@@ -426,19 +696,25 @@ const ROLE_STRATEGIES: DiagramStrategy[] = [
 const CONTENT_STRATEGIES: DiagramStrategy[] = [
   {
     type: "gantt-chart",
-    matches: ({ artifactContent }) => Array.isArray(artifactContent?.tasks),
+    matches: ({ artifactContent }) => {
+      const record = toRecord(artifactContent);
+      return Array.isArray(record?.tasks);
+    },
     generate: generateGanttChart,
   },
   {
     type: "class-diagram",
-    matches: ({ artifactContent }) => Array.isArray(artifactContent?.classes),
+    matches: ({ artifactContent }) => {
+      const record = toRecord(artifactContent);
+      return Array.isArray(record?.classes);
+    },
     generate: generateClassDiagram,
   },
 ];
 
 const runStrategies = (
   strategies: DiagramStrategy[],
-  context: { role: string; artifactContent: any },
+  context: DiagramContext,
 ): MermaidDiagram | null => {
   for (const strategy of strategies) {
     if (strategy.matches(context)) {
@@ -455,7 +731,7 @@ const runStrategies = (
 export function autoGenerateDiagram(
   stepId: string,
   role: string,
-  artifactContent: any,
+  artifactContent: unknown,
 ): MermaidDiagram | null {
   if (!artifactContent) {
     return null;

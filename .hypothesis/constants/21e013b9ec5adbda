@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\versioning.py
+# hypothesis_version: 6.147.0
+
+[400, '%Y-%m-%d', '/', '/api/', '/api/docs', '/api/health', '/api/openapi', 'API-Version', 'Deprecation', 'Link', 'Sunset', 'Warning', '__api_deprecated__', '__api_sunset__', '__api_version__', 'api', 'current_version', 'error', 'forge.versioning', 'message', 'migration_guide', 'missing_api_version', 'sunset_date', 'supported_versions', 'true', 'v', 'v1']

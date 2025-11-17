@@ -20,6 +20,7 @@ from forge.core.logger import forge_logger as logger
 
 class BulletSection(Enum):
     """Sections for organizing knowledge in the context playbook."""
+
     STRATEGIES_AND_HARD_RULES = "strategies_and_hard_rules"
     APIS_TO_USE = "apis_to_use_for_specific_information"
     VERIFICATION_CHECKLIST = "verification_checklist"
@@ -97,10 +98,14 @@ class BulletPoint:
     def from_dict(cls, data: Dict[str, Any]) -> "BulletPoint":
         """Create from dictionary for deserialization."""
         tags_field = data.get("tags") or []
-        tags_list = list(tags_field) if isinstance(tags_field, Sequence) else [str(tags_field)]
+        tags_list = (
+            list(tags_field) if isinstance(tags_field, Sequence) else [str(tags_field)]
+        )
         last_used_raw = data.get("last_used")
         last_used_val = (
-            datetime.fromisoformat(last_used_raw) if isinstance(last_used_raw, str) else None
+            datetime.fromisoformat(last_used_raw)
+            if isinstance(last_used_raw, str)
+            else None
         )
 
         return cls(
@@ -122,7 +127,7 @@ class ContextPlaybook:
 
     Prevents context collapse through incremental updates.
     """
-    
+
     def __init__(self, max_bullets: int = 1000, enable_grow_and_refine: bool = True):
         """Initialize the playbook storage with section tracking and metrics buckets."""
         self.max_bullets = max_bullets
@@ -152,10 +157,10 @@ class ContextPlaybook:
         """Add a new bullet point to the playbook."""
         if bullet_id is None:
             bullet_id = f"ctx-{len(self.bullets):05d}"
-        
+
         if bullet_id in self.bullets:
             raise ValueError(f"Bullet ID {bullet_id} already exists")
-        
+
         # Check for redundancy if grow-and-refine is enabled
         if self.enable_grow_and_refine and self._is_redundant(content, section):
             logger.debug("Skipping redundant bullet: %s...", content[:50])
@@ -167,15 +172,15 @@ class ContextPlaybook:
             section=section,
             tags=list(tags) if tags else [],
         )
-        
+
         self.bullets[bullet_id] = bullet
         self.sections[section].append(bullet_id)
         self.performance_metrics["total_updates"] += 1
         self.performance_metrics["bullets_added"] += 1
-        
+
         # Update content hash cache
         self._content_hash_cache[bullet_id] = self._compute_content_hash(content)
-        
+
         logger.debug("Added bullet %s to section %s", bullet_id, section.value)
         return bullet_id
 
@@ -189,25 +194,25 @@ class ContextPlaybook:
         """Update an existing bullet point."""
         if bullet_id not in self.bullets:
             return False
-        
+
         bullet = self.bullets[bullet_id]
-        
+
         if content is not None:
             bullet.content = content
             bullet.last_updated = datetime.now()
             # Update content hash cache
             self._content_hash_cache[bullet_id] = self._compute_content_hash(content)
-        
+
         if helpful is True:
             bullet.helpful_count += 1
             self.performance_metrics["successful_insights"] += 1
-        
+
         if harmful is True:
             bullet.harmful_count += 1
             self.performance_metrics["failed_insights"] += 1
-        
+
         return True
-    
+
     def get_relevant_bullets(
         self,
         query: str,
@@ -220,7 +225,7 @@ class ContextPlaybook:
             bullet_ids = self.sections[section]
         else:
             bullet_ids = list(self.bullets.keys())
-        
+
         # Filter by helpfulness score
         relevant_bullets: List[Tuple[BulletPoint, int]] = []
         for bullet_id in bullet_ids:
@@ -229,66 +234,67 @@ class ContextPlaybook:
                 # Basic keyword matching (can be enhanced with embeddings)
                 query_words = {word.lower() for word in query.split()}
                 content_words = {word.lower() for word in bullet.content.split()}
-                
+
                 # Calculate relevance score
                 overlap = len(query_words.intersection(content_words))
                 if overlap > 0 or len(query_words) == 0:
                     relevant_bullets.append((bullet, overlap))
-        
+
         # Sort by relevance score (overlap) then by helpfulness
-        relevant_bullets.sort(key=lambda x: (x[1], x[0].helpfulness_score), reverse=True)
-        
+        relevant_bullets.sort(
+            key=lambda x: (x[1], x[0].helpfulness_score), reverse=True
+        )
+
         # Mark bullets as used
         result = []
         for bullet, _ in relevant_bullets[:limit]:
             bullet.mark_used()
             result.append(bullet)
-        
+
         return result
-    
+
     def get_playbook_content(
         self,
         sections: Optional[List[BulletSection]] = None,
         max_bullets: int = 50,
     ) -> str:
         """Get formatted playbook content for LLM consumption."""
-        if sections is None:
-            sections = list(BulletSection)
-        
-        content = "ACE PLAYBOOK:\n"
-        content += "=" * 50 + "\n\n"
-        
+        sections = sections or list(BulletSection)
+        builder = ["ACE PLAYBOOK:\n", "=" * 50 + "\n\n"]
         total_bullets = 0
-        sections_iter = sections or list(BulletSection)
-        per_section_limit = max(1, max_bullets // max(len(sections_iter), 1))
+        per_section_limit = max(1, max_bullets // max(len(sections), 1))
 
-        for section in sections_iter:
-            if section in self.sections and self.sections[section]:
-                section_bullets = []
-                for bullet_id in self.sections[section]:
-                    bullet = self.bullets[bullet_id]
-                    section_bullets.append(bullet)
-                
-                # Sort by helpfulness score
-                section_bullets.sort(key=lambda b: b.helpfulness_score, reverse=True)
-                
-                if section_bullets:
-                    content += f"## {section.value.replace('_', ' ').title()}\n"
-                    for bullet in section_bullets[:per_section_limit]:
-                        content += (
-                            f"[{bullet.id}] helpful={bullet.helpful_count} "
-                            f"harmful={bullet.harmful_count} :: {bullet.content}\n"
-                        )
-                        total_bullets += 1
-                        if total_bullets >= max_bullets:
-                            break
-                    content += "\n"
-                
+        for section in sections:
+            if self._should_skip_section(section):
+                continue
+            section_bullets = self._sorted_section_bullets(section)
+            if not section_bullets:
+                continue
+            builder.append(f"## {section.value.replace('_', ' ').title()}\n")
+            for bullet in section_bullets[:per_section_limit]:
+                builder.append(
+                    f"[{bullet.id}] helpful={bullet.helpful_count} harmful={bullet.harmful_count} :: {bullet.content}\n"
+                )
+                bullet.mark_used()
+                total_bullets += 1
                 if total_bullets >= max_bullets:
                     break
-        
-        return content
-    
+            builder.append("\n")
+            if total_bullets >= max_bullets:
+                break
+
+        return "".join(builder)
+
+    def _should_skip_section(self, section: BulletSection) -> bool:
+        return section not in self.sections or not self.sections[section]
+
+    def _sorted_section_bullets(
+        self, section: BulletSection
+    ) -> List[BulletPoint]:
+        bullets = [self.bullets[bullet_id] for bullet_id in self.sections[section]]
+        bullets.sort(key=lambda b: b.helpfulness_score, reverse=True)
+        return bullets
+
     def cleanup_old_bullets(
         self,
         max_age_days: int = 30,
@@ -296,93 +302,96 @@ class ContextPlaybook:
     ) -> int:
         """Remove old, unhelpful bullet points."""
         cutoff_date = datetime.now() - timedelta(days=max_age_days)
-        
+
         to_remove = []
         for bullet_id, bullet in self.bullets.items():
-            if (bullet.last_updated < cutoff_date and 
-                bullet.usage_count < min_usage_count and
-                bullet.helpfulness_score < 0.3):
+            if (
+                bullet.last_updated < cutoff_date
+                and bullet.usage_count < min_usage_count
+                and bullet.helpfulness_score < 0.3
+            ):
                 to_remove.append(bullet_id)
-        
+
         for bullet_id in to_remove:
             self.remove_bullet(bullet_id)
-        
+
         self.performance_metrics["last_cleanup"] = datetime.now()
         return len(to_remove)
-    
+
     def remove_bullet(self, bullet_id: str) -> bool:
         """Remove a bullet point from the playbook."""
         if bullet_id not in self.bullets:
             return False
-        
+
         bullet = self.bullets[bullet_id]
         self.sections[bullet.section].remove(bullet_id)
         del self.bullets[bullet_id]
-        
+
         # Remove from content hash cache
         if bullet_id in self._content_hash_cache:
             del self._content_hash_cache[bullet_id]
-        
+
         self.performance_metrics["bullets_removed"] += 1
         return True
-    
+
     def _is_redundant(self, content: str, section: BulletSection) -> bool:
         """Check if content is redundant with existing bullets."""
         self.performance_metrics["redundancy_checks"] += 1
-        
+
         content_hash = self._compute_content_hash(content)
-        
+
         # Check for exact duplicates
         for bullet_id, bullet in self.bullets.items():
             if bullet.section == section:
                 if self._content_hash_cache.get(bullet_id) == content_hash:
                     return True
-                
+
                 # Check for high similarity (simple approach)
                 if self._compute_similarity(content, bullet.content) > 0.8:
                     return True
-        
+
         return False
-    
+
     def _compute_content_hash(self, content: str) -> str:
         """Compute hash of content for duplicate detection."""
         # Normalize content for comparison
-        normalized = re.sub(r'\s+', ' ', content.strip().lower())
-        return hashlib.md5(normalized.encode()).hexdigest()
-    
+        normalized = re.sub(r"\s+", " ", content.strip().lower())
+        # Use SHA-256 instead of MD5 for stronger collision resistance
+        return hashlib.sha256(normalized.encode()).hexdigest()
+
     def _compute_similarity(self, content1: str, content2: str) -> float:
         """Compute simple similarity between two content strings."""
         words1 = set(content1.lower().split())
         words2 = set(content2.lower().split())
-        
+
         if not words1 or not words2:
             return 0.0
-        
+
         intersection = len(words1.intersection(words2))
         union = len(words1.union(words2))
-        
+
         return intersection / union if union > 0 else 0.0
-    
+
     def grow_and_refine(self) -> Dict[str, int]:
         """Apply grow-and-refine mechanism to maintain playbook quality."""
         if not self.enable_grow_and_refine:
             return {"refined": 0, "removed": 0}
-        
+
         # Remove stale bullets
         removed = self.cleanup_old_bullets()
-        
+
         # If we're over the limit, remove least helpful bullets
         if len(self.bullets) > self.max_bullets:
             bullets_by_score = sorted(
                 self.bullets.items(),
-                key=lambda x: (x[1].helpfulness_score, x[1].usage_count)
+                key=lambda x: (x[1].helpfulness_score, x[1].usage_count),
             )
-            
+
             excess = len(self.bullets) - self.max_bullets
             for bullet_id, _ in bullets_by_score[:excess]:
                 self.remove_bullet(bullet_id)
                 removed += 1
-        
+
         return {"refined": 0, "removed": removed}
 
     def _metrics_to_serializable(self) -> Dict[str, Any]:
@@ -419,7 +428,10 @@ class ContextPlaybook:
         """Export playbook for persistence."""
         return {
             "bullets": {bid: bullet.to_dict() for bid, bullet in self.bullets.items()},
-            "sections": {section.value: list(bullet_ids) for section, bullet_ids in self.sections.items()},
+            "sections": {
+                section.value: list(bullet_ids)
+                for section, bullet_ids in self.sections.items()
+            },
             "performance_metrics": self._metrics_to_serializable(),
             "exported_at": datetime.now().isoformat(),
             "version": "1.0",
@@ -429,16 +441,18 @@ class ContextPlaybook:
         """Import playbook from persistence."""
         self.bullets = {}
         self.sections = {section: [] for section in BulletSection}
-        
+
         # Import bullets
         for bullet_id, bullet_data in data.get("bullets", {}).items():
             bullet = BulletPoint.from_dict(bullet_data)
             self.bullets[str(bullet_id)] = bullet
             self.sections[bullet.section].append(str(bullet_id))
-            
+
             # Rebuild content hash cache
-            self._content_hash_cache[bullet_id] = self._compute_content_hash(bullet.content)
-        
+            self._content_hash_cache[bullet_id] = self._compute_content_hash(
+                bullet.content
+            )
+
         # Import performance metrics
         perf_metrics_raw = data.get("performance_metrics", {})
         if isinstance(perf_metrics_raw, dict):

@@ -33,7 +33,9 @@ def test_import_utils(monkeypatch: pytest.MonkeyPatch) -> None:
         "pkg.impl": SimpleNamespace(Impl=Impl),
     }
 
-    monkeypatch.setattr(import_utils.importlib, "import_module", lambda name: modules[name])
+    monkeypatch.setattr(
+        import_utils.importlib, "import_module", lambda name: modules[name]
+    )
 
     result = import_utils.import_from("pkg.module.submodule.answer")
     assert result == 99
@@ -88,11 +90,15 @@ async def test_search_utils_iterate():
 def test_tenacity_metrics(monkeypatch: pytest.MonkeyPatch) -> None:
     events = []
 
-    monkeypatch.setattr(tenacity_metrics, "_record_metrics_event_runtime", lambda ev: events.append(ev))
+    monkeypatch.setattr(
+        tenacity_metrics, "_record_metrics_event_runtime", lambda ev: events.append(ev)
+    )
     before = tenacity_metrics.tenacity_before_sleep_factory("My Op")
     after = tenacity_metrics.tenacity_after_factory("My Op")
 
-    retry_state = SimpleNamespace(attempt_number=1, stop=SimpleNamespace(max_attempts=2))
+    retry_state = SimpleNamespace(
+        attempt_number=1, stop=SimpleNamespace(max_attempts=2)
+    )
     before(retry_state)
     assert events[0]["status"] == "attempt"
     before(SimpleNamespace(attempt_number=2))
@@ -141,4 +147,3 @@ def test_record_metrics_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setitem(sys.modules, "forge.metasop.metrics", DummyModule)
     tenacity_metrics._record_metrics_event_runtime({"status": "attempt"})
-

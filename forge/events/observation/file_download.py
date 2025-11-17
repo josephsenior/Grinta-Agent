@@ -2,18 +2,19 @@
 
 from dataclasses import dataclass
 
-from forge.core.schema import ObservationType
+from forge.core.schemas import ObservationType
 from forge.events.observation.observation import Observation
 
 
 @dataclass
 class FileDownloadObservation(Observation):
     """Observation for file download completion.
-    
+
     Attributes:
         file_path: Path where the file was downloaded
 
     """
+
     file_path: str
     observation: str = ObservationType.DOWNLOAD
 

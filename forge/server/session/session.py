@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 from forge.core.config.mcp_config import ForgeMCPConfigImpl
 from forge.core.exceptions import MicroagentValidationError
 from forge.core.logger import forgeLoggerAdapter
-from forge.core.schema import AgentState
+from forge.core.schemas import AgentState
 from forge.events.action import MessageAction, NullAction
 from forge.events.event import Event, EventSource
 from forge.events.observation import (
@@ -90,15 +90,21 @@ class Session:
             status_callback=self.queue_status_message,
             user_id=user_id,
         )
-        self.agent_session.event_stream.subscribe(EventStreamSubscriber.SERVER, self.on_event, self.sid)
+        self.agent_session.event_stream.subscribe(
+            EventStreamSubscriber.SERVER, self.on_event, self.sid
+        )
         self.config = config
         from forge.experiments.experiment_manager import ExperimentManagerImpl
 
-        self.config = ExperimentManagerImpl.run_config_variant_test(user_id, sid, self.config)
+        self.config = ExperimentManagerImpl.run_config_variant_test(
+            user_id, sid, self.config
+        )
         self.loop = asyncio.get_event_loop()
         self.user_id = user_id
         self._publish_queue: asyncio.Queue = asyncio.Queue()
-        self._monitor_publish_queue_task: asyncio.Task = self.loop.create_task(self._monitor_publish_queue())
+        self._monitor_publish_queue_task: asyncio.Task = self.loop.create_task(
+            self._monitor_publish_queue()
+        )
         self._wait_websocket_initial_complete: bool = True
 
     async def close(self) -> None:
@@ -106,7 +112,9 @@ class Session:
         if self.sio:
             await self.sio.emit(
                 "oh_event",
-                event_to_dict(AgentStateChangedObservation("", AgentState.STOPPED.value)),
+                event_to_dict(
+                    AgentStateChangedObservation("", AgentState.STOPPED.value)
+                ),
                 to=ROOM_KEY.format(sid=self.sid),
             )
         self.is_alive = False
@@ -116,20 +124,26 @@ class Session:
     def _configure_security_settings(self, settings: Settings) -> None:
         """Configure security settings from the provided settings."""
         self.config.security.confirmation_mode = (
-            self.config.security.confirmation_mode if settings.confirmation_mode is None else settings.confirmation_mode
+            self.config.security.confirmation_mode
+            if settings.confirmation_mode is None
+            else settings.confirmation_mode
         )
         self.config.security.security_analyzer = (
-            self.config.security.security_analyzer if settings.security_analyzer is None else settings.security_analyzer
+            self.config.security.security_analyzer
+            if settings.security_analyzer is None
+            else settings.security_analyzer
         )
 
     def _configure_sandbox_settings(self, settings: Settings) -> None:
         """Configure sandbox settings from the provided settings."""
         self.config.sandbox.base_container_image = (
-            settings.sandbox_base_container_image or self.config.sandbox.base_container_image
+            settings.sandbox_base_container_image
+            or self.config.sandbox.base_container_image
         )
         self.config.sandbox.runtime_container_image = (
             settings.sandbox_runtime_container_image
-            if settings.sandbox_base_container_image or settings.sandbox_runtime_container_image
+            if settings.sandbox_base_container_image
+            or settings.sandbox_runtime_container_image
             else self.config.sandbox.runtime_container_image
         )
 
@@ -148,26 +162,34 @@ class Session:
 
     def _configure_mcp_settings(self, settings: Settings) -> None:
         """Configure MCP settings from the provided settings."""
-        self.logger.debug(f"MCP configuration before setup - self.config.mcp_config: {self.config.mcp}")
+        self.logger.debug(
+            f"MCP configuration before setup - self.config.mcp_config: {self.config.mcp}"
+        )
 
         mcp_config = getattr(settings, "mcp_config", None)
         if mcp_config is not None:
             self.config.mcp = self.config.mcp.merge(mcp_config)
             self.logger.debug(f"Merged custom MCP Config: {mcp_config}")
 
-        FORGE_mcp_server, FORGE_mcp_stdio_servers = ForgeMCPConfigImpl.create_default_mcp_server_config(
-            self.config.mcp_host,
-            self.config,
-            self.user_id,
+        FORGE_mcp_server, FORGE_mcp_stdio_servers = (
+            ForgeMCPConfigImpl.create_default_mcp_server_config(
+                self.config.mcp_host,
+                self.config,
+                self.user_id,
+            )
         )
         if FORGE_mcp_server:
             self.config.mcp.shttp_servers.append(FORGE_mcp_server)
             self.logger.debug("Added default MCP HTTP server to config")
             self.config.mcp.stdio_servers.extend(FORGE_mcp_stdio_servers)
 
-        self.logger.debug(f"MCP configuration after setup - self.config.mcp: {self.config.mcp}")
+        self.logger.debug(
+            f"MCP configuration after setup - self.config.mcp: {self.config.mcp}"
+        )
 
-    def _configure_agent_condenser(self, settings: Settings, agent_config, llm_config) -> None:
+    def _configure_agent_condenser(
+        self, settings: Settings, agent_config, llm_config
+    ) -> None:
         """Configure agent condenser if enabled."""
         if settings.enable_default_condenser:
             max_events_for_condenser = settings.condenser_max_size or 120
@@ -177,6 +199,7 @@ class Session:
                 BrowserOutputCondenserConfig,
                 LLMSummarizingCondenserConfig,
             )
+
             default_condenser_config = CondenserPipelineConfig(
                 condensers=[
                     ConversationWindowCondenserConfig(),
@@ -190,8 +213,10 @@ class Session:
             )
             self.logger.info(
                 f'Enabling pipeline condenser with: browser_output_masking(attention_window=2), llm(model="{
-                    llm_config.model}", base_url="{
-                    llm_config.base_url}", keep_first=4, max_size={max_events_for_condenser})',
+                    llm_config.model
+                }", base_url="{llm_config.base_url}", keep_first=4, max_size={
+                    max_events_for_condenser
+                })',
             )
             agent_config.condenser = default_condenser_config
 
@@ -219,7 +244,13 @@ class Session:
             custom_secrets = settings.custom_secrets
             conversation_instructions = settings.conversation_instructions
 
-        return git_provider_tokens, selected_repository, selected_branch, custom_secrets, conversation_instructions
+        return (
+            git_provider_tokens,
+            selected_repository,
+            selected_branch,
+            custom_secrets,
+            conversation_instructions,
+        )
 
     async def _start_agent_session(
         self,
@@ -260,13 +291,17 @@ class Session:
             self.logger.exception(f"Error creating agent_session: {e}")
             error_message = str(e)
             if "microagent" in error_message.lower():
-                await self.send_error(f"Failed to create agent session: {error_message}")
+                await self.send_error(
+                    f"Failed to create agent session: {error_message}"
+                )
             else:
                 await self.send_error("Failed to create agent session: ValueError")
             return
         except Exception as e:
             self.logger.exception(f"Error creating agent_session: {e}")
-            await self.send_error(f"Failed to create agent session: {e.__class__.__name__}")
+            await self.send_error(
+                f"Failed to create agent session: {e.__class__.__name__}"
+            )
             return
 
     async def initialize_agent(
@@ -312,9 +347,13 @@ class Session:
         self.llm_registry.retry_listner = self._notify_on_llm_retry
 
         # Extract conversation data
-        git_provider_tokens, selected_repository, selected_branch, custom_secrets, conversation_instructions = (
-            self._extract_conversation_data(settings)
-        )
+        (
+            git_provider_tokens,
+            selected_repository,
+            selected_branch,
+            custom_secrets,
+            conversation_instructions,
+        ) = self._extract_conversation_data(settings)
 
         # Start agent session
         await self._start_agent_session(
@@ -331,16 +370,35 @@ class Session:
         )
 
     def _notify_on_llm_retry(self, retries: int, max: int) -> None:
-        self.queue_status_message("info", RuntimeStatus.LLM_RETRY, f"Retrying LLM request, {retries} / {max}")
+        self.queue_status_message(
+            "info", RuntimeStatus.LLM_RETRY, f"Retrying LLM request, {retries} / {max}"
+        )
 
     def on_event(self, event: Event) -> None:
         """Synchronous event callback that delegates to async handler.
-        
+
         Args:
             event: Event to process
 
         """
-        asyncio.get_event_loop().run_until_complete(self._on_event(event))
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop:
+            loop.create_task(self._on_event(event))
+            return
+
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop is None:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        loop.run_until_complete(self._on_event(event))
 
     async def _on_event(self, event: Event) -> None:
         """Callback function for events that mainly come from the agent.
@@ -365,10 +423,19 @@ class Session:
             event_dict["source"] = EventSource.AGENT
             # Debug logging for agent state changes
             if isinstance(event, AgentStateChangedObservation):
-                self.logger.info(f"DEBUG: AgentStateChangedObservation received - state: {event.agent_state}, reason: {event.reason}, sending to WebSocket", extra={"session_id": self.sid})
+                self.logger.info(
+                    f"DEBUG: AgentStateChangedObservation received - state: {event.agent_state}, reason: {event.reason}, sending to WebSocket",
+                    extra={"session_id": self.sid},
+                )
             await self.send(event_dict)
-            if isinstance(event, AgentStateChangedObservation) and event.agent_state == AgentState.ERROR:
-                self.logger.error(f"Agent status error: {event.reason}", extra={"signal": "agent_status_error"})
+            if (
+                isinstance(event, AgentStateChangedObservation)
+                and event.agent_state == AgentState.ERROR
+            ):
+                self.logger.error(
+                    f"Agent status error: {event.reason}",
+                    extra={"signal": "agent_status_error"},
+                )
         elif isinstance(event, ErrorObservation):
             event_dict = event_to_dict(event)
             event_dict["source"] = EventSource.AGENT
@@ -397,7 +464,10 @@ class Session:
     def _log_dispatch_start(self, data: dict) -> None:
         """Log the start of dispatch operation."""
         with contextlib.suppress(Exception):
-            self.logger.info(f"Dispatch called with data: {data}", extra={"signal": "dispatch_called"})
+            self.logger.info(
+                f"Dispatch called with data: {data}",
+                extra={"signal": "dispatch_called"},
+            )
 
     def _log_parsed_event(self, event) -> None:
         """Log the parsed event information."""
@@ -417,7 +487,9 @@ class Session:
             if not content.lower().startswith("sop:"):
                 return False
 
-            await self._send_status_message("info", RuntimeStatus.READY, "Starting MetaSOP orchestration…")
+            await self._send_status_message(
+                "info", RuntimeStatus.READY, "Starting MetaSOP orchestration…"
+            )
 
             # Create and start MetaSOP runner task
             asyncio.create_task(self._run_metasop_orchestration(content))
@@ -429,7 +501,7 @@ class Session:
 
     async def _run_metasop_orchestration(self, content: str) -> None:
         """Run MetaSOP orchestration asynchronously."""
-        from forge.metasop.clean_router import run_metasop_for_conversation
+        from forge.metasop.router import run_metasop_for_conversation
 
         try:
             self.logger.info(
@@ -456,7 +528,9 @@ class Session:
     def _handle_metasop_runner_error(self, error: Exception) -> None:
         """Handle errors in MetaSOP runner."""
         with contextlib.suppress(Exception):
-            self.logger.exception(f"Unhandled exception in MetaSOP runner for sid={self.sid}: {error}")
+            self.logger.exception(
+                f"Unhandled exception in MetaSOP runner for sid={self.sid}: {error}"
+            )
 
     async def _handle_metasop_error(self, error: Exception) -> None:
         """Handle errors in MetaSOP dispatch."""
@@ -464,7 +538,9 @@ class Session:
             self.logger.exception(f"Error while handling MetaSOP dispatch: {error}")
 
         with contextlib.suppress(Exception):
-            await self._send_status_message("debug", RuntimeStatus.ERROR, f"MetaSOP dispatch error: {error}")
+            await self._send_status_message(
+                "debug", RuntimeStatus.ERROR, f"MetaSOP dispatch error: {error}"
+            )
 
     async def _handle_image_validation(self, event) -> bool:
         """Handle image validation for message actions. Returns True if validation failed."""
@@ -477,7 +553,9 @@ class Session:
 
         # Check if vision is disabled
         if controller.agent.llm.config.disable_vision:
-            await self.send_error("Support for images is disabled for this model, try without an image.")
+            await self.send_error(
+                "Support for images is disabled for this model, try without an image."
+            )
             return True
 
         # Check if model supports vision
@@ -491,7 +569,7 @@ class Session:
 
     async def send(self, data: dict[str, object]) -> None:
         """Queue data for publishing to WebSocket clients.
-        
+
         Args:
             data: Data dictionary to send
 
@@ -559,8 +637,9 @@ class Session:
             and not bool(manager.rooms.get("/", {}).get(ROOM_KEY.format(sid=self.sid)))  # type: ignore[arg-type]
         ):
             self.logger.warning(
-                f"There is no listening client in the current room, waiting for the {_waiting_times}th attempt: {
-                    self.sid}",
+                f"There is no listening client in the current room, waiting for the {
+                    _waiting_times
+                }th attempt: {self.sid}",
             )
             _waiting_times += 1
             await asyncio.sleep(0.1)
@@ -575,7 +654,9 @@ class Session:
             True if event should be dropped
 
         """
-        if isinstance(data, dict) and (data.get("observation") == "null" or data.get("action") == "null"):
+        if isinstance(data, dict) and (
+            data.get("observation") == "null" or data.get("action") == "null"
+        ):
             with contextlib.suppress(Exception):
                 self.logger.warning(
                     'Dropping event with literal "null" in observation/action',
@@ -592,16 +673,18 @@ class Session:
 
         """
         self._wait_websocket_initial_complete = False
-        
+
         # Performance logging for streaming events
         event_type = data.get("action") or data.get("observation") or "unknown"
         event_id = data.get("id", "N/A")
         self.logger.debug(f"📡 Emitting to WebSocket: {event_type} (id={event_id})")
-        
+
         # Special logging for state changes
         if data.get("observation") == "agent_state_changed":
-            self.logger.info(f"🔄 Agent state changed to: {data.get('extras', {}).get('agent_state', 'unknown')}")
-        
+            self.logger.info(
+                f"🔄 Agent state changed to: {data.get('extras', {}).get('agent_state', 'unknown')}"
+            )
+
         if self.sio is None:
             self.logger.warning("Socket.IO server not available; dropping event.")
             return
@@ -611,16 +694,31 @@ class Session:
         """Sends an error message to the client."""
         await self.send({"error": True, "message": message})
 
-    async def _send_status_message(self, msg_type: str, runtime_status: RuntimeStatus, message: str) -> None:
+    async def _send_status_message(
+        self, msg_type: str, runtime_status: RuntimeStatus, message: str
+    ) -> None:
         """Sends a status message to the client."""
         if msg_type == "error":
             agent_session = self.agent_session
             controller = self.agent_session.controller
             if controller is not None and (not agent_session.is_closed()):
                 await controller.set_agent_state_to(AgentState.ERROR)
-            self.logger.error(f"Agent status error: {message}", extra={"signal": "agent_status_error"})
-        await self.send({"status_update": True, "type": msg_type, "id": runtime_status.value, "message": message})
+            self.logger.error(
+                f"Agent status error: {message}", extra={"signal": "agent_status_error"}
+            )
+        await self.send(
+            {
+                "status_update": True,
+                "type": msg_type,
+                "id": runtime_status.value,
+                "message": message,
+            }
+        )
 
-    def queue_status_message(self, msg_type: str, runtime_status: RuntimeStatus, message: str) -> None:
+    def queue_status_message(
+        self, msg_type: str, runtime_status: RuntimeStatus, message: str
+    ) -> None:
         """Queues a status message to be sent asynchronously."""
-        asyncio.run_coroutine_threadsafe(self._send_status_message(msg_type, runtime_status, message), self.loop)
+        asyncio.run_coroutine_threadsafe(
+            self._send_status_message(msg_type, runtime_status, message), self.loop
+        )

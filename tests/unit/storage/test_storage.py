@@ -69,7 +69,9 @@ class _StorageTest(ABC):
         self.assertEqual(store.list("foo"), ["foo/bar/"])
         file_names = store.list("foo/bar")
         file_names.sort()
-        self.assertEqual(file_names, ["foo/bar/baz.txt", "foo/bar/quux.txt", "foo/bar/qux.txt"])
+        self.assertEqual(
+            file_names, ["foo/bar/baz.txt", "foo/bar/quux.txt", "foo/bar/qux.txt"]
+        )
         store.delete("foo/bar/baz.txt")
         store.delete("foo/bar/qux.txt")
         store.delete("foo/bar/quux.txt")
@@ -82,7 +84,10 @@ class _StorageTest(ABC):
         store.write("foo/bar/subdir/file.txt", "Hello, world!")
         self.assertEqual(store.list(""), ["foo/"])
         self.assertEqual(sorted(store.list("foo")), ["foo/bar/", "foo/other.txt"])
-        self.assertEqual(sorted(store.list("foo/bar")), ["foo/bar/baz.txt", "foo/bar/qux.txt", "foo/bar/subdir/"])
+        self.assertEqual(
+            sorted(store.list("foo/bar")),
+            ["foo/bar/baz.txt", "foo/bar/qux.txt", "foo/bar/subdir/"],
+        )
         store.delete("foo/bar")
         self.assertEqual(store.list(""), ["foo/"])
         self.assertEqual(store.list("foo"), ["foo/other.txt"])
@@ -91,7 +96,6 @@ class _StorageTest(ABC):
 
 
 class TestLocalFileStore(TestCase, _StorageTest):
-
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp(prefix="FORGE_test_")
         self.store = LocalFileStore(self.temp_dir)
@@ -100,7 +104,9 @@ class TestLocalFileStore(TestCase, _StorageTest):
         try:
             shutil.rmtree(self.temp_dir, ignore_errors=True)
         except Exception as e:
-            logging.warning(f"Failed to remove temporary directory {self.temp_dir}: {e}")
+            logging.warning(
+                f"Failed to remove temporary directory {self.temp_dir}: {e}"
+            )
 
     def test_delete_missing_path_is_noop(self):
         store = self.get_store()
@@ -113,9 +119,12 @@ class TestLocalFileStore(TestCase, _StorageTest):
         # Reading should decode utf-8 bytes without error
         self.assertEqual(store.read("bytes.bin"), "binary payload")
         full_path = store.get_full_path("bytes.bin")
-        with patch("forge.storage.local.os.remove", side_effect=OSError("boom")) as mock_remove, patch(
-            "forge.storage.local.logger"
-        ) as mock_logger:
+        with (
+            patch(
+                "forge.storage.local.os.remove", side_effect=OSError("boom")
+            ) as mock_remove,
+            patch("forge.storage.local.logger") as mock_logger,
+        ):
             store.delete("bytes.bin")
             mock_remove.assert_called_once()
             mock_logger.error.assert_called_once()
@@ -124,27 +133,23 @@ class TestLocalFileStore(TestCase, _StorageTest):
 
 
 class TestInMemoryFileStore(TestCase, _StorageTest):
-
     def setUp(self):
         self.store = InMemoryFileStore()
 
 
 class TestGoogleCloudFileStore(TestCase, _StorageTest):
-
     def setUp(self):
         with patch("google.cloud.storage.Client", _MockGoogleCloudClient):
             self.store = GoogleCloudFileStore("dear-liza")
 
 
 class TestS3FileStore(TestCase, _StorageTest):
-
     def setUp(self):
         with patch("boto3.client", lambda service, **kwargs: _MockS3Client()):
             self.store = S3FileStore("dear-liza")
 
 
 class _MockGoogleCloudClient:
-
     def bucket(self, name: str):
         assert name == "dear-liza"
         return _MockGoogleCloudBucket()
@@ -203,7 +208,6 @@ class _MockGoogleCloudBlobWriter:
 
 
 class _MockS3Client:
-
     def __init__(self):
         self.objects_by_bucket: dict[str, dict[str, _MockS3Object]] = {}
 
@@ -215,11 +219,23 @@ class _MockS3Client:
     def get_object(self, Bucket: str, Key: str) -> dict:
         if Bucket not in self.objects_by_bucket:
             raise botocore.exceptions.ClientError(
-                {"Error": {"Code": "NoSuchBucket", "Message": f"The bucket '{Bucket}' does not exist"}}, "GetObject"
+                {
+                    "Error": {
+                        "Code": "NoSuchBucket",
+                        "Message": f"The bucket '{Bucket}' does not exist",
+                    }
+                },
+                "GetObject",
             )
         if Key not in self.objects_by_bucket[Bucket]:
             raise botocore.exceptions.ClientError(
-                {"Error": {"Code": "NoSuchKey", "Message": f"The specified key '{Key}' does not exist"}}, "GetObject"
+                {
+                    "Error": {
+                        "Code": "NoSuchKey",
+                        "Message": f"The specified key '{Key}' does not exist",
+                    }
+                },
+                "GetObject",
             )
         content = self.objects_by_bucket[Bucket][Key].content
         if isinstance(content, bytes):
@@ -229,16 +245,32 @@ class _MockS3Client:
     def list_objects_v2(self, Bucket: str, Prefix: str = "") -> dict:
         if Bucket not in self.objects_by_bucket:
             raise botocore.exceptions.ClientError(
-                {"Error": {"Code": "NoSuchBucket", "Message": f"The bucket '{Bucket}' does not exist"}}, "ListObjectsV2"
+                {
+                    "Error": {
+                        "Code": "NoSuchBucket",
+                        "Message": f"The bucket '{Bucket}' does not exist",
+                    }
+                },
+                "ListObjectsV2",
             )
         objects = self.objects_by_bucket[Bucket]
-        contents = [{"Key": key} for key in objects.keys() if not Prefix or key.startswith(Prefix)]
+        contents = [
+            {"Key": key}
+            for key in objects.keys()
+            if not Prefix or key.startswith(Prefix)
+        ]
         return {"Contents": contents} if contents else {}
 
     def delete_object(self, Bucket: str, Key: str) -> None:
         if Bucket not in self.objects_by_bucket:
             raise botocore.exceptions.ClientError(
-                {"Error": {"Code": "NoSuchBucket", "Message": f"The bucket '{Bucket}' does not exist"}}, "DeleteObject"
+                {
+                    "Error": {
+                        "Code": "NoSuchBucket",
+                        "Message": f"The bucket '{Bucket}' does not exist",
+                    }
+                },
+                "DeleteObject",
             )
         self.objects_by_bucket[Bucket].pop(Key, None)
 

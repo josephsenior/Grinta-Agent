@@ -15,13 +15,15 @@ def get_likely_indent_size(array_of_tabs) -> int:
 
 def get_target_filepath(self):
     return os.path.join(
-        self.workspace_mount_path, self.biocoder_instance.repository.split("/")[1], self.biocoder_instance.filePath
+        self.workspace_mount_path,
+        self.biocoder_instance.repository.split("/")[1],
+        self.biocoder_instance.filePath,
     )
 
 
 def remove_code(target_filepath: str, line_start: int, line_end: int, language: str):
     comment_prefix = {"python": "#", "java": "//"}
-    with open(target_filepath, "r", encoding='utf-8') as f:
+    with open(target_filepath, "r", encoding="utf-8") as f:
         lines = f.read().split("\n")
         signature_line = lines[line_start - 1]
 
@@ -33,18 +35,24 @@ def remove_code(target_filepath: str, line_start: int, line_end: int, language: 
         comment_indent_size = get_indent_size(signature_line) + indent_size
         lines = (
             lines[:line_start]
-            + [f"{' ' * comment_indent_size + comment_prefix[language.lower()]}TODO: replace with your code here"]
+            + [
+                f"{' ' * comment_indent_size + comment_prefix[language.lower()]}TODO: replace with your code here"
+            ]
             + [""] * 2
             + lines[line_end:]
         )
     first_line_after_removed_index = line_start
-    while len(lines[first_line_after_removed_index].strip()) == 0 and first_line_after_removed_index < len(lines):
+    while len(
+        lines[first_line_after_removed_index].strip()
+    ) == 0 and first_line_after_removed_index < len(lines):
         first_line_after_removed_index += 1
     first_line_after_removed = lines[first_line_after_removed_index]
     print("FIRST LINE AFTER REMOVED: ", first_line_after_removed)
-    with open("/testing_files/first_line_after_removed.txt", "w", encoding='utf-8') as f:
+    with open(
+        "/testing_files/first_line_after_removed.txt", "w", encoding="utf-8"
+    ) as f:
         f.write(first_line_after_removed)
-    with open(target_filepath, "w", encoding='utf-8') as f:
+    with open(target_filepath, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
 

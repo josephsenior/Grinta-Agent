@@ -25,6 +25,7 @@ from forge.runtime.impl.action_execution.action_execution_client import (
     ActionExecutionClient,
 )
 from forge.runtime.impl.docker.containers import stop_all_containers
+from forge.runtime.runtime_manager import RuntimeServerInfo, runtime_manager
 from forge.runtime.runtime_status import RuntimeStatus
 from forge.runtime.utils import find_available_tcp_port
 from forge.runtime.utils.command import (
@@ -208,8 +209,13 @@ class DockerRuntime(ActionExecutionClient):
         self._vscode_port_lock: PortLock | None = None
         self._app_port_locks: list[PortLock] = []
         if os.environ.get("DOCKER_HOST_ADDR"):
-            logger.info("Using DOCKER_HOST_IP: %s for local_runtime_url", os.environ["DOCKER_HOST_ADDR"])
-            self.config.sandbox.local_runtime_url = f"http://{os.environ['DOCKER_HOST_ADDR']}"
+            logger.info(
+                "Using DOCKER_HOST_IP: %s for local_runtime_url",
+                os.environ["DOCKER_HOST_ADDR"],
+            )
+            self.config.sandbox.local_runtime_url = (
+                f"http://{os.environ['DOCKER_HOST_ADDR']}"
+            )
         self.docker_client: docker.DockerClient = self._init_docker_client()
         self.api_url = f"{self.config.sandbox.local_runtime_url}:{self._container_port}"
         logger.info(f"DEBUG: Constructed api_url in __init__: {self.api_url}")
@@ -242,7 +248,7 @@ class DockerRuntime(ActionExecutionClient):
     @property
     def action_execution_server_url(self) -> str:
         """Get action execution server URL.
-        
+
         Returns:
             Server URL for action execution
 
@@ -265,24 +271,38 @@ class DockerRuntime(ActionExecutionClient):
 
             # Build and start new container
             self.maybe_build_runtime_container_image()
-            self.log("info", f"Starting runtime with image: {self.runtime_container_image}")
+            self.log(
+                "info", f"Starting runtime with image: {self.runtime_container_image}"
+            )
             await call_sync_from_async(self.init_container)
-            self.log("info", f"Container started: {self.container_name}. VSCode URL: {self.vscode_url}")
-            
+            self.log(
+                "info",
+                f"Container started: {self.container_name}. VSCode URL: {self.vscode_url}",
+            )
+
             # Give Docker time to assign networking details, then refresh container object
             if not self.config.sandbox.use_host_network:
                 import time
+
                 time.sleep(0.5)  # Give Docker time to assign IP
                 if self.container is not None:
                     self.container.reload()  # Refresh container attributes
                     # Update api_url with container IP for inter-container communication
-                    networks = self.container.attrs.get("NetworkSettings", {}).get("Networks", {})
+                    networks = self.container.attrs.get("NetworkSettings", {}).get(
+                        "Networks", {}
+                    )
                     container_ip = self._select_container_ip(networks)
                     if container_ip:
                         self.api_url = f"http://{container_ip}:{self._container_port}"
-                        self.log("info", f"Updated api_url for container network: {self.api_url}")
+                        self.log(
+                            "info",
+                            f"Updated api_url for container network: {self.api_url}",
+                        )
                     else:
-                        self.log("warning", f"Could not get container IP, using: {self.api_url}")
+                        self.log(
+                            "warning",
+                            f"Could not get container IP, using: {self.api_url}",
+                        )
 
     def _setup_log_streamer(self) -> None:
         """Setup log streamer if in debug mode and container is available."""
@@ -290,6 +310,34 @@ class DockerRuntime(ActionExecutionClient):
             self.log_streamer = LogStreamer(self.container, self.log)
         else:
             self.log_streamer = None
+
+    def _register_runtime_session(self, is_warm_start: bool) -> None:
+        """Register the current runtime instance with the shared runtime manager."""
+        log_thread = (
+            self.log_streamer.stdout_thread
+            if self.log_streamer and hasattr(self.log_streamer, "stdout_thread")
+            else None
+        )
+        runtime_manager.register_running(
+            self.sid,
+            "docker",
+            RuntimeServerInfo(
+                process=None,
+                execution_server_port=self._container_port,
+                vscode_port=self._vscode_port,
+                app_ports=list(self._app_ports),
+                log_thread=log_thread,
+                temp_workspace=self.config.workspace_mount_path_in_sandbox,
+                workspace_mount_path=self.config.workspace_mount_path_in_sandbox,
+            ),
+            metadata={
+                "container_name": self.container_name,
+                "runtime_image": self.runtime_container_image or "",
+                "api_url": self.api_url or "",
+                "attach_to_existing": str(self.attach_to_existing).lower(),
+                "warm_start": str(is_warm_start).lower(),
+            },
+        )
 
     async def _wait_for_runtime_ready(self) -> None:
         """Wait for the runtime to become ready and setup initial environment."""
@@ -315,7 +363,9 @@ class DockerRuntime(ActionExecutionClient):
             f"Container initialized with plugins: {[plugin.name for plugin in self.plugins]}. VSCode URL: {self.vscode_url}",
         )
 
-    def _select_container_ip(self, networks: dict[str, dict[str, typing.Any]]) -> str | None:
+    def _select_container_ip(
+        self, networks: dict[str, dict[str, typing.Any]]
+    ) -> str | None:
         """Select the best container IP address from available Docker networks.
 
         Prioritizes custom networks (e.g., 'forge-network') over default 'bridge' network
@@ -370,9 +420,15 @@ class DockerRuntime(ActionExecutionClient):
                 if self.container is not None:
                     network.connect(self.container)
                 else:
-                    self.log("warning", f"Container not available to connect to network {network_name}")
+                    self.log(
+                        "warning",
+                        f"Container not available to connect to network {network_name}",
+                    )
             except Exception as e:
-                self.log("error", f"Error: Failed to connect instance {self.container_name} to network {network_name}")
+                self.log(
+                    "error",
+                    f"Error: Failed to connect instance {self.container_name} to network {network_name}",
+                )
                 self.log("error", str(e))
 
     async def connect(self) -> None:
@@ -402,6 +458,9 @@ class DockerRuntime(ActionExecutionClient):
         # Setup log streamer
         self._setup_log_streamer()
 
+        # Register runtime session for observability
+        self._register_runtime_session(is_warm_start)
+
         # Wait for runtime to be ready
         await self._wait_for_runtime_ready()
 
@@ -425,18 +484,18 @@ class DockerRuntime(ActionExecutionClient):
 
     def maybe_build_runtime_container_image(self) -> None:
         """Build runtime container image if needed.
-        
+
         Builds custom image with dependencies if base image specified.
         """
         if self.runtime_container_image is None:
             if self.base_container_image is None:
                 msg = "Neither runtime container image nor base container image is set"
                 raise ValueError(msg)
-            
+
             try:
                 self.set_runtime_status(RuntimeStatus.BUILDING_RUNTIME)
                 logger.info("Starting to build runtime container image...")
-                
+
                 # Build the runtime image with proper error handling
                 self.runtime_container_image = build_runtime_image(
                     self.base_container_image,
@@ -447,9 +506,12 @@ class DockerRuntime(ActionExecutionClient):
                     extra_build_args=self.config.sandbox.runtime_extra_build_args,
                     enable_browser=self.config.enable_browser,
                 )
-                
-                logger.info("Successfully built runtime container image: %s", self.runtime_container_image)
-                
+
+                logger.info(
+                    "Successfully built runtime container image: %s",
+                    self.runtime_container_image,
+                )
+
             except Exception as e:
                 logger.error("Failed to build runtime container image: %s", e)
                 # Set status to ERROR to prevent getting stuck in BUILDING_RUNTIME
@@ -486,7 +548,8 @@ class DockerRuntime(ActionExecutionClient):
             return docker.from_env()
         except Exception:
             logger.error(
-                "Launch docker client failed. Please make sure you have installed docker and started docker desktop/daemon.", )
+                "Launch docker client failed. Please make sure you have installed docker and started docker desktop/daemon.",
+            )
             raise
 
     def _process_volumes(self) -> dict[str, dict[str, str]]:
@@ -520,13 +583,20 @@ class DockerRuntime(ActionExecutionClient):
                         container_path,
                         mount_mode,
                     )
-        elif self.config.workspace_mount_path is not None and self.config.workspace_mount_path_in_sandbox is not None:
+        elif (
+            self.config.workspace_mount_path is not None
+            and self.config.workspace_mount_path_in_sandbox is not None
+        ):
             mount_mode = "rw"
             volumes[os.path.abspath(self.config.workspace_mount_path)] = {
                 "bind": self.config.workspace_mount_path_in_sandbox,
                 "mode": mount_mode,
             }
-            logger.debug("Mount dir (legacy): %s with mode: %s", self.config.workspace_mount_path, mount_mode)
+            logger.debug(
+                "Mount dir (legacy): %s with mode: %s",
+                self.config.workspace_mount_path,
+                mount_mode,
+            )
         return volumes
 
     def _process_overlay_mounts(self) -> list[Mount]:
@@ -571,7 +641,11 @@ class DockerRuntime(ActionExecutionClient):
                 target=container_path,
                 source="",
                 type="volume",
-                labels={"app": "forge", "role": "worker", "container": self.container_name},
+                labels={
+                    "app": "forge",
+                    "role": "worker",
+                    "container": self.container_name,
+                },
                 driver_config=driver_cfg,
             )
             overlay_mounts.append(mount)
@@ -599,21 +673,84 @@ class DockerRuntime(ActionExecutionClient):
             RuntimeError: If no available ports found in any range (resource exhaustion)
 
         """
-        self._host_port, self._host_port_lock = self._find_available_port_with_lock(EXECUTION_SERVER_PORT_RANGE)
+        self._host_port, self._host_port_lock = self._find_available_port_with_lock(
+            EXECUTION_SERVER_PORT_RANGE
+        )
         self._container_port = self._host_port
 
         if self.config.sandbox.vscode_port:
             self._vscode_port = self.config.sandbox.vscode_port
             self._vscode_port_lock = None
         else:
-            self._vscode_port, self._vscode_port_lock = self._find_available_port_with_lock(VSCODE_PORT_RANGE)
+            self._vscode_port, self._vscode_port_lock = (
+                self._find_available_port_with_lock(VSCODE_PORT_RANGE)
+            )
 
         app_port_1, app_lock_1 = self._find_available_port_with_lock(APP_PORT_RANGE_1)
         app_port_2, app_lock_2 = self._find_available_port_with_lock(APP_PORT_RANGE_2)
         self._app_ports = [app_port_1, app_port_2]
-        self._app_port_locks = [lock for lock in [app_lock_1, app_lock_2] if lock is not None]
+        self._app_port_locks = [
+            lock for lock in [app_lock_1, app_lock_2] if lock is not None
+        ]
         self.api_url = f"{self.config.sandbox.local_runtime_url}:{self._container_port}"
-        logger.info(f"DEBUG: Constructed api_url in _find_available_ports: {self.api_url}")
+        logger.info(
+            f"DEBUG: Constructed api_url in _find_available_ports: {self.api_url}"
+        )
+
+    def _get_security_options(self) -> dict[str, Any]:
+        """Get security options for Docker container.
+
+        Returns:
+            Dictionary of security options for container creation
+        """
+        import os
+        from docker.types import Ulimit
+
+        security_enabled = os.getenv("DOCKER_SECURITY_ENABLED", "true").lower() in ("true", "1", "yes")
+        
+        if not security_enabled:
+            return {}
+
+        options: dict[str, Any] = {
+            # Drop dangerous capabilities
+            "cap_drop": [
+                "ALL",  # Drop all capabilities first
+            ],
+            # Add only necessary capabilities
+            "cap_add": [
+                "CHOWN",
+                "SETGID",
+                "SETUID",
+                "NET_BIND_SERVICE",  # For binding to ports < 1024
+            ],
+            # Security options
+            "security_opt": [
+                "no-new-privileges:true",  # Prevent privilege escalation
+            ],
+            # Read-only root filesystem (with tmpfs for writable dirs)
+            "read_only": False,  # Set to True if workspace is mounted separately
+            # Resource limits
+            "mem_limit": os.getenv("DOCKER_MEMORY_LIMIT", "2g"),  # 2GB default
+            "cpu_quota": int(os.getenv("DOCKER_CPU_QUOTA", "50000")),  # 50% of one CPU
+            "cpu_period": int(os.getenv("DOCKER_CPU_PERIOD", "100000")),  # 100ms period
+            "pids_limit": int(os.getenv("DOCKER_PIDS_LIMIT", "100")),  # Max 100 processes
+            # Ulimits
+            "ulimits": [
+                Ulimit(name="nofile", soft=1024, hard=2048),  # File descriptors
+                Ulimit(name="nproc", soft=64, hard=128),  # Processes
+            ],
+            # Temporary filesystems for writable directories
+            "tmpfs": {
+                "/tmp": "size=100m,noexec,nosuid",  # 100MB tmpfs, no exec, no suid
+            },
+        }
+
+        # Add seccomp profile if available
+        seccomp_profile = os.getenv("DOCKER_SECCOMP_PROFILE")
+        if seccomp_profile:
+            options["security_opt"].append(f"seccomp={seccomp_profile}")
+
+        return options
 
     def _configure_network_and_ports(
         self,
@@ -625,9 +762,14 @@ class DockerRuntime(ActionExecutionClient):
 
         if not use_host_network:
             binding_address = self.config.sandbox.runtime_binding_address or "0.0.0.0"
-            port_mapping = {f"{self._container_port}/tcp": (binding_address, self._host_port)}
+            port_mapping = {
+                f"{self._container_port}/tcp": (binding_address, self._host_port)
+            }
             if self._vscode_enabled:
-                port_mapping[f"{self._vscode_port}/tcp"] = (binding_address, self._vscode_port)
+                port_mapping[f"{self._vscode_port}/tcp"] = (
+                    binding_address,
+                    self._vscode_port,
+                )
             for port in self._app_ports:
                 port_mapping[f"{port}/tcp"] = (binding_address, port)
         else:
@@ -661,11 +803,15 @@ class DockerRuntime(ActionExecutionClient):
         gpu_ids = self.config.sandbox.cuda_visible_devices
         if gpu_ids is None:
             return [docker.types.DeviceRequest(capabilities=[["gpu"]], count=-1)]
-        return [docker.types.DeviceRequest(capabilities=[["gpu"]], device_ids=[str(i) for i in gpu_ids.split(",")])]
+        return [
+            docker.types.DeviceRequest(
+                capabilities=[["gpu"]], device_ids=[str(i) for i in gpu_ids.split(",")]
+            )
+        ]
 
     def init_container(self) -> None:
         """Initialize Docker container for runtime.
-        
+
         Allocates ports, configures networking, and starts container.
         """
         self.log("debug", "Preparing to start container...")
@@ -684,9 +830,13 @@ class DockerRuntime(ActionExecutionClient):
         self.log("debug", f"Workspace Base: {self.config.workspace_base}")
         volumes = self._process_volumes()
         if not volumes:
-            logger.debug("Mount dir is not set, will not mount the workspace directory to the container")
+            logger.debug(
+                "Mount dir is not set, will not mount the workspace directory to the container"
+            )
             volumes = {}
-        self.log("debug", f"Sandbox workspace: {self.config.workspace_mount_path_in_sandbox}")
+        self.log(
+            "debug", f"Sandbox workspace: {self.config.workspace_mount_path_in_sandbox}"
+        )
         raw_command = self.get_action_execution_server_startup_command()
 
         # Ensure the workspace directory exists and is owned by the sandbox user before the
@@ -721,9 +871,13 @@ class DockerRuntime(ActionExecutionClient):
                 msg = "Runtime container image is not set"
                 raise ValueError(msg)
             overlay_mounts = self._process_overlay_mounts()
-            
+
             runtime_kwargs = self.config.sandbox.docker_runtime_kwargs or {}
             entrypoint: list[str] = []
+            
+            # Security hardening options
+            security_options = self._get_security_options()
+            
             self.container = self.docker_client.containers.run(
                 self.runtime_container_image,
                 command=command,
@@ -737,37 +891,60 @@ class DockerRuntime(ActionExecutionClient):
                 volumes=volumes,
                 mounts=overlay_mounts,
                 device_requests=device_requests,
+                security_opt=security_options.get("security_opt", []),
+                cap_drop=security_options.get("cap_drop", []),
+                cap_add=security_options.get("cap_add", []),
+                read_only=security_options.get("read_only", False),
+                tmpfs=security_options.get("tmpfs", {}),
+                mem_limit=security_options.get("mem_limit"),
+                cpu_quota=security_options.get("cpu_quota"),
+                cpu_period=security_options.get("cpu_period"),
+                pids_limit=security_options.get("pids_limit"),
+                ulimits=security_options.get("ulimits", []),
                 **runtime_kwargs,
             )
             self.log("debug", f"Container started. Server url: {self.api_url}")
             self.set_runtime_status(RuntimeStatus.RUNTIME_STARTED)
         except Exception:
-            self.log("error", f"Error: Instance {self.container_name} FAILED to start container!\n")
+            self.log(
+                "error",
+                f"Error: Instance {self.container_name} FAILED to start container!\n",
+            )
             self.close()
             raise
 
     def _validate_container_status(self, container: Any) -> None:
         """Validate container is running, remove if exited.
-        
+
         Args:
             container: Docker container object
-            
+
         Raises:
             docker.errors.NotFound: If container is not running
 
         """
         if container.status == "exited":
-            self.log("warning", f"Container {self.container_name} has exited. Removing and will create fresh.")
+            self.log(
+                "warning",
+                f"Container {self.container_name} has exited. Removing and will create fresh.",
+            )
             container.remove(force=True)
-            raise docker.errors.NotFound(f"Container {self.container_name} was exited and removed")
-        
+            raise docker.errors.NotFound(
+                f"Container {self.container_name} was exited and removed"
+            )
+
         if container.status != "running":
-            self.log("warning", f"Container {self.container_name} status is {container.status}, not running")
-            raise docker.errors.NotFound(f"Container {self.container_name} is not running")
+            self.log(
+                "warning",
+                f"Container {self.container_name} status is {container.status}, not running",
+            )
+            raise docker.errors.NotFound(
+                f"Container {self.container_name} is not running"
+            )
 
     def _extract_port_config(self, config: dict) -> None:
         """Extract port configuration from container config.
-        
+
         Args:
             config: Container config dictionary
 
@@ -778,7 +955,7 @@ class DockerRuntime(ActionExecutionClient):
                 self._container_port = self._host_port
             elif env_var.startswith("VSCODE_PORT="):
                 self._vscode_port = int(env_var.split("VSCODE_PORT=")[1])
-        
+
         self._app_ports = []
         if exposed_ports := config.get("ExposedPorts"):
             for exposed_port in exposed_ports:
@@ -788,7 +965,7 @@ class DockerRuntime(ActionExecutionClient):
 
     def _setup_api_url_from_container(self, container: Any) -> None:
         """Setup API URL based on container network configuration.
-        
+
         Args:
             container: Docker container object
 
@@ -800,23 +977,32 @@ class DockerRuntime(ActionExecutionClient):
                 self.api_url = f"http://{container_ip}:{self._container_port}"
                 logger.info(f"DEBUG: Using container IP for api_url: {self.api_url}")
             else:
-                self.api_url = f"{self.config.sandbox.local_runtime_url}:{self._container_port}"
-                logger.warning(f"DEBUG: No container IP found, using configured URL: {self.api_url}")
+                self.api_url = (
+                    f"{self.config.sandbox.local_runtime_url}:{self._container_port}"
+                )
+                logger.warning(
+                    f"DEBUG: No container IP found, using configured URL: {self.api_url}"
+                )
         else:
-            self.api_url = f"{self.config.sandbox.local_runtime_url}:{self._container_port}"
+            self.api_url = (
+                f"{self.config.sandbox.local_runtime_url}:{self._container_port}"
+            )
             logger.info(f"DEBUG: Using host network, api_url: {self.api_url}")
 
     def _attach_to_container(self) -> None:
         """Attach to existing container and extract configuration."""
         self.container = self.docker_client.containers.get(self.container_name)
-        
+
         self._validate_container_status(self.container)
-        
+
         config = self.container.attrs["Config"]
         self._extract_port_config(config)
         self._setup_api_url_from_container(self.container)
-        
-        self.log("debug", f"attached to container: {self.container_name} {self._container_port} {self.api_url}")
+
+        self.log(
+            "debug",
+            f"attached to container: {self.container_name} {self._container_port} {self.api_url}",
+        )
 
     @tenacity.retry(
         stop=tenacity.stop_after_delay(120) | stop_if_should_exit(),
@@ -828,7 +1014,7 @@ class DockerRuntime(ActionExecutionClient):
     )
     def wait_until_alive(self) -> None:
         """Wait for Docker container and action execution server to be ready.
-        
+
         Polls container status and server health endpoint until ready or timeout.
         """
         try:
@@ -848,13 +1034,16 @@ class DockerRuntime(ActionExecutionClient):
         - rm_all_containers (bool): Whether to remove all containers with the 'Forge-sandbox-' prefix
         """
         super().close()
+        runtime_manager.deregister_running(self.sid)
         if self.log_streamer:
             self.log_streamer.close()
         if rm_all_containers is None:
             rm_all_containers = self.config.sandbox.rm_all_containers
         if self.config.sandbox.keep_runtime_alive or self.attach_to_existing:
             return
-        close_prefix = CONTAINER_NAME_PREFIX if rm_all_containers else self.container_name
+        close_prefix = (
+            CONTAINER_NAME_PREFIX if rm_all_containers else self.container_name
+        )
         stop_all_containers(close_prefix)
         self._release_port_locks()
 
@@ -938,7 +1127,10 @@ class DockerRuntime(ActionExecutionClient):
             lock_timeout=1.0,
         )
         if result is None:
-            logger.warning("Port locking failed for range %s, falling back to original method", port_range)
+            logger.warning(
+                "Port locking failed for range %s, falling back to original method",
+                port_range,
+            )
             port = port_range[1]
             for _ in range(max_attempts):
                 port = find_available_tcp_port(port_range[0], port_range[1])
@@ -952,7 +1144,9 @@ class DockerRuntime(ActionExecutionClient):
             return self._find_available_port_with_lock(port_range, max_attempts - 1)
         return (port, port_lock)
 
-    def _find_available_port(self, port_range: tuple[int, int], max_attempts: int = 5) -> int:
+    def _find_available_port(
+        self, port_range: tuple[int, int], max_attempts: int = 5
+    ) -> int:
         """Find an available port (legacy method for backward compatibility)."""
         port, _ = self._find_available_port_with_lock(port_range, max_attempts)
         return port
@@ -960,7 +1154,7 @@ class DockerRuntime(ActionExecutionClient):
     @property
     def vscode_url(self) -> str | None:
         """Get VS Code server URL with authentication token.
-        
+
         Returns:
             VS Code URL or None if not available
 
@@ -972,13 +1166,15 @@ class DockerRuntime(ActionExecutionClient):
     @property
     def web_hosts(self) -> dict[str, int]:
         """Get detected web server hosts from runtime.
-        
+
         Returns:
             Dictionary mapping URLs to ports
 
         """
         host_addr = os.environ.get("DOCKER_HOST_ADDR", "localhost")
-        hosts: dict[str, int] = {f"http://{host_addr}:{port}": port for port in self._app_ports}
+        hosts: dict[str, int] = {
+            f"http://{host_addr}:{port}": port for port in self._app_ports
+        }
         return hosts
 
     def pause(self) -> None:
@@ -1007,7 +1203,7 @@ class DockerRuntime(ActionExecutionClient):
     @classmethod
     async def delete(cls, conversation_id: str) -> None:
         """Delete Docker runtime resources for conversation.
-        
+
         Args:
             conversation_id: Conversation ID to clean up
 
@@ -1026,7 +1222,7 @@ class DockerRuntime(ActionExecutionClient):
 
     def get_action_execution_server_startup_command(self) -> list[str]:
         """Get command to start action execution server in container.
-        
+
         Returns:
             Command list for starting server
 

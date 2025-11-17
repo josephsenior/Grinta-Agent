@@ -146,8 +146,8 @@ RUN mkdir -p /Forge/micromamba/bin && \
     echo 'export PATH="/Forge/micromamba/bin:$PATH"' >> /etc/environment
 
 # Create the Forge virtual environment and install poetry and python
-RUN /Forge/micromamba/bin/micromamba create -n forge -y && \
-    /Forge/micromamba/bin/micromamba install -n forge -c conda-forge poetry python=3.12 -y
+RUN /Forge/micromamba/bin/micromamba create -n Forge -y && \
+    /Forge/micromamba/bin/micromamba install -n Forge -c conda-forge poetry python=3.12 -y
 
 # Create a clean Forge directory including only the pyproject.toml, poetry.lock and Forge/__init__.py
 RUN \
@@ -175,12 +175,12 @@ USER Forge
 ENV SKIP_VSCODE_BUILD=1
 RUN \
     /Forge/micromamba/bin/micromamba config set changeps1 False && \
-    /Forge/micromamba/bin/micromamba run -n forge poetry config virtualenvs.path /Forge/poetry && \
-    /Forge/micromamba/bin/micromamba run -n forge poetry env use python3.12 && \
+    /Forge/micromamba/bin/micromamba run -n Forge poetry config virtualenvs.path /Forge/poetry && \
+    /Forge/micromamba/bin/micromamba run -n Forge poetry env use python3.12 && \
     # Install project dependencies (including forge package)
-    /Forge/micromamba/bin/micromamba run -n forge poetry install --no-interaction --no-ansi && \
+    /Forge/micromamba/bin/micromamba run -n Forge poetry install --no-interaction --no-ansi && \
     # Clean up user caches
-    /Forge/micromamba/bin/micromamba run -n forge poetry cache clear --all . -n && \
+    /Forge/micromamba/bin/micromamba run -n Forge poetry cache clear --all . -n && \
     /Forge/micromamba/bin/micromamba clean --all
 
 
@@ -203,7 +203,7 @@ RUN \
     # Install Playwright browsers in shared location accessible to all users
     export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers && \
     mkdir -p /opt/playwright-browsers && \
-    /Forge/micromamba/bin/micromamba run -n forge poetry run playwright install chromium && \
+    /Forge/micromamba/bin/micromamba run -n Forge poetry run playwright install chromium && \
     # Set proper permissions for shared access
     chmod -R 755 /opt/playwright-browsers && \
     # Create cache directories and symlinks for both users
@@ -215,7 +215,7 @@ RUN \
     # Set environment variable for all users
     echo 'export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers' >> /etc/environment && \
     # Set environment variables (requires root)
-    /Forge/micromamba/bin/micromamba run -n forge poetry run python -c "import sys; print('OH_INTERPRETER_PATH=' + sys.executable)" >> /etc/environment && \
+    /Forge/micromamba/bin/micromamba run -n Forge poetry run python -c "import sys; print('OH_INTERPRETER_PATH=' + sys.executable)" >> /etc/environment && \
     # Set permissions for shared read-only access
     chmod -R 755 /Forge/poetry && \
     chmod -R 755 /Forge/micromamba && \
@@ -230,12 +230,12 @@ RUN \
     echo 'export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"' >> /etc/bash.bashrc && \
     # Set up conda environment activation for all users
     echo 'eval "$(/Forge/micromamba/bin/micromamba shell hook --shell bash)"' >> /etc/bash.bashrc && \
-    echo 'micromamba activate forge 2>/dev/null || true' >> /etc/bash.bashrc && \
+    echo 'micromamba activate Forge 2>/dev/null || true' >> /etc/bash.bashrc && \
     # Set up environment for root user
     echo 'export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/Forge/micromamba/bin:$PATH"' >> /root/.bashrc && \
     echo 'export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers' >> /root/.bashrc && \
     echo 'eval "$(/Forge/micromamba/bin/micromamba shell hook --shell bash)"' >> /root/.bashrc && \
-    echo 'micromamba activate forge 2>/dev/null || true' >> /root/.bashrc && \
+    echo 'micromamba activate Forge 2>/dev/null || true' >> /root/.bashrc && \
     # Clean up system packages (requires root)
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -308,7 +308,7 @@ RUN \
     echo 'export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/Forge/micromamba/bin:$PATH"' >> /home/Forge/.bashrc && \
     echo 'export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers' >> /home/Forge/.bashrc && \
     echo 'eval "$(/Forge/micromamba/bin/micromamba shell hook --shell bash)"' >> /home/Forge/.bashrc && \
-    echo 'micromamba activate forge 2>/dev/null || true' >> /home/Forge/.bashrc && \
+    echo 'micromamba activate Forge 2>/dev/null || true' >> /home/Forge/.bashrc && \
     chown Forge:Forge /home/Forge/.bashrc
 
 # Switch to non-root user for security

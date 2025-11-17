@@ -73,8 +73,7 @@ The MetaSOP Visualization System transforms raw agent artifacts into beautiful, 
 
 1. **`template_loader.py`**: Loads MetaSOP agent templates
 2. **`event_emitter.py`**: Structures and emits events
-3. **`clean_orchestrator.py`**: Wraps legacy orchestrator
-4. **`clean_router.py`**: Routes MetaSOP requests
+3. **`router.py`**: Routes MetaSOP requests via the canonical orchestrator helpers
 
 #### **Frontend Components**
 
@@ -383,10 +382,10 @@ export function useCleanMetaSOPOrchestration(events: any[]) {
 
 ```bash
 # 1. Start backend and frontend
-python -m Forge.server --port 3001
+python -m forge.server
 cd frontend && npm run dev
 
-# 2. Open http://localhost:3001
+# 2. Open http://localhost:3000 (or http://localhost:5173 for dev server)
 
 # 3. In chat, type:
 sop: Create a todo app with authentication
@@ -398,7 +397,7 @@ sop: Create a todo app with authentication
 
 ```python
 # Backend: Trigger MetaSOP with visualization
-from forge.metasop.clean_router import run_clean_metasop_orchestration
+from forge.metasop.router import run_clean_metasop_orchestration
 
 async def example():
     await run_clean_metasop_orchestration(

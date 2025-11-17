@@ -11,19 +11,27 @@ from forge.server.routes import public as public_routes
 
 @pytest.mark.asyncio
 async def test_get_litellm_models(monkeypatch):
-    monkeypatch.setattr(public_routes, "get_supported_llm_models", lambda cfg: ["gpt-4", "gpt-3.5-turbo"])
+    monkeypatch.setattr(
+        public_routes,
+        "get_supported_llm_models",
+        lambda cfg: ["gpt-4", "gpt-3.5-turbo"],
+    )
     assert await public_routes.get_litellm_models() == ["gpt-4", "gpt-3.5-turbo"]
 
 
 @pytest.mark.asyncio
 async def test_get_agents(monkeypatch):
-    monkeypatch.setattr(public_routes.Agent, "list_agents", lambda: ["beta", "alpha", "gamma"])
+    monkeypatch.setattr(
+        public_routes.Agent, "list_agents", lambda: ["beta", "alpha", "gamma"]
+    )
     assert await public_routes.get_agents() == ["alpha", "beta", "gamma"]
 
 
 @pytest.mark.asyncio
 async def test_get_security_analyzers(monkeypatch):
-    monkeypatch.setattr(public_routes, "SecurityAnalyzers", {"bandit": object(), "semgrep": object()})
+    monkeypatch.setattr(
+        public_routes, "SecurityAnalyzers", {"bandit": object(), "semgrep": object()}
+    )
     assert await public_routes.get_security_analyzers() == ["bandit", "semgrep"]
 
 

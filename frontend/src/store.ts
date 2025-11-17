@@ -12,6 +12,7 @@ import metricsReducer from "./state/metrics-slice";
 import microagentManagementReducer from "./state/microagent-management-slice";
 import eventMessageReducer from "./state/event-message-slice";
 import streamingReducer from "./store/streaming-slice";
+import notificationsReducer from "./store/notifications-slice";
 
 export const rootReducer = combineReducers({
   fileState: fileStateReducer,
@@ -27,6 +28,7 @@ export const rootReducer = combineReducers({
   microagentManagement: microagentManagementReducer,
   eventMessage: eventMessageReducer,
   streaming: streamingReducer,
+  notifications: notificationsReducer,
 });
 
 const store = configureStore({

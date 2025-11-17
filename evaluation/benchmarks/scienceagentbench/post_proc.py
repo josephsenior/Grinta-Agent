@@ -7,7 +7,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     fname = args.log_fname
     out_fname = args.log_fname.replace(".jsonl", ".converted.jsonl")
-    log = [json.loads(line) for line in open(fname, encoding='utf-8')]
+    log = [json.loads(line) for line in open(fname, encoding="utf-8")]
     simple_log = [
         json.dumps(
             {

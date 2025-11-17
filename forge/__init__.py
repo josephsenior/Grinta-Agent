@@ -15,7 +15,10 @@ def get_version():
     """
     try:
         root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        candidate_paths = [Path(root_dir) / "pyproject.toml", Path(root_dir) / "forge" / "pyproject.toml"]
+        candidate_paths = [
+            Path(root_dir) / "pyproject.toml",
+            Path(root_dir) / "forge" / "pyproject.toml",
+        ]
         for file_path in candidate_paths:
             if file_path.is_file():
                 with open(file_path, encoding="utf-8") as f:

@@ -34,7 +34,9 @@ AGENT_CLS_TO_INST_SUFFIX = {
 def get_config(metadata: EvalMetadata) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = "python:3.12-bookworm"
-    config = get_FORGE_config_for_eval(metadata=metadata, runtime="docker", sandbox_config=sandbox_config)
+    config = get_FORGE_config_for_eval(
+        metadata=metadata, runtime="docker", sandbox_config=sandbox_config
+    )
     config.set_llm_config(metadata.llm_config)
     agent_config = config.get_agent_config(metadata.agent_class)
     agent_config.enable_prompt_extensions = False
@@ -71,9 +73,7 @@ def process_instance(instance: Any, metadata: EvalMetadata, reset_logger: bool =
     else:
         logger.info("Starting evaluation for instance %s.", qid)
     instruction = encode_question(question)
-    instruction += (
-        "IMPORTANT: You should ONLY interact with the environment provided to you AND NEVER ASK FOR HUMAN HELP.\n"
-    )
+    instruction += "IMPORTANT: You should ONLY interact with the environment provided to you AND NEVER ASK FOR HUMAN HELP.\n"
     instruction += AGENT_CLS_TO_INST_SUFFIX[metadata.agent_class]
     logger.info("Instruction:\n%s", instruction, extra={"msg_type": "OBSERVATION"})
     runtime = create_runtime(config)
@@ -84,7 +84,9 @@ def process_instance(instance: Any, metadata: EvalMetadata, reset_logger: bool =
             config=config,
             initial_user_action=MessageAction(content=instruction),
             runtime=runtime,
-            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[metadata.agent_class],
+            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[
+                metadata.agent_class
+            ],
         )
     )
     if state is None:
@@ -134,16 +136,34 @@ if __name__ == "__main__":
         raise ValueError(f"Could not find LLM config: --llm_config {args.llm_config}")
     dataset = ""
     hardness = ""
-    dataset_choices = ["agenda", "airbnb", "coffee", "dblp", "flight", "gsm8k", "scirex", "yelp", "genda"]
+    dataset_choices = [
+        "agenda",
+        "airbnb",
+        "coffee",
+        "dblp",
+        "flight",
+        "gsm8k",
+        "scirex",
+        "yelp",
+        "genda",
+    ]
     if args.dataset not in dataset_choices:
-        raise ValueError("Please choose from agenda, airbnb, coffee, dblp, flight, gsm8k, scirex, yelp for dataset.")
+        raise ValueError(
+            "Please choose from agenda, airbnb, coffee, dblp, flight, gsm8k, scirex, yelp for dataset."
+        )
     if args.hardness not in ["easy", "hard"]:
         raise ValueError("Please choose from easy and hard for hardness.")
     toolqa_test = pd.DataFrame(get_data(dataset, hardness))
     toolqa_test.rename(columns={"qid": "instance_id"}, inplace=True)
     metadata = make_metadata(
-        llm_config, f"toolqa-{args.dataset}-{args.hardness}", args.agent_cls, args.eval_note, args.eval_output_dir
+        llm_config,
+        f"toolqa-{args.dataset}-{args.hardness}",
+        args.agent_cls,
+        args.eval_note,
+        args.eval_output_dir,
     )
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
     instances = prepare_dataset(toolqa_test, output_file, args.eval_n_limit)
-    run_evaluation(instances, metadata, output_file, args.eval_num_workers, process_instance)
+    run_evaluation(
+        instances, metadata, output_file, args.eval_num_workers, process_instance
+    )

@@ -78,7 +78,7 @@ function SecretsSettingsScreen() {
   return (
     <div
       data-testid="secrets-settings-screen"
-      className="px-11 py-9 flex flex-col gap-5"
+      className="p-6 sm:p-8 lg:p-10 flex flex-col gap-6 lg:gap-8"
     >
       {isLoadingSecrets && view === "list" && (
         <ul>
@@ -114,7 +114,7 @@ function SecretsSettingsScreen() {
       )}
 
       {view === "list" && (
-        <div className="border border-violet-500/20 rounded-md overflow-hidden">
+        <div className="border border-white/10 rounded-xl overflow-hidden">
           <table className="w-full">
             <thead className="bg-base-tertiary">
               <tr className="flex w-full items-center">

@@ -156,6 +156,19 @@ retry_max_wait = 120
 agent_mode = "simple"
 
 [agent]
+schema_version = "2025-11-14"
+
+[runtime_pool]
+enabled = true
+
+[runtime_pool.default]
+max_size = 2
+ttl_seconds = 600
+
+# Example override:
+# [runtime_pool.overrides.docker]
+# max_size = 4
+# ttl_seconds = 900
 llm_config = 'llm'
 
 # ============================================================================

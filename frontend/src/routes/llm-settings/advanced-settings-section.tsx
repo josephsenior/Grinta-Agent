@@ -59,7 +59,7 @@ export function AdvancedSettingsSection({
   return (
     <div
       data-testid="llm-settings-form-advanced"
-      className="flex flex-col gap-6"
+      className="flex flex-col gap-8"
     >
       <SettingsInput
         testId="llm-custom-model-input"
@@ -146,12 +146,12 @@ export function AdvancedSettingsSection({
         onChange={onAgentChange}
         placeholder="CodeActAgent"
       />
-      <div className="flex flex-wrap gap-2 text-xs text-text-tertiary">
+      <div className="flex flex-wrap gap-2 text-xs text-foreground-tertiary">
         {agentOptions.map((option) => (
           <button
             key={option.key}
             type="button"
-            className="px-2 py-1 rounded border border-border hover:border-brand-500/50 hover:text-text-primary transition-colors"
+            className="px-3 py-1.5 rounded-xl border border-white/10 bg-black/60 text-foreground-secondary hover:border-white/20 hover:text-foreground hover:bg-white/5 transition-all"
             onClick={() => onAgentChange(option.label)}
           >
             {option.label}
@@ -160,8 +160,8 @@ export function AdvancedSettingsSection({
       </div>
       <input type="hidden" name="agent-input" value={agentValue} />
 
-      <div className="border-t border-violet-500/20 pt-6 mt-2">
-        <h3 className="text-lg font-semibold mb-4 text-white">
+      <div className="border-t border-white/10 pt-6 mt-2">
+        <h3 className="text-lg font-semibold mb-4 text-foreground">
           Advanced LLM Configuration
         </h3>
         <AdvancedLLMConfig
@@ -202,7 +202,7 @@ export function AdvancedSettingsSection({
           onChange={onCondenserMaxSizeChange}
           isDisabled={!enableDefaultCondenser}
         />
-        <p className="text-xs text-text-foreground-secondary mt-1">
+        <p className="text-xs text-foreground-secondary mt-1">
           {t(I18nKey.SETTINGS$CONDENSER_MAX_SIZE_TOOLTIP)}
         </p>
       </div>

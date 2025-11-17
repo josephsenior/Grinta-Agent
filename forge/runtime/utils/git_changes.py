@@ -68,15 +68,19 @@ def get_valid_ref(repo_dir: str) -> str | None:
     except RuntimeError:
         pass
     try:
-        default_branch = run('git --no-pager remote show origin | grep "HEAD branch"', repo_dir).split()[-1].strip()
-        ref_non_default_branch = (
-            f'$(git --no-pager merge-base HEAD "$(git --no-pager rev-parse --abbrev-ref origin/{default_branch})")'
+        default_branch = (
+            run('git --no-pager remote show origin | grep "HEAD branch"', repo_dir)
+            .split()[-1]
+            .strip()
         )
+        ref_non_default_branch = f'$(git --no-pager merge-base HEAD "$(git --no-pager rev-parse --abbrev-ref origin/{default_branch})")'
         ref_default_branch = f"origin/{default_branch}"
         refs.extend((ref_non_default_branch, ref_default_branch))
     except RuntimeError:
         pass
-    ref_new_repo = "$(git --no-pager rev-parse --verify 4b825dc642cb6eb9a060e54bf8d69288fbee4904)"
+    ref_new_repo = (
+        "$(git --no-pager rev-parse --verify 4b825dc642cb6eb9a060e54bf8d69288fbee4904)"
+    )
     refs.append(ref_new_repo)
     for ref in refs:
         try:
@@ -181,7 +185,10 @@ def get_git_changes(cwd: str) -> list[dict[str, str]]:
         list[dict[str, str]]: List of change dictionaries with 'status' and 'path' keys.
 
     """
-    git_dirs = {os.path.dirname(f)[2:] for f in glob.glob("./*/.git", root_dir=cwd, recursive=True)}
+    git_dirs = {
+        os.path.dirname(f)[2:]
+        for f in glob.glob("./*/.git", root_dir=cwd, recursive=True)
+    }
     changes = get_changes_in_repo(cwd)
     changes = [
         change
@@ -201,22 +208,26 @@ def get_git_changes(cwd: str) -> list[dict[str, str]]:
     return changes
 
 
-if __name__ == "__main__":
+def _main() -> None:
     try:
         changes = get_git_changes(os.getcwd())
         try:
             from forge.core.io import print_json_stdout
-        except Exception:
-            sys.stdout.write(json.dumps(changes) + "\n")
-            sys.stdout.flush()
+        except Exception:  # pragma: no cover
+            sys.stdout.write(json.dumps(changes) + "\n")  # pragma: no cover
+            sys.stdout.flush()  # pragma: no cover
         else:
             print_json_stdout(changes)
     except Exception as e:
         logging.exception("Failed to compute git changes")
         try:
             from forge.core.io import print_json_stdout
-        except Exception:
-            sys.stdout.write(json.dumps({"error": str(e)}) + "\n")
-            sys.stdout.flush()
+        except Exception:  # pragma: no cover
+            sys.stdout.write(json.dumps({"error": str(e)}) + "\n")  # pragma: no cover
+            sys.stdout.flush()  # pragma: no cover
         else:
             print_json_stdout({"error": str(e)})
+
+
+if __name__ == "__main__":  # pragma: no cover
+    _main()

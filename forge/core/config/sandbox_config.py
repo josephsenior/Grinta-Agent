@@ -57,7 +57,9 @@ class SandboxConfig(BaseModel):
     pause_closed_runtimes: bool = Field(default=True)
     rm_all_containers: bool = Field(default=False)
     api_key: str | None = Field(default=None)
-    base_container_image: str | None = Field(default="nikolaik/python-nodejs:python3.12-nodejs22")
+    base_container_image: str | None = Field(
+        default="nikolaik/python-nodejs:python3.12-nodejs22"
+    )
     runtime_container_image: str | None = Field(default=None)
     user_id: int = Field(default=os.getuid() if hasattr(os, "getuid") else 1000)
     logger.debug("SandboxConfig user_id default: %s", user_id)
@@ -117,7 +119,7 @@ class SandboxConfig(BaseModel):
     @model_validator(mode="after")
     def set_default_base_image(self) -> SandboxConfig:
         """Set default base container image if not specified.
-        
+
         Returns:
             Self for method chaining
 

@@ -317,19 +317,23 @@ async def get_memory_stats(
     memories = settings.MEMORIES
 
     by_category = {
-        category.value: sum(bool(m.get("category") == category.value) for m in memories) for category in MemoryCategory
+        category.value: sum(bool(m.get("category") == category.value) for m in memories)
+        for category in MemoryCategory
     }
     # Used today
     today = datetime.now().date()
     used_today = sum(
         bool(
-            m.get("last_used") and datetime.fromisoformat(m["last_used"]).date() == today,
+            m.get("last_used")
+            and datetime.fromisoformat(m["last_used"]).date() == today,
         )
         for m in memories
     )
 
     # Most used
-    most_used = sorted(memories, key=lambda m: m.get("usage_count", 0), reverse=True)[:5]
+    most_used = sorted(memories, key=lambda m: m.get("usage_count", 0), reverse=True)[
+        :5
+    ]
 
     # Recently used
     recently_used = sorted(
@@ -494,7 +498,9 @@ async def update_memory(
     return {"status": "success"}
 
 
-def _find_and_update_memory(memories: list[dict], memory_id: str, updates: UpdateMemoryRequest) -> dict:
+def _find_and_update_memory(
+    memories: list[dict], memory_id: str, updates: UpdateMemoryRequest
+) -> dict:
     """Find memory by ID and apply updates.
 
     Args:

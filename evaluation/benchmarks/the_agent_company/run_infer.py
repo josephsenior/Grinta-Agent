@@ -6,7 +6,10 @@ import shutil
 import tempfile
 import yaml
 from browsing import pre_login
-from evaluation.utils.shared import get_default_sandbox_config_for_eval, get_FORGE_config_for_eval
+from evaluation.utils.shared import (
+    get_default_sandbox_config_for_eval,
+    get_FORGE_config_for_eval,
+)
 from forge.controller.state.state import State
 from forge.core.config import (
     LLMConfig,
@@ -36,9 +39,13 @@ def get_config(
     sandbox_config.enable_auto_lint = True
     sandbox_config.use_host_network = True
     config = get_FORGE_config_for_eval(
-        max_iterations=100, sandbox_config=sandbox_config, workspace_mount_path=mount_path_on_host
+        max_iterations=100,
+        sandbox_config=sandbox_config,
+        workspace_mount_path=mount_path_on_host,
     )
-    config.save_trajectory_path = os.path.join(mount_path_on_host, f"traj_{task_short_name}.json")
+    config.save_trajectory_path = os.path.join(
+        mount_path_on_host, f"traj_{task_short_name}.json"
+    )
     config.max_budget_per_task = 4
     config.set_llm_config(llm_config)
     if not agent_config:
@@ -67,10 +74,10 @@ def load_dependencies(runtime: Runtime) -> list[str]:
 
 def init_task_env(runtime: Runtime, hostname: str, env_llm_config: LLMConfig):
     command = f"SERVER_HOSTNAME={hostname} LITELLM_API_KEY={
-        (
-            env_llm_config.api_key.get_secret_value() if env_llm_config.api_key else None)} LITELLM_BASE_URL={
-        env_llm_config.base_url} LITELLM_MODEL={
-                env_llm_config.model} bash /utils/init.sh"
+        (env_llm_config.api_key.get_secret_value() if env_llm_config.api_key else None)
+    } LITELLM_BASE_URL={env_llm_config.base_url} LITELLM_MODEL={
+        env_llm_config.model
+    } bash /utils/init.sh"
     action = CmdRunAction(command=command)
     action.set_hard_timeout(900)
     logger.info(action, extra={"msg_type": "ACTION"})
@@ -82,9 +89,16 @@ def init_task_env(runtime: Runtime, hostname: str, env_llm_config: LLMConfig):
 def codeact_user_response(state: State) -> str:
     msg = "Please continue working on the task on whatever approach you think is suitable.\nIf you think you have solved the task, please finish the interaction.\nIMPORTANT: YOU SHOULD NEVER ASK FOR HUMAN HELP.\n"
     if state.history:
-        user_msgs = [event for event in state.history if isinstance(event, MessageAction) and event.source == "user"]
+        user_msgs = [
+            event
+            for event in state.history
+            if isinstance(event, MessageAction) and event.source == "user"
+        ]
         if len(user_msgs) >= 2:
-            return msg + "If you want to give up, run: <execute_bash> exit </execute_bash>.\n"
+            return (
+                msg
+                + "If you want to give up, run: <execute_bash> exit </execute_bash>.\n"
+            )
     return msg
 
 
@@ -116,12 +130,20 @@ def run_solver(
         os.makedirs(screenshots_dir, exist_ok=True)
         for image_id, obs in enumerate(state.history):
             if isinstance(obs, BrowserOutputObservation):
-                image_data = base64.b64decode(obs.screenshot.replace("data:image/png;base64,", ""))
-                with open(os.path.join(screenshots_dir, f"{image_id}.png"), "wb") as file:
+                image_data = base64.b64decode(
+                    obs.screenshot.replace("data:image/png;base64,", "")
+                )
+                with open(
+                    os.path.join(screenshots_dir, f"{image_id}.png"), "wb"
+                ) as file:
                     file.write(image_data)
                 if obs.set_of_marks:
-                    som_image_data = base64.b64decode(obs.set_of_marks.replace("data:image/png;base64,", ""))
-                    with open(os.path.join(screenshots_dir, f"{image_id}_som.png"), "wb") as file:
+                    som_image_data = base64.b64decode(
+                        obs.set_of_marks.replace("data:image/png;base64,", "")
+                    )
+                    with open(
+                        os.path.join(screenshots_dir, f"{image_id}_som.png"), "wb"
+                    ) as file:
                         file.write(som_image_data)
     if save_final_state:
         os.makedirs(state_dir, exist_ok=True)
@@ -130,12 +152,16 @@ def run_solver(
     return state
 
 
-def run_evaluator(runtime: Runtime, env_llm_config: LLMConfig, trajectory_path: str, result_path: str):
+def run_evaluator(
+    runtime: Runtime, env_llm_config: LLMConfig, trajectory_path: str, result_path: str
+):
     command = f"LITELLM_API_KEY={
-        (
-            env_llm_config.api_key.get_secret_value() if env_llm_config.api_key else None)} LITELLM_BASE_URL={
-        env_llm_config.base_url} LITELLM_MODEL={
-                env_llm_config.model} DECRYPTION_KEY='theagentcompany is all you need' python_default /utils/eval.py --trajectory_path {trajectory_path} --result_path {result_path}"
+        (env_llm_config.api_key.get_secret_value() if env_llm_config.api_key else None)
+    } LITELLM_BASE_URL={env_llm_config.base_url} LITELLM_MODEL={
+        env_llm_config.model
+    } DECRYPTION_KEY='theagentcompany is all you need' python_default /utils/eval.py --trajectory_path {
+        trajectory_path
+    } --result_path {result_path}"
     action = CmdRunAction(command=command)
     action.set_hard_timeout(600)
     logger.info(action, extra={"msg_type": "ACTION"})
@@ -147,10 +173,16 @@ def run_evaluator(runtime: Runtime, env_llm_config: LLMConfig, trajectory_path: 
 if __name__ == "__main__":
     parser = get_evaluation_parser()
     parser.add_argument(
-        "--task-image-name", type=str, default="ghcr.io/theagentcompany/example-image:1.0.0", help="Task image name"
+        "--task-image-name",
+        type=str,
+        default="ghcr.io/theagentcompany/example-image:1.0.0",
+        help="Task image name",
     )
     parser.add_argument(
-        "--outputs-path", type=str, default="./outputs", help="Folder path to save trajectories and evaluation results"
+        "--outputs-path",
+        type=str,
+        default="./outputs",
+        help="Folder path to save trajectories and evaluation results",
     )
     parser.add_argument(
         "--server-hostname",
@@ -158,7 +190,9 @@ if __name__ == "__main__":
         default="localhost",
         help="Server hostname, e.g. localhost to access the host machine from the container, assuming the task docker container is run with `--network host` flag",
     )
-    parser.add_argument("--agent-llm-config", type=str, default=None, help="LLM config for agent")
+    parser.add_argument(
+        "--agent-llm-config", type=str, default=None, help="LLM config for agent"
+    )
     parser.add_argument(
         "--env-llm-config",
         type=str,
@@ -173,7 +207,9 @@ if __name__ == "__main__":
     if args.agent_llm_config:
         agent_llm_config = get_llm_config_arg(args.agent_llm_config)
     if agent_llm_config is None:
-        raise ValueError(f"Could not find LLM config for agent: --agent-llm-config {args.agent_llm_config}")
+        raise ValueError(
+            f"Could not find LLM config for agent: --agent-llm-config {args.agent_llm_config}"
+        )
     if agent_llm_config.api_key is None:
         raise ValueError("LLM API key is not set for agent")
     env_llm_config: LLMConfig | None = None
@@ -186,7 +222,9 @@ if __name__ == "__main__":
     if env_llm_config.api_key is None:
         raise ValueError("LLM API key is not set for evaluation environment")
     task_short_name = args.task_image_name.split("/")[-1].split(":")[0]
-    logger.info("Task image name is %s, short name is %s", args.task_image_name, task_short_name)
+    logger.info(
+        "Task image name is %s, short name is %s", args.task_image_name, task_short_name
+    )
     if os.getenv("TMPDIR") and os.path.exists(os.getenv("TMPDIR")):
         temp_dir = os.path.abspath(os.getenv("TMPDIR"))
     else:
@@ -204,7 +242,9 @@ if __name__ == "__main__":
             runtime,
             dependencies,
             save_screenshots=True,
-            screenshots_dir=os.path.join(os.path.abspath(args.outputs_path), "screenshots"),
+            screenshots_dir=os.path.join(
+                os.path.abspath(args.outputs_path), "screenshots"
+            ),
         )
     except Exception as e:
         logger.error("Failed to pre-login: %s", e)
@@ -213,7 +253,9 @@ if __name__ == "__main__":
             runtime,
             dependencies,
             save_screenshots=True,
-            screenshots_dir=os.path.join(os.path.abspath(args.outputs_path), "screenshots"),
+            screenshots_dir=os.path.join(
+                os.path.abspath(args.outputs_path), "screenshots"
+            ),
         )
     state = run_solver(
         runtime,
@@ -230,9 +272,13 @@ if __name__ == "__main__":
     run_evaluator(runtime, env_llm_config, trajectory_path, result_path)
     shutil.move(
         os.path.join(temp_dir, f"traj_{task_short_name}.json"),
-        os.path.join(os.path.abspath(args.outputs_path), f"traj_{task_short_name}.json"),
+        os.path.join(
+            os.path.abspath(args.outputs_path), f"traj_{task_short_name}.json"
+        ),
     )
     shutil.move(
         os.path.join(temp_dir, f"eval_{task_short_name}.json"),
-        os.path.join(os.path.abspath(args.outputs_path), f"eval_{task_short_name}.json"),
+        os.path.join(
+            os.path.abspath(args.outputs_path), f"eval_{task_short_name}.json"
+        ),
     )

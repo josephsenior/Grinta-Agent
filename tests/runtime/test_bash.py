@@ -71,7 +71,10 @@ def _test_interrupt_handling(runtime, runtime_cls, config):
         assert obs_interrupt.exit_code == 0
         if not is_windows():
             assert "Keyboard interrupt received, exiting." in obs_interrupt.content
-            assert config.workspace_mount_path_in_sandbox in obs_interrupt.metadata.working_dir
+            assert (
+                config.workspace_mount_path_in_sandbox
+                in obs_interrupt.metadata.working_dir
+            )
     return obs_interrupt
 
 
@@ -120,7 +123,9 @@ def test_bash_background_server(temp_dir, runtime_cls, run_as_Forge):
         assert obs.exit_code == 0
         if runtime_cls == CLIRuntime:
             time.sleep(1)
-            curl_action = CmdRunAction(f"curl --fail --connect-timeout 1 http://localhost:{server_port}")
+            curl_action = CmdRunAction(
+                f"curl --fail --connect-timeout 1 http://localhost:{server_port}"
+            )
             curl_obs = runtime.run_action(curl_action)
             logger.info(curl_obs, extra={"msg_type": "OBSERVATION"})
             assert isinstance(curl_obs, CmdOutputObservation)
@@ -176,7 +181,9 @@ def test_multiline_commands(temp_dir, runtime_cls):
         _close_test_runtime(runtime)
 
 
-@pytest.mark.skipif(is_windows(), reason="Test relies on Linux bash-specific complex commands")
+@pytest.mark.skipif(
+    is_windows(), reason="Test relies on Linux bash-specific complex commands"
+)
 def test_complex_commands(temp_dir, runtime_cls, run_as_Forge):
     cmd = 'count=0; tries=0; while [ $count -lt 3 ]; do result=$(echo "Heads"); tries=$((tries+1)); echo "Flip $tries: $result"; if [ "$result" = "Heads" ]; then count=$((count+1)); else count=0; fi; done; echo "Got 3 heads in a row after $tries flips!";'
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
@@ -204,7 +211,9 @@ def test_no_ps2_in_output(temp_dir, runtime_cls, run_as_Forge):
         _close_test_runtime(runtime)
 
 
-@pytest.mark.skipif(is_windows(), reason="Test uses Linux-specific bash loops and sed commands")
+@pytest.mark.skipif(
+    is_windows(), reason="Test uses Linux-specific bash loops and sed commands"
+)
 def test_multiline_command_loop(temp_dir, runtime_cls):
     init_cmd = 'mkdir -p _modules && for month in {01..04}; do\n    for day in {01..05}; do\n        touch "_modules/2024-${month}-${day}-sample.md"\n    done\ndone && echo "created files"\n'
     follow_up_cmd = 'for file in _modules/*.md; do\n    new_date=$(echo $file | sed -E \'s/2024-(01|02|03|04)-/2024-/;s/2024-01/2024-08/;s/2024-02/2024-09/;s/2024-03/2024-10/;s/2024-04/2024-11/\')\n    mv "$file" "$new_date"\ndone && echo "success"\n'
@@ -272,7 +281,9 @@ def test_multiple_multiline_commands(temp_dir, runtime_cls, run_as_Forge):
 def test_cliruntime_multiple_newline_commands(temp_dir, run_as_Forge):
     runtime_cls = CLIRuntime
     if is_windows():
-        pytest.skip("CLIRuntime newline command test primarily for non-Windows bash behavior")
+        pytest.skip(
+            "CLIRuntime newline command test primarily for non-Windows bash behavior"
+        )
     else:
         cmds = ['echo "hello"', 'echo -e "hello\nworld"', 'echo -e "hello it\'s me"']
         expected_outputs = ["hello", "hello\nworld", "hello it's me"]
@@ -290,7 +301,9 @@ def test_cliruntime_multiple_newline_commands(temp_dir, run_as_Forge):
 
 def _test_windows_commands(runtime, config):
     """Test Windows PowerShell commands."""
-    obs = _run_cmd_action(runtime, f"Get-ChildItem -Path {config.workspace_mount_path_in_sandbox}")
+    obs = _run_cmd_action(
+        runtime, f"Get-ChildItem -Path {config.workspace_mount_path_in_sandbox}"
+    )
     assert obs.exit_code == 0
 
     obs = _run_cmd_action(runtime, "Get-ChildItem")
@@ -373,7 +386,10 @@ def test_run_as_user_correct_home_dir(temp_dir, runtime_cls, run_as_Forge):
             obs = _run_cmd_action(runtime, "cd $HOME && Get-Location")
             assert obs.exit_code == 0
             if runtime_cls == LocalRuntime:
-                assert os.getenv("USERPROFILE") in obs.content or os.getenv("HOME") in obs.content
+                assert (
+                    os.getenv("USERPROFILE") in obs.content
+                    or os.getenv("HOME") in obs.content
+                )
         else:
             obs = _run_cmd_action(runtime, "cd ~ && pwd")
             assert obs.exit_code == 0
@@ -407,13 +423,17 @@ def test_stateful_cmd(temp_dir, runtime_cls):
     runtime, config = _load_runtime(temp_dir, runtime_cls)
     try:
         if is_windows():
-            obs = _run_cmd_action(runtime, "New-Item -ItemType Directory -Path test -Force")
+            obs = _run_cmd_action(
+                runtime, "New-Item -ItemType Directory -Path test -Force"
+            )
             assert obs.exit_code == 0, "The exit code should be 0."
             obs = _run_cmd_action(runtime, "Set-Location test")
             assert obs.exit_code == 0, "The exit code should be 0."
             obs = _run_cmd_action(runtime, "Get-Location")
             assert obs.exit_code == 0, "The exit code should be 0."
-            norm_path = config.workspace_mount_path_in_sandbox.replace("\\", "/").replace("//", "/")
+            norm_path = config.workspace_mount_path_in_sandbox.replace(
+                "\\", "/"
+            ).replace("//", "/")
             test_path = f"{norm_path}/test".replace("//", "/")
             assert test_path in obs.content.replace("\\", "/")
         else:
@@ -425,8 +445,12 @@ def test_stateful_cmd(temp_dir, runtime_cls):
                 obs = _run_cmd_action(runtime, "cd test")
                 assert obs.exit_code == 0, "The exit code should be 0 for cd test."
                 obs = _run_cmd_action(runtime, "pwd")
-            assert obs.exit_code == 0, "The exit code for the pwd command (or combined command) should be 0."
-            assert f"{config.workspace_mount_path_in_sandbox}/test" in obs.content.strip()
+            assert obs.exit_code == 0, (
+                "The exit code for the pwd command (or combined command) should be 0."
+            )
+            assert (
+                f"{config.workspace_mount_path_in_sandbox}/test" in obs.content.strip()
+            )
     finally:
         _close_test_runtime(runtime)
 
@@ -558,7 +582,9 @@ def test_copy_to_non_existent_directory(temp_dir, runtime_cls):
     try:
         sandbox_dir = config.workspace_mount_path_in_sandbox
         _create_test_file(temp_dir)
-        runtime.copy_to(os.path.join(temp_dir, "test_file.txt"), f"{sandbox_dir}/new_dir")
+        runtime.copy_to(
+            os.path.join(temp_dir, "test_file.txt"), f"{sandbox_dir}/new_dir"
+        )
         obs = _run_cmd_action(runtime, f"cat {sandbox_dir}/new_dir/test_file.txt")
         assert obs.exit_code == 0
         assert "Hello, World!" in obs.content
@@ -617,7 +643,9 @@ def _verify_file_is_empty(runtime, sandbox_file, is_windows_platform):
 def _copy_test_file_and_verify(runtime, temp_dir, sandbox_file, is_windows_platform):
     """Copy test file and verify its content."""
     _create_test_file(temp_dir)
-    runtime.copy_to(os.path.join(temp_dir, "test_file.txt"), os.path.dirname(sandbox_file))
+    runtime.copy_to(
+        os.path.join(temp_dir, "test_file.txt"), os.path.dirname(sandbox_file)
+    )
 
     if is_windows_platform:
         cmd = f"Get-Content {sandbox_file}"
@@ -661,7 +689,10 @@ def test_copy_non_existent_file(temp_dir, runtime_cls):
     try:
         sandbox_dir = config.workspace_mount_path_in_sandbox
         with pytest.raises(FileNotFoundError):
-            runtime.copy_to(os.path.join(sandbox_dir, "non_existent_file.txt"), f"{sandbox_dir}/should_not_exist.txt")
+            runtime.copy_to(
+                os.path.join(sandbox_dir, "non_existent_file.txt"),
+                f"{sandbox_dir}/should_not_exist.txt",
+            )
         obs = _run_cmd_action(runtime, f"ls {sandbox_dir}/should_not_exist.txt")
         assert obs.exit_code != 0
     finally:
@@ -684,7 +715,9 @@ def test_copy_from_directory(temp_dir, runtime_cls):
         _close_test_runtime(runtime)
 
 
-@pytest.mark.skipif(is_windows(), reason="Test uses Linux-specific file permissions and sudo commands")
+@pytest.mark.skipif(
+    is_windows(), reason="Test uses Linux-specific file permissions and sudo commands"
+)
 def _setup_git_permissions(runtime, runtime_cls):
     """Setup proper permissions for git operations."""
     if runtime_cls not in [LocalRuntime, CLIRuntime]:
@@ -723,7 +756,8 @@ def _configure_git_user(runtime, runtime_cls):
     if runtime_cls in [LocalRuntime, CLIRuntime]:
         logger.info("Setting git config author")
         obs = _run_cmd_action(
-            runtime, 'git config user.name "forge" && git config user.email "Forge@all-hands.dev"'
+            runtime,
+            'git config user.name "forge" && git config user.email "Forge@all-hands.dev"',
         )
         assert obs.exit_code == 0
         obs = _run_cmd_action(runtime, "git config --list")
@@ -747,7 +781,10 @@ def _perform_git_operations(runtime):
 
 def test_git_operation(temp_dir, runtime_cls):
     runtime, config = _load_runtime(
-        temp_dir=temp_dir, use_workspace=False, runtime_cls=runtime_cls, run_as_Forge=True
+        temp_dir=temp_dir,
+        use_workspace=False,
+        runtime_cls=runtime_cls,
+        run_as_Forge=True,
     )
     try:
         # Setup permissions
@@ -772,7 +809,9 @@ def test_python_version(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         obs = runtime.run_action(CmdRunAction(command="python --version"))
-        assert isinstance(obs, CmdOutputObservation), "The observation should be a CmdOutputObservation."
+        assert isinstance(obs, CmdOutputObservation), (
+            "The observation should be a CmdOutputObservation."
+        )
         assert obs.exit_code == 0, "The exit code should be 0."
         assert "Python 3" in obs.content, 'The output should contain "Python 3".'
     finally:
@@ -801,10 +840,15 @@ def test_basic_command(temp_dir, runtime_cls, run_as_Forge):
             obs = _run_cmd_action(runtime, "nonexistent_command")
             assert obs.exit_code != 0
             assert "not recognized" in obs.content or "command not found" in obs.content
-            obs = _run_cmd_action(runtime, 'Write-Output "hello   world    with`nspecial  chars"')
+            obs = _run_cmd_action(
+                runtime, 'Write-Output "hello   world    with`nspecial  chars"'
+            )
             assert "hello   world    with\nspecial  chars" in obs.content
             assert obs.exit_code == 0
-            obs = _run_cmd_action(runtime, 'Write-Output "first" && Write-Output "second" && Write-Output "third"')
+            obs = _run_cmd_action(
+                runtime,
+                'Write-Output "first" && Write-Output "second" && Write-Output "third"',
+            )
         else:
             obs = _run_cmd_action(runtime, "echo 'hello world'")
             assert "hello world" in obs.content
@@ -812,10 +856,14 @@ def test_basic_command(temp_dir, runtime_cls, run_as_Forge):
             obs = _run_cmd_action(runtime, "nonexistent_command")
             assert obs.exit_code == 127
             assert "nonexistent_command: command not found" in obs.content
-            obs = _run_cmd_action(runtime, "echo 'hello   world    with\nspecial  chars'")
+            obs = _run_cmd_action(
+                runtime, "echo 'hello   world    with\nspecial  chars'"
+            )
             assert "hello   world    with\nspecial  chars" in obs.content
             assert obs.exit_code == 0
-            obs = _run_cmd_action(runtime, 'echo "first" && echo "second" && echo "third"')
+            obs = _run_cmd_action(
+                runtime, 'echo "first" && echo "second" && echo "third"'
+            )
         assert "first" in obs.content
         assert "second" in obs.content
         assert "third" in obs.content
@@ -824,13 +872,19 @@ def test_basic_command(temp_dir, runtime_cls, run_as_Forge):
         _close_test_runtime(runtime)
 
 
-@pytest.mark.skipif(is_windows(), reason="Powershell does not support interactive commands")
 @pytest.mark.skipif(
-    os.getenv("TEST_RUNTIME") == "cli", reason="CLIRuntime does not support interactive commands from the agent."
+    is_windows(), reason="Powershell does not support interactive commands"
+)
+@pytest.mark.skipif(
+    os.getenv("TEST_RUNTIME") == "cli",
+    reason="CLIRuntime does not support interactive commands from the agent.",
 )
 def test_interactive_command(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(
-        temp_dir, runtime_cls, run_as_Forge, runtime_startup_env_vars={"NO_CHANGE_TIMEOUT_SECONDS": "1"}
+        temp_dir,
+        runtime_cls,
+        run_as_Forge,
+        runtime_startup_env_vars={"NO_CHANGE_TIMEOUT_SECONDS": "1"},
     )
     try:
         action = CmdRunAction('read -p "Enter name: " name && echo "Hello $name"')
@@ -853,7 +907,10 @@ def test_interactive_command(temp_dir, runtime_cls, run_as_Forge):
         _close_test_runtime(runtime)
 
 
-@pytest.mark.skipif(is_windows(), reason="Test relies on Linux-specific commands like seq and bash for loops")
+@pytest.mark.skipif(
+    is_windows(),
+    reason="Test relies on Linux-specific commands like seq and bash for loops",
+)
 def test_long_output(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
@@ -867,8 +924,14 @@ def test_long_output(temp_dir, runtime_cls, run_as_Forge):
         _close_test_runtime(runtime)
 
 
-@pytest.mark.skipif(is_windows(), reason="Test relies on Linux-specific commands like seq and bash for loops")
-@pytest.mark.skipif(os.getenv("TEST_RUNTIME") == "cli", reason="CLIRuntime does not truncate command output.")
+@pytest.mark.skipif(
+    is_windows(),
+    reason="Test relies on Linux-specific commands like seq and bash for loops",
+)
+@pytest.mark.skipif(
+    os.getenv("TEST_RUNTIME") == "cli",
+    reason="CLIRuntime does not truncate command output.",
+)
 def test_long_output_exceed_history_limit(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
@@ -884,7 +947,9 @@ def test_long_output_exceed_history_limit(temp_dir, runtime_cls, run_as_Forge):
         _close_test_runtime(runtime)
 
 
-@pytest.mark.skipif(is_windows(), reason="Test uses Linux-specific temp directory and bash for loops")
+@pytest.mark.skipif(
+    is_windows(), reason="Test uses Linux-specific temp directory and bash for loops"
+)
 def test_long_output_from_nested_directories(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
@@ -905,15 +970,22 @@ def test_long_output_from_nested_directories(temp_dir, runtime_cls, run_as_Forge
         _close_test_runtime(runtime)
 
 
-@pytest.mark.skipif(is_windows(), reason="Test uses Linux-specific commands like find and grep with complex syntax")
+@pytest.mark.skipif(
+    is_windows(),
+    reason="Test uses Linux-specific commands like find and grep with complex syntax",
+)
 def test_command_backslash(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
-        action = CmdRunAction('mkdir -p /tmp/test_dir && echo "implemented_function" > /tmp/test_dir/file_1.txt')
+        action = CmdRunAction(
+            'mkdir -p /tmp/test_dir && echo "implemented_function" > /tmp/test_dir/file_1.txt'
+        )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert obs.exit_code == 0
-        action = CmdRunAction('find /tmp/test_dir -type f -exec grep -l "implemented_function" {} \\;')
+        action = CmdRunAction(
+            'find /tmp/test_dir -type f -exec grep -l "implemented_function" {} \\;'
+        )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert obs.exit_code == 0
@@ -922,17 +994,26 @@ def test_command_backslash(temp_dir, runtime_cls, run_as_Forge):
         _close_test_runtime(runtime)
 
 
-@pytest.mark.skipif(is_windows(), reason="Test uses Linux-specific ps aux, awk, and grep commands")
 @pytest.mark.skipif(
-    os.getenv("TEST_RUNTIME") == "cli", reason="CLIRuntime does not support interactive commands from the agent."
+    is_windows(), reason="Test uses Linux-specific ps aux, awk, and grep commands"
 )
-def test_stress_long_output_with_soft_and_hard_timeout(temp_dir, runtime_cls, run_as_Forge):
+@pytest.mark.skipif(
+    os.getenv("TEST_RUNTIME") == "cli",
+    reason="CLIRuntime does not support interactive commands from the agent.",
+)
+def test_stress_long_output_with_soft_and_hard_timeout(
+    temp_dir, runtime_cls, run_as_Forge
+):
     runtime, config = _load_runtime(
         temp_dir,
         runtime_cls,
         run_as_Forge,
         runtime_startup_env_vars={"NO_CHANGE_TIMEOUT_SECONDS": "1"},
-        docker_runtime_kwargs={"cpu_period": 100000, "cpu_quota": 100000, "mem_limit": "4G"},
+        docker_runtime_kwargs={
+            "cpu_period": 100000,
+            "cpu_quota": 100000,
+            "mem_limit": "4G",
+        },
     )
     try:
         for i in range(10):
@@ -942,13 +1023,19 @@ def test_stress_long_output_with_soft_and_hard_timeout(temp_dir, runtime_cls, ru
             )
             mem_obs = runtime.run_action(mem_action)
             assert mem_obs.exit_code == 0
-            logger.info("Tmux memory usage (iteration %s): %s KB", i, mem_obs.content.strip())
+            logger.info(
+                "Tmux memory usage (iteration %s): %s KB", i, mem_obs.content.strip()
+            )
             mem_action = CmdRunAction(
                 'ps aux | awk \'{printf "%8.1f KB  %s\\n", $6, $0}\' | sort -nr | grep "action_execution_server" | grep "/Forge/poetry" | grep -v grep | awk \'{print $1}\''
             )
             mem_obs = runtime.run_action(mem_action)
             assert mem_obs.exit_code == 0
-            logger.info("Action execution server memory usage (iteration %s): %s KB", i, mem_obs.content.strip())
+            logger.info(
+                "Action execution server memory usage (iteration %s): %s KB",
+                i,
+                mem_obs.content.strip(),
+            )
             action = CmdRunAction(
                 'read -p "Do you want to continue? [Y/n] " answer; if [[ $answer == "Y" ]]; then echo "Proceeding with operation..."; echo "Operation completed successfully!"; else echo "Operation cancelled."; exit 1; fi'
             )
@@ -989,7 +1076,9 @@ def test_command_output_continuation(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         if is_windows():
-            action = CmdRunAction("1..5 | ForEach-Object { Write-Output $_; Start-Sleep 3 }")
+            action = CmdRunAction(
+                "1..5 | ForEach-Object { Write-Output $_; Start-Sleep 3 }"
+            )
         else:
             action = CmdRunAction("for i in {1..5}; do echo $i; sleep 3; done")
         action.set_hard_timeout(2.5)
@@ -1007,7 +1096,9 @@ def test_command_output_continuation(temp_dir, runtime_cls, run_as_Forge):
             action = CmdRunAction("")
             action.set_hard_timeout(2.5)
             obs = runtime.run_action(action)
-            assert "[Below is the output of the previous command.]" in obs.metadata.prefix
+            assert (
+                "[Below is the output of the previous command.]" in obs.metadata.prefix
+            )
             assert obs.content.strip() == expected
             assert "[The command timed out after 2.5 seconds." in obs.metadata.suffix
         action = CmdRunAction("")
@@ -1018,7 +1109,8 @@ def test_command_output_continuation(temp_dir, runtime_cls, run_as_Forge):
 
 
 @pytest.mark.skipif(
-    os.getenv("TEST_RUNTIME") == "cli", reason="FIXME: CLIRuntime does not implement empty command behavior."
+    os.getenv("TEST_RUNTIME") == "cli",
+    reason="FIXME: CLIRuntime does not implement empty command behavior.",
 )
 def test_long_running_command_follow_by_execute(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
@@ -1058,21 +1150,27 @@ def test_long_running_command_follow_by_execute(temp_dir, runtime_cls, run_as_Fo
 
 
 @pytest.mark.skipif(
-    os.getenv("TEST_RUNTIME") == "cli", reason="FIXME: CLIRuntime does not implement empty command behavior."
+    os.getenv("TEST_RUNTIME") == "cli",
+    reason="FIXME: CLIRuntime does not implement empty command behavior.",
 )
 def test_empty_command_errors(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         obs = runtime.run_action(CmdRunAction(""))
         assert isinstance(obs, CmdOutputObservation)
-        assert "ERROR: No previous running command to retrieve logs from." in obs.content
+        assert (
+            "ERROR: No previous running command to retrieve logs from." in obs.content
+        )
     finally:
         _close_test_runtime(runtime)
 
 
-@pytest.mark.skipif(is_windows(), reason="Powershell does not support interactive commands")
 @pytest.mark.skipif(
-    os.getenv("TEST_RUNTIME") == "cli", reason="CLIRuntime does not support interactive commands from the agent."
+    is_windows(), reason="Powershell does not support interactive commands"
+)
+@pytest.mark.skipif(
+    os.getenv("TEST_RUNTIME") == "cli",
+    reason="CLIRuntime does not support interactive commands from the agent.",
 )
 def test_python_interactive_input(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
@@ -1095,11 +1193,16 @@ def test_python_interactive_input(temp_dir, runtime_cls, run_as_Forge):
         _close_test_runtime(runtime)
 
 
-@pytest.mark.skipif(is_windows(), reason="Powershell does not support interactive commands")
 @pytest.mark.skipif(
-    os.getenv("TEST_RUNTIME") == "cli", reason="CLIRuntime does not support interactive commands from the agent."
+    is_windows(), reason="Powershell does not support interactive commands"
 )
-def test_python_interactive_input_without_set_input(temp_dir, runtime_cls, run_as_Forge):
+@pytest.mark.skipif(
+    os.getenv("TEST_RUNTIME") == "cli",
+    reason="CLIRuntime does not support interactive commands from the agent.",
+)
+def test_python_interactive_input_without_set_input(
+    temp_dir, runtime_cls, run_as_Forge
+):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         python_script = "name = input('Enter your name: '); age = input('Enter your age: '); print(f'Hello {name}, you are {age} years old')"
@@ -1110,7 +1213,10 @@ def test_python_interactive_input_without_set_input(temp_dir, runtime_cls, run_a
         obs = runtime.run_action(CmdRunAction("Alice", is_input=False))
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert "Enter your age:" not in obs.content
-        assert 'Your command "Alice" is NOT executed. The previous command is still running' in obs.metadata.suffix
+        assert (
+            'Your command "Alice" is NOT executed. The previous command is still running'
+            in obs.metadata.suffix
+        )
         assert obs.metadata.exit_code == -1
         obs = runtime.run_action(CmdRunAction("Alice", is_input=True))
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
@@ -1128,7 +1234,9 @@ def test_python_interactive_input_without_set_input(temp_dir, runtime_cls, run_a
 def test_bash_remove_prefix(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
-        action = CmdRunAction("git init && git remote add origin https://github.com/All-Hands-AI/Forge")
+        action = CmdRunAction(
+            "git init && git remote add origin https://github.com/All-Hands-AI/Forge"
+        )
         obs = runtime.run_action(action)
         assert obs.metadata.exit_code == 0
         obs = runtime.run_action(CmdRunAction("git remote -v"))

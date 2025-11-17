@@ -18,7 +18,10 @@ async def test_sse_connection_timeout():
     mock_client.disconnect = mock.AsyncMock()
     with mock.patch("sys.platform", "linux"):
         with mock.patch("forge.mcp_client.utils.MCPClient", return_value=mock_client):
-            servers = [MCPSSEServerConfig(url="http://server1:8080"), MCPSSEServerConfig(url="http://server2:8080")]
+            servers = [
+                MCPSSEServerConfig(url="http://server1:8080"),
+                MCPSSEServerConfig(url="http://server2:8080"),
+            ]
             clients = await create_mcp_clients(sse_servers=servers, shttp_servers=[])
             assert len(clients) == 0
             assert mock_client.connect_http.call_count == 2
@@ -46,11 +49,18 @@ async def test_mixed_connection_results():
     mock_tool.name = "mock_tool"
     mock_tool.to_param.return_value = {
         "type": "function",
-        "function": {"name": "mock_tool", "description": "A mock tool for testing", "parameters": {}},
+        "function": {
+            "name": "mock_tool",
+            "description": "A mock tool for testing",
+            "parameters": {},
+        },
     }
     successful_client.tools = [mock_tool]
     with mock.patch("sys.platform", "linux"):
-        with mock.patch("forge.mcp_client.utils.create_mcp_clients", return_value=[successful_client]):
+        with mock.patch(
+            "forge.mcp_client.utils.create_mcp_clients",
+            return_value=[successful_client],
+        ):
             tools = await fetch_mcp_tools_from_config(mock_config, None)
             assert len(tools) > 0
             assert tools[0]["function"]["name"] == "mock_tool"

@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
-from types import SimpleNamespace
+from types import MappingProxyType, SimpleNamespace
+from typing import Any, cast
 
 import pytest
 
-from fastapi import status
+from fastapi import Request, status
 from fastapi.responses import JSONResponse
 
 from forge.integrations.service_types import (
@@ -21,7 +22,9 @@ from forge.integrations.service_types import (
     UnknownException,
     User,
 )
+from forge.integrations.provider import ProviderToken
 from forge.server.routes import git as git_routes
+from forge.storage.data_models.user_secrets import UserSecrets
 
 
 def _dummy_handler(**methods):
@@ -42,9 +45,10 @@ async def test_get_user_installations_github(monkeypatch):
     handler = _dummy_handler(get_github_installations=get_installations)
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
+    tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=None)})
     result = await git_routes.get_user_installations(
         ProviderType.GITHUB,
-        provider_tokens={"token": "x"},
+        provider_tokens=tokens,
         access_token=None,
         user_id="user",
     )
@@ -59,9 +63,10 @@ async def test_get_user_installations_bitbucket(monkeypatch):
     handler = _dummy_handler(get_bitbucket_workspaces=get_workspaces)
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
+    tokens = MappingProxyType({ProviderType.BITBUCKET: ProviderToken(token=None)})
     result = await git_routes.get_user_installations(
         ProviderType.BITBUCKET,
-        provider_tokens={"token": "x"},
+        provider_tokens=tokens,
         access_token=None,
         user_id="user",
     )
@@ -73,9 +78,10 @@ async def test_get_user_installations_unsupported(monkeypatch):
     handler = _dummy_handler()
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
+    tokens = MappingProxyType({ProviderType.GITLAB: ProviderToken(token=None)})
     response = await git_routes.get_user_installations(
         ProviderType.GITLAB,
-        provider_tokens={"token": "x"},
+        provider_tokens=tokens,
         access_token=None,
         user_id="user",
     )
@@ -110,7 +116,9 @@ async def test_get_user_repositories_success(monkeypatch):
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
     monkeypatch.setattr(git_routes.server_config, "app_mode", "cloud")
 
-    result = await git_routes.get_user_repositories(provider_tokens={"token": "x"})
+    tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=None)})
+    result = await git_routes.get_user_repositories(provider_tokens=tokens)
+    assert isinstance(result, list)
     assert len(result) == 1
     assert result[0].full_name == "user/repo"
 
@@ -123,7 +131,8 @@ async def test_get_user_repositories_unknown_exception(monkeypatch):
     handler = _dummy_handler(get_repositories=get_repos)
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
-    response = await git_routes.get_user_repositories(provider_tokens={"token": "x"})
+    tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=None)})
+    response = await git_routes.get_user_repositories(provider_tokens=tokens)
     assert isinstance(response, JSONResponse)
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -142,7 +151,11 @@ async def test_get_user_success(monkeypatch):
     handler = _dummy_handler(get_user=get_user)
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
-    user = await git_routes.get_user(provider_tokens={"token": "x"}, access_token=None, user_id="me")
+    tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=None)})
+    user = await git_routes.get_user(
+        provider_tokens=tokens, access_token=None, user_id="me"
+    )
+    assert isinstance(user, User)
     assert user.login == "tester"
 
 
@@ -154,7 +167,10 @@ async def test_get_user_unknown(monkeypatch):
     handler = _dummy_handler(get_user=get_user)
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
-    response = await git_routes.get_user(provider_tokens={"token": "x"}, access_token=None, user_id="me")
+    tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=None)})
+    response = await git_routes.get_user(
+        provider_tokens=tokens, access_token=None, user_id="me"
+    )
     assert isinstance(response, JSONResponse)
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -180,7 +196,11 @@ async def test_search_repositories_success(monkeypatch):
     handler = _dummy_handler(search_repositories=search)
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
-    repos = await git_routes.search_repositories("forge", provider_tokens={"token": "x"}, access_token=None, user_id="me")
+    tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=None)})
+    repos = await git_routes.search_repositories(
+        "forge", provider_tokens=tokens, access_token=None, user_id="me"
+    )
+    assert isinstance(repos, list)
     assert len(repos) == 1
 
 
@@ -192,7 +212,8 @@ async def test_search_repositories_unknown(monkeypatch):
     handler = _dummy_handler(search_repositories=search)
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
-    response = await git_routes.search_repositories("forge", provider_tokens={"token": "x"})
+    tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=None)})
+    response = await git_routes.search_repositories("forge", provider_tokens=tokens)
     assert isinstance(response, JSONResponse)
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -211,11 +232,13 @@ async def test_search_branches_success(monkeypatch):
     handler = _dummy_handler(search_branches=search)
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
+    tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=None)})
     branches = await git_routes.search_branches(
         repository="repo",
         query="m",
-        provider_tokens={"token": "x"},
+        provider_tokens=tokens,
     )
+    assert isinstance(branches, list)
     assert branches[0].name == "main"
 
 
@@ -227,7 +250,8 @@ async def test_search_branches_auth_error(monkeypatch):
     handler = _dummy_handler(search_branches=search)
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
-    response = await git_routes.search_branches("repo", "m", provider_tokens={"token": "x"})
+    tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=None)})
+    response = await git_routes.search_branches("repo", "m", provider_tokens=tokens)
     assert isinstance(response, JSONResponse)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -240,7 +264,8 @@ async def test_search_branches_unknown(monkeypatch):
     handler = _dummy_handler(search_branches=search)
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
-    response = await git_routes.search_branches("repo", "m", provider_tokens={"token": "x"})
+    tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=None)})
+    response = await git_routes.search_branches("repo", "m", provider_tokens=tokens)
     assert isinstance(response, JSONResponse)
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -248,6 +273,7 @@ async def test_search_branches_unknown(monkeypatch):
 @pytest.mark.asyncio
 async def test_search_branches_missing_tokens():
     response = await git_routes.search_branches("repo", "m", provider_tokens=None)
+    assert isinstance(response, JSONResponse)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
@@ -267,7 +293,11 @@ async def test_get_suggested_tasks_success(monkeypatch):
     handler = _dummy_handler(get_suggested_tasks=get_tasks)
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
-    tasks = await git_routes.get_suggested_tasks(provider_tokens={"token": "x"}, access_token=None, user_id="me")
+    tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=None)})
+    tasks = await git_routes.get_suggested_tasks(
+        provider_tokens=tokens, access_token=None, user_id="me"
+    )
+    assert isinstance(tasks, list)
     assert tasks[0].title == "Review PR"
 
 
@@ -279,7 +309,10 @@ async def test_get_suggested_tasks_unknown(monkeypatch):
     handler = _dummy_handler(get_suggested_tasks=get_tasks)
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
-    response = await git_routes.get_suggested_tasks(provider_tokens={"token": "x"}, access_token=None, user_id="me")
+    tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=None)})
+    response = await git_routes.get_suggested_tasks(
+        provider_tokens=tokens, access_token=None, user_id="me"
+    )
     assert isinstance(response, JSONResponse)
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -287,7 +320,9 @@ async def test_get_suggested_tasks_unknown(monkeypatch):
 @pytest.mark.asyncio
 async def test_get_suggested_tasks_no_tokens():
     with pytest.raises(AuthenticationError):
-        await git_routes.get_suggested_tasks(provider_tokens=None, access_token=None, user_id="me")
+        await git_routes.get_suggested_tasks(
+            provider_tokens=None, access_token=None, user_id="me"
+        )
 
 
 @pytest.mark.asyncio
@@ -304,7 +339,11 @@ async def test_get_repository_branches_success(monkeypatch):
     handler = _dummy_handler(get_branches=get_branches)
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
-    result = await git_routes.get_repository_branches("owner/repo", provider_tokens={"token": "x"})
+    tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=None)})
+    result = await git_routes.get_repository_branches(
+        "owner/repo", provider_tokens=tokens
+    )
+    assert isinstance(result, PaginatedBranchesResponse)
     assert result.total_count == 1
     assert result.branches[0].name == "main"
 
@@ -317,7 +356,10 @@ async def test_get_repository_branches_unknown(monkeypatch):
     handler = _dummy_handler(get_branches=get_branches)
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
-    response = await git_routes.get_repository_branches("owner/repo", provider_tokens={"token": "x"})
+    tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=None)})
+    response = await git_routes.get_repository_branches(
+        "owner/repo", provider_tokens=tokens
+    )
     assert isinstance(response, JSONResponse)
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -341,6 +383,7 @@ async def test_get_repository_microagents_success(monkeypatch):
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
     result = await git_routes.get_repository_microagents("owner/repo")
+    assert isinstance(result, list)
     assert result[0].name == "agent"
 
 
@@ -391,7 +434,10 @@ async def test_get_repository_microagent_content_success(monkeypatch):
     handler = _dummy_handler(get_microagent_content=get_content)
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
-    result = await git_routes.get_repository_microagent_content("owner/repo", file_path="microagents/a.md")
+    result = await git_routes.get_repository_microagent_content(
+        "owner/repo", file_path="microagents/a.md"
+    )
+    assert isinstance(result, SimpleNamespace)
     assert result.content == "data"
 
 
@@ -403,7 +449,9 @@ async def test_get_repository_microagent_content_runtime_error(monkeypatch):
     handler = _dummy_handler(get_microagent_content=get_content)
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
-    response = await git_routes.get_repository_microagent_content("owner/repo", file_path="microagents/a.md")
+    response = await git_routes.get_repository_microagent_content(
+        "owner/repo", file_path="microagents/a.md"
+    )
     assert isinstance(response, JSONResponse)
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -416,7 +464,9 @@ async def test_get_repository_microagent_content_generic_error(monkeypatch):
     handler = _dummy_handler(get_microagent_content=get_content)
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
-    response = await git_routes.get_repository_microagent_content("owner/repo", file_path="microagents/a.md")
+    response = await git_routes.get_repository_microagent_content(
+        "owner/repo", file_path="microagents/a.md"
+    )
     assert isinstance(response, JSONResponse)
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert b"Error fetching microagent content" in response.body
@@ -431,7 +481,9 @@ async def test_get_repository_microagent_content_auth_error(monkeypatch):
     monkeypatch.setattr(git_routes, "ProviderHandler", handler)
 
     with pytest.raises(AuthenticationError):
-        await git_routes.get_repository_microagent_content("owner/repo", file_path="microagents/a.md")
+        await git_routes.get_repository_microagent_content(
+            "owner/repo", file_path="microagents/a.md"
+        )
 
 
 @pytest.mark.asyncio
@@ -441,10 +493,8 @@ async def test_summarize_repository(monkeypatch):
 
     monkeypatch.setattr(git_routes, "get_user_id", fake_get_user_id)
 
-    class DummyRequest:
-        pass
-
-    response = await git_routes.summarize_repository(DummyRequest(), summarize_request={})
+    request = cast(Request, SimpleNamespace())
+    response = await git_routes.summarize_repository(request, summarize_request={})
     assert response.status_code == status.HTTP_501_NOT_IMPLEMENTED
     assert json.loads(response.body) == {
         "error": "Repository summarization is not implemented on this server."

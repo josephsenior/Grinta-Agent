@@ -21,6 +21,8 @@ export function useBackgroundRuntimeInit() {
   const { conversationId } = useConversationId();
 
   useEffect(() => {
+    let cleanupFn: (() => void) | undefined;
+
     const checkRuntimeStatus = async () => {
       try {
         // Check if conversation is initialized
@@ -63,8 +65,7 @@ export function useBackgroundRuntimeInit() {
           }
         }, 2000); // Poll every 2 seconds
 
-        // Timeout after 60 seconds
-        setTimeout(() => {
+        const timeoutId = setTimeout(() => {
           clearInterval(checkInterval);
           if (!status.isReady) {
             setStatus({
@@ -75,7 +76,10 @@ export function useBackgroundRuntimeInit() {
           }
         }, 60000);
 
-        return () => clearInterval(checkInterval);
+        return () => {
+          clearInterval(checkInterval);
+          clearTimeout(timeoutId);
+        };
       } catch (error) {
         setStatus({
           isInitializing: false,
@@ -85,7 +89,15 @@ export function useBackgroundRuntimeInit() {
       }
     };
 
-    checkRuntimeStatus();
+    checkRuntimeStatus().then((cleanup) => {
+      cleanupFn = cleanup;
+    });
+
+    return () => {
+      if (cleanupFn) {
+        cleanupFn();
+      }
+    };
   }, [conversationId]);
 
   return status;

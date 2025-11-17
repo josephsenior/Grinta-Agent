@@ -17,5 +17,9 @@ class MCPClientTool(Tool):
         """Convert tool to function call format."""
         return {
             "type": "function",
-            "function": {"name": self.name, "description": self.description, "parameters": self.inputSchema},
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": self.inputSchema,
+            },
         }

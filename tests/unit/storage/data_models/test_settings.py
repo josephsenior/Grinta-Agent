@@ -12,11 +12,22 @@ def test_settings_from_config():
     mock_app_config = ForgeConfig(
         default_agent="test-agent",
         max_iterations=100,
-        security=SecurityConfig(security_analyzer="test-analyzer", confirmation_mode=True),
-        llms={"llm": LLMConfig(model="test-model", api_key=SecretStr("test-key"), base_url="https://test.example.com")},
+        security=SecurityConfig(
+            security_analyzer="test-analyzer", confirmation_mode=True
+        ),
+        llms={
+            "llm": LLMConfig(
+                model="test-model",
+                api_key=SecretStr("test-key"),
+                base_url="https://test.example.com",
+            )
+        },
         sandbox=SandboxConfig(remote_runtime_resource_factor=2),
     )
-    with patch("forge.storage.data_models.settings.load_FORGE_config", return_value=mock_app_config):
+    with patch(
+        "forge.storage.data_models.settings.load_FORGE_config",
+        return_value=mock_app_config,
+    ):
         settings = Settings.from_config()
         assert settings is not None
         assert settings.language == "en"
@@ -35,11 +46,20 @@ def test_settings_from_config_no_api_key():
     mock_app_config = ForgeConfig(
         default_agent="test-agent",
         max_iterations=100,
-        security=SecurityConfig(security_analyzer="test-analyzer", confirmation_mode=True),
-        llms={"llm": LLMConfig(model="test-model", api_key=None, base_url="https://test.example.com")},
+        security=SecurityConfig(
+            security_analyzer="test-analyzer", confirmation_mode=True
+        ),
+        llms={
+            "llm": LLMConfig(
+                model="test-model", api_key=None, base_url="https://test.example.com"
+            )
+        },
         sandbox=SandboxConfig(remote_runtime_resource_factor=2),
     )
-    with patch("forge.storage.data_models.settings.load_FORGE_config", return_value=mock_app_config):
+    with patch(
+        "forge.storage.data_models.settings.load_FORGE_config",
+        return_value=mock_app_config,
+    ):
         settings = Settings.from_config()
         assert settings is None
 

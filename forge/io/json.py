@@ -76,7 +76,7 @@ def loads(json_str, **kwargs):
         elif char == "}":
             depth -= 1
             if depth == 0 and start != -1:
-                response = json_str[start: i + 1]
+                response = json_str[start : i + 1]
                 try:
                     json_str = repair_json(response)
                     return json.loads(json_str, **kwargs)

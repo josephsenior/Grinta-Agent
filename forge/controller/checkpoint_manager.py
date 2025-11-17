@@ -130,7 +130,9 @@ class CheckpointManager:
             filesystem_snapshot_path = str(checkpoint_path / "filesystem")
             # In production, you'd use something like rsync or tar
             # For now, we just mark it as available
-            logger.debug(f"Filesystem snapshot would be created at: {filesystem_snapshot_path}")
+            logger.debug(
+                f"Filesystem snapshot would be created at: {filesystem_snapshot_path}"
+            )
 
         # Create checkpoint record
         checkpoint = Checkpoint(
@@ -245,7 +247,9 @@ class CheckpointManager:
                     self.checkpoints.append(checkpoint)
 
                 except Exception as e:
-                    logger.warning(f"Failed to load checkpoint metadata {metadata_file}: {e}")
+                    logger.warning(
+                        f"Failed to load checkpoint metadata {metadata_file}: {e}"
+                    )
 
             logger.info(f"Loaded {len(self.checkpoints)} existing checkpoints")
 
@@ -277,8 +281,10 @@ class CheckpointManager:
 
         # Remove excess checkpoints (keep only max_checkpoints most recent)
         if len(self.checkpoints) > self.max_checkpoints:
-            sorted_checkpoints = sorted(self.checkpoints, key=lambda c: c.created_at, reverse=True)
-            to_delete = sorted_checkpoints[self.max_checkpoints:]
+            sorted_checkpoints = sorted(
+                self.checkpoints, key=lambda c: c.created_at, reverse=True
+            )
+            to_delete = sorted_checkpoints[self.max_checkpoints :]
 
             for checkpoint in to_delete:
                 await self._delete_checkpoint(checkpoint)

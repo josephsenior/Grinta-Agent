@@ -54,47 +54,6 @@ export function extractUserFriendlyError(
 }
 
 /**
- * Format raw error into user-friendly format (client-side fallback)
- */
-export function formatClientError(error: unknown): UserFriendlyErrorData {
-  // Try to extract backend formatted error
-  const backendError = extractUserFriendlyError(error);
-  if (backendError) {
-    return backendError;
-  }
-
-  const axiosDetails = extractAxiosDetails(error);
-  if (axiosDetails) {
-    const mapped = mapHttpStatusToError(
-      axiosDetails.status,
-      axiosDetails.message,
-    );
-    if (mapped) {
-      return mapped;
-    }
-    return buildDefaultAxiosError(axiosDetails.message);
-  }
-
-  // Handle Error objects
-  if (error instanceof Error) {
-    return formatJavaScriptError(error);
-  }
-
-  // Fallback for unknown errors
-  return {
-    title: "Unexpected error",
-    message: "Something unexpected happened. Please try refreshing the page.",
-    severity: "error",
-    category: "system",
-    icon: "❌",
-    suggestion: "Refresh the page",
-    actions: [{ label: "Refresh", type: "refresh", highlight: true }],
-    technical_details: String(error),
-    can_retry: true,
-  };
-}
-
-/**
  * Format JavaScript Error objects
  */
 function formatJavaScriptError(error: Error): UserFriendlyErrorData {
@@ -300,6 +259,44 @@ function buildDefaultAxiosError(
       { label: "Support", type: "support", url: "mailto:support@forge.ai" },
     ],
     technical_details: message,
+    can_retry: true,
+  };
+}
+
+/**
+ * Format raw error into user-friendly format (client-side fallback)
+ */
+export function formatClientError(error: unknown): UserFriendlyErrorData {
+  const backendError = extractUserFriendlyError(error);
+  if (backendError) {
+    return backendError;
+  }
+
+  const axiosDetails = extractAxiosDetails(error);
+  if (axiosDetails) {
+    const mapped = mapHttpStatusToError(
+      axiosDetails.status,
+      axiosDetails.message,
+    );
+    if (mapped) {
+      return mapped;
+    }
+    return buildDefaultAxiosError(axiosDetails.message);
+  }
+
+  if (error instanceof Error) {
+    return formatJavaScriptError(error);
+  }
+
+  return {
+    title: "Unexpected error",
+    message: "Something unexpected happened. Please try refreshing the page.",
+    severity: "error",
+    category: "system",
+    icon: "❌",
+    suggestion: "Refresh the page",
+    actions: [{ label: "Refresh", type: "refresh", highlight: true }],
+    technical_details: String(error),
     can_retry: true,
   };
 }

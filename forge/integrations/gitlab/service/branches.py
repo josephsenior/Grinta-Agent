@@ -70,7 +70,9 @@ class GitLabBranchesMixin(GitLabMixinBase):
             total_count=total_count,
         )
 
-    async def search_branches(self, repository: str, query: str, per_page: int = 30) -> list[Branch]:
+    async def search_branches(
+        self, repository: str, query: str, per_page: int = 30
+    ) -> list[Branch]:
         """Search branches using GitLab API which supports `search` param."""
         encoded_name = repository.replace("/", "%2F")
         url = f"{self.BASE_URL}/projects/{encoded_name}/repository/branches"

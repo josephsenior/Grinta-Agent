@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\llm\tool_names.py
+# hypothesis_version: 6.147.0
+
+['browser', 'edit_file', 'execute_bash', 'finish', 'str_replace_editor', 'task_tracker']

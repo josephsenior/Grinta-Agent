@@ -3,7 +3,9 @@ import pandas as pd
 from forge.core.logger import forge_logger as logger
 
 
-def _validate_metrics_data(row: pd.Series) -> tuple[dict, float, list] | tuple[None, None, None]:
+def _validate_metrics_data(
+    row: pd.Series,
+) -> tuple[dict, float, list] | tuple[None, None, None]:
     """Validate and extract metrics data from row."""
     metrics = row.get("metrics")
     if not metrics:
@@ -13,7 +15,9 @@ def _validate_metrics_data(row: pd.Series) -> tuple[dict, float, list] | tuple[N
     accumulated = metrics.get("accumulated_cost")
     costs = metrics.get("costs", [])
     if accumulated is None:
-        logger.warning("Instance %s: No accumulated_cost in metrics", row["instance_id"])
+        logger.warning(
+            "Instance %s: No accumulated_cost in metrics", row["instance_id"]
+        )
         return None, None, None
 
     return metrics, accumulated, costs
@@ -41,23 +45,32 @@ def _check_duplicate_costs(costs: list, instance_id: str) -> tuple[bool, bool]:
     return has_duplicate, all_pairs_match
 
 
-def _calculate_corrected_cost(costs: list, has_duplicate: bool, all_pairs_match: bool) -> float:
+def _calculate_corrected_cost(
+    costs: list, has_duplicate: bool, all_pairs_match: bool
+) -> float:
     """Calculate total cost with potential correction for duplicate counting."""
     if len(costs) < 2 or not has_duplicate or not all_pairs_match:
         # Normal case - sum all costs
         return sum((cost_entry["cost"] for cost_entry in costs))
     # Handle buggy double-counting case
-    paired_steps_cost = sum((cost_entry["cost"] for cost_entry in costs[: -1 if len(costs) % 2 else None]))
+    paired_steps_cost = sum(
+        (cost_entry["cost"] for cost_entry in costs[: -1 if len(costs) % 2 else None])
+    )
     real_paired_cost = paired_steps_cost / 2
     unpaired_cost = costs[-1]["cost"] if len(costs) % 2 else 0
     return real_paired_cost + unpaired_cost
 
 
-def _validate_cost_consistency(total_cost: float, accumulated: float, instance_id: str) -> None:
+def _validate_cost_consistency(
+    total_cost: float, accumulated: float, instance_id: str
+) -> None:
     """Validate that calculated cost matches accumulated cost."""
     if abs(total_cost - accumulated) >= 1e-06:
         logger.warning(
-            "Instance %s: Cost mismatch: accumulated: %s, sum of costs: %s, ", instance_id, accumulated, total_cost
+            "Instance %s: Cost mismatch: accumulated: %s, sum of costs: %s, ",
+            instance_id,
+            accumulated,
+            total_cost,
         )
 
 
@@ -82,7 +95,9 @@ def verify_instance_costs(row: pd.Series) -> float:
         metrics, accumulated, costs = metrics_data
 
         # Check for duplicate costs
-        has_duplicate, all_pairs_match = _check_duplicate_costs(costs, row["instance_id"])
+        has_duplicate, all_pairs_match = _check_duplicate_costs(
+            costs, row["instance_id"]
+        )
 
         # Calculate total cost with potential correction
         total_cost = _calculate_corrected_cost(costs, has_duplicate, all_pairs_match)
@@ -92,13 +107,21 @@ def verify_instance_costs(row: pd.Series) -> float:
 
         return total_cost
     except Exception as e:
-        logger.error("Error verifying costs for instance %s: %s", row.get("instance_id", "UNKNOWN"), e)
+        logger.error(
+            "Error verifying costs for instance %s: %s",
+            row.get("instance_id", "UNKNOWN"),
+            e,
+        )
         return 0.0
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Verify costs in SWE-bench output file")
-    parser.add_argument("input_filepath", type=str, help="Path to the output.jsonl file")
+    parser = argparse.ArgumentParser(
+        description="Verify costs in SWE-bench output file"
+    )
+    parser.add_argument(
+        "input_filepath", type=str, help="Path to the output.jsonl file"
+    )
     args = parser.parse_args()
     try:
         df = pd.read_json(args.input_filepath, lines=True)

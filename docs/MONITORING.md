@@ -13,14 +13,22 @@ Forge includes comprehensive production-grade monitoring with:
 
 ### Start Monitoring Stack
 
+docker-compose up -d
 ```bash
 cd monitoring
-docker-compose up -d
+docker compose up -d  # uses base + optional override
+```
+
+Optional: copy the example override and adjust targets if not using host.docker.internal:
+
+```bash
+cp docker-compose.override.example.yml docker-compose.override.yml
+docker compose up -d --force-recreate prometheus grafana
 ```
 
 **Services Started:**
 - Prometheus: `http://localhost:9090`
-- Grafana: `http://localhost:3001` (admin/admin)
+- Grafana: `http://localhost:3001` (admin/admin) - Note: Grafana runs on port 3001, separate from the Forge backend which runs on port 3000
 
 ### Access Dashboards
 
@@ -89,6 +97,130 @@ metasop_cache_hits / (metasop_cache_hits + metasop_cache_stores)  # Cache rate
 - High retry rate → Unstable dependencies
 
 ## Prometheus Metrics Reference
+
+### Request/HTTP Metrics
+
+```
+forge_build_info{version="...",git_sha="..."} 1          # Build metadata
+forge_request_total                                   # Total HTTP requests seen
+forge_request_exceptions_total                        # Requests resulting in exceptions
+forge_requests_in_flight                              # Currently active requests
+forge_request_duration_ms_bucket{le="..."}           # Latency histogram buckets (ms)
+forge_request_duration_ms_sum                         # Latency histogram sum
+forge_request_duration_ms_count                       # Latency histogram count
+forge_request_bytes_total                             # Sum of request bytes (via Content-Length)
+forge_response_bytes_total                            # Sum of response bytes
+
+forge_request_total{method="...",status="...",route="..."}  # Per-route counters
+```
+
+Notes:
+- Byte counters are lightweight and rely on `Content-Length` when present; streaming bodies are not buffered.
+- Access logs include per-request `request_content_length` and `response_content_length` on the `forge.access` channel.
+
+### PromQL Examples: Method/Status
+
+Requests per second by method (exclude internal `exception` pseudo-status):
+
+```promql
+sum by (method) (rate(forge_request_total{status!="exception"}[5m]))
+```
+
+Error rate (5xx) overall and by method:
+
+```promql
+# Overall 5xx error rate (% of all requests)
+100 * sum(rate(forge_request_total{status=~"5.."}[5m]))
+  / sum(rate(forge_request_total{status!="exception"}[5m]))
+
+# By method
+100 * sum by (method) (rate(forge_request_total{status=~"5.."}[5m]))
+  / sum by (method) (rate(forge_request_total{status!="exception"}[5m]))
+```
+
+Success rate (2xx and 3xx) overall and by method:
+
+```promql
+# Overall success rate
+100 * sum(rate(forge_request_total{status=~"2..|3.."}[5m]))
+  / sum(rate(forge_request_total{status!="exception"}[5m]))
+
+# By method
+100 * sum by (method) (rate(forge_request_total{status=~"2..|3.."}[5m]))
+  / sum by (method) (rate(forge_request_total{status!="exception"}[5m]))
+```
+
+4xx vs 5xx split (requests per second):
+
+```promql
+sum(rate(forge_request_total{status=~"4.."}[5m]))  # client errors
+sum(rate(forge_request_total{status=~"5.."}[5m]))  # server errors
+```
+
+Top methods by 5xx volume:
+
+```promql
+topk(3, sum by (method) (rate(forge_request_total{status=~"5.."}[5m])))
+```
+
+Unhandled exception rate (not mapped to an HTTP status):
+
+```promql
+rate(forge_request_total{status="exception"}[5m])
+```
+
+Note: The `exception` status represents unhandled errors before an HTTP response is produced; consider whether to include or exclude it in SLI calculations.
+
+### PromQL Examples: Route-Level
+
+Top endpoints by request rate (normalized by route template):
+
+```promql
+topk(10, sum by (route) (rate(forge_request_total{status!="exception"}[5m])))
+```
+
+Slowest endpoints by p95 latency (approximate via histogram quantile):
+
+```promql
+histogram_quantile(
+  0.95,
+  sum by (le, route) (rate(forge_request_duration_ms_bucket[5m]))
+) by (route)
+```
+
+Error rate by route (5xx / all):
+
+```promql
+100 * sum by (route) (rate(forge_request_total{status=~"5.."}[5m]))
+  / sum by (route) (rate(forge_request_total{status!="exception"}[5m]))
+```
+
+Top routes by response bytes (egress):
+
+```promql
+topk(5, sum by (route) (rate(forge_response_bytes_total[5m])))
+```
+
+### Runtime Pool Metrics
+
+```
+forge_runtime_warm_pool_total                      # Total warm sandboxes staged for reuse
+forge_runtime_warm_pool{kind="docker"}            # Warm capacity by runtime kind
+forge_runtime_running_sessions_total              # Active runtime sessions across all kinds
+forge_runtime_running_sessions{kind="remote"}     # Active sessions by runtime kind
+```
+
+**PromQL examples:**
+
+```promql
+# Alert when Docker warm capacity drops below 2 instances
+forge_runtime_warm_pool{kind="docker"} < 2
+
+# Detect leaked remote sessions (sessions that remain active after traffic quiets down)
+max_over_time(forge_runtime_running_sessions{kind="remote"}[10m])
+```
+
+The runtime manager updates the snapshot whenever Local, Docker, or Remote runtimes acquire warm sandboxes or attach live sessions, giving immediate visibility into pool pressure and potential leaks.
 
 ### Steps & Execution
 
@@ -376,6 +508,42 @@ GET /api/monitoring/metrics
 ```
 
 ## Best Practices
+## Readiness Probe
+
+Endpoint for container healthchecks and orchestrators:
+
+```http
+GET /api/monitoring/readiness
+```
+
+Response includes status and dependency checks:
+
+```json
+{
+  "status": "ready",
+  "timestamp": "2025-11-11T10:00:00Z",
+  "checks": {
+    "redis": { "status": "up" },
+    "mcp": { "status": "skipped" }
+  }
+}
+```
+
+Configuration:
+- `REDIS_URL` or `REDIS_CONNECTION_URL`: if set, performs a `PING` check.
+- `ACTION_EXECUTION_SERVER_URL`: if set, checks `GET /alive` on that service.
+
+Docker Compose healthcheck (example):
+
+```yaml
+healthcheck:
+  test: ["CMD", "curl", "-fsS", "http://localhost:3000/api/monitoring/readiness"]
+  interval: 30s
+  timeout: 3s
+  retries: 3
+  start_period: 10s
+```
+
 
 ### 1. Monitor Key Metrics
 
@@ -616,4 +784,61 @@ GET /api/analytics/usage?period=week
 - **PromQL Tutorial:** https://prometheus.io/docs/prometheus/latest/querying/basics/
 
 For questions about monitoring, see [Troubleshooting](./TROUBLESHOOTING.md) or open a GitHub issue.
+
+
+## Operators Appendix
+
+### ACCESS Log Fields
+
+- message: High-level event, e.g. "Request started: GET /path", "Request completed: GET /path", "Request sizes"
+- request_id: Correlation ID for end-to-end tracing
+- method: HTTP method (GET, POST, ...)
+- path: Request path (no query string)
+- status_code: Response status (on completion)
+- duration_ms: End-to-end request time in milliseconds (on completion)
+- client_host: Remote address (on start)
+- user_agent: User agent string (on start)
+- request_content_length: Bytes from request `Content-Length` header, if present
+- response_content_length: Bytes from response `Content-Length` header (or body length when safe)
+
+### Sample Queries (CLI)
+
+Tail access logs only (JSON format assumed):
+
+```bash
+grep '"forge.access"' logs/Forge.log
+```
+
+Top endpoints by request volume:
+
+```bash
+jq -r 'select(.message|startswith("Request completed")) | .path' logs/Forge.log \
+  | sort | uniq -c | sort -nr | head
+```
+
+p95 request latency (approximate via awk):
+
+```bash
+jq -r 'select(.message|startswith("Request completed")) | .duration_ms' logs/Forge.log \
+  | sort -n | awk 'BEGIN{p=95} {a[NR]=$1} END{print a[int(NR*p/100)]}'
+```
+
+Requests over 1 MB response size:
+
+```bash
+jq -r 'select(.message=="Request sizes" and (.response_content_length // 0) > (1024*1024)) | {path, response_content_length}' logs/Forge.log
+```
+
+Error rate by status:
+
+```bash
+jq -r 'select(.message|startswith("Request completed")) | .status_code' logs/Forge.log \
+  | awk '{c[$1]++} END{for (k in c) print k, c[k]}' | sort -nr
+```
+
+Trace a single request_id:
+
+```bash
+REQ="<paste-request-id>"; jq -c --arg id "$REQ" 'select(.request_id==$id)' logs/Forge.log
+```
 

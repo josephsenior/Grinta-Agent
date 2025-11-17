@@ -9,17 +9,17 @@ import asyncio
 import signal
 import threading
 import time
-from typing import TYPE_CHECKING, Callable
+from types import FrameType
+from typing import Callable, cast
 from uuid import UUID, uuid4
 
 from uvicorn.server import HANDLED_SIGNALS
 
 from forge.core.logger import forge_logger as logger
 
-if TYPE_CHECKING:
-    from types import FrameType
+_Handler = Callable[[int, FrameType | None], None]
 
-_should_exit = None
+_should_exit: bool | None = None
 _shutdown_listeners: dict[UUID, Callable] = {}
 
 
@@ -30,29 +30,37 @@ def _register_signal_handler(sig: signal.Signals) -> None:
         sig: The signal to register a handler for.
 
     """
-    original_handler = None
+    import sys as _sys
 
-    def handler(signum, frame):
+    _mod = _sys.modules[__name__]
+    handler_candidate: object = _mod.signal.getsignal(sig)
+    fallback_handler: _Handler | None = None
+    if callable(handler_candidate):
+        fallback_handler = cast(_Handler, handler_candidate)
+    elif handler_candidate == signal.SIG_DFL:
+        fallback_handler = signal.default_int_handler
+
+    def handler(signum: int, frame: FrameType | None) -> None:
         """Signal handler that sets shutdown flag and invokes cleanup callback."""
-        if should_continue():
-            logger.debug("shutdown_signal:%s", sig)
-            global _should_exit
-            if not _should_exit:
-                _should_exit = True
-                listeners = list(_shutdown_listeners.values())
-                for callable in listeners:
-                    try:
-                        callable()
-                    except Exception:
-                        logger.exception("Error calling shutdown listener")
-            if original_handler:
-                original_handler(sig, frame)
+        logger.debug("shutdown_signal:%s", sig)
+        if not _should_exit:
+            # Set global flag and invoke listeners once
+            globals()["_should_exit"] = True
+            listeners = list(_shutdown_listeners.values())
+            for listener in listeners:
+                try:
+                    listener()
+                except Exception:
+                    logger.exception("Error calling shutdown listener")
+        if fallback_handler is not None:
+            fallback_handler(signum, frame)
 
-    original_handler = signal.signal(sig, handler)
+    _mod.signal.signal(sig, handler)
 
 
 def _register_signal_handlers() -> None:
     """Register all shutdown signal handlers."""
+    # Only register once per process
     global _should_exit
     if _should_exit is not None:
         return

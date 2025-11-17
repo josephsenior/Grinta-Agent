@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\llm\streaming_llm.py
+# hypothesis_version: 6.147.0
+
+[0.1, 'api_key', 'api_version', 'base_url', 'choices', 'content', 'custom_llm_provider', 'delta', 'drop_params', 'max_tokens', 'messages', 'model', 'reasoning_effort', 'stream', 'temperature', 'timeout', 'top_p']

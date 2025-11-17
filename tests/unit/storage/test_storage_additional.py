@@ -54,8 +54,17 @@ from forge.storage.s3 import S3FileStore
 from forge.storage.secrets.file_secrets_store import FileSecretsStore
 from forge.storage.slack_store import SlackStore
 from forge.storage.web_hook import WebHookFileStore
-from forge.storage.conversation.file_conversation_store import FileConversationStore, _sort_key
-from forge.core.config.mcp_config import MCPConfig, MCPSHTTPServerConfig, MCPSSEServerConfig, MCPStdioServerConfig
+from forge.storage.conversation.file_conversation_store import (
+    FileConversationStore,
+    _sort_key,
+)
+from forge.core.config.mcp_config import (
+    MCPConfig,
+    MCPSHTTPServerConfig,
+    MCPSSEServerConfig,
+    MCPStdioServerConfig,
+)
+
 
 class ImmediateExecutor:
     """Executor that executes submitted callables immediately for deterministic tests."""
@@ -83,6 +92,7 @@ class StubFileStore(InMemoryFileStore):
         if isinstance(value, bytes):
             return value.decode("utf-8", errors="ignore")
         return value
+
 
 @pytest.fixture(autouse=True)
 def _isolate_executor(monkeypatch: pytest.MonkeyPatch):
@@ -180,7 +190,9 @@ def test_get_file_store_with_webhook_non_batch(monkeypatch: pytest.MonkeyPatch) 
         ("something-else", ConversationStatus.UNKNOWN),
     ],
 )
-def test_conversation_status_from_runtime_status(input_value: str | None, expected: ConversationStatus) -> None:
+def test_conversation_status_from_runtime_status(
+    input_value: str | None, expected: ConversationStatus
+) -> None:
     assert ConversationStatus.from_runtime_status(input_value) is expected
 
 
@@ -193,10 +205,21 @@ def test_conversation_location_helpers() -> None:
         == "users/user/conversations/123/events/5.json"
     )
     assert get_conversation_metadata_filename("sid") == "sessions/sid/metadata.json"
-    assert get_conversation_init_data_filename("sid", "user") == "users/user/conversations/sid/init.json"
-    assert get_conversation_agent_state_filename("sid") == "sessions/sid/agent_state.pkl"
-    assert get_conversation_llm_registry_filename("sid") == "sessions/sid/llm_registry.json"
-    assert get_conversation_stats_filename("sid", "user") == "users/user/conversations/sid/conversation_stats.pkl"
+    assert (
+        get_conversation_init_data_filename("sid", "user")
+        == "users/user/conversations/sid/init.json"
+    )
+    assert (
+        get_conversation_agent_state_filename("sid") == "sessions/sid/agent_state.pkl"
+    )
+    assert (
+        get_conversation_llm_registry_filename("sid")
+        == "sessions/sid/llm_registry.json"
+    )
+    assert (
+        get_conversation_stats_filename("sid", "user")
+        == "users/user/conversations/sid/conversation_stats.pkl"
+    )
     assert get_experiment_config_filename("sid") == "sessions/sid/exp_config.json"
 
 
@@ -236,14 +259,18 @@ def test_knowledge_base_store_persistence(tmp_path) -> None:
 
 
 def test_get_knowledge_base_store_singleton(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("forge.storage.knowledge_base_store._store", None, raising=False)
+    monkeypatch.setattr(
+        "forge.storage.knowledge_base_store._store", None, raising=False
+    )
 
     sentinel = object()
 
     def fake_constructor():
         return sentinel
 
-    monkeypatch.setattr("forge.storage.knowledge_base_store.KnowledgeBaseStore", fake_constructor)
+    monkeypatch.setattr(
+        "forge.storage.knowledge_base_store.KnowledgeBaseStore", fake_constructor
+    )
 
     first = get_knowledge_base_store()
     second = get_knowledge_base_store()
@@ -273,7 +300,9 @@ def test_slack_store_workspace_and_links(tmp_path: pytest.TempPathFactory) -> No
     assert store.get_workspace("T1") is None
 
     store.save_workspace(workspace)
-    user_link = SlackUserLink(slack_user_id="U1", slack_workspace_id="workspace-id", FORGE_user_id="forge-1")
+    user_link = SlackUserLink(
+        slack_user_id="U1", slack_workspace_id="workspace-id", FORGE_user_id="forge-1"
+    )
     store.save_user_link(user_link)
     assert store.get_user_link("workspace-id", "U1").FORGE_user_id == "forge-1"
     assert store.get_user_links_by_FORGE_user("forge-1")[0].slack_user_id == "U1"
@@ -287,12 +316,20 @@ def test_slack_store_workspace_and_links(tmp_path: pytest.TempPathFactory) -> No
         created_by_slack_user_id="U1",
     )
     store.save_conversation_link(conversation_link)
-    assert store.get_conversation_link("workspace-id", "C1", "123.456").conversation_id == "conv-1"
-    assert store.get_conversation_links_by_conversation_id("conv-1")[0].slack_channel_id == "C1"
+    assert (
+        store.get_conversation_link("workspace-id", "C1", "123.456").conversation_id
+        == "conv-1"
+    )
+    assert (
+        store.get_conversation_links_by_conversation_id("conv-1")[0].slack_channel_id
+        == "C1"
+    )
     assert store.delete_conversation_link("workspace-id", "C1", "123.456") is True
 
 
-def test_slack_store_oauth_state_management(monkeypatch: pytest.MonkeyPatch, tmp_path: pytest.TempPathFactory) -> None:
+def test_slack_store_oauth_state_management(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: pytest.TempPathFactory
+) -> None:
     store = make_slack_store(tmp_path)
 
     fake_uuid = SimpleNamespace(hex="abc123")
@@ -323,7 +360,9 @@ def test_slack_store_read_invalid_json(tmp_path: pytest.TempPathFactory) -> None
 
 
 @pytest.mark.asyncio
-async def test_file_secrets_store_load_and_store(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_file_secrets_store_load_and_store(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     backing_store = InMemoryFileStore()
     store = FileSecretsStore(backing_store, user_id="user-42")
     path = store._build_default_path()
@@ -379,7 +418,10 @@ async def test_file_secrets_store_get_instance(monkeypatch: pytest.MonkeyPatch) 
         file_store_web_hook_batch=False,
     )
     dummy_store = InMemoryFileStore()
-    monkeypatch.setattr("forge.storage.secrets.file_secrets_store.get_file_store", lambda **_: dummy_store)
+    monkeypatch.setattr(
+        "forge.storage.secrets.file_secrets_store.get_file_store",
+        lambda **_: dummy_store,
+    )
 
     instance = await FileSecretsStore.get_instance(config, user_id="user-1")
     assert instance.file_store is dummy_store
@@ -510,7 +552,9 @@ def test_s3_file_store_error_translation(monkeypatch: pytest.MonkeyPatch) -> Non
                 "PutObject",
             )
 
-    monkeypatch.setattr("forge.storage.s3.boto3.client", lambda *args, **kwargs: RaisingClient())
+    monkeypatch.setattr(
+        "forge.storage.s3.boto3.client", lambda *args, **kwargs: RaisingClient()
+    )
     store = S3FileStore("bucket-name")
 
     with pytest.raises(FileNotFoundError) as err:
@@ -523,11 +567,15 @@ def test_s3_file_store_url_scheme(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("forge.storage.s3.boto3.client", lambda *args, **kwargs: dummy)
     store = S3FileStore("bucket-name")
     assert store._ensure_url_scheme(True, "http://example.com") == "https://example.com"
-    assert store._ensure_url_scheme(False, "https://example.com") == "http://example.com"
+    assert (
+        store._ensure_url_scheme(False, "https://example.com") == "http://example.com"
+    )
     assert store._ensure_url_scheme(True, None) is None
 
 
-def test_batched_webhook_enqueues_on_size_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_batched_webhook_enqueues_on_size_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     inner = StubFileStore()
     payloads: list[Any] = []
 
@@ -559,7 +607,9 @@ def test_web_hook_on_write_retries(monkeypatch: pytest.MonkeyPatch) -> None:
     class DummyResponse:
         def raise_for_status(self) -> None:
             if len(attempts) < 2:
-                raise botocore.exceptions.EndpointConnectionError(endpoint_url="http://error")
+                raise botocore.exceptions.EndpointConnectionError(
+                    endpoint_url="http://error"
+                )
 
     class DummyClient:
         def post(self, url: str, content: Any):
@@ -580,7 +630,9 @@ def test_web_hook_delete_retries(monkeypatch: pytest.MonkeyPatch) -> None:
 
     class DummyResponse:
         def raise_for_status(self) -> None:
-            raise botocore.exceptions.EndpointConnectionError(endpoint_url="http://error")
+            raise botocore.exceptions.EndpointConnectionError(
+                endpoint_url="http://error"
+            )
 
     class DummyClient:
         def post(self, url: str, content: Any):
@@ -597,7 +649,9 @@ def test_web_hook_delete_retries(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_file_conversation_store_initializes_default_dirs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_file_conversation_store_initializes_default_dirs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(
         "forge.core.config.forge_config.ForgeConfig",
         lambda: SimpleNamespace(workspace_base=str(tmp_path)),
@@ -608,7 +662,9 @@ async def test_file_conversation_store_initializes_default_dirs(tmp_path: Path, 
 
 
 @pytest.mark.asyncio
-async def test_file_conversation_store_get_metadata_removes_legacy_fields(tmp_path: Path) -> None:
+async def test_file_conversation_store_get_metadata_removes_legacy_fields(
+    tmp_path: Path,
+) -> None:
     config = SimpleNamespace(workspace_base=str(tmp_path))
     store = FileConversationStore(StubFileStore(), config=config)
     path = store.get_conversation_metadata_filename("conv-1")
@@ -628,8 +684,12 @@ async def test_file_conversation_store_get_metadata_removes_legacy_fields(tmp_pa
 
 
 @pytest.mark.asyncio
-async def test_file_conversation_store_get_metadata_creates_when_invalid(tmp_path: Path) -> None:
-    store = FileConversationStore(StubFileStore(), config=SimpleNamespace(workspace_base=str(tmp_path)))
+async def test_file_conversation_store_get_metadata_creates_when_invalid(
+    tmp_path: Path,
+) -> None:
+    store = FileConversationStore(
+        StubFileStore(), config=SimpleNamespace(workspace_base=str(tmp_path))
+    )
     path = store.get_conversation_metadata_filename("new-conv")
     store.file_store.write(path, "{}")
     metadata = await store.get_metadata("new-conv")
@@ -640,7 +700,9 @@ async def test_file_conversation_store_get_metadata_creates_when_invalid(tmp_pat
 
 @pytest.mark.asyncio
 async def test_file_conversation_store_get_metadata_no_create(tmp_path: Path) -> None:
-    store = FileConversationStore(StubFileStore(), config=SimpleNamespace(workspace_base=str(tmp_path)))
+    store = FileConversationStore(
+        StubFileStore(), config=SimpleNamespace(workspace_base=str(tmp_path))
+    )
     path = store.get_conversation_metadata_filename("missing")
     store.file_store.write(path, "{}")
     with pytest.raises(FileNotFoundError):
@@ -648,7 +710,9 @@ async def test_file_conversation_store_get_metadata_no_create(tmp_path: Path) ->
 
 
 @pytest.mark.asyncio
-async def test_file_conversation_store_delete_and_exists(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_file_conversation_store_delete_and_exists(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     class TrackingStore(StubFileStore):
         def __init__(self) -> None:
             super().__init__()
@@ -681,8 +745,12 @@ async def test_file_conversation_store_delete_and_exists(monkeypatch: pytest.Mon
 
 
 @pytest.mark.asyncio
-async def test_file_conversation_store_search_with_pagination(caplog: pytest.LogCaptureFixture) -> None:
-    store = FileConversationStore(StubFileStore(), config=SimpleNamespace(workspace_base=None))
+async def test_file_conversation_store_search_with_pagination(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    store = FileConversationStore(
+        StubFileStore(), config=SimpleNamespace(workspace_base=None)
+    )
 
     def write_metadata(cid: str, created: str) -> None:
         store.file_store.write(
@@ -717,8 +785,12 @@ async def test_file_conversation_store_search_with_pagination(caplog: pytest.Log
 
 
 @pytest.mark.asyncio
-async def test_file_conversation_store_search_handles_missing_directory(monkeypatch: pytest.MonkeyPatch) -> None:
-    store = FileConversationStore(StubFileStore(), config=SimpleNamespace(workspace_base=None))
+async def test_file_conversation_store_search_handles_missing_directory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = FileConversationStore(
+        StubFileStore(), config=SimpleNamespace(workspace_base=None)
+    )
 
     def raise_not_found(path: str) -> list[str]:
         raise FileNotFoundError
@@ -730,14 +802,19 @@ async def test_file_conversation_store_search_handles_missing_directory(monkeypa
 
 
 @pytest.mark.asyncio
-async def test_file_conversation_store_get_instance(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_file_conversation_store_get_instance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     captured: dict[str, Any] = {}
 
     def fake_get_file_store(**kwargs):
         captured.update(kwargs)
         return StubFileStore()
 
-    monkeypatch.setattr("forge.storage.conversation.file_conversation_store.get_file_store", fake_get_file_store)
+    monkeypatch.setattr(
+        "forge.storage.conversation.file_conversation_store.get_file_store",
+        fake_get_file_store,
+    )
     config = SimpleNamespace(
         file_store="memory",
         file_store_path="/tmp",
@@ -762,7 +839,9 @@ def test_file_conversation_sort_key() -> None:
     assert _sort_key(metadata) == metadata.created_at.isoformat()
 
 
-def test_knowledge_base_store_uses_default_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_knowledge_base_store_uses_default_home(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     store = KnowledgeBaseStore()
     default_path = tmp_path / ".Forge" / "kb"
@@ -770,7 +849,9 @@ def test_knowledge_base_store_uses_default_home(tmp_path: Path, monkeypatch: pyt
     assert default_path.exists()
 
 
-def test_knowledge_base_store_handles_corrupt_files(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+def test_knowledge_base_store_handles_corrupt_files(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     store_path = tmp_path / "kb"
     store_path.mkdir()
     (store_path / "collections.json").write_text("{invalid json")
@@ -826,7 +907,9 @@ def test_s3_file_store_read_missing_bucket(monkeypatch: pytest.MonkeyPatch) -> N
                 "GetObject",
             )
 
-    monkeypatch.setattr("forge.storage.s3.boto3.client", lambda *args, **kwargs: MissingBucketClient())
+    monkeypatch.setattr(
+        "forge.storage.s3.boto3.client", lambda *args, **kwargs: MissingBucketClient()
+    )
     store = S3FileStore("bucket")
     with pytest.raises(FileNotFoundError):
         store.read("key")
@@ -840,7 +923,9 @@ def test_s3_file_store_read_missing_key(monkeypatch: pytest.MonkeyPatch) -> None
                 "GetObject",
             )
 
-    monkeypatch.setattr("forge.storage.s3.boto3.client", lambda *args, **kwargs: MissingKeyClient())
+    monkeypatch.setattr(
+        "forge.storage.s3.boto3.client", lambda *args, **kwargs: MissingKeyClient()
+    )
     store = S3FileStore("bucket")
     with pytest.raises(FileNotFoundError):
         store.read("missing")
@@ -873,13 +958,17 @@ def test_s3_file_store_delete_access_denied(monkeypatch: pytest.MonkeyPatch) -> 
                 "DeleteObject",
             )
 
-    monkeypatch.setattr("forge.storage.s3.boto3.client", lambda *args, **kwargs: AccessDeniedClient())
+    monkeypatch.setattr(
+        "forge.storage.s3.boto3.client", lambda *args, **kwargs: AccessDeniedClient()
+    )
     store = S3FileStore("bucket")
     with pytest.raises(FileNotFoundError):
         store.delete("path")
 
 
-def test_s3_file_store_list_returns_directories(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_s3_file_store_list_returns_directories(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     client = DummyS3Client()
     client.put_object(Bucket="bucket", Key="folder/a.txt", Body=b"a")
     client.put_object(Bucket="bucket", Key="folder/b.txt", Body=b"b")
@@ -907,7 +996,9 @@ def test_s3_file_store_write_other_error(monkeypatch: pytest.MonkeyPatch) -> Non
                 "PutObject",
             )
 
-    monkeypatch.setattr("forge.storage.s3.boto3.client", lambda *args, **kwargs: OtherErrorClient())
+    monkeypatch.setattr(
+        "forge.storage.s3.boto3.client", lambda *args, **kwargs: OtherErrorClient()
+    )
     store = S3FileStore("bucket")
     with pytest.raises(FileNotFoundError):
         store.write("key", "value")
@@ -918,7 +1009,9 @@ def test_s3_file_store_read_general_exception(monkeypatch: pytest.MonkeyPatch) -
         def get_object(self, Bucket: str, Key: str):  # noqa: N803
             raise RuntimeError("boom")
 
-    monkeypatch.setattr("forge.storage.s3.boto3.client", lambda *args, **kwargs: BrokenClient())
+    monkeypatch.setattr(
+        "forge.storage.s3.boto3.client", lambda *args, **kwargs: BrokenClient()
+    )
     store = S3FileStore("bucket")
     with pytest.raises(FileNotFoundError):
         store.read("key")
@@ -932,7 +1025,9 @@ def test_s3_file_store_delete_no_such_bucket(monkeypatch: pytest.MonkeyPatch) ->
                 "DeleteObject",
             )
 
-    monkeypatch.setattr("forge.storage.s3.boto3.client", lambda *args, **kwargs: MissingBucketClient())
+    monkeypatch.setattr(
+        "forge.storage.s3.boto3.client", lambda *args, **kwargs: MissingBucketClient()
+    )
     store = S3FileStore("bucket")
     with pytest.raises(FileNotFoundError):
         store.delete("path")
@@ -946,18 +1041,24 @@ def test_s3_file_store_delete_no_such_key(monkeypatch: pytest.MonkeyPatch) -> No
                 "DeleteObject",
             )
 
-    monkeypatch.setattr("forge.storage.s3.boto3.client", lambda *args, **kwargs: MissingKeyClient())
+    monkeypatch.setattr(
+        "forge.storage.s3.boto3.client", lambda *args, **kwargs: MissingKeyClient()
+    )
     store = S3FileStore("bucket")
     with pytest.raises(FileNotFoundError):
         store.delete("path")
 
 
-def test_s3_file_store_delete_general_exception(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_s3_file_store_delete_general_exception(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     class BrokenClient(DummyS3Client):
         def delete_object(self, Bucket: str, Key: str):  # noqa: N803
             raise RuntimeError("broken")
 
-    monkeypatch.setattr("forge.storage.s3.boto3.client", lambda *args, **kwargs: BrokenClient())
+    monkeypatch.setattr(
+        "forge.storage.s3.boto3.client", lambda *args, **kwargs: BrokenClient()
+    )
     store = S3FileStore("bucket")
     with pytest.raises(FileNotFoundError):
         store.delete("path")
@@ -1004,9 +1105,15 @@ def test_file_store_base_methods() -> None:
 
 
 def reset_settings_cache(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(settings_module, "_settings_from_config_cache", None, raising=False)
-    monkeypatch.setattr(settings_module, "_settings_from_config_cache_time", 0.0, raising=False)
-    monkeypatch.setattr(settings_module, "_settings_from_config_cache_loader_id", None, raising=False)
+    monkeypatch.setattr(
+        settings_module, "_settings_from_config_cache", None, raising=False
+    )
+    monkeypatch.setattr(
+        settings_module, "_settings_from_config_cache_time", 0.0, raising=False
+    )
+    monkeypatch.setattr(
+        settings_module, "_settings_from_config_cache_loader_id", None, raising=False
+    )
 
 
 def test_settings_api_key_serializer_exposes_when_requested() -> None:
@@ -1045,7 +1152,9 @@ def test_settings_secrets_store_serializer() -> None:
     assert serialized["secrets_store"] == {"provider_tokens": {}}
 
 
-def test_settings_check_explicit_llm_config_env(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_settings_check_explicit_llm_config_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     explicit = SimpleNamespace(api_key=SecretStr("env"))
     app_config = SimpleNamespace(llms={"llm": explicit})
     monkeypatch.setenv("FORGE_API_KEY", "env")
@@ -1097,7 +1206,9 @@ def test_settings_from_config_caches_results(monkeypatch: pytest.MonkeyPatch) ->
     assert calls["count"] == 1
 
 
-def test_settings_from_config_handles_explicit_skip(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_settings_from_config_handles_explicit_skip(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     reset_settings_cache(monkeypatch)
 
     def fake_loader():
@@ -1145,4 +1256,3 @@ def test_settings_merge_with_config_settings(monkeypatch: pytest.MonkeyPatch) ->
         "https://config-sse.example",
         "https://store-sse.example",
     }
-

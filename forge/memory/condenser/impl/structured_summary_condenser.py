@@ -13,6 +13,7 @@ from forge.core.logger import forge_logger as logger
 from forge.core.message import Message, TextContent
 from forge.events.action.agent import CondensationAction
 from forge.events.observation.agent import AgentCondensationObservation
+from forge.events.event import Event
 from forge.events.serialization.event import truncate_content
 from forge.memory.condenser.condenser import Condensation, RollingCondenser
 from forge.memory.view import View
@@ -29,15 +30,25 @@ class StateSummary(BaseModel):
         default="",
         description="Essential user requirements, goals, and clarifications in concise form.",
     )
-    completed_tasks: str = Field(default="", description="List of tasks completed so far with brief results.")
-    pending_tasks: str = Field(default="", description="List of tasks that still need to be done.")
+    completed_tasks: str = Field(
+        default="", description="List of tasks completed so far with brief results."
+    )
+    pending_tasks: str = Field(
+        default="", description="List of tasks that still need to be done."
+    )
     current_state: str = Field(
         default="",
         description="Current variables, data structures, or other relevant state information.",
     )
-    files_modified: str = Field(default="", description="List of files that have been created or modified.")
-    function_changes: str = Field(default="", description="List of functions that have been created or modified.")
-    data_structures: str = Field(default="", description="List of key data structures in use or modified.")
+    files_modified: str = Field(
+        default="", description="List of files that have been created or modified."
+    )
+    function_changes: str = Field(
+        default="", description="List of functions that have been created or modified."
+    )
+    data_structures: str = Field(
+        default="", description="List of key data structures in use or modified."
+    )
     tests_written: str = Field(
         default="",
         description="Whether tests have been written for the changes. True, false, or unknown.",
@@ -46,15 +57,27 @@ class StateSummary(BaseModel):
         default="",
         description="Whether all tests are currently passing. True, false, or unknown.",
     )
-    failing_tests: str = Field(default="", description="List of names or descriptions of any failing tests.")
-    error_messages: str = Field(default="", description="List of key error messages encountered.")
+    failing_tests: str = Field(
+        default="", description="List of names or descriptions of any failing tests."
+    )
+    error_messages: str = Field(
+        default="", description="List of key error messages encountered."
+    )
     branch_created: str = Field(
         default="",
         description="Whether a branch has been created for this work. True, false, or unknown.",
     )
-    branch_name: str = Field(default="", description="Name of the current working branch if known.")
-    commits_made: str = Field(default="", description="Whether any commits have been made. True, false, or unknown.")
-    pr_created: str = Field(default="", description="Whether a pull request has been created. True, false, or unknown.")
+    branch_name: str = Field(
+        default="", description="Name of the current working branch if known."
+    )
+    commits_made: str = Field(
+        default="",
+        description="Whether any commits have been made. True, false, or unknown.",
+    )
+    pr_created: str = Field(
+        default="",
+        description="Whether a pull request has been created. True, false, or unknown.",
+    )
     pr_status: str = Field(
         default="",
         description="Status of any pull request: 'draft', 'open', 'merged', 'closed', or 'unknown'.",
@@ -86,10 +109,7 @@ class StateSummary(BaseModel):
                 "parameters": {
                     "type": "object",
                     "properties": properties,
-                    "required": [
-                        "user_context",
-                        "completed_tasks",
-                        "pending_tasks"],
+                    "required": ["user_context", "completed_tasks", "pending_tasks"],
                 },
             },
         }
@@ -131,15 +151,21 @@ class StructuredSummaryCondenser(RollingCondenser):
     Maintains a condensed history and forgets old events when it grows too large. Uses structured generation via function-calling to produce summaries that replace forgotten events.
     """
 
-    def __init__(self, llm: LLM, max_size: int = 100, keep_first: int = 1, max_event_length: int = 10000) -> None:
+    def __init__(
+        self,
+        llm: LLM,
+        max_size: int = 100,
+        keep_first: int = 1,
+        max_event_length: int = 10000,
+    ) -> None:
         """Initialize a structured summarizing condenser using LLM function calling.
-        
+
         This condenser uses an LLM with function calling capability to generate structured
         state summaries (StateSummary objects) that replace forgotten events. Unlike free-form
         text summarization, structured summaries enforce consistent categorization across
         multiple dimensions (user context, tasks, code changes, version control status, etc.),
         making the preserved context more queryable and reliable for downstream processing.
-        
+
         Args:
             llm: Language model instance with active function calling capability.
                  Will raise ValueError if is_function_calling_active() returns False.
@@ -149,22 +175,22 @@ class StructuredSummaryCondenser(RollingCondenser):
                        Must be >= 0 and < max_size // 2 to leave room for summary and tail.
             max_event_length: Maximum character length for individual event content before truncation.
                              Prevents excessively large prompts when summarizing events (default 10000).
-        
+
         Raises:
             ValueError: If keep_first >= max_size // 2, keep_first < 0, max_size < 1,
                        or if LLM doesn't have function calling enabled.
-        
+
         Side Effects:
             - Validates LLM function calling capability via is_function_calling_active()
             - Initializes parent RollingCondenser for event management
-        
+
         Notes:
             - Structure: [keep_first events] + [1 summary event] + [events_from_tail recent events]
             - Structured output: StateSummary with 22 fields for comprehensive state tracking
             - Function calling: Uses StateSummary.tool_description() to enforce structured output
             - Forgotten events: Selected from view[keep_first:-events_from_tail], excluding summary events
             - Examples: max_size=100, keep_first=1 → keep 1 first + 1 summary + ~48 recent events
-        
+
         Example:
             >>> from forge.llm.llm import LLM
             >>> llm = get_llm_with_function_calling()  # doctest: +SKIP
@@ -209,29 +235,39 @@ class StructuredSummaryCondenser(RollingCondenser):
         # Create condensation result
         return self._create_condensation_result(forgotten_events, summary)
 
-    def _prepare_view_sections(self, view: View) -> tuple[list, list, AgentCondensationObservation]:
+    def _prepare_view_sections(
+        self, view: View
+    ) -> tuple[list[Event], list[Event], AgentCondensationObservation]:
         """Prepare view sections: head, forgotten events, and summary event."""
-        head = view[: self.keep_first]
+        head = list(view[: self.keep_first])
         target_size = self.max_size // 2
         events_from_tail = target_size - len(head) - 1
 
         # Get or create summary event
-        summary_event = (
-            view[self.keep_first]
-            if isinstance(view[self.keep_first], AgentCondensationObservation)
-            else AgentCondensationObservation("No events summarized")
-        )
+        summary_event: AgentCondensationObservation
+        try:
+            candidate_event = view[self.keep_first]
+        except IndexError:
+            candidate_event = None
+
+        if isinstance(candidate_event, AgentCondensationObservation):
+            summary_event = candidate_event
+        else:
+            summary_event = AgentCondensationObservation("No events summarized")
 
         # Get forgotten events (exclude summary events)
-        forgotten_events = [
+        forgotten_slice = view[self.keep_first : -events_from_tail]
+        forgotten_events: list[Event] = [
             event
-            for event in view[self.keep_first: -events_from_tail]
+            for event in forgotten_slice
             if not isinstance(event, AgentCondensationObservation)
         ]
 
         return head, forgotten_events, summary_event
 
-    def _build_condensation_prompt(self, summary_event: AgentCondensationObservation, forgotten_events: list) -> str:
+    def _build_condensation_prompt(
+        self, summary_event: AgentCondensationObservation, forgotten_events: list
+    ) -> str:
         """Build the prompt for LLM condensation."""
         base_prompt = (
             "You are maintaining a context-aware state summary for an interactive software agent. This summary is critical because it:\n"
@@ -246,16 +282,21 @@ class StructuredSummaryCondenser(RollingCondenser):
             "- Work that has been completed\n"
             "- Tasks that remain pending\n"
             "- Current state of code, variables, and data structures\n"
-            "- The status of any version control operations\n\n")
+            "- The status of any version control operations\n\n"
+        )
 
         # Add previous summary
         summary_event_content = self._truncate(summary_event.message or "")
-        base_prompt += f"<PREVIOUS SUMMARY>\n{summary_event_content}\n</PREVIOUS SUMMARY>\n\n"
+        base_prompt += (
+            f"<PREVIOUS SUMMARY>\n{summary_event_content}\n</PREVIOUS SUMMARY>\n\n"
+        )
 
         # Add forgotten events
         for forgotten_event in forgotten_events:
             event_content = self._truncate(str(forgotten_event))
-            base_prompt += f"<EVENT id={forgotten_event.id}>\n{event_content}\n</EVENT>\n"
+            base_prompt += (
+                f"<EVENT id={forgotten_event.id}>\n{event_content}\n</EVENT>\n"
+            )
 
         return base_prompt
 
@@ -266,7 +307,10 @@ class StructuredSummaryCondenser(RollingCondenser):
         response = self.llm.completion(
             messages=self.llm.format_messages_for_llm(messages),
             tools=[StateSummary.tool_description()],
-            tool_choice={"type": "function", "function": {"name": "create_state_summary"}},
+            tool_choice={
+                "type": "function",
+                "function": {"name": "create_state_summary"},
+            },
         )
 
         # Parse response
@@ -286,7 +330,11 @@ class StructuredSummaryCondenser(RollingCondenser):
                 raise ValueError(msg)
 
             summary_tool_call = next(
-                (tool_call for tool_call in message.tool_calls if tool_call.function.name == "create_state_summary"),
+                (
+                    tool_call
+                    for tool_call in message.tool_calls
+                    if tool_call.function.name == "create_state_summary"
+                ),
                 None,
             )
             if not summary_tool_call:
@@ -298,7 +346,9 @@ class StructuredSummaryCondenser(RollingCondenser):
             return StateSummary.model_validate(args_dict)
 
         except (ValueError, AttributeError, KeyError, json.JSONDecodeError) as e:
-            logger.warning("Failed to parse summary tool call: %s. Using empty summary.", e)
+            logger.warning(
+                "Failed to parse summary tool call: %s. Using empty summary.", e
+            )
             return StateSummary()
 
     def _add_response_metadata(self, response) -> None:
@@ -308,7 +358,9 @@ class StructuredSummaryCondenser(RollingCondenser):
         self.add_metadata("response", model_dump_with_options(response))
         self.add_metadata("metrics", self.llm.metrics.get())
 
-    def _create_condensation_result(self, forgotten_events: list, summary: StateSummary) -> Condensation:
+    def _create_condensation_result(
+        self, forgotten_events: list, summary: StateSummary
+    ) -> Condensation:
         """Create the final condensation result."""
         return Condensation(
             action=CondensationAction(
@@ -344,15 +396,15 @@ class StructuredSummaryCondenser(RollingCondenser):
 # Lazy registration to avoid circular imports
 def _register_config():
     """Register StructuredSummaryCondenserConfig with the StructuredSummaryCondenser factory.
-    
+
     Defers import of StructuredSummaryCondenserConfig to avoid circular dependency between
     condenser implementations and their configuration classes. Called at module load time
     to enable from_config() factory method to instantiate condensers from config objects.
-    
+
     Side Effects:
         - Imports StructuredSummaryCondenserConfig from forge.core.config.condenser_config
         - Registers config class with StructuredSummaryCondenser.register_config() factory
-    
+
     Notes:
         - Must be called at module level after StructuredSummaryCondenser class definition
         - Pattern reused across all condenser implementations
@@ -360,6 +412,8 @@ def _register_config():
 
     """
     from forge.core.config.condenser_config import StructuredSummaryCondenserConfig
+
     StructuredSummaryCondenser.register_config(StructuredSummaryCondenserConfig)
+
 
 _register_config()

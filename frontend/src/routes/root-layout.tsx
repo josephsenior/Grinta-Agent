@@ -31,6 +31,8 @@ import { LOCAL_STORAGE_KEYS } from "#/utils/local-storage";
 import { ToastProvider } from "#/components/shared/notifications/toast";
 import { RoutePreloader } from "#/utils/route-preloader";
 import { injectCriticalCSS } from "#/utils/critical-css";
+import { cn } from "#/utils/utils";
+import { Button } from "#/components/ui/button";
 
 const ConversationPanelWrapper = React.lazy(() =>
   import(
@@ -86,57 +88,131 @@ const MaintenanceBanner = React.lazy(() =>
 
 export function ErrorBoundary() {
   const error = useRouteError();
+  const navigate = useNavigate();
   const { t } = useTranslation();
 
   if (isRouteErrorResponse(error)) {
+    // Handle 404 errors
+    if (error.status === 404) {
+      navigate("/404", { replace: true });
+      return null;
+    }
+
+    // Handle other HTTP errors
     return (
-      <div>
-        <h1 data-testid="page-title">{error.status}</h1>
-        <p>{error.statusText}</p>
-        <pre>
-          {error.data instanceof Object
-            ? JSON.stringify(error.data)
-            : error.data}
-        </pre>
+      <div className="relative min-h-screen overflow-hidden bg-black text-foreground">
+        <div className="relative z-[1] flex min-h-screen flex-col items-center justify-center px-6 py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <div className="mb-8">
+              <h1 className="text-9xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-500 via-accent-500 to-brand-600">
+                {error.status}
+              </h1>
+            </div>
+            <div className="mb-8 space-y-4">
+              <h2 className="text-3xl font-semibold text-white sm:text-4xl">
+                {error.statusText || "Something went wrong"}
+              </h2>
+              <p className="text-lg text-white/70">
+                {error.data instanceof Object
+                  ? JSON.stringify(error.data)
+                  : error.data || "An error occurred while loading this page."}
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Button
+                onClick={() => navigate("/")}
+                className="bg-white text-black hover:bg-white/90 font-semibold rounded-xl px-6 py-3"
+              >
+                Go Home
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => window.location.reload()}
+                className="border border-white/20 bg-transparent text-foreground hover:bg-white/10 font-semibold rounded-xl px-6 py-3"
+              >
+                Reload Page
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
+
   if (error instanceof Error) {
     return (
-      <div>
-        <h1 data-testid="page-title">{t(I18nKey.ERROR$GENERIC)}</h1>
-        <pre>{error.message}</pre>
+      <div className="relative min-h-screen overflow-hidden bg-black text-foreground">
+        <div className="relative z-[1] flex min-h-screen flex-col items-center justify-center px-6 py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <div className="mb-8">
+              <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-500 via-accent-500 to-brand-600">
+                Error
+              </h1>
+            </div>
+            <div className="mb-8 space-y-4">
+              <h2 className="text-3xl font-semibold text-white sm:text-4xl">
+                {t(I18nKey.ERROR$GENERIC)}
+              </h2>
+              <p className="text-lg text-white/70">
+                {error.message || "An unexpected error occurred."}
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Button
+                onClick={() => navigate("/")}
+                className="bg-white text-black hover:bg-white/90 font-semibold rounded-xl px-6 py-3"
+              >
+                Go Home
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => window.location.reload()}
+                className="border border-white/20 bg-transparent text-foreground hover:bg-white/10 font-semibold rounded-xl px-6 py-3"
+              >
+                Reload Page
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <h1 data-testid="page-title">{t(I18nKey.ERROR$UNKNOWN)}</h1>
-    </div>
-  );
-}
-
-export default function MainApp() {
-  const controller = useMainAppController();
-
-  return (
-    <AppErrorBoundary>
-      <ToastProvider>
-        <div
-          data-testid="root-layout"
-          className="min-h-screen w-full bg-black font-sans safe-area-top safe-area-bottom safe-area-left safe-area-right"
-        >
-          <div className="relative z-10 h-screen lg:min-w-[1024px] flex flex-col overflow-hidden">
-            <MainLayoutShell controller={controller} />
+    <div className="relative min-h-screen overflow-hidden bg-black text-foreground">
+      <div className="relative z-[1] flex min-h-screen flex-col items-center justify-center px-6 py-20">
+        <div className="mx-auto max-w-2xl text-center">
+          <div className="mb-8">
+            <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-500 via-accent-500 to-brand-600">
+              Error
+            </h1>
           </div>
-
-          <AppFooter isConversationPage={controller.isConversationPage} />
-          <OverlayModals controller={controller} />
-          <RoutePreloader />
+          <div className="mb-8 space-y-4">
+            <h2 className="text-3xl font-semibold text-white sm:text-4xl">
+              {t(I18nKey.ERROR$UNKNOWN)}
+            </h2>
+            <p className="text-lg text-white/70">
+              An unknown error occurred. Please try again.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button
+              onClick={() => navigate("/")}
+              className="bg-white text-black hover:bg-white/90 font-semibold rounded-xl px-6 py-3"
+            >
+              Go Home
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => window.location.reload()}
+              className="border border-white/20 bg-transparent text-foreground hover:bg-white/10 font-semibold rounded-xl px-6 py-3"
+            >
+              Reload Page
+            </Button>
+          </div>
         </div>
-      </ToastProvider>
-    </AppErrorBoundary>
+      </div>
+    </div>
   );
 }
 
@@ -159,65 +235,6 @@ interface MainAppController {
   t: TFunction;
 }
 
-function useMainAppController(): MainAppController {
-  const { navigate, pathname, isOnTosPage, isConversationPage } =
-    useRouteContext();
-  const { t } = useTranslation();
-
-  const appData = useMainAppData(isOnTosPage);
-  useMainAppLifecycle({
-    isOnTosPage,
-    settings: appData.settings,
-    config: appData.config,
-    balance: appData.balance,
-    pathname,
-    navigate,
-    t,
-  });
-
-  const effectiveGitHubAuthUrl = useEffectiveGitHubAuthUrl({
-    gitHubAuthUrl: appData.gitHubAuthUrl,
-    isOnTosPage,
-  });
-  const loginMethodExists = useLoginMethodDetection(appData.isAuthed);
-  const authModalState = useAuthModalState({
-    isAuthed: appData.isAuthed,
-    authQuery: appData.authQuery,
-    isOnTosPage,
-    config: appData.config,
-    loginMethodExists,
-  });
-  const {
-    conversationPanelIsOpen,
-    openConversationPanel,
-    closeConversationPanel,
-  } = useConversationPanelState();
-  const { consentFormIsOpen, closeConsentForm } = useConsentFormState({
-    isOnTosPage,
-    settings: appData.settings,
-    migrateUserConsent: appData.migrateUserConsent,
-  });
-
-  return {
-    isConversationPage,
-    showHeader: !isConversationPage,
-    status: {
-      renderAuthModal: authModalState.renderAuthModal,
-      renderReAuthModal: authModalState.renderReAuthModal,
-      consentFormIsOpen,
-    },
-    config: appData.config.data,
-    settings: appData.settings,
-    conversationPanelIsOpen,
-    openConversationPanel,
-    closeConversationPanel,
-    closeConsentForm,
-    effectiveGitHubAuthUrl,
-    isAuthed: appData.isAuthed,
-    t,
-  };
-}
-
 function useRouteContext() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -227,7 +244,7 @@ function useRouteContext() {
   return { navigate, pathname, isOnTosPage, isConversationPage };
 }
 
-function useMainAppData(isOnTosPage: boolean) {
+function useMainAppData() {
   const config = useConfig();
   const settingsQuery = useSettings();
   const settings = settingsQuery.data;
@@ -250,31 +267,6 @@ function useMainAppData(isOnTosPage: boolean) {
     isAuthed,
     gitHubAuthUrl,
   };
-}
-
-function useMainAppLifecycle({
-  isOnTosPage,
-  settings,
-  config,
-  balance,
-  pathname,
-  navigate,
-  t,
-}: {
-  isOnTosPage: boolean;
-  settings: ReturnType<typeof useSettings>["data"];
-  config: ReturnType<typeof useConfig>;
-  balance: ReturnType<typeof useBalance>;
-  pathname: string;
-  navigate: ReturnType<typeof useNavigate>;
-  t: TFunction;
-}) {
-  useAutoLogin();
-  useAuthCallback();
-  useCriticalCss();
-  useLanguageSync({ isOnTosPage, settings });
-  useNewUserToast({ settings, config, t });
-  useBalanceRedirect({ isOnTosPage, balance, pathname, navigate });
 }
 
 function useCriticalCss() {
@@ -331,6 +323,31 @@ function useBalanceRedirect({
   }, [balance.error?.status, pathname, isOnTosPage, navigate]);
 }
 
+function useMainAppLifecycle({
+  isOnTosPage,
+  settings,
+  config,
+  balance,
+  pathname,
+  navigate,
+  t,
+}: {
+  isOnTosPage: boolean;
+  settings: ReturnType<typeof useSettings>["data"];
+  config: ReturnType<typeof useConfig>;
+  balance: ReturnType<typeof useBalance>;
+  pathname: string;
+  navigate: ReturnType<typeof useNavigate>;
+  t: TFunction;
+}) {
+  useAutoLogin();
+  useAuthCallback();
+  useCriticalCss();
+  useLanguageSync({ isOnTosPage, settings });
+  useNewUserToast({ settings, config, t });
+  useBalanceRedirect({ isOnTosPage, balance, pathname, navigate });
+}
+
 function useEffectiveGitHubAuthUrl({
   gitHubAuthUrl,
   isOnTosPage,
@@ -370,6 +387,13 @@ function useAuthModalState({
   };
 }
 
+function checkLoginMethodExists(): boolean {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return false;
+  }
+  return localStorage.getItem(LOCAL_STORAGE_KEYS.LOGIN_METHOD) !== null;
+}
+
 function useLoginMethodDetection(isAuthed: boolean | undefined) {
   const [loginMethodExists, setLoginMethodExists] = useState(
     checkLoginMethodExists(),
@@ -396,6 +420,14 @@ function useLoginMethodDetection(isAuthed: boolean | undefined) {
   }, []);
 
   return loginMethodExists;
+}
+
+function shouldConversationStartOpen(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  const win = window as Window & { __Forge_PLAYWRIGHT?: boolean };
+  return win?.__Forge_PLAYWRIGHT === true;
 }
 
 function useConversationPanelState() {
@@ -468,6 +500,65 @@ function useConsentFormState({
   return { consentFormIsOpen, closeConsentForm };
 }
 
+function useMainAppController(): MainAppController {
+  const { navigate, pathname, isOnTosPage, isConversationPage } =
+    useRouteContext();
+  const { t } = useTranslation();
+
+  const appData = useMainAppData();
+  useMainAppLifecycle({
+    isOnTosPage,
+    settings: appData.settings,
+    config: appData.config,
+    balance: appData.balance,
+    pathname,
+    navigate,
+    t,
+  });
+
+  const effectiveGitHubAuthUrl = useEffectiveGitHubAuthUrl({
+    gitHubAuthUrl: appData.gitHubAuthUrl,
+    isOnTosPage,
+  });
+  const loginMethodExists = useLoginMethodDetection(appData.isAuthed);
+  const authModalState = useAuthModalState({
+    isAuthed: appData.isAuthed,
+    authQuery: appData.authQuery,
+    isOnTosPage,
+    config: appData.config,
+    loginMethodExists,
+  });
+  const {
+    conversationPanelIsOpen,
+    openConversationPanel,
+    closeConversationPanel,
+  } = useConversationPanelState();
+  const { consentFormIsOpen, closeConsentForm } = useConsentFormState({
+    isOnTosPage,
+    settings: appData.settings,
+    migrateUserConsent: appData.migrateUserConsent,
+  });
+
+  return {
+    isConversationPage,
+    showHeader: !isConversationPage,
+    status: {
+      renderAuthModal: authModalState.renderAuthModal,
+      renderReAuthModal: authModalState.renderReAuthModal,
+      consentFormIsOpen,
+    },
+    config: appData.config.data,
+    settings: appData.settings,
+    conversationPanelIsOpen,
+    openConversationPanel,
+    closeConversationPanel,
+    closeConsentForm,
+    effectiveGitHubAuthUrl,
+    isAuthed: appData.isAuthed,
+    t,
+  };
+}
+
 function MainLayoutShell({ controller }: { controller: MainAppController }) {
   const maintenanceEnabled = controller.config?.MAINTENANCE;
 
@@ -487,7 +578,7 @@ function MainLayoutShell({ controller }: { controller: MainAppController }) {
         fallback={
           <div
             className={`fixed left-0 w-64 h-full bg-background-tertiary animate-pulse ${
-              controller.isConversationPage ? "top-0" : "top-16"
+              controller.showHeader ? "top-16" : "top-0"
             }`}
           />
         }
@@ -498,14 +589,14 @@ function MainLayoutShell({ controller }: { controller: MainAppController }) {
       <div
         className={cn(
           "flex flex-1 h-full min-h-0",
-          controller.isConversationPage ? "" : "pt-14",
+          controller.showHeader ? "pt-[88px] sm:pt-[96px]" : "",
         )}
       >
         <div
           className={
             controller.isConversationPage
               ? "w-full h-full"
-              : "p-3 md:p-4 lg:p-6 w-full"
+              : "p-3 md:p-4 lg:p-6 w-full pb-12 sm:pb-16"
           }
         >
           <div className="flex flex-col flex-1 gap-3 md:gap-4 lg:gap-5 min-w-0 h-full">
@@ -565,6 +656,14 @@ function AppFooter({ isConversationPage }: { isConversationPage: boolean }) {
   );
 }
 
+function ModalFallback() {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div className="bg-background-tertiary w-96 h-64 animate-pulse rounded-lg" />
+    </div>
+  );
+}
+
 function OverlayModals({ controller }: { controller: MainAppController }) {
   return (
     <>
@@ -619,31 +718,27 @@ function OverlayModals({ controller }: { controller: MainAppController }) {
   );
 }
 
-function ModalFallback() {
+export default function MainApp() {
+  const controller = useMainAppController();
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-      <div className="bg-background-tertiary w-96 h-64 animate-pulse rounded-lg" />
-    </div>
+    <AppErrorBoundary>
+      <ToastProvider>
+        <div
+          data-testid="root-layout"
+          className="min-h-screen w-full bg-black font-sans safe-area-top safe-area-bottom safe-area-left safe-area-right"
+        >
+          <div className="relative z-10 h-screen lg:min-w-[1024px] flex flex-col overflow-hidden">
+            <MainLayoutShell controller={controller} />
+          </div>
+
+          <AppFooter isConversationPage={controller.isConversationPage} />
+          <OverlayModals controller={controller} />
+          <RoutePreloader />
+        </div>
+      </ToastProvider>
+    </AppErrorBoundary>
   );
-}
-
-function shouldConversationStartOpen(): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-  const win = window as Window & { __Forge_PLAYWRIGHT?: boolean };
-  return win?.__Forge_PLAYWRIGHT === true;
-}
-
-function checkLoginMethodExists(): boolean {
-  if (typeof window === "undefined" || !window.localStorage) {
-    return false;
-  }
-  return localStorage.getItem(LOCAL_STORAGE_KEYS.LOGIN_METHOD) !== null;
-}
-
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
 }
 
 // Minimal hydrate fallback used by React Router to improve UX while route modules

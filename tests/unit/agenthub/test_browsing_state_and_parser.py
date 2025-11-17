@@ -6,6 +6,8 @@ import ast
 
 import pytest
 
+from typing import cast
+
 from forge.agenthub.browsing_agent import response_parser
 from forge.agenthub.browsing_agent.state_tracker import BrowsingStateTracker
 from forge.events.action import BrowseInteractiveAction
@@ -42,11 +44,13 @@ def test_state_tracker_records_visits_and_interactions() -> None:
 @pytest.mark.parametrize(
     "action_text, expected_message",
     [
-        ("Taking a look```click(\"11\")```", ""),
+        ('Taking a look```click("11")```', ""),
         ("Message only with no code", "Message only with no code"),
     ],
 )
-def test_response_parser_generates_actions(action_text: str, expected_message: str) -> None:
+def test_response_parser_generates_actions(
+    action_text: str, expected_message: str
+) -> None:
     parser = response_parser.BrowsingResponseParser()
     action = parser.parse(action_text)
 
@@ -58,35 +62,41 @@ def test_response_parser_generates_actions(action_text: str, expected_message: s
 
 def test_response_parser_handles_structured_response() -> None:
     parser = response_parser.BrowsingResponseParser()
-    structured = {
-        "choices": [
-            {
-                "message": {
-                    "content": "Thinking```noop()```",
+    structured = cast(
+        dict[str, list[dict[str, dict[str, str | None]]]],
+        {
+            "choices": [
+                {
+                    "message": {
+                        "content": "Thinking```noop()```",
+                    }
                 }
-            }
-        ]
-    }
+            ]
+        },
+    )
     action = parser.parse(structured)
     assert isinstance(action, BrowseInteractiveAction)
     assert action.browser_actions == "noop()"
 
 
-def test_browsing_action_parser_handles_send_message(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_browsing_action_parser_handles_send_message(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     parser = response_parser.BrowsingActionParserBrowseInteractive()
-    action_str = "Thought```send_msg_to_user(\"hello\")```"
+    action_str = 'Thought```send_msg_to_user("hello")```'
 
     action = parser.parse(action_str)
+    assert isinstance(action, BrowseInteractiveAction)
     assert action.browser_actions == 'send_msg_to_user("hello")'
     assert action.browsergym_send_msg_to_user == "hello"
 
     # trigger fallback regex path
-    bad_action = "```send_msg_to_user(\"invalid\""
+    bad_action = '```send_msg_to_user("invalid"'
 
     def _raise_syntax_error(*args, **kwargs):
         raise SyntaxError("bad")
 
     monkeypatch.setattr(ast, "parse", _raise_syntax_error)
     action = parser.parse(f"Thought{bad_action}")
+    assert isinstance(action, BrowseInteractiveAction)
     assert action.browsergym_send_msg_to_user == ""
-

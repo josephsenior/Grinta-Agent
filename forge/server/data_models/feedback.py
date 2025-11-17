@@ -31,15 +31,15 @@ FEEDBACK_URL = "https://share-od-trajectory-3u9bw9tx.uc.gateway.dev/share_od_tra
 
 def store_feedback(feedback: FeedbackDataModel) -> dict[str, str]:
     """Store user feedback to remote endpoint.
-    
+
     Sends feedback data to feedback collection service, eliding sensitive fields in logs.
-    
+
     Args:
         feedback: Feedback data to store
-        
+
     Returns:
         Response data dictionary from feedback service
-        
+
     Raises:
         ValueError: If feedback storage fails
 
@@ -47,7 +47,9 @@ def store_feedback(feedback: FeedbackDataModel) -> dict[str, str]:
     feedback.feedback = feedback.polarity
     display_feedback = model_dump_with_options(feedback)
     if "trajectory" in display_feedback:
-        display_feedback["trajectory"] = f"elided [length: {len(display_feedback['trajectory'])}"
+        display_feedback["trajectory"] = (
+            f"elided [length: {len(display_feedback['trajectory'])}"
+        )
     if "token" in display_feedback:
         display_feedback["token"] = "elided"
     logger.debug("Got feedback: %s", display_feedback)

@@ -50,6 +50,7 @@ tenacity = ">=8.5,<10.0"
 zope-interface = "7.2"
 pathspec = "^0.12.1"
 pyjwt = "^2.9.0"
+bcrypt = "^4.0.0"  # Password hashing for authentication
 dirhash = "*"
 tornado = "*"
 python-dotenv = "*"
@@ -157,6 +158,8 @@ pre-commit = "4.2.0"
 build = "*"
 types-setuptools = "*"
 pytest = "^8.4.0"
+grpcio = "^1.70.0"
+grpcio-tools = "^1.70.0"
 
 [tool.poetry.group.test]
 optional = true

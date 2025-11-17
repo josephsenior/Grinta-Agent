@@ -49,7 +49,9 @@ class DummyLLMConfig:
 @pytest.mark.asyncio
 async def test_generate_conversation_title_truncates(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(conversation_summary, "LLMConfig", DummyLLMConfig)
-    registry = DummyLLMRegistry(result="Title that is definitely longer than five characters")
+    registry = DummyLLMRegistry(
+        result="Title that is definitely longer than five characters"
+    )
     long_message = "x" * 1100
     title = await conversation_summary.generate_conversation_title(
         long_message, DummyLLMConfig("model", None, None), registry, max_length=10
@@ -59,10 +61,22 @@ async def test_generate_conversation_title_truncates(monkeypatch: pytest.MonkeyP
     registry = DummyLLMRegistry()
     registry.result = "Title"
     monkeypatch.setattr(
-        registry, "request_extraneous_completion", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("fail"))
+        registry,
+        "request_extraneous_completion",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("fail")),
     )
-    assert await conversation_summary.generate_conversation_title("hello", DummyLLMConfig("m", None, None), registry) is None
-    assert await conversation_summary.generate_conversation_title("", DummyLLMConfig("m", None, None), registry) is None
+    assert (
+        await conversation_summary.generate_conversation_title(
+            "hello", DummyLLMConfig("m", None, None), registry
+        )
+        is None
+    )
+    assert (
+        await conversation_summary.generate_conversation_title(
+            "", DummyLLMConfig("m", None, None), registry
+        )
+        is None
+    )
 
 
 @pytest.mark.asyncio
@@ -73,7 +87,9 @@ async def test_auto_generate_title_with_llm(monkeypatch: pytest.MonkeyPatch):
 
     llm_registry = DummyLLMRegistry("Great Title")
     settings = DummySettings(llm_model="model", llm_api_key=None, llm_base_url=None)
-    title = await conversation_summary.auto_generate_title("cid", "user", object(), settings, llm_registry)
+    title = await conversation_summary.auto_generate_title(
+        "cid", "user", object(), settings, llm_registry
+    )
     assert title == "Great Title"
 
 
@@ -84,17 +100,28 @@ async def test_auto_generate_title_fallback(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(conversation_summary, "MessageAction", DummyAction)
     llm_registry = DummyLLMRegistry()
     settings = DummySettings(llm_model=None, llm_api_key=None, llm_base_url=None)
-    title = await conversation_summary.auto_generate_title("cid", "user", object(), settings, llm_registry)
+    title = await conversation_summary.auto_generate_title(
+        "cid", "user", object(), settings, llm_registry
+    )
     assert title.startswith("Hello")
 
 
 def test_generate_truncated_title() -> None:
-    assert conversation_summary._generate_truncated_title("  spaced  ", max_length=4) == "spac..."
-    assert conversation_summary._generate_truncated_title("short", max_length=10) == "short"
+    assert (
+        conversation_summary._generate_truncated_title("  spaced  ", max_length=4)
+        == "spac..."
+    )
+    assert (
+        conversation_summary._generate_truncated_title("short", max_length=10)
+        == "short"
+    )
 
 
 def test_get_default_conversation_title() -> None:
-    assert conversation_summary.get_default_conversation_title("abcdef") == "Conversation abcde"
+    assert (
+        conversation_summary.get_default_conversation_title("abcdef")
+        == "Conversation abcde"
+    )
 
 
 @pytest.mark.asyncio
@@ -107,7 +134,9 @@ async def test_auto_generate_title_handles_missing(monkeypatch: pytest.MonkeyPat
             return self.events
 
     monkeypatch.setattr(conversation_summary, "EventStore", EmptyEventStore)
-    result = await conversation_summary.auto_generate_title("cid", "user", object(), DummySettings(), DummyLLMRegistry())
+    result = await conversation_summary.auto_generate_title(
+        "cid", "user", object(), DummySettings(), DummyLLMRegistry()
+    )
     assert result == ""
 
 
@@ -116,9 +145,13 @@ async def test_auto_generate_title_logs_error(monkeypatch: pytest.MonkeyPatch):
     async def bad_try(*args, **kwargs):
         raise RuntimeError("boom")
 
-    monkeypatch.setattr(conversation_summary, "_get_first_user_message", lambda *args: "hello")
+    monkeypatch.setattr(
+        conversation_summary, "_get_first_user_message", lambda *args: "hello"
+    )
     monkeypatch.setattr(conversation_summary, "_try_llm_title_generation", bad_try)
-    result = await conversation_summary.auto_generate_title("cid", "user", object(), DummySettings(), DummyLLMRegistry())
+    result = await conversation_summary.auto_generate_title(
+        "cid", "user", object(), DummySettings(), DummyLLMRegistry()
+    )
     assert result == ""
 
 
@@ -130,6 +163,7 @@ async def test_try_llm_title_generation_handles_error(monkeypatch: pytest.Monkey
         lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("fail")),
     )
     settings = DummySettings(llm_model="model", llm_api_key=None, llm_base_url=None)
-    result = await conversation_summary._try_llm_title_generation("message", settings, DummyLLMRegistry("ignored"))
+    result = await conversation_summary._try_llm_title_generation(
+        "message", settings, DummyLLMRegistry("ignored")
+    )
     assert result is None
-

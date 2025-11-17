@@ -2,7 +2,10 @@ import json
 from pathlib import Path
 from typing import cast
 from datasets import Dataset, load_dataset
-from evaluation.benchmarks.testgeneval.constants import KEY_INSTANCE_ID, TestGenEvalInstance
+from evaluation.benchmarks.testgeneval.constants import (
+    KEY_INSTANCE_ID,
+    TestGenEvalInstance,
+)
 
 
 def get_test_directives(instance: TestGenEvalInstance) -> list:
@@ -21,14 +24,16 @@ def get_test_directives(instance: TestGenEvalInstance) -> list:
         directives_transformed = []
         for d in directives:
             d = d[: -len(".py")] if d.endswith(".py") else d
-            d = d[len("tests/"):] if d.startswith("tests/") else d
+            d = d[len("tests/") :] if d.startswith("tests/") else d
             d = d.replace("/", ".")
             directives_transformed.append(d)
         directives = directives_transformed
     return directives
 
 
-def load_testgeneval_dataset(name="kjain14/testgeneval", split="test", ids=None) -> list[TestGenEvalInstance]:
+def load_testgeneval_dataset(
+    name="kjain14/testgeneval", split="test", ids=None
+) -> list[TestGenEvalInstance]:
     """Load SWE-bench dataset from Hugging Face Datasets or local .json/.jsonl file."""
     if ids:
         ids = set(ids)
@@ -73,10 +78,14 @@ def _normalize_dataset_name(name: str) -> str:
     return name
 
 
-def _validate_and_filter_dataset(dataset: list, ids: set[str], dataset_ids: set[str]) -> None:
+def _validate_and_filter_dataset(
+    dataset: list, ids: set[str], dataset_ids: set[str]
+) -> None:
     """Validate and filter dataset by IDs."""
     if ids - dataset_ids:
-        raise ValueError(f"Some instance IDs not found in dataset!\nMissing IDs:\n{' '.join(ids - dataset_ids)}")
+        raise ValueError(
+            f"Some instance IDs not found in dataset!\nMissing IDs:\n{' '.join(ids - dataset_ids)}"
+        )
 
     # Filter dataset in place
     dataset[:] = [instance for instance in dataset if instance["id"] in ids]

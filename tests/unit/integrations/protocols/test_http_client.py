@@ -46,7 +46,12 @@ class DummyHTTPClient(HTTPClient):
     async def _get_headers(self) -> dict[str, Any]:
         return {"Authorization": f"Bearer {self.token.get_secret_value()}"}
 
-    async def _make_request(self, url: str, params: dict | None = None, method: RequestMethod = RequestMethod.GET):
+    async def _make_request(
+        self,
+        url: str,
+        params: dict | None = None,
+        method: RequestMethod = RequestMethod.GET,
+    ):
         return ({"test": "data"}, {})
 
 
@@ -89,7 +94,9 @@ class TestHTTPClient:
         url = "https://api.example.com/user"
         headers = {"Authorization": "Bearer token"}
         params = {"per_page": 10}
-        result = await client.execute_request(mock_client, url, headers, params, RequestMethod.GET)
+        result = await client.execute_request(
+            mock_client, url, headers, params, RequestMethod.GET
+        )
         assert result == mock_response
         mock_client.get.assert_called_once_with(url, headers=headers, params=params)
 
@@ -103,7 +110,9 @@ class TestHTTPClient:
         url = "https://api.example.com/issues"
         headers = {"Authorization": "Bearer token"}
         params = {"title": "Test Issue"}
-        result = await client.execute_request(mock_client, url, headers, params, RequestMethod.POST)
+        result = await client.execute_request(
+            mock_client, url, headers, params, RequestMethod.POST
+        )
         assert result == mock_response
         mock_client.post.assert_called_once_with(url, headers=headers, json=params)
 
@@ -112,7 +121,9 @@ class TestHTTPClient:
         client = DummyHTTPClient("github")
         mock_response = Mock()
         mock_response.status_code = 401
-        error = httpx.HTTPStatusError(message="401 Unauthorized", request=Mock(), response=mock_response)
+        error = httpx.HTTPStatusError(
+            message="401 Unauthorized", request=Mock(), response=mock_response
+        )
         result = client.handle_http_status_error(error)
         assert isinstance(result, AuthenticationError)
         assert "Invalid github token" in str(result)
@@ -123,7 +134,9 @@ class TestHTTPClient:
         client.provider = "gitlab"
         mock_response = Mock()
         mock_response.status_code = 404
-        error = httpx.HTTPStatusError(message="404 Not Found", request=Mock(), response=mock_response)
+        error = httpx.HTTPStatusError(
+            message="404 Not Found", request=Mock(), response=mock_response
+        )
         result = client.handle_http_status_error(error)
         assert isinstance(result, ResourceNotFoundError)
         assert "Resource not found on gitlab API" in str(result)
@@ -134,7 +147,9 @@ class TestHTTPClient:
         client.provider = "bitbucket"
         mock_response = Mock()
         mock_response.status_code = 429
-        error = httpx.HTTPStatusError(message="429 Too Many Requests", request=Mock(), response=mock_response)
+        error = httpx.HTTPStatusError(
+            message="429 Too Many Requests", request=Mock(), response=mock_response
+        )
         result = client.handle_http_status_error(error)
         assert isinstance(result, RateLimitError)
         assert "bitbucket API rate limit exceeded" in str(result)
@@ -145,7 +160,9 @@ class TestHTTPClient:
         client.provider = "test-provider"
         mock_response = Mock()
         mock_response.status_code = 500
-        error = httpx.HTTPStatusError(message="500 Internal Server Error", request=Mock(), response=mock_response)
+        error = httpx.HTTPStatusError(
+            message="500 Internal Server Error", request=Mock(), response=mock_response
+        )
         result = client.handle_http_status_error(error)
         assert isinstance(result, UnknownException)
         assert "Unknown error" in str(result)
@@ -231,14 +248,20 @@ class TestHTTPClient:
             client.provider = provider
             mock_response = Mock()
             mock_response.status_code = 401
-            error = httpx.HTTPStatusError(message="401 Unauthorized", request=Mock(), response=mock_response)
+            error = httpx.HTTPStatusError(
+                message="401 Unauthorized", request=Mock(), response=mock_response
+            )
             result = client.handle_http_status_error(error)
             assert f"Invalid {provider} token" in str(result)
             mock_response.status_code = 404
-            error = httpx.HTTPStatusError(message="404 Not Found", request=Mock(), response=mock_response)
+            error = httpx.HTTPStatusError(
+                message="404 Not Found", request=Mock(), response=mock_response
+            )
             result = client.handle_http_status_error(error)
             assert f"Resource not found on {provider} API" in str(result)
             mock_response.status_code = 429
-            error = httpx.HTTPStatusError(message="429 Too Many Requests", request=Mock(), response=mock_response)
+            error = httpx.HTTPStatusError(
+                message="429 Too Many Requests", request=Mock(), response=mock_response
+            )
             result = client.handle_http_status_error(error)
             assert f"{provider} API rate limit exceeded" in str(result)

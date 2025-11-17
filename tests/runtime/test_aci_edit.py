@@ -13,7 +13,10 @@ def test_view_file(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
-        action = FileWriteAction(content="This is a test file.\nThis file is for testing purposes.", path=test_file)
+        action = FileWriteAction(
+            content="This is a test file.\nThis file is for testing purposes.",
+            path=test_file,
+        )
         obs = runtime.run_action(action)
         action = FileEditAction(command="view", path=test_file)
         obs = runtime.run_action(action)
@@ -25,20 +28,28 @@ def test_view_file(temp_dir, runtime_cls, run_as_Forge):
 
 
 def test_view_directory(temp_dir, runtime_cls, run_as_Forge):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge, enable_browser=True)
+    runtime, config = _load_runtime(
+        temp_dir, runtime_cls, run_as_Forge, enable_browser=True
+    )
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
-        action = FileWriteAction(content="This is a test file.\nThis file is for testing purposes.", path=test_file)
+        action = FileWriteAction(
+            content="This is a test file.\nThis file is for testing purposes.",
+            path=test_file,
+        )
         obs = runtime.run_action(action)
-        action = FileEditAction(command="view", path=config.workspace_mount_path_in_sandbox)
+        action = FileEditAction(
+            command="view", path=config.workspace_mount_path_in_sandbox
+        )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert (
             obs.content
             == f"Here's the files and directories up to 2 levels deep in {
-                config.workspace_mount_path_in_sandbox}, excluding hidden items:\n{
-                config.workspace_mount_path_in_sandbox}/\n{
-                config.workspace_mount_path_in_sandbox}/test.txt\n\n1 hidden files/directories in this directory are excluded. You can use 'ls -la /workspace' to see them."
+                config.workspace_mount_path_in_sandbox
+            }, excluding hidden items:\n{config.workspace_mount_path_in_sandbox}/\n{
+                config.workspace_mount_path_in_sandbox
+            }/test.txt\n\n1 hidden files/directories in this directory are excluded. You can use 'ls -la /workspace' to see them."
         )
     finally:
         _close_test_runtime(runtime)
@@ -48,7 +59,9 @@ def test_create_file(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         new_file = os.path.join(config.workspace_mount_path_in_sandbox, "new_file.txt")
-        action = FileEditAction(command="create", path=new_file, file_text="New file content")
+        action = FileEditAction(
+            command="create", path=new_file, file_text="New file content"
+        )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert "File created successfully" in obs.content
@@ -79,11 +92,16 @@ def test_create_file_with_empty_content(temp_dir, runtime_cls, run_as_Forge):
 def test_create_with_none_file_text(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
-        new_file = os.path.join(config.workspace_mount_path_in_sandbox, "none_content.txt")
+        new_file = os.path.join(
+            config.workspace_mount_path_in_sandbox, "none_content.txt"
+        )
         action = FileEditAction(command="create", path=new_file, file_text=None)
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
-        assert obs.content == "ERROR:\nParameter `file_text` is required for command: create."
+        assert (
+            obs.content
+            == "ERROR:\nParameter `file_text` is required for command: create."
+        )
     finally:
         _close_test_runtime(runtime)
 
@@ -92,9 +110,17 @@ def test_str_replace(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
-        action = FileWriteAction(content="This is a test file.\nThis file is for testing purposes.", path=test_file)
+        action = FileWriteAction(
+            content="This is a test file.\nThis file is for testing purposes.",
+            path=test_file,
+        )
         runtime.run_action(action)
-        action = FileEditAction(command="str_replace", path=test_file, old_str="test file", new_str="sample file")
+        action = FileEditAction(
+            command="str_replace",
+            path=test_file,
+            old_str="test file",
+            new_str="sample file",
+        )
         obs = runtime.run_action(action)
         assert f"The file {test_file} has been edited" in obs.content
         action = FileEditAction(command="view", path=test_file)
@@ -108,7 +134,10 @@ def test_str_replace_multi_line(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
-        action = FileWriteAction(content="This is a test file.\nThis file is for testing purposes.", path=test_file)
+        action = FileWriteAction(
+            content="This is a test file.\nThis file is for testing purposes.",
+            path=test_file,
+        )
         runtime.run_action(action)
         action = FileEditAction(
             command="str_replace",
@@ -129,7 +158,11 @@ def test_str_replace_multi_line_with_tabs(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
-        action = FileEditAction(command="create", path=test_file, file_text='def test():\n\tprint("Hello, World!")')
+        action = FileEditAction(
+            command="create",
+            path=test_file,
+            file_text='def test():\n\tprint("Hello, World!")',
+        )
         runtime.run_action(action)
         action = FileEditAction(
             command="str_replace",
@@ -151,9 +184,14 @@ def test_str_replace_error_multiple_occurrences(temp_dir, runtime_cls, run_as_Fo
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
-        action = FileWriteAction(content="This is a test file.\nThis file is for testing purposes.", path=test_file)
+        action = FileWriteAction(
+            content="This is a test file.\nThis file is for testing purposes.",
+            path=test_file,
+        )
         runtime.run_action(action)
-        action = FileEditAction(command="str_replace", path=test_file, old_str="test", new_str="sample")
+        action = FileEditAction(
+            command="str_replace", path=test_file, old_str="test", new_str="sample"
+        )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert "Multiple occurrences of old_str `test`" in obs.content
@@ -162,7 +200,9 @@ def test_str_replace_error_multiple_occurrences(temp_dir, runtime_cls, run_as_Fo
         _close_test_runtime(runtime)
 
 
-def test_str_replace_error_multiple_multiline_occurrences(temp_dir, runtime_cls, run_as_Forge):
+def test_str_replace_error_multiple_multiline_occurrences(
+    temp_dir, runtime_cls, run_as_Forge
+):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
@@ -171,7 +211,10 @@ def test_str_replace_error_multiple_multiline_occurrences(temp_dir, runtime_cls,
         action = FileWriteAction(content=content, path=test_file)
         runtime.run_action(action)
         action = FileEditAction(
-            command="str_replace", path=test_file, old_str=multi_block, new_str='def new():\n    print("World")'
+            command="str_replace",
+            path=test_file,
+            old_str=multi_block,
+            new_str='def new():\n    print("World")',
         )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
@@ -187,11 +230,19 @@ def test_str_replace_nonexistent_string(temp_dir, runtime_cls, run_as_Forge):
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
         runtime.run_action(action)
-        action = FileEditAction(command="str_replace", path=test_file, old_str="Non-existent Line", new_str="New Line")
+        action = FileEditAction(
+            command="str_replace",
+            path=test_file,
+            old_str="Non-existent Line",
+            new_str="New Line",
+        )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert "No replacement was performed" in obs.content
-        assert f"old_str `Non-existent Line` did not appear verbatim in {test_file}" in obs.content
+        assert (
+            f"old_str `Non-existent Line` did not appear verbatim in {test_file}"
+            in obs.content
+        )
     finally:
         _close_test_runtime(runtime)
 
@@ -200,9 +251,16 @@ def test_str_replace_with_empty_new_str(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
-        action = FileWriteAction(content="Line 1\nLine to remove\nLine 3", path=test_file)
+        action = FileWriteAction(
+            content="Line 1\nLine to remove\nLine 3", path=test_file
+        )
         runtime.run_action(action)
-        action = FileEditAction(command="str_replace", path=test_file, old_str="Line to remove\n", new_str="")
+        action = FileEditAction(
+            command="str_replace",
+            path=test_file,
+            old_str="Line to remove\n",
+            new_str="",
+        )
         obs = runtime.run_action(action)
         assert "Line to remove" not in obs.content
         assert "Line 1" in obs.content
@@ -217,7 +275,9 @@ def test_str_replace_with_empty_old_str(temp_dir, runtime_cls, run_as_Forge):
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2\nLine 3", path=test_file)
         runtime.run_action(action)
-        action = FileEditAction(command="str_replace", path=test_file, old_str="", new_str="New string")
+        action = FileEditAction(
+            command="str_replace", path=test_file, old_str="", new_str="New string"
+        )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         if isinstance(runtime, CLIRuntime):
@@ -240,7 +300,9 @@ def test_str_replace_with_none_old_str(temp_dir, runtime_cls, run_as_Forge):
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2\nLine 3", path=test_file)
         runtime.run_action(action)
-        action = FileEditAction(command="str_replace", path=test_file, old_str=None, new_str="new content")
+        action = FileEditAction(
+            command="str_replace", path=test_file, old_str=None, new_str="new content"
+        )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert "old_str" in obs.content
@@ -254,7 +316,9 @@ def test_insert(temp_dir, runtime_cls, run_as_Forge):
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
         runtime.run_action(action)
-        action = FileEditAction(command="insert", path=test_file, insert_line=1, new_str="Inserted line")
+        action = FileEditAction(
+            command="insert", path=test_file, insert_line=1, new_str="Inserted line"
+        )
         obs = runtime.run_action(action)
         assert f"The file {test_file} has been edited" in obs.content
         action = FileEditAction(command="view", path=test_file)
@@ -272,7 +336,9 @@ def test_insert_invalid_line(temp_dir, runtime_cls, run_as_Forge):
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
         runtime.run_action(action)
-        action = FileEditAction(command="insert", path=test_file, insert_line=10, new_str="Invalid Insert")
+        action = FileEditAction(
+            command="insert", path=test_file, insert_line=10, new_str="Invalid Insert"
+        )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert "Invalid `insert_line` parameter" in obs.content
@@ -287,7 +353,9 @@ def test_insert_with_empty_string(temp_dir, runtime_cls, run_as_Forge):
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
         runtime.run_action(action)
-        action = FileEditAction(command="insert", path=test_file, insert_line=1, new_str="")
+        action = FileEditAction(
+            command="insert", path=test_file, insert_line=1, new_str=""
+        )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert "1\tLine 1" in obs.content
@@ -303,7 +371,9 @@ def test_insert_with_none_new_str(temp_dir, runtime_cls, run_as_Forge):
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
         runtime.run_action(action)
-        action = FileEditAction(command="insert", path=test_file, insert_line=1, new_str=None)
+        action = FileEditAction(
+            command="insert", path=test_file, insert_line=1, new_str=None
+        )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert "ERROR" in obs.content
@@ -318,7 +388,9 @@ def test_undo_edit(temp_dir, runtime_cls, run_as_Forge):
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="This is a test file.", path=test_file)
         runtime.run_action(action)
-        action = FileEditAction(command="str_replace", path=test_file, old_str="test", new_str="sample")
+        action = FileEditAction(
+            command="str_replace", path=test_file, old_str="test", new_str="sample"
+        )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert "This is a sample file." in obs.content
@@ -338,7 +410,9 @@ def test_undo_edit(temp_dir, runtime_cls, run_as_Forge):
 def test_validate_path_invalid(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
-        invalid_file = os.path.join(config.workspace_mount_path_in_sandbox, "nonexistent.txt")
+        invalid_file = os.path.join(
+            config.workspace_mount_path_in_sandbox, "nonexistent.txt"
+        )
         action = FileEditAction(command="view", path=invalid_file)
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
@@ -354,7 +428,9 @@ def test_create_existing_file_error(temp_dir, runtime_cls, run_as_Forge):
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
         runtime.run_action(action)
-        action = FileEditAction(command="create", path=test_file, file_text="New content")
+        action = FileEditAction(
+            command="create", path=test_file, file_text="New content"
+        )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert "File already exists" in obs.content
@@ -368,10 +444,15 @@ def test_str_replace_missing_old_str(temp_dir, runtime_cls, run_as_Forge):
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
         runtime.run_action(action)
-        action = FileEditAction(command="str_replace", path=test_file, old_str="", new_str="sample")
+        action = FileEditAction(
+            command="str_replace", path=test_file, old_str="", new_str="sample"
+        )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
-        assert "No replacement was performed. Multiple occurrences of old_str ``" in obs.content
+        assert (
+            "No replacement was performed. Multiple occurrences of old_str ``"
+            in obs.content
+        )
     finally:
         _close_test_runtime(runtime)
 
@@ -382,10 +463,18 @@ def test_str_replace_new_str_and_old_str_same(temp_dir, runtime_cls, run_as_Forg
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
         runtime.run_action(action)
-        action = FileEditAction(command="str_replace", path=test_file, old_str="test file", new_str="test file")
+        action = FileEditAction(
+            command="str_replace",
+            path=test_file,
+            old_str="test file",
+            new_str="test file",
+        )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
-        assert "No replacement was performed. `new_str` and `old_str` must be different." in obs.content
+        assert (
+            "No replacement was performed. `new_str` and `old_str` must be different."
+            in obs.content
+        )
     finally:
         _close_test_runtime(runtime)
 
@@ -396,7 +485,9 @@ def test_insert_missing_line_param(temp_dir, runtime_cls, run_as_Forge):
         test_file = os.path.join(config.workspace_mount_path_in_sandbox, "test.txt")
         action = FileWriteAction(content="Line 1\nLine 2", path=test_file)
         runtime.run_action(action)
-        action = FileEditAction(command="insert", path=test_file, new_str="Missing insert line")
+        action = FileEditAction(
+            command="insert", path=test_file, new_str="Missing insert line"
+        )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert "Parameter `insert_line` is required for command: insert" in obs.content
@@ -421,14 +512,19 @@ def test_undo_edit_no_history_error(temp_dir, runtime_cls, run_as_Forge):
 def test_view_large_file_with_truncation(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
-        large_file = os.path.join(config.workspace_mount_path_in_sandbox, "large_test.txt")
+        large_file = os.path.join(
+            config.workspace_mount_path_in_sandbox, "large_test.txt"
+        )
         large_content = "Line 1\n" * 16000
         action = FileWriteAction(content=large_content, path=large_file)
         runtime.run_action(action)
         action = FileEditAction(command="view", path=large_file)
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
-        assert "Due to the max output limit, only part of this file has been shown to you." in obs.content
+        assert (
+            "Due to the max output limit, only part of this file has been shown to you."
+            in obs.content
+        )
     finally:
         _close_test_runtime(runtime)
 
@@ -440,9 +536,15 @@ def test_insert_line_string_conversion():
     causes a TypeError in the editor.
     """
     mock_editor = MagicMock()
-    mock_editor.return_value = MagicMock(error=None, output="Success", old_content=None, new_content=None)
+    mock_editor.return_value = MagicMock(
+        error=None, output="Success", old_content=None, new_content=None
+    )
     result, _ = _execute_file_editor(
-        editor=mock_editor, command="insert", path="/test/path.py", insert_line="185", new_str="test content"
+        editor=mock_editor,
+        command="insert",
+        path="/test/path.py",
+        insert_line="185",
+        new_str="test content",
     )
     mock_editor.assert_called_once()
     args, kwargs = mock_editor.call_args

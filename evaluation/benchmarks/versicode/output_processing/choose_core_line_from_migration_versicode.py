@@ -59,7 +59,9 @@ def _is_single_line_docstring(line: str) -> bool:
 
 def _starts_multi_line_comment(line: str) -> bool:
     """Check if line starts a multi-line comment."""
-    return ('"""' in line or "'''" in line) and (not re.findall("'''(.*?)'''|\\\"\\\"\\\"(.*?)\\\"\\\"\\\"", line))
+    return ('"""' in line or "'''" in line) and (
+        not re.findall("'''(.*?)'''|\\\"\\\"\\\"(.*?)\\\"\\\"\\\"", line)
+    )
 
 
 def _update_comment_state(line: str, in_multi_line_comment: bool) -> bool:
@@ -75,7 +77,9 @@ def _update_comment_state(line: str, in_multi_line_comment: bool) -> bool:
 
 def _ends_multi_line_comment(line: str) -> bool:
     """Check if line ends a multi-line comment."""
-    return ('"""' in line or "'''" in line) and (not re.findall("'''(.*?)'''|\\\"\\\"\\\"(.*?)\\\"\\\"\\\"", line))
+    return ('"""' in line or "'''" in line) and (
+        not re.findall("'''(.*?)'''|\\\"\\\"\\\"(.*?)\\\"\\\"\\\"", line)
+    )
 
 
 def _is_task_function_line(line: str) -> bool:
@@ -88,7 +92,9 @@ def _contains_core_token(line: str, core_token: str) -> bool:
     return bool(re.search(f"\x08{re.escape(core_token)}\x08(?!\\s*=)", line))
 
 
-def _create_masked_code(lines: list[str], replaced_lines: dict[int, str]) -> tuple[str, str]:
+def _create_masked_code(
+    lines: list[str], replaced_lines: dict[int, str]
+) -> tuple[str, str]:
     """Create masked code by replacing a random line with mask."""
     random_line_location = random.choice(list(replaced_lines.keys()))
     masked_line = lines[random_line_location]
@@ -113,7 +119,9 @@ def save_json(file_path, data):
 if __name__ == "__main__":
     model_list = os.listdir("../data/result_data/code_migration")
     for model in model_list:
-        input_json_file = f"../data/result_data/code_migration/{model}/VersiCode_migration.json"
+        input_json_file = (
+            f"../data/result_data/code_migration/{model}/VersiCode_migration.json"
+        )
         output_json_file = input_json_file
         data = load_json(input_json_file)
         for item in data:

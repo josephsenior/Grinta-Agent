@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\routes\files.py
+# hypothesis_version: 6.147.0
+
+[200, 404, 415, 422, 500, '..', '../', './', '/', '/git/changes', '/git/diff', '/list-files', '/select-file', '/upload-files', '/zip-directory', 'BINARY_FILE_ERROR', 'ERROR_BINARY_FILE', 'Error getting diff', 'Error opening file', 'FILE_OPEN_ERROR', 'GIT_DIFF_ERROR', 'INVALID_FILE_PATH', 'INVALID_PATH', 'LIST_FILES_ERROR', 'Not a git repository', 'RUNTIME_NOT_READY', 'RUNTIME_UNAVAILABLE', 'RuntimeFileOps', 'ZIP_ERROR', 'Zipping workspace', 'application/zip', 'code', 'description', 'dev-user', 'error', 'git', 'model', 'name', 'pytest', 'reason', 'replace', 'skipped_files', 'uploaded_files', 'utf-8', 'workspace.zip']

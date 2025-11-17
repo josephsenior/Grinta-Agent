@@ -194,7 +194,9 @@ def _process_git_path_lines(line: str) -> tuple[str | None, str | None]:
     return old_path, new_path
 
 
-def _create_header_from_paths(old_path: str, new_path: str, old_version: str | None, new_version: str | None) -> header:
+def _create_header_from_paths(
+    old_path: str, new_path: str, old_version: str | None, new_version: str | None
+) -> header:
     """Create header from normalized paths and versions."""
     old_path = _normalize_git_path(old_path)
     new_path = _normalize_git_path(new_path)
@@ -207,7 +209,9 @@ def _create_header_from_paths(old_path: str, new_path: str, old_version: str | N
     )
 
 
-def _create_header_from_cmd_paths(cmd_old_path: str, cmd_new_path: str, old_version: str, new_version: str) -> header:
+def _create_header_from_cmd_paths(
+    cmd_old_path: str, cmd_new_path: str, old_version: str, new_version: str
+) -> header:
     """Create header from command paths and versions."""
     cmd_old_path = _normalize_git_path(cmd_old_path)
     cmd_new_path = _normalize_git_path(cmd_new_path)
@@ -249,7 +253,9 @@ def parse_git_header(text: str | list[str]) -> header | None:
     return _try_build_header_from_state(state)
 
 
-def _try_process_git_header_line(line: str, state: _GitHeaderParsingState) -> header | None:
+def _try_process_git_header_line(
+    line: str, state: _GitHeaderParsingState
+) -> header | None:
     """Try to process a git header line and return header if complete.
 
     Args:
@@ -289,7 +295,12 @@ def _try_build_header_from_state(state: _GitHeaderParsingState) -> header | None
         Header if state is complete, None otherwise
 
     """
-    if state.cmd_old_path and state.cmd_new_path and state.old_version and state.new_version:
+    if (
+        state.cmd_old_path
+        and state.cmd_new_path
+        and state.old_version
+        and state.new_version
+    ):
         return _create_header_from_cmd_paths(
             state.cmd_old_path,
             state.cmd_new_path,
@@ -303,12 +314,12 @@ class _GitHeaderParsingState:
     """State for parsing git header information."""
 
     def __init__(self) -> None:
-        self.old_version = None
-        self.new_version = None
-        self.old_path = None
-        self.new_path = None
-        self.cmd_old_path = None
-        self.cmd_new_path = None
+        self.old_version: str | None = None
+        self.new_version: str | None = None
+        self.old_path: str | None = None
+        self.new_path: str | None = None
+        self.cmd_old_path: str | None = None
+        self.cmd_new_path: str | None = None
 
 
 def _process_git_diffcmd_header_line(line: str, state: _GitHeaderParsingState) -> bool:
@@ -384,7 +395,13 @@ def _process_new_path_and_version(diff_header) -> tuple[str | None, int | None]:
 
 def _create_default_header(index_path: str) -> header:
     """Create a default header when diff header is not available."""
-    return header(index_path=index_path, old_path=index_path, old_version=None, new_path=index_path, new_version=None)
+    return header(
+        index_path=index_path,
+        old_path=index_path,
+        old_version=None,
+        new_path=index_path,
+        new_version=None,
+    )
 
 
 def _process_svn_header_line(lines: list[str]) -> header | None:
@@ -414,7 +431,13 @@ def _process_svn_header_line(lines: list[str]) -> header | None:
     if not isinstance(nver, int):
         nver = None
 
-    return header(index_path=i.group(1), old_path=opath, old_version=over, new_path=npath, new_version=nver)
+    return header(
+        index_path=i.group(1),
+        old_path=opath,
+        old_version=over,
+        new_path=npath,
+        new_version=nver,
+    )
 
 
 def parse_svn_header(text: str | list[str]) -> header | None:
@@ -534,7 +557,13 @@ def parse_diffcmd_header(text: str | list[str]) -> header | None:
         d = diffcmd_header.match(lines[0])
         del lines[0]
         if d:
-            return header(index_path=None, old_path=d.group(1), old_version=None, new_path=d.group(2), new_version=None)
+            return header(
+                index_path=None,
+                old_path=d.group(1),
+                old_version=None,
+                new_path=d.group(2),
+                new_version=None,
+            )
     return None
 
 
@@ -606,7 +635,15 @@ def _parse_default_hunk_header(match) -> tuple[int, int, int, int]:
 
 
 def _process_default_change_line(
-    kind: str, line: str, old: int, new: int, r: int, i: int, old_len: int, new_len: int, hunk_n: int,
+    kind: str,
+    line: str,
+    old: int,
+    new: int,
+    r: int,
+    i: int,
+    old_len: int,
+    new_len: int,
+    hunk_n: int,
 ) -> tuple[Change | None, int, int]:
     """Process a change line and return change object with updated counters."""
     if kind == "<" and (r != old_len or r == 0):
@@ -619,7 +656,7 @@ def _process_default_change_line(
 def parse_default_diff(text: str | list[str]) -> list[Change] | None:
     """Parse default diff format (ed-style) into list of changes."""
     lines = text.splitlines() if isinstance(text, str) else text
-    changes = []
+    changes: list[Change] = []
     hunks = split_by_regex(lines, default_hunk_start)
 
     old, new, old_len, new_len = 0, 0, 0, 0
@@ -639,7 +676,9 @@ def parse_default_diff(text: str | list[str]) -> list[Change] | None:
             elif c:
                 kind = c.group(1)
                 line = c.group(2)
-                change, r, i = _process_default_change_line(kind, line, old, new, r, i, old_len, new_len, hunk_n)
+                change, r, i = _process_default_change_line(
+                    kind, line, old, new, r, i, old_len, new_len, hunk_n
+                )
                 if change:
                     changes.append(change)
 
@@ -649,7 +688,7 @@ def parse_default_diff(text: str | list[str]) -> list[Change] | None:
 def parse_unified_diff(text: str | list[str]) -> list[Change] | None:
     """Parse a unified diff into a list of changes."""
     lines = text.splitlines() if isinstance(text, str) else text
-    changes = []
+    changes: list[Change] = []
     hunks = split_by_regex(lines, unified_hunk_start)
 
     for hunk_n, hunk in enumerate(hunks):
@@ -688,7 +727,9 @@ def _parse_hunk_header(hunk: list[str]) -> tuple[int, int, int, int]:
     return old, old_len, new, new_len
 
 
-def _parse_hunk_lines(hunk: list[str], old: int, old_len: int, new: int, new_len: int, hunk_n: int) -> list[Change]:
+def _parse_hunk_lines(
+    hunk: list[str], old: int, old_len: int, new: int, new_len: int, hunk_n: int
+) -> list[Change]:
     """Parse the lines within a unified diff hunk.
 
     Processes additions (+), deletions (-), and context lines ( ) to build
@@ -706,13 +747,15 @@ def _parse_hunk_lines(hunk: list[str], old: int, old_len: int, new: int, new_len
         List of Change objects
 
     """
-    changes = []
+    changes: list[Change] = []
     r = 0  # old line counter
     i = 0  # new line counter
 
     for n in hunk:
         kind, line = _extract_line_kind_and_content(n)
-        change, r_delta, i_delta = _process_hunk_line(kind, line, old, new, r, i, old_len, new_len, hunk_n)
+        change, r_delta, i_delta = _process_hunk_line(
+            kind, line, old, new, r, i, old_len, new_len, hunk_n
+        )
 
         if change:
             changes.append(change)
@@ -775,7 +818,9 @@ def _process_hunk_line(
     return None, 0, 0
 
 
-def _parse_removal_hunk(old_hunk: list[str], old: int, old_len: int, hunk_n: int, changes: list[Change]) -> None:
+def _parse_removal_hunk(
+    old_hunk: list[str], old: int, old_len: int, hunk_n: int, changes: list[Change]
+) -> None:
     """Parse a hunk with only removals."""
     msg = "Got unexpected change in removal hunk: "
     j = 0
@@ -796,7 +841,9 @@ def _parse_removal_hunk(old_hunk: list[str], old: int, old_len: int, hunk_n: int
             raise exceptions.ParseException(msg + kind, hunk_n)
 
 
-def _parse_insertion_hunk(new_hunk: list[str], new: int, new_len: int, hunk_n: int, changes: list[Change]) -> None:
+def _parse_insertion_hunk(
+    new_hunk: list[str], new: int, new_len: int, hunk_n: int, changes: list[Change]
+) -> None:
     """Parse a context diff hunk containing only insertions.
 
     Args:
@@ -846,7 +893,8 @@ def _parse_insertion_line(new_hunk: list[str]) -> tuple[str | None, str | None, 
 
 
 def _get_change_kinds(
-    old_hunk: list[str], new_hunk: list[str],
+    old_hunk: list[str],
+    new_hunk: list[str],
 ) -> tuple[str | None, str | None, str | None, str | None]:
     """Get change kinds and lines from old and new hunks."""
     c_old = context_change.match(old_hunk[0]) if old_hunk else None
@@ -931,9 +979,16 @@ def _parse_mixed_hunk(
 
     while j < old_len and k < new_len:
         if not _skip_invalid_lines(old_hunk, new_hunk, j, k):
-            kind_old, line_old, kind_new, line_new = _get_change_kinds(old_hunk, new_hunk)
+            kind_old, line_old, kind_new, line_new = _get_change_kinds(
+                old_hunk, new_hunk
+            )
 
-            if kind_old and kind_new:
+            if (
+                kind_old
+                and kind_new
+                and line_old is not None
+                and line_new is not None
+            ):
                 j, k = _process_and_consume_mixed_line(
                     old_hunk,
                     new_hunk,
@@ -948,9 +1003,14 @@ def _parse_mixed_hunk(
                     hunk_n,
                     changes,
                 )
+            else:
+                msg = "Malformed mixed hunk line: missing kind or line content"
+                raise exceptions.ParseException(msg, hunk_n)
 
 
-def _skip_invalid_lines(old_hunk: list[str], new_hunk: list[str], j: int, k: int) -> bool:
+def _skip_invalid_lines(
+    old_hunk: list[str], new_hunk: list[str], j: int, k: int
+) -> bool:
     """Skip invalid lines in hunks and increment counters.
 
     Args:
@@ -1053,7 +1113,7 @@ def parse_context_diff(text: str | list[str]) -> list[Change] | None:
 
     """
     lines = text.splitlines() if isinstance(text, str) else text
-    changes = []
+    changes: list[Change] = []
     hunks = split_by_regex(lines, context_hunk_start)
 
     for hunk_n, hunk in enumerate(hunks):
@@ -1084,7 +1144,9 @@ def _process_context_hunk(hunk: list[str], hunk_n: int, changes: list[Change]) -
     old, old_len = _extract_context_old_range(old_hunk)
     new, new_len = _extract_context_new_range(new_hunk)
 
-    _dispatch_context_hunk_type(old_hunk, new_hunk, old, new, old_len, new_len, hunk_n, changes)
+    _dispatch_context_hunk_type(
+        old_hunk, new_hunk, old, new, old_len, new_len, hunk_n, changes
+    )
 
 
 def _extract_context_old_range(old_hunk: list[str]) -> tuple[int, int]:
@@ -1155,10 +1217,14 @@ def _dispatch_context_hunk_type(
     elif not old_hunk and new_hunk:
         _parse_insertion_hunk(new_hunk, new, new_len, hunk_n, changes)
     else:
-        _parse_mixed_hunk(old_hunk, new_hunk, old, new, old_len, new_len, hunk_n, changes)
+        _parse_mixed_hunk(
+            old_hunk, new_hunk, old, new, old_len, new_len, hunk_n, changes
+        )
 
 
-def _process_ed_deletion(old: int, old_end: int, hunk_n: int, changes: list, r: int) -> tuple[int, int]:
+def _process_ed_deletion(
+    old: int, old_end: int, hunk_n: int, changes: list, r: int
+) -> tuple[int, int]:
     """Process ed deletion hunk."""
     k = 0
     while old_end >= old:
@@ -1169,7 +1235,9 @@ def _process_ed_deletion(old: int, old_end: int, hunk_n: int, changes: list, r: 
     return r, k
 
 
-def _process_ed_change_removal(old: int, old_end: int, hunk_n: int, changes: list, r: int) -> tuple[int, int]:
+def _process_ed_change_removal(
+    old: int, old_end: int, hunk_n: int, changes: list, r: int
+) -> tuple[int, int]:
     """Process removal part of ed change hunk."""
     k = 0
     while old_end >= old:
@@ -1197,7 +1265,7 @@ def parse_ed_diff(text: str | list[str]) -> list[Change] | None:
 
     """
     lines = text.splitlines() if isinstance(text, str) else text
-    changes = []
+    changes: list[Change] = []
     hunks = split_by_regex(lines, ed_hunk_start)
     hunks.reverse()
 
@@ -1220,7 +1288,9 @@ class _EdDiffState:
         self.addition_offset = 0
 
 
-def _process_ed_hunk(hunk: list[str], hunk_number: int, changes: list[Change], state: _EdDiffState) -> None:
+def _process_ed_hunk(
+    hunk: list[str], hunk_number: int, changes: list[Change], state: _EdDiffState
+) -> None:
     """Process a single ed diff hunk.
 
     Args:
@@ -1252,7 +1322,9 @@ def _process_ed_hunk(hunk: list[str], hunk_number: int, changes: list[Change], s
                 state.deletion_offset,
             )
         else:
-            _process_ed_addition_or_change(hunk, old_start, old_end, operation, hunk_number, changes, state)
+            _process_ed_addition_or_change(
+                hunk, old_start, old_end, operation, hunk_number, changes, state
+            )
 
 
 def _process_ed_addition_or_change(
@@ -1289,7 +1361,11 @@ def _process_ed_addition_or_change(
                 state.deletion_offset,
             )
             line_number = (
-                old_start - state.deletion_offset + state.line_offset + state.change_offset + state.addition_offset
+                old_start
+                - state.deletion_offset
+                + state.line_offset
+                + state.change_offset
+                + state.addition_offset
             )
             changes.append(Change(None, line_number, hunk[0], hunk_number))
             state.line_offset += 1
@@ -1320,7 +1396,7 @@ def parse_rcs_ed_diff(text: str | list[str]) -> list[Change] | None:
 
     """
     lines = text.splitlines() if isinstance(text, str) else text
-    changes = []
+    changes: list[Change] = []
     hunks = split_by_regex(lines, rcs_ed_hunk_start)
 
     state = _RcsEdDiffState()
@@ -1339,7 +1415,9 @@ class _RcsEdDiffState:
         self.total_change_size = 0
 
 
-def _process_rcs_ed_hunk(hunk: list[str], hunk_n: int, changes: list[Change], state: _RcsEdDiffState) -> None:
+def _process_rcs_ed_hunk(
+    hunk: list[str], hunk_n: int, changes: list[Change], state: _RcsEdDiffState
+) -> None:
     """Process a single RCS ed diff hunk.
 
     Args:
@@ -1488,7 +1566,9 @@ def _decode_and_decompress_data(encoded: str, expected_size: int) -> bytes:
     return data
 
 
-def _process_new_encoded_data(line: str, new_encoded: str, new_size: int) -> tuple[str, int]:
+def _process_new_encoded_data(
+    line: str, new_encoded: str, new_size: int
+) -> tuple[str, int]:
     """Process new encoded data line."""
     if _is_base85_string(line):
         _validate_base85_line(line)
@@ -1498,7 +1578,9 @@ def _process_new_encoded_data(line: str, new_encoded: str, new_size: int) -> tup
     return "", 0
 
 
-def _process_old_encoded_data(line: str, old_encoded: str, old_size: int) -> tuple[str, int]:
+def _process_old_encoded_data(
+    line: str, old_encoded: str, old_size: int
+) -> tuple[str, int]:
     """Process old encoded data line."""
     if _is_base85_string(line):
         _validate_base85_line(line)
@@ -1529,7 +1611,9 @@ def _parse_command_header(
     return cmd_old_path, cmd_new_path
 
 
-def _parse_git_index(line: str, old_version: str | None, new_version: str | None) -> tuple[str | None, str | None]:
+def _parse_git_index(
+    line: str, old_version: str | None, new_version: str | None
+) -> tuple[str | None, str | None]:
     """Parse git index if not already parsed."""
     if old_version is None and new_version is None:
         return _parse_git_header_index(line)
@@ -1558,7 +1642,9 @@ def _process_old_size_parsing(line: str, old_size: int) -> int:
     return old_size
 
 
-def _process_new_encoded_content(line: str, new_encoded: str, new_size: int, changes: list[Change]) -> tuple[str, int]:
+def _process_new_encoded_content(
+    line: str, new_encoded: str, new_size: int, changes: list[Change]
+) -> tuple[str, int]:
     """Process new encoded content and update changes if needed."""
     if new_size > 0:
         new_encoded, new_size = _process_new_encoded_data(line, new_encoded, new_size)
@@ -1569,7 +1655,9 @@ def _process_new_encoded_content(line: str, new_encoded: str, new_size: int, cha
     return new_encoded, new_size
 
 
-def _process_old_encoded_content(line: str, old_encoded: str, old_size: int, changes: list[Change]) -> tuple[str, int]:
+def _process_old_encoded_content(
+    line: str, old_encoded: str, old_size: int, changes: list[Change]
+) -> tuple[str, int]:
     """Process old encoded content and update changes if needed."""
     if old_size > 0:
         old_encoded, old_size = _process_old_encoded_data(line, old_encoded, old_size)
@@ -1595,7 +1683,9 @@ def parse_git_binary_diff(text: str | list[str]) -> list[Change] | None:
 
     for line in lines:
         # Parse command header
-        cmd_old_path, cmd_new_path = _parse_command_header(line, cmd_old_path, cmd_new_path)
+        cmd_old_path, cmd_new_path = _parse_command_header(
+            line, cmd_old_path, cmd_new_path
+        )
         if cmd_old_path is not None and cmd_new_path is not None:
             continue
 
@@ -1615,7 +1705,11 @@ def parse_git_binary_diff(text: str | list[str]) -> list[Change] | None:
             continue
 
         # Process encoded content
-        new_encoded, new_size = _process_new_encoded_content(line, new_encoded, new_size, changes)
-        old_encoded, old_size = _process_old_encoded_content(line, old_encoded, old_size, changes)
+        new_encoded, new_size = _process_new_encoded_content(
+            line, new_encoded, new_size, changes
+        )
+        old_encoded, old_size = _process_old_encoded_content(
+            line, old_encoded, old_size, changes
+        )
 
     return changes

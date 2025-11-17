@@ -27,7 +27,7 @@ from forge.runtime.plugins.agent_skills.file_reader.file_readers import (
 def reset_current_file():
     from forge.runtime.plugins.agent_skills import agentskills
 
-    agentskills.CURRENT_FILE = None
+    setattr(agentskills, "CURRENT_FILE", None)
 
 
 def _numbered_test_lines(start, end) -> str:
@@ -98,7 +98,8 @@ SEP = "-" * 49 + "\n"
 
 def test_open_file_unexist_path():
     _capture_file_operation_error(
-        lambda: open_file("/unexist/path/a.txt"), "ERROR: File /unexist/path/a.txt not found."
+        lambda: open_file("/unexist/path/a.txt"),
+        "ERROR: File /unexist/path/a.txt not found.",
     )
 
 
@@ -216,7 +217,9 @@ def test_goto_line_negative(tmp_path):
     with io.StringIO() as buf:
         with contextlib.redirect_stdout(buf):
             open_file(str(temp_file_path))
-    _capture_file_operation_error(lambda: goto_line(-1), "ERROR: Line number must be between 1 and 4.")
+    _capture_file_operation_error(
+        lambda: goto_line(-1), "ERROR: Line number must be between 1 and 4."
+    )
 
 
 def test_goto_line_out_of_bound(tmp_path):
@@ -226,7 +229,9 @@ def test_goto_line_out_of_bound(tmp_path):
     with io.StringIO() as buf:
         with contextlib.redirect_stdout(buf):
             open_file(str(temp_file_path))
-    _capture_file_operation_error(lambda: goto_line(100), "ERROR: Line number must be between 1 and 9.")
+    _capture_file_operation_error(
+        lambda: goto_line(100), "ERROR: Line number must be between 1 and 9."
+    )
 
 
 def test_scroll_down(tmp_path):
@@ -347,7 +352,7 @@ def test_print_window_internal(tmp_path):
     test_file_path = tmp_path / "a.txt"
     test_file_path.write_text("")
     open_file(str(test_file_path))
-    with open(test_file_path, "w", encoding='utf-8') as file:
+    with open(test_file_path, "w", encoding="utf-8") as file:
         for i in range(1, 101):
             file.write(f"Line `{i}`\n")
     current_line = 50
@@ -364,7 +369,7 @@ def test_open_file_large_line_number(tmp_path):
     test_file_path = tmp_path / "a.txt"
     test_file_path.write_text("")
     open_file(str(test_file_path))
-    with open(test_file_path, "w", encoding='utf-8') as file:
+    with open(test_file_path, "w", encoding="utf-8") as file:
         for i in range(1, 1000):
             file.write(f"Line `{i}`\n")
     current_line = 800
@@ -385,7 +390,7 @@ def test_open_file_large_line_number(tmp_path):
 def test_search_dir(tmp_path):
     for i in range(1, 101):
         temp_file_path = tmp_path / f"a{i}.txt"
-        with open(temp_file_path, "w", encoding='utf-8') as file:
+        with open(temp_file_path, "w", encoding="utf-8") as file:
             file.write("Line 1\nLine 2\nLine 3\nLine 4\nLine 5\n")
             if i == 50:
                 file.write("bingo")
@@ -395,16 +400,15 @@ def test_search_dir(tmp_path):
         result = buf.getvalue()
     assert result is not None
     expected = f'[Found 1 matches for "bingo" in {tmp_path}]\n{
-        os.path.join(
-            str(tmp_path),
-            'a50.txt')} (Line 6): bingo\n[End of matches for "bingo" in {tmp_path}]\n'
+        os.path.join(str(tmp_path), "a50.txt")
+    } (Line 6): bingo\n[End of matches for "bingo" in {tmp_path}]\n'
     assert result.split("\n") == expected.split("\n")
 
 
 def test_search_dir_not_exist_term(tmp_path):
     for i in range(1, 101):
         temp_file_path = tmp_path / f"a{i}.txt"
-        with open(temp_file_path, "w", encoding='utf-8') as file:
+        with open(temp_file_path, "w", encoding="utf-8") as file:
             file.write("Line 1\nLine 2\nLine 3\nLine 4\nLine 5\n")
     with io.StringIO() as buf:
         with contextlib.redirect_stdout(buf):
@@ -418,7 +422,7 @@ def test_search_dir_not_exist_term(tmp_path):
 def test_search_dir_too_much_match(tmp_path):
     for i in range(1, 1000):
         temp_file_path = tmp_path / f"a{i}.txt"
-        with open(temp_file_path, "w", encoding='utf-8') as file:
+        with open(temp_file_path, "w", encoding="utf-8") as file:
             file.write("Line 1\nLine 2\nLine 3\nLine 4\nLine 5\n")
     with io.StringIO() as buf:
         with contextlib.redirect_stdout(buf):
@@ -433,7 +437,7 @@ def test_search_dir_cwd(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     for i in range(1, 101):
         temp_file_path = tmp_path / f"a{i}.txt"
-        with open(temp_file_path, "w", encoding='utf-8') as file:
+        with open(temp_file_path, "w", encoding="utf-8") as file:
             file.write("Line 1\nLine 2\nLine 3\nLine 4\nLine 5\n")
             if i == 50:
                 file.write("bingo")
@@ -474,7 +478,8 @@ def test_search_file_not_exist_term(tmp_path):
 
 def test_search_file_not_exist_file():
     _capture_file_operation_error(
-        lambda: search_file("Line 6", "/unexist/path/a.txt"), "ERROR: File /unexist/path/a.txt not found."
+        lambda: search_file("Line 6", "/unexist/path/a.txt"),
+        "ERROR: File /unexist/path/a.txt not found.",
     )
 
 
@@ -540,7 +545,7 @@ def test_parse_docx(tmp_path):
 
 def test_parse_latex(tmp_path):
     test_latex_path = tmp_path / "test.tex"
-    with open(test_latex_path, "w", encoding='utf-8') as f:
+    with open(test_latex_path, "w", encoding="utf-8") as f:
         f.write(
             "\n        \\documentclass{article}\n        \\begin{document}\n        Hello, this is a test LaTeX document.\n        \\end{document}\n        "
         )

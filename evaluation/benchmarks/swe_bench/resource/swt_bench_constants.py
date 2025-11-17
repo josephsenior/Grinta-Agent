@@ -77,7 +77,10 @@ MAP_VERSION_TO_INSTALL_DJANGO = (
         }
         for k in ["1.7", "1.8", "1.9", "1.10", "1.11", "2.0", "2.1", "2.2"]
     }
-    | {k: {"python": "3.5", "install": "python setup.py install"} for k in ["1.4", "1.5", "1.6"]}
+    | {
+        k: {"python": "3.5", "install": "python setup.py install"}
+        for k in ["1.4", "1.5", "1.6"]
+    }
     | {
         k: {
             "python": "3.6",
@@ -92,12 +95,30 @@ MAP_VERSION_TO_INSTALL_DJANGO = (
         }
         for k in ["3.0", "3.1", "3.2"]
     }
-    | {k: {"python": "3.8", "packages": "requirements.txt", "install": "python -m pip install -e ."} for k in ["4.0"]}
     | {
-        k: {"python": "3.9", "packages": "requirements.txt", "install": "python -m pip install -e ."}
+        k: {
+            "python": "3.8",
+            "packages": "requirements.txt",
+            "install": "python -m pip install -e .",
+        }
+        for k in ["4.0"]
+    }
+    | {
+        k: {
+            "python": "3.9",
+            "packages": "requirements.txt",
+            "install": "python -m pip install -e .",
+        }
         for k in ["4.1", "4.2"]
     }
-    | {k: {"python": "3.11", "packages": "requirements.txt", "install": "python -m pip install -e ."} for k in ["5.0"]}
+    | {
+        k: {
+            "python": "3.11",
+            "packages": "requirements.txt",
+            "install": "python -m pip install -e .",
+        }
+        for k in ["5.0"]
+    }
 )
 MAP_VERSION_TO_INSTALL_REQUESTS = {
     k: {"python": "3.9", "packages": "pytest", "install": "python -m pip install ."}
@@ -338,7 +359,9 @@ MAP_VERSION_TO_INSTALL_MATPLOTLIB = (
         k: {
             "python": "3.5",
             "install": "python setup.py build; python setup.py install",
-            "pre_install": ["apt-get -y update && apt-get -y upgrade && && apt-get install -y imagemagick ffmpeg"],
+            "pre_install": [
+                "apt-get -y update && apt-get -y upgrade && && apt-get install -y imagemagick ffmpeg"
+            ],
             "pip_packages": ["pytest"],
             "execute_test_as_nonroot": True,
         }
@@ -388,7 +411,9 @@ for k in ["3.0", "3.1", "3.2", "3.3", "3.4", "3.5", "4.0", "4.1", "4.2", "4.3", 
                 "sed -i 's/sphinxcontrib-serializinghtml/sphinxcontrib-serializinghtml<=1.1.9/' setup.py",
             ]
         )
-MAP_VERSION_TO_INSTALL_SPHINX["7.2"]["pre_install"] += ["apt-get update && apt-get install -y graphviz"]
+MAP_VERSION_TO_INSTALL_SPHINX["7.2"]["pre_install"] += [
+    "apt-get update && apt-get install -y graphviz"
+]
 MAP_VERSION_TO_INSTALL_ASTROPY = {
     k: {
         "python": "3.9",
@@ -435,7 +460,8 @@ MAP_VERSION_TO_INSTALL_SYMPY = {
         "pip_packages": ["mpmath==1.3.0", "flake8-comprehensions"],
         "install": "python -m pip install -e .",
     }
-    for k in ["0.7", "1.0", "1.1", "1.10", "1.11", "1.12", "1.2", "1.4", "1.5", "1.6"] + ["1.7", "1.8", "1.9"]
+    for k in ["0.7", "1.0", "1.1", "1.10", "1.11", "1.12", "1.2", "1.4", "1.5", "1.6"]
+    + ["1.7", "1.8", "1.9"]
 } | {
     k: {
         "python": "3.9",
@@ -446,15 +472,34 @@ MAP_VERSION_TO_INSTALL_SYMPY = {
     for k in ["1.13"]
 }
 MAP_VERSION_TO_INSTALL_PYLINT = {
-    k: {"python": "3.9", "packages": "requirements.txt", "install": "python -m pip install -e ."}
-    for k in ["2.10", "2.11", "2.13", "2.14", "2.15", "2.16", "2.17", "2.8", "2.9", "3.0"]
+    k: {
+        "python": "3.9",
+        "packages": "requirements.txt",
+        "install": "python -m pip install -e .",
+    }
+    for k in [
+        "2.10",
+        "2.11",
+        "2.13",
+        "2.14",
+        "2.15",
+        "2.16",
+        "2.17",
+        "2.8",
+        "2.9",
+        "3.0",
+    ]
 }
 MAP_VERSION_TO_INSTALL_PYLINT["2.8"]["pip_packages"] = ["pyenchant==3.2"]
 MAP_VERSION_TO_INSTALL_PYLINT["2.8"]["pre_install"] = [
     "apt-get update && apt-get install -y libenchant-2-dev hunspell-en-us"
 ]
 MAP_VERSION_TO_INSTALL_PYLINT |= {
-    k: {**MAP_VERSION_TO_INSTALL_PYLINT[k], "pip_packages": ["astroid==3.0.0a6", "setuptools"]} for k in ["3.0"]
+    k: {
+        **MAP_VERSION_TO_INSTALL_PYLINT[k],
+        "pip_packages": ["astroid==3.0.0a6", "setuptools"],
+    }
+    for k in ["3.0"]
 }
 MAP_VERSION_TO_INSTALL_XARRAY = {
     k: {
@@ -477,7 +522,11 @@ MAP_VERSION_TO_INSTALL_XARRAY = {
     for k in ["0.12", "0.18", "0.19", "0.20", "2022.03", "2022.06", "2022.09"]
 }
 MAP_VERSION_TO_INSTALL_SQLFLUFF = {
-    k: {"python": "3.9", "packages": "requirements.txt", "install": "python -m pip install -e ."}
+    k: {
+        "python": "3.9",
+        "packages": "requirements.txt",
+        "install": "python -m pip install -e .",
+    }
     for k in [
         "0.10",
         "0.11",
@@ -499,7 +548,11 @@ MAP_VERSION_TO_INSTALL_SQLFLUFF = {
     ]
 }
 MAP_VERSION_TO_INSTALL_DBT_CORE = {
-    k: {"python": "3.9", "packages": "requirements.txt", "install": "python -m pip install -e ."}
+    k: {
+        "python": "3.9",
+        "packages": "requirements.txt",
+        "install": "python -m pip install -e .",
+    }
     for k in [
         "0.13",
         "0.14",
@@ -521,7 +574,11 @@ MAP_VERSION_TO_INSTALL_DBT_CORE = {
     ]
 }
 MAP_VERSION_TO_INSTALL_PYVISTA = {
-    k: {"python": "3.9", "install": "python -m pip install -e .", "pip_packages": ["pytest"]}
+    k: {
+        "python": "3.9",
+        "install": "python -m pip install -e .",
+        "pip_packages": ["pytest"],
+    }
     for k in ["0.20", "0.21", "0.22", "0.23"]
 } | {
     k: {
@@ -554,8 +611,25 @@ MAP_VERSION_TO_INSTALL_PYVISTA = {
     ]
 }
 MAP_VERSION_TO_INSTALL_ASTROID = {
-    k: {"python": "3.9", "install": "python -m pip install -e .", "pip_packages": ["pytest"]}
-    for k in ["2.10", "2.12", "2.13", "2.14", "2.15", "2.16", "2.5", "2.6", "2.7", "2.8", "2.9", "3.0"]
+    k: {
+        "python": "3.9",
+        "install": "python -m pip install -e .",
+        "pip_packages": ["pytest"],
+    }
+    for k in [
+        "2.10",
+        "2.12",
+        "2.13",
+        "2.14",
+        "2.15",
+        "2.16",
+        "2.5",
+        "2.6",
+        "2.7",
+        "2.8",
+        "2.9",
+        "3.0",
+    ]
 }
 MAP_VERSION_TO_INSTALL_MARSHMALLOW = {
     k: {"python": "3.9", "install": "python -m pip install -e '.[dev]'"}
@@ -589,14 +663,36 @@ MAP_VERSION_TO_INSTALL_PVLIB = {
 }
 MAP_VERSION_TO_INSTALL_PYDICOM = {
     k: {"python": "3.6", "install": "python -m pip install -e .", "packages": "numpy"}
-    for k in ["1.0", "1.1", "1.2", "1.3", "1.4", "2.0", "2.1", "2.2", "2.3", "2.4", "3.0"]
+    for k in [
+        "1.0",
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "2.0",
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4",
+        "3.0",
+    ]
 }
-MAP_VERSION_TO_INSTALL_PYDICOM |= {k: {**MAP_VERSION_TO_INSTALL_PYDICOM[k], "python": "3.8"} for k in ["1.4", "2.0"]}
-MAP_VERSION_TO_INSTALL_PYDICOM |= {k: {**MAP_VERSION_TO_INSTALL_PYDICOM[k], "python": "3.9"} for k in ["2.1", "2.2"]}
-MAP_VERSION_TO_INSTALL_PYDICOM |= {k: {**MAP_VERSION_TO_INSTALL_PYDICOM[k], "python": "3.10"} for k in ["2.3"]}
-MAP_VERSION_TO_INSTALL_PYDICOM |= {k: {**MAP_VERSION_TO_INSTALL_PYDICOM[k], "python": "3.11"} for k in ["2.4", "3.0"]}
+MAP_VERSION_TO_INSTALL_PYDICOM |= {
+    k: {**MAP_VERSION_TO_INSTALL_PYDICOM[k], "python": "3.8"} for k in ["1.4", "2.0"]
+}
+MAP_VERSION_TO_INSTALL_PYDICOM |= {
+    k: {**MAP_VERSION_TO_INSTALL_PYDICOM[k], "python": "3.9"} for k in ["2.1", "2.2"]
+}
+MAP_VERSION_TO_INSTALL_PYDICOM |= {
+    k: {**MAP_VERSION_TO_INSTALL_PYDICOM[k], "python": "3.10"} for k in ["2.3"]
+}
+MAP_VERSION_TO_INSTALL_PYDICOM |= {
+    k: {**MAP_VERSION_TO_INSTALL_PYDICOM[k], "python": "3.11"} for k in ["2.4", "3.0"]
+}
 MAP_VERSION_TO_INSTALL_HUMANEVAL = {k: {"python": "3.9"} for k in ["1.0"]}
-MAP_VERSION_TO_INSTALL_HUMANEVAL_FIX = {k: {"python": "3.10", "packages": "pytest"} for k in ["0.0.1"]}
+MAP_VERSION_TO_INSTALL_HUMANEVAL_FIX = {
+    k: {"python": "3.10", "packages": "pytest"} for k in ["0.0.1"]
+}
 MAP_VERSION_TO_INSTALL = {
     "astropy/astropy": MAP_VERSION_TO_INSTALL_ASTROPY,
     "dbt-labs/dbt-core": MAP_VERSION_TO_INSTALL_DBT_CORE,
@@ -628,23 +724,45 @@ MAP_REPO_TO_TEST_FRAMEWORK_VERBOSE = {
         k: "./tests/runtests.py --verbosity 2 --settings=test_sqlite --parallel 1"
         for k in MAP_VERSION_TO_INSTALL_DJANGO
     },
-    "marshmallow-code/marshmallow": {k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_MARSHMALLOW},
-    "matplotlib/matplotlib": {k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_MATPLOTLIB},
-    "mwaskom/seaborn": {k: "pytest -rA --tb=long" for k in MAP_VERSION_TO_INSTALL_SEABORN},
+    "marshmallow-code/marshmallow": {
+        k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_MARSHMALLOW
+    },
+    "matplotlib/matplotlib": {
+        k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_MATPLOTLIB
+    },
+    "mwaskom/seaborn": {
+        k: "pytest -rA --tb=long" for k in MAP_VERSION_TO_INSTALL_SEABORN
+    },
     "pallets/flask": {k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_FLASK},
     "psf/requests": {k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_REQUESTS},
-    "pvlib/pvlib-python": {k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_PVLIB},
+    "pvlib/pvlib-python": {
+        k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_PVLIB
+    },
     "pydata/xarray": {k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_XARRAY},
     "pydicom/pydicom": {k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_PYDICOM},
-    "pylint-dev/astroid": {k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_ASTROID},
-    "pylint-dev/pylint": {k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_PYLINT},
-    "pytest-dev/pytest": {k: "pytest -rA --tb=long" for k in MAP_VERSION_TO_INSTALL_PYTEST},
+    "pylint-dev/astroid": {
+        k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_ASTROID
+    },
+    "pylint-dev/pylint": {
+        k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_PYLINT
+    },
+    "pytest-dev/pytest": {
+        k: "pytest -rA --tb=long" for k in MAP_VERSION_TO_INSTALL_PYTEST
+    },
     "pyvista/pyvista": {k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_PYVISTA},
-    "scikit-learn/scikit-learn": {k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_SKLEARN},
+    "scikit-learn/scikit-learn": {
+        k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_SKLEARN
+    },
     "sphinx-doc/sphinx": {k: "tox -epy39 -v --" for k in MAP_VERSION_TO_INSTALL_SPHINX},
-    "sqlfluff/sqlfluff": {k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_SQLFLUFF},
+    "sqlfluff/sqlfluff": {
+        k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_SQLFLUFF
+    },
     "swe-bench/humaneval": {k: "python" for k in MAP_VERSION_TO_INSTALL_HUMANEVAL},
-    "nielstron/humaneval_fix": {k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_HUMANEVAL},
+    "nielstron/humaneval_fix": {
+        k: TEST_PYTEST_VERBOSE for k in MAP_VERSION_TO_INSTALL_HUMANEVAL
+    },
     "sympy/sympy": {k: "bin/test -C --verbose" for k in MAP_VERSION_TO_INSTALL_SYMPY},
 }
-MAP_REPO_TO_TEST_FRAMEWORK_VERBOSE["django/django"]["1.9"] = "./tests/runtests.py --verbosity 2"
+MAP_REPO_TO_TEST_FRAMEWORK_VERBOSE["django/django"]["1.9"] = (
+    "./tests/runtests.py --verbosity 2"
+)

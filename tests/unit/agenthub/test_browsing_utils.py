@@ -7,7 +7,7 @@ import json
 import pytest
 
 from forge.agenthub.browsing_agent import utils as browsing_utils
-from forge.agenthub.browsing_agent import browsing_agent
+from forge.agenthub.browsing_agent import browsing_agent_ultimate as browsing_agent
 
 
 def test_get_error_prefix_formats_message() -> None:
@@ -23,7 +23,9 @@ def test_get_error_prefix_formats_message() -> None:
         ("Navigate to login", "nav-only"),
     ],
 )
-def test_get_system_message_includes_goal_and_actions(goal: str, action_space: str) -> None:
+def test_get_system_message_includes_goal_and_actions(
+    goal: str, action_space: str
+) -> None:
     system_message = browsing_agent.get_system_message(goal, action_space)
     assert goal in system_message
     assert action_space in system_message
@@ -37,7 +39,9 @@ def test_get_prompt_adds_concise_instruction(monkeypatch: pytest.MonkeyPatch) ->
     assert "http://example.com" in prompt
     assert "tree" in prompt
     assert "prev" in prompt
-    assert "chain of thought of a valid action when providing a concise answer" in prompt
+    assert (
+        "chain of thought of a valid action when providing a concise answer" in prompt
+    )
 
 
 def test_page_parser_extracts_title_and_text() -> None:
@@ -56,7 +60,9 @@ def test_prompt_builder_builds_from_fragments() -> None:
     builder = browsing_utils.PromptBuilder()
     builder.add_fragment(fragment)
     builder.add_fragment(
-        browsing_utils.BrowsingPromptFragment(name="body", content="World", metadata={"kind": "body"})
+        browsing_utils.BrowsingPromptFragment(
+            name="body", content="World", metadata={"kind": "body"}
+        )
     )
 
     assert builder.build() == "Hello\n\nWorld"
@@ -68,4 +74,3 @@ def test_parse_error_response_returns_dataclass() -> None:
 
     assert error.message == "Invalid action"
     assert error.reason == "Missing bid"
-

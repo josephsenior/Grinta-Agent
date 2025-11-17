@@ -30,7 +30,15 @@ TOP_KEYS = [
     "tool_call_metadata",
     "llm_metrics",
 ]
-UNDERSCORE_KEYS = ["id", "sequence", "timestamp", "source", "cause", "tool_call_metadata", "llm_metrics"]
+UNDERSCORE_KEYS = [
+    "id",
+    "sequence",
+    "timestamp",
+    "source",
+    "cause",
+    "tool_call_metadata",
+    "llm_metrics",
+]
 DELETE_FROM_TRAJECTORY_EXTRAS = {
     "dom_object",
     "axtree_object",
@@ -40,7 +48,10 @@ DELETE_FROM_TRAJECTORY_EXTRAS = {
     "focused_element_bid",
     "extra_element_properties",
 }
-DELETE_FROM_TRAJECTORY_EXTRAS_AND_SCREENSHOTS = DELETE_FROM_TRAJECTORY_EXTRAS | {"screenshot", "set_of_marks"}
+DELETE_FROM_TRAJECTORY_EXTRAS_AND_SCREENSHOTS = DELETE_FROM_TRAJECTORY_EXTRAS | {
+    "screenshot",
+    "set_of_marks",
+}
 
 
 def event_from_dict(data: dict[str, Any]) -> Event:
@@ -111,7 +122,9 @@ def _populate_metrics_from_dict(metrics: Metrics, value: dict) -> None:
         cost_kwargs: dict[str, Any] = {}
         # Support legacy schemas that use ``amount`` instead of ``cost``.
         cost_kwargs["cost"] = cost.get("cost", cost.get("amount", 0.0))
-        cost_kwargs["model"] = cost.get("model", metrics.model_name if hasattr(metrics, "model_name") else "")
+        cost_kwargs["model"] = cost.get(
+            "model", metrics.model_name if hasattr(metrics, "model_name") else ""
+        )
         if "prompt_tokens" in cost:
             cost_kwargs["prompt_tokens"] = cost["prompt_tokens"]
         if "timestamp" in cost:
@@ -119,10 +132,14 @@ def _populate_metrics_from_dict(metrics: Metrics, value: dict) -> None:
         metrics._costs.append(Cost(**cost_kwargs))
 
     # Process response latencies
-    metrics.response_latencies = [ResponseLatency(**latency) for latency in value.get("response_latencies", [])]
+    metrics.response_latencies = [
+        ResponseLatency(**latency) for latency in value.get("response_latencies", [])
+    ]
 
     # Process token usages
-    metrics.token_usages = [TokenUsage(**usage) for usage in value.get("token_usages", [])]
+    metrics.token_usages = [
+        TokenUsage(**usage) for usage in value.get("token_usages", [])
+    ]
 
     # Process accumulated token usage
     if "accumulated_token_usage" in value:
@@ -148,9 +165,11 @@ def _extract_event_properties(event: Event) -> tuple[dict, bool]:
     return (props, is_dataclass)
 
 
-def _process_top_level_keys(event: Event, props: dict, is_dataclass: bool) -> dict:
+def _process_top_level_keys(
+    event: Event, props: dict[str, Any], is_dataclass: bool
+) -> dict[str, Any]:
     """Process top-level keys for event serialization."""
-    d = {}
+    d: dict[str, Any] = {}
 
     for key in TOP_KEYS:
         # Extract value for key
@@ -167,7 +186,7 @@ def _process_top_level_keys(event: Event, props: dict, is_dataclass: bool) -> di
     return d
 
 
-def _extract_key_value(event: Event, key: str) -> any:
+def _extract_key_value(event: Event, key: str) -> Any:
     """Extract value for a key from event, checking both direct and private attributes."""
     # Check direct attribute first
     if hasattr(event, key) and getattr(event, key) is not None:
@@ -241,7 +260,7 @@ def _transform_llm_metrics_key(d: dict) -> None:
         d["llm_metrics"] = d["llm_metrics"].get()
 
 
-def event_to_dict(event: Event) -> dict:
+def event_to_dict(event: Event) -> dict[str, Any]:
     """Convert event to dictionary representation."""
     props, is_dataclass = _extract_event_properties(event)
     d = _process_top_level_keys(event, props, is_dataclass)
@@ -265,7 +284,7 @@ def event_to_dict(event: Event) -> dict:
     raise ValueError(msg)
 
 
-def _clean_none_values(props: dict) -> None:
+def _clean_none_values(props: dict[str, Any]) -> None:
     """Remove None values from props."""
     if "security_risk" in props and props["security_risk"] is None:
         props.pop("security_risk")
@@ -273,41 +292,16 @@ def _clean_none_values(props: dict) -> None:
         props.pop("task_completed")
 
 
-def _create_minimal_event_dict(event: Event) -> dict:
+def _create_minimal_event_dict(event: Event) -> dict[str, Any]:
     """Create minimal dictionary for non-dataclass events."""
-    minimal = {}
-
-    # Add ID if available
-    if hasattr(event, "id"):
-        with contextlib.suppress(Exception):
-            minimal["id"] = int(event.id)
-
-    # Add sequence if available
-    if hasattr(event, "sequence"):
-        with contextlib.suppress(Exception):
-            minimal["sequence"] = int(event.sequence)
-
-    # Add timestamp if available
-    if hasattr(event, "timestamp"):
-        with contextlib.suppress(Exception):
-            minimal["timestamp"] = event.timestamp
-
-    # Add source if available
-    if hasattr(event, "source"):
-        try:
-            src = event.source
-            minimal["source"] = src.value if hasattr(src, "value") else str(src)
-        except Exception:
-            pass
-
-    # Add fallback fields
-    minimal["observation"] = "fallback"
-    minimal["content"] = str(event)
-
-    return minimal
+    raise TypeError(
+        f"Attempted to serialize unsupported non-dataclass event of type {type(event).__name__}."
+    )
 
 
-def _process_action_event(event: Event, d: dict, props: dict) -> dict:
+def _process_action_event(
+    event: Event, d: dict[str, Any], props: dict[str, Any]
+) -> dict[str, Any]:
     """Process action event dictionary."""
     # Handle security risk
     if "security_risk" in props:
@@ -322,7 +316,9 @@ def _process_action_event(event: Event, d: dict, props: dict) -> dict:
     return d
 
 
-def _process_observation_event(event: Event, d: dict, props: dict) -> dict:
+def _process_observation_event(
+    event: Event, d: dict[str, Any], props: dict[str, Any]
+) -> dict[str, Any]:
     """Process observation event dictionary."""
     # Add content
     d["content"] = props.pop("content", "")
@@ -340,7 +336,7 @@ def _process_observation_event(event: Event, d: dict, props: dict) -> dict:
     return d
 
 
-def _convert_extras_safely(props: dict) -> dict:
+def _convert_extras_safely(props: dict[str, Any]) -> dict[str, Any]:
     """Convert extras dictionary safely."""
 
     def _safe_convert(v):
@@ -353,15 +349,17 @@ def _convert_extras_safely(props: dict) -> dict:
     return {k: _safe_convert(v) for k, v in props.items()}
 
 
-def event_to_trajectory(event: Event, include_screenshots: bool = False) -> dict:
+def event_to_trajectory(
+    event: Event, include_screenshots: bool = False
+) -> dict[str, Any] | None:
     """Convert event to trajectory format for storage/analysis.
-    
+
     Serializes event and removes sensitive fields based on screenshot inclusion preference.
-    
+
     Args:
         event: Event to convert
         include_screenshots: Whether to include screenshot data
-        
+
     Returns:
         Dictionary representation suitable for trajectory storage, or None if invalid
 
@@ -372,7 +370,9 @@ def event_to_trajectory(event: Event, include_screenshots: bool = False) -> dict
     if "extras" in d:
         remove_fields(
             d["extras"],
-            DELETE_FROM_TRAJECTORY_EXTRAS if include_screenshots else DELETE_FROM_TRAJECTORY_EXTRAS_AND_SCREENSHOTS,
+            DELETE_FROM_TRAJECTORY_EXTRAS
+            if include_screenshots
+            else DELETE_FROM_TRAJECTORY_EXTRAS_AND_SCREENSHOTS,
         )
         # set_of_marks can be very large; exclude regardless of screenshot preference
         d["extras"].pop("set_of_marks", None)
@@ -384,4 +384,8 @@ def truncate_content(content: str, max_chars: int | None = None) -> str:
     if max_chars is None or len(content) <= max_chars or max_chars < 0:
         return content
     half = max_chars // 2
-    return content[:half] + "\n[... Observation truncated due to length ...]\n" + content[-half:]
+    return (
+        content[:half]
+        + "\n[... Observation truncated due to length ...]\n"
+        + content[-half:]
+    )

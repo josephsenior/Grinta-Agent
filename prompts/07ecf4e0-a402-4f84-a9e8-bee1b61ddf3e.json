@@ -1,0 +1,14 @@
+{
+  "id": "07ecf4e0-a402-4f84-a9e8-bee1b61ddf3e",
+  "title": "Render Err",
+  "description": null,
+  "category": "coding",
+  "content": "{{var}}",
+  "variables": [],
+  "tags": [],
+  "is_favorite": false,
+  "usage_count": 0,
+  "created_at": "2025-11-13 21:05:05.189626",
+  "updated_at": "2025-11-13 21:21:52.550318",
+  "metadata": {}
+}

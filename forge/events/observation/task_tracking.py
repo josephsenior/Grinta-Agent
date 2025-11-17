@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from forge.core.schema import ObservationType
+from forge.core.schemas import ObservationType
 from forge.events.observation.observation import Observation
 
 

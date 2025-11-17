@@ -1,12 +1,173 @@
+import json
 import os
 import os as _os
+import sys
 import tempfile
 import time
+import types
+from typing import Any, Callable, Iterator, Sequence, cast
+
+import bashlex
 import pytest
+from pydantic import BaseModel
+
+if "litellm" not in sys.modules:
+    from typing import Any as _Any, Callable as _Callable
+
+    class _ModelResponse(BaseModel):
+        model: str | None = None
+        choices: list[_Any] = []
+
+    class _ModelInfo(BaseModel):
+        model_name: str | None = None
+
+    class _PromptTokensDetails(BaseModel):
+        cached_tokens: int | None = None
+
+    class _ChatCompletionToolParam(BaseModel):
+        name: str | None = None
+        description: str | None = None
+        parameters: dict[str, _Any] = {}
+
+    async def _acompletion(*args, **kwargs) -> dict[str, _Any]:
+        return {}
+
+    def _completion(*args, **kwargs) -> dict[str, _Any]:
+        return {}
+
+    class _APIConnectionError(Exception):
+        pass
+
+    class _ContentPolicyViolationError(Exception):
+        pass
+
+    class _RateLimitError(Exception):
+        pass
+
+    class _ServiceUnavailableError(Exception):
+        pass
+
+    class _Timeout(Exception):
+        pass
+
+    class _InternalServerError(Exception):
+        pass
+
+    class _CostPerToken(BaseModel):
+        input_cost_per_token: float | None = None
+        output_cost_per_token: float | None = None
+
+    class _Usage(BaseModel):
+        prompt_tokens: int | None = None
+        completion_tokens: int | None = None
+        total_tokens: int | None = None
+
+    class _LiteLLMUtilsModule(types.ModuleType):
+        create_pretrained_tokenizer: _Callable[..., _Any]
+        get_model_info: _Callable[..., _Any]
+
+    class _LiteLLMExceptionsModule(types.ModuleType):
+        APIConnectionError: type[Exception]
+        ContentPolicyViolationError: type[Exception]
+        RateLimitError: type[Exception]
+        ServiceUnavailableError: type[Exception]
+        Timeout: type[Exception]
+        InternalServerError: type[Exception]
+
+    class _LiteLLMTypesUtilsModule(types.ModuleType):
+        CostPerToken: type[_CostPerToken]
+        ModelResponse: type[_ModelResponse]
+        Usage: type[_Usage]
+
+    class _LiteLLMModule(types.ModuleType):
+        ModelResponse: type[_ModelResponse]
+        ModelInfo: type[_ModelInfo]
+        PromptTokensDetails: type[_PromptTokensDetails]
+        ChatCompletionToolParam: type[_ChatCompletionToolParam]
+        acompletion: _Callable[..., _Any]
+        completion: _Callable[..., _Any]
+        completion_cost: _Callable[..., _Any]
+        APIConnectionError: type[Exception]
+        ContentPolicyViolationError: type[Exception]
+        RateLimitError: type[Exception]
+        ServiceUnavailableError: type[Exception]
+        Timeout: type[Exception]
+        InternalServerError: type[Exception]
+        CostPerToken: type[_CostPerToken]
+        Usage: type[_Usage]
+        suppress_debug_info: bool
+        set_verbose: bool
+        utils: _LiteLLMUtilsModule
+        exceptions: _LiteLLMExceptionsModule
+        create_pretrained_tokenizer: _Callable[..., _Any]
+        get_model_info: _Callable[..., _Any]
+
+    litellm_stub = _LiteLLMModule("litellm")
+    litellm_stub.ModelResponse = _ModelResponse
+    litellm_stub.ModelInfo = _ModelInfo
+    litellm_stub.PromptTokensDetails = _PromptTokensDetails
+    litellm_stub.ChatCompletionToolParam = _ChatCompletionToolParam
+    litellm_stub.acompletion = _acompletion
+    litellm_stub.completion = _completion
+    litellm_stub.completion_cost = lambda *args, **kwargs: 0
+    litellm_stub.APIConnectionError = _APIConnectionError
+    litellm_stub.ContentPolicyViolationError = _ContentPolicyViolationError
+    litellm_stub.RateLimitError = _RateLimitError
+    litellm_stub.ServiceUnavailableError = _ServiceUnavailableError
+    litellm_stub.Timeout = _Timeout
+    litellm_stub.InternalServerError = _InternalServerError
+    litellm_stub.CostPerToken = _CostPerToken
+    litellm_stub.Usage = _Usage
+    litellm_stub.suppress_debug_info = True
+    litellm_stub.set_verbose = False
+
+    utils_module = _LiteLLMUtilsModule("litellm.utils")
+    utils_module.create_pretrained_tokenizer = lambda *args, **kwargs: None
+    utils_module.get_model_info = lambda *args, **kwargs: {}
+
+    exceptions_module = _LiteLLMExceptionsModule("litellm.exceptions")
+    exceptions_module.APIConnectionError = _APIConnectionError
+    exceptions_module.ContentPolicyViolationError = _ContentPolicyViolationError
+    exceptions_module.RateLimitError = _RateLimitError
+    exceptions_module.ServiceUnavailableError = _ServiceUnavailableError
+    exceptions_module.Timeout = _Timeout
+    exceptions_module.InternalServerError = _InternalServerError
+
+    types_utils_module = _LiteLLMTypesUtilsModule("litellm.types.utils")
+    types_utils_module.CostPerToken = _CostPerToken
+    types_utils_module.ModelResponse = _ModelResponse
+    types_utils_module.Usage = _Usage
+
+    litellm_stub.utils = utils_module
+    litellm_stub.exceptions = exceptions_module
+    litellm_stub.create_pretrained_tokenizer = utils_module.create_pretrained_tokenizer
+    litellm_stub.get_model_info = utils_module.get_model_info
+
+    sys.modules["litellm"] = litellm_stub
+    sys.modules["litellm.utils"] = utils_module
+    sys.modules["litellm.exceptions"] = exceptions_module
+    sys.modules["litellm.types.utils"] = types_utils_module
+if "tokenizers" not in sys.modules:
+    tokenizers_stub = types.ModuleType("tokenizers")
+    sys.modules["tokenizers"] = tokenizers_stub
+
 from forge.core.logger import forge_logger as logger
 from forge.events.action import CmdRunAction
-from forge.runtime.utils.bash import BashCommandStatus, BashSession
+from forge.events.observation import ErrorObservation, Observation
+from forge.events.observation.commands import (
+    CMD_OUTPUT_PS1_BEGIN,
+    CMD_OUTPUT_PS1_END,
+    CmdOutputMetadata,
+    CmdOutputObservation,
+)
+from forge.runtime.utils.bash import (
+    BashCommandStatus,
+    BashSession,
+    escape_bash_special_chars,
+    split_bash_commands,
+)
 from forge.runtime.utils.bash_constants import TIMEOUT_MESSAGE_TEMPLATE
+from forge.runtime.utils.server_detector import DetectedServer
 
 
 def get_no_change_timeout_suffix(timeout_seconds):
@@ -14,25 +175,48 @@ def get_no_change_timeout_suffix(timeout_seconds):
     return f"\n[The command has no new output after {timeout_seconds} seconds. {TIMEOUT_MESSAGE_TEMPLATE}]"
 
 
+def _cmd_metadata(obs: Observation) -> CmdOutputMetadata:
+    """Ensure observation is a CmdOutputObservation and return its metadata."""
+    assert isinstance(obs, CmdOutputObservation)
+    metadata = obs.metadata
+    assert metadata is not None
+    return metadata
+
+
 @pytest.fixture(autouse=True)
 def _ensure_tmux_available(monkeypatch):
     """Ensure libtmux finds a tmux binary during tests on systems without tmux installed."""
     import json
-    from forge.events.observation.commands import CMD_OUTPUT_PS1_BEGIN, CMD_OUTPUT_PS1_END
+    from forge.events.observation.commands import (
+        CMD_OUTPUT_PS1_BEGIN,
+        CMD_OUTPUT_PS1_END,
+    )
 
     class FakeCmdResult:
-
         def __init__(self, stdout_lines):
             self.stdout = stdout_lines
 
     class FakePane:
-
         def __init__(self, work_dir):
             self._work_dir = work_dir
-            self._buffer = []
+            self._buffer: list[str] = []
             self._append_ps1(exit_code=0)
             self._long_running = False
             self._python_running = False
+            self._running_interactive = False
+            self._interactive: dict[str, str | None] = {}
+            self._running_heredoc = False
+            self._heredoc_lines: list[str] = []
+            self._heredoc_marker: str | None = None
+            self._heredoc_start_index: int | None = None
+            self._sequence: tuple[str, ...] = ()
+            self._seq_index: int = 0
+            self._sequence_start_time: float = 0.0
+            self._sequence_interval: float = 3.0
+            self._sequence_exit_code: int = 0
+            self._running_sequence = False
+            self._long_running_start: float | None = None
+            self._python_state: dict[str, Any] = {}
 
         def _append_ps1(self, exit_code=0, pid=1):
             meta = {
@@ -76,7 +260,11 @@ def _ensure_tmux_available(monkeypatch):
                     tail_cmd = tail.strip()
                     if tail_cmd.startswith("echo "):
                         val = tail_cmd[5:].strip()
-                        if val.startswith('"') and val.endswith('"') or (val.startswith("'") and val.endswith("'")):
+                        if (
+                            val.startswith('"')
+                            and val.endswith('"')
+                            or (val.startswith("'") and val.endswith("'"))
+                        ):
                             val = val[1:-1]
                         if var:
                             val = val.replace(f"${var}", input_val)
@@ -101,31 +289,47 @@ def _ensure_tmux_available(monkeypatch):
             output = ""
             exit_code = 0
             if cmd == "":
-                if hasattr(self, "_sequence") and getattr(self, "_seq_index", 0) < len(self._sequence):
+                if hasattr(self, "_sequence") and getattr(self, "_seq_index", 0) < len(
+                    self._sequence
+                ):
                     next_chunk = self._sequence[self._seq_index]
                     self._buffer.append(next_chunk)
                     self._seq_index += 1
                     if self._seq_index >= len(self._sequence):
                         import time as _time
 
-                        total_duration = getattr(self, "_sequence_interval", 3.0) * len(self._sequence)
-                        elapsed = _time.time() - getattr(self, "_sequence_start_time", 0)
+                        total_duration = float(
+                            getattr(self, "_sequence_interval", 3.0)
+                        ) * len(self._sequence)
+                        elapsed = _time.time() - getattr(
+                            self, "_sequence_start_time", 0
+                        )
                         if elapsed >= total_duration:
                             self._running_sequence = False
-                            self._append_ps1(exit_code=getattr(self, "_sequence_exit_code", 0))
+                            self._append_ps1(
+                                exit_code=getattr(self, "_sequence_exit_code", 0)
+                            )
                 return
             if cmd == "" and getattr(self, "_long_running", False):
                 return
             if cmd.startswith("echo "):
                 val = cmd[5:].strip()
-                if val.startswith("'") and val.endswith("'") or (val.startswith('"') and val.endswith('"')):
+                if (
+                    val.startswith("'")
+                    and val.endswith("'")
+                    or (val.startswith('"') and val.endswith('"'))
+                ):
                     val = val[1:-1]
                 output = val + "\n"
             elif cmd == "pwd":
                 output = str(self._work_dir) + "\n"
             elif cmd.startswith("cd "):
                 target = cmd[3:].strip()
-                if target.startswith("'") and target.endswith("'") or (target.startswith('"') and target.endswith('"')):
+                if (
+                    target.startswith("'")
+                    and target.endswith("'")
+                    or (target.startswith('"') and target.endswith('"'))
+                ):
                     target = target[1:-1]
                 if not _os.path.isabs(target):
                     target = _os.path.join(str(self._work_dir), target)
@@ -136,7 +340,9 @@ def _ensure_tmux_available(monkeypatch):
                 import re as _re
                 import time as _time
 
-                match = _re.search(r"for i in \{1\.\.(\d+)\}; do echo\s+(.+?); sleep (\d+); done", cmd)
+                match = _re.search(
+                    r"for i in \{1\.\.(\d+)\}; do echo\s+(.+?); sleep (\d+); done", cmd
+                )
                 if match:
                     end = int(match.group(1))
                     echo_expr = match.group(2).strip()
@@ -148,7 +354,7 @@ def _ensure_tmux_available(monkeypatch):
                             text = text[1:-1]
                         text = text.replace("$i", str(i))
                         outputs.append(f"{text}")
-                    self._sequence = outputs
+                    self._sequence = tuple(outputs)
                     self._seq_index = 1
                     self._buffer.append(outputs[0])
                     self._running_sequence = True
@@ -157,7 +363,7 @@ def _ensure_tmux_available(monkeypatch):
                     self._sequence_exit_code = 0
                     return
             elif cmd.startswith("for i in {1..3}"):
-                self._sequence = ["1", "2", "3"]
+                self._sequence = ("1", "2", "3")
                 self._buffer.append(self._sequence[0])
                 self._seq_index = 1
                 self._running_sequence = True
@@ -170,7 +376,9 @@ def _ensure_tmux_available(monkeypatch):
             elif cmd.startswith("for i in {1..") and "echo" in cmd:
                 import re as _re
 
-                match = _re.search(r"for i in \{1\.\.(\d+)\}; do echo\s+(.+?); done", cmd)
+                match = _re.search(
+                    r"for i in \{1\.\.(\d+)\}; do echo\s+(.+?); done", cmd
+                )
                 if match:
                     end = int(match.group(1))
                     echo_expr = match.group(2).strip()
@@ -186,7 +394,11 @@ def _ensure_tmux_available(monkeypatch):
                         if len(outputs) > keep:
                             outputs = outputs[-keep:]
                     self._buffer.extend(outputs)
-                    if end >= 50000 and self._buffer and self._buffer[0].startswith(CMD_OUTPUT_PS1_BEGIN):
+                    if (
+                        end >= 50000
+                        and self._buffer
+                        and self._buffer[0].startswith(CMD_OUTPUT_PS1_BEGIN)
+                    ):
                         self._buffer = self._buffer[1:]
                     self._append_ps1(exit_code=0)
                     return
@@ -197,7 +409,9 @@ def _ensure_tmux_available(monkeypatch):
                     tail_part = parts[1] if len(parts) > 1 else None
                     import re as _re
 
-                    m = _re.search("read\\s+-p\\s+['\\\"](.*?)['\\\"]\\s+(\\w+)", read_part)
+                    m = _re.search(
+                        "read\\s+-p\\s+['\\\"](.*?)['\\\"]\\s+(\\w+)", read_part
+                    )
                     prompt_text = m.group(1) if m else ""
                     var_name = m.group(2) if m else None
                 except Exception:
@@ -207,7 +421,10 @@ def _ensure_tmux_available(monkeypatch):
                 if prompt_text:
                     self._buffer.append(prompt_text + "\n")
                 self._running_interactive = True
-                self._interactive = {"tail": tail_part.strip() if tail_part else None, "var": var_name}
+                self._interactive = {
+                    "tail": tail_part.strip() if tail_part else None,
+                    "var": var_name,
+                }
                 return
             elif cmd.startswith("cat <<"):
                 parts = command.split()
@@ -260,19 +477,30 @@ def _ensure_tmux_available(monkeypatch):
             if args and args[0] == "capture-pane":
                 import time as _time
 
-                if getattr(self, "_running_sequence", False) and hasattr(self, "_sequence"):
+                if getattr(self, "_running_sequence", False) and hasattr(
+                    self, "_sequence"
+                ):
                     elapsed = _time.time() - getattr(self, "_sequence_start_time", 0)
-                    available = 1 + int(elapsed // getattr(self, "_sequence_interval", 3.0))
+                    available = 1 + int(
+                        elapsed // getattr(self, "_sequence_interval", 3.0)
+                    )
                     available = min(len(self._sequence), available)
                     while getattr(self, "_seq_index", 0) < available:
                         next_chunk = self._sequence[self._seq_index]
                         self._buffer.append(next_chunk)
                         self._seq_index += 1
-                    total_duration = getattr(self, "_sequence_interval", 3.0) * len(self._sequence)
-                    if elapsed >= total_duration and getattr(self, "_seq_index", 0) >= len(self._sequence):
+                    total_duration = getattr(self, "_sequence_interval", 3.0) * len(
+                        self._sequence
+                    )
+                    if elapsed >= total_duration and getattr(
+                        self, "_seq_index", 0
+                    ) >= len(self._sequence):
                         self._running_sequence = False
                         self._append_ps1(exit_code=0)
-                if getattr(self, "_running_heredoc", False) and getattr(self, "_heredoc_start_index", None) is not None:
+                if (
+                    getattr(self, "_running_heredoc", False)
+                    and getattr(self, "_heredoc_start_index", None) is not None
+                ):
                     visible_buf = self._buffer[: self._heredoc_start_index]
                 else:
                     visible_buf = self._buffer
@@ -285,7 +513,6 @@ def _ensure_tmux_available(monkeypatch):
             return FakeCmdResult([])
 
     class FakeWindow:
-
         def __init__(self, work_dir):
             self.active_pane = FakePane(work_dir)
 
@@ -296,11 +523,11 @@ def _ensure_tmux_available(monkeypatch):
             return
 
     class FakeSession:
-
         def __init__(self, work_dir):
             self.history_limit = 2000
             self._work_dir = work_dir
             self.active_window = FakeWindow(work_dir)
+            self.name: str | None = None
 
         def set_option(self, *args, **kwargs):
             self.history_limit = int(args[1]) if len(args) > 1 else self.history_limit
@@ -312,7 +539,6 @@ def _ensure_tmux_available(monkeypatch):
             return
 
     class FakeServer:
-
         def __init__(self):
             self._sessions = []
 
@@ -334,12 +560,16 @@ def test_session_initialization():
         obs = session.execute(CmdRunAction("pwd"))
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert temp_dir in obs.content
-        assert "[The command completed with exit code 0.]" in obs.metadata.suffix
+        assert "[The command completed with exit code 0.]" in _cmd_metadata(obs).suffix
         session.close()
     session = BashSession(work_dir=os.getcwd(), username="nobody")
     session.initialize()
-    assert "Forge-nobody" in session.session.name
-    session.close()
+    try:
+        assert session.session is not None
+        assert session.session.name is not None
+        assert "Forge-nobody" in session.session.name
+    finally:
+        session.close()
 
 
 def test_cwd_property(tmp_path):
@@ -403,18 +633,20 @@ def _test_multiple_commands(session):
 def _verify_successful_command_result(obs, session):
     """Verify successful command execution result."""
     assert "hello world" in obs.content
-    assert obs.metadata.suffix == "\n[The command completed with exit code 0.]"
-    assert obs.metadata.prefix == ""
-    assert obs.metadata.exit_code == 0
+    metadata = _cmd_metadata(obs)
+    assert metadata.suffix == "\n[The command completed with exit code 0.]"
+    assert metadata.prefix == ""
+    assert metadata.exit_code == 0
     assert session.prev_status == BashCommandStatus.COMPLETED
 
 
 def _verify_command_not_found_result(obs, session):
     """Verify command not found error result."""
-    assert obs.metadata.exit_code == 127
+    metadata = _cmd_metadata(obs)
+    assert metadata.exit_code == 127
     assert "nonexistent_command: command not found" in obs.content
-    assert obs.metadata.suffix == "\n[The command completed with exit code 127.]"
-    assert obs.metadata.prefix == ""
+    assert metadata.suffix == "\n[The command completed with exit code 127.]"
+    assert metadata.prefix == ""
     assert session.prev_status == BashCommandStatus.COMPLETED
 
 
@@ -423,10 +655,24 @@ def _verify_multiple_commands_result(obs, session):
     assert "first" in obs.content
     assert "second" in obs.content
     assert "third" in obs.content
-    assert obs.metadata.suffix == "\n[The command completed with exit code 0.]"
-    assert obs.metadata.prefix == ""
-    assert obs.metadata.exit_code == 0
+    metadata = _cmd_metadata(obs)
+    assert metadata.suffix == "\n[The command completed with exit code 0.]"
+    assert metadata.prefix == ""
+    assert metadata.exit_code == 0
     assert session.prev_status == BashCommandStatus.COMPLETED
+
+
+def _build_ps1_block(exit_code=0, cwd="."):
+    """Create a PS1 metadata block for synthetic pane outputs."""
+    payload = {
+        "pid": 1234,
+        "exit_code": exit_code,
+        "username": "tester",
+        "hostname": "localhost",
+        "working_dir": cwd,
+        "py_interpreter_path": "",
+    }
+    return f"{CMD_OUTPUT_PS1_BEGIN}{json.dumps(payload)}{CMD_OUTPUT_PS1_END}"
 
 
 def _setup_long_running_test_session():
@@ -438,13 +684,16 @@ def _setup_long_running_test_session():
 
 def _execute_long_running_command(session):
     """Execute long-running command and validate initial output."""
-    obs = session.execute(CmdRunAction("for i in {1..3}; do echo $i; sleep 3; done", blocking=False))
+    obs = session.execute(
+        CmdRunAction("for i in {1..3}; do echo $i; sleep 3; done", blocking=False)
+    )
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert "1" in obs.content
-    assert obs.metadata.exit_code == -1
+    assert _cmd_metadata(obs).exit_code == -1
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
-    assert obs.metadata.suffix == get_no_change_timeout_suffix(2)
-    assert obs.metadata.prefix == ""
+    metadata = _cmd_metadata(obs)
+    assert metadata.suffix == get_no_change_timeout_suffix(2)
+    assert metadata.prefix == ""
     return obs
 
 
@@ -453,9 +702,10 @@ def _test_continuation_input(session):
     obs = session.execute(CmdRunAction("", is_input=True))
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert "2" in obs.content
-    assert obs.metadata.prefix == "[Below is the output of the previous command.]\n"
-    assert obs.metadata.suffix == get_no_change_timeout_suffix(2)
-    assert obs.metadata.exit_code == -1
+    metadata = _cmd_metadata(obs)
+    assert metadata.prefix == "[Below is the output of the previous command.]\n"
+    assert metadata.suffix == get_no_change_timeout_suffix(2)
+    assert metadata.exit_code == -1
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
     return obs
 
@@ -465,9 +715,10 @@ def _test_interrupting_command(session):
     obs = session.execute(CmdRunAction("sleep 15"))
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert "3" not in obs.content
-    assert obs.metadata.prefix == "[Below is the output of the previous command.]\n"
-    assert "The previous command is still running" in obs.metadata.suffix
-    assert obs.metadata.exit_code == -1
+    metadata = _cmd_metadata(obs)
+    assert metadata.prefix == "[Below is the output of the previous command.]\n"
+    assert "The previous command is still running" in metadata.suffix
+    assert metadata.exit_code == -1
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
     return obs
 
@@ -478,9 +729,10 @@ def _test_after_wait(session):
     obs = session.execute(CmdRunAction("sleep 15"))
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert "3" in obs.content
-    assert obs.metadata.prefix == "[Below is the output of the previous command.]\n"
-    assert "The previous command is still running" in obs.metadata.suffix
-    assert obs.metadata.exit_code == -1
+    metadata = _cmd_metadata(obs)
+    assert metadata.prefix == "[Below is the output of the previous command.]\n"
+    assert "The previous command is still running" in metadata.suffix
+    assert metadata.exit_code == -1
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
     return obs
 
@@ -513,13 +765,16 @@ def _setup_bash_session():
 
 def _test_read_prompt_command(session):
     """Test read prompt command."""
-    obs = session.execute(CmdRunAction("read -p 'Enter name: ' name && echo \"Hello $name\""))
+    obs = session.execute(
+        CmdRunAction("read -p 'Enter name: ' name && echo \"Hello $name\"")
+    )
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert "Enter name:" in obs.content
-    assert obs.metadata.exit_code == -1
+    metadata = _cmd_metadata(obs)
+    assert metadata.exit_code == -1
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
-    assert obs.metadata.suffix == get_no_change_timeout_suffix(3)
-    assert obs.metadata.prefix == ""
+    assert metadata.suffix == get_no_change_timeout_suffix(3)
+    assert metadata.prefix == ""
     return obs
 
 
@@ -528,9 +783,10 @@ def _test_input_response(session):
     obs = session.execute(CmdRunAction("John", is_input=True))
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert "Hello John" in obs.content
-    assert obs.metadata.exit_code == 0
-    assert obs.metadata.suffix == "\n[The command completed with exit code 0.]"
-    assert obs.metadata.prefix == ""
+    metadata = _cmd_metadata(obs)
+    assert metadata.exit_code == 0
+    assert metadata.suffix == "\n[The command completed with exit code 0.]"
+    assert metadata.prefix == ""
     assert session.prev_status == BashCommandStatus.COMPLETED
     return obs
 
@@ -539,10 +795,11 @@ def _test_heredoc_command(session):
     """Test heredoc command."""
     obs = session.execute(CmdRunAction("cat << EOF"))
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert obs.metadata.exit_code == -1
+    metadata = _cmd_metadata(obs)
+    assert metadata.exit_code == -1
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
-    assert obs.metadata.suffix == get_no_change_timeout_suffix(3)
-    assert obs.metadata.prefix == ""
+    assert metadata.suffix == get_no_change_timeout_suffix(3)
+    assert metadata.prefix == ""
     return obs
 
 
@@ -551,18 +808,20 @@ def _test_heredoc_input_lines(session):
     # First line
     obs = session.execute(CmdRunAction("line 1", is_input=True))
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert obs.metadata.exit_code == -1
+    metadata = _cmd_metadata(obs)
+    assert metadata.exit_code == -1
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
-    assert obs.metadata.suffix == get_no_change_timeout_suffix(3)
-    assert obs.metadata.prefix == "[Below is the output of the previous command.]\n"
+    assert metadata.suffix == get_no_change_timeout_suffix(3)
+    assert metadata.prefix == "[Below is the output of the previous command.]\n"
 
     # Second line
     obs = session.execute(CmdRunAction("line 2", is_input=True))
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert obs.metadata.exit_code == -1
+    metadata = _cmd_metadata(obs)
+    assert metadata.exit_code == -1
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
-    assert obs.metadata.suffix == get_no_change_timeout_suffix(3)
-    assert obs.metadata.prefix == "[Below is the output of the previous command.]\n"
+    assert metadata.suffix == get_no_change_timeout_suffix(3)
+    assert metadata.prefix == "[Below is the output of the previous command.]\n"
 
     return obs
 
@@ -572,9 +831,10 @@ def _test_heredoc_termination(session):
     obs = session.execute(CmdRunAction("EOF", is_input=True))
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert "line 1" in obs.content and "line 2" in obs.content
-    assert obs.metadata.exit_code == 0
-    assert obs.metadata.suffix == "\n[The command completed with exit code 0.]"
-    assert obs.metadata.prefix == ""
+    metadata = _cmd_metadata(obs)
+    assert metadata.exit_code == 0
+    assert metadata.suffix == "\n[The command completed with exit code 0.]"
+    assert metadata.prefix == ""
     return obs
 
 
@@ -603,33 +863,44 @@ def test_interactive_command():
 def test_ctrl_c():
     session = BashSession(work_dir=os.getcwd(), no_change_timeout_seconds=2)
     session.initialize()
-    obs = session.execute(CmdRunAction("while true; do echo 'looping'; sleep 3; done"))
-    logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert "looping" in obs.content
-    assert obs.metadata.suffix == get_no_change_timeout_suffix(2)
-    assert obs.metadata.prefix == ""
-    assert obs.metadata.exit_code == -1
-    assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
-    obs = session.execute(CmdRunAction("C-c", is_input=True))
-    logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert obs.metadata.exit_code in (1, 130)
-    assert "CTRL+C was sent" in obs.metadata.suffix
-    assert obs.metadata.prefix == ""
-    assert session.prev_status == BashCommandStatus.COMPLETED
-    session.close()
+    try:
+        obs = session.execute(
+            CmdRunAction("while true; do echo 'looping'; sleep 3; done")
+        )
+        logger.info(obs, extra={"msg_type": "OBSERVATION"})
+        assert "looping" in obs.content
+        metadata = _cmd_metadata(obs)
+        assert metadata.suffix == get_no_change_timeout_suffix(2)
+        assert metadata.prefix == ""
+        assert metadata.exit_code == -1
+        assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
+        obs = session.execute(CmdRunAction("C-c", is_input=True))
+        logger.info(obs, extra={"msg_type": "OBSERVATION"})
+        metadata = _cmd_metadata(obs)
+        assert metadata.exit_code in (1, 130)
+        assert "CTRL+C was sent" in metadata.suffix
+        assert metadata.prefix == ""
+        assert session.prev_status == BashCommandStatus.COMPLETED
+    finally:
+        session.close()
 
 
 def test_empty_command_errors():
     session = BashSession(work_dir=os.getcwd())
     session.initialize()
-    obs = session.execute(CmdRunAction(""))
-    logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert obs.content == "ERROR: No previous running command to retrieve logs from."
-    assert obs.metadata.exit_code == -1
-    assert obs.metadata.prefix == ""
-    assert obs.metadata.suffix == ""
-    assert session.prev_status is None
-    session.close()
+    try:
+        obs = session.execute(CmdRunAction(""))
+        logger.info(obs, extra={"msg_type": "OBSERVATION"})
+        assert (
+            obs.content == "ERROR: No previous running command to retrieve logs from."
+        )
+        metadata = _cmd_metadata(obs)
+        assert metadata.exit_code == -1
+        assert metadata.prefix == ""
+        assert metadata.suffix == ""
+        assert session.prev_status is None
+    finally:
+        session.close()
 
 
 def _setup_continuation_test_session():
@@ -654,14 +925,16 @@ def _handle_immediate_completion(obs):
     assert "3" in obs.content
     assert "4" in obs.content
     assert "5" in obs.content
-    assert "[The command completed with exit code 0.]" in obs.metadata.suffix
+    assert "[The command completed with exit code 0.]" in _cmd_metadata(obs).suffix
 
 
 def _handle_timeout_continuation(session, obs):
     """Handle case where command times out and needs continuation."""
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
     assert "1" in obs.content
-    assert "[The command has no new output after 1 seconds." in obs.metadata.suffix
+    assert (
+        "[The command has no new output after 1 seconds." in _cmd_metadata(obs).suffix
+    )
 
     numbers_seen = {i for i in range(1, 6) if str(i) in obs.content}
 
@@ -673,16 +946,25 @@ def _handle_timeout_continuation(session, obs):
         for i in range(1, 6):
             if str(i) in obs.content and i not in numbers_seen:
                 numbers_seen.add(i)
-                logger.info("Found number %s in output", i, extra={"msg_type": "TEST_INFO"})
+                logger.info(
+                    "Found number %s in output", i, extra={"msg_type": "TEST_INFO"}
+                )
 
         if session.prev_status == BashCommandStatus.COMPLETED:
-            assert "[The command completed with exit code 0.]" in obs.metadata.suffix
+            assert (
+                "[The command completed with exit code 0.]" in _cmd_metadata(obs).suffix
+            )
             break
         else:
-            assert "[The command has no new output after 1 seconds." in obs.metadata.suffix
+            assert (
+                "[The command has no new output after 1 seconds."
+                in _cmd_metadata(obs).suffix
+            )
             assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
 
-    assert numbers_seen == {1, 2, 3, 4, 5}, f"Expected to see numbers 1-5, but saw {numbers_seen}"
+    assert numbers_seen == {1, 2, 3, 4, 5}, (
+        f"Expected to see numbers 1-5, but saw {numbers_seen}"
+    )
     assert session.prev_status == BashCommandStatus.COMPLETED
 
 
@@ -708,59 +990,399 @@ def test_command_output_continuation():
 def test_long_output():
     session = BashSession(work_dir=os.getcwd())
     session.initialize()
-    obs = session.execute(CmdRunAction('for i in {1..5000}; do echo "Line $i"; done'))
-    logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert "Line 1" in obs.content
-    assert "Line 5000" in obs.content
-    assert obs.metadata.exit_code == 0
-    assert obs.metadata.prefix == ""
-    assert obs.metadata.suffix == "\n[The command completed with exit code 0.]"
-    session.close()
+    try:
+        obs = session.execute(
+            CmdRunAction('for i in {1..5000}; do echo "Line $i"; done')
+        )
+        logger.info(obs, extra={"msg_type": "OBSERVATION"})
+        assert "Line 1" in obs.content
+        assert "Line 5000" in obs.content
+        metadata = _cmd_metadata(obs)
+        assert metadata.exit_code == 0
+        assert metadata.prefix == ""
+        assert metadata.suffix == "\n[The command completed with exit code 0.]"
+    finally:
+        session.close()
 
 
 def test_long_output_exceed_history_limit():
     session = BashSession(work_dir=os.getcwd())
     session.initialize()
-    obs = session.execute(CmdRunAction('for i in {1..50000}; do echo "Line $i"; done'))
-    logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert "Previous command outputs are truncated" in obs.metadata.prefix
-    assert "Line 40000" in obs.content
-    assert "Line 50000" in obs.content
-    assert obs.metadata.exit_code == 0
-    assert obs.metadata.suffix == "\n[The command completed with exit code 0.]"
-    session.close()
+    try:
+        obs = session.execute(
+            CmdRunAction('for i in {1..50000}; do echo "Line $i"; done')
+        )
+        logger.info(obs, extra={"msg_type": "OBSERVATION"})
+        metadata = _cmd_metadata(obs)
+        assert "Previous command outputs are truncated" in (metadata.prefix or "")
+        assert "Line 40000" in obs.content
+        assert "Line 50000" in obs.content
+        assert metadata.exit_code == 0
+        assert metadata.suffix == "\n[The command completed with exit code 0.]"
+    finally:
+        session.close()
 
 
 def test_multiline_command():
     session = BashSession(work_dir=os.getcwd())
     session.initialize()
-    obs = session.execute(CmdRunAction('if true; then\necho "inside if"\nfi'))
-    logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert "inside if" in obs.content
-    assert obs.metadata.exit_code == 0
-    assert obs.metadata.prefix == ""
-    assert obs.metadata.suffix == "\n[The command completed with exit code 0.]"
-    session.close()
+    try:
+        obs = session.execute(CmdRunAction('if true; then\necho "inside if"\nfi'))
+        logger.info(obs, extra={"msg_type": "OBSERVATION"})
+        assert "inside if" in obs.content
+        metadata = _cmd_metadata(obs)
+        assert metadata.exit_code == 0
+        assert metadata.prefix == ""
+        assert metadata.suffix == "\n[The command completed with exit code 0.]"
+    finally:
+        session.close()
 
 
 def test_python_interactive_input():
     session = BashSession(work_dir=os.getcwd(), no_change_timeout_seconds=2)
     session.initialize()
-    python_script = "name = input('Enter your name: '); age = input('Enter your age: '); print(f'Hello {name}, you are {age} years old')"
-    obs = session.execute(CmdRunAction(f'python3 -c "{python_script}"'))
-    logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert "Enter your name:" in obs.content
-    assert obs.metadata.exit_code == -1
+    try:
+        python_script = "name = input('Enter your name: '); age = input('Enter your age: '); print(f'Hello {name}, you are {age} years old')"
+        obs = session.execute(CmdRunAction(f'python3 -c "{python_script}"'))
+        logger.info(obs, extra={"msg_type": "OBSERVATION"})
+        assert "Enter your name:" in obs.content
+        metadata = _cmd_metadata(obs)
+        assert metadata.exit_code == -1
+        assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
+        obs = session.execute(CmdRunAction("Alice", is_input=True))
+        logger.info(obs, extra={"msg_type": "OBSERVATION"})
+        assert "Enter your age:" in obs.content
+        metadata = _cmd_metadata(obs)
+        assert metadata.exit_code == -1
+        assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
+        obs = session.execute(CmdRunAction("25", is_input=True))
+        logger.info(obs, extra={"msg_type": "OBSERVATION"})
+        assert "Hello Alice, you are 25 years old" in obs.content
+        metadata = _cmd_metadata(obs)
+        assert metadata.exit_code == 0
+        assert metadata.suffix == "\n[The command completed with exit code 0.]"
+        assert session.prev_status == BashCommandStatus.COMPLETED
+    finally:
+        session.close()
+
+
+def test_handle_nochange_timeout_with_multiple_prompts():
+    session = BashSession(work_dir=".")
+    session.prev_output = "previous output"
+    session.NO_CHANGE_TIMEOUT_SECONDS = 7
+    session._cwd = "."
+    session._closed = True
+    block1 = _build_ps1_block(exit_code=0)
+    block2 = _build_ps1_block(exit_code=0)
+    pane_content = f"{block1}\nline one\n{block2}\n"
+    ps1_matches = CmdOutputMetadata.matches_ps1_metadata(pane_content)
+    obs = session._handle_nochange_timeout_command(
+        "echo 'hi'", pane_content, ps1_matches
+    )
     assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
-    obs = session.execute(CmdRunAction("Alice", is_input=True))
-    logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert "Enter your age:" in obs.content
-    assert obs.metadata.exit_code == -1
-    assert session.prev_status == BashCommandStatus.NO_CHANGE_TIMEOUT
-    obs = session.execute(CmdRunAction("25", is_input=True))
-    logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert "Hello Alice, you are 25 years old" in obs.content
-    assert obs.metadata.exit_code == 0
-    assert obs.metadata.suffix == "\n[The command completed with exit code 0.]"
-    assert session.prev_status == BashCommandStatus.COMPLETED
+    metadata = _cmd_metadata(obs)
+    assert metadata.prefix == "[Below is the output of the previous command.]\n"
+    assert metadata.suffix.endswith(f"{TIMEOUT_MESSAGE_TEMPLATE}]")
+
+
+def test_handle_hard_timeout_with_multiple_prompts():
+    session = BashSession(work_dir=".")
+    session.prev_output = "previous"
+    session._cwd = "."
+    session._closed = True
+    block1 = _build_ps1_block(exit_code=0)
+    block2 = _build_ps1_block(exit_code=0)
+    pane_content = f"{block1}\nlong output\n{block2}\n"
+    ps1_matches = CmdOutputMetadata.matches_ps1_metadata(pane_content)
+    obs = session._handle_hard_timeout_command(
+        "sleep 5", pane_content, ps1_matches, timeout=3.5
+    )
+    assert session.prev_status == BashCommandStatus.HARD_TIMEOUT
+    metadata = _cmd_metadata(obs)
+    assert metadata.prefix == "[Below is the output of the previous command.]\n"
+    assert "timed out after 3.5 seconds" in metadata.suffix
+
+
+def test_split_bash_commands_handles_empty_parse(monkeypatch):
+    def fake_parse(command):
+        return []
+
+    monkeypatch.setattr("forge.runtime.utils.bash.bashlex.parse", fake_parse)
+    assert split_bash_commands("echo hi") == ["echo hi"]
+
+
+def test_split_bash_commands_parsing_error(monkeypatch):
+    def fake_parse(command):
+        raise bashlex.errors.ParsingError("boom")
+
+    monkeypatch.setattr("forge.runtime.utils.bash.bashlex.parse", fake_parse)
+    command = "echo 'unterminated"
+    assert split_bash_commands(command) == [command]
+
+
+def test_escape_bash_special_chars_preserves_safe_segments():
+    command = r'echo "safe"; echo \$PATH \; ls \&'
+    escaped = escape_bash_special_chars(command)
+    assert '"safe"' in escaped
+    assert "\\\\;" in escaped
+    assert "\\\\&" in escaped
+
+
+def test_escape_bash_special_chars_handles_heredoc():
+    command = "cat <<EOF\nhello\nEOF"
+    assert escape_bash_special_chars(command) == command
+
+
+def test_escape_bash_special_chars_parse_failure(monkeypatch):
+    def raise_parse(_):
+        raise bashlex.errors.ParsingError("boom")
+
+    monkeypatch.setattr("forge.runtime.utils.bash.bashlex.parse", raise_parse)
+    command = r"echo \$HOME"
+    assert escape_bash_special_chars(command) == command
+
+
+def test_split_bash_commands_merges_between_segments(monkeypatch):
+    from types import SimpleNamespace
+
+    command = "echo 1; echo 2"
+    nodes = [
+        SimpleNamespace(pos=(0, 6)),
+        SimpleNamespace(pos=(8, 14)),
+    ]
+    monkeypatch.setattr("forge.runtime.utils.bash.bashlex.parse", lambda _: nodes)
+    result = split_bash_commands(command)
+    assert result[0] == "echo 1;"
+    assert result[1] == "echo 2"
+
+
+def test_split_bash_commands_appends_trailing_segment(monkeypatch):
+    from types import SimpleNamespace
+
+    command = "echo 1;   "
+    nodes = [SimpleNamespace(pos=(0, 6))]
+    monkeypatch.setattr("forge.runtime.utils.bash.bashlex.parse", lambda _: nodes)
+    result = split_bash_commands(command)
+    assert result == ["echo 1;"]
+
+
+def test_initialize_uses_su_for_root_user(monkeypatch):
+    captured = {}
+
+    class RecordingPane:
+        def send_keys(self, *args, **kwargs):
+            return None
+
+        def cmd(self, *args, **kwargs):
+            return types.SimpleNamespace(stdout=[])
+
+    class RecordingWindow:
+        def __init__(self, start_directory, window_shell=None):
+            self._start_directory = start_directory
+            self._window_shell = window_shell
+            self.active_pane = RecordingPane()
+
+        def new_window(self, **kwargs):
+            captured["window_shell"] = kwargs.get("window_shell")
+            return RecordingWindow(
+                kwargs.get("start_directory"), kwargs.get("window_shell")
+            )
+
+        def kill(self):
+            return None
+
+    class RecordingSession:
+        def __init__(self, start_directory):
+            self.history_limit = 0
+            self.active_window = RecordingWindow(start_directory)
+
+        def set_option(self, *args, **kwargs):
+            self.history_limit = int(args[1])
+
+        def new_window(self, **kwargs):
+            captured["window_shell"] = kwargs.get("window_shell")
+            return RecordingWindow(
+                kwargs.get("start_directory"), kwargs.get("window_shell")
+            )
+
+        def kill(self):
+            return None
+
+    class RecordingServer:
+        def new_session(self, **kwargs):
+            return RecordingSession(kwargs.get("start_directory"))
+
+    monkeypatch.setattr("forge.runtime.utils.bash.libtmux.Server", RecordingServer)
+    session = BashSession(work_dir=".", username="root")
+    session.initialize()
+    assert captured["window_shell"] == "su root -"
     session.close()
+
+
+def test_combine_outputs_without_matches():
+    session = BashSession(work_dir=".")
+    assert session._combine_outputs_between_matches("output", []) == "output"
+
+
+def test_validate_session_requires_initialization():
+    session = BashSession(work_dir=".")
+    with pytest.raises(RuntimeError, match="not initialized"):
+        session._validate_session_and_command(CmdRunAction("echo"))
+
+
+def test_validate_session_blocks_input_for_idle_session():
+    session = BashSession(work_dir=".")
+    session._initialized = True
+    session.prev_status = None
+    with pytest.raises(
+        ValueError, match="No previous running command to retrieve logs"
+    ):
+        session._validate_session_and_command(CmdRunAction("", is_input=True))
+
+
+def test_validate_session_rejects_multiple_commands(monkeypatch):
+    session = BashSession(work_dir=".")
+    session._initialized = True
+    session.prev_status = None
+    action = CmdRunAction("echo 1")
+    monkeypatch.setattr(
+        "forge.runtime.utils.bash.split_bash_commands", lambda *_: ["echo 1", "echo 2"]
+    )
+    with pytest.raises(ValueError, match="Cannot execute multiple commands"):
+        session._validate_session_and_command(action)
+
+
+def test_check_timeouts_triggers_nochange_and_hard(monkeypatch):
+    session = BashSession(work_dir=".")
+    action = CmdRunAction("sleep 1")
+    action.set_hard_timeout(0.01, blocking=False)
+    session.NO_CHANGE_TIMEOUT_SECONDS = 1
+    sentinel_nochange = object()
+    sentinel_hard = object()
+    monkeypatch.setattr(
+        session,
+        "_handle_nochange_timeout_command",
+        lambda *args, **kwargs: sentinel_nochange,
+    )
+    monkeypatch.setattr(
+        session, "_handle_hard_timeout_command", lambda *args, **kwargs: sentinel_hard
+    )
+    result = session._check_timeouts(
+        action,
+        last_change_time=time.time() - 2,
+        start_time=time.time(),
+        command="sleep 1",
+        cur_pane_output="output",
+        ps1_matches=[],
+    )
+    assert result is sentinel_nochange
+    action.blocking = True
+    result = session._check_timeouts(
+        action,
+        last_change_time=time.time(),
+        start_time=time.time() - 1,
+        command="sleep 1",
+        cur_pane_output="output",
+        ps1_matches=[],
+    )
+    assert result is sentinel_hard
+
+
+def test_monitor_handles_prompt_and_server_detection(monkeypatch):
+    session = BashSession(work_dir=".")
+    session._closed = True
+    pane_outputs = ["initial", "Enter value:", "Server ready", "done"]
+
+    def fake_get_pane_content():
+        value = pane_outputs.pop(0)
+        return value
+
+    monkeypatch.setattr(session, "_get_pane_content", fake_get_pane_content)
+    monkeypatch.setattr(
+        "forge.runtime.utils.bash.should_continue",
+        lambda: True if pane_outputs else False,
+    )
+    monkeypatch.setattr(
+        "forge.runtime.utils.bash.detect_interactive_prompt",
+        lambda output: (True, "yes") if "Enter" in output else (False, None),
+    )
+    server_stub = DetectedServer(
+        port=8000,
+        url="http://localhost:8000",
+        protocol="http",
+        health_status="healthy",
+    )
+    monkeypatch.setattr(
+        "forge.runtime.utils.server_detector.detect_server_from_output",
+        lambda output, **kwargs: server_stub if "Server ready" in output else None,
+    )
+    monkeypatch.setattr(
+        session,
+        "_check_command_completion",
+        lambda *args, **kwargs: CmdOutputObservation(content="done", command="cmd")
+        if args[0] == "done"
+        else None,
+    )
+    monkeypatch.setattr(session, "_check_timeouts", lambda *args, **kwargs: None)
+    monkeypatch.setattr(session, "_send_command_to_pane", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        "forge.runtime.utils.bash.CmdOutputMetadata.matches_ps1_metadata",
+        lambda *args, **kwargs: [],
+    )
+    monkeypatch.setattr("time.sleep", lambda *args, **kwargs: None)
+
+    action = CmdRunAction("cmd")
+    action.set_hard_timeout(None)
+    result = session._monitor_command_execution(
+        "cmd", initial_ps1_count=0, is_input=False, action=action
+    )
+    assert isinstance(result, CmdOutputObservation)
+    assert (
+        getattr(session, "_last_detected_server_url", None) == "http://localhost:8000"
+    )
+
+
+def test_monitor_raises_when_interrupted(monkeypatch):
+    session = BashSession(work_dir=".")
+    session._closed = True
+    monkeypatch.setattr(session, "_get_pane_content", lambda: "output")
+    monkeypatch.setattr("forge.runtime.utils.bash.should_continue", lambda: False)
+    monkeypatch.setattr(
+        "forge.runtime.utils.bash.CmdOutputMetadata.matches_ps1_metadata",
+        lambda *args, **kwargs: [],
+    )
+    monkeypatch.setattr(
+        session, "_check_command_completion", lambda *args, **kwargs: None
+    )
+    monkeypatch.setattr(session, "_check_timeouts", lambda *args, **kwargs: None)
+    with pytest.raises(RuntimeError, match="interrupted"):
+        session._monitor_command_execution(
+            "cmd", initial_ps1_count=0, is_input=False, action=CmdRunAction("cmd")
+        )
+
+
+def test_execute_returns_error_observation_on_validation_error(monkeypatch):
+    session = BashSession(work_dir=".")
+    session._closed = True
+    monkeypatch.setattr(
+        session,
+        "_validate_session_and_command",
+        lambda *_: (_ for _ in ()).throw(ValueError("boom")),
+    )
+    result = session.execute(CmdRunAction("cmd"))
+    assert isinstance(result, ErrorObservation)
+    assert result.content == "boom"
+
+
+def test_get_detected_server_returns_once():
+    session = BashSession(work_dir=".")
+    session._last_detected_server = DetectedServer(
+        port=8000,
+        url="http://localhost",
+        protocol="http",
+        health_status="ok",
+    )
+    session._last_detected_server_url = "http://localhost"
+    server = session.get_detected_server()
+    assert server.url == "http://localhost"
+    assert session.get_detected_server() is None

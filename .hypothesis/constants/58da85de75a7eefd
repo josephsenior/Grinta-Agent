@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\routes\slack.py
+# hypothesis_version: 6.147.0
+
+[400, 500, '/callback', '/events', '/install', '/workspaces', ':white_check_mark:', ':x:', 'Event', 'Invalid OAuth state', 'Invalid signature', 'Missing OAuth code', 'Workspace not found', 'X-Slack-Signature', 'access_token', 'action', 'app_mention', 'app_mentions:read', 'args', 'authed_user', 'bash', 'bot_id', 'bot_user_id', 'challenge', 'channel', 'channels:history', 'chat:write', 'content', 'event', 'groups:history', 'id', 'im:history', 'message', 'mpim:history', 'name', 'ok', 'replace', 'team', 'team_id', 'team_name', 'text', 'text/html', 'thread_ts', 'ts', 'type', 'url', 'url_verification', 'user', 'users:read', 'utf-8', 'v0=', 'workspaces']

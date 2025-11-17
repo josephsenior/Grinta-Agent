@@ -16,7 +16,9 @@ from forge.llm import streaming_llm as streaming_module
 class FakeResponse(dict):
     def __init__(self, content: str = "content") -> None:
         super().__init__(
-            choices=[{"message": {"content": content, "tool_calls": [], "cache_control": {}}}],
+            choices=[
+                {"message": {"content": content, "tool_calls": [], "cache_control": {}}}
+            ],
             usage={"prompt_tokens": 1, "completion_tokens": 1},
         )
 
@@ -45,12 +47,23 @@ def _patch_async_env(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     monkeypatch.setattr(async_module, "get_features", lambda model: features)
     monkeypatch.setattr(async_module, "should_continue", lambda: False)
-    monkeypatch.setattr(async_module, "logger", SimpleNamespace(debug=lambda *a, **k: None, error=lambda *a, **k: None))
-    monkeypatch.setattr(async_module.AsyncLLM, "retry_decorator", lambda self, **kwargs: (lambda func: func))
+    monkeypatch.setattr(
+        async_module,
+        "logger",
+        SimpleNamespace(debug=lambda *a, **k: None, error=lambda *a, **k: None),
+    )
+    monkeypatch.setattr(
+        async_module.AsyncLLM,
+        "retry_decorator",
+        lambda self, **kwargs: (lambda func: func),
+    )
+
     async def fake_acompletion(*args, **kwargs):
         return FakeResponse()
 
-    monkeypatch.setattr(async_module, "litellm_acompletion", fake_acompletion, raising=False)
+    monkeypatch.setattr(
+        async_module, "litellm_acompletion", fake_acompletion, raising=False
+    )
 
 
 @pytest.mark.asyncio
@@ -65,7 +78,9 @@ async def test_async_completion_flow(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result["choices"][0]["message"]["content"] == "content"
 
     # Exercise helper utilities
-    parsed = llm._process_completion_args((None, [{"role": "user", "content": "msg"}]), {})
+    parsed = llm._process_completion_args(
+        (None, [{"role": "user", "content": "msg"}]), {}
+    )
     assert parsed[0]["content"] == "msg"
 
     with pytest.raises(ValueError):
@@ -77,7 +92,9 @@ async def test_async_completion_flow(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_async_completion_handles_exceptions(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_async_completion_handles_exceptions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _patch_async_env(monkeypatch)
     config = _make_config()
     llm = async_module.AsyncLLM(config=config, service_id="svc")
@@ -87,25 +104,59 @@ async def test_async_completion_handles_exceptions(monkeypatch: pytest.MonkeyPat
 
     llm._base_async_completion = raise_completion  # type: ignore[assignment]
     with pytest.raises(RuntimeError):
-        await llm._execute_completion_with_cancellation(raise_completion, (), {"messages": []})
+        await llm._execute_completion_with_cancellation(
+            raise_completion, (), {"messages": []}
+        )
 
 
 def _patch_stream_env(monkeypatch: pytest.MonkeyPatch) -> None:
     _patch_async_env(monkeypatch)
-    monkeypatch.setattr(streaming_module.AsyncLLM, "__init__", async_module.AsyncLLM.__init__)
-    monkeypatch.setattr(streaming_module.AsyncLLM, "retry_decorator", lambda self, **kwargs: (lambda func: func))
-    monkeypatch.setattr(streaming_module, "logger", SimpleNamespace(debug=lambda *a, **k: None, error=lambda *a, **k: None))
-    monkeypatch.setattr("forge.core.config.api_key_manager.APIKeyManager._extract_provider", lambda self, model: "openai", raising=False)
-    monkeypatch.setattr("forge.core.config.api_key_manager.APIKeyManager._get_provider_key_from_env", lambda self, provider: None, raising=False)
-    monkeypatch.setattr("forge.core.config.api_key_manager.APIKeyManager.validate_and_clean_completion_params", lambda self, model, params: params, raising=False)
-    monkeypatch.setattr("forge.core.config.api_key_manager.APIKeyManager.get_api_key_for_model", lambda self, model, key: None, raising=False)
-    monkeypatch.setattr("forge.core.config.api_key_manager.APIKeyManager.set_environment_variables", lambda self, model, key: None, raising=False)
+    monkeypatch.setattr(
+        streaming_module.AsyncLLM, "__init__", async_module.AsyncLLM.__init__
+    )
+    monkeypatch.setattr(
+        streaming_module.AsyncLLM,
+        "retry_decorator",
+        lambda self, **kwargs: (lambda func: func),
+    )
+    monkeypatch.setattr(
+        streaming_module,
+        "logger",
+        SimpleNamespace(debug=lambda *a, **k: None, error=lambda *a, **k: None),
+    )
+    monkeypatch.setattr(
+        "forge.core.config.api_key_manager.APIKeyManager._extract_provider",
+        lambda self, model: "openai",
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "forge.core.config.api_key_manager.APIKeyManager._get_provider_key_from_env",
+        lambda self, provider: None,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "forge.core.config.api_key_manager.APIKeyManager.validate_and_clean_completion_params",
+        lambda self, model, params: params,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "forge.core.config.api_key_manager.APIKeyManager.get_api_key_for_model",
+        lambda self, model, key: None,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "forge.core.config.api_key_manager.APIKeyManager.set_environment_variables",
+        lambda self, model, key: None,
+        raising=False,
+    )
 
 
 @pytest.mark.asyncio
 async def test_streaming_completion_flow(monkeypatch: pytest.MonkeyPatch) -> None:
     _patch_stream_env(monkeypatch)
-    config = _make_config(base_url="https://example", api_version="v1", custom_llm_provider="custom")
+    config = _make_config(
+        base_url="https://example", api_version="v1", custom_llm_provider="custom"
+    )
     llm = streaming_module.StreamingLLM(config=config, service_id="svc")
 
     async def fake_generator(*args, **kwargs):
@@ -119,14 +170,17 @@ async def test_streaming_completion_flow(monkeypatch: pytest.MonkeyPatch) -> Non
     assert completion_partial.keywords["api_version"] == "v1"
     assert completion_partial.keywords["custom_llm_provider"] == "custom"
     chunks = []
-    async for chunk in llm.async_streaming_completion(messages=[{"role": "user", "content": "hi"}]):
+    async for chunk in llm.async_streaming_completion(
+        messages=[{"role": "user", "content": "hi"}]
+    ):
         chunks.append(chunk)
     assert chunks[0]["choices"][0]["delta"]["content"] == "chunk"
 
     # Validate helper behavior
-    messages = llm._process_streaming_messages((None, [{"role": "user", "content": "ping"}]), {})
+    messages = llm._process_streaming_messages(
+        (None, [{"role": "user", "content": "ping"}]), {}
+    )
     assert messages[0]["content"] == "ping"
-
 
 
 @pytest.mark.asyncio
@@ -159,6 +213,7 @@ async def test_streaming_wrapper_exception(monkeypatch: pytest.MonkeyPatch) -> N
 
     llm._base_async_streaming_completion = failing_generator  # type: ignore[assignment]
     with pytest.raises(RuntimeError):
-        async for _ in llm._async_streaming_completion_wrapper(messages=[{"role": "user", "content": "hi"}], stream=True):
+        async for _ in llm._async_streaming_completion_wrapper(
+            messages=[{"role": "user", "content": "hi"}], stream=True
+        ):
             pass
-

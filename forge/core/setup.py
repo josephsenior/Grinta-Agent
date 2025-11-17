@@ -11,6 +11,7 @@ Functions:
 from __future__ import annotations
 
 import hashlib
+import importlib
 import os
 import uuid
 from typing import TYPE_CHECKING, Callable
@@ -21,6 +22,7 @@ from forge.controller import AgentController
 from forge.controller.agent import Agent
 from forge.controller.state.state import State
 from forge.core.config.config_utils import DEFAULT_WORKSPACE_MOUNT_PATH_IN_SANDBOX
+from forge.core.exceptions import AgentNotRegisteredError
 from forge.core.logger import forge_logger as logger
 from forge.events import EventStream
 from forge.integrations.provider import (
@@ -30,7 +32,7 @@ from forge.integrations.provider import (
 )
 from forge.llm.llm_registry import LLMRegistry
 from forge.memory.memory import Memory
-from forge.runtime import get_runtime_cls
+from forge.runtime import RuntimeOrchestrator, RuntimeAcquireResult, get_runtime_cls
 from forge.storage import get_file_store
 from forge.storage.data_models.user_secrets import UserSecrets
 from forge.utils.async_utils import GENERAL_TIMEOUT, call_async_from_sync
@@ -50,6 +52,10 @@ def create_runtime(
     headless_mode: bool = True,
     agent: Agent | None = None,
     git_provider_tokens: PROVIDER_TOKEN_TYPE | None = None,
+    *,
+    event_stream: EventStream | None = None,
+    env_vars: dict[str, str] | None = None,
+    user_id: str | None = None,
 ) -> Runtime:
     """Create a runtime for the agent to run on.
 
@@ -67,9 +73,12 @@ def create_runtime(
         The created Runtime instance (not yet connected or initialized).
 
     """
-    session_id = sid or generate_sid(config)
-    file_store = get_file_store(config.file_store, config.file_store_path)
-    event_stream = EventStream(session_id, file_store)
+    if event_stream is None:
+        session_id = sid or generate_sid(config)
+        file_store = get_file_store(config.file_store, config.file_store_path)
+        event_stream = EventStream(session_id, file_store)
+    else:
+        session_id = sid or event_stream.sid
     agent_cls = type(agent) if agent else Agent.get_cls(config.default_agent)
     runtime_cls = get_runtime_cls(config.runtime)
     logger.debug("Initializing runtime: %s", runtime_cls.__name__)
@@ -81,8 +90,12 @@ def create_runtime(
         headless_mode=headless_mode,
         llm_registry=llm_registry or LLMRegistry(config),
         git_provider_tokens=git_provider_tokens,
+        env_vars=env_vars,
+        user_id=user_id,
     )
-    logger.debug("Runtime created with plugins: %s", [plugin.name for plugin in runtime.plugins])
+    logger.debug(
+        "Runtime created with plugins: %s", [plugin.name for plugin in runtime.plugins]
+    )
     return runtime
 
 
@@ -112,14 +125,14 @@ def _create_secret_store(provider_tokens: dict) -> UserSecrets | None:
     return UserSecrets(provider_tokens=provider_tokens) if provider_tokens else None
 
 
-def get_provider_tokens():
+def get_provider_tokens() -> PROVIDER_TOKEN_TYPE | None:
     """Retrieve provider tokens from environment variables and return them as a dictionary.
 
     Returns:
         A dictionary mapping ProviderType to ProviderToken if tokens are found, otherwise None.
 
     """
-    provider_tokens = {}
+    provider_tokens: dict[ProviderType, ProviderToken] = {}
     _add_github_token(provider_tokens)
     _add_gitlab_token(provider_tokens)
     _add_bitbucket_token(provider_tokens)
@@ -132,6 +145,7 @@ def initialize_repository_for_runtime(
     runtime: Runtime,
     immutable_provider_tokens: PROVIDER_TOKEN_TYPE | None = None,
     selected_repository: str | None = None,
+    selected_branch: str | None = None,
 ) -> str | None:
     """Initialize the repository for the runtime by cloning or initializing it, running setup scripts, and setting up git hooks if present.
 
@@ -139,6 +153,7 @@ def initialize_repository_for_runtime(
         runtime: The runtime to initialize the repository for.
         immutable_provider_tokens: (optional) Provider tokens to use for authentication.
         selected_repository: (optional) The repository to use.
+        selected_branch: (optional) Branch ref to checkout.
 
     Returns:
         The repository directory path if a repository was cloned, None otherwise.
@@ -152,7 +167,7 @@ def initialize_repository_for_runtime(
         GENERAL_TIMEOUT,
         immutable_provider_tokens,
         selected_repository,
-        None,
+        selected_branch,
     )
     runtime.maybe_run_setup_script()
     runtime.maybe_setup_git_hooks()
@@ -186,25 +201,48 @@ def create_memory(
     memory.set_conversation_instructions(conversation_instructions)
     if runtime:
         memory.set_runtime_info(runtime, {}, working_dir)
-        microagents: list[BaseMicroagent] = runtime.get_microagents_from_selected_repo(selected_repository)
+        microagents: list[BaseMicroagent] = runtime.get_microagents_from_selected_repo(
+            selected_repository
+        )
         memory.load_user_workspace_microagents(microagents)
         if selected_repository and repo_directory:
             memory.set_repository_info(selected_repository, repo_directory)
     return memory
 
 
+def _ensure_agent_class_available(agent_name: str) -> None:
+    """Ensure the requested agent class has been registered.
+
+    Attempts to import `forge.agenthub` (and its submodules) lazily so that the
+    built-in agents are registered even when the CLI is exercised in isolation,
+    such as during unit tests.
+    """
+    if agent_name in Agent._registry:
+        return
+    try:
+        importlib.import_module("forge.agenthub")
+    except Exception as exc:  # pragma: no cover - defensive logging
+        logger.debug("Failed to auto-import forge.agenthub: %s", exc)
+    if agent_name not in Agent._registry:
+        raise AgentNotRegisteredError(agent_name)
+
+
 def create_agent(config: ForgeConfig, llm_registry: LLMRegistry) -> Agent:
     """Create agent instance from configuration.
-    
+
     Args:
         config: Forge configuration
         llm_registry: LLM registry for model access
-        
+
     Returns:
         Initialized agent instance
 
     """
-    agent_cls: type[Agent] = Agent.get_cls(config.default_agent)
+    try:
+        agent_cls: type[Agent] = Agent.get_cls(config.default_agent)
+    except AgentNotRegisteredError:
+        _ensure_agent_class_available(config.default_agent)
+        agent_cls = Agent.get_cls(config.default_agent)
     agent_config = config.get_agent_config(config.default_agent)
     config.get_llm_config_from_agent(config.default_agent)
     return agent_cls(config=agent_config, llm_registry=llm_registry)
@@ -219,9 +257,9 @@ def create_controller(
     replay_events: list[Event] | None = None,
 ) -> tuple[AgentController, State | None]:
     """Create agent controller with optional state restoration.
-    
+
     Attempts to restore previous agent state from session if available.
-    
+
     Args:
         agent: Agent instance
         runtime: Runtime environment
@@ -229,16 +267,23 @@ def create_controller(
         conversation_stats: Conversation statistics tracker
         headless_mode: Whether running in headless mode
         replay_events: Optional events to replay
-        
+
     Returns:
         Tuple of (controller, initial_state)
 
     """
     event_stream = runtime.event_stream
+    if event_stream is None:
+        raise RuntimeError("Runtime does not have an initialized event stream")
     initial_state = None
     try:
-        logger.debug("Trying to restore agent state from session %s if available", event_stream.sid)
-        initial_state = State.restore_from_session(event_stream.sid, event_stream.file_store)
+        logger.debug(
+            "Trying to restore agent state from session %s if available",
+            event_stream.sid,
+        )
+        initial_state = State.restore_from_session(
+            event_stream.sid, event_stream.file_store
+        )
     except Exception as e:
         logger.debug("Cannot restore agent state: %s", e)
     controller = AgentController(

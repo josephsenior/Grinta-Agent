@@ -17,9 +17,13 @@ class GitLabFeaturesMixin(GitLabMixinBase):
     async def _get_cursorrules_url(self, repository: str) -> str:
         """Get the URL for checking .cursorrules file."""
         project_id = self._extract_project_id(repository)
-        return f"{self.BASE_URL}/projects/{project_id}/repository/files/.cursorrules/raw"
+        return (
+            f"{self.BASE_URL}/projects/{project_id}/repository/files/.cursorrules/raw"
+        )
 
-    async def _get_microagents_directory_url(self, repository: str, microagents_path: str) -> str:
+    async def _get_microagents_directory_url(
+        self, repository: str, microagents_path: str
+    ) -> str:
         """Get the URL for checking microagents directory."""
         project_id = self._extract_project_id(repository)
         return f"{self.BASE_URL}/projects/{project_id}/repository/tree"
@@ -30,7 +34,11 @@ class GitLabFeaturesMixin(GitLabMixinBase):
 
     def _is_valid_microagent_file(self, item: dict) -> bool:
         """Check if an item represents a valid microagent file."""
-        return item["type"] == "blob" and item["name"].endswith(".md") and (item["name"] != "README.md")
+        return (
+            item["type"] == "blob"
+            and item["name"].endswith(".md")
+            and (item["name"] != "README.md")
+        )
 
     def _get_file_name_from_item(self, item: dict) -> str:
         """Extract file name from directory item."""
@@ -100,10 +108,18 @@ class GitLabFeaturesMixin(GitLabMixinBase):
                     return True
         return False
 
-    def _create_merge_request_task(self, mr: dict, task_type: TaskType) -> SuggestedTask:
+    def _create_merge_request_task(
+        self, mr: dict, task_type: TaskType
+    ) -> SuggestedTask:
         """Create a SuggestedTask from merge request data."""
-        repo_name = mr.get("project", {}).get("fullPath", "")
-        mr_number = mr.get("iid")
+        repo_name = mr.get("project", {}).get("fullPath", "") or ""
+        mr_number_raw = mr.get("iid")
+        mr_number = 0
+        if mr_number_raw is not None:
+            try:
+                mr_number = int(mr_number_raw)
+            except (TypeError, ValueError):
+                mr_number = 0
         title = mr.get("title", "")
         return SuggestedTask(
             git_provider=ProviderType.GITLAB,
@@ -116,7 +132,13 @@ class GitLabFeaturesMixin(GitLabMixinBase):
     def _create_issue_task(self, issue: dict) -> SuggestedTask:
         """Create a SuggestedTask from issue data."""
         repo_name = issue.get("references", {}).get("full", "").split("#")[0].strip()
-        issue_number = issue.get("iid")
+        issue_number_raw = issue.get("iid")
+        issue_number = 0
+        if issue_number_raw is not None:
+            try:
+                issue_number = int(issue_number_raw)
+            except (TypeError, ValueError):
+                issue_number = 0
         title = issue.get("title", "")
         return SuggestedTask(
             git_provider=ProviderType.GITLAB,
@@ -126,7 +148,9 @@ class GitLabFeaturesMixin(GitLabMixinBase):
             title=title,
         )
 
-    async def _process_merge_requests(self, merge_requests: list) -> list[SuggestedTask]:
+    async def _process_merge_requests(
+        self, merge_requests: list
+    ) -> list[SuggestedTask]:
         """Process merge requests and return suggested tasks."""
         tasks = []
         for mr in merge_requests:
@@ -139,8 +163,14 @@ class GitLabFeaturesMixin(GitLabMixinBase):
     async def _process_assigned_issues(self, username: str) -> list[SuggestedTask]:
         """Process assigned issues and return suggested tasks."""
         url = f"{self.BASE_URL}/issues"
-        params = {"assignee_username": username, "state": "opened", "scope": "assigned_to_me"}
-        issues_response, _ = await self._make_request(method=RequestMethod.GET, url=url, params=params)
+        params = {
+            "assignee_username": username,
+            "state": "opened",
+            "scope": "assigned_to_me",
+        }
+        issues_response, _ = await self._make_request(
+            method=RequestMethod.GET, url=url, params=params
+        )
 
         tasks = []
         for issue in issues_response:
@@ -174,7 +204,9 @@ class GitLabFeaturesMixin(GitLabMixinBase):
         except Exception:
             return []
 
-    async def get_microagent_content(self, repository: str, file_path: str) -> MicroagentContentResponse:
+    async def get_microagent_content(
+        self, repository: str, file_path: str
+    ) -> MicroagentContentResponse:
         """Fetch individual file content from GitLab repository.
 
         Args:

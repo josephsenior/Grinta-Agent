@@ -22,7 +22,11 @@ def mock_file_store():
 @pytest.fixture
 def conversation_stats(mock_file_store):
     """Create a ConversationStats instance for testing."""
-    return ConversationStats(file_store=mock_file_store, conversation_id="test-conversation-id", user_id="test-user-id")
+    return ConversationStats(
+        file_store=mock_file_store,
+        conversation_id="test-conversation-id",
+        user_id="test-user-id",
+    )
 
 
 @pytest.fixture
@@ -80,7 +84,9 @@ def test_maybe_restore_metrics(mock_file_store):
 
     metrics_path = get_conversation_stats_filename(conversation_id, user_id)
     mock_file_store.write(metrics_path, serialized_metrics)
-    stats = ConversationStats(file_store=mock_file_store, conversation_id=conversation_id, user_id=user_id)
+    stats = ConversationStats(
+        file_store=mock_file_store, conversation_id=conversation_id, user_id=user_id
+    )
     assert service_id in stats.restored_metrics
     assert stats.restored_metrics[service_id].accumulated_cost == 0.1
 
@@ -133,7 +139,13 @@ def test_get_metrics_for_service(conversation_stats):
 
 def test_register_llm_with_new_service(conversation_stats):
     """Test registering a new LLM service."""
-    llm_config = LLMConfig(model="gpt-4o", api_key="test_key", num_retries=2, retry_min_wait=1, retry_max_wait=2)
+    llm_config = LLMConfig(
+        model="gpt-4o",
+        api_key="test_key",
+        num_retries=2,
+        retry_min_wait=1,
+        retry_max_wait=2,
+    )
     with patch("forge.llm.llm.litellm_completion"):
         llm = LLM(service_id="new-service", config=llm_config)
         service_id = "new-service"
@@ -149,7 +161,13 @@ def test_register_llm_with_restored_metrics(conversation_stats):
     restored_metrics = Metrics(model_name="gpt-4")
     restored_metrics.add_cost(0.1)
     conversation_stats.restored_metrics = {service_id: restored_metrics}
-    llm_config = LLMConfig(model="gpt-4o", api_key="test_key", num_retries=2, retry_min_wait=1, retry_max_wait=2)
+    llm_config = LLMConfig(
+        model="gpt-4o",
+        api_key="test_key",
+        num_retries=2,
+        retry_min_wait=1,
+        retry_max_wait=2,
+    )
     with patch("forge.llm.llm.litellm_completion"):
         llm = LLM(service_id=service_id, config=llm_config)
         event = RegistryEvent(llm=llm, service_id=service_id)
@@ -165,7 +183,13 @@ def test_llm_registry_notifications(connected_registry_and_stats):
     """Test that LLM registry notifications update conversation stats."""
     mock_llm_registry, conversation_stats = connected_registry_and_stats
     service_id = "test-service"
-    llm_config = LLMConfig(model="gpt-4o", api_key="test_key", num_retries=2, retry_min_wait=1, retry_max_wait=2)
+    llm_config = LLMConfig(
+        model="gpt-4o",
+        api_key="test_key",
+        num_retries=2,
+        retry_min_wait=1,
+        retry_max_wait=2,
+    )
     llm = mock_llm_registry.get_llm(service_id, llm_config)
     assert service_id in conversation_stats.service_to_metrics
     assert conversation_stats.service_to_metrics[service_id] is llm.metrics
@@ -179,8 +203,18 @@ def test_llm_registry_notifications(connected_registry_and_stats):
         response_id="resp1",
     )
     assert conversation_stats.service_to_metrics[service_id].accumulated_cost == 0.05
-    assert conversation_stats.service_to_metrics[service_id].accumulated_token_usage.prompt_tokens == 100
-    assert conversation_stats.service_to_metrics[service_id].accumulated_token_usage.completion_tokens == 50
+    assert (
+        conversation_stats.service_to_metrics[
+            service_id
+        ].accumulated_token_usage.prompt_tokens
+        == 100
+    )
+    assert (
+        conversation_stats.service_to_metrics[
+            service_id
+        ].accumulated_token_usage.completion_tokens
+        == 50
+    )
     combined = conversation_stats.get_combined_metrics()
     assert combined.accumulated_cost == 0.05
     assert combined.accumulated_token_usage.prompt_tokens == 100
@@ -192,9 +226,19 @@ def test_multiple_llm_services(connected_registry_and_stats):
     mock_llm_registry, conversation_stats = connected_registry_and_stats
     service1 = "service1"
     service2 = "service2"
-    llm_config1 = LLMConfig(model="gpt-4o", api_key="test_key", num_retries=2, retry_min_wait=1, retry_max_wait=2)
+    llm_config1 = LLMConfig(
+        model="gpt-4o",
+        api_key="test_key",
+        num_retries=2,
+        retry_min_wait=1,
+        retry_max_wait=2,
+    )
     llm_config2 = LLMConfig(
-        model="gpt-3.5-turbo", api_key="test_key", num_retries=2, retry_min_wait=1, retry_max_wait=2
+        model="gpt-3.5-turbo",
+        api_key="test_key",
+        num_retries=2,
+        retry_min_wait=1,
+        retry_max_wait=2,
     )
     llm1 = mock_llm_registry.get_llm(service1, llm_config1)
     llm2 = mock_llm_registry.get_llm(service2, llm_config2)
@@ -235,10 +279,23 @@ def test_register_llm_with_multiple_restored_services_bug(conversation_stats):
     restored_metrics_1.add_cost(0.1)
     restored_metrics_2 = Metrics(model_name="gpt-3.5")
     restored_metrics_2.add_cost(0.05)
-    conversation_stats.restored_metrics = {service_id_1: restored_metrics_1, service_id_2: restored_metrics_2}
-    llm_config_1 = LLMConfig(model="gpt-4o", api_key="test_key", num_retries=2, retry_min_wait=1, retry_max_wait=2)
+    conversation_stats.restored_metrics = {
+        service_id_1: restored_metrics_1,
+        service_id_2: restored_metrics_2,
+    }
+    llm_config_1 = LLMConfig(
+        model="gpt-4o",
+        api_key="test_key",
+        num_retries=2,
+        retry_min_wait=1,
+        retry_max_wait=2,
+    )
     llm_config_2 = LLMConfig(
-        model="gpt-3.5-turbo", api_key="test_key", num_retries=2, retry_min_wait=1, retry_max_wait=2
+        model="gpt-3.5-turbo",
+        api_key="test_key",
+        num_retries=2,
+        retry_min_wait=1,
+        retry_max_wait=2,
     )
     with patch("forge.llm.llm.litellm_completion"):
         llm_1 = LLM(service_id=service_id_1, config=llm_config_1)
@@ -259,7 +316,9 @@ def test_save_and_restore_workflow(mock_file_store):
     """Test the full workflow of saving and restoring metrics."""
     conversation_id = "test-conversation-id"
     user_id = "test-user-id"
-    stats1 = ConversationStats(file_store=mock_file_store, conversation_id=conversation_id, user_id=user_id)
+    stats1 = ConversationStats(
+        file_store=mock_file_store, conversation_id=conversation_id, user_id=user_id
+    )
     service_id = "test-service"
     metrics = Metrics(model_name="gpt-4")
     metrics.add_cost(0.05)
@@ -273,12 +332,25 @@ def test_save_and_restore_workflow(mock_file_store):
     )
     stats1.service_to_metrics[service_id] = metrics
     stats1.save_metrics()
-    stats2 = ConversationStats(file_store=mock_file_store, conversation_id=conversation_id, user_id=user_id)
+    stats2 = ConversationStats(
+        file_store=mock_file_store, conversation_id=conversation_id, user_id=user_id
+    )
     assert service_id in stats2.restored_metrics
     assert stats2.restored_metrics[service_id].accumulated_cost == 0.05
-    assert stats2.restored_metrics[service_id].accumulated_token_usage.prompt_tokens == 100
-    assert stats2.restored_metrics[service_id].accumulated_token_usage.completion_tokens == 50
-    llm_config = LLMConfig(model="gpt-4o", api_key="test_key", num_retries=2, retry_min_wait=1, retry_max_wait=2)
+    assert (
+        stats2.restored_metrics[service_id].accumulated_token_usage.prompt_tokens == 100
+    )
+    assert (
+        stats2.restored_metrics[service_id].accumulated_token_usage.completion_tokens
+        == 50
+    )
+    llm_config = LLMConfig(
+        model="gpt-4o",
+        api_key="test_key",
+        num_retries=2,
+        retry_min_wait=1,
+        retry_max_wait=2,
+    )
     with patch("forge.llm.llm.litellm_completion"):
         llm = LLM(service_id=service_id, config=llm_config)
         event = RegistryEvent(llm=llm, service_id=service_id)
@@ -294,8 +366,12 @@ def test_merge_conversation_stats_success_non_overlapping(mock_file_store):
     (service_to_metrics) are not merged; if present, an error is logged but
     execution continues. Incoming restored metrics overwrite duplicates.
     """
-    stats_a = ConversationStats(file_store=mock_file_store, conversation_id="conv-merge-a", user_id="user-x")
-    stats_b = ConversationStats(file_store=mock_file_store, conversation_id="conv-merge-b", user_id="user-x")
+    stats_a = ConversationStats(
+        file_store=mock_file_store, conversation_id="conv-merge-a", user_id="user-x"
+    )
+    stats_b = ConversationStats(
+        file_store=mock_file_store, conversation_id="conv-merge-b", user_id="user-x"
+    )
     m_a_active = Metrics(model_name="model-a")
     m_a_active.add_cost(0.1)
     m_a_restored = Metrics(model_name="model-a")
@@ -321,11 +397,22 @@ def test_merge_conversation_stats_success_non_overlapping(mock_file_store):
 
 @pytest.mark.parametrize(
     "self_side,other_side",
-    [("active", "active"), ("restored", "active"), ("active", "restored"), ("restored", "restored")],
+    [
+        ("active", "active"),
+        ("restored", "active"),
+        ("active", "restored"),
+        ("restored", "restored"),
+    ],
 )
-def test_merge_conversation_stats_duplicates_overwrite_and_log_errors(mock_file_store, self_side, other_side):
-    stats_a = ConversationStats(file_store=mock_file_store, conversation_id="conv-merge-a", user_id="user-x")
-    stats_b = ConversationStats(file_store=mock_file_store, conversation_id="conv-merge-b", user_id="user-x")
+def test_merge_conversation_stats_duplicates_overwrite_and_log_errors(
+    mock_file_store, self_side, other_side
+):
+    stats_a = ConversationStats(
+        file_store=mock_file_store, conversation_id="conv-merge-a", user_id="user-x"
+    )
+    stats_b = ConversationStats(
+        file_store=mock_file_store, conversation_id="conv-merge-b", user_id="user-x"
+    )
     dupe_id = "dupe-service"
     m1 = Metrics(model_name="m")
     m1.add_cost(0.1)
@@ -363,7 +450,9 @@ def _create_test_metrics():
 
 def _setup_initial_stats(mock_file_store, conversation_id, user_id):
     """Setup initial conversation stats with test metrics."""
-    stats1 = ConversationStats(file_store=mock_file_store, conversation_id=conversation_id, user_id=user_id)
+    stats1 = ConversationStats(
+        file_store=mock_file_store, conversation_id=conversation_id, user_id=user_id
+    )
     service_a, service_b, service_c = "service-a", "service-b", "service-c"
     metrics_a, metrics_b, metrics_c = _create_test_metrics()
 
@@ -387,7 +476,13 @@ def _verify_restored_metrics(stats, service_a, service_b, service_c):
 
 def _register_llm_service(stats, service_a):
     """Register an LLM service and verify the transition."""
-    llm_config = LLMConfig(model="gpt-4o", api_key="test_key", num_retries=2, retry_min_wait=1, retry_max_wait=2)
+    llm_config = LLMConfig(
+        model="gpt-4o",
+        api_key="test_key",
+        num_retries=2,
+        retry_min_wait=1,
+        retry_max_wait=2,
+    )
     with patch("forge.llm.llm.litellm_completion"):
         llm_a = LLM(service_id=service_a, config=llm_config)
         event_a = RegistryEvent(llm=llm_a, service_id=service_a)
@@ -412,10 +507,14 @@ def test_save_metrics_preserves_restored_metrics_fix(mock_file_store):
     user_id = "test-user-id"
 
     # Setup initial stats
-    stats1, service_a, service_b, service_c = _setup_initial_stats(mock_file_store, conversation_id, user_id)
+    stats1, service_a, service_b, service_c = _setup_initial_stats(
+        mock_file_store, conversation_id, user_id
+    )
 
     # Load stats and verify restored metrics
-    stats2 = ConversationStats(file_store=mock_file_store, conversation_id=conversation_id, user_id=user_id)
+    stats2 = ConversationStats(
+        file_store=mock_file_store, conversation_id=conversation_id, user_id=user_id
+    )
     _verify_restored_metrics(stats2, service_a, service_b, service_c)
 
     # Register one service and verify transition
@@ -424,7 +523,9 @@ def test_save_metrics_preserves_restored_metrics_fix(mock_file_store):
 
     # Save and reload to verify persistence
     stats2.save_metrics()
-    stats3 = ConversationStats(file_store=mock_file_store, conversation_id=conversation_id, user_id=user_id)
+    stats3 = ConversationStats(
+        file_store=mock_file_store, conversation_id=conversation_id, user_id=user_id
+    )
     _verify_restored_metrics(stats3, service_a, service_b, service_c)
 
 
@@ -432,7 +533,9 @@ def test_save_metrics_throws_error_on_duplicate_service_ids(mock_file_store):
     """Test updated: save_metrics should NOT raise on duplicate service IDs; it should prefer service_to_metrics and proceed."""
     conversation_id = "test-conversation-id"
     user_id = "test-user-id"
-    stats = ConversationStats(file_store=mock_file_store, conversation_id=conversation_id, user_id=user_id)
+    stats = ConversationStats(
+        file_store=mock_file_store, conversation_id=conversation_id, user_id=user_id
+    )
     service_id = "duplicate-service"
     restored_metrics = Metrics(model_name="gpt-4")
     restored_metrics.add_cost(0.1)

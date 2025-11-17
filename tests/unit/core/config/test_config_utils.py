@@ -17,12 +17,12 @@ def test_finalize_config_cli_disables_jupyter_and_browsing_when_true():
     agent_config = AgentConfig(enable_jupyter=True, enable_browsing=True)
     app_config.agents[DEFAULT_AGENT_NAME] = agent_config
     finalize_config(app_config)
-    assert not app_config.agents[
-        DEFAULT_AGENT_NAME
-    ].enable_jupyter, "enable_jupyter should be False when runtime is 'cli'"
-    assert not app_config.agents[
-        DEFAULT_AGENT_NAME
-    ].enable_browsing, "enable_browsing should be False when runtime is 'cli'"
+    assert not app_config.agents[DEFAULT_AGENT_NAME].enable_jupyter, (
+        "enable_jupyter should be False when runtime is 'cli'"
+    )
+    assert not app_config.agents[DEFAULT_AGENT_NAME].enable_browsing, (
+        "enable_browsing should be False when runtime is 'cli'"
+    )
 
 
 def test_finalize_config_cli_keeps_jupyter_and_browsing_false_when_false():
@@ -36,12 +36,12 @@ def test_finalize_config_cli_keeps_jupyter_and_browsing_false_when_false():
     agent_config = AgentConfig(enable_jupyter=False, enable_browsing=False)
     app_config.agents[DEFAULT_AGENT_NAME] = agent_config
     finalize_config(app_config)
-    assert not app_config.agents[
-        DEFAULT_AGENT_NAME
-    ].enable_jupyter, "enable_jupyter should remain False when runtime is 'cli' and initially False"
-    assert not app_config.agents[
-        DEFAULT_AGENT_NAME
-    ].enable_browsing, "enable_browsing should remain False when runtime is 'cli' and initially False"
+    assert not app_config.agents[DEFAULT_AGENT_NAME].enable_jupyter, (
+        "enable_jupyter should remain False when runtime is 'cli' and initially False"
+    )
+    assert not app_config.agents[DEFAULT_AGENT_NAME].enable_browsing, (
+        "enable_browsing should remain False when runtime is 'cli' and initially False"
+    )
 
 
 def test_finalize_config_other_runtime_keeps_jupyter_and_browsing_false_by_default():
@@ -55,12 +55,12 @@ def test_finalize_config_other_runtime_keeps_jupyter_and_browsing_false_by_defau
     agent_config = AgentConfig()
     app_config.agents[DEFAULT_AGENT_NAME] = agent_config
     finalize_config(app_config)
-    assert not app_config.agents[
-        DEFAULT_AGENT_NAME
-    ].enable_jupyter, "enable_jupyter should remain False by default (new default)"
-    assert not app_config.agents[
-        DEFAULT_AGENT_NAME
-    ].enable_browsing, "enable_browsing should remain False by default (new default)"
+    assert not app_config.agents[DEFAULT_AGENT_NAME].enable_jupyter, (
+        "enable_jupyter should remain False by default (new default)"
+    )
+    assert not app_config.agents[DEFAULT_AGENT_NAME].enable_browsing, (
+        "enable_browsing should remain False by default (new default)"
+    )
 
 
 def test_finalize_config_other_runtime_keeps_jupyter_and_browsing_false_if_set():
@@ -74,12 +74,12 @@ def test_finalize_config_other_runtime_keeps_jupyter_and_browsing_false_if_set()
     agent_config = AgentConfig(enable_jupyter=False, enable_browsing=False)
     app_config.agents[DEFAULT_AGENT_NAME] = agent_config
     finalize_config(app_config)
-    assert not app_config.agents[
-        DEFAULT_AGENT_NAME
-    ].enable_jupyter, "enable_jupyter should remain False for non-cli runtimes if explicitly set to False"
-    assert not app_config.agents[
-        DEFAULT_AGENT_NAME
-    ].enable_browsing, "enable_browsing should remain False for non-cli runtimes if explicitly set to False"
+    assert not app_config.agents[DEFAULT_AGENT_NAME].enable_jupyter, (
+        "enable_jupyter should remain False for non-cli runtimes if explicitly set to False"
+    )
+    assert not app_config.agents[DEFAULT_AGENT_NAME].enable_browsing, (
+        "enable_browsing should remain False for non-cli runtimes if explicitly set to False"
+    )
 
 
 def test_finalize_config_no_agents_defined():
@@ -109,10 +109,18 @@ def test_finalize_config_multiple_agents_cli_runtime():
     app_config.agents["Agent1"] = agent_config1
     app_config.agents["Agent2"] = agent_config2
     finalize_config(app_config)
-    assert not app_config.agents["Agent1"].enable_jupyter, "Jupyter should be disabled for Agent1"
-    assert not app_config.agents["Agent1"].enable_browsing, "Browsing should be disabled for Agent1"
-    assert not app_config.agents["Agent2"].enable_jupyter, "Jupyter should be disabled for Agent2"
-    assert not app_config.agents["Agent2"].enable_browsing, "Browsing should be disabled for Agent2"
+    assert not app_config.agents["Agent1"].enable_jupyter, (
+        "Jupyter should be disabled for Agent1"
+    )
+    assert not app_config.agents["Agent1"].enable_browsing, (
+        "Browsing should be disabled for Agent1"
+    )
+    assert not app_config.agents["Agent2"].enable_jupyter, (
+        "Jupyter should be disabled for Agent2"
+    )
+    assert not app_config.agents["Agent2"].enable_browsing, (
+        "Browsing should be disabled for Agent2"
+    )
 
 
 def test_finalize_config_multiple_agents_other_runtime():
@@ -128,7 +136,15 @@ def test_finalize_config_multiple_agents_other_runtime():
     app_config.agents["Agent1"] = agent_config1
     app_config.agents["Agent2"] = agent_config2
     finalize_config(app_config)
-    assert app_config.agents["Agent1"].enable_jupyter, "Jupyter should be True for Agent1"
-    assert app_config.agents["Agent1"].enable_browsing, "Browsing should be True for Agent1"
-    assert not app_config.agents["Agent2"].enable_jupyter, "Jupyter should be False for Agent2"
-    assert not app_config.agents["Agent2"].enable_browsing, "Browsing should be False for Agent2"
+    assert app_config.agents["Agent1"].enable_jupyter, (
+        "Jupyter should be True for Agent1"
+    )
+    assert app_config.agents["Agent1"].enable_browsing, (
+        "Browsing should be True for Agent1"
+    )
+    assert not app_config.agents["Agent2"].enable_jupyter, (
+        "Jupyter should be False for Agent2"
+    )
+    assert not app_config.agents["Agent2"].enable_browsing, (
+        "Browsing should be False for Agent2"
+    )

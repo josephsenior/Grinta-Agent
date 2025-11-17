@@ -14,8 +14,6 @@ import sys
 from collections.abc import Iterable
 from typing import Any
 
-from litellm import ChatCompletionToolParam
-
 from forge.core.exceptions import (
     FunctionCallConversionError,
     FunctionCallValidationError,
@@ -42,7 +40,8 @@ def refine_prompt(prompt: str) -> str:
         str: The refined prompt with platform-specific adjustments.
 
     """
-    if sys.platform == "win32":
+    platform_name: str = sys.platform
+    if platform_name == "win32":
         return prompt.replace("bash", "powershell")
     return prompt
 
@@ -344,10 +343,10 @@ def _format_parameter(param_name: str, param_value: Any) -> str:
 
 def convert_tools_to_description(tools: list[dict]) -> str:
     """Convert tool definitions to text description for non-function-calling models.
-    
+
     Args:
         tools: List of tool definitions
-        
+
     Returns:
         Formatted tool description string
 
@@ -372,7 +371,9 @@ def convert_tools_to_description(tools: list[dict]) -> str:
                 if "enum" in param_info:
                     enum_values = ", ".join(f"`{v}`" for v in param_info["enum"])
                     desc += f"\nAllowed values: [{enum_values}]"
-                ret += f"  ({j + 1}) {param_name} ({param_type}, {param_status}): {desc}\n"
+                ret += (
+                    f"  ({j + 1}) {param_name} ({param_type}, {param_status}): {desc}\n"
+                )
         else:
             ret += "No parameters are required for this function.\n"
         ret += f"---- END FUNCTION #{i + 1} ----\n"
@@ -390,7 +391,8 @@ def _process_system_message(content: Any, system_prompt_suffix: str) -> dict:
             content.append({"type": "text", "text": system_prompt_suffix})
     else:
         msg = f"Unexpected content type {
-            type(content)}. Expected str or list. Content: {content}"
+            type(content)
+        }. Expected str or list. Content: {content}"
         raise FunctionCallConversionError(
             msg,
         )
@@ -399,7 +401,7 @@ def _process_system_message(content: Any, system_prompt_suffix: str) -> dict:
 
 def _process_user_message(
     content: Any,
-    tools: list[ChatCompletionToolParam],
+    tools: list[dict],
     add_in_context_learning_example: bool,
     first_user_message_encountered: bool,
 ) -> tuple[dict, bool]:
@@ -411,7 +413,9 @@ def _process_user_message(
     return ({"role": "user", "content": content}, first_user_message_encountered)
 
 
-def _add_in_context_learning_example(content: Any, tools: list[ChatCompletionToolParam]) -> Any:
+def _add_in_context_learning_example(
+    content: Any, tools: list[dict]
+) -> Any:
     """Add in-context learning example to content."""
     if not (example := IN_CONTEXT_LEARNING_EXAMPLE_PREFIX(tools)):
         return content
@@ -420,8 +424,9 @@ def _add_in_context_learning_example(content: Any, tools: list[ChatCompletionToo
         return example + content
     if isinstance(content, list):
         return _add_example_to_list_content(content, example)
-    msg = f"Unexpected content type {
-        type(content)}. Expected str or list. Content: {content}"
+    msg = f"Unexpected content type {type(content)}. Expected str or list. Content: {
+        content
+    }"
     raise FunctionCallConversionError(
         msg,
     )
@@ -438,62 +443,93 @@ def _add_example_to_list_content(content: list, example: str) -> list:
 
 def convert_fncall_messages_to_non_fncall_messages(
     messages: list[dict],
-    tools: list[ChatCompletionToolParam],
+    tools: list[dict],
     add_in_context_learning_example: bool = True,
 ) -> list[dict]:
     """Convert function calling messages to non-function calling messages."""
     messages = copy.deepcopy(messages)
     formatted_tools = convert_tools_to_description(tools)
-    system_prompt_suffix = SYSTEM_PROMPT_SUFFIX_TEMPLATE.format(description=formatted_tools)
-    converted_messages = []
+    system_prompt_suffix = SYSTEM_PROMPT_SUFFIX_TEMPLATE.format(
+        description=formatted_tools
+    )
+    converted_messages: list[dict[str, Any]] = []
     first_user_message_encountered = False
     for message in messages:
-        role = message["role"]
-        content = message["content"]
-        if role == "assistant":
-            if isinstance(content, str) and "<function=" in content and ("</function>" in content):
-                converted_messages.append({"role": "assistant", "content": content, "tool_calls": []})
-            else:
-                converted_messages.append({"role": "assistant", "content": content})
-        elif role == "system":
-            converted_messages.append(_process_system_message(content, system_prompt_suffix))
-        elif role == "user":
-            user_msg, first_user_message_encountered = _process_user_message(
-                content,
-                tools,
-                add_in_context_learning_example,
-                first_user_message_encountered,
-            )
-            converted_messages.append(user_msg)
-        elif role == "tool":
-            # Convert tool messages (function results) to user messages for non-function-calling models
-            # Format with "EXECUTION RESULT of [tool_name]:" prefix and preserve metadata
-            tool_name = message.get("name", "unknown_tool")
-            
-            # Format the content with execution result prefix
-            if isinstance(content, str):
-                formatted_content = f"EXECUTION RESULT of [{tool_name}]:\n{content}"
-                formatted_content_list = [{"type": "text", "text": formatted_content}]
-            elif isinstance(content, list):
-                # Find the first text item and prepend the prefix
-                formatted_content_list = copy.deepcopy(content)
-                for item in formatted_content_list:
-                    if item.get("type") == "text":
-                        item["text"] = f"EXECUTION RESULT of [{tool_name}]:\n{item['text']}"
-                        break
-            else:
-                # Fallback for unexpected content types
-                formatted_content_list = [{"type": "text", "text": f"EXECUTION RESULT of [{tool_name}]:\n{str(content)}"}]
-            
-            # Preserve cache_control metadata if present
-            if "cache_control" in message and formatted_content_list:
-                formatted_content_list[-1]["cache_control"] = message["cache_control"]
-            
-            converted_messages.append({"role": "user", "content": formatted_content_list})
+        message_payloads, first_user_message_encountered = _convert_single_message(
+            message,
+            tools,
+            system_prompt_suffix,
+            add_in_context_learning_example,
+            first_user_message_encountered,
+        )
+        converted_messages.extend(message_payloads)
     return converted_messages
 
 
-def _extract_and_validate_params(matching_tool: dict, param_matches: Iterable[re.Match], fn_name: str) -> dict:
+def _convert_single_message(
+    message: dict,
+    tools: list[dict],
+    system_prompt_suffix: str,
+    add_in_context_learning_example: bool,
+    first_user_message_encountered: bool,
+) -> tuple[list[dict], bool]:
+    role = message["role"]
+    content = message["content"]
+    if role == "assistant":
+        return [_convert_assistant_message(content)], first_user_message_encountered
+    if role == "system":
+        return (
+            [_process_system_message(content, system_prompt_suffix)],
+            first_user_message_encountered,
+        )
+    if role == "user":
+        user_msg, first_user_message_encountered = _process_user_message(
+            content,
+            tools,
+            add_in_context_learning_example,
+            first_user_message_encountered,
+        )
+        return [user_msg], first_user_message_encountered
+    if role == "tool":
+        return ([_convert_tool_message(message)], first_user_message_encountered)
+    return ([{"role": role, "content": content}], first_user_message_encountered)
+
+
+def _convert_assistant_message(content: Any) -> dict:
+    if (
+        isinstance(content, str)
+        and "<function=" in content
+        and ("</function>" in content)
+    ):
+        return {"role": "assistant", "content": content, "tool_calls": []}
+    return {"role": "assistant", "content": content}
+
+
+def _convert_tool_message(message: dict) -> dict:
+    tool_name = message.get("name", "unknown_tool")
+    content_list = _format_tool_content(message.get("content"), tool_name)
+    if "cache_control" in message and content_list:
+        content_list[-1]["cache_control"] = message["cache_control"]
+    return {"role": "user", "content": content_list}
+
+
+def _format_tool_content(content: Any, tool_name: str) -> list[dict]:
+    prefix = f"EXECUTION RESULT of [{tool_name}]:\n"
+    if isinstance(content, str):
+        return [{"type": "text", "text": f"{prefix}{content}"}]
+    if isinstance(content, list):
+        cloned_content = copy.deepcopy(content)
+        for item in cloned_content:
+            if item.get("type") == "text":
+                item["text"] = f"{prefix}{item['text']}"
+                break
+        return cloned_content
+    return [{"type": "text", "text": f"{prefix}{str(content)}"}]
+
+
+def _extract_and_validate_params(
+    matching_tool: dict, param_matches: Iterable[re.Match], fn_name: str
+) -> dict:
     """Extract and validate parameters from function call matches."""
     # Extract parameter schema information
     param_schema = _extract_parameter_schema(matching_tool)
@@ -510,7 +546,9 @@ def _extract_and_validate_params(matching_tool: dict, param_matches: Iterable[re
         _validate_parameter_allowed(param_name, param_schema["allowed_params"], fn_name)
 
         # Convert parameter value based on type
-        converted_value = _convert_parameter_value(param_name, param_value, param_schema["param_name_to_type"])
+        converted_value = _convert_parameter_value(
+            param_name, param_value, param_schema["param_name_to_type"]
+        )
 
         # Validate enum constraints
         _validate_enum_constraint(param_name, converted_value, matching_tool, fn_name)
@@ -519,7 +557,9 @@ def _extract_and_validate_params(matching_tool: dict, param_matches: Iterable[re
         found_params.add(param_name)
 
     # Validate all required parameters are present
-    _validate_required_parameters(found_params, param_schema["required_params"], fn_name)
+    _validate_required_parameters(
+        found_params, param_schema["required_params"], fn_name
+    )
 
     return params
 
@@ -540,7 +580,10 @@ def _extract_parameter_schema(matching_tool: dict) -> dict:
         # Extract allowed parameters and types
         if "properties" in params_def:
             allowed_params = set(params_def["properties"].keys())
-            param_name_to_type = {name: val.get("type", "string") for name, val in params_def["properties"].items()}
+            param_name_to_type = {
+                name: val.get("type", "string")
+                for name, val in params_def["properties"].items()
+            }
 
     return {
         "required_params": required_params,
@@ -549,7 +592,9 @@ def _extract_parameter_schema(matching_tool: dict) -> dict:
     }
 
 
-def _validate_parameter_allowed(param_name: str, allowed_params: set, fn_name: str) -> None:
+def _validate_parameter_allowed(
+    param_name: str, allowed_params: set, fn_name: str
+) -> None:
     """Validate that parameter is allowed for the function."""
     if allowed_params and param_name not in allowed_params:
         msg = (
@@ -561,7 +606,9 @@ def _validate_parameter_allowed(param_name: str, allowed_params: set, fn_name: s
         )
 
 
-def _convert_parameter_value(param_name: str, param_value: str, param_name_to_type: dict) -> any:
+def _convert_parameter_value(
+    param_name: str, param_value: str, param_name_to_type: dict
+) -> Any:
     """Convert parameter value based on its expected type."""
     if param_name not in param_name_to_type:
         return param_value
@@ -584,7 +631,7 @@ def _convert_to_integer(param_name: str, param_value: str) -> int:
         raise FunctionCallValidationError(msg) from e
 
 
-def _convert_to_array(param_name: str, param_value: str) -> list:
+def _convert_to_array(param_name: str, param_value: str) -> list[Any]:
     """Convert parameter value to array."""
     try:
         return json.loads(param_value)
@@ -593,7 +640,9 @@ def _convert_to_array(param_name: str, param_value: str) -> list:
         raise FunctionCallValidationError(msg) from e
 
 
-def _validate_enum_constraint(param_name: str, param_value: any, matching_tool: dict, fn_name: str) -> None:
+def _validate_enum_constraint(
+    param_name: str, param_value: Any, matching_tool: dict, fn_name: str
+) -> None:
     """Validate enum constraints for parameter."""
     if "parameters" not in matching_tool:
         return
@@ -611,7 +660,9 @@ def _validate_enum_constraint(param_name: str, param_value: any, matching_tool: 
         raise FunctionCallValidationError(msg)
 
 
-def _validate_required_parameters(found_params: set, required_params: set, fn_name: str) -> None:
+def _validate_required_parameters(
+    found_params: set, required_params: set, fn_name: str
+) -> None:
     """Validate that all required parameters are present."""
     if missing_params := (required_params - found_params):
         msg = f"Missing required parameters for function '{fn_name}': {missing_params}"
@@ -639,7 +690,11 @@ def _normalize_parameter_tags(fn_body: str) -> str:
     This function rewrites the malformed form into the correct one to allow
     downstream parsing to succeed.
     """
-    return re.sub("<parameter=([a-zA-Z0-9_]+)=([^<]*)</parameter>", "<parameter=\\1>\\2</parameter>", fn_body)
+    return re.sub(
+        "<parameter=([a-zA-Z0-9_]+)=([^<]*)</parameter>",
+        "<parameter=\\1>\\2</parameter>",
+        fn_body,
+    )
 
 
 def _process_system_message_reverse(content: Any, system_prompt_suffix: str) -> dict:
@@ -651,40 +706,47 @@ def _process_system_message_reverse(content: Any, system_prompt_suffix: str) -> 
     return {"role": "system", "content": content}
 
 
-def _process_user_message_reverse(content: Any, tools: list[ChatCompletionToolParam]) -> dict:
+def _process_user_message_reverse(
+    content: Any, tools: list[dict]
+) -> dict:
     """Process user message for reverse conversion, removing examples and converting tool results.
-    
+
     If the user message contains a tool result (detected by EXECUTION RESULT pattern),
     it should be converted back to a 'tool' role message for proper round-trip conversion.
     """
     content = _remove_in_context_learning_examples(content, tools)
-    
+
     # Check if this user message is actually a tool result that should have 'tool' role
     is_tool_result = _find_tool_result_match(content)
-    
+
     content = _convert_tool_results(content)
-    
+
     # If it's a tool result, return with 'tool' role for proper round-trip conversion
     if is_tool_result:
         return {"role": "tool", "content": content}
-    
+
     return {"role": "user", "content": content}
 
 
-def _remove_in_context_learning_examples(content: Any, tools: list[ChatCompletionToolParam]) -> Any:
+def _remove_in_context_learning_examples(
+    content: Any, tools: list[dict]
+) -> Any:
     """Remove in-context learning examples from content."""
     if isinstance(content, str):
         return _remove_examples_from_string(content, tools)
     if isinstance(content, list):
         return _remove_examples_from_list(content, tools)
-    msg = f"Unexpected content type {
-        type(content)}. Expected str or list. Content: {content}"
+    msg = f"Unexpected content type {type(content)}. Expected str or list. Content: {
+        content
+    }"
     raise FunctionCallConversionError(
         msg,
     )
 
 
-def _remove_examples_from_string(content: str, tools: list[ChatCompletionToolParam]) -> str:
+def _remove_examples_from_string(
+    content: str, tools: list[dict]
+) -> str:
     """Remove examples from string content."""
     example_prefix = IN_CONTEXT_LEARNING_EXAMPLE_PREFIX(tools)
     if content.startswith(example_prefix):
@@ -694,7 +756,9 @@ def _remove_examples_from_string(content: str, tools: list[ChatCompletionToolPar
     return content
 
 
-def _remove_examples_from_list(content: list, tools: list[ChatCompletionToolParam]) -> list:
+def _remove_examples_from_list(
+    content: list, tools: list[dict]
+) -> list:
     """Remove examples from list content."""
     example_prefix = IN_CONTEXT_LEARNING_EXAMPLE_PREFIX(tools)
     for item in content:
@@ -702,7 +766,9 @@ def _remove_examples_from_list(content: list, tools: list[ChatCompletionToolPara
             if item["text"].startswith(example_prefix):
                 item["text"] = item["text"].replace(example_prefix, "", 1)
             if item["text"].endswith(IN_CONTEXT_LEARNING_EXAMPLE_SUFFIX):
-                item["text"] = item["text"].replace(IN_CONTEXT_LEARNING_EXAMPLE_SUFFIX, "", 1)
+                item["text"] = item["text"].replace(
+                    IN_CONTEXT_LEARNING_EXAMPLE_SUFFIX, "", 1
+                )
     return content
 
 
@@ -723,12 +789,17 @@ def _find_tool_result_match(content: Any) -> Any:
                 _match
                 for item in content
                 if item.get("type") == "text"
-                and (_match := re.search(TOOL_RESULT_REGEX_PATTERN, item["text"], re.DOTALL))
+                and (
+                    _match := re.search(
+                        TOOL_RESULT_REGEX_PATTERN, item["text"], re.DOTALL
+                    )
+                )
             ),
             None,
         )
-    msg = f"Unexpected content type {
-        type(content)}. Expected str or list. Content: {content}"
+    msg = f"Unexpected content type {type(content)}. Expected str or list. Content: {
+        content
+    }"
     raise FunctionCallConversionError(
         msg,
     )
@@ -773,7 +844,8 @@ def _find_tool_call_match(content: Any) -> Any:
             (
                 _match
                 for item in content
-                if item.get("type") == "text" and (_match := re.search(FN_REGEX_PATTERN, item["text"], re.DOTALL))
+                if item.get("type") == "text"
+                and (_match := re.search(FN_REGEX_PATTERN, item["text"], re.DOTALL))
             ),
             None,
         )
@@ -787,20 +859,28 @@ def _extract_tool_call_info(tool_call_match: Any) -> tuple[str, str]:
     return fn_name, fn_body
 
 
-def _find_matching_tool(fn_name: str, tools: list[ChatCompletionToolParam]) -> dict:
+def _find_matching_tool(fn_name: str, tools: list[dict]) -> dict:
     """Find matching tool for function name."""
     matching_tool = next(
-        (tool["function"] for tool in tools if tool["type"] == "function" and tool["function"]["name"] == fn_name),
+        (
+            tool["function"]
+            for tool in tools
+            if tool["type"] == "function" and tool["function"]["name"] == fn_name
+        ),
         None,
     )
     if not matching_tool:
-        available_tools = [tool["function"]["name"] for tool in tools if tool["type"] == "function"]
+        available_tools = [
+            tool["function"]["name"] for tool in tools if tool["type"] == "function"
+        ]
         msg = f"Function '{fn_name}' not found in available tools: {available_tools}"
         raise FunctionCallValidationError(msg)
     return matching_tool
 
 
-def _create_tool_call(fn_name: str, fn_body: str, matching_tool: dict, tool_call_counter: int) -> tuple[dict, int]:
+def _create_tool_call(
+    fn_name: str, fn_body: str, matching_tool: dict, tool_call_counter: int
+) -> tuple[dict, int]:
     """Create tool call object and increment counter."""
     param_matches = re.finditer(FN_PARAM_REGEX_PATTERN, fn_body, re.DOTALL)
     params = _extract_and_validate_params(matching_tool, param_matches, fn_name)
@@ -824,7 +904,8 @@ def _trim_content_before_function(content: Any) -> Any:
         content = content.split("<function=")[0].strip()
     else:
         msg = f"Unexpected content type {
-            type(content)}. Expected str or list. Content: {content}"
+            type(content)
+        }. Expected str or list. Content: {content}"
         raise FunctionCallConversionError(
             msg,
         )
@@ -833,9 +914,9 @@ def _trim_content_before_function(content: Any) -> Any:
 
 def _process_assistant_message_for_conversion(
     content: Any,
-    tools: list[ChatCompletionToolParam],
+    tools: list[dict],
     tool_call_counter: int,
-    converted_messages: list[dict],
+    converted_messages: list[dict[str, Any]],
     system_prompt_suffix: str,
 ) -> int:
     """Process assistant message for converting to function calling format."""
@@ -850,13 +931,17 @@ def _process_assistant_message_for_conversion(
         matching_tool = _find_matching_tool(fn_name, tools)
 
         # Create tool call
-        tool_call, tool_call_counter = _create_tool_call(fn_name, fn_body, matching_tool, tool_call_counter)
+        tool_call, tool_call_counter = _create_tool_call(
+            fn_name, fn_body, matching_tool, tool_call_counter
+        )
 
         # Trim content before function call
         content = _trim_content_before_function(content)
 
         # Add to converted messages
-        converted_messages.append({"role": "assistant", "content": content, "tool_calls": [tool_call]})
+        converted_messages.append(
+            {"role": "assistant", "content": content, "tool_calls": [tool_call]}
+        )
     else:
         # No tool call found, add as regular message
         converted_messages.append({"role": "assistant", "content": content})
@@ -866,34 +951,33 @@ def _process_assistant_message_for_conversion(
 
 def convert_non_fncall_messages_to_fncall_messages(
     messages: list[dict],
-    tools: list[ChatCompletionToolParam],
+    tools: list[dict],
 ) -> list[dict]:
     """Convert non-function calling messages back to function calling messages."""
     messages = copy.deepcopy(messages)
     formatted_tools = convert_tools_to_description(tools)
-    system_prompt_suffix = SYSTEM_PROMPT_SUFFIX_TEMPLATE.format(description=formatted_tools)
-    converted_messages = []
+    system_prompt_suffix = SYSTEM_PROMPT_SUFFIX_TEMPLATE.format(
+        description=formatted_tools
+    )
+    converted_messages: list[dict[str, Any]] = []
     tool_call_counter = 1
-    role_dispatch = {
-        "system": lambda c: _process_system_message_reverse(c, system_prompt_suffix),
-        "user": lambda c: _process_user_message_reverse(c, tools),
-        "assistant": lambda c: _process_assistant_message_for_conversion(
-            c,
-            tools,
-            tool_call_counter,
-            converted_messages,
-            system_prompt_suffix,
-        ),
-    }
     for message in messages:
         role = message["role"]
         content = message["content"] or ""
-        if role in role_dispatch:
-            if role == "assistant":
-                tool_call_counter = role_dispatch[role](content)
-            elif role in ["user", "system"]:
-                processed = role_dispatch[role](content)
-                converted_messages.append(processed)
+        if role == "assistant":
+            tool_call_counter = _process_assistant_message_for_conversion(
+                content,
+                tools,
+                tool_call_counter,
+                converted_messages,
+                system_prompt_suffix,
+            )
+        elif role == "system":
+            processed = _process_system_message_reverse(content, system_prompt_suffix)
+            converted_messages.append(processed)
+        elif role == "user":
+            processed = _process_user_message_reverse(content, tools)
+            converted_messages.append(processed)
         else:
             converted_messages.append({"role": role, "content": content})
     return converted_messages
@@ -916,8 +1000,8 @@ def convert_from_multiple_tool_calls_to_single_tool_call_messages(
         FunctionCallConversionError: If pending tool calls remain
 
     """
-    converted_messages = []
-    pending_tool_calls: dict[str, dict] = {}
+    converted_messages: list[dict[str, Any]] = []
+    pending_tool_calls: dict[str, dict[str, Any]] = {}
 
     for message in messages:
         role = message["role"]
@@ -927,7 +1011,9 @@ def convert_from_multiple_tool_calls_to_single_tool_call_messages(
         elif role == "tool":
             _process_tool_message(message, pending_tool_calls, converted_messages)
         else:
-            _process_other_message(message, pending_tool_calls, converted_messages, role)
+            _process_other_message(
+                message, pending_tool_calls, converted_messages, role
+            )
 
     if not ignore_final_tool_result and pending_tool_calls:
         msg = f"Found pending tool calls but no tool result: pending_tool_calls={pending_tool_calls!r}"
@@ -939,7 +1025,9 @@ def convert_from_multiple_tool_calls_to_single_tool_call_messages(
 
 
 def _process_assistant_message(
-    message: dict, pending_tool_calls: dict[str, dict], converted_messages: list[dict],
+    message: dict,
+    pending_tool_calls: dict[str, dict],
+    converted_messages: list[dict[str, Any]],
 ) -> None:
     """Process assistant message with potential tool calls.
 
@@ -961,7 +1049,11 @@ def _process_assistant_message(
         converted_messages.append(message)
 
 
-def _process_tool_message(message: dict, pending_tool_calls: dict[str, dict], converted_messages: list[dict]) -> None:
+def _process_tool_message(
+    message: dict,
+    pending_tool_calls: dict[str, dict],
+    converted_messages: list[dict[str, Any]],
+) -> None:
     """Process tool result message.
 
     Args:
@@ -974,13 +1066,18 @@ def _process_tool_message(message: dict, pending_tool_calls: dict[str, dict], co
         _tool_call_message = pending_tool_calls.pop(message["tool_call_id"])
         converted_messages.append(_tool_call_message)
     else:
-        assert not pending_tool_calls, f"Found pending tool calls but not found in pending list: {pending_tool_calls:=}"
+        assert not pending_tool_calls, (
+            f"Found pending tool calls but not found in pending list: {pending_tool_calls:=}"
+        )
 
     converted_messages.append(message)
 
 
 def _process_other_message(
-    message: dict, pending_tool_calls: dict[str, dict], converted_messages: list[dict], role: str,
+    message: dict,
+    pending_tool_calls: dict[str, dict],
+    converted_messages: list[dict[str, Any]],
+    role: str,
 ) -> None:
     """Process message with other roles.
 
@@ -991,7 +1088,7 @@ def _process_other_message(
         role: Message role
 
     """
-    assert (
-        not pending_tool_calls
-    ), f"Found pending tool calls but not expect to handle it with role {role}: {pending_tool_calls:=}, {message:=}"
+    assert not pending_tool_calls, (
+        f"Found pending tool calls but not expect to handle it with role {role}: {pending_tool_calls:=}, {message:=}"
+    )
     converted_messages.append(message)

@@ -69,8 +69,15 @@ from forge.prompt_optimization.realtime.live_optimizer import (
     LiveOptimizationResult,
     OptimizationTrigger,
 )
-from forge.prompt_optimization.realtime.real_time_monitor import MonitoringAlert, AlertLevel, MetricType
-from forge.prompt_optimization.realtime.websocket_server import WebSocketMessageType, WebSocketOptimizationServer
+from forge.prompt_optimization.realtime.real_time_monitor import (
+    MonitoringAlert,
+    AlertLevel,
+    MetricType,
+)
+from forge.prompt_optimization.realtime.websocket_server import (
+    WebSocketMessageType,
+    WebSocketOptimizationServer,
+)
 
 
 class _StubLiveOptimizer:
@@ -96,8 +103,12 @@ class _StubLiveOptimizer:
     def stop(self) -> None:
         self.started = False
 
-    async def trigger_optimization(self, prompt_id: str, priority: int, context: Dict[str, Any]) -> str:
-        self.triggered.append({"prompt_id": prompt_id, "priority": priority, "context": context})
+    async def trigger_optimization(
+        self, prompt_id: str, priority: int, context: Dict[str, Any]
+    ) -> str:
+        self.triggered.append(
+            {"prompt_id": prompt_id, "priority": priority, "context": context}
+        )
         return f"opt-{prompt_id}"
 
     def get_optimization_status(self) -> Dict[str, Any]:
@@ -138,8 +149,17 @@ class _StubStreamingEngine:
     def stop(self) -> None:
         self.started = False
 
-    async def add_event(self, event_type: str, prompt_id: str, data: Dict[str, Any], priority: int = 5) -> str:
-        self.events.append({"event_type": event_type, "prompt_id": prompt_id, "data": data, "priority": priority})
+    async def add_event(
+        self, event_type: str, prompt_id: str, data: Dict[str, Any], priority: int = 5
+    ) -> str:
+        self.events.append(
+            {
+                "event_type": event_type,
+                "prompt_id": prompt_id,
+                "data": data,
+                "priority": priority,
+            }
+        )
         return f"event-{prompt_id}"
 
     def get_processing_stats(self) -> Dict[str, Any]:
@@ -166,10 +186,14 @@ class _StubRealTimeMonitor:
     def get_current_metrics(self, prompt_id: Optional[str] = None) -> Dict[str, Any]:
         return {"metric": 1}
 
-    def get_active_alerts(self, prompt_id: Optional[str] = None) -> List[MonitoringAlert]:
+    def get_active_alerts(
+        self, prompt_id: Optional[str] = None
+    ) -> List[MonitoringAlert]:
         return []
 
-    def get_alert_history(self, prompt_id: Optional[str] = None, limit: int = 100) -> List[MonitoringAlert]:
+    def get_alert_history(
+        self, prompt_id: Optional[str] = None, limit: int = 100
+    ) -> List[MonitoringAlert]:
         return []
 
     def get_dashboard_data(self) -> Dict[str, Any]:
@@ -188,7 +212,9 @@ class _StubWebSocketServer:
     async def stop(self) -> None:
         self.started = False
 
-    async def broadcast_message(self, message: Dict[str, Any], subscription_type: Optional[str] = None) -> None:
+    async def broadcast_message(
+        self, message: Dict[str, Any], subscription_type: Optional[str] = None
+    ) -> None:
         self.messages.append({"message": message, "subscription": subscription_type})
 
     def get_server_stats(self) -> Dict[str, Any]:
@@ -199,19 +225,33 @@ class _StubWebSocketServer:
 
 
 @pytest.mark.asyncio
-async def test_real_time_optimization_system_lifecycle(monkeypatch: pytest.MonkeyPatch, tmp_path):
+async def test_real_time_optimization_system_lifecycle(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+):
     import forge.prompt_optimization.realtime.integration as integration_module
 
     monkeypatch.setattr(integration_module, "LiveOptimizer", _StubLiveOptimizer)
     monkeypatch.setattr(integration_module, "HotSwapper", _StubHotSwapper)
-    monkeypatch.setattr(integration_module, "PerformancePredictor", _StubPerformancePredictor)
-    monkeypatch.setattr(integration_module, "StreamingOptimizationEngine", _StubStreamingEngine)
+    monkeypatch.setattr(
+        integration_module, "PerformancePredictor", _StubPerformancePredictor
+    )
+    monkeypatch.setattr(
+        integration_module, "StreamingOptimizationEngine", _StubStreamingEngine
+    )
     monkeypatch.setattr(integration_module, "RealTimeMonitor", _StubRealTimeMonitor)
-    monkeypatch.setattr(integration_module, "WebSocketOptimizationServer", _StubWebSocketServer)
+    monkeypatch.setattr(
+        integration_module, "WebSocketOptimizationServer", _StubWebSocketServer
+    )
     monkeypatch.setattr(integration_module.asyncio, "create_task", lambda coro: None)
 
-    base_optimizer = type("BaseOptimizer", (), {"registry": object(), "tracker": object()})()
-    system = RealTimeOptimizationSystem(strategy_manager=object(), base_optimizer=base_optimizer, config={"websocket": {"host": "0.0.0.0", "port": 1234}})
+    base_optimizer = type(
+        "BaseOptimizer", (), {"registry": object(), "tracker": object()}
+    )()
+    system = RealTimeOptimizationSystem(
+        strategy_manager=object(),
+        base_optimizer=base_optimizer,
+        config={"websocket": {"host": "0.0.0.0", "port": 1234}},
+    )
 
     assert system.get_system_status()["status"] == "stopped"
     await system.initialize()
@@ -244,10 +284,14 @@ async def test_real_time_optimization_system_lifecycle(monkeypatch: pytest.Monke
     await system._on_alert_generated(alert)
     await system._on_metrics_update(type("Event", (), {"data": {"metric": 1}}), [])
 
-    trigger_id = await system.trigger_optimization("prompt", priority=3, context={"extra": True})
+    trigger_id = await system.trigger_optimization(
+        "prompt", priority=3, context={"extra": True}
+    )
     assert trigger_id.startswith("opt-")
 
-    event_id = await system.add_streaming_event("metrics_update", "prompt", {"metrics": {"value": 1}})
+    event_id = await system.add_streaming_event(
+        "metrics_update", "prompt", {"metrics": {"value": 1}}
+    )
     assert event_id.startswith("event-")
 
     status = system.get_system_status()
@@ -258,6 +302,7 @@ async def test_real_time_optimization_system_lifecycle(monkeypatch: pytest.Monke
 
     dashboard = system.get_dashboard_data()
     assert "system_status" in dashboard
+    assert "health_snapshot" in dashboard
 
     export_path = tmp_path / "system.json"
     system.export_system_data(export_path.as_posix())
@@ -288,8 +333,12 @@ class _WSStubLiveOptimizer:
     def __init__(self):
         self.triggered: List[Dict[str, Any]] = []
 
-    async def trigger_optimization(self, prompt_id: str, priority: int, context: Dict[str, Any]) -> str:
-        self.triggered.append({"prompt_id": prompt_id, "priority": priority, "context": context})
+    async def trigger_optimization(
+        self, prompt_id: str, priority: int, context: Dict[str, Any]
+    ) -> str:
+        self.triggered.append(
+            {"prompt_id": prompt_id, "priority": priority, "context": context}
+        )
         return "event-123"
 
     def get_optimization_status(self) -> Dict[str, Any]:
@@ -303,7 +352,9 @@ class _WSStubMonitor:
     def get_current_metrics(self, prompt_id: Optional[str] = None) -> Dict[str, Any]:
         return {"metric": 1}
 
-    def get_active_alerts(self, prompt_id: Optional[str] = None) -> List[MonitoringAlert]:
+    def get_active_alerts(
+        self, prompt_id: Optional[str] = None
+    ) -> List[MonitoringAlert]:
         return [
             MonitoringAlert(
                 alert_id="alert",
@@ -321,7 +372,9 @@ class _WSStubMonitor:
     def clear_alert(self, alert_id: str) -> bool:
         return True
 
-    def get_alert_history(self, prompt_id: Optional[str] = None, limit: int = 100) -> List[MonitoringAlert]:
+    def get_alert_history(
+        self, prompt_id: Optional[str] = None, limit: int = 100
+    ) -> List[MonitoringAlert]:
         return []
 
 
@@ -335,7 +388,9 @@ class _FakeWebSocket:
     async def send(self, message: str) -> None:
         self.sent.append(json.loads(message))
 
-    async def close(self, code: Optional[int] = None, reason: Optional[str] = None) -> None:
+    async def close(
+        self, code: Optional[int] = None, reason: Optional[str] = None
+    ) -> None:
         self.closed = True
 
 
@@ -352,7 +407,9 @@ async def test_websocket_server_message_handlers(monkeypatch: pytest.MonkeyPatch
         return _Server()
 
     monkeypatch.setattr("websockets.serve", fake_serve)
-    server = WebSocketOptimizationServer(_WSStubLiveOptimizer(), _WSStubMonitor(), heartbeat_interval=0.01)
+    server = WebSocketOptimizationServer(
+        _WSStubLiveOptimizer(), _WSStubMonitor(), heartbeat_interval=0.01
+    )
 
     fake_ws = _FakeWebSocket()
     server.clients.add(fake_ws)
@@ -364,15 +421,26 @@ async def test_websocket_server_message_handlers(monkeypatch: pytest.MonkeyPatch
     await server._handle_get_metrics(fake_ws, {"prompt_id": "prompt"})
     await server._handle_get_alerts(fake_ws, {"prompt_id": "prompt"})
     await server._handle_clear_alert(fake_ws, {"alert_id": "alert"})
-    await server._handle_trigger_optimization(fake_ws, {"prompt_id": "prompt", "priority": 6, "context": {}})
+    await server._handle_trigger_optimization(
+        fake_ws, {"prompt_id": "prompt", "priority": 6, "context": {}}
+    )
 
-    await server._handle_message(fake_ws, json.dumps({"type": WebSocketMessageType.SUBSCRIBE, "subscription_type": "metrics"}))
-    await server._handle_message(fake_ws, json.dumps({"type": WebSocketMessageType.GET_STATUS}))
+    await server._handle_message(
+        fake_ws,
+        json.dumps(
+            {"type": WebSocketMessageType.SUBSCRIBE, "subscription_type": "metrics"}
+        ),
+    )
+    await server._handle_message(
+        fake_ws, json.dumps({"type": WebSocketMessageType.GET_STATUS})
+    )
     await server._handle_message(fake_ws, json.dumps({"type": "unknown"}))
 
     server.client_subscriptions[fake_ws].update({"metrics", "alerts"})
+
     async def fake_sleep(_: float):
         server.is_running = False
+
     original_sleep = asyncio.sleep
     monkeypatch.setattr(asyncio, "sleep", fake_sleep)
 
@@ -383,7 +451,9 @@ async def test_websocket_server_message_handlers(monkeypatch: pytest.MonkeyPatch
     await server._monitoring_loop()
 
     await server.broadcast_message({"type": "test"})
-    await server.broadcast_message({"type": "metrics_specific"}, subscription_type="metrics")
+    await server.broadcast_message(
+        {"type": "metrics_specific"}, subscription_type="metrics"
+    )
     clients_before_stop = server.get_client_info()
     assert clients_before_stop
     await server.start()
@@ -397,4 +467,3 @@ async def test_websocket_server_message_handlers(monkeypatch: pytest.MonkeyPatch
     assert isinstance(clients, list)
 
     monkeypatch.setattr(asyncio, "sleep", original_sleep)
-

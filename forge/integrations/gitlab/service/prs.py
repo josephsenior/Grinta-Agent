@@ -47,7 +47,9 @@ class GitLabPRsMixin(GitLabMixinBase):
         }
         if labels and len(labels) > 0:
             payload["labels"] = ",".join(labels)
-        response, _ = await self._make_request(url=url, params=payload, method=RequestMethod.POST)
+        response, _ = await self._make_request(
+            url=url, params=payload, method=RequestMethod.POST
+        )
         return response["web_url"]
 
     async def get_pr_details(self, repository: str, pr_number: int) -> dict:

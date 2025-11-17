@@ -263,6 +263,13 @@ test-frontend:
 test:
 	@$(MAKE) -s test-frontend
 
+# Proto compilation
+.PHONY: compile-protos
+compile-protos:
+	@echo "$(GREEN)Compiling Protocol Buffer definitions...$(RESET)"
+	@python scripts/compile_protos.py
+	@echo "$(GREEN)Proto compilation completed.$(RESET)"
+
 build-frontend:
 	@echo "$(YELLOW)Building frontend...$(RESET)"
 	@cd frontend && npm run prepare && npm run build

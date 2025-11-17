@@ -53,7 +53,9 @@ def test_codeact_user_response_exit(monkeypatch):
     def fake_try_parse(action):
         return "done"
 
-    result = utils.codeact_user_response(state, encapsulate_solution=False, try_parse=fake_try_parse)
+    result = utils.codeact_user_response(
+        state, encapsulate_solution=False, try_parse=fake_try_parse
+    )
     assert result == "/exit"
 
 
@@ -76,7 +78,10 @@ def test_cleanup_terminates_children(monkeypatch):
         utils.cleanup()
         process.terminate.assert_called_once()
         process.join.assert_called_once()
-        assert any("Cleaning up child processes" in str(call.args[0]) for call in info_mock.call_args_list)
+        assert any(
+            "Cleaning up child processes" in str(call.args[0])
+            for call in info_mock.call_args_list
+        )
 
 
 def test_reset_logger_for_multiprocessing(monkeypatch, tmp_path):
@@ -115,7 +120,9 @@ def test_extract_image_urls():
 
 
 def test_get_unique_uid(monkeypatch):
-    passwd_content = io.StringIO("root:x:0:0:root:/root:/bin/bash\nuser:x:1000:1000::/home/user:/bin/sh\n")
+    passwd_content = io.StringIO(
+        "root:x:0:0:root:/root:/bin/bash\nuser:x:1000:1000::/home/user:/bin/sh\n"
+    )
 
     def fake_open(path, mode="r", encoding=None):
         assert path == "/etc/passwd"
@@ -124,4 +131,3 @@ def test_get_unique_uid(monkeypatch):
     monkeypatch.setattr(builtins, "open", fake_open)
     uid = utils.get_unique_uid(start_uid=1000)
     assert uid == 1001
-

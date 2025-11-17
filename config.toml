@@ -97,10 +97,26 @@ agent_mode = "simple"  # ✅ BETA: Focus on ONE reliable agent
 [agent]
 llm_config = 'llm'
 
+[runtime_pool]
+enabled = true
+
+[runtime_pool.default]
+max_size = 2
+ttl_seconds = 600
+
+# Example:
+# [runtime_pool.overrides.docker]
+# max_size = 3
+# ttl_seconds = 900
+
 # USE OPTIMIZED PROMPTS!
 # CodeActAgent: "system_prompt_forge.j2" (most optimized)
 # Options: system_prompt.j2 | system_prompt_forge.j2 | system_prompt_ultimate.j2 | system_prompt_optimized.j2
 system_prompt_filename = "system_prompt_forge.j2"
+
+# Schema
+# ============================================================================
+schema_version = "2025-11-14"
 
 # Tools
 # ============================================================================

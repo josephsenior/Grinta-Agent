@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import importlib
 from functools import lru_cache
-from typing import TypeVar
+from typing import Any, NoReturn, TypeVar
 
 T = TypeVar("T")
 
 
-def import_from(qual_name: str):
+def import_from(qual_name: str) -> Any:
     """Import a value from its fully qualified name.
 
     This function is a utility to dynamically import any Python value (class, function, variable)
@@ -69,6 +69,60 @@ def get_impl(cls: type[T], impl_name: str | None) -> type[T]:
     """
     if impl_name is None:
         return cls
+
     impl_class = import_from(impl_name)
-    assert cls == impl_class or issubclass(impl_class, cls)
-    return impl_class
+    if _impl_matches_base(cls, impl_class):
+        return impl_class
+
+    if _matches_reimported_base(cls, impl_class):
+        return impl_class
+
+    _raise_invalid_impl(cls, impl_class)
+
+
+def _impl_matches_base(cls: type[T], impl_class: type[T]) -> bool:
+    if cls == impl_class or issubclass(impl_class, cls):
+        return True
+    return _matches_qualified_name_in_mro(cls, impl_class)
+
+
+def _matches_qualified_name_in_mro(base_cls: type[T], impl_class: type[T]) -> bool:
+    base_mod = getattr(base_cls, "__module__", None)
+    base_name = getattr(base_cls, "__name__", None)
+    for candidate in getattr(impl_class, "__mro__", ()):
+        if (
+            getattr(candidate, "__module__", None) == base_mod
+            and getattr(candidate, "__name__", None) == base_name
+        ):
+            return True
+    return False
+
+
+def _reimport_base_class(base_mod: str, base_name: str) -> type[Any] | None:
+    try:
+        imported_base = import_from(f"{base_mod}.{base_name}")
+        if isinstance(imported_base, type):
+            return imported_base
+    except Exception:
+        return None
+    return None
+
+
+def _matches_reimported_base(cls: type[T], impl_class: type[T]) -> bool:
+    base_mod = getattr(cls, "__module__", None)
+    base_name = getattr(cls, "__name__", None)
+    if not (base_mod and base_name):
+        return False
+    imported_base = _reimport_base_class(base_mod, base_name)
+    return bool(imported_base and issubclass(impl_class, imported_base))
+
+
+def _raise_invalid_impl(cls: type[T], impl_class: type[T]) -> NoReturn:
+    base_mod = getattr(cls, "__module__", None)
+    base_name = getattr(cls, "__name__", None)
+    impl_mod = getattr(impl_class, "__module__", None)
+    impl_name = getattr(impl_class, "__name__", None)
+    raise AssertionError(
+        "Implementation class is not a subclass of the base class. "
+        f"base={base_mod}.{base_name}, impl={impl_mod}.{impl_name}"
+    )

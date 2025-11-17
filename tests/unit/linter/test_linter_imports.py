@@ -11,7 +11,9 @@ import pytest
 
 def reload_module() -> types.ModuleType:
     """Helper to reload the forge.linter module and return it."""
-    return importlib.reload(sys.modules.get("forge.linter", importlib.import_module("forge.linter")))
+    return importlib.reload(
+        sys.modules.get("forge.linter", importlib.import_module("forge.linter"))
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -26,7 +28,9 @@ def reset_modules():
     importlib.reload(linter_module)
 
 
-def test_import_uses_real_module_when_available(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_import_uses_real_module_when_available(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """When forge_aci.linter exists we should expose its classes."""
     fake_package = types.ModuleType("forge_aci")
     fake_module = types.ModuleType("forge_aci.linter")
@@ -50,7 +54,9 @@ def test_import_uses_real_module_when_available(monkeypatch: pytest.MonkeyPatch)
     assert set(module.__all__) == {"DefaultLinter", "LintResult"}
 
 
-def test_import_falls_back_to_stub_when_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_import_falls_back_to_stub_when_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """If forge_aci is missing we should expose lightweight stub implementations."""
     monkeypatch.delitem(sys.modules, "forge_aci", raising=False)
     monkeypatch.delitem(sys.modules, "forge_aci.linter", raising=False)
@@ -63,5 +69,3 @@ def test_import_falls_back_to_stub_when_missing(monkeypatch: pytest.MonkeyPatch)
     assert hasattr(result, "errors") and result.errors == []
     assert hasattr(result, "warnings") and result.warnings == []
     assert set(module.__all__) == {"DefaultLinter", "LintResult"}
-
-

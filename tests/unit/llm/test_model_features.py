@@ -1,5 +1,10 @@
 import pytest
-from forge.llm.model_features import ModelFeatures, get_features, model_matches, normalize_model_name
+from forge.llm.model_features import (
+    ModelFeatures,
+    get_features,
+    model_matches,
+    normalize_model_name,
+)
 
 
 @pytest.mark.parametrize(
@@ -13,7 +18,10 @@ from forge.llm.model_features import ModelFeatures, get_features, model_matches,
         ("deepseek/DeepSeek-R1-0528:671b-Q4_K_XL", "deepseek-r1-0528"),
         ("openai/GLM-4.5-GGUF", "glm-4.5"),
         ("openrouter/gpt-4o-mini", "gpt-4o-mini"),
-        ("bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0", "anthropic.claude-3-5-sonnet-20241022-v2"),
+        (
+            "bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+            "anthropic.claude-3-5-sonnet-20241022-v2",
+        ),
         ("", ""),
         (None, ""),
     ],
@@ -184,14 +192,24 @@ def test_function_calling_models(model):
 
 @pytest.mark.parametrize(
     "model",
-    ["o1-2024-12-17", "o3-mini", "o4-mini", "gemini-2.5-flash", "gemini-2.5-pro", "gpt-5", "gpt-5-mini-2025-08-07"],
+    [
+        "o1-2024-12-17",
+        "o3-mini",
+        "o4-mini",
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
+        "gpt-5",
+        "gpt-5-mini-2025-08-07",
+    ],
 )
 def test_reasoning_effort_models(model):
     features = get_features(model)
     assert features.supports_reasoning_effort is True
 
 
-@pytest.mark.parametrize("model", ["deepseek/DeepSeek-R1-0528:671b-Q4_K_XL", "DeepSeek-R1-0528"])
+@pytest.mark.parametrize(
+    "model", ["deepseek/DeepSeek-R1-0528:671b-Q4_K_XL", "DeepSeek-R1-0528"]
+)
 def test_deepseek_reasoning_effort_models(model):
     features = get_features(model)
     assert features.supports_reasoning_effort is True
@@ -255,7 +273,13 @@ def test_stop_words_grok_provider_prefixed():
 
 @pytest.mark.parametrize(
     "model",
-    ["o1-mini", "o1-2024-12-17", "xai/grok-4-0709", "deepseek/DeepSeek-R1-0528:671b-Q4_K_XL", "DeepSeek-R1-0528"],
+    [
+        "o1-mini",
+        "o1-2024-12-17",
+        "xai/grok-4-0709",
+        "deepseek/DeepSeek-R1-0528:671b-Q4_K_XL",
+        "DeepSeek-R1-0528",
+    ],
 )
 def test_supports_stop_words_false_models(model):
     features = get_features(model)

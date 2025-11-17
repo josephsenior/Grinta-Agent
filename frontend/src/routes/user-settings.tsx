@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSettings } from "#/hooks/query/use-settings";
@@ -35,18 +35,20 @@ function EmailInputSection({
   const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <label className="text-sm">{t("SETTINGS$USER_EMAIL")}</label>
+      <div className="flex flex-col gap-3">
+        <label className="text-sm font-medium text-foreground">
+          {t("SETTINGS$USER_EMAIL")}
+        </label>
         <div className="flex items-center gap-3">
           <input
             type="email"
             value={email}
             onChange={onEmailChange}
-            className={`text-base text-foreground p-2 bg-black rounded-sm border ${
+            className={`text-base text-foreground px-4 py-2.5 bg-black/60 rounded-xl border backdrop-blur-sm transition-all ${
               isEmailChanged && !isEmailValid
-                ? "border-danger-500"
-                : "border-violet-500/20"
-            } flex-grow`}
+                ? "border-danger-500/50 focus:border-danger-500"
+                : "border-white/10 focus:border-white/20 hover:border-white/15"
+            } flex-grow focus:outline-none`}
             placeholder={t("SETTINGS$USER_EMAIL_LOADING")}
             data-testid="email-input"
           />
@@ -54,19 +56,19 @@ function EmailInputSection({
 
         {isEmailChanged && !isEmailValid && (
           <div
-            className="text-danger-500 text-sm mt-1"
+            className="text-danger-400 text-sm"
             data-testid="email-validation-error"
           >
             {t("SETTINGS$INVALID_EMAIL_FORMAT")}
           </div>
         )}
 
-        <div className="flex items-center gap-3 mt-2">
+        <div className="flex items-center gap-3 mt-1">
           <button
             type="button"
             onClick={onSaveEmail}
             disabled={!isEmailChanged || isSaving || !isEmailValid}
-            className="px-4 py-2 rounded-sm bg-brand-500 text-white hover:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed disabled:text-base"
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 text-white font-medium shadow-lg shadow-brand-500/30 hover:shadow-xl hover:shadow-brand-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg"
             data-testid="save-email-button"
           >
             {isSaving ? t("SETTINGS$SAVING") : t("SETTINGS$SAVE")}
@@ -77,7 +79,7 @@ function EmailInputSection({
               type="button"
               onClick={onResendVerification}
               disabled={isResendingVerification}
-              className="px-4 py-2 rounded-sm bg-brand-500 text-white hover:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed disabled:text-base"
+              className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/5 text-foreground font-medium hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="resend-verification-button"
             >
               {isResendingVerification
@@ -97,11 +99,13 @@ function VerificationAlert() {
   const { t } = useTranslation();
   return (
     <div
-      className="bg-danger-500/10 border border-danger-500 text-danger-500 px-4 py-3 rounded-sm mt-4"
+      className="rounded-xl border border-danger-500/30 bg-danger-500/10 backdrop-blur-sm px-4 py-3 mt-4"
       role="alert"
     >
-      <p className="font-bold">{t("SETTINGS$EMAIL_VERIFICATION_REQUIRED")}</p>
-      <p className="text-sm">
+      <p className="font-semibold text-danger-400">
+        {t("SETTINGS$EMAIL_VERIFICATION_REQUIRED")}
+      </p>
+      <p className="text-sm text-danger-400/80 mt-1">
         {t("SETTINGS$EMAIL_VERIFICATION_RESTRICTION_MESSAGE")}
       </p>
     </div>
@@ -203,39 +207,86 @@ function UserSettingsScreen() {
   };
 
   const isEmailChanged = email !== originalEmail;
+  const themeTitleId = useId();
+  const themeDescriptionId = useId();
+
+  const panelClass =
+    "relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 via-black/40 to-black/80 backdrop-blur-xl p-6 shadow-[0_40px_120px_rgba(0,0,0,0.45)]";
 
   return (
-    <div data-testid="user-settings-screen" className="flex flex-col h-full">
-      <div className="p-9 flex flex-col gap-8">
-        {isLoading ? (
-          <div className="animate-pulse h-8 w-64 bg-black rounded-sm" />
-        ) : (
-          <EmailInputSection
-            email={email}
-            onEmailChange={handleEmailChange}
-            onSaveEmail={handleSaveEmail}
-            onResendVerification={handleResendVerification}
-            isSaving={isSaving}
-            isResendingVerification={isResendingVerification}
-            isEmailChanged={isEmailChanged}
-            emailVerified={settings?.EMAIL_VERIFIED}
-            isEmailValid={isEmailValid}
-          >
-            {settings?.EMAIL_VERIFIED === false && <VerificationAlert />}
-          </EmailInputSection>
-        )}
+    <div data-testid="user-settings-screen" className="flex flex-col">
+      <div className="p-6 sm:p-8 lg:p-10 flex flex-col gap-6 lg:gap-8">
+        <div className="mx-auto max-w-6xl w-full space-y-6 lg:space-y-8">
+          {isLoading ? (
+            <div className="animate-pulse h-8 w-64 bg-black/50 rounded-xl" />
+          ) : (
+            <>
+              {/* Email Settings */}
+              <div className={panelClass}>
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0"
+                >
+                  <div className="absolute inset-y-0 left-1/2 w-1/2 bg-gradient-to-r from-brand-500/5 via-accent-500/3 to-transparent blur-2xl" />
+                </div>
+                <div className="relative z-[1]">
+                  <h2 className="text-lg font-semibold text-foreground mb-4">
+                    {t("SETTINGS$USER_EMAIL", "Email Settings")}
+                  </h2>
+                  <EmailInputSection
+                    email={email}
+                    onEmailChange={handleEmailChange}
+                    onSaveEmail={handleSaveEmail}
+                    onResendVerification={handleResendVerification}
+                    isSaving={isSaving}
+                    isResendingVerification={isResendingVerification}
+                    isEmailChanged={isEmailChanged}
+                    emailVerified={settings?.EMAIL_VERIFIED}
+                    isEmailValid={isEmailValid}
+                  >
+                    {settings?.EMAIL_VERIFIED === false && (
+                      <VerificationAlert />
+                    )}
+                  </EmailInputSection>
+                </div>
+              </div>
 
-        {/* Theme Settings */}
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-text-primary">
-              Theme Preference
-            </label>
-            <p className="text-xs text-text-muted mb-2">
-              Choose your preferred theme or follow your system settings
-            </p>
-            <ThemeToggle variant="dropdown" />
-          </div>
+              {/* Theme Settings */}
+              <div className={panelClass}>
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0"
+                >
+                  <div className="absolute inset-y-0 left-1/2 w-1/2 bg-gradient-to-r from-brand-500/5 via-accent-500/3 to-transparent blur-2xl" />
+                </div>
+                <div className="relative z-[1]">
+                  <div
+                    className="flex flex-col gap-3"
+                    role="group"
+                    aria-labelledby={themeTitleId}
+                    aria-describedby={themeDescriptionId}
+                  >
+                    <h3
+                      id={themeTitleId}
+                      className="text-xl font-semibold text-foreground"
+                    >
+                      {t("userSettings.theme.title", "Theme Preference")}
+                    </h3>
+                    <p
+                      id={themeDescriptionId}
+                      className="text-sm text-foreground-secondary mb-2"
+                    >
+                      {t(
+                        "userSettings.theme.description",
+                        "Choose your preferred theme or follow your system settings",
+                      )}
+                    </p>
+                    <ThemeToggle variant="dropdown" />
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

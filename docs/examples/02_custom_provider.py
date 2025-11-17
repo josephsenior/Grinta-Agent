@@ -13,23 +13,23 @@ def add_custom_provider():
     """Add a custom LLM provider to the system."""
     # Step 1: Create provider configuration
     custom_provider_config = ProviderConfig(
-        name='myprovider',
-        env_var='MYPROVIDER_API_KEY',
+        name="myprovider",
+        env_var="MYPROVIDER_API_KEY",
         requires_protocol=True,
         supports_streaming=True,
-        required_params={'api_key', 'model'},
-        optional_params={'timeout', 'temperature', 'max_tokens'},
-        forbidden_params={'custom_llm_provider'},
-        api_key_prefixes=['mp-'],  # Your provider's key prefix
+        required_params={"api_key", "model"},
+        optional_params={"timeout", "temperature", "max_tokens"},
+        forbidden_params={"custom_llm_provider"},
+        api_key_prefixes=["mp-"],  # Your provider's key prefix
         api_key_min_length=20,
         handles_own_routing=False,
         requires_custom_llm_provider=False,
     )
-    
+
     # Step 2: Register provider (in production, add to provider_config.py)
     # For this example, we'll just demonstrate usage
     print(f"Provider config created: {custom_provider_config.name}")
-    
+
     # Step 3: Configure LLM with your provider
     llm_config = LLMConfig(
         model="myprovider/my-model-name",
@@ -38,26 +38,25 @@ def add_custom_provider():
         temperature=0.0,
         max_output_tokens=4000,
     )
-    
+
     # Step 4: Create LLM instance
-    llm = LLM(
-        config=llm_config,
-        service_id="custom-provider-example"
-    )
-    
+    llm = LLM(config=llm_config, service_id="custom-provider-example")
+
     # Step 5: Test the connection
     try:
         print("Testing LLM connection...")
         response = llm.completion(
-            messages=[{
-                "role": "user",
-                "content": "Hello! Please respond with 'Hello, World!'"
-            }]
+            messages=[
+                {
+                    "role": "user",
+                    "content": "Hello! Please respond with 'Hello, World!'",
+                }
+            ]
         )
-        
+
         print(f"✅ Success! Response: {response.choices[0].message.content}")
         print(f"Cost: ${llm.metrics.accumulated_cost:.4f}")
-        
+
     except Exception as e:
         print(f"❌ Error: {e}")
         print("\nCommon issues:")
@@ -69,10 +68,10 @@ def add_custom_provider():
 
 def add_to_codebase():
     """Instructions for permanently adding the provider."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("To permanently add this provider to Forge:")
-    print("="*60)
-    
+    print("=" * 60)
+
     print("""
 1. Edit: Forge/core/config/provider_config.py
    
@@ -123,7 +122,7 @@ def add_to_codebase():
    MYPROVIDER_API_KEY=mp-your-key
    
    # Start Forge
-   poetry run python -m forge.server.listen
+   poetry run python -m forge.server
    
 5. Submit PR:
    
@@ -136,11 +135,10 @@ def add_to_codebase():
 
 if __name__ == "__main__":
     print("Custom LLM Provider Example")
-    print("="*60)
-    
+    print("=" * 60)
+
     # Add and test custom provider
     add_custom_provider()
-    
+
     # Show how to add permanently
     add_to_codebase()
-

@@ -1,4 +1,6 @@
 @echo off
+REM Enforce strict CSP for any auxiliary local commands (non-Docker portions)
+set CSP_POLICY=strict
 echo ========================================
 echo   Restarting Forge Backend
 echo ========================================
@@ -12,7 +14,7 @@ docker rm forge-app- 2>nul
 REM Start services
 echo.
 echo Starting backend server...
-docker-compose up -d
+docker compose up -d
 
 echo.
 echo ========================================

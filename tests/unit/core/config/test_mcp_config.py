@@ -18,6 +18,12 @@ def test_validate_mcp_url_rejects_invalid_scheme():
     assert _validate_mcp_url("https://example.com") == "https://example.com"
 
 
+def test_validate_mcp_url_requires_host():
+    with pytest.raises(ValueError) as exc:
+        _validate_mcp_url("https:///no-host")
+    assert "valid domain" in str(exc.value)
+
+
 def test_stdio_server_parsing():
     config = MCPStdioServerConfig(
         name="tool_server",
@@ -29,6 +35,12 @@ def test_stdio_server_parsing():
     assert config.env == {"KEY": "value", "FLAG": "1"}
 
 
+def test_stdio_server_args_empty_string_and_env_blank():
+    config = MCPStdioServerConfig(name="tool", command="binary", args="", env=" ")
+    assert config.args == []
+    assert config.env == {}
+
+
 def test_stdio_server_invalid_command():
     with pytest.raises(ValueError):
         MCPStdioServerConfig(name="tool", command="with spaces")
@@ -37,6 +49,11 @@ def test_stdio_server_invalid_command():
 def test_stdio_server_invalid_env_pair():
     with pytest.raises(ValueError):
         MCPStdioServerConfig(name="tool", command="binary", env="BADPAIR")
+
+
+def test_stdio_server_invalid_env_key():
+    with pytest.raises(ValueError):
+        MCPStdioServerConfig(name="tool", command="binary", env="1INVALID=value")
 
 
 def test_mcp_config_from_toml_section_and_merge():
@@ -61,23 +78,49 @@ def test_mcp_config_from_toml_section_and_merge():
     assert len(merged.sse_servers) == 2
 
 
+def test_mcp_config_normalize_servers_mixed():
+    servers = MCPConfig._normalize_servers(
+        ["https://example.com", {"url": "https://other.com"}]
+    )
+    assert servers == [{"url": "https://example.com"}, {"url": "https://other.com"}]
+
+
 def test_mcp_config_duplicate_urls_raise():
     with pytest.raises(ValueError):
-        MCPConfig.from_toml_section({"sse_servers": [{"url": "https://dup"}, {"url": "https://dup"}]})
+        MCPConfig.from_toml_section(
+            {"sse_servers": [{"url": "https://dup"}, {"url": "https://dup"}]}
+        )
+
+
+def test_mcp_config_from_toml_invalid_stdio(monkeypatch):
+    with pytest.raises(ValueError) as exc:
+        MCPConfig.from_toml_section(
+            {"stdio_servers": [{"name": "bad server", "command": "tool"}]}
+        )
+    assert "Server name can only" in str(exc.value)
 
 
 def test_forge_mcp_config_default(monkeypatch: pytest.MonkeyPatch):
     cfg = MCPConfig()
-    default_shttp, stdio = mcp_module.ForgeMCPConfig.create_default_mcp_server_config("localhost:8000", cfg)
+    default_shttp, stdio = mcp_module.ForgeMCPConfig.create_default_mcp_server_config(
+        "localhost:8000", cfg
+    )
     assert default_shttp.url == "http://localhost:8000/mcp/mcp"
     assert stdio == []
+
+
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import ValidationError
 from forge.controller.agent import Agent
 from forge.core.config import ForgeConfig, load_from_env
-from forge.core.config.mcp_config import MCPConfig, MCPSHTTPServerConfig, MCPSSEServerConfig, MCPStdioServerConfig
+from forge.core.config.mcp_config import (
+    MCPConfig,
+    MCPSHTTPServerConfig,
+    MCPSSEServerConfig,
+    MCPStdioServerConfig,
+)
 from forge.llm.llm_registry import LLMRegistry
 from forge.server.services.conversation_stats import ConversationStats
 from forge.server.session.conversation_init_data import ConversationInitData
@@ -88,7 +131,10 @@ from forge.storage.memory import InMemoryFileStore
 def test_valid_sse_config():
     """Test a valid SSE configuration."""
     config = MCPConfig(
-        sse_servers=[MCPSSEServerConfig(url="http://server1:8080"), MCPSSEServerConfig(url="http://server2:8080")]
+        sse_servers=[
+            MCPSSEServerConfig(url="http://server1:8080"),
+            MCPSSEServerConfig(url="http://server2:8080"),
+        ]
     )
     config.validate_servers()
 
@@ -109,7 +155,10 @@ def test_invalid_sse_url():
 def test_duplicate_sse_urls():
     """Test SSE configuration with duplicate server URLs."""
     config = MCPConfig(
-        sse_servers=[MCPSSEServerConfig(url="http://server1:8080"), MCPSSEServerConfig(url="http://server1:8080")]
+        sse_servers=[
+            MCPSSEServerConfig(url="http://server1:8080"),
+            MCPSSEServerConfig(url="http://server1:8080"),
+        ]
     )
     with pytest.raises(ValueError) as exc_info:
         config.validate_servers()
@@ -168,10 +217,18 @@ def test_mcp_stdio_server_config_basic():
     assert config.env == {}
 
 
+def test_mcp_stdio_server_equality_other_type():
+    config = MCPStdioServerConfig(name="srv", command="binary")
+    assert config != 123
+
+
 def test_mcp_stdio_server_config_with_args_and_env():
     """Test MCPStdioServerConfig with args and env."""
     config = MCPStdioServerConfig(
-        name="test-server", command="python", args=["-m", "server"], env={"DEBUG": "true", "PORT": "8080"}
+        name="test-server",
+        command="python",
+        args=["-m", "server"],
+        env={"DEBUG": "true", "PORT": "8080"},
     )
     assert config.name == "test-server"
     assert config.command == "python"
@@ -182,7 +239,10 @@ def test_mcp_stdio_server_config_with_args_and_env():
 def test_mcp_config_with_stdio_servers():
     """Test MCPConfig with stdio servers."""
     stdio_server = MCPStdioServerConfig(
-        name="test-server", command="python", args=["-m", "server"], env={"DEBUG": "true"}
+        name="test-server",
+        command="python",
+        args=["-m", "server"],
+        env={"DEBUG": "true"},
     )
     config = MCPConfig(stdio_servers=[stdio_server])
     assert len(config.stdio_servers) == 1
@@ -197,7 +257,12 @@ def test_from_toml_section_with_stdio_servers():
     data = {
         "sse_servers": ["http://server1:8080"],
         "stdio_servers": [
-            {"name": "test-server", "command": "python", "args": ["-m", "server"], "env": {"DEBUG": "true"}}
+            {
+                "name": "test-server",
+                "command": "python",
+                "args": ["-m", "server"],
+                "env": {"DEBUG": "true"},
+            }
         ],
     }
     result = MCPConfig.from_toml_section(data)
@@ -215,7 +280,10 @@ def test_mcp_config_with_both_server_types():
     """Test MCPConfig with both SSE and stdio servers."""
     sse_server = MCPSSEServerConfig(url="http://server1:8080", api_key="test-api-key")
     stdio_server = MCPStdioServerConfig(
-        name="test-server", command="python", args=["-m", "server"], env={"DEBUG": "true"}
+        name="test-server",
+        command="python",
+        args=["-m", "server"],
+        env={"DEBUG": "true"},
     )
     config = MCPConfig(sse_servers=[sse_server], stdio_servers=[stdio_server])
     assert len(config.sse_servers) == 1
@@ -280,22 +348,31 @@ def test_stdio_server_equality_with_different_env_order():
 
 def test_mcp_stdio_server_args_parsing_basic():
     """Test MCPStdioServerConfig args parsing with basic shell-like format."""
-    config = MCPStdioServerConfig(name="test-server", command="python", args="arg1 arg2 arg3")
+    config = MCPStdioServerConfig(
+        name="test-server", command="python", args="arg1 arg2 arg3"
+    )
     assert config.args == ["arg1", "arg2", "arg3"]
-    config = MCPStdioServerConfig(name="test-server", command="python", args="single-arg")
+    config = MCPStdioServerConfig(
+        name="test-server", command="python", args="single-arg"
+    )
     assert config.args == ["single-arg"]
 
 
 def test_mcp_stdio_server_args_parsing_invalid_quotes():
     """Test MCPStdioServerConfig args parsing with invalid quotes."""
     with pytest.raises(ValidationError) as exc_info:
-        MCPStdioServerConfig(name="test-server", command="python", args='--config "unmatched quote')
+        MCPStdioServerConfig(
+            name="test-server", command="python", args='--config "unmatched quote'
+        )
     assert "Invalid argument format" in str(exc_info.value)
 
 
 def test_env_var_mcp_shttp_server_config(monkeypatch):
     """Test creating MCPSHTTPServerConfig from environment variables."""
-    monkeypatch.setenv("MCP_SHTTP_SERVERS", '[{"url": "http://env-server:8080", "api_key": "env-api-key"}]')
+    monkeypatch.setenv(
+        "MCP_SHTTP_SERVERS",
+        '[{"url": "http://env-server:8080", "api_key": "env-api-key"}]',
+    )
     config = ForgeConfig()
     load_from_env(config, os.environ)
     config.mcp = MCPConfig(
@@ -322,7 +399,10 @@ def test_env_var_mcp_shttp_server_config_with_toml(monkeypatch, tmp_path):
         f.write(
             '\n[mcp]\nsse_servers = ["http://toml-server:8080"]\nshttp_servers = [\n    { url = "http://toml-http-server:8080", api_key = "toml-api-key" }\n]\n'
         )
-    monkeypatch.setenv("MCP_SHTTP_SERVERS", '[{"url": "http://env-server:8080", "api_key": "env-api-key"}]')
+    monkeypatch.setenv(
+        "MCP_SHTTP_SERVERS",
+        '[{"url": "http://env-server:8080", "api_key": "env-api-key"}]',
+    )
     config = ForgeConfig()
     from forge.core.config import load_from_toml
 
@@ -341,7 +421,9 @@ def test_env_var_mcp_shttp_server_config_with_toml(monkeypatch, tmp_path):
 
 def test_env_var_mcp_shttp_servers_with_python_str_representation(monkeypatch):
     """Test creating MCPSHTTPServerConfig from environment variables using Python string representation."""
-    mcp_shttp_servers = [{"url": "https://example.com/mcp/mcp", "api_key": "test-api-key"}]
+    mcp_shttp_servers = [
+        {"url": "https://example.com/mcp/mcp", "api_key": "test-api-key"}
+    ]
     monkeypatch.setenv("MCP_SHTTP_SERVERS", str(mcp_shttp_servers))
     config = ForgeConfig()
     load_from_env(config, os.environ)
@@ -355,7 +437,10 @@ def test_env_var_mcp_shttp_servers_with_python_str_representation(monkeypatch):
 @pytest.mark.asyncio
 async def test_session_preserves_env_mcp_config(monkeypatch):
     """Test that Session preserves MCP configuration from environment variables."""
-    monkeypatch.setenv("MCP_SHTTP_SERVERS", '[{"url": "http://env-server:8080", "api_key": "env-api-key"}]')
+    monkeypatch.setenv(
+        "MCP_SHTTP_SERVERS",
+        '[{"url": "http://env-server:8080", "api_key": "env-api-key"}]',
+    )
     monkeypatch.setenv("MCP_HOST", "dummy")
     config = ForgeConfig()
     load_from_env(config, os.environ)
@@ -377,9 +462,24 @@ async def test_session_preserves_env_mcp_config(monkeypatch):
     mock_agent_instance = MagicMock()
     mock_agent_cls.return_value = mock_agent_instance
     session.agent_session.event_stream.add_event = MagicMock()
-    with patch.object(session.agent_session, "start", AsyncMock()), patch.object(
-        Agent, "get_cls", return_value=mock_agent_cls
+    with (
+        patch.object(session.agent_session, "start", AsyncMock()),
+        patch.object(Agent, "get_cls", return_value=mock_agent_cls),
     ):
         await session.initialize_agent(settings, None, None)
     assert len(session.config.mcp.shttp_servers) >= 0
     await session.close()
+
+
+def test_mcp_config_convert_string_urls():
+    data = {"sse_servers": ["https://one"], "shttp_servers": ["https://two"]}
+    converted = MCPConfig.convert_string_urls(data)
+    assert converted["sse_servers"][0] == {"url": "https://one"}
+    assert converted["shttp_servers"][0] == {"url": "https://two"}
+
+
+def test_mcp_config_from_toml_invalid_shttp():
+    data = {"shttp_servers": ["invalid-url"]}
+    with pytest.raises(ValueError) as exc:
+        MCPConfig.from_toml_section(data)
+    assert "URL must include a scheme" in str(exc.value)

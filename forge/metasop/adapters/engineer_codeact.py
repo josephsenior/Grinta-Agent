@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from forge.core.logger import forge_logger as logger
 from forge.llm.llm_registry import LLMRegistry
@@ -31,6 +31,7 @@ def run_controller(*args, **kwargs):
     )
     raise NotImplementedError(msg)
 
+
 if TYPE_CHECKING:
     from forge.core.config import ForgeConfig
 
@@ -53,7 +54,9 @@ def _infer_system_ops_permission(user_request: str) -> tuple[bool, list[str]]:
     return False, []
 
 
-def _setup_llm_registry(config: ForgeConfig | None, llm_registry: LLMRegistry | None) -> LLMRegistry:
+def _setup_llm_registry(
+    config: ForgeConfig | None, llm_registry: LLMRegistry | None
+) -> LLMRegistry:
     """Setup LLM registry from config or use provided one."""
     if llm_registry is None:
         if config is None:
@@ -67,11 +70,11 @@ def _build_extra_context(ctx: OrchestrationContext, step: SopStep) -> dict[str, 
     """Build extra context including retrieval results and dependencies."""
     retrieval_key = f"retrieval::{step.id}"
     extra_context = dict(ctx.extra.items())
-    
+
     # Add retrieval results if available
     if retrieval_key in ctx.extra:
         extra_context["retrieval_results"] = ctx.extra.get(retrieval_key)
-    
+
     # Note: Previous step artifacts are passed via ctx.extra by the orchestrator
     # The orchestrator stores artifacts with keys like "artifact::pm_spec", "artifact::arch_design"
     # Extract these for the Engineer to use
@@ -80,10 +83,10 @@ def _build_extra_context(ctx: OrchestrationContext, step: SopStep) -> dict[str, 
         if key.startswith("artifact::"):
             step_id = key.replace("artifact::", "")
             artifacts[step_id] = value
-    
+
     if artifacts:
         extra_context["previous_artifacts"] = artifacts
-    
+
     return extra_context
 
 
@@ -95,7 +98,7 @@ def _build_engineer_messages(
 ) -> list:
     """Build structured messages for the Engineer LLM with planning context."""
     schema = load_schema(step.outputs.schema_file)
-    
+
     # Build enhanced task description for Engineer (PLANNING, not coding)
     task_description = f"""{step.task}
 
@@ -118,7 +121,9 @@ implementing without wondering what to build or where files should go."""
 
     return build_structured_messages(
         role_name=role_profile.get("name", step.role),
-        role_goal=role_profile.get("goal", "Create comprehensive implementation blueprint and file structure"),
+        role_goal=role_profile.get(
+            "goal", "Create comprehensive implementation blueprint and file structure"
+        ),
         constraints=role_profile.get("constraints", []),
         sop_task=task_description,
         user_request=ctx.user_request,
@@ -141,7 +146,9 @@ def _extract_usage_metrics(response) -> dict[str, Any]:
     usage = getattr(response, "usage", None)
     return {
         "prompt_tokens": getattr(usage, "prompt_tokens", None) if usage else None,
-        "completion_tokens": getattr(usage, "completion_tokens", None) if usage else None,
+        "completion_tokens": getattr(usage, "completion_tokens", None)
+        if usage
+        else None,
         "total_tokens": getattr(usage, "total_tokens", None) if usage else None,
         "model_name": getattr(response, "model", None),
     }
@@ -150,7 +157,7 @@ def _extract_usage_metrics(response) -> dict[str, Any]:
 def _parse_implementation_content(content: str) -> dict[str, Any]:
     """Parse the implementation content and extract structured data."""
     parsed = {}
-    
+
     # Try to extract JSON if present
     try:
         # Look for JSON blocks in markdown
@@ -167,9 +174,9 @@ def _parse_implementation_content(content: str) -> dict[str, Any]:
         parsed = {
             "implementation": content,
             "artifact_path": ENGINEER_SUMMARY_PATH,
-            "source": "agent"
+            "source": "agent",
         }
-    
+
     return parsed
 
 
@@ -182,15 +189,15 @@ def _build_artifact_content(
     art_content: dict = {
         "__trace_meta__": trace_meta,
         "__raw__": content,
-        "source": "agent"
+        "source": "agent",
     }
-    
+
     # Merge parsed content
     art_content.update(parsed_content)
-    
+
     # Ensure artifact_path is set
     art_content.setdefault("artifact_path", ENGINEER_SUMMARY_PATH)
-    
+
     return art_content
 
 
@@ -220,71 +227,81 @@ def run_engineer_with_llm(
 
     This is much simpler and more reliable than spawning a nested controller.
     """
-    repo_root = getattr(ctx, "repo_root", None)
-    summary_file: Path | None = Path(repo_root) / ENGINEER_SUMMARY_PATH if repo_root else None
-    if summary_file and llm_registry is None and config is None and summary_file.exists():
-        try:
-            parsed_content = json.loads(summary_file.read_text(encoding="utf-8"))
-        except Exception as exc:
-            logger.error(f"Failed to load engineer summary from {summary_file}: {exc}", exc_info=True)
-        else:
-            art_content = {
-                "__trace_meta__": {},
-                "__raw__": parsed_content,
-                "artifact_path": ENGINEER_SUMMARY_PATH,
-                "source": "agent",
-                "candidates": parsed_content.get("candidates"),
-            }
-            if isinstance(art_content.get("candidates"), list):
-                for candidate in art_content["candidates"]:
-                    if isinstance(candidate, dict):
-                        candidate.setdefault("meta", {})
-                        candidate["meta"].setdefault("source", "agent")
-            art = Artifact(step_id=step.id, role=step.role, content=art_content)
+    if llm_registry is None and config is None:
+        cached = _load_cached_summary_if_available(ctx)
+        if cached is not None:
+            art = Artifact(step_id=step.id, role=step.role, content=cached)
             _set_artifact_source_metadata(art)
             return StepResult(ok=True, artifact=art)
 
     try:
-        # Setup LLM registry
-        llm_registry = _setup_llm_registry(config, llm_registry)
-        
-        # Get LLM from context if available, otherwise use active LLM
-        if hasattr(ctx, 'llm_registry') and ctx.llm_registry:
-            llm = ctx.llm_registry.get_active_llm()
-        else:
-            llm = llm_registry.get_active_llm()
-
+        llm = _resolve_llm(ctx, config, llm_registry)
         logger.info(f"Engineer step starting with LLM: {llm.config.model}")
-
-        # Build context and messages
-        extra_context = _build_extra_context(ctx, step)
-        messages = _build_engineer_messages(step, ctx, role_profile, extra_context)
-
-        logger.info(f"Engineer step: Built {len(messages)} messages for LLM")
-
-        # Generate implementation
-        response, content = _generate_implementation(llm, messages)
-
+        response, content = _run_engineer_llm(step, ctx, role_profile, llm)
         logger.info(f"Engineer step: Received {len(content)} chars from LLM")
-
-        # Parse the implementation content
         parsed_content = _parse_implementation_content(content)
-
-        # Extract metrics and build artifact
         trace_meta = _extract_usage_metrics(response)
         art_content = _build_artifact_content(trace_meta, content, parsed_content)
         art = Artifact(step_id=step.id, role=step.role, content=art_content)
-
-        # Set source metadata
         _set_artifact_source_metadata(art)
-
         logger.info(f"Engineer step completed successfully for step_id={step.id}")
-
         return StepResult(ok=True, artifact=art)
-        
     except Exception as e:
         logger.error(f"Engineer step failed: {e}", exc_info=True)
         return StepResult(ok=False, error=str(e))
+
+
+def _load_cached_summary_if_available(ctx: OrchestrationContext) -> Optional[dict]:
+    repo_root = getattr(ctx, "repo_root", None)
+    if not repo_root:
+        return None
+    summary_file = Path(repo_root) / ENGINEER_SUMMARY_PATH
+    if not summary_file.exists():
+        return None
+    try:
+        parsed_content = json.loads(summary_file.read_text(encoding="utf-8"))
+    except Exception as exc:
+        logger.error(
+            f"Failed to load engineer summary from {summary_file}: {exc}",
+            exc_info=True,
+        )
+        return None
+    art_content = {
+        "__trace_meta__": {},
+        "__raw__": parsed_content,
+        "artifact_path": ENGINEER_SUMMARY_PATH,
+        "source": "agent",
+        "candidates": parsed_content.get("candidates"),
+    }
+    if isinstance(art_content.get("candidates"), list):
+        for candidate in art_content["candidates"]:
+            if isinstance(candidate, dict):
+                candidate.setdefault("meta", {})
+                candidate["meta"].setdefault("source", "agent")
+    return art_content
+
+
+def _resolve_llm(
+    ctx: OrchestrationContext,
+    config: ForgeConfig | None,
+    llm_registry: LLMRegistry | None,
+):
+    registry = _setup_llm_registry(config, llm_registry)
+    if hasattr(ctx, "llm_registry") and ctx.llm_registry:
+        return ctx.llm_registry.get_active_llm()
+    return registry.get_active_llm()
+
+
+def _run_engineer_llm(
+    step: SopStep,
+    ctx: OrchestrationContext,
+    role_profile: dict[str, Any],
+    llm,
+):
+    extra_context = _build_extra_context(ctx, step)
+    messages = _build_engineer_messages(step, ctx, role_profile, extra_context)
+    logger.info(f"Engineer step: Built {len(messages)} messages for LLM")
+    return _generate_implementation(llm, messages)
 
 
 # Alias for backward compatibility

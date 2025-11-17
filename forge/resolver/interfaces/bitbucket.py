@@ -54,7 +54,10 @@ class BitbucketIssueHandler(IssueHandlerInterface):
     def get_headers(self) -> dict[str, str]:
         """Construct authorization headers depending on token format."""
         if ":" not in self.token:
-            return {"Authorization": f"Bearer {self.token}", "Accept": "application/json"}
+            return {
+                "Authorization": f"Bearer {self.token}",
+                "Accept": "application/json",
+            }
         auth_str = base64.b64encode(self.token.encode()).decode()
         return {"Authorization": f"Basic {auth_str}", "Accept": "application/json"}
 
@@ -141,7 +144,9 @@ class BitbucketIssueHandler(IssueHandlerInterface):
         logger.warning("BitbucketIssueHandler.download_issues not implemented")
         return []
 
-    def get_issue_comments(self, issue_number: int, comment_id: int | None = None) -> list[str] | None:
+    def get_issue_comments(
+        self, issue_number: int, comment_id: int | None = None
+    ) -> list[str] | None:
         """Get comments for an issue.
 
         Args:
@@ -165,7 +170,9 @@ class BitbucketIssueHandler(IssueHandlerInterface):
             The URL for the branch
 
         """
-        return f"https://{self.base_domain}/{self.owner}/{self.repo}/branch/{branch_name}"
+        return (
+            f"https://{self.base_domain}/{self.owner}/{self.repo}/branch/{branch_name}"
+        )
 
     def get_compare_url(self, branch_name: str) -> str:
         """Get the URL for comparing branches.
@@ -263,7 +270,10 @@ class BitbucketIssueHandler(IssueHandlerInterface):
         data = response.json()
         if data is None:
             data = {}
-        return {"html_url": data.get("links", {}).get("html", {}).get("href", ""), "number": data.get("id", 0)}
+        return {
+            "html_url": data.get("links", {}).get("html", {}).get("href", ""),
+            "number": data.get("id", 0),
+        }
 
     def request_reviewers(self, reviewer: str, pr_number: int) -> None:
         """Request reviewers for a pull request.
@@ -298,7 +308,9 @@ class BitbucketIssueHandler(IssueHandlerInterface):
             A list of thread comments
 
         """
-        logger.warning("BitbucketIssueHandler.get_issue_thread_comments not implemented")
+        logger.warning(
+            "BitbucketIssueHandler.get_issue_thread_comments not implemented"
+        )
         return []
 
     def get_issue_review_comments(self, issue_number: int) -> list[str]:
@@ -311,7 +323,9 @@ class BitbucketIssueHandler(IssueHandlerInterface):
             A list of review comments
 
         """
-        logger.warning("BitbucketIssueHandler.get_issue_review_comments not implemented")
+        logger.warning(
+            "BitbucketIssueHandler.get_issue_review_comments not implemented"
+        )
         return []
 
     def get_issue_review_threads(self, issue_number: int) -> list[ReviewThread]:
@@ -333,7 +347,7 @@ class BitbucketIssueHandler(IssueHandlerInterface):
         review_comments: list[str] | None,
         review_threads: list[ReviewThread],
         thread_comments: list[str] | None,
-    ) -> list[str]:
+    ) -> list[int]:
         """Collect issue references from various sources.
 
         Args:
@@ -343,10 +357,10 @@ class BitbucketIssueHandler(IssueHandlerInterface):
             thread_comments: List of thread comments.
 
         Returns:
-            list[str]: List of issue references found.
+            list[int]: List of issue references found.
 
         """
-        new_issue_references = []
+        new_issue_references: list[int] = []
 
         # Extract from issue body
         if issue_body:
@@ -360,7 +374,9 @@ class BitbucketIssueHandler(IssueHandlerInterface):
         # Extract from review threads
         if review_threads:
             for review_thread in review_threads:
-                new_issue_references.extend(extract_issue_references(review_thread.comment))
+                new_issue_references.extend(
+                    extract_issue_references(review_thread.comment)
+                )
 
         # Extract from thread comments
         if thread_comments:
@@ -422,7 +438,9 @@ class BitbucketIssueHandler(IssueHandlerInterface):
 
         # Remove duplicates and filter out already processed issues
         non_duplicate_references = set(new_issue_references)
-        unique_issue_references = non_duplicate_references.difference(closing_issue_numbers)
+        unique_issue_references = non_duplicate_references.difference(
+            closing_issue_numbers
+        )
 
         # Fetch content for unique issues
         for issue_number in unique_issue_references:
@@ -457,7 +475,11 @@ class BitbucketIssueHandler(IssueHandlerInterface):
             if any(issue.get(key) is None for key in ["id", "title"]):
                 logger.warning("Skipping #%s as it is missing id or title.", issue)
                 continue
-            body = issue.get("content", {}).get("raw", "") if issue.get("content") is not None else ""
+            body = (
+                issue.get("content", {}).get("raw", "")
+                if issue.get("content") is not None
+                else ""
+            )
             closing_issues: list[str] = []
             review_comments: list[str] = []
             review_threads: list[ReviewThread] = []

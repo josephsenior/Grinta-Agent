@@ -2,7 +2,11 @@ import pytest
 from dataclasses import dataclass
 from types import SimpleNamespace
 
-from forge.controller.action_parser import ActionParseError, ActionParser, ResponseParser
+from forge.controller.action_parser import (
+    ActionParseError,
+    ActionParser,
+    ResponseParser,
+)
 from forge.controller.agent import Agent
 from forge.controller.autonomy import AutonomyController, AutonomyLevel
 from forge.events.action import Action, CmdRunAction
@@ -58,7 +62,11 @@ class _FakePromptManager:
 
 class _TestAgent(Agent):
     def __init__(self):
-        llm_registry = SimpleNamespace(get_llm_from_agent_config=lambda *_: SimpleNamespace(config=SimpleNamespace()))
+        llm_registry = SimpleNamespace(
+            get_llm_from_agent_config=lambda *_: SimpleNamespace(
+                config=SimpleNamespace()
+            )
+        )
         config = SimpleNamespace(cli_mode=False)
         super().__init__(config=config, llm_registry=llm_registry)
         self._prompt_manager = _FakePromptManager("system-message")
@@ -107,7 +115,11 @@ def test_agent_set_mcp_tools_adds_unique_tools(caplog):
     agent = _TestAgent()
     tool = {
         "type": "function",
-        "function": {"name": "tool_one", "description": "", "parameters": {"type": "object", "properties": {}}},
+        "function": {
+            "name": "tool_one",
+            "description": "",
+            "parameters": {"type": "object", "properties": {}},
+        },
     }
     agent.set_mcp_tools([tool, tool])
     assert agent.tools[0]["function"]["name"] == "tool_one"
@@ -152,5 +164,3 @@ def test_autonomy_retry_only_for_import_errors(monkeypatch):
     assert controller.should_retry_on_error(ModuleNotFoundError("foo"), 0)
     assert not controller.should_retry_on_error(ModuleNotFoundError("foo"), 1)
     assert not controller.should_retry_on_error(ValueError("no retry"), 0)
-
-

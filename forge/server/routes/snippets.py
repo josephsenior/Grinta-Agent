@@ -6,7 +6,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, status, FastAPI
@@ -177,7 +177,7 @@ async def list_snippets(
         snippets = _load_all_snippets()
         snippets = _apply_list_filters(snippets, language, category, is_favorite)
         snippets = _sort_by_update_time(snippets)
-        return snippets[offset: offset + limit]
+        return snippets[offset : offset + limit]
 
     except Exception as e:
         logger.exception(f"Error listing snippets: {e}")
@@ -293,7 +293,9 @@ async def search_snippets(request: SearchSnippetsRequest) -> list[CodeSnippet]:
         ) from e
 
 
-def _filter_snippets(snippets: list[CodeSnippet], request: SearchSnippetsRequest) -> list[CodeSnippet]:
+def _filter_snippets(
+    snippets: list[CodeSnippet], request: SearchSnippetsRequest
+) -> list[CodeSnippet]:
     """Apply all filters to snippet list.
 
     Args:
@@ -311,7 +313,9 @@ def _filter_snippets(snippets: list[CodeSnippet], request: SearchSnippetsRequest
     return _filter_by_query(snippets, request.query)
 
 
-def _filter_by_language(snippets: list[CodeSnippet], language: SnippetLanguage | None) -> list[CodeSnippet]:
+def _filter_by_language(
+    snippets: list[CodeSnippet], language: SnippetLanguage | None
+) -> list[CodeSnippet]:
     """Filter snippets by programming language.
 
     Args:
@@ -327,7 +331,9 @@ def _filter_by_language(snippets: list[CodeSnippet], language: SnippetLanguage |
     return [s for s in snippets if s.language == language]
 
 
-def _filter_by_category(snippets: list[CodeSnippet], category: SnippetCategory | None) -> list[CodeSnippet]:
+def _filter_by_category(
+    snippets: list[CodeSnippet], category: SnippetCategory | None
+) -> list[CodeSnippet]:
     """Filter snippets by category.
 
     Args:
@@ -343,7 +349,9 @@ def _filter_by_category(snippets: list[CodeSnippet], category: SnippetCategory |
     return [s for s in snippets if s.category == category]
 
 
-def _filter_by_favorite(snippets: list[CodeSnippet], is_favorite: bool | None) -> list[CodeSnippet]:
+def _filter_by_favorite(
+    snippets: list[CodeSnippet], is_favorite: bool | None
+) -> list[CodeSnippet]:
     """Filter snippets by favorite status.
 
     Args:
@@ -359,7 +367,9 @@ def _filter_by_favorite(snippets: list[CodeSnippet], is_favorite: bool | None) -
     return [s for s in snippets if s.is_favorite == is_favorite]
 
 
-def _filter_by_tags(snippets: list[CodeSnippet], tags: list[str] | None) -> list[CodeSnippet]:
+def _filter_by_tags(
+    snippets: list[CodeSnippet], tags: list[str] | None
+) -> list[CodeSnippet]:
     """Filter snippets by tags.
 
     Args:
@@ -375,7 +385,9 @@ def _filter_by_tags(snippets: list[CodeSnippet], tags: list[str] | None) -> list
     return [s for s in snippets if any(tag in s.tags for tag in tags)]
 
 
-def _filter_by_query(snippets: list[CodeSnippet], query: str | None) -> list[CodeSnippet]:
+def _filter_by_query(
+    snippets: list[CodeSnippet], query: str | None
+) -> list[CodeSnippet]:
     """Filter snippets by text search query.
 
     Args:
@@ -390,15 +402,29 @@ def _filter_by_query(snippets: list[CodeSnippet], query: str | None) -> list[Cod
         return snippets
 
     query_lower = query.lower()
-    return [
-        s
-        for s in snippets
-        if query_lower in s.title.lower()
-        or (s.description and query_lower in s.description.lower())
-        or query_lower in s.code.lower()
-        or any(query_lower in tag.lower() for tag in s.tags)
-        or any(query_lower in dep.lower() for dep in s.dependencies)
-    ]
+    return [s for s in snippets if _snippet_matches_query(s, query_lower)]
+
+
+def _snippet_matches_query(snippet: CodeSnippet, query_lower: str) -> bool:
+    return any(
+        (
+            _text_matches(snippet.title, query_lower),
+            _text_matches(snippet.description, query_lower),
+            _text_matches(snippet.code, query_lower),
+            _iterable_matches(snippet.tags, query_lower),
+            _iterable_matches(snippet.dependencies, query_lower),
+        )
+    )
+
+
+def _text_matches(value: str | None, query_lower: str) -> bool:
+    if not value:
+        return False
+    return query_lower in value.lower()
+
+
+def _iterable_matches(values: Iterable[str], query_lower: str) -> bool:
+    return any(query_lower in item.lower() for item in values)
 
 
 def _sort_snippets(snippets: list[CodeSnippet], sort_by: str) -> list[CodeSnippet]:
@@ -421,7 +447,9 @@ def _sort_snippets(snippets: list[CodeSnippet], sort_by: str) -> list[CodeSnippe
     return sorted(snippets, key=key_func, reverse=(sort_by != "title"))
 
 
-def _paginate_results(snippets: list[CodeSnippet], offset: int, limit: int) -> list[CodeSnippet]:
+def _paginate_results(
+    snippets: list[CodeSnippet], offset: int, limit: int
+) -> list[CodeSnippet]:
     """Paginate snippet results.
 
     Args:
@@ -433,7 +461,7 @@ def _paginate_results(snippets: list[CodeSnippet], offset: int, limit: int) -> l
         Paginated slice of snippets
 
     """
-    return snippets[offset: offset + limit]
+    return snippets[offset : offset + limit]
 
 
 @app.get("/stats")
@@ -475,7 +503,9 @@ def _count_snippets_by_language(snippets: list[CodeSnippet]) -> dict[str, int]:
 
     """
     return {
-        lang.value: count for lang in SnippetLanguage if (count := len([s for s in snippets if s.language == lang])) > 0
+        lang.value: count
+        for lang in SnippetLanguage
+        if (count := len([s for s in snippets if s.language == lang])) > 0
     }
 
 
@@ -490,7 +520,9 @@ def _count_snippets_by_category(snippets: list[CodeSnippet]) -> dict[str, int]:
 
     """
     return {
-        cat.value: count for cat in SnippetCategory if (count := len([s for s in snippets if s.category == cat])) > 0
+        cat.value: count
+        for cat in SnippetCategory
+        if (count := len([s for s in snippets if s.category == cat])) > 0
     }
 
 
@@ -507,7 +539,9 @@ def _count_favorites(snippets: list[CodeSnippet]) -> int:
     return len([s for s in snippets if s.is_favorite])
 
 
-def _get_most_used_snippets(snippets: list[CodeSnippet], limit: int = 5) -> list[tuple[str, int]]:
+def _get_most_used_snippets(
+    snippets: list[CodeSnippet], limit: int = 5
+) -> list[tuple[str, int]]:
     """Get the most frequently used snippets.
 
     Args:
@@ -629,7 +663,7 @@ def _create_export_response(collection: SnippetCollection) -> JSONResponse:
         JSONResponse with download headers
 
     """
-    filename = f'snippets_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+    filename = f"snippets_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
     return JSONResponse(
         content=json.loads(collection.model_dump_json(indent=2)),
@@ -799,7 +833,9 @@ async def update_snippet(snippet_id: str, request: UpdateSnippetRequest) -> Code
         ) from e
 
 
-@app.delete("/{snippet_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
+@app.delete(
+    "/{snippet_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None
+)
 async def delete_snippet(snippet_id: str) -> None:
     """Delete a snippet.
 

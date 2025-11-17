@@ -34,9 +34,11 @@ for name in ("tree-sitter-python",):
         logger.warning("warning: grammar dir not found: %s", p)
 if not grammars:
     logger = logging.getLogger(__name__)
-    logger.error("No grammars found under third_party; clone tree-sitter-<lang> into third_party first")
+    logger.error(
+        "No grammars found under third_party; clone tree-sitter-<lang> into third_party first"
+    )
     sys.exit(1)
 logger = logging.getLogger(__name__)
 logger.info("Building language lib -> %s", out_file)
-Language.build_library(out_file, grammars)
+Language.build_library(out_file, grammars)  # type: ignore[attr-defined]
 logger.info("Built: %s", out_file)

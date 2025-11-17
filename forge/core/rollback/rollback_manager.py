@@ -90,7 +90,9 @@ class RollbackManager:
         """
         self.workspace_path = Path(workspace_path)
         self.checkpoints_dir = (
-            Path(checkpoints_dir) if checkpoints_dir else self.workspace_path / ".Forge" / "checkpoints"
+            Path(checkpoints_dir)
+            if checkpoints_dir
+            else self.workspace_path / ".Forge" / "checkpoints"
         )
         self.max_checkpoints = max_checkpoints
         self.auto_cleanup = auto_cleanup
@@ -128,7 +130,9 @@ class RollbackManager:
             try:
                 with open(manifest_file) as f:
                     data = json.load(f)
-                    checkpoints = [Checkpoint.from_dict(cp) for cp in data.get("checkpoints", [])]
+                    checkpoints = [
+                        Checkpoint.from_dict(cp) for cp in data.get("checkpoints", [])
+                    ]
             except Exception as e:
                 logger.warning(f"Failed to load checkpoints manifest: {e}")
 
@@ -173,7 +177,13 @@ class RollbackManager:
             )
 
             result = subprocess.run(
-                ["git", "commit", "-m", "[Forge Checkpoint] Auto-snapshot", "--allow-empty"],
+                [
+                    "git",
+                    "commit",
+                    "-m",
+                    "[Forge Checkpoint] Auto-snapshot",
+                    "--allow-empty",
+                ],
                 check=False,
                 cwd=self.workspace_path,
                 capture_output=True,
@@ -302,7 +312,9 @@ class RollbackManager:
         if not checkpoint:
             return False
 
-        logger.info(f"Rolling back to checkpoint: {checkpoint.description} ({checkpoint_id})")
+        logger.info(
+            f"Rolling back to checkpoint: {checkpoint.description} ({checkpoint_id})"
+        )
 
         try:
             # Try git-based rollback first
@@ -326,7 +338,9 @@ class RollbackManager:
             Checkpoint object or None if not found
 
         """
-        checkpoint = next((cp for cp in self.checkpoints if cp.id == checkpoint_id), None)
+        checkpoint = next(
+            (cp for cp in self.checkpoints if cp.id == checkpoint_id), None
+        )
         if not checkpoint:
             logger.error(f"Checkpoint not found: {checkpoint_id}")
         return checkpoint

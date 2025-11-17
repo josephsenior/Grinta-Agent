@@ -16,7 +16,9 @@ def get_timeout_suffix(timeout_seconds):
     return f"[The command timed out after {timeout_seconds} seconds. {TIMEOUT_MESSAGE_TEMPLATE}]"
 
 
-pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="WindowsPowershellSession tests require Windows")
+pytestmark = pytest.mark.skipif(
+    sys.platform != "win32", reason="WindowsPowershellSession tests require Windows"
+)
 
 
 @pytest.fixture
@@ -79,7 +81,10 @@ def test_command_failure_exit_code(windows_bash_session):
     result = windows_bash_session.execute(action)
     assert isinstance(result, CmdOutputObservation)
     assert "ERROR" in result.content
-    assert "is not recognized" in result.content or "CommandNotFoundException" in result.content
+    assert (
+        "is not recognized" in result.content
+        or "CommandNotFoundException" in result.content
+    )
     assert result.exit_code == 1
 
 
@@ -186,21 +191,30 @@ def test_working_directory(windows_bash_session, temp_work_dir):
     result_cd = windows_bash_session.execute(action_cd)
     assert isinstance(result_cd, CmdOutputObservation)
     assert result_cd.exit_code == 0
+    metadata_cd = result_cd.metadata
+    assert metadata_cd is not None
     assert windows_bash_session._cwd.lower().endswith("\\subdir")
-    assert result_cd.metadata.working_dir.lower().endswith("\\subdir")
+    assert metadata_cd.working_dir is not None
+    assert metadata_cd.working_dir.lower().endswith("\\subdir")
     action_pwd = CmdRunAction(command="(Get-Location).Path")
     result_pwd = windows_bash_session.execute(action_pwd)
     assert isinstance(result_pwd, CmdOutputObservation)
     assert result_pwd.exit_code == 0
     assert result_pwd.content.strip().lower().endswith("\\subdir")
-    assert result_pwd.metadata.working_dir.lower().endswith("\\subdir")
+    metadata_pwd = result_pwd.metadata
+    assert metadata_pwd is not None
+    assert metadata_pwd.working_dir is not None
+    assert metadata_pwd.working_dir.lower().endswith("\\subdir")
     action_cd_back = CmdRunAction(command=f"Set-Location '{abs_temp_work_dir}'")
     result_cd_back = windows_bash_session.execute(action_cd_back)
     assert isinstance(result_cd_back, CmdOutputObservation)
     assert result_cd_back.exit_code == 0
     temp_dir_basename = os.path.basename(abs_temp_work_dir)
     assert windows_bash_session._cwd.lower().endswith(temp_dir_basename.lower())
-    assert result_cd_back.metadata.working_dir.lower().endswith(temp_dir_basename.lower())
+    metadata_back = result_cd_back.metadata
+    assert metadata_back is not None
+    assert metadata_back.working_dir is not None
+    assert metadata_back.working_dir.lower().endswith(temp_dir_basename.lower())
 
 
 def test_cleanup(windows_bash_session):
@@ -245,7 +259,9 @@ def test_exception_during_execution(windows_bash_session):
     """Test handling of exceptions during command execution."""
     patch_target = "forge.runtime.utils.windows_bash.PowerShell"
     mock_powershell_class = MagicMock()
-    mock_powershell_class.Create.side_effect = Exception("Test exception from mocked Create")
+    mock_powershell_class.Create.side_effect = Exception(
+        "Test exception from mocked Create"
+    )
     with patch(patch_target, mock_powershell_class):
         action = CmdRunAction(command="Write-Output 'Test'")
         result = windows_bash_session.execute(action)
@@ -299,7 +315,9 @@ def test_stateful_file_operations(windows_bash_session, temp_work_dir):
     abs_temp_work_dir = os.path.abspath(temp_work_dir)
     sub_dir_name = "file_test_dir"
     sub_dir_path = Path(abs_temp_work_dir) / sub_dir_name
-    create_dir_action = CmdRunAction(command=f'New-Item -Path "{sub_dir_name}" -ItemType Directory')
+    create_dir_action = CmdRunAction(
+        command=f'New-Item -Path "{sub_dir_name}" -ItemType Directory'
+    )
     result = windows_bash_session.execute(create_dir_action)
     assert result.exit_code == 0
     assert sub_dir_path.is_dir()
@@ -308,7 +326,9 @@ def test_stateful_file_operations(windows_bash_session, temp_work_dir):
     assert result.exit_code == 0
     assert windows_bash_session._cwd.lower().endswith(f"\\{sub_dir_name.lower()}")
     test_content = "This is a test file created by PowerShell"
-    create_file_action = CmdRunAction(command=f'Set-Content -Path "test_file.txt" -Value "{test_content}"')
+    create_file_action = CmdRunAction(
+        command=f'Set-Content -Path "test_file.txt" -Value "{test_content}"'
+    )
     result = windows_bash_session.execute(create_file_action)
     assert result.exit_code == 0
     expected_file_path = sub_dir_path / "test_file.txt"
@@ -322,11 +342,15 @@ def test_stateful_file_operations(windows_bash_session, temp_work_dir):
     assert result.exit_code == 0
     temp_dir_basename = os.path.basename(abs_temp_work_dir)
     assert windows_bash_session._cwd.lower().endswith(temp_dir_basename.lower())
-    read_from_parent_action = CmdRunAction(command=f'Get-Content -Path "{sub_dir_name}/test_file.txt"')
+    read_from_parent_action = CmdRunAction(
+        command=f'Get-Content -Path "{sub_dir_name}/test_file.txt"'
+    )
     result = windows_bash_session.execute(read_from_parent_action)
     assert result.exit_code == 0
     assert test_content in result.content
-    remove_file_action = CmdRunAction(command=f'Remove-Item -Path "{sub_dir_name}/test_file.txt" -Force')
+    remove_file_action = CmdRunAction(
+        command=f'Remove-Item -Path "{sub_dir_name}/test_file.txt" -Force'
+    )
     result = windows_bash_session.execute(remove_file_action)
     assert result.exit_code == 0
 
@@ -411,7 +435,10 @@ def test_windows_path_handling(windows_bash_session, temp_work_dir):
     """Test that os.chdir works with both forward slashes and escaped backslashes on Windows."""
     test_dir = Path(temp_work_dir) / "test_dir"
     test_dir.mkdir()
-    path_formats = [str(test_dir).replace("\\", "/"), str(test_dir).replace("\\", "\\\\")]
+    path_formats = [
+        str(test_dir).replace("\\", "/"),
+        str(test_dir).replace("\\", "\\\\"),
+    ]
     for path in path_formats:
         action = CmdRunAction(command=f'''python -c "import os; os.chdir('{path}')"''')
         result = windows_bash_session.execute(action)

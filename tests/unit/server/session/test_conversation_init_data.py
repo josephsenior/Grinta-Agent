@@ -22,7 +22,11 @@ def test_conversation_init_data_defaults():
 def test_conversation_init_data_assignment_frozen_fields():
     tokens = MappingProxyType({"github": "token"})
     secrets = MappingProxyType({"secret": "value"})
-    data = ConversationInitData(git_provider_tokens=tokens, custom_secrets=secrets, git_provider=ProviderType.GITHUB)
+    data = ConversationInitData(
+        git_provider_tokens=tokens,
+        custom_secrets=secrets,
+        git_provider=ProviderType.GITHUB,
+    )
     with pytest.raises(ValidationError):
         data.git_provider_tokens = {}
     with pytest.raises(ValidationError):

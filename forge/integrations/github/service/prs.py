@@ -39,13 +39,23 @@ class GitHubPRsMixin(GitHubMixinBase):
         url = f"{self.BASE_URL}/repos/{repo_name}/pulls"
         if not body:
             body = f"Merging changes from {source_branch} into {target_branch}"
-        payload = {"title": title, "head": source_branch, "base": target_branch, "body": body, "draft": draft}
-        response, _ = await self._make_request(url=url, params=payload, method=RequestMethod.POST)
+        payload = {
+            "title": title,
+            "head": source_branch,
+            "base": target_branch,
+            "body": body,
+            "draft": draft,
+        }
+        response, _ = await self._make_request(
+            url=url, params=payload, method=RequestMethod.POST
+        )
         if labels and len(labels) > 0:
             pr_number = response["number"]
             labels_url = f"{self.BASE_URL}/repos/{repo_name}/issues/{pr_number}/labels"
             labels_payload = {"labels": labels}
-            await self._make_request(url=labels_url, params=labels_payload, method=RequestMethod.POST)
+            await self._make_request(
+                url=labels_url, params=labels_payload, method=RequestMethod.POST
+            )
         return response["html_url"]
 
     async def get_pr_details(self, repository: str, pr_number: int) -> dict:

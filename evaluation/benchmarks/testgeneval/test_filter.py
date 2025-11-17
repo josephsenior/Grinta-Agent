@@ -1,11 +1,19 @@
 import ast
 import re
 from evaluation.benchmarks.testgeneval.constants import Status as TestStatus
-from evaluation.benchmarks.testgeneval.log_parsers import MAP_REPO_TO_PARSER, parse_log_pytest
+from evaluation.benchmarks.testgeneval.log_parsers import (
+    MAP_REPO_TO_PARSER,
+    parse_log_pytest,
+)
 
 
 def indent_text(text, indent_level):
-    return "\n".join((" " * indent_level + line if line.strip() else line for line in text.split("\n")))
+    return "\n".join(
+        (
+            " " * indent_level + line if line.strip() else line
+            for line in text.split("\n")
+        )
+    )
 
 
 def extract_preamble_classes_and_functions(code):
@@ -20,10 +28,16 @@ def extract_preamble_classes_and_functions(code):
         class_match = patterns["class"].search(code, current_position)
         method_match = patterns["method"].search(code, current_position)
 
-        if class_match and (not method_match or class_match.start() < method_match.start()):
-            current_position = _process_class_match(code, class_match, classes, patterns)
+        if class_match and (
+            not method_match or class_match.start() < method_match.start()
+        ):
+            current_position = _process_class_match(
+                code, class_match, classes, patterns
+            )
         elif method_match:
-            current_position = _process_method_match(code, method_match, test_functions, patterns, class_match)
+            current_position = _process_method_match(
+                code, method_match, test_functions, patterns, class_match
+            )
         else:
             break
 
@@ -38,7 +52,9 @@ def _compile_regex_patterns():
             "(?P<decorators>(?:^@[^\\r\\n]*(?:\\r?\\n(?:[ \\t]+[^\\r\\n]*|^\\)[^\\r\\n]*)*)*\\r?\\n)*?)^class\\s+([\\w]+)(?:\\([^)]*\\))?:",
             re.MULTILINE,
         ),
-        "method": re.compile("(^(\\s*@.*\\s*)*^\\s*def\\s+[\\w_]+\\(.*\\):)", re.MULTILINE),
+        "method": re.compile(
+            "(^(\\s*@.*\\s*)*^\\s*def\\s+[\\w_]+\\(.*\\):)", re.MULTILINE
+        ),
         "function": re.compile(
             "(?P<decorators>(?:^@[^\\r\\n]*(?:\\r?\\n(?:[ \\t]+[^\\r\\n]*|^\\)[^\\r\\n]*)*)*\\r?\\n)*?)^def\\s+([\\w_]+)\\(.*\\):",
             re.MULTILINE,
@@ -60,17 +76,23 @@ def _extract_class_body(code: str, start_index: int) -> tuple[str, int]:
     for i, line in enumerate(lines[1:], start=1):
         if _should_break_class_extraction(line, start_indent, inside_multiline_comment):
             break
-        inside_multiline_comment = _update_multiline_comment_state(line, inside_multiline_comment)
+        inside_multiline_comment = _update_multiline_comment_state(
+            line, inside_multiline_comment
+        )
         end_index = start_index + len("\n".join(lines[: i + 1])) + 1
 
     return (code[start_index:end_index], end_index)
 
 
-def _should_break_class_extraction(line: str, start_indent: int, inside_multiline_comment: bool) -> bool:
+def _should_break_class_extraction(
+    line: str, start_indent: int, inside_multiline_comment: bool
+) -> bool:
     """Check if class extraction should break at this line."""
     stripped_line = line.strip()
     current_indent = len(line) - len(line.lstrip())
-    return not inside_multiline_comment and (current_indent <= start_indent and stripped_line)
+    return not inside_multiline_comment and (
+        current_indent <= start_indent and stripped_line
+    )
 
 
 def _update_multiline_comment_state(line: str, inside_multiline_comment: bool) -> bool:
@@ -105,34 +127,48 @@ def _extract_class_methods(class_body: str, class_name: str, method_pattern) -> 
             _ = class_name + class_body[:method_start]
             set_prefix = True
 
-        method_body = _extract_method_body(class_body, method_start, method_name, method_pattern)
+        method_body = _extract_method_body(
+            class_body, method_start, method_name, method_pattern
+        )
         methods.append((method_name, method_body))
 
     return methods
 
 
-def _extract_method_body(class_body: str, method_start: int, method_name: str, method_pattern) -> str:
+def _extract_method_body(
+    class_body: str, method_start: int, method_name: str, method_pattern
+) -> str:
     """Extract the body of a method."""
-    if next_method := method_pattern.search(class_body, method_start + len(method_name)):
-        return class_body[method_start: next_method.start()]
+    if next_method := method_pattern.search(
+        class_body, method_start + len(method_name)
+    ):
+        return class_body[method_start : next_method.start()]
     else:
         return class_body[method_start:]
 
 
-def _process_method_match(code: str, method_match, test_functions: list, patterns: dict, class_match) -> int:
+def _process_method_match(
+    code: str, method_match, test_functions: list, patterns: dict, class_match
+) -> int:
     """Process a method/function match and extract its body."""
     function_name = method_match.group(0)
     start_idx = method_match.start()
-    function_body = _extract_function_body(code, start_idx, function_name, patterns["function"], class_match)
+    function_body = _extract_function_body(
+        code, start_idx, function_name, patterns["function"], class_match
+    )
     test_functions.append((function_body, start_idx))
     return start_idx + len(function_body)
 
 
-def _extract_function_body(code: str, start_idx: int, function_name: str, function_pattern, class_match) -> str:
+def _extract_function_body(
+    code: str, start_idx: int, function_name: str, function_pattern, class_match
+) -> str:
     """Extract the body of a function."""
     lines = code[start_idx:].split("\n")
     len(lines[0]) - len(lines[0].lstrip())
-    if next_function := _find_next_function(code, start_idx, function_name, function_pattern, class_match):
+    if next_function := _find_next_function(
+        code, start_idx, function_name, function_pattern, class_match
+    ):
         next_function_start = next_function.start()
         if class_match and next_function_start > class_match.start():
             next_function_start = class_match.start()
@@ -141,7 +177,9 @@ def _extract_function_body(code: str, start_idx: int, function_name: str, functi
         return code[start_idx:]
 
 
-def _find_next_function(code: str, start_idx: int, function_name: str, function_pattern, class_match):
+def _find_next_function(
+    code: str, start_idx: int, function_name: str, function_pattern, class_match
+):
     """Find the next function in the code."""
     next_function = function_pattern.search(code, start_idx + len(function_name))
 
@@ -150,7 +188,9 @@ def _find_next_function(code: str, start_idx: int, function_name: str, function_
         and (class_match is None or next_function.start() < class_match.start())
         and not _is_function_at_same_level(code, next_function, start_idx)
     ):
-        next_function = function_pattern.search(code, next_function.start() + len(next_function[0]))
+        next_function = function_pattern.search(
+            code, next_function.start() + len(next_function[0])
+        )
 
     return next_function
 
@@ -179,7 +219,9 @@ def _determine_preamble(code: str, classes: list, test_functions: list) -> str:
         return code
 
 
-def filter_passing_tests(test_content: str, test_output: str, repo: str) -> tuple[str, list[str], list[str]]:
+def filter_passing_tests(
+    test_content: str, test_output: str, repo: str
+) -> tuple[str, list[str], list[str]]:
     """Filter tests based on their execution results.
 
     Returns:
@@ -202,7 +244,9 @@ def filter_passing_tests(test_content: str, test_output: str, repo: str) -> tupl
     filtered_functions = _filter_test_functions(functions, failing_tests)
 
     # Reconstruct filtered content
-    filtered_content = _reconstruct_filtered_content(preamble, filtered_classes, filtered_functions)
+    filtered_content = _reconstruct_filtered_content(
+        preamble, filtered_classes, filtered_functions
+    )
 
     return (filtered_content, passing_tests, failing_tests)
 
@@ -237,9 +281,9 @@ def _extract_method_name(method_name: str) -> str:
 
 def _is_method_passing(method_name: str, failing_tests: list[str]) -> bool:
     """Check if a method is passing (not in failing tests)."""
-    return all(method_name not in failing_test for failing_test in failing_tests) and all(
-        failing_test not in method_name for failing_test in failing_tests
-    )
+    return all(
+        method_name not in failing_test for failing_test in failing_tests
+    ) and all(failing_test not in method_name for failing_test in failing_tests)
 
 
 def _filter_test_functions(functions: list, failing_tests: list[str]) -> list:
@@ -259,7 +303,9 @@ def _extract_function_name(func_body: str) -> str:
     return func_body.split("def ")[1].split("(")[0].strip()
 
 
-def _reconstruct_filtered_content(preamble: str, filtered_classes: list, filtered_functions: list) -> str:
+def _reconstruct_filtered_content(
+    preamble: str, filtered_classes: list, filtered_functions: list
+) -> str:
     """Reconstruct the filtered test content."""
     content_parts = [preamble]
 
@@ -281,7 +327,9 @@ def _build_class_content(class_name: str, methods: list) -> str:
     return class_content
 
 
-def filter_tests(test_content: str, test_output: str, repo: str) -> tuple[str, list[str], list[str]]:
+def filter_tests(
+    test_content: str, test_output: str, repo: str
+) -> tuple[str, list[str], list[str]]:
     """Filter tests using AST parsing to remove failing test functions from the test file.
 
     Non-test functions (e.g. setup or helper methods) and classes (even if all test methods are failing)
@@ -303,7 +351,9 @@ def filter_tests(test_content: str, test_output: str, repo: str) -> tuple[str, l
         return filter_passing_tests(test_content, test_output, repo)
 
 
-def _filter_tests_with_ast(test_content: str, test_output: str, repo: str) -> tuple[str, list[str], list[str]]:
+def _filter_tests_with_ast(
+    test_content: str, test_output: str, repo: str
+) -> tuple[str, list[str], list[str]]:
     """Filter tests using AST parsing."""
     tree = ast.parse(test_content)
     test_results = _parse_test_results(test_output, repo)
@@ -323,10 +373,20 @@ def _parse_test_results(test_output: str, repo: str) -> dict[str, str]:
     return parser(test_output)
 
 
-def _categorize_test_results(test_results: dict[str, str]) -> tuple[list[str], list[str]]:
+def _categorize_test_results(
+    test_results: dict[str, str],
+) -> tuple[list[str], list[str]]:
     """Categorize test results into passing and failing."""
-    passing_tests = [name for name, status in test_results.items() if status == TestStatus.PASSED.value]
-    failing_tests = [name for name, status in test_results.items() if status != TestStatus.PASSED.value]
+    passing_tests = [
+        name
+        for name, status in test_results.items()
+        if status == TestStatus.PASSED.value
+    ]
+    failing_tests = [
+        name
+        for name, status in test_results.items()
+        if status != TestStatus.PASSED.value
+    ]
     return passing_tests, failing_tests
 
 
@@ -357,7 +417,9 @@ def _filter_ast_nodes(body: list, is_failing: callable) -> list:
     return new_body
 
 
-def _should_skip_function(node: ast.FunctionDef | ast.AsyncFunctionDef, is_failing: callable) -> bool:
+def _should_skip_function(
+    node: ast.FunctionDef | ast.AsyncFunctionDef, is_failing: callable
+) -> bool:
     """Check if a function should be skipped."""
     return node.name.startswith("test") and is_failing(node.name)
 
@@ -379,7 +441,9 @@ def _filter_class_node(node: ast.ClassDef, is_failing: callable) -> ast.ClassDef
 
 
 def _should_skip_class_method(
-    subnode: ast.FunctionDef | ast.AsyncFunctionDef, class_name: str, is_failing: callable
+    subnode: ast.FunctionDef | ast.AsyncFunctionDef,
+    class_name: str,
+    is_failing: callable,
 ) -> bool:
     """Check if a class method should be skipped."""
     qualified_name = f"{class_name}.{subnode.name}"

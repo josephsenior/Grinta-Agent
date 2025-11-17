@@ -5,7 +5,12 @@ import tempfile
 from typing import Any
 import pandas as pd
 from datasets import load_dataset
-from evaluation.benchmarks.agent_bench.helper import FAKE_RESPONSES, INST_SUFFIXES, compare_results, create_sh_file
+from evaluation.benchmarks.agent_bench.helper import (
+    FAKE_RESPONSES,
+    INST_SUFFIXES,
+    compare_results,
+    create_sh_file,
+)
 from evaluation.utils.shared import (
     EvalMetadata,
     EvalOutput,
@@ -133,7 +138,9 @@ def _run_script_command(runtime: Runtime, command: str, script_name: str) -> str
     return obs.content
 
 
-def _setup_logging(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool) -> None:
+def _setup_logging(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool
+) -> None:
     """Setup logging for the evaluation instance."""
     if reset_logger:
         log_dir = os.path.join(metadata.eval_output_dir, "infer_logs")
@@ -145,15 +152,16 @@ def _setup_logging(instance: pd.Series, metadata: EvalMetadata, reset_logger: bo
 def _build_instruction(instance: pd.Series, metadata: EvalMetadata) -> str:
     """Build the instruction string for the agent."""
     instruction = f"Please fix the following issue.\nIMPORTANT: You should ONLY interact with the environment provided to you AND NEVER ASK FOR HUMAN HELP.\nPlease encapsulate your final answer (answer ONLY) within <solution> and </solution>.\nFor example: The answer to the question is <solution> 42 </solution>.\n# Problem \n{
-        instance.description}\n\n"
-    instruction += (
-        "IMPORTANT: You should ONLY interact with the environment provided to you AND NEVER ASK FOR HUMAN HELP.\n"
-    )
+        instance.description
+    }\n\n"
+    instruction += "IMPORTANT: You should ONLY interact with the environment provided to you AND NEVER ASK FOR HUMAN HELP.\n"
     instruction += INST_SUFFIXES[metadata.agent_class]
     return instruction
 
 
-def _run_agent_evaluation(config, instruction: str, metadata: EvalMetadata, runtime: Runtime) -> State:
+def _run_agent_evaluation(
+    config, instruction: str, metadata: EvalMetadata, runtime: Runtime
+) -> State:
     """Run the agent evaluation and return the state."""
     state: State | None = asyncio.run(
         run_controller(
@@ -199,12 +207,20 @@ def _extract_agent_answer_from_history(state: State) -> str:
 
 
 def _create_eval_output(
-    instance: pd.Series, metadata: EvalMetadata, instruction: str, state: State, agent_answer: str, final_ans: str
+    instance: pd.Series,
+    metadata: EvalMetadata,
+    instruction: str,
+    state: State,
+    agent_answer: str,
+    final_ans: str,
 ) -> EvalOutput:
     """Create the final evaluation output."""
     comparison_method = instance.comparison_method
     logger.info(
-        "Final message: %s | Ground truth: %s | Comparison method: %s", agent_answer, final_ans, comparison_method
+        "Final message: %s | Ground truth: %s | Comparison method: %s",
+        agent_answer,
+        final_ans,
+        comparison_method,
     )
 
     test_result = compare_results(comparison_method, agent_answer, final_ans)
@@ -228,7 +244,9 @@ def _create_eval_output(
     )
 
 
-def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True) -> EvalOutput:
+def process_instance(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True
+) -> EvalOutput:
     """Process a single evaluation instance."""
     config = get_config(metadata)
 
@@ -256,7 +274,9 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
         agent_answer = _extract_agent_answer_from_history(state)
 
     # Create and return evaluation output
-    return _create_eval_output(instance, metadata, instruction, state, agent_answer, final_ans)
+    return _create_eval_output(
+        instance, metadata, instruction, state, agent_answer, final_ans
+    )
 
 
 if __name__ == "__main__":
@@ -270,8 +290,15 @@ if __name__ == "__main__":
     if llm_config is None:
         raise ValueError(f"Could not find LLM config: --llm_config {args.llm_config}")
     metadata = make_metadata(
-        llm_config, "AgentBench-OS", args.agent_cls, args.max_iterations, args.eval_note, args.eval_output_dir
+        llm_config,
+        "AgentBench-OS",
+        args.agent_cls,
+        args.max_iterations,
+        args.eval_note,
+        args.eval_output_dir,
     )
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
     instances = prepare_dataset(agent_bench_tests, output_file, args.eval_n_limit)
-    run_evaluation(instances, metadata, output_file, args.eval_num_workers, process_instance)
+    run_evaluation(
+        instances, metadata, output_file, args.eval_num_workers, process_instance
+    )

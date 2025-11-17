@@ -1,34 +1,16 @@
-"""Enumerations describing the lifecycle states of a Forge agent."""
+"""Deprecated shim for legacy imports."""
 
-from enum import Enum
+from __future__ import annotations
 
+import warnings
 
-class AgentState(str, Enum):
-    """Enum defining all possible agent states.
-    
-    Represents the current operational state of the agent.
-    """
-    LOADING = "loading"
-    "The agent is loading.\n    "
-    RUNNING = "running"
-    "The agent is running.\n    "
-    AWAITING_USER_INPUT = "awaiting_user_input"
-    "The agent is awaiting user input.\n    "
-    PAUSED = "paused"
-    "The agent is paused.\n    "
-    STOPPED = "stopped"
-    "The agent is stopped.\n    "
-    FINISHED = "finished"
-    "The agent is finished with the current task.\n    "
-    REJECTED = "rejected"
-    "The agent rejects the task.\n    "
-    ERROR = "error"
-    "An error occurred during the task.\n    "
-    AWAITING_USER_CONFIRMATION = "awaiting_user_confirmation"
-    "The agent is awaiting user confirmation.\n    "
-    USER_CONFIRMED = "user_confirmed"
-    "The user confirmed the agent's action.\n    "
-    USER_REJECTED = "user_rejected"
-    "The user rejected the agent's action.\n    "
-    RATE_LIMITED = "rate_limited"
-    "The agent is rate limited.\n    "
+warnings.warn(
+    "Importing AgentState from 'forge.core.schema.agent' is deprecated. "
+    "Import from 'forge.core.schemas.enums' instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from forge.core.schemas.enums import AgentState
+
+__all__ = ["AgentState"]

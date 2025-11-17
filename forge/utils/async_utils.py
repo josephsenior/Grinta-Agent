@@ -4,10 +4,10 @@ import asyncio
 from collections.abc import Coroutine, Iterable
 from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
-from typing import Callable
+from typing import Any, Awaitable, Callable
 
 GENERAL_TIMEOUT: int = 15
-EXECUTOR = ThreadPoolExecutor()
+EXECUTOR: ThreadPoolExecutor = ThreadPoolExecutor()
 
 
 async def call_sync_from_async(fn: Callable, *args, **kwargs):
@@ -21,7 +21,12 @@ async def call_sync_from_async(fn: Callable, *args, **kwargs):
     return await coro
 
 
-def call_async_from_sync(corofn: Callable, timeout: float = GENERAL_TIMEOUT, *args, **kwargs):
+def call_async_from_sync(
+    corofn: Callable[..., Awaitable[Any]] | None,
+    timeout: float = GENERAL_TIMEOUT,
+    *args,
+    **kwargs,
+) -> Any:
     """Shorthand for running a coroutine in the default background thread pool executor.
 
     and awaiting the result.
@@ -54,12 +59,27 @@ def call_async_from_sync(corofn: Callable, timeout: float = GENERAL_TIMEOUT, *ar
     return future.result()
 
 
-async def call_coro_in_bg_thread(corofn: Callable, timeout: float = GENERAL_TIMEOUT, *args, **kwargs) -> None:
-    """Function for running a coroutine in a background thread."""
-    await call_sync_from_async(call_async_from_sync, corofn, timeout, *args, **kwargs)
+async def call_coro_in_bg_thread(
+    corofn: Callable[..., Awaitable[Any]] | None,
+    timeout: float = GENERAL_TIMEOUT,
+    *args,
+    **kwargs,
+) -> None:
+    """Function for running a coroutine in a background thread.
+
+    Resolve the delegate at call-time from the canonical module to ensure
+    test monkeypatches apply deterministically even under import edge-cases.
+    """
+    import importlib
+
+    mod = importlib.import_module("forge.utils.async_utils")
+    delegate = getattr(mod, "call_sync_from_async")
+    await delegate(call_async_from_sync, corofn, timeout, *args, **kwargs)
 
 
-async def wait_all(iterable: Iterable[Coroutine], timeout: int = GENERAL_TIMEOUT) -> list:
+async def wait_all(
+    iterable: Iterable[Coroutine], timeout: int = GENERAL_TIMEOUT
+) -> list:
     """Shorthand for waiting for all the coroutines in the iterable given in parallel.
 
     Creates a task for each coroutine. Returns a list of results in the original order. If any single task
@@ -100,7 +120,9 @@ class AsyncException(Exception):
         return "\n".join(str(e) for e in self.exceptions)
 
 
-async def run_in_loop(coro: Coroutine, loop: asyncio.AbstractEventLoop, timeout: float = GENERAL_TIMEOUT):
+async def run_in_loop(
+    coro: Coroutine, loop: asyncio.AbstractEventLoop, timeout: float = GENERAL_TIMEOUT
+):
     """Run `coro` on `loop`, using thread handoff when switching event loops."""
     running_loop = asyncio.get_running_loop()
     if running_loop == loop:

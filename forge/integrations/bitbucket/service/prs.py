@@ -43,7 +43,9 @@ class BitBucketPRsMixin(BitBucketMixinBase):
             "close_source_branch": False,
             "draft": draft,
         }
-        data, _ = await self._make_request(url=url, params=payload, method=RequestMethod.POST)
+        data, _ = await self._make_request(
+            url=url, params=payload, method=RequestMethod.POST
+        )
         return data.get("links", {}).get("html", {}).get("href", "")
 
     async def get_pr_details(self, repository: str, pr_number: int) -> dict:

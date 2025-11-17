@@ -3,7 +3,6 @@ from typing import Any
 
 
 class TaskState:
-
     def __init__(
         self,
         finished: bool = False,
@@ -43,7 +42,6 @@ class FeedbackType(enum.Enum):
 
 
 class StepOutput:
-
     def __init__(
         self,
         observation: str = None,
@@ -67,9 +65,7 @@ class StepOutput:
             output += "Your answer is wrong.\n"
         if self.turn_info is not None:
             n_steps_left, n_propose_solution_left = self.turn_info
-            output += (
-                f"You have {n_steps_left} steps left and {n_propose_solution_left} chances to propose solution left.\n"
-            )
+            output += f"You have {n_steps_left} steps left and {n_propose_solution_left} chances to propose solution left.\n"
             if n_steps_left <= 1:
                 output += "You should take the last step to propose a solution.\n"
         return output

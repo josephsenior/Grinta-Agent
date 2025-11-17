@@ -23,10 +23,12 @@ class Test(BaseIntegrationTest):
         assert_and_raise(obs.exit_code == 0, f"Failed to run command: {obs.content}")
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_file_path = os.path.join(temp_dir, "index.html")
-            with open(temp_file_path, "w", encoding='utf-8') as f:
+            with open(temp_file_path, "w", encoding="utf-8") as f:
                 f.write(HTML_FILE)
             runtime.copy_to(temp_file_path, "/tmp/server")  # nosec B108 - Safe: test environment
-        action = CmdRunAction(command="cd /tmp/server && nohup python3 -m http.server 8000 &")
+        action = CmdRunAction(
+            command="cd /tmp/server && nohup python3 -m http.server 8000 &"
+        )
         obs = runtime.run_action(action)
 
     @classmethod
@@ -36,13 +38,16 @@ class Test(BaseIntegrationTest):
         message_actions = [
             event
             for event in histories
-            if isinstance(event, (MessageAction, AgentFinishAction, AgentDelegateObservation))
+            if isinstance(
+                event, (MessageAction, AgentFinishAction, AgentDelegateObservation)
+            )
         ]
         logger.debug("Total message-like events: %s", len(message_actions))
         for event in message_actions:
             try:
                 if isinstance(event, AgentDelegateObservation) or (
-                    not isinstance(event, AgentFinishAction) and isinstance(event, MessageAction)
+                    not isinstance(event, AgentFinishAction)
+                    and isinstance(event, MessageAction)
                 ):
                     content = event.content
                 elif isinstance(event, AgentFinishAction):
@@ -54,9 +59,12 @@ class Test(BaseIntegrationTest):
                     return TestResult(success=True)
             except Exception as e:
                 logger.error("Error processing event: %s", e)
-        logger.debug("Total messages: %s. Messages: %s", len(message_actions), message_actions)
+        logger.debug(
+            "Total messages: %s. Messages: %s", len(message_actions), message_actions
+        )
         return TestResult(
             success=False,
             reason=f"The answer is not found in any message. Total messages: {
-                len(message_actions)}.",
+                len(message_actions)
+            }.",
         )

@@ -15,7 +15,10 @@ from forge.server.session.conversation import ServerConversation
 from forge.server.utils import get_conversation
 from forge.utils.async_utils import call_sync_from_async
 
-app = APIRouter(prefix="/api/conversations/{conversation_id}/feedback", dependencies=get_dependencies())
+app = APIRouter(
+    prefix="/api/conversations/{conversation_id}/feedback",
+    dependencies=get_dependencies(),
+)
 
 
 @app.post("/submit-feedback")
@@ -63,7 +66,9 @@ async def submit_feedback(
 
     """
     body = await request.json()
-    async_store = AsyncEventStoreWrapper(conversation.event_stream, filter=EventFilter(exclude_hidden=True))
+    async_store = AsyncEventStoreWrapper(
+        conversation.event_stream, filter=EventFilter(exclude_hidden=True)
+    )
     trajectory = []
     async for event in async_store:
         trajectory.append(event_to_dict(event))

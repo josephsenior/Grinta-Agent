@@ -108,4 +108,3 @@ def test_parse_default_diff_edits() -> None:
         (None, 2, "first new"),
         (None, 3, "second new"),
     ]
-

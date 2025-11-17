@@ -19,7 +19,7 @@ class InMemoryFileStore(FileStore):
 
     def write(self, path: str, contents: str | bytes) -> None:
         """Write to in-memory file store.
-        
+
         Args:
             path: File path
             contents: Content to write
@@ -31,13 +31,13 @@ class InMemoryFileStore(FileStore):
 
     def read(self, path: str) -> str:
         """Read from in-memory file store.
-        
+
         Args:
             path: File path
-            
+
         Returns:
             File content
-            
+
         Raises:
             FileNotFoundError: If file doesn't exist
 
@@ -48,10 +48,10 @@ class InMemoryFileStore(FileStore):
 
     def list(self, path: str) -> list[str]:
         """List files/directories in memory at given path.
-        
+
         Args:
             path: Directory path
-            
+
         Returns:
             List of file/directory names
 
@@ -78,7 +78,7 @@ class InMemoryFileStore(FileStore):
 
     def delete(self, path: str) -> None:
         """Delete from in-memory file store.
-        
+
         Args:
             path: Path to delete (file or directory prefix)
 
@@ -87,6 +87,6 @@ class InMemoryFileStore(FileStore):
             keys_to_delete = [key for key in self.files if key.startswith(path)]
             for key in keys_to_delete:
                 del self.files[key]
-            logger.debug("Cleared in-memory file store: %s", path)
+            logger.info("Cleared in-memory file store: %s", path)
         except Exception as e:
             logger.error("Error clearing in-memory file store: %s", str(e))

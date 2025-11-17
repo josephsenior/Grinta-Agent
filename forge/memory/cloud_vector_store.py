@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 import os
 import time
+import asyncio
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
@@ -35,7 +36,9 @@ class VectorBackend(ABC):
         """Add a document to the vector store."""
 
     @abstractmethod
-    def search(self, query: str, k: int = 5, filter_metadata: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    def search(
+        self, query: str, k: int = 5, filter_metadata: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         """Search for similar documents."""
 
     @abstractmethod
@@ -46,7 +49,11 @@ class VectorBackend(ABC):
 class ChromaDBBackend(VectorBackend):
     """Local ChromaDB backend - runs on weak PCs, good for development."""
 
-    def __init__(self, collection_name: str = "FORGE_memory", persist_directory: Path | None = None) -> None:
+    def __init__(
+        self,
+        collection_name: str = "FORGE_memory",
+        persist_directory: Path | None = None,
+    ) -> None:
         """Initialize ChromaDB local vector store with sentence embeddings.
 
         Sets up ChromaDB persistent client with SentenceTransformer embeddings for local development.
@@ -86,7 +93,10 @@ class ChromaDBBackend(VectorBackend):
             from chromadb.config import Settings
             from sentence_transformers import SentenceTransformer
         except ImportError as e:
-            msg = "ChromaDB backend requires: pip install chromadb sentence-transformers\n" f"Original error: {e}"
+            msg = (
+                "ChromaDB backend requires: pip install chromadb sentence-transformers\n"
+                f"Original error: {e}"
+            )
             raise ImportError(
                 msg,
             ) from e
@@ -107,7 +117,9 @@ class ChromaDBBackend(VectorBackend):
 
         try:
             self.collection = self.client.get_collection(name=collection_name)
-            logger.info(f"Loaded ChromaDB collection with {self.collection.count()} documents")
+            logger.info(
+                f"Loaded ChromaDB collection with {self.collection.count()} documents"
+            )
         except Exception:
             self.collection = self.client.create_collection(
                 name=collection_name,
@@ -144,7 +156,9 @@ class ChromaDBBackend(VectorBackend):
             metadatas=[doc_metadata],
         )
 
-    def search(self, query: str, k: int = 5, filter_metadata: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    def search(
+        self, query: str, k: int = 5, filter_metadata: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         """Search the collection for the most similar documents to the query."""
         if self.collection.count() == 0:
             return []
@@ -166,6 +180,29 @@ class ChromaDBBackend(VectorBackend):
             }
             for i in range(len(results["ids"][0]))
         ]
+
+    async def async_add(
+        self,
+        step_id: str,
+        role: str,
+        artifact_hash: str | None,
+        rationale: str | None,
+        content_text: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Non-blocking add using a thread to encode and persist."""
+        await asyncio.to_thread(
+            self.add, step_id, role, artifact_hash, rationale, content_text, metadata
+        )
+
+    async def async_search(
+        self,
+        query: str,
+        k: int = 5,
+        filter_metadata: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Non-blocking search wrapper."""
+        return await asyncio.to_thread(self.search, query, k, filter_metadata)
 
     def stats(self) -> dict[str, Any]:
         """Return metadata about the local ChromaDB collection and embedding model."""
@@ -214,15 +251,22 @@ class ChromaDBBackend(VectorBackend):
 
 
 class QdrantCloudBackend(VectorBackend):
-    """Qdrant Cloud backend - free tier available, production-ready."""
+    """Qdrant Cloud backend - free tier available, production-ready with native async support."""
 
     def __init__(self, collection_name: str = "FORGE_memory") -> None:
         """Connect to Qdrant Cloud using credentials from the environment and ensure the collection exists."""
         try:
-            from qdrant_client import QdrantClient
-            from qdrant_client.http import models
+            from qdrant_client import QdrantClient  # type: ignore
+            try:
+                from qdrant_client import AsyncQdrantClient  # type: ignore
+            except Exception:
+                AsyncQdrantClient = None  # type: ignore[assignment]
+            from qdrant_client.http import models  # type: ignore
         except ImportError as e:
-            msg = "Qdrant backend requires: pip install qdrant-client\n" f"Original error: {e}"
+            msg = (
+                "Qdrant backend requires: pip install qdrant-client\n"
+                f"Original error: {e}"
+            )
             raise ImportError(
                 msg,
             ) from e
@@ -242,7 +286,13 @@ class QdrantCloudBackend(VectorBackend):
                 msg,
             )
 
+        # Initialize sync client and async client if available
         self.client = QdrantClient(url=qdrant_url, api_key=qdrant_key)
+        self.async_client = (
+            AsyncQdrantClient(url=qdrant_url, api_key=qdrant_key)
+            if "AsyncQdrantClient" in globals() and AsyncQdrantClient is not None
+            else None
+        )
         self.collection_name = collection_name
         self.models = models
 
@@ -300,7 +350,9 @@ class QdrantCloudBackend(VectorBackend):
             ],
         )
 
-    def search(self, query: str, k: int = 5, filter_metadata: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    def search(
+        self, query: str, k: int = 5, filter_metadata: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         """Execute a similarity search against the Qdrant collection."""
         query_embedding = self._get_embedding(query)
 
@@ -334,6 +386,105 @@ class QdrantCloudBackend(VectorBackend):
             for hit in results
         ]
 
+    async def async_add(
+        self,
+        step_id: str,
+        role: str,
+        artifact_hash: str | None,
+        rationale: str | None,
+        content_text: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Native async add using AsyncQdrantClient when available; otherwise offload sync call."""
+        text = self._prepare_text(rationale, content_text)
+        # Use fully async embedding generation with aiohttp
+        embedding = await self._get_embedding_async(text)
+
+        payload = {
+            "step_id": step_id,
+            "role": role,
+            "text": text[:2000],
+            "timestamp": time.time(),
+            **(metadata or {}),
+        }
+        if artifact_hash:
+            payload["artifact_hash"] = artifact_hash
+
+        # If async client available, use it; otherwise offload sync upsert
+        if self.async_client is not None:
+            await self.async_client.upsert(
+                collection_name=self.collection_name,
+                points=[
+                    self.models.PointStruct(
+                        id=hash(step_id) & 0x7FFFFFFF,
+                        vector=embedding,
+                        payload=payload,
+                    ),
+                ],
+            )
+        else:
+            await asyncio.to_thread(
+                self.client.upsert,
+                collection_name=self.collection_name,
+                points=[
+                    self.models.PointStruct(
+                        id=hash(step_id) & 0x7FFFFFFF,
+                        vector=embedding,
+                        payload=payload,
+                    ),
+                ],
+            )
+
+    async def async_search(
+        self,
+        query: str,
+        k: int = 5,
+        filter_metadata: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Native async search using AsyncQdrantClient when available; otherwise offload sync search."""
+        # Use fully async embedding generation
+        query_embedding = await self._get_embedding_async(query)
+
+        # Build filter if provided
+        qdrant_filter = None
+        if filter_metadata:
+            qdrant_filter = self.models.Filter(
+                must=[
+                    self.models.FieldCondition(
+                        key=key,
+                        match=self.models.MatchValue(value=value),
+                    )
+                    for key, value in filter_metadata.items()
+                ],
+            )
+
+        # Execute search
+        if self.async_client is not None:
+            results = await self.async_client.search(
+                collection_name=self.collection_name,
+                query_vector=query_embedding,
+                limit=k,
+                query_filter=qdrant_filter,
+            )
+        else:
+            results = await asyncio.to_thread(
+                self.client.search,
+                collection_name=self.collection_name,
+                query_vector=query_embedding,
+                limit=k,
+                query_filter=qdrant_filter,
+            )
+
+        return [
+            {
+                "step_id": hit.payload.get("step_id"),
+                "score": hit.score,
+                "excerpt": hit.payload.get("text", ""),
+                **{k: v for k, v in hit.payload.items() if k not in ["text"]},
+            }
+            for hit in results
+        ]
+
     def stats(self) -> dict[str, Any]:
         """Return summary statistics for the Qdrant collection."""
         info = self.client.get_collection(self.collection_name)
@@ -344,22 +495,65 @@ class QdrantCloudBackend(VectorBackend):
         }
 
     def _get_embedding(self, text: str) -> list[float]:
-        """Get embedding using HuggingFace Inference API or fallback to local."""
+        """Get embedding using HuggingFace Inference API or fallback to local.
+
+        Note: This method is CPU/IO-bound and should be called via asyncio.to_thread
+        in async contexts to avoid blocking the event loop.
+        """
         if self.hf_api_key:
             try:
                 import requests
 
                 api_url = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-mpnet-base-v2"
                 headers = {"Authorization": f"Bearer {self.hf_api_key}"}
-                response = requests.post(api_url, headers=headers, json={"inputs": text[:512]}, timeout=30)
+                response = requests.post(
+                    api_url, headers=headers, json={"inputs": text[:512]}, timeout=30
+                )
 
                 if response.status_code == 200:
                     return response.json()
-                logger.warning(f"HF API error: {response.status_code}, falling back to local")
+                logger.warning(
+                    f"HF API error: {response.status_code}, falling back to local"
+                )
             except Exception as e:
                 logger.warning(f"HF API error: {e}, falling back to local")
 
         # Fallback to local embeddings
+        from sentence_transformers import SentenceTransformer
+
+        if not hasattr(self, "_local_model"):
+            self._local_model = SentenceTransformer("all-mpnet-base-v2")
+        return self._local_model.encode(text[:512], show_progress_bar=False).tolist()
+
+    async def _get_embedding_async(self, text: str) -> list[float]:
+        """Async wrapper for embedding generation using aiohttp for HF API calls."""
+        if self.hf_api_key:
+            try:
+                import aiohttp
+
+                api_url = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-mpnet-base-v2"
+                headers = {"Authorization": f"Bearer {self.hf_api_key}"}
+
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        api_url,
+                        headers=headers,
+                        json={"inputs": text[:512]},
+                        timeout=aiohttp.ClientTimeout(total=30),
+                    ) as response:
+                        if response.status == 200:
+                            return await response.json()
+                        logger.warning(
+                            f"HF API error: {response.status}, falling back to local"
+                        )
+            except Exception as e:
+                logger.warning(f"HF API async error: {e}, falling back to local")
+
+        # Fallback to local embeddings in thread (CPU-bound)
+        return await asyncio.to_thread(self._get_embedding_fallback, text)
+
+    def _get_embedding_fallback(self, text: str) -> list[float]:
+        """Local fallback for embedding generation (CPU-bound, run in thread)."""
         from sentence_transformers import SentenceTransformer
 
         if not hasattr(self, "_local_model"):
@@ -394,7 +588,9 @@ class AdaptiveVectorStore:
         store = AdaptiveVectorStore()  # Uses Qdrant Cloud automatically
     """
 
-    def __init__(self, collection_name: str = "FORGE_memory", force_backend: str | None = None) -> None:
+    def __init__(
+        self, collection_name: str = "FORGE_memory", force_backend: str | None = None
+    ) -> None:
         """Initialize with automatic backend detection.
 
         Args:
@@ -403,6 +599,7 @@ class AdaptiveVectorStore:
 
         """
         self.collection_name = collection_name
+        self.backend: VectorBackend
 
         # Determine backend
         if force_backend:
@@ -435,11 +632,44 @@ class AdaptiveVectorStore:
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Add a document to the vector store."""
-        return self.backend.add(step_id, role, artifact_hash, rationale, content_text, metadata)
+        return self.backend.add(
+            step_id, role, artifact_hash, rationale, content_text, metadata
+        )
 
-    def search(self, query: str, k: int = 5, filter_metadata: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    async def async_add(
+        self,
+        step_id: str,
+        role: str,
+        artifact_hash: str | None,
+        rationale: str | None,
+        content_text: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Async wrapper to add without blocking."""
+        if hasattr(self.backend, "async_add"):
+            return await self.backend.async_add(
+                step_id, role, artifact_hash, rationale, content_text, metadata
+            )
+        await asyncio.to_thread(
+            self.add, step_id, role, artifact_hash, rationale, content_text, metadata
+        )
+
+    def search(
+        self, query: str, k: int = 5, filter_metadata: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         """Search for similar documents."""
         return self.backend.search(query, k, filter_metadata)
+
+    async def async_search(
+        self,
+        query: str,
+        k: int = 5,
+        filter_metadata: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Async wrapper for search."""
+        if hasattr(self.backend, "async_search"):
+            return await self.backend.async_search(query, k, filter_metadata)
+        return await asyncio.to_thread(self.search, query, k, filter_metadata)
 
     def stats(self) -> dict[str, Any]:
         """Get statistics about the vector store."""
@@ -459,7 +689,14 @@ class VectorMemoryStore:
         )
         self._store = AdaptiveVectorStore()
 
-    def add(self, step_id: str, role: str, artifact_hash: str | None, rationale: str | None, content_text: str) -> None:
+    def add(
+        self,
+        step_id: str,
+        role: str,
+        artifact_hash: str | None,
+        rationale: str | None,
+        content_text: str,
+    ) -> None:
         """Add a record (backward compatible interface)."""
         self._store.add(step_id, role, artifact_hash, rationale, content_text)
 
@@ -472,4 +709,9 @@ class VectorMemoryStore:
         return self._store.stats()
 
 
-__all__ = ["AdaptiveVectorStore", "ChromaDBBackend", "QdrantCloudBackend", "VectorMemoryStore"]
+__all__ = [
+    "AdaptiveVectorStore",
+    "ChromaDBBackend",
+    "QdrantCloudBackend",
+    "VectorMemoryStore",
+]

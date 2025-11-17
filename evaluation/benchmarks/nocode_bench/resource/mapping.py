@@ -10,7 +10,9 @@ import os
 from forge.core.logger import forge_logger as logger
 
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_RUNTIME_RESOURCE_FACTOR = int(os.environ.get("DEFAULT_RUNTIME_RESOURCE_FACTOR", 1))
+DEFAULT_RUNTIME_RESOURCE_FACTOR = int(
+    os.environ.get("DEFAULT_RUNTIME_RESOURCE_FACTOR", 1)
+)
 _global_resource_mapping: dict[str, dict[str, float]] = {}
 
 
@@ -20,7 +22,7 @@ def get_resource_mapping(dataset_name: str) -> dict[str, float]:
         if not os.path.exists(file_path):
             logger.info("Resource mapping for %s not found.", dataset_name)
             return None
-        with open(file_path, "r", encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             _global_resource_mapping[dataset_name] = json.load(f)
         logger.debug("Loaded resource mapping for %s", dataset_name)
     return _global_resource_mapping[dataset_name]

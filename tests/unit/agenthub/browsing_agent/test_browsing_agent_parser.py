@@ -1,5 +1,12 @@
+from __future__ import annotations
+
+from typing import Dict, List
+
 import pytest
-from forge.agenthub.browsing_agent.response_parser import BrowseInteractiveAction, BrowsingResponseParser
+from forge.agenthub.browsing_agent.response_parser import (
+    BrowseInteractiveAction,
+    BrowsingResponseParser,
+)
 
 
 @pytest.mark.parametrize(
@@ -20,7 +27,9 @@ from forge.agenthub.browsing_agent.response_parser import BrowseInteractiveActio
 )
 def test_parse_response(action_str: str, expected: str) -> None:
     parser = BrowsingResponseParser()
-    response = {"choices": [{"message": {"content": action_str}}]}
+    response: Dict[str, List[dict[str, dict[str, str | None]]]] = {
+        "choices": [{"message": {"content": action_str}}]
+    }
     result = parser.parse_response(response)
     assert result == expected
 
@@ -30,7 +39,12 @@ def test_parse_response(action_str: str, expected: str) -> None:
     [
         ("click('81')```", "click('81')", "", ""),
         ("```click('81')```", "click('81')", "", ""),
-        ("We need to perform a click\n```click('81')", "click('81')", "We need to perform a click", ""),
+        (
+            "We need to perform a click\n```click('81')",
+            "click('81')",
+            "We need to perform a click",
+            "",
+        ),
         (
             'Tell the user that the city was built in 1751.\n```send_msg_to_user("Based on the results of my search, the city was built in 1751.")',
             'send_msg_to_user("Based on the results of my search, the city was built in 1751.")',
@@ -58,7 +72,10 @@ def test_parse_response(action_str: str, expected: str) -> None:
     ],
 )
 def test_parse_action(
-    action_str: str, expected_browser_actions: str, expected_thought: str, expected_msg_content: str
+    action_str: str,
+    expected_browser_actions: str,
+    expected_thought: str,
+    expected_msg_content: str,
 ) -> None:
     parser = BrowsingResponseParser()
     action = parser.parse_action(action_str)

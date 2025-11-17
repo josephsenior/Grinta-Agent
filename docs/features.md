@@ -66,10 +66,11 @@ This page documents features that are implemented and available in Forge.
 - Specialized runtime for action execution
 - Optimized for performance
 
-### Warm Server Pool
-- Pre-initialized runtime servers
-- Reduced startup latency
-- Configurable pool sizes and cleanup policies
+### Warm Runtime Pool
+- Reusable sandboxes keyed by runtime type + repo
+- Reduced startup latency via warm reuse
+- Per-key policies (`max_size`, `ttl_seconds`) from `ForgeConfig`
+- Telemetry for idle reclaims and capacity evictions
 
 ## Tools and Integrations
 
@@ -159,13 +160,34 @@ Specialized agents for domain-specific tasks:
 
 ### Logging and Monitoring
 - Comprehensive logging with configurable levels
-- Performance metrics and monitoring endpoints
+- Prometheus metrics and `/monitoring` endpoint
 - Error tracking and reporting
+- Runtime telemetry:
+  - `forge_runtime_watchdog_watched` (gauge by kind)
+  - `forge_runtime_pool_idle_reclaim_total`
+  - `forge_runtime_pool_eviction_total`
+  - `forge_runtime_scaling_signals_*` (overprovision, capacity_exhausted, saturation)
+- MetaSOP guardrail metrics:
+  - `metasop_guardrail_concurrency_total`
+  - `metasop_guardrail_concurrency_peak`
+  - `metasop_guardrail_runtime_avg_ms`
 
 ### Plugin System
 - Extensible architecture for custom tools and agents
 - Third-party integrations
 - Runtime plugin initialization
+
+## Eventing & Streaming
+
+### EventStream
+- Pub/sub with backpressure (drop_oldest/drop_newest/block)
+- Async durability via `DurableEventWriter`
+- Secret masking for tokens/credentials
+
+### Event Service (in‑process)
+- Start/Publish/Subscribe/Replay APIs
+- Structured envelopes with type and metadata
+- RPC metrics: totals, failures, latency
 
 ### Trajectory Recording
 - Session replay capabilities

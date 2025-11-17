@@ -1,4 +1,3 @@
-import json
 from forge.events.observation.commands import (
     CMD_OUTPUT_METADATA_PS1_REGEX,
     CMD_OUTPUT_PS1_BEGIN,
@@ -6,6 +5,10 @@ from forge.events.observation.commands import (
     CmdOutputMetadata,
     CmdOutputObservation,
 )
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[4]
 
 
 def test_ps1_metadata_format():
@@ -14,7 +17,9 @@ def test_ps1_metadata_format():
     print(prompt)
     assert prompt.startswith("\n###PS1JSON###\n")
     assert prompt.endswith("\n###PS1END###\n")
-    assert '\\"exit_code\\"' in prompt, "PS1 prompt should contain escaped double quotes"
+    assert '\\"exit_code\\"' in prompt, (
+        "PS1 prompt should contain escaped double quotes"
+    )
 
 
 def test_ps1_metadata_json_structure():
@@ -24,7 +29,14 @@ def test_ps1_metadata_json_structure():
     json_str = json_str.replace('\\"', '"')
     json_str = json_str.split("###PS1END###")[0].strip()
     data = json.loads(json_str)
-    expected_fields = {"pid", "exit_code", "username", "hostname", "working_dir", "py_interpreter_path"}
+    expected_fields = {
+        "pid",
+        "exit_code",
+        "username",
+        "hostname",
+        "working_dir",
+        "py_interpreter_path",
+    }
     assert set(data.keys()) == expected_fields
 
 
@@ -87,9 +99,8 @@ def test_ps1_metadata_parsing_additional_prefix():
         "py_interpreter_path": "/usr/bin/python",
     }
     ps1_str = f"\nThis is something that not part of the PS1 prompt\n\n###PS1JSON###\n{
-        json.dumps(
-            test_data,
-            indent=2)}\n###PS1END###\n"
+        json.dumps(test_data, indent=2)
+    }\n###PS1END###\n"
     matches = CmdOutputMetadata.matches_ps1_metadata(ps1_str)
     assert len(matches) == 1
     metadata = CmdOutputMetadata.from_ps1_match(matches[0])
@@ -152,12 +163,10 @@ def test_ps1_metadata_multiple_blocks():
         "py_interpreter_path": "/usr/bin/python",
     }
     ps1_str = f"###PS1JSON###\n{
-        json.dumps(
-            test_data,
-            indent=2)}\n###PS1END###\nSome other content\n###PS1JSON###\n{
-        json.dumps(
-            test_data,
-            indent=2)}\n###PS1END###\n"
+        json.dumps(test_data, indent=2)
+    }\n###PS1END###\nSome other content\n###PS1JSON###\n{
+        json.dumps(test_data, indent=2)
+    }\n###PS1END###\n"
     matches = CmdOutputMetadata.matches_ps1_metadata(ps1_str)
     assert len(matches) == 2
     metadata1 = CmdOutputMetadata.from_ps1_match(matches[0])

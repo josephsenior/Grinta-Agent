@@ -93,4 +93,3 @@ def test_term_color_colorize(monkeypatch: pytest.MonkeyPatch) -> None:
     result = term_color.colorize("hi", term_color.TermColor.INFO)
     assert result == "<blue>hi"
     assert captured == {"text": "hi", "color": "blue"}
-

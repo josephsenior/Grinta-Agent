@@ -5,7 +5,11 @@ import tempfile
 from typing import Any
 import pandas as pd
 from datasets import load_dataset
-from evaluation.benchmarks.aider_bench.helper import FAKE_RESPONSES, INST_SUFFIXES, INSTRUCTIONS_ADDENDUM
+from evaluation.benchmarks.aider_bench.helper import (
+    FAKE_RESPONSES,
+    INST_SUFFIXES,
+    INSTRUCTIONS_ADDENDUM,
+)
 from evaluation.utils.shared import (
     EvalMetadata,
     EvalOutput,
@@ -19,7 +23,12 @@ from evaluation.utils.shared import (
     run_evaluation,
 )
 from forge.controller.state.state import State
-from forge.core.config import ForgeConfig, get_llm_config_arg, load_from_toml, parse_arguments
+from forge.core.config import (
+    ForgeConfig,
+    get_llm_config_arg,
+    load_from_toml,
+    parse_arguments,
+)
 from forge.core.logger import forge_logger as logger
 from forge.core.main import create_runtime, run_controller
 from forge.events.action import CmdRunAction, MessageAction
@@ -29,14 +38,18 @@ from forge.utils.async_utils import call_async_from_sync
 
 USE_UNIT_TESTS = os.environ.get("USE_UNIT_TESTS", "false").lower() == "true"
 SKIP_NUM = os.environ.get("SKIP_NUM")
-SKIP_NUM = int(SKIP_NUM) if SKIP_NUM and SKIP_NUM.isdigit() and (int(SKIP_NUM) >= 0) else None
+SKIP_NUM = (
+    int(SKIP_NUM) if SKIP_NUM and SKIP_NUM.isdigit() and (int(SKIP_NUM) >= 0) else None
+)
 
 
 def get_config(metadata: EvalMetadata) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = "python:3.11-bookworm"
     config = get_FORGE_config_for_eval(
-        metadata=metadata, sandbox_config=sandbox_config, runtime=os.environ.get("RUNTIME", "docker")
+        metadata=metadata,
+        sandbox_config=sandbox_config,
+        runtime=os.environ.get("RUNTIME", "docker"),
     )
     config.set_llm_config(metadata.llm_config)
     agent_config = config.get_agent_config(metadata.agent_class)
@@ -65,12 +78,12 @@ def initialize_runtime(runtime: Runtime, instance: pd.Series):
     assert obs.exit_code == 0
     with tempfile.TemporaryDirectory() as tmpdir:
         file_path = os.path.join(tmpdir, f"{instance.instance_name}.py")
-        with open(file_path, "w", encoding='utf-8') as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             f.write(instance.signature)
         runtime.copy_to(file_path, "/workspace")
         if USE_UNIT_TESTS:
             file_path = os.path.join(tmpdir, f"{instance.instance_name}_test.py")
-            with open(file_path, "w", encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 f.write(instance.test)
             runtime.copy_to(file_path, "/workspace")
     logger.info("\n%s END Runtime Initialization Fn %s\n", "-" * 50, "-" * 50)
@@ -88,7 +101,7 @@ def complete_runtime(runtime: Runtime, instance: pd.Series) -> dict[str, Any]:
     script_name = f"{instance.instance_name}_test.py"
     with tempfile.TemporaryDirectory() as tmpdir:
         file_path = os.path.join(tmpdir, script_name)
-        with open(file_path, "w", encoding='utf-8') as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             f.write(instance.test)
         runtime.copy_to(file_path, "/workspace")
         logger.info("Running test file: %s", script_name)
@@ -102,23 +115,30 @@ def complete_runtime(runtime: Runtime, instance: pd.Series) -> dict[str, Any]:
     return {"test_output": obs.content, "exit_code": exit_code}
 
 
-def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True) -> EvalOutput:
+def process_instance(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True
+) -> EvalOutput:
     config = get_config(metadata)
     if reset_logger:
         log_dir = os.path.join(metadata.eval_output_dir, "infer_logs")
         reset_logger_for_multiprocessing(logger, str(instance.instance_id), log_dir)
     else:
-        logger.info("\nStarting evaluation for instance %s.\n", str(instance.instance_id))
+        logger.info(
+            "\nStarting evaluation for instance %s.\n", str(instance.instance_id)
+        )
     logger.info(instance)
     instruction = instance.instruction
-    instruction += INSTRUCTIONS_ADDENDUM.format(signature_file=f"{instance.instance_name}.py")
-    if USE_UNIT_TESTS:
-        logger.info("\nInstruction to run test_file: %s_test.py\n", instance.instance_name)
-        instruction += f"Use `python -m unittest {
-            instance.instance_name}_test.py` to run the test_file and verify the correctness of your solution. DO NOT EDIT the test file.\n\n"
-    instruction += (
-        "IMPORTANT: You should ONLY interact with the environment provided to you AND NEVER ASK FOR HUMAN HELP.\n"
+    instruction += INSTRUCTIONS_ADDENDUM.format(
+        signature_file=f"{instance.instance_name}.py"
     )
+    if USE_UNIT_TESTS:
+        logger.info(
+            "\nInstruction to run test_file: %s_test.py\n", instance.instance_name
+        )
+        instruction += f"Use `python -m unittest {
+            instance.instance_name
+        }_test.py` to run the test_file and verify the correctness of your solution. DO NOT EDIT the test file.\n\n"
+    instruction += "IMPORTANT: You should ONLY interact with the environment provided to you AND NEVER ASK FOR HUMAN HELP.\n"
     instruction += INST_SUFFIXES[metadata.agent_class]
     runtime: Runtime = create_runtime(config)
     call_async_from_sync(runtime.connect)
@@ -170,12 +190,25 @@ if __name__ == "__main__":
     if llm_config is None:
         raise ValueError(f"Could not find LLM config: --llm_config {args.llm_config}")
     metadata = make_metadata(
-        llm_config, "AiderBench", args.agent_cls, args.max_iterations, args.eval_note, args.eval_output_dir
+        llm_config,
+        "AiderBench",
+        args.agent_cls,
+        args.max_iterations,
+        args.eval_note,
+        args.eval_output_dir,
     )
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
     eval_ids = None
     if args.eval_ids:
         eval_ids = str(args.eval_ids).split(",")
         logger.info("\nUsing specific dataset IDs: %s\n", eval_ids)
-    instances = prepare_dataset(aider_bench_tests, output_file, args.eval_n_limit, eval_ids=eval_ids, skip_num=SKIP_NUM)
-    run_evaluation(instances, metadata, output_file, args.eval_num_workers, process_instance)
+    instances = prepare_dataset(
+        aider_bench_tests,
+        output_file,
+        args.eval_n_limit,
+        eval_ids=eval_ids,
+        skip_num=SKIP_NUM,
+    )
+    run_evaluation(
+        instances, metadata, output_file, args.eval_num_workers, process_instance
+    )

@@ -19,7 +19,10 @@ def test_get_shell_config_path_no_files_fallback():
     """Test shell config path fallback when no shell detection and no config files exist."""
     with tempfile.TemporaryDirectory() as temp_dir:
         with patch("forge.cli.shell_config.Path.home", return_value=Path(temp_dir)):
-            with patch("shellingham.detect_shell", side_effect=Exception("Shell detection failed")):
+            with patch(
+                "shellingham.detect_shell",
+                side_effect=Exception("Shell detection failed"),
+            ):
                 profile_path = get_shell_config_path()
                 import platform
 
@@ -35,7 +38,10 @@ def test_get_shell_config_path_bash_fallback():
         with patch("forge.cli.shell_config.Path.home", return_value=Path(temp_dir)):
             bashrc = Path(temp_dir) / ".bashrc"
             bashrc.touch()
-            with patch("shellingham.detect_shell", side_effect=Exception("Shell detection failed")):
+            with patch(
+                "shellingham.detect_shell",
+                side_effect=Exception("Shell detection failed"),
+            ):
                 profile_path = get_shell_config_path()
                 import platform
 
@@ -90,7 +96,7 @@ def test_add_aliases_to_shell_config_bash():
                 assert success is True
                 with patch("shellingham.detect_shell", return_value=("bash", "bash")):
                     profile_path = get_shell_config_path()
-                with open(profile_path, "r", encoding='utf-8') as f:
+                with open(profile_path, "r", encoding="utf-8") as f:
                     content = f.read()
                     assert "alias Forge=" in content
                     assert "alias oh=" in content
@@ -105,7 +111,7 @@ def test_add_aliases_to_shell_config_zsh():
                 success = add_aliases_to_shell_config()
                 assert success is True
                 profile_path = Path(temp_dir) / ".zshrc"
-                with open(profile_path, "r", encoding='utf-8') as f:
+                with open(profile_path, "r", encoding="utf-8") as f:
                     content = f.read()
                     assert "alias Forge=" in content
                     assert "alias oh=" in content
@@ -123,7 +129,7 @@ def test_add_aliases_handles_existing_aliases():
                 assert success is True
                 with patch("shellingham.detect_shell", return_value=("bash", "bash")):
                     profile_path = get_shell_config_path()
-                with open(profile_path, "r", encoding='utf-8') as f:
+                with open(profile_path, "r", encoding="utf-8") as f:
                     content = f.read()
                     FORGE_count = content.count("alias Forge=")
                     oh_count = content.count("alias oh=")
@@ -145,7 +151,7 @@ def test_aliases_exist_in_shell_config_no_aliases():
         with patch("forge.cli.shell_config.Path.home", return_value=Path(temp_dir)):
             with patch("shellingham.detect_shell", return_value=("bash", "bash")):
                 profile_path = get_shell_config_path()
-                with open(profile_path, "w", encoding='utf-8') as f:
+                with open(profile_path, "w", encoding="utf-8") as f:
                     f.write("export PATH=$PATH:/usr/local/bin\n")
                 assert aliases_exist_in_shell_config() is False
 
@@ -166,7 +172,10 @@ def test_shell_config_manager_basic_functionality():
     assert custom_manager.command == "custom-command"
     assert manager.get_shell_type_from_path(Path("/home/user/.bashrc")) == "bash"
     assert manager.get_shell_type_from_path(Path("/home/user/.zshrc")) == "zsh"
-    assert manager.get_shell_type_from_path(Path("/home/user/.config/fish/config.fish")) == "fish"
+    assert (
+        manager.get_shell_type_from_path(Path("/home/user/.config/fish/config.fish"))
+        == "fish"
+    )
 
 
 def test_shell_config_manager_reload_commands():
@@ -174,7 +183,9 @@ def test_shell_config_manager_reload_commands():
     manager = ShellConfigManager()
     assert "source ~/.zshrc" in manager.get_reload_command(Path("/home/user/.zshrc"))
     assert "source ~/.bashrc" in manager.get_reload_command(Path("/home/user/.bashrc"))
-    assert "source ~/.bash_profile" in manager.get_reload_command(Path("/home/user/.bash_profile"))
+    assert "source ~/.bash_profile" in manager.get_reload_command(
+        Path("/home/user/.bash_profile")
+    )
     assert "source ~/.config/fish/config.fish" in manager.get_reload_command(
         Path("/home/user/.config/fish/config.fish")
     )
@@ -190,7 +201,7 @@ def test_shell_config_manager_template_rendering():
             with patch.object(manager, "detect_shell", return_value="bash"):
                 success = manager.add_aliases()
                 assert success is True
-                with open(bashrc, "r", encoding='utf-8') as f:
+                with open(bashrc, "r", encoding="utf-8") as f:
                     content = f.read()
                     assert "test-command" in content
                     assert 'alias Forge="test-command"' in content
@@ -229,7 +240,10 @@ def test_alias_setup_declined_persisted():
     with tempfile.TemporaryDirectory() as temp_dir:
         with patch("forge.cli.shell_config.Path.home", return_value=Path(temp_dir)):
             with patch("shellingham.detect_shell", return_value=("bash", "bash")):
-                with patch("forge.cli.shell_config.aliases_exist_in_shell_config", return_value=False):
+                with patch(
+                    "forge.cli.shell_config.aliases_exist_in_shell_config",
+                    return_value=False,
+                ):
                     with patch("forge.cli.main.cli_confirm", return_value=1):
                         with patch("prompt_toolkit.print_formatted_text"):
                             assert not alias_setup_declined()
@@ -245,11 +259,18 @@ def test_alias_setup_skipped_when_previously_declined():
             mark_alias_setup_declined()
             assert alias_setup_declined()
             with patch("shellingham.detect_shell", return_value=("bash", "bash")):
-                with patch("forge.cli.shell_config.aliases_exist_in_shell_config", return_value=False):
+                with patch(
+                    "forge.cli.shell_config.aliases_exist_in_shell_config",
+                    return_value=False,
+                ):
                     with patch("forge.cli.main.cli_confirm"):
                         with patch("prompt_toolkit.print_formatted_text"):
-                            should_show = not aliases_exist_in_shell_config() and (not main_alias_setup_declined())
-                            assert not should_show, "Alias setup should be skipped when user previously declined"
+                            should_show = not aliases_exist_in_shell_config() and (
+                                not main_alias_setup_declined()
+                            )
+                            assert not should_show, (
+                                "Alias setup should be skipped when user previously declined"
+                            )
 
 
 def test_alias_setup_accepted_does_not_set_declined_flag():
@@ -258,9 +279,15 @@ def test_alias_setup_accepted_does_not_set_declined_flag():
     with tempfile.TemporaryDirectory() as temp_dir:
         with patch("forge.cli.shell_config.Path.home", return_value=Path(temp_dir)):
             with patch("shellingham.detect_shell", return_value=("bash", "bash")):
-                with patch("forge.cli.shell_config.aliases_exist_in_shell_config", return_value=False):
+                with patch(
+                    "forge.cli.shell_config.aliases_exist_in_shell_config",
+                    return_value=False,
+                ):
                     with patch("forge.cli.main.cli_confirm", return_value=0):
-                        with patch("forge.cli.shell_config.add_aliases_to_shell_config", return_value=True):
+                        with patch(
+                            "forge.cli.shell_config.add_aliases_to_shell_config",
+                            return_value=True,
+                        ):
                             with patch("prompt_toolkit.print_formatted_text"):
                                 assert not alias_setup_declined()
                                 run_alias_setup_flow(config)

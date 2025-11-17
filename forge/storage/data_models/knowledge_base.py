@@ -69,4 +69,3 @@ class KnowledgeBaseSettings(BaseModel):
     relevance_threshold: float = 0.7  # Minimum relevance score
     auto_search: bool = True  # Auto-search KB in chat
     search_strategy: str = "hybrid"  # "hybrid", "semantic", "keyword"
-

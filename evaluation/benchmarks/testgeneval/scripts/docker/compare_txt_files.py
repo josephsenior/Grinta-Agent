@@ -1,5 +1,8 @@
 def print_diff_ignore_order(file1, file2):
-    with open(file1, "r", encoding='utf-8') as f1, open(file2, "r", encoding='utf-8') as f2:
+    with (
+        open(file1, "r", encoding="utf-8") as f1,
+        open(file2, "r", encoding="utf-8") as f2,
+    ):
         file1_lines = set(f1.readlines())
         file2_lines = set(f2.readlines())
     only_in_file1 = file1_lines - file2_lines

@@ -50,8 +50,20 @@ def test_token_usage_accumulation_and_merge() -> None:
 
 
 def test_token_usage_addition_operator() -> None:
-    usage_a = TokenUsage(prompt_tokens=1, completion_tokens=2, cache_read_tokens=3, cache_write_tokens=4, context_window=10)
-    usage_b = TokenUsage(prompt_tokens=5, completion_tokens=7, cache_read_tokens=11, cache_write_tokens=13, context_window=15)
+    usage_a = TokenUsage(
+        prompt_tokens=1,
+        completion_tokens=2,
+        cache_read_tokens=3,
+        cache_write_tokens=4,
+        context_window=10,
+    )
+    usage_b = TokenUsage(
+        prompt_tokens=5,
+        completion_tokens=7,
+        cache_read_tokens=11,
+        cache_write_tokens=13,
+        context_window=15,
+    )
     total = usage_a + usage_b
     assert total.prompt_tokens == 6
     assert total.completion_tokens == 9
@@ -89,5 +101,3 @@ def test_serialization_cycle() -> None:
     loaded = pickle.loads(serialized)
     assert isinstance(loaded, Metrics)
     assert loaded.accumulated_cost == pytest.approx(1.25)
-
-

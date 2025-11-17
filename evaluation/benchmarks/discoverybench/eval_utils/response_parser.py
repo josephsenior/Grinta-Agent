@@ -1,4 +1,9 @@
-workflow_summary_markers = ["WORKFLOW SUMMARY", "WORKFLOW_SUMMARY", "WORKFLOW-SUMMARY", "Workflow Summary"]
+workflow_summary_markers = [
+    "WORKFLOW SUMMARY",
+    "WORKFLOW_SUMMARY",
+    "WORKFLOW-SUMMARY",
+    "Workflow Summary",
+]
 final_answer_markers = [
     "FINAL ANSWER",
     "FINAL_ANSWER",
@@ -24,7 +29,9 @@ def extract_between(content, start_markers, end_markers=None):
 
 def extract_gen_hypo_from_logs(content: str):
     error = ""
-    gen_workflow = extract_between(content, workflow_summary_markers, final_answer_markers)
+    gen_workflow = extract_between(
+        content, workflow_summary_markers, final_answer_markers
+    )
     if not gen_workflow:
         error += "No Workflow Summary found in the line. | "
     gen_hypothesis = extract_between(content, final_answer_markers, next_agent_markers)

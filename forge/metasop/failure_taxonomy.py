@@ -5,9 +5,26 @@ from __future__ import annotations
 import re
 from typing import Any
 
-BUILD_PATTERNS = ["ModuleNotFoundError", "ImportError", "cannot find module", "No module named"]
-RUNTIME_PATTERNS = ["Traceback (most recent call last)", "TypeError", "ValueError", "ReferenceError", "NameError"]
-DEPENDENCY_PATTERNS = ["version conflict", "dependency", "Could not resolve", "npm ERR!", "poetry.lock"]
+BUILD_PATTERNS = [
+    "ModuleNotFoundError",
+    "ImportError",
+    "cannot find module",
+    "No module named",
+]
+RUNTIME_PATTERNS = [
+    "Traceback (most recent call last)",
+    "TypeError",
+    "ValueError",
+    "ReferenceError",
+    "NameError",
+]
+DEPENDENCY_PATTERNS = [
+    "version conflict",
+    "dependency",
+    "Could not resolve",
+    "npm ERR!",
+    "poetry.lock",
+]
 TEST_FAIL_PATTERNS = ["FAILED", "AssertionError", "expect\\("]
 LINT_PATTERNS = ["lint", "eslint", "flake8"]
 

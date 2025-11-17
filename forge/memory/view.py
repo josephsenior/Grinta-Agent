@@ -55,14 +55,12 @@ class View(BaseModel):
         return iter(self.events)
 
     @overload
-    def __getitem__(self, key: slice) -> list[Event]:
-        ...
+    def __getitem__(self, key: slice) -> list[Event]: ...
 
     @overload
-    def __getitem__(self, key: int) -> Event:
-        ...
+    def __getitem__(self, key: int) -> Event: ...
 
-    def __getitem__(self, key: int | slice) -> Event | list[Event]:
+    def __getitem__(self, key: object) -> Event | list[Event]:
         """Access events by integer index or slice.
 
         Args:
@@ -92,12 +90,12 @@ class View(BaseModel):
 
         """
         if isinstance(key, slice):
-            start, stop, step = key.indices(len(self))
-            return [self[i] for i in range(start, stop, step)]
+            start, stop, step = key.indices(len(self.events))
+            return self.events[start:stop:step]
         if isinstance(key, int):
             return self.events[key]
         msg = f"Invalid key type: {type(key)}"
-        raise ValueError(msg)
+        raise TypeError(msg)
 
     @staticmethod
     def _collect_forgotten_event_ids(events: list[Event]) -> set[int]:
@@ -145,9 +143,16 @@ class View(BaseModel):
         summary, summary_offset = View._find_summary_info(events)
         if summary is not None and summary_offset is not None:
             logger.info("Inserting summary at offset %s", summary_offset)
-            kept_events.insert(summary_offset, AgentCondensationObservation(content=summary))
+            kept_events.insert(
+                summary_offset, AgentCondensationObservation(content=summary)
+            )
 
         # Check for unhandled condensation requests
-        unhandled_condensation_request = View._check_unhandled_condensation_request(events)
+        unhandled_condensation_request = View._check_unhandled_condensation_request(
+            events
+        )
 
-        return View(events=kept_events, unhandled_condensation_request=unhandled_condensation_request)
+        return View(
+            events=kept_events,
+            unhandled_condensation_request=unhandled_condensation_request,
+        )

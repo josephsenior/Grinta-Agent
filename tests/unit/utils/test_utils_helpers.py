@@ -92,4 +92,3 @@ def test_create_registry_and_conversation_stats(monkeypatch):
     assert registry_calls["stats_args"] == (store_instance, "session-id", "user-id")
     assert registry.subscribers == [stats.register_llm]
     assert user_config.llm_config.model == "model"
-

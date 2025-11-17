@@ -10,7 +10,8 @@ ENV POETRY_VIRTUALENVS_PATH=/Forge/poetry \
     EDITOR=code \
     VISUAL=code \
     GIT_EDITOR="code --wait" \
-    OPENVSCODE_SERVER_ROOT=/Forge/.openvscode-server
+    OPENVSCODE_SERVER_ROOT=/Forge/.openvscode-server \
+    PYTHONPATH=/Forge/code
 
 {% macro setup_base_system() %}
 
@@ -175,10 +176,10 @@ RUN if [ -z "${RELEASE_TAG}" ]; then \
 # Install our custom extensions as Forge user
 USER Forge
 RUN mkdir -p ${OPENVSCODE_SERVER_ROOT}/extensions/Forge-hello-world && \
-    cp -r /Forge/code/Forge/runtime/utils/vscode-extensions/hello-world/* ${OPENVSCODE_SERVER_ROOT}/extensions/Forge-hello-world/
+    cp -r /Forge/code/forge/runtime/utils/vscode-extensions/hello-world/* ${OPENVSCODE_SERVER_ROOT}/extensions/Forge-hello-world/
 
 RUN mkdir -p ${OPENVSCODE_SERVER_ROOT}/extensions/Forge-memory-monitor && \
-    cp -r /Forge/code/Forge/runtime/utils/vscode-extensions/memory-monitor/* ${OPENVSCODE_SERVER_ROOT}/extensions/Forge-memory-monitor/
+    cp -r /Forge/code/forge/runtime/utils/vscode-extensions/memory-monitor/* ${OPENVSCODE_SERVER_ROOT}/extensions/Forge-memory-monitor/
 
 # Some extension dirs are removed because they trigger false positives in vulnerability scans.
 RUN rm -rf ${OPENVSCODE_SERVER_ROOT}/extensions/{handlebars,pug,json,diff,grunt,ini,npm}
@@ -289,8 +290,8 @@ RUN /Forge/micromamba/bin/micromamba create -n Forge -y && \
 # Create a clean Forge directory including only the pyproject.toml, poetry.lock and Forge/__init__.py
 RUN \
     if [ -d /Forge/code ]; then rm -rf /Forge/code; fi && \
-    mkdir -p /Forge/code/Forge && \
-    touch /Forge/code/Forge/__init__.py && \
+    mkdir -p /Forge/code/forge && \
+    touch /Forge/code/forge/__init__.py && \
     chown -R Forge:Forge /Forge/code && \
     # Set global git configuration to ensure proper author/committer information
     git config --global user.name "Forge" && \
@@ -330,12 +331,12 @@ RUN \
 # ================================================================
 # Copy Project source files
 # ================================================================
-RUN if [ -d /Forge/code/Forge ]; then rm -rf /Forge/code/Forge; fi
+RUN if [ -d /Forge/code/forge ]; then rm -rf /Forge/code/forge; fi
 COPY --chown=Forge:Forge ./code/pyproject.toml ./code/poetry.lock /Forge/code/
 RUN if [ -d /Forge/code/microagents ]; then rm -rf /Forge/code/microagents; fi
 COPY --chown=Forge:Forge ./code/microagents /Forge/code/microagents
-COPY --chown=Forge:Forge ./code/Forge /Forge/code/Forge
-RUN chmod a+rwx /Forge/code/Forge/__init__.py && \
+COPY --chown=Forge:Forge ./code/forge /Forge/code/forge
+RUN chmod a+rwx /Forge/code/forge/__init__.py && \
     chown -R Forge:Forge /Forge/code
 
 

@@ -6,11 +6,17 @@ from forge.llm.metrics import Cost, Metrics, ResponseLatency, TokenUsage
 
 
 def test_command_output_success_serialization():
-    obs = CmdOutputObservation(command="ls", content="file1.txt\nfile2.txt", metadata=CmdOutputMetadata(exit_code=0))
+    obs = CmdOutputObservation(
+        command="ls",
+        content="file1.txt\nfile2.txt",
+        metadata=CmdOutputMetadata(exit_code=0),
+    )
     serialized = event_to_dict(obs)
     assert serialized["success"] is True
     obs = CmdOutputObservation(
-        command="ls", content="No such file or directory", metadata=CmdOutputMetadata(exit_code=1)
+        command="ls",
+        content="No such file or directory",
+        metadata=CmdOutputMetadata(exit_code=1),
     )
     serialized = event_to_dict(obs)
     assert serialized["success"] is False
@@ -53,7 +59,9 @@ def test_metrics_full_serialization():
 
 def _create_test_observation():
     """Create a test observation for metrics testing."""
-    return CmdOutputObservation(command="ls", content="test.txt", metadata=CmdOutputMetadata(exit_code=0))
+    return CmdOutputObservation(
+        command="ls", content="test.txt", metadata=CmdOutputMetadata(exit_code=0)
+    )
 
 
 def _create_test_metrics():
@@ -127,7 +135,9 @@ def _verify_deserialized_metrics(deserialized):
 
 
 def test_metrics_none_serialization():
-    obs = CmdOutputObservation(command="ls", content="test.txt", metadata=CmdOutputMetadata(exit_code=0))
+    obs = CmdOutputObservation(
+        command="ls", content="test.txt", metadata=CmdOutputMetadata(exit_code=0)
+    )
     obs._llm_metrics = None
     serialized = event_to_dict(obs)
     assert "llm_metrics" not in serialized

@@ -28,6 +28,7 @@ from typing import Any
 @dataclass
 class StepCacheEntry:
     """Cache entry for a step execution result."""
+
     context_hash: str
     step_id: str
     role: str
@@ -49,10 +50,10 @@ class StepCacheEntry:
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> StepCacheEntry:
         """Create cache entry from JSON dictionary.
-        
+
         Args:
             data: Dictionary with cache entry fields
-            
+
         Returns:
             StepCacheEntry instance
 
@@ -131,11 +132,11 @@ class StepCache:
 
     def get(self, context_hash: str, role: str) -> StepCacheEntry | None:
         """Get cache entry by context hash and role.
-        
+
         Args:
             context_hash: Hash of step execution context
             role: Role name for the step
-            
+
         Returns:
             StepCacheEntry if found and not expired, None otherwise
 
@@ -148,7 +149,10 @@ class StepCache:
             if role.lower() in self.exclude_roles:
                 self._misses += 1
                 return None
-            if self.ttl_seconds is not None and time.time() - entry.created_ts > self.ttl_seconds:
+            if (
+                self.ttl_seconds is not None
+                and time.time() - entry.created_ts > self.ttl_seconds
+            ):
                 self._store.pop(context_hash, None)
                 self._misses += 1
                 try:
@@ -163,7 +167,9 @@ class StepCache:
             self._hits += 1
             return StepCacheEntry(**entry.to_json())
 
-    def get_by_fingerprint(self, diff_fingerprint: str, role: str) -> StepCacheEntry | None:
+    def get_by_fingerprint(
+        self, diff_fingerprint: str, role: str
+    ) -> StepCacheEntry | None:
         """Lookup a cache entry by its diff_fingerprint (best-effort).
 
         This scans the in-memory store for a matching fingerprint and returns
@@ -176,8 +182,14 @@ class StepCache:
                 try:
                     if role.lower() in self.exclude_roles:
                         return None
-                    if entry.diff_fingerprint and entry.diff_fingerprint == diff_fingerprint:
-                        if self.ttl_seconds is not None and time.time() - entry.created_ts > self.ttl_seconds:
+                    if (
+                        entry.diff_fingerprint
+                        and entry.diff_fingerprint == diff_fingerprint
+                    ):
+                        if (
+                            self.ttl_seconds is not None
+                            and time.time() - entry.created_ts > self.ttl_seconds
+                        ):
                             continue
                         self._store.move_to_end(key, last=True)
                         self._hits += 1
@@ -241,7 +253,8 @@ class StepCache:
 
         # Check minimum tokens threshold
         return self.min_tokens_threshold is None or (
-            isinstance(entry.total_tokens, int) and entry.total_tokens >= self.min_tokens_threshold
+            isinstance(entry.total_tokens, int)
+            and entry.total_tokens >= self.min_tokens_threshold
         )
 
     def _store_entry(self, entry: StepCacheEntry) -> list[tuple[str, StepCacheEntry]]:
@@ -267,7 +280,11 @@ class StepCache:
         self._store.move_to_end(entry.context_hash, last=True)
         self._stores += 1
 
-        return self._evict_excess_entries() if self.max_entries and len(self._store) > self.max_entries else []
+        return (
+            self._evict_excess_entries()
+            if self.max_entries and len(self._store) > self.max_entries
+            else []
+        )
 
     def _evict_excess_entries(self) -> list[tuple[str, StepCacheEntry]]:
         """Evict oldest entries from cache to maintain size limits.
@@ -298,7 +315,9 @@ class StepCache:
         return evicted_entries
 
     def _persist_cache_operations(
-        self, entry: StepCacheEntry, evicted_entries: list[tuple[str, StepCacheEntry]],
+        self,
+        entry: StepCacheEntry,
+        evicted_entries: list[tuple[str, StepCacheEntry]],
     ) -> None:
         """Persist cache operations to disk for durability.
 
@@ -338,7 +357,9 @@ class StepCache:
             # Silently ignore persistence errors to avoid breaking cache functionality
             pass
 
-    def _remove_evicted_entries_from_disk(self, evicted_entries: list[tuple[str, StepCacheEntry]]) -> None:
+    def _remove_evicted_entries_from_disk(
+        self, evicted_entries: list[tuple[str, StepCacheEntry]]
+    ) -> None:
         """Remove evicted entries from disk storage."""
         if not self.cache_dir:
             return
@@ -349,7 +370,7 @@ class StepCache:
 
     def stats(self) -> dict[str, Any]:
         """Get cache statistics.
-        
+
         Returns:
             Dictionary with cache hit/miss counts, entry counts, and eviction stats
 
@@ -389,7 +410,13 @@ class StepCache:
         path = os.path.join(self.cache_dir, f"{entry.context_hash}.json")
         try:
             with open(path, "w", encoding="utf-8") as f:
-                json.dump(entry.to_json(), f, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+                json.dump(
+                    entry.to_json(),
+                    f,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                    sort_keys=True,
+                )
         except Exception:
             pass
 
@@ -417,7 +444,12 @@ class StepCache:
         idx_path = os.path.join(self.cache_dir, "index.json")
         try:
             with open(idx_path, "w", encoding="utf-8") as f:
-                json.dump({"order": list(self._store.keys())}, f, separators=(",", ":"), sort_keys=True)
+                json.dump(
+                    {"order": list(self._store.keys())},
+                    f,
+                    separators=(",", ":"),
+                    sort_keys=True,
+                )
         except Exception:
             pass
 
@@ -498,7 +530,10 @@ class StepCache:
                 entry = StepCacheEntry.from_json(data)
 
                 # Check TTL
-                if self.ttl_seconds is not None and time.time() - entry.created_ts > self.ttl_seconds:
+                if (
+                    self.ttl_seconds is not None
+                    and time.time() - entry.created_ts > self.ttl_seconds
+                ):
                     return False
 
                 self._store[key] = entry

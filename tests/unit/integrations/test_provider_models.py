@@ -84,7 +84,9 @@ def test_custom_secret_from_value_invalid_type() -> None:
         (ProviderType.BITBUCKET, "BITBUCKET_TOKEN", "PR", "pull request"),
     ],
 )
-def test_suggested_task_get_provider_terms(provider, token_env_var, request_type_short, request_verb) -> None:
+def test_suggested_task_get_provider_terms(
+    provider, token_env_var, request_type_short, request_verb
+) -> None:
     task = _make_task(provider, TaskType.OPEN_ISSUE)
     terms = task.get_provider_terms()
     assert terms["tokenEnvVar"] == token_env_var
@@ -114,7 +116,9 @@ def test_suggested_task_get_prompt_uses_expected_template(
 ) -> None:
     env = EnvRecorder()
     monkeypatch.setattr(service_types, "Environment", lambda *args, **kwargs: env)
-    monkeypatch.setattr(service_types, "FileSystemLoader", lambda *args, **kwargs: object())
+    monkeypatch.setattr(
+        service_types, "FileSystemLoader", lambda *args, **kwargs: object()
+    )
 
     task = _make_task(ProviderType.GITHUB, task_type)
 
@@ -129,13 +133,16 @@ def test_suggested_task_get_prompt_uses_expected_template(
     assert render_kwargs["tokenEnvVar"] == "GITHUB_TOKEN"
 
 
-def test_suggested_task_get_prompt_unsupported_task(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_suggested_task_get_prompt_unsupported_task(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     env = EnvRecorder()
     monkeypatch.setattr(service_types, "Environment", lambda *args, **kwargs: env)
-    monkeypatch.setattr(service_types, "FileSystemLoader", lambda *args, **kwargs: object())
+    monkeypatch.setattr(
+        service_types, "FileSystemLoader", lambda *args, **kwargs: object()
+    )
 
     task = _make_task(ProviderType.GITHUB, TaskType.OPEN_PR)
 
     with pytest.raises(ValueError):
         task.get_prompt_for_task()
-

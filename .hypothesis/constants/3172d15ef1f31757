@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\integrations\gitlab\service\features.py
+# hypothesis_version: 6.147.0
+
+['#', '%2F', '.md', '/', 'FAILED', 'README.md', 'assigned_to_me', 'assignee_username', 'blob', 'conflicts', 'currentUser', 'discussions', 'full', 'fullPath', 'iid', 'name', 'nodes', 'notes', 'opened', 'path', 'pipelines', 'project', 'recursive', 'references', 'resolvable', 'resolved', 'scope', 'state', 'status', 'title', 'true', 'type']

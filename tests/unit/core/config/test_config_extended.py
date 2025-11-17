@@ -100,9 +100,7 @@ def test_app_config_extended_random_keys(tmp_path: os.PathLike) -> None:
     This test verifies that the extended section accepts arbitrary keys,
     including ones not defined in any schema.
     """
-    config_content = (
-        '\n[core]\nworkspace_base = "/tmp/workspace"\n\n[extended]\nrandom_key = "random_value"\nanother_key = 3.14\n'
-    )
+    config_content = '\n[core]\nworkspace_base = "/tmp/workspace"\n\n[extended]\nrandom_key = "random_value"\nanother_key = 3.14\n'
     config_file = tmp_path / "config.toml"
     config_file.write_text(config_content)
     config = ForgeConfig()

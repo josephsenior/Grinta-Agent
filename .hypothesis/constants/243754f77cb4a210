@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\integrations\github\service\base.py
+# hypothesis_version: 6.147.0
+
+['Accept', 'Authorization', 'Link', 'avatar_url', 'company', 'email', 'errors', 'id', 'login', 'name', 'query', 'str', 'variables']

@@ -19,6 +19,7 @@ from forge.core.logger import forge_logger as logger
 # Optional distributed cache
 try:
     from forge.core.cache import DistributedCache
+
     DISTRIBUTED_CACHE_AVAILABLE = True
 except ImportError:
     DISTRIBUTED_CACHE_AVAILABLE = False
@@ -27,7 +28,7 @@ except ImportError:
 
 class GraphCache:
     """Caches code graphs for fast access.
-    
+
     Features:
     - Caches entire graph structure
     - Tracks file modifications
@@ -35,16 +36,16 @@ class GraphCache:
     - Persistent storage
     - TTL-based expiration
     """
-    
+
     def __init__(
         self,
         cache_dir: str = "./.Forge/graph_cache",
         ttl_seconds: int = 3600,  # 1 hour
         enable_persistence: bool = True,
-        use_distributed: bool = True  # Use Redis if available
+        use_distributed: bool = True,  # Use Redis if available
     ):
         """Initialize graph cache with optional distributed (Redis) backend.
-        
+
         Args:
             cache_dir: Directory to store cached graphs
             ttl_seconds: Time-to-live for cached graphs
@@ -55,7 +56,7 @@ class GraphCache:
         self.cache_dir = cache_dir
         self.ttl = timedelta(seconds=ttl_seconds)
         self.enable_persistence = enable_persistence
-        
+
         # Try to use distributed cache if requested and available
         self.distributed_cache = None
         if use_distributed and DISTRIBUTED_CACHE_AVAILABLE:
@@ -66,18 +67,22 @@ class GraphCache:
                     max_connections=50,
                 )
                 if self.distributed_cache.enabled:
-                    logger.info(f"📊 Graph cache using REDIS distributed backend (perfect for 1000+ users!)")
+                    logger.info(
+                        f"📊 Graph cache using REDIS distributed backend (perfect for 1000+ users!)"
+                    )
                 else:
                     self.distributed_cache = None
             except Exception as e:
                 logger.warning(f"Failed to init distributed cache, using local: {e}")
                 self.distributed_cache = None
-        
+
         # In-memory cache (L1)
         self.graph_cache: Dict[str, Any] = {}  # repo_path → graph_data
         self.graph_metadata: Dict[str, Dict[str, Any]] = {}  # repo_path → metadata
-        self.file_mtimes: Dict[str, Dict[str, float]] = {}  # repo_path → {file_path: mtime}
-        
+        self.file_mtimes: Dict[
+            str, Dict[str, float]
+        ] = {}  # repo_path → {file_path: mtime}
+
         # Stats
         self.stats = {
             "hits": 0,
@@ -88,17 +93,19 @@ class GraphCache:
             "distributed_hits": 0,
             "distributed_misses": 0,
         }
-        
+
         # Create cache directory
         if enable_persistence:
             os.makedirs(cache_dir, exist_ok=True)
-        
+
         cache_mode = "distributed (Redis)" if self.distributed_cache else "local"
-        logger.info(f"📊 Graph cache initialized (mode={cache_mode}, ttl={ttl_seconds}s)")
-    
+        logger.info(
+            f"📊 Graph cache initialized (mode={cache_mode}, ttl={ttl_seconds}s)"
+        )
+
     def _load_from_persistence(self, repo_path: str) -> None:
         """Load graph from disk persistence if enabled.
-        
+
         Args:
             repo_path: Path to repository
 
@@ -108,17 +115,17 @@ class GraphCache:
 
     def _load_from_distributed_cache(self, repo_path: str) -> bool:
         """Load graph from distributed cache (L2).
-        
+
         Args:
             repo_path: Path to repository
-            
+
         Returns:
             True if loaded successfully, False otherwise
 
         """
         if not self.distributed_cache:
             return False
-        
+
         try:
             cached_data = self.distributed_cache.get(repo_path)
             if cached_data:
@@ -133,40 +140,40 @@ class GraphCache:
                 self.stats["distributed_misses"] += 1
         except Exception as e:
             logger.debug(f"Distributed cache error: {e}")
-        
+
         return False
 
     def _validate_cache_entry(self, repo_path: str) -> bool:
         """Validate cached graph entry (TTL and modifications).
-        
+
         Args:
             repo_path: Path to repository
-            
+
         Returns:
             True if cache entry is valid, False otherwise
 
         """
         metadata = self.graph_metadata.get(repo_path, {})
         cached_at = metadata.get("cached_at")
-        
+
         if cached_at and datetime.now() - cached_at > self.ttl:
             self._invalidate_repo(repo_path)
             self.stats["misses"] += 1
             return False
-        
+
         if self._has_modifications(repo_path):
             self.stats["partial_updates"] += 1
             logger.debug(f"⚠️  Graph cache outdated for {repo_path} (files modified)")
             return False
-        
+
         return True
 
     def get_graph(self, repo_path: str) -> Optional[Any]:
         """Get cached graph with 2-tier caching (L1 local, L2 Redis).
-        
+
         Args:
             repo_path: Path to repository
-            
+
         Returns:
             Graph data if cached and valid, None otherwise
 
@@ -174,31 +181,28 @@ class GraphCache:
         # L1: Check in-memory cache (fastest)
         if repo_path not in self.graph_cache:
             self._load_from_persistence(repo_path)
-        
+
         # L2: Check distributed cache if L1 missed
         if repo_path not in self.graph_cache:
             if self._load_from_distributed_cache(repo_path):
                 return self.graph_cache[repo_path]
             self.stats["misses"] += 1
             return None
-        
+
         # Validate cache entry
         if not self._validate_cache_entry(repo_path):
             return None
-        
+
         # Cache hit!
         self.stats["hits"] += 1
         logger.debug(f"✓ Graph cache hit for {repo_path}")
         return self.graph_cache[repo_path]
-    
+
     def cache_graph(
-        self,
-        repo_path: str,
-        graph_data: Any,
-        tracked_files: Optional[Set[str]] = None
+        self, repo_path: str, graph_data: Any, tracked_files: Optional[Set[str]] = None
     ) -> None:
         """Cache graph for a repository.
-        
+
         Args:
             repo_path: Path to repository
             graph_data: The graph data to cache
@@ -207,13 +211,13 @@ class GraphCache:
         """
         # Store graph
         self.graph_cache[repo_path] = graph_data
-        
+
         # Store metadata
         self.graph_metadata[repo_path] = {
             "cached_at": datetime.now(),
-            "file_count": len(tracked_files) if tracked_files else 0
+            "file_count": len(tracked_files) if tracked_files else 0,
         }
-        
+
         # Track file modification times
         if tracked_files:
             self.file_mtimes[repo_path] = {}
@@ -222,33 +226,35 @@ class GraphCache:
                     self.file_mtimes[repo_path][file_path] = os.path.getmtime(file_path)
                 except (OSError, FileNotFoundError):
                     pass
-            
+
             self.stats["files_tracked"] = len(tracked_files)
-        
+
         # Persist to disk (L3 - local persistence)
         if self.enable_persistence:
             self._save_to_disk(repo_path)
-        
+
         # Store in distributed cache (L2 - shared across instances)
         if self.distributed_cache:
             try:
                 cache_data = {
                     "graph": graph_data,
                     "metadata": self.graph_metadata[repo_path],
-                    "file_mtimes": self.file_mtimes.get(repo_path, {})
+                    "file_mtimes": self.file_mtimes.get(repo_path, {}),
                 }
                 self.distributed_cache.set(repo_path, cache_data)
                 logger.debug(f"📊 Stored graph in Redis for {repo_path}")
             except Exception as e:
                 logger.debug(f"Failed to cache graph in Redis: {e}")
-        
-        logger.info(f"💾 Cached graph for {repo_path} ({self.stats['files_tracked']} files)")
-    
+
+        logger.info(
+            f"💾 Cached graph for {repo_path} ({self.stats['files_tracked']} files)"
+        )
+
     def _has_modifications(self, repo_path: str) -> bool:
         """Check if any tracked files were modified."""
         if repo_path not in self.file_mtimes:
             return False
-        
+
         for file_path, cached_mtime in self.file_mtimes[repo_path].items():
             try:
                 current_mtime = os.path.getmtime(file_path)
@@ -258,70 +264,73 @@ class GraphCache:
             except (OSError, FileNotFoundError):
                 # File deleted
                 return True
-        
+
         return False
-    
+
     def _invalidate_repo(self, repo_path: str) -> None:
         """Invalidate cached graph for a repository."""
         self.graph_cache.pop(repo_path, None)
         self.graph_metadata.pop(repo_path, None)
         self.file_mtimes.pop(repo_path, None)
         logger.debug(f"🗑️  Invalidated graph cache: {repo_path}")
-    
+
     def _get_cache_file_path(self, repo_path: str) -> str:
         """Get cache file path for a repository."""
         # Create safe filename from repo path
         safe_name = repo_path.replace("/", "_").replace("\\", "_").replace(":", "_")
         return os.path.join(self.cache_dir, f"graph_{safe_name}.json")
-    
+
     def _save_to_disk(self, repo_path: str) -> None:
         """Save graph to disk."""
         try:
             cache_file = self._get_cache_file_path(repo_path)
-            
+
+            metadata_candidate = self.graph_metadata.get(repo_path, {})
+            metadata = metadata_candidate if isinstance(metadata_candidate, dict) else {}
+
+            cached_at_value = metadata.get("cached_at")
+            if isinstance(cached_at_value, datetime):
+                metadata["cached_at"] = cached_at_value.isoformat()
+
             data = {
                 "graph": self.graph_cache.get(repo_path),
-                "metadata": self.graph_metadata.get(repo_path, {}),
-                "file_mtimes": self.file_mtimes.get(repo_path, {})
+                "metadata": metadata,
+                "file_mtimes": self.file_mtimes.get(repo_path, {}),
             }
-            
-            # Convert datetime to ISO format
-            if "cached_at" in data["metadata"]:
-                data["metadata"]["cached_at"] = data["metadata"]["cached_at"].isoformat()
-            
-            with open(cache_file, 'w', encoding='utf-8') as f:
+
+            with open(cache_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
-            
+
             logger.debug(f"💾 Saved graph to {cache_file}")
-            
+
         except Exception as e:
             logger.warning(f"Failed to save graph cache: {e}")
-    
+
     def _load_from_disk(self, repo_path: str) -> None:
         """Load graph from disk."""
         try:
             cache_file = self._get_cache_file_path(repo_path)
-            
+
             if not os.path.exists(cache_file):
                 return
-            
-            with open(cache_file, 'r', encoding='utf-8') as f:
+
+            with open(cache_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            
+
             self.graph_cache[repo_path] = data.get("graph")
             self.file_mtimes[repo_path] = data.get("file_mtimes", {})
-            
+
             # Convert ISO format back to datetime
             metadata = data.get("metadata", {})
             if "cached_at" in metadata:
                 metadata["cached_at"] = datetime.fromisoformat(metadata["cached_at"])
             self.graph_metadata[repo_path] = metadata
-            
+
             logger.debug(f"📂 Loaded graph from {cache_file}")
-            
+
         except Exception as e:
             logger.warning(f"Failed to load graph cache: {e}")
-    
+
     def clear(self) -> None:
         """Clear all caches."""
         count = len(self.graph_cache)
@@ -329,16 +338,17 @@ class GraphCache:
         self.graph_metadata.clear()
         self.file_mtimes.clear()
         logger.info(f"🧹 Cleared graph cache ({count} repos)")
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
         total_requests = self.stats["hits"] + self.stats["misses"]
-        hit_rate = (self.stats["hits"] / total_requests * 100) if total_requests > 0 else 0
-        
+        hit_rate = (
+            (self.stats["hits"] / total_requests * 100) if total_requests > 0 else 0
+        )
+
         return {
             **self.stats,
             "cached_repos": len(self.graph_cache),
             "hit_rate_percent": round(hit_rate, 1),
-            "total_requests": total_requests
+            "total_requests": total_requests,
         }
-

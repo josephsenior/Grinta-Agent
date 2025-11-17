@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import importlib
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from google.api_core.exceptions import NotFound
-from google.cloud import storage
+
+storage: Any
+try:  # pragma: no cover - optional dependency
+    storage = importlib.import_module("google.cloud.storage")
+except ImportError:  # pragma: no cover - fallback when dependency missing
+    storage = cast(Any, None)
 
 from forge.storage.files import FileStore
 
@@ -32,7 +38,7 @@ class GoogleCloudFileStore(FileStore):
 
     def write(self, path: str, contents: str | bytes) -> None:
         """Write to Google Cloud Storage bucket.
-        
+
         Args:
             path: Object path
             contents: Content to write
@@ -45,13 +51,13 @@ class GoogleCloudFileStore(FileStore):
 
     def read(self, path: str) -> str:
         """Read from Google Cloud Storage bucket.
-        
+
         Args:
             path: Object path
-            
+
         Returns:
             File content as string
-            
+
         Raises:
             FileNotFoundError: If object not found
 
@@ -65,10 +71,10 @@ class GoogleCloudFileStore(FileStore):
 
     def list(self, path: str) -> list[str]:
         """List objects in GCS bucket at given prefix.
-        
+
         Args:
             path: Directory prefix
-            
+
         Returns:
             List of object paths
 
@@ -93,7 +99,7 @@ class GoogleCloudFileStore(FileStore):
 
     def delete(self, path: str) -> None:
         """Delete objects from GCS bucket.
-        
+
         Args:
             path: Object path or prefix to delete
 

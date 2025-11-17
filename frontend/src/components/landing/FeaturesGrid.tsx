@@ -1,16 +1,15 @@
 import React, { useState, useRef } from "react";
 import {
-  Zap,
-  Shield,
-  Rocket,
-  Code,
-  Palette,
-  Globe,
+  Sparkles,
+  Workflow,
+  Gauge,
+  Brain,
+  ShieldCheck,
+  LineChart,
   ArrowRight,
   CheckCircle,
   Star,
 } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import {
   Card,
   CardContent,
@@ -22,9 +21,9 @@ import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Progress } from "#/components/ui/progress";
 import { useScrollReveal } from "#/hooks/use-scroll-reveal";
+import { capabilityShowcase } from "#/content/landing";
 
 export default function FeaturesGrid(): React.ReactElement {
-  const { t } = useTranslation();
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 50, y: 50 });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -84,92 +83,16 @@ export default function FeaturesGrid(): React.ReactElement {
     }
   };
 
-  const features = [
-    {
-      icon: Zap,
-      title: t("LANDING$FEATURE_1_TITLE", {
-        defaultValue: "Instant Code Generation",
-      }),
-      description: t("LANDING$FEATURE_1_DESC", {
-        defaultValue:
-          "Forge Pro writes production-ready code in seconds, from simple functions to complex applications.",
-      }),
-      stats: "10x faster",
-      color: "brand",
-      badge: "Popular",
-      progress: 95,
-      size: "large", // For bento layout
-    },
-    {
-      icon: Shield,
-      title: t("LANDING$FEATURE_2_TITLE", { defaultValue: "Built-in Testing" }),
-      description: t("LANDING$FEATURE_2_DESC", {
-        defaultValue:
-          "Every piece of code comes with comprehensive tests and security best practices built-in.",
-      }),
-      stats: "100% coverage",
-      color: "success",
-      badge: "Secure",
-      progress: 100,
-      size: "medium",
-    },
-    {
-      icon: Rocket,
-      title: t("LANDING$FEATURE_3_TITLE", { defaultValue: "Auto Deployment" }),
-      description: t("LANDING$FEATURE_3_DESC", {
-        defaultValue:
-          "Forge Pro handles the entire deployment pipeline, from build optimization to production release.",
-      }),
-      stats: "Zero downtime",
-      color: "accent",
-      badge: "Automated",
-      progress: 88,
-      size: "medium",
-    },
-    {
-      icon: Code,
-      title: t("LANDING$FEATURE_4_TITLE", {
-        defaultValue: "Multi-Language Expert",
-      }),
-      description: t("LANDING$FEATURE_4_DESC", {
-        defaultValue:
-          "Fluent in all major programming languages and frameworks, adapting to your tech stack.",
-      }),
-      stats: "50+ languages",
-      color: "warning",
-      badge: "Expert",
-      progress: 92,
-      size: "small",
-    },
-    {
-      icon: Palette,
-      title: t("LANDING$FEATURE_5_TITLE", { defaultValue: "UI/UX Excellence" }),
-      description: t("LANDING$FEATURE_5_DESC", {
-        defaultValue:
-          "Creates beautiful, responsive interfaces with modern design principles and accessibility.",
-      }),
-      stats: "Pixel perfect",
-      color: "brand",
-      badge: "Design",
-      progress: 97,
-      size: "small",
-    },
-    {
-      icon: Globe,
-      title: t("LANDING$FEATURE_6_TITLE", {
-        defaultValue: "Continuous Learning",
-      }),
-      description: t("LANDING$FEATURE_6_DESC", {
-        defaultValue:
-          "Forge Pro constantly evolves, learning from the latest development trends and best practices.",
-      }),
-      stats: "Always updated",
-      color: "accent",
-      badge: "AI-Powered",
-      progress: 85,
-      size: "large",
-    },
-  ];
+  const iconMap = {
+    sparkles: Sparkles,
+    workflow: Workflow,
+    gauge: Gauge,
+    brain: Brain,
+    shield: ShieldCheck,
+    lineChart: LineChart,
+  } as const;
+
+  const features = capabilityShowcase;
 
   // Track mouse for spotlight effect
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -183,8 +106,9 @@ export default function FeaturesGrid(): React.ReactElement {
   };
 
   return (
-    <section ref={sectionRef} className="py-20 px-6 relative">
-      <div className="max-w-7xl mx-auto">
+    <section ref={sectionRef} className="relative py-24 px-6">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(124,58,237,0.15),_transparent_60%)]" />
+      <div className="relative max-w-7xl mx-auto">
         {/* Header */}
         <div
           className={`text-center mb-16 max-w-3xl mx-auto ${isVisible ? "stagger-item delay-0" : "opacity-0"}`}
@@ -206,24 +130,20 @@ export default function FeaturesGrid(): React.ReactElement {
             </Badge>
           </div>
 
-          <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight tracking-tight">
-            <span className="text-foreground block mb-2">
-              Powerful Features
-            </span>
-            <span className="bg-gradient-to-r from-brand-500 via-accent-500 to-brand-600 bg-clip-text text-transparent gradient-shimmer block">
-              Built for Developers
-            </span>
+          <h2 className="text-4xl md:text-5xl font-semibold mb-6 leading-tight tracking-tight text-white">
+            The full stack Forge ships with every workspace.
           </h2>
 
           <p className="text-lg md:text-xl text-foreground-secondary max-w-3xl mx-auto mb-8 leading-relaxed">
-            Everything you need to build, test, and deploy world-class software
+            Purpose-built capabilities for planning, editing, validating, and
+            deploying with enterprise guardrails.
           </p>
 
           <Button
             variant="outline"
-            className="border-brand-500/40 text-violet-500 hover:bg-violet-500/10 px-8 py-3 text-base font-semibold backdrop-blur-sm hover:shadow-lg hover:border-brand-500/60 transition-all duration-300 interactive-scale button-shine overflow-hidden"
+            className="border-white/20 text-white hover:bg-white/10 px-8 py-3 text-base font-semibold backdrop-blur-sm hover:shadow-lg transition-all duration-300"
           >
-            View All Features
+            Explore the full roadmap
             <ArrowRight className="w-5 h-5 ml-3" />
           </Button>
         </div>
@@ -240,15 +160,22 @@ export default function FeaturesGrid(): React.ReactElement {
             } as React.CSSProperties
           }
         >
-          {features.map((feature, index) => {
-            const colors = getColorClasses(feature.color);
+          {features.map((feature: any, index: number) => {
+            const colors = getColorClasses(feature.theme);
 
             // Bento box layout classes (asymmetric)
-            const sizeClasses = {
+            const sizeClassMap = {
               large: "md:col-span-8 md:row-span-1",
               medium: "md:col-span-6 md:row-span-1",
               small: "md:col-span-6 md:row-span-1",
-            }[feature.size];
+            } as const;
+
+            const sizeClasses =
+              sizeClassMap[feature.size as keyof typeof sizeClassMap] ??
+              sizeClassMap.small;
+
+            const Icon =
+              iconMap[feature.icon as keyof typeof iconMap] ?? Sparkles;
 
             return (
               <Card
@@ -276,7 +203,7 @@ export default function FeaturesGrid(): React.ReactElement {
                     <div
                       className={`w-14 h-14 rounded-xl ${colors.bg} flex items-center justify-center ring-1 ${colors.ring} group-hover:scale-110 transition-all duration-300 morphing-icon`}
                     >
-                      <feature.icon
+                      <Icon
                         className={`w-7 h-7 ${colors.text} floating-icon`}
                         style={{ animationDelay: `${index * 0.2}s` }}
                       />
@@ -305,7 +232,7 @@ export default function FeaturesGrid(): React.ReactElement {
                       Performance
                     </span>
                     <span className={`font-bold ${colors.text}`}>
-                      {feature.stats}
+                      {feature.stat}
                     </span>
                   </div>
 

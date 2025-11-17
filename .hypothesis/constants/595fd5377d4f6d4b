@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\middleware\cost_quota.py
+# hypothesis_version: 6.147.0
+
+[0.0, 0.5, 1.0, 5.0, 10.0, 20.0, 50.0, 100.0, 200.0, 2000.0, 429, 3600, 86400, 2592000, ',', '/', '/api/health', '/assets', '/health', '1', '1.0', 'COST_QUOTA_EXCEEDED', 'OTEL_ENABLED', 'OTEL_SAMPLE_DEFAULT', 'OTEL_SAMPLE_REDIS', 'Retry-After', 'X-Cost-Quota-Plan', 'X-Forwarded-For', 'daily', 'daily_cost', 'db.system', 'enterprise', 'false', 'forge.redis', 'forge.trace_id', 'free', 'inf', 'last_reset_day', 'last_reset_month', 'limit', 'limit_type', 'monthly', 'monthly_cost', 'pro', 'quota.allowed', 'quota.check', 'quota.cost.usd', 'quota.daily.cost', 'quota.daily.limit', 'quota.key', 'quota.monthly.cost', 'quota.monthly.limit', 'quota.plan', 'quota.record_cost', 'quota_plan', 'redis', 'reset_at', 'spent', 'trace_id', 'true', 'unknown', 'unlimited', 'user_id', 'yes']

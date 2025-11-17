@@ -26,7 +26,9 @@ TraceElement = Message | ToolCall | ToolOutput | Function
 def get_next_id(trace: list[TraceElement]) -> str:
     """Return smallest positive string ID not yet used by ToolCall elements."""
     used_ids = [el.id for el in trace if isinstance(el, ToolCall)]
-    return next((str(i) for i in range(1, len(used_ids) + 2) if str(i) not in used_ids), "1")
+    return next(
+        (str(i) for i in range(1, len(used_ids) + 2) if str(i) not in used_ids), "1"
+    )
 
 
 def get_last_id(trace: list[TraceElement]) -> str | None:
@@ -58,13 +60,15 @@ def parse_action(trace: list[TraceElement], action: Action) -> list[TraceElement
     return inv_trace
 
 
-def parse_observation(trace: list[TraceElement], obs: Observation) -> list[TraceElement]:
+def parse_observation(
+    trace: list[TraceElement], obs: Observation
+) -> list[TraceElement]:
     """Parse an Observation into Invariant trace elements.
-    
+
     Args:
         trace: Current trace elements
         obs: Observation to parse
-        
+
     Returns:
         List of trace elements representing the observation
 
@@ -78,13 +82,15 @@ def parse_observation(trace: list[TraceElement], obs: Observation) -> list[Trace
     return []
 
 
-def parse_element(trace: list[TraceElement], element: Action | Observation) -> list[TraceElement]:
+def parse_element(
+    trace: list[TraceElement], element: Action | Observation
+) -> list[TraceElement]:
     """Parse an Action or Observation into trace elements.
-    
+
     Args:
         trace: Current trace elements
         element: Action or Observation to parse
-        
+
     Returns:
         List of trace elements
 
@@ -96,10 +102,10 @@ def parse_element(trace: list[TraceElement], element: Action | Observation) -> l
 
 def parse_trace(trace: list[tuple[Action, Observation]]) -> list[TraceElement]:
     """Parse a complete trace of action-observation pairs into Invariant format.
-    
+
     Args:
         trace: List of (action, observation) tuples
-        
+
     Returns:
         List of Invariant trace elements
 
@@ -113,15 +119,16 @@ def parse_trace(trace: list[tuple[Action, Observation]]) -> list[TraceElement]:
 
 class InvariantState(BaseModel):
     """State container for Invariant security analysis trace.
-    
+
     Maintains a trace of events (messages, tool calls, tool outputs)
     for security policy evaluation.
     """
+
     trace: list[TraceElement] = Field(default_factory=list)
 
     def add_action(self, action: Action) -> None:
         """Add an action to the trace.
-        
+
         Args:
             action: Action to add
 
@@ -130,7 +137,7 @@ class InvariantState(BaseModel):
 
     def add_observation(self, obs: Observation) -> None:
         """Add an observation to the trace.
-        
+
         Args:
             obs: Observation to add
 
@@ -139,7 +146,7 @@ class InvariantState(BaseModel):
 
     def concatenate(self, other: InvariantState) -> None:
         """Concatenate another InvariantState's trace to this one.
-        
+
         Args:
             other: InvariantState to concatenate
 

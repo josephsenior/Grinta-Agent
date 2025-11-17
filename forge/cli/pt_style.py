@@ -1,5 +1,7 @@
 """Prompt Toolkit style definitions shared across the Forge CLI."""
 
+from typing import cast
+
 from prompt_toolkit.styles import Style, merge_styles
 from prompt_toolkit.styles.defaults import default_ui_style
 
@@ -29,4 +31,4 @@ def get_cli_style() -> Style:
             "risk-high": "#FF0000 bold",
         },
     )
-    return merge_styles([base, custom])
+    return cast(Style, merge_styles([base, custom]))

@@ -6,7 +6,12 @@ global:
   external_labels:
     monitor: 'forge-monitor'
 
+# Recording and alerting rules
+rule_files:
+  - 'recording-rules.yml'
+
 # Scrape configs
+
 scrape_configs:
   # MetaSOP Prometheus metrics (from forge/metasop/metrics.py)
   - job_name: 'forge-metasop'
@@ -18,7 +23,7 @@ scrape_configs:
 
   # REST API monitoring endpoint
   - job_name: 'forge-api'
-    metrics_path: '/api/monitoring/metrics'
+    metrics_path: '/api/monitoring/metrics-prom'
     static_configs:
       - targets: ['host.docker.internal:3000']
         labels:

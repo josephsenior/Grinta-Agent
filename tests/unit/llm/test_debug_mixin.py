@@ -64,7 +64,9 @@ def test_log_response_handles_tool_calls(monkeypatch: pytest.MonkeyPatch) -> Non
                 "message": {
                     "content": "message",
                     "tool_calls": [
-                        SimpleNamespace(function=SimpleNamespace(name="fn", arguments="{}")),
+                        SimpleNamespace(
+                            function=SimpleNamespace(name="fn", arguments="{}")
+                        ),
                     ],
                 }
             }
@@ -72,4 +74,3 @@ def test_log_response_handles_tool_calls(monkeypatch: pytest.MonkeyPatch) -> Non
     }
     mixin.log_response(response)
     assert "Function call: fn({})" in response_logger.messages[0]
-

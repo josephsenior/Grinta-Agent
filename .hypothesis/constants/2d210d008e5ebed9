@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\agenthub\readonly_agent\tools\view.py
+# hypothesis_version: 6.147.0
+
+['array', 'description', 'function', 'integer', 'items', 'object', 'path', 'properties', 'required', 'string', 'type', 'view', 'view_range']

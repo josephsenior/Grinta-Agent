@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+import time
 
 from forge.core.logger import forge_logger as logger
 from forge.events.event_store_abc import EventStoreABC
@@ -17,8 +19,6 @@ from forge.storage.locations import (
 from forge.utils.shutdown_listener import should_continue
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-
     from forge.events.event import Event, EventSource
     from forge.events.event_filter import EventFilter
     from forge.storage.files import FileStore
@@ -26,17 +26,17 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class _CachePage:
-    events: list[dict] | None
+    events: list[dict[str, Any]] | None
     start: int
     end: int
     __test__ = False
 
     def covers(self, global_index: int) -> bool:
         """Check if this cache page contains the given event index.
-        
+
         Args:
             global_index: Global event index to check
-            
+
         Returns:
             True if index is in this cache page
 
@@ -45,10 +45,10 @@ class _CachePage:
 
     def get_event(self, global_index: int) -> Event | None:
         """Get event from this cache page by global index.
-        
+
         Args:
             global_index: Global event index
-            
+
         Returns:
             Event object or None if not in cache
 
@@ -101,7 +101,9 @@ class EventStore(EventStoreABC):
             max_id = max(event_id, max_id)
         return max_id + 1
 
-    def _normalize_search_range(self, start_id: int, end_id: int | None) -> tuple[int, int]:
+    def _normalize_search_range(
+        self, start_id: int, end_id: int | None
+    ) -> tuple[int, int]:
         """Normalize the search range based on current ID and end_id."""
         if end_id is None:
             end_id = self.cur_id
@@ -109,7 +111,9 @@ class EventStore(EventStoreABC):
             end_id += 1
         return start_id, end_id
 
-    def _setup_reverse_search(self, start_id: int, end_id: int, reverse: bool) -> tuple[int, int, int]:
+    def _setup_reverse_search(
+        self, start_id: int, end_id: int, reverse: bool
+    ) -> tuple[int, int, int]:
         """Set up parameters for reverse search if needed."""
         if reverse:
             step = -1
@@ -120,19 +124,23 @@ class EventStore(EventStoreABC):
             step = 1
         return start_id, end_id, step
 
-    def _get_event_from_cache_or_storage(self, index: int, cache_page) -> Event | None:
+    def _get_event_from_cache_or_storage(
+        self, index: int, cache_page: _CachePage
+    ) -> Event | None:
         """Get event from cache or storage."""
         event = cache_page.get_event(index)
-        if event is None:
-            try:
-                event = self.get_event(index)
-            except FileNotFoundError:
-                event = None
-        return event
+        if event is not None:
+            return event
 
-    def _should_yield_event(self, event: Event | None, filter: EventFilter | None) -> bool:
-        """Check if event should be yielded based on filter."""
-        return event is not None and (not filter or filter.include(event))
+        for _ in range(5):
+            try:
+                return self.get_event(index)
+            except FileNotFoundError:
+                time.sleep(0.01)
+        try:
+            return self.get_event(index)
+        except FileNotFoundError:
+            return None
 
     def search_events(
         self,
@@ -171,34 +179,48 @@ class EventStore(EventStoreABC):
                 cache_page = self._load_cache_page_for_index(index)
 
             event = self._get_event_from_cache_or_storage(index, cache_page)
+            if event is None:
+                continue
+            if filter and not filter.include(event):
+                continue
 
-            if self._should_yield_event(event, filter):
-                yield event
-                num_results += 1
-                if limit and limit <= num_results:
-                    return
+            yield event
+            num_results += 1
+            if limit and limit <= num_results:
+                return
 
     def get_event(self, id: int) -> Event:
         """Get event by ID from persistent storage.
-        
+
         Args:
             id: Event ID to retrieve
-            
+
         Returns:
             Event object
-            
+
         Raises:
             FileNotFoundError: If event doesn't exist
 
         """
         filename = self._get_filename_for_id(id, self.user_id)
+        last_error: Exception | None = None
+        for _ in range(5):
+            try:
+                content = self.file_store.read(filename)
+                data = json.loads(content)
+                return event_from_dict(data)
+            except (json.JSONDecodeError, ValueError) as exc:
+                last_error = exc
+                time.sleep(0.01)
+        if last_error:
+            raise last_error
         content = self.file_store.read(filename)
         data = json.loads(content)
         return event_from_dict(data)
 
     def get_latest_event(self) -> Event:
         """Get most recent event from storage.
-        
+
         Returns:
             Latest event object
 
@@ -207,7 +229,7 @@ class EventStore(EventStoreABC):
 
     def get_latest_event_id(self) -> int:
         """Get ID of most recent event.
-        
+
         Returns:
             Latest event ID
 
@@ -216,10 +238,10 @@ class EventStore(EventStoreABC):
 
     def filtered_events_by_source(self, source: EventSource) -> Iterable[Event]:
         """Filter events by source (USER, AGENT, ENVIRONMENT, etc.).
-        
+
         Args:
             source: Event source to filter by
-            
+
         Yields:
             Events matching the source
 

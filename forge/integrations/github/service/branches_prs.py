@@ -27,7 +27,9 @@ class GitHubBranchesMixin(GitHubMixinBase):
                 last_push_date = None
                 if branch_data.get("commit") and branch_data["commit"].get("commit"):
                     commit_info = branch_data["commit"]["commit"]
-                    if commit_info.get("committer") and commit_info["committer"].get("date"):
+                    if commit_info.get("committer") and commit_info["committer"].get(
+                        "date"
+                    ):
                         last_push_date = commit_info["committer"]["date"]
                 branch = Branch(
                     name=branch_data.get("name"),
@@ -57,7 +59,9 @@ class GitHubBranchesMixin(GitHubMixinBase):
             last_push_date = None
             if branch_data.get("commit") and branch_data["commit"].get("commit"):
                 commit_info = branch_data["commit"]["commit"]
-                if commit_info.get("committer") and commit_info["committer"].get("date"):
+                if commit_info.get("committer") and commit_info["committer"].get(
+                    "date"
+                ):
                     last_push_date = commit_info["committer"]["date"]
             branch = Branch(
                 name=branch_data.get("name"),
@@ -87,11 +91,15 @@ class GitHubBranchesMixin(GitHubMixinBase):
         parts = repository.split("/")
         return None if len(parts) < 2 else (parts[-2], parts[-1])
 
-    async def _execute_branch_search_query(self, owner: str, name: str, query: str, per_page: int) -> dict | None:
+    async def _execute_branch_search_query(
+        self, owner: str, name: str, query: str, per_page: int
+    ) -> dict | None:
         """Execute the GraphQL query for branch search."""
         variables = {"owner": owner, "name": name, "query": query, "perPage": per_page}
         try:
-            return await self.execute_graphql_query(search_branches_graphql_query, variables)
+            return await self.execute_graphql_query(
+                search_branches_graphql_query, variables
+            )
         except Exception as e:
             logger.warning("Failed to search for branches: %s", e)
             return None
@@ -109,7 +117,12 @@ class GitHubBranchesMixin(GitHubMixinBase):
             last_push_date = target.get("committedDate")
 
         protected = node.get("branchProtectionRule") is not None
-        return Branch(name=bname, commit_sha=commit_sha, protected=protected, last_push_date=last_push_date)
+        return Branch(
+            name=bname,
+            commit_sha=commit_sha,
+            protected=protected,
+            last_push_date=last_push_date,
+        )
 
     def _process_branch_nodes(self, nodes: list) -> list[Branch]:
         """Process branch nodes and return Branch objects."""
@@ -119,7 +132,9 @@ class GitHubBranchesMixin(GitHubMixinBase):
             branches.append(branch)
         return branches
 
-    async def search_branches(self, repository: str, query: str, per_page: int = 30) -> list[Branch]:
+    async def search_branches(
+        self, repository: str, query: str, per_page: int = 30
+    ) -> list[Branch]:
         """Search branches by name using GitHub GraphQL with a partial query."""
         is_valid, adjusted_per_page = self._validate_search_inputs(query, per_page)
         if not is_valid:
@@ -130,7 +145,9 @@ class GitHubBranchesMixin(GitHubMixinBase):
             return []
 
         owner, name = repo_parts
-        result = await self._execute_branch_search_query(owner, name, query, adjusted_per_page)
+        result = await self._execute_branch_search_query(
+            owner, name, query, adjusted_per_page
+        )
         if not result:
             return []
 

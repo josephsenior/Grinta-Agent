@@ -4,14 +4,13 @@ import pytest
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.keys import Keys
 from forge.cli.tui import process_agent_pause
-from forge.core.schema import AgentState
+from forge.core.schemas import AgentState
 from forge.events import EventSource
 from forge.events.action import ChangeAgentStateAction
 from forge.events.observation import AgentStateChangedObservation
 
 
 class TestProcessAgentPause:
-
     @pytest.mark.asyncio
     @patch("forge.cli.tui.create_input")
     @patch("forge.cli.tui.print_formatted_text")
@@ -57,7 +56,6 @@ class TestProcessAgentPause:
 
 
 class TestCliPauseResumeInRunSession:
-
     @pytest.mark.asyncio
     async def test_on_event_async_pause_processing(self):
         """Test that on_event_async processes the pause event when is_paused is set."""
@@ -66,9 +64,10 @@ class TestCliPauseResumeInRunSession:
         is_paused = asyncio.Event()
         reload_microagents = False
         config = MagicMock()
-        with patch("forge.cli.main.display_event") as mock_display_event, patch(
-            "forge.cli.main.update_usage_metrics"
-        ) as mock_update_metrics:
+        with (
+            patch("forge.cli.main.display_event") as mock_display_event,
+            patch("forge.cli.main.update_usage_metrics") as mock_update_metrics,
+        ):
 
             async def test_func():
                 is_paused.set()
@@ -78,7 +77,9 @@ class TestCliPauseResumeInRunSession:
                     mock_display_event(event, config)
                     mock_update_metrics(event, usage_metrics=MagicMock())
                     if is_paused.is_set():
-                        event_stream.add_event(ChangeAgentStateAction(AgentState.PAUSED), EventSource.USER)
+                        event_stream.add_event(
+                            ChangeAgentStateAction(AgentState.PAUSED), EventSource.USER
+                        )
 
                 await on_event_async_test(event)
                 event_stream.add_event.assert_called_once()
@@ -107,7 +108,9 @@ class TestCliPauseResumeInRunSession:
 
             async def on_event_async_test(event):
                 nonlocal reload_microagents, is_paused
-                if isinstance(event.observation, AgentStateChangedObservation) and event.observation.agent_state in [
+                if isinstance(
+                    event.observation, AgentStateChangedObservation
+                ) and event.observation.agent_state in [
                     AgentState.AWAITING_USER_INPUT,
                     AgentState.FINISHED,
                 ]:
@@ -125,7 +128,8 @@ class TestCliPauseResumeInRunSession:
         """Test that when is_paused is set, awaiting confirmation events do not trigger prompting."""
         event = MagicMock()
         event.observation = AgentStateChangedObservation(
-            agent_state=AgentState.AWAITING_USER_CONFIRMATION, content="Agent awaiting confirmation"
+            agent_state=AgentState.AWAITING_USER_CONFIRMATION,
+            content="Agent awaiting confirmation",
         )
         is_paused = asyncio.Event()
         mock_confirmation = MagicMock()
@@ -137,7 +141,8 @@ class TestCliPauseResumeInRunSession:
                 nonlocal is_paused
                 if (
                     isinstance(event.observation, AgentStateChangedObservation)
-                    and event.observation.agent_state == AgentState.AWAITING_USER_CONFIRMATION
+                    and event.observation.agent_state
+                    == AgentState.AWAITING_USER_CONFIRMATION
                 ):
                     if is_paused.is_set():
                         return
@@ -150,7 +155,6 @@ class TestCliPauseResumeInRunSession:
 
 
 class TestCliCommandsPauseResume:
-
     @pytest.mark.asyncio
     @patch("forge.cli.commands.handle_resume_command")
     async def test_handle_commands_resume(self, mock_handle_resume):
@@ -166,8 +170,20 @@ class TestCliCommandsPauseResume:
         settings_store = MagicMock()
         agent_state = AgentState.PAUSED
         mock_handle_resume.return_value = (False, False)
-        close_repl, reload_microagents, new_session_requested, _ = await handle_commands(
-            message, event_stream, usage_metrics, sid, config, current_dir, settings_store, agent_state
+        (
+            close_repl,
+            reload_microagents,
+            new_session_requested,
+            _,
+        ) = await handle_commands(
+            message,
+            event_stream,
+            usage_metrics,
+            sid,
+            config,
+            current_dir,
+            settings_store,
+            agent_state,
         )
         mock_handle_resume.assert_called_once_with(event_stream, agent_state)
         assert close_repl is False
@@ -176,21 +192,23 @@ class TestCliCommandsPauseResume:
 
 
 class TestAgentStatePauseResume:
-
     @pytest.mark.asyncio
     @patch("forge.cli.main.display_agent_running_message")
     @patch("forge.cli.tui.process_agent_pause")
-    async def test_agent_running_enables_pause(self, mock_process_agent_pause, mock_display_message):
+    async def test_agent_running_enables_pause(
+        self, mock_process_agent_pause, mock_display_message
+    ):
         """Test that when the agent is running, pause functionality is enabled."""
         event = MagicMock()
-        event.observation = AgentStateChangedObservation(agent_state=AgentState.RUNNING, content="Agent is running")
+        event.observation = AgentStateChangedObservation(
+            agent_state=AgentState.RUNNING, content="Agent is running"
+        )
         event_stream = MagicMock()
         is_paused = asyncio.Event()
         loop = MagicMock()
         reload_microagents = False
 
         async def test_func():
-
             async def on_event_async_test(event):
                 nonlocal reload_microagents
                 if (
@@ -209,7 +227,9 @@ class TestAgentStatePauseResume:
     @pytest.mark.asyncio
     @patch("forge.cli.main.display_event")
     @patch("forge.cli.main.update_usage_metrics")
-    async def test_pause_event_changes_agent_state(self, mock_update_metrics, mock_display_event):
+    async def test_pause_event_changes_agent_state(
+        self, mock_update_metrics, mock_display_event
+    ):
         """Test that when is_paused is set, a PAUSED state change event is added to the stream."""
         event = MagicMock()
         event_stream = MagicMock()
@@ -219,13 +239,14 @@ class TestAgentStatePauseResume:
         is_paused.set()
 
         async def test_func():
-
             async def on_event_async_test(event):
                 nonlocal reload_microagents
                 mock_display_event(event, config)
                 mock_update_metrics(event, MagicMock())
                 if is_paused.is_set():
-                    event_stream.add_event(ChangeAgentStateAction(AgentState.PAUSED), EventSource.USER)
+                    event_stream.add_event(
+                        ChangeAgentStateAction(AgentState.PAUSED), EventSource.USER
+                    )
                     is_paused.clear()
 
             await on_event_async_test(event)
@@ -250,7 +271,6 @@ class TestAgentStatePauseResume:
         mock_prompt_task = MagicMock()
 
         async def test_func():
-
             async def on_event_async_test(event):
                 nonlocal is_paused
                 if (

@@ -30,10 +30,10 @@ class ExtendedConfig(RootModel[dict[str, Any]]):
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ExtendedConfig":
         """Create ExtendedConfig from dictionary.
-        
+
         Args:
             data: Configuration dictionary
-            
+
         Returns:
             ExtendedConfig instance
 

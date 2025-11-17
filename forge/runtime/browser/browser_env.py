@@ -47,7 +47,7 @@ class BrowserEnv:
 
     def get_html_text_converter(self) -> html2text.HTML2Text:
         """Get configured HTML to text converter.
-        
+
         Returns:
             Configured html2text converter instance
 
@@ -68,7 +68,7 @@ class BrowserEnv:
     )
     def init_browser(self) -> None:
         """Initialize BrowserGym environment in subprocess.
-        
+
         Sets up Playwright browser and message passing infrastructure.
         """
         logger.debug("Starting browser env...")
@@ -99,7 +99,10 @@ class BrowserEnv:
             import nltk  # type: ignore[import-untyped]
 
             nltk.download("punkt_tab")
-        elif "webarena" not in self.browsergym_eval_env and "miniwob" not in self.browsergym_eval_env:
+        elif (
+            "webarena" not in self.browsergym_eval_env
+            and "miniwob" not in self.browsergym_eval_env
+        ):
             msg = f"Unsupported browsergym eval env: {self.browsergym_eval_env}"
             raise ValueError(msg)
 
@@ -164,12 +167,17 @@ class BrowserEnv:
     def _handle_eval_goal_request(self, unique_request_id: str) -> None:
         """Handle evaluation goal request."""
         self.browser_side.send(
-            (unique_request_id, {"text_content": self.eval_goal, "image_content": self.goal_image_urls}),
+            (
+                unique_request_id,
+                {"text_content": self.eval_goal, "image_content": self.goal_image_urls},
+            ),
         )
 
     def _handle_eval_rewards_request(self, unique_request_id: str) -> None:
         """Handle evaluation rewards request."""
-        self.browser_side.send((unique_request_id, {"text_content": json.dumps(self.eval_rewards)}))
+        self.browser_side.send(
+            (unique_request_id, {"text_content": json.dumps(self.eval_rewards)})
+        )
 
     def _process_observation(self, obs: dict) -> dict:
         """Process observation data for browser environment."""
@@ -179,12 +187,16 @@ class BrowserEnv:
             overlay_som(obs["screenshot"], obs.get("extra_element_properties", {})),
             add_data_prefix=True,
         )
-        obs["screenshot"] = image_to_png_base64_url(obs["screenshot"], add_data_prefix=True)
+        obs["screenshot"] = image_to_png_base64_url(
+            obs["screenshot"], add_data_prefix=True
+        )
         obs["active_page_index"] = obs["active_page_index"].item()
         obs["elapsed_time"] = obs["elapsed_time"].item()
         return obs
 
-    def _handle_browser_action(self, env: Any, action_data: dict, unique_request_id: str) -> None:
+    def _handle_browser_action(
+        self, env: Any, action_data: dict, unique_request_id: str
+    ) -> None:
         """Handle browser action and send response."""
         action = action_data["action"]
 
@@ -201,18 +213,23 @@ class BrowserEnv:
 
     def _handle_localhost_server_readiness(self, action: str) -> str:
         """Handle server readiness for localhost URLs to prevent chrome-error://chromewebdata/.
-        
+
         Uses async non-blocking checks to avoid freezing the browser process.
         """
         import re
 
         # Check if this is a goto action to a localhost URL
-        goto_match = re.search(r'goto\(["\'](http://(?:localhost|127\.0\.0\.1|0\.0\.0\.0):\d+[^"\']*?)["\']\)', action)
+        goto_match = re.search(
+            r'goto\(["\'](http://(?:localhost|127\.0\.0\.1|0\.0\.0\.0):\d+[^"\']*?)["\']\)',
+            action,
+        )
         if not goto_match:
             return action
 
         url = goto_match.group(1)
-        logger.info(f"🔍 Detected localhost navigation to {url}, checking server readiness...")
+        logger.info(
+            f"🔍 Detected localhost navigation to {url}, checking server readiness..."
+        )
 
         # Run async server check
         try:
@@ -220,46 +237,58 @@ class BrowserEnv:
             asyncio.set_event_loop(loop)
             server_ready = loop.run_until_complete(self._check_server_ready_async(url))
             loop.close()
-            
+
             if server_ready:
                 logger.info(f"✅ Server at {url} is ready and responding!")
             else:
-                logger.warning(f"⚠️ Server at {url} not responding, but proceeding with navigation...")
+                logger.warning(
+                    f"⚠️ Server at {url} not responding, but proceeding with navigation..."
+                )
         except Exception as e:
-            logger.warning(f"⚠️ Error checking server readiness: {e}, proceeding anyway...")
+            logger.warning(
+                f"⚠️ Error checking server readiness: {e}, proceeding anyway..."
+            )
 
         return action
 
-    async def _check_server_ready_async(self, url: str, max_wait: int = 30, check_interval: float = 0.5) -> bool:
+    async def _check_server_ready_async(
+        self, url: str, max_wait: int = 30, check_interval: float = 0.5
+    ) -> bool:
         """Async non-blocking server readiness check.
-        
+
         Args:
             url: URL to check
             max_wait: Maximum seconds to wait
             check_interval: Seconds between checks
-            
+
         Returns:
             True if server is ready, False otherwise
 
         """
         import aiohttp  # type: ignore[import-untyped]
-        
+
         start_time = time.time()
         attempt = 0
-        
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=3)) as session:
+
+        async with aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=3)
+        ) as session:
             while time.time() - start_time < max_wait:
                 attempt += 1
                 try:
                     async with session.head(url, allow_redirects=True) as response:
                         if response.status < 500:
-                            logger.debug(f"✅ Server ready after {attempt} attempts ({time.time() - start_time:.1f}s) - Status: {response.status}")
+                            logger.debug(
+                                f"✅ Server ready after {attempt} attempts ({time.time() - start_time:.1f}s) - Status: {response.status}"
+                            )
                             return True
                 except Exception as e:
-                    logger.debug(f"⏳ Attempt {attempt}: Server not ready yet - {type(e).__name__}")
-                
+                    logger.debug(
+                        f"⏳ Attempt {attempt}: Server not ready yet - {type(e).__name__}"
+                    )
+
                 await asyncio.sleep(check_interval)
-        
+
         logger.warning(f"❌ Server not ready after {max_wait}s ({attempt} attempts)")
         return False
 
@@ -329,10 +358,10 @@ class BrowserEnv:
 
     def check_alive(self, timeout: float = 60) -> bool:
         """Check if browser subprocess is alive and responding.
-        
+
         Args:
             timeout: Timeout in seconds
-            
+
         Returns:
             True if browser is alive
 
@@ -353,7 +382,9 @@ class BrowserEnv:
             self.agent_side.send(("SHUTDOWN", None))
             self.process.join(5)
             if self.process.is_alive():
-                logger.error("Browser process did not terminate, forcefully terminating...")
+                logger.error(
+                    "Browser process did not terminate, forcefully terminating..."
+                )
                 self.process.terminate()
                 self.process.join(5)
                 if self.process.is_alive():

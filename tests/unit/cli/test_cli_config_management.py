@@ -4,7 +4,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from forge.cli.commands import display_mcp_servers, remove_mcp_server
 from forge.core.config import ForgeConfig
-from forge.core.config.mcp_config import MCPConfig, MCPSSEServerConfig, MCPStdioServerConfig
+from forge.core.config.mcp_config import (
+    MCPConfig,
+    MCPSSEServerConfig,
+    MCPStdioServerConfig,
+)
 
 
 class TestMCPServerManagement:
@@ -75,5 +79,7 @@ class TestMCPServerManagement:
         mock_prompt_restart.assert_called()
         assert mock_cli_confirm.call_count == 2
         mock_save.assert_called_once()
-        success_calls = [call for call in mock_print.call_args_list if "removed" in str(call[0][0])]
+        success_calls = [
+            call for call in mock_print.call_args_list if "removed" in str(call[0][0])
+        ]
         assert success_calls

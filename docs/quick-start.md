@@ -39,7 +39,7 @@ cd frontend && npm run dev
 
 ## Verify
 
-1. Open http://localhost:3001
+1. Open http://localhost:3000
 2. Create a conversation
 3. Ask: "Create a simple HTML page"
 

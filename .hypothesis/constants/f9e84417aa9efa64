@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\runtime\utils\git_changes.py
+# hypothesis_version: 6.147.0
+
+['*', './*/.git', '??', 'A', 'C', 'D', 'M', 'R', 'U', '__main__', 'error', 'path', 'status']

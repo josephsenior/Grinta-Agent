@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\metasop\router.py
+# hypothesis_version: 6.147.0
+
+[100, 1000, ':', 'Cleaned message: %s', '__raw__', '_error', 'a', 'all_steps', 'artifacts', 'content', 'debug', 'default_sop', 'duration_ms', 'enabled', 'error', 'events', 'executed', 'executed_shaped', 'executed_steps', 'feature_delivery', 'id', 'info', 'llm_registry', 'logs', 'message', 'metasop', 'metasop_runs.ndjson', 'oh_event', 'ok', 'qa', 'qa_verify', 'report', 'retries', 'sop:', 'status', 'status_update', 'steps', 'success', 'summary', 'tests', 'tokens', 'total_tokens', 'ts', 'type', 'unavailable', 'unserializable', 'utf-8']

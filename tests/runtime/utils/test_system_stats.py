@@ -3,7 +3,11 @@
 import time
 from unittest.mock import patch
 import psutil
-from forge.runtime.utils.system_stats import get_system_info, get_system_stats, update_last_execution_time
+from forge.runtime.utils.system_stats import (
+    get_system_info,
+    get_system_stats,
+    update_last_execution_time,
+)
 
 
 def _validate_cpu_stats(stats):

@@ -13,58 +13,20 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
+import { metaSopSteps, metaSopHighlights } from "#/content/landing";
 
 export default function MetaSOPShowcase(): React.ReactElement {
   const [activeStep, setActiveStep] = useState(0);
   const [progress, setProgress] = useState(0);
 
-  const steps = [
-    {
-      id: "pm",
-      icon: Users,
-      role: "Product Manager",
-      task: "Define requirements",
-      output: "User stories & acceptance criteria",
-      color: "brand",
-      status: "completed",
-    },
-    {
-      id: "architect",
-      icon: Workflow,
-      role: "Architect",
-      task: "Design system",
-      output: "API specs & architecture docs",
-      color: "accent",
-      status: "completed",
-    },
-    {
-      id: "engineer",
-      icon: Code,
-      role: "Engineer",
-      task: "Implement code",
-      output: "Production-ready code",
-      color: "success",
-      status: "in_progress",
-    },
-    {
-      id: "qa",
-      icon: TestTube,
-      role: "QA Engineer",
-      task: "Test & verify",
-      output: "Test reports & coverage",
-      color: "warning",
-      status: "pending",
-    },
-    {
-      id: "deploy",
-      icon: Rocket,
-      role: "DevOps",
-      task: "Deploy & monitor",
-      output: "Live production deployment",
-      color: "info",
-      status: "pending",
-    },
-  ];
+  const iconCycle = [Users, Workflow, Code, TestTube, Rocket];
+  const colorCycle = ["brand", "accent", "success", "warning", "info"] as const;
+  const steps = metaSopSteps.map((step: any, index: number) => ({
+    ...step,
+    id: `${step.role.toLowerCase().replace(/\s+/g, "-")}-${index}`,
+    icon: iconCycle[index % iconCycle.length],
+    color: colorCycle[index % colorCycle.length],
+  }));
 
   // Auto-advance through steps
   useEffect(() => {
@@ -379,50 +341,39 @@ export default function MetaSOPShowcase(): React.ReactElement {
 
         {/* Benefits Grid */}
         <div className="mt-24 grid md:grid-cols-3 gap-6">
-          <Card className="glass border-border/30 hover:border-brand-500/30 transition-all duration-300">
-            <CardContent className="p-8 text-center">
-              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-brand-500/20 to-brand-600/20 flex items-center justify-center border border-brand-500/30">
-                <Zap className="w-7 h-7 text-violet-500" />
-              </div>
-              <h3 className="text-xl font-bold text-foreground mb-2">
-                10x Faster Development
-              </h3>
-              <p className="text-sm text-foreground-secondary">
-                Complete projects in hours, not weeks. MetaSOP orchestrates the
-                entire team simultaneously.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="glass border-border/30 hover:border-success-500/30 transition-all duration-300">
-            <CardContent className="p-8 text-center">
-              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-success-500/20 to-success-600/20 flex items-center justify-center border border-success-500/30">
-                <CheckCircle className="w-7 h-7 text-success-500" />
-              </div>
-              <h3 className="text-xl font-bold text-foreground mb-2">
-                Zero Bottlenecks
-              </h3>
-              <p className="text-sm text-foreground-secondary">
-                No waiting for team members. Each role executes in parallel with
-                perfect coordination.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="glass border-border/30 hover:border-accent-500/30 transition-all duration-300">
-            <CardContent className="p-8 text-center">
-              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-accent-500/20 to-accent-600/20 flex items-center justify-center border border-accent-500/30">
-                <Workflow className="w-7 h-7 text-accent-500" />
-              </div>
-              <h3 className="text-xl font-bold text-foreground mb-2">
-                Enterprise Quality
-              </h3>
-              <p className="text-sm text-foreground-secondary">
-                Every output meets professional standards with built-in best
-                practices and quality checks.
-              </p>
-            </CardContent>
-          </Card>
+          {metaSopHighlights.map((highlight: any, index: number) => {
+            const Icon = [Zap, CheckCircle, Workflow][index] ?? Zap;
+            const hoverBorders = [
+              "hover:border-brand-500/30",
+              "hover:border-success-500/30",
+              "hover:border-accent-500/30",
+            ];
+            const gradients = [
+              "from-brand-500/20 to-brand-600/20",
+              "from-success-500/20 to-success-600/20",
+              "from-accent-500/20 to-accent-600/20",
+            ];
+            return (
+              <Card
+                key={highlight.title}
+                className={`glass border-border/30 transition-all duration-300 ${hoverBorders[index % hoverBorders.length]}`}
+              >
+                <CardContent className="p-8 text-center">
+                  <div
+                    className={`w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br ${gradients[index % gradients.length]} flex items-center justify-center border border-white/10`}
+                  >
+                    <Icon className="w-7 h-7 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-foreground mb-2">
+                    {highlight.title}
+                  </h3>
+                  <p className="text-sm text-foreground-secondary">
+                    {highlight.description}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
     </section>

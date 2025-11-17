@@ -30,7 +30,10 @@ def _create_argument_parser():
     _add_list_parser(sub)
     _add_validate_manifest_parser(sub)
     _add_validate_template_parser(sub)
-    sub.add_parser("metrics-snapshot", help="Print in-process metrics snapshot (if process collected events)")
+    sub.add_parser(
+        "metrics-snapshot",
+        help="Print in-process metrics snapshot (if process collected events)",
+    )
 
     return parser
 

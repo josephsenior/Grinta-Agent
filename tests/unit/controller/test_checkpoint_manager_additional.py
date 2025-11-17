@@ -8,12 +8,11 @@ from types import SimpleNamespace
 import pytest
 
 from forge.controller.checkpoint_manager import CheckpointManager
-from forge.core.schema import AgentState
+from forge.core.schemas import AgentState
 
 
 def build_state(iteration: int, last_error: str = "") -> SimpleNamespace:
     """Create a lightweight state compatible with CheckpointManager."""
-
     return SimpleNamespace(
         iteration_flag=SimpleNamespace(current_value=iteration),
         agent_state=AgentState.RUNNING,
@@ -24,7 +23,6 @@ def build_state(iteration: int, last_error: str = "") -> SimpleNamespace:
 @pytest.mark.asyncio
 async def test_checkpoint_manager_create_and_restore(tmp_path):
     """Checkpoints should persist state snapshots and allow restoration."""
-
     manager = CheckpointManager(tmp_path, max_checkpoints=3, retention_hours=24)
     state = build_state(iteration=7)
 
@@ -48,7 +46,6 @@ async def test_checkpoint_manager_create_and_restore(tmp_path):
 @pytest.mark.asyncio
 async def test_checkpoint_manager_cleanup_old_entries(tmp_path):
     """Old checkpoints should be pruned based on retention policy and max count."""
-
     manager = CheckpointManager(tmp_path, max_checkpoints=1, retention_hours=1)
     state = build_state(iteration=1)
 
@@ -67,4 +64,3 @@ async def test_checkpoint_manager_cleanup_old_entries(tmp_path):
 
     # Attempting to restore deleted checkpoint should return None
     assert await manager.restore_checkpoint(first_id) is None
-

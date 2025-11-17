@@ -5,7 +5,7 @@ from typing import TypedDict
 from forge.controller.agent import Agent
 from forge.controller.state.state import State
 from forge.core.config import AgentConfig
-from forge.core.schema import AgentState
+from forge.core.schemas import AgentState
 from forge.events.action import (
     Action,
     AgentFinishAction,
@@ -57,16 +57,24 @@ class DummyAgent(Agent):
             {
                 "action": CmdRunAction(command='echo "foo"'),
                 "observations": [
-                    CmdOutputObservation("foo", command='echo "foo"', metadata=CmdOutputMetadata(exit_code=0)),
+                    CmdOutputObservation(
+                        "foo",
+                        command='echo "foo"',
+                        metadata=CmdOutputMetadata(exit_code=0),
+                    ),
                 ],
             },
             {
-                "action": FileWriteAction(content='echo "Hello, World!"', path="hello.sh"),
+                "action": FileWriteAction(
+                    content='echo "Hello, World!"', path="hello.sh"
+                ),
                 "observations": [FileWriteObservation(content="", path="hello.sh")],
             },
             {
                 "action": FileReadAction(path="hello.sh"),
-                "observations": [FileReadObservation('echo "Hello, World!"\n', path="hello.sh")],
+                "observations": [
+                    FileReadObservation('echo "Hello, World!"\n', path="hello.sh")
+                ],
             },
             {
                 "action": CmdRunAction(command="bash hello.sh"),
@@ -78,9 +86,14 @@ class DummyAgent(Agent):
                     ),
                 ],
             },
-            {"action": AgentRejectAction(), "observations": [AgentStateChangedObservation("", AgentState.REJECTED)]},
             {
-                "action": AgentFinishAction(outputs={}, thought="Task completed", action="finish"),
+                "action": AgentRejectAction(),
+                "observations": [AgentStateChangedObservation("", AgentState.REJECTED)],
+            },
+            {
+                "action": AgentFinishAction(
+                    outputs={}, thought="Task completed", final_thought="Task completed"
+                ),
                 "observations": [AgentStateChangedObservation("", AgentState.FINISHED)],
             },
         ]
@@ -101,7 +114,14 @@ class DummyAgent(Agent):
         if not isinstance(metadata, dict):
             return
 
-        variable_fields = ["pid", "username", "hostname", "working_dir", "py_interpreter_path", "suffix"]
+        variable_fields = [
+            "pid",
+            "username",
+            "hostname",
+            "working_dir",
+            "py_interpreter_path",
+            "suffix",
+        ]
         for field in variable_fields:
             metadata.pop(field, None)
 
@@ -151,13 +171,13 @@ class DummyAgent(Agent):
         self._normalize_path(obs)
         self._normalize_message(obs)
 
-    def _validate_observations(self, state: State, prev_step: dict) -> None:
+    def _validate_observations(self, state: State, prev_step: ActionObs) -> None:
         """Validate observations from the previous step."""
         if "observations" not in prev_step or not prev_step["observations"]:
             return
 
         expected_observations = prev_step["observations"]
-        hist_events = state.view[-len(expected_observations):]
+        hist_events = state.view[-len(expected_observations) :]
 
         if len(hist_events) < len(expected_observations):
             pass

@@ -20,7 +20,9 @@ class NoOpCondenser(Condenser):
         return view
 
     @classmethod
-    def from_config(cls, config: "NoOpCondenserConfig", llm_registry: "LLMRegistry") -> "NoOpCondenser":
+    def from_config(
+        cls, config: "NoOpCondenserConfig", llm_registry: "LLMRegistry"
+    ) -> "NoOpCondenser":
         """Return a new no-op condenser regardless of configuration."""
         return NoOpCondenser()
 
@@ -28,15 +30,15 @@ class NoOpCondenser(Condenser):
 # Lazy registration to avoid circular imports
 def _register_config():
     """Register NoOpCondenserConfig with the NoOpCondenser factory.
-    
+
     Defers import of NoOpCondenserConfig to avoid circular dependency between
     condenser implementations and their configuration classes. Called at module load time
     to enable from_config() factory method to instantiate condensers from config objects.
-    
+
     Side Effects:
         - Imports NoOpCondenserConfig from forge.core.config.condenser_config
         - Registers config class with NoOpCondenser.register_config() factory
-    
+
     Notes:
         - Must be called at module level after NoOpCondenser class definition
         - Pattern reused across all condenser implementations
@@ -44,6 +46,8 @@ def _register_config():
 
     """
     from forge.core.config.condenser_config import NoOpCondenserConfig
+
     NoOpCondenser.register_config(NoOpCondenserConfig)
+
 
 _register_config()

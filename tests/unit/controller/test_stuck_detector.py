@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -21,13 +21,21 @@ def _assign(event, event_id: int, source: EventSource):
     event._source = source  # type: ignore[attr-defined]
 
 
+def _state_from_history(history: list[Any]) -> State:
+    state = State()
+    state.history = list(history)
+    return state
+
+
 def _cmd_action(command: str, event_id: int) -> CmdRunAction:
     action = CmdRunAction(command=command, thought="")
     _assign(action, event_id, EventSource.AGENT)
     return action
 
 
-def _cmd_observation(content: str, command: str, exit_code: int, event_id: int) -> CmdOutputObservation:
+def _cmd_observation(
+    content: str, command: str, exit_code: int, event_id: int
+) -> CmdOutputObservation:
     obs = CmdOutputObservation(content=content, command=command, exit_code=exit_code)
     _assign(obs, event_id, EventSource.ENVIRONMENT)
     return obs
@@ -59,7 +67,7 @@ def test_detects_repeating_action_observation_loop():
     for i in range(4):
         history.append(_cmd_action("ls", i * 2 + 1))
         history.append(_cmd_observation("listing", "ls", 0, i * 2 + 2))
-    detector = StuckDetector(SimpleNamespace(history=history))
+    detector = StuckDetector(cast(State, SimpleNamespace(history=history)))
     assert detector.is_stuck()
 
 
@@ -70,7 +78,7 @@ def test_detects_repeating_action_error_loop():
         obs = ErrorObservation(content="boom", error_id="E")
         _assign(obs, i * 2 + 2, EventSource.ENVIRONMENT)
         history.append(obs)
-    detector = StuckDetector(SimpleNamespace(history=history))
+    detector = StuckDetector(cast(State, SimpleNamespace(history=history)))
     assert detector.is_stuck()
 
 
@@ -84,7 +92,7 @@ def test_detects_ipython_syntax_error_loop():
                 i * 2 + 2,
             ),
         )
-    detector = StuckDetector(SimpleNamespace(history=history))
+    detector = StuckDetector(cast(State, SimpleNamespace(history=history)))
     assert detector.is_stuck()
 
 
@@ -101,19 +109,19 @@ def test_detects_monologue_without_observations():
 def test_detects_action_observation_pattern():
     history = []
     for i in range(6):
-        history.append(_cmd_action(f"ls {i%2}", i * 2 + 1))
+        history.append(_cmd_action(f"ls {i % 2}", i * 2 + 1))
         history.append(_cmd_observation("out", "ls", 0, i * 2 + 2))
     detector = StuckDetector(SimpleNamespace(history=history))
     assert detector.is_stuck()
 
 
 def test_detects_context_window_error_loop():
-    history = []
+    history: list[AgentCondensationObservation] = []
     for i in range(12):
         obs = AgentCondensationObservation(content=f"summary {i}")
         _assign(obs, i + 1, EventSource.ENVIRONMENT)
         history.append(obs)
-    detector = StuckDetector(SimpleNamespace(history=history))
+    detector = StuckDetector(cast(State, SimpleNamespace(history=history)))
     assert detector.is_stuck()
 
 
@@ -257,17 +265,24 @@ def test_extract_error_line_from_observation_conditions():
         ],
     )
     obs2 = IPythonRunCellObservation(content=content, code="")
-    assert detector._extract_error_line_from_observation(
-        obs2,
-        "SyntaxError: invalid syntax. Perhaps you forgot a comma?",
-    ) is None
+    assert (
+        detector._extract_error_line_from_observation(
+            obs2,
+            "SyntaxError: invalid syntax. Perhaps you forgot a comma?",
+        )
+        is None
+    )
 
 
 def test_check_for_consistent_line_error_requires_all_matches():
     detector = StuckDetector(SimpleNamespace(history=[]))
-    obs1 = _ipython_observation("SyntaxError: unterminated string literal (detected at line 1)", 1)
+    obs1 = _ipython_observation(
+        "SyntaxError: unterminated string literal (detected at line 1)", 1
+    )
     obs2 = IPythonRunCellObservation(content="short", code="")
-    assert not detector._check_for_consistent_line_error([obs1, obs2], "SyntaxError: unterminated string literal (detected at line")
+    assert not detector._check_for_consistent_line_error(
+        [obs1, obs2], "SyntaxError: unterminated string literal (detected at line"
+    )
 
 
 def test_is_stuck_action_observation_pattern_requires_enough_events():
@@ -278,7 +293,7 @@ def test_is_stuck_action_observation_pattern_requires_enough_events():
 
 def test_check_consecutive_condensation_events_false():
     detector = StuckDetector(SimpleNamespace(history=[]))
-    history = []
+    history: list[AgentCondensationObservation | CmdOutputObservation] = []
     for i in range(5):
         obs = AgentCondensationObservation(content=f"summary {i}")
         _assign(obs, i * 2 + 1, EventSource.ENVIRONMENT)
@@ -286,12 +301,16 @@ def test_check_consecutive_condensation_events_false():
         if i < 4:
             spacer = _cmd_observation("ok", "cmd", 0, i * 2 + 2)
             history.append(spacer)
-    events = detector._get_condensation_events(history)
-    assert not detector._check_consecutive_condensation_events(events, history)
+    events = detector._get_condensation_events(cast(list[Any], history))
+    assert not detector._check_consecutive_condensation_events(
+        cast(list[Any], events), cast(list[Any], history)
+    )
 
 
 def test_context_window_error_requires_minimum_events():
-    detector = StuckDetector(SimpleNamespace(history=[AgentCondensationObservation(content="s")]))
+    detector = StuckDetector(
+        SimpleNamespace(history=[AgentCondensationObservation(content="s")])
+    )
     assert not detector._is_stuck_context_window_error(detector.state.history)  # type: ignore[attr-defined]
 
 
@@ -321,15 +340,30 @@ def test_calculate_intent_diversity_and_failure_rate():
 
 def test_extract_action_intent_variants():
     detector = StuckDetector(SimpleNamespace(history=[]))
-    assert detector._extract_action_intent(IPythonRunCellAction(code="edit_file_by_replace('a')")) == "edit_file"
-    assert detector._extract_action_intent(IPythonRunCellAction(code="print('x')")) == "execute_python"
-    assert detector._extract_action_intent(_cmd_action("python script.py", 1)) == "execute_code"
-    assert detector._extract_action_intent(MessageAction(content="hi")) == "other_action"
+    assert (
+        detector._extract_action_intent(
+            IPythonRunCellAction(code="edit_file_by_replace('a')")
+        )
+        == "edit_file"
+    )
+    assert (
+        detector._extract_action_intent(IPythonRunCellAction(code="print('x')"))
+        == "execute_python"
+    )
+    assert (
+        detector._extract_action_intent(_cmd_action("python script.py", 1))
+        == "execute_code"
+    )
+    assert (
+        detector._extract_action_intent(MessageAction(content="hi")) == "other_action"
+    )
 
 
 def test_extract_observation_outcome_unknown():
     detector = StuckDetector(SimpleNamespace(history=[]))
-    assert detector._extract_observation_outcome(MessageAction(content="hi")) == "unknown"
+    assert (
+        detector._extract_observation_outcome(MessageAction(content="hi")) == "unknown"
+    )
 
 
 def test_eq_no_pid_ipython_special_case():
@@ -338,4 +372,3 @@ def test_eq_no_pid_ipython_special_case():
     action1 = IPythonRunCellAction(code=code)
     action2 = IPythonRunCellAction(code=code.replace("line2", "line2"))
     assert detector._eq_no_pid(action1, action2)
-

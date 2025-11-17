@@ -44,7 +44,9 @@ class BitbucketFailureStub(_BaseStub):
 
 
 @pytest.mark.asyncio
-async def test_validate_provider_token_prefers_github(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_validate_provider_token_prefers_github(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(utils, "GitHubService", GitHubSuccessStub)
     monkeypatch.setattr(utils, "GitLabService", GitLabFailureStub)
     monkeypatch.setattr(utils, "BitBucketService", BitbucketFailureStub)
@@ -54,17 +56,23 @@ async def test_validate_provider_token_prefers_github(monkeypatch: pytest.Monkey
 
 
 @pytest.mark.asyncio
-async def test_validate_provider_token_falls_back_to_gitlab(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_validate_provider_token_falls_back_to_gitlab(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(utils, "GitHubService", GitHubFailureStub)
     monkeypatch.setattr(utils, "GitLabService", GitLabSuccessStub)
     monkeypatch.setattr(utils, "BitBucketService", BitbucketFailureStub)
 
-    result = await utils.validate_provider_token(SecretStr("token"), base_domain="git.example.com")
+    result = await utils.validate_provider_token(
+        SecretStr("token"), base_domain="git.example.com"
+    )
     assert result == ProviderType.GITLAB
 
 
 @pytest.mark.asyncio
-async def test_validate_provider_token_falls_back_to_bitbucket(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_validate_provider_token_falls_back_to_bitbucket(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(utils, "GitHubService", GitHubFailureStub)
     monkeypatch.setattr(utils, "GitLabService", GitLabFailureStub)
     monkeypatch.setattr(utils, "BitBucketService", BitbucketSuccessStub)
@@ -74,7 +82,9 @@ async def test_validate_provider_token_falls_back_to_bitbucket(monkeypatch: pyte
 
 
 @pytest.mark.asyncio
-async def test_validate_provider_token_returns_none_when_all_fail(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_validate_provider_token_returns_none_when_all_fail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(utils, "GitHubService", GitHubFailureStub)
     monkeypatch.setattr(utils, "GitLabService", GitLabFailureStub)
     monkeypatch.setattr(utils, "BitBucketService", BitbucketFailureStub)
@@ -84,7 +94,8 @@ async def test_validate_provider_token_returns_none_when_all_fail(monkeypatch: p
 
 
 @pytest.mark.asyncio
-async def test_validate_provider_token_returns_none_for_missing_token(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_validate_provider_token_returns_none_for_missing_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     result = await utils.validate_provider_token(None)
     assert result is None
-

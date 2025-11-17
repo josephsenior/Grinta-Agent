@@ -11,12 +11,18 @@ async def test_get_paginated_branches_github_basic_next_page():
     mock_response = [
         {
             "name": "main",
-            "commit": {"sha": "abc123", "commit": {"committer": {"date": "2024-01-01T12:00:00Z"}}},
+            "commit": {
+                "sha": "abc123",
+                "commit": {"committer": {"date": "2024-01-01T12:00:00Z"}},
+            },
             "protected": True,
         },
         {
             "name": "feature/foo",
-            "commit": {"sha": "def456", "commit": {"committer": {"date": "2024-01-02T15:30:00Z"}}},
+            "commit": {
+                "sha": "def456",
+                "commit": {"committer": {"date": "2024-01-02T15:30:00Z"}},
+            },
             "protected": False,
         },
     ]
@@ -47,7 +53,10 @@ async def test_get_paginated_branches_github_no_next_page():
     mock_response = [
         {
             "name": "dev",
-            "commit": {"sha": "zzz999", "commit": {"committer": {"date": "2024-01-03T00:00:00Z"}}},
+            "commit": {
+                "sha": "zzz999",
+                "commit": {"committer": {"date": "2024-01-03T00:00:00Z"}},
+            },
             "protected": False,
         }
     ]
@@ -78,7 +87,10 @@ async def test_search_branches_github_success_and_variables():
                         },
                         {
                             "name": "chore/update",
-                            "target": {"__typename": "Tag", "oid": "should_be_ignored_for_commit"},
+                            "target": {
+                                "__typename": "Tag",
+                                "oid": "should_be_ignored_for_commit",
+                            },
                             "branchProtectionRule": None,
                         },
                     ]

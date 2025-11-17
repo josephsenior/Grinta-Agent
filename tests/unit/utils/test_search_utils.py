@@ -81,9 +81,7 @@ async def test_iterate_multiple_pages():
                         "user_id": "123",
                         "selected_repository": "repo1",
                         "title": f"ServerConversation {i}",
-                        "created_at": f"2025-01-{
-                            15 +
-                            i}T19:51:04Z",
+                        "created_at": f"2025-01-{15 + i}T19:51:04Z",
                     }
                 )
                 for i in range(1, 6)
@@ -94,7 +92,13 @@ async def test_iterate_multiple_pages():
     async for result in iterate(store.search, limit=2):
         results.append(result)
     assert len(results) == 5
-    assert [r.conversation_id for r in results] == ["conv5", "conv4", "conv3", "conv2", "conv1"]
+    assert [r.conversation_id for r in results] == [
+        "conv5",
+        "conv4",
+        "conv3",
+        "conv2",
+        "conv1",
+    ]
 
 
 @pytest.mark.asyncio

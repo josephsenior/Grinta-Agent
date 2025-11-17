@@ -1,9 +1,12 @@
 import json
-from forge.core.pydantic_compat import model_dump_json, model_dump_with_options, model_to_dict
+from forge.core.pydantic_compat import (
+    model_dump_json,
+    model_dump_with_options,
+    model_to_dict,
+)
 
 
 class V2Like:
-
     def __init__(self, data):
         self._data = data
 
@@ -17,7 +20,6 @@ class V2Like:
 
 
 class V1Like:
-
     def __init__(self, data):
         self._data = data
 
@@ -62,9 +64,7 @@ def test_model_to_dict_passthrough_dict():
 
 
 def test_model_dump_with_options_mode_json_falls_back_to_json_method():
-
     class V1JSON:
-
         def __init__(self, d):
             self._d = d
 

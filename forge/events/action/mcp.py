@@ -3,24 +3,26 @@
 from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
-from forge.core.schema import ActionType
+from forge.core.schemas import ActionType
 from forge.events.action.action import Action, ActionSecurityRisk
+from forge.events.action._canonical import canonicalize
 
 
 @dataclass
 class MCPAction(Action):
     """Action to call an MCP (Model Context Protocol) tool.
-    
+
     Attributes:
         name: Name of the MCP tool to call
         arguments: Arguments to pass to the tool
         thought: Agent's reasoning for this action
 
     """
-    name: str
+
+    name: str = ""
     arguments: dict[str, Any] = field(default_factory=dict)
     thought: str = ""
-    action: str = ActionType.MCP
+    action: ClassVar[str] = ActionType.MCP
     runnable: ClassVar[bool] = True
     security_risk: ActionSecurityRisk = ActionSecurityRisk.UNKNOWN
 
@@ -28,8 +30,8 @@ class MCPAction(Action):
     def message(self) -> str:
         """Get MCP tool call message."""
         return f"I am interacting with the MCP server with name:\n```\n{
-            self.name}\n```\nand arguments:\n```\n{
-            self.arguments}\n```"
+            self.name
+        }\n```\nand arguments:\n```\n{self.arguments}\n```"
 
     def __str__(self) -> str:
         """Return a readable summary of the MCP invocation."""
@@ -41,3 +43,6 @@ class MCPAction(Action):
         return ret
 
     __test__ = False
+
+
+canonicalize("MCPAction", MCPAction)

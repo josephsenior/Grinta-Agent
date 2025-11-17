@@ -62,6 +62,7 @@ def clear_cost_store():
 @pytest.mark.asyncio
 async def test_cost_quota_middleware_allows_within_limits():
     middleware = CostQuotaMiddleware()
+
     async def call_next(request):  # pylint: disable=unused-argument
         return Response(content="ok")
 
@@ -87,6 +88,7 @@ async def test_cost_quota_middleware_skips_when_disabled():
 @pytest.mark.asyncio
 async def test_cost_quota_middleware_skips_health_assets():
     middleware = CostQuotaMiddleware()
+
     async def call_next(request):  # pylint: disable=unused-argument
         return Response(content="ok")
 
@@ -226,7 +228,10 @@ async def test_redis_middleware_fallback(monkeypatch):
         async def get(self, key):  # pylint: disable=unused-argument
             return None
 
-    monkeypatch.setattr("forge.server.middleware.cost_quota.redis", SimpleNamespace(from_url=lambda *args, **kwargs: DummyRedis()))
+    monkeypatch.setattr(
+        "forge.server.middleware.cost_quota.redis",
+        SimpleNamespace(from_url=lambda *args, **kwargs: DummyRedis()),
+    )
     monkeypatch.setattr("forge.server.middleware.cost_quota.REDIS_AVAILABLE", True)
 
     request = _make_request()
@@ -245,7 +250,10 @@ async def test_redis_middleware_allows_on_error(monkeypatch, caplog):
         async def get(self, key):  # pylint: disable=unused-argument
             raise RuntimeError("redis down")
 
-    monkeypatch.setattr("forge.server.middleware.cost_quota.redis", SimpleNamespace(from_url=lambda *args, **kwargs: DummyRedis()))
+    monkeypatch.setattr(
+        "forge.server.middleware.cost_quota.redis",
+        SimpleNamespace(from_url=lambda *args, **kwargs: DummyRedis()),
+    )
     monkeypatch.setattr("forge.server.middleware.cost_quota.REDIS_AVAILABLE", True)
 
     allowed = await middleware._check_quota("user:user-redis", QuotaPlan.FREE)
@@ -268,7 +276,10 @@ async def test_redis_middleware_respects_limits(monkeypatch):
             return 0
 
     dummy = DummyRedis()
-    monkeypatch.setattr("forge.server.middleware.cost_quota.redis", SimpleNamespace(from_url=lambda *args, **kwargs: dummy))
+    monkeypatch.setattr(
+        "forge.server.middleware.cost_quota.redis",
+        SimpleNamespace(from_url=lambda *args, **kwargs: dummy),
+    )
     monkeypatch.setattr("forge.server.middleware.cost_quota.REDIS_AVAILABLE", True)
 
     allowed = await middleware._check_quota("user:limit", QuotaPlan.FREE)
@@ -295,7 +306,10 @@ async def test_redis_record_cost_async(monkeypatch, caplog):
             self.last_expire = (key, ttl)
 
     dummy = DummyRedis()
-    monkeypatch.setattr("forge.server.middleware.cost_quota.redis", SimpleNamespace(from_url=lambda *args, **kwargs: dummy))
+    monkeypatch.setattr(
+        "forge.server.middleware.cost_quota.redis",
+        SimpleNamespace(from_url=lambda *args, **kwargs: dummy),
+    )
     monkeypatch.setattr("forge.server.middleware.cost_quota.REDIS_AVAILABLE", True)
 
     await middleware.record_cost_async("user:user-redis", 1.5)
@@ -331,7 +345,10 @@ async def test_redis_record_cost_async_handles_error(monkeypatch, caplog):
             pass
 
     dummy = DummyRedis()
-    monkeypatch.setattr("forge.server.middleware.cost_quota.redis", SimpleNamespace(from_url=lambda *args, **kwargs: dummy))
+    monkeypatch.setattr(
+        "forge.server.middleware.cost_quota.redis",
+        SimpleNamespace(from_url=lambda *args, **kwargs: dummy),
+    )
     monkeypatch.setattr("forge.server.middleware.cost_quota.REDIS_AVAILABLE", True)
 
     await middleware.record_cost_async("user:error", 2.0)
@@ -407,7 +424,10 @@ async def test_redis_daily_limit(monkeypatch):
             return 0
 
     dummy = DummyRedis()
-    monkeypatch.setattr("forge.server.middleware.cost_quota.redis", SimpleNamespace(from_url=lambda *args, **kwargs: dummy))
+    monkeypatch.setattr(
+        "forge.server.middleware.cost_quota.redis",
+        SimpleNamespace(from_url=lambda *args, **kwargs: dummy),
+    )
     monkeypatch.setattr("forge.server.middleware.cost_quota.REDIS_AVAILABLE", True)
 
     allowed = await middleware._check_quota("user:daily", QuotaPlan.FREE)

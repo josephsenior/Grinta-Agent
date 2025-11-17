@@ -7,26 +7,47 @@ from litellm import ChatCompletionMessageToolCall
 from forge.controller.state.state import State
 from forge.core.config.agent_config import AgentConfig
 from forge.core.message import ImageContent, Message, TextContent
-from forge.events.action import AgentFinishAction, AgentThinkAction, CmdRunAction, MessageAction
+from forge.events.action import (
+    AgentFinishAction,
+    AgentThinkAction,
+    CmdRunAction,
+    MessageAction,
+)
 from forge.events.action.message import SystemMessageAction
-from forge.events.event import Event, EventSource, FileEditSource, FileReadSource, RecallType
+from forge.events.event import (
+    Event,
+    EventSource,
+    FileEditSource,
+    FileReadSource,
+    RecallType,
+)
 from forge.events.observation import CmdOutputObservation
 from forge.events.observation.agent import MicroagentKnowledge, RecallObservation
 from forge.events.observation.browse import BrowserOutputObservation
-from forge.events.observation.commands import CmdOutputMetadata, IPythonRunCellObservation
+from forge.events.observation.commands import (
+    CmdOutputMetadata,
+    IPythonRunCellObservation,
+)
 from forge.events.observation.delegate import AgentDelegateObservation
 from forge.events.observation.error import ErrorObservation
 from forge.events.observation.files import FileEditObservation, FileReadObservation
 from forge.events.observation.reject import UserRejectObservation
 from forge.events.tool import ToolCallMetadata
 from forge.memory.conversation_memory import ConversationMemory
-from forge.utils.prompt import ConversationInstructions, PromptManager, RepositoryInfo, RuntimeInfo
+from forge.utils.prompt import (
+    ConversationInstructions,
+    PromptManager,
+    RepositoryInfo,
+    RuntimeInfo,
+)
 
 
 @pytest.fixture
 def agent_config():
     return AgentConfig(
-        enable_prompt_extensions=True, enable_som_visual_browsing=True, disabled_microagents=["disabled_agent"]
+        enable_prompt_extensions=True,
+        enable_som_visual_browsing=True,
+        disabled_microagents=["disabled_agent"],
     )
 
 
@@ -34,7 +55,9 @@ def agent_config():
 def conversation_memory(agent_config):
     prompt_manager = MagicMock(spec=PromptManager)
     prompt_manager.get_system_message.return_value = "System message"
-    prompt_manager.build_workspace_context.return_value = "Formatted repository and runtime info"
+    prompt_manager.build_workspace_context.return_value = (
+        "Formatted repository and runtime info"
+    )
 
     def build_microagent_info(triggered_agents):
         if not triggered_agents:
@@ -47,7 +70,9 @@ def conversation_memory(agent_config):
 
 @pytest.fixture
 def prompt_dir(tmp_path):
-    shutil.copytree("Forge/agenthub/codeact_agent/prompts", tmp_path, dirs_exist_ok=True)
+    shutil.copytree(
+        "Forge/agenthub/codeact_agent/prompts", tmp_path, dirs_exist_ok=True
+    )
     return tmp_path
 
 
@@ -99,7 +124,9 @@ def test_conversation_memory_initializes_vector_store(monkeypatch):
         calls["called"] = True
         return stub_store
 
-    monkeypatch.setattr("forge.memory.enhanced_vector_store.EnhancedVectorStore", factory)
+    monkeypatch.setattr(
+        "forge.memory.enhanced_vector_store.EnhancedVectorStore", factory
+    )
     memory = ConversationMemory(config, prompt_manager)
     assert calls["called"]
     assert memory.vector_store is stub_store
@@ -118,7 +145,9 @@ def test_conversation_memory_vector_store_failure(monkeypatch):
     def failing(*args, **kwargs):
         raise RuntimeError("boom")
 
-    monkeypatch.setattr("forge.memory.enhanced_vector_store.EnhancedVectorStore", failing)
+    monkeypatch.setattr(
+        "forge.memory.enhanced_vector_store.EnhancedVectorStore", failing
+    )
     memory = ConversationMemory(config, prompt_manager)
     assert memory.vector_store is None
 
@@ -179,7 +208,9 @@ def initial_user_action():
     return msg
 
 
-def test_ensure_initial_user_message_adds_if_only_system(conversation_memory, initial_user_action):
+def test_ensure_initial_user_message_adds_if_only_system(
+    conversation_memory, initial_user_action
+):
     """Test adding the initial user message when only the system message exists."""
     system_message = SystemMessageAction(content="System")
     system_message._source = EventSource.AGENT
@@ -190,7 +221,9 @@ def test_ensure_initial_user_message_adds_if_only_system(conversation_memory, in
     assert events[1] == initial_user_action
 
 
-def test_ensure_initial_user_message_correct_already_present(conversation_memory, initial_user_action):
+def test_ensure_initial_user_message_correct_already_present(
+    conversation_memory, initial_user_action
+):
     """Test that nothing changes if the correct initial user message is at index 1."""
     system_message = SystemMessageAction(content="System")
     agent_message = MessageAction(content="Assistant")
@@ -201,7 +234,9 @@ def test_ensure_initial_user_message_correct_already_present(conversation_memory
     assert events == original_events
 
 
-def test_ensure_initial_user_message_incorrect_at_index_1(conversation_memory, initial_user_action):
+def test_ensure_initial_user_message_incorrect_at_index_1(
+    conversation_memory, initial_user_action
+):
     """Test inserting the correct initial user message when an incorrect message is at index 1."""
     system_message = SystemMessageAction(content="System")
     incorrect_second_message = MessageAction(content="Assistant")
@@ -214,7 +249,9 @@ def test_ensure_initial_user_message_incorrect_at_index_1(conversation_memory, i
     assert events[2] == incorrect_second_message
 
 
-def test_ensure_initial_user_message_correct_present_later(conversation_memory, initial_user_action):
+def test_ensure_initial_user_message_correct_present_later(
+    conversation_memory, initial_user_action
+):
     """Test inserting the correct initial user message at index 1 even if it exists later."""
     system_message = SystemMessageAction(content="System")
     incorrect_second_message = MessageAction(content="Assistant")
@@ -228,7 +265,9 @@ def test_ensure_initial_user_message_correct_present_later(conversation_memory, 
     assert events[2] == incorrect_second_message
 
 
-def test_ensure_initial_user_message_different_user_msg_at_index_1(conversation_memory, initial_user_action):
+def test_ensure_initial_user_message_different_user_msg_at_index_1(
+    conversation_memory, initial_user_action
+):
     """Test inserting the correct initial user message when a *different* user message is at index 1."""
     system_message = SystemMessageAction(content="System")
     different_user_message = MessageAction(content="Different User Message")
@@ -260,7 +299,9 @@ def test_ensure_initial_user_message_different_user_msg_at_index_1_and_orphaned_
         "object": "",
         "usage": {"completion_tokens": 0, "prompt_tokens": 0, "total_tokens": 0},
     }
-    orphaned_obs = CmdOutputObservation(command="orphan_cmd", content="Orphaned output", command_id=99, exit_code=0)
+    orphaned_obs = CmdOutputObservation(
+        command="orphan_cmd", content="Orphaned output", command_id=99, exit_code=0
+    )
     orphaned_obs.tool_call_metadata = ToolCallMetadata(
         tool_call_id="orphan_call_id",
         function_name="execute_bash",
@@ -285,7 +326,9 @@ def test_process_events_with_cmd_output_observation(conversation_memory):
     obs = CmdOutputObservation(
         command="echo hello",
         content="Command output",
-        metadata=CmdOutputMetadata(exit_code=0, prefix="[THIS IS PREFIX]", suffix="[THIS IS SUFFIX]"),
+        metadata=CmdOutputMetadata(
+            exit_code=0, prefix="[THIS IS PREFIX]", suffix="[THIS IS SUFFIX]"
+        ),
     )
     initial_user_message = MessageAction(content="Initial user message")
     initial_user_message._source = EventSource.USER
@@ -307,7 +350,10 @@ def test_process_events_with_cmd_output_observation(conversation_memory):
 
 
 def test_process_events_with_ipython_run_cell_observation(conversation_memory):
-    obs = IPythonRunCellObservation(code="plt.plot()", content="IPython output\n![image](data:image/png;base64,ABC123)")
+    obs = IPythonRunCellObservation(
+        code="plt.plot()",
+        content="IPython output\n![image](data:image/png;base64,ABC123)",
+    )
     initial_user_message = MessageAction(content="Initial user message")
     initial_user_message._source = EventSource.USER
     messages = conversation_memory.process_events(
@@ -322,12 +368,17 @@ def test_process_events_with_ipython_run_cell_observation(conversation_memory):
     assert len(result.content) == 1
     assert isinstance(result.content[0], TextContent)
     assert "IPython output" in result.content[0].text
-    assert "![image](data:image/png;base64, ...) already displayed to user" in result.content[0].text
+    assert (
+        "![image](data:image/png;base64, ...) already displayed to user"
+        in result.content[0].text
+    )
     assert "ABC123" not in result.content[0].text
 
 
 def test_process_events_with_agent_delegate_observation(conversation_memory):
-    obs = AgentDelegateObservation(content="Content", outputs={"content": "Delegated agent output"})
+    obs = AgentDelegateObservation(
+        content="Content", outputs={"content": "Delegated agent output"}
+    )
     initial_user_message = MessageAction(content="Initial user message")
     initial_user_message._source = EventSource.USER
     messages = conversation_memory.process_events(
@@ -402,7 +453,11 @@ def test_process_events_with_file_edit_observation(conversation_memory):
 
 
 def test_process_events_with_file_read_observation(conversation_memory):
-    obs = FileReadObservation(path="/test/file.txt", content="File content", impl_source=FileReadSource.DEFAULT)
+    obs = FileReadObservation(
+        path="/test/file.txt",
+        content="File content",
+        impl_source=FileReadSource.DEFAULT,
+    )
     initial_user_message = MessageAction(content="Initial user message")
     initial_user_message._source = EventSource.USER
     messages = conversation_memory.process_events(
@@ -422,7 +477,11 @@ def test_process_events_with_file_read_observation(conversation_memory):
 def test_process_events_with_browser_output_observation(conversation_memory):
     formatted_content = "[Current URL: http://example.com]\n\n============== BEGIN webpage content ==============\nPage loaded\n============== END webpage content =============="
     obs = BrowserOutputObservation(
-        url="http://example.com", trigger_by_action="browse", screenshot="", content=formatted_content, error=False
+        url="http://example.com",
+        trigger_by_action="browse",
+        screenshot="",
+        content=formatted_content,
+        error=False,
     )
     initial_user_message = MessageAction(content="Initial user message")
     initial_user_message._source = EventSource.USER
@@ -489,20 +548,30 @@ def test_process_events_with_function_calling_observation(conversation_memory):
         "total_calls_in_response": 1,
         "choices": [{"message": {"content": "Task completed"}}],
     }
-    obs = CmdOutputObservation(command="echo hello", content="Command output", command_id=1, exit_code=0)
+    obs = CmdOutputObservation(
+        command="echo hello", content="Command output", command_id=1, exit_code=0
+    )
     obs.tool_call_metadata = ToolCallMetadata(
-        tool_call_id="123", function_name="execute_bash", model_response=mock_response, total_calls_in_response=1
+        tool_call_id="123",
+        function_name="execute_bash",
+        model_response=mock_response,
+        total_calls_in_response=1,
     )
     initial_user_action = MessageAction(content="Initial user message")
     initial_user_action._source = EventSource.USER
     messages = conversation_memory.process_events(
-        condensed_history=[obs], initial_user_action=initial_user_action, max_message_chars=None, vision_is_active=False
+        condensed_history=[obs],
+        initial_user_action=initial_user_action,
+        max_message_chars=None,
+        vision_is_active=False,
     )
     assert len(messages) == 2
 
 
 def test_process_events_with_message_action_with_image(conversation_memory):
-    action = MessageAction(content="Message with image", image_urls=["http://example.com/image.jpg"])
+    action = MessageAction(
+        content="Message with image", image_urls=["http://example.com/image.jpg"]
+    )
     action._source = EventSource.AGENT
     initial_user_action = MessageAction(content="Initial user message")
     initial_user_action._source = EventSource.USER
@@ -542,7 +611,9 @@ def test_process_events_with_user_cmd_action(conversation_memory):
     assert "ls -l" in result.content[0].text
 
 
-def test_process_events_with_agent_finish_action_with_tool_metadata(conversation_memory):
+def test_process_events_with_agent_finish_action_with_tool_metadata(
+    conversation_memory,
+):
     mock_response = {
         "id": "mock_id",
         "total_calls_in_response": 1,
@@ -551,7 +622,10 @@ def test_process_events_with_agent_finish_action_with_tool_metadata(conversation
     action = AgentFinishAction(thought="Initial thought")
     action._source = EventSource.AGENT
     action.tool_call_metadata = ToolCallMetadata(
-        tool_call_id="123", function_name="finish", model_response=mock_response, total_calls_in_response=1
+        tool_call_id="123",
+        function_name="finish",
+        model_response=mock_response,
+        total_calls_in_response=1,
     )
     initial_user_action = MessageAction(content="Initial user message")
     initial_user_action._source = EventSource.USER
@@ -596,7 +670,10 @@ def test_process_events_with_environment_microagent_observation(conversation_mem
     initial_user_action = MessageAction(content="Initial user message")
     initial_user_action._source = EventSource.USER
     messages = conversation_memory.process_events(
-        condensed_history=[obs], initial_user_action=initial_user_action, max_message_chars=None, vision_is_active=False
+        condensed_history=[obs],
+        initial_user_action=initial_user_action,
+        max_message_chars=None,
+        vision_is_active=False,
     )
     assert len(messages) == 3
     result = messages[2]
@@ -611,15 +688,30 @@ def test_process_events_with_environment_microagent_observation(conversation_mem
     assert call_args["repository_info"].repo_directory == "/path/to/repo"
     assert isinstance(call_args["runtime_info"], RuntimeInfo)
     assert call_args["runtime_info"].available_hosts == {"localhost": 8080}
-    assert call_args["repo_instructions"] == "# Test Repository\nThis is a test repository."
+    assert (
+        call_args["repo_instructions"]
+        == "# Test Repository\nThis is a test repository."
+    )
 
 
-def test_process_events_with_knowledge_microagent_microagent_observation(conversation_memory):
+def test_process_events_with_knowledge_microagent_microagent_observation(
+    conversation_memory,
+):
     """Test processing a RecallObservation with KNOWLEDGE type."""
     microagent_knowledge = [
-        MicroagentKnowledge(name="test_agent", trigger="test", content="This is test agent content"),
-        MicroagentKnowledge(name="another_agent", trigger="another", content="This is another agent content"),
-        MicroagentKnowledge(name="disabled_agent", trigger="disabled", content="This is disabled agent content"),
+        MicroagentKnowledge(
+            name="test_agent", trigger="test", content="This is test agent content"
+        ),
+        MicroagentKnowledge(
+            name="another_agent",
+            trigger="another",
+            content="This is another agent content",
+        ),
+        MicroagentKnowledge(
+            name="disabled_agent",
+            trigger="disabled",
+            content="This is disabled agent content",
+        ),
     ]
     obs = RecallObservation(
         recall_type=RecallType.KNOWLEDGE,
@@ -629,7 +721,10 @@ def test_process_events_with_knowledge_microagent_microagent_observation(convers
     initial_user_action = MessageAction(content="Initial user message")
     initial_user_action._source = EventSource.USER
     messages = conversation_memory.process_events(
-        condensed_history=[obs], initial_user_action=initial_user_action, max_message_chars=None, vision_is_active=False
+        condensed_history=[obs],
+        initial_user_action=initial_user_action,
+        max_message_chars=None,
+        vision_is_active=False,
     )
     assert len(messages) == 3
     result = messages[2]
@@ -649,7 +744,9 @@ def test_process_events_with_knowledge_microagent_microagent_observation(convers
     assert "disabled_agent" not in agent_names
 
 
-def test_process_events_with_microagent_observation_extensions_disabled(agent_config, conversation_memory):
+def test_process_events_with_microagent_observation_extensions_disabled(
+    agent_config, conversation_memory
+):
     """Test processing a RecallObservation when prompt extensions are disabled."""
     agent_config.enable_prompt_extensions = False
     obs = RecallObservation(
@@ -661,7 +758,10 @@ def test_process_events_with_microagent_observation_extensions_disabled(agent_co
     initial_user_action = MessageAction(content="Initial user message")
     initial_user_action._source = EventSource.USER
     messages = conversation_memory.process_events(
-        condensed_history=[obs], initial_user_action=initial_user_action, max_message_chars=None, vision_is_active=False
+        condensed_history=[obs],
+        initial_user_action=initial_user_action,
+        max_message_chars=None,
+        vision_is_active=False,
     )
     assert len(messages) == 2
     conversation_memory.prompt_manager.build_workspace_context.assert_not_called()
@@ -671,12 +771,17 @@ def test_process_events_with_microagent_observation_extensions_disabled(agent_co
 def test_process_events_with_empty_microagent_knowledge(conversation_memory):
     """Test processing a RecallObservation with empty microagent knowledge."""
     obs = RecallObservation(
-        recall_type=RecallType.KNOWLEDGE, microagent_knowledge=[], content="Retrieved knowledge from microagents"
+        recall_type=RecallType.KNOWLEDGE,
+        microagent_knowledge=[],
+        content="Retrieved knowledge from microagents",
     )
     initial_user_action = MessageAction(content="Initial user message")
     initial_user_action._source = EventSource.USER
     messages = conversation_memory.process_events(
-        condensed_history=[obs], initial_user_action=initial_user_action, max_message_chars=None, vision_is_active=False
+        condensed_history=[obs],
+        initial_user_action=initial_user_action,
+        max_message_chars=None,
+        vision_is_active=False,
     )
     assert len(messages) == 2
     conversation_memory.prompt_manager.build_microagent_info.assert_not_called()
@@ -686,7 +791,7 @@ def test_conversation_memory_processes_microagent_observation(prompt_dir):
     """Test that ConversationMemory processes RecallObservations correctly."""
     template_path = os.path.join(prompt_dir, "microagent_info.j2")
     if not os.path.exists(template_path):
-        with open(template_path, "w", encoding='utf-8') as f:
+        with open(template_path, "w", encoding="utf-8") as f:
             f.write(
                 '{% for agent_info in triggered_agents %}\n<EXTRA_INFO>\nThe following information has been included based on a keyword match for "{{ agent_info.trigger_word }}".\nIt may or may not be relevant to the user\'s request.\n\n    # Verify the template was correctly rendered\n{{ agent_info.content }}\n</EXTRA_INFO>\n{% endfor %}\n'
             )
@@ -694,12 +799,16 @@ def test_conversation_memory_processes_microagent_observation(prompt_dir):
     agent_config.enable_prompt_extensions = True
     agent_config.disabled_microagents = []
     prompt_manager = PromptManager(prompt_dir=prompt_dir)
-    conversation_memory = ConversationMemory(config=agent_config, prompt_manager=prompt_manager)
+    conversation_memory = ConversationMemory(
+        config=agent_config, prompt_manager=prompt_manager
+    )
     microagent_observation = RecallObservation(
         recall_type=RecallType.KNOWLEDGE,
         microagent_knowledge=[
             MicroagentKnowledge(
-                name="test_agent", trigger="test_trigger", content="This is triggered content for testing."
+                name="test_agent",
+                trigger="test_trigger",
+                content="This is triggered content for testing.",
             )
         ],
         content="Retrieved knowledge from microagents",
@@ -721,14 +830,16 @@ def test_conversation_memory_processes_environment_microagent_observation(prompt
     """Test that ConversationMemory processes environment info RecallObservations correctly."""
     template_path = os.path.join(prompt_dir, "additional_info.j2")
     if not os.path.exists(template_path):
-        with open(template_path, "w", encoding='utf-8') as f:
+        with open(template_path, "w", encoding="utf-8") as f:
             f.write(
                 "\n{% if repository_info %}\n<REPOSITORY_INFO>\nAt the user's request, repository {{ repository_info.repo_name }} has been cloned to directory {{ repository_info.repo_directory }}.\n</REPOSITORY_INFO>\n{% endif %}\n\n{% if repository_instructions %}\n<REPOSITORY_INSTRUCTIONS>\n{{ repository_instructions }}\n</REPOSITORY_INSTRUCTIONS>\n{% endif %}\n\n{% if runtime_info and runtime_info.available_hosts %}\n<RUNTIME_INFORMATION>\nThe user has access to the following hosts for accessing a web application,\neach of which has a corresponding port:\n{% for host, port in runtime_info.available_hosts.items() %}\n* {{ host }} (port {{ port }})\n{% endfor %}\n</RUNTIME_INFORMATION>\n{% endif %}\n"
             )
     agent_config = MagicMock(spec=AgentConfig)
     agent_config.enable_prompt_extensions = True
     prompt_manager = PromptManager(prompt_dir=prompt_dir)
-    conversation_memory = ConversationMemory(config=agent_config, prompt_manager=prompt_manager)
+    conversation_memory = ConversationMemory(
+        config=agent_config, prompt_manager=prompt_manager
+    )
     microagent_observation = RecallObservation(
         recall_type=RecallType.WORKSPACE_CONTEXT,
         repo_name="owner/repo",
@@ -763,22 +874,38 @@ def test_process_events_with_microagent_observation_deduplication(conversation_m
     obs1 = RecallObservation(
         recall_type=RecallType.KNOWLEDGE,
         microagent_knowledge=[
-            MicroagentKnowledge(name="python_agent", trigger="python", content="Python best practices v1"),
-            MicroagentKnowledge(name="git_agent", trigger="git", content="Git best practices v1"),
-            MicroagentKnowledge(name="image_agent", trigger="image", content="Image best practices v1"),
+            MicroagentKnowledge(
+                name="python_agent",
+                trigger="python",
+                content="Python best practices v1",
+            ),
+            MicroagentKnowledge(
+                name="git_agent", trigger="git", content="Git best practices v1"
+            ),
+            MicroagentKnowledge(
+                name="image_agent", trigger="image", content="Image best practices v1"
+            ),
         ],
         content="First retrieval",
     )
     obs2 = RecallObservation(
         recall_type=RecallType.KNOWLEDGE,
         microagent_knowledge=[
-            MicroagentKnowledge(name="python_agent", trigger="python", content="Python best practices v2")
+            MicroagentKnowledge(
+                name="python_agent",
+                trigger="python",
+                content="Python best practices v2",
+            )
         ],
         content="Second retrieval",
     )
     obs3 = RecallObservation(
         recall_type=RecallType.KNOWLEDGE,
-        microagent_knowledge=[MicroagentKnowledge(name="git_agent", trigger="git", content="Git best practices v3")],
+        microagent_knowledge=[
+            MicroagentKnowledge(
+                name="git_agent", trigger="git", content="Git best practices v3"
+            )
+        ],
         content="Third retrieval",
     )
     initial_user_action = MessageAction(content="Initial user message")
@@ -795,20 +922,34 @@ def test_process_events_with_microagent_observation_deduplication(conversation_m
     assert "Python best practices v1" in messages[2].content[0].text
 
 
-def test_process_events_with_microagent_observation_deduplication_disabled_agents(conversation_memory):
+def test_process_events_with_microagent_observation_deduplication_disabled_agents(
+    conversation_memory,
+):
     """Test that disabled agents are filtered out and deduplication keeps the first occurrence."""
     obs1 = RecallObservation(
         recall_type=RecallType.KNOWLEDGE,
         microagent_knowledge=[
-            MicroagentKnowledge(name="disabled_agent", trigger="disabled", content="Disabled agent content"),
-            MicroagentKnowledge(name="enabled_agent", trigger="enabled", content="Enabled agent content v1"),
+            MicroagentKnowledge(
+                name="disabled_agent",
+                trigger="disabled",
+                content="Disabled agent content",
+            ),
+            MicroagentKnowledge(
+                name="enabled_agent",
+                trigger="enabled",
+                content="Enabled agent content v1",
+            ),
         ],
         content="First retrieval",
     )
     obs2 = RecallObservation(
         recall_type=RecallType.KNOWLEDGE,
         microagent_knowledge=[
-            MicroagentKnowledge(name="enabled_agent", trigger="enabled", content="Enabled agent content v2")
+            MicroagentKnowledge(
+                name="enabled_agent",
+                trigger="enabled",
+                content="Enabled agent content v2",
+            )
         ],
         content="Second retrieval",
     )
@@ -825,13 +966,22 @@ def test_process_events_with_microagent_observation_deduplication_disabled_agent
     assert "Enabled agent content v1" in messages[2].content[0].text
 
 
-def test_process_events_with_microagent_observation_deduplication_empty(conversation_memory):
+def test_process_events_with_microagent_observation_deduplication_empty(
+    conversation_memory,
+):
     """Test that empty RecallObservations are handled correctly."""
-    obs = RecallObservation(recall_type=RecallType.KNOWLEDGE, microagent_knowledge=[], content="Empty retrieval")
+    obs = RecallObservation(
+        recall_type=RecallType.KNOWLEDGE,
+        microagent_knowledge=[],
+        content="Empty retrieval",
+    )
     initial_user_action = MessageAction(content="Initial user message")
     initial_user_action._source = EventSource.USER
     messages = conversation_memory.process_events(
-        condensed_history=[obs], initial_user_action=initial_user_action, max_message_chars=None, vision_is_active=False
+        condensed_history=[obs],
+        initial_user_action=initial_user_action,
+        max_message_chars=None,
+        vision_is_active=False,
     )
     assert len(messages) == 2
     assert messages[0].role == "system"
@@ -842,26 +992,41 @@ def test_has_agent_in_earlier_events(conversation_memory):
     """Test the _has_agent_in_earlier_events helper method."""
     obs1 = RecallObservation(
         recall_type=RecallType.KNOWLEDGE,
-        microagent_knowledge=[MicroagentKnowledge(name="agent1", trigger="trigger1", content="Content 1")],
+        microagent_knowledge=[
+            MicroagentKnowledge(name="agent1", trigger="trigger1", content="Content 1")
+        ],
         content="First retrieval",
     )
     obs2 = RecallObservation(
         recall_type=RecallType.KNOWLEDGE,
-        microagent_knowledge=[MicroagentKnowledge(name="agent2", trigger="trigger2", content="Content 2")],
+        microagent_knowledge=[
+            MicroagentKnowledge(name="agent2", trigger="trigger2", content="Content 2")
+        ],
         content="Second retrieval",
     )
-    obs3 = RecallObservation(recall_type=RecallType.WORKSPACE_CONTEXT, content="Environment info")
+    obs3 = RecallObservation(
+        recall_type=RecallType.WORKSPACE_CONTEXT, content="Environment info"
+    )
     events = [obs1, MessageAction(content="User message"), obs2, obs3]
     assert conversation_memory._has_agent_in_earlier_events("agent1", 2, events) is True
     assert conversation_memory._has_agent_in_earlier_events("agent1", 3, events) is True
     assert conversation_memory._has_agent_in_earlier_events("agent1", 4, events) is True
-    assert conversation_memory._has_agent_in_earlier_events("agent2", 0, events) is False
-    assert conversation_memory._has_agent_in_earlier_events("agent2", 1, events) is False
-    assert conversation_memory._has_agent_in_earlier_events("non_existent", 3, events) is False
+    assert (
+        conversation_memory._has_agent_in_earlier_events("agent2", 0, events) is False
+    )
+    assert (
+        conversation_memory._has_agent_in_earlier_events("agent2", 1, events) is False
+    )
+    assert (
+        conversation_memory._has_agent_in_earlier_events("non_existent", 3, events)
+        is False
+    )
 
 
 def test_build_message_content_includes_microagent(conversation_memory):
-    repo_info = RepositoryInfo(repo_name="repo", repo_directory="/repo", branch_name=None)
+    repo_info = RepositoryInfo(
+        repo_name="repo", repo_directory="/repo", branch_name=None
+    )
     runtime_info = RuntimeInfo(
         date="2025-01-01",
         available_hosts={},
@@ -882,23 +1047,43 @@ def test_build_message_content_includes_microagent(conversation_memory):
 
 
 def test_filter_agents_in_microagent_obs_non_knowledge(conversation_memory):
-    obs = RecallObservation(recall_type=RecallType.WORKSPACE_CONTEXT, microagent_knowledge=[MicroagentKnowledge(name="agent", trigger="t", content="c")], content="")
-    assert conversation_memory._filter_agents_in_microagent_obs(obs, 0, []) == obs.microagent_knowledge
+    obs = RecallObservation(
+        recall_type=RecallType.WORKSPACE_CONTEXT,
+        microagent_knowledge=[
+            MicroagentKnowledge(name="agent", trigger="t", content="c")
+        ],
+        content="",
+    )
+    assert (
+        conversation_memory._filter_agents_in_microagent_obs(obs, 0, [])
+        == obs.microagent_knowledge
+    )
 
 
 def test_should_include_message_helpers():
-    tool_message = Message(role="tool", content=[TextContent(text="Tool")], tool_call_id="call_1")
+    tool_message = Message(
+        role="tool", content=[TextContent(text="Tool")], tool_call_id="call_1"
+    )
     assistant_message = Message(
         role="assistant",
         content=[TextContent(text="Assistant")],
         tool_calls=[
-            ChatCompletionMessageToolCall(id="call_1", type="function", function={"name": "fn", "arguments": ""})
+            ChatCompletionMessageToolCall(
+                id="call_1", type="function", function={"name": "fn", "arguments": ""}
+            )
         ],
     )
     assert ConversationMemory._should_include_message(tool_message, {"call_1"}, set())
-    assert ConversationMemory._should_include_message(assistant_message, set(), {"call_1"})
-    assistant_message.tool_calls[0] = ChatCompletionMessageToolCall(id="missing", type="function", function={"name": "fn", "arguments": ""})
-    assert ConversationMemory._should_include_message(assistant_message, set(), {"call_1"}) is False
+    assert ConversationMemory._should_include_message(
+        assistant_message, set(), {"call_1"}
+    )
+    assistant_message.tool_calls[0] = ChatCompletionMessageToolCall(
+        id="missing", type="function", function={"name": "fn", "arguments": ""}
+    )
+    assert (
+        ConversationMemory._should_include_message(assistant_message, set(), {"call_1"})
+        is False
+    )
 
 
 def test_all_tool_calls_match():
@@ -906,7 +1091,9 @@ def test_all_tool_calls_match():
         role="assistant",
         content=[TextContent(text="Assistant")],
         tool_calls=[
-            ChatCompletionMessageToolCall(id="call_1", type="function", function={"name": "fn", "arguments": ""})
+            ChatCompletionMessageToolCall(
+                id="call_1", type="function", function={"name": "fn", "arguments": ""}
+            )
         ],
     )
     assert ConversationMemory._all_tool_calls_match(assistant_message, {"call_1"})
@@ -944,7 +1131,6 @@ def test_store_and_recall_from_memory(monkeypatch):
 
 
 class TestFilterUnmatchedToolCalls:
-
     @pytest.fixture
     def processor(self):
         return ConversationMemory()
@@ -958,7 +1144,9 @@ class TestFilterUnmatchedToolCalls:
             Message(role="assistant", content=[TextContent(text="Hi there")]),
             Message(role="user", content=[TextContent(text="How are you?")]),
         ]
-        assert list(ConversationMemory._filter_unmatched_tool_calls(messages)) == messages
+        assert (
+            list(ConversationMemory._filter_unmatched_tool_calls(messages)) == messages
+        )
 
     def test_matched_tool_calls_are_unchanged(self):
         messages = [
@@ -968,19 +1156,31 @@ class TestFilterUnmatchedToolCalls:
                 content=[],
                 tool_calls=[
                     ChatCompletionMessageToolCall(
-                        id="call_1", type="function", function={"name": "get_weather", "arguments": ""}
+                        id="call_1",
+                        type="function",
+                        function={"name": "get_weather", "arguments": ""},
                     )
                 ],
             ),
-            Message(role="tool", tool_call_id="call_1", content=[TextContent(text="Sunny, 75°F")]),
+            Message(
+                role="tool",
+                tool_call_id="call_1",
+                content=[TextContent(text="Sunny, 75°F")],
+            ),
             Message(role="assistant", content=[TextContent(text="It's sunny today.")]),
         ]
-        assert list(ConversationMemory._filter_unmatched_tool_calls(messages)) == messages
+        assert (
+            list(ConversationMemory._filter_unmatched_tool_calls(messages)) == messages
+        )
 
     def test_tool_call_without_response_is_removed(self):
         messages = [
             Message(role="user", content=[TextContent(text="Query")]),
-            Message(role="tool", tool_call_id="missing_call", content=[TextContent(text="Response")]),
+            Message(
+                role="tool",
+                tool_call_id="missing_call",
+                content=[TextContent(text="Response")],
+            ),
             Message(role="assistant", content=[TextContent(text="Answer")]),
         ]
         expected_after_filter = [
@@ -998,7 +1198,9 @@ class TestFilterUnmatchedToolCalls:
                 content=[],
                 tool_calls=[
                     ChatCompletionMessageToolCall(
-                        id="unmatched_call", type="function", function={"name": "some_function", "arguments": ""}
+                        id="unmatched_call",
+                        type="function",
+                        function={"name": "some_function", "arguments": ""},
                     )
                 ],
             ),
@@ -1020,14 +1222,22 @@ class TestFilterUnmatchedToolCalls:
                 content=[],
                 tool_calls=[
                     ChatCompletionMessageToolCall(
-                        id="matched_call", type="function", function={"name": "function1", "arguments": ""}
+                        id="matched_call",
+                        type="function",
+                        function={"name": "function1", "arguments": ""},
                     ),
                     ChatCompletionMessageToolCall(
-                        id="unmatched_call", type="function", function={"name": "function2", "arguments": ""}
+                        id="unmatched_call",
+                        type="function",
+                        function={"name": "function2", "arguments": ""},
                     ),
                 ],
             ),
-            Message(role="tool", tool_call_id="matched_call", content=[TextContent(text="Data")]),
+            Message(
+                role="tool",
+                tool_call_id="matched_call",
+                content=[TextContent(text="Data")],
+            ),
             Message(role="assistant", content=[TextContent(text="Result")]),
         ]
         expected = [
@@ -1037,11 +1247,17 @@ class TestFilterUnmatchedToolCalls:
                 content=[],
                 tool_calls=[
                     ChatCompletionMessageToolCall(
-                        id="matched_call", type="function", function={"name": "function1", "arguments": ""}
+                        id="matched_call",
+                        type="function",
+                        function={"name": "function1", "arguments": ""},
                     )
                 ],
             ),
-            Message(role="tool", tool_call_id="matched_call", content=[TextContent(text="Data")]),
+            Message(
+                role="tool",
+                tool_call_id="matched_call",
+                content=[TextContent(text="Data")],
+            ),
             Message(role="assistant", content=[TextContent(text="Result")]),
         ]
         result = list(ConversationMemory._filter_unmatched_tool_calls(messages))
@@ -1079,7 +1295,11 @@ def _create_mock_tool_call_metadata(
                     "role": "assistant",
                     "content": None,
                     "tool_calls": [
-                        {"id": tool_call_id, "type": "function", "function": {"name": function_name, "arguments": "{}"}}
+                        {
+                            "id": tool_call_id,
+                            "type": "function",
+                            "function": {"name": function_name, "arguments": "{}"},
+                        }
                     ],
                 }
             }
@@ -1090,7 +1310,10 @@ def _create_mock_tool_call_metadata(
         "usage": {"completion_tokens": 0, "prompt_tokens": 0, "total_tokens": 0},
     }
     return ToolCallMetadata(
-        tool_call_id=tool_call_id, function_name=function_name, model_response=mock_response, total_calls_in_response=1
+        tool_call_id=tool_call_id,
+        function_name=function_name,
+        model_response=mock_response,
+        total_calls_in_response=1,
     )
 
 
@@ -1116,7 +1339,9 @@ def _create_test_events() -> tuple[Event, Event, Event, Event, Event]:
         tool_call_id="call_ls_1", function_name="execute_bash", response_id="resp_ls_1"
     )
 
-    cmd_obs = CmdOutputObservation(command_id=1, command="ls", content="file1.txt\nfile2.py", exit_code=0)
+    cmd_obs = CmdOutputObservation(
+        command_id=1, command="ls", content="file1.txt\nfile2.py", exit_code=0
+    )
     cmd_obs._source = EventSource.AGENT
     cmd_obs.tool_call_metadata = _create_mock_tool_call_metadata(
         tool_call_id="call_ls_1", function_name="execute_bash", response_id="resp_ls_1"
@@ -1173,10 +1398,18 @@ def test_process_events_partial_history(conversation_memory):
 
     _ensure_system_message, _ensure_initial_user_message, and tool call matching logic.
     """
-    system_message, user_message, recall_obs, cmd_action, cmd_obs = _create_test_events()
+    system_message, user_message, recall_obs, cmd_action, cmd_obs = (
+        _create_test_events()
+    )
 
     # Test with full history
-    full_history: list[Event] = [system_message, user_message, recall_obs, cmd_action, cmd_obs]
+    full_history: list[Event] = [
+        system_message,
+        user_message,
+        recall_obs,
+        cmd_action,
+        cmd_obs,
+    ]
     messages_full = conversation_memory.process_events(
         condensed_history=list(full_history),
         initial_user_action=user_message,
@@ -1206,14 +1439,21 @@ def test_process_events_partial_history(conversation_memory):
     _assert_partial_obs_only_messages(messages_partial_obs_only)
 
 
-def test_process_ipython_observation_with_vision_enabled(agent_config, mock_prompt_manager):
+def test_process_ipython_observation_with_vision_enabled(
+    agent_config, mock_prompt_manager
+):
     """Test that _process_observation correctly handles IPythonRunCellObservation with image_urls when vision is enabled."""
     memory = ConversationMemory(agent_config, mock_prompt_manager)
     obs = IPythonRunCellObservation(
-        content="Test output", code="print('test')", image_urls=["data:image/png;base64,abc123"]
+        content="Test output",
+        code="print('test')",
+        image_urls=["data:image/png;base64,abc123"],
     )
     messages = memory._process_observation(
-        obs=obs, tool_call_id_to_message={}, max_message_chars=None, vision_is_active=True
+        obs=obs,
+        tool_call_id_to_message={},
+        max_message_chars=None,
+        vision_is_active=True,
     )
     assert len(messages) == 1
     message = messages[0]
@@ -1252,13 +1492,17 @@ def test_handle_tool_based_action_empty_choices(conversation_memory):
 
 
 def test_handle_tool_based_action_missing_message(conversation_memory):
-    metadata = SimpleNamespace(model_response=SimpleNamespace(choices=[SimpleNamespace()]))
+    metadata = SimpleNamespace(
+        model_response=SimpleNamespace(choices=[SimpleNamespace()])
+    )
     action = SimpleNamespace(source="agent", tool_call_metadata=metadata)
     assert conversation_memory._handle_tool_based_action(action, {}) == []
 
 
 def test_handle_tool_based_action_populates_pending(conversation_memory):
-    assistant_message = SimpleNamespace(content=" Trim me ", tool_calls=None, role="agent")
+    assistant_message = SimpleNamespace(
+        content=" Trim me ", tool_calls=None, role="agent"
+    )
     choice = SimpleNamespace(message=assistant_message)
     response = SimpleNamespace(id="response-1", choices=[choice])
     metadata = SimpleNamespace(model_response=response)
@@ -1274,7 +1518,9 @@ def test_handle_tool_based_action_populates_pending(conversation_memory):
 
 
 def test_handle_tool_based_action_non_string_content(conversation_memory):
-    assistant_message = SimpleNamespace(content=["value"], tool_calls=None, role="invalid")
+    assistant_message = SimpleNamespace(
+        content=["value"], tool_calls=None, role="invalid"
+    )
     choice = SimpleNamespace(message=assistant_message)
     response = SimpleNamespace(id="response-2", choices=[choice])
     metadata = SimpleNamespace(model_response=response)
@@ -1288,8 +1534,12 @@ def test_handle_tool_based_action_non_string_content(conversation_memory):
 
 
 def test_handle_tool_based_action_missing_response_id(conversation_memory):
-    assistant_message = SimpleNamespace(content="hello", tool_calls=None, role="assistant")
-    response = SimpleNamespace(id=None, choices=[SimpleNamespace(message=assistant_message)])
+    assistant_message = SimpleNamespace(
+        content="hello", tool_calls=None, role="assistant"
+    )
+    response = SimpleNamespace(
+        id=None, choices=[SimpleNamespace(message=assistant_message)]
+    )
     metadata = SimpleNamespace(model_response=response)
     action = SimpleNamespace(source="agent", tool_call_metadata=metadata)
     assert conversation_memory._handle_tool_based_action(action, {}) == []
@@ -1298,7 +1548,9 @@ def test_handle_tool_based_action_missing_response_id(conversation_memory):
 def test_handle_agent_finish_action_sets_content(conversation_memory):
     action = AgentFinishAction(thought=None)
     action._source = EventSource.AGENT
-    metadata = _create_mock_tool_call_metadata(tool_call_id="call", function_name="finish")
+    metadata = _create_mock_tool_call_metadata(
+        tool_call_id="call", function_name="finish"
+    )
     metadata.model_response["choices"][0]["message"]["content"] = "Result content"
     action.tool_call_metadata = metadata
     messages = conversation_memory._handle_agent_finish_action(action)
@@ -1312,21 +1564,30 @@ def test_handle_message_action_user_images_with_vision(conversation_memory):
         def source(self):
             return "user"
 
-    action = UserImageMessage(content="See image", image_urls=["http://example.com/img.png"])
+    action = UserImageMessage(
+        content="See image", image_urls=["http://example.com/img.png"]
+    )
     messages = conversation_memory._handle_message_action(action, vision_is_active=True)
     assert len(messages[0].content) == 3
     assert isinstance(messages[0].content[1], TextContent)
     assert isinstance(messages[0].content[2], ImageContent)
 
 
-def test_process_ipython_observation_with_vision_disabled(agent_config, mock_prompt_manager):
+def test_process_ipython_observation_with_vision_disabled(
+    agent_config, mock_prompt_manager
+):
     """Test that _process_observation correctly handles IPythonRunCellObservation with image_urls when vision is disabled."""
     memory = ConversationMemory(agent_config, mock_prompt_manager)
     obs = IPythonRunCellObservation(
-        content="Test output", code="print('test')", image_urls=["data:image/png;base64,abc123"]
+        content="Test output",
+        code="print('test')",
+        image_urls=["data:image/png;base64,abc123"],
     )
     messages = memory._process_observation(
-        obs=obs, tool_call_id_to_message={}, max_message_chars=None, vision_is_active=False
+        obs=obs,
+        tool_call_id_to_message={},
+        max_message_chars=None,
+        vision_is_active=False,
     )
     assert len(messages) == 1
     message = messages[0]
@@ -1337,7 +1598,9 @@ def test_process_ipython_observation_with_vision_disabled(agent_config, mock_pro
 
 
 def test_process_action_returns_empty(conversation_memory):
-    assert conversation_memory._process_action(SimpleNamespace(source="agent"), {}) == []
+    assert (
+        conversation_memory._process_action(SimpleNamespace(source="agent"), {}) == []
+    )
 
 
 def test_process_mcp_observation(conversation_memory):
@@ -1350,7 +1613,12 @@ def test_process_mcp_observation(conversation_memory):
 
 def test_extract_browser_image_prefers_screenshot(conversation_memory):
     obs = BrowserOutputObservation(
-        content="Browser output", url="", trigger_by_action="", screenshot="data:image", set_of_marks=None, error=False
+        content="Browser output",
+        url="",
+        trigger_by_action="",
+        screenshot="data:image",
+        set_of_marks=None,
+        error=False,
     )
     url, image_type = conversation_memory._extract_browser_image(obs)
     assert url == "data:image"
@@ -1359,7 +1627,9 @@ def test_extract_browser_image_prefers_screenshot(conversation_memory):
 
 def test_add_browser_image_fallback_invalid_url(conversation_memory):
     content = [TextContent(text="Log")]
-    conversation_memory._add_browser_image_fallback(content, "http://invalid", "screenshot")
+    conversation_memory._add_browser_image_fallback(
+        content, "http://invalid", "screenshot"
+    )
     assert "invalid or empty" in content[0].text
 
 
@@ -1371,5 +1641,7 @@ def test_add_browser_image_fallback_no_image(conversation_memory):
 
 def test_process_recall_observation_prompt_extensions_disabled():
     memory = _make_memory({"enable_prompt_extensions": False})
-    obs = RecallObservation(recall_type=RecallType.KNOWLEDGE, microagent_knowledge=[], content="")
+    obs = RecallObservation(
+        recall_type=RecallType.KNOWLEDGE, microagent_knowledge=[], content=""
+    )
     assert memory._process_recall_observation(obs, current_index=0, events=[]) == []

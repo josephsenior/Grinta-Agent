@@ -17,7 +17,10 @@ class TestGitConfig:
 
     def test_git_config_from_env_vars(self):
         """Test that git configuration can be set via environment variables."""
-        with patch.dict(os.environ, {"GIT_USER_NAME": "testuser", "GIT_USER_EMAIL": "testuser@example.com"}):
+        with patch.dict(
+            os.environ,
+            {"GIT_USER_NAME": "testuser", "GIT_USER_EMAIL": "testuser@example.com"},
+        ):
             config = ForgeConfig()
             load_from_env(config, os.environ)
             assert config.git_user_name == "testuser"
@@ -33,7 +36,11 @@ class TestGitConfig:
         config.git_user_name = "customuser"
         config.git_user_email = "customuser@example.com"
         cmd = get_action_execution_server_startup_command(
-            server_port=8000, plugins=[], app_config=config, python_prefix=["python"], python_executable="python"
+            server_port=8000,
+            plugins=[],
+            app_config=config,
+            python_prefix=["python"],
+            python_executable="python",
         )
         assert "--git-user-name" not in cmd
         assert "--git-user-email" not in cmd
@@ -50,7 +57,11 @@ class TestGitConfig:
         config.git_user_name = "User With Spaces"
         config.git_user_email = "user+tag@example.com"
         cmd = get_action_execution_server_startup_command(
-            server_port=8000, plugins=[], app_config=config, python_prefix=["python"], python_executable="python"
+            server_port=8000,
+            plugins=[],
+            app_config=config,
+            python_prefix=["python"],
+            python_executable="python",
         )
         assert "User With Spaces" not in cmd
         assert "user+tag@example.com" not in cmd

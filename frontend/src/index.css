@@ -10,7 +10,33 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/* Global dark high-contrast base */
+:root, ::backdrop {
+  color-scheme: dark;
+}
+
+@layer base {
+  html, body, #root, #__next {
+    background-color: #000000;
+    color: var(--text-primary);
+  }
+  /* Default borders and panels */
+  * {
+    border-color: var(--border-primary);
+  }
+  ::selection {
+    background: rgba(139, 92, 246, 0.35);
+    color: #ffffff;
+  }
+  /* Inputs high-contrast baseline */
+  input, textarea, select {
+    background-color: #000000;
+    color: var(--text-primary);
+    border-color: var(--border-primary);
+  }
+}
+
+::root {
   /* Pure Black OLED-Optimized Color System */
   /* Pure black backgrounds for modern OLED displays */
   --bg-primary: #000000; /* Pure black for true OLED */
@@ -701,7 +727,7 @@ pre {
 
 /* Focus ring improvements */
 .heroui-autocomplete [data-slot="inputWrapper"]:focus-within {
-  outline: 2px solid rgba(189, 147, 249, 0.5) !important;
+  outline: 2px solid rgba(255, 255, 255, 0.2) !important;
   outline-offset: 2px !important;
 }
 

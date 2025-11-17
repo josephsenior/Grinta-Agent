@@ -35,11 +35,15 @@ class TestPortLockingFix:
             futures = [executor.submit(allocate_port) for _ in range(num_workers)]
             results = [future.result() for future in as_completed(futures)]
         successful_ports = [port for port in results if port is not None]
-        assert len(successful_ports) == len(set(successful_ports)), f"Duplicate ports allocated: {successful_ports}"
+        assert len(successful_ports) == len(set(successful_ports)), (
+            f"Duplicate ports allocated: {successful_ports}"
+        )
         for lock in port_locks:
             if lock:
                 lock.release()
-        print(f"Successfully allocated {len(successful_ports)} unique ports: {successful_ports}")
+        print(
+            f"Successfully allocated {len(successful_ports)} unique ports: {successful_ports}"
+        )
 
     def test_port_lock_basic_functionality(self):
         """Test basic port lock functionality."""
@@ -99,7 +103,9 @@ class TestPortLockingFix:
 
         num_workers = 15
         with ThreadPoolExecutor(max_workers=num_workers) as executor:
-            futures = {executor.submit(worker_allocate_port, i): i for i in range(num_workers)}
+            futures = {
+                executor.submit(worker_allocate_port, i): i for i in range(num_workers)
+            }
             results = {}
             for future in as_completed(futures):
                 worker_id = futures[future]
@@ -108,7 +114,9 @@ class TestPortLockingFix:
                     results[worker_id] = result
                 except Exception as e:
                     errors.append(f"Worker {worker_id} exception: {str(e)}")
-        successful_allocations = [(wid, port) for wid, port in allocated_ports if port is not None]
+        successful_allocations = [
+            (wid, port) for wid, port in allocated_ports if port is not None
+        ]
         allocated_port_numbers = [port for _, port in successful_allocations]
         print(f"Successful allocations: {len(successful_allocations)}")
         print(f"Allocated ports: {allocated_port_numbers}")
@@ -116,7 +124,9 @@ class TestPortLockingFix:
         if errors:
             print(f"Error details: {errors[:5]}")
         unique_ports = set(allocated_port_numbers)
-        assert len(allocated_port_numbers) == len(unique_ports), f"Duplicate ports found: {allocated_port_numbers}"
+        assert len(allocated_port_numbers) == len(unique_ports), (
+            f"Duplicate ports found: {allocated_port_numbers}"
+        )
         for lock in port_locks:
             if lock:
                 lock.release()
@@ -136,11 +146,15 @@ class TestPortLockingFix:
 
         num_workers = 10
         with ThreadPoolExecutor(max_workers=num_workers) as executor:
-            futures = [executor.submit(allocate_port_without_lock) for _ in range(num_workers)]
+            futures = [
+                executor.submit(allocate_port_without_lock) for _ in range(num_workers)
+            ]
             results = [future.result() for future in as_completed(futures)]
         unique_ports = set(results)
         duplicates_found = len(results) != len(unique_ports)
-        print(f"Without locking - Total ports: {len(results)}, Unique: {len(unique_ports)}")
+        print(
+            f"Without locking - Total ports: {len(results)}, Unique: {len(unique_ports)}"
+        )
         print(f"Ports allocated: {results}")
         print(f"Race condition detected: {duplicates_found}")
         assert len(results) == num_workers

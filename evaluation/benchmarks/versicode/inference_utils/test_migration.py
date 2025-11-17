@@ -35,7 +35,12 @@ def run_inference(model_name, origin_data_list):
         instruction = bulid_prompt(description, old_version, old_code, new_version)
         test_list.append(instruction)
     sampling_params = SamplingParams(n=6, temperature=0.8, top_p=0.95, max_tokens=512)
-    llm = LLM(model=model_name, tensor_parallel_size=4, gpu_memory_utilization=0.6, swap_space=40)
+    llm = LLM(
+        model=model_name,
+        tensor_parallel_size=4,
+        gpu_memory_utilization=0.6,
+        swap_space=40,
+    )
     outputs = llm.generate(test_list, sampling_params)
     for output in outputs:
         requests_id = int(output.request_id)
@@ -43,7 +48,9 @@ def run_inference(model_name, origin_data_list):
         output_list = output.outputs
         temp_ans_list.extend((o.text for o in output_list))
         temp_data_list[requests_id]["model_output"] = str(temp_ans_list)
-    save_folder_path = os.path.join("../data/result_data/code_migration", model_name.split("/")[-1])
+    save_folder_path = os.path.join(
+        "../data/result_data/code_migration", model_name.split("/")[-1]
+    )
     if not os.path.exists(save_folder_path):
         os.makedirs(save_folder_path)
     save_json_path = os.path.join(save_folder_path, json_path.split("/")[-1])

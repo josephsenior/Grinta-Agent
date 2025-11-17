@@ -12,9 +12,9 @@ app = FastAPI()
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
     """Mock WebSocket endpoint for testing.
-    
+
     Echoes back received messages with 'receive' prefix.
-    
+
     Args:
         websocket: WebSocket connection
 
@@ -34,7 +34,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 @app.get("/")
 def read_root() -> dict[str, str]:
     """Root endpoint.
-    
+
     Returns:
         Welcome message dictionary
 
@@ -45,7 +45,7 @@ def read_root() -> dict[str, str]:
 @app.get("/api/options/models")
 def read_llm_models() -> list[str]:
     """Get mock list of available LLM models.
-    
+
     Returns:
         List of mock GPT-4 model names
 
@@ -56,7 +56,7 @@ def read_llm_models() -> list[str]:
 @app.get("/api/options/agents")
 def read_llm_agents() -> list[str]:
     """Get mock list of available agents.
-    
+
     Returns:
         List containing CodeActAgent
 
@@ -67,7 +67,7 @@ def read_llm_agents() -> list[str]:
 @app.get("/api/list-files")
 def refresh_files() -> list[str]:
     """Get mock list of workspace files.
-    
+
     Returns:
         List with single mock file
 
@@ -78,7 +78,7 @@ def refresh_files() -> list[str]:
 @app.get("/api/options/config")
 def get_config() -> dict:
     """Get mock server configuration.
-    
+
     Returns:
         Configuration dictionary with all required fields
 
@@ -95,16 +95,16 @@ def get_config() -> dict:
             "HIDE_LLM_SETTINGS": False,
             "ENABLE_JIRA": True,
             "ENABLE_JIRA_DC": True,
-            "ENABLE_LINEAR": True
+            "ENABLE_LINEAR": True,
         },
-        "MAINTENANCE": None
+        "MAINTENANCE": None,
     }
 
 
 @app.get("/api/options/security-analyzers")
 def get_analyzers() -> list[str]:
     """Get mock list of security analyzers.
-    
+
     Returns:
         Empty list (no analyzers in mock)
 

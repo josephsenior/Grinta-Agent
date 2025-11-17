@@ -1,0 +1,37 @@
+# Prometheus recording rules for derived Forge metrics
+
+groups:
+  - name: forge-derived
+    interval: 1m
+    rules:
+      # Success rate over 5 minutes (%). Uses executed vs failed+timeout steps
+      - record: forge_success_rate_5m
+        expr: |
+          (rate(metasop_steps_executed[5m]) / (
+            rate(metasop_steps_executed[5m]) + rate(metasop_steps_failed[5m]) + rate(metasop_steps_timed_out[5m])
+          )) * 100
+
+      # Retry success rate over 5 minutes (%)
+      - record: forge_retry_success_rate_5m
+        expr: |
+          (rate(metasop_retry_successes[5m]) / (
+            rate(metasop_retry_successes[5m]) + rate(metasop_retry_failures[5m])
+          )) * 100
+
+      # gRPC request rate per service
+      - record: forge_eventservice_rpc_rate_5m
+        expr: rate(metasop_eventservice_rpc_total[5m])
+
+      - record: forge_runtime_rpc_rate_5m
+        expr: rate(metasop_runtime_rpc_total[5m])
+
+      # gRPC error rate percentage
+      - record: forge_eventservice_error_rate_5m
+        expr: |
+          (rate(metasop_eventservice_rpc_failures_total[5m]) /
+          rate(metasop_eventservice_rpc_total[5m])) * 100
+
+      - record: forge_runtime_error_rate_5m
+        expr: |
+          (rate(metasop_runtime_rpc_failures_total[5m]) /
+          rate(metasop_runtime_rpc_total[5m])) * 100

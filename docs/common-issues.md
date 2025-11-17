@@ -96,8 +96,8 @@ tail -f logs/uvicorn.err
 
 **Fix:**
 - Check backend is running: `forge start`
-- Check port 3001 is not blocked by firewall
-- Try: `curl http://localhost:3001/health`
+- Check port 3000 is not blocked by firewall
+- Try: `curl http://localhost:3000/health`
 
 ### ❌ "Agent state stuck in LOADING"
 

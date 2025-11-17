@@ -289,10 +289,10 @@ async def pass_to_codeact(request: PassToCodeActRequest) -> JSONResponse:
 
 def _format_pm_artifact(pm_artifact: dict) -> List[str]:
     """Format PM specification artifact.
-    
+
     Args:
         pm_artifact: PM artifact dictionary
-        
+
     Returns:
         List of formatted prompt lines
 
@@ -317,17 +317,17 @@ def _format_pm_artifact(pm_artifact: dict) -> List[str]:
 
 def _format_technical_decisions(tech_decisions: List) -> List[str]:
     """Format technical decisions list.
-    
+
     Args:
         tech_decisions: List of technical decisions
-        
+
     Returns:
         Formatted lines
 
     """
     if not tech_decisions:
         return []
-    
+
     lines = ["**Technical Decisions:**", ""]
     for dec in tech_decisions:
         if isinstance(dec, dict):
@@ -340,10 +340,10 @@ def _format_technical_decisions(tech_decisions: List) -> List[str]:
 
 def _format_arch_artifact(arch_artifact: dict) -> List[str]:
     """Format architecture design artifact.
-    
+
     Args:
         arch_artifact: Architecture artifact dictionary
-        
+
     Returns:
         List of formatted prompt lines
 
@@ -362,30 +362,32 @@ def _format_arch_artifact(arch_artifact: dict) -> List[str]:
         str(arch_content.get("database_schema", "N/A")),
         "",
     ]
-    
-    lines.extend(_format_technical_decisions(arch_content.get("technical_decisions", [])))
+
+    lines.extend(
+        _format_technical_decisions(arch_content.get("technical_decisions", []))
+    )
     return lines
 
 
 def _format_run_commands(run_results: dict) -> List[str]:
     """Format run commands section.
-    
+
     Args:
         run_results: Run results dictionary
-        
+
     Returns:
         Formatted lines
 
     """
     if not run_results:
         return []
-    
+
     lines = ["### ⚙️ Setup & Run Commands:", ""]
-    
+
     for cmd_type, label in [
         ("setup_commands", "Setup"),
         ("test_commands", "Testing"),
-        ("dev_commands", "Development")
+        ("dev_commands", "Development"),
     ]:
         cmds = run_results.get(cmd_type, [])
         if cmds:
@@ -393,43 +395,49 @@ def _format_run_commands(run_results: dict) -> List[str]:
             for cmd in cmds:
                 lines.append(f"```bash\n{cmd}\n```")
             lines.append("")
-    
+
     return lines
 
 
 def _format_engineer_artifact(eng_artifact: dict) -> List[str]:
     """Format engineer implementation artifact.
-    
+
     Args:
         eng_artifact: Engineer artifact dictionary
-        
+
     Returns:
         List of formatted prompt lines
 
     """
     eng_content = eng_artifact.get("content", {})
     lines = ["## 👨‍💻 Engineer Implementation Blueprint:", ""]
-    
+
     # File Structure
     file_structure = eng_content.get("file_structure")
     if file_structure:
-        lines.extend([
-            "### 📁 File Structure:",
-            "```",
-            _format_file_tree(file_structure),
-            "```",
-            "",
-        ])
-    
+        lines.extend(
+            [
+                "### 📁 File Structure:",
+                "```",
+                _format_file_tree(file_structure),
+                "```",
+                "",
+            ]
+        )
+
     # Implementation Plan
-    impl_plan = eng_content.get("implementation_plan", eng_content.get("implementation_summary", ""))
+    impl_plan = eng_content.get(
+        "implementation_plan", eng_content.get("implementation_summary", "")
+    )
     if impl_plan:
-        lines.extend([
-            "### 📝 Implementation Steps:",
-            impl_plan,
-            "",
-        ])
-    
+        lines.extend(
+            [
+                "### 📝 Implementation Steps:",
+                impl_plan,
+                "",
+            ]
+        )
+
     # Dependencies
     dependencies = eng_content.get("dependencies", [])
     if dependencies:
@@ -437,23 +445,25 @@ def _format_engineer_artifact(eng_artifact: dict) -> List[str]:
         for dep in dependencies:
             lines.append(f"- {dep}")
         lines.extend(["", ""])
-    
+
     # Technical Decisions
-    lines.extend(_format_technical_decisions(eng_content.get("technical_decisions", [])))
-    
+    lines.extend(
+        _format_technical_decisions(eng_content.get("technical_decisions", []))
+    )
+
     # Run Commands
     lines.extend(_format_run_commands(eng_content.get("run_results", {})))
     lines.extend(["---", ""])
-    
+
     return lines
 
 
 def _format_ui_artifact(ui_artifact: dict) -> List[str]:
     """Format UI design artifact.
-    
+
     Args:
         ui_artifact: UI artifact dictionary
-        
+
     Returns:
         List of formatted prompt lines
 
@@ -475,10 +485,10 @@ def _format_ui_artifact(ui_artifact: dict) -> List[str]:
 
 def _format_final_instructions(repo_root: Optional[str]) -> List[str]:
     """Format final task instructions.
-    
+
     Args:
         repo_root: Optional repository root path
-        
+
     Returns:
         List of instruction lines
 
@@ -498,10 +508,10 @@ def _format_final_instructions(repo_root: Optional[str]) -> List[str]:
         "",
         "Start implementation now. Create the files step by step, install dependencies, write code, and test.",
     ]
-    
+
     if repo_root:
         lines.extend(["", f"**Working Directory:** `{repo_root}`"])
-    
+
     return lines
 
 

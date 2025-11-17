@@ -5,14 +5,16 @@ import boto3
 from forge.core.logger import forge_logger as logger
 
 
-def list_foundation_models(aws_region_name: str, aws_access_key_id: str, aws_secret_access_key: str) -> list[str]:
+def list_foundation_models(
+    aws_region_name: str, aws_access_key_id: str, aws_secret_access_key: str
+) -> list[str]:
     """List available AWS Bedrock foundation models.
-    
+
     Args:
         aws_region_name: AWS region
         aws_access_key_id: AWS access key
         aws_secret_access_key: AWS secret key
-        
+
     Returns:
         List of model IDs prefixed with "bedrock/", empty on error
 
@@ -24,7 +26,9 @@ def list_foundation_models(aws_region_name: str, aws_access_key_id: str, aws_sec
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
         )
-        foundation_models_list = client.list_foundation_models(byOutputModality="TEXT", byInferenceType="ON_DEMAND")
+        foundation_models_list = client.list_foundation_models(
+            byOutputModality="TEXT", byInferenceType="ON_DEMAND"
+        )
         model_summaries = foundation_models_list["modelSummaries"]
         return ["bedrock/" + model["modelId"] for model in model_summaries]
     except Exception as err:
@@ -37,10 +41,10 @@ def list_foundation_models(aws_region_name: str, aws_access_key_id: str, aws_sec
 
 def remove_error_modelId(model_list: list[str]) -> list[str]:
     """Remove Bedrock models from model list (error handling fallback).
-    
+
     Args:
         model_list: List of model IDs
-        
+
     Returns:
         List with Bedrock models filtered out
 

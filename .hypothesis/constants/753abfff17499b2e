@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\memory\enhanced_vector_store.py
+# hypothesis_version: 6.147.0
+
+[0.2, 0.8, 256, 500, 1000, 3600, 10000, 'EnhancedVectorStore', 'FORGE_memory', 'QueryCache', 'ReRanker', 'VectorMemoryStore', 'accuracy_weight', 'cache', 'caching_enabled', 'config', 'enabled', 'excerpt', 'final_k', 'hit_rate', 'hits', 'initial_k', 'max_size', 'misses', 'model', 'rationale', 'rerank_score', 'reranker', 'reranking_enabled', 'size', 'speed_weight']

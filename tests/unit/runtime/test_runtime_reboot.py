@@ -1,7 +1,10 @@
 from unittest.mock import MagicMock, Mock
 import httpx
 import pytest
-from forge.core.exceptions import AgentRuntimeDisconnectedError, AgentRuntimeTimeoutError
+from forge.core.exceptions import (
+    AgentRuntimeDisconnectedError,
+    AgentRuntimeTimeoutError,
+)
 from forge.events.action import CmdRunAction
 from forge.runtime.base import Runtime
 
@@ -27,21 +30,31 @@ def test_runtime_timeout_error(runtime, mock_session):
     )
     with pytest.raises(AgentRuntimeTimeoutError) as exc_info:
         runtime.send_action_for_execution(action)
-    assert str(exc_info.value) == "Runtime failed to return execute_action before the requested timeout of 120s"
+    assert (
+        str(exc_info.value)
+        == "Runtime failed to return execute_action before the requested timeout of 120s"
+    )
 
 
 @pytest.mark.parametrize(
     "status_code,expected_message",
     [
         (404, "Runtime is not responding. This may be temporary, please try again."),
-        (502, "Runtime is temporarily unavailable. This may be due to a restart or network issue, please try again."),
+        (
+            502,
+            "Runtime is temporarily unavailable. This may be due to a restart or network issue, please try again.",
+        ),
     ],
 )
-def test_runtime_disconnected_error(runtime, mock_session, status_code, expected_message):
+def test_runtime_disconnected_error(
+    runtime, mock_session, status_code, expected_message
+):
     mock_response = Mock()
     mock_response.status_code = status_code
     mock_response.raise_for_status = Mock(
-        side_effect=httpx.HTTPStatusError("mock_error", request=MagicMock(), response=mock_response)
+        side_effect=httpx.HTTPStatusError(
+            "mock_error", request=MagicMock(), response=mock_response
+        )
     )
     mock_response.json = Mock(
         return_value={
@@ -50,7 +63,9 @@ def test_runtime_disconnected_error(runtime, mock_session, status_code, expected
             "extras": {"command_id": "test_id", "command": "test command"},
         }
     )
-    runtime.send_action_for_execution.side_effect = AgentRuntimeDisconnectedError(expected_message)
+    runtime.send_action_for_execution.side_effect = AgentRuntimeDisconnectedError(
+        expected_message
+    )
     action = CmdRunAction(command="test command")
     action.set_hard_timeout(120)
     with pytest.raises(AgentRuntimeDisconnectedError) as exc_info:

@@ -43,7 +43,9 @@ def get_error_prefix(obs: BrowserOutputObservation) -> str:
     return f"## Error from previous action:\n{obs.last_browser_action_error}\n"
 
 
-def create_goal_prompt(goal: str, image_urls: list[str] | None) -> tuple[str, list[str]]:
+def create_goal_prompt(
+    goal: str, image_urls: list[str] | None
+) -> tuple[str, list[str]]:
     """Create goal prompt with optional images.
 
     Args:
@@ -54,9 +56,7 @@ def create_goal_prompt(goal: str, image_urls: list[str] | None) -> tuple[str, li
         Tuple of (goal_text, goal_image_urls)
 
     """
-    goal_txt: str = (
-        f"# Instructions\nReview the current state of the page and all other information to find the best possible next action to accomplish your goal. Your answer will be interpreted and executed by a program, make sure to follow the formatting instructions.\n\n## Goal:\n{goal}\n"
-    )
+    goal_txt: str = f"# Instructions\nReview the current state of the page and all other information to find the best possible next action to accomplish your goal. Your answer will be interpreted and executed by a program, make sure to follow the formatting instructions.\n\n## Goal:\n{goal}\n"
     goal_image_urls = []
     if image_urls is not None:
         for idx, url in enumerate(image_urls):
@@ -143,7 +143,9 @@ def get_action_prompt(action_set: HighLevelActionSet) -> str:
 
     """
     action_set_generic_info = "Note: This action set allows you to interact with your environment. Most of them are python function executing playwright code. The primary way of referring to elements in the page is through bid which are specified in your observations.\n\n"
-    action_description = action_set.describe(with_long_description=False, with_examples=False)
+    action_description = action_set.describe(
+        with_long_description=False, with_examples=False
+    )
     return f"# Action space:\n{action_set_generic_info}{action_description}\n"
 
 
@@ -161,11 +163,10 @@ def get_history_prompt(prev_actions: list[BrowseInteractiveAction]) -> str:
     for i in range(len(prev_actions)):
         history_prompt.extend(
             (
-                f"## step {
-                    i + 1}",
-                f"\nOuput thought and action: {
-                    prev_actions[i].thought} ```{
-                    prev_actions[i].browser_actions}```\n",
+                f"## step {i + 1}",
+                f"\nOuput thought and action: {prev_actions[i].thought} ```{
+                    prev_actions[i].browser_actions
+                }```\n",
             ),
         )
     return "\n".join(history_prompt) + "\n"
@@ -183,11 +184,13 @@ class VisualBrowsingAgent(Agent):
         """Initialize the visual browsing agent with action subsets."""
         super().__init__(config, llm_registry)
         action_subsets = ["chat", "bid", "nav", "tab", "infeas"]
-        self.action_space = HighLevelActionSet(subsets=action_subsets, strict=False, multiaction=False)
+        self.action_space = HighLevelActionSet(
+            subsets=action_subsets, strict=False, multiaction=False
+        )
         self.action_prompt = get_action_prompt(self.action_space)
         self.abstract_example = f"\n# Abstract Example\n\nHere is an abstract version of the answer with description of the content of each tag. Make sure you follow this structure, but replace the content with your answer:\n\nYou must mandatorily think step by step. If you need to make calculations such as coordinates, write them here. Describe the effect that your previous action had on the current content of the page. In summary the next action I will perform is ```{
-            self.action_space.example_action(
-                abstract=True)}```\n"
+            self.action_space.example_action(abstract=True)
+        }```\n"
         self.concrete_example = "\n# Concrete Example\n\nHere is a concrete example of how to format your answer. Make sure to generate the action in the correct format ensuring that the action is present inside ``````:\n\nLet's think step-by-step. From previous action I tried to set the value of year to \"2022\", using select_option, but it doesn't appear to be in the form. It may be a dynamic dropdown, I will try using click with the bid \"324\" and look at the response from the page. In summary the next action I will perform is ```click('324')```\n"
         self.hints = "\nNote:\n* Make sure to use bid to identify elements when using commands.\n* Interacting with combobox, dropdowns and auto-complete fields can be tricky, sometimes you need to use select_option, while other times you need to use fill or click and wait for the reaction of the page.\n\n"
         self.reset()
@@ -200,10 +203,14 @@ class VisualBrowsingAgent(Agent):
     def _handle_initial_state(self, state: State) -> Action | None:
         """Handle initial state with noop action."""
         if len(state.view) == 1:
-            return BrowseInteractiveAction(browser_actions="noop(1000)", return_axtree=True)
+            return BrowseInteractiveAction(
+                browser_actions="noop(1000)", return_axtree=True
+            )
         return None
 
-    def _process_events(self, state: State) -> tuple[list, Action | None, Observation | None]:
+    def _process_events(
+        self, state: State
+    ) -> tuple[list, Action | None, Observation | None]:
         """Process events from state view and extract relevant information."""
         prev_actions = []
         last_obs = None
@@ -215,7 +222,9 @@ class VisualBrowsingAgent(Agent):
                 last_action = event
             elif isinstance(event, MessageAction) and event.source == EventSource.AGENT:
                 return [], AgentFinishAction(outputs={"content": event.content}), None
-            elif isinstance(event, Observation) and isinstance(event, BrowserOutputObservation):
+            elif isinstance(event, Observation) and isinstance(
+                event, BrowserOutputObservation
+            ):
                 last_obs = event
 
         if prev_actions:
@@ -223,13 +232,20 @@ class VisualBrowsingAgent(Agent):
 
         return prev_actions, last_action, last_obs
 
-    def _handle_user_message_action(self, last_action: Action) -> Action | None:
+    def _handle_user_message_action(
+        self, last_action: Action | None
+    ) -> Action | None:
         """Handle user message action from last action."""
-        if isinstance(last_action, BrowseInteractiveAction) and last_action.browsergym_send_msg_to_user:
+        if (
+            isinstance(last_action, BrowseInteractiveAction)
+            and last_action.browsergym_send_msg_to_user
+        ):
             return MessageAction(last_action.browsergym_send_msg_to_user)
         return None
 
-    def _process_browser_observation(self, last_obs: Observation) -> tuple[str, str, str, str, str]:
+    def _process_browser_observation(
+        self, last_obs: Observation | None
+    ) -> tuple[str, str, str, str, str | None]:
         """Process browser observation and extract relevant information."""
         error_prefix = ""
         focused_element = "## Focused element:\nNone\n"
@@ -247,7 +263,9 @@ class VisualBrowsingAgent(Agent):
                         raise RuntimeError(msg)
 
             if last_obs.focused_element_bid is not None:
-                focused_element = f"## Focused element:\nbid='{last_obs.focused_element_bid}'\n"
+                focused_element = (
+                    f"## Focused element:\nbid='{last_obs.focused_element_bid}'\n"
+                )
 
             tabs = get_tabs(last_obs)
 
@@ -265,7 +283,9 @@ class VisualBrowsingAgent(Agent):
                 )
                 cur_axtree_txt = get_axtree(axtree_txt=cur_axtree_txt)
             except Exception as e:
-                logger.error("Error when trying to process the accessibility tree: %s", e)
+                logger.error(
+                    "Error when trying to process the accessibility tree: %s", e
+                )
                 msg = "Error encountered when browsing."
                 raise RuntimeError(msg)
 
@@ -280,7 +300,7 @@ class VisualBrowsingAgent(Agent):
         tabs: str,
         focused_element: str,
         error_prefix: str,
-        set_of_marks: str,
+        set_of_marks: str | None,
         history_prompt: str,
     ) -> list[TextContent | ImageContent]:
         """Build human prompt for LLM."""
@@ -297,7 +317,9 @@ class VisualBrowsingAgent(Agent):
             set_of_marks,
         )
 
-        human_prompt: list[TextContent | ImageContent] = [TextContent(type="text", text=goal_txt)]
+        human_prompt: list[TextContent | ImageContent] = [
+            TextContent(type="text", text=goal_txt)
+        ]
 
         if len(goal_images) > 0:
             human_prompt.append(ImageContent(image_urls=goal_images))
@@ -307,11 +329,9 @@ class VisualBrowsingAgent(Agent):
         if som_screenshot is not None:
             human_prompt.append(ImageContent(image_urls=[som_screenshot]))
 
-        remaining_content = f"\n{history_prompt}{
-            self.action_prompt}{
-            self.hints}{
-            self.abstract_example}{
-                self.concrete_example}"
+        remaining_content = f"\n{history_prompt}{self.action_prompt}{self.hints}{
+            self.abstract_example
+        }{self.concrete_example}"
         human_prompt.append(TextContent(type="text", text=remaining_content))
 
         return human_prompt
@@ -333,8 +353,10 @@ class VisualBrowsingAgent(Agent):
 
         # Process browser observation
         try:
-            error_prefix, focused_element, tabs, cur_axtree_txt, set_of_marks = self._process_browser_observation(
-                last_obs,
+            error_prefix, focused_element, tabs, cur_axtree_txt, set_of_marks = (
+                self._process_browser_observation(
+                    last_obs,
+                )
             )
         except Exception as e:
             return MessageAction(str(e))
@@ -358,5 +380,7 @@ class VisualBrowsingAgent(Agent):
             Message(role="user", content=human_prompt),
         ]
 
-        response = self.llm.completion(messages=messages, temperature=0.0, stop=[")```", ")\n```"])
+        response = self.llm.completion(
+            messages=messages, temperature=0.0, stop=[")```", ")\n```"]
+        )
         return self.response_parser.parse(response)

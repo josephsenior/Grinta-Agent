@@ -27,13 +27,15 @@ from forge.events.action import (
     MessageAction,
 )
 from forge.events.event import FileReadSource
-from forge.events.tool import ToolCallMetadata
+from forge.events.tool import ToolCallMetadata, build_tool_call_metadata
 
 if TYPE_CHECKING:
     from litellm import ChatCompletionToolParam, ModelResponse
 
 
-def grep_to_cmdrun(pattern: str, path: str | None = None, include: str | None = None) -> str:
+def grep_to_cmdrun(
+    pattern: str, path: str | None = None, include: str | None = None
+) -> str:
     """Convert grep tool arguments to a shell command string.
 
     Args:
@@ -103,7 +105,8 @@ def _create_view_action(arguments: dict) -> Action:
     """Create a view action from arguments."""
     if "path" not in arguments:
         msg = f'Missing required argument "path" in tool call {
-            ViewTool["function"]["name"]}'
+            ViewTool["function"]["name"]
+        }'
         raise FunctionCallValidationError(
             msg,
         )
@@ -123,7 +126,8 @@ def _create_grep_action(arguments: dict) -> Action:
     """Create a grep action from arguments."""
     if "pattern" not in arguments:
         msg = f'Missing required argument "pattern" in tool call {
-            GrepTool["function"]["name"]}'
+            GrepTool["function"]["name"]
+        }'
         raise FunctionCallValidationError(
             msg,
         )
@@ -139,7 +143,8 @@ def _create_glob_action(arguments: dict) -> Action:
     """Create a glob action from arguments."""
     if "pattern" not in arguments:
         msg = f'Missing required argument "pattern" in tool call {
-            GlobTool["function"]["name"]}'
+            GlobTool["function"]["name"]
+        }'
         raise FunctionCallValidationError(
             msg,
         )
@@ -155,7 +160,9 @@ def _create_mcp_action(tool_call, arguments: dict) -> Action:
     return MCPAction(name=tool_call.function.name, arguments=arguments)
 
 
-def _create_action_from_tool_call(tool_call, mcp_tool_names: list[str] | None) -> Action:
+def _create_action_from_tool_call(
+    tool_call, mcp_tool_names: list[str] | None
+) -> Action:
     """Create an action from a tool call."""
     arguments = _parse_tool_call_arguments(tool_call)
     function_name = tool_call.function.name
@@ -178,7 +185,9 @@ def _create_action_from_tool_call(tool_call, mcp_tool_names: list[str] | None) -
     )
 
 
-def _process_tool_calls(assistant_msg, response: ModelResponse, mcp_tool_names: list[str] | None) -> list[Action]:
+def _process_tool_calls(
+    assistant_msg, response: ModelResponse, mcp_tool_names: list[str] | None
+) -> list[Action]:
     """Process tool calls and return actions."""
     actions: list[Action] = []
     thought = _extract_thought_from_content(assistant_msg.content)
@@ -193,10 +202,10 @@ def _process_tool_calls(assistant_msg, response: ModelResponse, mcp_tool_names: 
             action = combine_thought(action, thought)
 
         # Add tool call metadata
-        action.tool_call_metadata = ToolCallMetadata(
-            tool_call_id=tool_call.id,
+        action.tool_call_metadata = build_tool_call_metadata(
             function_name=tool_call.function.name,
-            model_response=response,
+            tool_call_id=tool_call.id,
+            response_obj=response,
             total_calls_in_response=len(assistant_msg.tool_calls),
         )
 
@@ -205,25 +214,37 @@ def _process_tool_calls(assistant_msg, response: ModelResponse, mcp_tool_names: 
     return actions
 
 
-def response_to_actions(response: ModelResponse, mcp_tool_names: list[str] | None = None) -> list[Action]:
+def response_to_actions(
+    response: ModelResponse, mcp_tool_names: list[str] | None = None
+) -> list[Action]:
     """Convert model response to actions."""
-    assert len(response.choices) == 1, "Only one choice is supported for now"
+    _validate_response_choices(response)
 
     choice = response.choices[0]
-    assistant_msg = choice.message
+    assistant_msg = getattr(choice, "message", None)
+    if assistant_msg is None:
+        raise FunctionCallValidationError(
+            "Model response choice is missing a message payload"
+        )
 
-    if hasattr(assistant_msg, "tool_calls") and assistant_msg.tool_calls:
+    tool_calls = getattr(assistant_msg, "tool_calls", None)
+    if tool_calls:
         actions = _process_tool_calls(assistant_msg, response, mcp_tool_names)
     else:
-        content = str(assistant_msg.content) if assistant_msg.content else ""
-        actions = [MessageAction(content=content, wait_for_response=True)]
+        content = getattr(assistant_msg, "content", None)
+        text_content = str(content) if content else ""
+        actions = [MessageAction(content=text_content, wait_for_response=True)]
 
-    # Set response ID for all actions
     for action in actions:
         action.response_id = response.id
 
     assert actions
     return actions
+
+
+def _validate_response_choices(response: ModelResponse) -> None:
+    """Validate that response has exactly one choice."""
+    assert len(response.choices) == 1, "Only one choice is supported for now"
 
 
 def get_tools() -> list[ChatCompletionToolParam]:

@@ -10,7 +10,7 @@ from forge.controller.state.state import State
 from forge.core.config import ForgeConfig
 from forge.core.config.agent_config import AgentConfig
 from forge.core.config.llm_config import LLMConfig
-from forge.core.schema import AgentState
+from forge.core.schemas import AgentState
 from forge.events import EventSource, EventStream
 from forge.events.action import AgentDelegateAction, AgentFinishAction, MessageAction
 from forge.events.action.agent import RecallAction
@@ -39,7 +39,9 @@ def conversation_stats():
 
     file_store = InMemoryFileStore({})
     conversation_id = f"test-conversation-{uuid.uuid4()}"
-    return ConversationStats(file_store=file_store, conversation_id=conversation_id, user_id="test-user")
+    return ConversationStats(
+        file_store=file_store, conversation_id=conversation_id, user_id="test-user"
+    )
 
 
 @pytest.fixture
@@ -108,10 +110,14 @@ def create_mock_agent_factory(mock_child_agent, llm_registry):
 
 
 @pytest.mark.asyncio
-async def test_delegation_flow(mock_parent_agent, mock_child_agent, mock_event_stream, connected_registry_and_stats):
+async def test_delegation_flow(
+    mock_parent_agent, mock_child_agent, mock_event_stream, connected_registry_and_stats
+):
     """Test parent delegation flow and metrics accumulation."""
     llm_registry, conversation_stats = connected_registry_and_stats
-    Agent.get_cls = Mock(return_value=create_mock_agent_factory(mock_child_agent, llm_registry))
+    Agent.get_cls = Mock(
+        return_value=create_mock_agent_factory(mock_child_agent, llm_registry)
+    )
     step_count = 0
 
     def agent_step_fn(state):
@@ -128,8 +134,12 @@ async def test_delegation_flow(mock_parent_agent, mock_child_agent, mock_event_s
     parent_state = State(
         inputs={},
         metrics=parent_metrics,
-        budget_flag=BudgetControlFlag(current_value=2, limit_increase_amount=10, max_value=10),
-        iteration_flag=IterationControlFlag(current_value=1, limit_increase_amount=10, max_value=10),
+        budget_flag=BudgetControlFlag(
+            current_value=2, limit_increase_amount=10, max_value=10
+        ),
+        iteration_flag=IterationControlFlag(
+            current_value=1, limit_increase_amount=10, max_value=10
+        ),
     )
     parent_controller = AgentController(
         agent=mock_parent_agent,
@@ -146,12 +156,16 @@ async def test_delegation_flow(mock_parent_agent, mock_child_agent, mock_event_s
 
     def on_event(event: Event):
         if isinstance(event, RecallAction):
-            microagent_observation = RecallObservation(recall_type=RecallType.KNOWLEDGE, content="Found info")
+            microagent_observation = RecallObservation(
+                recall_type=RecallType.KNOWLEDGE, content="Found info"
+            )
             microagent_observation._cause = event.id
             mock_event_stream.add_event(microagent_observation, EventSource.ENVIRONMENT)
 
     mock_memory.on_event = on_event
-    mock_event_stream.subscribe(EventStreamSubscriber.MEMORY, mock_memory.on_event, mock_memory)
+    mock_event_stream.subscribe(
+        EventStreamSubscriber.MEMORY, mock_memory.on_event, mock_memory
+    )
 
     def child_step_factory(state):
         act = CmdRunAction(command="echo")
@@ -179,32 +193,39 @@ async def test_delegation_flow(mock_parent_agent, mock_child_agent, mock_event_s
     assert mock_event_stream.get_latest_event_id() >= 3
     assert any((isinstance(event, RecallObservation) for event in events))
     assert any((isinstance(event, AgentDelegateAction) for event in events))
-    assert parent_controller.delegate is not None, "Parent's delegate controller was not set."
-    assert (
-        parent_controller.state.iteration_flag.current_value == 2
-    ), "Parent iteration should be incremented after step."
+    assert parent_controller.delegate is not None, (
+        "Parent's delegate controller was not set."
+    )
+    assert parent_controller.state.iteration_flag.current_value == 2, (
+        "Parent iteration should be incremented after step."
+    )
     delegate_controller = parent_controller.delegate
     for i in range(4):
         delegate_controller.state.iteration_flag.step()
         delegate_controller.agent.step(delegate_controller.state)
         delegate_controller.agent.llm.metrics.add_cost(1.0)
     assert delegate_controller.state.get_local_step() == 4
-    combined_metrics = delegate_controller.state.conversation_stats.get_combined_metrics()
+    combined_metrics = (
+        delegate_controller.state.conversation_stats.get_combined_metrics()
+    )
     assert combined_metrics.accumulated_cost == 6
     delegate_controller.state.outputs = {"delegate_result": "done"}
     child_finish_action = AgentFinishAction()
     await delegate_controller._on_event(child_finish_action)
     await asyncio.sleep(0.5)
-    assert parent_controller.delegate is None, "Parent delegate should be None after child finishes."
-    assert (
-        parent_controller.state.iteration_flag.current_value == 7
-    ), "Parent iteration should be the child's iteration + 1 after child is done."
+    assert parent_controller.delegate is None, (
+        "Parent delegate should be None after child finishes."
+    )
+    assert parent_controller.state.iteration_flag.current_value == 7, (
+        "Parent iteration should be the child's iteration + 1 after child is done."
+    )
     await parent_controller.close()
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "delegate_state", [AgentState.RUNNING, AgentState.FINISHED, AgentState.ERROR, AgentState.REJECTED]
+    "delegate_state",
+    [AgentState.RUNNING, AgentState.FINISHED, AgentState.ERROR, AgentState.REJECTED],
 )
 async def test_delegate_step_different_states(
     mock_parent_agent, mock_event_stream, delegate_state, connected_registry_and_stats
@@ -233,12 +254,8 @@ async def test_delegate_step_different_states(
     mock_delegate._step = AsyncMock()
     mock_delegate.close = AsyncMock()
 
-    async def call_on_event_with_new_loop():
-        """In this thread, create and set a fresh event loop, so that the run_until_complete().
-
-        calls inside controller.on_event(...) find a valid loop.
-
-        """
+    def call_on_event_with_new_loop():
+        """Create a fresh loop in another thread and deliver an event."""
         loop_in_thread = asyncio.new_event_loop()
         try:
             asyncio.set_event_loop(loop_in_thread)
@@ -270,7 +287,9 @@ async def test_delegate_hits_global_limits(
 ):
     """Global limits from control flags should apply to delegates."""
     llm_registry, conversation_stats = connected_registry_and_stats
-    Agent.get_cls = Mock(return_value=create_mock_agent_factory(mock_child_agent, llm_registry))
+    Agent.get_cls = Mock(
+        return_value=create_mock_agent_factory(mock_child_agent, llm_registry)
+    )
     mock_parent_agent.llm.metrics.accumulated_cost = 2
     mock_parent_agent.llm.service_id = "main_agent"
     llm_registry.service_to_llm["main_agent"] = mock_parent_agent.llm
@@ -279,8 +298,12 @@ async def test_delegate_hits_global_limits(
     parent_state = State(
         inputs={},
         metrics=parent_metrics,
-        budget_flag=BudgetControlFlag(current_value=2, limit_increase_amount=10, max_value=10),
-        iteration_flag=IterationControlFlag(current_value=2, limit_increase_amount=3, max_value=3),
+        budget_flag=BudgetControlFlag(
+            current_value=2, limit_increase_amount=10, max_value=10
+        ),
+        iteration_flag=IterationControlFlag(
+            current_value=2, limit_increase_amount=3, max_value=3
+        ),
     )
     parent_controller = AgentController(
         agent=mock_parent_agent,
@@ -297,12 +320,16 @@ async def test_delegate_hits_global_limits(
 
     def on_event(event: Event):
         if isinstance(event, RecallAction):
-            microagent_observation = RecallObservation(recall_type=RecallType.KNOWLEDGE, content="Found info")
+            microagent_observation = RecallObservation(
+                recall_type=RecallType.KNOWLEDGE, content="Found info"
+            )
             microagent_observation._cause = event.id
             mock_event_stream.add_event(microagent_observation, EventSource.ENVIRONMENT)
 
     mock_memory.on_event = on_event
-    mock_event_stream.subscribe(EventStreamSubscriber.MEMORY, mock_memory.on_event, mock_memory)
+    mock_event_stream.subscribe(
+        EventStreamSubscriber.MEMORY, mock_memory.on_event, mock_memory
+    )
 
     def parent_step_factory(*args, **kwargs):
         action = AgentDelegateAction(agent="ChildAgent", inputs={"test": True})
@@ -318,8 +345,18 @@ async def test_delegate_hits_global_limits(
     assert mock_event_stream.get_latest_event_id() >= 3
     assert any((isinstance(event, RecallObservation) for event in events))
     assert any((isinstance(event, AgentDelegateAction) for event in events))
-    assert parent_controller.delegate is not None, "Parent's delegate controller was not set."
+    assert parent_controller.delegate is not None, (
+        "Parent's delegate controller was not set."
+    )
     delegate_controller = parent_controller.delegate
+    # Ensure the child agent produces a valid action when allowed to step again
+    def child_step_factory(state):
+        act = CmdRunAction(command="echo")
+        act._tool_call_metadata = None
+        return act
+
+    mock_child_agent.step.side_effect = child_step_factory
+
     await delegate_controller.set_agent_state_to(AgentState.RUNNING)
     message_action = MessageAction(content="Test message")
     message_action._source = EventSource.USER
@@ -333,12 +370,16 @@ async def test_delegate_hits_global_limits(
     await delegate_controller.set_agent_state_to(AgentState.RUNNING)
     await asyncio.sleep(0.1)
     assert delegate_controller.state.iteration_flag.max_value == 6
-    assert delegate_controller.state.iteration_flag.max_value == parent_controller.state.iteration_flag.max_value
+    assert (
+        delegate_controller.state.iteration_flag.max_value
+        == parent_controller.state.iteration_flag.max_value
+    )
     message_action = MessageAction(content="Test message 2")
     message_action._source = EventSource.USER
     await delegate_controller._on_event(message_action)
     await asyncio.sleep(0.1)
     assert delegate_controller.state.iteration_flag.current_value == 4
     assert (
-        delegate_controller.state.iteration_flag.current_value == parent_controller.state.iteration_flag.current_value
+        delegate_controller.state.iteration_flag.current_value
+        == parent_controller.state.iteration_flag.current_value
     )

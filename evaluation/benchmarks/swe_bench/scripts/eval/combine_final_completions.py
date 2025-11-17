@@ -17,7 +17,7 @@ def load_completions(output_dir: str, instance_id: str):
         file_path = files[-1]
     except IndexError:
         return None
-    with open(file_path, "r", encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         result = json.load(f)
     messages = result["messages"]
     messages.append(result["response"]["choices"][0]["message"])
@@ -31,7 +31,7 @@ args = parser.parse_args()
 output_dir = os.path.dirname(args.jsonl_path)
 output_path = os.path.join(output_dir, "output.with_completions.jsonl.gz")
 needs_update = False
-with open(args.jsonl_path, "r", encoding='utf-8') as f_in:
+with open(args.jsonl_path, "r", encoding="utf-8") as f_in:
     for line in tqdm(f_in, desc="Checking for changes"):
         data = json.loads(line)
         new_completions = load_completions(output_dir, data["instance_id"])
@@ -47,7 +47,10 @@ if os.path.exists(output_path):
     if input() != "y":
         logger.info("Exiting...")
         exit(0)
-with open(args.jsonl_path, "r", encoding='utf-8') as f_in, gzip.open(output_path, "wt") as f_out:
+with (
+    open(args.jsonl_path, "r", encoding="utf-8") as f_in,
+    gzip.open(output_path, "wt") as f_out,
+):
     for line in tqdm(f_in):
         data = json.loads(line)
         data["raw_completions"] = load_completions(output_dir, data["instance_id"])

@@ -5,6 +5,7 @@
  */
 
 import { useNavigate } from "react-router-dom";
+import React from "react";
 import type { ErrorAction } from "#/components/shared/error/user-friendly-error";
 
 type CustomHandlerMap = Record<string, () => void> | undefined;
@@ -16,12 +17,14 @@ type BuiltInHandlerContext = {
 
 export function useErrorActionHandler() {
   const navigate = useNavigate();
+  const lastHandledRef = React.useRef<string | null>(null);
 
   const handleErrorAction = (
     action: ErrorAction,
     customHandlers?: CustomHandlerMap,
   ) => {
     if (invokeCustomHandler(action, customHandlers)) {
+      lastHandledRef.current = `custom:${action.type}`;
       return;
     }
 
@@ -30,12 +33,13 @@ export function useErrorActionHandler() {
       customHandlers,
     };
 
-    if (!handleBuiltInAction(action, context)) {
+    if (!handleBuiltInAction(action, context, lastHandledRef)) {
       handleFallbackAction(action);
+      lastHandledRef.current = `fallback:${action.type}`;
     }
   };
 
-  return { handleErrorAction };
+  return { handleErrorAction, lastHandledAction: lastHandledRef };
 }
 
 function invokeCustomHandler(
@@ -66,20 +70,25 @@ const EXTERNAL_LINK_DEFAULTS: Record<string, string> = {
 function handleBuiltInAction(
   action: ErrorAction,
   { navigate, customHandlers }: BuiltInHandlerContext,
+  tracker: React.MutableRefObject<string | null>,
 ): boolean {
   if (handleUtilityAction(action, customHandlers)) {
+    tracker.current = `utility:${action.type}`;
     return true;
   }
 
   if (handleNavigationAction(action.type, navigate)) {
+    tracker.current = `navigate:${action.type}`;
     return true;
   }
 
   if (handleExternalLinkAction(action)) {
+    tracker.current = `external:${action.type}`;
     return true;
   }
 
   if (handlePlaceholderAction(action.type)) {
+    tracker.current = `placeholder:${action.type}`;
     return true;
   }
 

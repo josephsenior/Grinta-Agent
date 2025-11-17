@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from contextlib import contextmanager
-from typing import Any
+from typing import Any, Iterator
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError
 
@@ -18,7 +18,7 @@ _SUPPRESS_ENV_EXPORT: bool = False
 
 
 @contextmanager
-def suppress_llm_env_export() -> None:
+def suppress_llm_env_export() -> Iterator[None]:
     """Context manager to temporarily disable environment export during config loading."""
     global _SUPPRESS_ENV_EXPORT
     previous = _SUPPRESS_ENV_EXPORT
@@ -111,7 +111,7 @@ class LLMConfig(BaseModel):
     )
     correct_num: int = Field(
         default=5,
-        description="The number of times the draft editor LLM tries to fix an error when editing"
+        description="The number of times the draft editor LLM tries to fix an error when editing",
     )
     for_routing: bool = Field(default=False)
     model_config = ConfigDict(extra="forbid")
@@ -153,15 +153,15 @@ class LLMConfig(BaseModel):
         # Try to create the base config
         try:
             base_config = cls.model_validate(base_data)
-            llm_mapping['llm'] = base_config
+            llm_mapping["llm"] = base_config
         except ValidationError:
-            logger.warning(
-                'Cannot parse [llm] config from toml. Continuing with defaults.'
+            logger.debug(
+                "Cannot parse [llm] config from toml. Continuing with defaults."
             )
             # If base config fails, create a default one
             base_config = cls()
             # Still add it to the mapping
-            llm_mapping['llm'] = base_config
+            llm_mapping["llm"] = base_config
 
         # Process each custom section independently
         for name, overrides in custom_sections.items():
@@ -171,14 +171,14 @@ class LLMConfig(BaseModel):
                 custom_config = cls.model_validate(merged)
                 llm_mapping[name] = custom_config
             except ValidationError:
-                logger.warning(
-                    f'Cannot parse [{name}] config from toml. This section will be skipped.'
+                logger.debug(
+                    "Cannot parse [%s] config from toml. This section will be skipped.",
+                    name,
                 )
                 # Skip this custom section but continue with others
                 continue
 
         return llm_mapping
-
 
     def model_post_init(self, __context: Any) -> None:
         """Post-initialization hook for clean API key handling and environment setup.
@@ -198,7 +198,9 @@ class LLMConfig(BaseModel):
         if not _SUPPRESS_ENV_EXPORT and not has_explicit_key:
             try:
                 # Get the correct API key for this model/provider
-                correct_api_key = api_key_manager.get_api_key_for_model(self.model, self.api_key)
+                correct_api_key = api_key_manager.get_api_key_for_model(
+                    self.model, self.api_key
+                )
 
                 if correct_api_key:
                     self.api_key = correct_api_key
@@ -215,7 +217,7 @@ class LLMConfig(BaseModel):
             except Exception as e:
                 logger.error(f"Error in API key handling: {e}")
 
-        # Set environment variables for LiteLLM using the secure manager unless suppressed
+            # Set environment variables for LiteLLM using the secure manager unless suppressed
             api_key_manager.set_environment_variables(self.model, self.api_key)
 
         # CRITICAL: Clean base_url to prevent protocol errors
@@ -231,48 +233,51 @@ class LLMConfig(BaseModel):
         """Set provider-specific environment variables."""
         # OpenRouter-specific variables
         if self.openrouter_site_url:
-            os.environ['OR_SITE_URL'] = self.openrouter_site_url
+            os.environ["OR_SITE_URL"] = self.openrouter_site_url
         if self.openrouter_app_name:
-            os.environ['OR_APP_NAME'] = self.openrouter_app_name
+            os.environ["OR_APP_NAME"] = self.openrouter_app_name
 
         # AWS credentials for Bedrock
         if self.aws_access_key_id:
-            os.environ['AWS_ACCESS_KEY_ID'] = self.aws_access_key_id.get_secret_value()
+            os.environ["AWS_ACCESS_KEY_ID"] = self.aws_access_key_id.get_secret_value()
         if self.aws_secret_access_key:
-            os.environ['AWS_SECRET_ACCESS_KEY'] = (
+            os.environ["AWS_SECRET_ACCESS_KEY"] = (
                 self.aws_secret_access_key.get_secret_value()
             )
         if self.aws_region_name:
-            os.environ['AWS_REGION_NAME'] = self.aws_region_name
+            os.environ["AWS_REGION_NAME"] = self.aws_region_name
 
     def _clean_base_url(self) -> None:
         """Clean base_url and other parameters using provider-aware validation."""
         if not self.model:
             return
-            
+
         provider = api_key_manager._extract_provider(self.model)
         provider_config = provider_config_manager.get_provider_config(provider)
-        
+
         # Use provider configuration to validate and clean base_url
         cleaned_url = provider_config.validate_base_url(self.base_url)
         if cleaned_url != self.base_url:
-            logger.info(f"Cleaned base_url for {provider}: '{self.base_url}' -> {cleaned_url}")
+            logger.info(
+                f"Cleaned base_url for {provider}: '{self.base_url}' -> {cleaned_url}"
+            )
             self.base_url = cleaned_url
-        
+
         # Additional validation for custom_llm_provider based on provider configuration
-        if hasattr(self, 'custom_llm_provider') and self.custom_llm_provider:
+        if hasattr(self, "custom_llm_provider") and self.custom_llm_provider:
             # Check if custom_llm_provider is forbidden for this provider
-            if not provider_config.is_param_allowed('custom_llm_provider'):
-                logger.info(f"Clearing custom_llm_provider '{self.custom_llm_provider}' for {provider} - not allowed for this provider")
+            if not provider_config.is_param_allowed("custom_llm_provider"):
+                logger.info(
+                    f"Clearing custom_llm_provider '{self.custom_llm_provider}' for {provider} - not allowed for this provider"
+                )
                 # Note: Can't directly modify Pydantic field, but this will help with logging
 
     def _configure_model_defaults(self) -> None:
         """Configure model-specific default settings."""
         # Set reasoning_effort to 'high' by default for non-Gemini models
-        if self.reasoning_effort is None and 'gemini-2.5-pro' not in self.model:
-            self.reasoning_effort = 'high'
+        if self.reasoning_effort is None and "gemini-2.5-pro" not in self.model:
+            self.reasoning_effort = "high"
 
         # Set API version for Azure models
-        if self.model.startswith('azure') and self.api_version is None:
-            self.api_version = '2024-12-01-preview'
-
+        if self.model.startswith("azure") and self.api_version is None:
+            self.api_version = "2024-12-01-preview"

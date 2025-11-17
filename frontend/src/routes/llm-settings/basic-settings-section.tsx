@@ -39,7 +39,7 @@ export function BasicSettingsSection({
     isOpenhandsModel(currentSelectedModel);
 
   return (
-    <div data-testid="llm-settings-form-basic" className="flex flex-col gap-6">
+    <div data-testid="llm-settings-form-basic" className="flex flex-col gap-8">
       {!isLoading && !isFetching && (
         <>
           <ModelSelector

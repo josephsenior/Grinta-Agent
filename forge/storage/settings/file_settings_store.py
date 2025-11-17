@@ -22,7 +22,9 @@ if TYPE_CHECKING:
 #   Prevents file I/O contention when multiple users load settings simultaneously
 _file_settings_cache: dict[str, tuple[Settings | None, float]] = {}
 _file_settings_locks: dict[str, asyncio.Lock] = {}
-_FILE_SETTINGS_CACHE_TTL = 60  # seconds (OPTIMIZED: increased from 30s for 2-3x improvement)
+_FILE_SETTINGS_CACHE_TTL = (
+    60  # seconds (OPTIMIZED: increased from 30s for 2-3x improvement)
+)
 
 
 @dataclass
@@ -35,42 +37,42 @@ class FileSettingsStore(SettingsStore):
 
     async def load(self) -> Settings | None:
         """Load settings with caching and lock to prevent concurrent file I/O contention.
-        
+
         🚀 PERFORMANCE FIX: Added global cache + asyncio lock to fix 1,129ms bottleneck
            when 10+ users load settings concurrently.
         """
         # 🚀 FIX: Check global cache first (keyed by path for multi-user support)
         cache_key = self.path
         current_time = time.time()
-        
+
         if cache_key in _file_settings_cache:
             cached_settings, cached_time = _file_settings_cache[cache_key]
             if current_time - cached_time < _FILE_SETTINGS_CACHE_TTL:
                 return cached_settings
-        
+
         # 🚀 FIX: Use lock to prevent concurrent file reads
         #   Get or create lock for this file path
         if cache_key not in _file_settings_locks:
             _file_settings_locks[cache_key] = asyncio.Lock()
-        
+
         lock = _file_settings_locks[cache_key]
-        
+
         async with lock:
             # Double-check cache after acquiring lock (another request might have loaded it)
             if cache_key in _file_settings_cache:
                 cached_settings, cached_time = _file_settings_cache[cache_key]
                 if current_time - cached_time < _FILE_SETTINGS_CACHE_TTL:
                     return cached_settings
-            
+
             # Cache miss - load from file
             try:
                 json_str = await call_sync_from_async(self.file_store.read, self.path)
                 kwargs = json.loads(json_str)
                 settings = Settings(**kwargs)
-                
+
                 # 🚀 FIX: Cache the result
                 _file_settings_cache[cache_key] = (settings, current_time)
-                
+
                 return settings
             except FileNotFoundError:
                 # 🚀 FIX: Cache the None result too
@@ -81,20 +83,22 @@ class FileSettingsStore(SettingsStore):
         """Store settings and invalidate cache."""
         json_str = model_dump_json(settings, context={"expose_secrets": True})
         await call_sync_from_async(self.file_store.write, self.path, json_str)
-        
+
         # 🚀 FIX: Invalidate cache on write
         cache_key = self.path
         if cache_key in _file_settings_cache:
             del _file_settings_cache[cache_key]
 
     @classmethod
-    async def get_instance(cls, config: ForgeConfig, user_id: str | None) -> FileSettingsStore:
+    async def get_instance(
+        cls, config: ForgeConfig, user_id: str | None
+    ) -> FileSettingsStore:
         """Get FileSettingsStore singleton instance.
-        
+
         Args:
             config: Forge configuration
             user_id: Optional user ID
-            
+
         Returns:
             FileSettingsStore instance
 

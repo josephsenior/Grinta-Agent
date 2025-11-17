@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -13,14 +14,14 @@ from forge.server.routes import memory as memory_routes
 
 
 class DummySettingsStore:
-    def __init__(self, settings):
-        self._settings = settings
-        self.saved_settings = None
+    def __init__(self, settings: Any | None):
+        self._settings: Any | None = settings
+        self.saved_settings: Any | None = None
 
     async def load(self):
         return self._settings
 
-    async def save(self, settings):
+    async def save(self, settings: Any):
         self.saved_settings = settings
         self._settings = settings
 
@@ -52,8 +53,10 @@ async def test_create_memory_initializes_memories_and_saves(monkeypatch):
     )
     response = await memory_routes.create_memory(payload, store)
     assert response["status"] == "success"
+    assert store._settings is not None
     assert hasattr(store._settings, "MEMORIES")
     assert len(store._settings.MEMORIES) == 1
+    assert store.saved_settings is not None
     saved = store.saved_settings.MEMORIES[0]
     assert saved["title"] == "Memory"
 
@@ -129,7 +132,9 @@ def test_memory_matches_category_tags_usage_importance():
         "importance": memory_routes.MemoryImportance.MEDIUM.value,
     }
     assert memory_routes._memory_matches_category(memory, None)
-    assert memory_routes._memory_matches_category(memory, memory_routes.MemoryCategory.PROJECT.value)
+    assert memory_routes._memory_matches_category(
+        memory, memory_routes.MemoryCategory.PROJECT.value
+    )
     assert not memory_routes._memory_matches_category(memory, "other")
 
     assert memory_routes._memory_matches_tags(memory, None)
@@ -141,8 +146,12 @@ def test_memory_matches_category_tags_usage_importance():
     assert not memory_routes._memory_matches_usage_count(memory, 5)
 
     assert memory_routes._memory_matches_importance(memory, None)
-    assert memory_routes._memory_matches_importance(memory, memory_routes.MemoryImportance.MEDIUM.value)
-    assert not memory_routes._memory_matches_importance(memory, memory_routes.MemoryImportance.HIGH.value)
+    assert memory_routes._memory_matches_importance(
+        memory, memory_routes.MemoryImportance.MEDIUM.value
+    )
+    assert not memory_routes._memory_matches_importance(
+        memory, memory_routes.MemoryImportance.HIGH.value
+    )
 
 
 def test_memory_matches_filters_failure_cases():
@@ -155,10 +164,24 @@ def test_memory_matches_filters_failure_cases():
         "importance": memory_routes.MemoryImportance.LOW.value,
     }
     base_search = memory_routes.SearchMemoriesRequest(query="alpha")
-    assert not memory_routes._memory_matches_filters(memory, base_search.model_copy(update={"category": memory_routes.MemoryCategory.PROJECT}))
-    assert not memory_routes._memory_matches_filters(memory, base_search.model_copy(update={"tags": ["beta"]}))
-    assert not memory_routes._memory_matches_filters(memory, base_search.model_copy(update={"min_usage_count": 5}))
-    assert not memory_routes._memory_matches_filters(memory, base_search.model_copy(update={"importance": memory_routes.MemoryImportance.HIGH}))
+    assert not memory_routes._memory_matches_filters(
+        memory,
+        base_search.model_copy(
+            update={"category": memory_routes.MemoryCategory.PROJECT}
+        ),
+    )
+    assert not memory_routes._memory_matches_filters(
+        memory, base_search.model_copy(update={"tags": ["beta"]})
+    )
+    assert not memory_routes._memory_matches_filters(
+        memory, base_search.model_copy(update={"min_usage_count": 5})
+    )
+    assert not memory_routes._memory_matches_filters(
+        memory,
+        base_search.model_copy(
+            update={"importance": memory_routes.MemoryImportance.HIGH}
+        ),
+    )
 
 
 @pytest.mark.asyncio
@@ -230,7 +253,9 @@ async def test_export_memories_includes_stats(monkeypatch):
     store = DummySettingsStore(SimpleNamespace(MEMORIES=memories))
 
     async def fake_stats(_store):
-        return memory_routes.MemoryStats(total=1, by_category={}, used_today=0, most_used=[], recently_used=[])
+        return memory_routes.MemoryStats(
+            total=1, by_category={}, used_today=0, most_used=[], recently_used=[]
+        )
 
     monkeypatch.setattr(memory_routes, "get_memory_stats", fake_stats)
     result = await memory_routes.export_memories(store)
@@ -243,7 +268,9 @@ async def test_export_memories_handles_missing_data(monkeypatch):
     store = DummySettingsStore(None)
 
     async def fake_stats(_store):
-        return memory_routes.MemoryStats(total=0, by_category={}, used_today=0, most_used=[], recently_used=[])
+        return memory_routes.MemoryStats(
+            total=0, by_category={}, used_today=0, most_used=[], recently_used=[]
+        )
 
     monkeypatch.setattr(memory_routes, "get_memory_stats", fake_stats)
     result = await memory_routes.export_memories(store)
@@ -255,8 +282,11 @@ async def test_import_memories_replace(monkeypatch):
     settings = SimpleNamespace(MEMORIES=[{"id": "existing"}])
     store = DummySettingsStore(settings)
     data = {"memories": [{"id": "new"}]}
-    result = await memory_routes.import_memories(data, merge=False, settings_store=store)
+    result = await memory_routes.import_memories(
+        data, merge=False, settings_store=store
+    )
     assert result["imported"] == 1
+    assert store._settings is not None
     assert store._settings.MEMORIES == [{"id": "new"}]
 
 
@@ -267,6 +297,7 @@ async def test_import_memories_merge_avoids_duplicates():
     data = {"memories": [{"id": "existing"}, {"id": "new"}]}
     result = await memory_routes.import_memories(data, merge=True, settings_store=store)
     assert result["imported"] == 1
+    assert store._settings is not None
     assert len(store._settings.MEMORIES) == 2
 
 
@@ -315,7 +346,9 @@ async def test_update_memory_success(monkeypatch):
     memory = {"id": "1", "title": "Old", "content": "Old"}
     settings = SimpleNamespace(MEMORIES=[memory])
     store = DummySettingsStore(settings)
-    updates = memory_routes.UpdateMemoryRequest(title="New", tags=["tag"], importance=memory_routes.MemoryImportance.HIGH)
+    updates = memory_routes.UpdateMemoryRequest(
+        title="New", tags=["tag"], importance=memory_routes.MemoryImportance.HIGH
+    )
     response = await memory_routes.update_memory("1", updates, store)
     assert response["status"] == "success"
     assert memory["title"] == "New"
@@ -329,7 +362,9 @@ async def test_update_memory_not_found():
     settings = SimpleNamespace(MEMORIES=[{"id": "1"}])
     store = DummySettingsStore(settings)
     with pytest.raises(HTTPException) as exc:
-        await memory_routes.update_memory("missing", memory_routes.UpdateMemoryRequest(title="New"), store)
+        await memory_routes.update_memory(
+            "missing", memory_routes.UpdateMemoryRequest(title="New"), store
+        )
     assert exc.value.status_code == 404
 
 
@@ -337,12 +372,14 @@ async def test_update_memory_not_found():
 async def test_update_memory_no_settings():
     store = DummySettingsStore(None)
     with pytest.raises(HTTPException) as exc:
-        await memory_routes.update_memory("1", memory_routes.UpdateMemoryRequest(title="New"), store)
+        await memory_routes.update_memory(
+            "1", memory_routes.UpdateMemoryRequest(title="New"), store
+        )
     assert exc.value.status_code == 404
 
 
 def test_apply_memory_updates_individual_fields():
-    memory = {}
+    memory: dict[str, Any] = {}
     updates = memory_routes.UpdateMemoryRequest(
         title="Title",
         content="Content",
@@ -361,6 +398,7 @@ async def test_delete_memory_success():
     store = DummySettingsStore(settings)
     response = await memory_routes.delete_memory("1", store)
     assert response["status"] == "success"
+    assert store._settings is not None
     assert len(store._settings.MEMORIES) == 1
 
 

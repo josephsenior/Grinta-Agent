@@ -6,6 +6,7 @@ It does not implement browser functionality.
 from __future__ import annotations
 
 import asyncio
+import importlib
 import os
 import select
 import shutil
@@ -18,23 +19,30 @@ import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
-from binaryornot.check import is_binary
 try:
-    from forge_aci.editor.editor import OHEditor
-    from forge_aci.editor.exceptions import ToolError
-    from forge_aci.editor.results import ToolResult
-    from forge_aci.utils.diff import get_diff
+    from binaryornot.check import is_binary  # type: ignore[import-untyped]
+except ImportError:  # pragma: no cover - fallback when binaryornot is unavailable
+
+    def is_binary(_path: str) -> bool:
+        """Basic fallback heuristic when binaryornot is missing."""
+        return False
+
+
+try:
+    from forge_aci.editor.editor import OHEditor  # type: ignore[import-not-found]
+    from forge_aci.editor.exceptions import ToolError  # type: ignore[import-not-found]
+    from forge_aci.editor.results import ToolResult  # type: ignore[import-not-found]
+    from forge_aci.utils.diff import get_diff  # type: ignore[import-not-found]
 except ImportError:
-    # Stubs for when forge_aci is not installed
-    class ToolError(Exception):
+
+    class _ToolError(Exception):
         """Stub ToolError for testing."""
 
         def __init__(self, message: str = "") -> None:
-            """Store an optional message for the simulated editor error."""
             super().__init__(message)
             self.message = message
 
-    class ToolResult:
+    class _ToolResult:
         """Stub ToolResult for testing."""
 
         def __init__(
@@ -45,17 +53,17 @@ except ImportError:
             old_content: str | None = None,
             new_content: str | None = None,
         ) -> None:
-            """Capture simulated output/error values for testing without forge_aci."""
             self.output = output or ""
             self.error = error
             self.old_content = old_content
             self.new_content = new_content
 
-    class OHEditor:
+    class _OHEditor:
         """Stub OHEditor for testing when forge_aci is unavailable."""
 
-        def __init__(self, workspace_root: str | None = None, *args, **kwargs) -> None:
-            """Remember the workspace root for basic file operations in tests."""
+        def __init__(
+            self, workspace_root: str | None = None, *args: Any, **kwargs: Any
+        ) -> None:
             self.workspace_root = workspace_root
 
         def __call__(
@@ -70,46 +78,65 @@ except ImportError:
             insert_line: int | None = None,
             enable_linting: bool = False,
             **_: Any,
-        ) -> ToolResult:
-            """Execute a minimal editing command against the local filesystem stub."""
+        ) -> "_ToolResult":
             try:
                 if command == "view":
-                    if not os.path.exists(path) or os.path.isdir(path):
-                        return ToolResult(output="", old_content=None, new_content=None)
-                    with open(path, encoding="utf-8", errors="replace") as handle:
-                        content = handle.read()
-                    if view_range:
-                        start, end = view_range
-                        lines = content.splitlines(True)
-                        selected = "".join(lines[max(start - 1, 0): end])
-                    else:
-                        selected = content
-                    return ToolResult(output=selected, old_content=content, new_content=content)
+                    return self._handle_view(path, view_range)
                 if command in {"edit", "apply_edit"}:
-                    previous = ""
-                    if os.path.exists(path):
-                        with open(path, encoding="utf-8", errors="replace") as handle:
-                            previous = handle.read()
-                    updated = new_str if new_str is not None else file_text or previous
-                    directory = os.path.dirname(path)
-                    if directory:
-                        os.makedirs(directory, exist_ok=True)
-                    with open(path, "w", encoding="utf-8") as handle:
-                        handle.write(updated)
-                    return ToolResult(output="File updated", old_content=previous, new_content=updated)
+                    return self._handle_edit(path, file_text, new_str)
                 if command == "write":
-                    content = file_text or new_str or ""
-                    directory = os.path.dirname(path)
-                    if directory:
-                        os.makedirs(directory, exist_ok=True)
-                    with open(path, "w", encoding="utf-8") as handle:
-                        handle.write(content)
-                    return ToolResult(output="File written", old_content=None, new_content=content)
+                    return self._handle_write(path, file_text, new_str)
             except Exception as exc:  # pragma: no cover - safeguard for stub
-                return ToolResult(error=str(exc))
-            return ToolResult(output="", old_content=None, new_content=None)
+                return _ToolResult(error=str(exc))
+            return _ToolResult(output="", old_content=None, new_content=None)
 
-    def get_diff(
+        def _handle_view(
+            self, path: str, view_range: list[int] | None
+        ) -> "_ToolResult":
+            if not os.path.exists(path) or os.path.isdir(path):
+                return _ToolResult(output="", old_content=None, new_content=None)
+            content = self._read_file(path)
+            selected = self._select_range(content, view_range)
+            return _ToolResult(output=selected, old_content=content, new_content=content)
+
+        def _handle_edit(
+            self, path: str, file_text: str | None, new_str: str | None
+        ) -> "_ToolResult":
+            previous = self._read_file(path) if os.path.exists(path) else ""
+            updated = new_str if new_str is not None else file_text or previous
+            self._write_file(path, updated)
+            return _ToolResult(
+                output="File updated", old_content=previous, new_content=updated
+            )
+
+        def _handle_write(
+            self, path: str, file_text: str | None, new_str: str | None
+        ) -> "_ToolResult":
+            content = file_text or new_str or ""
+            self._write_file(path, content)
+            return _ToolResult(output="File written", old_content=None, new_content=content)
+
+        def _select_range(
+            self, content: str, view_range: list[int] | None
+        ) -> str:
+            if not view_range:
+                return content
+            start, end = view_range
+            lines = content.splitlines(True)
+            return "".join(lines[max(start - 1, 0) : end])
+
+        def _read_file(self, path: str) -> str:
+            with open(path, encoding="utf-8", errors="replace") as handle:
+                return handle.read()
+
+        def _write_file(self, path: str, content: str) -> None:
+            directory = os.path.dirname(path)
+            if directory:
+                os.makedirs(directory, exist_ok=True)
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write(content)
+
+    def _get_diff(
         old: str | None = None,
         new: str | None = None,
         *,
@@ -117,7 +144,6 @@ except ImportError:
         new_contents: str = "",
         **__: Any,
     ) -> str:
-        """Stub diff function when forge_aci is unavailable."""
         previous = old if old is not None else old_contents
         updated = new if new is not None else new_contents
         return "\n".join(
@@ -129,6 +155,11 @@ except ImportError:
                 f"+{updated}",
             ]
         )
+
+    ToolError = _ToolError
+    ToolResult = _ToolResult
+    OHEditor = _OHEditor
+    get_diff = _get_diff
 from pydantic import SecretStr
 
 from forge.core.config.mcp_config import MCPConfig, MCPStdioServerConfig
@@ -145,6 +176,7 @@ from forge.events.observation import (
 from forge.runtime.base import Runtime
 from forge.runtime.runtime_status import RuntimeStatus
 from forge.mcp import utils as mcp_utils
+from forge.utils.circuit_breaker import get_circuit_breaker_manager
 
 if TYPE_CHECKING:
     from forge.core.config import ForgeConfig
@@ -162,35 +194,46 @@ if TYPE_CHECKING:
     from forge.integrations.provider import PROVIDER_TOKEN_TYPE
     from forge.llm.llm_registry import LLMRegistry
     from forge.runtime.plugins import PluginRequirement
+    from forge.runtime.utils.windows_bash import (
+        WindowsPowershellSession as WindowsPowershellSessionType,
+    )
+else:
+    WindowsPowershellSessionType = Any
 
-# Windows PowerShell session - only available on Windows
-# Note: Import is deferred to avoid executing windows_bash.py on non-Windows platforms
-WindowsPowershellSession = None
+# Windows PowerShell session - only available on Windows; imported lazily in connect().
+WindowsPowershellSession: Any | None = None
 
 # Import Windows-specific exception for proper error handling
 if sys.platform == "win32":
     try:
-        from forge.runtime.utils.windows_exceptions import DotNetMissingError
-    except ImportError:
-        # Fallback if windows_exceptions module is not available
-        class DotNetMissingError(Exception):
+        _win_exceptions = importlib.import_module(
+            "forge.runtime.utils.windows_exceptions"
+        )
+        DotNetMissingError = getattr(_win_exceptions, "DotNetMissingError")
+    except (ImportError, AttributeError):
+
+        class _FallbackDotNetMissingError(Exception):
             """Raised when required .NET runtime dependencies for PowerShell are missing."""
 
             def __init__(self, message: str, details: str | None = None):
-                """Capture message and optional details for missing .NET runtime issues."""
                 self.message = message
                 self.details = details
                 super().__init__(message)
+
+        DotNetMissingError = _FallbackDotNetMissingError
 else:
-    # Stub for non-Windows platforms
-    class DotNetMissingError(Exception):
+
+    class _FallbackDotNetMissingError(Exception):
         """Stub error used on non-Windows platforms when .NET dependency checks occur."""
 
         def __init__(self, message: str, details: str | None = None):
-            """Store provided message and optional extra details."""
             self.message = message
             self.details = details
             super().__init__(message)
+
+    DotNetMissingError = _FallbackDotNetMissingError
+
+SIGKILL = getattr(signal, "SIGKILL", signal.SIGTERM)
 
 
 class CLIRuntime(Runtime):
@@ -254,7 +297,7 @@ class CLIRuntime(Runtime):
         self.file_editor = OHEditor(workspace_root=self._workspace_path)
         self._shell_stream_callback: Callable[[str], None] | None = None
         self._is_windows = sys.platform == "win32"
-        self._powershell_session = None
+        self._powershell_session: WindowsPowershellSessionType | None = None
         logger.warning(
             "Initializing CLIRuntime. WARNING: NO SANDBOX IS USED. This runtime executes commands directly on the local system. Use with caution in untrusted environments.",
         )
@@ -264,47 +307,64 @@ class CLIRuntime(Runtime):
         try:
             self.set_runtime_status(RuntimeStatus.STARTING_RUNTIME)
             logger.info("Starting CLI runtime initialization...")
-            
+
             os.makedirs(self._workspace_path, exist_ok=True)
             os.chdir(self._workspace_path)
-            
+
             if self._is_windows:
                 try:
-                    from forge.runtime.utils.windows_bash import WindowsPowershellSession
+                    from forge.runtime.utils.windows_bash import (
+                        WindowsPowershellSession,
+                    )
+
                     self._powershell_session = WindowsPowershellSession(
                         work_dir=self._workspace_path,
                         username=None,
                         no_change_timeout_seconds=30,
                         max_memory_mb=None,
                     )
-                    logger.info("Windows PowerShell session support loaded successfully")
+                    logger.info(
+                        "Windows PowerShell session support loaded successfully"
+                    )
                 except (ImportError, DotNetMissingError) as err:
                     friendly_message = "WARNING: PowerShell and .NET SDK are not properly configured. Some CLI features may not work.\nThe .NET SDK and PowerShell are required for full Forge CLI functionality on Windows.\nPlease install the .NET SDK following: https://docs.all-hands.dev/usage/windows-without-wsl"
-                    logger.warning("Windows runtime initialization failed: %s: %s", type(err).__name__, str(err))
+                    logger.warning(
+                        "Windows runtime initialization failed: %s: %s",
+                        type(err).__name__,
+                        str(err),
+                    )
                     logger.warning(friendly_message)
-                    if isinstance(err, DotNetMissingError) and hasattr(err, "details") and err.details:
+                    if (
+                        isinstance(err, DotNetMissingError)
+                        and hasattr(err, "details")
+                        and err.details
+                    ):
                         logger.debug("Details: %s", err.details)
                     self._powershell_session = None
                 except Exception as e:
                     logger.warning("Failed to initialize PowerShell session: %s", e)
                     self._powershell_session = None
-            
+
             if not self.attach_to_existing:
                 # Add timeout to prevent hanging on setup_initial_env
                 try:
                     await asyncio.wait_for(
                         asyncio.to_thread(self.setup_initial_env),
-                        timeout=60.0  # 60 second timeout for setup
+                        timeout=60.0,  # 60 second timeout for setup
                     )
                 except asyncio.TimeoutError:
-                    logger.error("CLI runtime setup_initial_env timed out after 60 seconds")
+                    logger.error(
+                        "CLI runtime setup_initial_env timed out after 60 seconds"
+                    )
                     self.set_runtime_status(RuntimeStatus.ERROR)
                     raise RuntimeError("CLI runtime initialization timed out")
-            
+
             self._runtime_initialized = True
             self.set_runtime_status(RuntimeStatus.RUNTIME_STARTED)
-            logger.info("CLIRuntime initialized with workspace at %s", self._workspace_path)
-            
+            logger.info(
+                "CLIRuntime initialized with workspace at %s", self._workspace_path
+            )
+
         except Exception as e:
             logger.error("Failed to initialize CLI runtime: %s", e)
             # Set status to ERROR to prevent getting stuck in STARTING_RUNTIME
@@ -322,16 +382,23 @@ class CLIRuntime(Runtime):
         """
         if not env_vars:
             return
-        logger.info("[CLIRuntime] Setting environment variables for this session: %s", list(env_vars.keys()))
+        logger.info(
+            "[CLIRuntime] Setting environment variables for this session: %s",
+            list(env_vars.keys()),
+        )
         for key, value in env_vars.items():
             if isinstance(value, SecretStr):
                 os.environ[key] = value.get_secret_value()
-                logger.warning('[CLIRuntime] Set os.environ["%s"] (from SecretStr)', key)
+                logger.warning(
+                    '[CLIRuntime] Set os.environ["%s"] (from SecretStr)', key
+                )
             else:
                 os.environ[key] = value
                 logger.debug('[CLIRuntime] Set os.environ["%s"]', key)
 
-    def _safe_terminate_process(self, process_obj, signal_to_send=signal.SIGTERM) -> None:
+    def _safe_terminate_process(
+        self, process_obj, signal_to_send=signal.SIGTERM
+    ) -> None:
         """Safely attempts to terminate/kill a process group or a single process.
 
         Args:
@@ -366,10 +433,20 @@ class CLIRuntime(Runtime):
             OSError: On OS-level errors
 
         """
-        group_desc = "kill process group" if signal_to_send == signal.SIGKILL else "terminate process group"
+        group_desc = (
+            "kill process group"
+            if signal_to_send == SIGKILL
+            else "terminate process group"
+        )
 
         logger.debug("[_safe_terminate_process] Original PID to act on: %s", pid)
-        pgid_to_kill = os.getpgid(pid)
+        pgid_getter = getattr(os, "getpgid", None)
+        killpg = getattr(os, "killpg", None)
+        if pgid_getter is None or killpg is None:
+            raise AttributeError(
+                "Process group operations are not supported on this platform."
+            )
+        pgid_to_kill = pgid_getter(pid)
         logger.debug(
             "[_safe_terminate_process] Attempting to %s for PID %s (PGID: %s) with %s.",
             group_desc,
@@ -377,7 +454,7 @@ class CLIRuntime(Runtime):
             pgid_to_kill,
             signal_to_send,
         )
-        os.killpg(pgid_to_kill, signal_to_send)
+        killpg(pgid_to_kill, signal_to_send)
         logger.debug(
             "[_safe_terminate_process] Successfully sent signal %s to PGID %s (original PID: %s).",
             signal_to_send,
@@ -385,7 +462,9 @@ class CLIRuntime(Runtime):
             pid,
         )
 
-    def _fallback_kill_process(self, process_obj, signal_to_send, pid: int, original_error: Exception) -> None:
+    def _fallback_kill_process(
+        self, process_obj, signal_to_send, pid: int, original_error: Exception
+    ) -> None:
         """Fallback to direct process termination.
 
         Args:
@@ -395,7 +474,9 @@ class CLIRuntime(Runtime):
             original_error: Original exception that triggered fallback
 
         """
-        process_desc = "kill process" if signal_to_send == signal.SIGKILL else "terminate process"
+        process_desc = (
+            "kill process" if signal_to_send == SIGKILL else "terminate process"
+        )
 
         logger.warning(
             "[_safe_terminate_process] Error with PGID for PID %s: %s. Falling back to direct kill/terminate.",
@@ -404,17 +485,26 @@ class CLIRuntime(Runtime):
         )
 
         try:
-            if signal_to_send == signal.SIGKILL:
+            if signal_to_send == SIGKILL:
                 process_obj.kill()
             else:
                 process_obj.terminate()
-            logger.debug("[_safe_terminate_process] Fallback: Terminated %s (PID: %s).", process_desc, pid)
+            logger.debug(
+                "[_safe_terminate_process] Fallback: Terminated %s (PID: %s).",
+                process_desc,
+                pid,
+            )
         except Exception as e_fallback:
             logger.error(
-                "[_safe_terminate_process] Fallback: Error during %s (PID: %s): %s", process_desc, pid, e_fallback,
+                "[_safe_terminate_process] Fallback: Error during %s (PID: %s): %s",
+                process_desc,
+                pid,
+                e_fallback,
             )
 
-    def _execute_powershell_command(self, command: str, timeout: float) -> CmdOutputObservation | ErrorObservation:
+    def _execute_powershell_command(
+        self, command: str, timeout: float
+    ) -> CmdOutputObservation | ErrorObservation:
         """Execute a command using PowerShell session on Windows.
 
         Args:
@@ -425,7 +515,10 @@ class CLIRuntime(Runtime):
 
         """
         if self._powershell_session is None:
-            return ErrorObservation(content="PowerShell session is not available.", error_id="POWERSHELL_SESSION_ERROR")
+            return ErrorObservation(
+                content="PowerShell session is not available.",
+                error_id="POWERSHELL_SESSION_ERROR",
+            )
         try:
             from forge.events.action import CmdRunAction
 
@@ -435,12 +528,13 @@ class CLIRuntime(Runtime):
         except Exception as e:
             logger.error('Error executing PowerShell command "%s": %s', command, e)
             return ErrorObservation(
-                content=f'Error executing PowerShell command "{command}": {
-                    e!s}',
+                content=f'Error executing PowerShell command "{command}": {e!s}',
                 error_id="POWERSHELL_EXECUTION_ERROR",
             )
 
-    def _execute_shell_command(self, command: str, timeout: float) -> CmdOutputObservation:
+    def _execute_shell_command(
+        self, command: str, timeout: float
+    ) -> CmdOutputObservation:
         """Execute a shell command and stream its output to a callback function.
 
         Args:
@@ -464,7 +558,9 @@ class CLIRuntime(Runtime):
             self._read_remaining_output(process, execution_state)
 
             # Determine exit code
-            execution_state["exit_code"] = -1 if execution_state["timed_out"] else process.returncode
+            execution_state["exit_code"] = (
+                -1 if execution_state["timed_out"] else process.returncode
+            )
 
         except Exception as e:
             return self._handle_execution_error(process, execution_state, e)
@@ -495,30 +591,52 @@ class CLIRuntime(Runtime):
             universal_newlines=True,
             start_new_session=True,
         )
-        logger.debug('[_execute_shell_command] PID of bash -c: %s for command: "%s"', process.pid, command)
+        logger.debug(
+            '[_execute_shell_command] PID of bash -c: %s for command: "%s"',
+            process.pid,
+            command,
+        )
         return process
 
-    def _execute_with_timeout_handling(self, process: subprocess.Popen, execution_state: dict, timeout: float) -> None:
+    def _execute_with_timeout_handling(
+        self, process: subprocess.Popen, execution_state: dict, timeout: float
+    ) -> None:
         """Execute the command with timeout handling."""
         if not process.stdout:
             return
 
-        while process.poll() is None and not self._check_timeout(process, execution_state, timeout):
+        while process.poll() is None and not self._check_timeout(
+            process, execution_state, timeout
+        ):
             self._read_available_output(process, execution_state)
 
-    def _check_timeout(self, process: subprocess.Popen, execution_state: dict, timeout: float) -> bool:
+    def _check_timeout(
+        self, process: subprocess.Popen, execution_state: dict, timeout: float
+    ) -> bool:
         """Check if the command has timed out."""
-        if timeout is not None and time.monotonic() - execution_state["start_time"] > timeout:
-            logger.debug('Command "%s" timed out after %s seconds. Terminating.', execution_state["command"], timeout)
+        if (
+            timeout is not None
+            and time.monotonic() - execution_state["start_time"] > timeout
+        ):
+            logger.debug(
+                'Command "%s" timed out after %s seconds. Terminating.',
+                execution_state["command"],
+                timeout,
+            )
             self._safe_terminate_process(process, signal_to_send=signal.SIGTERM)
             execution_state["timed_out"] = True
             return True
         return False
 
-    def _read_available_output(self, process: subprocess.Popen, execution_state: dict) -> None:
+    def _read_available_output(
+        self, process: subprocess.Popen, execution_state: dict
+    ) -> None:
         """Read available output from the process."""
-        ready_to_read, _, _ = select.select([process.stdout], [], [], 0.1)
-        if ready_to_read and (line := process.stdout.readline()):
+        stdout_stream = process.stdout
+        if stdout_stream is None:
+            return
+        ready_to_read, _, _ = select.select([stdout_stream], [], [], 0.1)
+        if ready_to_read and (line := stdout_stream.readline()):
             execution_state["output_lines"].append(line)
             self._handle_stream_callback(line)
 
@@ -527,7 +645,9 @@ class CLIRuntime(Runtime):
         if self._shell_stream_callback:
             self._shell_stream_callback(line)
 
-    def _read_remaining_output(self, process: subprocess.Popen, execution_state: dict) -> None:
+    def _read_remaining_output(
+        self, process: subprocess.Popen, execution_state: dict
+    ) -> None:
         """Read any remaining output from the process."""
         if process.stdout and not process.stdout.closed:
             try:
@@ -551,13 +671,21 @@ class CLIRuntime(Runtime):
         e: Exception,
     ) -> CmdOutputObservation:
         """Handle execution errors."""
-        logger.error('Outer exception in _execute_shell_command for "%s": %s', execution_state["command"], e)
+        logger.error(
+            'Outer exception in _execute_shell_command for "%s": %s',
+            execution_state["command"],
+            e,
+        )
 
         if process and process.poll() is None:
-            self._safe_terminate_process(process, signal_to_send=signal.SIGKILL)
+            self._safe_terminate_process(process, signal_to_send=SIGKILL)
 
-        error_content = "".join(execution_state["output_lines"]) + f"\nError during execution: {e}"
-        return CmdOutputObservation(command=execution_state["command"], content=error_content, exit_code=-1)
+        error_content = (
+            "".join(execution_state["output_lines"]) + f"\nError during execution: {e}"
+        )
+        return CmdOutputObservation(
+            command=execution_state["command"], content=error_content, exit_code=-1
+        )
 
     def _create_output_observation(self, execution_state: dict) -> CmdOutputObservation:
         """Create the final output observation."""
@@ -571,7 +699,9 @@ class CLIRuntime(Runtime):
 
         obs_metadata = {"working_dir": execution_state["workspace_path"]}
         if execution_state["timed_out"]:
-            obs_metadata["suffix"] = f'[The command timed out after {execution_state["timeout"]:.1f} seconds.]'
+            obs_metadata["suffix"] = (
+                f"[The command timed out after {execution_state['timeout']:.1f} seconds.]"
+            )
 
         return CmdOutputObservation(
             command=execution_state["command"],
@@ -583,7 +713,9 @@ class CLIRuntime(Runtime):
     def run(self, action: CmdRunAction) -> Observation:
         """Run a command using subprocess."""
         if not self._runtime_initialized:
-            return ErrorObservation(f"Runtime not initialized for command: {action.command}")
+            return ErrorObservation(
+                f"Runtime not initialized for command: {action.command}"
+            )
         if action.is_input:
             logger.warning(
                 "CLIRuntime received an action with `is_input=True` (command: '%s'). CLIRuntime currently does not support sending input or signals to active processes. This action will be ignored and an error observation will be returned.",
@@ -591,21 +723,32 @@ class CLIRuntime(Runtime):
             )
             return ErrorObservation(
                 content=f"CLIRuntime does not support interactive input from the agent (e.g., 'C-c'). The command '{
-                    action.command}' was not sent to any process.",
+                    action.command
+                }' was not sent to any process.",
                 error_id="AGENT_ERROR$BAD_ACTION",
             )
         try:
-            effective_timeout = action.timeout if action.timeout is not None else self.config.sandbox.timeout
+            effective_timeout = (
+                action.timeout
+                if action.timeout is not None
+                else self.config.sandbox.timeout
+            )
             logger.debug(
                 'Running command in CLIRuntime: "%s" with effective timeout: %ss',
                 action.command,
                 effective_timeout,
             )
             if self._is_windows and self._powershell_session is not None:
-                return self._execute_powershell_command(action.command, timeout=effective_timeout)
-            return self._execute_shell_command(action.command, timeout=effective_timeout)
+                return self._execute_powershell_command(
+                    action.command, timeout=effective_timeout
+                )
+            return self._execute_shell_command(
+                action.command, timeout=effective_timeout
+            )
         except Exception as e:
-            logger.error('Error in CLIRuntime.run for command "%s": %s', action.command, str(e))
+            logger.error(
+                'Error in CLIRuntime.run for command "%s": %s', action.command, str(e)
+            )
             return ErrorObservation(f'Error running command "{action.command}": {e!s}')
 
     def run_ipython(self, action: IPythonRunCellAction) -> Observation:
@@ -615,18 +758,24 @@ class CLIRuntime(Runtime):
         Users should also disable the Jupyter plugin in AgentConfig.
         """
         logger.warning(
-            "run_ipython is called on CLIRuntime, but it's not implemented. Please disable the Jupyter plugin in AgentConfig.", )
-        return ErrorObservation("Executing IPython cells is not implemented in CLIRuntime. ")
+            "run_ipython is called on CLIRuntime, but it's not implemented. Please disable the Jupyter plugin in AgentConfig.",
+        )
+        return ErrorObservation(
+            "Executing IPython cells is not implemented in CLIRuntime. "
+        )
 
     def _sanitize_filename(self, filename: str) -> str:
         if filename == "/workspace":
             actual_filename = self._workspace_path
         elif filename.startswith("/workspace/"):
-            actual_filename = os.path.join(self._workspace_path, filename[len("/workspace/"):])
+            actual_filename = os.path.join(
+                self._workspace_path, filename[len("/workspace/") :]
+            )
         elif filename.startswith("/"):
             if not filename.startswith(self._workspace_path):
                 msg = f"Invalid path: {filename}. You can only work with files in {
-                    self._workspace_path}."
+                    self._workspace_path
+                }."
                 raise PermissionError(
                     msg,
                 )
@@ -635,8 +784,11 @@ class CLIRuntime(Runtime):
             actual_filename = os.path.join(self._workspace_path, filename.lstrip("/"))
         resolved_path = os.path.realpath(actual_filename)
         if not resolved_path.startswith(self._workspace_path):
-            msg = f"Invalid path traversal: {filename}. Path resolves outside the workspace. Resolved: {resolved_path}, Workspace: {
-                self._workspace_path}"
+            msg = f"Invalid path traversal: {
+                filename
+            }. Path resolves outside the workspace. Resolved: {
+                resolved_path
+            }, Workspace: {self._workspace_path}"
             raise PermissionError(
                 msg,
             )
@@ -648,8 +800,12 @@ class CLIRuntime(Runtime):
             return ErrorObservation("Runtime not initialized")
         file_path = self._sanitize_filename(action.path)
         if action.impl_source == FileReadSource.OH_ACI:
-            result_str, _ = self._execute_file_editor(command="view", path=file_path, view_range=action.view_range)
-            return FileReadObservation(content=result_str, path=action.path, impl_source=FileReadSource.OH_ACI)
+            result_str, _ = self._execute_file_editor(
+                command="view", path=file_path, view_range=action.view_range
+            )
+            return FileReadObservation(
+                content=result_str, path=action.path, impl_source=FileReadSource.OH_ACI
+            )
         try:
             if not os.path.exists(file_path):
                 return ErrorObservation(f"File not found: {action.path}")
@@ -680,11 +836,15 @@ class CLIRuntime(Runtime):
 
     def browse(self, action: BrowseURLAction) -> Observation:
         """Not implemented for CLI runtime."""
-        return ErrorObservation("Browser functionality is not implemented in CLIRuntime")
+        return ErrorObservation(
+            "Browser functionality is not implemented in CLIRuntime"
+        )
 
     def browse_interactive(self, action: BrowseInteractiveAction) -> Observation:
         """Not implemented for CLI runtime."""
-        return ErrorObservation("Browser functionality is not implemented in CLIRuntime")
+        return ErrorObservation(
+            "Browser functionality is not implemented in CLIRuntime"
+        )
 
     def _execute_file_editor(
         self,
@@ -757,7 +917,11 @@ class CLIRuntime(Runtime):
             old_content=action.old_str,
             new_content=action.new_str,
             impl_source=FileEditSource.OH_ACI,
-            diff=get_diff(old_contents=old_content or "", new_contents=new_content or "", filepath=action.path),
+            diff=get_diff(
+                old_contents=old_content or "",
+                new_contents=new_content or "",
+                filepath=action.path,
+            ),
         )
 
     async def call_tool_mcp(self, action: MCPAction) -> Observation:
@@ -770,36 +934,52 @@ class CLIRuntime(Runtime):
             Observation: The result of the MCP tool execution
 
         """
-        if sys.platform == "win32":
+        platform_name = sys.platform
+        if platform_name == "win32":
             self.log("info", "MCP functionality is disabled on Windows")
             return ErrorObservation("MCP functionality is not available on Windows")
         try:
             mcp_config = self.get_mcp_config()
-            if not mcp_config.sse_servers and (not mcp_config.shttp_servers) and (not mcp_config.stdio_servers):
+            if (
+                not mcp_config.sse_servers
+                and (not mcp_config.shttp_servers)
+                and (not mcp_config.stdio_servers)
+            ):
                 self.log("warning", "No MCP servers configured")
                 return ErrorObservation("No MCP servers configured")
             self.log(
                 "debug",
-                f"Creating MCP clients for action {
-                    action.name} with servers: SSE={
-                    len(
-                        mcp_config.sse_servers)}, SHTTP={
-                    len(
-                        mcp_config.shttp_servers)}, stdio={
-                            len(
-                                mcp_config.stdio_servers)}",
+                f"Creating MCP clients for action {action.name} with servers: SSE={
+                    len(mcp_config.sse_servers)
+                }, SHTTP={len(mcp_config.shttp_servers)}, stdio={
+                    len(mcp_config.stdio_servers)
+                }",
             )
-            mcp_clients = await mcp_utils.create_mcp_clients(
-                mcp_config.sse_servers,
-                mcp_config.shttp_servers,
-                self.sid,
-                mcp_config.stdio_servers,
+            # Protect MCP client creation with breaker
+            cb = get_circuit_breaker_manager()
+            mcp_clients = await cb.async_call(
+                "mcp:create_clients",
+                lambda: mcp_utils.create_mcp_clients(
+                    mcp_config.sse_servers,
+                    mcp_config.shttp_servers,
+                    self.sid,
+                    mcp_config.stdio_servers,
+                ),
             )
             if not mcp_clients:
                 self.log("warning", "No MCP clients could be created")
-                return ErrorObservation("No MCP clients could be created - check server configurations")
-            self.log("debug", f"Executing MCP tool: {action.name} with arguments: {action.arguments}")
-            result = await mcp_utils.call_tool_mcp(mcp_clients, action)
+                return ErrorObservation(
+                    "No MCP clients could be created - check server configurations"
+                )
+            self.log(
+                "debug",
+                f"Executing MCP tool: {action.name} with arguments: {action.arguments}",
+            )
+            # Protect MCP tool call with breaker per tool name
+            result = await cb.async_call(
+                f"mcp:call_tool:{action.name}",
+                lambda: mcp_utils.call_tool_mcp(mcp_clients, action),
+            )
             self.log("debug", f"MCP tool {action.name} executed successfully")
             return result
         except Exception as e:
@@ -812,7 +992,9 @@ class CLIRuntime(Runtime):
         """Return the workspace root path."""
         return Path(os.path.abspath(self._workspace_path))
 
-    def copy_to(self, host_src: str, sandbox_dest: str, recursive: bool = False) -> None:
+    def copy_to(
+        self, host_src: str, sandbox_dest: str, recursive: bool = False
+    ) -> None:
         """Copy a file or directory from the host to the sandbox."""
         # Validate runtime and source
         self._validate_copy_operation(host_src)
@@ -835,7 +1017,9 @@ class CLIRuntime(Runtime):
             logger.error("File not found during copy: %s", str(e))
             raise
         except shutil.SameFileError as e:
-            logger.debug("Skipping copy as source and destination are the same: %s", str(e))
+            logger.debug(
+                "Skipping copy as source and destination are the same: %s", str(e)
+            )
         except Exception as e:
             logger.error("Unexpected error copying file: %s", str(e))
             msg = f"Unexpected error copying file: {e!s}"
@@ -862,7 +1046,9 @@ class CLIRuntime(Runtime):
 
     def _copy_file(self, host_src: str, dest: str, sandbox_dest: str) -> None:
         """Copy a file to the destination."""
-        final_target_file_path = self._determine_file_destination(host_src, dest, sandbox_dest)
+        final_target_file_path = self._determine_file_destination(
+            host_src, dest, sandbox_dest
+        )
 
         # Ensure destination directory exists
         os.makedirs(os.path.dirname(final_target_file_path), exist_ok=True)
@@ -870,7 +1056,9 @@ class CLIRuntime(Runtime):
         # Copy the file
         shutil.copy2(host_src, final_target_file_path)
 
-    def _determine_file_destination(self, host_src: str, dest: str, sandbox_dest: str) -> str:
+    def _determine_file_destination(
+        self, host_src: str, dest: str, sandbox_dest: str
+    ) -> str:
         """Determine the final destination path for a file."""
         # If destination is a directory or ends with separator
         if (
@@ -885,20 +1073,23 @@ class CLIRuntime(Runtime):
         # Default: use destination as file path
         return dest
 
-    def list_files(self, path: str | None = None) -> list[str]:
+    def list_files(self, path: str = "", recursive: bool = False) -> list[str]:
         """List files in the sandbox."""
         if not self._runtime_initialized:
             msg = "Runtime not initialized"
             raise RuntimeError(msg)
-        if path is None:
-            dir_path = self._workspace_path
-        else:
-            dir_path = self._sanitize_filename(path)
+        dir_path = self._workspace_path if not path else self._sanitize_filename(path)
         try:
             if not os.path.exists(dir_path):
                 return []
             if not os.path.isdir(dir_path):
                 return [dir_path]
+            if recursive:
+                files: list[str] = []
+                for root, _, filenames in os.walk(dir_path):
+                    for filename in filenames:
+                        files.append(os.path.join(root, filename))
+                return files
             return [os.path.join(dir_path, f) for f in os.listdir(dir_path)]
         except Exception as e:
             logger.error("Error listing files: %s", str(e))
@@ -959,10 +1150,9 @@ class CLIRuntime(Runtime):
                 except Exception as e:
                     logger.error("Error deleting workspace directory: %s", str(e))
 
-    @property
     def additional_agent_instructions(self) -> str:
         """Get additional instructions for agent in CLI runtime.
-        
+
         Returns:
             Instructions string with working directory constraints
 
@@ -970,12 +1160,15 @@ class CLIRuntime(Runtime):
         return "\n\n".join(
             [
                 f"Your working directory is {
-                    self._workspace_path}. You can only read and write files in this directory.",
+                    self._workspace_path
+                }. You can only read and write files in this directory.",
                 "You are working directly on the user's machine. In most cases, the working environment is already set up.",
             ],
         )
 
-    def get_mcp_config(self, extra_stdio_servers: list[MCPStdioServerConfig] | None = None) -> MCPConfig:
+    def get_mcp_config(
+        self, extra_stdio_servers: list[MCPStdioServerConfig] | None = None
+    ) -> MCPConfig:
         """Get MCP configuration for CLI runtime.
 
         Args:
@@ -985,7 +1178,8 @@ class CLIRuntime(Runtime):
             MCPConfig: The MCP configuration with stdio servers and any configured SSE/SHTTP servers
 
         """
-        if sys.platform == "win32":
+        platform_name = sys.platform
+        if platform_name == "win32":
             self.log("debug", "MCP is disabled on Windows, returning empty config")
             return MCPConfig(sse_servers=[], stdio_servers=[], shttp_servers=[])
         mcp_config = self.config.mcp
@@ -998,17 +1192,15 @@ class CLIRuntime(Runtime):
             mcp_config.stdio_servers = current_stdio_servers
         self.log(
             "debug",
-            f"CLI MCP config: {
-                len(
-                    mcp_config.sse_servers)} SSE servers, {
-                len(
-                    mcp_config.stdio_servers)} stdio servers, {
-                        len(
-                            mcp_config.shttp_servers)} SHTTP servers",
+            f"CLI MCP config: {len(mcp_config.sse_servers)} SSE servers, {
+                len(mcp_config.stdio_servers)
+            } stdio servers, {len(mcp_config.shttp_servers)} SHTTP servers",
         )
         return mcp_config
 
-    def subscribe_to_shell_stream(self, callback: Callable[[str], None] | None = None) -> bool:
+    def subscribe_to_shell_stream(
+        self, callback: Callable[[str], None] | None = None
+    ) -> bool:
         """Subscribe to shell command output stream.
 
         Args:

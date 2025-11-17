@@ -75,8 +75,12 @@ class BatchedWebHookFileStore(FileStore):
         if client is None:
             client = httpx.Client()
         self.client = client
-        self.batch_timeout_seconds = batch_timeout_seconds or WEBHOOK_BATCH_TIMEOUT_SECONDS
-        self.batch_size_limit_bytes = batch_size_limit_bytes or WEBHOOK_BATCH_SIZE_LIMIT_BYTES
+        self.batch_timeout_seconds = (
+            batch_timeout_seconds or WEBHOOK_BATCH_TIMEOUT_SECONDS
+        )
+        self.batch_size_limit_bytes = (
+            batch_size_limit_bytes or WEBHOOK_BATCH_SIZE_LIMIT_BYTES
+        )
         self._batch_lock = threading.Lock()
         self._batch = {}
         self._batch_timer = None
@@ -127,7 +131,9 @@ class BatchedWebHookFileStore(FileStore):
         self.file_store.delete(path)
         self._queue_update(path, "delete", None)
 
-    def _queue_update(self, path: str, operation: str, contents: str | bytes | None) -> None:
+    def _queue_update(
+        self, path: str, operation: str, contents: str | bytes | None
+    ) -> None:
         """Queue an update to be sent to the webhook.
 
         Args:
@@ -158,7 +164,9 @@ class BatchedWebHookFileStore(FileStore):
             if self._batch_timer is not None:
                 self._batch_timer.cancel()
                 self._batch_timer = None
-            timer = threading.Timer(self.batch_timeout_seconds, self._enqueue_batch_from_timer)
+            timer = threading.Timer(
+                self.batch_timeout_seconds, self._enqueue_batch_from_timer
+            )
             timer.daemon = True
             timer.start()
             self._batch_timer = timer
@@ -187,7 +195,9 @@ class BatchedWebHookFileStore(FileStore):
             self._batch_timer.cancel()
             self._batch_timer = None
 
-    def _send_batch(self, batch_to_send: dict[str, tuple[str, str | bytes | None]]) -> None:
+    def _send_batch(
+        self, batch_to_send: dict[str, tuple[str, str | bytes | None]]
+    ) -> None:
         """Send the current batch of updates to the webhook as a single request.
 
         This method acquires the batch lock and processes all pending updates in one batch.
@@ -201,10 +211,14 @@ class BatchedWebHookFileStore(FileStore):
     @tenacity.retry(
         wait=tenacity.wait_fixed(1),
         stop=tenacity.stop_after_attempt(3),
-        before_sleep=tenacity_before_sleep_factory("storage.batched_webhook.send_batch"),
+        before_sleep=tenacity_before_sleep_factory(
+            "storage.batched_webhook.send_batch"
+        ),
         after=tenacity_after_factory("storage.batched_webhook.send_batch"),
     )
-    def _send_batch_request(self, batch: dict[str, tuple[str, str | bytes | None]]) -> None:
+    def _send_batch_request(
+        self, batch: dict[str, tuple[str, str | bytes | None]]
+    ) -> None:
         """Send a single batch request to the webhook URL with all updates.
 
         This method is retried up to 3 times with a 1-second delay between attempts.
@@ -218,7 +232,10 @@ class BatchedWebHookFileStore(FileStore):
         """
         batch_payload = []
         for path, (operation, contents) in batch.items():
-            item = {"method": "POST" if operation == "write" else "DELETE", "path": path}
+            item = {
+                "method": "POST" if operation == "write" else "DELETE",
+                "path": path,
+            }
             if operation == "write" and contents is not None:
                 if isinstance(contents, bytes):
                     try:

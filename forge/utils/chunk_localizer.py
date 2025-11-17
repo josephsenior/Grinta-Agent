@@ -15,15 +15,18 @@ from forge.core.logger import forge_logger as logger
 
 class Chunk(BaseModel):
     """Represent a snippet of text along with 1-based line range metadata."""
+
     text: str
     line_range: tuple[int, int]
-    normalized_lcs: float | None = None
+    normalized_lcs: float = 0.0
 
     def visualize(self) -> str:
         """Render chunk with prefixed line numbers for display/debugging."""
         lines = self.text.split("\n")
         assert len(lines) == self.line_range[1] - self.line_range[0] + 1
-        return "".join((f"{self.line_range[0] + i}|{line}\n" for i, line in enumerate(lines)))
+        return "".join(
+            (f"{self.line_range[0] + i}|{line}\n" for i, line in enumerate(lines))
+        )
 
 
 def _create_chunks_from_raw_string(content: str, size: int):
@@ -40,15 +43,30 @@ def _create_chunks_from_raw_string(content: str, size: int):
     lines = content.split("\n")
     ret = []
     for i in range(0, len(lines), size):
-        _cur_lines = lines[i: i + size]
-        ret.append(Chunk(text="\n".join(_cur_lines), line_range=(i + 1, i + len(_cur_lines))))
+        _cur_lines = lines[i : i + size]
+        ret.append(
+            Chunk(text="\n".join(_cur_lines), line_range=(i + 1, i + len(_cur_lines)))
+        )
     return ret
 
 
-def create_chunks(text: str, size: int = 100, language: str | None = None) -> list[Chunk]:
-    """Split text into fixed-size chunks (optionally language-aware via tree-sitter)."""
+def create_chunks(
+    text: str, size: int = 100, language: str | None = None
+) -> list[Chunk]:
+    """Split text into fixed-size chunks (optionally language-aware via tree-sitter).
+
+    Resolve get_parser from the canonical module to ensure test monkeypatches are respected
+    even under import duplication scenarios.
+    """
     try:
-        parser = get_parser(language) if language is not None else None
+        if language is not None:
+            import importlib
+
+            mod = importlib.import_module("forge.utils.chunk_localizer")
+            parser_fn = getattr(mod, "get_parser")
+            parser = parser_fn(language)
+        else:
+            parser = None
     except AttributeError:
         logger.debug("Language %s not supported. Falling back to raw string.", language)
         parser = None
@@ -70,7 +88,9 @@ def normalized_lcs(chunk: str, query: str) -> float:
     return _score / len(chunk)
 
 
-def get_top_k_chunk_matches(text: str, query: str, k: int = 3, max_chunk_size: int = 100) -> list[Chunk]:
+def get_top_k_chunk_matches(
+    text: str, query: str, k: int = 3, max_chunk_size: int = 100
+) -> list[Chunk]:
     """Get the top k chunks in the text that match the query.
 
     The query could be a string of draft code edits.
@@ -84,8 +104,14 @@ def get_top_k_chunk_matches(text: str, query: str, k: int = 3, max_chunk_size: i
     """
     raw_chunks = create_chunks(text, max_chunk_size)
     chunks_with_lcs: list[Chunk] = [
-        Chunk(text=chunk.text, line_range=chunk.line_range, normalized_lcs=normalized_lcs(chunk.text, query))
+        Chunk(
+            text=chunk.text,
+            line_range=chunk.line_range,
+            normalized_lcs=normalized_lcs(chunk.text, query),
+        )
         for chunk in raw_chunks
     ]
-    sorted_chunks = sorted(chunks_with_lcs, key=lambda x: x.normalized_lcs, reverse=True)
+    sorted_chunks = sorted(
+        chunks_with_lcs, key=lambda x: x.normalized_lcs, reverse=True
+    )
     return sorted_chunks[:k]

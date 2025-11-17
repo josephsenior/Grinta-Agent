@@ -380,8 +380,8 @@ conversation = await memory_system.retrieve_conversation(conversation_id)
 
 ### **REST API**
 ```bash
-# Store conversation
-curl -X POST http://localhost:8000/api/memory/conversations \
+# Store memory
+curl -X POST http://localhost:3000/api/memory \
   -H "Content-Type: application/json" \
   -d '{
     "user_message": "How to implement authentication?",
@@ -390,20 +390,28 @@ curl -X POST http://localhost:8000/api/memory/conversations \
     "metadata": {"success": true}
   }'
 
-# Search conversations
-curl "http://localhost:8000/api/memory/conversations/search?query=authentication&max_results=10"
+# Search memory
+curl -X POST http://localhost:3000/api/memory/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "authentication",
+    "max_results": 10
+  }'
 
-# Get conversation by ID
-curl "http://localhost:8000/api/memory/conversations/{conversation_id}"
+# Get memory by ID
+curl http://localhost:3000/api/memory/{memory_id}
 
 # Get memory statistics
-curl "http://localhost:8000/api/memory/statistics"
+curl http://localhost:3000/api/memory/stats
 ```
 
 ### **WebSocket API**
 ```javascript
-// Connect to memory WebSocket
-const socket = io('ws://localhost:8000/memory');
+// Connect to Socket.IO
+const socket = io('http://localhost:3000', {
+  path: '/socket.io',
+  query: { conversationId: 'your-conversation-id' }
+});
 
 // Listen for memory updates
 socket.on('memory_update', (data) => {

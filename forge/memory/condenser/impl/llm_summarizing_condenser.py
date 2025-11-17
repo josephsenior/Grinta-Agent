@@ -25,14 +25,20 @@ class LLMSummarizingCondenser(RollingCondenser):
     and newly forgotten events.
     """
 
-    def __init__(self, llm: LLM, max_size: int = 100, keep_first: int = 1, max_event_length: int = 10000) -> None:
+    def __init__(
+        self,
+        llm: LLM,
+        max_size: int = 100,
+        keep_first: int = 1,
+        max_event_length: int = 10000,
+    ) -> None:
         """Initialize the LLM-based summarizing condenser that summarizes forgotten events.
-        
+
         This condenser maintains a rolling window of recent events and creates textual summaries
         of forgotten events using an LLM. It preserves a fixed prefix of initial events (keep_first),
         maintains one summary observation event after the prefix, fills the remainder with recent events,
         and forgets old non-summary events between prefix and tail.
-        
+
         Args:
             llm: Language model instance for generating summaries of forgotten events.
             max_size: Maximum number of events before condensation is triggered. Must be >= 1.
@@ -41,21 +47,21 @@ class LLMSummarizingCondenser(RollingCondenser):
                        Must be >= 0 and < max_size // 2 to leave room for summary and tail.
             max_event_length: Maximum character length for individual event content before truncation.
                              Prevents excessively large prompts when summarizing events (default 10000).
-        
+
         Raises:
             ValueError: If keep_first >= max_size // 2, keep_first < 0, or max_size < 1.
-        
+
         Side Effects:
             - Initializes parent RollingCondenser for event management
             - Sets truncation limit for content preprocessing in get_condensation()
-        
+
         Notes:
             - Structure: [keep_first events] + [1 summary event] + [events_from_tail recent events]
             - Forgotten events are selected from view[keep_first:-events_from_tail]
             - Events are truncated to max_event_length before being included in LLM prompt
             - Summary prompt preserves TASK_TRACKING and maintains context-aware state
             - Examples: max_size=100, keep_first=1 → keep 1 first + 1 summary + ~48 recent events
-        
+
         Example:
             >>> from forge.llm.llm import LLM
             >>> llm = get_llm_instance()  # doctest: +SKIP
@@ -95,7 +101,7 @@ class LLMSummarizingCondenser(RollingCondenser):
         )
         forgotten_events = [
             event
-            for event in view[self.keep_first: -events_from_tail]
+            for event in view[self.keep_first : -events_from_tail]
             if not isinstance(event, AgentCondensationObservation)
         ]
         prompt = (
@@ -133,7 +139,9 @@ class LLMSummarizingCondenser(RollingCondenser):
         return len(view) > self.max_size
 
     @classmethod
-    def from_config(cls, config: "LLMSummarizingCondenserConfig", llm_registry: "LLMRegistry") -> "LLMSummarizingCondenser":
+    def from_config(
+        cls, config: "LLMSummarizingCondenserConfig", llm_registry: "LLMRegistry"
+    ) -> "LLMSummarizingCondenser":
         """Instantiate summarizing condenser configured with registry-provided LLM."""
         llm_config = config.llm_config.model_copy()
         llm_config.caching_prompt = False
@@ -149,15 +157,15 @@ class LLMSummarizingCondenser(RollingCondenser):
 # Lazy registration to avoid circular imports
 def _register_config():
     """Register LLMSummarizingCondenserConfig with the LLMSummarizingCondenser factory.
-    
+
     Defers import of LLMSummarizingCondenserConfig to avoid circular dependency between
     condenser implementations and their configuration classes. Called at module load time
     to enable from_config() factory method to instantiate condensers from config objects.
-    
+
     Side Effects:
         - Imports LLMSummarizingCondenserConfig from forge.core.config.condenser_config
         - Registers config class with LLMSummarizingCondenser.register_config() factory
-    
+
     Notes:
         - Must be called at module level after LLMSummarizingCondenser class definition
         - Pattern reused across all condenser implementations
@@ -165,6 +173,8 @@ def _register_config():
 
     """
     from forge.core.config.condenser_config import LLMSummarizingCondenserConfig
+
     LLMSummarizingCondenser.register_config(LLMSummarizingCondenserConfig)
+
 
 _register_config()

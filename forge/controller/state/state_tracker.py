@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from forge.controller.state.control_flags import (
     BudgetControlFlag,
@@ -36,9 +36,11 @@ class StateTracker:
 
     """
 
-    def __init__(self, sid: str | None, file_store: FileStore | None, user_id: str | None) -> None:
+    def __init__(
+        self, sid: str | None, file_store: FileStore | None, user_id: str | None
+    ) -> None:
         """Initialize state tracker.
-        
+
         Args:
             sid: Session ID for this tracker
             file_store: File storage backend for persisting state
@@ -49,7 +51,12 @@ class StateTracker:
         self.file_store = file_store
         self.user_id = user_id
         self.agent_history_filter = EventFilter(
-            exclude_types=(NullAction, NullObservation, ChangeAgentStateAction, AgentStateChangedObservation),
+            exclude_types=(
+                NullAction,
+                NullObservation,
+                ChangeAgentStateAction,
+                AgentStateChangedObservation,
+            ),
             exclude_hidden=True,
         )
 
@@ -96,7 +103,11 @@ class StateTracker:
                 confirmation_mode=confirmation_mode,
             )
             self.state.start_id = 0
-            logger.info("AgentController %s - created new state. start_id: %s", id, self.state.start_id)
+            logger.info(
+                "AgentController %s - created new state. start_id: %s",
+                id,
+                self.state.start_id,
+            )
         else:
             self.state = state
             if self.state.start_id <= -1:
@@ -120,7 +131,9 @@ class StateTracker:
 
         events = self._fetch_events_from_stream(event_stream, start_id, end_id)
         if delegate_ranges := self._find_delegate_ranges(events):
-            self.state.history = self._filter_events_with_delegates(events, delegate_ranges)
+            self.state.history = self._filter_events_with_delegates(
+                events, delegate_ranges
+            )
         else:
             self.state.history = events
 
@@ -129,18 +142,28 @@ class StateTracker:
     def _get_history_range(self, event_stream: EventStream) -> tuple[int, int]:
         """Get the start and end ID range for history."""
         start_id = max(self.state.start_id, 0)
-        end_id = self.state.end_id if self.state.end_id >= 0 else event_stream.get_latest_event_id()
+        end_id = (
+            self.state.end_id
+            if self.state.end_id >= 0
+            else event_stream.get_latest_event_id()
+        )
         return start_id, end_id
 
     def _validate_history_range(self, start_id: int, end_id: int) -> bool:
         """Validate the history range and set empty history if invalid."""
         if start_id > end_id + 1:
-            logger.warning("start_id %s is greater than end_id + 1 (%s). History will be empty.", start_id, end_id + 1)
+            logger.warning(
+                "start_id %s is greater than end_id + 1 (%s). History will be empty.",
+                start_id,
+                end_id + 1,
+            )
             self.state.history = []
             return False
         return True
 
-    def _fetch_events_from_stream(self, event_stream: EventStream, start_id: int, end_id: int) -> list[Event]:
+    def _fetch_events_from_stream(
+        self, event_stream: EventStream, start_id: int, end_id: int
+    ) -> list[Event]:
         """Fetch events from the event stream."""
         return list(
             event_stream.search_events(
@@ -161,27 +184,38 @@ class StateTracker:
                 delegate_action_ids.append(event.id)
             elif isinstance(event, AgentDelegateObservation):
                 if not delegate_action_ids:
-                    logger.warning("Found AgentDelegateObservation without matching action at id=%s", event.id)
+                    logger.warning(
+                        "Found AgentDelegateObservation without matching action at id=%s",
+                        event.id,
+                    )
                     continue
                 action_id = delegate_action_ids.pop()
                 delegate_ranges.append((action_id, event.id))
 
         return delegate_ranges
 
-    def _filter_events_with_delegates(self, events: list[Event], delegate_ranges: list[tuple[int, int]]) -> list[Event]:
+    def _filter_events_with_delegates(
+        self, events: list[Event], delegate_ranges: list[tuple[int, int]]
+    ) -> list[Event]:
         """Filter events to exclude those within delegate ranges."""
         filtered_events: list[Event] = []
         current_idx = 0
 
         for start_id, end_id in sorted(delegate_ranges):
             # Add events before the delegate range
-            filtered_events.extend(event for event in events[current_idx:] if event.id < start_id)
+            filtered_events.extend(
+                event for event in events[current_idx:] if event.id < start_id
+            )
 
             # Add only the delegate action and observation
-            filtered_events.extend(event for event in events if event.id in (start_id, end_id))
+            filtered_events.extend(
+                event for event in events if event.id in (start_id, end_id)
+            )
 
             # Update current index to after this delegate range
-            current_idx = next((i for i, e in enumerate(events) if e.id > end_id), len(events))
+            current_idx = next(
+                (i for i, e in enumerate(events) if e.id > end_id), len(events)
+            )
 
         # Add remaining events after the last delegate range
         filtered_events.extend(events[current_idx:])
@@ -189,15 +223,19 @@ class StateTracker:
 
     def close(self, event_stream: EventStream) -> None:
         """Finalize state history when agent controller closes.
-        
+
         Saves complete event history to state for persistence.
-        
+
         Args:
             event_stream: Event stream to extract history from
 
         """
         start_id = max(self.state.start_id, 0)
-        end_id = self.state.end_id if self.state.end_id >= 0 else event_stream.get_latest_event_id()
+        end_id = (
+            self.state.end_id
+            if self.state.end_id >= 0
+            else event_stream.get_latest_event_id()
+        )
         self.state.history = list(
             event_stream.search_events(
                 start_id=start_id,
@@ -209,7 +247,7 @@ class StateTracker:
 
     def add_history(self, event: Event) -> None:
         """Add event to state history if it passes filter criteria.
-        
+
         Args:
             event: Event to potentially add to history
 
@@ -219,21 +257,26 @@ class StateTracker:
 
     def get_trajectory(self, include_screenshots: bool = False) -> list[dict]:
         """Convert state history to trajectory format for export.
-        
+
         Args:
             include_screenshots: Whether to include screenshot data
-            
+
         Returns:
             List of trajectory event dictionaries
 
         """
-        return [event_to_trajectory(event, include_screenshots) for event in self.state.history]
+        trajectory: list[dict[str, Any]] = []
+        for event in self.state.history:
+            serialized = event_to_trajectory(event, include_screenshots)
+            if serialized is not None:
+                trajectory.append(serialized)
+        return trajectory
 
     def maybe_increase_control_flags_limits(self, headless_mode: bool) -> None:
         """Conditionally increase iteration and budget limits.
-        
+
         Used when agent needs more resources to complete task.
-        
+
         Args:
             headless_mode: Whether running in headless mode
 
@@ -270,4 +313,6 @@ class StateTracker:
         Budget flag will monitor for when budget is exceeded.
         """
         if self.state.budget_flag and self.state.conversation_stats:
-            self.state.budget_flag.current_value = self.state.conversation_stats.get_combined_metrics().accumulated_cost
+            self.state.budget_flag.current_value = (
+                self.state.conversation_stats.get_combined_metrics().accumulated_cost
+            )

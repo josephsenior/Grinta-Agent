@@ -17,14 +17,28 @@ Forge now has **production-grade API versioning** that allows safe evolution wit
 
 ---
 
+## 🧾 **Event Stream Contracts (New!)**
+
+Versioning doesn't stop at HTTP. The agent event bus now publishes **typed, versioned schemas** for every action and observation:
+
+- **EventSchemaV1** (Pydantic) wraps every Action/Observation payload. Future breaking changes will ship as `EventVersion.V2`, with `migrate_schema_version()` handling upgrades/downgrades.
+- **Action Schemas:** `forge/core/schemas/actions.py` defines canonical structures (read/write/edit/run/etc.) including metadata such as security risk and confirmation state.
+- **Observation Schemas:** `forge/core/schemas/observations.py` captures runtime responses, command metadata, and error payloads in a consistent layout.
+- **Serialization Helpers:** `forge/core/schemas/serialization.py` exposes `serialize_event()` / `deserialize_event()` so downstream services or log processors can reliably parse the stream.
+- **Telemetry Integration:** `ToolTelemetry` and the cross-cutting tool middleware now consume these schemas, guaranteeing that plan → verify → execute → observe traces stay aligned with API evolution.
+
+👉 **Why it matters:** HTTP versioning protects external clients, while event schema versioning protects internal services, log pipelines, and replay tooling. Together they give Forge end-to-end contract stability.
+
+---
+
 ## 📋 **Architecture**
 
 ### **1. Backend Versioning**
 
 #### **Files Created:**
 ```python
-Forge/server/versioning.py       # Versioning middleware + utilities
-Forge/server/constants.py        # Version constants
+forge/server/versioning.py       # Versioning middleware + utilities
+forge/server/constants.py        # Version constants
 ```
 
 #### **How It Works:**
@@ -81,7 +95,7 @@ export const USE_VERSIONED_ENDPOINTS = false;  // ← Beta mode
 ```
 
 ```python
-# Forge/server/constants.py  
+# forge/server/constants.py  
 ENFORCE_API_VERSIONING = False  # ← Beta mode (allows non-versioned)
 ```
 
@@ -134,7 +148,7 @@ export const USE_VERSIONED_ENDPOINTS = true;  // ← Enable versioning!
 ```
 
 ```python
-# Forge/server/constants.py
+# forge/server/constants.py
 ENFORCE_API_VERSIONING = True  # ← Enforce strict versioning
 ```
 
@@ -176,7 +190,7 @@ DEPRECATED_VERSIONS = {
 }
 
 # 3. Create v2 routes (keep v1 working!)
-# Forge/server/routes/conversation_v2.py
+# forge/server/routes/conversation_v2.py
 app = APIRouter(prefix="/api/v2/conversations")
 
 @app.get("/")
@@ -222,7 +236,7 @@ Warning: 299 - "v1 API is deprecated. Please migrate to v2."         ← Warning
 ### **Adding a New Endpoint (v1)**
 
 ```python
-# Forge/server/routes/my_feature.py
+# forge/server/routes/my_feature.py
 from fastapi import APIRouter
 
 app = APIRouter(prefix="/api/my-feature")
@@ -233,7 +247,7 @@ async def get_my_feature():
 ```
 
 ```python
-# Forge/server/app.py
+# forge/server/app.py
 from forge.server.routes.my_feature import app as my_feature_router
 
 app.include_router(my_feature_router, tags=["v1", "my-feature"])
@@ -244,7 +258,7 @@ app.include_router(my_feature_router, tags=["v1", "my-feature"])
 ### **Adding a v2 Endpoint (Future)**
 
 ```python
-# Forge/server/routes/my_feature_v2.py
+# forge/server/routes/my_feature_v2.py
 from fastapi import APIRouter
 
 app = APIRouter(prefix="/api/v2/my-feature")  # ← v2 prefix
@@ -258,7 +272,7 @@ async def get_my_feature_v2():
 ```
 
 ```python
-# Forge/server/app.py
+# forge/server/app.py
 from forge.server.routes.my_feature_v2 import app as my_feature_v2_router
 
 app.include_router(my_feature_v2_router, tags=["v2", "my-feature"])
@@ -345,7 +359,7 @@ version = get_api_version_from_path(path)  # → None (safe)
 After launch, update swagger to show versions:
 
 ```python
-# Forge/server/app.py
+# forge/server/app.py
 app = FastAPI(
     title="Forge API",
     description="Multi-version API with backward compatibility",

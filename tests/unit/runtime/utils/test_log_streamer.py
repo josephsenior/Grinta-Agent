@@ -19,7 +19,9 @@ def test_init_failure_handling(mock_container, mock_log_fn):
     streamer = LogStreamer(mock_container, mock_log_fn)
     assert streamer.stdout_thread is None
     assert streamer.log_generator is None
-    mock_log_fn.assert_called_with("error", "Failed to initialize log streaming: Test error")
+    mock_log_fn.assert_called_with(
+        "error", "Failed to initialize log streaming: Test error"
+    )
 
 
 def test_stream_logs_without_generator(mock_container, mock_log_fn):
@@ -41,7 +43,6 @@ def test_normal_operation(mock_container, mock_log_fn):
     """Test normal operation of LogStreamer."""
 
     class MockLogGenerator:
-
         def __init__(self, logs):
             self.logs = iter(logs)
             self.closed = False
@@ -63,7 +64,10 @@ def test_normal_operation(mock_container, mock_log_fn):
     assert streamer.stdout_thread is not None
     assert streamer.log_generator is not None
     streamer.close()
-    expected_calls = [("debug", "[inside container] test log 1"), ("debug", "[inside container] test log 2")]
+    expected_calls = [
+        ("debug", "[inside container] test log 1"),
+        ("debug", "[inside container] test log 2"),
+    ]
     actual_calls = [(args[0], args[1]) for args, _ in mock_log_fn.call_args_list]
     for expected in expected_calls:
         assert expected in actual_calls

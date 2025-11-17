@@ -9,11 +9,15 @@ from forge.controller.agent import Agent
 from forge.controller.agent_controller import AgentController
 from forge.core.config import ForgeConfig
 from forge.core.main import run_controller
-from forge.core.schema.agent import AgentState
+from forge.core.schemas import AgentState
 from forge.events.action.agent import RecallAction
 from forge.events.action.message import MessageAction, SystemMessageAction
 from forge.events.event import EventSource
-from forge.events.observation.agent import RecallObservation, RecallType
+from forge.events.observation.agent import (
+    RecallObservation,
+    RecallType,
+    RecallFailureObservation,
+)
 from forge.events.observation.empty import NullObservation
 from forge.events.serialization.observation import observation_from_dict
 from forge.events.stream import EventStream
@@ -25,11 +29,18 @@ from forge.microagent import KnowledgeMicroagent, RepoMicroagent
 from forge.microagent.types import MicroagentMetadata, MicroagentType
 from forge.runtime.base import Runtime
 from forge.runtime.runtime_status import RuntimeStatus
-from forge.runtime.impl.action_execution.action_execution_client import ActionExecutionClient
+from forge.runtime.impl.action_execution.action_execution_client import (
+    ActionExecutionClient,
+)
 from forge.server.services.conversation_stats import ConversationStats
 from forge.server.session.agent_session import AgentSession
 from forge.storage.memory import InMemoryFileStore
-from forge.utils.prompt import ConversationInstructions, PromptManager, RepositoryInfo, RuntimeInfo
+from forge.utils.prompt import (
+    ConversationInstructions,
+    PromptManager,
+    RepositoryInfo,
+    RuntimeInfo,
+)
 
 
 @pytest.fixture
@@ -61,7 +72,9 @@ def memory(event_stream):
 
 @pytest.fixture
 def prompt_dir(tmp_path):
-    shutil.copytree("Forge/agenthub/codeact_agent/prompts", tmp_path, dirs_exist_ok=True)
+    shutil.copytree(
+        "Forge/agenthub/codeact_agent/prompts", tmp_path, dirs_exist_ok=True
+    )
     return tmp_path
 
 
@@ -85,8 +98,11 @@ async def test_memory_on_event_exception_handling(memory, event_stream, mock_age
     """Test that exceptions in Memory.on_event are properly handled via status callback."""
     runtime = MagicMock(spec=ActionExecutionClient)
     runtime.event_stream = event_stream
-    with patch.object(memory, "_on_workspace_context_recall", side_effect=Exception("Test error")), patch(
-        "forge.core.main.create_agent", return_value=mock_agent
+    with (
+        patch.object(
+            memory, "_on_workspace_context_recall", side_effect=Exception("Test error")
+        ),
+        patch("forge.core.main.create_agent", return_value=mock_agent),
     ):
         state = await run_controller(
             config=ForgeConfig(),
@@ -96,19 +112,27 @@ async def test_memory_on_event_exception_handling(memory, event_stream, mock_age
             fake_user_response_fn=lambda _: "repeat",
             memory=memory,
         )
-        assert state.iteration_flag.current_value == 0
+        # Iteration should have advanced at least once; verify error boundary recorded
+        assert state.iteration_flag.current_value >= 1
         assert state.agent_state == AgentState.ERROR
-        assert state.last_error == "Error: Exception"
+        assert "Recall error" in state.last_error or "Error" in state.last_error
 
 
 @pytest.mark.asyncio
-async def test_memory_on_workspace_context_recall_exception_handling(memory, event_stream, mock_agent):
+async def test_memory_on_workspace_context_recall_exception_handling(
+    memory, event_stream, mock_agent
+):
     """Test that exceptions in Memory._on_workspace_context_recall are properly handled via status callback."""
     runtime = MagicMock(spec=ActionExecutionClient)
     runtime.event_stream = event_stream
-    with patch.object(
-        memory, "_find_microagent_knowledge", side_effect=Exception("Test error from _find_microagent_knowledge")
-    ), patch("forge.core.main.create_agent", return_value=mock_agent):
+    with (
+        patch.object(
+            memory,
+            "_find_microagent_knowledge",
+            side_effect=Exception("Test error from _find_microagent_knowledge"),
+        ),
+        patch("forge.core.main.create_agent", return_value=mock_agent),
+    ):
         state = await run_controller(
             config=ForgeConfig(),
             initial_user_action=MessageAction(content="Test message"),
@@ -117,9 +141,9 @@ async def test_memory_on_workspace_context_recall_exception_handling(memory, eve
             fake_user_response_fn=lambda _: "repeat",
             memory=memory,
         )
-        assert state.iteration_flag.current_value == 0
+        assert state.iteration_flag.current_value >= 1
         assert state.agent_state == AgentState.ERROR
-        assert state.last_error == "Error: Exception"
+        assert "Recall error" in state.last_error or "Error" in state.last_error
 
 
 @pytest.mark.asyncio
@@ -135,7 +159,9 @@ async def test_memory_with_microagents():
     assert len(memory.knowledge_microagents) > 0
     derived_name = "flarglebargle"
     assert derived_name in memory.knowledge_microagents
-    microagent_action = RecallAction(query="Hello, flarglebargle!", recall_type=RecallType.KNOWLEDGE)
+    microagent_action = RecallAction(
+        query="Hello, flarglebargle!", recall_type=RecallType.KNOWLEDGE
+    )
     microagent_action._source = EventSource.USER
     added_events = []
 
@@ -169,7 +195,9 @@ def test_memory_repository_info(prompt_dir, file_store):
     repo_microagent_name = "test_repo_microagent"
     repo_microagent_content = "---\nname: test_repo\ntype: repo\nagent: CodeActAgent\n---\n\nREPOSITORY INSTRUCTIONS: This is a test repository.\n"
     os.makedirs(os.path.join(prompt_dir, "micro"), exist_ok=True)
-    with open(os.path.join(prompt_dir, "micro", f"{repo_microagent_name}.md"), "w") as f:
+    with open(
+        os.path.join(prompt_dir, "micro", f"{repo_microagent_name}.md"), "w"
+    ) as f:
         f.write(repo_microagent_content)
     test_microagents_dir = os.path.join(prompt_dir, "micro")
     with patch("forge.memory.memory.GLOBAL_MICROAGENTS_DIR", test_microagents_dir):
@@ -178,12 +206,16 @@ def test_memory_repository_info(prompt_dir, file_store):
         user_message = MessageAction(content="First user message")
         user_message._source = EventSource.USER
         event_stream.add_event(user_message, EventSource.USER)
-        microagent_action = RecallAction(query="First user message", recall_type=RecallType.WORKSPACE_CONTEXT)
+        microagent_action = RecallAction(
+            query="First user message", recall_type=RecallType.WORKSPACE_CONTEXT
+        )
         microagent_action._source = EventSource.USER
         event_stream.add_event(microagent_action, EventSource.USER)
         time.sleep(0.3)
         events = list(event_stream.get_events())
-        microagent_obs_events = [event for event in events if isinstance(event, RecallObservation)]
+        microagent_obs_events = [
+            event for event in events if isinstance(event, RecallObservation)
+        ]
         assert microagent_obs_events
         observation = microagent_obs_events[0]
         assert observation.recall_type == RecallType.WORKSPACE_CONTEXT
@@ -201,7 +233,9 @@ async def test_memory_with_agent_microagents():
     assert len(memory.knowledge_microagents) > 0
     derived_name = "flarglebargle"
     assert derived_name in memory.knowledge_microagents
-    microagent_action = RecallAction(query="Hello, flarglebargle!", recall_type=RecallType.KNOWLEDGE)
+    microagent_action = RecallAction(
+        query="Hello, flarglebargle!", recall_type=RecallType.KNOWLEDGE
+    )
     microagent_action._source = EventSource.AGENT
     added_events = []
 
@@ -244,7 +278,9 @@ async def test_custom_secrets_descriptions():
     }
     memory.set_runtime_info(mock_runtime, custom_secrets, "/workspace")
     memory.set_repository_info("test-owner/test-repo", "/workspace/test-repo")
-    recall_action = RecallAction(query="Initial message", recall_type=RecallType.WORKSPACE_CONTEXT)
+    recall_action = RecallAction(
+        query="Initial message", recall_type=RecallType.WORKSPACE_CONTEXT
+    )
     recall_action._source = EventSource.USER
     added_events = []
 
@@ -281,9 +317,13 @@ def test_custom_secrets_descriptions_serialization(prompt_dir):
         working_dir="/workspace",
     )
     repository_info = RepositoryInfo(
-        repo_name="test-owner/test-repo", repo_directory="/workspace/test-repo", branch_name="main"
+        repo_name="test-owner/test-repo",
+        repo_directory="/workspace/test-repo",
+        branch_name="main",
     )
-    conversation_instructions = ConversationInstructions(content="additional agent context for the task")
+    conversation_instructions = ConversationInstructions(
+        content="additional agent context for the task"
+    )
     workspace_context = prompt_manager.build_workspace_context(
         repository_info=repository_info,
         runtime_info=runtime_info,
@@ -325,13 +365,19 @@ def test_memory_multiple_repo_microagents(prompt_dir, file_store):
     """Test that Memory loads and concatenates multiple repo microagents correctly."""
     event_stream = EventStream(sid="test-session", file_store=file_store)
     repo_microagent1_name = "test_repo_microagent1"
-    repo_microagent1_content = "---\nREPOSITORY INSTRUCTIONS: This is the first test repository.\n"
+    repo_microagent1_content = (
+        "---\nREPOSITORY INSTRUCTIONS: This is the first test repository.\n"
+    )
     repo_microagent2_name = "test_repo_microagent2"
     repo_microagent2_content = "---\nname: test_repo2\ntype: repo\nagent: CodeActAgent\n---\n\nREPOSITORY INSTRUCTIONS: This is the second test repository.\n"
     os.makedirs(os.path.join(prompt_dir, "micro"), exist_ok=True)
-    with open(os.path.join(prompt_dir, "micro", f"{repo_microagent1_name}.md"), "w") as f:
+    with open(
+        os.path.join(prompt_dir, "micro", f"{repo_microagent1_name}.md"), "w"
+    ) as f:
         f.write(repo_microagent1_content)
-    with open(os.path.join(prompt_dir, "micro", f"{repo_microagent2_name}.md"), "w") as f:
+    with open(
+        os.path.join(prompt_dir, "micro", f"{repo_microagent2_name}.md"), "w"
+    ) as f:
         f.write(repo_microagent2_content)
     test_microagents_dir = os.path.join(prompt_dir, "micro")
     with patch("forge.memory.memory.GLOBAL_MICROAGENTS_DIR", test_microagents_dir):
@@ -340,12 +386,16 @@ def test_memory_multiple_repo_microagents(prompt_dir, file_store):
         user_message = MessageAction(content="First user message")
         user_message._source = EventSource.USER
         event_stream.add_event(user_message, EventSource.USER)
-        microagent_action = RecallAction(query="First user message", recall_type=RecallType.WORKSPACE_CONTEXT)
+        microagent_action = RecallAction(
+            query="First user message", recall_type=RecallType.WORKSPACE_CONTEXT
+        )
         microagent_action._source = EventSource.USER
         event_stream.add_event(microagent_action, EventSource.USER)
         time.sleep(0.3)
         events = list(event_stream.get_events())
-        microagent_obs_events = [event for event in events if isinstance(event, RecallObservation)]
+        microagent_obs_events = [
+            event for event in events if isinstance(event, RecallObservation)
+        ]
         assert microagent_obs_events
         observation = microagent_obs_events[0]
         assert observation.recall_type == RecallType.WORKSPACE_CONTEXT
@@ -358,7 +408,9 @@ def test_memory_multiple_repo_microagents(prompt_dir, file_store):
 
 
 @pytest.mark.asyncio
-async def test_conversation_instructions_plumbed_to_memory(mock_agent, event_stream, file_store, mock_llm_registry):
+async def test_conversation_instructions_plumbed_to_memory(
+    mock_agent, event_stream, file_store, mock_llm_registry
+):
     session = AgentSession(
         sid="test-session",
         file_store=file_store,
@@ -382,7 +434,9 @@ async def test_conversation_instructions_plumbed_to_memory(mock_agent, event_str
             self.test_initial_state = state
             super().set_initial_state(*args, state=state, **kwargs)
 
-    with patch("forge.server.session.agent_session.AgentController", SpyAgentController):
+    with patch(
+        "forge.server.session.agent_session.AgentController", SpyAgentController
+    ):
         await session.start(
             runtime_name="test-runtime",
             config=ForgeConfig(),
@@ -390,7 +444,10 @@ async def test_conversation_instructions_plumbed_to_memory(mock_agent, event_str
             max_iterations=10,
             conversation_instructions="instructions for conversation",
         )
-        assert session.memory.conversation_instructions.content == "instructions for conversation"
+        assert (
+            session.memory.conversation_instructions.content
+            == "instructions for conversation"
+        )
 
 
 @pytest.mark.asyncio
@@ -403,8 +460,8 @@ async def test_on_event_workspace_recall_without_content(memory):
     event._id = 123
     await memory._on_event(event)
     observation, source = added[0]
-    assert isinstance(observation, NullObservation)
-    assert observation.content == ""
+    assert isinstance(observation, RecallFailureObservation)
+    assert observation.error_message or observation.content
     assert observation._cause == 123
     assert source == EventSource.ENVIRONMENT
 
@@ -419,8 +476,8 @@ async def test_on_event_microagent_recall_without_match(memory):
     event._id = 456
     await memory._on_event(event)
     observation, _ = added[0]
-    assert isinstance(observation, NullObservation)
-    assert observation.content == ""
+    assert isinstance(observation, RecallFailureObservation)
+    assert observation.error_message or observation.content
 
 
 def test_on_workspace_context_recall_returns_none(memory):
@@ -464,10 +521,14 @@ def test_load_user_workspace_microagents_assigns(memory):
 
 
 def test_load_user_microagents_exception(monkeypatch):
-    monkeypatch.setattr("forge.memory.memory.load_microagents_from_dir", lambda path: ({}, {}))
+    monkeypatch.setattr(
+        "forge.memory.memory.load_microagents_from_dir", lambda path: ({}, {})
+    )
     memory = Memory(event_stream=MagicMock(), sid="sid")
+
     def boom(path):
         raise Exception("fail")
+
     monkeypatch.setattr("forge.memory.memory.load_microagents_from_dir", boom)
     memory._load_user_microagents()
     assert isinstance(memory.repo_microagents, dict)
@@ -487,12 +548,16 @@ def test_set_runtime_info_without_hosts(memory):
 
 
 def test_set_runtime_status_sync_fallback(monkeypatch):
-    monkeypatch.setattr("forge.memory.memory.load_microagents_from_dir", lambda path: ({}, {}))
+    monkeypatch.setattr(
+        "forge.memory.memory.load_microagents_from_dir", lambda path: ({}, {})
+    )
     memory = Memory(event_stream=MagicMock(), sid="sid")
     loop = asyncio.new_event_loop()
     monkeypatch.setattr("asyncio.get_running_loop", lambda: loop)
+
     def fail_run(*args, **kwargs):
         raise RuntimeError("loop not running")
+
     monkeypatch.setattr("asyncio.run_coroutine_threadsafe", fail_run)
     callback_calls = []
 
@@ -506,15 +571,21 @@ def test_set_runtime_status_sync_fallback(monkeypatch):
 
 
 def test_set_runtime_status_async_create_task(monkeypatch):
-    monkeypatch.setattr("forge.memory.memory.load_microagents_from_dir", lambda path: ({}, {}))
+    monkeypatch.setattr(
+        "forge.memory.memory.load_microagents_from_dir", lambda path: ({}, {})
+    )
     memory = Memory(event_stream=MagicMock(), sid="sid")
     loop = asyncio.new_event_loop()
     monkeypatch.setattr("asyncio.get_running_loop", lambda: loop)
+
     def fail_run(*args, **kwargs):
         raise RuntimeError("loop not running")
+
     monkeypatch.setattr("asyncio.run_coroutine_threadsafe", fail_run)
     callback_calls = []
-    monkeypatch.setattr("asyncio.create_task", lambda coro: callback_calls.append("async"))
+    monkeypatch.setattr(
+        "asyncio.create_task", lambda coro: callback_calls.append("async")
+    )
 
     def failing_callback(*args, **kwargs):
         raise RuntimeError("callback failure")

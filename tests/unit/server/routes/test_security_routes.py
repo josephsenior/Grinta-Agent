@@ -3,19 +3,21 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 
 from forge.server.routes import security as security_routes
+from forge.server.session.conversation import ServerConversation
 
 
 class DummyAnalyzer:
     def __init__(self):
         self.called_with = None
 
-    async def handle_api_request(self, request):
+    async def handle_api_request(self, request: Request) -> str:
         self.called_with = request
         return "ok"
 
@@ -23,8 +25,8 @@ class DummyAnalyzer:
 @pytest.mark.asyncio
 async def test_security_api_proxies_request(monkeypatch):
     analyzer = DummyAnalyzer()
-    conversation = SimpleNamespace(security_analyzer=analyzer)
-    request = SimpleNamespace()
+    conversation = cast(ServerConversation, SimpleNamespace(security_analyzer=analyzer))
+    request = cast(Request, SimpleNamespace())
     response = await security_routes.security_api(request, conversation)
     assert response == "ok"
     assert analyzer.called_with is request
@@ -32,7 +34,9 @@ async def test_security_api_proxies_request(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_security_api_missing_analyzer():
-    conversation = SimpleNamespace(security_analyzer=None)
+    conversation = cast(ServerConversation, SimpleNamespace(security_analyzer=None))
     with pytest.raises(HTTPException) as exc:
-        await security_routes.security_api(SimpleNamespace(), conversation)
+        await security_routes.security_api(
+            cast(Request, SimpleNamespace()), conversation
+        )
     assert exc.value.status_code == 404

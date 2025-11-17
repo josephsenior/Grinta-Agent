@@ -187,7 +187,7 @@ poetry run alembic upgrade head
 **Solution:**
 ```bash
 # Check backend is running
-curl http://localhost:3000/api/health
+curl http://localhost:3000/api/monitoring/health
 
 # Check WebSocket URL in frontend
 # Should be: ws://localhost:3000/ws/...
@@ -311,7 +311,7 @@ npm run dev
 **Solution:**
 ```bash
 # Check backend is running
-curl http://localhost:3000/api/health
+curl http://localhost:3000/api/monitoring/health
 
 # Check WebSocket URL matches backend port
 # In frontend/.env:
@@ -328,7 +328,7 @@ VITE_WS_URL=ws://localhost:3000
 **Diagnostics:**
 ```bash
 # Check p95 latency in Grafana
-# http://localhost:3001/grafana
+# http://localhost:3001/grafana (Grafana runs on port 3001, separate from backend on port 3000)
 
 # Check if rate limited
 tail -f logs/Forge.log | grep "rate"

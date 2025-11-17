@@ -1,12 +1,13 @@
+"""Unit tests for forge.structural helper functions."""
+
 from __future__ import annotations
 
 import ast
-import importlib
 from types import SimpleNamespace
 
 import pytest
 
-structural = importlib.import_module("forge.structural")
+import forge.structural as structural
 
 
 def test_available_always_true() -> None:
@@ -19,12 +20,49 @@ def test_find_lang_lib_none(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_find_lang_lib_custom_path(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
-    ext = {"windows": "dll", "darwin": "dylib"}.get(structural.platform.system().lower(), "so")
+    ext = {"windows": "dll", "darwin": "dylib"}.get(
+        structural.platform.system().lower(), "so"
+    )
     lib_path = tmp_path / f"my-langs.{ext}"
     lib_path.write_text("", encoding="utf-8")
 
     monkeypatch.setattr(structural.os.path, "abspath", lambda path: str(tmp_path))
-    monkeypatch.setattr(structural.os.path, "exists", lambda path: str(path) == str(lib_path))
+    monkeypatch.setattr(
+        structural.os.path, "exists", lambda path: str(path) == str(lib_path)
+    )
+    assert structural._find_lang_lib() == str(lib_path)
+
+
+def test_find_lang_lib_linux(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    lib_path = tmp_path / "my-langs.so"
+    lib_path.write_text("", encoding="utf-8")
+    monkeypatch.setattr(structural.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(structural.os.path, "abspath", lambda path: str(tmp_path))
+    monkeypatch.setattr(
+        structural.os.path, "exists", lambda path: str(path) == str(lib_path)
+    )
+    assert structural._find_lang_lib() == str(lib_path)
+
+
+def test_find_lang_lib_windows(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    lib_path = tmp_path / "my-langs.dll"
+    lib_path.write_text("", encoding="utf-8")
+    monkeypatch.setattr(structural.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(structural.os.path, "abspath", lambda path: str(tmp_path))
+    monkeypatch.setattr(
+        structural.os.path, "exists", lambda path: str(path) == str(lib_path)
+    )
+    assert structural._find_lang_lib() == str(lib_path)
+
+
+def test_find_lang_lib_darwin(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    lib_path = tmp_path / "my-langs.dylib"
+    lib_path.write_text("", encoding="utf-8")
+    monkeypatch.setattr(structural.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(structural.os.path, "abspath", lambda path: str(tmp_path))
+    monkeypatch.setattr(
+        structural.os.path, "exists", lambda path: str(path) == str(lib_path)
+    )
     assert structural._find_lang_lib() == str(lib_path)
 
 
@@ -77,7 +115,13 @@ def test_node_type_counts_tree_sitter(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeNode(SimpleNamespace):
         pass
 
-    root = FakeNode(type="root", children=[FakeNode(type="child", children=[]), FakeNode(type="child", children=[])])
+    root = FakeNode(
+        type="root",
+        children=[
+            FakeNode(type="child", children=[]),
+            FakeNode(type="child", children=[]),
+        ],
+    )
 
     class FakeTree:
         root_node = root
@@ -92,4 +136,3 @@ def test_semantic_diff_counts(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(structural, "_HAS_TS", False)
     diff = structural.semantic_diff_counts("a = 1", "a = 1\nb = 2")
     assert diff["Assign"] == 1
-

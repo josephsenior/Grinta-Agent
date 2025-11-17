@@ -34,4 +34,3 @@ def test_check_permission_allowed_when_enabled():
     allowed, reason = config.check_permission(PermissionCategory.SHELL, "sudo_command")
     assert allowed
     assert reason is None
-

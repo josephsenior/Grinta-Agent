@@ -49,7 +49,6 @@ class DummyMetrics:
 @pytest.fixture
 def quota_module(monkeypatch: pytest.MonkeyPatch):
     """Provide a stub cost quota module that records invocations."""
-
     original_module = sys.modules.get("forge.server.middleware.cost_quota")
     recorded: list[tuple[str, float]] = []
 
@@ -79,21 +78,27 @@ def test_record_llm_cost_from_metrics_ignores_zero_cost(quota_module) -> None:
     assert quota_module == []
 
 
-def test_record_llm_cost_from_metrics_handles_missing_module(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_record_llm_cost_from_metrics_handles_missing_module(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     sys.modules.pop("forge.server.middleware.cost_quota", None)
     metrics_stub = DummyMetrics(cost=3.3)
     cost_tracker.record_llm_cost_from_metrics("user:123", metrics_stub)  # type: ignore[arg-type]
     # Should not raise or record anything when module import fails
 
 
-def test_record_llm_cost_from_metrics_logs_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_record_llm_cost_from_metrics_logs_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     failing_module = types.ModuleType("forge.server.middleware.cost_quota")
 
     def failing_record(*args, **kwargs):
         raise RuntimeError("quota failed")
 
     failing_module.record_llm_cost = failing_record  # type: ignore[attr-defined]
-    monkeypatch.setitem(sys.modules, "forge.server.middleware.cost_quota", failing_module)
+    monkeypatch.setitem(
+        sys.modules, "forge.server.middleware.cost_quota", failing_module
+    )
     logger = StubLogger()
     monkeypatch.setattr(cost_tracker, "logger", logger)
     metrics_stub = DummyMetrics(cost=1.0)
@@ -101,7 +106,9 @@ def test_record_llm_cost_from_metrics_logs_errors(monkeypatch: pytest.MonkeyPatc
     assert any("Failed to record LLM cost" in msg for msg in logger.records)
 
 
-def test_record_llm_cost_from_response_records_cost(quota_module, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_record_llm_cost_from_response_records_cost(
+    quota_module, monkeypatch: pytest.MonkeyPatch
+) -> None:
     class StubLiteLLM:
         @staticmethod
         def completion_cost(*, completion_response):
@@ -109,11 +116,15 @@ def test_record_llm_cost_from_response_records_cost(quota_module, monkeypatch: p
             return 0.75
 
     monkeypatch.setitem(sys.modules, "litellm", StubLiteLLM)
-    cost_tracker.record_llm_cost_from_response("ip:1.2.3.4", {"usage": {"prompt_tokens": 1}})
+    cost_tracker.record_llm_cost_from_response(
+        "ip:1.2.3.4", {"usage": {"prompt_tokens": 1}}
+    )
     assert quota_module == [("ip:1.2.3.4", 0.75)]
 
 
-def test_record_llm_cost_from_response_handles_errors(quota_module, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_record_llm_cost_from_response_handles_errors(
+    quota_module, monkeypatch: pytest.MonkeyPatch
+) -> None:
     class StubLiteLLM:
         @staticmethod
         def completion_cost(*, completion_response):
@@ -121,15 +132,25 @@ def test_record_llm_cost_from_response_handles_errors(quota_module, monkeypatch:
 
     logger = StubLogger()
     monkeypatch.setitem(sys.modules, "litellm", StubLiteLLM)
-    monkeypatch.setitem(sys.modules, "forge.server.middleware.cost_quota", types.SimpleNamespace(record_llm_cost=lambda *a, **k: None))
+    monkeypatch.setitem(
+        sys.modules,
+        "forge.server.middleware.cost_quota",
+        types.SimpleNamespace(record_llm_cost=lambda *a, **k: None),
+    )
     monkeypatch.setattr(cost_tracker, "logger", logger)
 
-    cost_tracker.record_llm_cost_from_response("user:err", {"usage": {"prompt_tokens": 1}})
-    assert any("Failed to record LLM cost from response" in entry for entry in logger.records)
+    cost_tracker.record_llm_cost_from_response(
+        "user:err", {"usage": {"prompt_tokens": 1}}
+    )
+    assert any(
+        "Failed to record LLM cost from response" in entry for entry in logger.records
+    )
     assert quota_module == []
 
 
-def test_record_llm_cost_from_response_import_error(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_record_llm_cost_from_response_import_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     original_import = builtins.__import__
 
     def fake_import(name, *args, **kwargs):
@@ -139,7 +160,9 @@ def test_record_llm_cost_from_response_import_error(monkeypatch: pytest.MonkeyPa
 
     monkeypatch.setattr(builtins, "__import__", fake_import)
     # Ensure cost quota import also fails gracefully
-    monkeypatch.delitem(sys.modules, "forge.server.middleware.cost_quota", raising=False)
+    monkeypatch.delitem(
+        sys.modules, "forge.server.middleware.cost_quota", raising=False
+    )
     cost_tracker.record_llm_cost_from_response("user:none", {"usage": {"cost": 1}})
 
 
@@ -160,7 +183,6 @@ class DummyDebug(debug_mixin.DebugMixin):
 @pytest.fixture
 def debug_loggers(monkeypatch: pytest.MonkeyPatch):
     """Patch debug mixin loggers and return their stubs."""
-
     main_logger = StubLogger()
     prompt_logger = StubLogger()
     response_logger = StubLogger()
@@ -176,7 +198,10 @@ def test_log_prompt_with_text_and_image(debug_loggers) -> None:
     mixin = DummyDebug()
     messages = [
         {"role": "user", "content": "hello"},
-        {"role": "user", "content": [{"type": "image_url", "image_url": {"url": "http://example"}}]},
+        {
+            "role": "user",
+            "content": [{"type": "image_url", "image_url": {"url": "http://example"}}],
+        },
     ]
     mixin.log_prompt(messages)
     assert main_logger.records == []
@@ -213,7 +238,9 @@ def test_log_prompt_skips_none_content(debug_loggers) -> None:
 def test_log_response_with_tool_calls(debug_loggers) -> None:
     _, _, response_logger = debug_loggers
     mixin = DummyDebug()
-    tool_call = types.SimpleNamespace(function=types.SimpleNamespace(name="lookup", arguments='{"arg": 1}'))
+    tool_call = types.SimpleNamespace(
+        function=types.SimpleNamespace(name="lookup", arguments='{"arg": 1}')
+    )
     response = {
         "choices": [
             {
@@ -232,7 +259,9 @@ def test_log_response_when_debug_disabled(monkeypatch: pytest.MonkeyPatch) -> No
     disabled_logger = StubLogger(enabled=False)
     monkeypatch.setattr(debug_mixin, "logger", disabled_logger)
     mixin = DummyDebug()
-    mixin.log_response({"choices": [{"message": {"content": "no-log", "tool_calls": []}}]})
+    mixin.log_response(
+        {"choices": [{"message": {"content": "no-log", "tool_calls": []}}]}
+    )
     assert disabled_logger.records == []
 
 
@@ -288,7 +317,9 @@ def test_metrics_token_usage_and_merge_diff() -> None:
     baseline = m1.copy()
     baseline.add_cost(0.2)
     diff = m_combined.diff(baseline)
-    assert diff.accumulated_cost == pytest.approx(m_combined.accumulated_cost - baseline.accumulated_cost)
+    assert diff.accumulated_cost == pytest.approx(
+        m_combined.accumulated_cost - baseline.accumulated_cost
+    )
     assert diff.accumulated_token_usage.prompt_tokens >= 0
 
 
@@ -330,4 +361,3 @@ def test_metrics_serialization_roundtrip() -> None:
     text = m.log()
     assert "accumulated_cost" in text
     assert repr(m).startswith("Metrics(")
-

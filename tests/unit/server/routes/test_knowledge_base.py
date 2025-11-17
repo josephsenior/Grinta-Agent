@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from io import BytesIO
+from typing import Any
 
 import pytest
 
@@ -31,7 +32,7 @@ def _make_client() -> TestClient:
 
 
 def _collection(**overrides) -> KnowledgeBaseCollection:
-    base = {
+    base: dict[str, Any] = {
         "user_id": "user",
         "name": "Collection",
         "description": "desc",
@@ -45,7 +46,7 @@ def _collection(**overrides) -> KnowledgeBaseCollection:
 
 
 def _document(**overrides) -> KnowledgeBaseDocument:
-    base = {
+    base: dict[str, Any] = {
         "collection_id": "col-1",
         "filename": "doc.txt",
         "content_hash": "hash",
@@ -59,7 +60,7 @@ def _document(**overrides) -> KnowledgeBaseDocument:
 
 
 def _search_result(**overrides) -> KnowledgeBaseSearchResult:
-    base = {
+    base: dict[str, Any] = {
         "document_id": "doc-1",
         "collection_id": "col-1",
         "filename": "doc.txt",
@@ -131,7 +132,9 @@ def test_create_collection_failure(monkeypatch):
 
 def test_list_collections_success(monkeypatch):
     client = _make_client()
-    stub = StubKBManager(list_collections=lambda: [_collection(name="A"), _collection(name="B")])
+    stub = StubKBManager(
+        list_collections=lambda: [_collection(name="A"), _collection(name="B")]
+    )
     monkeypatch.setattr(kb_routes, "_get_kb_manager", lambda user_id="default": stub)
 
     response = client.get("/api/knowledge-base/collections")
@@ -141,7 +144,9 @@ def test_list_collections_success(monkeypatch):
 
 def test_list_collections_failure(monkeypatch):
     client = _make_client()
-    stub = StubKBManager(list_collections=lambda: (_ for _ in ()).throw(RuntimeError("fail")))
+    stub = StubKBManager(
+        list_collections=lambda: (_ for _ in ()).throw(RuntimeError("fail"))
+    )
     monkeypatch.setattr(kb_routes, "_get_kb_manager", lambda user_id="default": stub)
 
     response = client.get("/api/knowledge-base/collections")
@@ -150,7 +155,9 @@ def test_list_collections_failure(monkeypatch):
 
 def test_get_collection_found(monkeypatch):
     client = _make_client()
-    stub = StubKBManager(get_collection=lambda collection_id: _collection(id=collection_id))
+    stub = StubKBManager(
+        get_collection=lambda collection_id: _collection(id=collection_id)
+    )
     monkeypatch.setattr(kb_routes, "_get_kb_manager", lambda user_id="default": stub)
 
     response = client.get("/api/knowledge-base/collections/col-1")
@@ -169,7 +176,9 @@ def test_get_collection_not_found(monkeypatch):
 
 def test_get_collection_error(monkeypatch):
     client = _make_client()
-    stub = StubKBManager(get_collection=lambda collection_id: (_ for _ in ()).throw(RuntimeError("fail")))
+    stub = StubKBManager(
+        get_collection=lambda collection_id: (_ for _ in ()).throw(RuntimeError("fail"))
+    )
     monkeypatch.setattr(kb_routes, "_get_kb_manager", lambda user_id="default": stub)
 
     response = client.get("/api/knowledge-base/collections/col-1")
@@ -178,7 +187,11 @@ def test_get_collection_error(monkeypatch):
 
 def test_update_collection_success(monkeypatch):
     client = _make_client()
-    stub = StubKBManager(update_collection=lambda **kwargs: _collection(**{"id": kwargs["collection_id"]}))
+    stub = StubKBManager(
+        update_collection=lambda **kwargs: _collection(
+            **{"id": kwargs["collection_id"]}
+        )
+    )
     monkeypatch.setattr(kb_routes, "_get_kb_manager", lambda user_id="default": stub)
 
     response = client.patch(
@@ -203,7 +216,9 @@ def test_update_collection_not_found(monkeypatch):
 
 def test_update_collection_error(monkeypatch):
     client = _make_client()
-    stub = StubKBManager(update_collection=lambda **kwargs: (_ for _ in ()).throw(RuntimeError("fail")))
+    stub = StubKBManager(
+        update_collection=lambda **kwargs: (_ for _ in ()).throw(RuntimeError("fail"))
+    )
     monkeypatch.setattr(kb_routes, "_get_kb_manager", lambda user_id="default": stub)
 
     response = client.patch(
@@ -233,7 +248,11 @@ def test_delete_collection_not_found(monkeypatch):
 
 def test_delete_collection_error(monkeypatch):
     client = _make_client()
-    stub = StubKBManager(delete_collection=lambda collection_id: (_ for _ in ()).throw(RuntimeError("fail")))
+    stub = StubKBManager(
+        delete_collection=lambda collection_id: (_ for _ in ()).throw(
+            RuntimeError("fail")
+        )
+    )
     monkeypatch.setattr(kb_routes, "_get_kb_manager", lambda user_id="default": stub)
 
     response = client.delete("/api/knowledge-base/collections/col-1")
@@ -242,7 +261,9 @@ def test_delete_collection_error(monkeypatch):
 
 def test_upload_document_too_large(monkeypatch):
     client = _make_client()
-    monkeypatch.setattr(kb_routes, "_get_kb_manager", lambda user_id="default": StubKBManager())
+    monkeypatch.setattr(
+        kb_routes, "_get_kb_manager", lambda user_id="default": StubKBManager()
+    )
 
     large_content = BytesIO(b"a" * (10 * 1024 * 1024 + 1))
     response = client.post(
@@ -254,7 +275,9 @@ def test_upload_document_too_large(monkeypatch):
 
 def test_upload_document_invalid_encoding(monkeypatch):
     client = _make_client()
-    monkeypatch.setattr(kb_routes, "_get_kb_manager", lambda user_id="default": StubKBManager())
+    monkeypatch.setattr(
+        kb_routes, "_get_kb_manager", lambda user_id="default": StubKBManager()
+    )
 
     response = client.post(
         "/api/knowledge-base/collections/col-1/documents",
@@ -277,7 +300,9 @@ def test_upload_document_not_found(monkeypatch):
 
 def test_upload_document_error(monkeypatch):
     client = _make_client()
-    stub = StubKBManager(add_document=lambda **kwargs: (_ for _ in ()).throw(RuntimeError("fail")))
+    stub = StubKBManager(
+        add_document=lambda **kwargs: (_ for _ in ()).throw(RuntimeError("fail"))
+    )
     monkeypatch.setattr(kb_routes, "_get_kb_manager", lambda user_id="default": stub)
 
     response = client.post(
@@ -302,7 +327,12 @@ def test_upload_document_success(monkeypatch):
 
 def test_list_documents_success(monkeypatch):
     client = _make_client()
-    stub = StubKBManager(list_documents=lambda collection_id: [_document(id="doc-1"), _document(id="doc-2")])
+    stub = StubKBManager(
+        list_documents=lambda collection_id: [
+            _document(id="doc-1"),
+            _document(id="doc-2"),
+        ]
+    )
     monkeypatch.setattr(kb_routes, "_get_kb_manager", lambda user_id="default": stub)
 
     response = client.get("/api/knowledge-base/collections/col-1/documents")
@@ -312,7 +342,9 @@ def test_list_documents_success(monkeypatch):
 
 def test_list_documents_error(monkeypatch):
     client = _make_client()
-    stub = StubKBManager(list_documents=lambda collection_id: (_ for _ in ()).throw(RuntimeError("fail")))
+    stub = StubKBManager(
+        list_documents=lambda collection_id: (_ for _ in ()).throw(RuntimeError("fail"))
+    )
     monkeypatch.setattr(kb_routes, "_get_kb_manager", lambda user_id="default": stub)
 
     response = client.get("/api/knowledge-base/collections/col-1/documents")
@@ -340,7 +372,9 @@ def test_get_document_not_found(monkeypatch):
 
 def test_get_document_error(monkeypatch):
     client = _make_client()
-    stub = StubKBManager(get_document=lambda document_id: (_ for _ in ()).throw(RuntimeError("fail")))
+    stub = StubKBManager(
+        get_document=lambda document_id: (_ for _ in ()).throw(RuntimeError("fail"))
+    )
     monkeypatch.setattr(kb_routes, "_get_kb_manager", lambda user_id="default": stub)
 
     response = client.get("/api/knowledge-base/documents/doc-1")
@@ -367,7 +401,9 @@ def test_delete_document_not_found(monkeypatch):
 
 def test_delete_document_error(monkeypatch):
     client = _make_client()
-    stub = StubKBManager(delete_document=lambda document_id: (_ for _ in ()).throw(RuntimeError("fail")))
+    stub = StubKBManager(
+        delete_document=lambda document_id: (_ for _ in ()).throw(RuntimeError("fail"))
+    )
     monkeypatch.setattr(kb_routes, "_get_kb_manager", lambda user_id="default": stub)
 
     response = client.delete("/api/knowledge-base/documents/doc-1")
@@ -376,7 +412,9 @@ def test_delete_document_error(monkeypatch):
 
 def test_search_success(monkeypatch):
     client = _make_client()
-    stub = StubKBManager(search=lambda **kwargs: [_search_result(), _search_result(document_id="doc-2")])
+    stub = StubKBManager(
+        search=lambda **kwargs: [_search_result(), _search_result(document_id="doc-2")]
+    )
     monkeypatch.setattr(kb_routes, "_get_kb_manager", lambda user_id="default": stub)
 
     response = client.post(
@@ -389,7 +427,9 @@ def test_search_success(monkeypatch):
 
 def test_search_error(monkeypatch):
     client = _make_client()
-    stub = StubKBManager(search=lambda **kwargs: (_ for _ in ()).throw(RuntimeError("fail")))
+    stub = StubKBManager(
+        search=lambda **kwargs: (_ for _ in ()).throw(RuntimeError("fail"))
+    )
     monkeypatch.setattr(kb_routes, "_get_kb_manager", lambda user_id="default": stub)
 
     response = client.post(

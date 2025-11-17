@@ -41,7 +41,11 @@ def parse_log_pytest_options(log: str) -> dict[str, str]:
                 continue
             if has_option := option_pattern.search(test_case[1]):
                 main, option = has_option.groups()
-                if option.startswith("/") and (not option.startswith("//")) and ("*" not in option):
+                if (
+                    option.startswith("/")
+                    and (not option.startswith("//"))
+                    and ("*" not in option)
+                ):
                     option = "/" + option.split("/")[-1]
                 test_name = f"{main}[{option}]"
             else:
@@ -70,7 +74,9 @@ def parse_log_django(log: str) -> dict[str, str]:
     return test_status_map
 
 
-def _process_line_for_django_log(line: str, test_status_map: dict, prev_test: str | None) -> str | None:
+def _process_line_for_django_log(
+    line: str, test_status_map: dict, prev_test: str | None
+) -> str | None:
     """Process a single line for Django log parsing."""
     # Handle special case for version test
     if "--version is equivalent to version" in line:
@@ -102,7 +108,9 @@ def _process_passed_tests(line: str, test_status_map: dict) -> None:
 
 def _extract_test_name_for_passed(line: str, suffix: str) -> str:
     """Extract test name for passed test."""
-    if line.strip().startswith("Applying sites.0002_alter_domain_unique...test_no_migrations"):
+    if line.strip().startswith(
+        "Applying sites.0002_alter_domain_unique...test_no_migrations"
+    ):
         line = line.split("...", 1)[-1].strip()
     return line.rsplit(suffix, 1)[0]
 
@@ -134,7 +142,9 @@ def _process_error_tests(line: str, test_status_map: dict) -> None:
         test_status_map[test] = TestStatus.ERROR.value
 
 
-def _process_ok_with_prev_test(line: str, test_status_map: dict, prev_test: str | None) -> None:
+def _process_ok_with_prev_test(
+    line: str, test_status_map: dict, prev_test: str | None
+) -> None:
     """Process 'ok' pattern with previous test."""
     if line.lstrip().startswith("ok") and prev_test is not None:
         test_status_map[prev_test] = TestStatus.PASSED.value

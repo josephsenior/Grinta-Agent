@@ -6,8 +6,8 @@ OUT_FILE = "patch.jsonl"
 
 
 def main():
-    with open(IN_FILE, "r", encoding='utf-8') as fin:
-        with open(OUT_FILE, "w", encoding='utf-8') as fout:
+    with open(IN_FILE, "r", encoding="utf-8") as fin:
+        with open(OUT_FILE, "w", encoding="utf-8") as fout:
             for line in fin:
                 data = json.loads(line)
                 groups = re.match("(.*)__(.*)-(.*)", data["instance_id"])

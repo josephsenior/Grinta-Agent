@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 import pytest
 
 from forge.controller.replay import ReplayManager
@@ -28,7 +30,11 @@ def test_replay_manager_filters_and_replays():
     step2 = manager.step()
     assert isinstance(step2, CmdRunAction)
     # Wait for response flag is cleared during initialization
-    assert manager.replay_events[0].wait_for_response is False
+    first_event = manager.replay_events[0]
+    if isinstance(first_event, MessageAction):
+        assert first_event.wait_for_response is False
+    else:
+        pytest.fail("First replay event is not a MessageAction")
     assert not manager.should_replay()
 
 
@@ -41,6 +47,4 @@ def test_replay_manager_from_trajectory():
     assert len(events) == 2
     assert isinstance(events[0], MessageAction)
     with pytest.raises(ValueError):
-        ReplayManager.get_replay_events("not-a-list")
-
-
+        ReplayManager.get_replay_events(cast(Any, "not-a-list"))

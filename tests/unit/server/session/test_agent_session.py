@@ -6,13 +6,20 @@ import asyncio
 import logging
 import time
 from types import MappingProxyType, SimpleNamespace
+from typing import Any, Mapping, cast
 import json
 
 import pytest
+from pydantic import SecretStr
 
+from forge.integrations.provider import CustomSecret, ProviderToken, ProviderType
+from forge.llm.llm_registry import LLMRegistry
+from forge.server.services.conversation_stats import ConversationStats
 from forge.server.session import agent_session as session_module
 from forge.server.session.agent_session import AgentSession, AgentState
 from forge.events.action import MessageAction
+from forge.storage.files import FileStore
+from forge.storage.memory import InMemoryFileStore
 
 
 class DummyEventStream:
@@ -68,34 +75,50 @@ class DummyRemoteRuntime(DummyRuntime):
 
 
 class DummyProviderHandler:
-    created = []
+    created: list["DummyProviderHandler"] = []
 
-    def __init__(self, provider_tokens=None):
-        self.provider_tokens = provider_tokens or {}
+    def __init__(
+        self,
+        provider_tokens: MappingProxyType[ProviderType, ProviderToken] | None = None,
+    ):
+        self.provider_tokens = provider_tokens
         DummyProviderHandler.created.append(self)
         self.event_stream = None
 
     @staticmethod
     def get_provider_env_key(provider):
-        return f"{provider}_token"
+        if hasattr(provider, "name"):
+            return f"{provider.name}_TOKEN"
+        return f"{str(provider).upper()}_TOKEN"
 
     async def set_event_stream_secrets(self, event_stream):
         self.event_stream = event_stream
 
     async def get_env_vars(self, expose_secrets=False):
-        return {f"ENV_{key.upper()}": value for key, value in self.provider_tokens.items()}
+        if not self.provider_tokens:
+            return {}
+        return {
+            f"ENV_{provider.name}": token.token.get_secret_value()
+            if token.token
+            else None
+            for provider, token in self.provider_tokens.items()
+        }
 
 
 class DummyUserSecrets:
-    def __init__(self, custom_secrets: dict | None):
-        self.custom_secrets = custom_secrets or {}
+    def __init__(self, custom_secrets: Mapping[str, CustomSecret] | None):
+        data = dict(custom_secrets) if custom_secrets else {}
+        self.custom_secrets = MappingProxyType(data)
         self.event_stream = None
 
     def set_event_stream_secrets(self, event_stream):
         self.event_stream = event_stream
 
     def get_env_vars(self):
-        return {f"SECRET_{k}": v for k, v in self.custom_secrets.items()}
+        return {
+            f"SECRET_{k}": v.secret.get_secret_value()
+            for k, v in self.custom_secrets.items()
+        }
 
     def get_custom_secrets_descriptions(self):
         return {k: f"desc:{k}" for k in self.custom_secrets}
@@ -125,7 +148,9 @@ class DummyMemory:
 class DummyAgentController:
     def __init__(self, **kwargs):
         self.kwargs = kwargs
-        self.state = SimpleNamespace(agent_state=kwargs.get("initial_state", AgentState.RUNNING))
+        self.state = SimpleNamespace(
+            agent_state=kwargs.get("initial_state", AgentState.RUNNING)
+        )
         self.closed = False
         self.saved = False
 
@@ -149,14 +174,35 @@ class DummyAgent:
     def __init__(self):
         self.name = "dummy-agent"
         self.config = SimpleNamespace(enable_mcp=True)
-        self.llm = SimpleNamespace(config=SimpleNamespace(model="model", base_url="url"))
+        self.llm = SimpleNamespace(
+            config=SimpleNamespace(model="model", base_url="url")
+        )
         self.sandbox_plugins = [SimpleNamespace(name="plugin")]
+
+
+def _provider_tokens(**tokens: str) -> MappingProxyType[ProviderType, ProviderToken]:
+    mapping = {
+        ProviderType[key.upper()]: ProviderToken(token=SecretStr(value))
+        for key, value in tokens.items()
+    }
+    return MappingProxyType(mapping)
+
+
+def _custom_secret_mapping(**secrets: str) -> MappingProxyType[str, CustomSecret]:
+    mapping = {
+        key: CustomSecret(secret=SecretStr(value)) for key, value in secrets.items()
+    }
+    return MappingProxyType(mapping)
 
 
 @pytest.fixture(autouse=True)
 def patch_dependencies(monkeypatch):
     monkeypatch.setattr(session_module, "EventStream", DummyEventStream)
-    monkeypatch.setattr(session_module, "forgeLoggerAdapter", lambda extra=None: logging.getLogger("agent-session-test"))
+    monkeypatch.setattr(
+        session_module,
+        "forgeLoggerAdapter",
+        lambda extra=None: logging.getLogger("agent-session-test"),
+    )
     monkeypatch.setattr(session_module, "ProviderHandler", DummyProviderHandler)
     monkeypatch.setattr(session_module, "UserSecrets", DummyUserSecrets)
     monkeypatch.setattr(session_module, "Memory", DummyMemory)
@@ -173,16 +219,41 @@ def patch_dependencies(monkeypatch):
 
     monkeypatch.setattr(session_module, "call_sync_from_async", async_call_sync)
     monkeypatch.setattr(session_module, "RemoteRuntime", DummyRemoteRuntime)
+
+    class DummyEventAdapter:
+        def __init__(self):
+            self._streams: dict[str, DummyEventStream] = {}
+
+        def start_session(self, session_id=None, user_id=None, **kwargs):
+            sid = session_id or "dummy-session"
+            if sid not in self._streams:
+                self._streams[sid] = DummyEventStream(sid, InMemoryFileStore(), user_id)
+            return {"session_id": sid, "user_id": user_id, "repository": None, "branch": None, "labels": kwargs.get("labels") or {}}
+
+        def get_event_stream(self, session_id):
+            return self._streams.setdefault(
+                session_id, DummyEventStream(session_id, InMemoryFileStore(), "user")
+            )
+
+    dummy_adapter = DummyEventAdapter()
+    monkeypatch.setattr(
+        session_module, "get_event_service_adapter", lambda: dummy_adapter
+    )
     yield
     DummyProviderHandler.created.clear()
 
 
 def make_agent_session():
+    file_store: FileStore = InMemoryFileStore()
+    llm_registry = cast(LLMRegistry, SimpleNamespace())
+    conversation_stats = ConversationStats(
+        file_store, conversation_id="sid", user_id="user"
+    )
     return AgentSession(
         sid="sid",
-        file_store="fs",
-        llm_registry=SimpleNamespace(),
-        conversation_stats=SimpleNamespace(),
+        file_store=file_store,
+        llm_registry=llm_registry,
+        conversation_stats=conversation_stats,
         status_callback=None,
         user_id="user",
     )
@@ -195,10 +266,11 @@ def make_agent():
 @pytest.mark.asyncio
 async def test_setup_runtime_and_providers_invokes_handlers(monkeypatch):
     session = make_agent_session()
+
     async def fake_create_runtime(*args, **kwargs):
         return True
 
-    called = {}
+    called: dict[str, Any] = {}
 
     async def fake_setup_handlers(*args, **kwargs):
         called["handled"] = True
@@ -223,9 +295,13 @@ async def test_setup_runtime_and_providers_invokes_handlers(monkeypatch):
 async def test_start_success(monkeypatch):
     session = make_agent_session()
     session._validate_session_state = lambda: True
-    startup_state = {"started_at": time.time(), "finished": False, "restored_state": False}
+    startup_state = {
+        "started_at": time.time(),
+        "finished": False,
+        "restored_state": False,
+    }
     session._initialize_session_startup = lambda: startup_state
-    events = {}
+    events: dict[str, bool] = {}
 
     async def fake_setup_runtime(*args, **kwargs):
         return True
@@ -239,10 +315,14 @@ async def test_start_success(monkeypatch):
     session._setup_runtime_and_providers = fake_setup_runtime
     session._setup_memory_and_mcp_tools = fake_setup_memory
     session._setup_controller_and_handle_replay = fake_setup_controller
-    recorded = {}
+    recorded: dict[str, Any] = {}
     session._start_agent_execution = lambda msg: recorded.setdefault("msg", msg)
-    finalize_calls = {}
-    session._finalize_session_startup = lambda state, runtime_connected: finalize_calls.setdefault("called", (state, runtime_connected))
+    finalize_calls: dict[str, Any] = {}
+    session._finalize_session_startup = (
+        lambda state, runtime_connected: finalize_calls.setdefault(
+            "called", (state, runtime_connected)
+        )
+    )
 
     await session.start(
         runtime_name="runtime",
@@ -260,14 +340,22 @@ async def test_start_success(monkeypatch):
 async def test_start_handles_exception(monkeypatch):
     session = make_agent_session()
     session._validate_session_state = lambda: True
-    session._initialize_session_startup = lambda: {"started_at": time.time(), "finished": False, "restored_state": False}
+    session._initialize_session_startup = lambda: {
+        "started_at": time.time(),
+        "finished": False,
+        "restored_state": False,
+    }
 
     async def failing_setup(*args, **kwargs):
         raise RuntimeError("boom")
 
-    finalize = {}
+    finalize: dict[str, Any] = {}
     session._setup_runtime_and_providers = failing_setup
-    session._finalize_session_startup = lambda state, runtime_connected: finalize.setdefault("called", (state, runtime_connected))
+    session._finalize_session_startup = (
+        lambda state, runtime_connected: finalize.setdefault(
+            "called", (state, runtime_connected)
+        )
+    )
 
     with pytest.raises(RuntimeError):
         await session.start(
@@ -317,11 +405,15 @@ def test_run_replay(monkeypatch):
 
 def test_maybe_restore_state(monkeypatch):
     session = make_agent_session()
-    monkeypatch.setattr(session_module.State, "restore_from_session", lambda *args, **kwargs: SimpleNamespace())
+    monkeypatch.setattr(
+        session_module.State,
+        "restore_from_session",
+        lambda *args, **kwargs: SimpleNamespace(),
+    )
     restored = session._maybe_restore_state()
     assert restored is not None
 
-    calls = {"count": 0}
+    calls: dict[str, int] = {"count": 0}
 
     def raise_restore(*args, **kwargs):
         calls["count"] += 1
@@ -353,17 +445,29 @@ def test_initialize_and_finalize_startup():
     session._finalize_session_startup(state, runtime_connected=True)
     assert session._starting is False
 
+
+def test_finalize_session_startup_failure():
+    session = make_agent_session()
+    state = session._initialize_session_startup()
     state["finished"] = False
     session._finalize_session_startup(state, runtime_connected=False)
 
 
 def test_override_provider_tokens_with_custom_secret():
     session = make_agent_session()
-    tokens = MappingProxyType({"github": "token", "gitlab": "token2"})
-    secrets = {"GITHUB_TOKEN": "custom"}
+    tokens = MappingProxyType(
+        {
+            ProviderType.GITHUB: ProviderToken(token=SecretStr("token")),
+            ProviderType.GITLAB: ProviderToken(token=SecretStr("token2")),
+        }
+    )
+    secrets = MappingProxyType(
+        {"GITHUB_TOKEN": CustomSecret(secret=SecretStr("custom"))}
+    )
     filtered = session.override_provider_tokens_with_custom_secret(tokens, secrets)
-    assert "github" not in filtered
-    assert "gitlab" in filtered
+    assert filtered is not None
+    assert ProviderType.GITHUB not in filtered
+    assert ProviderType.GITLAB in filtered
 
     assert session.override_provider_tokens_with_custom_secret(None, None) is None
 
@@ -376,10 +480,11 @@ def test_validate_session_state_default():
 @pytest.mark.asyncio
 async def test_setup_provider_handlers(monkeypatch):
     session = make_agent_session()
-    secrets = {"foo": "bar"}
-    await session._setup_provider_handlers({"github": "token"}, secrets)
+    secrets = _custom_secret_mapping(foo="bar")
+    await session._setup_provider_handlers(_provider_tokens(github="token"), secrets)
     assert DummyProviderHandler.created
     handler = DummyProviderHandler.created[0]
+    assert handler.provider_tokens is not None
     assert handler.event_stream is session.event_stream
 
 
@@ -392,13 +497,15 @@ async def test_setup_memory_and_mcp_tools(monkeypatch):
         selected_repository="repo/owner",
         selected_branch="main",
         conversation_instructions="instruction",
-        custom_secrets={"foo": SimpleNamespace(description="desc")},
+        custom_secrets=_custom_secret_mapping(foo="bar"),
         config=SimpleNamespace(workspace_mount_path_in_sandbox="/workspace"),
         agent=agent,
     )
-    assert isinstance(session.memory, DummyMemory)
-    assert session.memory.runtime_info[0] is session.runtime
-    assert session.memory.repo_info == ("repo/owner", "owner", "main")
+    memory = session.memory
+    assert isinstance(memory, DummyMemory)
+    assert memory.runtime_info is not None
+    assert memory.runtime_info[0] is session.runtime
+    assert memory.repo_info == ("repo/owner", "owner", "main")
 
 
 @pytest.mark.asyncio
@@ -447,14 +554,16 @@ async def test_setup_controller_and_handle_replay(monkeypatch):
 async def test_create_runtime_remote(monkeypatch):
     session = make_agent_session()
     agent = make_agent()
-    monkeypatch.setattr(session_module, "get_runtime_cls", lambda name: DummyRemoteRuntime)
+    monkeypatch.setattr(
+        session_module, "get_runtime_cls", lambda name: DummyRemoteRuntime
+    )
 
     connected = await session._create_runtime(
         runtime_name="remote",
         config=SimpleNamespace(),
         agent=agent,
-        git_provider_tokens={"github": "token"},
-        custom_secrets={"GITHUB_TOKEN": "override"},
+        git_provider_tokens=_provider_tokens(github="token"),
+        custom_secrets=_custom_secret_mapping(GITHUB_TOKEN="override"),
         selected_repository="owner/repo",
         selected_branch="main",
     )
@@ -475,13 +584,17 @@ async def test_create_runtime_non_remote(monkeypatch):
         runtime_name="local",
         config=SimpleNamespace(),
         agent=agent,
-        git_provider_tokens={"github": "token"},
+        git_provider_tokens=_provider_tokens(github="token"),
         custom_secrets=None,
         selected_repository=None,
         selected_branch=None,
     )
     assert connected is True
-    assert DummyProviderHandler.created[-1].provider_tokens == {"github": "token"}
+    last_handler = DummyProviderHandler.created[-1]
+    assert last_handler.provider_tokens is not None
+    token = last_handler.provider_tokens[ProviderType.GITHUB]
+    assert token.token is not None
+    assert token.token.get_secret_value() == "token"
 
 
 @pytest.mark.asyncio
@@ -494,8 +607,10 @@ async def test_create_runtime_handles_unavailable(monkeypatch):
 
     monkeypatch.setattr(session_module, "get_runtime_cls", lambda name: FailingRuntime)
 
-    status_calls = []
-    session._status_callback = lambda msg_type, status, message: status_calls.append((msg_type, status, message))
+    status_calls: list[tuple[str, Any, Any]] = []
+    session._status_callback = lambda msg_type, status, message: status_calls.append(
+        (msg_type, status, message)
+    )
 
     connected = await session._create_runtime(
         runtime_name="failing",
@@ -604,15 +719,17 @@ def test_maybe_restore_state_warning(monkeypatch):
 @pytest.mark.asyncio
 async def test_start_returns_when_invalid(monkeypatch):
     session = make_agent_session()
-    calls = {}
+    calls: dict[str, bool] = {}
 
     def fake_validate():
         calls["called"] = True
         return False
 
     session._validate_session_state = fake_validate
-    called = {}
-    session._setup_runtime_and_providers = lambda *a, **k: called.setdefault("runtime", True)
+    called: dict[str, Any] = {}
+    session._setup_runtime_and_providers = lambda *a, **k: called.setdefault(
+        "runtime", True
+    )
 
     await session.start(
         runtime_name="runtime",
@@ -627,7 +744,11 @@ async def test_start_returns_when_invalid(monkeypatch):
 @pytest.mark.asyncio
 async def test_start_respects_closed(monkeypatch):
     session = make_agent_session()
-    session._initialize_session_startup = lambda: {"started_at": time.time(), "finished": False, "restored_state": False}
+    session._initialize_session_startup = lambda: {
+        "started_at": time.time(),
+        "finished": False,
+        "restored_state": False,
+    }
 
     async def fake_setup_runtime(*args, **kwargs):
         return True
@@ -641,10 +762,14 @@ async def test_start_respects_closed(monkeypatch):
     session._setup_runtime_and_providers = fake_setup_runtime
     session._setup_memory_and_mcp_tools = fake_setup_memory
     session._setup_controller_and_handle_replay = fake_setup_controller
-    recorded = {}
+    recorded: dict[str, Any] = {}
     session._start_agent_execution = lambda msg: recorded.setdefault("msg", msg)
-    finalize_calls = {}
-    session._finalize_session_startup = lambda state, runtime_connected: finalize_calls.setdefault("called", (state, runtime_connected))
+    finalize_calls: dict[str, Any] = {}
+    session._finalize_session_startup = (
+        lambda state, runtime_connected: finalize_calls.setdefault(
+            "called", (state, runtime_connected)
+        )
+    )
 
     await session.start(
         runtime_name="runtime",
@@ -658,7 +783,11 @@ async def test_start_respects_closed(monkeypatch):
     assert finalize_calls["called"][1] is True
 
     session._closed = True
-    session._initialize_session_startup = lambda: {"started_at": time.time(), "finished": False, "restored_state": False}
+    session._initialize_session_startup = lambda: {
+        "started_at": time.time(),
+        "finished": False,
+        "restored_state": False,
+    }
     recorded.clear()
     await session.start(
         runtime_name="runtime",
@@ -673,7 +802,9 @@ def test_get_state_timeout_paths(monkeypatch):
     session = make_agent_session()
     session.controller = None
     session._started_at = 0
-    monkeypatch.setattr(session_module.time, "time", lambda: session_module.WAIT_TIME_BEFORE_CLOSE + 1)
+    monkeypatch.setattr(
+        session_module.time, "time", lambda: session_module.WAIT_TIME_BEFORE_CLOSE + 1
+    )
     assert session.get_state() == AgentState.ERROR
     monkeypatch.setattr(session_module.time, "time", lambda: 0)
     assert session.get_state() is None

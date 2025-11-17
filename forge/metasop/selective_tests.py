@@ -58,7 +58,9 @@ def _gather_test_files(repo_root: Path) -> list[Path]:
         return out
     for p in tests_dir.rglob("*.py"):
         name = p.name
-        if name.startswith(PYTEST_FILE_PREFIX) or name.endswith(f"{PYTEST_FILE_SUFFIX}.py"):
+        if name.startswith(PYTEST_FILE_PREFIX) or name.endswith(
+            f"{PYTEST_FILE_SUFFIX}.py"
+        ):
             out.append(p)
     return out
 
@@ -83,7 +85,9 @@ def _parse_imported_modules(test_file: Path) -> set[str]:
     return modules
 
 
-def _candidate_modules_from_changed(changed_paths: Iterable[str], repo_root: Path) -> set[str]:
+def _candidate_modules_from_changed(
+    changed_paths: Iterable[str], repo_root: Path
+) -> set[str]:
     mods: set[str] = set()
     for rel in changed_paths:
         try:
@@ -132,7 +136,9 @@ def select_tests(
         return []
 
     # Select candidates based on mode
-    candidate = _select_candidates_by_mode(changed_paths, repo_root_path, test_files, mode)
+    candidate = _select_candidates_by_mode(
+        changed_paths, repo_root_path, test_files, mode
+    )
 
     # Convert to relative paths and apply limits
     return _format_and_limit_results(candidate, repo_root_path, max_tests)
@@ -164,7 +170,9 @@ def _select_candidates_by_mode(
     return candidate
 
 
-def _select_by_imports(changed_paths: list[str], repo_root_path: Path, test_files: list[Path]) -> set[Path]:
+def _select_by_imports(
+    changed_paths: list[str], repo_root_path: Path, test_files: list[Path]
+) -> set[Path]:
     """Select test files based on import analysis."""
     candidate: set[Path] = set()
 
@@ -206,16 +214,22 @@ def _is_python_file(path: Path) -> bool:
     return path.suffix == ".py"
 
 
-def _find_corresponding_test_file(python_file: Path, repo_root_path: Path) -> Path | None:
+def _find_corresponding_test_file(
+    python_file: Path, repo_root_path: Path
+) -> Path | None:
     """Find corresponding test file for a Python file."""
     stem = python_file.stem
     match = repo_root_path / TEST_FILE_GLOB / f"test_{stem}.py"
     return match if match.exists() else None
 
 
-def _format_and_limit_results(candidate: set[Path], repo_root_path: Path, max_tests: int | None) -> list[str]:
+def _format_and_limit_results(
+    candidate: set[Path], repo_root_path: Path, max_tests: int | None
+) -> list[str]:
     """Format results as relative paths and apply limits."""
-    out = [str(p.relative_to(repo_root_path)).replace("\\", "/") for p in sorted(candidate)]
+    out = [
+        str(p.relative_to(repo_root_path)).replace("\\", "/") for p in sorted(candidate)
+    ]
 
     if max_tests and len(out) > max_tests:
         out = out[:max_tests]

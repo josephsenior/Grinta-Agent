@@ -19,7 +19,9 @@ if TYPE_CHECKING:
     from forge.core.config import ForgeConfig
 
 
-def _setup_llm_registry(config: ForgeConfig | None, llm_registry: LLMRegistry | None) -> LLMRegistry:
+def _setup_llm_registry(
+    config: ForgeConfig | None, llm_registry: LLMRegistry | None
+) -> LLMRegistry:
     """Setup LLM registry from config or use provided one."""
     if llm_registry is None:
         if config is None:
@@ -79,7 +81,9 @@ def _get_candidate_hint(ctx: OrchestrationContext, step: SopStep) -> int | None:
     return None
 
 
-def _generate_multiple_candidates(llm, messages: list, n_hint: int) -> tuple[Any, list[dict]]:
+def _generate_multiple_candidates(
+    llm, messages: list, n_hint: int
+) -> tuple[Any, list[dict]]:
     """Generate multiple candidates for the step."""
     candidates_list = []
     last_resp = None
@@ -118,7 +122,9 @@ def _extract_usage_metrics(response) -> dict[str, Any]:
     usage = getattr(response, "usage", None)
     return {
         "prompt_tokens": getattr(usage, "prompt_tokens", None) if usage else None,
-        "completion_tokens": getattr(usage, "completion_tokens", None) if usage else None,
+        "completion_tokens": getattr(usage, "completion_tokens", None)
+        if usage
+        else None,
         "total_tokens": getattr(usage, "total_tokens", None) if usage else None,
         "model_name": getattr(response, "model", None),
     }
@@ -134,7 +140,9 @@ def _build_artifact_content(
 
     if candidates_list is not None:
         art_content["candidates"] = candidates_list
-        art_content["__raw__"] = candidates_list[0]["content"] if candidates_list else ""
+        art_content["__raw__"] = (
+            candidates_list[0]["content"] if candidates_list else ""
+        )
     else:
         art_content["__raw__"] = content
 
@@ -177,7 +185,9 @@ def run_step_with_Forge(
         n_hint = _get_candidate_hint(ctx, step)
 
         if n_hint and isinstance(n_hint, int) and (n_hint > 1):
-            response, candidates_list = _generate_multiple_candidates(llm, messages, n_hint)
+            response, candidates_list = _generate_multiple_candidates(
+                llm, messages, n_hint
+            )
             content = None
         else:
             response, content = _generate_single_response(llm, messages)
@@ -197,4 +207,3 @@ def run_step_with_Forge(
 
 
 __all__ = ["LLMRegistry", "load_schema", "run_step_with_Forge"]
- 

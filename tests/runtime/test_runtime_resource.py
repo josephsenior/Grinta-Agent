@@ -9,9 +9,17 @@ from forge.events.action import CmdRunAction
 def test_stress_docker_runtime(temp_dir, runtime_cls, repeat=1):
     pytest.skip("This test is flaky")
     runtime, config = _load_runtime(
-        temp_dir, runtime_cls, docker_runtime_kwargs={"cpu_period": 100000, "cpu_quota": 100000, "mem_limit": "4G"}
+        temp_dir,
+        runtime_cls,
+        docker_runtime_kwargs={
+            "cpu_period": 100000,
+            "cpu_quota": 100000,
+            "mem_limit": "4G",
+        },
     )
-    action = CmdRunAction(command="sudo apt-get update && sudo apt-get install -y stress-ng")
+    action = CmdRunAction(
+        command="sudo apt-get update && sudo apt-get install -y stress-ng"
+    )
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})

@@ -1,6 +1,7 @@
 """Structured task tracking tool definition for CodeAct runs."""
 
 from litellm import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from ._compat import build_tool_param
 
 from forge.llm.tool_names import TASK_TRACKER_TOOL_NAME
 
@@ -8,7 +9,9 @@ _DETAILED_TASK_TRACKER_DESCRIPTION = "This tool provides structured task managem
 _SHORT_TASK_TRACKER_DESCRIPTION = "Provides structured task management for development workflows, enabling progress\ntracking and systematic organization of complex coding activities.\n\n* Apply to multi-phase projects (3+ distinct steps) or when managing multiple user requirements\n* Update status (todo/in_progress/done) dynamically throughout work\n* Maintain single active task focus at any time\n* Mark completion immediately upon task finish\n* Decompose complex work into manageable, actionable units\n"
 
 
-def create_task_tracker_tool(use_short_description: bool = False) -> ChatCompletionToolParam:
+def create_task_tracker_tool(
+    use_short_description: bool = False,
+) -> ChatCompletionToolParam:
     """Create a task tracker tool for the agent.
 
     Args:
@@ -18,56 +21,54 @@ def create_task_tracker_tool(use_short_description: bool = False) -> ChatComplet
         ChatCompletionToolParam: The configured task tracker tool.
 
     """
-    description = _SHORT_TASK_TRACKER_DESCRIPTION if use_short_description else _DETAILED_TASK_TRACKER_DESCRIPTION
-    return ChatCompletionToolParam(
-        type="function",
-        function=ChatCompletionToolParamFunctionChunk(
-            name=TASK_TRACKER_TOOL_NAME,
-            description=description,
-            parameters={
-                "type": "object",
-                "properties": {
-                    "command": {
-                        "type": "string",
-                        "enum": [
-                            "view",
-                            "plan"],
-                        "description": "The command to execute. `view` shows the current task list. `plan` creates or updates the task list based on provided requirements and progress. Always `view` the current list before making changes.",
-                    },
-                    "task_list": {
-                        "type": "array",
-                        "description": "The full task list. Required parameter of `plan` command.",
-                        "items": {
-                                "type": "object",
-                                "properties": {
-                                    "id": {
-                                        "type": "string",
-                                        "description": "Unique task identifier"},
-                                    "title": {
-                                        "type": "string",
-                                        "description": "Brief task description"},
-                                    "status": {
-                                        "type": "string",
-                                                "description": "Current task status",
-                                                "enum": [
-                                                    "todo",
-                                                    "in_progress",
-                                                    "done"],
-                                    },
-                                    "notes": {
-                                        "type": "string",
-                                        "description": "Optional additional context or details"},
-                                },
-                            "required": [
-                                    "title",
-                                    "status",
-                                    "id"],
-                            "additionalProperties": False,
+    description = (
+        _SHORT_TASK_TRACKER_DESCRIPTION
+        if use_short_description
+        else _DETAILED_TASK_TRACKER_DESCRIPTION
+    )
+    return build_tool_param(
+        ChatCompletionToolParam,
+        ChatCompletionToolParamFunctionChunk,
+        name=TASK_TRACKER_TOOL_NAME,
+        description=description,
+        parameters={
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "enum": ["view", "plan"],
+                    "description": "The command to execute. `view` shows the current task list. `plan` creates or updates the task list based on provided requirements and progress. Always `view` the current list before making changes.",
+                },
+                "task_list": {
+                    "type": "array",
+                    "description": "The full task list. Required parameter of `plan` command.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "description": "Unique task identifier",
+                            },
+                            "title": {
+                                "type": "string",
+                                "description": "Brief task description",
+                            },
+                            "status": {
+                                "type": "string",
+                                "description": "Current task status",
+                                "enum": ["todo", "in_progress", "done"],
+                            },
+                            "notes": {
+                                "type": "string",
+                                "description": "Optional additional context or details",
+                            },
                         },
+                        "required": ["title", "status", "id"],
+                        "additionalProperties": False,
                     },
                 },
-                "required": ["command"],
-                "additionalProperties": False,
             },
-        ),
+            "required": ["command"],
+            "additionalProperties": False,
+        },
     )

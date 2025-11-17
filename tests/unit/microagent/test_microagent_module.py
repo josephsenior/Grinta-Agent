@@ -29,14 +29,18 @@ def test_finalize_loaded_microagent_validates_type() -> None:
     assert finalized.version == "1.2"
 
     with pytest.raises(MicroagentValidationError):
-        _finalize_loaded_microagent({"name": "demo", "type": "invalid"}, Path("demo.md"))
+        _finalize_loaded_microagent(
+            {"name": "demo", "type": "invalid"}, Path("demo.md")
+        )
 
 
 def test_infer_microagent_type_updates_triggers() -> None:
     knowledge_metadata = MicroagentMetadata(name="demo", triggers=["/demo"])
     assert _infer_microagent_type(knowledge_metadata) is MicroagentType.KNOWLEDGE
 
-    task_metadata = MicroagentMetadata(name="runner", inputs=[InputMetadata(name="arg", description="desc")])
+    task_metadata = MicroagentMetadata(
+        name="runner", inputs=[InputMetadata(name="arg", description="desc")]
+    )
     inferred = _infer_microagent_type(task_metadata)
     assert inferred is MicroagentType.TASK
     assert "/runner" in task_metadata.triggers
@@ -76,7 +80,13 @@ def test_task_microagent_appends_prompt() -> None:
         inputs=[InputMetadata(name="project", description="Name of project")],
         type=MicroagentType.TASK,
     )
-    agent = TaskMicroagent(name="tasker", content="Task body with ${project}", metadata=metadata, source="path", type=MicroagentType.TASK)
+    agent = TaskMicroagent(
+        name="tasker",
+        content="Task body with ${project}",
+        metadata=metadata,
+        source="path",
+        type=MicroagentType.TASK,
+    )
     assert "ask the user to provide them" in agent.content
     assert agent.requires_user_input() is True
     assert agent.extract_variables("Here is ${value}") == ["value"]
@@ -191,13 +201,18 @@ def test_derive_microagent_name_fallback_relpath(tmp_path: Path) -> None:
     assert derived.endswith("external")
 
 
-def test_derive_microagent_name_returns_none(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_derive_microagent_name_returns_none(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     microagent_dir = tmp_path / "microagents"
     microagent_dir.mkdir()
     target = tmp_path / "file.md"
     target.write_text("content", encoding="utf-8")
 
-    monkeypatch.setattr("os.path.relpath", lambda *args, **kwargs: (_ for _ in ()).throw(OSError("fail")))
+    monkeypatch.setattr(
+        "os.path.relpath",
+        lambda *args, **kwargs: (_ for _ in ()).throw(OSError("fail")),
+    )
     assert BaseMicroagent._derive_microagent_name(target, microagent_dir) is None
 
 
@@ -227,11 +242,16 @@ def test_load_handles_legacy_instructions(tmp_path: Path) -> None:
     assert agent.name == "repo_legacy"
 
 
-def test_load_single_microagent_generic_error(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_load_single_microagent_generic_error(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     path = tmp_path / "agent.md"
     path.write_text("---\nname: a\n---\n", encoding="utf-8")
 
-    monkeypatch.setattr("forge.microagent.microagent.BaseMicroagent.load", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(
+        "forge.microagent.microagent.BaseMicroagent.load",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
 
     with pytest.raises(ValueError) as exc:
         micro_module._load_single_microagent(path, tmp_path)
@@ -248,4 +268,3 @@ def test_resolve_path_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     stub = _PathStub("relative.md")
     resolved = BaseMicroagent._resolve_path(stub)
     assert isinstance(resolved, Path)
-

@@ -36,4 +36,3 @@ def test_internal_task_tracker_decompose_and_reset():
     assert ids and ids[0].startswith("task_")
     tracker.reset()
     assert tracker.get_progress()["total"] == 0
-

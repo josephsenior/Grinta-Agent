@@ -15,13 +15,11 @@ from forge.events.observation import ErrorObservation
 
 def make_state(history: list) -> SimpleNamespace:
     """Create a lightweight state with history for circuit breaker tests."""
-
     return SimpleNamespace(history=history)
 
 
 def test_circuit_breaker_disabled():
     """When disabled, circuit breaker should never trip."""
-
     breaker = CircuitBreaker(CircuitBreakerConfig(enabled=False))
     result = breaker.check(make_state(history=[]))
     assert isinstance(result, CircuitBreakerResult)
@@ -31,7 +29,6 @@ def test_circuit_breaker_disabled():
 
 def test_circuit_breaker_trips_on_consecutive_errors():
     """Consecutive errors beyond threshold should pause execution."""
-
     config = CircuitBreakerConfig(max_consecutive_errors=2)
     breaker = CircuitBreaker(config)
 
@@ -45,7 +42,6 @@ def test_circuit_breaker_trips_on_consecutive_errors():
 
 def test_circuit_breaker_trips_on_high_risk_actions():
     """High-risk actions beyond threshold should pause execution."""
-
     config = CircuitBreakerConfig(max_high_risk_actions=1)
     breaker = CircuitBreaker(config)
     breaker.record_high_risk_action(ActionSecurityRisk.HIGH)
@@ -56,7 +52,6 @@ def test_circuit_breaker_trips_on_high_risk_actions():
 
 def test_circuit_breaker_trips_on_stuck_detection():
     """Multiple stuck detections should stop the agent."""
-
     config = CircuitBreakerConfig(max_stuck_detections=1)
     breaker = CircuitBreaker(config)
     breaker.record_stuck_detection()
@@ -67,7 +62,6 @@ def test_circuit_breaker_trips_on_stuck_detection():
 
 def test_circuit_breaker_error_rate_trigger():
     """High error rate in recent actions should pause execution."""
-
     config = CircuitBreakerConfig(max_error_rate=0.25, error_rate_window=4)
     breaker = CircuitBreaker(config)
     breaker.recent_actions_success = [False, False, True, False]
@@ -78,10 +72,8 @@ def test_circuit_breaker_error_rate_trigger():
 
 def test_circuit_breaker_updates_from_state_history():
     """_update_metrics should count error observations from history."""
-
     breaker = CircuitBreaker(CircuitBreakerConfig(max_consecutive_errors=1))
     history = [ErrorObservation(content="fail"), ErrorObservation(content="fail2")]
     result = breaker.check(make_state(history=history))
     assert breaker.consecutive_errors >= 1
     assert isinstance(result, CircuitBreakerResult)
-

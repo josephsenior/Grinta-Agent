@@ -1,6 +1,8 @@
+from typing import cast
 from unittest.mock import patch
+
 from forge.controller.state.state import State, TrafficControlState
-from forge.core.schema import AgentState
+from forge.core.schemas import AgentState
 from forge.events.event import Event
 from forge.llm.metrics import Metrics
 from forge.storage.memory import InMemoryFileStore
@@ -8,8 +10,8 @@ from forge.storage.memory import InMemoryFileStore
 
 def example_event(index: int) -> Event:
     event = Event()
-    event._message = f"Test message {index}"
-    event._id = index
+    setattr(event, "_message", f"Test message {index}")
+    setattr(event, "_id", index)
     return event
 
 
@@ -47,7 +49,7 @@ def test_restore_older_state_version():
         local_iteration=42,
         max_iterations=100,
         agent_state=AgentState.RUNNING,
-        traffic_control_state=TrafficControlState.NORMAL,
+        traffic_control_state=cast(TrafficControlState, TrafficControlState.NORMAL),
         metrics=Metrics(),
         confirmation_mode=False,
     )
@@ -74,7 +76,7 @@ def test_save_without_deprecated_fields():
         local_iteration=42,
         max_iterations=100,
         agent_state=AgentState.RUNNING,
-        traffic_control_state=TrafficControlState.NORMAL,
+        traffic_control_state=cast(TrafficControlState, TrafficControlState.NORMAL),
         metrics=Metrics(),
         confirmation_mode=False,
     )

@@ -28,7 +28,9 @@ async def test_search_repositories_url_parsing_standard_url(bitbucket_service):
         html_url="https://bitbucket.org/workspace/repo",
     )
     with patch.object(
-        bitbucket_service, "get_repository_details_from_repo_name", return_value=mock_repo
+        bitbucket_service,
+        "get_repository_details_from_repo_name",
+        return_value=mock_repo,
     ) as mock_get_repo:
         url = "https://bitbucket.org/workspace/repo"
         repositories = await bitbucket_service.search_repositories(
@@ -40,7 +42,9 @@ async def test_search_repositories_url_parsing_standard_url(bitbucket_service):
 
 
 @pytest.mark.asyncio
-async def test_search_repositories_url_parsing_with_extra_path_segments(bitbucket_service):
+async def test_search_repositories_url_parsing_with_extra_path_segments(
+    bitbucket_service,
+):
     """Test URL parsing with additional path segments and verify correct workspace/repo extraction."""
     mock_repo = Repository(
         id="1",
@@ -53,7 +57,9 @@ async def test_search_repositories_url_parsing_with_extra_path_segments(bitbucke
         html_url="https://bitbucket.org/my-workspace/my-repo",
     )
     with patch.object(
-        bitbucket_service, "get_repository_details_from_repo_name", return_value=mock_repo
+        bitbucket_service,
+        "get_repository_details_from_repo_name",
+        return_value=mock_repo,
     ) as mock_get_repo:
         url = "https://bitbucket.org/my-workspace/my-repo/src/feature-branch/src/main.py?at=feature-branch&fileviewer=file-view-default#lines-25"
         repositories = await bitbucket_service.search_repositories(
@@ -67,7 +73,9 @@ async def test_search_repositories_url_parsing_with_extra_path_segments(bitbucke
 @pytest.mark.asyncio
 async def test_search_repositories_url_parsing_invalid_url(bitbucket_service):
     """Test URL parsing with invalid URL returns empty results."""
-    with patch.object(bitbucket_service, "get_repository_details_from_repo_name") as mock_get_repo:
+    with patch.object(
+        bitbucket_service, "get_repository_details_from_repo_name"
+    ) as mock_get_repo:
         url = "not-a-valid-url"
         repositories = await bitbucket_service.search_repositories(
             query=url, per_page=10, sort="updated", order="desc", public=True
@@ -77,9 +85,13 @@ async def test_search_repositories_url_parsing_invalid_url(bitbucket_service):
 
 
 @pytest.mark.asyncio
-async def test_search_repositories_url_parsing_insufficient_path_segments(bitbucket_service):
+async def test_search_repositories_url_parsing_insufficient_path_segments(
+    bitbucket_service,
+):
     """Test URL parsing with insufficient path segments returns empty results."""
-    with patch.object(bitbucket_service, "get_repository_details_from_repo_name") as mock_get_repo:
+    with patch.object(
+        bitbucket_service, "get_repository_details_from_repo_name"
+    ) as mock_get_repo:
         url = "https://bitbucket.org/workspace"
         repositories = await bitbucket_service.search_repositories(
             query=url, per_page=10, sort="updated", order="desc", public=True

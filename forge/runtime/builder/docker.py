@@ -9,7 +9,10 @@ import time
 
 import docker
 
-from forge import __version__ as oh_version
+try:  # Robust import: tests sometimes exec module directly, breaking attribute import
+    from forge import __version__ as oh_version
+except Exception:  # pragma: no cover - defensive fallback
+    oh_version = "unknown"
 from forge.core.exceptions import AgentRuntimeBuildError
 from forge.core.logger import RollingLogger
 from forge.core.logger import forge_logger as logger
@@ -20,7 +23,9 @@ from forge.utils.term_color import TermColor, colorize
 def _docker_validate_server_version(version_info):
     server_version = version_info.get("Version", "").split("+")[0].replace("-", ".")
     is_podman = version_info.get("Components")[0].get("Name").startswith("Podman")
-    if tuple(map(int, (server_version or "").split(".")[:2])) < (18, 9) and (not is_podman):
+    if tuple(map(int, (server_version or "").split(".")[:2])) < (18, 9) and (
+        not is_podman
+    ):
         msg = "Docker server version must be >= 18.09 to use BuildKit"
         raise AgentRuntimeBuildError(msg)
     if is_podman and tuple(map(int, (server_version or "").split(".")[:2])) < (4, 9):
@@ -48,8 +53,12 @@ class DockerRuntimeBuilder(RuntimeBuilder):
         self.docker_client = docker_client
         version_info = self.docker_client.version()
         server_version = version_info.get("Version", "").replace("-", ".")
-        self.is_podman = version_info.get("Components")[0].get("Name").startswith("Podman")
-        if tuple(map(int, server_version.split(".")[:2])) < (18, 9) and (not self.is_podman):
+        self.is_podman = (
+            version_info.get("Components")[0].get("Name").startswith("Podman")
+        )
+        if tuple(map(int, server_version.split(".")[:2])) < (18, 9) and (
+            not self.is_podman
+        ):
             msg = "Docker server version must be >= 18.09 to use BuildKit"
             raise AgentRuntimeBuildError(msg)
         if self.is_podman and tuple(map(int, server_version.split(".")[:2])) < (4, 9):
@@ -76,9 +85,13 @@ class DockerRuntimeBuilder(RuntimeBuilder):
         self.docker_client = docker.from_env()
         version_info = self.docker_client.version()
         server_version = version_info.get("Version", "").split("+")[0].replace("-", ".")
-        self.is_podman = version_info.get("Components")[0].get("Name").startswith("Podman")
+        self.is_podman = (
+            version_info.get("Components")[0].get("Name").startswith("Podman")
+        )
 
-        if tuple(map(int, server_version.split("."))) < (18, 9) and (not self.is_podman):
+        if tuple(map(int, server_version.split("."))) < (18, 9) and (
+            not self.is_podman
+        ):
             msg = "Docker server version must be >= 18.09 to use BuildKit"
             raise AgentRuntimeBuildError(msg)
         if self.is_podman and tuple(map(int, server_version.split("."))) < (4, 9):
@@ -88,7 +101,9 @@ class DockerRuntimeBuilder(RuntimeBuilder):
     def _install_docker_if_needed(self) -> None:
         """Install Docker if buildx is not available."""
         if not DockerRuntimeBuilder.check_buildx(self.is_podman):
-            logger.info("No docker binary available inside Forge-app container, trying to download online...")
+            logger.info(
+                "No docker binary available inside Forge-app container, trying to download online..."
+            )
             commands = [
                 "apt-get update",
                 "apt-get install -y ca-certificates curl gnupg",
@@ -107,7 +122,12 @@ class DockerRuntimeBuilder(RuntimeBuilder):
         target_image_hash_name = tags[0]
         target_image_repo, target_image_source_tag = target_image_hash_name.split(":")
         target_image_tag = tags[1].split(":")[1] if len(tags) > 1 else None
-        return target_image_hash_name, target_image_repo, target_image_source_tag, target_image_tag
+        return (
+            target_image_hash_name,
+            target_image_repo,
+            target_image_source_tag,
+            target_image_tag,
+        )
 
     def _build_docker_command(
         self,
@@ -135,7 +155,10 @@ class DockerRuntimeBuilder(RuntimeBuilder):
         cache_dir = "/tmp/.buildx-cache"  # nosec B108 - Safe: Docker build cache directory
         if use_local_cache and self._is_cache_usable(cache_dir):
             buildx_cmd.extend(
-                [f"--cache-from=type=local,src={cache_dir}", f"--cache-to=type=local,dest={cache_dir},mode=max"],
+                [
+                    f"--cache-from=type=local,src={cache_dir}",
+                    f"--cache-to=type=local,dest={cache_dir},mode=max",
+                ],
             )
 
         if extra_build_args:
@@ -147,7 +170,12 @@ class DockerRuntimeBuilder(RuntimeBuilder):
     def _set_default_builder(self) -> None:
         """Set the default Docker buildx builder."""
         builder_cmd = ["docker", "buildx", "use", "default"]
-        subprocess.Popen(builder_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+        subprocess.Popen(
+            builder_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        )
 
     def _process_build_output(self, process: subprocess.Popen[str]) -> list[str]:
         """Process the build command output and collect log lines.
@@ -187,7 +215,9 @@ class DockerRuntimeBuilder(RuntimeBuilder):
         elif isinstance(e, FileNotFoundError):
             logger.error("Python executable not found: %s", e)
         elif isinstance(e, PermissionError):
-            logger.error("Permission denied when trying to execute the build command:\n%s", e)
+            logger.error(
+                "Permission denied when trying to execute the build command:\n%s", e
+            )
         else:
             logger.error("An unexpected error occurred during the build process: %s", e)
 
@@ -205,7 +235,9 @@ class DockerRuntimeBuilder(RuntimeBuilder):
             Exception: For any other unexpected errors.
 
         """
-        self.rolling_logger.start(f"================ {buildx_cmd[0].upper()} BUILD STARTED ================")
+        self.rolling_logger.start(
+            f"================ {buildx_cmd[0].upper()} BUILD STARTED ================"
+        )
 
         # Set default builder
         self._set_default_builder()
@@ -226,7 +258,9 @@ class DockerRuntimeBuilder(RuntimeBuilder):
             return_code = process.wait()
             if return_code != 0:
                 output_str = "\n".join(output_lines)
-                raise subprocess.CalledProcessError(return_code, process.args, output=output_str, stderr=None)
+                raise subprocess.CalledProcessError(
+                    return_code, process.args, output=output_str, stderr=None
+                )
 
         except Exception as e:
             self._handle_build_exceptions(e)
@@ -242,18 +276,28 @@ class DockerRuntimeBuilder(RuntimeBuilder):
         """Tag the image and validate it was built successfully."""
         logger.info("Image [%s] build finished.", target_image_hash_name)
 
-        if target_image_tag:
+        try:
             image = self.docker_client.images.get(target_image_hash_name)
-            image.tag(target_image_repo, target_image_tag)
-            logger.info("Re-tagged image [%s] with more generic tag [%s]", target_image_hash_name, target_image_tag)
-
-        image = self.docker_client.images.get(target_image_hash_name)
-        if image is None:
+        except docker.errors.ImageNotFound as exc:
             msg = f"Build failed: Image {target_image_hash_name} not found"
-            raise AgentRuntimeBuildError(msg)
+            raise AgentRuntimeBuildError(msg) from exc
 
-        tags_str = f"{target_image_source_tag}, {target_image_tag}" if target_image_tag else target_image_source_tag
-        logger.info("Image %s with tags [%s] built successfully", target_image_repo, tags_str)
+        if target_image_tag:
+            image.tag(target_image_repo, target_image_tag)
+            logger.info(
+                "Re-tagged image [%s] with more generic tag [%s]",
+                target_image_hash_name,
+                target_image_tag,
+            )
+
+        tags_str = (
+            f"{target_image_source_tag}, {target_image_tag}"
+            if target_image_tag
+            else target_image_source_tag
+        )
+        logger.info(
+            "Image %s with tags [%s] built successfully", target_image_repo, tags_str
+        )
 
         return target_image_hash_name
 
@@ -293,7 +337,12 @@ class DockerRuntimeBuilder(RuntimeBuilder):
         self._install_docker_if_needed()
 
         # Parse image tags
-        target_image_hash_name, target_image_repo, target_image_source_tag, target_image_tag = self._parse_image_tags(
+        (
+            target_image_hash_name,
+            target_image_repo,
+            target_image_source_tag,
+            target_image_tag,
+        ) = self._parse_image_tags(
             tags,
         )
 
@@ -337,10 +386,16 @@ class DockerRuntimeBuilder(RuntimeBuilder):
             return True
         except docker.errors.ImageNotFound:
             if not pull_from_repo:
-                logger.debug("Image %s %s locally", image_name, colorize("not found", TermColor.WARNING))
+                logger.debug(
+                    "Image %s %s locally",
+                    image_name,
+                    colorize("not found", TermColor.WARNING),
+                )
                 return False
             try:
-                logger.debug("Image not found locally. Trying to pull it, please wait...")
+                logger.debug(
+                    "Image not found locally. Trying to pull it, please wait..."
+                )
                 layers: dict[str, dict[str, str]] = {}
                 previous_layer_count = 0
                 if ":" in image_name:
@@ -348,7 +403,9 @@ class DockerRuntimeBuilder(RuntimeBuilder):
                 else:
                     image_repo = image_name
                     image_tag = None
-                for line in self.docker_client.api.pull(image_repo, tag=image_tag, stream=True, decode=True):
+                for line in self.docker_client.api.pull(
+                    image_repo, tag=image_tag, stream=True, decode=True
+                ):
                     self._output_build_progress(line, layers, previous_layer_count)
                     previous_layer_count = len(layers)
                 logger.debug("Image pulled")
@@ -359,7 +416,11 @@ class DockerRuntimeBuilder(RuntimeBuilder):
             except Exception as e:
                 msg = f"Image {colorize('could not be pulled', TermColor.ERROR)}: "
                 ex_msg = str(e)
-                msg += "image not found in registry." if "Not Found" in ex_msg else f"{ex_msg}"
+                msg += (
+                    "image not found in registry."
+                    if "Not Found" in ex_msg
+                    else f"{ex_msg}"
+                )
                 logger.debug(msg)
                 return False
 
@@ -369,14 +430,18 @@ class DockerRuntimeBuilder(RuntimeBuilder):
         else:
             self.rolling_logger.add_line(new_line)
 
-    def _output_build_progress(self, current_line: dict, layers: dict, previous_layer_count: int) -> None:
+    def _output_build_progress(
+        self, current_line: dict, layers: dict, previous_layer_count: int
+    ) -> None:
         """Output build progress for Docker layers."""
         if "id" in current_line and "progressDetail" in current_line:
             self._process_layer_progress(current_line, layers, previous_layer_count)
         elif "status" in current_line:
             logger.debug(current_line["status"])
 
-    def _process_layer_progress(self, current_line: dict, layers: dict, previous_layer_count: int) -> None:
+    def _process_layer_progress(
+        self, current_line: dict, layers: dict, previous_layer_count: int
+    ) -> None:
         """Process progress for a specific layer."""
         layer_id = current_line["id"]
 
@@ -393,14 +458,18 @@ class DockerRuntimeBuilder(RuntimeBuilder):
         # Output progress
         self._output_layer_progress(layer_id, layers, previous_layer_count, percentage)
 
-    def _update_layer_data(self, layer_id: str, current_line: dict, layers: dict) -> None:
+    def _update_layer_data(
+        self, layer_id: str, current_line: dict, layers: dict
+    ) -> None:
         """Update layer data with current line information."""
         if "status" in current_line:
             layers[layer_id]["status"] = current_line["status"]
         if "progress" in current_line:
             layers[layer_id]["progress"] = current_line["progress"]
 
-    def _calculate_layer_percentage(self, current_line: dict, layer_data: dict) -> float:
+    def _calculate_layer_percentage(
+        self, current_line: dict, layer_data: dict
+    ) -> float:
         """Calculate percentage for layer progress."""
         if "progressDetail" in current_line:
             progress_detail = current_line["progressDetail"]
@@ -410,7 +479,9 @@ class DockerRuntimeBuilder(RuntimeBuilder):
             return min(progress_detail["current"] / total * 100, 100)
         return 0
 
-    def _output_layer_progress(self, layer_id: str, layers: dict, previous_layer_count: int, percentage: float) -> None:
+    def _output_layer_progress(
+        self, layer_id: str, layers: dict, previous_layer_count: int, percentage: float
+    ) -> None:
         """Output progress for the layer."""
         if self.rolling_logger.is_enabled():
             self._output_rolling_logger_progress(layers, previous_layer_count)
@@ -419,7 +490,9 @@ class DockerRuntimeBuilder(RuntimeBuilder):
 
         layers[layer_id]["last_logged"] = percentage
 
-    def _output_rolling_logger_progress(self, layers: dict, previous_layer_count: int) -> None:
+    def _output_rolling_logger_progress(
+        self, layers: dict, previous_layer_count: int
+    ) -> None:
         """Output progress using rolling logger."""
         self.rolling_logger.move_back(previous_layer_count)
 
@@ -433,12 +506,23 @@ class DockerRuntimeBuilder(RuntimeBuilder):
             elif status == "Already exists":
                 self.rolling_logger.write_immediately(f"Layer {lid}: Already exists")
             else:
-                self.rolling_logger.write_immediately(f"Layer {lid}: {progress} {status}")
+                self.rolling_logger.write_immediately(
+                    f"Layer {lid}: {progress} {status}"
+                )
 
-    def _output_debug_logger_progress(self, layer_id: str, layers: dict, percentage: float) -> None:
+    def _output_debug_logger_progress(
+        self, layer_id: str, layers: dict, percentage: float
+    ) -> None:
         """Output progress using debug logger."""
-        if percentage != 0 and (percentage - layers[layer_id]["last_logged"] >= 10 or percentage == 100):
-            logger.debug("Layer %s: %s %s", layer_id, layers[layer_id]["progress"], layers[layer_id]["status"])
+        if percentage != 0 and (
+            percentage - layers[layer_id]["last_logged"] >= 10 or percentage == 100
+        ):
+            logger.debug(
+                "Layer %s: %s %s",
+                layer_id,
+                layers[layer_id]["progress"],
+                layers[layer_id]["status"],
+            )
 
     def _prune_old_cache_files(self, cache_dir: str, max_age_days: int = 7) -> None:
         """Prune cache files older than the specified number of days.
@@ -460,7 +544,9 @@ class DockerRuntimeBuilder(RuntimeBuilder):
                             os.remove(file_path)
                             logger.debug("Removed old cache file: %s", file_path)
                     except Exception as e:
-                        logger.warning("Error processing cache file %s: %s", file_path, e)
+                        logger.warning(
+                            "Error processing cache file %s: %s", file_path, e
+                        )
         except Exception as e:
             logger.warning("Error during build cache pruning: %s", e)
 
@@ -482,7 +568,10 @@ class DockerRuntimeBuilder(RuntimeBuilder):
                 logger.debug("Failed to create cache directory %s: %s", cache_dir, e)
                 return False
         if not os.access(cache_dir, os.W_OK):
-            logger.warning("Cache directory %s is not writable. Caches will not be used for Docker builds.", cache_dir)
+            logger.warning(
+                "Cache directory %s is not writable. Caches will not be used for Docker builds.",
+                cache_dir,
+            )
             return False
         self._prune_old_cache_files(cache_dir)
         logger.debug("Cache directory %s is usable", cache_dir)

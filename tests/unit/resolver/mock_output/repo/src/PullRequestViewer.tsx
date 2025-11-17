@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Octokit } from '@octokit/rest';
 import Select from 'react-select';
 
-const octokit = new Octokit({ auth: import.meta.env.VITE_GITHUB_TOKEN });
+const importMetaToken =
+  (globalThis as { importMeta?: { env?: Record<string, string | undefined> } }).importMeta?.env
+    ?.VITE_GITHUB_TOKEN;
+const authToken =
+  (typeof process !== 'undefined' && process.env?.VITE_GITHUB_TOKEN) ||
+  importMetaToken ||
+  '';
+const octokit = new Octokit({ auth: authToken });
 
 interface PullRequest {
   title: string;
@@ -22,6 +28,7 @@ const PullRequestViewer: React.FC = () => {
   const [repos, setRepos] = useState<Repo[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<Repo | null>(null);
   const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
+  const handleRepoChange = (option: Repo | null) => setSelectedRepo(option);
 
   useEffect(() => {
     const fetchRepos = async () => {
@@ -30,7 +37,7 @@ const PullRequestViewer: React.FC = () => {
           org: 'OpenDevin',
           type: 'all',
         });
-        const repoOptions = response.data.map((repo) => ({
+        const repoOptions = (response.data as Array<{ name: string }>).map((repo) => ({
           value: repo.name,
           label: repo.name,
         }));
@@ -59,7 +66,8 @@ const PullRequestViewer: React.FC = () => {
               page: page,
             });
 
-            allPullRequests = [...allPullRequests, ...response.data];
+            const data = response.data as PullRequest[];
+            allPullRequests = [...allPullRequests, ...data];
 
             if (response.data.length < 100) {
               hasNextPage = false;
@@ -83,7 +91,7 @@ const PullRequestViewer: React.FC = () => {
       <Select
         options={repos}
         value={selectedRepo}
-        onChange={(option) => setSelectedRepo(option as Repo)}
+        onChange={handleRepoChange}
         placeholder="Select a repository"
         aria-label="Select a repository"
       />

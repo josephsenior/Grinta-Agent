@@ -20,7 +20,7 @@ def extract_modified_files(patch):
 def process_report(oh_output_file):
     succ = 0
     fail = 0
-    for line in open(oh_output_file, encoding='utf-8'):
+    for line in open(oh_output_file, encoding="utf-8"):
         line = json.loads(line)
         instance_id = line["instance_id"]
         gold_patch = line["swe_instance"]["patch"]
@@ -33,15 +33,15 @@ def process_report(oh_output_file):
             succ += 1
         else:
             fail += 1
-            print(f"{instance_id}: file mismatch, gold = {gold_modified_files}, generated = {generated_modified_files}")
+            print(
+                f"{instance_id}: file mismatch, gold = {gold_modified_files}, generated = {generated_modified_files}"
+            )
     print(
         f"\nSUMMARY: {succ} out of {
-            succ +
-            fail} instances found correct files to edit, success rate = {
-            succ /
-            float(
-                succ +
-                fail)}"
+            succ + fail
+        } instances found correct files to edit, success rate = {
+            succ / float(succ + fail)
+        }"
     )
 
 

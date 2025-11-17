@@ -576,6 +576,34 @@ prepareApp().then(async () => {
                     Component: m.default,
                   })),
               },
+              {
+                path: "dashboard",
+                lazy: () =>
+                  import("./routes/dashboard").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "profile",
+                lazy: () =>
+                  import("./routes/profile").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "help",
+                lazy: () =>
+                  import("./routes/help").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "notifications",
+                lazy: () =>
+                  import("./routes/notifications").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
             ],
           },
         ],
@@ -591,18 +619,23 @@ prepareApp().then(async () => {
         },
       );
 
-      createRoot(rootEl).render(
-        <ThemeProvider defaultTheme="dark">
-          <Provider store={store}>
-            <QueryClientProvider client={queryClient}>
-              <RouterProvider router={router} />
-              <ToasterClient />
-              <PosthogInit />
-              <EnsurePortalRoot />
-            </QueryClientProvider>
-          </Provider>
-        </ThemeProvider>,
-      );
+      // Dynamically import AuthProvider to avoid circular dependencies
+      import("./context/auth-context").then(({ AuthProvider }) => {
+        createRoot(rootEl).render(
+          <ThemeProvider defaultTheme="dark">
+            <Provider store={store}>
+              <QueryClientProvider client={queryClient}>
+                <AuthProvider>
+                  <RouterProvider router={router} />
+                  <ToasterClient />
+                  <PosthogInit />
+                  <EnsurePortalRoot />
+                </AuthProvider>
+              </QueryClientProvider>
+            </Provider>
+          </ThemeProvider>,
+        );
+      });
     });
   });
 });

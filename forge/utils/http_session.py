@@ -24,7 +24,9 @@ class HttpSession:
     def request(self, *args, **kwargs):
         """Proxy generic request while merging default headers and guarding reuse."""
         if self._is_closed:
-            logger.error("Session is being used after close!", stack_info=True, exc_info=True)
+            logger.error(
+                "Session is being used after close!", stack_info=True, exc_info=True
+            )
             self._is_closed = False
         headers = kwargs.get("headers") or {}
         headers = {**self.headers, **headers}
@@ -34,7 +36,9 @@ class HttpSession:
     def stream(self, *args, **kwargs):
         """Stream response content with default headers and reuse guard."""
         if self._is_closed:
-            logger.error("Session is being used after close!", stack_info=True, exc_info=True)
+            logger.error(
+                "Session is being used after close!", stack_info=True, exc_info=True
+            )
             self._is_closed = False
         headers = kwargs.get("headers") or {}
         headers = {**self.headers, **headers}

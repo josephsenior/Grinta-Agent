@@ -5,7 +5,15 @@ import logging
 import types
 from typing import Any, TYPE_CHECKING, cast
 
-from forge.metasop.models import Artifact, RoleProfile, SopStep, SopTemplate, StepOutputSpec, StepResult, StepTrace
+from forge.metasop.models import (
+    Artifact,
+    RoleProfile,
+    SopStep,
+    SopTemplate,
+    StepOutputSpec,
+    StepResult,
+    StepTrace,
+)
 from forge.metasop.orchestrator import MetaSOPOrchestrator
 from forge.metasop.strategies import BaseStepExecutor
 
@@ -25,22 +33,68 @@ class RotatingExecutor(BaseStepExecutor):
         config: "ForgeConfig | None" = None,
     ) -> StepResult:
         ctx.extra.get(f"micro_prev_artifact::{step.id}")
-        variants = ["func a()\nprint('A')", "func b()\nprint('B B B B')", "func c()\nprint('C')"]
+        content_variant = self._select_variant(ctx)
+        artifact = Artifact(
+            step_id=step.id, role=step.role, content={"content": content_variant}
+        )
+        trace = StepTrace(
+            step_id=step.id, role=step.role, total_tokens=0, model_name="dummy"
+        )
+        return StepResult(ok=True, artifact=artifact, trace=trace)
+
+    def _select_variant(self, ctx: Any) -> str:
+        variants = [
+            "func a()\nprint('A')",
+            "func b()\nprint('B B B B')",
+            "func c()\nprint('C')",
+        ]
         content_variant = variants[self.calls % len(variants)]
         ctx.extra["last_variant"] = content_variant
         self.calls += 1
-        artifact = Artifact(step_id=step.id, role=step.role, content={"content": content_variant})
-        trace = StepTrace(step_id=step.id, role=step.role, total_tokens=0, model_name="dummy")
-        return StepResult(ok=True, artifact=artifact, trace=trace)
+        return content_variant
 
 
 def main() -> None:
-    cfg: Any = types.SimpleNamespace(extended=types.SimpleNamespace(metasop={}), runtime=types.SimpleNamespace())
-    orch = MetaSOPOrchestrator(sop_name="feature_delivery", config=cast("ForgeConfig | None", cfg))
+    logger = logging.getLogger(__name__)
+    orch = _build_orchestrator()
+    _run_orchestrator(orch, logger)
+    logger.info("\n--- Invalid events captured by emitter.invalid_events ---")
+    _log_invalid_events(orch, logger)
+    logger.info("\n--- Emitted step events ---")
+    _log_step_events(orch, logger)
+
+
+def _build_orchestrator() -> MetaSOPOrchestrator:
+    cfg: Any = types.SimpleNamespace(
+        extended=types.SimpleNamespace(metasop={}), runtime=types.SimpleNamespace()
+    )
+    orch = MetaSOPOrchestrator(
+        sop_name="feature_delivery", config=cast("ForgeConfig | None", cfg)
+    )
     orch.template = SopTemplate(
         name="feature_delivery",
-        steps=[SopStep(id="impl", role="engineer", task="impl task", outputs=StepOutputSpec(schema="dummy.json"))],
+        steps=[
+            SopStep(
+                id="impl",
+                role="engineer",
+                task="impl task",
+                outputs=StepOutputSpec(schema="dummy.json"),
+            )
+        ],
     )
+    _configure_settings(orch)
+    orch.step_executor = RotatingExecutor()
+    if orch.profiles is None:
+        orch.profiles = {}
+    orch.profiles["engineer"] = RoleProfile(
+        name="engineer",
+        goal="Implement micro iteration candidate",
+        capabilities=["implement"],
+    )
+    return orch
+
+
+def _configure_settings(orch: MetaSOPOrchestrator) -> None:
     settings = orch.settings
     settings.metrics_prometheus_port = None
     settings.enabled = True
@@ -49,51 +103,49 @@ def main() -> None:
     settings.micro_iteration_no_change_limit = 2
     settings.patch_scoring_enable = True
     settings.micro_iteration_candidate_count = 3
-    orch.step_executor = RotatingExecutor()
-    orch.profiles["engineer"] = RoleProfile(
-        name="engineer",
-        goal="Implement micro iteration candidate",
-        capabilities=["implement"],
-    )
-    logger = logging.getLogger(__name__)
+
+
+def _run_orchestrator(orch: MetaSOPOrchestrator, logger: logging.Logger) -> None:
     try:
-        success, done = orch.run(user_request="repro")
+        success, _ = orch.run(user_request="repro")
         logger.info("SUCCESS: %s", success)
-    except Exception as e:
-        logger.exception("RUN ERROR: %s", e)
-    logger.info("\n--- Invalid events captured by emitter.invalid_events ---")
+    except Exception as exc:  # pragma: no cover - diagnostic tool
+        logger.exception("RUN ERROR: %s", exc)
+
+
+def _log_invalid_events(orch: MetaSOPOrchestrator, logger: logging.Logger) -> None:
     try:
-        inv = getattr(orch._emitter, "invalid_events", None)
-        try:
-            from forge.core.io import print_json_stdout
-        except Exception:
-            try:
-                logger.info(json.dumps(inv, default=str, indent=2, ensure_ascii=False))
-            except Exception:
-                logger.info(repr(inv))
-        else:
-            try:
-                print_json_stdout(inv, pretty=True)
-            except Exception:
-                logger.info(json.dumps(inv, default=str, indent=2, ensure_ascii=False))
-    except Exception as e:
-        logger.exception("Could not print invalid_events: %s", e)
-    logger.info("\n--- Emitted step events ---")
+        invalid_events = getattr(orch._emitter, "invalid_events", None)
+        _print_json_with_fallback(invalid_events, logger)
+    except Exception as exc:  # pragma: no cover - diagnostic tool
+        logger.exception("Could not print invalid_events: %s", exc)
+
+
+def _log_step_events(orch: MetaSOPOrchestrator, logger: logging.Logger) -> None:
     try:
-        try:
-            from forge.core.io import print_json_stdout
-        except Exception:
-            try:
-                logger.info(json.dumps(orch.step_events, default=str, indent=2, ensure_ascii=False))
-            except Exception:
-                logger.info(repr(orch.step_events))
-        else:
-            try:
-                print_json_stdout(orch.step_events, pretty=True)
-            except Exception:
-                logger.info(json.dumps(orch.step_events, default=str, indent=2, ensure_ascii=False))
-    except Exception as e:
-        logger.exception("Could not print step_events: %s", e)
+        _print_json_with_fallback(orch.step_events, logger)
+    except Exception as exc:  # pragma: no cover - diagnostic tool
+        logger.exception("Could not print step_events: %s", exc)
+
+
+def _print_json_with_fallback(data: Any, logger: logging.Logger) -> None:
+    try:
+        from forge.core.io import print_json_stdout
+    except Exception:
+        _log_json(data, logger)
+        return
+
+    try:
+        print_json_stdout(data, pretty=True)
+    except Exception:
+        _log_json(data, logger)
+
+
+def _log_json(data: Any, logger: logging.Logger) -> None:
+    try:
+        logger.info(json.dumps(data, default=str, indent=2, ensure_ascii=False))
+    except Exception:
+        logger.info(repr(data))
 
 
 if __name__ == "__main__":

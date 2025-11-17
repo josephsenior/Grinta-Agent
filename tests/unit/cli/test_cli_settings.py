@@ -16,7 +16,6 @@ from forge.storage.settings.file_settings_store import FileSettingsStore
 
 
 class MockLLMSummarizingCondenserConfig:
-
     def __init__(self, llm_config, type, keep_first=4, max_size=120):
         self.llm_config = llm_config
         self.type = type
@@ -25,20 +24,17 @@ class MockLLMSummarizingCondenserConfig:
 
 
 class MockConversationWindowCondenserConfig:
-
     def __init__(self, type):
         self.type = type
 
 
 class MockCondenserPipelineConfig:
-
     def __init__(self, type, condensers):
         self.type = type
         self.condensers = condensers
 
 
 class TestDisplaySettings:
-
     @pytest.fixture
     def app_config(self):
         config = MagicMock(spec=ForgeConfig)
@@ -98,7 +94,9 @@ class TestDisplaySettings:
         assert str(Path(app_config.file_store_path)) in settings_text
 
     @patch("forge.cli.settings.print_container")
-    def test_display_settings_advanced_config(self, mock_print_container, advanced_app_config):
+    def test_display_settings_advanced_config(
+        self, mock_print_container, advanced_app_config
+    ):
         display_settings(advanced_app_config)
         mock_print_container.assert_called_once()
         container = mock_print_container.call_args[0][0]
@@ -115,7 +113,6 @@ class TestDisplaySettings:
 
 
 class TestModifyLLMSettingsBasic:
-
     @pytest.fixture
     def app_config(self):
         config = MagicMock(spec=ForgeConfig)
@@ -145,14 +142,26 @@ class TestModifyLLMSettingsBasic:
     @patch("forge.cli.settings.organize_models_and_providers")
     @patch("forge.cli.settings.PromptSession")
     @patch("forge.cli.settings.cli_confirm")
-    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch(
+        "forge.cli.settings.LLMSummarizingCondenserConfig",
+        MockLLMSummarizingCondenserConfig,
+    )
     async def test_modify_llm_settings_basic_success(
-        self, mock_confirm, mock_session, mock_organize, mock_get_models, app_config, settings_store
+        self,
+        mock_confirm,
+        mock_session,
+        mock_organize,
+        mock_get_models,
+        app_config,
+        settings_store,
     ):
         mock_get_models.return_value = ["openai/gpt-4", "anthropic/claude-3-opus"]
         mock_organize.return_value = {
             "openai": {"models": ["gpt-4", "gpt-3.5-turbo"], "separator": "/"},
-            "anthropic": {"models": ["claude-3-opus", "claude-3-sonnet"], "separator": "/"},
+            "anthropic": {
+                "models": ["claude-3-opus", "claude-3-sonnet"],
+                "separator": "/",
+            },
         }
         session_instance = MagicMock()
         session_instance.prompt_async = AsyncMock(side_effect=["gpt-4", "new-api-key"])
@@ -176,12 +185,23 @@ class TestModifyLLMSettingsBasic:
     @patch("forge.cli.settings.organize_models_and_providers")
     @patch("forge.cli.settings.PromptSession")
     @patch("forge.cli.settings.cli_confirm")
-    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch(
+        "forge.cli.settings.LLMSummarizingCondenserConfig",
+        MockLLMSummarizingCondenserConfig,
+    )
     async def test_modify_llm_settings_basic_user_cancels(
-        self, mock_confirm, mock_session, mock_organize, mock_get_models, app_config, settings_store
+        self,
+        mock_confirm,
+        mock_session,
+        mock_organize,
+        mock_get_models,
+        app_config,
+        settings_store,
     ):
         mock_get_models.return_value = ["openai/gpt-4", "anthropic/claude-3-opus"]
-        mock_organize.return_value = {"openai": {"models": ["gpt-4", "gpt-3.5-turbo"], "separator": "/"}}
+        mock_organize.return_value = {
+            "openai": {"models": ["gpt-4", "gpt-3.5-turbo"], "separator": "/"}
+        }
         session_instance = MagicMock()
         session_instance.prompt_async = AsyncMock(side_effect=UserCancelledError())
         mock_session.return_value = session_instance
@@ -195,12 +215,24 @@ class TestModifyLLMSettingsBasic:
     @patch("forge.cli.settings.PromptSession")
     @patch("forge.cli.settings.cli_confirm")
     @patch("forge.cli.settings.print_formatted_text")
-    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch(
+        "forge.cli.settings.LLMSummarizingCondenserConfig",
+        MockLLMSummarizingCondenserConfig,
+    )
     async def test_modify_llm_settings_basic_invalid_provider_input(
-        self, mock_print, mock_confirm, mock_session, mock_organize, mock_get_models, app_config, settings_store
+        self,
+        mock_print,
+        mock_confirm,
+        mock_session,
+        mock_organize,
+        mock_get_models,
+        app_config,
+        settings_store,
     ):
         mock_get_models.return_value = ["openai/gpt-4", "anthropic/claude-3-opus"]
-        mock_organize.return_value = {"openai": {"models": ["gpt-4", "gpt-3.5-turbo"], "separator": "/"}}
+        mock_organize.return_value = {
+            "openai": {"models": ["gpt-4", "gpt-3.5-turbo"], "separator": "/"}
+        }
         session_instance = MagicMock()
         session_instance.prompt_async = AsyncMock(
             side_effect=["invalid-provider", "openai", "custom-model", "new-api-key"]
@@ -233,23 +265,34 @@ class TestModifyLLMSettingsBasic:
         import inspect
         import forge.cli.settings as settings_module
 
-        source_lines = inspect.getsource(settings_module.modify_llm_settings_basic).splitlines()
+        source_lines = inspect.getsource(
+            settings_module.modify_llm_settings_basic
+        ).splitlines()
         default_model_block = []
         in_default_model_block = False
         for line in source_lines:
-            if "# Set default model to the best verified model for the provider" in line:
+            if (
+                "# Set default model to the best verified model for the provider"
+                in line
+            ):
                 in_default_model_block = True
                 default_model_block.append(line)
             elif in_default_model_block:
                 default_model_block.append(line)
                 if "# Show the default model" in line:
                     break
-        assert default_model_block, "Could not find the block that sets the default model"
+        assert default_model_block, (
+            "Could not find the block that sets the default model"
+        )
         print("Default model block found:")
         for line in default_model_block:
             print(f"  {line.strip()}")
-        first_model_check = any(("provider_models[0]" in line for line in default_model_block))
-        assert first_model_check, "Default model selection should use the first model in the list"
+        first_model_check = any(
+            ("provider_models[0]" in line for line in default_model_block)
+        )
+        assert first_model_check, (
+            "Default model selection should use the first model in the list"
+        )
 
     @pytest.mark.asyncio
     @patch("forge.cli.settings.VERIFIED_PROVIDERS", ["forge", "anthropic", "openai"])
@@ -259,12 +302,27 @@ class TestModifyLLMSettingsBasic:
     @patch("forge.cli.settings.PromptSession")
     @patch("forge.cli.settings.cli_confirm")
     @patch("forge.cli.settings.print_formatted_text")
-    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch(
+        "forge.cli.settings.LLMSummarizingCondenserConfig",
+        MockLLMSummarizingCondenserConfig,
+    )
     async def test_default_provider_print_and_initial_selection(
-        self, mock_print, mock_confirm, mock_session, mock_organize, mock_get_models, app_config, settings_store
+        self,
+        mock_print,
+        mock_confirm,
+        mock_session,
+        mock_organize,
+        mock_get_models,
+        app_config,
+        settings_store,
     ):
         """Verify default provider printing and initial provider selection index."""
-        mock_get_models.return_value = ["Openhands/o3", "Forge/o3", "anthropic/claude-3-opus", "openai/gpt-4"]
+        mock_get_models.return_value = [
+            "Openhands/o3",
+            "Forge/o3",
+            "anthropic/claude-3-opus",
+            "openai/gpt-4",
+        ]
         mock_organize.return_value = {
             "forge": {"models": ["o3"], "separator": "/"},
             "anthropic": {"models": ["claude-3-opus"], "separator": "/"},
@@ -278,7 +336,10 @@ class TestModifyLLMSettingsBasic:
         default_print_calls = [
             c
             for c in mock_print.call_args_list
-            if c and c[0] and isinstance(c[0][0], HTML) and ("Default provider:" in c[0][0].value)
+            if c
+            and c[0]
+            and isinstance(c[0][0], HTML)
+            and ("Default provider:" in c[0][0].value)
         ]
         assert default_print_calls, "Default provider line was not printed"
         printed_html = default_print_calls[0][0][0].value
@@ -305,20 +366,35 @@ class TestModifyLLMSettingsBasic:
 
     @pytest.mark.asyncio
     @patch("forge.cli.settings.VERIFIED_PROVIDERS", ["forge", "anthropic"])
-    @patch("forge.cli.settings.VERIFIED_ANTHROPIC_MODELS", ["claude-3-opus", "claude-3-sonnet"])
+    @patch(
+        "forge.cli.settings.VERIFIED_ANTHROPIC_MODELS",
+        ["claude-3-opus", "claude-3-sonnet"],
+    )
     @patch("forge.cli.settings.get_supported_llm_models")
     @patch("forge.cli.settings.organize_models_and_providers")
     @patch("forge.cli.settings.PromptSession")
     @patch("forge.cli.settings.cli_confirm")
-    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch(
+        "forge.cli.settings.LLMSummarizingCondenserConfig",
+        MockLLMSummarizingCondenserConfig,
+    )
     async def test_modify_llm_settings_basic_keep_existing_values(
-        self, mock_confirm, mock_session, mock_organize, mock_get_models, app_config_with_existing, settings_store
+        self,
+        mock_confirm,
+        mock_session,
+        mock_organize,
+        mock_get_models,
+        app_config_with_existing,
+        settings_store,
     ):
         """Test keeping existing configuration values by pressing Enter/selecting defaults."""
         mock_get_models.return_value = ["anthropic/claude-3-opus", "openai/gpt-4"]
         mock_organize.return_value = {
             "forge": {"models": [], "separator": "/"},
-            "anthropic": {"models": ["claude-3-opus", "claude-3-sonnet"], "separator": "/"},
+            "anthropic": {
+                "models": ["claude-3-opus", "claude-3-sonnet"],
+                "separator": "/",
+            },
         }
         session_instance = MagicMock()
         session_instance.prompt_async = AsyncMock(side_effect=[""])
@@ -342,20 +418,35 @@ class TestModifyLLMSettingsBasic:
 
     @pytest.mark.asyncio
     @patch("forge.cli.settings.VERIFIED_PROVIDERS", ["forge", "anthropic"])
-    @patch("forge.cli.settings.VERIFIED_ANTHROPIC_MODELS", ["claude-3-opus", "claude-3-sonnet"])
+    @patch(
+        "forge.cli.settings.VERIFIED_ANTHROPIC_MODELS",
+        ["claude-3-opus", "claude-3-sonnet"],
+    )
     @patch("forge.cli.settings.get_supported_llm_models")
     @patch("forge.cli.settings.organize_models_and_providers")
     @patch("forge.cli.settings.PromptSession")
     @patch("forge.cli.settings.cli_confirm")
-    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch(
+        "forge.cli.settings.LLMSummarizingCondenserConfig",
+        MockLLMSummarizingCondenserConfig,
+    )
     async def test_modify_llm_settings_basic_change_only_api_key(
-        self, mock_confirm, mock_session, mock_organize, mock_get_models, app_config_with_existing, settings_store
+        self,
+        mock_confirm,
+        mock_session,
+        mock_organize,
+        mock_get_models,
+        app_config_with_existing,
+        settings_store,
     ):
         """Test changing only the API key while keeping provider and model."""
         mock_get_models.return_value = ["anthropic/claude-3-opus"]
         mock_organize.return_value = {
             "forge": {"models": [], "separator": "/"},
-            "anthropic": {"models": ["claude-3-opus", "claude-3-sonnet"], "separator": "/"},
+            "anthropic": {
+                "models": ["claude-3-opus", "claude-3-sonnet"],
+                "separator": "/",
+            },
         }
         session_instance = MagicMock()
         session_instance.prompt_async = AsyncMock(side_effect=["new-api-key-12345"])
@@ -378,9 +469,18 @@ class TestModifyLLMSettingsBasic:
     @patch("forge.cli.settings.organize_models_and_providers")
     @patch("forge.cli.settings.PromptSession")
     @patch("forge.cli.settings.cli_confirm")
-    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch(
+        "forge.cli.settings.LLMSummarizingCondenserConfig",
+        MockLLMSummarizingCondenserConfig,
+    )
     async def test_modify_llm_settings_basic_change_provider_and_model(
-        self, mock_confirm, mock_session, mock_organize, mock_get_models, app_config_with_existing, settings_store
+        self,
+        mock_confirm,
+        mock_session,
+        mock_organize,
+        mock_get_models,
+        app_config_with_existing,
+        settings_store,
     ):
         """Test changing provider and model requires re-entering API key when provider changes."""
         mock_get_models.return_value = [
@@ -389,11 +489,19 @@ class TestModifyLLMSettingsBasic:
             "Openhands/o3",
         ]
         mock_organize.return_value = {
-            "openhands": {"models": ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "o3"], "separator": "/"},
-            "anthropic": {"models": ["claude-3-opus", "claude-3-sonnet"], "separator": "/"},
+            "openhands": {
+                "models": ["claude-sonnet-4-20250514", "claude-opus-4-20250514", "o3"],
+                "separator": "/",
+            },
+            "anthropic": {
+                "models": ["claude-3-opus", "claude-3-sonnet"],
+                "separator": "/",
+            },
         }
         session_instance = MagicMock()
-        session_instance.prompt_async = AsyncMock(side_effect=["new-api-key-after-provider-change"])
+        session_instance.prompt_async = AsyncMock(
+            side_effect=["new-api-key-after-provider-change"]
+        )
         mock_session.return_value = session_instance
         mock_confirm.side_effect = [0, 2, 0]
         await modify_llm_settings_basic(app_config_with_existing, settings_store)
@@ -405,17 +513,29 @@ class TestModifyLLMSettingsBasic:
         args, kwargs = settings_store.store.call_args
         settings = args[0]
         assert settings.llm_model == "Openhands/o3"
-        assert settings.llm_api_key.get_secret_value() == "new-api-key-after-provider-change"
+        assert (
+            settings.llm_api_key.get_secret_value()
+            == "new-api-key-after-provider-change"
+        )
 
     @pytest.mark.asyncio
     @patch("forge.cli.settings.VERIFIED_PROVIDERS", ["openhands", "anthropic"])
-    @patch("forge.cli.settings.VERIFIED_OPENHANDS_MODELS", ["anthropic/claude-3-opus", "anthropic/claude-3-sonnet"])
-    @patch("forge.cli.settings.VERIFIED_ANTHROPIC_MODELS", ["claude-sonnet-4-20250514", "claude-3-opus"])
+    @patch(
+        "forge.cli.settings.VERIFIED_OPENHANDS_MODELS",
+        ["anthropic/claude-3-opus", "anthropic/claude-3-sonnet"],
+    )
+    @patch(
+        "forge.cli.settings.VERIFIED_ANTHROPIC_MODELS",
+        ["claude-sonnet-4-20250514", "claude-3-opus"],
+    )
     @patch("forge.cli.settings.get_supported_llm_models")
     @patch("forge.cli.settings.organize_models_and_providers")
     @patch("forge.cli.settings.PromptSession")
     @patch("forge.cli.settings.cli_confirm")
-    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
+    @patch(
+        "forge.cli.settings.LLMSummarizingCondenserConfig",
+        MockLLMSummarizingCondenserConfig,
+    )
     async def test_modify_llm_settings_basic_from_scratch(
         self, mock_confirm, mock_session, mock_organize, mock_get_models, settings_store
     ):
@@ -436,10 +556,16 @@ class TestModifyLLMSettingsBasic:
         config.enable_default_condenser = True
         config.default_agent = "test-agent"
         config.file_store_path = "/tmp"  # nosec B108 - Safe: test configuration
-        mock_get_models.return_value = ["anthropic/claude-sonnet-4-20250514", "anthropic/claude-3-opus"]
+        mock_get_models.return_value = [
+            "anthropic/claude-sonnet-4-20250514",
+            "anthropic/claude-3-opus",
+        ]
         mock_organize.return_value = {
             "forge": {"models": [], "separator": "/"},
-            "anthropic": {"models": ["claude-sonnet-4-20250514", "claude-3-opus"], "separator": "/"},
+            "anthropic": {
+                "models": ["claude-sonnet-4-20250514", "claude-3-opus"],
+                "separator": "/",
+            },
         }
         session_instance = MagicMock()
         session_instance.prompt_async = AsyncMock(side_effect=["new-api-key-12345"])
@@ -463,7 +589,6 @@ class TestModifyLLMSettingsBasic:
 
 
 class TestModifyLLMSettingsAdvanced:
-
     @pytest.fixture
     def app_config(self):
         config = MagicMock(spec=ForgeConfig)
@@ -494,8 +619,14 @@ class TestModifyLLMSettingsAdvanced:
     @patch("forge.cli.settings.Agent.list_agents")
     @patch("forge.cli.settings.PromptSession")
     @patch("forge.cli.settings.cli_confirm")
-    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
-    @patch("forge.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
+    @patch(
+        "forge.cli.settings.LLMSummarizingCondenserConfig",
+        MockLLMSummarizingCondenserConfig,
+    )
+    @patch(
+        "forge.cli.settings.ConversationWindowCondenserConfig",
+        MockConversationWindowCondenserConfig,
+    )
     @patch("forge.cli.settings.CondenserPipelineConfig", MockCondenserPipelineConfig)
     async def test_modify_llm_settings_advanced_success(
         self, mock_confirm, mock_session, mock_list_agents, app_config, settings_store
@@ -527,8 +658,14 @@ class TestModifyLLMSettingsAdvanced:
     @patch("forge.cli.settings.Agent.list_agents")
     @patch("forge.cli.settings.PromptSession")
     @patch("forge.cli.settings.cli_confirm")
-    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
-    @patch("forge.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
+    @patch(
+        "forge.cli.settings.LLMSummarizingCondenserConfig",
+        MockLLMSummarizingCondenserConfig,
+    )
+    @patch(
+        "forge.cli.settings.ConversationWindowCondenserConfig",
+        MockConversationWindowCondenserConfig,
+    )
     async def test_modify_llm_settings_advanced_user_cancels(
         self, mock_confirm, mock_session, mock_list_agents, app_config, settings_store
     ):
@@ -545,15 +682,33 @@ class TestModifyLLMSettingsAdvanced:
     @patch("forge.cli.settings.PromptSession")
     @patch("forge.cli.settings.cli_confirm")
     @patch("forge.cli.settings.print_formatted_text")
-    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
-    @patch("forge.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
+    @patch(
+        "forge.cli.settings.LLMSummarizingCondenserConfig",
+        MockLLMSummarizingCondenserConfig,
+    )
+    @patch(
+        "forge.cli.settings.ConversationWindowCondenserConfig",
+        MockConversationWindowCondenserConfig,
+    )
     async def test_modify_llm_settings_advanced_invalid_agent(
-        self, mock_print, mock_confirm, mock_session, mock_list_agents, app_config, settings_store
+        self,
+        mock_print,
+        mock_confirm,
+        mock_session,
+        mock_list_agents,
+        app_config,
+        settings_store,
     ):
         mock_list_agents.return_value = ["default", "test-agent"]
         session_instance = MagicMock()
         session_instance.prompt_async = AsyncMock(
-            side_effect=["new-model", "https://new-url", "new-api-key", "invalid-agent", "default"]
+            side_effect=[
+                "new-model",
+                "https://new-url",
+                "new-api-key",
+                "invalid-agent",
+                "default",
+            ]
         )
         mock_session.return_value = session_instance
         await modify_llm_settings_advanced(app_config, settings_store)
@@ -569,8 +724,14 @@ class TestModifyLLMSettingsAdvanced:
     @patch("forge.cli.settings.Agent.list_agents")
     @patch("forge.cli.settings.PromptSession")
     @patch("forge.cli.settings.cli_confirm")
-    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
-    @patch("forge.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
+    @patch(
+        "forge.cli.settings.LLMSummarizingCondenserConfig",
+        MockLLMSummarizingCondenserConfig,
+    )
+    @patch(
+        "forge.cli.settings.ConversationWindowCondenserConfig",
+        MockConversationWindowCondenserConfig,
+    )
     async def test_modify_llm_settings_advanced_user_rejects_save(
         self, mock_confirm, mock_session, mock_list_agents, app_config, settings_store
     ):
@@ -608,17 +769,33 @@ class TestModifyLLMSettingsAdvanced:
     @patch("forge.cli.settings.Agent.list_agents")
     @patch("forge.cli.settings.PromptSession")
     @patch("forge.cli.settings.cli_confirm")
-    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
-    @patch("forge.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
+    @patch(
+        "forge.cli.settings.LLMSummarizingCondenserConfig",
+        MockLLMSummarizingCondenserConfig,
+    )
+    @patch(
+        "forge.cli.settings.ConversationWindowCondenserConfig",
+        MockConversationWindowCondenserConfig,
+    )
     @patch("forge.cli.settings.CondenserPipelineConfig", MockCondenserPipelineConfig)
     async def test_modify_llm_settings_advanced_keep_existing_values(
-        self, mock_confirm, mock_session, mock_list_agents, app_config_with_existing, settings_store
+        self,
+        mock_confirm,
+        mock_session,
+        mock_list_agents,
+        app_config_with_existing,
+        settings_store,
     ):
         """Test keeping all existing values in advanced settings by pressing Enter."""
         mock_list_agents.return_value = ["default", "existing-agent", "test-agent"]
         session_instance = MagicMock()
         session_instance.prompt_async = AsyncMock(
-            side_effect=["custom-existing-model", "https://existing-api.com", "", "existing-agent"]
+            side_effect=[
+                "custom-existing-model",
+                "https://existing-api.com",
+                "",
+                "existing-agent",
+            ]
         )
         mock_session.return_value = session_instance
         mock_confirm.side_effect = [1, 1, 0]
@@ -648,17 +825,33 @@ class TestModifyLLMSettingsAdvanced:
     @patch("forge.cli.settings.Agent.list_agents")
     @patch("forge.cli.settings.PromptSession")
     @patch("forge.cli.settings.cli_confirm")
-    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
-    @patch("forge.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
+    @patch(
+        "forge.cli.settings.LLMSummarizingCondenserConfig",
+        MockLLMSummarizingCondenserConfig,
+    )
+    @patch(
+        "forge.cli.settings.ConversationWindowCondenserConfig",
+        MockConversationWindowCondenserConfig,
+    )
     @patch("forge.cli.settings.CondenserPipelineConfig", MockCondenserPipelineConfig)
     async def test_modify_llm_settings_advanced_partial_change(
-        self, mock_confirm, mock_session, mock_list_agents, app_config_with_existing, settings_store
+        self,
+        mock_confirm,
+        mock_session,
+        mock_list_agents,
+        app_config_with_existing,
+        settings_store,
     ):
         """Test changing only some values in advanced settings while keeping others."""
         mock_list_agents.return_value = ["default", "existing-agent", "test-agent"]
         session_instance = MagicMock()
         session_instance.prompt_async = AsyncMock(
-            side_effect=["new-custom-model", "https://existing-api.com", "new-api-key-123", "test-agent"]
+            side_effect=[
+                "new-custom-model",
+                "https://existing-api.com",
+                "new-api-key-123",
+                "test-agent",
+            ]
         )
         mock_session.return_value = session_instance
         mock_confirm.side_effect = [0, 1, 0]
@@ -677,8 +870,14 @@ class TestModifyLLMSettingsAdvanced:
     @patch("forge.cli.settings.Agent.list_agents")
     @patch("forge.cli.settings.PromptSession")
     @patch("forge.cli.settings.cli_confirm")
-    @patch("forge.cli.settings.LLMSummarizingCondenserConfig", MockLLMSummarizingCondenserConfig)
-    @patch("forge.cli.settings.ConversationWindowCondenserConfig", MockConversationWindowCondenserConfig)
+    @patch(
+        "forge.cli.settings.LLMSummarizingCondenserConfig",
+        MockLLMSummarizingCondenserConfig,
+    )
+    @patch(
+        "forge.cli.settings.ConversationWindowCondenserConfig",
+        MockConversationWindowCondenserConfig,
+    )
     @patch("forge.cli.settings.CondenserPipelineConfig", MockCondenserPipelineConfig)
     async def test_modify_llm_settings_advanced_from_scratch(
         self, mock_confirm, mock_session, mock_list_agents, settings_store
@@ -702,7 +901,12 @@ class TestModifyLLMSettingsAdvanced:
         mock_list_agents.return_value = ["default", "test-agent", "advanced-agent"]
         session_instance = MagicMock()
         session_instance.prompt_async = AsyncMock(
-            side_effect=["from-scratch-model", "https://new-api-endpoint.com", "brand-new-api-key", "advanced-agent"]
+            side_effect=[
+                "from-scratch-model",
+                "https://new-api-endpoint.com",
+                "brand-new-api-key",
+                "advanced-agent",
+            ]
         )
         mock_session.return_value = session_instance
         mock_confirm.side_effect = [1, 0, 0]
@@ -730,7 +934,6 @@ class TestModifyLLMSettingsAdvanced:
 
 
 class TestGetValidatedInput:
-
     @pytest.mark.asyncio
     @patch("forge.cli.settings.PromptSession")
     async def test_get_validated_input_with_prefill(self, mock_session):
@@ -739,8 +942,12 @@ class TestGetValidatedInput:
 
         session_instance = MagicMock()
         session_instance.prompt_async = AsyncMock(return_value="modified-value")
-        result = await get_validated_input(session_instance, "Enter value: ", default_value="existing-value")
-        session_instance.prompt_async.assert_called_once_with("Enter value: ", default="existing-value")
+        result = await get_validated_input(
+            session_instance, "Enter value: ", default_value="existing-value"
+        )
+        session_instance.prompt_async.assert_called_once_with(
+            "Enter value: ", default="existing-value"
+        )
         assert result == "modified-value"
 
     @pytest.mark.asyncio
@@ -752,9 +959,14 @@ class TestGetValidatedInput:
         session_instance = MagicMock()
         session_instance.prompt_async = AsyncMock(return_value="  ")
         result = await get_validated_input(
-            session_instance, "Enter value: ", default_value="", enter_keeps_value="existing-value"
+            session_instance,
+            "Enter value: ",
+            default_value="",
+            enter_keeps_value="existing-value",
         )
-        session_instance.prompt_async.assert_called_once_with("Enter value: ", default="")
+        session_instance.prompt_async.assert_called_once_with(
+            "Enter value: ", default=""
+        )
         assert result == "existing-value"
 
     @pytest.mark.asyncio
@@ -764,7 +976,9 @@ class TestGetValidatedInput:
         from forge.cli.settings import get_validated_input
 
         session_instance = MagicMock()
-        session_instance.prompt_async = AsyncMock(side_effect=["invalid", "valid-input"])
+        session_instance.prompt_async = AsyncMock(
+            side_effect=["invalid", "valid-input"]
+        )
         with patch("forge.cli.settings.print_formatted_text") as mock_print:
             result = await get_validated_input(
                 session_instance,
@@ -781,7 +995,6 @@ class TestGetValidatedInput:
 
 
 class TestModifySearchApiSettings:
-
     @pytest.fixture
     def app_config(self):
         config = MagicMock(spec=ForgeConfig)

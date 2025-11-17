@@ -33,7 +33,12 @@ from evaluation.utils.shared import (
     run_evaluation,
 )
 from forge.controller.state.state import State
-from forge.core.config import ForgeConfig, get_evaluation_parser, get_llm_config_arg, load_FORGE_config
+from forge.core.config import (
+    ForgeConfig,
+    get_evaluation_parser,
+    get_llm_config_arg,
+    load_FORGE_config,
+)
 from forge.core.logger import forge_logger as logger
 from forge.core.main import create_runtime, run_controller
 from forge.events.action import CmdRunAction, MessageAction
@@ -68,7 +73,9 @@ ID2CONDA = {
 def get_config(metadata: EvalMetadata) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = "public.ecr.aws/i5g0m1f6/ml-bench"
-    config = get_FORGE_config_for_eval(metadata=metadata, runtime="docker", sandbox_config=sandbox_config)
+    config = get_FORGE_config_for_eval(
+        metadata=metadata, runtime="docker", sandbox_config=sandbox_config
+    )
     config.set_llm_config(metadata.llm_config)
     agent_config = config.get_agent_config(metadata.agent_class)
     agent_config.enable_prompt_extensions = False
@@ -131,7 +138,8 @@ def complete_runtime(runtime: Runtime, instance: pd.Series) -> dict[str, Any]:
         logger.error("Error reading evaluation script: %s", obs.content)
         eval_script_content = ""
     action = CmdRunAction(
-        command=f"timeout 120s conda run -n {ID2CONDA[instance['github_id']]} bash {eval_script}", timeout=600
+        command=f"timeout 120s conda run -n {ID2CONDA[instance['github_id']]} bash {eval_script}",
+        timeout=600,
     )
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
@@ -165,11 +173,17 @@ def process_instance(instance: Any, metadata: EvalMetadata, reset_logger: bool =
     repo_name = repo_url.split("/")[-1]
     task_path = os.path.join("/workspace", repo_name, instance["path"][2:])
     instruction = (
-        f"Please complete the Machine Learning task in the following repository: {repo_name}\n\n{
-            instance['instruction']}\n\nYou should create a script named `run.sh` under the specified path in the repo to run the task.\n\nYou can find the task repo at: {task_path}\n\n"
+        f"Please complete the Machine Learning task in the following repository: {
+            repo_name
+        }\n\n{
+            instance['instruction']
+        }\n\nYou should create a script named `run.sh` under the specified path in the repo to run the task.\n\nYou can find the task repo at: {
+            task_path
+        }\n\n"
         + (
             f"Here is the prefix code for the task:\n```bash\n{
-                instance['prefix_code']}\n```\n\n"
+                instance['prefix_code']
+            }\n```\n\n"
             if instance["prefix_code"]
             else ""
         )
@@ -184,7 +198,9 @@ def process_instance(instance: Any, metadata: EvalMetadata, reset_logger: bool =
             config=config,
             initial_user_action=MessageAction(content=instruction),
             runtime=runtime,
-            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN.get(metadata.agent_class),
+            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN.get(
+                metadata.agent_class
+            ),
         )
     )
     assert state is not None
@@ -214,9 +230,7 @@ if __name__ == "__main__":
     )
     args, _ = parser.parse_known_args()
     data_split = args.eval_split
-    ml_bench = load_dataset(
-        "super-dainiu/ml-bench", split=data_split
-    ).to_pandas()  # nosec B615 - Safe: evaluation benchmark dataset
+    ml_bench = load_dataset("super-dainiu/ml-bench", split=data_split).to_pandas()  # nosec B615 - Safe: evaluation benchmark dataset
     ml_bench.rename(columns={"id": "instance_id"}, inplace=True)
     llm_config = None
     if args.llm_config:
@@ -225,8 +239,15 @@ if __name__ == "__main__":
     if llm_config is None:
         raise ValueError(f"Could not find LLM config: --llm_config {args.llm_config}")
     metadata = make_metadata(
-        llm_config, f"ml-bench-{data_split}", args.agent_cls, args.max_iterations, args.eval_note, args.eval_output_dir
+        llm_config,
+        f"ml-bench-{data_split}",
+        args.agent_cls,
+        args.max_iterations,
+        args.eval_note,
+        args.eval_output_dir,
     )
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
     instances = prepare_dataset(ml_bench, output_file, args.eval_n_limit)
-    run_evaluation(instances, metadata, output_file, args.eval_num_workers, process_instance)
+    run_evaluation(
+        instances, metadata, output_file, args.eval_num_workers, process_instance
+    )

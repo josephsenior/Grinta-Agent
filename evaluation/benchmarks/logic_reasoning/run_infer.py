@@ -19,7 +19,12 @@ from forge.controller.state.state import State
 from forge.core.config import ForgeConfig, get_evaluation_parser, get_llm_config_arg
 from forge.core.logger import forge_logger as logger
 from forge.core.main import create_runtime, run_controller
-from forge.events.action import AgentFinishAction, CmdRunAction, IPythonRunCellAction, MessageAction
+from forge.events.action import (
+    AgentFinishAction,
+    CmdRunAction,
+    IPythonRunCellAction,
+    MessageAction,
+)
 from forge.events.observation import CmdOutputObservation
 from forge.runtime.base import Runtime
 from forge.utils.async_utils import call_async_from_sync
@@ -33,8 +38,12 @@ AGENT_CLS_TO_INST_SUFFIX = {
 def get_config(metadata: EvalMetadata) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = "xingyaoww/od-eval-logic-reasoning:v1.0"
-    sandbox_config.runtime_extra_deps = "$OH_INTERPRETER_PATH -m pip install scitools-pyke"
-    config = get_FORGE_config_for_eval(metadata=metadata, runtime="docker", sandbox_config=sandbox_config)
+    sandbox_config.runtime_extra_deps = (
+        "$OH_INTERPRETER_PATH -m pip install scitools-pyke"
+    )
+    config = get_FORGE_config_for_eval(
+        metadata=metadata, runtime="docker", sandbox_config=sandbox_config
+    )
     config.set_llm_config(metadata.llm_config)
     agent_config = config.get_agent_config(metadata.agent_class)
     agent_config.enable_prompt_extensions = False
@@ -135,7 +144,9 @@ with open(os.path.join(CUR_EVAL_DIR, "instruction.txt"), "r") as f:
     INSTRUCTION_TEMPLATE = f.read()
 
 
-def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True):
+def process_instance(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True
+):
     config = get_config(metadata)
     if reset_logger:
         log_dir = os.path.join(metadata.eval_output_dir, "infer_logs")
@@ -157,7 +168,9 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
             config=config,
             initial_user_action=MessageAction(content=instruction),
             runtime=runtime,
-            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN.get(metadata.agent_class),
+            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN.get(
+                metadata.agent_class
+            ),
         )
     )
     if state is None:
@@ -171,8 +184,12 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
             final_message = event.content
             break
     final_message = final_message.strip("'")
-    logger.info("Predicted answer: %s, Ground truth: %s", final_message, instance["answer"])
-    test_result = get_test_result(model_answer=final_message, ground_truth=instance["answer"])
+    logger.info(
+        "Predicted answer: %s, Ground truth: %s", final_message, instance["answer"]
+    )
+    test_result = get_test_result(
+        model_answer=final_message, ground_truth=instance["answer"]
+    )
     test_result["final_message"] = final_message
     metrics = get_metrics(state)
     histories = compatibility_for_eval_history_pairs(state.history)
@@ -195,7 +212,12 @@ if __name__ == "__main__":
         help="the logic reasoning dataset to evaluate on {ProntoQA, ProofWriter}",
         default="ProofWriter",
     )
-    parser.add_argument("--data-split", type=str, help="data split to evaluate on {validation}", default="validation")
+    parser.add_argument(
+        "--data-split",
+        type=str,
+        help="data split to evaluate on {validation}",
+        default="validation",
+    )
     args, _ = parser.parse_known_args()
     dataset_name = args.dataset
     data_split = args.data_split
@@ -209,8 +231,15 @@ if __name__ == "__main__":
     if llm_config is None:
         raise ValueError(f"Could not find LLM config: --llm_config {args.llm_config}")
     metadata = make_metadata(
-        llm_config, dataset_name, args.agent_cls, args.max_iterations, args.eval_note, args.eval_output_dir
+        llm_config,
+        dataset_name,
+        args.agent_cls,
+        args.max_iterations,
+        args.eval_note,
+        args.eval_output_dir,
     )
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
     instances = prepare_dataset(dataset_df, output_file, args.eval_n_limit)
-    run_evaluation(instances, metadata, output_file, args.eval_num_workers, process_instance)
+    run_evaluation(
+        instances, metadata, output_file, args.eval_num_workers, process_instance
+    )

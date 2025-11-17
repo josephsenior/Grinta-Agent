@@ -72,7 +72,9 @@ async def test_validate_blocks_critical_risk():
     config = _config(environment="production")
     validator = SafetyValidator(config)
     validator.analyzer = _StubAnalyzer(
-        _assessment(risk_level=ActionSecurityRisk.HIGH, risk_category=RiskCategory.CRITICAL),
+        _assessment(
+            risk_level=ActionSecurityRisk.HIGH, risk_category=RiskCategory.CRITICAL
+        ),
     )
 
     result = await validator.validate(CmdRunAction(command="rm -rf /"), _context())
@@ -85,10 +87,14 @@ async def test_validate_blocks_high_risk_in_production():
     config = _config(environment="production", enable_mandatory_validation=False)
     validator = SafetyValidator(config)
     validator.analyzer = _StubAnalyzer(
-        _assessment(risk_level=ActionSecurityRisk.HIGH, risk_category=RiskCategory.HIGH),
+        _assessment(
+            risk_level=ActionSecurityRisk.HIGH, risk_category=RiskCategory.HIGH
+        ),
     )
 
-    result = await validator.validate(CmdRunAction(command="chmod 777 file"), _context())
+    result = await validator.validate(
+        CmdRunAction(command="chmod 777 file"), _context()
+    )
     assert not result.allowed
     assert result.blocked_reason and "HIGH RISK" in result.blocked_reason
 
@@ -98,10 +104,14 @@ async def test_validate_blocks_high_risk_autonomous_when_mandatory():
     config = _config(require_review_for_high_risk=True)
     validator = SafetyValidator(config)
     validator.analyzer = _StubAnalyzer(
-        _assessment(risk_level=ActionSecurityRisk.HIGH, risk_category=RiskCategory.HIGH),
+        _assessment(
+            risk_level=ActionSecurityRisk.HIGH, risk_category=RiskCategory.HIGH
+        ),
     )
 
-    result = await validator.validate(CmdRunAction(command="danger"), _context(is_autonomous=True))
+    result = await validator.validate(
+        CmdRunAction(command="danger"), _context(is_autonomous=True)
+    )
     assert not result.allowed
     assert result.requires_review  # review required for high risk
 
@@ -111,7 +121,11 @@ async def test_validate_allows_medium_risk():
     config = _config()
     validator = SafetyValidator(config)
     validator.analyzer = _StubAnalyzer(
-        _assessment(risk_level=ActionSecurityRisk.MEDIUM, risk_category=RiskCategory.MEDIUM, matched_patterns=[]),
+        _assessment(
+            risk_level=ActionSecurityRisk.MEDIUM,
+            risk_category=RiskCategory.MEDIUM,
+            matched_patterns=[],
+        ),
     )
 
     result = await validator.validate(CmdRunAction(command="ls"), _context())
@@ -145,7 +159,9 @@ async def test_log_to_audit_handles_disabled_and_errors():
     validator.audit_logger = SimpleNamespace(
         log_action=AsyncMock(return_value="audit-success"),
     )
-    assert await validator._log_to_audit(action, context, dummy_result) == "audit-success"
+    assert (
+        await validator._log_to_audit(action, context, dummy_result) == "audit-success"
+    )
 
 
 def test_validator_initializes_audit_logger(monkeypatch, tmp_path):
@@ -156,7 +172,11 @@ def test_validator_initializes_audit_logger(monkeypatch, tmp_path):
         async def log_action(self, **kwargs):
             return "dummy"
 
-    monkeypatch.setitem(sys.modules, "forge.audit.audit_logger", types.SimpleNamespace(AuditLogger=DummyAuditLogger))
+    monkeypatch.setitem(
+        sys.modules,
+        "forge.audit.audit_logger",
+        types.SimpleNamespace(AuditLogger=DummyAuditLogger),
+    )
     config = _config(enable_audit_logging=True, audit_log_path=str(tmp_path))
     validator = SafetyValidator(config)
     assert isinstance(validator.audit_logger, DummyAuditLogger)
@@ -238,7 +258,9 @@ async def test_send_webhook_alert_success(monkeypatch):
         def __init__(self, total):
             self.total = total
 
-    aiohttp_stub = types.SimpleNamespace(ClientSession=lambda: DummySession(), ClientTimeout=DummyTimeout)
+    aiohttp_stub = types.SimpleNamespace(
+        ClientSession=lambda: DummySession(), ClientTimeout=DummyTimeout
+    )
     monkeypatch.setitem(sys.modules, "aiohttp", aiohttp_stub)
 
     validator = SafetyValidator(_config(alert_webhook_url="https://example.com"))
@@ -270,9 +292,10 @@ async def test_send_webhook_alert_handles_error_status(monkeypatch):
         def __init__(self, total):
             self.total = total
 
-    aiohttp_stub = types.SimpleNamespace(ClientSession=lambda: DummySession(), ClientTimeout=DummyTimeout)
+    aiohttp_stub = types.SimpleNamespace(
+        ClientSession=lambda: DummySession(), ClientTimeout=DummyTimeout
+    )
     monkeypatch.setitem(sys.modules, "aiohttp", aiohttp_stub)
 
     validator = SafetyValidator(_config(alert_webhook_url="https://example.com"))
     await validator._send_webhook_alert("alert")
-

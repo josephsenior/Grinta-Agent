@@ -3,8 +3,12 @@ import json
 import os
 import git
 import pandas as pd
-from evaluation.benchmarks.discoverybench.eval_utils.eval_w_subhypo_gen import run_eval_gold_vs_gen_NL_hypo_workflow
-from evaluation.benchmarks.discoverybench.eval_utils.response_parser import extract_gen_hypo_from_logs
+from evaluation.benchmarks.discoverybench.eval_utils.eval_w_subhypo_gen import (
+    run_eval_gold_vs_gen_NL_hypo_workflow,
+)
+from evaluation.benchmarks.discoverybench.eval_utils.response_parser import (
+    extract_gen_hypo_from_logs,
+)
 from evaluation.utils.shared import (
     EvalMetadata,
     EvalOutput,
@@ -19,7 +23,12 @@ from evaluation.utils.shared import (
     run_evaluation,
 )
 from forge.controller.state.state import State
-from forge.core.config import AgentConfig, ForgeConfig, get_llm_config_arg, parse_arguments
+from forge.core.config import (
+    AgentConfig,
+    ForgeConfig,
+    get_llm_config_arg,
+    parse_arguments,
+)
 from forge.core.logger import forge_logger as logger
 from forge.core.main import create_runtime, run_controller
 from forge.events.action import AgentFinishAction, CmdRunAction, MessageAction
@@ -29,7 +38,15 @@ from forge.utils.async_utils import call_async_from_sync
 
 EVALUATION_LLM = "gpt-4-1106-preview"
 DATA_FILES = {}
-LIBRARIES = ["pandas", "numpy", "scipy", "matplotlib", "seaborn", "scikit-learn", "statsmodels"]
+LIBRARIES = [
+    "pandas",
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "seaborn",
+    "scikit-learn",
+    "statsmodels",
+]
 AGENT_CLS_TO_FAKE_USER_RESPONSE_FN = {"CodeActAgent": codeact_user_response}
 AGENT_CLS_TO_INST_SUFFIX = {
     "CodeActAgent": 'When you think you have fixed the issue through code changes, please finish the interaction using the "finish" tool.\n'
@@ -39,16 +56,22 @@ AGENT_CLS_TO_INST_SUFFIX = {
 def get_config(metadata: EvalMetadata) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = "python:3.12-bookworm"
-    config = get_FORGE_config_for_eval(metadata=metadata, runtime="docker", sandbox_config=sandbox_config)
+    config = get_FORGE_config_for_eval(
+        metadata=metadata, runtime="docker", sandbox_config=sandbox_config
+    )
     config.set_llm_config(metadata.llm_config)
     agent_config = config.get_agent_config(metadata.agent_class)
     agent_config.enable_prompt_extensions = False
-    agent_config = AgentConfig(function_calling=False, enable_jupyter=True, enable_browsing=True)
+    agent_config = AgentConfig(
+        function_calling=False, enable_jupyter=True, enable_browsing=True
+    )
     config.set_agent_config(agent_config)
     return config
 
 
-def get_dv_query_for_real(datasets, question, domain_knowledge=None, workflow_tags=None):
+def get_dv_query_for_real(
+    datasets, question, domain_knowledge=None, workflow_tags=None
+):
     """Prepare a structured query for the agent to execute on the specified datasets.
 
     This function constructs a query by compiling metadata from the provided datasets, along with any relevant domain knowledge and workflow tags.
@@ -110,11 +133,25 @@ def initialize_runtime(runtime: Runtime, data_files: list[str]):
 
 
 def get_last_agent_finish_action(state: State) -> AgentFinishAction:
-    return next((event for event in reversed(state.history) if isinstance(event, AgentFinishAction)), None)
+    return next(
+        (
+            event
+            for event in reversed(state.history)
+            if isinstance(event, AgentFinishAction)
+        ),
+        None,
+    )
 
 
 def get_last_message_action(state: State) -> MessageAction:
-    return next((event for event in reversed(state.history) if isinstance(event, MessageAction)), None)
+    return next(
+        (
+            event
+            for event in reversed(state.history)
+            if isinstance(event, MessageAction)
+        ),
+        None,
+    )
 
 
 def complete_runtime(state: State):
@@ -122,18 +159,24 @@ def complete_runtime(state: State):
     last_agent_message_action = get_last_message_action(state)
     if last_agent_finish_action is not None:
         final_message_1 = last_agent_finish_action.thought
-        gen_hypo_1, gen_workflow_1, error_1 = extract_gen_hypo_from_logs(final_message_1)
+        gen_hypo_1, gen_workflow_1, error_1 = extract_gen_hypo_from_logs(
+            final_message_1
+        )
     else:
         gen_hypo_1, gen_workflow_1, error_1 = ("", "", "")
     if last_agent_message_action is not None:
         final_message_2 = last_agent_message_action.content
-        gen_hypo_2, gen_workflow_2, error_2 = extract_gen_hypo_from_logs(final_message_2)
+        gen_hypo_2, gen_workflow_2, error_2 = extract_gen_hypo_from_logs(
+            final_message_2
+        )
     else:
         gen_hypo_2, gen_workflow_2, error_2 = ("", "", "")
     if gen_hypo_1 and gen_hypo_2:
         return {
             "gen_hypo": (
-                last_agent_finish_action.thought if last_agent_finish_action else last_agent_message_action.content
+                last_agent_finish_action.thought
+                if last_agent_finish_action
+                else last_agent_message_action.content
             ),
             "gen_workflow": "",
             "error": "",
@@ -145,7 +188,9 @@ def complete_runtime(state: State):
     }
 
 
-def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True):
+def process_instance(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True
+):
     """Process and evaluate a single instance of the dataset.
 
     This function executes the Forge agent
@@ -184,7 +229,9 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
             config=config,
             initial_user_action=MessageAction(content=instruction),
             runtime=runtime,
-            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN.get(metadata.agent_class),
+            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN.get(
+                metadata.agent_class
+            ),
         )
     )
     if state is None:
@@ -288,7 +335,11 @@ def create_dataset(repo_location: str, split: str = "test"):
     df["data_files"] = df["datasets"].apply(lambda x: list_csv_files(x))
     answer_key = pd.read_csv(answer_key_location)
     answer_key = answer_key.rename(
-        columns={"metadataid": "metadata_id", "query_id": "qid", "gold_hypothesis": "gold_hypothesis"}
+        columns={
+            "metadataid": "metadata_id",
+            "query_id": "qid",
+            "gold_hypothesis": "gold_hypothesis",
+        }
     )
     df["qid"] = df["qid"].astype(int)
     df["metadata_id"] = df["metadata_id"].astype(int)
@@ -316,8 +367,15 @@ if __name__ == "__main__":
     if llm_config is None:
         raise ValueError(f"Could not find LLM config: --llm_config {args.llm_config}")
     metadata = make_metadata(
-        llm_config, "discoverybench-python", args.agent_cls, args.max_iterations, args.eval_note, args.eval_output_dir
+        llm_config,
+        "discoverybench-python",
+        args.agent_cls,
+        args.max_iterations,
+        args.eval_note,
+        args.eval_output_dir,
     )
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
     instances = prepare_dataset(dataset, output_file, args.eval_n_limit)
-    run_evaluation(instances, metadata, output_file, args.eval_num_workers, process_instance)
+    run_evaluation(
+        instances, metadata, output_file, args.eval_num_workers, process_instance
+    )

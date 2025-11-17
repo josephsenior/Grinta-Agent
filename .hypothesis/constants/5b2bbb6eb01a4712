@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\routes\prompt_optimization.py
+# hypothesis_version: 6.147.0
+
+[0.0, 0.1, 0.5, 1.0, '/analytics/summary', '/config', '/health', '/prompts', '/status', 'active_tests', 'active_variant_id', 'agent', 'avg_improvement', 'config', 'cost_savings', 'day', 'default', 'generated_at', 'healthy', 'message', 'month', 'new_variants', 'optimizer', 'orchestrator', 'period', 'prompt-optimization', 'prompt_id', 'prompt_optimizer', 'prompts_optimized', 'registry', 'service', 'status', 'storage', 'strategy', 'summary', 'timestamp', 'total_variants', 'tracker', 'unknown', 'updated_fields', 'week']

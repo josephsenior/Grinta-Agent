@@ -10,7 +10,6 @@ from forge.storage import get_file_store
 
 
 class MockLLMRegistry:
-
     def __init__(self, config):
         self.config = config
 

@@ -58,4 +58,3 @@ def record_llm_cost_from_response(user_key: str, response: dict) -> None:
         pass
     except Exception as e:
         logger.error(f"Failed to record LLM cost from response: {e}")
-

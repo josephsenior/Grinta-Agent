@@ -43,7 +43,9 @@ class FakeFileStore:
         return entries
 
 
-def _create_message_event(content: str, source: EventSource, event_id: int) -> dict[str, Any]:
+def _create_message_event(
+    content: str, source: EventSource, event_id: int
+) -> dict[str, Any]:
     action = MessageAction(content=content)
     action._id = event_id
     action._sequence = event_id
@@ -78,7 +80,10 @@ def test_event_store_reads_and_filters_events(tmp_path):
 
     # cache page to speed future lookups
     cache_filename = store._get_filename_for_cache(0, 2)
-    cache_events = [_create_message_event("event0", EventSource.AGENT, 0), _create_message_event("event1", EventSource.USER, 1)]
+    cache_events = [
+        _create_message_event("event0", EventSource.AGENT, 0),
+        _create_message_event("event1", EventSource.USER, 1),
+    ]
     file_store.write(cache_filename, json.dumps(cache_events))
 
     events = list(store.search_events())
@@ -90,7 +95,10 @@ def test_event_store_reads_and_filters_events(tmp_path):
     assert len(filtered) == 1
     assert filtered[0].message == "event0"
 
-    ids = [store._get_id_from_filename("invalid"), store._get_id_from_filename("sessions/sid/events/3.json")]
+    ids = [
+        store._get_id_from_filename("invalid"),
+        store._get_id_from_filename("sessions/sid/events/3.json"),
+    ]
     assert ids == [-1, 3]
 
 
@@ -158,10 +166,15 @@ def test_nested_event_store_fetches_and_filters(monkeypatch):
 def test_nested_event_store_helper_logic(monkeypatch):
     nested = NestedEventStore(base_url="http://example", sid="sid", user_id=None)
     params = nested._build_search_params(5, 10, True, 150)
-    assert params["reverse"] is True and params["limit"] == 100 and params["end_id"] == 10
+    assert (
+        params["reverse"] is True and params["limit"] == 100 and params["end_id"] == 10
+    )
 
     responses = [
-        {"events": [_create_message_event("reverse", EventSource.AGENT, 3)], "has_more": False},
+        {
+            "events": [_create_message_event("reverse", EventSource.AGENT, 3)],
+            "has_more": False,
+        },
     ]
     recorded = []
 
@@ -176,7 +189,9 @@ def test_nested_event_store_helper_logic(monkeypatch):
 
     # limit countdown path should not stop immediately when limit > 1
     event = event_from_dict(_create_message_event("limit", EventSource.AGENT, 5))
-    should_yield, should_stop = nested._process_event(event, end_id=None, filter=None, limit=2)
+    should_yield, should_stop = nested._process_event(
+        event, end_id=None, filter=None, limit=2
+    )
     assert should_yield is True and should_stop is False
 
     # `_make_api_request` returning None yields no events
@@ -193,7 +208,9 @@ def test_nested_event_store_helper_logic(monkeypatch):
 
     # Filter exclusion path
     filt = EventFilter(query="missing")
-    should_yield, should_stop = nested._process_event(event, end_id=None, filter=filt, limit=2)
+    should_yield, should_stop = nested._process_event(
+        event, end_id=None, filter=filt, limit=2
+    )
     assert should_yield is False and should_stop is False
 
 
@@ -205,7 +222,9 @@ def test_nested_event_store_headers_and_error_paths(monkeypatch):
         return httpx.Response(404)
 
     monkeypatch.setattr(httpx, "get", fake_get)
-    nested = NestedEventStore(base_url="http://example", sid="sid", user_id=None, session_api_key="api-key")
+    nested = NestedEventStore(
+        base_url="http://example", sid="sid", user_id=None, session_api_key="api-key"
+    )
     assert nested._make_api_request({"start_id": 0}) is None
     assert captured_headers["headers"]["X-Session-API-Key"] == "api-key"
 
@@ -220,7 +239,10 @@ def test_nested_event_store_headers_and_error_paths(monkeypatch):
     monkeypatch.setattr(
         nested,
         "_make_api_request",
-        lambda params: {"events": [_create_message_event("latest", EventSource.AGENT, 9)], "has_more": False},
+        lambda params: {
+            "events": [_create_message_event("latest", EventSource.AGENT, 9)],
+            "has_more": False,
+        },
     )
     assert nested.get_latest_event_id() == 9
 
@@ -290,7 +312,10 @@ def test_event_stream_error_handler_logs_error(monkeypatch):
         raise RuntimeError("boom")
 
     errors = []
-    monkeypatch.setattr("forge.events.stream.logger.error", lambda *args, **kwargs: errors.append(args[0]))
+    monkeypatch.setattr(
+        "forge.events.stream.logger.error",
+        lambda *args, **kwargs: errors.append(args[0]),
+    )
 
     stream.subscribe(EventStreamSubscriber.TEST, bad_callback, "cb1")
     stream.add_event(MessageAction(content="hi"), EventSource.AGENT)
@@ -345,4 +370,3 @@ def test_session_exists_checks_storage(monkeypatch):
 
     monkeypatch.setattr(file_store, "list", raising_list)
     assert asyncio.run(session_exists("sid2", file_store)) is False
-

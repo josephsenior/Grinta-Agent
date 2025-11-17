@@ -387,27 +387,28 @@ print(f"Execution time: {result.execution_time}")
 
 ### **REST API**
 ```bash
-# Create a new task
-curl -X POST http://localhost:8000/api/metasop/tasks \
+# Get MetaSOP orchestration
+curl http://localhost:3000/api/metasop/orchestration/{conversation_id}
+
+# Get artifact for a step
+curl http://localhost:3000/api/metasop/artifacts/{conversation_id}/{step_id}
+
+# Pass to CodeAct agent
+curl -X POST http://localhost:3000/api/metasop/pass-to-codeact \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "Implement user authentication",
-    "description": "Add login/logout functionality",
-    "priority": "high",
-    "deadline": "2024-01-15"
+    "conversation_id": "conv_123",
+    "step_id": "step_456"
   }'
-
-# Get task status
-curl http://localhost:8000/api/metasop/tasks/{task_id}/status
-
-# Get agent performance
-curl http://localhost:8000/api/metasop/agents/performance
 ```
 
 ### **WebSocket API**
 ```javascript
-// Connect to MetaSOP WebSocket
-const socket = io('ws://localhost:8000/metasop');
+// Connect to Socket.IO
+const socket = io('http://localhost:3000', {
+  path: '/socket.io',
+  query: { conversationId: 'your-conversation-id' }
+});
 
 // Listen for task updates
 socket.on('task_update', (data) => {
@@ -509,10 +510,10 @@ emitter.emit_step_complete(
 #### **Testing the Visualization System**
 ```bash
 # 1. Start backend and frontend
-python -m Forge.server --port 3001
+python -m forge.server
 cd frontend && npm run dev
 
-# 2. Open http://localhost:3001
+# 2. Open http://localhost:3000 (or http://localhost:5173 for dev server)
 
 # 3. In chat, type:
 sop: Create a todo app with authentication

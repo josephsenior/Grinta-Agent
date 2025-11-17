@@ -19,7 +19,9 @@ def has_miniwob():
         return False
 
 
-@pytest.mark.skipif(not has_miniwob(), reason="Requires browsergym-miniwob package to be installed")
+@pytest.mark.skipif(
+    not has_miniwob(), reason="Requires browsergym-miniwob package to be installed"
+)
 def test_browsergym_eval_env(runtime_cls, temp_dir):
     runtime, config = _load_runtime(
         temp_dir,
@@ -30,9 +32,14 @@ def test_browsergym_eval_env(runtime_cls, temp_dir):
         force_rebuild_runtime=True,
         enable_browser=True,
     )
-    from forge.runtime.browser.browser_env import BROWSER_EVAL_GET_GOAL_ACTION, BROWSER_EVAL_GET_REWARDS_ACTION
+    from forge.runtime.browser.browser_env import (
+        BROWSER_EVAL_GET_GOAL_ACTION,
+        BROWSER_EVAL_GET_REWARDS_ACTION,
+    )
 
-    action = BrowseInteractiveAction(browser_actions=BROWSER_EVAL_GET_GOAL_ACTION, return_axtree=False)
+    action = BrowseInteractiveAction(
+        browser_actions=BROWSER_EVAL_GET_GOAL_ACTION, return_axtree=False
+    )
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
@@ -44,8 +51,13 @@ def test_browsergym_eval_env(runtime_cls, temp_dir):
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})
-    assert obs.url.strip() == "file:///miniwob-plusplus/miniwob/html/miniwob/choose-list.html"
-    action = BrowseInteractiveAction(browser_actions=BROWSER_EVAL_GET_REWARDS_ACTION, return_axtree=False)
+    assert (
+        obs.url.strip()
+        == "file:///miniwob-plusplus/miniwob/html/miniwob/choose-list.html"
+    )
+    action = BrowseInteractiveAction(
+        browser_actions=BROWSER_EVAL_GET_REWARDS_ACTION, return_axtree=False
+    )
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     logger.info(obs, extra={"msg_type": "OBSERVATION"})

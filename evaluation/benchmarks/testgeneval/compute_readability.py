@@ -6,7 +6,12 @@ def total_byte_entropy_stats(python_code):
     for byte in python_code.encode("utf-8"):
         byte_counts[byte] = byte_counts.get(byte, 0) + 1
     total_bytes = sum(byte_counts.values())
-    entropy = -sum((count / total_bytes * math.log2(count / total_bytes) for count in byte_counts.values()))
+    entropy = -sum(
+        (
+            count / total_bytes * math.log2(count / total_bytes)
+            for count in byte_counts.values()
+        )
+    )
     return {"total_byte_entropy": entropy}
 
 
@@ -55,7 +60,10 @@ def arithmetic_operations_stats(tree, num_lines):
                 traverse(child)
 
     traverse(tree.root_node)
-    return {"total_arithmetic_operations": total_ops, "avg_arithmetic_operations": total_ops / num_lines}
+    return {
+        "total_arithmetic_operations": total_ops,
+        "avg_arithmetic_operations": total_ops / num_lines,
+    }
 
 
 def numbers_floats_stats(tree, num_lines):
@@ -66,7 +74,10 @@ def numbers_floats_stats(tree, num_lines):
         nonlocal total_numbers, total_floats
         if node.type in ["integer_literal", "decimal_literal"]:
             total_numbers += 1
-            if "." in node.text.decode("utf8") or "e" in node.text.decode("utf8").lower():
+            if (
+                "." in node.text.decode("utf8")
+                or "e" in node.text.decode("utf8").lower()
+            ):
                 total_floats += 1
         for child in node.children:
             traverse(child)
@@ -97,7 +108,10 @@ def assertions_stats(tree, num_lines):
             traverse(child)
 
     traverse(tree.root_node)
-    return {"total_assertions": total_assertions, "total_has_assertions": 1 if total_assertions > 0 else 0}
+    return {
+        "total_assertions": total_assertions,
+        "total_has_assertions": 1 if total_assertions > 0 else 0,
+    }
 
 
 def class_instances_stats(tree, num_lines):
@@ -146,9 +160,14 @@ def distinct_methods_stats(tree, num_lines):
     traverse(tree.root_node)
     total_distinct_methods = len(method_names)
     total_method_ratio = (
-        total_distinct_methods / (total_nodes - total_distinct_methods) if total_nodes > total_distinct_methods else 0
+        total_distinct_methods / (total_nodes - total_distinct_methods)
+        if total_nodes > total_distinct_methods
+        else 0
     )
-    return {"total_distinct_methods": total_distinct_methods, "total_method_ratio": total_method_ratio}
+    return {
+        "total_distinct_methods": total_distinct_methods,
+        "total_method_ratio": total_method_ratio,
+    }
 
 
 def loops_stats(tree, num_lines):
@@ -266,7 +285,9 @@ def compute_regression(results):
         "total_floats": -0.0174,
         "total_byte_entropy": -0.3917,
     }
-    test_score = sum((value * results[component] for component, value in components.items()))
+    test_score = sum(
+        (value * results[component] for component, value in components.items())
+    )
     test_score += 5.7501
     return test_score
 

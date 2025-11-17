@@ -21,11 +21,13 @@ if TYPE_CHECKING:
 
 class TokenResponse(BaseModel):
     """Response model for authentication token."""
+
     token: str
 
 
 class ProviderType(Enum):
     """Git provider type enumeration."""
+
     GITHUB = "github"
     GITLAB = "gitlab"
     BITBUCKET = "bitbucket"
@@ -34,6 +36,7 @@ class ProviderType(Enum):
 
 class TaskType(str, Enum):
     """Task type enumeration for suggested tasks."""
+
     MERGE_CONFLICTS = "MERGE_CONFLICTS"
     FAILING_CHECKS = "FAILING_CHECKS"
     UNRESOLVED_COMMENTS = "UNRESOLVED_COMMENTS"
@@ -44,12 +47,14 @@ class TaskType(str, Enum):
 
 class OwnerType(str, Enum):
     """Owner type enumeration for repositories."""
+
     USER = "user"
     ORGANIZATION = "organization"
 
 
 class SuggestedTask(BaseModel):
     """Model representing a suggested task from a git provider."""
+
     git_provider: ProviderType
     task_type: TaskType
     repo: str
@@ -58,10 +63,10 @@ class SuggestedTask(BaseModel):
 
     def get_provider_terms(self) -> dict:
         """Get provider-specific terminology dictionary.
-        
+
         Returns:
             Dictionary with provider-specific terms (PR/MR, API names, etc.)
-            
+
         Raises:
             ValueError: If provider type is not supported
 
@@ -101,12 +106,12 @@ class SuggestedTask(BaseModel):
 
     def get_prompt_for_task(self) -> str:
         """Generate prompt text for the suggested task.
-        
+
         Renders Jinja2 template based on task type with provider-specific terms.
-        
+
         Returns:
             Rendered prompt string for the task
-            
+
         Raises:
             ValueError: If task type is not supported
 
@@ -137,6 +142,7 @@ class SuggestedTask(BaseModel):
 
 class CreateMicroagent(BaseModel):
     """Model for creating a new microagent."""
+
     repo: str
     git_provider: ProviderType | None = None
     title: str | None = None
@@ -144,6 +150,7 @@ class CreateMicroagent(BaseModel):
 
 class User(BaseModel):
     """Model representing a user from a git provider."""
+
     id: str
     login: str
     avatar_url: str
@@ -154,6 +161,7 @@ class User(BaseModel):
 
 class Branch(BaseModel):
     """Model representing a git branch."""
+
     name: str
     commit_sha: str
     protected: bool
@@ -162,6 +170,7 @@ class Branch(BaseModel):
 
 class PaginatedBranchesResponse(BaseModel):
     """Response model for paginated branch list."""
+
     branches: list[Branch]
     has_next_page: bool
     current_page: int
@@ -171,6 +180,7 @@ class PaginatedBranchesResponse(BaseModel):
 
 class Repository(BaseModel):
     """Model representing a git repository."""
+
     id: str
     full_name: str
     git_provider: ProviderType
@@ -184,6 +194,7 @@ class Repository(BaseModel):
 
 class Comment(BaseModel):
     """Model representing a comment on an issue or PR."""
+
     id: str
     body: str
     author: str
@@ -214,6 +225,7 @@ class MicroagentParseError(ValueError):
 
 class RequestMethod(Enum):
     """HTTP request method enumeration."""
+
     POST = "post"
     GET = "get"
 

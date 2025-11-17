@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\integrations\bitbucket\service\repos.py
+# hypothesis_version: 6.147.0
+
+[100, 1000, '-created_on', '-updated_on', '/', '[?&]page=(\\d+)', 'created', 'full_name', 'name', 'next', 'page', 'pagelen', 'q', 'slug', 'sort', 'values']

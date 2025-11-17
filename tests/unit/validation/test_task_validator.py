@@ -43,7 +43,9 @@ async def test_test_passing_validator_detects_failed_tests():
     task = Task(description="Run tests")
     history = [
         CmdRunAction(command="pytest --maxfail=1"),
-        CmdOutputObservation(command="pytest --maxfail=1", content="failures", exit_code=1),
+        CmdOutputObservation(
+            command="pytest --maxfail=1", content="failures", exit_code=1
+        ),
     ]
     state = DummyState(history)
 
@@ -60,7 +62,9 @@ async def test_test_passing_validator_passes_on_successful_tests():
     task = Task(description="Run tests successfully")
     history = [
         CmdRunAction(command="npm test -- --watch=false"),
-        CmdOutputObservation(command="npm test -- --watch=false", content="all good", exit_code=0),
+        CmdOutputObservation(
+            command="npm test -- --watch=false", content="all good", exit_code=0
+        ),
     ]
     state = DummyState(history)
 
@@ -263,11 +267,15 @@ async def test_llm_task_evaluator_handles_llm_exception():
 
 
 class StubValidator(TaskValidatorAlias):
-    def __init__(self, result: ValidationResult | None = None, should_raise: bool = False):
+    def __init__(
+        self, result: ValidationResult | None = None, should_raise: bool = False
+    ):
         self._result = result
         self._should_raise = should_raise
 
-    async def validate_completion(self, task: Task, state: DummyState) -> ValidationResult:
+    async def validate_completion(
+        self, task: Task, state: DummyState
+    ) -> ValidationResult:
         if self._should_raise:
             raise RuntimeError("validator failure")
         return self._result
@@ -357,5 +365,3 @@ async def test_composite_validator_handles_validator_exceptions():
     assert result.passed
     assert result.reason == "No validators ran successfully"
     assert result.confidence == 0.0
-
-

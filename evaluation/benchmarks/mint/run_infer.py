@@ -34,7 +34,9 @@ def codeact_user_response_mint(state: State, task: Task, task_config: dict[str, 
     logger.info("Gold reference: %s", task.reference)
     logger.info("Task config: %s", task_config)
     env = SimplifiedEnv(agent_state=state, task=task, task_config=task_config)
-    last_action = next((event for event in reversed(state.history) if isinstance(event, Action)), None)
+    last_action = next(
+        (event for event in reversed(state.history) if isinstance(event, Action)), None
+    )
     result_state: TaskState = env.step(last_action.message or "")
     state.extra_data["task_state"] = result_state
     if not result_state.latest_output:
@@ -49,7 +51,9 @@ AGENT_CLS_TO_FAKE_USER_RESPONSE_FN = {"CodeActAgent": codeact_user_response_mint
 AGENT_CLS_TO_INST_SUFFIX = {
     "CodeActAgent": 'IMPORTANT: When your answer is confirmed by the user to be correct, you can use the "finish" tool to finish the interaction.\n'
 }
-with open(os.path.join(os.path.dirname(__file__, encoding='utf-8'), "requirements.txt"), "r") as f:
+with open(
+    os.path.join(os.path.dirname(__file__, encoding="utf-8"), "requirements.txt"), "r"
+) as f:
     MINT_DEPENDENCIES = f.read().splitlines()
 
 
@@ -64,7 +68,14 @@ def load_incontext_example(task_name: str, with_tool: bool = True):
         "humaneval": "humaneval",
     }[task_name]
     with open(
-        os.path.join(os.path.dirname(__file__), "tasks", "in_context_examples", subset, "with_tool.txt"), "r"
+        os.path.join(
+            os.path.dirname(__file__),
+            "tasks",
+            "in_context_examples",
+            subset,
+            "with_tool.txt",
+        ),
+        "r",
     ) as f:
         return f.read()
 
@@ -72,8 +83,12 @@ def load_incontext_example(task_name: str, with_tool: bool = True):
 def get_config(metadata: EvalMetadata) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = "xingyaoww/od-eval-mint:v1.0"
-    sandbox_config.runtime_extra_deps = f"$OH_INTERPRETER_PATH -m pip install {' '.join(MINT_DEPENDENCIES)}"
-    config = get_FORGE_config_for_eval(metadata=metadata, runtime="docker", sandbox_config=sandbox_config)
+    sandbox_config.runtime_extra_deps = (
+        f"$OH_INTERPRETER_PATH -m pip install {' '.join(MINT_DEPENDENCIES)}"
+    )
+    config = get_FORGE_config_for_eval(
+        metadata=metadata, runtime="docker", sandbox_config=sandbox_config
+    )
     config.set_llm_config(metadata.llm_config)
     agent_config = config.get_agent_config(metadata.agent_class)
     agent_config.enable_prompt_extensions = False
@@ -157,10 +172,17 @@ if __name__ == "__main__":
     parser = get_evaluation_parser()
     SUBSETS = ["math", "mmlu", "theoremqa", "mbpp", "humaneval"]
     parser.add_argument(
-        "--subset", default="all", choices=SUBSETS + ["all"], type=str, help="subset of the dataset to be used"
+        "--subset",
+        default="all",
+        choices=SUBSETS + ["all"],
+        type=str,
+        help="subset of the dataset to be used",
     )
     parser.add_argument(
-        "--max-propose-solution", default=2, type=int, help="maximum number of times the agent can propose a solution"
+        "--max-propose-solution",
+        default=2,
+        type=int,
+        help="maximum number of times the agent can propose a solution",
     )
     args, _ = parser.parse_known_args()
     subsets = SUBSETS if args.subset == "all" else [args.subset]
@@ -195,4 +217,6 @@ if __name__ == "__main__":
     )
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
     instances = prepare_dataset(dataset_df, output_file, args.eval_n_limit)
-    run_evaluation(instances, metadata, output_file, args.eval_num_workers, process_instance)
+    run_evaluation(
+        instances, metadata, output_file, args.eval_num_workers, process_instance
+    )

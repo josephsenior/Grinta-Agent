@@ -4,7 +4,16 @@ from __future__ import annotations
 
 import os
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Annotated, Any, Literal, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Annotated,
+    Any,
+    Literal,
+    Mapping,
+    TypeAlias,
+    cast,
+    overload,
+)
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, WithJsonSchema
@@ -28,6 +37,7 @@ from forge.integrations.service_types import (
     TokenResponse,
     User,
 )
+from forge.utils.circuit_breaker import get_circuit_breaker_manager
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
@@ -40,20 +50,20 @@ if TYPE_CHECKING:
 
 class ProviderToken(BaseModel):
     """Typed container for provider access tokens plus optional metadata."""
+
     token: SecretStr | None = Field(default=None)
     user_id: str | None = Field(default=None)
     host: str | None = Field(default=None)
     model_config = ConfigDict(frozen=True, validate_assignment=True)
 
     @classmethod
-    def from_value(cls, token_value: ProviderToken | dict[str, str]) -> ProviderToken:
+    def from_value(cls, token_value: object) -> ProviderToken:
         """Factory method to create a ProviderToken from various input types."""
         if isinstance(token_value, cls):
             return token_value
         if isinstance(token_value, dict):
-            token_str = token_value.get("token", "")
-            if token_str is None:
-                token_str = ""
+            token_raw = token_value.get("token")
+            token_str = token_raw if isinstance(token_raw, str) else ""
             user_id = token_value.get("user_id")
             host = token_value.get("host")
             return cls(token=SecretStr(token_str), user_id=user_id, host=host)
@@ -63,25 +73,28 @@ class ProviderToken(BaseModel):
 
 class CustomSecret(BaseModel):
     """Represents a user-defined secret (value plus description)."""
+
     secret: SecretStr = Field(default_factory=lambda: SecretStr(""))
     description: str = Field(default="")
     model_config = ConfigDict(frozen=True, validate_assignment=True)
 
     @classmethod
-    def from_value(cls, secret_value: CustomSecret | dict[str, str]) -> CustomSecret:
+    def from_value(cls, secret_value: object) -> CustomSecret:
         """Factory method to create a ProviderToken from various input types."""
         if isinstance(secret_value, CustomSecret):
             return secret_value
         if isinstance(secret_value, dict):
-            secret = secret_value.get("secret", "")
-            description = secret_value.get("description", "")
+            secret_raw = secret_value.get("secret")
+            description_raw = secret_value.get("description")
+            secret = secret_raw if isinstance(secret_raw, str) else ""
+            description = description_raw if isinstance(description_raw, str) else ""
             return cls(secret=SecretStr(secret), description=description)
         msg = "Unsupport Provider token type"
         raise ValueError(msg)
 
 
-PROVIDER_TOKEN_TYPE = MappingProxyType[ProviderType, ProviderToken]
-CUSTOM_SECRETS_TYPE = MappingProxyType[str, CustomSecret]
+PROVIDER_TOKEN_TYPE = Mapping[ProviderType, ProviderToken]
+CUSTOM_SECRETS_TYPE = Mapping[str, CustomSecret]
 PROVIDER_TOKEN_FIELD_TYPE = dict[ProviderType, ProviderToken]
 CUSTOM_SECRETS_FIELD_TYPE = dict[str, CustomSecret]
 PROVIDER_TOKEN_TYPE_WITH_JSON_SCHEMA = Annotated[
@@ -96,6 +109,7 @@ CUSTOM_SECRETS_TYPE_WITH_JSON_SCHEMA = Annotated[
 
 class ProviderHandler:
     """Facade around provider-specific services (GitHub, GitLab, Bitbucket)."""
+
     PROVIDER_DOMAINS: dict[ProviderType, str] = {
         ProviderType.GITHUB: "github.com",
         ProviderType.GITLAB: "gitlab.com",
@@ -104,7 +118,7 @@ class ProviderHandler:
 
     def __init__(
         self,
-        provider_tokens: PROVIDER_TOKEN_TYPE,
+        provider_tokens: MappingProxyType[ProviderType, ProviderToken],
         external_auth_id: str | None = None,
         external_auth_token: SecretStr | None = None,
         external_token_manager: bool = False,
@@ -112,9 +126,6 @@ class ProviderHandler:
         sid: str | None = None,
     ) -> None:
         """Initialize the handler with provider tokens and optional auth context."""
-        if not isinstance(provider_tokens, MappingProxyType):
-            msg = f"provider_tokens must be a MappingProxyType, got {type(provider_tokens).__name__}"
-            raise TypeError(msg)
         self.service_class_map: dict[ProviderType, type[GitService]] = {
             ProviderType.GITHUB: GithubServiceImpl,
             ProviderType.GITLAB: GitLabServiceImpl,
@@ -127,7 +138,9 @@ class ProviderHandler:
         self.sid = sid
         self._provider_tokens = provider_tokens
         WEB_HOST = os.getenv("WEB_HOST", "").strip()
-        self.REFRESH_TOKEN_URL = f"https://{WEB_HOST}/api/refresh-tokens" if WEB_HOST else None
+        self.REFRESH_TOKEN_URL = (
+            f"https://{WEB_HOST}/api/refresh-tokens" if WEB_HOST else None
+        )
 
     @property
     def provider_tokens(self) -> PROVIDER_TOKEN_TYPE:
@@ -152,52 +165,70 @@ class ProviderHandler:
         for provider in self.provider_tokens:
             try:
                 service = self._get_service(provider)
-                return await service.get_user()
+                op_key = f"provider:{provider.value}:get_user"
+                return await get_circuit_breaker_manager().async_call(
+                    op_key, service.get_user
+                )
             except Exception:
                 continue
         msg = "Need valid provider token"
         raise AuthenticationError(msg)
 
-    async def _get_latest_provider_token(self, provider: ProviderType) -> SecretStr | None:
+    async def _get_latest_provider_token(
+        self, provider: ProviderType
+    ) -> SecretStr | None:
         """Get latest token from service."""
+        if not self.REFRESH_TOKEN_URL or not self.sid:
+            return None
         try:
             async with httpx.AsyncClient() as client:
+                headers: dict[str, str] = {}
+                if self.session_api_key:
+                    headers["X-Session-API-Key"] = self.session_api_key
                 resp = await client.get(
                     self.REFRESH_TOKEN_URL,
-                    headers={"X-Session-API-Key": self.session_api_key},
+                    headers=headers or None,
                     params={"provider": provider.value, "sid": self.sid},
                 )
             resp.raise_for_status()
             data = TokenResponse.model_validate_json(resp.text)
             return SecretStr(data.token)
-        except Exception as e:
-            logger.warning("Failed to fetch latest token for provider %s: %s", provider, e)
+        except Exception:
+            logger.warning("Failed to fetch latest token for provider")
         return None
 
     async def get_github_installations(self) -> list[str]:
         """Get list of GitHub App installations accessible to user.
-        
+
         Returns:
             List of installation IDs, empty list if error
 
         """
         service = cast("InstallationsService", self._get_service(ProviderType.GITHUB))
         try:
-            return await service.get_installations()
+            op_key = "provider:github:get_installations"
+            return await get_circuit_breaker_manager().async_call(
+                op_key, service.get_installations
+            )
         except Exception as e:
             logger.warning("Failed to get github installations %s", e)
         return []
 
     async def get_bitbucket_workspaces(self) -> list[str]:
         """Get list of Bitbucket workspaces accessible to user.
-        
+
         Returns:
             List of workspace IDs, empty list if error
 
         """
-        service = cast("InstallationsService", self._get_service(ProviderType.BITBUCKET))
+        service = cast(
+            "InstallationsService", self._get_service(ProviderType.BITBUCKET)
+        )
         try:
-            return await service.get_installations()
+            op_key = "provider:bitbucket:get_installations"
+            return await get_circuit_breaker_manager().async_call(
+                op_key, service.get_installations
+            )
         except Exception as e:
             logger.warning("Failed to get bitbucket workspaces %s", e)
         return []
@@ -218,13 +249,27 @@ class ProviderHandler:
                 msg = "Failed to provider params for paginating repos"
                 raise ValueError(msg)
             service = self._get_service(selected_provider)
-            return await service.get_paginated_repos(page, per_page, sort, installation_id)
+            op_key = f"provider:{selected_provider.value}:get_paginated_repos"
+            return await get_circuit_breaker_manager().async_call(
+                op_key,
+                lambda: service.get_paginated_repos(
+                    page, per_page, sort, installation_id
+                ),
+            )
         all_repos: list[Repository] = []
+
+        async def _fetch_provider_repos(provider: ProviderType) -> list[Repository]:
+            service = self._get_service(provider)
+            op_key = f"provider:{provider.value}:get_all_repositories"
+            return await get_circuit_breaker_manager().async_call(
+                op_key,
+                lambda: service.get_all_repositories(sort, app_mode),
+            )
+
         for provider in self.provider_tokens:
             try:
-                service = self._get_service(provider)
-                service_repos = await service.get_all_repositories(sort, app_mode)
-                all_repos.extend(service_repos)
+                repos = await _fetch_provider_repos(provider)
+                all_repos.extend(repos)
             except Exception as e:
                 logger.warning("Error fetching repos from %s: %s", provider, e)
         return all_repos
@@ -252,14 +297,26 @@ class ProviderHandler:
         if selected_provider:
             service = self._get_service(selected_provider)
             try:
-                return await service.search_branches(repository, query, per_page)
+                op_key = f"provider:{selected_provider.value}:search_branches"
+                return await get_circuit_breaker_manager().async_call(
+                    op_key,
+                    lambda: service.search_branches(repository, query, per_page),
+                )
             except Exception as e:
-                logger.warning("Error searching branches from selected provider %s: %s", selected_provider, e)
+                logger.warning(
+                    "Error searching branches from selected provider %s: %s",
+                    selected_provider,
+                    e,
+                )
                 return []
         try:
             repo_details = await self.verify_repo_provider(repository)
             service = self._get_service(repo_details.git_provider)
-            return await service.search_branches(repository, query, per_page)
+            op_key = f"provider:{repo_details.git_provider.value}:search_branches"
+            return await get_circuit_breaker_manager().async_call(
+                op_key,
+                lambda: service.search_branches(repository, query, per_page),
+            )
         except Exception as e:
             logger.warning("Error searching branches for %s: %s", repository, e)
             return []
@@ -273,14 +330,14 @@ class ProviderHandler:
         order: str,
     ) -> list[Repository]:
         """Search repositories across providers.
-        
+
         Args:
             selected_provider: Specific provider to search, or None for all
             query: Search query string or repository URL
             per_page: Results per page
             sort: Sort field (stars, updated, etc.)
             order: Sort order (asc, desc)
-            
+
         Returns:
             List of matching repositories
 
@@ -288,14 +345,26 @@ class ProviderHandler:
         if selected_provider:
             service = self._get_service(selected_provider)
             public = self._is_repository_url(query, selected_provider)
-            user_repos = await service.search_repositories(query, per_page, sort, order, public)
+            op_key = f"provider:{selected_provider.value}:search_repositories"
+            user_repos = await get_circuit_breaker_manager().async_call(
+                op_key,
+                lambda: service.search_repositories(
+                    query, per_page, sort, order, public
+                ),
+            )
             return self._deduplicate_repositories(user_repos)
         all_repos: list[Repository] = []
         for provider in self.provider_tokens:
             try:
                 service = self._get_service(provider)
                 public = self._is_repository_url(query, provider)
-                service_repos = await service.search_repositories(query, per_page, sort, order, public)
+                op_key = f"provider:{provider.value}:search_repositories"
+                service_repos = await get_circuit_breaker_manager().async_call(
+                    op_key,
+                    lambda: service.search_repositories(
+                        query, per_page, sort, order, public
+                    ),
+                )
                 all_repos.extend(service_repos)
             except Exception as e:
                 logger.warning("Error searching repos from %s: %s", provider, e)
@@ -307,7 +376,9 @@ class ProviderHandler:
         custom_host = self.provider_tokens[provider].host
         custom_host_exists = custom_host and custom_host in query
         default_host_exists = self.PROVIDER_DOMAINS[provider] in query
-        return query.startswith(("http://", "https://")) and (custom_host_exists or default_host_exists)
+        return query.startswith(("http://", "https://")) and (
+            custom_host_exists or default_host_exists
+        )
 
     def _deduplicate_repositories(self, repos: list[Repository]) -> list[Repository]:
         """Remove duplicate repositories based on full_name."""
@@ -333,13 +404,18 @@ class ProviderHandler:
             env_vars: Dict of providers and their tokens that require updating
 
         """
+        exposed_env_vars: dict[str, str]
         if env_vars:
             exposed_env_vars = self.expose_env_vars(env_vars)
         else:
-            exposed_env_vars = await self.get_env_vars(expose_secrets=True)
+            exposed_env_vars = cast(
+                dict[str, str], await self.get_env_vars(expose_secrets=True)
+            )
         event_stream.set_secrets(exposed_env_vars)
 
-    def expose_env_vars(self, env_secrets: dict[ProviderType, SecretStr]) -> dict[str, str]:
+    def expose_env_vars(
+        self, env_secrets: dict[ProviderType, SecretStr]
+    ) -> dict[str, str]:
         """Return string values instead of typed values for environment secrets.
 
         Called just before exporting secrets to runtime, or setting secrets in the event stream.
@@ -350,34 +426,24 @@ class ProviderHandler:
             exposed_envs[env_key] = token.get_secret_value()
         return exposed_envs
 
-    @overload
-    def get_env_vars(
-        self,
-        expose_secrets: Literal[True],
-        providers: list[ProviderType] | None = ...,
-        get_latest: bool = False,
-    ) -> Coroutine[Any, Any, dict[str, str]]:
-        ...
-
-    @overload
-    def get_env_vars(
-        self,
-        expose_secrets: Literal[False],
-        providers: list[ProviderType] | None = ...,
-        get_latest: bool = False,
-    ) -> Coroutine[Any, Any, dict[ProviderType, SecretStr]]:
-        ...
-
-    def _get_provider_list(self, providers: list[ProviderType] | None) -> list[ProviderType]:
+    def _get_provider_list(
+        self, providers: list[ProviderType] | None
+    ) -> list[ProviderType]:
         """Get the list of providers to process."""
         return providers if providers is not None else list(ProviderType)
 
-    async def _get_provider_token(self, provider: ProviderType, get_latest: bool) -> SecretStr | None:
+    async def _get_provider_token(
+        self, provider: ProviderType, get_latest: bool
+    ) -> SecretStr | None:
         """Get token for a specific provider."""
         if provider not in self.provider_tokens:
             return None
 
-        token = self.provider_tokens[provider].token if self.provider_tokens else SecretStr("")
+        token = (
+            self.provider_tokens[provider].token
+            if self.provider_tokens
+            else SecretStr("")
+        )
 
         if get_latest and self.REFRESH_TOKEN_URL and self.sid:
             token = await self._get_latest_provider_token(provider)
@@ -421,10 +487,15 @@ class ProviderHandler:
         provider_list = self._get_provider_list(providers)
         env_vars = await self._collect_provider_tokens(provider_list, get_latest)
 
-        return self.expose_env_vars(env_vars) if expose_secrets else env_vars
+        if expose_secrets:
+            exposed_envs: dict[str, str] = self.expose_env_vars(env_vars)
+            return exposed_envs
+        return env_vars
 
     @classmethod
-    def check_cmd_action_for_provider_token_ref(cls, event: Action) -> list[ProviderType]:
+    def check_cmd_action_for_provider_token_ref(
+        cls, event: Action
+    ) -> list[ProviderType]:
         """Detect if agent run action is using a provider token (e.g $GITHUB_TOKEN).
 
         Returns a list of providers which are called by the agent.
@@ -442,16 +513,18 @@ class ProviderHandler:
         """Map ProviderType value to the environment variable name in the runtime."""
         return f"{provider.value}_token".lower()
 
-    async def verify_repo_provider(self, repository: str, specified_provider: ProviderType | None = None) -> Repository:
+    async def verify_repo_provider(
+        self, repository: str, specified_provider: ProviderType | None = None
+    ) -> Repository:
         """Verify repository provider and get repository details.
-        
+
         Args:
             repository: Repository name or URL
             specified_provider: Optional specific provider to check
-            
+
         Returns:
             Repository details with verified provider
-            
+
         Raises:
             ValueError: If repository not found in any provider
 
@@ -460,13 +533,21 @@ class ProviderHandler:
         if specified_provider:
             try:
                 service = self._get_service(specified_provider)
-                return await service.get_repository_details_from_repo_name(repository)
+                op_key = f"provider:{specified_provider.value}:get_repo_details"
+                return await get_circuit_breaker_manager().async_call(
+                    op_key,
+                    lambda: service.get_repository_details_from_repo_name(repository),
+                )
             except Exception as e:
                 errors.append(f"{specified_provider.value}: {e!s}")
         for provider in self.provider_tokens:
             try:
                 service = self._get_service(provider)
-                return await service.get_repository_details_from_repo_name(repository)
+                op_key = f"provider:{provider.value}:get_repo_details"
+                return await get_circuit_breaker_manager().async_call(
+                    op_key,
+                    lambda: service.get_repository_details_from_repo_name(repository),
+                )
             except Exception as e:
                 errors.append(f"{provider.value}: {e!s}")
         logger.error(
@@ -499,13 +580,23 @@ class ProviderHandler:
         if specified_provider:
             try:
                 service = self._get_service(specified_provider)
-                return await service.get_paginated_branches(repository, page, per_page)
+                op_key = f"provider:{specified_provider.value}:get_paginated_branches"
+                return await get_circuit_breaker_manager().async_call(
+                    op_key,
+                    lambda: service.get_paginated_branches(repository, page, per_page),
+                )
             except Exception as e:
-                logger.warning("Error fetching branches from %s: %s", specified_provider, e)
+                logger.warning(
+                    "Error fetching branches from %s: %s", specified_provider, e
+                )
         for provider in self.provider_tokens:
             try:
                 service = self._get_service(provider)
-                return await service.get_paginated_branches(repository, page, per_page)
+                op_key = f"provider:{provider.value}:get_paginated_branches"
+                return await get_circuit_breaker_manager().async_call(
+                    op_key,
+                    lambda: service.get_paginated_branches(repository, page, per_page),
+                )
             except Exception as e:
                 logger.warning("Error fetching branches from %s: %s", provider, e)
         return PaginatedBranchesResponse(
@@ -533,13 +624,26 @@ class ProviderHandler:
         for provider in self.provider_tokens:
             try:
                 service = self._get_service(provider)
-                result = await service.get_microagents(repository)
+                op_key = f"provider:{provider.value}:get_microagents"
+                result = await get_circuit_breaker_manager().async_call(
+                    op_key,
+                    lambda: service.get_microagents(repository),
+                )
                 if result:
                     return result
-                logger.debug("No microagents found on %s for %s, trying other providers", provider, repository)
+                logger.debug(
+                    "No microagents found on %s for %s, trying other providers",
+                    provider,
+                    repository,
+                )
             except Exception as e:
                 errors.append(f"{provider.value}: {e!s}")
-                logger.warning("Error fetching microagents from %s for %s: %s", provider, repository, e)
+                logger.warning(
+                    "Error fetching microagents from %s for %s: %s",
+                    provider,
+                    repository,
+                    e,
+                )
         if errors:
             logger.error(
                 "Failed to fetch microagents for %s with all available providers. Errors: %s",
@@ -550,7 +654,9 @@ class ProviderHandler:
             raise AuthenticationError(msg)
         return []
 
-    async def get_microagent_content(self, repository: str, file_path: str) -> MicroagentContentResponse:
+    async def get_microagent_content(
+        self, repository: str, file_path: str
+    ) -> MicroagentContentResponse:
         """Get content of a specific microagent file from a repository.
 
         Args:
@@ -568,7 +674,11 @@ class ProviderHandler:
         for provider in self.provider_tokens:
             try:
                 service = self._get_service(provider)
-                result = await service.get_microagent_content(repository, file_path)
+                op_key = f"provider:{provider.value}:get_microagent_content"
+                result = await get_circuit_breaker_manager().async_call(
+                    op_key,
+                    lambda: service.get_microagent_content(repository, file_path),
+                )
                 if result:
                     return result
                 logger.debug(
@@ -578,14 +688,29 @@ class ProviderHandler:
                     file_path,
                 )
             except ResourceNotFoundError:
-                logger.debug("File not found on %s for %s/%s, trying other providers", provider, repository, file_path)
+                logger.debug(
+                    "File not found on %s for %s/%s, trying other providers",
+                    provider,
+                    repository,
+                    file_path,
+                )
                 continue
             except MicroagentParseError as e:
                 errors.append(f"{provider.value}: {e!s}")
-                logger.warning("Error parsing microagent content from %s for %s: %s", provider, repository, e)
+                logger.warning(
+                    "Error parsing microagent content from %s for %s: %s",
+                    provider,
+                    repository,
+                    e,
+                )
             except Exception as e:
                 errors.append(f"{provider.value}: {e!s}")
-                logger.warning("Error fetching microagent content from %s for %s: %s", provider, repository, e)
+                logger.warning(
+                    "Error fetching microagent content from %s for %s: %s",
+                    provider,
+                    repository,
+                    e,
+                )
         if errors:
             logger.error(
                 "Failed to fetch microagent content for %s with all available providers. Errors: %s",
@@ -597,6 +722,15 @@ class ProviderHandler:
 
     async def _verify_repository(self, repo_name: str) -> tuple[ProviderType, str]:
         """Verify repository and return provider and full name."""
+        if not self.provider_tokens:
+            if "/" not in repo_name:
+                msg = (
+                    "Repository must be in 'owner/name' format when no provider "
+                    "tokens are configured"
+                )
+                raise AuthenticationError(msg)
+            logger.info("No provider tokens configured; assuming public repository")
+            return ProviderType.GITHUB, repo_name
         try:
             repository = await self.verify_repo_provider(repo_name)
             return repository.git_provider, repository.full_name
@@ -611,18 +745,24 @@ class ProviderHandler:
             domain = self.provider_tokens[provider].host or domain
         return domain
 
-    def _build_authenticated_url(self, provider: ProviderType, domain: str, repo_name: str, token_value: str) -> str:
+    def _build_authenticated_url(
+        self, provider: ProviderType, domain: str, repo_name: str, token_value: str
+    ) -> str:
         """Build authenticated URL based on provider type."""
         if provider == ProviderType.GITLAB:
             return f"https://oauth2:{token_value}@{domain}/{repo_name}.git"
-        if (provider == ProviderType.BITBUCKET and ":" in token_value) or provider not in [
+        if (
+            provider == ProviderType.BITBUCKET and ":" in token_value
+        ) or provider not in [
             ProviderType.GITLAB,
             ProviderType.BITBUCKET,
         ]:
             return f"https://{token_value}@{domain}/{repo_name}.git"
         return f"https://x-token-auth:{token_value}@{domain}/{repo_name}.git"
 
-    def _get_remote_url(self, provider: ProviderType, domain: str, repo_name: str) -> str:
+    def _get_remote_url(
+        self, provider: ProviderType, domain: str, repo_name: str
+    ) -> str:
         """Get remote URL with or without authentication."""
         if not (self.provider_tokens and provider in self.provider_tokens):
             return f"https://{domain}/{repo_name}.git"
@@ -648,7 +788,9 @@ class ProviderHandler:
         domain = self._get_authenticated_domain(provider)
         return self._get_remote_url(provider, domain, full_repo_name)
 
-    async def is_pr_open(self, repository: str, pr_number: int, git_provider: ProviderType) -> bool:
+    async def is_pr_open(
+        self, repository: str, pr_number: int, git_provider: ProviderType
+    ) -> bool:
         """Check if a PR is still active (not closed/merged).
 
         This method checks the PR status using the provider's service method.
@@ -664,7 +806,11 @@ class ProviderHandler:
         """
         try:
             service = self._get_service(git_provider)
-            return await service.is_pr_open(repository, pr_number)
+            op_key = f"provider:{git_provider.value}:is_pr_open"
+            return await get_circuit_breaker_manager().async_call(
+                op_key,
+                lambda: service.is_pr_open(repository, pr_number),
+            )
         except Exception as e:
             logger.warning(
                 "Could not determine PR status for %s#%s: %s. Including conversation to be safe.",

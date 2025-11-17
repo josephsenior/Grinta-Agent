@@ -27,7 +27,9 @@ def verify_run(sop_name: str, artifacts: dict[str, Any]) -> dict[str, Any]:
                     required_candidates = schema.get("required", [])
                     if isinstance(required_candidates, list):
                         missing.extend(
-                            req for req in required_candidates if isinstance(req, str) and req not in art.content
+                            req
+                            for req in required_candidates
+                            if isinstance(req, str) and req not in art.content
                         )
                 if missing:
                     step_entry["status"] = "incomplete"

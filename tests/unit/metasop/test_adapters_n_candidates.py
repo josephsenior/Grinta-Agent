@@ -8,23 +8,20 @@ def _dummy_role_profile():
 
 
 class _DummyLLM:
-
     class Choice:
-
         def __init__(self, content):
-
             class Msg:
-
                 def __init__(self, content):
                     self.content = content
 
             self.message = Msg(content)
 
     class Response:
-
         def __init__(self, content, model="dummy-model"):
             self.choices = [_DummyLLM.Choice(content)]
-            self.usage = type("U", (), {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2})
+            self.usage = type(
+                "U", (), {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2}
+            )
             self.model = model
 
     def __init__(self, responses=None):
@@ -38,7 +35,6 @@ class _DummyLLM:
 
 
 class _DummyLLMRegistry:
-
     def __init__(self, llm):
         self._llm = llm
 
@@ -55,14 +51,22 @@ def test_FORGE_adapter_honors_n_candidates(monkeypatch, tmp_path):
     def dummy_registry_factory(config=None):
         return _DummyLLMRegistry(dummy_llm)
 
-    monkeypatch.setattr("forge.metasop.adapters.forge.LLMRegistry", dummy_registry_factory)
+    monkeypatch.setattr(
+        "forge.metasop.adapters.forge.LLMRegistry", dummy_registry_factory
+    )
     try:
-        monkeypatch.setattr("forge.llm.llm_registry.LLMRegistry", dummy_registry_factory)
+        monkeypatch.setattr(
+            "forge.llm.llm_registry.LLMRegistry", dummy_registry_factory
+        )
     except Exception:
         pass
     monkeypatch.setattr("forge.metasop.adapters.forge.load_schema", lambda s: {})
     res = run_step_with_Forge(
-        step, ctx, _dummy_role_profile(), config=None, llm_registry=_DummyLLMRegistry(dummy_llm)
+        step,
+        ctx,
+        _dummy_role_profile(),
+        config=None,
+        llm_registry=_DummyLLMRegistry(dummy_llm),
     )
     assert res.ok
     art = res.artifact
@@ -88,11 +92,13 @@ def test_engineer_codeact_adaptor_respects_candidates(monkeypatch, tmp_path):
     }
     summary_path.write_text(__import__("json").dumps(parsed), encoding="utf-8")
     monkeypatch.setattr(
-        "forge.metasop.adapters.engineer_codeact.call_async_from_sync", lambda func, **kwargs: {"fake": "state"}
+        "forge.metasop.adapters.engineer_codeact.call_async_from_sync",
+        lambda func, **kwargs: {"fake": "state"},
     )
     try:
         monkeypatch.setattr(
-            "forge.metasop.adapters.engineer_codeact.run_controller", lambda *a, **k: {"fake": "state"}
+            "forge.metasop.adapters.engineer_codeact.run_controller",
+            lambda *a, **k: {"fake": "state"},
         )
     except Exception:
         pass
@@ -104,3 +110,5 @@ def test_engineer_codeact_adaptor_respects_candidates(monkeypatch, tmp_path):
     if "candidates" in art.content:
         for c in art.content["candidates"]:
             assert c.get("meta", {}).get("source") == "agent"
+        assert art.content["candidates"][0]["content"] == "one"
+        assert art.content["candidates"][1]["content"] == "two"

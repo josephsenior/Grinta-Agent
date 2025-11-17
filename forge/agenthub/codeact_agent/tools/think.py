@@ -1,17 +1,32 @@
-"""Definition of the lightweight reasoning tool for CodeAct agents."""
+"""Definition of the lightweight reasoning tool for CodeAct agents.
+
+Constructed via compatibility helper for resilience against stubbed `litellm`.
+"""
 
 from litellm import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from ._compat import build_tool_param
 
-_THINK_DESCRIPTION = "Use the tool to think about something. It will not obtain new information or make any changes to the repository, but just log the thought. Use it when complex reasoning or brainstorming is needed.\n\nCommon use cases:\n1. When exploring a repository and discovering the source of a bug, call this tool to brainstorm several unique ways of fixing the bug, and assess which change(s) are likely to be simplest and most effective.\n2. After receiving test results, use this tool to brainstorm ways to fix failing tests.\n3. When planning a complex refactoring, use this tool to outline different approaches and their tradeoffs.\n4. When designing a new feature, use this tool to think through architecture decisions and implementation details.\n5. When debugging a complex issue, use this tool to organize your thoughts and hypotheses.\n\nThe tool simply logs your thought process for better transparency and does not execute any code or make changes."
-ThinkTool = ChatCompletionToolParam(
-    type="function",
-    function=ChatCompletionToolParamFunctionChunk(
-        name="think",
-        description=_THINK_DESCRIPTION,
-        parameters={
-            "type": "object",
-            "properties": {"thought": {"type": "string", "description": "The thought to log."}},
-            "required": ["thought"],
+_THINK_DESCRIPTION = (
+    "Use the tool to think about something. It will not obtain new information or make any changes to the repository, but just log the thought. Use it when complex reasoning or brainstorming is needed.\n\n"
+    "Common use cases:\n"
+    "1. When exploring a repository and discovering the source of a bug, call this tool to brainstorm several unique ways of fixing the bug, and assess which change(s) are likely to be simplest and most effective.\n"
+    "2. After receiving test results, use this tool to brainstorm ways to fix failing tests.\n"
+    "3. When planning a complex refactoring, use this tool to outline different approaches and their tradeoffs.\n"
+    "4. When designing a new feature, use this tool to think through architecture decisions and implementation details.\n"
+    "5. When debugging a complex issue, use this tool to organize your thoughts and hypotheses.\n\n"
+    "The tool simply logs your thought process for better transparency and does not execute any code or make changes."
+)
+
+ThinkTool = build_tool_param(
+    ChatCompletionToolParam,
+    ChatCompletionToolParamFunctionChunk,
+    name="think",
+    description=_THINK_DESCRIPTION,
+    parameters={
+        "type": "object",
+        "properties": {
+            "thought": {"type": "string", "description": "The thought to log."}
         },
-    ),
+        "required": ["thought"],
+    },
 )

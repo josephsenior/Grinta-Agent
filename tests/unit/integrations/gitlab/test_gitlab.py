@@ -92,7 +92,9 @@ async def test_gitlab_get_repositories_mixed_owner_types():
         mock_request.side_effect = [(mock_repos, {"Link": ""})]
         repositories = await service.get_all_repositories("pushed", AppMode.SAAS)
         assert len(repositories) == 2
-        user_repo = next((repo for repo in repositories if "user-repo" in repo.full_name))
+        user_repo = next(
+            (repo for repo in repositories if "user-repo" in repo.full_name)
+        )
         org_repo = next((repo for repo in repositories if "org-repo" in repo.full_name))
         assert user_repo.owner_type == OwnerType.USER
         assert org_repo.owner_type == OwnerType.ORGANIZATION
@@ -191,8 +193,14 @@ async def test_gitlab_search_repositories_url_parsing():
     """Test that search_repositories correctly parses GitLab URLs when public=True."""
     service = GitLabService(token=SecretStr("test-token"))
     assert service._parse_gitlab_url("https://gitlab.com/group/repo") == "group/repo"
-    assert service._parse_gitlab_url("https://gitlab.com/group/subgroup/repo") == "group/subgroup/repo"
-    assert service._parse_gitlab_url("https://gitlab.example.com/org/team/project") == "org/team/project"
+    assert (
+        service._parse_gitlab_url("https://gitlab.com/group/subgroup/repo")
+        == "group/subgroup/repo"
+    )
+    assert (
+        service._parse_gitlab_url("https://gitlab.example.com/org/team/project")
+        == "org/team/project"
+    )
     assert service._parse_gitlab_url("https://gitlab.com/group/repo/") == "group/repo"
     assert service._parse_gitlab_url("https://gitlab.com/group/") is None
     assert service._parse_gitlab_url("https://gitlab.com/") is None
@@ -203,7 +211,9 @@ async def test_gitlab_search_repositories_url_parsing():
 async def test_gitlab_search_repositories_public_url_lookup():
     """Test that search_repositories looks up specific repository when public=True."""
     service = GitLabService(token=SecretStr("test-token"))
-    with patch.object(service, "get_repository_details_from_repo_name") as mock_get_repo:
+    with patch.object(
+        service, "get_repository_details_from_repo_name"
+    ) as mock_get_repo:
         mock_get_repo.return_value = Repository(
             id="123",
             full_name="group/repo",
@@ -212,7 +222,9 @@ async def test_gitlab_search_repositories_public_url_lookup():
             is_public=True,
             owner_type=OwnerType.ORGANIZATION,
         )
-        repositories = await service.search_repositories(query="https://gitlab.com/group/repo", public=True)
+        repositories = await service.search_repositories(
+            query="https://gitlab.com/group/repo", public=True
+        )
         mock_get_repo.assert_called_once_with("group/repo")
         assert len(repositories) == 1
         assert repositories[0].full_name == "group/repo"
@@ -222,7 +234,9 @@ async def test_gitlab_search_repositories_public_url_lookup():
 async def test_gitlab_search_repositories_public_url_lookup_with_subgroup():
     """Test that search_repositories handles subgroups correctly when public=True."""
     service = GitLabService(token=SecretStr("test-token"))
-    with patch.object(service, "get_repository_details_from_repo_name") as mock_get_repo:
+    with patch.object(
+        service, "get_repository_details_from_repo_name"
+    ) as mock_get_repo:
         mock_get_repo.return_value = Repository(
             id="456",
             full_name="group/subgroup/repo",
@@ -243,10 +257,14 @@ async def test_gitlab_search_repositories_public_url_lookup_with_subgroup():
 async def test_gitlab_search_repositories_public_url_not_found():
     """Test that search_repositories returns empty list when repository doesn't exist."""
     service = GitLabService(token=SecretStr("test-token"))
-    with patch.object(service, "get_repository_details_from_repo_name") as mock_get_repo:
+    with patch.object(
+        service, "get_repository_details_from_repo_name"
+    ) as mock_get_repo:
         mock_get_repo.side_effect = Exception("Repository not found")
         with pytest.raises(Exception, match="Repository not found"):
-            await service.search_repositories(query="https://gitlab.com/nonexistent/repo", public=True)
+            await service.search_repositories(
+                query="https://gitlab.com/nonexistent/repo", public=True
+            )
         mock_get_repo.assert_called_once_with("nonexistent/repo")
 
 
@@ -254,8 +272,12 @@ async def test_gitlab_search_repositories_public_url_not_found():
 async def test_gitlab_search_repositories_public_invalid_url():
     """Test that search_repositories returns empty list for invalid URLs."""
     service = GitLabService(token=SecretStr("test-token"))
-    with patch.object(service, "get_repository_details_from_repo_name") as mock_get_repo:
-        repositories = await service.search_repositories(query="invalid-url", public=True)
+    with patch.object(
+        service, "get_repository_details_from_repo_name"
+    ) as mock_get_repo:
+        repositories = await service.search_repositories(
+            query="invalid-url", public=True
+        )
         mock_get_repo.assert_not_called()
         assert len(repositories) == 0
 
@@ -275,7 +297,9 @@ async def test_gitlab_search_repositories_formats_search_query():
     ]
     with patch.object(service, "_make_request") as mock_request:
         mock_request.return_value = (mock_repos, {})
-        repositories = await service.search_repositories(query="my project name", public=False)
+        repositories = await service.search_repositories(
+            query="my project name", public=False
+        )
         mock_request.assert_called_once()
         call_args = mock_request.call_args
         url = call_args[0][0]
@@ -302,7 +326,9 @@ async def test_gitlab_search_repositories_single_term_query():
     ]
     with patch.object(service, "_make_request") as mock_request:
         mock_request.return_value = (mock_repos, {})
-        repositories = await service.search_repositories(query="singleterm", public=False)
+        repositories = await service.search_repositories(
+            query="singleterm", public=False
+        )
         mock_request.assert_called_once()
         call_args = mock_request.call_args
         params = call_args[0][1]

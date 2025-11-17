@@ -1,5 +1,7 @@
 """Runtime plugin registration and convenience exports."""
 
+from typing import Callable
+
 from forge.runtime.plugins.agent_skills import (
     AgentSkillsPlugin,
     AgentSkillsRequirement,
@@ -18,4 +20,8 @@ __all__ = [
     "VSCodePlugin",
     "VSCodeRequirement",
 ]
-ALL_PLUGINS = {"jupyter": JupyterPlugin, "agent_skills": AgentSkillsPlugin, "vscode": VSCodePlugin}
+ALL_PLUGINS: dict[str, Callable[[], Plugin]] = {
+    "jupyter": JupyterPlugin,
+    "agent_skills": AgentSkillsPlugin,
+    "vscode": VSCodePlugin,
+}

@@ -11,7 +11,9 @@ from forge.llm import llm_utils
 def test_check_tools_passthrough_for_non_gemini() -> None:
     with suppress_llm_env_export():
         config = LLMConfig(model="gpt-4o")
-    tools = [{"function": {"parameters": {"properties": {"value": {"type": "string"}}}}}]
+    tools = [
+        {"function": {"parameters": {"properties": {"value": {"type": "string"}}}}}
+    ]
     assert llm_utils.check_tools(tools, config) is tools
 
 
@@ -24,9 +26,21 @@ def test_check_tools_strips_defaults_and_unsupported_formats() -> None:
             "function": {
                 "parameters": {
                     "properties": {
-                        "enum_value": {"type": "string", "format": "enum", "default": "keep"},
-                        "dt_value": {"type": "string", "format": "date-time", "default": "2024-01-01"},
-                        "custom": {"type": "string", "format": "uuid", "default": "remove-me"},
+                        "enum_value": {
+                            "type": "string",
+                            "format": "enum",
+                            "default": "keep",
+                        },
+                        "dt_value": {
+                            "type": "string",
+                            "format": "date-time",
+                            "default": "2024-01-01",
+                        },
+                        "custom": {
+                            "type": "string",
+                            "format": "uuid",
+                            "default": "remove-me",
+                        },
                     }
                 }
             }
@@ -44,5 +58,7 @@ def test_check_tools_strips_defaults_and_unsupported_formats() -> None:
     assert "format" in properties["dt_value"]  # allowed format preserved
 
     # The original list should remain unchanged
-    assert "default" in original_tools[0]["function"]["parameters"]["properties"]["enum_value"]
-
+    assert (
+        "default"
+        in original_tools[0]["function"]["parameters"]["properties"]["enum_value"]
+    )

@@ -19,7 +19,8 @@ def check_port_available(port: int) -> bool:
     """
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        sock.bind(("0.0.0.0", port))  # nosec B104 - Safe: checking port availability on all interfaces
+        # Bind to loopback to avoid exposing the port check on all interfaces
+        sock.bind(("127.0.0.1", port))
         return True
     except OSError:
         time.sleep(0.1)
@@ -28,7 +29,9 @@ def check_port_available(port: int) -> bool:
         sock.close()
 
 
-def find_available_tcp_port(min_port: int = 30000, max_port: int = 39999, max_attempts: int = 10) -> int:
+def find_available_tcp_port(
+    min_port: int = 30000, max_port: int = 39999, max_attempts: int = 10
+) -> int:
     """Find an available TCP port in a specified range.
 
     Args:
@@ -43,7 +46,9 @@ def find_available_tcp_port(min_port: int = 30000, max_port: int = 39999, max_at
     rng = random.SystemRandom()
     ports = list(range(min_port, max_port + 1))
     rng.shuffle(ports)
-    return next((port for port in ports[:max_attempts] if check_port_available(port)), -1)
+    return next(
+        (port for port in ports[:max_attempts] if check_port_available(port)), -1
+    )
 
 
 def display_number_matrix(number: int) -> str | None:

@@ -31,7 +31,12 @@ class MCPProxyManager:
     and managing FastMCP proxy instances, including mounting them to FastAPI applications.
     """
 
-    def __init__(self, auth_enabled: bool = False, api_key: str | None = None, logger_level: int | None = None) -> None:
+    def __init__(
+        self,
+        auth_enabled: bool = False,
+        api_key: str | None = None,
+        logger_level: int | None = None,
+    ) -> None:
         """Initialize the MCP Proxy Manager.
 
         Args:
@@ -51,12 +56,18 @@ class MCPProxyManager:
     def initialize(self) -> None:
         """Initialize the FastMCP proxy with the current configuration."""
         if len(self.config["mcpServers"]) == 0:
-            logger.info("No MCP servers configured for FastMCP Proxy, skipping initialization.")
+            logger.info(
+                "No MCP servers configured for FastMCP Proxy, skipping initialization."
+            )
             return
-        self.proxy = FastMCP.as_proxy(self.config, auth_enabled=self.auth_enabled, api_key=self.api_key)
+        self.proxy = FastMCP.as_proxy(
+            self.config, auth_enabled=self.auth_enabled, api_key=self.api_key
+        )
         logger.info("FastMCP Proxy initialized successfully")
 
-    async def mount_to_app(self, app: FastAPI, allow_origins: list[str] | None = None) -> None:
+    async def mount_to_app(
+        self, app: FastAPI, allow_origins: list[str] | None = None
+    ) -> None:
         """Mount the SSE server app to a FastAPI application.
 
         Args:
@@ -94,10 +105,15 @@ class MCPProxyManager:
 
             return wrapped
 
-        mcp_app = close_on_double_start(self.proxy.http_app(path="/sse", transport="sse"))
+        mcp_app = close_on_double_start(
+            self.proxy.http_app(path="/sse", transport="sse")
+        )
         app.mount("/mcp", mcp_app)
-        if "/mcp" in app.routes:
-            app.routes.remove("/mcp")
+        routes_to_remove = [
+            route for route in list(app.routes) if getattr(route, "path", None) == "/mcp"
+        ]
+        for route in routes_to_remove:
+            app.routes.remove(route)
         app.mount("/", mcp_app)
         logger.info("Mounted FastMCP Proxy app at /mcp")
 

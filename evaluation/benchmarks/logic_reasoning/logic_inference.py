@@ -6,8 +6,9 @@ from pyke import knowledge_engine
 
 
 class PykeProgram:
-
-    def __init__(self, logic_program: str, dataset_name="ProntoQA", workspace_mount_path="./") -> None:
+    def __init__(
+        self, logic_program: str, dataset_name="ProntoQA", workspace_mount_path="./"
+    ) -> None:
         self.logic_program = logic_program
         self.flag = self.parse_logic_program()
         self.dataset_name = dataset_name
@@ -18,7 +19,10 @@ class PykeProgram:
             self.flag = True
         except Exception:
             self.flag = False
-        self.answer_map = {"ProntoQA": self.answer_map_prontoqa, "ProofWriter": self.answer_map_proofwriter}
+        self.answer_map = {
+            "ProntoQA": self.answer_map_prontoqa,
+            "ProofWriter": self.answer_map_proofwriter,
+        }
 
     def parse_logic_program(self):
         keywords = ["Query:", "Rules:", "Facts:", "Predicates:"]
@@ -39,7 +43,11 @@ class PykeProgram:
         return (remain_program_str, segment_list)
 
     def validate_program(self):
-        if self.Rules is not None and self.Facts is not None and (self.Rules[0] != "" and self.Facts[0] != ""):
+        if (
+            self.Rules is not None
+            and self.Facts is not None
+            and (self.Rules[0] != "" and self.Facts[0] != "")
+        ):
             return True
         tmp_rules = []
         tmp_facts = []
@@ -62,7 +70,9 @@ class PykeProgram:
                     f.write(fact + "\n")
 
     def create_rule_file(self, rules):
-        pyke_rules = [self.parse_forward_rule(idx + 1, rule) for idx, rule in enumerate(rules)]
+        pyke_rules = [
+            self.parse_forward_rule(idx + 1, rule) for idx, rule in enumerate(rules)
+        ]
         with open(os.path.join(self.cache_dir, "rules.krb"), "w") as f:
             f.write("\n\n".join(pyke_rules))
 
@@ -86,9 +96,13 @@ class PykeProgram:
 
     def check_specific_predicate(self, subject_name, predicate_name, engine):
         results = []
-        with engine.prove_goal(f"facts.{predicate_name}({subject_name}, $label)") as gen:
+        with engine.prove_goal(
+            f"facts.{predicate_name}({subject_name}, $label)"
+        ) as gen:
             results.extend((vars["label"] for vars, plan in gen))
-        with engine.prove_goal(f"rules.{predicate_name}({subject_name}, $label)") as gen:
+        with engine.prove_goal(
+            f"rules.{predicate_name}({subject_name}, $label)"
+        ) as gen:
             results.extend((vars["label"] for vars, plan in gen))
         if len(results) == 1:
             return results[0]
@@ -142,7 +156,6 @@ class PykeProgram:
 
 
 class LogicInferenceEngine:
-
     def __init__(self):
         self.dataset_name = os.environ.get("DATASET_NAME", "ProofWriter")
         self.workspace_mount_path = "/workspace"
@@ -154,7 +167,9 @@ class LogicInferenceEngine:
             return random.choice(["A", "B", "C"])
 
     def safe_execute_program(self, logic_program):
-        program = PykeProgram(logic_program, self.dataset_name, self.workspace_mount_path)
+        program = PykeProgram(
+            logic_program, self.dataset_name, self.workspace_mount_path
+        )
         if not program.flag:
             answer = self.random_backup()
             return (answer, "parsing error", "")

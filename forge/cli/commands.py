@@ -6,7 +6,9 @@ import asyncio
 import os
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+import re
+import shlex
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict
 
 import tomlkit
 from prompt_toolkit import HTML, print_formatted_text
@@ -43,7 +45,7 @@ from forge.core.config.mcp_config import (
     MCPSSEServerConfig,
     MCPStdioServerConfig,
 )
-from forge.core.schema import AgentState
+from forge.core.schemas import AgentState
 from forge.core.schema.exit_reason import ExitReason
 from forge.events import EventSource
 from forge.events.action import ChangeAgentStateAction, MessageAction
@@ -79,12 +81,15 @@ def restart_cli() -> None:
     """Restart the CLI by replacing the current process."""
     print_formatted_text("🔄 Restarting Forge CLI...")
     python_executable = sys.executable
-    script_args = sys.argv
+    # Sanitize argv to avoid control characters being passed through
+    script_args = [arg for arg in sys.argv if "\n" not in arg and "\r" not in arg][:128]
     try:
         os.execv(python_executable, [python_executable, *script_args])
     except Exception as e:
         print_formatted_text(f"❌ Failed to restart CLI: {e}")
-        print_formatted_text("Please restart Forge manually for changes to take effect.")
+        print_formatted_text(
+            "Please restart Forge manually for changes to take effect."
+        )
 
 
 async def prompt_for_restart(config: ForgeConfig) -> bool:
@@ -192,7 +197,9 @@ async def _handle_capaudit_command(command: str) -> None:
 def _display_capaudit_summary(report: dict) -> None:
     """Display capability audit summary in human-readable format."""
     print_formatted_text("\nCapability Audit Summary:")
-    print_formatted_text(f" Profiles: {report['profiles_count']}  SOPs: {report['sops_scanned']}")
+    print_formatted_text(
+        f" Profiles: {report['profiles_count']}  SOPs: {report['sops_scanned']}"
+    )
 
     _display_unknown_capabilities(report["unknown_capabilities"])
     _display_unused_capabilities(report["unused_capabilities"])
@@ -248,55 +255,32 @@ async def handle_commands(
 ) -> tuple[bool, bool, bool, ExitReason]:
     """Handle CLI commands and route to the correct command handler."""
     normalized_command = command.strip()
-    exit_reason = ExitReason.ERROR
 
-    if normalized_command == "/help":
-        handle_help_command()
-        return (False, False, False, exit_reason)
+    if result := _dispatch_sync_command(
+        normalized_command,
+        usage_metrics,
+        sid,
+        config,
+        event_stream,
+    ):
+        return result
 
-    if normalized_command == "/status":
-        handle_status_command(usage_metrics, sid)
-        return (False, False, False, exit_reason)
+    async_result = await _dispatch_async_command(
+        normalized_command,
+        config,
+        event_stream,
+        current_dir,
+        settings_store,
+        agent_state,
+    )
+    if async_result:
+        return async_result
 
-    if normalized_command == "/new":
-        close_repl, new_session_requested = handle_new_command(config, event_stream, usage_metrics, sid)
-        exit_reason = ExitReason.INTENTIONAL if close_repl else ExitReason.ERROR
-        return (close_repl, False, new_session_requested, exit_reason)
+    prefix_result = await _dispatch_prefixed_command(normalized_command)
+    if prefix_result:
+        return prefix_result
 
-    if normalized_command == "/exit":
-        close_repl = handle_exit_command(config, event_stream, usage_metrics, sid)
-        exit_reason = ExitReason.INTENTIONAL if close_repl else ExitReason.ERROR
-        return (close_repl, False, False, exit_reason)
-
-    if normalized_command == "/init":
-        close_repl, reload_microagents = await handle_init_command(config, event_stream, current_dir)
-        exit_reason = ExitReason.INTENTIONAL if close_repl else ExitReason.ERROR
-        return (close_repl, reload_microagents, False, exit_reason)
-
-    if normalized_command == "/settings":
-        await handle_settings_command(config, settings_store)
-        return (False, False, False, exit_reason)
-
-    if normalized_command == "/mcp":
-        await handle_mcp_command(config)
-        return (False, False, False, exit_reason)
-
-    if normalized_command == "/resume":
-        close_repl, new_session_requested = await handle_resume_command(event_stream, agent_state)
-        exit_reason = ExitReason.INTENTIONAL if close_repl else ExitReason.ERROR
-        return (close_repl, False, new_session_requested, exit_reason)
-
-    if normalized_command.startswith("/replay"):
-        await _handle_replay_command(normalized_command)
-        return (False, False, False, exit_reason)
-
-    if normalized_command.startswith("/capaudit"):
-        await _handle_capaudit_command(normalized_command)
-        return (False, False, False, exit_reason)
-
-    action = MessageAction(content=command)
-    event_stream.add_event(action, EventSource.USER)
-    return (True, False, False, ExitReason.INTENTIONAL)
+    return _handle_user_message(command, event_stream)
 
 
 def _handle_help_command() -> tuple[bool, bool, bool, str | None]:
@@ -311,20 +295,6 @@ def _handle_status_command(usage_metrics, sid) -> tuple[bool, bool, bool, str | 
     return (False, False, False, None)
 
 
-def _handle_new_command(config, event_stream, usage_metrics, sid) -> tuple[bool, bool, bool, str | None]:
-    """Handle /new command."""
-    close_repl, new_session_requested = handle_new_command(config, event_stream, usage_metrics, sid)
-    exit_reason = "intentional" if close_repl else None
-    return (close_repl, False, new_session_requested, exit_reason)
-
-
-def _handle_exit_command(config, event_stream, usage_metrics, sid) -> tuple[bool, bool, bool, str | None]:
-    """Handle /exit command."""
-    close_repl = handle_exit_command(config, event_stream, usage_metrics, sid)
-    exit_reason = "intentional" if close_repl else None
-    return (close_repl, False, False, exit_reason)
-
-
 def handle_exit_command(
     config: ForgeConfig,
     event_stream: EventStream,
@@ -332,24 +302,174 @@ def handle_exit_command(
     sid: str,
 ) -> bool:
     """Handle /exit command with confirmation.
-    
+
     Args:
         config: Forge configuration
         event_stream: Event stream to send stop event
         usage_metrics: Usage metrics for display
         sid: Session ID
-        
+
     Returns:
         True if user confirmed exit
 
     """
     close_repl = False
-    confirm_exit = cli_confirm(config, "\nTerminate session?", ["Yes, proceed", "No, dismiss"]) == 0
+    confirm_exit = (
+        cli_confirm(config, "\nTerminate session?", ["Yes, proceed", "No, dismiss"])
+        == 0
+    )
     if confirm_exit:
-        event_stream.add_event(ChangeAgentStateAction(AgentState.STOPPED), EventSource.ENVIRONMENT)
+        event_stream.add_event(
+            ChangeAgentStateAction(AgentState.STOPPED), EventSource.ENVIRONMENT
+        )
         display_shutdown_message(usage_metrics, sid)
         close_repl = True
     return close_repl
+
+
+def _dispatch_sync_command(
+    normalized_command: str,
+    usage_metrics: UsageMetrics,
+    sid: str,
+    config: ForgeConfig,
+    event_stream: EventStream,
+) -> tuple[bool, bool, bool, ExitReason] | None:
+    handlers: Dict[str, Callable[[], tuple[bool, bool, bool, ExitReason]]] = {
+        "/help": _result_for_help,
+        "/status": lambda: _result_for_status(usage_metrics, sid),
+        "/new": lambda: _result_for_new(config, event_stream, usage_metrics, sid),
+        "/exit": lambda: _result_for_exit(config, event_stream, usage_metrics, sid),
+    }
+    handler = handlers.get(normalized_command)
+    if handler:
+        return handler()
+    return None
+
+
+async def _dispatch_async_command(
+    normalized_command: str,
+    config: ForgeConfig,
+    event_stream: EventStream,
+    current_dir: str,
+    settings_store: FileSettingsStore,
+    agent_state: str,
+) -> tuple[bool, bool, bool, ExitReason] | None:
+    async_handlers: Dict[
+        str, Callable[[], Awaitable[tuple[bool, bool, bool, ExitReason]]]
+    ] = {
+        "/init": lambda: _result_for_init(config, event_stream, current_dir),
+        "/settings": lambda: _result_for_settings(config, settings_store),
+        "/mcp": lambda: _result_for_mcp(config),
+        "/resume": lambda: _result_for_resume(event_stream, agent_state),
+    }
+    handler = async_handlers.get(normalized_command)
+    if handler:
+        return await handler()
+    return None
+
+
+async def _dispatch_prefixed_command(
+    normalized_command: str,
+) -> tuple[bool, bool, bool, ExitReason] | None:
+    prefix_handlers: Dict[str, Callable[[str], Awaitable[None]]] = {
+        "/replay": _handle_replay_command,
+        "/capaudit": _handle_capaudit_command,
+    }
+    for prefix, handler in prefix_handlers.items():
+        if normalized_command.startswith(prefix):
+            await handler(normalized_command)
+            return _command_result()
+    return None
+
+
+def _handle_user_message(
+    command: str, event_stream: EventStream
+) -> tuple[bool, bool, bool, ExitReason]:
+    action = MessageAction(content=command)
+    event_stream.add_event(action, EventSource.USER)
+    return (True, False, False, ExitReason.INTENTIONAL)
+
+
+def _result_for_help() -> tuple[bool, bool, bool, ExitReason]:
+    handle_help_command()
+    return _command_result()
+
+
+def _result_for_status(
+    usage_metrics: UsageMetrics, sid: str
+) -> tuple[bool, bool, bool, ExitReason]:
+    handle_status_command(usage_metrics, sid)
+    return _command_result()
+
+
+def _result_for_new(
+    config: ForgeConfig,
+    event_stream: EventStream,
+    usage_metrics: UsageMetrics,
+    sid: str,
+) -> tuple[bool, bool, bool, ExitReason]:
+    close_repl, new_session_requested = handle_new_command(
+        config, event_stream, usage_metrics, sid
+    )
+    exit_reason = ExitReason.INTENTIONAL if close_repl else ExitReason.ERROR
+    return _command_result(close_repl, False, new_session_requested, exit_reason)
+
+
+def _result_for_exit(
+    config: ForgeConfig,
+    event_stream: EventStream,
+    usage_metrics: UsageMetrics,
+    sid: str,
+) -> tuple[bool, bool, bool, ExitReason]:
+    close_repl = handle_exit_command(config, event_stream, usage_metrics, sid)
+    exit_reason = ExitReason.INTENTIONAL if close_repl else ExitReason.ERROR
+    return _command_result(close_repl, False, False, exit_reason)
+
+
+async def _result_for_init(
+    config: ForgeConfig,
+    event_stream: EventStream,
+    current_dir: str,
+) -> tuple[bool, bool, bool, ExitReason]:
+    close_repl, reload_microagents = await handle_init_command(
+        config, event_stream, current_dir
+    )
+    exit_reason = ExitReason.INTENTIONAL if close_repl else ExitReason.ERROR
+    return _command_result(close_repl, reload_microagents, False, exit_reason)
+
+
+async def _result_for_settings(
+    config: ForgeConfig, settings_store: FileSettingsStore
+) -> tuple[bool, bool, bool, ExitReason]:
+    await handle_settings_command(config, settings_store)
+    return _command_result()
+
+
+async def _result_for_mcp(
+    config: ForgeConfig,
+) -> tuple[bool, bool, bool, ExitReason]:
+    await handle_mcp_command(config)
+    return _command_result()
+
+
+async def _result_for_resume(
+    event_stream: EventStream,
+    agent_state: str,
+) -> tuple[bool, bool, bool, ExitReason]:
+    close_repl, new_session_requested = await handle_resume_command(
+        event_stream, agent_state
+    )
+    exit_reason = ExitReason.INTENTIONAL if close_repl else ExitReason.ERROR
+    return _command_result(close_repl, False, new_session_requested, exit_reason)
+
+
+def _command_result(
+    close_repl: bool = False,
+    reload_microagents: bool = False,
+    new_session_requested: bool = False,
+    exit_reason: ExitReason = ExitReason.ERROR,
+) -> tuple[bool, bool, bool, ExitReason]:
+    return close_repl, reload_microagents, new_session_requested, exit_reason
 
 
 def handle_help_command() -> None:
@@ -363,12 +483,12 @@ async def handle_init_command(
     current_dir: str,
 ) -> tuple[bool, bool]:
     """Handle /init command to initialize repository context.
-    
+
     Args:
         config: Forge configuration
         event_stream: Event stream to send init message
         current_dir: Current working directory
-        
+
     Returns:
         Tuple of (close_repl, reload_microagents) flags
 
@@ -379,7 +499,9 @@ async def handle_init_command(
         init_repo = await init_repository(config, current_dir)
         if init_repo:
             REPO_MD_CREATE_PROMPT = "\n        Please explore this repository. Create the file .Forge/microagents/repo.md with:\n            - A description of the project\n            - An overview of the file structure\n            - Any information on how to run tests or other relevant commands\n            - Any other information that would be helpful to a brand new developer\n        Keep it short--just a few paragraphs will do.\n    "
-            event_stream.add_event(MessageAction(content=REPO_MD_CREATE_PROMPT), EventSource.USER)
+            event_stream.add_event(
+                MessageAction(content=REPO_MD_CREATE_PROMPT), EventSource.USER
+            )
             reload_microagents = True
             close_repl = True
     else:
@@ -391,7 +513,7 @@ async def handle_init_command(
 
 def handle_status_command(usage_metrics: UsageMetrics, sid: str) -> None:
     """Handle /status command to display session status and metrics.
-    
+
     Args:
         usage_metrics: Usage metrics to display
         sid: Session ID
@@ -407,13 +529,13 @@ def handle_new_command(
     sid: str,
 ) -> tuple[bool, bool]:
     """Handle /new command to start new conversation.
-    
+
     Args:
         config: Forge configuration
         event_stream: Event stream to send stop event
         usage_metrics: Usage metrics for display
         sid: Session ID
-        
+
     Returns:
         Tuple of (close_repl, new_session_requested) flags
 
@@ -431,14 +553,18 @@ def handle_new_command(
     if new_session_requested:
         close_repl = True
         new_session_requested = True
-        event_stream.add_event(ChangeAgentStateAction(AgentState.STOPPED), EventSource.ENVIRONMENT)
+        event_stream.add_event(
+            ChangeAgentStateAction(AgentState.STOPPED), EventSource.ENVIRONMENT
+        )
         display_shutdown_message(usage_metrics, sid)
     return (close_repl, new_session_requested)
 
 
-async def handle_settings_command(config: ForgeConfig, settings_store: FileSettingsStore) -> None:
+async def handle_settings_command(
+    config: ForgeConfig, settings_store: FileSettingsStore
+) -> None:
     """Handle /settings command to modify configuration.
-    
+
     Args:
         config: Forge configuration to modify
         settings_store: Settings storage backend
@@ -458,13 +584,15 @@ async def handle_settings_command(config: ForgeConfig, settings_store: FileSetti
         await modify_search_api_settings(config, settings_store)
 
 
-async def handle_resume_command(event_stream: EventStream, agent_state: str) -> tuple[bool, bool]:
+async def handle_resume_command(
+    event_stream: EventStream, agent_state: str
+) -> tuple[bool, bool]:
     """Handle /resume command to resume paused agent.
-    
+
     Args:
         event_stream: Event stream to send continue message
         agent_state: Current agent state
-        
+
     Returns:
         Tuple of (close_repl, new_session_requested) flags
 
@@ -485,13 +613,13 @@ async def handle_resume_command(event_stream: EventStream, agent_state: str) -> 
 
 async def init_repository(config: ForgeConfig, current_dir: str) -> bool:
     """Initialize repository with Forge microagent context.
-    
+
     Prompts user to create repo.md with project documentation.
-    
+
     Args:
         config: Forge configuration
         current_dir: Current working directory
-        
+
     Returns:
         True if user confirmed initialization
 
@@ -500,34 +628,54 @@ async def init_repository(config: ForgeConfig, current_dir: str) -> bool:
     init_repo = False
     if repo_file_path.exists():
         try:
-            content = await asyncio.get_event_loop().run_in_executor(None, read_file, repo_file_path)
-            print_formatted_text("Repository instructions file (repo.md) already exists.\n")
+            content = await asyncio.get_event_loop().run_in_executor(
+                None, read_file, repo_file_path
+            )
+            print_formatted_text(
+                "Repository instructions file (repo.md) already exists.\n"
+            )
             container = Frame(
-                TextArea(text=content, read_only=True, style=COLOR_GREY, wrap_lines=True),
+                TextArea(
+                    text=content, read_only=True, style=COLOR_GREY, wrap_lines=True
+                ),
                 title="Repository Instructions (repo.md)",
                 style=f"fg:{COLOR_GREY}",
             )
             print_container(container)
             print_formatted_text("")
-            init_repo = cli_confirm(config, "Do you want to re-initialize?", ["Yes, re-initialize", "No, dismiss"]) == 0
+            init_repo = (
+                cli_confirm(
+                    config,
+                    "Do you want to re-initialize?",
+                    ["Yes, re-initialize", "No, dismiss"],
+                )
+                == 0
+            )
             if init_repo:
                 write_to_file(repo_file_path, "")
         except Exception:
             print_formatted_text("Error reading repository instructions file (repo.md)")
             init_repo = False
     else:
-        print_formatted_text("\nRepository instructions file will be created by exploring the repository.\n")
-        init_repo = cli_confirm(config, "Do you want to proceed?", ["Yes, create", "No, dismiss"]) == 0
+        print_formatted_text(
+            "\nRepository instructions file will be created by exploring the repository.\n"
+        )
+        init_repo = (
+            cli_confirm(
+                config, "Do you want to proceed?", ["Yes, create", "No, dismiss"]
+            )
+            == 0
+        )
     return init_repo
 
 
 def check_folder_security_agreement(config: ForgeConfig, current_dir: str) -> bool:
     """Check if current directory is trusted, prompt user if not.
-    
+
     Args:
         config: Forge configuration with trusted directories
         current_dir: Directory to check
-        
+
     Returns:
         True if directory is trusted or user approves
 
@@ -551,7 +699,12 @@ def check_folder_security_agreement(config: ForgeConfig, current_dir: str) -> bo
         clear()
         print_container(security_frame)
         print_formatted_text("")
-        confirm = cli_confirm(config, "Do you wish to continue?", ["Yes, proceed", "No, exit"]) == 0
+        confirm = (
+            cli_confirm(
+                config, "Do you wish to continue?", ["Yes, proceed", "No, exit"]
+            )
+            == 0
+        )
         if confirm:
             add_local_config_trusted_dir(current_dir)
         return confirm
@@ -563,7 +716,13 @@ async def handle_mcp_command(config: ForgeConfig) -> None:
     action = cli_confirm(
         config,
         "MCP Server Configuration",
-        ["List configured servers", "Add new server", "Remove server", "View errors", "Go back"],
+        [
+            "List configured servers",
+            "Add new server",
+            "Remove server",
+            "View errors",
+            "Go back",
+        ],
     )
     if action == 0:
         display_mcp_servers(config)
@@ -598,7 +757,9 @@ def display_mcp_servers(config: ForgeConfig) -> None:
         if stdio_count > 0:
             print_formatted_text("Stdio Servers:")
             for idx, stdio_server in enumerate(mcp_config.stdio_servers, 1):
-                print_formatted_text(f"  {idx}. {stdio_server.name} ({stdio_server.command})")
+                print_formatted_text(
+                    f"  {idx}. {stdio_server.name} ({stdio_server.command})"
+                )
             print_formatted_text("")
         if shttp_count > 0:
             print_formatted_text("SHTTP Servers:")
@@ -679,7 +840,12 @@ async def add_mcp_server(config: ForgeConfig) -> None:
     transport_type = cli_confirm(
         config,
         "Select MCP server transport type:",
-        ["SSE (Server-Sent Events)", "Stdio (Standard Input/Output)", "SHTTP (Streamable HTTP)", "Cancel"],
+        [
+            "SSE (Server-Sent Events)",
+            "Stdio (Standard Input/Output)",
+            "SHTTP (Streamable HTTP)",
+            "Cancel",
+        ],
     )
     if transport_type == 3:
         return
@@ -694,18 +860,24 @@ async def add_mcp_server(config: ForgeConfig) -> None:
         print_formatted_text(f"Error adding MCP server: {e}")
 
 
-async def _collect_sse_server_inputs(config: ForgeConfig) -> tuple[str | None, str | None]:
+async def _collect_sse_server_inputs(
+    config: ForgeConfig,
+) -> tuple[str | None, str | None]:
     """Collect user inputs for SSE server configuration."""
     url = await collect_input(config, "\nEnter server URL:")
     if url is None:
         return None, None
 
-    api_key = await collect_input(config, "\nEnter API key (optional, press Enter to skip):")
+    api_key = await collect_input(
+        config, "\nEnter API key (optional, press Enter to skip):"
+    )
     return (None, None) if api_key is None else (url, api_key or None)
 
 
 async def _validate_and_create_sse_server(
-    config: ForgeConfig, url: str, api_key: str | None,
+    config: ForgeConfig,
+    url: str,
+    api_key: str | None,
 ) -> MCPSSEServerConfig | None:
     """Validate inputs and create SSE server config."""
     try:
@@ -764,12 +936,15 @@ async def _collect_stdio_server_inputs(
     if command is None:
         return None, None, None, None
 
-    args_input = await collect_input(config, '\nEnter arguments (optional, e.g., "-y server-package arg1"):')
+    args_input = await collect_input(
+        config, '\nEnter arguments (optional, e.g., "-y server-package arg1"):'
+    )
     if args_input is None:
         return None, None, None, None
 
     env_input = await collect_input(
-        config, "\nEnter environment variables (KEY=VALUE format, comma-separated, optional):",
+        config,
+        "\nEnter environment variables (KEY=VALUE format, comma-separated, optional):",
     )
     if env_input is None:
         return None, None, None, None
@@ -777,9 +952,54 @@ async def _collect_stdio_server_inputs(
     return name, command, args_input, env_input
 
 
-def _validate_stdio_server_config(name: str, command: str, args_input: str, env_input: str) -> MCPStdioServerConfig:
+def _parse_stdio_args_input(args_input: str) -> list[str]:
+    """Parse the arguments user input into a list suitable for MCPStdioServerConfig."""
+    if not args_input.strip():
+        return []
+    try:
+        return shlex.split(args_input.strip())
+    except ValueError as exc:
+        msg = (
+            "Invalid argument format. Use shell-style quoting, e.g. "
+            "'--flag value' or \"--config 'path with spaces'\"."
+        )
+        raise ValueError(msg) from exc
+
+
+def _parse_stdio_env_input(env_input: str) -> dict[str, str]:
+    """Parse environment variables input into dictionary form."""
+    if not env_input.strip():
+        return {}
+
+    environment: dict[str, str] = {}
+    for pair in env_input.split(","):
+        pair = pair.strip()
+        if not pair:
+            continue
+        if "=" not in pair:
+            msg = f"Environment variable '{pair}' must be in KEY=VALUE format."
+            raise ValueError(msg)
+        key, value = pair.split("=", 1)
+        key = key.strip()
+        if not key:
+            raise ValueError("Environment variable key cannot be empty.")
+        if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", key):
+            msg = (
+                f"Invalid environment variable name '{key}'. Must start with a letter "
+                "or underscore and contain only alphanumeric characters and underscores."
+            )
+            raise ValueError(msg)
+        environment[key] = value
+    return environment
+
+
+def _validate_stdio_server_config(
+    name: str, command: str, args: list[str], env: dict[str, str]
+) -> MCPStdioServerConfig:
     """Validate and create Stdio server configuration."""
-    return MCPStdioServerConfig(name=name, command=command, args=args_input, env=env_input)
+    return MCPStdioServerConfig(
+        name=name, command=command, args=args, env=env
+    )
 
 
 def _build_stdio_server_config_dict(server: MCPStdioServerConfig) -> dict[str, Any]:
@@ -802,11 +1022,20 @@ async def _validate_stdio_server_name(config: ForgeConfig, name: str) -> bool:
 
 
 async def _validate_stdio_server_inputs(
-    config: ForgeConfig, name: str, command: str, args_input: str, env_input: str,
+    config: ForgeConfig,
+    name: str,
+    command: str,
+    args_input: str,
+    env_input: str,
 ) -> MCPStdioServerConfig | None:
     """Validate inputs and create stdio server config."""
     try:
-        return _validate_stdio_server_config(name, command, args_input, env_input)
+        parsed_args = _parse_stdio_args_input(args_input)
+        parsed_env = _parse_stdio_env_input(env_input)
+        return _validate_stdio_server_config(name, command, parsed_args, parsed_env)
+    except ValueError as parse_error:
+        print_formatted_text(f"❌ {parse_error}")
+        return None
     except ValidationError as e:
         print_formatted_text("❌ Please fix the following errors:")
         for error in e.errors():
@@ -818,47 +1047,83 @@ async def _validate_stdio_server_inputs(
 async def add_stdio_server(config: ForgeConfig) -> None:
     """Add a Stdio MCP server."""
     print_formatted_text("Adding Stdio MCP Server")
-
     while True:
-        name, command, args_input, env_input = await _collect_stdio_server_inputs(config)
-        if name is None:
-            print_formatted_text("Operation cancelled.")
+        gathered = await _gather_stdio_inputs(config)
+        if gathered is None:
+            _announce_operation_cancelled()
             return
+        name, command, args_input, env_input = gathered
 
         if not await _validate_stdio_server_name(config, name):
-            if cli_confirm(config, "\nTry again?") != 0:
-                print_formatted_text("Operation cancelled.")
+            if not _should_retry_after_failure(config):
+                _announce_operation_cancelled()
                 return
             continue
 
-        server = await _validate_stdio_server_inputs(config, name, command, args_input, env_input)
+        server = await _validate_stdio_server_inputs(
+            config, name, command, args_input, env_input
+        )
         if server is not None:
-            break
-
-        if cli_confirm(config, "\nTry again?") != 0:
-            print_formatted_text("Operation cancelled.")
+            await _finalize_stdio_server_addition(config, server)
             return
 
+        if not _should_retry_after_failure(config):
+            _announce_operation_cancelled()
+            return
+
+
+async def _gather_stdio_inputs(
+    config: ForgeConfig,
+) -> tuple[str, str, str, str] | None:
+    """Collect stdio inputs and handle cancellation."""
+    name, command, args_input, env_input = await _collect_stdio_server_inputs(config)
+    if None in (name, command, args_input, env_input):
+        return None
+    assert isinstance(name, str)
+    assert isinstance(command, str)
+    assert isinstance(args_input, str)
+    assert isinstance(env_input, str)
+    return name, command, args_input, env_input
+
+
+def _announce_operation_cancelled() -> None:
+    print_formatted_text("Operation cancelled.")
+
+
+def _should_retry_after_failure(config: ForgeConfig) -> bool:
+    return cli_confirm(config, "\nTry again?") == 0
+
+
+async def _finalize_stdio_server_addition(
+    config: ForgeConfig, server: MCPStdioServerConfig
+) -> None:
     server_config = _build_stdio_server_config_dict(server)
     config_file_path = _add_server_to_config("stdio_servers", server_config)
-    print_formatted_text(f"✓ Stdio MCP server added to {config_file_path}: {server.name}")
-
+    print_formatted_text(
+        f"✓ Stdio MCP server added to {config_file_path}: {server.name}"
+    )
     if await prompt_for_restart(config):
         restart_cli()
 
 
-async def _collect_shttp_server_inputs(config: ForgeConfig) -> tuple[str | None, str | None]:
+async def _collect_shttp_server_inputs(
+    config: ForgeConfig,
+) -> tuple[str | None, str | None]:
     """Collect user inputs for SHTTP server configuration."""
     url = await collect_input(config, "\nEnter server URL:")
     if url is None:
         return None, None
 
-    api_key = await collect_input(config, "\nEnter API key (optional, press Enter to skip):")
+    api_key = await collect_input(
+        config, "\nEnter API key (optional, press Enter to skip):"
+    )
     return (None, None) if api_key is None else (url, api_key or None)
 
 
 async def _validate_and_create_shttp_server(
-    config: ForgeConfig, url: str, api_key: str | None,
+    config: ForgeConfig,
+    url: str,
+    api_key: str | None,
 ) -> MCPSHTTPServerConfig | None:
     """Validate inputs and create SHTTP server config."""
     try:
@@ -899,7 +1164,9 @@ async def add_shttp_server(config: ForgeConfig) -> None:
 
     server_config = _build_shttp_server_config(server)
     config_file_path = _add_server_to_config("shttp_servers", server_config)
-    print_formatted_text(f"✓ SHTTP MCP server added to {config_file_path}: {server.url}")
+    print_formatted_text(
+        f"✓ SHTTP MCP server added to {config_file_path}: {server.url}"
+    )
 
     if await prompt_for_restart(config):
         restart_cli()
@@ -907,10 +1174,18 @@ async def add_shttp_server(config: ForgeConfig) -> None:
 
 def _collect_available_servers(mcp_config) -> list[tuple[str, str, object]]:
     """Collect all available MCP servers for removal."""
-    servers = []
-    servers.extend(("SSE", sse_server.url, sse_server) for sse_server in mcp_config.sse_servers)
-    servers.extend(("Stdio", stdio_server.name, stdio_server) for stdio_server in mcp_config.stdio_servers)
-    servers.extend(("SHTTP", shttp_server.url, shttp_server) for shttp_server in mcp_config.shttp_servers)
+    servers: list[tuple[str, str, object]] = []
+    servers.extend(
+        ("SSE", sse_server.url, sse_server) for sse_server in mcp_config.sse_servers
+    )
+    servers.extend(
+        ("Stdio", stdio_server.name, stdio_server)
+        for stdio_server in mcp_config.stdio_servers
+    )
+    servers.extend(
+        ("SHTTP", shttp_server.url, shttp_server)
+        for shttp_server in mcp_config.shttp_servers
+    )
     return servers
 
 
@@ -921,7 +1196,9 @@ def _get_server_removal_choices(servers: list[tuple[str, str, object]]) -> list[
     return choices
 
 
-def _confirm_server_removal(config: ForgeConfig, server_type: str, identifier: str) -> bool:
+def _confirm_server_removal(
+    config: ForgeConfig, server_type: str, identifier: str
+) -> bool:
     """Confirm server removal with user."""
     confirm = cli_confirm(
         config,
@@ -935,7 +1212,9 @@ def _remove_sse_server(config_data: dict, identifier: str) -> bool:
     """Remove SSE server from configuration."""
     if "sse_servers" not in config_data["mcp"]:
         return False
-    config_data["mcp"]["sse_servers"] = [s for s in config_data["mcp"]["sse_servers"] if s.get("url") != identifier]
+    config_data["mcp"]["sse_servers"] = [
+        s for s in config_data["mcp"]["sse_servers"] if s.get("url") != identifier
+    ]
     return True
 
 
@@ -953,11 +1232,15 @@ def _remove_shttp_server(config_data: dict, identifier: str) -> bool:
     """Remove SHTTP server from configuration."""
     if "shttp_servers" not in config_data["mcp"]:
         return False
-    config_data["mcp"]["shttp_servers"] = [s for s in config_data["mcp"]["shttp_servers"] if s.get("url") != identifier]
+    config_data["mcp"]["shttp_servers"] = [
+        s for s in config_data["mcp"]["shttp_servers"] if s.get("url") != identifier
+    ]
     return True
 
 
-def _remove_server_from_config(config_data: dict, server_type: str, identifier: str) -> bool:
+def _remove_server_from_config(
+    config_data: dict, server_type: str, identifier: str
+) -> bool:
     """Remove server from configuration data."""
     if server_type == "SSE":
         return _remove_sse_server(config_data, identifier)
@@ -993,7 +1276,9 @@ async def remove_mcp_server(config: ForgeConfig) -> None:
 
     if _remove_server_from_config(config_data, server_type, identifier):
         save_config_file(config_data, config_file_path)
-        print_formatted_text(f'✓ {server_type} MCP server "{identifier}" removed from {config_file_path}.')
+        print_formatted_text(
+            f'✓ {server_type} MCP server "{identifier}" removed from {config_file_path}.'
+        )
         if await prompt_for_restart(config):
             restart_cli()
     else:

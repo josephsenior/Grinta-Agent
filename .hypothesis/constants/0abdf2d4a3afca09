@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\controller\agent_controller.py
+# hypothesis_version: 6.147.0
+
+[0.7, 60.0, 120.0, '\n\nSuggestions:\n', '\nMissing items:\n', ', ', '-delegate', '1', '<none>', 'ACTION', 'ExceededBudget', 'LOG_ALL_EVENTS', 'MESSAGE_RECEIVED', 'METRICS', 'NO_ID', 'OBSERVATION', 'PENDING_ACTION_SET', 'STEP', 'STEPPING_AGENT', 'STEP_BLOCKED_STATE', 'System message: %s', 'TASK: ', '_pending_action_info', 'budget', 'config', 'confirmation_state', 'current_value', 'debug', 'error', 'event_source', 'force_finish', 'full', 'hidden', 'id', 'info', 'iteration', 'limit', 'max_retries', 'max_stuck_detections', 'max_value', 'maximum', 'message', 'metrics', 'msg_type', 'partial', 'prompt is too long', 'reason', 'retry_attempt', 'safety', 'sambanovaexception', 'security_risk', 'session_id', 'status', 'stop', 'task', 'task_validator', 'thought', 'tool_call_metadata', 'true', 'unknown', 'warning']

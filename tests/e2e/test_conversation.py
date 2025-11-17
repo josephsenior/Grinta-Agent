@@ -94,7 +94,9 @@ def _select_repository_option(page: Page) -> None:
             continue
 
     if not option_found:
-        print("Could not find repository option in dropdown, trying keyboard navigation")
+        print(
+            "Could not find repository option in dropdown, trying keyboard navigation"
+        )
         page.keyboard.press("ArrowDown")
         page.wait_for_timeout(500)
         page.keyboard.press("Enter")
@@ -119,10 +121,14 @@ def _wait_for_button_enabled(page: Page, launch_button) -> bool:
     for attempt in range(max_wait_attempts):
         try:
             if is_disabled := launch_button.is_disabled():
-                print(f"Launch button still disabled, waiting... (attempt {attempt + 1}/{max_wait_attempts})")
+                print(
+                    f"Launch button still disabled, waiting... (attempt {attempt + 1}/{max_wait_attempts})"
+                )
                 page.wait_for_timeout(2000)
             else:
-                print(f"Repository Launch button is now enabled (attempt {attempt + 1})")
+                print(
+                    f"Repository Launch button is now enabled (attempt {attempt + 1})"
+                )
                 button_enabled = True
                 break
         except Exception as e:
@@ -190,7 +196,9 @@ def _wait_for_loading_complete(page: Page) -> None:
             continue
 
 
-def _wait_for_conversation_elements(page: Page, navigation_timeout: int, check_interval: int) -> None:
+def _wait_for_conversation_elements(
+    page: Page, navigation_timeout: int, check_interval: int
+) -> None:
     """Wait for conversation interface elements to appear."""
     try:
         current_url = page.url
@@ -223,7 +231,9 @@ def _wait_for_conversation_elements(page: Page, navigation_timeout: int, check_i
                 try:
                     element = page.locator(selector)
                     if element.is_visible(timeout=2000):
-                        print(f"Found conversation interface element with selector: {selector}")
+                        print(
+                            f"Found conversation interface element with selector: {selector}"
+                        )
                         conversation_loaded = True
                         break
                 except Exception:
@@ -296,12 +306,20 @@ def _wait_for_agent_input_ready(page: Page) -> None:
             connecting_or_starting = any(
                 msg
                 for msg in status_messages
-                if "connecting" in msg.lower() or "starting" in msg.lower() or "runtime to start" in msg.lower()
+                if "connecting" in msg.lower()
+                or "starting" in msg.lower()
+                or "runtime to start" in msg.lower()
             )
             has_ready_indicator = _check_ready_indicators(page, ready_indicators)
 
-            if (has_ready_indicator or not connecting_or_starting) and input_ready and submit_ready:
-                print("✅ Agent is ready for user input - input field and submit button are enabled")
+            if (
+                (has_ready_indicator or not connecting_or_starting)
+                and input_ready
+                and submit_ready
+            ):
+                print(
+                    "✅ Agent is ready for user input - input field and submit button are enabled"
+                )
                 agent_ready = True
                 break
         except Exception as e:
@@ -311,7 +329,9 @@ def _wait_for_agent_input_ready(page: Page) -> None:
 
     if not agent_ready:
         page.screenshot(path="test-results/conv_timeout_waiting_for_agent.png")
-        raise AssertionError(f"Agent did not become ready for input within {max_wait_time} seconds")
+        raise AssertionError(
+            f"Agent did not become ready for input within {max_wait_time} seconds"
+        )
 
 
 def _get_status_messages(page: Page) -> list[str]:
@@ -482,7 +502,9 @@ def _wait_for_submit_button_enabled(page: Page, submit_button) -> bool:
                     button_enabled = True
                     print("Submit button is enabled")
                     break
-                print(f"Waiting for submit button to be enabled... ({int(time.time() - start_time)}s)")
+                print(
+                    f"Waiting for submit button to be enabled... ({int(time.time() - start_time)}s)"
+                )
             except Exception as e:
                 print(f"Error checking if button is disabled: {e}")
             page.wait_for_timeout(2000)
@@ -530,7 +552,9 @@ def _wait_for_agent_response(page: Page, expected_line_count: int) -> None:
         elapsed = int(time.time() - response_start_time)
         if elapsed % 30 == 0 and elapsed > 0:
             page.screenshot(path=f"test-results/conv_response_wait_{elapsed}s.png")
-            print(f"Screenshot saved: conv_response_wait_{elapsed}s.png (waiting {elapsed}s for response)")
+            print(
+                f"Screenshot saved: conv_response_wait_{elapsed}s.png (waiting {elapsed}s for response)"
+            )
 
         try:
             agent_messages = page.locator('[data-testid="agent-message"]').all()
@@ -542,12 +566,18 @@ def _wait_for_agent_response(page: Page, expected_line_count: int) -> None:
                     content = msg.text_content()
                     if content and len(content.strip()) > 10:
                         if _check_readme_response(content, expected_line_count):
-                            print("✅ Found agent response about README.md with line count!")
-                            page.screenshot(path="test-results/conv_09_agent_response.png")
+                            print(
+                                "✅ Found agent response about README.md with line count!"
+                            )
+                            page.screenshot(
+                                path="test-results/conv_09_agent_response.png"
+                            )
                             print("Screenshot saved: conv_09_agent_response.png")
                             page.screenshot(path="test-results/conv_10_final_state.png")
                             print("Screenshot saved: conv_10_final_state.png")
-                            print("✅ Test completed successfully - agent provided correct README line count")
+                            print(
+                                "✅ Test completed successfully - agent provided correct README line count"
+                            )
                             return
                 except Exception as e:
                     print(f"Error processing agent message {i}: {e}")
@@ -562,7 +592,9 @@ def _wait_for_agent_response(page: Page, expected_line_count: int) -> None:
     print("Screenshot saved: conv_09_agent_response.png")
     page.screenshot(path="test-results/conv_10_final_state.png")
     print("Screenshot saved: conv_10_final_state.png")
-    raise AssertionError("Agent response did not include README line count within time limit")
+    raise AssertionError(
+        "Agent response did not include README line count within time limit"
+    )
 
 
 def _check_readme_response(content: str, expected_line_count: int) -> bool:

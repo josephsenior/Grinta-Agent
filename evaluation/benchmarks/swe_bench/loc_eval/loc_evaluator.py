@@ -13,7 +13,6 @@ from forge.core.logger import forge_logger as logger
 
 
 class LocEvaluator:
-
     def __init__(self, args):
         """Localization evaluation.
 
@@ -68,7 +67,9 @@ class LocEvaluator:
         """
         if os.path.exists(directory_path):
             if not os.path.isdir(directory_path):
-                raise NotADirectoryError(f"Path exists but is not a directory: {directory_path}")
+                raise NotADirectoryError(
+                    f"Path exists but is not a directory: {directory_path}"
+                )
             return True
         else:
             os.makedirs(directory_path)
@@ -89,14 +90,30 @@ class LocEvaluator:
         total_instance_num = len(self.all_eval_results)
         for instance_id in self.all_eval_results:
             curr_eval_result = self.all_eval_results[instance_id]["final_eval"]
-            macro_la_file += curr_eval_result["localization"]["loc_acc (%)"]["la_file (%)"]["la_file_macro"]
-            micro_la_file += curr_eval_result["localization"]["loc_acc (%)"]["la_file (%)"]["la_file_micro"]
-            macro_avg_file_idx += curr_eval_result["localization"]["turn_idx"]["file"]["macro"]
-            micro_avg_file_idx += curr_eval_result["localization"]["turn_idx"]["file"]["micro"]
-            macro_la_func += curr_eval_result["localization"]["loc_acc (%)"]["la_func (%)"]["la_func_macro"]
-            micro_la_func += curr_eval_result["localization"]["loc_acc (%)"]["la_func (%)"]["la_func_micro"]
-            macro_avg_func_idx += curr_eval_result["localization"]["turn_idx"]["function"]["macro"]
-            micro_avg_func_idx += curr_eval_result["localization"]["turn_idx"]["function"]["micro"]
+            macro_la_file += curr_eval_result["localization"]["loc_acc (%)"][
+                "la_file (%)"
+            ]["la_file_macro"]
+            micro_la_file += curr_eval_result["localization"]["loc_acc (%)"][
+                "la_file (%)"
+            ]["la_file_micro"]
+            macro_avg_file_idx += curr_eval_result["localization"]["turn_idx"]["file"][
+                "macro"
+            ]
+            micro_avg_file_idx += curr_eval_result["localization"]["turn_idx"]["file"][
+                "micro"
+            ]
+            macro_la_func += curr_eval_result["localization"]["loc_acc (%)"][
+                "la_func (%)"
+            ]["la_func_macro"]
+            micro_la_func += curr_eval_result["localization"]["loc_acc (%)"][
+                "la_func (%)"
+            ]["la_func_micro"]
+            macro_avg_func_idx += curr_eval_result["localization"]["turn_idx"][
+                "function"
+            ]["macro"]
+            micro_avg_func_idx += curr_eval_result["localization"]["turn_idx"][
+                "function"
+            ]["micro"]
             if self.eval_task_success:
                 if curr_eval_result["task_success"]["resolved"]:
                     resolve_rate += 1
@@ -124,9 +141,17 @@ class LocEvaluator:
             "la_file (%)": {"macro": macro_la_file, "micro": micro_la_file},
             "la_func (%)": {"macro": macro_la_func, "micro": micro_la_func},
             "resolve_rate (%)": resolve_rate if self.eval_task_success else None,
-            "loc_file_idx (turn idx)": {"macro": macro_avg_file_idx, "micro": micro_avg_file_idx},
-            "loc_func_idx (turn idx)": {"macro": macro_avg_func_idx, "micro": micro_avg_func_idx},
-            "resolve_idx (turn idx)": avg_resolve_idx if self.eval_task_success else None,
+            "loc_file_idx (turn idx)": {
+                "macro": macro_avg_file_idx,
+                "micro": micro_avg_file_idx,
+            },
+            "loc_func_idx (turn idx)": {
+                "macro": macro_avg_func_idx,
+                "micro": micro_avg_func_idx,
+            },
+            "resolve_idx (turn idx)": avg_resolve_idx
+            if self.eval_task_success
+            else None,
             "max_turn_limit": self.max_agent_turn,
             "total_instance_num": total_instance_num,
             "cost_summary": self.cost_summary,
@@ -134,7 +159,9 @@ class LocEvaluator:
         self._write_to_json(self.overall_eval, "overall_eval.json")
 
     def _save_to_eval_dicts(self, agent_trajectory: dict):
-        self._write_to_json(agent_trajectory, f"loc__instance_{self.instance.instance_id}.json")
+        self._write_to_json(
+            agent_trajectory, f"loc__instance_{self.instance.instance_id}.json"
+        )
         self.all_eval_results[self.instance.instance_id] = agent_trajectory
         self._write_to_json(self.all_eval_results, "all_loc_evals.json")
         self._compute_avg_over_all()
@@ -149,7 +176,7 @@ class LocEvaluator:
             output_dir = os.path.join(self.save_dir, "loc_acc")
             os.makedirs(output_dir, exist_ok=True)
             filepath = os.path.join(output_dir, file_name)
-            with open(filepath, "w", encoding='utf-8') as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
             return True
         except Exception as e:
@@ -164,16 +191,24 @@ class LocEvaluator:
                 or an error occurs.
         """
         try:
-            with open(file_path, "r", encoding='utf-8') as file:
+            with open(file_path, "r", encoding="utf-8") as file:
                 return json.load(file)
         except FileNotFoundError:
-            logger.warning("Warning: File '%s' not found. Returning an empty dictionary...", file_path)
+            logger.warning(
+                "Warning: File '%s' not found. Returning an empty dictionary...",
+                file_path,
+            )
             return {}
         except json.JSONDecodeError:
-            logger.error("Error: File '%s' contains invalid JSON. Returning an empty dictionary...", file_path)
+            logger.error(
+                "Error: File '%s' contains invalid JSON. Returning an empty dictionary...",
+                file_path,
+            )
             return {}
         except Exception as e:
-            logger.error("Error reading from JSON: %s\nReturning an empty dictionary...", str(e))
+            logger.error(
+                "Error reading from JSON: %s\nReturning an empty dictionary...", str(e)
+            )
             return {}
 
     def read_from_jsonl(self, file_path):
@@ -184,16 +219,24 @@ class LocEvaluator:
                 or an error occurs.
         """
         try:
-            with open(file_path, "r", encoding='utf-8') as file:
+            with open(file_path, "r", encoding="utf-8") as file:
                 return json.load(file)
         except FileNotFoundError:
-            logger.warning("Warning: File '%s' not found. Returning an empty dictionary...", file_path)
+            logger.warning(
+                "Warning: File '%s' not found. Returning an empty dictionary...",
+                file_path,
+            )
             return {}
         except json.JSONDecodeError:
-            logger.error("Error: File '%s' contains invalid JSON. Returning an empty dictionary...", file_path)
+            logger.error(
+                "Error: File '%s' contains invalid JSON. Returning an empty dictionary...",
+                file_path,
+            )
             return {}
         except Exception as e:
-            logger.error("Error reading from JSON: %s\nReturning an empty dictionary...", str(e))
+            logger.error(
+                "Error reading from JSON: %s\nReturning an empty dictionary...", str(e)
+            )
             return {}
 
     def _parse_agent_turn_num(self):
@@ -252,7 +295,9 @@ class LocEvaluator:
             if value := self._try_python_style_parsing(argument_str, key):
                 return value
 
-            return value if (value := self._try_generic_parsing(argument_str, key)) else ""
+            return (
+                value if (value := self._try_generic_parsing(argument_str, key)) else ""
+            )
         except Exception:
             return ""
 
@@ -308,7 +353,9 @@ class LocEvaluator:
 
     def _try_quoted_value(self, remainder: str, quote_char: str) -> str:
         """Try to extract quoted value."""
-        pattern = f"\\s*:\\s*{quote_char}((?:[^{quote_char}\\\\]|\\\\.)*)(?:{quote_char}|$)"
+        pattern = (
+            f"\\s*:\\s*{quote_char}((?:[^{quote_char}\\\\]|\\\\.)*)(?:{quote_char}|$)"
+        )
         if match := re.search(pattern, remainder, re.DOTALL):
             value = match[1]
             if quote_char == '"':
@@ -324,11 +371,21 @@ class LocEvaluator:
 
     def _unescape_json_string(self, value: str) -> str:
         """Unescape JSON-style string."""
-        return value.replace('\\"', '"').replace("\\n", "\n").replace("\\t", "\t").replace("\\\\", "\\")
+        return (
+            value.replace('\\"', '"')
+            .replace("\\n", "\n")
+            .replace("\\t", "\t")
+            .replace("\\\\", "\\")
+        )
 
     def _unescape_python_string(self, value: str) -> str:
         """Unescape Python-style string."""
-        return value.replace("\\'", "'").replace("\\n", "\n").replace("\\t", "\t").replace("\\\\", "\\")
+        return (
+            value.replace("\\'", "'")
+            .replace("\\n", "\n")
+            .replace("\\t", "\t")
+            .replace("\\\\", "\\")
+        )
 
     def _parse_path_from_args(self, argument_str: str) -> str:
         """Parse path from argument string.
@@ -373,14 +430,18 @@ class LocEvaluator:
         curr_turn_agent_loc = {}
         if action_history["action"] != "edit":
             return curr_turn_agent_loc
-        agent_msg_list = action_history["tool_call_metadata"]["model_response"]["choices"]
+        agent_msg_list = action_history["tool_call_metadata"]["model_response"][
+            "choices"
+        ]
         agent_edit = {"create": ["file_text"], "str_replace": ["old_str", "new_str"]}
         for cho in agent_msg_list:
             for func_dict in cho["message"]["tool_calls"]:
                 self._process_tool_call(func_dict, agent_edit, curr_turn_agent_loc)
         return curr_turn_agent_loc
 
-    def _process_tool_call(self, func_dict: dict, agent_edit: dict, curr_turn_agent_loc: dict) -> None:
+    def _process_tool_call(
+        self, func_dict: dict, agent_edit: dict, curr_turn_agent_loc: dict
+    ) -> None:
         """Process a single tool call and update location tracking."""
         edit_args = func_dict["function"]["arguments"]
         edit_dict = self._parse_string_to_dict(edit_args)
@@ -391,9 +452,13 @@ class LocEvaluator:
         else:
             self._process_raw_edit_args(edit_args, agent_edit, func_names)
 
-        self._update_location_tracking(func_names, edit_dict, edit_args, curr_turn_agent_loc)
+        self._update_location_tracking(
+            func_names, edit_dict, edit_args, curr_turn_agent_loc
+        )
 
-    def _process_parsed_edit_dict(self, edit_dict: dict, agent_edit: dict, func_names: list) -> None:
+    def _process_parsed_edit_dict(
+        self, edit_dict: dict, agent_edit: dict, func_names: list
+    ) -> None:
         """Process parsed edit dictionary."""
         curr_command = edit_dict["command"]
         agent_acts = agent_edit[curr_command]
@@ -401,7 +466,9 @@ class LocEvaluator:
             code_patch = edit_dict.get(act)
             func_names.extend(self._parse_func_names_from_str(code_patch))
 
-    def _process_raw_edit_args(self, edit_args: str, agent_edit: dict, func_names: list) -> None:
+    def _process_raw_edit_args(
+        self, edit_args: str, agent_edit: dict, func_names: list
+    ) -> None:
         """Process raw edit arguments."""
         for new_act in list(agent_edit.values()):
             if new_act in edit_args:
@@ -412,10 +479,18 @@ class LocEvaluator:
             func_names.extend(self._parse_func_names_from_str(code_patch))
 
     def _update_location_tracking(
-        self, func_names: list, edit_dict: dict, edit_args: str, curr_turn_agent_loc: dict
+        self,
+        func_names: list,
+        edit_dict: dict,
+        edit_args: str,
+        curr_turn_agent_loc: dict,
     ) -> None:
         """Update location tracking with function names."""
-        file_path = edit_dict.get("path") if edit_dict else self._parse_path_from_args(edit_args)
+        file_path = (
+            edit_dict.get("path")
+            if edit_dict
+            else self._parse_path_from_args(edit_args)
+        )
 
         if file_path and len(file_path) > 0:
             if func_names := list(set(func_names)):
@@ -429,25 +504,43 @@ class LocEvaluator:
     def _add_task_success_metric(self) -> bool:
         """Task success evaluation result."""
         self.task_resolved = False
-        report_pth = os.path.join(self.eval_dir, self.instance.instance_id, "report.json")
+        report_pth = os.path.join(
+            self.eval_dir, self.instance.instance_id, "report.json"
+        )
         eval_report = self.read_from_json(report_pth)
         if self.instance.instance_id in eval_report.keys():
             self.task_resolved = eval_report[self.instance.instance_id]["resolved"]
         if self.task_resolved:
-            return {"resolved": self.task_resolved, "resolve_index": self.agent_turn_num}
+            return {
+                "resolved": self.task_resolved,
+                "resolve_index": self.agent_turn_num,
+            }
         if self.align_failed_with_max_iter:
-            return {"resolved": self.task_resolved, "resolve_index": self.max_agent_turn}
+            return {
+                "resolved": self.task_resolved,
+                "resolve_index": self.max_agent_turn,
+            }
         else:
-            return {"resolved": self.task_resolved, "resolve_index": self.agent_turn_num}
+            return {
+                "resolved": self.task_resolved,
+                "resolve_index": self.agent_turn_num,
+            }
 
     def _process_turn_trajectory(
-        self, turn_idx: int, action_history: dict, observ_history: dict, curr_turn_agent_loc: dict
+        self,
+        turn_idx: int,
+        action_history: dict,
+        observ_history: dict,
+        curr_turn_agent_loc: dict,
     ) -> dict:
         """Process a single turn and return trajectory entry."""
         turn_entry = {
             "loc_eval": None,
             "loc": curr_turn_agent_loc,
-            "action": {"action": action_history["action"], "message": action_history["message"]},
+            "action": {
+                "action": action_history["action"],
+                "message": action_history["message"],
+            },
             "observation": None,
         }
 
@@ -467,10 +560,17 @@ class LocEvaluator:
         for file_key in curr_turn_agent_loc:
             for func_name in curr_turn_agent_loc[file_key]:
                 # Update file location
-                if file_key in self.gold_loc["file"] and file_key not in self.agent_loc["agent loc"]["file"]:
+                if (
+                    file_key in self.gold_loc["file"]
+                    and file_key not in self.agent_loc["agent loc"]["file"]
+                ):
                     self.agent_loc["agent loc"]["file"].append(file_key)
-                    self.agent_loc["turn index"]["file"][self.gold_loc["file"].index(file_key)] = turn_idx
-                    self.agent_loc["loc progress"]["file"][self.gold_loc["file"].index(file_key)] = True
+                    self.agent_loc["turn index"]["file"][
+                        self.gold_loc["file"].index(file_key)
+                    ] = turn_idx
+                    self.agent_loc["loc progress"]["file"][
+                        self.gold_loc["file"].index(file_key)
+                    ] = True
 
                 # Update function location
                 new_agent_loc = {"file": file_key, "function": func_name}
@@ -479,8 +579,12 @@ class LocEvaluator:
                     and new_agent_loc not in self.agent_loc["agent loc"]["function"]
                 ):
                     self.agent_loc["agent loc"]["function"].append(new_agent_loc)
-                    self.agent_loc["turn index"]["function"][self.gold_loc["function"].index(new_agent_loc)] = turn_idx
-                    self.agent_loc["loc progress"]["function"][self.gold_loc["function"].index(new_agent_loc)] = True
+                    self.agent_loc["turn index"]["function"][
+                        self.gold_loc["function"].index(new_agent_loc)
+                    ] = turn_idx
+                    self.agent_loc["loc progress"]["function"][
+                        self.gold_loc["function"].index(new_agent_loc)
+                    ] = True
 
     def _build_final_eval_metrics(self) -> dict:
         """Build final evaluation metrics."""
@@ -530,16 +634,27 @@ class LocEvaluator:
         if agent_trajectory["final_eval"]["localization"]["loc_acc (%)"] != perfect_loc:
             agent_trajectory["final_eval"]["localization"]["loc_acc (%)"] = perfect_loc
             agent_trajectory["final_eval"]["localization"]["details"] = {
-                "loc_file": [True for _ in range(len(self.agent_loc["loc progress"]["file"]))],
-                "loc_func": [True for _ in range(len(self.agent_loc["loc progress"]["function"]))],
+                "loc_file": [
+                    True for _ in range(len(self.agent_loc["loc progress"]["file"]))
+                ],
+                "loc_func": [
+                    True for _ in range(len(self.agent_loc["loc progress"]["function"]))
+                ],
             }
 
         # Adjust turn indices if alignment failed
         if self.align_failed_with_max_iter:
             for level1 in agent_trajectory["final_eval"]["localization"]["turn_idx"]:
-                for level2 in agent_trajectory["final_eval"]["localization"]["turn_idx"][level1]:
-                    agent_trajectory["final_eval"]["localization"]["turn_idx"][level1][level2] = min(
-                        agent_trajectory["final_eval"]["localization"]["turn_idx"][level1][level2], self.agent_turn_num
+                for level2 in agent_trajectory["final_eval"]["localization"][
+                    "turn_idx"
+                ][level1]:
+                    agent_trajectory["final_eval"]["localization"]["turn_idx"][level1][
+                        level2
+                    ] = min(
+                        agent_trajectory["final_eval"]["localization"]["turn_idx"][
+                            level1
+                        ][level2],
+                        self.agent_turn_num,
                     )
 
     def eval_agent_trajectory(self):
@@ -561,28 +676,37 @@ class LocEvaluator:
             action_history = self.trajectory[history_idx]
             observ_history = self.trajectory[history_idx + 1]
 
-            if action_history["source"] != "agent" or "action" not in action_history.keys():
+            if (
+                action_history["source"] != "agent"
+                or "action" not in action_history.keys()
+            ):
                 continue
 
             turn_idx += 1
             curr_turn_agent_loc = self._parse_loc_from_history(action_history)
 
             # Process turn and update trajectory
-            turn_entry = self._process_turn_trajectory(turn_idx, action_history, observ_history, curr_turn_agent_loc)
+            turn_entry = self._process_turn_trajectory(
+                turn_idx, action_history, observ_history, curr_turn_agent_loc
+            )
             agent_trajectory["trajectory"][f"turn {turn_idx}"] = turn_entry
 
             # Update agent location tracking
             self._update_agent_location(curr_turn_agent_loc, turn_idx)
 
             # Update turn evaluation
-            agent_trajectory["trajectory"][f"turn {turn_idx}"]["loc_eval"] = self.agent_loc
+            agent_trajectory["trajectory"][f"turn {turn_idx}"]["loc_eval"] = (
+                self.agent_loc
+            )
 
         # Build final evaluation metrics
         agent_trajectory["final_eval"] = self._build_final_eval_metrics()
 
         # Add task success metric if needed
         if self.eval_task_success:
-            agent_trajectory["final_eval"]["task_success"] = self._add_task_success_metric()
+            agent_trajectory["final_eval"]["task_success"] = (
+                self._add_task_success_metric()
+            )
 
         # Handle task resolved corrections
         self._handle_task_resolved_corrections(agent_trajectory)
@@ -595,7 +719,11 @@ class LocEvaluator:
         gt_loc_dict = gt_localization["patch"].to_dict()
         assert gt_loc_dict["instance_id"] == self.instance.instance_id
 
-        self.gold_loc = {"gt_loc_dict": gt_loc_dict["functions"], "file": [], "function": []}
+        self.gold_loc = {
+            "gt_loc_dict": gt_loc_dict["functions"],
+            "file": [],
+            "function": [],
+        }
         self._process_gt_functions(gt_loc_dict)
         self._initialize_agent_loc_tracking()
 
@@ -606,7 +734,9 @@ class LocEvaluator:
                 continue
 
             self._add_file_to_gold_loc(file_key)
-            self._add_functions_to_gold_loc(file_key, gt_loc_dict["functions"][file_key])
+            self._add_functions_to_gold_loc(
+                file_key, gt_loc_dict["functions"][file_key]
+            )
 
     def _add_file_to_gold_loc(self, file_key: str) -> None:
         """Add file to gold location if not already present."""
@@ -621,23 +751,50 @@ class LocEvaluator:
 
     def _initialize_agent_loc_tracking(self) -> None:
         """Initialize agent location tracking with turn indices and progress."""
-        init_turn = self.max_agent_turn if self.align_failed_with_max_iter else self.agent_turn_num
+        init_turn = (
+            self.max_agent_turn
+            if self.align_failed_with_max_iter
+            else self.agent_turn_num
+        )
 
-        self.agent_loc["gold loc"] = {"file": self.gold_loc["file"], "function": self.gold_loc["function"]}
-        self.agent_loc["turn index"]["file"] = [init_turn for _ in range(len(self.gold_loc["file"]))]
-        self.agent_loc["turn index"]["function"] = [init_turn for _ in range(len(self.gold_loc["function"]))]
-        self.agent_loc["loc progress"]["file"] = [False for _ in range(len(self.gold_loc["file"]))]
-        self.agent_loc["loc progress"]["function"] = [False for _ in range(len(self.gold_loc["function"]))]
+        self.agent_loc["gold loc"] = {
+            "file": self.gold_loc["file"],
+            "function": self.gold_loc["function"],
+        }
+        self.agent_loc["turn index"]["file"] = [
+            init_turn for _ in range(len(self.gold_loc["file"]))
+        ]
+        self.agent_loc["turn index"]["function"] = [
+            init_turn for _ in range(len(self.gold_loc["function"]))
+        ]
+        self.agent_loc["loc progress"]["file"] = [
+            False for _ in range(len(self.gold_loc["file"]))
+        ]
+        self.agent_loc["loc progress"]["function"] = [
+            False for _ in range(len(self.gold_loc["function"]))
+        ]
 
     def instance_loc_eval(
-        self, instance: pd.Series = None, repo_root: str = None, trajectory: list = None, infer_cost: dict = None
+        self,
+        instance: pd.Series = None,
+        repo_root: str = None,
+        trajectory: list = None,
+        infer_cost: dict = None,
     ):
         if instance is None:
-            logger.error("No instance provided. Skipping current localization evaluation...")
+            logger.error(
+                "No instance provided. Skipping current localization evaluation..."
+            )
         if trajectory is None:
-            logger.error("No inference trajectory provided for current instance with ID: %s", instance.instance_id)
+            logger.error(
+                "No inference trajectory provided for current instance with ID: %s",
+                instance.instance_id,
+            )
         if infer_cost is None:
-            logger.error("No inference accumulated cost for current instance with ID: %s", instance.instance_id)
+            logger.error(
+                "No inference accumulated cost for current instance with ID: %s",
+                instance.instance_id,
+            )
         self._init_config()
         self.cost_summary["details"][instance.instance_id] = infer_cost
         self.instance = instance
@@ -656,14 +813,29 @@ def swe_data_loader(args):
     """
     dataset = load_dataset(args.dataset, split=args.split)  # nosec B615 - Safe: evaluation benchmark dataset
     swe_bench_tests = filter_dataset(dataset.to_pandas(), "instance_id")
-    logger.info("Loaded dataset %s with split %s: %s tasks", args.dataset, args.split, len(swe_bench_tests))
+    logger.info(
+        "Loaded dataset %s with split %s: %s tasks",
+        args.dataset,
+        args.split,
+        len(swe_bench_tests),
+    )
     if "SWE-Gym" in args.dataset:
         with open(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "split", "swegym_verified_instances.json"), "r"
+            os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "split",
+                "swegym_verified_instances.json",
+            ),
+            "r",
         ) as f:
             swegym_verified_instances = json.load(f)
-            swe_bench_tests = swe_bench_tests[swe_bench_tests["instance_id"].isin(swegym_verified_instances)]
-        logger.info("%s tasks left after filtering for SWE-Gym verified instances", len(swe_bench_tests))
+            swe_bench_tests = swe_bench_tests[
+                swe_bench_tests["instance_id"].isin(swegym_verified_instances)
+            ]
+        logger.info(
+            "%s tasks left after filtering for SWE-Gym verified instances",
+            len(swe_bench_tests),
+        )
     return prepare_dataset(swe_bench_tests, args.swe_output_file, -1)
 
 
@@ -683,14 +855,19 @@ def infer_data_loader(args):
     """
     infer_output_filepath = os.path.join(args.infer_dir, "output.jsonl")
     infer_outputs = []
-    with open(infer_output_filepath, "r", encoding='utf-8') as file:
+    with open(infer_output_filepath, "r", encoding="utf-8") as file:
         for line_num, line in enumerate(file, 1):
             if line := line.strip():
                 try:
                     json_obj = json.loads(line)
                     infer_outputs.append(json_obj)
                 except json.JSONDecodeError as e:
-                    logger.error("Error parsing JSON on line %s in '%s': %s", line_num, infer_output_filepath, str(e))
+                    logger.error(
+                        "Error parsing JSON on line %s in '%s': %s",
+                        line_num,
+                        infer_output_filepath,
+                        str(e),
+                    )
                     continue
     return infer_outputs
 
@@ -739,12 +916,26 @@ def infer_cost_calculator(args):
 
 if __name__ == "__main__":
     "Main function for localization evaluation"
-    parser = argparse.ArgumentParser(description="Localization evaluation on SWE-Bench.")
-    parser.add_argument("--infer-dir", type=str, default=None, help="Directory containing model inference outputs")
-    parser.add_argument("--dataset", type=str, default=None, help="SWE-Bench dataset version")
-    parser.add_argument("--split", type=str, default=None, help="SWE-Bench dataset split selection")
+    parser = argparse.ArgumentParser(
+        description="Localization evaluation on SWE-Bench."
+    )
     parser.add_argument(
-        "--max-infer-turn", type=int, default=None, help="Max number of turns allowed for coding agent."
+        "--infer-dir",
+        type=str,
+        default=None,
+        help="Directory containing model inference outputs",
+    )
+    parser.add_argument(
+        "--dataset", type=str, default=None, help="SWE-Bench dataset version"
+    )
+    parser.add_argument(
+        "--split", type=str, default=None, help="SWE-Bench dataset split selection"
+    )
+    parser.add_argument(
+        "--max-infer-turn",
+        type=int,
+        default=None,
+        help="Max number of turns allowed for coding agent.",
     )
     parser.add_argument(
         "--align-with-max",
@@ -774,10 +965,16 @@ if __name__ == "__main__":
         assert instance_id == swe_instance.instance_id
         processed_instances.append(instance_id)
         upload_instruction = infer_instance["instruction"]
-        repo_root = upload_instruction.split("<uploaded_files>")[1].split("</uploaded_files>")[0].strip()
+        repo_root = (
+            upload_instruction.split("<uploaded_files>")[1]
+            .split("</uploaded_files>")[0]
+            .strip()
+        )
         curr_trajectory = infer_instance["history"]
         curr_cost = infer_instance["metrics"]["accumulated_cost"]
-        loc_evaluator.instance_loc_eval(swe_instance, repo_root, curr_trajectory, curr_cost)
+        loc_evaluator.instance_loc_eval(
+            swe_instance, repo_root, curr_trajectory, curr_cost
+        )
     logger.info(
         "\n[Inference Data Summary]\n%s - Total cost:   $ %s\n%s - Average cost: $ %s\n%s - Number of Instances: %s",
         " " * 4,

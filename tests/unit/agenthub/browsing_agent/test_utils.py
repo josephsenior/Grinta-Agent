@@ -63,4 +63,3 @@ def test_parse_error_response_round_trip() -> None:
     assert isinstance(error, utils.ErrorResponse)
     assert error.message == "Bad Request"
     assert error.reason == "Malformed JSON"
-

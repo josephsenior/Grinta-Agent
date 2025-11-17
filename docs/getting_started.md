@@ -72,10 +72,15 @@ OPENAI_API_KEY=sk-your-key-here
 
 1. **Start backend:**
 ```bash
-poetry run python -m Forge.server.listen
+poetry run python -m forge.server
 ```
 
-Backend will start on `http://localhost:3000`
+Or alternatively:
+```bash
+python -m forge.server
+```
+
+Backend will start on `http://localhost:3000` (default port, configurable via `port` environment variable)
 
 2. **Start frontend (in new terminal):**
 ```bash

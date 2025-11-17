@@ -1,0 +1,13 @@
+C:\Users\GIGABYTE\Desktop\Forge
+C:\Users\GIGABYTE\Desktop\Forge
+C:\Users\GIGABYTE\AppData\Roaming\Python\Python312\site-packages
+C:\Users\GIGABYTE\AppData\Local\Programs\Python\Python312\python312.zip
+C:\Users\GIGABYTE\AppData\Local\Programs\Python\Python312\DLLs
+C:\Users\GIGABYTE\AppData\Local\Programs\Python\Python312\Lib
+C:\Users\GIGABYTE\AppData\Local\Programs\Python\Python312
+C:\Users\GIGABYTE\AppData\Local\Programs\Python\Python312\Lib\site-packages
+C:\Users\GIGABYTE\Desktop\Forge
+C:\Users\GIGABYTE\AppData\Local\Programs\Python\Python312\Lib\site-packages\win32
+C:\Users\GIGABYTE\AppData\Local\Programs\Python\Python312\Lib\site-packages\win32\lib
+C:\Users\GIGABYTE\AppData\Local\Programs\Python\Python312\Lib\site-packages\Pythonwin
+C:\Users\GIGABYTE\Desktop\Forge

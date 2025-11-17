@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\events\serialization\observation.py
+# hypothesis_version: 6.147.0
+
+['command_id', 'content', 'exit_code', 'extras', 'message', 'metadata', 'microagent_knowledge', 'observation', 'recall_type']

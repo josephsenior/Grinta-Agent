@@ -26,10 +26,18 @@ class RetrySettings(BaseModel):
     instance. All values are optional; absence defers to legacy defaults.
     """
 
-    max_attempts: int | None = Field(default=None, ge=1, description="Total attempts including the first execution")
-    initial_delay: float | None = Field(default=0.5, ge=0, description="Initial backoff delay in seconds")
-    backoff_factor: float | None = Field(default=1.5, ge=1.0, description="Multiplicative backoff factor")
-    max_delay: float | None = Field(default=30.0, ge=0, description="Upper bound for any computed delay")
+    max_attempts: int | None = Field(
+        default=None, ge=1, description="Total attempts including the first execution"
+    )
+    initial_delay: float | None = Field(
+        default=0.5, ge=0, description="Initial backoff delay in seconds"
+    )
+    backoff_factor: float | None = Field(
+        default=1.5, ge=1.0, description="Multiplicative backoff factor"
+    )
+    max_delay: float | None = Field(
+        default=30.0, ge=0, description="Upper bound for any computed delay"
+    )
 
     @field_validator("max_attempts")
     @classmethod
@@ -41,16 +49,25 @@ class RetrySettings(BaseModel):
 
 class MetaSOPSettings(BaseModel):
     """Pydantic model capturing MetaSOP configuration toggles and limits."""
-    enabled: bool = Field(default=False, description="Master feature flag gate for MetaSOP orchestration")
+
+    enabled: bool = Field(
+        default=False, description="Master feature flag gate for MetaSOP orchestration"
+    )
     default_sop: str | None = Field(
         default="feature_delivery",
         description="Default SOP template when not provided explicitly",
     )
     token_budget_soft: int | None = Field(default=None, ge=1)
     token_budget_hard: int | None = Field(default=None, ge=1)
-    enable_failure_taxonomy: bool = Field(default=True, description="Toggle failure taxonomy enrichment events")
-    log_events_jsonl: bool = Field(default=False, description="Emit raw event stream to ~/.Forge/runs as JSONL")
-    retry: RetrySettings | None = Field(default=None, description="Structured retry settings")
+    enable_failure_taxonomy: bool = Field(
+        default=True, description="Toggle failure taxonomy enrichment events"
+    )
+    log_events_jsonl: bool = Field(
+        default=False, description="Emit raw event stream to ~/.Forge/runs as JSONL"
+    )
+    retry: RetrySettings | None = Field(
+        default=None, description="Structured retry settings"
+    )
     strict_mode: bool = Field(
         default=False,
         description="If true, unexpected internal exceptions propagate instead of being suppressed",
@@ -60,7 +77,9 @@ class MetaSOPSettings(BaseModel):
         ge=1,
         description="Global per-step wall clock timeout in seconds (non-QA)",
     )
-    qa_timeout_seconds: int | None = Field(default=None, ge=1, description="Timeout for QA step execution in seconds")
+    qa_timeout_seconds: int | None = Field(
+        default=None, ge=1, description="Timeout for QA step execution in seconds"
+    )
     enable_vector_memory: bool = Field(
         default=False,
         description="Use vector semantic memory store (hash embeddings) instead of lexical TF-IDF",
@@ -131,8 +150,12 @@ class MetaSOPSettings(BaseModel):
         le=10,
         description="Stop after this many consecutive no-diff iterations",
     )
-    enable_step_cache: bool = Field(default=True, description="Enable context-hash based step execution caching")
-    step_cache_max_entries: int | None = Field(default=256, ge=1, description="Max cached step results (LRU eviction)")
+    enable_step_cache: bool = Field(
+        default=True, description="Enable context-hash based step execution caching"
+    )
+    step_cache_max_entries: int | None = Field(
+        default=256, ge=1, description="Max cached step results (LRU eviction)"
+    )
     step_cache_dir: str | None = Field(
         default=None,
         description="Optional directory for persistent cache entries (if unset, in-memory only)",
@@ -227,277 +250,277 @@ class MetaSOPSettings(BaseModel):
         ge=1,
         description="Per-candidate speculative generation timeout in seconds",
     )
-    
+
     # ACE Framework Settings
     enable_ace: bool = Field(
-        default=False,
-        description="Enable ACE (Agentic Context Engineering) framework for self-improving agents"
+        default=True,
+        description="Enable ACE (Agentic Context Engineering) framework for self-improving agents",
+    )
+    ace_auto_enable_threshold: float = Field(
+        default=5.0,
+        description="Auto-enable ACE for tasks with complexity >= threshold (0 = always enable, None = disable)",
     )
     ace_max_bullets: int = Field(
         default=1000,
         ge=100,
         le=10000,
-        description="Maximum number of bullets in ACE context playbook"
+        description="Maximum number of bullets in ACE context playbook",
     )
     ace_multi_epoch: bool = Field(
-        default=True,
-        description="Enable multi-epoch training for ACE framework"
+        default=True, description="Enable multi-epoch training for ACE framework"
     )
     ace_num_epochs: int = Field(
         default=5,
         ge=1,
         le=20,
-        description="Number of training epochs for ACE multi-epoch training"
+        description="Number of training epochs for ACE multi-epoch training",
     )
     ace_reflector_max_iterations: int = Field(
         default=5,
         ge=1,
         le=10,
-        description="Maximum number of reflection refinement iterations"
+        description="Maximum number of reflection refinement iterations",
     )
     ace_playbook_persistence_path: str | None = Field(
         default=None,
-        description="Path for saving ACE playbooks (if None, uses default location)"
+        description="Path for saving ACE playbooks (if None, uses default location)",
     )
     ace_enable_online_adaptation: bool = Field(
-        default=True,
-        description="Enable test-time learning for ACE framework"
+        default=True, description="Enable test-time learning for ACE framework"
     )
     ace_min_helpfulness_threshold: float = Field(
         default=0.0,
         ge=0.0,
         le=1.0,
-        description="Minimum helpfulness score for bullet retrieval"
+        description="Minimum helpfulness score for bullet retrieval",
     )
     ace_max_playbook_content_length: int = Field(
         default=50,
         ge=10,
         le=200,
-        description="Maximum number of bullets in playbook content for LLM"
+        description="Maximum number of bullets in playbook content for LLM",
     )
     ace_enable_grow_and_refine: bool = Field(
         default=True,
-        description="Enable grow-and-refine mechanism for playbook maintenance"
+        description="Enable grow-and-refine mechanism for playbook maintenance",
     )
     ace_cleanup_interval_days: int = Field(
-        default=30,
-        ge=1,
-        le=365,
-        description="Days between playbook cleanup cycles"
+        default=30, ge=1, le=365, description="Days between playbook cleanup cycles"
     )
     ace_redundancy_threshold: float = Field(
         default=0.8,
         ge=0.0,
         le=1.0,
-        description="Similarity threshold for redundancy detection"
+        description="Similarity threshold for redundancy detection",
     )
     ace_auto_save_playbook: bool = Field(
-        default=True,
-        description="Automatically save playbook after each update"
+        default=True, description="Automatically save playbook after each update"
     )
     ace_playbook_save_interval: int = Field(
         default=10,
         ge=1,
         le=100,
-        description="Number of updates between automatic playbook saves"
+        description="Number of updates between automatic playbook saves",
     )
 
     # Dynamic Prompt Optimization Settings
     enable_prompt_optimization: bool = Field(
         default=False,
-        description="Enable Dynamic Prompt Optimization for self-improving prompts"
+        description="Enable Dynamic Prompt Optimization for self-improving prompts",
     )
     prompt_opt_ab_split: float = Field(
         default=0.8,
         ge=0.0,
         le=1.0,
-        description="A/B testing split ratio (0.8 = 80% best, 20% experiments)"
+        description="A/B testing split ratio (0.8 = 80% best, 20% experiments)",
     )
     prompt_opt_min_samples: int = Field(
         default=5,
         ge=1,
         le=50,
-        description="Minimum samples required before switching variants"
+        description="Minimum samples required before switching variants",
     )
     prompt_opt_confidence_threshold: float = Field(
         default=0.95,
         ge=0.5,
         le=1.0,
-        description="Confidence threshold for statistical significance testing"
+        description="Confidence threshold for statistical significance testing",
     )
     prompt_opt_success_weight: float = Field(
         default=0.4,
         ge=0.0,
         le=1.0,
-        description="Weight for success rate in composite scoring"
+        description="Weight for success rate in composite scoring",
     )
     prompt_opt_time_weight: float = Field(
         default=0.2,
         ge=0.0,
         le=1.0,
-        description="Weight for execution time in composite scoring"
+        description="Weight for execution time in composite scoring",
     )
     prompt_opt_error_weight: float = Field(
         default=0.2,
         ge=0.0,
         le=1.0,
-        description="Weight for error rate in composite scoring"
+        description="Weight for error rate in composite scoring",
     )
     prompt_opt_cost_weight: float = Field(
         default=0.2,
         ge=0.0,
         le=1.0,
-        description="Weight for token cost in composite scoring"
+        description="Weight for token cost in composite scoring",
     )
     prompt_opt_enable_evolution: bool = Field(
-        default=True,
-        description="Enable LLM-powered prompt evolution"
+        default=True, description="Enable LLM-powered prompt evolution"
     )
     prompt_opt_evolution_threshold: float = Field(
         default=0.7,
         ge=0.0,
         le=1.0,
-        description="Composite score threshold below which prompts are evolved"
+        description="Composite score threshold below which prompts are evolved",
     )
     prompt_opt_max_variants_per_prompt: int = Field(
-        default=10,
-        ge=1,
-        le=50,
-        description="Maximum number of variants per prompt"
+        default=10, ge=1, le=50, description="Maximum number of variants per prompt"
     )
     prompt_opt_storage_path: str = Field(
         default="~/.Forge/prompt_optimization/",
-        description="Storage path for prompt optimization data"
+        description="Storage path for prompt optimization data",
     )
     prompt_opt_sync_interval: int = Field(
         default=100,
         ge=1,
         le=1000,
-        description="Number of updates between storage syncs"
+        description="Number of updates between storage syncs",
     )
     prompt_opt_auto_save: bool = Field(
-        default=True,
-        description="Automatically save optimization data"
+        default=True, description="Automatically save optimization data"
+    )
+    prompt_opt_history_path: str | None = Field(
+        default=None,
+        description="Optional JSON path for prompt performance history persistence",
+    )
+    prompt_opt_history_auto_flush: bool = Field(
+        default=False,
+        description="Flush history file after each record when using JSON persistence",
     )
 
     # Causal Reasoning Settings
     enable_causal_reasoning: bool = Field(
         default=False,
-        description="Enable causal reasoning for conflict prediction and prevention"
+        description="Enable causal reasoning for conflict prediction and prevention",
     )
     causal_confidence_threshold: float = Field(
         default=0.75,
         ge=0.0,
         le=1.0,
-        description="Confidence threshold for causal conflict detection"
+        description="Confidence threshold for causal conflict detection",
     )
     causal_max_analysis_time_ms: int = Field(
         default=50,
         ge=1,
         le=500,
-        description="Maximum time allowed for causal analysis per step in milliseconds"
+        description="Maximum time allowed for causal analysis per step in milliseconds",
     )
 
     # Parallel Execution Settings
     enable_parallel_execution: bool = Field(
         default=False,
-        description="Enable intelligent parallel execution of independent steps"
+        description="Enable intelligent parallel execution of independent steps",
     )
     max_parallel_workers: int = Field(
         default=4,
         ge=1,
         le=16,
-        description="Maximum number of parallel worker threads for step execution"
+        description="Maximum number of parallel worker threads for step execution",
     )
     parallel_dependency_analysis: bool = Field(
-        default=True,
-        description="Enable dependency-aware parallel grouping"
+        default=True, description="Enable dependency-aware parallel grouping"
     )
     parallel_lock_management: bool = Field(
         default=True,
-        description="Enable intelligent lock management for parallel execution"
+        description="Enable intelligent lock management for parallel execution",
     )
 
     # Async Execution Settings
     enable_async_execution: bool = Field(
         default=False,
-        description="Enable true async/await execution for massive performance gains with async parallel execution"
+        description="Enable true async/await execution for massive performance gains with async parallel execution",
     )
     async_max_concurrent_steps: int = Field(
         default=10,
         ge=1,
         le=100,
-        description="Maximum number of steps that can run concurrently in async mode"
+        description="Maximum number of steps that can run concurrently in async mode",
     )
 
     # Learning and Feedback Settings
     enable_learning: bool = Field(
         default=True,
-        description="Enable learning from execution feedback and persistent pattern storage"
+        description="Enable learning from execution feedback and persistent pattern storage",
     )
     learning_persistence_path: str = Field(
         default="~/.Forge/learning/",
-        description="Path for storing learned patterns and performance data"
+        description="Path for storing learned patterns and performance data",
     )
     learning_min_samples: int = Field(
         default=5,
         ge=1,
         le=100,
-        description="Minimum number of executions before applying learned patterns"
+        description="Minimum number of executions before applying learned patterns",
     )
     learning_confidence_decay: float = Field(
         default=0.95,
         ge=0.5,
         le=1.0,
-        description="Decay factor for old patterns over time"
+        description="Decay factor for old patterns over time",
     )
 
     # Predictive Execution Planning Settings
     enable_predictive_planning: bool = Field(
         default=False,
-        description="Enable predictive execution planning for intelligent pre-execution optimization"
+        description="Enable predictive execution planning for intelligent pre-execution optimization",
     )
     predictive_max_planning_time_ms: int = Field(
         default=100,
         ge=10,
         le=1000,
-        description="Maximum time allowed for predictive planning in milliseconds"
+        description="Maximum time allowed for predictive planning in milliseconds",
     )
     predictive_confidence_threshold: float = Field(
         default=0.7,
         ge=0.0,
         le=1.0,
-        description="Minimum confidence threshold for accepting predictive execution plans"
+        description="Minimum confidence threshold for accepting predictive execution plans",
     )
     predictive_learn_from_execution: bool = Field(
         default=True,
-        description="Enable learning from actual execution results to improve future predictions"
+        description="Enable learning from actual execution results to improve future predictions",
     )
 
     # Context-Aware Collaborative Streaming Settings
     enable_collaborative_streaming: bool = Field(
         default=False,
-        description="Enable context-aware collaborative streaming between agents with partial context protection"
+        description="Enable context-aware collaborative streaming between agents with partial context protection",
     )
     streaming_context_completeness_threshold: float = Field(
         default=0.8,
         ge=0.0,
         le=1.0,
-        description="Minimum context completeness threshold for safe agent consumption of streamed data"
+        description="Minimum context completeness threshold for safe agent consumption of streamed data",
     )
     streaming_semantic_consistency_threshold: float = Field(
         default=0.7,
         ge=0.0,
         le=1.0,
-        description="Minimum semantic consistency threshold for preventing contradictory information"
+        description="Minimum semantic consistency threshold for preventing contradictory information",
     )
     streaming_enable_real_time_collaboration: bool = Field(
         default=True,
-        description="Enable real-time agent collaboration through validated streaming"
+        description="Enable real-time agent collaboration through validated streaming",
     )
 
     @classmethod
-    def from_raw(cls, raw: dict[str, Any] | None) -> MetaSOPSettings:
+    def from_raw(cls, raw: Any | None) -> MetaSOPSettings:
         """Coerce arbitrary raw config into MetaSOPSettings, falling back to defaults."""
         if raw is None:
             return cls()

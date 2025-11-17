@@ -37,20 +37,24 @@ This guide covers deploying Forge in production environments.
 
 ## Performance Optimization
 
-### Warm Server Pool
+### Warm Runtime Pool
 
-Pre-initialize runtime servers for faster startup:
+Reduce cold-starts by enabling reusable sandboxes and tuning per-key policies:
 
 ```toml
-[sandbox]
-# Pre-create servers on startup
-INITIAL_NUM_WARM_SERVERS = 2
+[runtime_pool]
+enabled = true
 
-# Maintain pool size
-DESIRED_NUM_WARM_SERVERS = 2
+  # Policy key format typically includes runtime kind and repo selector
+  # Example: "docker|repo:*" applies to all docker runtimes
+  [runtime_pool.policies."docker|repo:*"]
+  max_size = 4        # max warm entries for this key
+  ttl_seconds = 900   # reclaim idle entries after 15 minutes
 
-# Skip dependency checks in production
-SKIP_DEPENDENCY_CHECK = 1
+  # Another example policy
+  [runtime_pool.policies."local|repo:*"]
+  max_size = 1
+  ttl_seconds = 300
 ```
 
 ### Resource Limits
@@ -126,8 +130,7 @@ save_trajectory_path = "/logs/trajectories"
 
 ### Common Issues
 
-- **Slow startup:** Check warm server pool configuration
+- **Slow startup:** Check warm runtime pool configuration and adjust `max_size`/`ttl_seconds`
 - **Memory issues:** Adjust resource limits
 - **API errors:** Verify API keys and network connectivity
-- **Container crashes:** Check logs and resource usage</content>
-<parameter name="filePath">c:\Users\GIGABYTE\Desktop\Forge\docs_consolidated\production_deployment.md
+- **Container crashes:** Check logs and resource usage

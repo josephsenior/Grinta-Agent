@@ -1,3 +1,5 @@
+/* eslint-disable no-console, class-methods-use-this, @typescript-eslint/no-empty-function, @typescript-eslint/no-useless-constructor */
+
 import "@testing-library/jest-dom";
 
 // Mock window.matchMedia
@@ -24,19 +26,11 @@ Object.defineProperty(window, "matchMedia", {
 
     thresholds: ReadonlyArray<number> = [];
 
-    constructor() {}
+    observe() {}
 
-    observe() {
-      return null;
-    }
+    disconnect() {}
 
-    disconnect() {
-      return null;
-    }
-
-    unobserve() {
-      return null;
-    }
+    unobserve() {}
 
     takeRecords() {
       return [];
@@ -46,19 +40,11 @@ Object.defineProperty(window, "matchMedia", {
 // Mock ResizeObserver
 (globalThis as unknown as Record<string, unknown>).ResizeObserver =
   class ResizeObserver {
-    constructor() {}
+    observe() {}
 
-    observe() {
-      return null;
-    }
+    disconnect() {}
 
-    disconnect() {
-      return null;
-    }
-
-    unobserve() {
-      return null;
-    }
+    unobserve() {}
   } as any;
 
 // Mock localStorage
@@ -68,7 +54,7 @@ const localStorageMock: Record<string, unknown> = {
   removeItem: jest.fn(),
   clear: jest.fn(),
   length: 0,
-  key: jest.fn((i: number) => null),
+  key: jest.fn(() => null),
 };
 (globalThis as unknown as Record<string, unknown>).localStorage =
   localStorageMock;
@@ -80,7 +66,7 @@ const sessionStorageMock: Record<string, unknown> = {
   removeItem: jest.fn(),
   clear: jest.fn(),
   length: 0,
-  key: jest.fn((i: number) => null),
+  key: jest.fn(() => null),
 };
 (globalThis as unknown as Record<string, unknown>).sessionStorage =
   sessionStorageMock;

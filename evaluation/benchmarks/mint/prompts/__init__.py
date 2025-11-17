@@ -16,7 +16,6 @@ class PromptTemplate:
 
 
 class ToolPromptTemplate(PromptTemplate):
-
     def __init__(self, use_tool: bool):
         if use_tool:
             template = TEMPLATE_WITH_TOOL

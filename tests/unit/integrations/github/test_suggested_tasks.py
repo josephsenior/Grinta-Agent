@@ -7,7 +7,12 @@ from forge.integrations.service_types import TaskType, User
 @pytest.mark.asyncio
 def _create_mock_user():
     """Create mock user for testing."""
-    return User(id="1", login="test-user", avatar_url="https://example.com/avatar.jpg", name="Test User")
+    return User(
+        id="1",
+        login="test-user",
+        avatar_url="https://example.com/avatar.jpg",
+        name="Test User",
+    )
 
 
 def _create_mock_graphql_response():
@@ -22,7 +27,9 @@ def _create_mock_graphql_response():
                             "title": "PR with conflicts",
                             "repository": {"nameWithOwner": "test-org/repo-1"},
                             "mergeable": "CONFLICTING",
-                            "commits": {"nodes": [{"commit": {"statusCheckRollup": None}}]},
+                            "commits": {
+                                "nodes": [{"commit": {"statusCheckRollup": None}}]
+                            },
                             "reviews": {"nodes": []},
                         },
                         {
@@ -30,7 +37,15 @@ def _create_mock_graphql_response():
                             "title": "PR with failing checks",
                             "repository": {"nameWithOwner": "test-org/repo-1"},
                             "mergeable": "MERGEABLE",
-                            "commits": {"nodes": [{"commit": {"statusCheckRollup": {"state": "FAILURE"}}}]},
+                            "commits": {
+                                "nodes": [
+                                    {
+                                        "commit": {
+                                            "statusCheckRollup": {"state": "FAILURE"}
+                                        }
+                                    }
+                                ]
+                            },
                             "reviews": {"nodes": []},
                         },
                         {
@@ -38,15 +53,31 @@ def _create_mock_graphql_response():
                             "title": "PR with comments",
                             "repository": {"nameWithOwner": "test-user/repo-2"},
                             "mergeable": "MERGEABLE",
-                            "commits": {"nodes": [{"commit": {"statusCheckRollup": {"state": "SUCCESS"}}}]},
+                            "commits": {
+                                "nodes": [
+                                    {
+                                        "commit": {
+                                            "statusCheckRollup": {"state": "SUCCESS"}
+                                        }
+                                    }
+                                ]
+                            },
                             "reviews": {"nodes": [{"state": "CHANGES_REQUESTED"}]},
                         },
                     ]
                 },
                 "issues": {
                     "nodes": [
-                        {"number": 3, "title": "Assigned issue 1", "repository": {"nameWithOwner": "test-org/repo-1"}},
-                        {"number": 5, "title": "Assigned issue 2", "repository": {"nameWithOwner": "test-user/repo-2"}},
+                        {
+                            "number": 3,
+                            "title": "Assigned issue 1",
+                            "repository": {"nameWithOwner": "test-org/repo-1"},
+                        },
+                        {
+                            "number": 5,
+                            "title": "Assigned issue 2",
+                            "repository": {"nameWithOwner": "test-user/repo-2"},
+                        },
                     ]
                 },
             }
@@ -58,7 +89,9 @@ def _setup_mock_service():
     """Setup mock GitHub service."""
     service = GitHubService()
     service.get_user = AsyncMock(return_value=_create_mock_user())
-    service.execute_graphql_query = AsyncMock(return_value=_create_mock_graphql_response())
+    service.execute_graphql_query = AsyncMock(
+        return_value=_create_mock_graphql_response()
+    )
     return service
 
 
@@ -93,7 +126,9 @@ def _validate_specific_tasks(tasks):
     assert failing_pr.title == "PR with failing checks"
 
     # Validate unresolved comments task
-    commented_pr = next((t for t in tasks if t.task_type == TaskType.UNRESOLVED_COMMENTS))
+    commented_pr = next(
+        (t for t in tasks if t.task_type == TaskType.UNRESOLVED_COMMENTS)
+    )
     assert commented_pr.issue_number == 4
     assert commented_pr.title == "PR with comments"
 

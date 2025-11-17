@@ -82,4 +82,3 @@ def test_get_evaluation_parser_combines_arguments():
     assert args.eval_output_dir == "out"
     assert args.eval_n_limit == 2
     assert args.task == "demo"
-

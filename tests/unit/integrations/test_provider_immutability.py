@@ -22,15 +22,21 @@ def test_provider_token_immutability():
 
 def test_secret_store_immutability():
     """Test that UserSecrets is immutable."""
-    store = UserSecrets(provider_tokens={ProviderType.GITHUB: ProviderToken(token=SecretStr("test"))})
+    store = UserSecrets(
+        provider_tokens={ProviderType.GITHUB: ProviderToken(token=SecretStr("test"))}
+    )
     with pytest.raises(ValidationError):
         store.provider_tokens = {}
     with pytest.raises((TypeError, AttributeError)):
-        store.provider_tokens[ProviderType.GITHUB] = ProviderToken(token=SecretStr("new"))
+        store.provider_tokens[ProviderType.GITHUB] = ProviderToken(
+            token=SecretStr("new")
+        )
     with pytest.raises((TypeError, AttributeError)):
         store.provider_tokens.clear()
     with pytest.raises((TypeError, AttributeError)):
-        store.provider_tokens[ProviderType.GITLAB] = ProviderToken(token=SecretStr("test"))
+        store.provider_tokens[ProviderType.GITLAB] = ProviderToken(
+            token=SecretStr("test")
+        )
     github_token = store.provider_tokens[ProviderType.GITHUB]
     with pytest.raises(ValidationError):
         github_token.token = SecretStr("new")
@@ -40,44 +46,89 @@ def test_secret_store_immutability():
 def test_settings_immutability():
     """Test that Settings secrets_store is immutable."""
     settings = Settings(
-        secrets_store=UserSecrets(provider_tokens={ProviderType.GITHUB: ProviderToken(token=SecretStr("test"))})
+        secrets_store=UserSecrets(
+            provider_tokens={
+                ProviderType.GITHUB: ProviderToken(token=SecretStr("test"))
+            }
+        )
     )
     with pytest.raises(ValidationError):
         settings.secrets_store = UserSecrets()
     with pytest.raises((TypeError, AttributeError)):
-        settings.secrets_store.provider_tokens[ProviderType.GITHUB] = ProviderToken(token=SecretStr("new"))
-    new_store = UserSecrets(provider_tokens={ProviderType.GITHUB: ProviderToken(token=SecretStr("new_token"))})
+        settings.secrets_store.provider_tokens[ProviderType.GITHUB] = ProviderToken(
+            token=SecretStr("new")
+        )
+    new_store = UserSecrets(
+        provider_tokens={
+            ProviderType.GITHUB: ProviderToken(token=SecretStr("new_token"))
+        }
+    )
     new_settings = settings.model_copy(update={"secrets_store": new_store})
-    assert settings.secrets_store.provider_tokens[ProviderType.GITHUB].token.get_secret_value() == "test"
-    assert new_settings.secrets_store.provider_tokens[ProviderType.GITHUB].token.get_secret_value() == "new_token"
+    assert (
+        settings.secrets_store.provider_tokens[
+            ProviderType.GITHUB
+        ].token.get_secret_value()
+        == "test"
+    )
+    assert (
+        new_settings.secrets_store.provider_tokens[
+            ProviderType.GITHUB
+        ].token.get_secret_value()
+        == "new_token"
+    )
     with pytest.raises(ValidationError):
-        new_settings.secrets_store.provider_tokens[ProviderType.GITHUB].token = SecretStr("")
+        new_settings.secrets_store.provider_tokens[
+            ProviderType.GITHUB
+        ].token = SecretStr("")
 
 
 def test_provider_handler_immutability():
     """Test that ProviderHandler maintains token immutability."""
-    tokens = MappingProxyType({ProviderType.GITHUB: ProviderToken(token=SecretStr("test"))})
+    tokens = MappingProxyType(
+        {ProviderType.GITHUB: ProviderToken(token=SecretStr("test"))}
+    )
     handler = ProviderHandler(provider_tokens=tokens)
     with pytest.raises((TypeError, AttributeError)):
-        handler.provider_tokens[ProviderType.GITHUB] = ProviderToken(token=SecretStr("new"))
+        handler.provider_tokens[ProviderType.GITHUB] = ProviderToken(
+            token=SecretStr("new")
+        )
     with pytest.raises((ValidationError, TypeError, AttributeError)):
         handler.provider_tokens = {}
-    assert handler.provider_tokens[ProviderType.GITHUB].token.get_secret_value() == "test"
+    assert (
+        handler.provider_tokens[ProviderType.GITHUB].token.get_secret_value() == "test"
+    )
 
 
 def test_token_conversion():
     """Test token conversion in UserSecrets.create."""
     store1 = Settings(
-        secrets_store=UserSecrets(provider_tokens={ProviderType.GITHUB: ProviderToken(token=SecretStr("test_token"))})
+        secrets_store=UserSecrets(
+            provider_tokens={
+                ProviderType.GITHUB: ProviderToken(token=SecretStr("test_token"))
+            }
+        )
     )
-    assert store1.secrets_store.provider_tokens[ProviderType.GITHUB].token.get_secret_value() == "test_token"
+    assert (
+        store1.secrets_store.provider_tokens[
+            ProviderType.GITHUB
+        ].token.get_secret_value()
+        == "test_token"
+    )
     assert store1.secrets_store.provider_tokens[ProviderType.GITHUB].user_id is None
-    store2 = UserSecrets(provider_tokens={"github": {"token": "test_token", "user_id": "user1"}})
-    assert store2.provider_tokens[ProviderType.GITHUB].token.get_secret_value() == "test_token"
+    store2 = UserSecrets(
+        provider_tokens={"github": {"token": "test_token", "user_id": "user1"}}
+    )
+    assert (
+        store2.provider_tokens[ProviderType.GITHUB].token.get_secret_value()
+        == "test_token"
+    )
     assert store2.provider_tokens[ProviderType.GITHUB].user_id == "user1"
     token = ProviderToken(token=SecretStr("test_token"), user_id="user2")
     store3 = UserSecrets(provider_tokens={ProviderType.GITHUB: token})
-    assert store3.provider_tokens[ProviderType.GITHUB].token.get_secret_value() == "test_token"
+    assert (
+        store3.provider_tokens[ProviderType.GITHUB].token.get_secret_value()
+        == "test_token"
+    )
     assert store3.provider_tokens[ProviderType.GITHUB].user_id == "user2"
     store4 = UserSecrets(provider_tokens={ProviderType.GITHUB: 123})
     assert ProviderType.GITHUB not in store4.provider_tokens
@@ -101,7 +152,10 @@ def test_expose_env_vars():
         }
     )
     handler = ProviderHandler(provider_tokens=tokens)
-    env_secrets = {ProviderType.GITHUB: SecretStr("gh_token"), ProviderType.GITLAB: SecretStr("gl_token")}
+    env_secrets = {
+        ProviderType.GITHUB: SecretStr("gh_token"),
+        ProviderType.GITLAB: SecretStr("gl_token"),
+    }
     exposed = handler.expose_env_vars(env_secrets)
     assert exposed["github_token"] == "gh_token"
     assert exposed["gitlab_token"] == "gl_token"
@@ -122,7 +176,9 @@ async def test_get_env_vars():
     assert isinstance(env_vars[ProviderType.GITHUB], SecretStr)
     assert env_vars[ProviderType.GITHUB].get_secret_value() == "test_token"
     assert env_vars[ProviderType.GITLAB].get_secret_value() == "gitlab_token"
-    env_vars = await handler.get_env_vars(expose_secrets=False, providers=[ProviderType.GITHUB])
+    env_vars = await handler.get_env_vars(
+        expose_secrets=False, providers=[ProviderType.GITHUB]
+    )
     assert len(env_vars) == 1
     assert ProviderType.GITHUB in env_vars
     assert ProviderType.GITLAB not in env_vars
@@ -140,7 +196,6 @@ def event_stream():
     """Fixture for event stream testing."""
 
     class TestEventStream:
-
         def __init__(self):
             self.secrets = {}
 
@@ -160,11 +215,20 @@ async def test_set_event_stream_secrets(event_stream):
         }
     )
     handler = ProviderHandler(provider_tokens=tokens)
-    env_vars = {ProviderType.GITHUB: SecretStr("new_token"), ProviderType.GITLAB: SecretStr("new_gitlab_token")}
+    env_vars = {
+        ProviderType.GITHUB: SecretStr("new_token"),
+        ProviderType.GITLAB: SecretStr("new_gitlab_token"),
+    }
     await handler.set_event_stream_secrets(event_stream, env_vars)
-    assert event_stream.secrets == {"github_token": "new_token", "gitlab_token": "new_gitlab_token"}
+    assert event_stream.secrets == {
+        "github_token": "new_token",
+        "gitlab_token": "new_gitlab_token",
+    }
     await handler.set_event_stream_secrets(event_stream)
-    assert event_stream.secrets == {"github_token": "test_token", "gitlab_token": "gitlab_token"}
+    assert event_stream.secrets == {
+        "github_token": "test_token",
+        "gitlab_token": "gitlab_token",
+    }
 
 
 def test_check_cmd_action_for_provider_token_ref():

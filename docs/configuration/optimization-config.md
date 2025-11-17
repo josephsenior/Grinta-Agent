@@ -392,13 +392,13 @@ user_satisfaction = 0.1 # 10% weight
 
 ```bash
 # View optimization metrics
-curl http://localhost:8000/api/optimization/metrics
+curl http://localhost:3000/api/prompt-optimization/status
 
-# View A/B test results
-curl http://localhost:8000/api/optimization/ab-tests
+# View prompt variants
+curl http://localhost:3000/api/prompt-optimization/prompts/{prompt_id}/variants
 
-# View best performing variants
-curl http://localhost:8000/api/optimization/best-variants
+# View analytics summary
+curl http://localhost:3000/api/prompt-optimization/analytics/summary
 ```
 
 ### **Optimization Dashboard**

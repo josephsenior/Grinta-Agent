@@ -48,25 +48,10 @@ def collect_environment_payload(
     config_models: list[str] | None = None,
 ) -> dict[str, Any]:
     """Collect key runtime/environment details for inclusion in context hash payload."""
-    runtime_env: dict[str, str] = {}
-    if config is not None:
-        runtime_config = getattr(config, "runtime", None)
-        env_config = getattr(runtime_config, "env", {})
-        if isinstance(env_config, dict):
-            runtime_env = {str(k): str(v) for k, v in env_config.items()}
-
-    runtime_identity: dict[str, Any] = {}
-    if runtime is not None:
-        runtime_identity = {
-            "runtime_id": getattr(runtime, "runtime_id", None),
-            "runtime_name": getattr(runtime, "name", None),
-        }
-
-    lock_hashes = {}
-    for rel in LOCK_FILES:
-        if h := _hash_file(ROOT / rel):
-            lock_hashes[str(rel)] = h
-    payload: dict[str, Any] = {
+    runtime_env = _extract_runtime_env(config)
+    runtime_identity = _extract_runtime_identity(runtime)
+    lock_hashes = _collect_lock_hashes()
+    return {
         "python_version": platform.python_version(),
         "platform": platform.system().lower(),
         "platform_release": platform.release(),
@@ -76,9 +61,37 @@ def collect_environment_payload(
         "env_vars_exposed": sorted([k for k in os.environ if k.startswith("FORGE_")]),
         "llm_models": list(config_models) if config_models else [],
         "runtime_env": runtime_env,
-        "runtime_identity": {k: v for k, v in runtime_identity.items() if v is not None},
+        "runtime_identity": {
+            k: v for k, v in runtime_identity.items() if v is not None
+        },
     }
-    return payload
+
+
+def _extract_runtime_env(config: ForgeConfig | None) -> dict[str, str]:
+    if config is None:
+        return {}
+    runtime_config = getattr(config, "runtime", None)
+    env_config = getattr(runtime_config, "env", {})
+    if isinstance(env_config, dict):
+        return {str(k): str(v) for k, v in env_config.items()}
+    return {}
+
+
+def _extract_runtime_identity(runtime: Runtime | None) -> dict[str, Any]:
+    if runtime is None:
+        return {}
+    return {
+        "runtime_id": getattr(runtime, "runtime_id", None),
+        "runtime_name": getattr(runtime, "name", None),
+    }
+
+
+def _collect_lock_hashes() -> dict[str, str]:
+    lock_hashes: dict[str, str] = {}
+    for rel in LOCK_FILES:
+        if h := _hash_file(ROOT / rel):
+            lock_hashes[str(rel)] = h
+    return lock_hashes
 
 
 def compute_environment_signature(

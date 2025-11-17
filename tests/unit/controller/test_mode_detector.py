@@ -31,5 +31,3 @@ def test_detect_mode_ask_user():
     result = ModeDetector.detect_mode(request)
     assert result == "ask_user"
     assert ModeDetector.detect_mode(request, auto_detect=False) == "ask_user"
-
-

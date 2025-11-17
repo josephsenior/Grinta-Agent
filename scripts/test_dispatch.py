@@ -8,9 +8,9 @@ from forge.storage.local import LocalFileStore
 
 
 class DummySIO:
-    manager = {}
+    manager: dict[str, str] = {}
 
-    async def emit(self, *args, **kwargs):
+    async def emit(self, *args: object, **kwargs: object) -> None:
         logging.getLogger(__name__).info("SIO EMIT: %s %s", args, kwargs)
 
 

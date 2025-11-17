@@ -7,7 +7,7 @@ logger = logging.getLogger("forge.eval.swe_bench.live.convert")
 
 
 def main(output_jsonl: str):
-    with open(output_jsonl, "r", encoding='utf-8') as f:
+    with open(output_jsonl, "r", encoding="utf-8") as f:
         for line in f:
             try:
                 output = json.loads(line)
@@ -21,7 +21,9 @@ def main(output_jsonl: str):
                     inst = output.get("instance_id", "<unknown>")
                 except Exception:
                     inst = "<unknown>"
-                logger.exception("Error while reading output of instance %s: %s", inst, e)
+                logger.exception(
+                    "Error while reading output of instance %s: %s", inst, e
+                )
                 continue
             print_json_stdout(pred)
 
@@ -29,7 +31,10 @@ def main(output_jsonl: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--output_jsonl", type=str, required=True, help="Path to the prediction file (.../outputs.jsonl)"
+        "--output_jsonl",
+        type=str,
+        required=True,
+        help="Path to the prediction file (.../outputs.jsonl)",
     )
     args = parser.parse_args()
     main(args.output_jsonl)

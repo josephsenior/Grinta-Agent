@@ -56,24 +56,39 @@ def test_record_metrics_event_runtime(monkeypatch):
 
 def test_tenacity_before_sleep_factory(monkeypatch):
     events = []
-    monkeypatch.setattr(tenacity_metrics, "_record_metrics_event_runtime", lambda event: events.append(event))
+    monkeypatch.setattr(
+        tenacity_metrics,
+        "_record_metrics_event_runtime",
+        lambda event: events.append(event),
+    )
     state = SimpleNamespace(attempt_number=2, stop=SimpleNamespace(max_attempts=5))
     before = tenacity_before_sleep_factory("operation name")
     before(state)
     assert events == [
-        {"status": "attempt", "operation": "operation_name", "attempt_index": 2, "max_attempts": 5},
+        {
+            "status": "attempt",
+            "operation": "operation_name",
+            "attempt_index": 2,
+            "max_attempts": 5,
+        },
     ]
 
 
 def test_tenacity_after_factory_success(monkeypatch):
     events = []
-    monkeypatch.setattr(tenacity_metrics, "_record_metrics_event_runtime", lambda event: events.append(event))
+    monkeypatch.setattr(
+        tenacity_metrics,
+        "_record_metrics_event_runtime",
+        lambda event: events.append(event),
+    )
 
     class SuccessOutcome:
         def successful(self):
             return True
 
-    state = SimpleNamespace(outcome=SuccessOutcome(), attempt_number=1, stop=SimpleNamespace(max_attempts=3))
+    state = SimpleNamespace(
+        outcome=SuccessOutcome(), attempt_number=1, stop=SimpleNamespace(max_attempts=3)
+    )
     after = tenacity_after_factory("op")
     after(state)
     assert events == [{"status": "retry_success", "operation": "op"}]
@@ -81,7 +96,11 @@ def test_tenacity_after_factory_success(monkeypatch):
 
 def test_tenacity_after_factory_failure(monkeypatch):
     events = []
-    monkeypatch.setattr(tenacity_metrics, "_record_metrics_event_runtime", lambda event: events.append(event))
+    monkeypatch.setattr(
+        tenacity_metrics,
+        "_record_metrics_event_runtime",
+        lambda event: events.append(event),
+    )
     state = SimpleNamespace(
         outcome=None,
         exception=RuntimeError("boom"),
@@ -103,7 +122,11 @@ def test_tenacity_after_factory_failure(monkeypatch):
 
 def test_tenacity_after_factory_success_error(monkeypatch):
     events = []
-    monkeypatch.setattr(tenacity_metrics, "_record_metrics_event_runtime", lambda event: events.append(event))
+    monkeypatch.setattr(
+        tenacity_metrics,
+        "_record_metrics_event_runtime",
+        lambda event: events.append(event),
+    )
 
     class BadOutcome:
         def successful(self):
@@ -133,13 +156,22 @@ def test_tenacity_after_factory_success_error(monkeypatch):
 
 def test_tenacity_after_factory_outer_exception(monkeypatch):
     events = []
-    monkeypatch.setattr(tenacity_metrics, "_record_metrics_event_runtime", lambda event: events.append(event))
+    monkeypatch.setattr(
+        tenacity_metrics,
+        "_record_metrics_event_runtime",
+        lambda event: events.append(event),
+    )
 
     def raising(_operation: str):
         raise ValueError("boom")
 
     monkeypatch.setattr(tenacity_metrics, "sanitize_operation_label", raising)
-    state = SimpleNamespace(attempt_number=1, stop=SimpleNamespace(max_attempts=1), outcome=None, exception=None)
+    state = SimpleNamespace(
+        attempt_number=1,
+        stop=SimpleNamespace(max_attempts=1),
+        outcome=None,
+        exception=None,
+    )
     after = tenacity_after_factory("op")
     after(state)
     assert events == []

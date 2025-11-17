@@ -62,7 +62,9 @@ class Settings(BaseModel):
     enable_permissions: bool | None = None
     enable_checkpoints: bool | None = None
     remote_runtime_resource_factor: int | None = None
-    secrets_store: UserSecrets = Field(default_factory=lambda: UserSecrets(), frozen=True)
+    secrets_store: UserSecrets = Field(
+        default_factory=lambda: UserSecrets(), frozen=True
+    )
     enable_default_condenser: bool = True
     enable_sound_notifications: bool = False
     enable_proactive_conversation_starters: bool = True
@@ -115,14 +117,20 @@ class Settings(BaseModel):
         secret_store = UserSecrets(provider_tokens={}, custom_secrets={})
         if isinstance(tokens, dict):
             converted_store = UserSecrets(provider_tokens=tokens)
-            secret_store = secret_store.model_copy(update={"provider_tokens": converted_store.provider_tokens})
+            secret_store = secret_store.model_copy(
+                update={"provider_tokens": converted_store.provider_tokens}
+            )
         else:
             secret_store.model_copy(update={"provider_tokens": tokens})
         if isinstance(custom_secrets, dict):
             converted_store = UserSecrets(custom_secrets=custom_secrets)
-            secret_store = secret_store.model_copy(update={"custom_secrets": converted_store.custom_secrets})
+            secret_store = secret_store.model_copy(
+                update={"custom_secrets": converted_store.custom_secrets}
+            )
         else:
-            secret_store = secret_store.model_copy(update={"custom_secrets": custom_secrets})
+            secret_store = secret_store.model_copy(
+                update={"custom_secrets": custom_secrets}
+            )
         data["secret_store"] = secret_store
         return data
 
@@ -130,13 +138,13 @@ class Settings(BaseModel):
     @classmethod
     def validate_condenser_max_size(cls, v: int | None) -> int | None:
         """Validate condenser max size is at least 20 events.
-        
+
         Args:
             v: Max size value to validate
-            
+
         Returns:
             Validated value
-            
+
         Raises:
             ValueError: If value less than 20
 
@@ -172,7 +180,11 @@ class Settings(BaseModel):
             import os
 
             env_key = os.environ.get("FORGE_API_KEY")
-            if env_key and isinstance(explicit_api_key, SecretStr) and (explicit_api_key.get_secret_value() == env_key):
+            if (
+                env_key
+                and isinstance(explicit_api_key, SecretStr)
+                and (explicit_api_key.get_secret_value() == env_key)
+            ):
                 return True
         except Exception:
             pass
@@ -207,62 +219,68 @@ class Settings(BaseModel):
     @staticmethod
     def _cache_and_return_none(current_time: float) -> None:
         """Cache a None result to avoid repeated config loads."""
-        global _settings_from_config_cache, _settings_from_config_cache_time, _settings_from_config_cache_loader_id
+        global \
+            _settings_from_config_cache, \
+            _settings_from_config_cache_time, \
+            _settings_from_config_cache_loader_id
         _settings_from_config_cache = None
         _settings_from_config_cache_time = current_time
         _settings_from_config_cache_loader_id = id(load_FORGE_config)
         return None
 
     @staticmethod
-    def from_config() -> Settings | None:
-        """Load settings from config.toml with global caching.
-        
-        🚀 PERFORMANCE FIX: Added module-level cache to prevent repeated config.toml parsing.
-           This fixes the 1,119ms bottleneck when 10+ users load settings concurrently.
-        """
-        import time
-        global _settings_from_config_cache, _settings_from_config_cache_time, _settings_from_config_cache_loader_id
-        
-        current_time = time.time()
+    def _get_cached_settings(current_time: float) -> Settings | None:
+        """Return cached settings when valid, otherwise None."""
+        global \
+            _settings_from_config_cache, \
+            _settings_from_config_cache_time, \
+            _settings_from_config_cache_loader_id
 
-        # 🚀 FIX: Check module-level cache first (skip when load_FORGE_config is mocked)
+        cached = _settings_from_config_cache
+        if cached is None:
+            return None
+
         cache_is_mocked = Mock is not None and isinstance(load_FORGE_config, Mock)
-        cache_loader_matches = _settings_from_config_cache_loader_id == id(load_FORGE_config)
-        if _settings_from_config_cache is not None:
-            cache_fresh = current_time - _settings_from_config_cache_time < _SETTINGS_FROM_CONFIG_CACHE_TTL
-            if cache_fresh and not cache_is_mocked and cache_loader_matches:
-                return _settings_from_config_cache
-            if cache_is_mocked:
-                # Ensure tests using patched configs always recompute
-                _settings_from_config_cache = None
-                _settings_from_config_cache_time = 0.0
-                _settings_from_config_cache_loader_id = None
-            if not cache_loader_matches:
-                _settings_from_config_cache = None
-                _settings_from_config_cache_time = 0.0
-                _settings_from_config_cache_loader_id = None
-        
-        # Cache miss - load from config
-        app_config = load_FORGE_config()
+        cache_loader_matches = _settings_from_config_cache_loader_id == id(
+            load_FORGE_config
+        )
+        cache_fresh = (
+            current_time - _settings_from_config_cache_time
+            < _SETTINGS_FROM_CONFIG_CACHE_TTL
+        )
 
-        # Check for explicit LLM config that should skip settings
-        if Settings._check_explicit_llm_config(app_config):
-            return Settings._cache_and_return_none(current_time)
+        if cache_fresh and not cache_is_mocked and cache_loader_matches:
+            return cached
 
-        # Get and validate API key
-        llm_config: LLMConfig = app_config.get_llm_config()
+        if cache_is_mocked or not cache_loader_matches:
+            Settings._reset_settings_cache()
+        return None
+
+    @staticmethod
+    def _reset_settings_cache() -> None:
+        """Reset cached settings metadata."""
+        global \
+            _settings_from_config_cache, \
+            _settings_from_config_cache_time, \
+            _settings_from_config_cache_loader_id
+        _settings_from_config_cache = None
+        _settings_from_config_cache_time = 0.0
+        _settings_from_config_cache_loader_id = None
+
+    @staticmethod
+    def _should_use_llm_config(llm_config: "LLMConfig") -> bool:
         if not Settings._has_explicit_api_key(llm_config):
-            return Settings._cache_and_return_none(current_time)
-
+            return False
         api_key = llm_config.api_key if hasattr(llm_config, "api_key") else None
-        if not Settings._validate_api_key(api_key):
-            return Settings._cache_and_return_none(current_time)
+        return Settings._validate_api_key(api_key)
 
-        # Build settings
+    @staticmethod
+    def _build_settings_from_app_config(
+        app_config, llm_config: "LLMConfig"
+    ) -> "Settings":
         security = app_config.security
         mcp_config = app_config.mcp if hasattr(app_config, "mcp") else None
-
-        settings_from_config = Settings(
+        return Settings(
             language="en",
             agent=app_config.default_agent,
             max_iterations=app_config.max_iterations,
@@ -273,15 +291,56 @@ class Settings(BaseModel):
             llm_base_url=llm_config.base_url,
             remote_runtime_resource_factor=app_config.sandbox.remote_runtime_resource_factor,
             mcp_config=mcp_config,
-            search_api_key=getattr(app_config, 'search_api_key', None),
+            search_api_key=getattr(app_config, "search_api_key", None),
             max_budget_per_task=app_config.max_budget_per_task,
         )
-        
-        # 🚀 FIX: Cache the successful result at module level
-        _settings_from_config_cache = settings_from_config
+
+    @staticmethod
+    def _cache_settings_result(settings: "Settings", current_time: float) -> None:
+        """Persist successful settings result in module cache."""
+        global \
+            _settings_from_config_cache, \
+            _settings_from_config_cache_time, \
+            _settings_from_config_cache_loader_id
+        _settings_from_config_cache = settings
         _settings_from_config_cache_time = current_time
         _settings_from_config_cache_loader_id = id(load_FORGE_config)
-        
+
+    @staticmethod
+    def from_config() -> Settings | None:
+        """Load settings from config.toml with global caching.
+
+        🚀 PERFORMANCE FIX: Added module-level cache to prevent repeated config.toml parsing.
+           This fixes the 1,119ms bottleneck when 10+ users load settings concurrently.
+        """
+        import time
+
+        global \
+            _settings_from_config_cache, \
+            _settings_from_config_cache_time, \
+            _settings_from_config_cache_loader_id
+
+        current_time = time.time()
+
+        cached_settings = Settings._get_cached_settings(current_time)
+        if cached_settings is not None:
+            return cached_settings
+
+        app_config = load_FORGE_config()
+
+        # Check for explicit LLM config that should skip settings
+        if Settings._check_explicit_llm_config(app_config):
+            return Settings._cache_and_return_none(current_time)
+
+        # Get and validate API key
+        llm_config: LLMConfig = app_config.get_llm_config()
+        if not Settings._should_use_llm_config(llm_config):
+            return Settings._cache_and_return_none(current_time)
+
+        settings_from_config = Settings._build_settings_from_app_config(
+            app_config, llm_config
+        )
+        Settings._cache_settings_result(settings_from_config, current_time)
         return settings_from_config
 
     def merge_with_config_settings(self) -> Settings:
@@ -297,9 +356,12 @@ class Settings(BaseModel):
             self.mcp_config = config_settings.mcp_config
             return self
         merged_mcp = MCPConfig(
-            sse_servers=list(config_settings.mcp_config.sse_servers) + list(self.mcp_config.sse_servers),
-            stdio_servers=list(config_settings.mcp_config.stdio_servers) + list(self.mcp_config.stdio_servers),
-            shttp_servers=list(config_settings.mcp_config.shttp_servers) + list(self.mcp_config.shttp_servers),
+            sse_servers=list(config_settings.mcp_config.sse_servers)
+            + list(self.mcp_config.sse_servers),
+            stdio_servers=list(config_settings.mcp_config.stdio_servers)
+            + list(self.mcp_config.stdio_servers),
+            shttp_servers=list(config_settings.mcp_config.shttp_servers)
+            + list(self.mcp_config.shttp_servers),
         )
         self.mcp_config = merged_mcp
         return self

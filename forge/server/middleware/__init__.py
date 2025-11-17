@@ -1,9 +1,15 @@
-"""Server middleware for forge."""
+"""Server middleware exports.
 
-# Import from the middleware.py file (not the directory)
-import importlib.util
-import sys
-from pathlib import Path
+This package re-exports middleware utilities and classes, including helpers
+defined in the sibling module ``forge.server.middleware`` (middleware.py).
+We import those helpers via an explicit relative import to avoid recursive
+package-import issues and circular initialization.
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Any
 
 from forge.server.middleware.rate_limiter import (
     REDIS_AVAILABLE,
@@ -21,30 +27,18 @@ from forge.server.middleware.security_headers import (
     CSRFProtection,
     SecurityHeadersMiddleware,
 )
+from forge.server.middleware.request_metrics import RequestMetricsMiddleware
+from forge.server.middleware.request_size import RequestSizeLoggingMiddleware
 
-server_dir = Path(__file__).parent.parent
-if str(server_dir) not in sys.path:
-    sys.path.insert(0, str(server_dir))
-
-# Now import from the middleware.py file
-
-middleware_file = server_dir / "middleware.py"
-spec = importlib.util.spec_from_file_location("_middleware_file", middleware_file)
-if spec and spec.loader:
-    _middleware_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(_middleware_module)
-    CacheControlMiddleware = _middleware_module.CacheControlMiddleware
-    InMemoryRateLimiter = _middleware_module.InMemoryRateLimiter
-    LocalhostCORSMiddleware = _middleware_module.LocalhostCORSMiddleware
-    RateLimitMiddleware = _middleware_module.RateLimitMiddleware
-else:
-    # Fallback - import directly (might conflict with package name)
-    from forge.server import middleware as _mw
-
-    CacheControlMiddleware = _mw.CacheControlMiddleware
-    InMemoryRateLimiter = _mw.InMemoryRateLimiter
-    LocalhostCORSMiddleware = _mw.LocalhostCORSMiddleware
-    RateLimitMiddleware = _mw.RateLimitMiddleware
+# Import helpers from the sibling module middleware.py deterministically to
+# avoid importing the package name "forge.server.middleware" recursively.
+from ..middleware_core import (
+    CacheControlMiddleware,
+    InMemoryRateLimiter,
+    LocalhostCORSMiddleware,
+    RateLimitMiddleware,
+)
+logger = logging.getLogger("forge.middleware")
 
 __all__ = [
     "CacheControlMiddleware",
@@ -54,6 +48,8 @@ __all__ = [
     "InMemoryRateLimiter",
     "LocalhostCORSMiddleware",
     "QuotaPlan",
+    "RequestMetricsMiddleware",
+    "RequestSizeLoggingMiddleware",
     "REDIS_AVAILABLE",
     "RateLimitMiddleware",
     "RateLimiter",

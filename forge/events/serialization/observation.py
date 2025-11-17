@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import importlib
 from typing import Any
 
 from forge.events.event import RecallType
@@ -12,6 +13,7 @@ from forge.events.observation.agent import (
     AgentThinkObservation,
     MicroagentKnowledge,
     RecallObservation,
+    RecallFailureObservation,
 )
 from forge.events.observation.browse import BrowserOutputObservation
 from forge.events.observation.commands import (
@@ -50,11 +52,18 @@ observations = (
     AgentCondensationObservation,
     AgentThinkObservation,
     RecallObservation,
+    RecallFailureObservation,
     MCPObservation,
     FileDownloadObservation,
     TaskTrackingObservation,
 )
-OBSERVATION_TYPE_TO_CLASS = {observation_class.observation: observation_class for observation_class in observations}
+_OBSERVATION_CLASS_PATHS = {
+    observation_class.observation: (
+        observation_class.__module__,
+        observation_class.__name__,
+    )
+    for observation_class in observations
+}
 
 
 def _update_cmd_output_metadata(
@@ -79,21 +88,25 @@ def _update_cmd_output_metadata(
 
 def handle_observation_deprecated_extras(extras: dict) -> dict:
     """Handle deprecated extras fields in observation dictionaries.
-    
+
     Migrates legacy field names (exit_code, command_id) to new metadata structure
     and removes obsolete fields.
-    
+
     Args:
         extras: Extras dictionary from observation
-        
+
     Returns:
         Updated extras dictionary with deprecated fields migrated
 
     """
     if "exit_code" in extras:
-        extras["metadata"] = _update_cmd_output_metadata(extras.get("metadata"), exit_code=extras.pop("exit_code"))
+        extras["metadata"] = _update_cmd_output_metadata(
+            extras.get("metadata"), exit_code=extras.pop("exit_code")
+        )
     if "command_id" in extras:
-        extras["metadata"] = _update_cmd_output_metadata(extras.get("metadata"), pid=extras.pop("command_id"))
+        extras["metadata"] = _update_cmd_output_metadata(
+            extras.get("metadata"), pid=extras.pop("command_id")
+        )
     if "formatted_output_and_error" in extras:
         extras.pop("formatted_output_and_error")
     return extras
@@ -108,35 +121,70 @@ def _validate_observation_dict(observation: dict) -> None:
 
 def _get_observation_class(observation_type: str):
     """Get observation class from observation type."""
-    observation_class = OBSERVATION_TYPE_TO_CLASS.get(observation_type)
-    if observation_class is None:
-        msg = f"'observation['observation']={
-            observation_type!r}' is not defined. Available observations: {
-            OBSERVATION_TYPE_TO_CLASS.keys()}"
-        raise KeyError(
-            msg,
+    class_info = _OBSERVATION_CLASS_PATHS.get(observation_type)
+    if class_info is None:
+        msg = (
+            f"'observation['observation']={observation_type!r}' is not defined. "
+            f"Available observations: {_OBSERVATION_CLASS_PATHS.keys()}"
         )
+        raise KeyError(msg)
+    module_name, class_name = class_info
+    module = importlib.import_module(module_name)
+    observation_class = getattr(module, class_name, None)
+    if observation_class is None:
+        msg = (
+            f"Observation class '{class_name}' not found in module '{module_name}'. "
+            f"Available observations: {_OBSERVATION_CLASS_PATHS.keys()}"
+        )
+        raise KeyError(msg)
     return observation_class
 
 
-def _extract_observation_data(observation: dict) -> tuple[str, dict]:
-    """Extract content and extras from observation dict."""
+# Treat these fields as metadata to be applied post-construction.
+# Including "cause" prevents it from being passed into dataclass __init__,
+# since "cause" is a property on Event, not a dataclass field.
+METADATA_FIELDS = (
+    "id",
+    "sequence",
+    "timestamp",
+    "source",
+    "cause",
+    "tool_call_metadata",
+)
+
+
+def _extract_observation_data(observation: dict) -> tuple[str, dict, dict]:
+    """Extract content, extras, and metadata from observation dict."""
     observation.pop("observation")
     observation.pop("message", None)
+    observation.pop("success", None)
+    observation.pop("error", None)
     content = observation.pop("content", "")
     extras = copy.deepcopy(observation.pop("extras", {}))
     extras = handle_observation_deprecated_extras(extras)
+
+    metadata: dict = {}
+    for field in METADATA_FIELDS:
+        if field in observation:
+            metadata[field] = observation.pop(field)
+        if field in extras and field not in metadata:
+            metadata[field] = extras.pop(field)
+        else:
+            extras.pop(field, None)
+
     # Remaining keys (e.g., command, metadata) should be treated as extras/kwargs
     if observation:
         extras.update(observation)
-    return content, extras
+    return content, extras, metadata
 
 
 def _process_cmd_output_metadata(extras: dict) -> None:
     """Process CmdOutputObservation metadata."""
     if "metadata" in extras and isinstance(extras["metadata"], dict):
         extras["metadata"] = CmdOutputMetadata(**extras["metadata"])
-    elif "metadata" not in extras or not isinstance(extras["metadata"], CmdOutputMetadata):
+    elif "metadata" not in extras or not isinstance(
+        extras["metadata"], CmdOutputMetadata
+    ):
         extras["metadata"] = CmdOutputMetadata()
 
 
@@ -144,24 +192,27 @@ def _process_recall_observation_data(extras: dict) -> None:
     """Process RecallObservation specific data."""
     if "recall_type" in extras:
         extras["recall_type"] = RecallType(extras["recall_type"])
-    if "microagent_knowledge" in extras and isinstance(extras["microagent_knowledge"], list):
+    if "microagent_knowledge" in extras and isinstance(
+        extras["microagent_knowledge"], list
+    ):
         extras["microagent_knowledge"] = [
-            MicroagentKnowledge(**item) if isinstance(item, dict) else item for item in extras["microagent_knowledge"]
+            MicroagentKnowledge(**item) if isinstance(item, dict) else item
+            for item in extras["microagent_knowledge"]
         ]
 
 
 def observation_from_dict(observation: dict) -> Observation:
     """Deserialize observation from dictionary representation.
-    
+
     Converts dictionary to Observation instance, handling special cases for
     CmdOutputObservation and RecallObservation types.
-    
+
     Args:
         observation: Dictionary with observation type and data
-        
+
     Returns:
         Deserialized Observation instance
-        
+
     Raises:
         KeyError: If observation dict is invalid
 
@@ -169,7 +220,7 @@ def observation_from_dict(observation: dict) -> Observation:
     observation = observation.copy()
     _validate_observation_dict(observation)
     observation_class = _get_observation_class(observation["observation"])
-    content, extras = _extract_observation_data(observation)
+    content, extras, metadata = _extract_observation_data(observation)
 
     if observation_class is CmdOutputObservation:
         _process_cmd_output_metadata(extras)
@@ -177,5 +228,6 @@ def observation_from_dict(observation: dict) -> Observation:
         _process_recall_observation_data(extras)
 
     obs = observation_class(content=content, **extras)
-    assert isinstance(obs, Observation)
+    for attr, value in metadata.items():
+        setattr(obs, attr, value)
     return obs

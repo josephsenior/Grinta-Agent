@@ -54,7 +54,7 @@ def test_dumps_handles_custom_objects(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_dumps_respects_custom_kwargs(monkeypatch: pytest.MonkeyPatch) -> None:
-    """dumps should honour caller-supplied kwargs, including custom encoder."""
+    """Dumps should honour caller-supplied kwargs, including custom encoder."""
 
     class CustomEncoder(json.JSONEncoder):
         def default(self, obj):  # noqa: D401 - standard JSON hook
@@ -65,7 +65,7 @@ def test_dumps_respects_custom_kwargs(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_dumps_injects_default_encoder(monkeypatch: pytest.MonkeyPatch) -> None:
-    """dumps should inject ForgeJSONEncoder when kwargs omit cls."""
+    """Dumps should inject ForgeJSONEncoder when kwargs omit cls."""
     captured: dict[str, object] = {}
 
     original = json.dumps
@@ -90,18 +90,18 @@ def test_print_json_noop(capsys) -> None:
 
 
 def test_loads_valid_json() -> None:
-    """loads should return parsed JSON when input is valid."""
+    """Loads should return parsed JSON when input is valid."""
     assert forge_json.loads('{"ok": true}') == {"ok": True}
 
 
 def test_loads_repairs_invalid_json(monkeypatch: pytest.MonkeyPatch) -> None:
-    """loads should use json_repair when the initial parse fails."""
+    """Loads should use json_repair when the initial parse fails."""
     monkeypatch.setattr(forge_json, "repair_json", lambda value: '{"fixed": 1}')
     assert forge_json.loads("invalid {json}") == {"fixed": 1}
 
 
 def test_loads_raises_when_repair_fails(monkeypatch: pytest.MonkeyPatch) -> None:
-    """loads should raise LLMResponseError when repair does not yield an object."""
+    """Loads should raise LLMResponseError when repair does not yield an object."""
     monkeypatch.setattr(forge_json, "repair_json", lambda value: value)
     with pytest.raises(LLMResponseError):
         forge_json.loads("no braces here")
@@ -115,10 +115,8 @@ def test_encoder_falls_back_to_super(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_loads_raises_when_repair_json_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
-    """loads should raise an LLMResponseError when repaired JSON remains invalid."""
+    """Loads should raise an LLMResponseError when repaired JSON remains invalid."""
     monkeypatch.setattr(forge_json, "repair_json", lambda value: value)
     invalid = '{"value": "missing closing brace",}'
     with pytest.raises(LLMResponseError):
         forge_json.loads(invalid)
-
-

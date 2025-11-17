@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 from typing import Any
-
-from litellm import BaseModel
 from dataclasses import dataclass
 
 from forge.resolver.interfaces.issue import Issue

@@ -34,17 +34,31 @@ def check_docker_requirements() -> bool:
 
     """
     if not shutil.which("docker"):
-        print_formatted_text(HTML("<ansired>❌ Docker is not installed or not in PATH.</ansired>"))
-        print_formatted_text(HTML("<grey>Please install Docker first: https://docs.docker.com/get-docker/</grey>"))
+        print_formatted_text(
+            HTML("<ansired>❌ Docker is not installed or not in PATH.</ansired>")
+        )
+        print_formatted_text(
+            HTML(
+                "<grey>Please install Docker first: https://docs.docker.com/get-docker/</grey>"
+            )
+        )
         return False
     try:
-        result = subprocess.run(["docker", "info"], check=False, capture_output=True, text=True, timeout=10)
+        result = subprocess.run(
+            ["docker", "info"], check=False, capture_output=True, text=True, timeout=10
+        )
         if result.returncode != 0:
-            print_formatted_text(HTML("<ansired>❌ Docker daemon is not running.</ansired>"))
-            print_formatted_text(HTML("<grey>Please start Docker and try again.</grey>"))
+            print_formatted_text(
+                HTML("<ansired>❌ Docker daemon is not running.</ansired>")
+            )
+            print_formatted_text(
+                HTML("<grey>Please start Docker and try again.</grey>")
+            )
             return False
     except (subprocess.TimeoutExpired, subprocess.SubprocessError) as e:
-        print_formatted_text(HTML("<ansired>❌ Failed to check Docker status.</ansired>"))
+        print_formatted_text(
+            HTML("<ansired>❌ Failed to check Docker status.</ansired>")
+        )
         print_formatted_text(HTML(f"<grey>Error: {e}</grey>"))
         return False
     return True
@@ -65,16 +79,22 @@ def _pull_runtime_image(runtime_image: str) -> None:
     try:
         subprocess.run(pull_cmd, check=True, timeout=300)
     except subprocess.CalledProcessError:
-        print_formatted_text(HTML("<ansired>❌ Failed to pull runtime image.</ansired>"))
+        print_formatted_text(
+            HTML("<ansired>❌ Failed to pull runtime image.</ansired>")
+        )
         sys.exit(1)
     except subprocess.TimeoutExpired:
-        print_formatted_text(HTML("<ansired>❌ Timeout while pulling runtime image.</ansired>"))
+        print_formatted_text(
+            HTML("<ansired>❌ Timeout while pulling runtime image.</ansired>")
+        )
         sys.exit(1)
 
 
 def _configure_gpu_support(docker_cmd: list[str]) -> None:
     """Configure GPU support for Docker command."""
-    print_formatted_text(HTML("<ansigreen>🖥️ Enabling GPU support via nvidia-docker...</ansigreen>"))
+    print_formatted_text(
+        HTML("<ansigreen>🖥️ Enabling GPU support via nvidia-docker...</ansigreen>")
+    )
     docker_cmd.insert(2, "--gpus")
     docker_cmd.insert(3, "all")
     docker_cmd.extend(["-e", "SANDBOX_ENABLE_GPU=true"])
@@ -104,12 +124,16 @@ def _run_docker_container(docker_cmd: list[str]) -> None:
         subprocess.run(docker_cmd, check=True)
     except subprocess.CalledProcessError as e:
         print_formatted_text("")
-        print_formatted_text(HTML("<ansired>❌ Failed to start Forge GUI server.</ansired>"))
+        print_formatted_text(
+            HTML("<ansired>❌ Failed to start Forge GUI server.</ansired>")
+        )
         print_formatted_text(HTML(f"<grey>Error: {e}</grey>"))
         sys.exit(1)
     except KeyboardInterrupt:
         print_formatted_text("")
-        print_formatted_text(HTML("<ansigreen>✓ Forge GUI server stopped successfully.</ansigreen>"))
+        print_formatted_text(
+            HTML("<ansigreen>✓ Forge GUI server stopped successfully.</ansigreen>")
+        )
         sys.exit(0)
 
 
@@ -136,7 +160,9 @@ def launch_gui_server(mount_cwd: bool = False, gpu: bool = False) -> None:
 
     print_formatted_text("")
     print_formatted_text(HTML("<ansigreen>✅ Starting Forge GUI server...</ansigreen>"))
-    print_formatted_text(HTML("<grey>The server will be available at: http://localhost:3000</grey>"))
+    print_formatted_text(
+        HTML("<grey>The server will be available at: http://localhost:3000</grey>")
+    )
     print_formatted_text(HTML("<grey>Press Ctrl+C to stop the server.</grey>"))
     print_formatted_text("")
 
@@ -163,7 +189,15 @@ def launch_gui_server(mount_cwd: bool = False, gpu: bool = False) -> None:
         _configure_cwd_mount(docker_cmd)
 
     docker_cmd.extend(
-        ["-p", "3000:3000", "--add-host", "host.docker.internal:host-gateway", "--name", "Forge-app", app_image],
+        [
+            "-p",
+            "3000:3000",
+            "--add-host",
+            "host.docker.internal:host-gateway",
+            "--name",
+            "Forge-app",
+            app_image,
+        ],
     )
 
     _run_docker_container(docker_cmd)

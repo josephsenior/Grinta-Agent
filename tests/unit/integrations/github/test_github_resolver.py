@@ -130,14 +130,18 @@ async def test_get_review_thread_comments_full_flow() -> None:
         ],
     )
 
-    comments = await resolver.get_review_thread_comments("comment-node", "owner/repo", 42)
+    comments = await resolver.get_review_thread_comments(
+        "comment-node", "owner/repo", 42
+    )
 
     assert [comment.id for comment in comments] == ["root-comment", "reply"]
     assert resolver.execute_graphql_query.await_count == 2
 
 
 @pytest.mark.asyncio
-async def test_get_all_thread_comments_paginates(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_get_all_thread_comments_paginates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     resolver = StubGitHubResolver()
     thread_comments_page1 = {
         "data": {
@@ -231,15 +235,33 @@ async def test_get_review_thread_comments_missing_comment_node() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_review_thread_comments_missing_thread_logs(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_get_review_thread_comments_missing_thread_logs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     resolver = StubGitHubResolver()
-    resolver.prime_graphql({"data": {"node": {"id": "comment", "replyTo": None}}}, {"data": {"repository": {"pullRequest": {"reviewThreads": {"nodes": [], "pageInfo": {"hasNextPage": False, "endCursor": None}}}}}})
+    resolver.prime_graphql(
+        {"data": {"node": {"id": "comment", "replyTo": None}}},
+        {
+            "data": {
+                "repository": {
+                    "pullRequest": {
+                        "reviewThreads": {
+                            "nodes": [],
+                            "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        }
+                    }
+                }
+            }
+        },
+    )
     warnings: list[str] = []
 
     def capture_warning(message: str, *_, **__):
         warnings.append(message)
 
-    monkeypatch.setattr("forge.integrations.github.service.resolver.logger.warning", capture_warning)
+    monkeypatch.setattr(
+        "forge.integrations.github.service.resolver.logger.warning", capture_warning
+    )
 
     comments = await resolver.get_review_thread_comments("comment", "owner/repo", 10)
 
@@ -277,4 +299,3 @@ def test_process_raw_comments_orders_and_limits() -> None:
     processed = resolver._process_raw_comments(comments, max_comments=2)
     assert [c.id for c in processed] == ["3", "4"]
     assert all(isinstance(c, Comment) for c in processed)
-

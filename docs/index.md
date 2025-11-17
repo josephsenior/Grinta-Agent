@@ -25,7 +25,7 @@ Forge is an AI-powered development platform that helps developers build software
 - [REST API](api/rest.md) - HTTP endpoints
 
 ### Runtime and Performance
-- [Warm Server Pool](runtime/warm_servers.md) - Fast startup optimization
+- Warm Runtime Pool - Fast startup via reusable sandboxes with policy controls
 - [BrowserGym Integration](integrations/browsergym.md) - Web automation (optional)
 
 ### Experimental Features

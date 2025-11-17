@@ -1,8 +1,18 @@
 from unittest.mock import MagicMock
-from forge.events.action import Action, ChangeAgentStateAction, CmdRunAction, MessageAction, NullAction
+from forge.events.action import (
+    Action,
+    ChangeAgentStateAction,
+    CmdRunAction,
+    MessageAction,
+    NullAction,
+)
 from forge.events.event import Event, EventSource
 from forge.events.event_filter import EventFilter
-from forge.events.observation import AgentStateChangedObservation, CmdOutputObservation, NullObservation
+from forge.events.observation import (
+    AgentStateChangedObservation,
+    CmdOutputObservation,
+    NullObservation,
+)
 from forge.events.stream import EventStream
 from forge.server.routes.manage_conversations import _get_contextual_events
 
@@ -64,7 +74,9 @@ def _apply_cmd_output_observation_defaults(kwargs: dict, spec: dict):
     if "content" not in kwargs:
         kwargs["content"] = f"default_obs_content_for_{spec['id']}"
     if "command_id" not in kwargs:
-        kwargs["command_id"] = spec.get("cause", spec["id"] - 1 if spec["id"] > 0 else 0)
+        kwargs["command_id"] = spec.get(
+            "cause", spec["id"] - 1 if spec["id"] > 0 else 0
+        )
     if "command" not in kwargs:
         kwargs["command"] = f"default_cmd_for_obs_{spec['id']}"
 
@@ -96,11 +108,13 @@ def _apply_agent_state_changed_defaults(kwargs: dict, spec: dict):
 def _set_event_metadata(event: Event, spec: dict) -> None:
     """Set event metadata from spec."""
     event._id = spec["id"]
-    default_source = EventSource.AGENT if issubclass(spec["type"], Action) else EventSource.USER
-    event._source = spec.get("source", default_source)
-    event._hidden = spec.get("hidden", False)
+    default_source = (
+        EventSource.AGENT if issubclass(spec["type"], Action) else EventSource.USER
+    )
+    event.source = spec.get("source", default_source)
+    event.hidden = bool(spec.get("hidden", False))
     if "cause" in spec:
-        event._cause = spec["cause"]
+        event.cause = spec["cause"]
 
 
 def create_test_events(event_specs: list[dict]) -> list[Event]:
@@ -132,7 +146,13 @@ def test_get_contextual_events_basic_retrieval():
     all_event_specs = [
         {"id": 1, "type": MessageAction, "content": "message_1"},
         {"id": 2, "type": CmdRunAction, "command": "command_2"},
-        {"id": 3, "type": CmdOutputObservation, "content": "observation_3", "command_id": 2, "command": "command_2"},
+        {
+            "id": 3,
+            "type": CmdOutputObservation,
+            "content": "observation_3",
+            "command_id": 2,
+            "command": "command_2",
+        },
         {"id": 4, "type": MessageAction, "content": "message_4"},
         {"id": 5, "type": CmdRunAction, "command": "command_5_target"},
         {
@@ -144,15 +164,35 @@ def test_get_contextual_events_basic_retrieval():
         },
         {"id": 7, "type": MessageAction, "content": "message_7"},
         {"id": 8, "type": CmdRunAction, "command": "command_8"},
-        {"id": 9, "type": CmdOutputObservation, "content": "observation_9", "command_id": 8, "command": "command_8"},
+        {
+            "id": 9,
+            "type": CmdOutputObservation,
+            "content": "observation_9",
+            "command_id": 8,
+            "command": "command_8",
+        },
         {"id": 10, "type": MessageAction, "content": "message_10"},
         {"id": 11, "type": CmdRunAction, "command": "command_11"},
     ]
     all_events_objects = create_test_events(all_event_specs)
     events_by_id = {e.id: e for e in all_events_objects}
-    events_to_return_before = [events_by_id[5], events_by_id[4], events_by_id[3], events_by_id[2]]
-    events_to_return_after = [events_by_id[6], events_by_id[7], events_by_id[8], events_by_id[9], events_by_id[10]]
-    mock_event_stream.search_events.side_effect = [events_to_return_before, events_to_return_after]
+    events_to_return_before = [
+        events_by_id[5],
+        events_by_id[4],
+        events_by_id[3],
+        events_by_id[2],
+    ]
+    events_to_return_after = [
+        events_by_id[6],
+        events_by_id[7],
+        events_by_id[8],
+        events_by_id[9],
+        events_by_id[10],
+    ]
+    mock_event_stream.search_events.side_effect = [
+        events_to_return_before,
+        events_to_return_after,
+    ]
     result_str = _get_contextual_events(mock_event_stream, target_event_id)
     expected_final_event_objects = [
         events_by_id[2],
@@ -188,10 +228,26 @@ def test_get_contextual_events_filtering():
     all_event_specs = [
         {"id": 0, "type": NullAction},
         {"id": 1, "type": MessageAction, "content": "message_1_VISIBLE"},
-        {"id": 2, "type": ChangeAgentStateAction, "agent_state": "thinking", "thought": "abc_FILTERED"},
+        {
+            "id": 2,
+            "type": ChangeAgentStateAction,
+            "agent_state": "thinking",
+            "thought": "abc_FILTERED",
+        },
         {"id": 3, "type": CmdRunAction, "command": "command_3_TARGET_VISIBLE"},
-        {"id": 4, "type": CmdOutputObservation, "content": "obs_4_HIDDEN_FILTERED", "command_id": 3, "hidden": True},
-        {"id": 5, "type": AgentStateChangedObservation, "agent_state": "running", "content": "state_change_5_FILTERED"},
+        {
+            "id": 4,
+            "type": CmdOutputObservation,
+            "content": "obs_4_HIDDEN_FILTERED",
+            "command_id": 3,
+            "hidden": True,
+        },
+        {
+            "id": 5,
+            "type": AgentStateChangedObservation,
+            "agent_state": "running",
+            "content": "state_change_5_FILTERED",
+        },
         {"id": 6, "type": MessageAction, "content": "message_6_VISIBLE"},
         {"id": 7, "type": NullObservation, "content": "null_obs_7_FILTERED"},
         {"id": 8, "type": CmdRunAction, "command": "command_8_VISIBLE"},
@@ -200,25 +256,38 @@ def test_get_contextual_events_filtering():
     ]
     all_events_objects = create_test_events(all_event_specs)
     events_by_id = {e.id: e for e in all_events_objects}
-    [events_by_id[3], events_by_id[1]]
     simulated_search_before = [events_by_id[3], events_by_id[1]]
     simulated_search_after = [events_by_id[6], events_by_id[8], events_by_id[9]]
-    mock_event_stream.search_events.side_effect = [simulated_search_before, simulated_search_after]
+    mock_event_stream.search_events.side_effect = [
+        simulated_search_before,
+        simulated_search_after,
+    ]
     result_str = _get_contextual_events(mock_event_stream, target_event_id)
-    expected_final_event_objects = [events_by_id[1], events_by_id[3], events_by_id[6], events_by_id[8], events_by_id[9]]
+    expected_final_event_objects = [
+        events_by_id[1],
+        events_by_id[3],
+        events_by_id[6],
+        events_by_id[8],
+        events_by_id[9],
+    ]
     expected_output_str = "\n".join((str(e) for e in expected_final_event_objects))
     assert result_str == expected_output_str
     calls = mock_event_stream.search_events.call_args_list
     assert len(calls) == 2
-    expected_filtered_types = (NullAction, NullObservation, ChangeAgentStateAction, AgentStateChangedObservation)
+    expected_filtered_types = {
+        NullAction,
+        NullObservation,
+        ChangeAgentStateAction,
+        AgentStateChangedObservation,
+    }
     filter_before = calls[0][1]["filter"]
     assert isinstance(filter_before, EventFilter)
     assert filter_before.exclude_hidden is True
-    assert set(filter_before.exclude_types) == set(expected_filtered_types)
+    assert set(filter_before.exclude_types or ()) == expected_filtered_types
     filter_after = calls[1][1]["filter"]
     assert isinstance(filter_after, EventFilter)
     assert filter_after.exclude_hidden is True
-    assert set(filter_after.exclude_types) == set(expected_filtered_types)
+    assert set(filter_after.exclude_types or ()) == expected_filtered_types
 
 
 def test_get_contextual_events_target_at_beginning():
@@ -242,8 +311,17 @@ def test_get_contextual_events_target_at_beginning():
     all_events_objects = create_test_events(all_event_specs)
     events_by_id = {e.id: e for e in all_events_objects}
     simulated_search_before = [events_by_id[1], events_by_id[0]]
-    simulated_search_after = [events_by_id[2], events_by_id[3], events_by_id[4], events_by_id[5], events_by_id[6]]
-    mock_event_stream.search_events.side_effect = [simulated_search_before, simulated_search_after]
+    simulated_search_after = [
+        events_by_id[2],
+        events_by_id[3],
+        events_by_id[4],
+        events_by_id[5],
+        events_by_id[6],
+    ]
+    mock_event_stream.search_events.side_effect = [
+        simulated_search_before,
+        simulated_search_after,
+    ]
     result_str = _get_contextual_events(mock_event_stream, target_event_id)
     expected_final_event_objects = [
         events_by_id[0],
@@ -281,16 +359,35 @@ def test_get_contextual_events_target_at_end():
         {"id": 2, "type": CmdOutputObservation, "content": "obs_2", "command_id": 1},
         {"id": 3, "type": MessageAction, "content": "message_3"},
         {"id": 4, "type": CmdRunAction, "command": "command_4"},
-        {"id": 5, "type": CmdOutputObservation, "content": "obs_5_TARGET", "command_id": 4},
+        {
+            "id": 5,
+            "type": CmdOutputObservation,
+            "content": "obs_5_TARGET",
+            "command_id": 4,
+        },
         {"id": 6, "type": MessageAction, "content": "message_6_last"},
     ]
     all_events_objects = create_test_events(all_event_specs)
     events_by_id = {e.id: e for e in all_events_objects}
-    simulated_search_before = [events_by_id[5], events_by_id[4], events_by_id[3], events_by_id[2]]
+    simulated_search_before = [
+        events_by_id[5],
+        events_by_id[4],
+        events_by_id[3],
+        events_by_id[2],
+    ]
     simulated_search_after = [events_by_id[6]]
-    mock_event_stream.search_events.side_effect = [simulated_search_before, simulated_search_after]
+    mock_event_stream.search_events.side_effect = [
+        simulated_search_before,
+        simulated_search_after,
+    ]
     result_str = _get_contextual_events(mock_event_stream, target_event_id)
-    expected_final_event_objects = [events_by_id[2], events_by_id[3], events_by_id[4], events_by_id[5], events_by_id[6]]
+    expected_final_event_objects = [
+        events_by_id[2],
+        events_by_id[3],
+        events_by_id[4],
+        events_by_id[5],
+        events_by_id[6],
+    ]
     expected_output_str = "\n".join((str(e) for e in expected_final_event_objects))
     assert result_str == expected_output_str
     calls = mock_event_stream.search_events.call_args_list
@@ -308,9 +405,12 @@ def test_get_contextual_events_empty_search_results():
     mock_event_stream = MagicMock(spec=EventStream)
     target_event_id = 10
     context_size = 4
-    simulated_search_before = []
-    simulated_search_after = []
-    mock_event_stream.search_events.side_effect = [simulated_search_before, simulated_search_after]
+    simulated_search_before: list[Event] = []
+    simulated_search_after: list[Event] = []
+    mock_event_stream.search_events.side_effect = [
+        simulated_search_before,
+        simulated_search_after,
+    ]
     result_str = _get_contextual_events(mock_event_stream, target_event_id)
     expected_output_str = ""
     assert result_str == expected_output_str
@@ -332,16 +432,24 @@ def test_get_contextual_events_all_events_filtered():
     """
     mock_event_stream = MagicMock(spec=EventStream)
     target_event_id = 2
-    simulated_search_before = []
-    simulated_search_after = []
-    mock_event_stream.search_events.side_effect = [simulated_search_before, simulated_search_after]
+    simulated_search_before: list[Event] = []
+    simulated_search_after: list[Event] = []
+    mock_event_stream.search_events.side_effect = [
+        simulated_search_before,
+        simulated_search_after,
+    ]
     result_str = _get_contextual_events(mock_event_stream, target_event_id)
     expected_output_str = ""
     assert result_str == expected_output_str
     calls = mock_event_stream.search_events.call_args_list
     assert len(calls) == 2
     filter_used = calls[0][1]["filter"]
-    expected_filtered_types = (NullAction, NullObservation, ChangeAgentStateAction, AgentStateChangedObservation)
+    expected_filtered_types = {
+        NullAction,
+        NullObservation,
+        ChangeAgentStateAction,
+        AgentStateChangedObservation,
+    }
     assert isinstance(filter_used, EventFilter)
     assert filter_used.exclude_hidden is True
-    assert set(filter_used.exclude_types) == set(expected_filtered_types)
+    assert set(filter_used.exclude_types or ()) == expected_filtered_types

@@ -14,8 +14,16 @@ async def test_anthropic_default_model_is_best_verified(
     mock_print, mock_confirm, mock_session, mock_organize, mock_get_models
 ):
     """Test that the default model for anthropic is the best verified model."""
-    mock_get_models.return_value = ["anthropic/claude-sonnet-4-20250514", "anthropic/claude-2"]
-    mock_organize.return_value = {"anthropic": {"models": ["claude-sonnet-4-20250514", "claude-2"], "separator": "/"}}
+    mock_get_models.return_value = [
+        "anthropic/claude-sonnet-4-20250514",
+        "anthropic/claude-2",
+    ]
+    mock_organize.return_value = {
+        "anthropic": {
+            "models": ["claude-sonnet-4-20250514", "claude-2"],
+            "separator": "/",
+        }
+    }
     session_instance = MagicMock()
     session_instance.prompt_async = AsyncMock(side_effect=KeyboardInterrupt())
     mock_session.return_value = session_instance
@@ -36,8 +44,13 @@ async def test_anthropic_default_model_is_best_verified(
         if (
             args
             and hasattr(args[0], "value")
-            and (f"Default model: </grey><green>{best_verified_model}</green>" in args[0].value)
+            and (
+                f"Default model: </grey><green>{best_verified_model}</green>"
+                in args[0].value
+            )
         ):
             default_model_displayed = True
             break
-    assert default_model_displayed, f"Default model displayed was not {best_verified_model}"
+    assert default_model_displayed, (
+        f"Default model displayed was not {best_verified_model}"
+    )

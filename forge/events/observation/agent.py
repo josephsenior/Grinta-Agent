@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 
-from forge.core.schema import ObservationType
+from forge.core.schemas import ObservationType
 from forge.events.event import RecallType
 from forge.events.observation.observation import Observation
 
@@ -118,7 +118,30 @@ class RecallObservation(Observation):
         else:
             fields.extend([f"recall_type={self.recall_type}"])
         if self.microagent_knowledge:
-            fields.extend([f"microagent_knowledge={', '.join([m.name for m in self.microagent_knowledge])}"])
+            fields.extend(
+                [
+                    f"microagent_knowledge={', '.join([m.name for m in self.microagent_knowledge])}"
+                ]
+            )
         return f"**RecallObservation**\n{', '.join(fields)}"
+
+    __test__ = False
+
+
+@dataclass
+class RecallFailureObservation(Observation):
+    """Represents a failure to complete a recall request (workspace or knowledge).
+
+    Provides structured fields to help downstream components distinguish recall failures
+    from generic errors and clear pending recall actions without altering iteration semantics.
+    """
+
+    recall_type: RecallType | None = None
+    error_message: str = ""
+    observation: str = ObservationType.RECALL_FAILURE
+
+    @property
+    def message(self) -> str:
+        return self.error_message or self.content
 
     __test__ = False

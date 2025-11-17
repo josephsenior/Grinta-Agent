@@ -52,7 +52,7 @@ def load_completions(instance_id: str):
         file_path = files[-1]
     except IndexError:
         return None
-    with open(file_path, "r", encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         result = json.load(f)
     messages = result["messages"]
     messages.append(result["response"]["choices"][0]["message"])
@@ -86,7 +86,9 @@ def convert_tool_call_to_string(tool_call: dict) -> str:
     try:
         args = json.loads(tool_call["function"]["arguments"])
     except json.JSONDecodeError as e:
-        raise ValueError(f"Failed to parse arguments as JSON. Arguments: {tool_call['function']['arguments']}") from e
+        raise ValueError(
+            f"Failed to parse arguments as JSON. Arguments: {tool_call['function']['arguments']}"
+        ) from e
     for param_name, param_value in args.items():
         is_multiline = isinstance(param_value, str) and "\n" in param_value
         ret += f"<parameter={param_name}>"
@@ -100,7 +102,9 @@ def convert_tool_call_to_string(tool_call: dict) -> str:
     return ret
 
 
-def _should_skip_message(i: int, n_turns: int, first_n_turns: int | None, last_n_turns: int | None) -> bool:
+def _should_skip_message(
+    i: int, n_turns: int, first_n_turns: int | None, last_n_turns: int | None
+) -> bool:
     """Determine if a message should be skipped based on turn limits."""
     return (
         _should_skip_first_n_turns(i, first_n_turns, last_n_turns)
@@ -109,19 +113,34 @@ def _should_skip_message(i: int, n_turns: int, first_n_turns: int | None, last_n
     )
 
 
-def _should_skip_first_n_turns(i: int, first_n_turns: int | None, last_n_turns: int | None) -> bool:
+def _should_skip_first_n_turns(
+    i: int, first_n_turns: int | None, last_n_turns: int | None
+) -> bool:
     """Check if message should be skipped due to first N turns limit."""
     return first_n_turns is not None and i >= first_n_turns and last_n_turns is None
 
 
-def _should_skip_last_n_turns(i: int, n_turns: int, first_n_turns: int | None, last_n_turns: int | None) -> bool:
+def _should_skip_last_n_turns(
+    i: int, n_turns: int, first_n_turns: int | None, last_n_turns: int | None
+) -> bool:
     """Check if message should be skipped due to last N turns limit."""
-    return last_n_turns is not None and i < n_turns - last_n_turns and first_n_turns is None
+    return (
+        last_n_turns is not None
+        and i < n_turns - last_n_turns
+        and first_n_turns is None
+    )
 
 
-def _should_skip_middle_turns(i: int, n_turns: int, first_n_turns: int | None, last_n_turns: int | None) -> bool:
+def _should_skip_middle_turns(
+    i: int, n_turns: int, first_n_turns: int | None, last_n_turns: int | None
+) -> bool:
     """Check if message should be skipped due to middle turns (both limits set)."""
-    return first_n_turns is not None and last_n_turns is not None and i >= first_n_turns and i < n_turns - last_n_turns
+    return (
+        first_n_turns is not None
+        and last_n_turns is not None
+        and i >= first_n_turns
+        and i < n_turns - last_n_turns
+    )
 
 
 def _process_system_message(traj: list) -> tuple[str, list]:
@@ -136,7 +155,9 @@ def _process_system_message(traj: list) -> tuple[str, list]:
     return output, traj
 
 
-def _merge_consecutive_user_messages(traj: list, first_n_turns: int | None, last_n_turns: int | None) -> list:
+def _merge_consecutive_user_messages(
+    traj: list, first_n_turns: int | None, last_n_turns: int | None
+) -> list:
     """Merge consecutive user messages into single messages."""
     merged_traj = []
     current_messages = []
@@ -150,14 +171,18 @@ def _merge_consecutive_user_messages(traj: list, first_n_turns: int | None, last
             current_messages.append(message)
         else:
             if current_messages:
-                merged_content = "\n".join((_convert_content(msg["content"]) for msg in current_messages))
+                merged_content = "\n".join(
+                    (_convert_content(msg["content"]) for msg in current_messages)
+                )
                 merged_traj.append({"role": "user", "content": merged_content})
                 current_messages = []
             merged_traj.append(message)
 
     # Handle any remaining user messages
     if current_messages:
-        merged_content = "\n".join((_convert_content(msg["content"]) for msg in current_messages))
+        merged_content = "\n".join(
+            (_convert_content(msg["content"]) for msg in current_messages)
+        )
         merged_traj.append({"role": "user", "content": merged_content})
 
     return merged_traj
@@ -172,7 +197,11 @@ def _format_turn_header(turn_id: int, role: str) -> str:
 def _format_tool_calls(message: dict) -> str:
     """Format tool calls for assistant messages."""
     output = ""
-    if "tool_calls" in message and message["tool_calls"] is not None and len(message["tool_calls"]) > 0:
+    if (
+        "tool_calls" in message
+        and message["tool_calls"] is not None
+        and len(message["tool_calls"]) > 0
+    ):
         for toolcall_id, tool_call in enumerate(message["tool_calls"]):
             output += f"### Tool Call {toolcall_id}\n"
             output += f"{convert_tool_call_to_string(tool_call)}\n"
@@ -222,7 +251,9 @@ def write_row_to_md_file(row, instance_id_to_test_result):
     if model_patch is None:
         return
 
-    resolved, test_output = _determine_resolution_status(row, instance_id_to_test_result)
+    resolved, test_output = _determine_resolution_status(
+        row, instance_id_to_test_result
+    )
     instance_id = row["instance_id"]
     filepath = _prepare_output_file(instance_id, resolved)
 
@@ -230,7 +261,16 @@ def write_row_to_md_file(row, instance_id_to_test_result):
     report = _load_report_file(instance_id)
     test_output = _load_test_output_if_needed(test_output, instance_id)
 
-    _write_markdown_content(filepath, instance_id, resolved, row, completions, model_patch, report, test_output)
+    _write_markdown_content(
+        filepath,
+        instance_id,
+        resolved,
+        row,
+        completions,
+        model_patch,
+        report,
+        test_output,
+    )
 
 
 def _extract_model_patch(row):
@@ -250,14 +290,18 @@ def _determine_resolution_status(row, instance_id_to_test_result):
 
     if "report" in row and row["report"] is not None:
         if not isinstance(row["report"], dict):
-            print(f"ERROR: Report is not a dict, but a {type(row['report'])}. Row: {row}")
+            print(
+                f"ERROR: Report is not a dict, but a {type(row['report'])}. Row: {row}"
+            )
             return None, None
         else:
             resolved = row["report"].get("resolved", False)
     elif row["instance_id"] in instance_id_to_test_result:
         report = instance_id_to_test_result[row["instance_id"]].get("report", {})
         resolved = report.get("resolved", False)
-        test_output = instance_id_to_test_result[row["instance_id"]].get("test_output", None)
+        test_output = instance_id_to_test_result[row["instance_id"]].get(
+            "test_output", None
+        )
     else:
         resolved = None
 
@@ -276,7 +320,7 @@ def _load_report_file(instance_id):
     global output_dir
     report_file = os.path.join(output_dir, "eval_outputs", instance_id, "report.json")
     if os.path.exists(report_file):
-        with open(report_file, "r", encoding='utf-8') as f:
+        with open(report_file, "r", encoding="utf-8") as f:
             return json.load(f)
     return None
 
@@ -285,16 +329,20 @@ def _load_test_output_if_needed(test_output, instance_id):
     """Load test output if not already available."""
     if test_output is None:
         global output_dir
-        test_output_file = os.path.join(output_dir, "eval_outputs", instance_id, "test_output.txt")
+        test_output_file = os.path.join(
+            output_dir, "eval_outputs", instance_id, "test_output.txt"
+        )
         if os.path.exists(test_output_file):
-            with open(test_output_file, "r", encoding='utf-8') as f:
+            with open(test_output_file, "r", encoding="utf-8") as f:
                 return f.read()
     return test_output
 
 
-def _write_markdown_content(filepath, instance_id, resolved, row, completions, model_patch, report, test_output):
+def _write_markdown_content(
+    filepath, instance_id, resolved, row, completions, model_patch, report, test_output
+):
     """Write markdown content to file."""
-    with open(filepath, "w", encoding='utf-8') as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         f.write(f"# {instance_id} (resolved: {resolved})\n")
         f.write("## MetaData\n")
         f.write("```json\n")
@@ -324,6 +372,10 @@ def _write_markdown_content(filepath, instance_id, resolved, row, completions, m
 instance_id_to_test_result = {}
 if eval_output_df is not None:
     instance_id_to_test_result = (
-        eval_output_df[["instance_id", "test_result"]].set_index("instance_id")["test_result"].to_dict()
+        eval_output_df[["instance_id", "test_result"]]
+        .set_index("instance_id")["test_result"]
+        .to_dict()
     )
-oh_format.progress_apply(write_row_to_md_file, axis=1, instance_id_to_test_result=instance_id_to_test_result)
+oh_format.progress_apply(
+    write_row_to_md_file, axis=1, instance_id_to_test_result=instance_id_to_test_result
+)

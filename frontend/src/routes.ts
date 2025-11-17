@@ -8,6 +8,15 @@ import {
 export default [
   layout("routes/root-layout.tsx", [
     index("routes/home.tsx"),
+    // Auth routes (public, no auth required)
+    route("auth/login", "routes/auth/login.tsx"),
+    route("auth/register", "routes/auth/register.tsx"),
+    route("auth/forgot-password", "routes/auth/forgot-password.tsx"),
+    route("auth/reset-password", "routes/auth/reset-password.tsx"),
+    route("dashboard", "routes/dashboard.tsx"),
+    route("profile", "routes/profile.tsx"), // Profile page
+    route("help", "routes/help.tsx"),
+    route("notifications", "routes/notifications.tsx"),
     route("accept-tos", "routes/accept-tos.tsx"),
     route("about", "routes/about.tsx"),
     route("pricing", "routes/pricing.tsx"),
@@ -20,6 +29,7 @@ export default [
       route("user", "routes/user-settings.tsx"),
       route("integrations", "routes/git-settings.tsx"),
       route("databases", "routes/database-settings.tsx"),
+      route("knowledge-base", "routes/settings.knowledge-base.tsx"),
       route("memory", "routes/memory-settings.tsx"),
       route("analytics", "routes/analytics-settings.tsx"),
       route("prompts", "routes/prompts-settings.tsx"),
@@ -43,5 +53,9 @@ export default [
       route("vscode", "routes/vscode-tab.tsx"),
     ]),
     route("microagent-management", "routes/microagent-management.tsx"),
+    // Admin routes (requires admin role)
+    route("admin/users", "routes/admin/users.tsx"),
+    route("admin/users/:userId", "routes/admin/users/[userId].tsx"),
+    route("*", "routes/404.tsx"), // Catch-all 404 route
   ]),
 ] satisfies RouteConfig;

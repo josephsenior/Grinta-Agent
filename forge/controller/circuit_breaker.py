@@ -168,7 +168,9 @@ class CircuitBreaker:
 
         # Keep only recent window
         if len(self.recent_actions_success) > self.config.error_rate_window * 2:
-            self.recent_actions_success = self.recent_actions_success[-self.config.error_rate_window * 2:]
+            self.recent_actions_success = self.recent_actions_success[
+                -self.config.error_rate_window * 2 :
+            ]
 
     def record_success(self) -> None:
         """Record a successful action."""
@@ -177,7 +179,9 @@ class CircuitBreaker:
 
         # Keep only recent window
         if len(self.recent_actions_success) > self.config.error_rate_window * 2:
-            self.recent_actions_success = self.recent_actions_success[-self.config.error_rate_window * 2:]
+            self.recent_actions_success = self.recent_actions_success[
+                -self.config.error_rate_window * 2 :
+            ]
 
     def record_high_risk_action(self, risk_level: ActionSecurityRisk) -> None:
         """Record a high-risk action.
@@ -213,7 +217,9 @@ class CircuitBreaker:
         # Look at recent history to update metrics
         recent_history = state.history[-20:]
 
-        error_count = sum(1 for event in recent_history if isinstance(event, ErrorObservation))
+        error_count = sum(
+            1 for event in recent_history if isinstance(event, ErrorObservation)
+        )
 
         # Update error tracking
         if error_count > len(self.recent_errors):
@@ -230,7 +236,7 @@ class CircuitBreaker:
         if not self.recent_actions_success:
             return 0.0
 
-        recent_window = self.recent_actions_success[-self.config.error_rate_window:]
+        recent_window = self.recent_actions_success[-self.config.error_rate_window :]
         errors = sum(1 for success in recent_window if not success)
 
         return errors / len(recent_window) if recent_window else 0.0

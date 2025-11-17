@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Generic, NoReturn, TypeVar
+from typing import Generic, TypeVar
 
 T = TypeVar("T", int, float)
 
@@ -31,7 +31,7 @@ class ControlFlag(Generic[T]):
         """Expand the limit when needed."""
         raise NotImplementedError
 
-    def step(self) -> NoReturn:
+    def step(self) -> None:
         """Determine the next state based on the current state and mode.
 
         Returns:
@@ -58,15 +58,15 @@ class IterationControlFlag(ControlFlag[int]):
 
     def step(self) -> None:
         """Increment iteration counter.
-        
+
         Raises:
             RuntimeError: If iteration limit reached
 
         """
         if self.reached_limit():
             msg = f"Agent reached maximum iteration. Current iteration: {
-                self.current_value}, max iteration: {
-                self.max_value}"
+                self.current_value
+            }, max iteration: {self.max_value}"
             raise RuntimeError(
                 msg,
             )
@@ -82,7 +82,7 @@ class BudgetControlFlag(ControlFlag[float]):
         self._hit_limit = self.current_value >= self.max_value
         return self._hit_limit
 
-    def increase_limit(self, headless_mode) -> None:
+    def increase_limit(self, headless_mode: bool) -> None:
         """Expand the budget limit by adding the initial value to the current value."""
         if self._hit_limit:
             self.max_value = self.current_value + self.limit_increase_amount

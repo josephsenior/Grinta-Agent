@@ -5,7 +5,6 @@ from forge.metasop.orchestrator import MetaSOPOrchestrator
 
 
 class DummyConfig:
-
     class extended:
         metasop = {"enabled": False}
 
@@ -20,7 +19,13 @@ def orch():
 
 
 def make_step(cond: str | None):
-    return SopStep(id="s", role="Engineer", task="t", outputs=StepOutputSpec(schema="engineer.schema.json"), condition=cond)
+    return SopStep(
+        id="s",
+        role="Engineer",
+        task="t",
+        outputs=StepOutputSpec(schema="engineer.schema.json"),
+        condition=cond,
+    )
 
 
 def test_condition_true_simple(orch):

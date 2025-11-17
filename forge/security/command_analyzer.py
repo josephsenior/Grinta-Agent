@@ -165,7 +165,7 @@ class CommandAnalyzer:
                 matched_patterns=[],
             )
 
-        matched_patterns = []
+        matched_patterns: list[str] = []
 
         # Check critical patterns (Layer 1)
         if assessment := self._check_critical_patterns(command, matched_patterns):
@@ -186,7 +186,9 @@ class CommandAnalyzer:
         # Check medium-risk patterns (Layer 5)
         return self._check_medium_low_risk_patterns(command, matched_patterns)
 
-    def _check_critical_patterns(self, command: str, matched_patterns: list[str]) -> CommandRiskAssessment | None:
+    def _check_critical_patterns(
+        self, command: str, matched_patterns: list[str]
+    ) -> CommandRiskAssessment | None:
         """Check for critical security patterns.
 
         Args:
@@ -210,7 +212,9 @@ class CommandAnalyzer:
                 )
         return None
 
-    def _check_encoding_patterns(self, command: str, matched_patterns: list[str]) -> CommandRiskAssessment | None:
+    def _check_encoding_patterns(
+        self, command: str, matched_patterns: list[str]
+    ) -> CommandRiskAssessment | None:
         """Check for encoded/obfuscated commands.
 
         Args:
@@ -233,7 +237,9 @@ class CommandAnalyzer:
             )
         return None
 
-    def _check_network_shell_patterns(self, command: str, matched_patterns: list[str]) -> CommandRiskAssessment | None:
+    def _check_network_shell_patterns(
+        self, command: str, matched_patterns: list[str]
+    ) -> CommandRiskAssessment | None:
         """Check for network shell execution patterns.
 
         Args:
@@ -247,7 +253,9 @@ class CommandAnalyzer:
         for pattern in self.NETWORK_SHELL_PATTERNS:
             if re.search(pattern, command, re.IGNORECASE):
                 matched_patterns.append(pattern)
-                logger.warning(f"HIGH RISK network shell command detected: {command[:100]}")
+                logger.warning(
+                    f"HIGH RISK network shell command detected: {command[:100]}"
+                )
                 return CommandRiskAssessment(
                     risk_level=ActionSecurityRisk.HIGH,
                     risk_category=RiskCategory.HIGH,
@@ -257,7 +265,9 @@ class CommandAnalyzer:
                 )
         return None
 
-    def _check_high_risk_patterns(self, command: str, matched_patterns: list[str]) -> CommandRiskAssessment | None:
+    def _check_high_risk_patterns(
+        self, command: str, matched_patterns: list[str]
+    ) -> CommandRiskAssessment | None:
         """Check for high-risk patterns.
 
         Args:
@@ -281,7 +291,9 @@ class CommandAnalyzer:
                 )
         return None
 
-    def _check_medium_low_risk_patterns(self, command: str, matched_patterns: list[str]) -> CommandRiskAssessment:
+    def _check_medium_low_risk_patterns(
+        self, command: str, matched_patterns: list[str]
+    ) -> CommandRiskAssessment:
         """Check for medium and low-risk patterns.
 
         Args:
@@ -322,7 +334,9 @@ class CommandAnalyzer:
             matched_patterns=[],
         )
 
-    def _check_custom_blocked(self, command: str, matched_patterns: list[str]) -> CommandRiskAssessment | None:
+    def _check_custom_blocked(
+        self, command: str, matched_patterns: list[str]
+    ) -> CommandRiskAssessment | None:
         """Check for custom blocked patterns.
 
         Args:
@@ -412,7 +426,10 @@ class CommandAnalyzer:
                 try:
                     decoded = base64.b64decode(encoded, validate=True)
                     # If it decodes and contains shell metacharacters, it's suspicious
-                    if any(char in decoded.decode("utf-8", errors="ignore") for char in ["|", "&", ";", "$", "`"]):
+                    if any(
+                        char in decoded.decode("utf-8", errors="ignore")
+                        for char in ["|", "&", ";", "$", "`"]
+                    ):
                         logger.warning("Suspicious base64 string detected in command")
                         return True
                 except Exception:

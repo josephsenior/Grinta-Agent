@@ -7,7 +7,7 @@ from forge.controller.state.state import State
 from forge.core.config import ForgeConfig
 from forge.core.config.config_utils import OH_DEFAULT_AGENT
 from forge.core.main import run_controller
-from forge.core.schema.agent import AgentState
+from forge.core.schemas import AgentState
 from forge.events.action.empty import NullAction
 from forge.events.action.message import MessageAction
 from forge.events.event import EventSource
@@ -20,7 +20,9 @@ def _get_config(trajectory_name: str, agent: str = OH_DEFAULT_AGENT):
         run_as_Forge=False,
         workspace_base=None,
         workspace_mount_path=None,
-        replay_trajectory_path=str((Path(__file__).parent / "trajs" / f"{trajectory_name}.json").resolve()),
+        replay_trajectory_path=str(
+            (Path(__file__).parent / "trajs" / f"{trajectory_name}.json").resolve()
+        ),
     )
 
 
@@ -30,9 +32,13 @@ def test_simple_replay(temp_dir, runtime_cls, run_as_Forge):
     (creating a simple 2048 game), using the default agent.
     """
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
-    config.replay_trajectory_path = str((Path(__file__).parent / "trajs" / "basic.json").resolve())
+    config.replay_trajectory_path = str(
+        (Path(__file__).parent / "trajs" / "basic.json").resolve()
+    )
     config.security.confirmation_mode = False
-    state: State | None = asyncio.run(run_controller(config=config, initial_user_action=NullAction(), runtime=runtime))
+    state: State | None = asyncio.run(
+        run_controller(config=config, initial_user_action=NullAction(), runtime=runtime)
+    )
     assert state.agent_state == AgentState.FINISHED
     _close_test_runtime(runtime)
 
@@ -52,7 +58,12 @@ def test_simple_gui_replay(temp_dir, runtime_cls, run_as_Forge):
     config = _get_config("basic_gui_mode")
     config.security.confirmation_mode = False
     state: State | None = asyncio.run(
-        run_controller(config=config, initial_user_action=NullAction(), runtime=runtime, exit_on_message=True)
+        run_controller(
+            config=config,
+            initial_user_action=NullAction(),
+            runtime=runtime,
+            exit_on_message=True,
+        )
     )
     assert state.agent_state == AgentState.FINISHED
     _close_test_runtime(runtime)
@@ -68,12 +79,19 @@ def test_replay_wrong_initial_state(temp_dir, runtime_cls, run_as_Forge):
     meaningless.
     """
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
-    config.replay_trajectory_path = str((Path(__file__).parent / "trajs" / "wrong_initial_state.json").resolve())
+    config.replay_trajectory_path = str(
+        (Path(__file__).parent / "trajs" / "wrong_initial_state.json").resolve()
+    )
     config.security.confirmation_mode = False
-    state: State | None = asyncio.run(run_controller(config=config, initial_user_action=NullAction(), runtime=runtime))
+    state: State | None = asyncio.run(
+        run_controller(config=config, initial_user_action=NullAction(), runtime=runtime)
+    )
     assert state.agent_state == AgentState.FINISHED
     has_error_in_action = any(
-        (isinstance(event, CmdOutputObservation) and event.exit_code != 0 for event in state.history)
+        (
+            isinstance(event, CmdOutputObservation) and event.exit_code != 0
+            for event in state.history
+        )
     )
     assert has_error_in_action
     _close_test_runtime(runtime)
@@ -90,9 +108,15 @@ def test_replay_basic_interactions(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     config = _get_config("basic_interactions")
     config.security.confirmation_mode = False
-    state: State | None = asyncio.run(run_controller(config=config, initial_user_action=NullAction(), runtime=runtime))
+    state: State | None = asyncio.run(
+        run_controller(config=config, initial_user_action=NullAction(), runtime=runtime)
+    )
     assert state.agent_state == AgentState.FINISHED
-    user_messages = ["what's 1+1?", "No, I mean by Goldbach's conjecture!", "Finish please"]
+    user_messages = [
+        "what's 1+1?",
+        "No, I mean by Goldbach's conjecture!",
+        "Finish please",
+    ]
     i = 0
     for event in state.history:
         if isinstance(event, MessageAction) and event._source == EventSource.USER:

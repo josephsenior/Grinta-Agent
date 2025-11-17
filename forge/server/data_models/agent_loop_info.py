@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from forge.core.schema.agent import AgentState
+from forge.core.schemas import AgentState
 from forge.storage.data_models.conversation_status import ConversationStatus
 
 if TYPE_CHECKING:

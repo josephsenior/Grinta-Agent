@@ -66,7 +66,11 @@ if "sklearn" not in sys.modules:
     sys.modules["sklearn.model_selection"] = model_selection_module
     sys.modules["sklearn.metrics"] = metrics_module
 
-from forge.prompt_optimization.models import PromptCategory, PromptMetrics, PromptVariant
+from forge.prompt_optimization.models import (
+    PromptCategory,
+    PromptMetrics,
+    PromptVariant,
+)
 from forge.prompt_optimization.realtime.hot_swapper import (
     HotSwapper,
     SwapResult,
@@ -156,11 +160,17 @@ class _StubLiveOptimizer:
 
 
 @pytest.mark.asyncio
-async def test_hot_swapper_atomic_and_blue_green(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_hot_swapper_atomic_and_blue_green(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     registry = _StubRegistry()
     prompt_id = "prompt-123"
-    from_variant = PromptVariant(prompt_id=prompt_id, content="from", category=PromptCategory.CUSTOM)
-    to_variant = PromptVariant(prompt_id=prompt_id, content="to", category=PromptCategory.CUSTOM)
+    from_variant = PromptVariant(
+        prompt_id=prompt_id, content="from", category=PromptCategory.CUSTOM
+    )
+    to_variant = PromptVariant(
+        prompt_id=prompt_id, content="to", category=PromptCategory.CUSTOM
+    )
     registry.add_variant(prompt_id, from_variant)
     registry.add_variant(prompt_id, to_variant)
     registry.set_active_variant(prompt_id, from_variant.id)
@@ -204,8 +214,12 @@ async def test_hot_swapper_atomic_and_blue_green(monkeypatch: pytest.MonkeyPatch
 async def test_hot_swapper_cancel_and_rollback(monkeypatch: pytest.MonkeyPatch) -> None:
     registry = _StubRegistry()
     prompt_id = "prompt-cancel"
-    variant_a = PromptVariant(prompt_id=prompt_id, content="A", category=PromptCategory.CUSTOM)
-    variant_b = PromptVariant(prompt_id=prompt_id, content="B", category=PromptCategory.CUSTOM)
+    variant_a = PromptVariant(
+        prompt_id=prompt_id, content="A", category=PromptCategory.CUSTOM
+    )
+    variant_b = PromptVariant(
+        prompt_id=prompt_id, content="B", category=PromptCategory.CUSTOM
+    )
     registry.add_variant(prompt_id, variant_a)
     registry.add_variant(prompt_id, variant_b)
     registry.set_active_variant(prompt_id, variant_a.id)
@@ -216,15 +230,21 @@ async def test_hot_swapper_cancel_and_rollback(monkeypatch: pytest.MonkeyPatch) 
     # Patch internal swap methods to pause so we can cancel mid-operation
     async def slow_atomic_swap(operation):
         await asyncio.sleep(0)  # allow cancellation path
-        return SwapResult(operation_id=operation.operation_id, success=True, execution_time=0.0)
+        return SwapResult(
+            operation_id=operation.operation_id, success=True, execution_time=0.0
+        )
 
     monkeypatch.setattr(swapper, "_atomic_swap", slow_atomic_swap)
 
     # Start swap but cancel immediately
     async def run_swap():
-        return await swapper.hot_swap(prompt_id, variant_a.id, variant_b.id, SwapStrategy.ATOMIC)
+        return await swapper.hot_swap(
+            prompt_id, variant_a.id, variant_b.id, SwapStrategy.ATOMIC
+        )
 
-    result = await swapper.hot_swap(prompt_id, variant_a.id, variant_b.id, SwapStrategy.ATOMIC)
+    result = await swapper.hot_swap(
+        prompt_id, variant_a.id, variant_b.id, SwapStrategy.ATOMIC
+    )
     assert result.success is True
     status = swapper.get_swap_status()
     assert status["successful_swaps"] >= 1
@@ -234,8 +254,12 @@ async def test_hot_swapper_cancel_and_rollback(monkeypatch: pytest.MonkeyPatch) 
 async def test_hot_swapper_internal_helpers() -> None:
     registry = _StubRegistry()
     prompt_id = "prompt-internal"
-    variant_a = PromptVariant(prompt_id=prompt_id, content="A", category=PromptCategory.CUSTOM)
-    variant_b = PromptVariant(prompt_id=prompt_id, content="B", category=PromptCategory.CUSTOM)
+    variant_a = PromptVariant(
+        prompt_id=prompt_id, content="A", category=PromptCategory.CUSTOM
+    )
+    variant_b = PromptVariant(
+        prompt_id=prompt_id, content="B", category=PromptCategory.CUSTOM
+    )
     registry.add_variant(prompt_id, variant_a)
     registry.add_variant(prompt_id, variant_b)
     registry.set_active_variant(prompt_id, variant_a.id)
@@ -245,7 +269,9 @@ async def test_hot_swapper_internal_helpers() -> None:
     assert failure.success is False
 
     # Cannot perform swap when variants missing
-    operation_id, operation = swapper._create_swap_operation(prompt_id, variant_a.id, variant_b.id, SwapStrategy.ATOMIC, {})
+    operation_id, operation = swapper._create_swap_operation(
+        prompt_id, variant_a.id, variant_b.id, SwapStrategy.ATOMIC, {}
+    )
     registry.variants[prompt_id].pop(variant_b.id)
     assert await swapper._can_perform_swap(operation) is False
     registry.variants[prompt_id][variant_b.id] = variant_b
@@ -265,7 +291,9 @@ async def test_hot_swapper_internal_helpers() -> None:
     swapper.add_health_checker(prompt_id, healthy_check)
 
     # Cover alternate swap strategies
-    op_blue_id, op_blue = swapper._create_swap_operation(prompt_id, variant_a.id, variant_b.id, SwapStrategy.BLUE_GREEN, {})
+    op_blue_id, op_blue = swapper._create_swap_operation(
+        prompt_id, variant_a.id, variant_b.id, SwapStrategy.BLUE_GREEN, {}
+    )
     swapper.rollback_data[op_blue_id] = {
         "prompt_id": prompt_id,
         "from_variant_id": variant_a.id,
@@ -275,7 +303,9 @@ async def test_hot_swapper_internal_helpers() -> None:
     result_blue = await swapper._blue_green_swap(op_blue)
     assert result_blue.success
 
-    op_roll_id, op_roll = swapper._create_swap_operation(prompt_id, variant_b.id, variant_a.id, SwapStrategy.ROLLING, {})
+    op_roll_id, op_roll = swapper._create_swap_operation(
+        prompt_id, variant_b.id, variant_a.id, SwapStrategy.ROLLING, {}
+    )
     swapper.rollback_data[op_roll_id] = {
         "prompt_id": prompt_id,
         "from_variant_id": variant_b.id,
@@ -285,7 +315,9 @@ async def test_hot_swapper_internal_helpers() -> None:
     result_roll = await swapper._rolling_swap(op_roll)
     assert result_roll.success
 
-    op_canary_id, op_canary = swapper._create_swap_operation(prompt_id, variant_a.id, variant_b.id, SwapStrategy.CANARY, {})
+    op_canary_id, op_canary = swapper._create_swap_operation(
+        prompt_id, variant_a.id, variant_b.id, SwapStrategy.CANARY, {}
+    )
     swapper.rollback_data[op_canary_id] = {
         "prompt_id": prompt_id,
         "from_variant_id": variant_a.id,
@@ -296,7 +328,9 @@ async def test_hot_swapper_internal_helpers() -> None:
     assert result_canary.success
 
     # Rollback data usage
-    op_id, operation = swapper._create_swap_operation(prompt_id, variant_a.id, variant_b.id, SwapStrategy.ATOMIC, None)
+    op_id, operation = swapper._create_swap_operation(
+        prompt_id, variant_a.id, variant_b.id, SwapStrategy.ATOMIC, None
+    )
     swapper.rollback_data[op_id] = {
         "prompt_id": prompt_id,
         "from_variant_id": variant_a.id,
@@ -307,7 +341,9 @@ async def test_hot_swapper_internal_helpers() -> None:
     swapper.clear_rollback_data(op_id)
 
     # Cancel operation path
-    cancel_id, cancel_operation = swapper._create_swap_operation(prompt_id, variant_a.id, variant_b.id, SwapStrategy.ATOMIC, {})
+    cancel_id, cancel_operation = swapper._create_swap_operation(
+        prompt_id, variant_a.id, variant_b.id, SwapStrategy.ATOMIC, {}
+    )
     swapper.active_operations[cancel_id] = cancel_operation
     swapper.rollback_data[cancel_id] = {
         "prompt_id": prompt_id,
@@ -320,8 +356,22 @@ async def test_hot_swapper_internal_helpers() -> None:
 
     # Store swap results beyond history size
     swapper.max_history_size = 1
-    swapper._store_swap_result(SwapResult(operation_id="1", success=True, execution_time=0.1, metadata={"prompt_id": prompt_id}))
-    swapper._store_swap_result(SwapResult(operation_id="2", success=False, execution_time=0.2, metadata={"prompt_id": prompt_id}))
+    swapper._store_swap_result(
+        SwapResult(
+            operation_id="1",
+            success=True,
+            execution_time=0.1,
+            metadata={"prompt_id": prompt_id},
+        )
+    )
+    swapper._store_swap_result(
+        SwapResult(
+            operation_id="2",
+            success=False,
+            execution_time=0.2,
+            metadata={"prompt_id": prompt_id},
+        )
+    )
     assert swapper.get_swap_history(prompt_id=prompt_id)
 
 
@@ -351,7 +401,9 @@ async def test_hot_swapper_error_paths() -> None:
     registry = _FailRegistry(variants)
     swapper = HotSwapper(registry, max_concurrent_swaps=0)
 
-    op_id, operation = swapper._create_swap_operation("prompt", variants[0].id, variants[1].id, SwapStrategy.ATOMIC, {})
+    op_id, operation = swapper._create_swap_operation(
+        "prompt", variants[0].id, variants[1].id, SwapStrategy.ATOMIC, {}
+    )
     assert await swapper._can_perform_swap(operation) is False
 
     swapper.max_concurrent_swaps = 1
@@ -359,9 +411,12 @@ async def test_hot_swapper_error_paths() -> None:
     assert await swapper._can_perform_swap(operation) is False
     swapper.active_operations.clear()
 
-    result = await swapper.hot_swap("prompt", variants[0].id, variants[1].id, SwapStrategy.ATOMIC)
+    result = await swapper.hot_swap(
+        "prompt", variants[0].id, variants[1].id, SwapStrategy.ATOMIC
+    )
     assert result.success is False
     assert "set_active_variant_failed" in result.error_message
+
 
 @pytest.mark.asyncio
 async def test_live_optimizer_internal_helpers(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -369,12 +424,16 @@ async def test_live_optimizer_internal_helpers(monkeypatch: pytest.MonkeyPatch) 
         def __init__(self):
             self.strategies = {
                 "balanced_multi": types.SimpleNamespace(
-                    select_variant_for_exploitation=lambda variants, metrics: variants[-1]
+                    select_variant_for_exploitation=lambda variants, metrics: variants[
+                        -1
+                    ]
                 )
             }
 
         def select_strategy(self, context: Dict[str, Any]):
-            return types.SimpleNamespace(selected_strategy="balanced_multi", confidence=0.9)
+            return types.SimpleNamespace(
+                selected_strategy="balanced_multi", confidence=0.9
+            )
 
     class _StubTracker:
         def __init__(self, metrics: Dict[str, PromptMetrics]):
@@ -409,6 +468,9 @@ async def test_live_optimizer_internal_helpers(monkeypatch: pytest.MonkeyPatch) 
         def get_all_variants(self, prompt_id: str):
             return self.variants
 
+        def get_variants_for_prompt(self, prompt_id: str):
+            return self.variants
+
     async def _stub_hot_swap(prompt_id: str, from_id: str, to_id: str):
         return True
 
@@ -418,15 +480,32 @@ async def test_live_optimizer_internal_helpers(monkeypatch: pytest.MonkeyPatch) 
     ]
 
     metrics_map = {
-        variants[0].id: PromptMetrics(success_rate=0.5, avg_execution_time=2.0, error_rate=0.1, avg_token_cost=5.0, sample_count=20),
-        variants[1].id: PromptMetrics(success_rate=0.8, avg_execution_time=1.0, error_rate=0.05, avg_token_cost=3.0, sample_count=30),
+        variants[0].id: PromptMetrics(
+            success_rate=0.5,
+            avg_execution_time=2.0,
+            error_rate=0.1,
+            avg_token_cost=5.0,
+            sample_count=20,
+        ),
+        variants[1].id: PromptMetrics(
+            success_rate=0.8,
+            avg_execution_time=1.0,
+            error_rate=0.05,
+            avg_token_cost=3.0,
+            sample_count=30,
+        ),
     }
 
     registry = _StubRegistry("prompt", variants)
     tracker = _StubTracker(metrics_map)
     base_optimizer = types.SimpleNamespace(registry=registry, tracker=tracker)
 
-    optimizer = LiveOptimizer(_StubStrategyManager(), base_optimizer, optimization_threshold=0.0, confidence_threshold=0.2)
+    optimizer = LiveOptimizer(
+        _StubStrategyManager(),
+        base_optimizer,
+        optimization_threshold=0.0,
+        confidence_threshold=0.2,
+    )
     optimizer.hot_swapper = types.SimpleNamespace(hot_swap=_stub_hot_swap)
     optimizer.performance_predictor = types.SimpleNamespace()
 
@@ -446,11 +525,16 @@ async def test_live_optimizer_internal_helpers(monkeypatch: pytest.MonkeyPatch) 
     assert result.metadata.get("strategy_used") == "balanced_multi"
 
     # Confidence calculation
-    confidence = optimizer._calculate_confidence(metrics_map, variants[0].id, variants[1].id)
+    confidence = optimizer._calculate_confidence(
+        metrics_map, variants[0].id, variants[1].id
+    )
     assert confidence > 0
 
     optimizer._update_optimization_stats(result)
-    optimizer.add_event_handler(OptimizationTrigger.USER_REQUEST, lambda event, res: optimizer.optimization_stats.update(last_handler=True))
+    optimizer.add_event_handler(
+        OptimizationTrigger.USER_REQUEST,
+        lambda event, res: optimizer.optimization_stats.update(last_handler=True),
+    )
     await optimizer._trigger_event_handlers(event, result)
     assert optimizer.optimization_stats.get("last_handler")
 
@@ -466,14 +550,20 @@ async def test_live_optimizer_internal_helpers(monkeypatch: pytest.MonkeyPatch) 
     await optimizer._check_performance_drops()
 
     tracker.metrics[variants[1].id] = PromptMetrics(
-        success_rate=0.9, avg_execution_time=0.5, error_rate=0.02, avg_token_cost=1.0, sample_count=1
+        success_rate=0.9,
+        avg_execution_time=0.5,
+        error_rate=0.02,
+        avg_token_cost=1.0,
+        sample_count=1,
     )
     await optimizer._check_new_variants()
     await optimizer._check_context_changes()
 
     await optimizer._process_optimization_queue()
 
-    zero_confidence = optimizer._calculate_confidence(metrics_map, "missing", variants[0].id)
+    zero_confidence = optimizer._calculate_confidence(
+        metrics_map, "missing", variants[0].id
+    )
     assert zero_confidence == 0.0
 
     old_event = LiveOptimizationEvent(
@@ -488,7 +578,9 @@ async def test_live_optimizer_internal_helpers(monkeypatch: pytest.MonkeyPatch) 
     await optimizer._cleanup_old_data()
     assert "old" not in optimizer.variant_switches
 
-    event_id = await optimizer.trigger_optimization("prompt", context={"prompt_id": "prompt"})
+    event_id = await optimizer.trigger_optimization(
+        "prompt", context={"prompt_id": "prompt"}
+    )
     assert event_id.startswith("opt_")
     await optimizer._process_optimization_queue()
 
@@ -517,9 +609,11 @@ async def test_live_optimizer_internal_helpers(monkeypatch: pytest.MonkeyPatch) 
     optimizer.get_optimization_history("prompt")
 
     optimizer.stop()  # Not running branch
+
     class _FakeTask:
         def cancel(self) -> None:
             pass
+
     original_create_task = asyncio.create_task
     monkeypatch.setattr(asyncio, "create_task", lambda coro: _FakeTask())
     optimizer.start()
@@ -528,7 +622,9 @@ async def test_live_optimizer_internal_helpers(monkeypatch: pytest.MonkeyPatch) 
 
 
 @pytest.mark.asyncio
-async def test_live_optimizer_optimization_loop(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_live_optimizer_optimization_loop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     variant = PromptVariant(content="Variant", category=PromptCategory.CUSTOM)
 
     class _LoopRegistry:
@@ -537,7 +633,9 @@ async def test_live_optimizer_optimization_loop(monkeypatch: pytest.MonkeyPatch)
 
     optimizer = LiveOptimizer(
         strategy_manager=types.SimpleNamespace(strategies={}),
-        base_optimizer=types.SimpleNamespace(registry=_LoopRegistry(), tracker=object()),
+        base_optimizer=types.SimpleNamespace(
+            registry=_LoopRegistry(), tracker=object()
+        ),
     )
 
     calls = {"queue": 0, "cache": 0, "trigger": 0, "cleanup": 0}
@@ -591,9 +689,13 @@ def _make_features(content: str = "Generate detailed report") -> PredictionFeatu
     )
 
 
-def test_performance_predictor_training_and_prediction(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+def test_performance_predictor_training_and_prediction(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
     # Use linear regression for simpler tests and patch models with stubs
-    predictor = PerformancePredictor(model_type=PredictionModel.LINEAR_REGRESSION, retrain_frequency=50)
+    predictor = PerformancePredictor(
+        model_type=PredictionModel.LINEAR_REGRESSION, retrain_frequency=50
+    )
 
     stub_model = _StubModel()
     monkeypatch.setattr(
@@ -611,8 +713,18 @@ def test_performance_predictor_training_and_prediction(monkeypatch: pytest.Monke
     assert predictor.is_trained
 
     variant = PromptVariant(content="Optimized prompt", category=PromptCategory.CUSTOM)
-    metrics = PromptMetrics(success_rate=0.8, avg_execution_time=1.2, error_rate=0.05, avg_token_cost=10.0, sample_count=50)
-    prediction = predictor.predict(variant, {"domain": "software", "task_type": "generation"}, historical_metrics=metrics)
+    metrics = PromptMetrics(
+        success_rate=0.8,
+        avg_execution_time=1.2,
+        error_rate=0.05,
+        avg_token_cost=10.0,
+        sample_count=50,
+    )
+    prediction = predictor.predict(
+        variant,
+        {"domain": "software", "task_type": "generation"},
+        historical_metrics=metrics,
+    )
     assert 0.0 <= prediction.predicted_score <= 1.0
     assert prediction.model_used == PredictionModel.LINEAR_REGRESSION.value
     assert prediction.features_used["context_domain"] == "software"
@@ -644,7 +756,9 @@ def test_performance_predictor_default_prediction() -> None:
 
 
 def test_performance_predictor_ensemble(monkeypatch: pytest.MonkeyPatch) -> None:
-    predictor = PerformancePredictor(model_type=PredictionModel.ENSEMBLE, retrain_frequency=5)
+    predictor = PerformancePredictor(
+        model_type=PredictionModel.ENSEMBLE, retrain_frequency=5
+    )
 
     monkeypatch.setattr(
         "forge.prompt_optimization.realtime.performance_predictor.RandomForestRegressor",
@@ -659,7 +773,9 @@ def test_performance_predictor_ensemble(monkeypatch: pytest.MonkeyPatch) -> None
         lambda *args, **kwargs: _StubModel(0.8),
     )
 
-    training_samples = [(_make_features(content=f"text {i}"), 0.4 + i * 0.01) for i in range(15)]
+    training_samples = [
+        (_make_features(content=f"text {i}"), 0.4 + i * 0.01) for i in range(15)
+    ]
     predictor.train(training_samples)
     assert predictor.is_trained
 
@@ -668,8 +784,12 @@ def test_performance_predictor_ensemble(monkeypatch: pytest.MonkeyPatch) -> None
     assert prediction.model_used.startswith("ensemble")
 
 
-def test_real_time_monitor_metrics_and_alerts(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
-    monitor = RealTimeMonitor(update_interval=0.01, max_history_size=50, trend_window_size=10)
+def test_real_time_monitor_metrics_and_alerts(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    monitor = RealTimeMonitor(
+        update_interval=0.01, max_history_size=50, trend_window_size=10
+    )
 
     prompt_id = "prompt-monitor"
     metrics = {
@@ -683,6 +803,7 @@ def test_real_time_monitor_metrics_and_alerts(monkeypatch: pytest.MonkeyPatch, t
     }
 
     captured_metrics: List[str] = []
+
     def metric_callback(pid: str, data: Dict[str, Any]) -> None:
         captured_metrics.append(pid)
 
@@ -709,7 +830,9 @@ def test_real_time_monitor_metrics_and_alerts(monkeypatch: pytest.MonkeyPatch, t
                 metrics=updated,
             )
         )
-    trend = asyncio.run(monitor._analyze_metric_trend(prompt_id, MetricType.SUCCESS_RATE))
+    trend = asyncio.run(
+        monitor._analyze_metric_trend(prompt_id, MetricType.SUCCESS_RATE)
+    )
     if trend:
         assert trend.metric_type == MetricType.SUCCESS_RATE
 
@@ -730,8 +853,12 @@ def test_real_time_monitor_metrics_and_alerts(monkeypatch: pytest.MonkeyPatch, t
 
     history = monitor.get_metric_history(prompt_id)
     assert history
-    trends = asyncio.run(monitor._analyze_metric_trend(prompt_id, MetricType.ERROR_RATE))
-    monitor.get_metric_history(prompt_id, variant_id="variant-1", metric_type=MetricType.SUCCESS_RATE)
+    trends = asyncio.run(
+        monitor._analyze_metric_trend(prompt_id, MetricType.ERROR_RATE)
+    )
+    monitor.get_metric_history(
+        prompt_id, variant_id="variant-1", metric_type=MetricType.SUCCESS_RATE
+    )
     monitor.get_performance_trends()
     monitor.get_performance_trends(prompt_id)
     monitor.get_active_alerts()
@@ -758,7 +885,9 @@ def test_real_time_monitor_metrics_and_alerts(monkeypatch: pytest.MonkeyPatch, t
     monitor.remove_alert_callback(alert_callback)
 
     original_create_task = asyncio.create_task
-    monkeypatch.setattr(asyncio, "create_task", lambda coro: types.SimpleNamespace(cancel=lambda: None))
+    monkeypatch.setattr(
+        asyncio, "create_task", lambda coro: types.SimpleNamespace(cancel=lambda: None)
+    )
     monitor.start()
     monitor.stop()
     monkeypatch.setattr(asyncio, "create_task", original_create_task)
@@ -773,7 +902,12 @@ def test_real_time_monitor_metrics_and_alerts(monkeypatch: pytest.MonkeyPatch, t
 @pytest.mark.asyncio
 async def test_streaming_engine_event_flow(monkeypatch: pytest.MonkeyPatch) -> None:
     live_optimizer = _StubLiveOptimizer()
-    engine = StreamingOptimizationEngine(live_optimizer, max_queue_size=5, processing_batch_size=2, processing_interval=0.01)
+    engine = StreamingOptimizationEngine(
+        live_optimizer,
+        max_queue_size=5,
+        processing_batch_size=2,
+        processing_interval=0.01,
+    )
 
     processed_events: List[str] = []
 
@@ -807,7 +941,9 @@ async def test_streaming_engine_event_flow(monkeypatch: pytest.MonkeyPatch) -> N
 
     # Pattern detection and performance history utilities
     engine.add_pattern_detector("prompt-stream", lambda events: ["custom_pattern"])
-    engine.performance_history["prompt-stream"] = deque([0.5 + i * 0.01 for i in range(60)], maxlen=engine.pattern_window_size)
+    engine.performance_history["prompt-stream"] = deque(
+        [0.5 + i * 0.01 for i in range(60)], maxlen=engine.pattern_window_size
+    )
     pattern_result = await engine._recognize_patterns(
         StreamEvent(
             event_id="pattern-2",
@@ -819,7 +955,9 @@ async def test_streaming_engine_event_flow(monkeypatch: pytest.MonkeyPatch) -> N
     )
     assert "custom_pattern" in pattern_result
 
-    engine.performance_history["prompt-stream"] = deque([0.1 * i for i in range(60)], maxlen=engine.pattern_window_size)
+    engine.performance_history["prompt-stream"] = deque(
+        [0.1 * i for i in range(60)], maxlen=engine.pattern_window_size
+    )
     await engine._check_common_patterns("prompt-stream")
     engine.clear_performance_history("prompt-stream")
     engine.clear_performance_history()
@@ -829,7 +967,11 @@ async def test_streaming_engine_event_flow(monkeypatch: pytest.MonkeyPatch) -> N
         event_type=StreamEventType.VARIANT_SWITCH,
         timestamp=datetime.now(),
         prompt_id="prompt-stream",
-        data={"from_variant": "old", "to_variant": "new", "metrics": {"composite_score": 0.7}},
+        data={
+            "from_variant": "old",
+            "to_variant": "new",
+            "metrics": {"composite_score": 0.7},
+        },
     )
     actions_switch = await engine._process_event_by_type(variant_switch_event)
     assert isinstance(actions_switch, list)
@@ -889,7 +1031,9 @@ async def test_streaming_engine_event_flow(monkeypatch: pytest.MonkeyPatch) -> N
     engine._calculate_cycle_similarity([[0.1] * 20, [0.1] * 20])
     engine._calculate_correlation([1, 2, 3], [1, 2, 4])
 
-    engine.pattern_buffers["prompt-stream"] = deque([anomaly_event], maxlen=engine.pattern_window_size)
+    engine.pattern_buffers["prompt-stream"] = deque(
+        [anomaly_event], maxlen=engine.pattern_window_size
+    )
     gathered = []
     async for evt in engine.get_streaming_events(limit=1):
         gathered.append(evt)
@@ -898,4 +1042,3 @@ async def test_streaming_engine_event_flow(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setattr(asyncio, "create_task", lambda coro: None)
     engine.start()
     engine.stop()
-

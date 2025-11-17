@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Optional
+import os
+import random
 
 from fastapi.responses import JSONResponse
 
-from forge.core.logger import forge_logger as logger
+from forge.core.logger import forge_logger as logger, get_trace_context
+from forge.server.utils.responses import error
 
 if TYPE_CHECKING:
     from fastapi import Request, Response
@@ -59,7 +62,12 @@ class RateLimiter:
             return await call_next(request)
 
         # Skip rate limiting for health checks and static files
-        if request.url.path in ["/health", "/api/health", "/"] or request.url.path.startswith("/assets"):
+        if request.url.path in [
+            "/health",
+            "/api/health",
+            "/api/monitoring/health",
+            "/",
+        ] or request.url.path.startswith("/assets"):
             return await call_next(request)
 
         # Get rate limit key (user_id or IP address)
@@ -68,14 +76,16 @@ class RateLimiter:
         # Check rate limits
         if not await self._check_rate_limit(rate_limit_key):
             logger.warning(f"Rate limit exceeded for {rate_limit_key}")
-            return JSONResponse(
+            # Standardized error envelope with retry metadata
+            resp = error(
+                message="Rate limit exceeded. Please try again later.",
                 status_code=429,
-                content={
-                    "detail": "Rate limit exceeded. Please try again later.",
-                    "retry_after": 60,
-                },
-                headers={"Retry-After": "60"},
+                error_code="RATE_LIMIT_EXCEEDED",
+                details={"reason": "too_many_requests"},
+                retry_after=60,
             )
+            resp.headers["Retry-After"] = "60"
+            return resp
 
         # Process request
         response = await call_next(request)
@@ -112,7 +122,12 @@ class RateLimiter:
             # Use first IP in X-Forwarded-For chain
             client_ip = forwarded_for.split(",")[0].strip()
 
-        return f"ip:{client_ip}"
+        try:
+            import hashlib
+            hashed = hashlib.sha256(client_ip.encode("utf-8")).hexdigest()[:12]
+            return "ip:" + hashed
+        except Exception:
+            return "ip:unknown"
 
     async def _check_rate_limit(self, key: str) -> bool:
         """Check if request is within rate limits.
@@ -130,14 +145,18 @@ class RateLimiter:
         timestamps = _rate_limit_store[key]
 
         # Remove old timestamps (outside the hour window)
-        timestamps[:] = [ts for ts in timestamps if current_time - ts < self.hour_window]
+        timestamps[:] = [
+            ts for ts in timestamps if current_time - ts < self.hour_window
+        ]
 
         # Check hourly limit
         if len(timestamps) >= self.requests_per_hour:
             return False
 
         # Check burst limit (requests in last minute)
-        recent_requests = [ts for ts in timestamps if current_time - ts < self.burst_window]
+        recent_requests = [
+            ts for ts in timestamps if current_time - ts < self.burst_window
+        ]
         if len(recent_requests) >= self.burst_limit:
             return False
 
@@ -160,7 +179,9 @@ class RateLimiter:
         timestamps = _rate_limit_store[key]
 
         # Count requests in current hour
-        hour_requests = [ts for ts in timestamps if current_time - ts < self.hour_window]
+        hour_requests = [
+            ts for ts in timestamps if current_time - ts < self.hour_window
+        ]
 
         return max(0, self.requests_per_hour - len(hour_requests))
 
@@ -175,11 +196,14 @@ class EndpointRateLimiter:
     def _get_default_limits():
         """Get default rate limits from environment variables."""
         import os
+
         requests_per_hour = int(os.getenv("RATE_LIMIT_REQUESTS", "1000"))
         burst_limit = int(os.getenv("RATE_LIMIT_BURST", "100"))
-        logger.info(f"Rate limiting configured: {requests_per_hour} req/hour, {burst_limit} burst")
+        logger.info(
+            f"Rate limiting configured: {requests_per_hour} req/hour, {burst_limit} burst"
+        )
         return requests_per_hour, burst_limit
-    
+
     def __init__(self, enabled: bool = True) -> None:
         """Initialize endpoint-specific rate limiter.
 
@@ -190,7 +214,7 @@ class EndpointRateLimiter:
         self.enabled = enabled
         # Get default limits from environment variables
         default_limits = self._get_default_limits()
-        
+
         # Define limits per endpoint pattern
         self.LIMITS = {
             "/api/conversations": default_limits,  # Use env-configured limits
@@ -254,7 +278,7 @@ try:
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
-    logger.debug("Redis not available. Using in-memory rate limiting.")
+    logger.info("Redis not available, using in-memory rate limiting")
 
 
 class RedisRateLimiter(RateLimiter):
@@ -278,12 +302,15 @@ class RedisRateLimiter(RateLimiter):
         """
         # 🚀 PRODUCTION FIX: Read from environment variables if not provided
         import os
+
         if requests_per_hour is None:
             requests_per_hour = int(os.getenv("RATE_LIMIT_REQUESTS", "1000"))
         if burst_limit is None:
             burst_limit = int(os.getenv("RATE_LIMIT_BURST", "100"))
-        
-        logger.info(f"RedisRateLimiter configured: {requests_per_hour} req/hour, {burst_limit} burst")
+
+        logger.info(
+            f"RedisRateLimiter configured: {requests_per_hour} req/hour, {burst_limit} burst"
+        )
         super().__init__(requests_per_hour, burst_limit, enabled)
         self.redis_url = redis_url
         self._redis_client: redis.Redis | None = None
@@ -308,7 +335,9 @@ class RedisRateLimiter(RateLimiter):
                 await self._redis_client.ping()
                 logger.info("Connected to Redis for rate limiting")
             except Exception as e:
-                logger.warning(f"Failed to connect to Redis: {e}. Falling back to in-memory.")
+                logger.warning(
+                    f"Failed to connect to Redis: {e}. Falling back to in-memory."
+                )
                 self._redis_client = None
 
         return self._redis_client
@@ -330,54 +359,157 @@ class RedisRateLimiter(RateLimiter):
             return await super()._check_rate_limit(key)
 
         try:
-            current_time = int(time.time())
-
-            # Use Redis sorted set for timestamps
-            redis_key = f"ratelimit:{key}"
-
-            # Remove old timestamps
-            await redis_client.zremrangebyscore(
-                redis_key,
-                0,
-                current_time - self.hour_window,
-            )
-
-            # Count requests in hour window
-            hour_count = await redis_client.zcount(
-                redis_key,
-                current_time - self.hour_window,
-                current_time,
-            )
-
-            if hour_count >= self.requests_per_hour:
-                return False
-
-            # Count requests in burst window
-            burst_count = await redis_client.zcount(
-                redis_key,
-                current_time - self.burst_window,
-                current_time,
-            )
-
-            if burst_count >= self.burst_limit:
-                logger.debug(f"Burst limit exceeded: {burst_count}/{self.burst_limit} for {key}")
-                return False
-
-            # Add current request with microsecond precision to avoid deduplication
-            # 🔧 FIX: Use microseconds to make each request unique
-            import uuid
-            unique_id = f"{current_time}:{uuid.uuid4()}"
-            await redis_client.zadd(redis_key, {unique_id: current_time})
-
-            # Set expiry
-            await redis_client.expire(redis_key, self.hour_window)
-
+            return await self._check_rate_limit_redis(redis_client, key)
+        except Exception as exc:
+            logger.error(f"Redis rate limit check failed: {exc}. Allowing request.")
+            self._instrument_failure(key, exc)
             return True
 
-        except Exception as e:
-            logger.error(f"Redis rate limit check failed: {e}. Allowing request.")
-            # Fail open - allow request if Redis fails
-            return True
+    async def _check_rate_limit_redis(
+        self,
+        redis_client: "redis.Redis",
+        key: str,
+    ) -> bool:
+        """Core Redis rate limit logic separated for readability."""
+        current_time = int(time.time())
+        redis_key = f"ratelimit:{key}"
+
+        await redis_client.zremrangebyscore(
+            redis_key,
+            0,
+            current_time - self.hour_window,
+        )
+
+        hour_count = await redis_client.zcount(
+            redis_key,
+            current_time - self.hour_window,
+            current_time,
+        )
+        if hour_count >= self.requests_per_hour:
+            self._record_rate_limit_span(
+                key,
+                allowed=False,
+                hour_count=hour_count,
+                burst_count=None,
+                reason="hour_limit",
+            )
+            return False
+
+        burst_count = await redis_client.zcount(
+            redis_key,
+            current_time - self.burst_window,
+            current_time,
+        )
+        if burst_count >= self.burst_limit:
+            logger.debug(
+                f"Burst limit exceeded: {burst_count}/{self.burst_limit} for {key}"
+            )
+            self._record_rate_limit_span(
+                key,
+                allowed=False,
+                hour_count=hour_count,
+                burst_count=burst_count,
+                reason="burst_limit",
+            )
+            return False
+
+        await self._record_request(redis_client, redis_key, current_time)
+        await redis_client.expire(redis_key, self.hour_window)
+
+        self._record_rate_limit_span(
+            key,
+            allowed=True,
+            hour_count=hour_count + 1,
+            burst_count=burst_count + 1,
+        )
+        return True
+
+    async def _record_request(
+        self,
+        redis_client: "redis.Redis",
+        redis_key: str,
+        timestamp: int,
+    ) -> None:
+        """Store the current request timestamp with microsecond uniqueness."""
+        import uuid
+
+        unique_id = f"{timestamp}:{uuid.uuid4()}"
+        await redis_client.zadd(redis_key, {unique_id: timestamp})
+
+    def _should_trace(self) -> bool:
+        """Decide if we should emit an OTEL span based on env + sampling."""
+        enabled = os.getenv(
+            "OTEL_INSTRUMENT_REDIS", os.getenv("OTEL_ENABLED", "false")
+        ).lower() in ("true", "1", "yes")
+        if not enabled:
+            return False
+
+        try:
+            sample_rate = float(
+                os.getenv("OTEL_SAMPLE_REDIS", os.getenv("OTEL_SAMPLE_DEFAULT", "1.0"))
+            )
+        except Exception:
+            sample_rate = 1.0
+
+        sample_rate = max(0.0, min(1.0, sample_rate))
+        return random.random() < sample_rate
+
+    def _record_rate_limit_span(
+        self,
+        key: str,
+        *,
+        allowed: bool,
+        hour_count: Optional[int],
+        burst_count: Optional[int],
+        reason: Optional[str] = None,
+        error: Exception | None = None,
+    ) -> None:
+        """Emit a single structured OTEL span for rate limiting decisions."""
+        if not self._should_trace():
+            return
+
+        try:
+            from opentelemetry import trace as _otel_trace  # type: ignore
+            from opentelemetry.trace import SpanKind as _SpanKind  # type: ignore
+        except Exception:
+            return
+
+        tracer = _otel_trace.get_tracer("forge.redis")
+        try:
+            with tracer.start_as_current_span(
+                "rate_limit.check", kind=_SpanKind.CLIENT
+            ) as span:
+                span.set_attribute("db.system", "redis")
+                span.set_attribute("ratelimit.key", key)
+                span.set_attribute("ratelimit.allowed", allowed)
+                if hour_count is not None:
+                    span.set_attribute("ratelimit.hour.count", int(hour_count))
+                    span.set_attribute("ratelimit.hour.limit", int(self.requests_per_hour))
+                if burst_count is not None:
+                    span.set_attribute("ratelimit.burst.count", int(burst_count))
+                    span.set_attribute("ratelimit.burst.limit", int(self.burst_limit))
+                if reason:
+                    span.set_attribute("ratelimit.reason", reason)
+                if error:
+                    span.set_attribute("error", True)
+                    span.record_exception(error)
+                ctx = get_trace_context()
+                if ctx.get("trace_id"):
+                    span.set_attribute("forge.trace_id", str(ctx["trace_id"]))
+        except Exception:
+            # Never let instrumentation break request flow
+            return
+
+    def _instrument_failure(self, key: str, exc: Exception) -> None:
+        """Record OTEL span for Redis failures."""
+        self._record_rate_limit_span(
+            key,
+            allowed=True,  # fail-open behaviour
+            hour_count=None,
+            burst_count=None,
+            reason="error",
+            error=exc,
+        )
 
     async def _get_remaining_requests(self, key: str) -> int:
         """Get remaining requests using Redis.

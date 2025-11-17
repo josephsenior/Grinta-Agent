@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\services\conversation_stats.py
+# hypothesis_version: 6.147.0
+
+['accumulated_cost', 'conversation_id', 'duplicate_services', 'get', 'metrics', 'restored metrics: %s', 'service_id', 'utf-8', 'value']

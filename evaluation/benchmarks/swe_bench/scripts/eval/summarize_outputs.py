@@ -22,7 +22,9 @@ ERROR_KEYWORDS = [
 def get_bootstrap_accuracy_error_bars(
     values: float | int | bool, num_samples: int = 1000, p_value=0.05
 ) -> tuple[float, float]:
-    sorted_vals = np.sort([np.mean(random.sample(values, len(values) // 2)) for _ in range(num_samples)])
+    sorted_vals = np.sort(
+        [np.mean(random.sample(values, len(values) // 2)) for _ in range(num_samples)]
+    )
     bottom_idx = int(num_samples * p_value / 2)
     top_idx = int(num_samples * (1.0 - p_value / 2))
     return (sorted_vals[bottom_idx], sorted_vals[top_idx])
@@ -45,7 +47,9 @@ def _calculate_costs_from_metrics(metrics: dict) -> tuple[float, float]:
     return main_agent_cost, editor_cost
 
 
-def _process_error_handling(error: str | None, error_counter: Counter, line: str) -> tuple[int, int]:
+def _process_error_handling(
+    error: str | None, error_counter: Counter, line: str
+) -> tuple[int, int]:
     """Process error handling and return error counts."""
     num_error_lines = 0
     num_agent_stuck_in_loop = 0
@@ -79,7 +83,9 @@ def _process_instance_data(
         return False, 0, 0, 0, 0, 0.0, 0.0, 0
 
     # Calculate costs
-    main_agent_cost, editor_cost = _calculate_costs_from_metrics(instance_data["metrics"])
+    main_agent_cost, editor_cost = _calculate_costs_from_metrics(
+        instance_data["metrics"]
+    )
 
     # Calculate turns
     history = instance_data.get("history", [])
@@ -99,9 +105,20 @@ def _process_instance_data(
 
     # Process errors
     error = instance_data.get("error")
-    num_error_lines, num_agent_stuck_in_loop = _process_error_handling(error, error_counter, line)
+    num_error_lines, num_agent_stuck_in_loop = _process_error_handling(
+        error, error_counter, line
+    )
 
-    return True, resolved_count, 0, num_error_lines, num_agent_stuck_in_loop, main_agent_cost, editor_cost, num_turns
+    return (
+        True,
+        resolved_count,
+        0,
+        num_error_lines,
+        num_agent_stuck_in_loop,
+        main_agent_cost,
+        editor_cost,
+        num_turns,
+    )
 
 
 def _build_result_dict(
@@ -125,13 +142,19 @@ def _build_result_dict(
         "resolved": _build_resolved_section(num_resolved, num_lines, resolved_arr),
         "empty_patches": _build_percentage_section(num_empty_patch, num_lines),
         "unfinished_runs": _build_percentage_section(num_unfinished_runs, num_lines),
-        "errors": _build_errors_section(num_error_lines, num_agent_stuck_in_loop, error_counter, num_lines),
+        "errors": _build_errors_section(
+            num_error_lines, num_agent_stuck_in_loop, error_counter, num_lines
+        ),
         "costs": _build_costs_section(main_agent_cost, editor_cost),
-        "statistics": _build_statistics_section(main_agent_cost, editor_cost, num_turns, num_lines),
+        "statistics": _build_statistics_section(
+            main_agent_cost, editor_cost, num_turns, num_lines
+        ),
     }
 
 
-def _build_resolved_section(num_resolved: int, num_lines: int, resolved_arr: list) -> dict:
+def _build_resolved_section(
+    num_resolved: int, num_lines: int, resolved_arr: list
+) -> dict:
     """Build resolved section with confidence intervals."""
     return {
         "count": num_resolved,
@@ -142,11 +165,17 @@ def _build_resolved_section(num_resolved: int, num_lines: int, resolved_arr: lis
 
 def _build_percentage_section(count: int, num_lines: int) -> dict:
     """Build a section with count and percentage."""
-    return {"count": count, "percentage": count / num_lines * 100 if num_lines > 0 else 0}
+    return {
+        "count": count,
+        "percentage": count / num_lines * 100 if num_lines > 0 else 0,
+    }
 
 
 def _build_errors_section(
-    num_error_lines: int, num_agent_stuck_in_loop: int, error_counter: Counter, num_lines: int
+    num_error_lines: int,
+    num_agent_stuck_in_loop: int,
+    error_counter: Counter,
+    num_lines: int,
 ) -> dict:
     """Build errors section with breakdown."""
     return {
@@ -154,7 +183,8 @@ def _build_errors_section(
         "percentage": num_error_lines / num_lines * 100 if num_lines > 0 else 0,
         "stuck_in_loop": _build_percentage_section(num_agent_stuck_in_loop, num_lines),
         "breakdown": {
-            str(error): _build_percentage_section(count, num_lines) for error, count in error_counter.items()
+            str(error): _build_percentage_section(count, num_lines)
+            for error, count in error_counter.items()
         },
     }
 
@@ -163,10 +193,16 @@ def _build_costs_section(main_agent_cost: list, editor_cost: list) -> dict:
     """Build costs section."""
     total_main = sum(main_agent_cost)
     total_editor = sum(editor_cost)
-    return {"main_agent": total_main, "editor": total_editor, "total": total_main + total_editor}
+    return {
+        "main_agent": total_main,
+        "editor": total_editor,
+        "total": total_main + total_editor,
+    }
 
 
-def _build_statistics_section(main_agent_cost: list, editor_cost: list, num_turns: list, num_lines: int) -> dict:
+def _build_statistics_section(
+    main_agent_cost: list, editor_cost: list, num_turns: list, num_lines: int
+) -> dict:
     """Build statistics section."""
     if num_lines == 0:
         return {"avg_turns": 0, "costs": {"main_agent": 0, "editor": 0, "total": 0}}
@@ -185,7 +221,7 @@ def _build_statistics_section(main_agent_cost: list, editor_cost: list, num_turn
 
 def process_file(file_path):
     """Process a file and extract statistics."""
-    with open(file_path, "r", encoding='utf-8') as file:
+    with open(file_path, "r", encoding="utf-8") as file:
         lines = file.readlines()
 
     num_lines = len(lines)
@@ -202,9 +238,16 @@ def process_file(file_path):
 
     for line in lines:
         instance_data = json.loads(line)
-        is_valid, resolved_count, empty_patch_count, error_count, stuck_count, main_cost, edit_cost, turns = (
-            _process_instance_data(instance_data, line, error_counter)
-        )
+        (
+            is_valid,
+            resolved_count,
+            empty_patch_count,
+            error_count,
+            stuck_count,
+            main_cost,
+            edit_cost,
+            turns,
+        ) = _process_instance_data(instance_data, line, error_counter)
 
         if not is_valid:
             num_unfinished_runs += 1
@@ -251,7 +294,9 @@ def aggregate_directory(input_path) -> pd.DataFrame:
             logger.exception("Error processing %s: %s", file_path, e)
             continue
     df = pd.DataFrame(results)
-    df["directory"] = df["file_path"].apply(lambda x: os.path.basename(os.path.dirname(x)))
+    df["directory"] = df["file_path"].apply(
+        lambda x: os.path.basename(os.path.dirname(x))
+    )
     df["resolve_rate"] = df["resolved"].apply(lambda x: x["percentage"])
     df["resolve_rate_ci"] = df["resolved"].apply(lambda x: x["ci"])
     df["empty_patch_rate"] = df["empty_patches"].apply(lambda x: x["percentage"])
@@ -265,8 +310,15 @@ def aggregate_directory(input_path) -> pd.DataFrame:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("input_path", type=str, help="The file or directory to summarize")
-    parser.add_argument("--output", type=str, help="Output JSONL file for results", default="summary_results.jsonl")
+    parser.add_argument(
+        "input_path", type=str, help="The file or directory to summarize"
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        help="Output JSONL file for results",
+        default="summary_results.jsonl",
+    )
     args = parser.parse_args()
     if os.path.isdir(args.input_path):
         df = aggregate_directory(args.input_path)
@@ -281,12 +333,14 @@ if __name__ == "__main__":
             "total_instances",
         ]
         summary_str = df[columns].to_string(
-            float_format=lambda x: "{:.2f}".format(x), formatters={"directory": lambda x: x[:90]}, index=False
+            float_format=lambda x: "{:.2f}".format(x),
+            formatters={"directory": lambda x: x[:90]},
+            index=False,
         )
         logger.info("\nResults summary (sorted by resolve rate):")
         logger.info("\n%s", summary_str)
         txt_output = args.output.rsplit(".", 1)[0] + ".txt"
-        with open(txt_output, "w", encoding='utf-8') as f:
+        with open(txt_output, "w", encoding="utf-8") as f:
             f.write("Results summary (sorted by resolve rate):\n")
             f.write(summary_str)
         df.to_json(args.output, lines=True, orient="records")
@@ -331,10 +385,22 @@ if __name__ == "__main__":
             )
             logger.info("Total cost: %.2f USD", result["costs"]["total"])
             logger.info("## Statistics")
-            logger.info("Avg. num of turns per instance: %.2f", result["statistics"]["avg_turns"])
-            logger.info("Avg. agent cost per instance: %.2f USD", result["statistics"]["costs"]["main_agent"])
-            logger.info("Avg. editor cost per instance: %.2f USD", result["statistics"]["costs"]["editor"])
-            logger.info("Avg. total cost per instance: %.2f USD", result["statistics"]["costs"]["total"])
+            logger.info(
+                "Avg. num of turns per instance: %.2f",
+                result["statistics"]["avg_turns"],
+            )
+            logger.info(
+                "Avg. agent cost per instance: %.2f USD",
+                result["statistics"]["costs"]["main_agent"],
+            )
+            logger.info(
+                "Avg. editor cost per instance: %.2f USD",
+                result["statistics"]["costs"]["editor"],
+            )
+            logger.info(
+                "Avg. total cost per instance: %.2f USD",
+                result["statistics"]["costs"]["total"],
+            )
             logger.info("## Detailed error breakdown:")
             for error, data in result["errors"]["breakdown"].items():
                 logger.info("%s: %d (%.2f%%)", error, data["count"], data["percentage"])

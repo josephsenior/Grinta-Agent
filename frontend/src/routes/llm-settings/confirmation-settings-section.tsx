@@ -41,7 +41,7 @@ export function ConfirmationSettingsSection({
         <TooltipButton
           tooltip={t(I18nKey.SETTINGS$CONFIRMATION_MODE_TOOLTIP)}
           ariaLabel={t(I18nKey.SETTINGS$CONFIRMATION_MODE)}
-          className="text-text-foreground-secondary hover:text-text-primary cursor-help transition-colors duration-200"
+          className="text-foreground-tertiary hover:text-foreground-secondary cursor-help transition-colors duration-200"
         >
           <QuestionCircleIcon width={16} height={16} />
         </TooltipButton>
@@ -75,7 +75,7 @@ export function ConfirmationSettingsSection({
               value={selectedSecurityAnalyzer || ""}
             />
           </div>
-          <p className="text-xs text-text-foreground-secondary max-w-[680px]">
+          <p className="text-xs text-foreground-secondary max-w-[680px]">
             {t(I18nKey.SETTINGS$SECURITY_ANALYZER_DESCRIPTION)}
           </p>
         </div>

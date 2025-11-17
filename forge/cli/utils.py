@@ -235,7 +235,11 @@ VERIFIED_ANTHROPIC_MODELS = [
     "claude-2.1",
     "claude-2",
 ]
-VERIFIED_MISTRAL_MODELS = ["devstral-small-2505", "devstral-small-2507", "devstral-medium-2507"]
+VERIFIED_MISTRAL_MODELS = [
+    "devstral-small-2505",
+    "devstral-small-2507",
+    "devstral-medium-2507",
+]
 VERIFIED_OPENHANDS_MODELS = [
     "claude-sonnet-4-20250514",
     "gpt-5-2025-08-07",
@@ -256,7 +260,9 @@ class ProviderInfo(BaseModel):
     """Information about a provider and its models."""
 
     separator: str = Field(description="The separator used in model identifiers")
-    models: list[str] = Field(default_factory=list, description="List of model identifiers")
+    models: list[str] = Field(
+        default_factory=list, description="List of model identifiers"
+    )
 
     def __getitem__(self, key: str) -> str | list[str]:
         """Allow dictionary-like access to fields."""
@@ -298,7 +304,12 @@ def split_is_actually_version(split: list[str]) -> bool:
         bool: True if the split represents a version, False otherwise.
 
     """
-    return len(split) > 1 and bool(split[1]) and bool(split[1][0]) and is_number(split[1][0])
+    return (
+        len(split) > 1
+        and bool(split[1])
+        and bool(split[1][0])
+        and is_number(split[1][0])
+    )
 
 
 def read_file(file_path: str | Path) -> str:

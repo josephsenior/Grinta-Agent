@@ -3,27 +3,42 @@
 from __future__ import annotations
 
 import asyncio
-from types import MappingProxyType, SimpleNamespace
 import contextlib
+from types import MappingProxyType, SimpleNamespace
+from typing import Any, Mapping
 
 import pytest
+from pydantic import SecretStr
 
 from forge.core.exceptions import MicroagentValidationError
-from forge.core.schema import AgentState
+from forge.core.schemas import AgentState
 from forge.events.action import MessageAction, NullAction
 from forge.events.event import EventSource
-from forge.events.observation import AgentStateChangedObservation, CmdOutputObservation, NullObservation
+from forge.events.observation import (
+    AgentStateChangedObservation,
+    CmdOutputObservation,
+    NullObservation,
+)
 from forge.events.observation.agent import RecallObservation
 from forge.events.observation.error import ErrorObservation
 from forge.events.serialization import event_to_dict
+from forge.integrations.provider import CustomSecret, ProviderToken, ProviderType
+from forge.llm.llm_registry import LLMRegistry
 from forge.runtime.runtime_status import RuntimeStatus
 from forge.server.constants import ROOM_KEY
 import forge.core.config.condenser_config as condenser_config_module
 import forge.experiments.experiment_manager as experiment_manager_module
-import forge.metasop.clean_router as metasop_router_module
+import forge.metasop.router as metasop_router_module
 from forge.server.session import session as session_module
 from forge.server.session.conversation_init_data import ConversationInitData
 from forge.server.session.session import Session
+from forge.server.services.conversation_stats import ConversationStats
+from forge.storage.data_models.settings import Settings
+from forge.storage.data_models.user_secrets import UserSecrets
+from forge.storage.files import FileStore
+from forge.storage.memory import InMemoryFileStore
+from forge.storage.secrets.secrets_store import SecretsStore
+from forge.storage.settings.settings_store import SettingsStore
 
 
 class DummyEventStream:
@@ -43,7 +58,9 @@ class DummyController:
         self.saved_states: list[AgentState] = []
         self.agent = SimpleNamespace(
             llm=SimpleNamespace(
-                config=SimpleNamespace(disable_vision=vision_disabled, base_url="url", model="model"),
+                config=SimpleNamespace(
+                    disable_vision=vision_disabled, base_url="url", model="model"
+                ),
                 vision_is_active=lambda: vision_active,
             )
         )
@@ -59,7 +76,15 @@ class DummyController:
 
 
 class DummyAgentSession:
-    def __init__(self, sid, file_store, llm_registry, conversation_stats, status_callback, user_id=None):
+    def __init__(
+        self,
+        sid,
+        file_store,
+        llm_registry,
+        conversation_stats,
+        status_callback,
+        user_id=None,
+    ):
         self.sid = sid
         self.file_store = file_store
         self.llm_registry = llm_registry
@@ -85,6 +110,7 @@ class DummyMCP:
     def __init__(self):
         self.shttp_servers: list[str] = []
         self.stdio_servers: list[str] = []
+        self.other: object | None = None
 
     def merge(self, other):
         merged = DummyMCP()
@@ -97,8 +123,12 @@ class DummyMCP:
 class DummyConfig:
     def __init__(self):
         self.runtime = "dummy_runtime"
-        self.security = SimpleNamespace(confirmation_mode=True, security_analyzer="default")
-        self.sandbox = SimpleNamespace(base_container_image="base", runtime_container_image="runtime", api_key=None)
+        self.security = SimpleNamespace(
+            confirmation_mode=True, security_analyzer="default"
+        )
+        self.sandbox = SimpleNamespace(
+            base_container_image="base", runtime_container_image="runtime", api_key=None
+        )
         self.git_user_name = "user"
         self.git_user_email = "user@example.com"
         self.mcp_host = "localhost"
@@ -111,7 +141,67 @@ class DummyConfig:
         return SimpleNamespace(condenser=None)
 
     def get_llm_config_from_agent(self, agent_name):
-        return SimpleNamespace(model="model", base_url="url", disable_vision=False, vision_is_active=lambda: True)
+        return SimpleNamespace(
+            model="model",
+            base_url="url",
+            disable_vision=False,
+            vision_is_active=lambda: True,
+            log_completions=False,
+            api_version="2023-08-01",
+            api_type="openai",
+            log_completions_folder=None,
+            top_k=None,
+            top_p=None,
+            temperature=0.7,
+            max_output_tokens=1024,
+            custom_tokenizer=None,
+            reasoning_effort=None,
+            safety_settings=None,
+            aws_region_name=None,
+            aws_access_key_id=None,
+            aws_secret_access_key=None,
+            enable_prompt_caching=False,
+            api_key=None,
+            timeout=30,
+            drop_params=None,
+            seed=None,
+            custom_llm_provider=None,
+            num_retries=0,
+            retry_min_wait=1,
+            retry_max_wait=30,
+            retry_multiplier=2,
+        )
+
+    def get_llm_config_from_agent_config(self, agent_config):
+        del agent_config
+        return SimpleNamespace(
+            model="model",
+            base_url="url",
+            log_completions=False,
+            api_version="2023-08-01",
+            api_type="openai",
+            log_completions_folder=None,
+            top_k=None,
+            top_p=None,
+            temperature=0.7,
+            max_output_tokens=1024,
+            custom_tokenizer=None,
+            reasoning_effort=None,
+            safety_settings=None,
+            aws_region_name=None,
+            aws_access_key_id=None,
+            aws_secret_access_key=None,
+            enable_prompt_caching=False,
+            api_key=None,
+            timeout=30,
+            drop_params=None,
+            seed=None,
+            custom_llm_provider=None,
+            num_retries=0,
+            retry_min_wait=1,
+            retry_max_wait=30,
+            retry_multiplier=2,
+        )
 
     def get_agent_to_llm_config_map(self):
         return {"DummyAgent": "llm"}
@@ -140,6 +230,52 @@ class DummyAgent:
         self.sandbox_plugins = []
 
 
+def _provider_tokens(
+    token: str = "token",
+) -> MappingProxyType[ProviderType, ProviderToken]:
+    return MappingProxyType(
+        {ProviderType.GITHUB: ProviderToken(token=SecretStr(token), host="github.com")}
+    )
+
+
+def _custom_secrets(secret_value: str = "value") -> MappingProxyType[str, CustomSecret]:
+    return MappingProxyType(
+        {"secret": CustomSecret(secret=SecretStr(secret_value), description="test")}
+    )
+
+
+class DummySettingsStore(SettingsStore):
+    def __init__(self) -> None:
+        self.saved: list[Settings] = []
+        self.to_return: Settings | None = None
+
+    async def load(self) -> Settings | None:
+        return self.to_return
+
+    async def store(self, settings: Settings) -> None:
+        self.saved.append(settings)
+
+    @classmethod
+    async def get_instance(cls, config: Any, user_id: str | None) -> SettingsStore:
+        return cls()
+
+
+class DummySecretsStore(SecretsStore):
+    def __init__(self) -> None:
+        self.saved: list[UserSecrets] = []
+        self.to_return: UserSecrets | None = None
+
+    async def load(self) -> UserSecrets | None:
+        return self.to_return
+
+    async def store(self, secrets: UserSecrets) -> None:
+        self.saved.append(secrets)
+
+    @classmethod
+    async def get_instance(cls, config: Any, user_id: str | None) -> SecretsStore:
+        return cls()
+
+
 @pytest.fixture(autouse=True)
 def patch_dependencies(monkeypatch):
     monkeypatch.setattr(session_module, "AgentSession", DummyAgentSession)
@@ -149,7 +285,9 @@ def patch_dependencies(monkeypatch):
         def run_config_variant_test(user_id, sid, config):
             return config
 
-    monkeypatch.setattr(experiment_manager_module, "ExperimentManagerImpl", DummyExperimentManager)
+    monkeypatch.setattr(
+        experiment_manager_module, "ExperimentManagerImpl", DummyExperimentManager
+    )
 
     monkeypatch.setattr(
         session_module.ForgeMCPConfigImpl,
@@ -157,14 +295,19 @@ def patch_dependencies(monkeypatch):
         lambda host, config, user_id: ("default_http", ["stdio1", "stdio2"]),
     )
 
-    monkeypatch.setattr(session_module.Agent, "get_cls", classmethod(lambda cls, name: DummyAgent))
+    monkeypatch.setattr(
+        session_module.Agent, "get_cls", classmethod(lambda cls, name: DummyAgent)
+    )
     yield
 
 
 async def make_session(config=None, sio=None):
     config = config or DummyConfig()
-    llm_registry = SimpleNamespace(retry_listner=None)
-    conversation_stats = SimpleNamespace()
+    file_store: FileStore = InMemoryFileStore()
+    llm_registry = LLMRegistry(config)
+    conversation_stats = ConversationStats(
+        file_store, conversation_id="sid", user_id="user"
+    )
     sio = sio or DummySIO()
     sio.manager.rooms.setdefault("/", {})[ROOM_KEY.format(sid="sid")] = {"client"}
     session = Session(
@@ -172,7 +315,7 @@ async def make_session(config=None, sio=None):
         config=config,
         llm_registry=llm_registry,
         conversation_stats=conversation_stats,
-        file_store="fs",
+        file_store=file_store,
         sio=sio,
         user_id="user",
     )
@@ -186,7 +329,10 @@ async def test_close_emits_and_cancels():
     assert any(entry[0] == "oh_event" for entry in sio.emitted)
     assert session.agent_session.closed is True
     await asyncio.sleep(0)
-    assert session._monitor_publish_queue_task.cancelled() or session._monitor_publish_queue_task.done()
+    assert (
+        session._monitor_publish_queue_task.cancelled()
+        or session._monitor_publish_queue_task.done()
+    )
 
 
 @pytest.mark.asyncio
@@ -217,7 +363,9 @@ async def test_configure_sandbox_settings():
 @pytest.mark.asyncio
 async def test_configure_git_settings():
     session, *_ = await make_session()
-    settings = SimpleNamespace(git_user_name="gituser", git_user_email="git@example.com")
+    settings = SimpleNamespace(
+        git_user_name="gituser", git_user_email="git@example.com"
+    )
     session._configure_git_settings(settings)
     assert session.config.git_user_name == "gituser"
     assert session.config.git_user_email == "git@example.com"
@@ -239,13 +387,30 @@ async def test_configure_mcp_settings():
 async def test_configure_agent_condenser(monkeypatch):
     session, *_ = await make_session()
 
-    monkeypatch.setattr(condenser_config_module, "CondenserPipelineConfig", lambda condensers: {"condensers": condensers})
-    monkeypatch.setattr(condenser_config_module, "ConversationWindowCondenserConfig", lambda: "conversation")
-    monkeypatch.setattr(condenser_config_module, "BrowserOutputCondenserConfig", lambda attention_window: ("browser", attention_window))
+    monkeypatch.setattr(
+        condenser_config_module,
+        "CondenserPipelineConfig",
+        lambda condensers: {"condensers": condensers},
+    )
+    monkeypatch.setattr(
+        condenser_config_module,
+        "ConversationWindowCondenserConfig",
+        lambda: "conversation",
+    )
+    monkeypatch.setattr(
+        condenser_config_module,
+        "BrowserOutputCondenserConfig",
+        lambda attention_window: ("browser", attention_window),
+    )
     monkeypatch.setattr(
         condenser_config_module,
         "LLMSummarizingCondenserConfig",
-        lambda llm_config, keep_first, max_size: ("llm", llm_config.model, keep_first, max_size),
+        lambda llm_config, keep_first, max_size: (
+            "llm",
+            llm_config.model,
+            keep_first,
+            max_size,
+        ),
     )
 
     agent_config = session.config.get_agent_config("DummyAgent")
@@ -263,14 +428,26 @@ async def test_extract_conversation_data():
     assert default == (None, None, None, None, None)
 
     data = ConversationInitData(
-        git_provider_tokens=MappingProxyType({"github": "token"}),
+        git_provider_tokens=_provider_tokens("token"),
         selected_repository="repo",
         selected_branch="main",
-        custom_secrets=MappingProxyType({"secret": "value"}),
+        custom_secrets=_custom_secrets("value"),
         conversation_instructions="instr",
     )
     extracted = session._extract_conversation_data(data)
-    assert extracted[1:] == ("repo", "main", MappingProxyType({"secret": "value"}), "instr")
+    provider_tokens = extracted[0]
+    assert isinstance(provider_tokens, Mapping)
+    provider = provider_tokens[ProviderType.GITHUB]
+    assert provider.token is not None
+    assert provider.token.get_secret_value() == "token"
+    assert extracted[1] == "repo"
+    assert extracted[2] == "main"
+    secrets = extracted[3]
+    assert isinstance(secrets, Mapping)
+    secret = secrets["secret"]
+    assert isinstance(secret, CustomSecret)
+    assert secret.secret.get_secret_value() == "value"
+    assert extracted[4] == "instr"
     await session.close()
 
 
@@ -281,8 +458,8 @@ async def test_start_agent_session_success():
         agent=SimpleNamespace(),
         max_iterations=2,
         max_budget_per_task=10,
-        git_provider_tokens={"github": "token"},
-        custom_secrets={"secret": "value"},
+        git_provider_tokens=_provider_tokens("token"),
+        custom_secrets=_custom_secrets("value"),
         selected_repository="repo",
         selected_branch="main",
         initial_message=None,
@@ -307,7 +484,9 @@ async def test_start_agent_session_microagent_error():
         errors.append(message)
 
     session.send_error = send_error
-    await session._start_agent_session(SimpleNamespace(), 1, None, None, None, None, None, None, None, None)
+    await session._start_agent_session(
+        SimpleNamespace(), 1, None, None, None, None, None, None, None, None
+    )
     assert "invalid microagent" in errors[0]
     await session.close()
 
@@ -326,7 +505,9 @@ async def test_start_agent_session_value_error():
         errors.append(message)
 
     session.send_error = send_error
-    await session._start_agent_session(SimpleNamespace(), 1, None, None, None, None, None, None, None, None)
+    await session._start_agent_session(
+        SimpleNamespace(), 1, None, None, None, None, None, None, None, None
+    )
     assert "microagent not found" in errors[0]
     await session.close()
 
@@ -345,7 +526,9 @@ async def test_start_agent_session_value_error_generic():
         errors.append(message)
 
     session.send_error = send_error
-    await session._start_agent_session(SimpleNamespace(), 1, None, None, None, None, None, None, None, None)
+    await session._start_agent_session(
+        SimpleNamespace(), 1, None, None, None, None, None, None, None, None
+    )
     assert errors[0] == "Failed to create agent session: ValueError"
     await session.close()
 
@@ -364,7 +547,9 @@ async def test_start_agent_session_generic_error():
         errors.append(message)
 
     session.send_error = send_error
-    await session._start_agent_session(SimpleNamespace(), 1, None, None, None, None, None, None, None, None)
+    await session._start_agent_session(
+        SimpleNamespace(), 1, None, None, None, None, None, None, None, None
+    )
     assert errors[0] == "Failed to create agent session: RuntimeError"
     await session.close()
 
@@ -374,8 +559,12 @@ async def test_initialize_agent(monkeypatch):
     session, *_ = await make_session()
     flags = {"security": False, "sandbox": False, "git": False, "mcp": False}
 
-    session._configure_security_settings = lambda settings: flags.__setitem__("security", True)
-    session._configure_sandbox_settings = lambda settings: flags.__setitem__("sandbox", True)
+    session._configure_security_settings = lambda settings: flags.__setitem__(
+        "security", True
+    )
+    session._configure_sandbox_settings = lambda settings: flags.__setitem__(
+        "sandbox", True
+    )
     session._configure_git_settings = lambda settings: flags.__setitem__("git", True)
     session._configure_mcp_settings = lambda settings: flags.__setitem__("mcp", True)
 
@@ -393,7 +582,10 @@ async def test_initialize_agent(monkeypatch):
     )
     await session.initialize_agent(settings, None, None)
     assert all(flags.values())
-    assert session.agent_session.event_stream.events[0][0].agent_state == AgentState.LOADING
+    assert (
+        session.agent_session.event_stream.events[0][0].agent_state
+        == AgentState.LOADING
+    )
     await session.close()
 
 
@@ -401,7 +593,9 @@ async def test_initialize_agent(monkeypatch):
 async def test_notify_on_llm_retry():
     session, *_ = await make_session()
     messages = []
-    session.queue_status_message = lambda msg_type, status, message: messages.append((msg_type, status, message))
+    session.queue_status_message = lambda msg_type, status, message: messages.append(
+        (msg_type, status, message)
+    )
     session._notify_on_llm_retry(2, 5)
     assert messages[0][1] == RuntimeStatus.LLM_RETRY
     await session.close()
@@ -434,7 +628,9 @@ async def test_on_event_branches(monkeypatch):
     await session._on_event(cmd)
     assert sent[-1]["source"] == EventSource.AGENT
 
-    state = AgentStateChangedObservation(reason="error", agent_state=AgentState.ERROR.value, content="")
+    state = AgentStateChangedObservation(
+        reason="error", agent_state=AgentState.ERROR.value, content=""
+    )
     state._source = EventSource.ENVIRONMENT  # type: ignore[attr-defined]
     await session._on_event(state)
     error = ErrorObservation(content="boom")
@@ -446,7 +642,11 @@ async def test_on_event_branches(monkeypatch):
     else:
         extras = {}
         args = {}
-    assert "boom" in str(payload) or extras.get("error") == "boom" or args.get("content") == "boom"
+    assert (
+        "boom" in str(payload)
+        or extras.get("error") == "boom"
+        or args.get("content") == "boom"
+    )
     await session.close()
 
 
@@ -454,6 +654,7 @@ async def test_on_event_branches(monkeypatch):
 async def test_dispatch_flow(monkeypatch):
     session, *_ = await make_session()
     captured = []
+
     async def no_metasop(event):
         return False
 
@@ -462,7 +663,9 @@ async def test_dispatch_flow(monkeypatch):
 
     session._handle_metasop_dispatch = no_metasop
     session._handle_image_validation = no_image
-    session.agent_session.event_stream.add_event = lambda event, source: captured.append((event, source))
+    session.agent_session.event_stream.add_event = (
+        lambda event, source: captured.append((event, source))
+    )
     await session.dispatch(event_to_dict(MessageAction(content="hi")))
     assert captured[0][1] == EventSource.USER
     await session.close()
@@ -471,6 +674,7 @@ async def test_dispatch_flow(monkeypatch):
 @pytest.mark.asyncio
 async def test_dispatch_metasop_short_circuit():
     session, *_ = await make_session()
+
     async def handled(event):
         return True
 
@@ -483,6 +687,7 @@ async def test_dispatch_metasop_short_circuit():
 @pytest.mark.asyncio
 async def test_dispatch_image_validation():
     session, *_ = await make_session()
+
     async def no_meta(event):
         return False
 
@@ -491,7 +696,9 @@ async def test_dispatch_image_validation():
 
     session._handle_metasop_dispatch = no_meta
     session._handle_image_validation = image_block
-    await session.dispatch(event_to_dict(MessageAction(content="hi", image_urls=["url"])))
+    await session.dispatch(
+        event_to_dict(MessageAction(content="hi", image_urls=["url"]))
+    )
     assert not session.agent_session.event_stream.events
     await session.close()
 
@@ -531,10 +738,12 @@ async def test_handle_metasop_dispatch_error():
 async def test_run_metasop_orchestration(monkeypatch):
     session, *_ = await make_session()
     called = []
+
+    async def recording_runner(**kwargs):
+        called.append(kwargs)
+
     monkeypatch.setattr(
-        metasop_router_module,
-        "run_metasop_for_conversation",
-        lambda **kwargs: called.append(kwargs) or asyncio.sleep(0),
+        metasop_router_module, "run_metasop_for_conversation", recording_runner
     )
     await session._run_metasop_orchestration("SOP: run")
     assert called
@@ -550,7 +759,9 @@ async def test_run_metasop_orchestration_error(monkeypatch):
     async def failing_runner(**kwargs):
         raise RuntimeError("boom")
 
-    monkeypatch.setattr(metasop_router_module, "run_metasop_for_conversation", failing_runner)
+    monkeypatch.setattr(
+        metasop_router_module, "run_metasop_for_conversation", failing_runner
+    )
     await session._run_metasop_orchestration("SOP")
     assert errors[0] == "boom"
     await session.close()
@@ -560,27 +771,51 @@ async def test_run_metasop_orchestration_error(monkeypatch):
 async def test_handle_image_validation(monkeypatch):
     session, *_ = await make_session()
 
-    assert await session._handle_image_validation(MessageAction(content="no images")) is False
+    assert (
+        await session._handle_image_validation(MessageAction(content="no images"))
+        is False
+    )
 
     session.agent_session.controller = None
-    assert await session._handle_image_validation(MessageAction(content="", image_urls=["img"])) is False
+    assert (
+        await session._handle_image_validation(
+            MessageAction(content="", image_urls=["img"])
+        )
+        is False
+    )
 
     controller = DummyController(vision_disabled=True)
     session.agent_session.controller = controller
     errors = []
+
     async def record_error(message):
         errors.append(message)
 
     session.send_error = record_error
-    assert await session._handle_image_validation(MessageAction(content="", image_urls=["img"])) is True
+    assert (
+        await session._handle_image_validation(
+            MessageAction(content="", image_urls=["img"])
+        )
+        is True
+    )
 
     controller = DummyController(vision_disabled=False, vision_active=False)
     session.agent_session.controller = controller
-    assert await session._handle_image_validation(MessageAction(content="", image_urls=["img"])) is True
+    assert (
+        await session._handle_image_validation(
+            MessageAction(content="", image_urls=["img"])
+        )
+        is True
+    )
 
     controller = DummyController(vision_disabled=False, vision_active=True)
     session.agent_session.controller = controller
-    assert await session._handle_image_validation(MessageAction(content="", image_urls=["img"])) is False
+    assert (
+        await session._handle_image_validation(
+            MessageAction(content="", image_urls=["img"])
+        )
+        is False
+    )
     await session.close()
 
 
@@ -588,6 +823,7 @@ async def test_handle_image_validation(monkeypatch):
 async def test_send_and_monitor():
     session, *_ = await make_session()
     sent = []
+
     async def record_send(data):
         sent.append(data)
 
@@ -602,6 +838,7 @@ async def test_send_and_monitor():
 async def test_send_error():
     session, *_ = await make_session()
     captured = []
+
     async def record_send(data):
         captured.append(data)
 
@@ -688,6 +925,7 @@ async def test_on_event_wrapper_invokes_loop(monkeypatch):
         def run_until_complete(self, coro):
             captured.append(coro)
 
+    monkeypatch.setattr(asyncio, "get_running_loop", lambda: (_ for _ in ()).throw(RuntimeError()))
     monkeypatch.setattr(asyncio, "get_event_loop", lambda: DummyLoop())
     session.on_event(MessageAction(content="wrapper"))
     assert captured
@@ -745,7 +983,9 @@ async def test_emit_to_client_state_logging(monkeypatch):
     session, sio, *_ = await make_session()
     infos = []
     session.logger.info = lambda message, extra=None: infos.append(message)
-    await session._emit_to_client({"observation": "agent_state_changed", "extras": {"agent_state": "READY"}})
+    await session._emit_to_client(
+        {"observation": "agent_state_changed", "extras": {"agent_state": "READY"}}
+    )
     assert any("Agent state changed" in msg for msg in infos)
     await session.close()
 

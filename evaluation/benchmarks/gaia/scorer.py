@@ -21,7 +21,6 @@ def split_string(s: str, char_list: list[str] = None) -> list[str]:
 
 
 def question_scorer(model_answer: str, ground_truth: str) -> bool:
-
     def is_float(element: any) -> bool:
         try:
             float(element)
@@ -38,7 +37,11 @@ def question_scorer(model_answer: str, ground_truth: str) -> bool:
         gt_elems = split_string(ground_truth)
         ma_elems = split_string(model_answer)
         if len(gt_elems) != len(ma_elems):
-            warnings.warn("Answer lists have different lengths, returning False.", UserWarning, stacklevel=2)
+            warnings.warn(
+                "Answer lists have different lengths, returning False.",
+                UserWarning,
+                stacklevel=2,
+            )
             return False
         comparisons = []
         for ma_elem, gt_elem in zip(ma_elems, gt_elems):
@@ -47,7 +50,8 @@ def question_scorer(model_answer: str, ground_truth: str) -> bool:
                 comparisons.append(normalized_ma_elem == float(gt_elem))
             else:
                 comparisons.append(
-                    normalize_str(ma_elem, remove_punct=False) == normalize_str(gt_elem, remove_punct=False)
+                    normalize_str(ma_elem, remove_punct=False)
+                    == normalize_str(gt_elem, remove_punct=False)
                 )
         return all(comparisons)
     else:

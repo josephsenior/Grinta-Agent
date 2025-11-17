@@ -2,6 +2,7 @@ import hashlib
 import os
 import tempfile
 import uuid
+from typing import Any
 from importlib.metadata import version
 from pathlib import Path
 from unittest.mock import ANY, MagicMock, mock_open, patch
@@ -37,7 +38,10 @@ def temp_dir(tmp_path_factory: TempPathFactory) -> str:
 @pytest.fixture
 def mock_docker_client():
     mock_client = MagicMock(spec=docker.DockerClient)
-    mock_client.version.return_value = {"Version": "20.10.0", "Components": [{"Name": "Engine", "Version": "20.10.0"}]}
+    mock_client.version.return_value = {
+        "Version": "20.10.0",
+        "Components": [{"Name": "Engine", "Version": "20.10.0"}],
+    }
     mock_client.images.get.return_value = MagicMock()
     return mock_client
 
@@ -53,16 +57,17 @@ def _patch_docker_from_env(monkeypatch, mock_docker_client):
 
 
 @pytest.fixture(autouse=True)
-def _patch_subprocess_popen(monkeypatch, encoding='utf-8'):
+def _patch_subprocess_popen(monkeypatch, encoding="utf-8"):
     """Patch subprocess.Popen used by the DockerRuntimeBuilder to simulate.
 
     docker buildx output so tests don't invoke the real docker binary.
     """
 
     class FakeStdout:
-
         def __init__(self, lines):
-            self._lines = [line if line.endswith("\n") else line + "\n" for line in lines]
+            self._lines = [
+                line if line.endswith("\n") else line + "\n" for line in lines
+            ]
             self._index = 0
 
         def readline(self):
@@ -73,8 +78,15 @@ def _patch_subprocess_popen(monkeypatch, encoding='utf-8'):
             return ""
 
     class FakePopen:
-
-        def __init__(self, args, stdout=None, stderr=None, universal_newlines=None, bufsize=None, **kwargs):
+        def __init__(
+            self,
+            args,
+            stdout=None,
+            stderr=None,
+            universal_newlines=None,
+            bufsize=None,
+            **kwargs,
+        ):
             self.args = args
             self.stdout = FakeStdout(["Step 1: fake build output", "Step 2: done"])
             self.returncode = 0
@@ -133,7 +145,10 @@ def test_prep_build_folder(temp_dir):
     shutil_mock = MagicMock()
     with patch(f"{prep_build_folder.__module__}.shutil", shutil_mock):
         prep_build_folder(
-            temp_dir, base_image=DEFAULT_BASE_IMAGE, build_from=BuildFromImageType.SCRATCH, extra_deps=None
+            temp_dir,
+            base_image=DEFAULT_BASE_IMAGE,
+            build_from=BuildFromImageType.SCRATCH,
+            extra_deps=None,
         )
     assert shutil_mock.copytree.call_count == 2
     assert shutil_mock.copy2.call_count == 2
@@ -143,7 +158,9 @@ def test_prep_build_folder(temp_dir):
 
 
 def test_get_hash_for_lock_files():
-    with patch("builtins.open", mock_open(read_data="mock-data".encode(encoding='utf-8'))):
+    with patch(
+        "builtins.open", mock_open(read_data="mock-data".encode(encoding="utf-8"))
+    ):
         hash = get_hash_for_lock_files("some_base_image", enable_browser=True)
         sha256 = hashlib.sha256()
         sha256.update("some_base_image".encode())
@@ -153,7 +170,9 @@ def test_get_hash_for_lock_files():
 
 
 def test_get_hash_for_lock_files_different_enable_browser():
-    with patch("builtins.open", mock_open(read_data="mock-data".encode(encoding='utf-8'))):
+    with patch(
+        "builtins.open", mock_open(read_data="mock-data".encode(encoding="utf-8"))
+    ):
         hash_true = get_hash_for_lock_files("some_base_image", enable_browser=True)
         hash_false = get_hash_for_lock_files("some_base_image", enable_browser=False)
         sha256_true = hashlib.sha256()
@@ -185,52 +204,72 @@ def test_get_hash_for_source_files():
 
 def test_generate_dockerfile_build_from_scratch():
     base_image = "debian:11"
-    dockerfile_content = _generate_dockerfile(base_image, build_from=BuildFromImageType.SCRATCH)
+    dockerfile_content = _generate_dockerfile(
+        base_image, build_from=BuildFromImageType.SCRATCH
+    )
     assert base_image in dockerfile_content
     assert "apt-get update" in dockerfile_content
     assert "wget curl" in dockerfile_content
     assert "poetry" in dockerfile_content and "-c conda-forge" in dockerfile_content
     assert "python=3.12" in dockerfile_content
-    assert "COPY --chown=Forge:Forge ./code/Forge /Forge/code/Forge" in dockerfile_content
-    assert "/Forge/micromamba/bin/micromamba run -n Forge poetry install" in dockerfile_content
+    assert (
+        "COPY --chown=Forge:Forge ./code/Forge /Forge/code/Forge" in dockerfile_content
+    )
+    assert (
+        "/Forge/micromamba/bin/micromamba run -n Forge poetry install"
+        in dockerfile_content
+    )
 
 
 def test_generate_dockerfile_build_from_lock():
     base_image = "debian:11"
-    dockerfile_content = _generate_dockerfile(base_image, build_from=BuildFromImageType.LOCK)
+    dockerfile_content = _generate_dockerfile(
+        base_image, build_from=BuildFromImageType.LOCK
+    )
     assert "wget curl sudo apt-utils git" not in dockerfile_content
     assert "-c conda-forge" not in dockerfile_content
     assert "python=3.12" not in dockerfile_content
     assert "https://micro.mamba.pm/install.sh" not in dockerfile_content
     assert "poetry install" not in dockerfile_content
-    assert "COPY --chown=Forge:Forge ./code/Forge /Forge/code/Forge" in dockerfile_content
+    assert (
+        "COPY --chown=Forge:Forge ./code/Forge /Forge/code/Forge" in dockerfile_content
+    )
 
 
 def test_generate_dockerfile_build_from_versioned():
     base_image = "debian:11"
-    dockerfile_content = _generate_dockerfile(base_image, build_from=BuildFromImageType.VERSIONED)
+    dockerfile_content = _generate_dockerfile(
+        base_image, build_from=BuildFromImageType.VERSIONED
+    )
     assert "wget curl sudo apt-utils git" not in dockerfile_content
     assert "-c conda-forge" not in dockerfile_content
     assert "python=3.12" not in dockerfile_content
     assert "https://micro.mamba.pm/install.sh" not in dockerfile_content
     assert "poetry install" in dockerfile_content
-    assert "COPY --chown=Forge:Forge ./code/Forge /Forge/code/Forge" in dockerfile_content
+    assert (
+        "COPY --chown=Forge:Forge ./code/Forge /Forge/code/Forge" in dockerfile_content
+    )
 
 
 def test_get_runtime_image_repo_and_tag_eventstream():
     base_image = "debian:11"
     img_repo, img_tag = get_runtime_image_repo_and_tag(base_image)
-    assert img_repo == f"{get_runtime_image_repo()}" and img_tag == f"{OH_VERSION}_image_debian_tag_11"
+    assert (
+        img_repo == f"{get_runtime_image_repo()}"
+        and img_tag == f"{OH_VERSION}_image_debian_tag_11"
+    )
     img_repo, img_tag = get_runtime_image_repo_and_tag(DEFAULT_BASE_IMAGE)
     assert (
-        img_repo
-        == f"{
-            get_runtime_image_repo()}"
-        and img_tag == f"{OH_VERSION}_image_nikolaik_s_python-nodejs_tag_python3.12-nodejs22"
+        img_repo == f"{get_runtime_image_repo()}"
+        and img_tag
+        == f"{OH_VERSION}_image_nikolaik_s_python-nodejs_tag_python3.12-nodejs22"
     )
     base_image = "ubuntu"
     img_repo, img_tag = get_runtime_image_repo_and_tag(base_image)
-    assert img_repo == f"{get_runtime_image_repo()}" and img_tag == f"{OH_VERSION}_image_ubuntu_tag_latest"
+    assert (
+        img_repo == f"{get_runtime_image_repo()}"
+        and img_tag == f"{OH_VERSION}_image_ubuntu_tag_latest"
+    )
 
 
 def test_build_runtime_image_from_scratch():
@@ -243,13 +282,19 @@ def test_build_runtime_image_from_scratch():
     mock_source_hash.return_value = "mock-source-tag"
     mock_runtime_builder = MagicMock()
     mock_runtime_builder.image_exists.return_value = False
-    mock_runtime_builder.build.return_value = f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"
+    mock_runtime_builder.build.return_value = (
+        f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"
+    )
     mock_prep_build_folder = MagicMock()
     mod = build_runtime_image.__module__
-    with patch(f"{mod}.get_hash_for_lock_files", mock_lock_hash), patch(
-        f"{mod}.get_hash_for_source_files", mock_source_hash
-    ), patch(f"{mod}.get_tag_for_versioned_image", mock_versioned_tag), patch(
-        f"{build_runtime_image.__module__}.prep_build_folder", mock_prep_build_folder
+    with (
+        patch(f"{mod}.get_hash_for_lock_files", mock_lock_hash),
+        patch(f"{mod}.get_hash_for_source_files", mock_source_hash),
+        patch(f"{mod}.get_tag_for_versioned_image", mock_versioned_tag),
+        patch(
+            f"{build_runtime_image.__module__}.prep_build_folder",
+            mock_prep_build_folder,
+        ),
     ):
         image_name = build_runtime_image(base_image, mock_runtime_builder)
         mock_runtime_builder.build.assert_called_once_with(
@@ -262,8 +307,13 @@ def test_build_runtime_image_from_scratch():
             platform=None,
             extra_build_args=None,
         )
-        assert image_name == f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"
-        mock_prep_build_folder.assert_called_once_with(ANY, base_image, BuildFromImageType.SCRATCH, None, True)
+        assert (
+            image_name
+            == f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"
+        )
+        mock_prep_build_folder.assert_called_once_with(
+            ANY, base_image, BuildFromImageType.SCRATCH, None, True
+        )
 
 
 def test_build_runtime_image_exact_hash_exist():
@@ -276,16 +326,25 @@ def test_build_runtime_image_exact_hash_exist():
     mock_versioned_tag.return_value = "mock-versioned-tag"
     mock_runtime_builder = MagicMock()
     mock_runtime_builder.image_exists.return_value = True
-    mock_runtime_builder.build.return_value = f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"
+    mock_runtime_builder.build.return_value = (
+        f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"
+    )
     mock_prep_build_folder = MagicMock()
     mod = build_runtime_image.__module__
-    with patch(f"{mod}.get_hash_for_lock_files", mock_lock_hash), patch(
-        f"{mod}.get_hash_for_source_files", mock_source_hash
-    ), patch(f"{mod}.get_tag_for_versioned_image", mock_versioned_tag), patch(
-        f"{build_runtime_image.__module__}.prep_build_folder", mock_prep_build_folder
+    with (
+        patch(f"{mod}.get_hash_for_lock_files", mock_lock_hash),
+        patch(f"{mod}.get_hash_for_source_files", mock_source_hash),
+        patch(f"{mod}.get_tag_for_versioned_image", mock_versioned_tag),
+        patch(
+            f"{build_runtime_image.__module__}.prep_build_folder",
+            mock_prep_build_folder,
+        ),
     ):
         image_name = build_runtime_image(base_image, mock_runtime_builder)
-        assert image_name == f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"
+        assert (
+            image_name
+            == f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"
+        )
         mock_runtime_builder.build.assert_not_called()
         mock_prep_build_folder.assert_not_called()
 
@@ -311,24 +370,39 @@ def test_build_runtime_image_exact_hash_not_exist_and_lock_exist():
             raise ValueError(f"Unexpected image name: {image_name}")
 
     mock_runtime_builder.image_exists.side_effect = image_exists_side_effect
-    mock_runtime_builder.build.return_value = f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"
+    mock_runtime_builder.build.return_value = (
+        f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"
+    )
     mock_prep_build_folder = MagicMock()
     mod = build_runtime_image.__module__
-    with patch(f"{mod}.get_hash_for_lock_files", mock_lock_hash), patch(
-        f"{mod}.get_hash_for_source_files", mock_source_hash
-    ), patch(f"{mod}.get_tag_for_versioned_image", mock_versioned_tag), patch(
-        f"{build_runtime_image.__module__}.prep_build_folder", mock_prep_build_folder
+    with (
+        patch(f"{mod}.get_hash_for_lock_files", mock_lock_hash),
+        patch(f"{mod}.get_hash_for_source_files", mock_source_hash),
+        patch(f"{mod}.get_tag_for_versioned_image", mock_versioned_tag),
+        patch(
+            f"{build_runtime_image.__module__}.prep_build_folder",
+            mock_prep_build_folder,
+        ),
     ):
         image_name = build_runtime_image(base_image, mock_runtime_builder)
-        assert image_name == f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"
+        assert (
+            image_name
+            == f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"
+        )
         mock_runtime_builder.build.assert_called_once_with(
             path=ANY,
-            tags=[f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"],
+            tags=[
+                f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"
+            ],
             platform=None,
             extra_build_args=None,
         )
         mock_prep_build_folder.assert_called_once_with(
-            ANY, f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag", BuildFromImageType.LOCK, None, True
+            ANY,
+            f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag",
+            BuildFromImageType.LOCK,
+            None,
+            True,
         )
 
 
@@ -353,16 +427,25 @@ def test_build_runtime_image_exact_hash_not_exist_and_lock_not_exist_and_version
             raise ValueError(f"Unexpected image name: {image_name}")
 
     mock_runtime_builder.image_exists.side_effect = image_exists_side_effect
-    mock_runtime_builder.build.return_value = f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"
+    mock_runtime_builder.build.return_value = (
+        f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"
+    )
     mock_prep_build_folder = MagicMock()
     mod = build_runtime_image.__module__
-    with patch(f"{mod}.get_hash_for_lock_files", mock_lock_hash), patch(
-        f"{mod}.get_hash_for_source_files", mock_source_hash
-    ), patch(f"{mod}.get_tag_for_versioned_image", mock_versioned_tag), patch(
-        f"{build_runtime_image.__module__}.prep_build_folder", mock_prep_build_folder
+    with (
+        patch(f"{mod}.get_hash_for_lock_files", mock_lock_hash),
+        patch(f"{mod}.get_hash_for_source_files", mock_source_hash),
+        patch(f"{mod}.get_tag_for_versioned_image", mock_versioned_tag),
+        patch(
+            f"{build_runtime_image.__module__}.prep_build_folder",
+            mock_prep_build_folder,
+        ),
     ):
         image_name = build_runtime_image(base_image, mock_runtime_builder)
-        assert image_name == f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"
+        assert (
+            image_name
+            == f"{get_runtime_image_repo()}:{OH_VERSION}_mock-lock-tag_mock-source-tag"
+        )
         mock_runtime_builder.build.assert_called_once_with(
             path=ANY,
             tags=[
@@ -373,14 +456,24 @@ def test_build_runtime_image_exact_hash_not_exist_and_lock_not_exist_and_version
             extra_build_args=None,
         )
         mock_prep_build_folder.assert_called_once_with(
-            ANY, f"{get_runtime_image_repo()}:{OH_VERSION}_mock-versioned-tag", BuildFromImageType.VERSIONED, None, True
+            ANY,
+            f"{get_runtime_image_repo()}:{OH_VERSION}_mock-versioned-tag",
+            BuildFromImageType.VERSIONED,
+            None,
+            True,
         )
 
 
 def test_output_build_progress(docker_runtime_builder):
-    layers = {}
+    layers: dict[str, dict[str, Any]] = {}
     docker_runtime_builder._output_build_progress(
-        {"id": "layer1", "status": "Downloading", "progressDetail": {"current": 50, "total": 100}}, layers, 0
+        {
+            "id": "layer1",
+            "status": "Downloading",
+            "progressDetail": {"current": 50, "total": 100},
+        },
+        layers,
+        0,
     )
     assert layers["layer1"]["status"] == "Downloading"
     assert layers["layer1"]["progress"] == ""
@@ -395,7 +488,7 @@ def live_docker_image():
     dockerfile_content = f'\n    # syntax=docker/dockerfile:1.4\n    FROM {DEFAULT_BASE_IMAGE} AS base\n    RUN apt-get update && apt-get install -y wget curl sudo apt-utils\n\n    FROM base AS intermediate\n    RUN mkdir -p /Forge\n\n    FROM intermediate AS final\n    RUN echo "Hello, Forge!" > /Forge/hello.txt\n    '
     with tempfile.TemporaryDirectory() as temp_dir:
         dockerfile_path = os.path.join(temp_dir, "Dockerfile")
-        with open(dockerfile_path, "w", encoding='utf-8') as f:
+        with open(dockerfile_path, "w", encoding="utf-8") as f:
             f.write(dockerfile_content)
         try:
             image, logs = client.images.build(
@@ -408,7 +501,11 @@ def live_docker_image():
             )
             client.api.tag(image.id, unique_prefix, "base")
             client.api.tag(image.id, unique_prefix, "intermediate")
-            all_tags = [f"{unique_prefix}:final", f"{unique_prefix}:base", f"{unique_prefix}:intermediate"]
+            all_tags = [
+                f"{unique_prefix}:final",
+                f"{unique_prefix}:base",
+                f"{unique_prefix}:intermediate",
+            ]
             print(f"\nImage ID: {image.id}")
             print(f"Image tags: {all_tags}\n")
             yield image
@@ -433,10 +530,11 @@ def test_build_image_from_scratch(docker_runtime_builder, tmp_path):
     with open(os.path.join(context_path, "Dockerfile"), "w") as f:
         f.write('FROM php:latest\nCMD ["sh", "-c", "echo \'Hello, World!\'"]\n')
     built_image_name = None
-    container = None
     client = docker.from_env()
     try:
-        built_image_name = docker_runtime_builder.build(context_path, tags, use_local_cache=False)
+        built_image_name = docker_runtime_builder.build(
+            context_path, tags, use_local_cache=False
+        )
         assert built_image_name == f"{tags[0]}"
         image = client.images.get(tags[0])
         assert image is not None
@@ -445,18 +543,14 @@ def test_build_image_from_scratch(docker_runtime_builder, tmp_path):
     except Exception as e:
         pytest.fail(f"test_build_image_from_scratch: Build failed with error: {str(e)}")
     finally:
-        if container:
-            try:
-                container.remove(force=True)
-                logger.info("Removed test container: `%s`", container.id)
-            except Exception as e:
-                logger.warning("Failed to remove test container `%s`: %s", container.id, str(e))
         if built_image_name:
             try:
                 client.images.remove(built_image_name, force=True)
                 logger.info("Removed test image: `%s`", built_image_name)
             except Exception as e:
-                logger.warning("Failed to remove test image `%s`: %s", built_image_name, str(e))
+                logger.warning(
+                    "Failed to remove test image `%s`: %s", built_image_name, str(e)
+                )
         else:
             logger.warning("No image was built, so no image cleanup was necessary.")
 
@@ -484,37 +578,39 @@ def test_build_image_from_repo(docker_runtime_builder, tmp_path):
     context_path = str(tmp_path)
     tags = ["alpine:latest"]
     with open(os.path.join(context_path, "Dockerfile"), "w") as f:
-        f.write(f"""FROM {DEFAULT_BASE_IMAGE}\nCMD ["sh", "-c", "echo 'Hello, World!'"]\n""")
+        f.write(
+            f"""FROM {DEFAULT_BASE_IMAGE}\nCMD ["sh", "-c", "echo 'Hello, World!'"]\n"""
+        )
     built_image_name = None
-    container = None
     client = docker.from_env()
     try:
-        built_image_name = docker_runtime_builder.build(context_path, tags, use_local_cache=False)
+        built_image_name = docker_runtime_builder.build(
+            context_path, tags, use_local_cache=False
+        )
         assert built_image_name == f"{tags[0]}"
         image = client.images.get(tags[0])
         assert image is not None
     except docker.errors.ImageNotFound:
         pytest.fail("test_build_image_from_repo: test image not found!")
     finally:
-        if container:
-            try:
-                container.remove(force=True)
-                logger.info("Removed test container: `%s`", container.id)
-            except Exception as e:
-                logger.warning("Failed to remove test container `%s`: %s", container.id, str(e))
         if built_image_name:
             try:
                 client.images.remove(built_image_name, force=True)
                 logger.info("Removed test image: `%s`", built_image_name)
             except Exception as e:
-                logger.warning("Failed to remove test image `%s`: %s", built_image_name, str(e))
+                logger.warning(
+                    "Failed to remove test image `%s`: %s", built_image_name, str(e)
+                )
         else:
             logger.warning("No image was built, so no image cleanup was necessary.")
 
 
 def test_image_exists_local(docker_runtime_builder):
     mock_client = MagicMock()
-    mock_client.version.return_value = {"Version": "20.10.0", "Components": [{"Name": "Engine", "Version": "20.10.0"}]}
+    mock_client.version.return_value = {
+        "Version": "20.10.0",
+        "Components": [{"Name": "Engine", "Version": "20.10.0"}],
+    }
     builder = DockerRuntimeBuilder(mock_client)
     image_name = "existing-local:image"
     assert builder.image_exists(image_name)
@@ -522,13 +618,22 @@ def test_image_exists_local(docker_runtime_builder):
 
 def test_image_exists_not_found():
     mock_client = MagicMock()
-    mock_client.version.return_value = {"Version": "20.10.0", "Components": [{"Name": "Engine", "Version": "20.10.0"}]}
-    mock_client.images.get.side_effect = docker.errors.ImageNotFound("He doesn't like you!")
-    mock_client.api.pull.side_effect = docker.errors.ImageNotFound("I don't like you either!")
+    mock_client.version.return_value = {
+        "Version": "20.10.0",
+        "Components": [{"Name": "Engine", "Version": "20.10.0"}],
+    }
+    mock_client.images.get.side_effect = docker.errors.ImageNotFound(
+        "He doesn't like you!"
+    )
+    mock_client.api.pull.side_effect = docker.errors.ImageNotFound(
+        "I don't like you either!"
+    )
     builder = DockerRuntimeBuilder(mock_client)
     assert not builder.image_exists("nonexistent:image")
     mock_client.images.get.assert_called_once_with("nonexistent:image")
-    mock_client.api.pull.assert_called_once_with("nonexistent", tag="image", stream=True, decode=True)
+    mock_client.api.pull.assert_called_once_with(
+        "nonexistent", tag="image", stream=True, decode=True
+    )
 
 
 def test_truncate_hash():

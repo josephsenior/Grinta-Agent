@@ -35,7 +35,9 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
         default="config.toml",
         help="Path to the config file (default: config.toml in the current directory)",
     )
-    parser.add_argument("-t", "--task", type=str, default="", help="The task for the agent to perform")
+    parser.add_argument(
+        "-t", "--task", type=str, default="", help="The task for the agent to perform"
+    )
     parser.add_argument(
         "-f",
         "--file",
@@ -57,7 +59,9 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
         type=str,
         help='Replace default Agent ([agent] section in config.toml) config with the specified Agent config, e.g. "CodeAct" for [agent.CodeAct] section in config.toml',
     )
-    parser.add_argument("-v", "--version", action="store_true", help="Show version information")
+    parser.add_argument(
+        "-v", "--version", action="store_true", help="Show version information"
+    )
 
 
 def add_evaluation_arguments(parser: argparse.ArgumentParser) -> None:
@@ -68,9 +72,24 @@ def add_evaluation_arguments(parser: argparse.ArgumentParser) -> None:
         type=str,
         help="The directory to save evaluation output",
     )
-    parser.add_argument("--eval-n-limit", default=None, type=int, help="The number of instances to evaluate")
-    parser.add_argument("--eval-num-workers", default=4, type=int, help="The number of workers to use for evaluation")
-    parser.add_argument("--eval-note", default=None, type=str, help="The note to add to the evaluation directory")
+    parser.add_argument(
+        "--eval-n-limit",
+        default=None,
+        type=int,
+        help="The number of instances to evaluate",
+    )
+    parser.add_argument(
+        "--eval-num-workers",
+        default=4,
+        type=int,
+        help="The number of workers to use for evaluation",
+    )
+    parser.add_argument(
+        "--eval-note",
+        default=None,
+        type=str,
+        help="The note to add to the evaluation directory",
+    )
     parser.add_argument(
         "--eval-ids",
         default=None,
@@ -81,8 +100,16 @@ def add_evaluation_arguments(parser: argparse.ArgumentParser) -> None:
 
 def add_headless_specific_arguments(parser: argparse.ArgumentParser) -> None:
     """Add arguments specific to headless mode (full evaluation suite)."""
-    parser.add_argument("-d", "--directory", type=str, help="The working directory for the agent")
-    parser.add_argument("-c", "--agent-cls", default=None, type=str, help="Name of the default agent to use")
+    parser.add_argument(
+        "-d", "--directory", type=str, help="The working directory for the agent"
+    )
+    parser.add_argument(
+        "-c",
+        "--agent-cls",
+        default=None,
+        type=str,
+        help="Name of the default agent to use",
+    )
     parser.add_argument(
         "-i",
         "--max-iterations",
@@ -125,7 +152,9 @@ def get_cli_parser() -> argparse.ArgumentParser:
         description="Forge supports two main commands:",
         metavar="COMMAND",
     )
-    serve_parser = subparsers.add_parser("serve", help="Launch the Forge GUI server using Docker (web interface)")
+    serve_parser = subparsers.add_parser(
+        "serve", help="Launch the Forge GUI server using Docker (web interface)"
+    )
     serve_parser.add_argument(
         "--mount-cwd",
         help="Mount the current working directory into the GUI server container",
@@ -138,7 +167,9 @@ def get_cli_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
     )
-    cli_parser = subparsers.add_parser("cli", help="Run Forge in CLI mode (terminal interface)")
+    cli_parser = subparsers.add_parser(
+        "cli", help="Run Forge in CLI mode (terminal interface)"
+    )
     add_common_arguments(cli_parser)
     cli_parser.add_argument(
         "--override-cli-mode",
@@ -146,7 +177,9 @@ def get_cli_parser() -> argparse.ArgumentParser:
         type=bool,
         default=False,
     )
-    parser.add_argument("--conversation", help="The conversation id to continue", type=str, default=None)
+    parser.add_argument(
+        "--conversation", help="The conversation id to continue", type=str, default=None
+    )
     return parser
 
 

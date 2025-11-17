@@ -19,5 +19,6 @@ def test_create_task_tracker_tool_short_description() -> None:
     assert "structured task management" in tool["function"]["description"]
     # Short description should be shorter than detailed one
     detailed = create_task_tracker_tool()
-    assert len(tool["function"]["description"]) < len(detailed["function"]["description"])
-
+    assert len(tool["function"]["description"]) < len(
+        detailed["function"]["description"]
+    )

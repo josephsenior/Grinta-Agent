@@ -77,7 +77,9 @@ def report_last(args) -> None:
     data = load_last()
     report = data.get("report", {})
     events = report.get("events", [])
-    table_rows = [["STEP", "ROLE", "STATUS", "RETRIES", "MS", "TOKENS", "MODEL", "FAILURE_TYPE"]]
+    table_rows = [
+        ["STEP", "ROLE", "STATUS", "RETRIES", "MS", "TOKENS", "MODEL", "FAILURE_TYPE"]
+    ]
     table_rows.extend(
         [
             str(evt.get("step_id")),
@@ -87,7 +89,10 @@ def report_last(args) -> None:
             str(evt.get("duration_ms", "")),
             str(evt.get("total_tokens", "")),
             str(evt.get("model", "")),
-            str(evt.get("failure_type", "") or (evt.get("meta") or {}).get("failure_type", "")),
+            str(
+                evt.get("failure_type", "")
+                or (evt.get("meta") or {}).get("failure_type", "")
+            ),
         ]
         for evt in events
         if evt.get("status") in {"executed", "executed_shaped", "failed", "skipped"}
@@ -97,7 +102,9 @@ def report_last(args) -> None:
             pass
 
 
-def _calculate_aggregate_stats(recs: list[dict[str, Any]]) -> tuple[int, int, float, float, float]:
+def _calculate_aggregate_stats(
+    recs: list[dict[str, Any]],
+) -> tuple[int, int, float, float, float]:
     """Calculate aggregate statistics from run records."""
     total = len(recs)
     ok_count = sum(bool(r.get("ok")) for r in recs)
@@ -117,7 +124,9 @@ def _collect_failure_types(recs: list[dict[str, Any]]) -> dict[str, int]:
                 meta = ev.get("meta") or {}
                 ftype = None
                 if isinstance(meta, dict):
-                    ftype = meta.get("failure_type") or meta.get("type") or ev.get("reason")
+                    ftype = (
+                        meta.get("failure_type") or meta.get("type") or ev.get("reason")
+                    )
                 if ftype:
                     failure_counter[ftype] = failure_counter.get(ftype, 0) + 1
     return failure_counter
@@ -135,12 +144,16 @@ def report_aggregate(args) -> None:
         return
 
     # Calculate statistics
-    _total, _ok_count, _avg_tokens, _avg_duration, _avg_retries = _calculate_aggregate_stats(recs)
+    _total, _ok_count, _avg_tokens, _avg_duration, _avg_retries = (
+        _calculate_aggregate_stats(recs)
+    )
 
     # Print aggregate stats
 
     if failure_counter := _collect_failure_types(recs):
-        for _k, _v in sorted(failure_counter.items(), key=lambda x: x[1], reverse=True)[:10]:
+        for _k, _v in sorted(failure_counter.items(), key=lambda x: x[1], reverse=True)[
+            :10
+        ]:
             pass
 
 

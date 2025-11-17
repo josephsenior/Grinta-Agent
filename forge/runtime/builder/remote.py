@@ -20,7 +20,9 @@ from forge.utils.shutdown_listener import should_continue, sleep_if_should_conti
 class RemoteRuntimeBuilder(RuntimeBuilder):
     """This class interacts with the remote Runtime API for building and managing container images."""
 
-    def __init__(self, api_url: str, api_key: str, session: HttpSession | None = None) -> None:
+    def __init__(
+        self, api_url: str, api_key: str, session: HttpSession | None = None
+    ) -> None:
         """Store API configuration and prepare an authenticated HTTP session."""
         self.api_url = api_url
         self.api_key = api_key
@@ -40,16 +42,22 @@ class RemoteRuntimeBuilder(RuntimeBuilder):
             tar.add(path, arcname=".")
         tar_buffer.seek(0)
         base64_encoded_tar = base64.b64encode(tar_buffer.getvalue()).decode("utf-8")
-        files = [("context", ("context.tar.gz", base64_encoded_tar)), ("target_image", (None, tags[0]))]
+        files = [
+            ("context", ("context.tar.gz", base64_encoded_tar)),
+            ("target_image", (None, tags[0])),
+        ]
         files.extend(("tags", (None, tag)) for tag in tags[1:])
         try:
-            response = send_request(self.session, "POST", f"{self.api_url}/build", files=files, timeout=30)
+            response = send_request(
+                self.session, "POST", f"{self.api_url}/build", files=files, timeout=30
+            )
         except httpx.HTTPError as e:
-            if e.response.status_code != 429:
+            response_obj = getattr(e, "response", None)
+            if response_obj is None or response_obj.status_code != 429:
                 raise
             logger.warning("Build was rate limited. Retrying in 30 seconds.")
             time.sleep(30)
-            return self.build(path, tags, platform)
+            return self.build(path, tags, platform, extra_build_args)
         build_data = response.json()
         build_id = build_data["build_id"]
         logger.info("Build initiated with ID: %s", build_id)
@@ -76,8 +84,16 @@ class RemoteRuntimeBuilder(RuntimeBuilder):
             if status == "SUCCESS":
                 logger.debug("Successfully built %s", status_data["image"])
                 return str(status_data["image"])
-            if status in ["FAILURE", "INTERNAL_ERROR", "TIMEOUT", "CANCELLED", "EXPIRED"]:
-                error_message = status_data.get("error", f"Build failed with status: {status}. Build ID: {build_id}")
+            if status in [
+                "FAILURE",
+                "INTERNAL_ERROR",
+                "TIMEOUT",
+                "CANCELLED",
+                "EXPIRED",
+            ]:
+                error_message = status_data.get(
+                    "error", f"Build failed with status: {status}. Build ID: {build_id}"
+                )
                 logger.error(error_message)
                 raise AgentRuntimeBuildError(error_message)
             sleep_if_should_continue(30)
@@ -87,7 +103,9 @@ class RemoteRuntimeBuilder(RuntimeBuilder):
     def image_exists(self, image_name: str, pull_from_repo: bool = True) -> bool:
         """Checks if an image exists in the remote registry using the /image_exists endpoint."""
         params = {"image": image_name}
-        response = send_request(self.session, "GET", f"{self.api_url}/image_exists", params=params)
+        response = send_request(
+            self.session, "GET", f"{self.api_url}/image_exists", params=params
+        )
         if response.status_code != 200:
             logger.error("Failed to check image existence: %s", response.text)
             msg = f"Failed to check image existence: {response.text}"

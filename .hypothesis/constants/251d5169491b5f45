@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\runtime\builder\remote.py
+# hypothesis_version: 6.147.0
+
+[200, 429, 1024, '.', 'Build interrupted', 'Build status: %s', 'CANCELLED', 'EXPIRED', 'FAILURE', 'GET', 'INTERNAL_ERROR', 'POST', 'SUCCESS', 'TIMEOUT', 'X-API-Key', 'build_id', 'context', 'context.tar.gz', 'error', 'exists', 'image', 'image_size_bytes', 'status', 'tags', 'target_image', 'upload_time', 'utf-8', 'w:gz']

@@ -30,19 +30,30 @@ from forge.runtime.base import Runtime
 from forge.utils.async_utils import call_async_from_sync
 
 AGENT_CLS_TO_FAKE_USER_RESPONSE_FN = {
-    "CodeActAgent": functools.partial(codeact_user_response, encapsulate_solution=True, try_parse=None)
+    "CodeActAgent": functools.partial(
+        codeact_user_response, encapsulate_solution=True, try_parse=None
+    )
 }
 AGENT_CLS_TO_INST_SUFFIX = {
     "CodeActAgent": 'When you think you have fixed the issue through code changes, please finish the interaction using the "finish" tool.\n'
 }
-FILE_EXT_MAP = {"python": "py", "java": "java", "c": "c", "cpp": "cpp", "javascript": "js", "typescript": "ts"}
+FILE_EXT_MAP = {
+    "python": "py",
+    "java": "java",
+    "c": "c",
+    "cpp": "cpp",
+    "javascript": "js",
+    "typescript": "ts",
+}
 
 
 def get_config(metadata: EvalMetadata) -> ForgeConfig:
     BIOCODER_BENCH_CONTAINER_IMAGE = "public.ecr.aws/i5g0m1f6/eval_biocoder:v1.0"
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = BIOCODER_BENCH_CONTAINER_IMAGE
-    config = get_FORGE_config_for_eval(metadata=metadata, runtime="docker", sandbox_config=sandbox_config)
+    config = get_FORGE_config_for_eval(
+        metadata=metadata, runtime="docker", sandbox_config=sandbox_config
+    )
     config.set_llm_config(metadata.llm_config)
     agent_config = config.get_agent_config(metadata.agent_class)
     agent_config.enable_prompt_extensions = False
@@ -63,11 +74,11 @@ def initialize_runtime(runtime: Runtime, instance: BiocoderData):
     assert obs.exit_code == 0
     with tempfile.TemporaryDirectory() as tmpdir:
         context_path = os.path.join(tmpdir, "context." + file_ext)
-        with open(context_path, "w", encoding='utf-8') as f:
+        with open(context_path, "w", encoding="utf-8") as f:
             f.write(instance.contextCode)
         runtime.copy_to(context_path, "/testing_files")
         golden_path = os.path.join(tmpdir, "golden." + file_ext)
-        with open(golden_path, "w", encoding='utf-8') as f:
+        with open(golden_path, "w", encoding="utf-8") as f:
             f.write(instance.goldenCode)
         runtime.copy_to(golden_path, "/testing_files")
         testcase_json = {
@@ -76,10 +87,12 @@ def initialize_runtime(runtime: Runtime, instance: BiocoderData):
             "language": instance.language.lower(),
         }
         testcase_path = os.path.join(tmpdir, "testcase_biocoder.json")
-        with open(testcase_path, "w", encoding='utf-8') as f:
+        with open(testcase_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(testcase_json, indent=4))
         runtime.copy_to(testcase_path, "/testing_files")
-    remove_code_script = os.path.join(os.path.dirname(__file__), "scripts", "setup", "remove_code.py")
+    remove_code_script = os.path.join(
+        os.path.dirname(__file__), "scripts", "setup", "remove_code.py"
+    )
     runtime.copy_to(remove_code_script, "/testing_files")
     action = CmdRunAction(command="cd /workspace")
     logger.info(action, extra={"msg_type": "ACTION"})
@@ -98,7 +111,9 @@ def initialize_runtime(runtime: Runtime, instance: BiocoderData):
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
     assert obs.exit_code == 0, f"Failed to chmod the files: {obs.content}"
-    target_filepath = os.path.join("/workspace", instance.repository.split("/")[1], instance.filePath)
+    target_filepath = os.path.join(
+        "/workspace", instance.repository.split("/")[1], instance.filePath
+    )
     line_start = instance.lineStart
     line_end = instance.lineEnd
     language = instance.language.lower()
@@ -121,14 +136,21 @@ def complete_runtime(runtime: Runtime, instance: pd.Series) -> dict[str, Any]:
     logger.info("%s BEGIN Runtime Completion Fn %s", "-" * 50, "-" * 50)
     obs: CmdOutputObservation
     test_result = {"result": {}, "metadata": {}}
-    copy_changed_code_script = os.path.join(os.path.dirname(__file__), "scripts", "setup", "copy_changed_code.py")
+    copy_changed_code_script = os.path.join(
+        os.path.dirname(__file__), "scripts", "setup", "copy_changed_code.py"
+    )
     runtime.copy_to(copy_changed_code_script, "/testing_files")
     file_ext = FILE_EXT_MAP[instance.language.lower()]
-    target_filepath = os.path.join("/workspace", instance.repository.split("/")[1], instance.filePath)
+    target_filepath = os.path.join(
+        "/workspace", instance.repository.split("/")[1], instance.filePath
+    )
     generated_path = os.path.join("/testing_files", "generated." + file_ext)
     action = CmdRunAction(
-        command=f"python3 /testing_files/copy_changed_code.py --target_filepath {target_filepath} --generated_code_filepath {generated_path} --line_start {
-            instance.lineStart} --include_signature"
+        command=f"python3 /testing_files/copy_changed_code.py --target_filepath {
+            target_filepath
+        } --generated_code_filepath {generated_path} --line_start {
+            instance.lineStart
+        } --include_signature"
     )
     logger.info(action, extra={"msg_type": "ACTION"})
     obs = runtime.run_action(action)
@@ -169,7 +191,9 @@ def complete_runtime(runtime: Runtime, instance: pd.Series) -> dict[str, Any]:
     return test_result
 
 
-def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True) -> EvalOutput:
+def process_instance(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True
+) -> EvalOutput:
     config = get_config(metadata)
     instance = BiocoderData(**instance)
     print(instance)
@@ -180,11 +204,12 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
     else:
         logger.info("Starting evaluation for instance %s.", instance_id)
     instruction = f'Please complete the function "{
-        instance.signature}" in the file /workspace/{
-        instance.repository.split('/')[1]}/{
-            instance.filePath}.\nThe environment has been set up for you to start working. You may assume all necessary tools are installed.\nTo complete the task, you must directly modify the file and fill in the function, keeping in mind that the function signature is on line {
-                instance.lineStart - 1}\n\nThe function should do the following:\n{
-                    instance.promptSummaryOnly}\n\n'
+        instance.signature
+    }" in the file /workspace/{instance.repository.split("/")[1]}/{
+        instance.filePath
+    }.\nThe environment has been set up for you to start working. You may assume all necessary tools are installed.\nTo complete the task, you must directly modify the file and fill in the function, keeping in mind that the function signature is on line {
+        instance.lineStart - 1
+    }\n\nThe function should do the following:\n{instance.promptSummaryOnly}\n\n'
     instruction += "IMPORTANT: You should ONLY interact with the environment provided to you AND NEVER ASK FOR HUMAN HELP.\nYou should NOT modify any other files other than the file intended. This means that you should NOT write any test cases.\nYou may need context from other files in the repository to complete this task.Do NOT add any import statements or change anything else other than the writing the function body.\nYou do not need to run the code to check if it works. \nMake sure to include proper formatting in Java and Python, including correct braces and/or indentation.\n"
     instruction += AGENT_CLS_TO_INST_SUFFIX[metadata.agent_class]
     runtime = create_runtime(config)
@@ -195,7 +220,9 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
             config=config,
             initial_user_action=MessageAction(content=instruction),
             runtime=runtime,
-            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[metadata.agent_class],
+            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[
+                metadata.agent_class
+            ],
         )
     )
     if state is None:
@@ -228,8 +255,15 @@ if __name__ == "__main__":
     if llm_config is None:
         raise ValueError(f"Could not find LLM config: --llm_config {args.llm_config}")
     metadata = make_metadata(
-        llm_config, "biocoder", args.agent_cls, args.max_iterations, args.eval_note, args.eval_output_dir
+        llm_config,
+        "biocoder",
+        args.agent_cls,
+        args.max_iterations,
+        args.eval_note,
+        args.eval_output_dir,
     )
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
     instances = prepare_dataset(biocoder_tests, output_file, args.eval_n_limit)
-    run_evaluation(instances, metadata, output_file, args.eval_num_workers, process_instance)
+    run_evaluation(
+        instances, metadata, output_file, args.eval_num_workers, process_instance
+    )

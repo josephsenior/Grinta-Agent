@@ -22,14 +22,24 @@ from forge.cli.tui import (
 )
 from forge.core.config import ForgeConfig
 from forge.events import EventSource
-from forge.events.action import Action, ActionConfirmationStatus, CmdRunAction, MCPAction, MessageAction
-from forge.events.observation import CmdOutputObservation, FileEditObservation, FileReadObservation, MCPObservation
+from forge.events.action import (
+    Action,
+    ActionConfirmationStatus,
+    CmdRunAction,
+    MCPAction,
+    MessageAction,
+)
+from forge.events.observation import (
+    CmdOutputObservation,
+    FileEditObservation,
+    FileReadObservation,
+    MCPObservation,
+)
 from forge.llm.metrics import Metrics
 from forge.mcp_client.error_collector import MCPError
 
 
 class TestDisplayFunctions:
-
     @patch("forge.cli.tui.print_formatted_text")
     def test_display_runtime_initialization_message_local(self, mock_print):
         display_runtime_initialization_message("local")
@@ -101,7 +111,9 @@ class TestDisplayFunctions:
 
     @patch("forge.cli.tui.display_command")
     @patch("forge.cli.tui.initialize_streaming_output")
-    def test_display_event_cmd_action_confirmed(self, mock_init_streaming, mock_display_command):
+    def test_display_event_cmd_action_confirmed(
+        self, mock_init_streaming, mock_display_command
+    ):
         config = MagicMock(spec=ForgeConfig)
         cmd_action = CmdRunAction(command="echo test")
         cmd_action.confirmation_state = ActionConfirmationStatus.CONFIRMED
@@ -146,7 +158,9 @@ class TestDisplayFunctions:
     @patch("forge.cli.tui.display_mcp_observation")
     def test_display_event_mcp_observation(self, mock_display_mcp_observation):
         config = MagicMock(spec=ForgeConfig)
-        mcp_observation = MCPObservation(content="Tool result", name="test_tool", arguments={"param": "value"})
+        mcp_observation = MCPObservation(
+            content="Tool result", name="test_tool", arguments={"param": "value"}
+        )
         display_event(mcp_observation, config)
         mock_display_mcp_observation.assert_called_once_with(mcp_observation)
 
@@ -170,7 +184,9 @@ class TestDisplayFunctions:
 
     @patch("forge.cli.tui.print_container")
     def test_display_mcp_observation(self, mock_print_container):
-        mcp_observation = MCPObservation(content="Tool result", name="test_tool", arguments={"param": "value"})
+        mcp_observation = MCPObservation(
+            content="Tool result", name="test_tool", arguments={"param": "value"}
+        )
         display_mcp_observation(mcp_observation)
         mock_print_container.assert_called_once()
         container = mock_print_container.call_args[0][0]
@@ -204,7 +220,6 @@ class TestDisplayFunctions:
 
 
 class TestInteractiveCommandFunctions:
-
     @patch("forge.cli.tui.print_container")
     def test_display_usage_metrics(self, mock_print_container):
         metrics = UsageMetrics()
@@ -244,7 +259,6 @@ class TestInteractiveCommandFunctions:
 
 
 class TestCustomDiffLexer:
-
     def test_custom_diff_lexer_plus_line(self):
         lexer = CustomDiffLexer()
         document = Mock()
@@ -279,7 +293,6 @@ class TestCustomDiffLexer:
 
 
 class TestUsageMetrics:
-
     def test_usage_metrics_initialization(self):
         metrics = UsageMetrics()
         assert isinstance(metrics.metrics, Metrics)
@@ -287,14 +300,12 @@ class TestUsageMetrics:
 
 
 class TestUserCancelledError:
-
     def test_user_cancelled_error(self):
         error = UserCancelledError()
         assert isinstance(error, Exception)
 
 
 class TestReadConfirmationInput:
-
     @pytest.mark.asyncio
     @patch("forge.cli.tui.cli_confirm")
     async def test_read_confirmation_input_yes(self, mock_confirm):
@@ -320,7 +331,6 @@ class TestReadConfirmationInput:
 
 
 class TestMarkdownRendering:
-
     def test_empty_string(self):
         assert _render_basic_markdown("") == ""
 
@@ -334,13 +344,22 @@ class TestMarkdownRendering:
         assert _render_basic_markdown("__under__") == "<u>under</u>"
 
     def test_combined(self):
-        assert _render_basic_markdown("mix **bold** and __under__ here") == "mix <b>bold</b> and <u>under</u> here"
+        assert (
+            _render_basic_markdown("mix **bold** and __under__ here")
+            == "mix <b>bold</b> and <u>under</u> here"
+        )
 
     def test_html_is_escaped(self):
-        assert _render_basic_markdown("<script>alert(1)</script>") == "&lt;script&gt;alert(1)&lt;/script&gt;"
+        assert (
+            _render_basic_markdown("<script>alert(1)</script>")
+            == "&lt;script&gt;alert(1)&lt;/script&gt;"
+        )
 
     def test_bold_with_special_chars(self):
-        assert _render_basic_markdown("**a < b & c > d**") == "<b>a &lt; b &amp; c &gt; d</b>"
+        assert (
+            _render_basic_markdown("**a < b & c > d**")
+            == "<b>a &lt; b &amp; c &gt; d</b>"
+        )
 
 
 "Tests for CLI TUI MCP functionality."
@@ -352,7 +371,9 @@ class TestMCPTUIDisplay:
     @patch("forge.cli.tui.print_container")
     def test_display_mcp_action_with_arguments(self, mock_print_container):
         """Test displaying MCP action with arguments."""
-        mcp_action = MCPAction(name="test_tool", arguments={"param1": "value1", "param2": 42})
+        mcp_action = MCPAction(
+            name="test_tool", arguments={"param1": "value1", "param2": 42}
+        )
         display_mcp_action(mcp_action)
         mock_print_container.assert_called_once()
         container = mock_print_container.call_args[0][0]
@@ -364,7 +385,9 @@ class TestMCPTUIDisplay:
     def test_display_mcp_observation_with_content(self, mock_print_container):
         """Test displaying MCP observation with content."""
         mcp_observation = MCPObservation(
-            content="Tool execution successful", name="test_tool", arguments={"param": "value"}
+            content="Tool execution successful",
+            name="test_tool",
+            arguments={"param": "value"},
         )
         display_mcp_observation(mcp_observation)
         mock_print_container.assert_called_once()
@@ -385,7 +408,9 @@ class TestMCPTUIDisplay:
     @patch("forge.cli.tui.print_container")
     @patch("forge.cli.tui.print_formatted_text")
     @patch("forge.cli.tui.mcp_error_collector")
-    def test_display_mcp_errors_with_errors(self, mock_collector, mock_print, mock_print_container):
+    def test_display_mcp_errors_with_errors(
+        self, mock_collector, mock_print, mock_print_container
+    ):
         """Test displaying MCP errors when some exist."""
         error1 = MCPError(
             timestamp=1234567890.0,
@@ -395,7 +420,10 @@ class TestMCPTUIDisplay:
             exception_details="Socket timeout",
         )
         error2 = MCPError(
-            timestamp=1234567891.0, server_name="test-server-2", server_type="sse", error_message="Server unreachable"
+            timestamp=1234567891.0,
+            server_name="test-server-2",
+            server_type="sse",
+            error_message="Server unreachable",
         )
         mock_collector.get_errors.return_value = [error1, error2]
         display_mcp_errors()

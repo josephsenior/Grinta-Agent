@@ -53,7 +53,9 @@ def get_config(metadata: EvalMetadata) -> ForgeConfig:
     return config
 
 
-def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True) -> EvalOutput:
+def process_instance(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True
+) -> EvalOutput:
     config = get_config(metadata)
     instance_id = instance["text"].strip()
     if reset_logger:
@@ -62,7 +64,12 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
     else:
         logger.info("Starting evaluation for instance %s.", instance_id)
     _game_class = {"eda-things": Q20Game, "eda-celebs": Q20GameCelebrity}
-    guesser_kargs = {"max_new_tokens": 64, "temperature": 0.8, "repetition_penalty": 1.0, "do_sample": True}
+    guesser_kargs = {
+        "max_new_tokens": 64,
+        "temperature": 0.8,
+        "repetition_penalty": 1.0,
+        "do_sample": True,
+    }
     global game
     assert metadata.dataset is not None
     assert metadata.details is not None
@@ -84,7 +91,9 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
             config=config,
             initial_user_action=MessageAction(content=instruction),
             runtime=runtime,
-            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[metadata.agent_class],
+            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[
+                metadata.agent_class
+            ],
         )
     )
     if state is None:
@@ -103,18 +112,32 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
         history=histories,
         metrics=metrics,
         error=state.last_error if state and state.last_error else None,
-        test_result={"success": test_result, "final_message": final_message, "ground_truth": instance["text"]},
+        test_result={
+            "success": test_result,
+            "final_message": final_message,
+            "ground_truth": instance["text"],
+        },
     )
 
 
 if __name__ == "__main__":
     parser = get_evaluation_parser()
-    parser.add_argument("--answerer_model", "-a", default="gpt-3.5-turbo", help="answerer model")
     parser.add_argument(
-        "--dataset", default="things", choices=["things", "celebs"], type=str, help="dataset to be used"
+        "--answerer_model", "-a", default="gpt-3.5-turbo", help="answerer model"
     )
-    parser.add_argument("--OPENAI_API_KEY", type=str, required=True, help="Your OpenAI API key")
-    parser.add_argument("--data-split", default="test", type=str, help="data split, eg, test")
+    parser.add_argument(
+        "--dataset",
+        default="things",
+        choices=["things", "celebs"],
+        type=str,
+        help="dataset to be used",
+    )
+    parser.add_argument(
+        "--OPENAI_API_KEY", type=str, required=True, help="Your OpenAI API key"
+    )
+    parser.add_argument(
+        "--data-split", default="test", type=str, help="data split, eg, test"
+    )
     args, _ = parser.parse_known_args()
     eda_dataset = load_dataset(
         "yizheapple/entity-deduction-arena", name=args.dataset, split=args.data_split
@@ -134,8 +157,15 @@ if __name__ == "__main__":
         args.eval_note,
         args.eval_output_dir,
         data_split=args.data_split,
-        details={"answerer_model": str(args.answerer_model), "openai_api_key": str(args.OPENAI_API_KEY)},
+        details={
+            "answerer_model": str(args.answerer_model),
+            "openai_api_key": str(args.OPENAI_API_KEY),
+        },
     )
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
-    prepared_dataset = prepare_dataset(eda_dataset.to_pandas(), output_file, args.eval_n_limit)
-    run_evaluation(prepared_dataset, metadata, output_file, args.eval_num_workers, process_instance)
+    prepared_dataset = prepare_dataset(
+        eda_dataset.to_pandas(), output_file, args.eval_n_limit
+    )
+    run_evaluation(
+        prepared_dataset, metadata, output_file, args.eval_num_workers, process_instance
+    )

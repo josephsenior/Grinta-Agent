@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\agenthub\loc_agent\tools\search_content.py
+# hypothesis_version: 6.147.0
+
+['**/*.py', 'array', 'default', 'description', 'entity_names', 'file_path_or_pattern', 'function', 'get_entity_contents', 'integer', 'items', 'line_nums', 'object', 'properties', 'required', 'search_code_snippets', 'search_terms', 'string', 'type']

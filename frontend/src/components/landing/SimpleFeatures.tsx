@@ -1,36 +1,19 @@
 import React from "react";
 import { Bot, Zap, Shield } from "lucide-react";
 import { useScrollReveal } from "#/hooks/use-scroll-reveal";
-
-const FEATURES = [
-  {
-    icon: Bot,
-    title: "AI-Powered Development",
-    description:
-      "Advanced AI agents that understand your codebase, write production-ready code, and solve complex problems autonomously.",
-    gradient: "from-brand-500 to-accent-500",
-  },
-  {
-    icon: Zap,
-    title: "Lightning Fast",
-    description:
-      "Optimized for speed with parallel execution, intelligent caching, and real-time streaming responses. Get more done in less time.",
-    gradient: "from-accent-500 to-brand-600",
-  },
-  {
-    icon: Shield,
-    title: "Enterprise Ready",
-    description:
-      "Built-in security scanning, compliance tracking, and audit trails. Your code stays private and secure on your infrastructure.",
-    gradient: "from-accent-emerald to-success-500",
-  },
-];
+import { simpleFeatureCards } from "#/content/landing";
 
 export function SimpleFeatures() {
   const { ref, isVisible } = useScrollReveal({
     threshold: 0.2,
     triggerOnce: true,
   });
+
+  const iconCycle = [Bot, Zap, Shield];
+  const features = simpleFeatureCards.map((feature, index) => ({
+    ...feature,
+    icon: iconCycle[index % iconCycle.length],
+  }));
 
   return (
     <section ref={ref} className="py-20 px-6 relative">
@@ -51,7 +34,7 @@ export function SimpleFeatures() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
-          {FEATURES.map((feature, index) => {
+          {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
               <div

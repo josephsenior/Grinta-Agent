@@ -263,7 +263,9 @@ def build_runtime_image_in_folder(
             runtime_image_repo,
             source_tag=source_tag,
             lock_tag=lock_tag,
-            versioned_tag=(versioned_tag if build_from == BuildFromImageType.SCRATCH else None),
+            versioned_tag=(
+                versioned_tag if build_from == BuildFromImageType.SCRATCH else None
+            ),
             platform=platform,
             extra_build_args=extra_build_args,
         )
@@ -424,7 +426,7 @@ def _build_sandbox_image(
     raise AgentRuntimeBuildError(msg)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--base_image",
@@ -468,7 +470,9 @@ if __name__ == "__main__":
                 platform=args.platform,
                 enable_browser=args.enable_browser,
             )
-            _runtime_image_repo, runtime_image_source_tag = runtime_image_hash_name.split(":")
+            _runtime_image_repo, runtime_image_source_tag = (
+                runtime_image_hash_name.split(":")
+            )
             shutil.copytree(temp_dir, build_folder, dirs_exist_ok=True)
         logger.debug(
             "Build folder [%s] is ready: %s",

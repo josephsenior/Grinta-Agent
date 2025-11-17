@@ -52,4 +52,3 @@ def test_get_iframe_tips_contains_guidance() -> None:
     tips = iframe_helper.get_iframe_tips()
     assert "iframe-friendly" in tips
     assert "Testing" in tips
-

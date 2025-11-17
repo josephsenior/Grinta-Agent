@@ -5,6 +5,7 @@ pytest-asyncio
 pytest-xdist
 pytest-timeout
 pytest-playwright
+hypothesis
 pre-commit
 mypy
 ruff

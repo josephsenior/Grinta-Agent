@@ -14,6 +14,7 @@ TOKEN_RE = re.compile("[A-Za-z0-9_]{2,}")
 @dataclass
 class MemoryRecord:
     """Normalized memory entry persisted and searched by MemoryIndex."""
+
     step_id: str
     role: str
     artifact_hash: str | None
@@ -26,7 +27,9 @@ class MemoryRecord:
 class MemoryIndex:
     """Lightweight TF-IDF memory store with append-only persistence."""
 
-    def __init__(self, run_id: str, base_dir: Path | None = None, max_records: int | None = 500) -> None:
+    def __init__(
+        self, run_id: str, base_dir: Path | None = None, max_records: int | None = 500
+    ) -> None:
         """Initialize in-process memory index for step artifacts and semantic search.
 
         Args:
@@ -125,7 +128,10 @@ class MemoryIndex:
 
         """
         total_docs = max(len(self._records), 1)
-        return {t: freq * math.log((total_docs + 1) / (1 + self._df.get(t, 0))) for t, freq in tokens.items()}
+        return {
+            t: freq * math.log((total_docs + 1) / (1 + self._df.get(t, 0)))
+            for t, freq in tokens.items()
+        }
 
     @staticmethod
     def _cosine(a: dict[str, float], b: dict[str, float]) -> float:
@@ -157,10 +163,19 @@ class MemoryIndex:
             return 0.0
         common = set(a.keys()) & set(b.keys())
         num = sum(a[t] * b[t] for t in common)
-        denom = math.sqrt(sum(v * v for v in a.values())) * math.sqrt(sum(v * v for v in b.values()))
+        denom = math.sqrt(sum(v * v for v in a.values())) * math.sqrt(
+            sum(v * v for v in b.values())
+        )
         return 0.0 if denom == 0 else num / denom
 
-    def add(self, step_id: str, role: str, artifact_hash: str | None, rationale: str | None, content: str) -> None:
+    def add(
+        self,
+        step_id: str,
+        role: str,
+        artifact_hash: str | None,
+        rationale: str | None,
+        content: str,
+    ) -> None:
         """Add a memory record to the index.
 
         Args:
@@ -193,7 +208,9 @@ class MemoryIndex:
 
     def _handle_capacity_limits(self) -> None:
         """Handle capacity limits by compacting or removing old records."""
-        should_compact = (self._max_records and len(self._records) > self._max_records) or len(
+        should_compact = (
+            self._max_records and len(self._records) > self._max_records
+        ) or len(
             self._df,
         ) > self._unique_term_threshold
 
@@ -213,7 +230,12 @@ class MemoryIndex:
                 self._df[tok] = self._df.get(tok, 0) + 1
 
     def _persist_record(
-        self, step_id: str, role: str, artifact_hash: str | None, rationale: str | None, excerpt: str,
+        self,
+        step_id: str,
+        role: str,
+        artifact_hash: str | None,
+        rationale: str | None,
+        excerpt: str,
     ) -> None:
         """Persist record to JSONL file.
 
@@ -312,7 +334,9 @@ class MemoryIndex:
             List of (score, index, record) tuples sorted by score
 
         """
-        scored = [(self._score_record(r, q_vec), i, r) for i, r in enumerate(self._records)]
+        scored = [
+            (self._score_record(r, q_vec), i, r) for i, r in enumerate(self._records)
+        ]
         scored.sort(key=lambda x: (x[0], -x[1]), reverse=True)
         return scored
 

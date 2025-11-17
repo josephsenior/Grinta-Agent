@@ -95,15 +95,15 @@ class UserAuth(ABC):
 
 async def get_user_auth(request: Request) -> UserAuth:
     """Get or create UserAuth instance for request.
-    
+
     Caches instance in request state for reuse within same request.
-    
+
     Args:
         request: HTTP request
-        
+
     Returns:
         UserAuth implementation instance
-        
+
     Raises:
         ValueError: If user auth instance creation fails
 

@@ -16,7 +16,12 @@ from evaluation.utils.shared import (
     update_llm_config_for_completions_logging,
 )
 from forge.controller.state.state import State
-from forge.core.config import AgentConfig, ForgeConfig, get_llm_config_arg, parse_arguments
+from forge.core.config import (
+    AgentConfig,
+    ForgeConfig,
+    get_llm_config_arg,
+    parse_arguments,
+)
 from forge.core.logger import forge_logger as logger
 from forge.core.main import create_runtime, run_controller
 from forge.events.action import MessageAction
@@ -24,40 +29,55 @@ from forge.events.serialization.event import event_to_dict
 from forge.runtime.base import Runtime
 from forge.utils.async_utils import call_async_from_sync
 
-FAKE_RESPONSES = {"CodeActAgent": fake_user_response, "VisualBrowsingAgent": fake_user_response}
+FAKE_RESPONSES = {
+    "CodeActAgent": fake_user_response,
+    "VisualBrowsingAgent": fake_user_response,
+}
 
 
 def get_config(metadata: EvalMetadata, instance_id: str) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.platform = "linux/amd64"
     config = get_FORGE_config_for_eval(
-        metadata=metadata, runtime=os.environ.get("RUNTIME", "docker"), sandbox_config=sandbox_config
+        metadata=metadata,
+        runtime=os.environ.get("RUNTIME", "docker"),
+        sandbox_config=sandbox_config,
     )
     config.debug = True
     config.set_llm_config(
-        update_llm_config_for_completions_logging(metadata.llm_config, metadata.eval_output_dir, instance_id)
+        update_llm_config_for_completions_logging(
+            metadata.llm_config, metadata.eval_output_dir, instance_id
+        )
     )
-    agent_config = AgentConfig(enable_jupyter=True, enable_browsing=True, enable_llm_editor=False)
+    agent_config = AgentConfig(
+        enable_jupyter=True, enable_browsing=True, enable_llm_editor=False
+    )
     config.set_agent_config(agent_config)
     return config
 
 
-def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True) -> EvalOutput:
+def process_instance(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True
+) -> EvalOutput:
     config = get_config(metadata, instance.instance_id)
     if reset_logger:
         log_dir = os.path.join(metadata.eval_output_dir, "infer_logs")
         reset_logger_for_multiprocessing(logger, str(instance.instance_id), log_dir)
     else:
-        logger.info("\nStarting evaluation for instance %s.\n", str(instance.instance_id))
+        logger.info(
+            "\nStarting evaluation for instance %s.\n", str(instance.instance_id)
+        )
     instance_id = instance.instance_id
     spec = importlib.util.spec_from_file_location(instance_id, instance.file_path)
     test_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(test_module)
-    assert hasattr(test_module, "Test"), f"Test module {instance_id} does not have a Test class"
+    assert hasattr(test_module, "Test"), (
+        f"Test module {instance_id} does not have a Test class"
+    )
     test_class: type[BaseIntegrationTest] = test_module.Test
-    assert issubclass(
-        test_class, BaseIntegrationTest
-    ), f"Test class {instance_id} does not inherit from BaseIntegrationTest"
+    assert issubclass(test_class, BaseIntegrationTest), (
+        f"Test class {instance_id} does not inherit from BaseIntegrationTest"
+    )
     instruction = test_class.INSTRUCTION
     runtime: Runtime = create_runtime(config)
     call_async_from_sync(runtime.connect)
@@ -96,9 +116,15 @@ def load_integration_tests() -> pd.DataFrame:
     """Load tests from python files under ./tests."""
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     test_dir = os.path.join(cur_dir, "tests")
-    test_files = [os.path.join(test_dir, f) for f in os.listdir(test_dir) if f.startswith("t") and f.endswith(".py")]
+    test_files = [
+        os.path.join(test_dir, f)
+        for f in os.listdir(test_dir)
+        if f.startswith("t") and f.endswith(".py")
+    ]
     df = pd.DataFrame(test_files, columns=["file_path"])
-    df["instance_id"] = df["file_path"].apply(lambda x: os.path.basename(x).rstrip(".py"))
+    df["instance_id"] = df["file_path"].apply(
+        lambda x: os.path.basename(x).rstrip(".py")
+    )
     return df
 
 
@@ -109,29 +135,52 @@ if __name__ == "__main__":
     if llm_config is None:
         raise ValueError(f"Could not find LLM config: --llm_config {args.llm_config}")
     metadata = make_metadata(
-        llm_config, "integration_tests", args.agent_cls, args.max_iterations, args.eval_note, args.eval_output_dir
+        llm_config,
+        "integration_tests",
+        args.agent_cls,
+        args.max_iterations,
+        args.eval_note,
+        args.eval_output_dir,
     )
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
     eval_ids = None
     if args.eval_ids:
         eval_ids = str(args.eval_ids).split(",")
         logger.info("\nUsing specific dataset IDs: %s\n", eval_ids)
-    instances = prepare_dataset(integration_tests, output_file, args.eval_n_limit, eval_ids=eval_ids)
-    run_evaluation(instances, metadata, output_file, args.eval_num_workers, process_instance)
+    instances = prepare_dataset(
+        integration_tests, output_file, args.eval_n_limit, eval_ids=eval_ids
+    )
+    run_evaluation(
+        instances, metadata, output_file, args.eval_num_workers, process_instance
+    )
     df = pd.read_json(output_file, lines=True, orient="records")
     df["success"] = df["test_result"].apply(lambda x: x["success"])
     df["reason"] = df["test_result"].apply(lambda x: x["reason"])
     logger.info("-" * 100)
-    logger.info("Success rate: %s (%s/%s)", df["success"].mean(), df["success"].sum(), len(df))
-    logger.info("\nEvaluation Results:" + "\n" + df[["instance_id", "success", "reason"]].to_string(index=False))
+    logger.info(
+        "Success rate: %s (%s/%s)", df["success"].mean(), df["success"].sum(), len(df)
+    )
+    logger.info(
+        "\nEvaluation Results:"
+        + "\n"
+        + df[["instance_id", "success", "reason"]].to_string(index=False)
+    )
     logger.info("-" * 100)
     df["cost"] = df["metrics"].apply(
-        lambda m: round(sum((c["cost"] for c in m["costs"])), 3) if m and "costs" in m else 0.0
+        lambda m: round(sum((c["cost"] for c in m["costs"])), 3)
+        if m and "costs" in m
+        else 0.0
     )
     df["error_message"] = df.get("error", None)
     logger.info("Total cost: USD %s", df["cost"].sum())
     report_file = os.path.join(metadata.eval_output_dir, "report.md")
-    with open(report_file, "w", encoding='utf-8') as f:
-        f.write(f"Success rate: {df['success'].mean():.2%} ({df['success'].sum()}/{len(df)})\n")
+    with open(report_file, "w", encoding="utf-8") as f:
+        f.write(
+            f"Success rate: {df['success'].mean():.2%} ({df['success'].sum()}/{len(df)})\n"
+        )
         f.write(f"\nTotal cost: USD {df['cost'].sum():.2f}\n")
-        f.write(df[["instance_id", "success", "reason", "cost", "error_message"]].to_markdown(index=False))
+        f.write(
+            df[
+                ["instance_id", "success", "reason", "cost", "error_message"]
+            ].to_markdown(index=False)
+        )

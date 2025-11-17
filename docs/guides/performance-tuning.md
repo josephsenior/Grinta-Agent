@@ -22,13 +22,16 @@
 **Use Production-Grade Server:**
 ```bash
 # Development (single worker)
-uvicorn Forge.server:app
+python -m forge.server
+
+# Or with uvicorn directly:
+uvicorn forge.server.listen:app --host 0.0.0.0 --port 3000
 
 # Production (multiple workers)
-gunicorn Forge.server:app \
+gunicorn forge.server.listen:app \
   --workers 4 \
   --worker-class uvicorn.workers.UvicornWorker \
-  --bind 0.0.0.0:8000
+  --bind 0.0.0.0:3000
 ```
 
 **Configure Workers:**

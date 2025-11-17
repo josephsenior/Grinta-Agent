@@ -8,7 +8,7 @@ def main():
     args = parser.parse_args()
     this_log = args.file
     outs = []
-    with open(this_log, "r", encoding='utf-8') as f:
+    with open(this_log, "r", encoding="utf-8") as f:
         lines = f.readlines()
         outs.extend((json.loads(line) for line in lines))
     print(f"Reading {this_log}")

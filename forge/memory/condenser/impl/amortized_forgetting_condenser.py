@@ -43,10 +43,10 @@ class AmortizedForgettingCondenser(RollingCondenser):
 
     def get_condensation(self, view: View) -> Condensation:
         """Generate condensation by keeping head and tail events.
-        
+
         Args:
             view: Memory view to condense
-            
+
         Returns:
             Condensation with events to forget
 
@@ -65,10 +65,10 @@ class AmortizedForgettingCondenser(RollingCondenser):
 
     def should_condense(self, view: View) -> bool:
         """Check if view exceeds max_size threshold.
-        
+
         Args:
             view: Memory view to check
-            
+
         Returns:
             True if condensation needed
 
@@ -82,18 +82,20 @@ class AmortizedForgettingCondenser(RollingCondenser):
         llm_registry: LLMRegistry,
     ) -> AmortizedForgettingCondenser:
         """Create condenser from configuration.
-        
+
         Args:
             config: Condenser configuration
             llm_registry: LLM registry (not used)
-            
+
         Returns:
             Configured condenser instance
 
         """
         from forge.core.pydantic_compat import model_dump_with_options
 
-        return AmortizedForgettingCondenser(**model_dump_with_options(config, exclude={"type"}))
+        return AmortizedForgettingCondenser(
+            **model_dump_with_options(config, exclude={"type"})
+        )
 
 
 # Lazy registration to avoid circular imports
@@ -117,6 +119,8 @@ def _register_config():
 
     """
     from forge.core.config.condenser_config import AmortizedForgettingCondenserConfig
+
     AmortizedForgettingCondenser.register_config(AmortizedForgettingCondenserConfig)
+
 
 _register_config()

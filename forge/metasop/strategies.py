@@ -52,13 +52,13 @@ class DefaultStepExecutor(BaseStepExecutor):
         config: ForgeConfig | None,
     ) -> StepResult:
         """Execute step using appropriate adapter based on role type.
-        
+
         Args:
             step: SOP step to execute
             ctx: Orchestration context with artifacts and state
             role_profile: Configuration for the specific role
             config: Forge configuration
-            
+
         Returns:
             StepResult with execution outcome and artifacts
 
@@ -68,7 +68,9 @@ class DefaultStepExecutor(BaseStepExecutor):
             return run_engineer_with_codeact(step, ctx, role_profile, config)
         # Use the orchestrator's LLM registry if available
         llm_registry = getattr(ctx, "llm_registry", None)
-        return run_step_with_Forge(step, ctx, role_profile, config=config, llm_registry=llm_registry)
+        return run_step_with_Forge(
+            step, ctx, role_profile, config=config, llm_registry=llm_registry
+        )
 
 
 class TimeoutStepExecutor(BaseStepExecutor):
@@ -86,7 +88,10 @@ class TimeoutStepExecutor(BaseStepExecutor):
         self,
         inner: BaseStepExecutor,
         timeout_seconds: int | None,
-        stuck_callback: Callable[[SopStep, OrchestrationContext, threading.Thread, float], None] | None = None,
+        stuck_callback: Callable[
+            [SopStep, OrchestrationContext, threading.Thread, float], None
+        ]
+        | None = None,
         stuck_threshold: float | None = None,
     ) -> None:
         """Wrap another executor with wall-clock timeout and optional stuck-thread handling."""
@@ -94,7 +99,11 @@ class TimeoutStepExecutor(BaseStepExecutor):
         self.timeout = timeout_seconds
         self._stuck_callback = stuck_callback
         self._stuck_threshold = (
-            stuck_threshold if stuck_threshold is not None else self.timeout * 2 if self.timeout else 30
+            stuck_threshold
+            if stuck_threshold is not None
+            else self.timeout * 2
+            if self.timeout
+            else 30
         )
 
     def execute(
@@ -112,7 +121,9 @@ class TimeoutStepExecutor(BaseStepExecutor):
 
         def run_inner() -> None:
             """Invoke wrapped executor and capture StepResult."""
-            result_container["result"] = self.inner.execute(step, ctx, role_profile, config)
+            result_container["result"] = self.inner.execute(
+                step, ctx, role_profile, config
+            )
 
         th = threading.Thread(target=run_inner, daemon=True)
         th.start()
@@ -132,7 +143,9 @@ class TimeoutStepExecutor(BaseStepExecutor):
                             time.sleep(threshold)
                             if worker.is_alive():
                                 try:
-                                    stuck_callback(step_arg, ctx_arg, worker, timeout_val)
+                                    stuck_callback(
+                                        step_arg, ctx_arg, worker, timeout_val
+                                    )
                                 except Exception:
                                     logging.exception("stuck_callback raised")
                         except Exception:
@@ -147,7 +160,9 @@ class TimeoutStepExecutor(BaseStepExecutor):
             except Exception:
                 logging.exception("Failed to start stuck watcher")
             return StepResult(ok=False, error=f"step_timeout_after_{self.timeout}s")
-        return result_container.get("result") or StepResult(ok=False, error="unknown_execution_failure")
+        return result_container.get("result") or StepResult(
+            ok=False, error="unknown_execution_failure"
+        )
 
 
 class BaseQAExecutor(ABC):
@@ -175,13 +190,13 @@ class DefaultQAExecutor(BaseQAExecutor):
         selected_tests: list[str] | None = None,
     ) -> Artifact:
         """Execute QA tests using pytest.
-        
+
         Args:
             step: QA step to execute
             ctx: Orchestration context
             repo_root: Root directory of repository
             selected_tests: Optional list of specific tests to run
-            
+
         Returns:
             Artifact with test results
 
@@ -196,11 +211,14 @@ class TimeoutQAExecutor(BaseQAExecutor):
         self,
         inner: BaseQAExecutor,
         timeout_seconds: int | None,
-        stuck_callback: Callable[[SopStep, OrchestrationContext, threading.Thread, float], None] | None = None,
+        stuck_callback: Callable[
+            [SopStep, OrchestrationContext, threading.Thread, float], None
+        ]
+        | None = None,
         stuck_threshold: float | None = None,
     ) -> None:
         """Initialize timeout QA executor.
-        
+
         Args:
             inner: QA executor to wrap
             timeout_seconds: Maximum execution time in seconds
@@ -212,7 +230,11 @@ class TimeoutQAExecutor(BaseQAExecutor):
         self.timeout = timeout_seconds
         self._stuck_callback = stuck_callback
         self._stuck_threshold = (
-            stuck_threshold if stuck_threshold is not None else self.timeout * 2 if self.timeout else 30
+            stuck_threshold
+            if stuck_threshold is not None
+            else self.timeout * 2
+            if self.timeout
+            else 30
         )
 
     def run_qa(
@@ -223,13 +245,13 @@ class TimeoutQAExecutor(BaseQAExecutor):
         selected_tests: list[str] | None = None,
     ) -> Artifact:
         """Execute QA with timeout protection.
-        
+
         Args:
             step: QA step to execute
             ctx: Orchestration context
             repo_root: Root directory of repository
             selected_tests: Optional list of specific tests to run
-            
+
         Returns:
             Artifact with test results or timeout error
 
@@ -241,7 +263,9 @@ class TimeoutQAExecutor(BaseQAExecutor):
 
         def run_inner() -> None:
             """Invoke wrapped QA executor and capture Artifact result."""
-            result_container["artifact"] = self.inner.run_qa(step, ctx, repo_root, selected_tests)
+            result_container["artifact"] = self.inner.run_qa(
+                step, ctx, repo_root, selected_tests
+            )
 
         th = threading.Thread(target=run_inner, daemon=True)
         th.start()
@@ -275,7 +299,9 @@ class TimeoutQAExecutor(BaseQAExecutor):
                     watcher.start()
             except Exception:
                 logging.exception("Failed to start stuck watcher")
-            return Artifact(step_id=step.id, role=step.role, content={"ok": False, "timeout": True})
+            return Artifact(
+                step_id=step.id, role=step.role, content={"ok": False, "timeout": True}
+            )
         return result_container.get("artifact") or Artifact(
             step_id=step.id,
             role=step.role,
@@ -287,21 +313,25 @@ class BaseFailureClassifier(ABC):
     """Abstract base class for failure classification strategies."""
 
     @abstractmethod
-    def classify(self, step_id: str, role: str, **kwargs: Any) -> tuple[str | None, dict | None]:
+    def classify(
+        self, step_id: str, role: str, **kwargs: Any
+    ) -> tuple[str | None, dict | None]:
         """Return (failure_type, meta) or (None, None)."""
 
 
 class DefaultFailureClassifier(BaseFailureClassifier):
     """Default classifier using taxonomy-based failure detection."""
 
-    def classify(self, step_id: str, role: str, **kwargs: Any) -> tuple[str | None, dict | None]:
+    def classify(
+        self, step_id: str, role: str, **kwargs: Any
+    ) -> tuple[str | None, dict | None]:
         """Classify step failure using failure taxonomy.
-        
+
         Args:
             step_id: ID of failed step
             role: Role that executed the step
             **kwargs: Additional context (stdout, stderr, etc.)
-            
+
         Returns:
             Tuple of (failure_type, metadata) or (None, None) if no failure
 
@@ -337,14 +367,21 @@ class MemoryIndexStore(BaseMemoryStore):
 
     def __init__(self, index: MemoryIndex | None) -> None:
         """Initialize with existing memory index.
-        
+
         Args:
             index: Optional MemoryIndex instance to wrap
 
         """
         self._index = index
 
-    def add(self, step_id: str, role: str, artifact_hash: str | None, rationale: str | None, content_text: str) -> None:
+    def add(
+        self,
+        step_id: str,
+        role: str,
+        artifact_hash: str | None,
+        rationale: str | None,
+        content_text: str,
+    ) -> None:
         """Add artifact to wrapped memory index."""
         if not self._index:
             return
@@ -365,9 +402,11 @@ class VectorOrLexicalMemoryStore(BaseMemoryStore):
     Selection decided at construction. Provides the same interface for orchestrator.
     """
 
-    def __init__(self, vector_enabled: bool, dim: int | None, max_records: int | None) -> None:
+    def __init__(
+        self, vector_enabled: bool, dim: int | None, max_records: int | None
+    ) -> None:
         """Initialize hybrid memory store.
-        
+
         Args:
             vector_enabled: Whether to enable vector-based search
             dim: Embedding dimension for vector store
@@ -376,13 +415,17 @@ class VectorOrLexicalMemoryStore(BaseMemoryStore):
         """
         self._vector_enabled = vector_enabled
         self._vector_store: VectorMemoryStore | None = None
-        self._lex_store: MemoryIndex | None = MemoryIndex(run_id="__transient__", max_records=max_records)
+        self._lex_store: MemoryIndex | None = MemoryIndex(
+            run_id="__transient__", max_records=max_records
+        )
         if vector_enabled:
-            self._vector_store = VectorMemoryStore(dim=dim or 256, max_records=max_records or 500)
+            self._vector_store = VectorMemoryStore(
+                dim=dim or 256, max_records=max_records or 500
+            )
 
     def bind_run(self, run_id: str) -> None:
         """Bind memory store to a specific run ID.
-        
+
         Args:
             run_id: Unique identifier for the orchestration run
 
@@ -393,14 +436,25 @@ class VectorOrLexicalMemoryStore(BaseMemoryStore):
                 max_records=self._lex_store._max_records if self._lex_store else 500,
             )
 
-    def add(self, step_id: str, role: str, artifact_hash: str | None, rationale: str | None, content_text: str) -> None:
+    def add(
+        self,
+        step_id: str,
+        role: str,
+        artifact_hash: str | None,
+        rationale: str | None,
+        content_text: str,
+    ) -> None:
         """Add artifact to both vector and lexical stores."""
         if self._vector_store:
             with contextlib.suppress(Exception):
-                self._vector_store.add(step_id, role, artifact_hash, rationale, content_text)
+                self._vector_store.add(
+                    step_id, role, artifact_hash, rationale, content_text
+                )
         if self._lex_store:
             with contextlib.suppress(Exception):
-                self._lex_store.add(step_id, role, artifact_hash, rationale, content_text)
+                self._lex_store.add(
+                    step_id, role, artifact_hash, rationale, content_text
+                )
 
     def search(self, query: str, k: int = 3) -> list[dict]:
         """Search using vector and/or lexical stores.
@@ -445,7 +499,9 @@ class VectorOrLexicalMemoryStore(BaseMemoryStore):
 
         return self._merge_results(v_hits, l_hits, k)
 
-    def _merge_results(self, v_hits: list[dict], l_hits: list[dict], k: int) -> list[dict]:
+    def _merge_results(
+        self, v_hits: list[dict], l_hits: list[dict], k: int
+    ) -> list[dict]:
         """Merge and deduplicate search results.
 
         Args:
@@ -470,7 +526,7 @@ class VectorOrLexicalMemoryStore(BaseMemoryStore):
 
     def stats(self) -> dict:
         """Get combined statistics from both stores.
-        
+
         Returns:
             Dictionary with vector/lexical stats and mode information
 

@@ -38,7 +38,9 @@ def _extract_required_caps(step: dict) -> list[str]:
     return []
 
 
-def audit_capabilities(profiles: dict[str, RoleProfile], sops_dir: Path) -> dict[str, Any]:
+def audit_capabilities(
+    profiles: dict[str, RoleProfile], sops_dir: Path
+) -> dict[str, Any]:
     """Audit capabilities across role profiles and SOPs."""
     # Initialize audit state
     audit_state = _initialize_audit_state(profiles)
@@ -56,16 +58,25 @@ def _initialize_audit_state(profiles: dict[str, RoleProfile]) -> dict:
     for rp in profiles.values():
         all_profile_caps.update(rp.capabilities)
 
-    return {"steps_missing": [], "unknown_caps": set(), "capability_usage": {}, "all_profile_caps": all_profile_caps}
+    return {
+        "steps_missing": [],
+        "unknown_caps": set(),
+        "capability_usage": {},
+        "all_profile_caps": all_profile_caps,
+    }
 
 
-def _process_sop_files(sops_dir: Path, profiles: dict[str, RoleProfile], audit_state: dict) -> None:
+def _process_sop_files(
+    sops_dir: Path, profiles: dict[str, RoleProfile], audit_state: dict
+) -> None:
     """Process all SOP files in the directory."""
     for sop_file in sops_dir.glob("*.yaml"):
         _process_single_sop_file(sop_file, profiles, audit_state)
 
 
-def _process_single_sop_file(sop_file: Path, profiles: dict[str, RoleProfile], audit_state: dict) -> None:
+def _process_single_sop_file(
+    sop_file: Path, profiles: dict[str, RoleProfile], audit_state: dict
+) -> None:
     """Process a single SOP file."""
     try:
         with sop_file.open("r", encoding="utf-8") as fh:
@@ -78,7 +89,12 @@ def _process_single_sop_file(sop_file: Path, profiles: dict[str, RoleProfile], a
         _process_single_step(step, data, profiles, audit_state)
 
 
-def _process_single_step(step: dict, sop_data: dict, profiles: dict[str, RoleProfile], audit_state: dict) -> None:
+def _process_single_step(
+    step: dict[str, Any] | object,
+    sop_data: dict[str, Any],
+    profiles: dict[str, RoleProfile],
+    audit_state: dict,
+) -> None:
     """Process a single step within a SOP."""
     if not isinstance(step, dict):
         return
@@ -97,7 +113,9 @@ def _process_single_step(step: dict, sop_data: dict, profiles: dict[str, RolePro
 def _update_capability_usage(required: list[str], audit_state: dict) -> None:
     """Update capability usage statistics and check for unknown capabilities."""
     for cap in required:
-        audit_state["capability_usage"][cap] = audit_state["capability_usage"].get(cap, 0) + 1
+        audit_state["capability_usage"][cap] = (
+            audit_state["capability_usage"].get(cap, 0) + 1
+        )
         if cap not in audit_state["all_profile_caps"]:
             audit_state["unknown_caps"].add(cap)
 
@@ -121,13 +139,27 @@ def _check_missing_capabilities(
 
     if missing := [c for c in required if c not in role_caps]:
         audit_state["steps_missing"].append(
-            {"sop": sop_data.get("name"), "step_id": step_id, "role": role, "required": required, "missing": missing},
+            {
+                "sop": sop_data.get("name"),
+                "step_id": step_id,
+                "role": role,
+                "required": required,
+                "missing": missing,
+            },
         )
 
 
-def _generate_audit_results(audit_state: dict, profiles: dict[str, RoleProfile], sops_dir: Path) -> dict[str, Any]:
+def _generate_audit_results(
+    audit_state: dict, profiles: dict[str, RoleProfile], sops_dir: Path
+) -> dict[str, Any]:
     """Generate the final audit results."""
-    unused_caps = sorted([c for c in audit_state["all_profile_caps"] if c not in audit_state["capability_usage"]])
+    unused_caps = sorted(
+        [
+            c
+            for c in audit_state["all_profile_caps"]
+            if c not in audit_state["capability_usage"]
+        ]
+    )
 
     return {
         "steps_missing_capabilities": audit_state["steps_missing"],

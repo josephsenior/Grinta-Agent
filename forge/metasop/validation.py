@@ -54,11 +54,16 @@ def validate_manifest_file(path: str) -> tuple[bool, list[str]]:
         tmp.pop("manifest_hash", None)
         recomputed = (
             __import__("hashlib")
-            .sha256(json.dumps(tmp, sort_keys=True, separators=(",", ":")).encode("utf-8"))
+            .sha256(
+                json.dumps(tmp, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            )
             .hexdigest()
         )
         if mh and mh != recomputed:
-            return (False, [f"Manifest hash mismatch: stored={mh} recomputed={recomputed}"])
+            return (
+                False,
+                [f"Manifest hash mismatch: stored={mh} recomputed={recomputed}"],
+            )
     except Exception:
         pass
     return (True, [])

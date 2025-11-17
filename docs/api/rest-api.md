@@ -59,39 +59,18 @@ X-API-Key: your-api-key-here
 Cookie: session_id=your-session-id
 ```
 
-### **Authentication Endpoints**
-```http
-# Login
-POST /api/auth/login
-Content-Type: application/json
+### **Authentication**
 
-{
-  "username": "user@example.com",
-  "password": "password123"
-}
+Forge currently uses session-based authentication for Socket.IO connections and API key-based authentication for LLM providers. User authentication endpoints are not yet implemented in the current backend.
 
-# Response
-{
-  "success": true,
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expires_in": 3600,
-  "user": {
-    "id": "user_123",
-    "username": "user@example.com",
-    "role": "user"
-  }
-}
+**Session Authentication (Socket.IO):**
+- Sessions are created when a conversation is initialized via `POST /api/conversations`
+- Session API keys are returned in the conversation response
+- Socket.IO connections require `conversationId` and optionally `session_api_key` in query parameters
 
-# Logout
-POST /api/auth/logout
-Authorization: Bearer your-token
-
-# Response
-{
-  "success": true,
-  "message": "Logged out successfully"
-}
-```
+**LLM Provider Authentication:**
+- API keys are configured via settings: `POST /api/settings`
+- Keys are stored securely and used for LLM API calls
 
 ---
 
@@ -99,120 +78,114 @@ Authorization: Bearer your-token
 
 ### **Development**
 ```
-http://localhost:8000/api/v1
+http://localhost:3000/api
 ```
+
+**Note:** The server runs on port 3000 by default (configurable via `port` environment variable). API versioning is handled via headers, not URL paths. All routes are under `/api/` prefix.
 
 ### **Staging**
 ```
-https://staging-api.Forge.ai/api/v1
+https://staging-api.forge.ai/api
 ```
 
 ### **Production**
 ```
-https://api.Forge.ai/api/v1
+https://api.forge.ai/api
 ```
 
-### **WebSocket URLs**
+### **WebSocket URLs (Socket.IO)**
 ```
 # Development
-ws://localhost:8000/ws
+http://localhost:3000/socket.io
 
 # Staging
-wss://staging-api.Forge.ai/ws
+https://staging-api.forge.ai/socket.io
 
 # Production
-wss://api.Forge.ai/ws
+https://api.forge.ai/socket.io
 ```
+
+**Note:** Socket.IO automatically handles WebSocket upgrade. Use the Socket.IO client library, not raw WebSocket.
 
 ---
 
 ## 🤖 **Agent Endpoints**
 
-### **CodeAct Agent**
+### **Conversation Management**
 
-#### **Run Agent**
+Agent execution is managed through conversations. Create a conversation, then start the agent loop.
+
+#### **Create Conversation**
 ```http
-POST /api/agent/run
-Authorization: Bearer your-token
+POST /api/conversations
 Content-Type: application/json
 
 {
-  "prompt": "Create a user authentication system",
-  "context": {
-    "domain": "web_development",
-    "framework": "FastAPI",
-    "database": "PostgreSQL"
-  },
-  "options": {
-    "max_iterations": 10,
-    "timeout": 300,
-    "enable_memory": true
-  }
+  "repository": "https://github.com/user/repo",
+  "git_provider": "github",
+  "selected_branch": "main",
+  "initial_user_msg": "Create a user authentication system"
 }
 ```
 
 **Response:**
 ```json
 {
-  "success": true,
-  "response": {
-    "code": "from fastapi import FastAPI, Depends, HTTPException\nfrom fastapi.security import HTTPBearer\n...",
-    "output": "User authentication system created successfully",
-    "execution_time": 2.5,
-    "memory_usage": 15.2,
-    "token_usage": 1250,
-    "confidence": 0.95
-  },
-  "metadata": {
-    "agent_id": "codeact_agent_123",
-    "session_id": "session_456",
-    "timestamp": "2024-01-15T10:30:00Z"
-  }
+  "status": "success",
+  "conversation_id": "conv_123abc",
+  "conversation_status": "STOPPED",
+  "message": null
 }
 ```
 
-#### **Get Agent Status**
+#### **Start Conversation (Agent Loop)**
 ```http
-GET /api/agent/status
-Authorization: Bearer your-token
+POST /api/conversations/{conversation_id}/start
+Content-Type: application/json
+
+{
+  "providers_set": ["github"]
+}
 ```
 
 **Response:**
 ```json
 {
-  "success": true,
-  "status": {
-    "is_running": true,
-    "active_sessions": 5,
-    "total_runs": 1250,
-    "success_rate": 0.92,
-    "average_execution_time": 3.2,
-    "memory_usage": 45.8
-  }
+  "status": "success",
+  "conversation_id": "conv_123abc",
+  "conversation_status": "STARTING",
+  "message": null
 }
 ```
 
-#### **Get Agent Metrics**
+#### **Stop Conversation**
 ```http
-GET /api/agent/metrics
-Authorization: Bearer your-token
+POST /api/conversations/{conversation_id}/stop
+```
+
+#### **Get Conversation Status**
+```http
+GET /api/conversations/{conversation_id}
 ```
 
 **Response:**
 ```json
 {
-  "success": true,
-  "metrics": {
-    "total_runs": 1250,
-    "success_rate": 0.92,
-    "average_execution_time": 3.2,
-    "memory_usage": 45.8,
-    "token_usage": 125000,
-    "error_rate": 0.08,
-    "uptime": 86400
-  }
+  "conversation_id": "conv_123abc",
+  "title": "Create a user authentication system",
+  "status": "RUNNING",
+  "runtime_status": "STATUS$READY",
+  "last_updated_at": "2025-01-15T10:30:00Z",
+  "created_at": "2025-01-15T10:00:00Z"
 }
 ```
+
+#### **Get Agent Health (Controller)**
+```http
+GET /api/monitoring/controller/{session_id}/health
+```
+
+Returns detailed health information about the agent controller including state, iteration usage, and safety services.
 
 ### **MetaSOP Orchestrator**
 
@@ -253,7 +226,7 @@ Content-Type: application/json
     "tests_written": 15,
     "documentation_created": true,
     "visualization_url": "/api/metasop/orchestrations/orch_456/visualization",
-    "websocket_url": "ws://localhost:8000/ws/metasop/orch_456"
+    "websocket_url": "http://localhost:3000/socket.io?conversationId=orch_456"
   },
   "metadata": {
     "orchestrator_id": "metasop_123",
@@ -416,11 +389,13 @@ MetaSOP emits real-time events via WebSocket for live visualization updates:
 
 ```javascript
 // Connect to MetaSOP WebSocket
-const ws = new WebSocket('ws://localhost:8000/ws/metasop/orch_456');
+const socket = io('http://localhost:3000', {
+  path: '/socket.io',
+  query: { conversationId: 'orch_456' }
+});
 
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  
+socket.on('message', (event) => {
+  // Event is already parsed JSON
   // Event types:
   // - orchestration_start: Orchestration has started
   // - step_start: Agent step started
@@ -429,8 +404,8 @@ ws.onmessage = (event) => {
   // - step_error: Error in step
   // - orchestration_complete: All steps completed
   
-  console.log('MetaSOP Event:', data);
-};
+  console.log('MetaSOP Event:', event);
+});
 ```
 
 **Example Event (Step Complete with Visualization Data):**
@@ -922,13 +897,18 @@ Authorization: Bearer your-token
 
 ## 🎯 **WebSocket Endpoints**
 
-### **WebSocket Connection**
+### **WebSocket Connection (Socket.IO)**
 ```javascript
-// Connect to WebSocket
-const socket = io('ws://localhost:8000/ws', {
-  auth: {
-    token: 'your-jwt-token'
-  }
+import { io } from 'socket.io-client';
+
+// Connect to Socket.IO
+const socket = io('http://localhost:3000', {
+  path: '/socket.io',
+  query: {
+    conversationId: 'conv_123abc',
+    session_api_key: 'your-session-key' // Optional
+  },
+  transports: ['websocket', 'polling']
 });
 
 // Listen for events
@@ -1048,36 +1028,30 @@ socket.emit('store_conversation', {
 
 ### **Example 1: Complete Agent Workflow**
 ```bash
-# 1. Login
-curl -X POST http://localhost:8000/api/auth/login \
+# 1. Create conversation
+curl -X POST http://localhost:3000/api/conversations \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "user@example.com",
-    "password": "password123"
+    "repository": "https://github.com/user/repo",
+    "git_provider": "github",
+    "initial_user_msg": "Create a user authentication system"
   }'
 
-# 2. Run agent
-curl -X POST http://localhost:8000/api/agent/run \
-  -H "Authorization: Bearer your-token" \
+# 2. Start agent loop
+curl -X POST http://localhost:3000/api/conversations/{conversation_id}/start \
   -H "Content-Type: application/json" \
   -d '{
-    "prompt": "Create a user authentication system",
-    "context": {
-      "domain": "web_development",
-      "framework": "FastAPI"
-    }
+    "providers_set": ["github"]
   }'
 
-# 3. Check agent status
-curl -X GET http://localhost:8000/api/agent/status \
-  -H "Authorization: Bearer your-token"
+# 3. Check conversation status
+curl -X GET http://localhost:3000/api/conversations/{conversation_id}
 ```
 
 ### **Example 2: Memory Management**
 ```bash
-# 1. Store conversation
-curl -X POST http://localhost:8000/api/memory/conversations \
-  -H "Authorization: Bearer your-token" \
+# 1. Store memory
+curl -X POST http://localhost:3000/api/memory \
   -H "Content-Type: application/json" \
   -d '{
     "user_message": "How to implement authentication?",
@@ -1085,34 +1059,33 @@ curl -X POST http://localhost:8000/api/memory/conversations \
     "context": {"domain": "web_development"}
   }'
 
-# 2. Search conversations
-curl -X GET "http://localhost:8000/api/memory/conversations/search?query=authentication&max_results=10" \
-  -H "Authorization: Bearer your-token"
+# 2. Search memory
+curl -X POST http://localhost:3000/api/memory/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "authentication",
+    "max_results": 10
+  }'
 
 # 3. Get memory statistics
-curl -X GET http://localhost:8000/api/memory/statistics \
-  -H "Authorization: Bearer your-token"
+curl -X GET http://localhost:3000/api/memory/stats
 ```
 
 ### **Example 3: Optimization Management**
 ```bash
 # 1. Get optimization status
-curl -X GET http://localhost:8000/api/optimization/status \
-  -H "Authorization: Bearer your-token"
+curl -X GET http://localhost:3000/api/prompt-optimization/status
 
-# 2. Trigger optimization
-curl -X POST http://localhost:8000/api/optimization/trigger \
-  -H "Authorization: Bearer your-token" \
+# 2. Trigger optimization (evolve prompt)
+curl -X POST http://localhost:3000/api/prompt-optimization/prompts/{prompt_id}/evolve \
   -H "Content-Type: application/json" \
   -d '{
-    "prompt_id": "system_prompt_1",
     "priority": 8,
     "context": {"reason": "performance_drop"}
   }'
 
 # 3. Get performance metrics
-curl -X GET http://localhost:8000/api/optimization/metrics/system_prompt_1 \
-  -H "Authorization: Bearer your-token"
+curl -X GET http://localhost:3000/api/prompt-optimization/prompts/{prompt_id}/metrics
 ```
 
 ---

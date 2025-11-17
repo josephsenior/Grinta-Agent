@@ -7,8 +7,17 @@ import pathlib
 import platform
 import sys
 from ast import literal_eval
+from dataclasses import dataclass
 from types import UnionType
-from typing import TYPE_CHECKING, Any, Literal, cast, get_args, get_origin, get_type_hints
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    cast,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 from uuid import uuid4
 
 import toml
@@ -19,6 +28,7 @@ from forge.core import logger
 from forge.core.config.arg_utils import get_headless_parser
 from forge.core.config.llm_config import LLMConfig
 from forge.core.config.agent_config import AgentConfig
+
 # Condenser configs imported lazily to avoid circular dependencies
 from forge.core.config.extended_config import ExtendedConfig
 from forge.core.config.kubernetes_config import KubernetesConfig
@@ -38,6 +48,49 @@ if TYPE_CHECKING:
 
 JWT_SECRET = ".jwt_secret"
 load_dotenv()
+
+
+@dataclass
+class _ConfigIssue:
+    section: str
+    reason: str
+    detail: str
+
+
+class ConfigLoadSummary:
+    """Aggregate warnings encountered while loading configuration sections."""
+
+    def __init__(self, toml_file: str) -> None:
+        self._toml_file = toml_file
+        self._issues: list[_ConfigIssue] = []
+
+    def record(self, section: str, reason: str, detail: str) -> None:
+        detail_str = (detail or "").strip()
+        if len(detail_str) > 240:
+            detail_str = f"{detail_str[:237]}..."
+        self._issues.append(_ConfigIssue(section=section, reason=reason, detail=detail_str))
+
+    def record_missing(self, section: str, detail: str) -> None:
+        self.record(section, "missing", detail)
+
+    def emit(self) -> None:
+        if not self._issues:
+            return
+        grouped: dict[str, list[_ConfigIssue]] = {}
+        for issue in self._issues:
+            grouped.setdefault(issue.section, []).append(issue)
+        lines: list[str] = []
+        for section in sorted(grouped.keys()):
+            reasons = "; ".join(
+                f"{issue.reason}: {issue.detail}" if issue.detail else issue.reason
+                for issue in grouped[section]
+            )
+            lines.append(f"[{section}] {reasons}")
+        logger.FORGE_logger.warning(
+            "Configuration sections skipped or partially applied while loading %s:\n%s",
+            self._toml_file,
+            "\n".join(lines),
+        )
 
 
 def _to_posix_workspace_path(path: str) -> str:
@@ -105,7 +158,10 @@ def _process_list_items(cast_value: list, field_type: Any) -> list:
     """
     inner_type = get_args(field_type)[0]
     if isinstance(inner_type, type) and issubclass(inner_type, BaseModel):
-        return [inner_type(**item) if isinstance(item, dict) else item for item in cast_value]
+        return [
+            inner_type(**item) if isinstance(item, dict) else item
+            for item in cast_value
+        ]
     return cast_value
 
 
@@ -167,7 +223,9 @@ def _process_field_value(
         return
 
     try:
-        from pydantic import SecretStr  # Local import to avoid circular dependencies during runtime
+        from pydantic import (
+            SecretStr,
+        )  # Local import to avoid circular dependencies during runtime
 
         if field_name.lower().endswith("api_key"):
             cast_value = SecretStr(value)
@@ -181,15 +239,16 @@ def _process_field_value(
 
                 if hasattr(sub_config, "model") and cast_value is not None:
                     api_key_manager.set_api_key(sub_config.model, cast_value)
-                    api_key_manager.set_environment_variables(sub_config.model, cast_value)
+                    api_key_manager.set_environment_variables(
+                        sub_config.model, cast_value
+                    )
             except Exception:
                 # Avoid hard failure if API key manager encounters issues during config load
-                logger.FORGE_logger.debug("Failed to sync API key manager for %s", getattr(sub_config, "model", "unknown"))
+                logger.FORGE_logger.debug("Failed to sync API key manager")
     except (ValueError, TypeError):
         logger.FORGE_logger.error(
-            "Error setting env var %s=%s: check that the value is of the right type",
+            "Error setting env var %s=<redacted>: check that the value is of the right type",
             env_var_name,
-            value,
         )
 
 
@@ -214,10 +273,14 @@ def _set_attr_from_env(
         if isinstance(field_value, BaseModel):
             _set_attr_from_env(field_value, env_dict, prefix=f"{field_name}_")
         elif env_var_name in env_dict:
-            _process_field_value(sub_config, field_name, field_type, env_var_name, env_dict)
+            _process_field_value(
+                sub_config, field_name, field_type, env_var_name, env_dict
+            )
 
 
-def load_from_env(cfg: ForgeConfig, env_or_toml_dict: dict | MutableMapping[str, str]) -> None:
+def load_from_env(
+    cfg: ForgeConfig, env_or_toml_dict: dict | MutableMapping[str, str]
+) -> None:
     """Set config attributes from environment variables or TOML dictionary.
 
     Args:
@@ -267,27 +330,38 @@ def _export_llm_api_keys(cfg: ForgeConfig) -> None:
                 api_key_manager.set_api_key(llm.model, llm.api_key)
                 api_key_manager.set_environment_variables(llm.model, llm.api_key)
     except Exception:
-        logger.FORGE_logger.debug("Failed to export LLM API keys after configuration load")
+        logger.FORGE_logger.debug(
+            "Failed to export LLM API keys after configuration load"
+        )
 
 
-def _process_core_section(core_config: dict, cfg: ForgeConfig) -> None:
+def _process_core_section(
+    core_config: dict, cfg: ForgeConfig, summary: ConfigLoadSummary | None = None
+) -> None:
     """Process the [core] section of the TOML config."""
-    cfg_type_hints = get_type_hints(cfg.__class__)
+    try:
+        cfg_type_hints = get_type_hints(cfg.__class__)
+    except NameError:
+        cfg_type_hints = getattr(cfg.__class__, "__annotations__", {})
     for key, value in core_config.items():
         if hasattr(cfg, key):
             if expected_type := cfg_type_hints.get(key, None):
                 origin = get_origin(expected_type)
                 args = get_args(expected_type)
-                if (origin is UnionType and SecretStr in args and isinstance(value, str)) or (
-                    expected_type is SecretStr and isinstance(value, str)
-                ):
+                if (
+                    origin is UnionType and SecretStr in args and isinstance(value, str)
+                ) or (expected_type is SecretStr and isinstance(value, str)):
                     value = SecretStr(value)
             setattr(cfg, key, value)
         else:
-            logger.FORGE_logger.warning('Unknown config key "%s" in [core] section', key)
+            logger.FORGE_logger.warning(
+                'Unknown config key "%s" in [core] section', key
+            )
 
 
-def _process_agent_section(toml_config: dict, cfg: ForgeConfig) -> None:
+def _process_agent_section(
+    toml_config: dict, cfg: ForgeConfig, summary: ConfigLoadSummary | None = None
+) -> None:
     """Process the [agent] section of the TOML config."""
     if "agent" in toml_config:
         try:
@@ -300,9 +374,13 @@ def _process_agent_section(toml_config: dict, cfg: ForgeConfig) -> None:
                 "Cannot parse [agent] config from toml, values have not been applied.\nError: %s",
                 e,
             )
+            if summary:
+                summary.record("agent", "invalid", str(e))
 
 
-def _process_llm_section(toml_config: dict, cfg: ForgeConfig) -> None:
+def _process_llm_section(
+    toml_config: dict, cfg: ForgeConfig, summary: ConfigLoadSummary | None = None
+) -> None:
     """Process the [llm] section of the TOML config."""
     if "llm" in toml_config:
         from forge.core.config.llm_config import suppress_llm_env_export
@@ -322,9 +400,13 @@ def _process_llm_section(toml_config: dict, cfg: ForgeConfig) -> None:
                 "Cannot parse [llm] config from toml, values have not been applied.\nError: %s",
                 e,
             )
+            if summary:
+                summary.record("llm", "invalid", str(e))
 
 
-def _process_security_section(toml_config: dict, cfg: ForgeConfig) -> None:
+def _process_security_section(
+    toml_config: dict, cfg: ForgeConfig, summary: ConfigLoadSummary | None = None
+) -> None:
     """Process the [security] section of the TOML config."""
     if "security" in toml_config:
         try:
@@ -336,12 +418,18 @@ def _process_security_section(toml_config: dict, cfg: ForgeConfig) -> None:
                 "Cannot parse [security] config from toml, values have not been applied.\nError: %s",
                 e,
             )
+            if summary:
+                summary.record("security", "invalid", str(e))
         except ValueError as exc:
+            if summary:
+                summary.record("security", "error", str(exc))
             msg = "Error in [security] section in config.toml"
             raise ValueError(msg) from exc
 
 
-def _process_sandbox_section(toml_config: dict, cfg: ForgeConfig) -> None:
+def _process_sandbox_section(
+    toml_config: dict, cfg: ForgeConfig, summary: ConfigLoadSummary | None = None
+) -> None:
     """Process the [sandbox] section of the TOML config."""
     if "sandbox" in toml_config:
         try:
@@ -353,12 +441,18 @@ def _process_sandbox_section(toml_config: dict, cfg: ForgeConfig) -> None:
                 "Cannot parse [sandbox] config from toml, values have not been applied.\nError: %s",
                 e,
             )
+            if summary:
+                summary.record("sandbox", "invalid", str(e))
         except ValueError as e:
+            if summary:
+                summary.record("sandbox", "error", str(e))
             msg = "Error in [sandbox] section in config.toml"
             raise ValueError(msg) from e
 
 
-def _process_mcp_section(toml_config: dict, cfg: ForgeConfig) -> None:
+def _process_mcp_section(
+    toml_config: dict, cfg: ForgeConfig, summary: ConfigLoadSummary | None = None
+) -> None:
     """Process the [mcp] section of the TOML config."""
     if "mcp" in toml_config:
         try:
@@ -370,16 +464,24 @@ def _process_mcp_section(toml_config: dict, cfg: ForgeConfig) -> None:
                 "Cannot parse MCP config from toml, values have not been applied.\nError: %s",
                 e,
             )
+            if summary:
+                summary.record("mcp", "invalid", str(e))
         except ValueError as err:
+            if summary:
+                summary.record("mcp", "error", str(err))
             msg = "Error in MCP sections in config.toml"
             raise ValueError(msg) from err
 
 
-def _process_kubernetes_section(toml_config: dict, cfg: ForgeConfig) -> None:
+def _process_kubernetes_section(
+    toml_config: dict, cfg: ForgeConfig, summary: ConfigLoadSummary | None = None
+) -> None:
     """Process the [kubernetes] section of the TOML config."""
     if "kubernetes" in toml_config:
         try:
-            kubernetes_mapping = KubernetesConfig.from_toml_section(toml_config["kubernetes"])
+            kubernetes_mapping = KubernetesConfig.from_toml_section(
+                toml_config["kubernetes"]
+            )
             if "kubernetes" in kubernetes_mapping:
                 cfg.kubernetes = kubernetes_mapping["kubernetes"]
         except (TypeError, KeyError, ValidationError) as e:
@@ -387,14 +489,23 @@ def _process_kubernetes_section(toml_config: dict, cfg: ForgeConfig) -> None:
                 "Cannot parse [kubernetes] config from toml, values have not been applied.\nError: %s",
                 e,
             )
+            if summary:
+                summary.record("kubernetes", "invalid", str(e))
 
 
-def _process_condenser_section(toml_config: dict, cfg: ForgeConfig) -> None:
+def _process_condenser_section(
+    toml_config: dict, cfg: ForgeConfig, summary: ConfigLoadSummary | None = None
+) -> None:
     """Process the [condenser] section of the TOML config."""
     if "condenser" in toml_config:
         try:
-            from forge.core.config.condenser_config import condenser_config_from_toml_section
-            condenser_mapping = condenser_config_from_toml_section(toml_config["condenser"], cfg.llms)
+            from forge.core.config.condenser_config import (
+                condenser_config_from_toml_section,
+            )
+
+            condenser_mapping = condenser_config_from_toml_section(
+                toml_config["condenser"], cfg.llms
+            )
             if "condenser" in condenser_mapping:
                 default_agent_config = cfg.get_agent_config()
                 default_agent_config.condenser_config = condenser_mapping["condenser"]
@@ -406,18 +517,24 @@ def _process_condenser_section(toml_config: dict, cfg: ForgeConfig) -> None:
                 "Cannot parse [condenser] config from toml, values have not been applied.\nError: %s",
                 e,
             )
+            if summary:
+                summary.record("condenser", "invalid", str(e))
     elif cfg.enable_default_condenser:
         from forge.core.config.condenser_config import LLMSummarizingCondenserConfig
 
         default_agent_config = cfg.get_agent_config()
-        default_condenser = LLMSummarizingCondenserConfig(llm_config=cfg.get_llm_config(), type="llm")
+        default_condenser = LLMSummarizingCondenserConfig(
+            llm_config=cfg.get_llm_config(), type="llm"
+        )
         default_agent_config.condenser_config = default_condenser
         logger.FORGE_logger.debug(
             "Default LLM summarizing condenser assigned to default agent (no condenser in config)",
         )
 
 
-def _process_extended_section(toml_config: dict, cfg: ForgeConfig) -> None:
+def _process_extended_section(
+    toml_config: dict, cfg: ForgeConfig, summary: ConfigLoadSummary | None = None
+) -> None:
     """Process the [extended] section of the TOML config."""
     if "extended" in toml_config:
         try:
@@ -427,15 +544,23 @@ def _process_extended_section(toml_config: dict, cfg: ForgeConfig) -> None:
                 "Cannot parse [extended] config from toml, values have not been applied.\nError: %s",
                 e,
             )
+            if summary:
+                summary.record("extended", "invalid", str(e))
 
 
-def _process_metasop_section(toml_config: dict, cfg: ForgeConfig) -> None:
+def _process_metasop_section(
+    toml_config: dict, cfg: ForgeConfig, summary: ConfigLoadSummary | None = None
+) -> None:
     """Process the [metasop] section of the TOML config."""
     if "metasop" in toml_config:
         try:
             from forge.core.pydantic_compat import model_dump_with_options
 
-            current_ext = model_dump_with_options(cfg.extended) if isinstance(cfg.extended, ExtendedConfig) else {}
+            current_ext = (
+                model_dump_with_options(cfg.extended)
+                if isinstance(cfg.extended, ExtendedConfig)
+                else {}
+            )
             current_ext["metasop"] = toml_config["metasop"]
             cfg.extended = ExtendedConfig(current_ext)
         except Exception as e:
@@ -443,6 +568,8 @@ def _process_metasop_section(toml_config: dict, cfg: ForgeConfig) -> None:
                 "Cannot parse [metasop] config from toml into extended settings.\nError: %s",
                 e,
             )
+            if summary:
+                summary.record("metasop", "invalid", str(e))
 
 
 def _check_unknown_sections(toml_config: dict, toml_file: str) -> None:
@@ -461,7 +588,7 @@ def _check_unknown_sections(toml_config: dict, toml_file: str) -> None:
     }
     for key in toml_config:
         if key.lower() not in known_sections:
-            logger.FORGE_logger.warning("Unknown section [%s] in %s", key, toml_file)
+            logger.FORGE_logger.debug("Unknown section [%s] in %s", key, toml_file)
 
 
 def load_from_toml(cfg: ForgeConfig, toml_file: str = "config.toml") -> None:
@@ -475,41 +602,49 @@ def load_from_toml(cfg: ForgeConfig, toml_file: str = "config.toml") -> None:
     - config.template.toml for the full list of config options.
 
     """
+    summary = ConfigLoadSummary(toml_file)
     try:
-        with open(toml_file, encoding="utf-8") as toml_contents:
-            toml_config = toml.load(toml_contents)
-    except FileNotFoundError:
-        return
-    except toml.TomlDecodeError as e:
-        logger.FORGE_logger.warning(
-            "Cannot parse config from toml, toml values have not been applied.\nError: %s",
-            e,
-        )
-        return
-    if "core" not in toml_config:
-        logger.FORGE_logger.warning("No [core] section found in %s. Core settings will use defaults.", toml_file)
-        core_config = {}
-    else:
-        core_config = toml_config["core"]
-    _process_core_section(core_config, cfg)
-    _process_agent_section(toml_config, cfg)
-    _process_llm_section(toml_config, cfg)
-    _process_security_section(toml_config, cfg)
-    _process_sandbox_section(toml_config, cfg)
-    _process_mcp_section(toml_config, cfg)
-    _process_kubernetes_section(toml_config, cfg)
-    _process_condenser_section(toml_config, cfg)
-    _process_extended_section(toml_config, cfg)
-    _process_metasop_section(toml_config, cfg)
-    _check_unknown_sections(toml_config, toml_file)
+        try:
+            with open(toml_file, encoding="utf-8") as toml_contents:
+                toml_config = toml.load(toml_contents)
+        except FileNotFoundError:
+            return
+        except toml.TomlDecodeError as e:
+            logger.FORGE_logger.warning(
+                "Cannot parse config from toml, toml values have not been applied.\nError: %s",
+                e,
+            )
+            return
+        if "core" not in toml_config:
+            logger.FORGE_logger.warning(
+                "No [core] section found in %s. Core settings will use defaults.",
+                toml_file,
+            )
+            summary.record_missing("core", "section missing; defaults applied")
+            core_config = {}
+        else:
+            core_config = toml_config["core"]
+        _process_core_section(core_config, cfg, summary)
+        _process_agent_section(toml_config, cfg, summary)
+        _process_llm_section(toml_config, cfg, summary)
+        _process_security_section(toml_config, cfg, summary)
+        _process_sandbox_section(toml_config, cfg, summary)
+        _process_mcp_section(toml_config, cfg, summary)
+        _process_kubernetes_section(toml_config, cfg, summary)
+        _process_condenser_section(toml_config, cfg, summary)
+        _process_extended_section(toml_config, cfg, summary)
+        _process_metasop_section(toml_config, cfg, summary)
+        _check_unknown_sections(toml_config, toml_file)
+    finally:
+        summary.emit()
 
 
 def get_or_create_jwt_secret(file_store: FileStore) -> str:
     """Get existing JWT secret or create a new one if not found.
-    
+
     Args:
         file_store: File store to read/write JWT secret
-        
+
     Returns:
         JWT secret string (hex UUID)
 
@@ -530,7 +665,9 @@ def _handle_sandbox_volumes(cfg) -> None:
 
     """
     if not cfg.sandbox.volumes:
-        logger.FORGE_logger.debug("No sandbox volumes configured. Preserving existing workspace mount settings.")
+        logger.FORGE_logger.debug(
+            "No sandbox volumes configured. Preserving existing workspace mount settings."
+        )
         return
     mounts = cfg.sandbox.volumes.split(",")
     workspace_mount_found = False
@@ -576,39 +713,57 @@ def finalize_config(cfg: ForgeConfig) -> None:
 
 def _handle_deprecated_workspace_vars(cfg: ForgeConfig) -> None:
     """Handle deprecated workspace environment variables."""
-    if cfg.workspace_base is not None or cfg.workspace_mount_path is not None:
-        logger.FORGE_logger.warning(
-            "DEPRECATED: The WORKSPACE_BASE and WORKSPACE_MOUNT_PATH environment variables are deprecated. Please use SANDBOX_VOLUMES instead, e.g. 'SANDBOX_VOLUMES=/my/host/dir:/workspace:rw'", )
 
+    _maybe_warn_deprecated_env(cfg)
     if cfg.workspace_base:
-        base_path_abs = os.path.abspath(cfg.workspace_base)
-        cfg.workspace_base = base_path_abs
-
-        if cfg.workspace_mount_rewrite:
-            try:
-                host_prefix, container_prefix = cfg.workspace_mount_rewrite.split(":", 1)
-            except ValueError:
-                logger.FORGE_logger.warning(
-                    "Invalid workspace_mount_rewrite value '%s'. Expected format '<host_prefix>:<container_prefix>'.",
-                    cfg.workspace_mount_rewrite,
-                )
-                host_prefix = ""
-                container_prefix = ""
-
-            normalized_host_prefix = os.path.abspath(host_prefix) if host_prefix else ""
-            if normalized_host_prefix and base_path_abs.startswith(normalized_host_prefix):
-                relative_tail = base_path_abs[len(normalized_host_prefix) :].lstrip("\\/")
-                container_path = os.path.join(container_prefix or "", relative_tail)
-            else:
-                container_path = container_prefix or base_path_abs
-
-            cfg.workspace_mount_path = _to_posix_workspace_path(container_path)
-            cfg.workspace_mount_path_in_sandbox = cfg.workspace_mount_path
-        else:
-            cfg.workspace_mount_path = base_path_abs
+        _normalize_workspace_base(cfg)
     elif cfg.workspace_mount_path:
-        # Normalize existing mount path if provided directly
         cfg.workspace_mount_path = _to_posix_workspace_path(cfg.workspace_mount_path)
+
+
+def _maybe_warn_deprecated_env(cfg: ForgeConfig) -> None:
+    workspace_env_set = bool(
+        os.getenv("WORKSPACE_BASE") or os.getenv("WORKSPACE_MOUNT_PATH")
+    )
+    if workspace_env_set and (
+        cfg.workspace_base is not None or cfg.workspace_mount_path is not None
+    ):
+        logger.FORGE_logger.warning(
+            "DEPRECATED: The WORKSPACE_BASE and WORKSPACE_MOUNT_PATH environment variables are deprecated. "
+            "Please use SANDBOX_VOLUMES instead, e.g. 'SANDBOX_VOLUMES=/my/host/dir:/workspace:rw'"
+        )
+
+
+def _normalize_workspace_base(cfg: ForgeConfig) -> None:
+    base_path = cfg.workspace_base
+    if base_path is None:
+        return
+    base_path_abs = os.path.abspath(base_path)
+    cfg.workspace_base = base_path_abs
+    rewrite = cfg.workspace_mount_rewrite
+    if rewrite:
+        container_path = _rewrite_workspace_mount(rewrite, base_path_abs)
+        cfg.workspace_mount_path = _to_posix_workspace_path(container_path)
+        cfg.workspace_mount_path_in_sandbox = cfg.workspace_mount_path
+        return
+    cfg.workspace_mount_path = base_path_abs
+
+
+def _rewrite_workspace_mount(rewrite: str, base_path_abs: str) -> str:
+    try:
+        host_prefix, container_prefix = rewrite.split(":", 1)
+    except ValueError:
+        logger.FORGE_logger.warning(
+            "Invalid workspace_mount_rewrite value '%s'. Expected format '<host_prefix>:<container_prefix>'.",
+            rewrite,
+        )
+        return base_path_abs
+
+    normalized_host_prefix = os.path.abspath(host_prefix) if host_prefix else ""
+    if normalized_host_prefix and base_path_abs.startswith(normalized_host_prefix):
+        relative_tail = base_path_abs[len(normalized_host_prefix) :].lstrip("\\/")
+        return os.path.join(container_prefix or "", relative_tail)
+    return container_prefix or base_path_abs
 
 
 def _configure_llm_logging(cfg: ForgeConfig) -> None:
@@ -621,7 +776,8 @@ def _handle_macos_host_network_warning(cfg: ForgeConfig) -> None:
     """Handle macOS host network warning."""
     if cfg.sandbox.use_host_network and platform.system() == "Darwin":
         logger.FORGE_logger.warning(
-            "Please upgrade to Docker Desktop 4.29.0 or later to use host network mode on macOS. See https://github.com/docker/roadmap/issues/238#issuecomment-2044688144 for more information.", )
+            "Please upgrade to Docker Desktop 4.29.0 or later to use host network mode on macOS. See https://github.com/docker/roadmap/issues/238#issuecomment-2044688144 for more information.",
+        )
 
 
 def _ensure_cache_directory(cfg: ForgeConfig) -> None:
@@ -633,7 +789,11 @@ def _ensure_cache_directory(cfg: ForgeConfig) -> None:
 def _configure_jwt_secret(cfg: ForgeConfig) -> None:
     """Configure JWT secret if not set."""
     if not cfg.jwt_secret:
-        cfg.jwt_secret = SecretStr(get_or_create_jwt_secret(get_file_store(cfg.file_store, cfg.file_store_path)))
+        cfg.jwt_secret = SecretStr(
+            get_or_create_jwt_secret(
+                get_file_store(cfg.file_store, cfg.file_store_path)
+            )
+        )
 
 
 def _configure_cli_runtime_agents(cfg: ForgeConfig) -> None:
@@ -646,7 +806,8 @@ def _configure_cli_runtime_agents(cfg: ForgeConfig) -> None:
             if agent_config.enable_browsing:
                 agent_config.enable_browsing = False
         logger.FORGE_logger.debug(
-            "Automatically disabled Jupyter plugin and browsing for all agents because CLIRuntime is selected and does not support IPython execution.", )
+            "Automatically disabled Jupyter plugin and browsing for all agents because CLIRuntime is selected and does not support IPython execution.",
+        )
     else:
         for agent_config in cfg.agents.values():
             # Default to disabled unless explicitly enabled in configuration.
@@ -660,7 +821,9 @@ def _configure_cli_runtime_agents(cfg: ForgeConfig) -> None:
         )
 
 
-def get_agent_config_arg(agent_config_arg: str, toml_file: str = "config.toml") -> AgentConfig | None:
+def get_agent_config_arg(
+    agent_config_arg: str, toml_file: str = "config.toml"
+) -> AgentConfig | None:
     """Get a group of agent settings from the config file.
 
     A group in config.toml can look like this:
@@ -693,7 +856,9 @@ def get_agent_config_arg(agent_config_arg: str, toml_file: str = "config.toml") 
         logger.FORGE_logger.error("Config file not found: %s", e)
         return None
     except toml.TomlDecodeError as e:
-        logger.FORGE_logger.error("Cannot parse agent group from %s. Exception: %s", agent_config_arg, e)
+        logger.FORGE_logger.error(
+            "Cannot parse agent group from %s. Exception: %s", agent_config_arg, e
+        )
         return None
     if "agent" in toml_config and agent_config_arg in toml_config["agent"]:
         return AgentConfig(**toml_config["agent"][agent_config_arg])
@@ -701,7 +866,9 @@ def get_agent_config_arg(agent_config_arg: str, toml_file: str = "config.toml") 
     return None
 
 
-def get_llm_config_arg(llm_config_arg: str, toml_file: str = "config.toml") -> LLMConfig | None:
+def get_llm_config_arg(
+    llm_config_arg: str, toml_file: str = "config.toml"
+) -> LLMConfig | None:
     """Get a group of llm settings from the config file.
 
     A group in config.toml can look like this:
@@ -730,7 +897,9 @@ def get_llm_config_arg(llm_config_arg: str, toml_file: str = "config.toml") -> L
     """
     llm_config_arg = llm_config_arg.strip("[]")
     llm_config_arg = llm_config_arg.removeprefix("llm.")
-    logger.FORGE_logger.debug('Loading llm config "%s" from %s', llm_config_arg, toml_file)
+    logger.FORGE_logger.debug(
+        'Loading llm config "%s" from %s', llm_config_arg, toml_file
+    )
     if not os.path.exists(toml_file):
         logger.FORGE_logger.debug("Config file not found: %s", toml_file)
         return None
@@ -741,11 +910,15 @@ def get_llm_config_arg(llm_config_arg: str, toml_file: str = "config.toml") -> L
         logger.FORGE_logger.error("Config file not found: %s", e)
         return None
     except toml.TomlDecodeError as e:
-        logger.FORGE_logger.error("Cannot parse llm group from %s. Exception: %s", llm_config_arg, e)
+        logger.FORGE_logger.error(
+            "Cannot parse llm group from %s. Exception: %s", llm_config_arg, e
+        )
         return None
     if "llm" in toml_config and llm_config_arg in toml_config["llm"]:
         return LLMConfig(**toml_config["llm"][llm_config_arg])
-    logger.FORGE_logger.debug('LLM config "%s" not found in %s', llm_config_arg, toml_file)
+    logger.FORGE_logger.debug(
+        'LLM config "%s" not found in %s', llm_config_arg, toml_file
+    )
     return None
 
 
@@ -758,13 +931,20 @@ def _load_toml_config(toml_file: str) -> dict | None:
         logger.FORGE_logger.error("Config file not found: %s. Error: %s", toml_file, e)
         return None
     except toml.TomlDecodeError as e:
-        logger.FORGE_logger.error("Cannot parse config file %s. Exception: %s", toml_file, e)
+        logger.FORGE_logger.error(
+            "Cannot parse config file %s. Exception: %s", toml_file, e
+        )
         return None
 
 
-def _validate_condenser_section(toml_config: dict, condenser_config_arg: str, toml_file: str) -> dict | None:
+def _validate_condenser_section(
+    toml_config: dict, condenser_config_arg: str, toml_file: str
+) -> dict | None:
     """Validate that condenser section exists and return condenser data."""
-    if "condenser" not in toml_config or condenser_config_arg not in toml_config["condenser"]:
+    if (
+        "condenser" not in toml_config
+        or condenser_config_arg not in toml_config["condenser"]
+    ):
         logger.FORGE_logger.error(
             "Condenser config section [condenser.%s] not found in %s",
             condenser_config_arg,
@@ -774,7 +954,9 @@ def _validate_condenser_section(toml_config: dict, condenser_config_arg: str, to
     return toml_config["condenser"][condenser_config_arg].copy()
 
 
-def _process_llm_condenser(condenser_data: dict, condenser_config_arg: str, toml_file: str) -> dict | None:
+def _process_llm_condenser(
+    condenser_data: dict, condenser_config_arg: str, toml_file: str
+) -> dict | None:
     """Process LLM-type condenser configuration."""
     llm_config_name = condenser_data["llm_config"]
     logger.FORGE_logger.debug(
@@ -782,7 +964,9 @@ def _process_llm_condenser(condenser_data: dict, condenser_config_arg: str, toml
         condenser_config_arg,
         llm_config_name,
     )
-    if referenced_llm_config := get_llm_config_arg(llm_config_name, toml_file=toml_file):
+    if referenced_llm_config := get_llm_config_arg(
+        llm_config_name, toml_file=toml_file
+    ):
         condenser_data["llm_config"] = referenced_llm_config
         return condenser_data
     logger.FORGE_logger.error(
@@ -798,7 +982,9 @@ def _normalize_condenser_config_arg(condenser_config_arg: str) -> str:
     return condenser_config_arg.strip("[]").removeprefix("condenser.")
 
 
-def _validate_condenser_type(condenser_data: dict, condenser_config_arg: str, toml_file: str) -> str | None:
+def _validate_condenser_type(
+    condenser_data: dict, condenser_config_arg: str, toml_file: str
+) -> str | None:
     """Validate that condenser type is specified."""
     condenser_type = condenser_data.get("type")
     if not condenser_type:
@@ -811,7 +997,9 @@ def _validate_condenser_type(condenser_data: dict, condenser_config_arg: str, to
     return condenser_type
 
 
-def _process_condenser_data(condenser_data: dict, condenser_config_arg: str, toml_file: str) -> dict | None:
+def _process_condenser_data(
+    condenser_data: dict, condenser_config_arg: str, toml_file: str
+) -> dict | None:
     """Process condenser data, handling LLM configs if needed."""
     condenser_type = condenser_data.get("type")
     if (
@@ -824,11 +1012,15 @@ def _process_condenser_data(condenser_data: dict, condenser_config_arg: str, tom
 
 
 def _create_condenser_config(
-    condenser_type: str, condenser_data: dict, condenser_config_arg: str, toml_file: str,
+    condenser_type: str,
+    condenser_data: dict,
+    condenser_config_arg: str,
+    toml_file: str,
 ) -> "CondenserConfig | None":
     """Create and return CondenserConfig object."""
     try:
         from forge.core.config.condenser_config import create_condenser_config
+
         config = create_condenser_config(condenser_type, condenser_data)
         logger.FORGE_logger.info(
             "Successfully loaded condenser config [%s] from %s",
@@ -837,11 +1029,15 @@ def _create_condenser_config(
         )
         return config
     except (ValidationError, ValueError) as e:
-        logger.FORGE_logger.error("Invalid condenser configuration for [%s]: %s.", condenser_config_arg, e)
+        logger.FORGE_logger.error(
+            "Invalid condenser configuration for [%s]: %s.", condenser_config_arg, e
+        )
         return None
 
 
-def get_condenser_config_arg(condenser_config_arg: str, toml_file: str = "config.toml") -> "CondenserConfig | None":
+def get_condenser_config_arg(
+    condenser_config_arg: str, toml_file: str = "config.toml"
+) -> "CondenserConfig | None":
     """Get a group of condenser settings from the config file by name.
 
     A group in config.toml can look like this:
@@ -870,25 +1066,35 @@ def get_condenser_config_arg(condenser_config_arg: str, toml_file: str = "config
 
     """
     condenser_config_arg = _normalize_condenser_config_arg(condenser_config_arg)
-    logger.FORGE_logger.debug("Loading condenser config [%s] from %s", condenser_config_arg, toml_file)
+    logger.FORGE_logger.debug(
+        "Loading condenser config [%s] from %s", condenser_config_arg, toml_file
+    )
 
     toml_config = _load_toml_config(toml_file)
     if toml_config is None:
         return None
 
-    condenser_data = _validate_condenser_section(toml_config, condenser_config_arg, toml_file)
+    condenser_data = _validate_condenser_section(
+        toml_config, condenser_config_arg, toml_file
+    )
     if condenser_data is None:
         return None
 
-    condenser_type = _validate_condenser_type(condenser_data, condenser_config_arg, toml_file)
+    condenser_type = _validate_condenser_type(
+        condenser_data, condenser_config_arg, toml_file
+    )
     if condenser_type is None:
         return None
 
-    condenser_data = _process_condenser_data(condenser_data, condenser_config_arg, toml_file)
+    condenser_data = _process_condenser_data(
+        condenser_data, condenser_config_arg, toml_file
+    )
     if condenser_data is None:
         return None
 
-    return _create_condenser_config(condenser_type, condenser_data, condenser_config_arg, toml_file)
+    return _create_condenser_config(
+        condenser_type, condenser_data, condenser_config_arg, toml_file
+    )
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -914,12 +1120,18 @@ def register_custom_agents(config: ForgeConfig) -> None:
             try:
                 agent_cls = get_impl(Agent, classpath)
                 Agent.register(agent_name, agent_cls)
-                logger.FORGE_logger.info("Registered custom agent '%s' from %s", agent_name, classpath)
+                logger.FORGE_logger.info(
+                    "Registered custom agent '%s' from %s", agent_name, classpath
+                )
             except Exception as e:
-                logger.FORGE_logger.error("Failed to register agent '%s': %s", agent_name, e)
+                logger.FORGE_logger.error(
+                    "Failed to register agent '%s': %s", agent_name, e
+                )
 
 
-def load_FORGE_config(set_logging_levels: bool = True, config_file: str = "config.toml") -> ForgeConfig:
+def load_FORGE_config(
+    set_logging_levels: bool = True, config_file: str = "config.toml"
+) -> ForgeConfig:
     """Load the configuration from the specified config file and environment variables.
 
     Args:
@@ -932,7 +1144,7 @@ def load_FORGE_config(set_logging_levels: bool = True, config_file: str = "confi
     from forge.core.config.cli_config import CLIConfig
     from forge.core.config.permissions_config import PermissionsConfig
     from forge.security.safety_config import SafetyConfig
-    
+
     # Base configs with no dependencies
     LLMConfig.model_rebuild()
     SandboxConfig.model_rebuild()
@@ -943,7 +1155,7 @@ def load_FORGE_config(set_logging_levels: bool = True, config_file: str = "confi
     MCPConfig.model_rebuild()
     PermissionsConfig.model_rebuild()
     SafetyConfig.model_rebuild()
-    
+
     # Condenser configs depend on LLMConfig and are Union types
     # We need to provide LLMConfig in the namespace since it's in TYPE_CHECKING block
     from forge.core.config.condenser_config import (
@@ -960,40 +1172,46 @@ def load_FORGE_config(set_logging_levels: bool = True, config_file: str = "confi
         SmartCondenserConfig,
         CondenserConfig,
     )
-    
+
     # Create namespace with all necessary imports for condenser configs
     condenser_namespace = {
-        'LLMConfig': LLMConfig, 
-        'Field': Field,
-        'BaseModel': BaseModel,
-        'ConfigDict': ConfigDict,
-        'ValidationError': ValidationError,
-        'Literal': Literal,
-        'cast': cast
+        "LLMConfig": LLMConfig,
+        "Field": Field,
+        "BaseModel": BaseModel,
+        "ConfigDict": ConfigDict,
+        "ValidationError": ValidationError,
+        "Literal": Literal,
+        "cast": cast,
     }
-    
+
     # Rebuild individual condenser config classes
     NoOpCondenserConfig.model_rebuild(_types_namespace=condenser_namespace)
-    ObservationMaskingCondenserConfig.model_rebuild(_types_namespace=condenser_namespace)
+    ObservationMaskingCondenserConfig.model_rebuild(
+        _types_namespace=condenser_namespace
+    )
     BrowserOutputCondenserConfig.model_rebuild(_types_namespace=condenser_namespace)
     RecentEventsCondenserConfig.model_rebuild(_types_namespace=condenser_namespace)
     LLMSummarizingCondenserConfig.model_rebuild(_types_namespace=condenser_namespace)
-    AmortizedForgettingCondenserConfig.model_rebuild(_types_namespace=condenser_namespace)
+    AmortizedForgettingCondenserConfig.model_rebuild(
+        _types_namespace=condenser_namespace
+    )
     LLMAttentionCondenserConfig.model_rebuild(_types_namespace=condenser_namespace)
     StructuredSummaryCondenserConfig.model_rebuild(_types_namespace=condenser_namespace)
     CondenserPipelineConfig.model_rebuild(_types_namespace=condenser_namespace)
-    ConversationWindowCondenserConfig.model_rebuild(_types_namespace=condenser_namespace)
+    ConversationWindowCondenserConfig.model_rebuild(
+        _types_namespace=condenser_namespace
+    )
     SmartCondenserConfig.model_rebuild(_types_namespace=condenser_namespace)
-    
+
     # Note: CondenserConfig is a Union type, so it doesn't have model_rebuild()
     # The individual types have been rebuilt above
-    
+
     # AgentConfig depends on LLMConfig, so rebuild it after LLMConfig
     AgentConfig.model_rebuild()
-    
+
     # ForgeConfig depends on everything
     ForgeConfig.model_rebuild()
-    
+
     original_env = dict(os.environ)
 
     config = ForgeConfig()
@@ -1011,10 +1229,14 @@ def load_FORGE_config(set_logging_levels: bool = True, config_file: str = "confi
     return config
 
 
-def _resolve_llm_config_from_cli(llm_config_name: str, config: ForgeConfig, config_file: str) -> LLMConfig:
+def _resolve_llm_config_from_cli(
+    llm_config_name: str, config: ForgeConfig, config_file: str
+) -> LLMConfig:
     """Resolve LLM config from CLI parameter."""
     if llm_config_name in config.llms:
-        logger.FORGE_logger.debug("Using LLM config '%s' from loaded configuration", llm_config_name)
+        logger.FORGE_logger.debug(
+            "Using LLM config '%s' from loaded configuration", llm_config_name
+        )
         return config.llms[llm_config_name]
 
     llm_config = get_llm_config_arg(llm_config_name, config_file)
@@ -1034,7 +1256,11 @@ def _try_user_config_llm(llm_config_name: str, config_file: str) -> LLMConfig | 
     if config_file == user_config or not os.path.exists(user_config):
         return None
 
-    logger.FORGE_logger.debug("Trying to load LLM config '%s' from user config: %s", llm_config_name, user_config)
+    logger.FORGE_logger.debug(
+        "Trying to load LLM config '%s' from user config: %s",
+        llm_config_name,
+        user_config,
+    )
     return get_llm_config_arg(llm_config_name, user_config)
 
 

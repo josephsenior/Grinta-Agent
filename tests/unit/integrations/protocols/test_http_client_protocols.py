@@ -43,9 +43,13 @@ class DummyHTTPClient(HTTPClient):
 async def test_execute_request_get_method() -> None:
     client = DummyHTTPClient()
     http_client = SimpleNamespace(get=AsyncMock(return_value={"status": 200}))
-    result = await client.execute_request(http_client, "https://example.com", {"h": "1"}, {"a": 1})
+    result = await client.execute_request(
+        http_client, "https://example.com", {"h": "1"}, {"a": 1}
+    )
     assert result == {"status": 200}
-    http_client.get.assert_awaited_once_with("https://example.com", headers={"h": "1"}, params={"a": 1})
+    http_client.get.assert_awaited_once_with(
+        "https://example.com", headers={"h": "1"}, params={"a": 1}
+    )
 
 
 @pytest.mark.asyncio
@@ -60,7 +64,9 @@ async def test_execute_request_post_method() -> None:
         method=RequestMethod.POST,
     )
     assert result == {"status": 201}
-    http_client.post.assert_awaited_once_with("https://example.com", headers={"h": "1"}, json={"a": 1})
+    http_client.post.assert_awaited_once_with(
+        "https://example.com", headers={"h": "1"}, json={"a": 1}
+    )
 
 
 def test_has_token_expired_checks_status_code() -> None:
@@ -102,4 +108,3 @@ def test_handle_http_error_returns_unknown_exception() -> None:
     client = DummyHTTPClient()
     exc = client.handle_http_error(RuntimeError("boom"))
     assert isinstance(exc, UnknownException)
-

@@ -99,11 +99,9 @@ class VectorMemoryStore:
 
         except Exception as e:
             # Fallback to old implementation
-            logger.warning(
-                f"Enhanced vector store not available, using feature hashing fallback.\n"
-                f"For better quality (92% vs 75% accuracy), install:\n"
-                f"  pip install chromadb sentence-transformers\n"
-                f"Error: {e}",
+            logger.debug(
+                "Enhanced vector store unavailable; falling back to feature hashing (%s)",
+                e,
             )
             self._setup_fallback(dim, max_records)
 
@@ -115,7 +113,14 @@ class VectorMemoryStore:
         self._doc_freq: dict[int, int] = {}
         self._enhanced = False
 
-    def add(self, step_id: str, role: str, artifact_hash: str | None, rationale: str | None, content_text: str) -> None:
+    def add(
+        self,
+        step_id: str,
+        role: str,
+        artifact_hash: str | None,
+        rationale: str | None,
+        content_text: str,
+    ) -> None:
         """Add a document to the vector store."""
         if self._enhanced and self._store:
             # Use enhanced store
@@ -127,7 +132,9 @@ class VectorMemoryStore:
             raw_vec = self._vectorize(text)
             for idx in raw_vec:
                 self._doc_freq[idx] = self._doc_freq.get(idx, 0) + 1
-            rec = VectorRecord(step_id, role, artifact_hash, rationale, excerpt, raw_vec)
+            rec = VectorRecord(
+                step_id, role, artifact_hash, rationale, excerpt, raw_vec
+            )
             self._records.append(rec)
             if self.max_records and len(self._records) > self.max_records:
                 self._records.pop(0)
@@ -172,7 +179,9 @@ class VectorMemoryStore:
                 "records": len(self._records),
                 "dim": self.dim,
                 "unique_hashed_features": len(self._doc_freq),
-                "collision_ratio": round(len(self._doc_freq) / self.dim, 4) if self.dim else None,
+                "collision_ratio": round(len(self._doc_freq) / self.dim, 4)
+                if self.dim
+                else None,
             }
         # Return enhanced stats
         stats = self._store.stats()
@@ -209,7 +218,9 @@ class VectorMemoryStore:
             return 0.0
         common = set(a.keys()) & set(b.keys())
         num = sum(a[i] * b[i] for i in common)
-        denom = math.sqrt(sum(v * v for v in a.values())) * math.sqrt(sum(v * v for v in b.values()))
+        denom = math.sqrt(sum(v * v for v in a.values())) * math.sqrt(
+            sum(v * v for v in b.values())
+        )
         return 0.0 if denom == 0 else num / denom
 
 

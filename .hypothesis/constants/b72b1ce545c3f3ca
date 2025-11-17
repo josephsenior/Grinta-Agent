@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\runtime\impl\cli\cli_runtime.py
+# hypothesis_version: 6.147.0
+
+[0.1, 60.0, '+++ new', '--- old', '-c', '.', '.zip', '/', '/workspace', '/workspace/', '@@ -1 +1 @@', 'Details: %s', 'DotNetMissingError', 'ERROR_BINARY_FILE', 'Error: %s', 'File updated', 'File written', 'SIGKILL', '_ToolResult', 'apply_edit', 'bash', 'command', 'debug', 'default', 'details', 'edit', 'error', 'exit_code', 'getpgid', 'info', 'kill process', 'kill process group', 'killpg', 'output_lines', 'pid', 'replace', 'start_time', 'suffix', 'terminate process', 'timed_out', 'timeout', 'utf-8', 'view', 'w', 'warning', 'win32', 'working_dir', 'workspace_path', 'write']

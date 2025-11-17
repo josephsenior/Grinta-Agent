@@ -26,19 +26,32 @@ def mock_output_dir():
         repo_path = os.path.join(temp_dir, "repo")
         os.makedirs(repo_path)
         subprocess.run(["git", "init", repo_path], check=True)
-        subprocess.run(["git", "-C", repo_path, "config", "user.email", "forge-tests@example.com"], check=True)
-        subprocess.run(["git", "-C", repo_path, "config", "user.name", "Forge Tests"], check=True)
+        subprocess.run(
+            ["git", "-C", repo_path, "config", "user.email", "forge-tests@example.com"],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", repo_path, "config", "user.name", "Forge Tests"], check=True
+        )
         readme_path = os.path.join(repo_path, "README.md")
-        with open(readme_path, "w", encoding='utf-8') as f:
+        with open(readme_path, "w", encoding="utf-8") as f:
             f.write("hello world")
         subprocess.run(["git", "-C", repo_path, "add", "README.md"], check=True)
-        subprocess.run(["git", "-C", repo_path, "commit", "-m", "Initial commit"], check=True)
+        subprocess.run(
+            ["git", "-C", repo_path, "commit", "-m", "Initial commit"], check=True
+        )
         yield temp_dir
 
 
 @pytest.fixture
 def mock_issue():
-    return Issue(number=42, title="Test Issue", owner="test-owner", repo="test-repo", body="Test body")
+    return Issue(
+        number=42,
+        title="Test Issue",
+        owner="test-owner",
+        repo="test-repo",
+        body="Test body",
+    )
 
 
 @pytest.fixture
@@ -60,11 +73,11 @@ def test_load_single_resolver_output():
 
 def test_apply_patch(mock_output_dir):
     sample_file = os.path.join(mock_output_dir, "sample.txt")
-    with open(sample_file, "w", encoding='utf-8') as f:
+    with open(sample_file, "w", encoding="utf-8") as f:
         f.write("Original content")
     patch_content = "\ndiff --git a/sample.txt b/sample.txt\nindex 9daeafb..b02def2 100644\n--- a/sample.txt\n+++ b/sample.txt\n@@ -1 +1,2 @@\n-Original content\n+Updated content\n+New line\n"
     apply_patch(mock_output_dir, patch_content)
-    with open(sample_file, "r", encoding='utf-8') as f:
+    with open(sample_file, "r", encoding="utf-8") as f:
         updated_content = f.read()
     assert updated_content.strip() == "Updated content\nNew line".strip()
 
@@ -72,9 +85,9 @@ def test_apply_patch(mock_output_dir):
 def test_apply_patch_preserves_line_endings(mock_output_dir):
     unix_file = os.path.join(mock_output_dir, "unix_style.txt")
     dos_file = os.path.join(mock_output_dir, "dos_style.txt")
-    with open(unix_file, "w", newline="\n", encoding='utf-8') as f:
+    with open(unix_file, "w", newline="\n", encoding="utf-8") as f:
         f.write("Line 1\nLine 2\nLine 3")
-    with open(dos_file, "w", newline="\r\n", encoding='utf-8') as f:
+    with open(dos_file, "w", newline="\r\n", encoding="utf-8") as f:
         f.write("Line 1\r\nLine 2\r\nLine 3")
     unix_patch = "\ndiff --git a/unix_style.txt b/unix_style.txt\nindex 9daeafb..b02def2 100644\n--- a/unix_style.txt\n+++ b/unix_style.txt\n@@ -1,3 +1,3 @@\n Line 1\n-Line 2\n+Updated Line 2\n Line 3\n"
     dos_patch = "\ndiff --git a/dos_style.txt b/dos_style.txt\nindex 9daeafb..b02def2 100644\n--- a/dos_style.txt\n+++ b/dos_style.txt\n@@ -1,3 +1,3 @@\n Line 1\n-Line 2\n+Updated Line 2\n Line 3\n"
@@ -84,7 +97,9 @@ def test_apply_patch_preserves_line_endings(mock_output_dir):
         unix_content = f.read()
     with open(dos_file, "rb") as f:
         dos_content = f.read()
-    assert b"\r\n" not in unix_content, "Unix-style line endings were changed to DOS-style"
+    assert b"\r\n" not in unix_content, (
+        "Unix-style line endings were changed to DOS-style"
+    )
     assert b"\r\n" in dos_content, "DOS-style line endings were changed to Unix-style"
     assert unix_content.decode("utf-8").split("\n")[1] == "Updated Line 2"
     assert dos_content.decode("utf-8").split("\r\n")[1] == "Updated Line 2"
@@ -95,28 +110,28 @@ def test_apply_patch_create_new_file(mock_output_dir):
     apply_patch(mock_output_dir, patch_content)
     new_file_path = os.path.join(mock_output_dir, "new_file.txt")
     assert os.path.exists(new_file_path), "New file was not created"
-    with open(new_file_path, "r", encoding='utf-8') as f:
+    with open(new_file_path, "r", encoding="utf-8") as f:
         content = f.read().strip()
     assert content == "hello world", "File content is incorrect"
 
 
 def test_apply_patch_rename_file(mock_output_dir):
     old_file = os.path.join(mock_output_dir, "old_name.txt")
-    with open(old_file, "w", encoding='utf-8') as f:
+    with open(old_file, "w", encoding="utf-8") as f:
         f.write("This file will be renamed")
     patch_content = "diff --git a/old_name.txt b/new_name.txt\nsimilarity index 100%\nrename from old_name.txt\nrename to new_name.txt"
     apply_patch(mock_output_dir, patch_content)
     new_file = os.path.join(mock_output_dir, "new_name.txt")
     assert not os.path.exists(old_file), "Old file still exists"
     assert os.path.exists(new_file), "New file was not created"
-    with open(new_file, "r", encoding='utf-8') as f:
+    with open(new_file, "r", encoding="utf-8") as f:
         content = f.read()
     assert content == "This file will be renamed"
 
 
 def test_apply_patch_delete_file(mock_output_dir):
     sample_file = os.path.join(mock_output_dir, "to_be_deleted.txt")
-    with open(sample_file, "w", encoding='utf-8') as f:
+    with open(sample_file, "w", encoding="utf-8") as f:
         f.write("This file will be deleted")
     patch_content = "\ndiff --git a/to_be_deleted.txt b/to_be_deleted.txt\ndeleted file mode 100644\nindex 9daeafb..0000000\n--- a/to_be_deleted.txt\n+++ /dev/null\n@@ -1 +0,0 @@\n-This file will be deleted\n"
     apply_patch(mock_output_dir, patch_content)
@@ -137,7 +152,9 @@ def test_initialize_repo(mock_output_dir):
 @patch("httpx.post")
 @patch("subprocess.run")
 @patch("forge.resolver.send_pull_request.LLM")
-def test_update_existing_pull_request(mock_llm_class, mock_subprocess_run, mock_requests_post, mock_reply_to_comment):
+def test_update_existing_pull_request(
+    mock_llm_class, mock_subprocess_run, mock_requests_post, mock_reply_to_comment
+):
     issue = Issue(
         owner="test-owner",
         repo="test-repo",
@@ -155,7 +172,9 @@ def test_update_existing_pull_request(mock_llm_class, mock_subprocess_run, mock_
     mock_requests_post.return_value.status_code = 201
     mock_llm_instance = MagicMock()
     mock_completion_response = MagicMock()
-    mock_completion_response.choices = [MagicMock(message=MagicMock(content="This is an issue resolution."))]
+    mock_completion_response.choices = [
+        MagicMock(message=MagicMock(content="This is an issue resolution."))
+    ]
     mock_llm_instance.completion.return_value = mock_completion_response
     mock_llm_class.return_value = mock_llm_instance
     llm_config = LLMConfig()
@@ -188,7 +207,10 @@ def test_update_existing_pull_request(mock_llm_class, mock_subprocess_run, mock_
     expected_comment = "This is an issue resolution."
     mock_requests_post.assert_called_once_with(
         comment_url,
-        headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"},
+        headers={
+            "Authorization": f"token {token}",
+            "Accept": "application/vnd.github.v3+json",
+        },
         json={"body": expected_comment},
     )
     mock_reply_to_comment.assert_has_calls(
@@ -197,7 +219,9 @@ def test_update_existing_pull_request(mock_llm_class, mock_subprocess_run, mock_
             call(issue.number, "comment2", "Updated documentation for B"),
         ]
     )
-    assert result == f"https://github.com/{issue.owner}/{issue.repo}/pull/{issue.number}"
+    assert (
+        result == f"https://github.com/{issue.owner}/{issue.repo}/pull/{issue.number}"
+    )
 
 
 @pytest.mark.parametrize(
@@ -217,14 +241,27 @@ def test_update_existing_pull_request(mock_llm_class, mock_subprocess_run, mock_
 @patch("httpx.post")
 @patch("httpx.get")
 def test_send_pull_request(
-    mock_get, mock_post, mock_run, mock_issue, mock_llm_config, mock_output_dir, pr_type, target_branch, pr_title
+    mock_get,
+    mock_post,
+    mock_run,
+    mock_issue,
+    mock_llm_config,
+    mock_output_dir,
+    pr_type,
+    target_branch,
+    pr_title,
 ):
     repo_path = os.path.join(mock_output_dir, "repo")
     if target_branch:
         mock_get.side_effect = [MagicMock(status_code=404), MagicMock(status_code=200)]
     else:
-        mock_get.side_effect = [MagicMock(status_code=404), MagicMock(json=lambda: {"default_branch": "main"})]
-    mock_post.return_value.json.return_value = {"html_url": "https://github.com/test-owner/test-repo/pull/1"}
+        mock_get.side_effect = [
+            MagicMock(status_code=404),
+            MagicMock(json=lambda: {"default_branch": "main"}),
+        ]
+    mock_post.return_value.json.return_value = {
+        "html_url": "https://github.com/test-owner/test-repo/pull/1"
+    }
     mock_run.side_effect = [MagicMock(returncode=0), MagicMock(returncode=0)]
     result = send_pull_request(
         issue=mock_issue,
@@ -241,7 +278,14 @@ def test_send_pull_request(
     assert mock_run.call_count == 2
     checkout_call, push_call = mock_run.call_args_list
     checkout_args, checkout_kwargs = checkout_call
-    assert checkout_args[0] == ["git", "-C", repo_path, "checkout", "-b", "Forge-fix-issue-42"]
+    assert checkout_args[0] == [
+        "git",
+        "-C",
+        repo_path,
+        "checkout",
+        "-b",
+        "Forge-fix-issue-42",
+    ]
     assert checkout_kwargs.get("capture_output") is True
     assert checkout_kwargs.get("text") is True
     assert checkout_kwargs.get("check") is False
@@ -262,7 +306,10 @@ def test_send_pull_request(
     assert push_args[0][-1].startswith("Forge-fix-issue-42")
     assert result
     if pr_type == "branch":
-        assert result == "https://github.com/test-owner/test-repo/compare/Forge-fix-issue-42?expand=1"
+        assert (
+            result
+            == "https://github.com/test-owner/test-repo/compare/Forge-fix-issue-42?expand=1"
+        )
         mock_post.assert_not_called()
     else:
         assert result == "https://github.com/test-owner/test-repo/pull/1"
@@ -279,13 +326,22 @@ def test_send_pull_request(
 @patch("subprocess.run")
 @patch("httpx.post")
 @patch("httpx.get")
-def test_send_pull_request_with_reviewer(mock_get, mock_post, mock_run, mock_issue, mock_output_dir, mock_llm_config):
+def test_send_pull_request_with_reviewer(
+    mock_get, mock_post, mock_run, mock_issue, mock_output_dir, mock_llm_config
+):
     repo_path = os.path.join(mock_output_dir, "repo")
     reviewer = "test-reviewer"
-    mock_get.side_effect = [MagicMock(status_code=404), MagicMock(json=lambda: {"default_branch": "main"})]
+    mock_get.side_effect = [
+        MagicMock(status_code=404),
+        MagicMock(json=lambda: {"default_branch": "main"}),
+    ]
     mock_post.side_effect = [
         MagicMock(
-            status_code=201, json=lambda: {"html_url": "https://github.com/test-owner/test-repo/pull/1", "number": 1}
+            status_code=201,
+            json=lambda: {
+                "html_url": "https://github.com/test-owner/test-repo/pull/1",
+                "number": 1,
+            },
         ),
         MagicMock(status_code=201),
     ]
@@ -305,7 +361,8 @@ def test_send_pull_request_with_reviewer(mock_get, mock_post, mock_run, mock_iss
     assert pr_create_call[1]["json"]["title"] == "Fix issue #42: Test Issue"
     reviewer_request_call = mock_post.call_args_list[1]
     assert (
-        reviewer_request_call[0][0] == "https://api.github.com/repos/test-owner/test-repo/pulls/1/requested_reviewers"
+        reviewer_request_call[0][0]
+        == "https://api.github.com/repos/test-owner/test-repo/pulls/1/requested_reviewers"
     )
     assert reviewer_request_call[1]["json"] == {"reviewers": ["test-reviewer"]}
     assert result == "https://github.com/test-owner/test-repo/pull/1"
@@ -314,13 +371,17 @@ def test_send_pull_request_with_reviewer(mock_get, mock_post, mock_run, mock_iss
 @patch("subprocess.run")
 @patch("httpx.post")
 @patch("httpx.get")
-def test_send_pull_request_target_branch_with_fork(mock_get, mock_post, mock_run, mock_issue, mock_output_dir):
+def test_send_pull_request_target_branch_with_fork(
+    mock_get, mock_post, mock_run, mock_issue, mock_output_dir
+):
     """Test that target_branch works correctly when using a fork."""
     repo_path = os.path.join(mock_output_dir, "repo")
     fork_owner = "fork-owner"
     target_branch = "custom-target"
     mock_get.side_effect = [MagicMock(status_code=404), MagicMock(status_code=200)]
-    mock_post.return_value.json.return_value = {"html_url": "https://github.com/test-owner/test-repo/pull/1"}
+    mock_post.return_value.json.return_value = {
+        "html_url": "https://github.com/test-owner/test-repo/pull/1"
+    }
     mock_run.side_effect = [MagicMock(returncode=0), MagicMock(returncode=0)]
     send_pull_request(
         issue=mock_issue,
@@ -334,13 +395,18 @@ def test_send_pull_request_target_branch_with_fork(mock_get, mock_post, mock_run
     )
     assert mock_get.call_count == 2
     target_branch_check = mock_get.call_args_list[1]
-    assert target_branch_check[0][0] == f"https://api.github.com/repos/test-owner/test-repo/branches/{target_branch}"
+    assert (
+        target_branch_check[0][0]
+        == f"https://api.github.com/repos/test-owner/test-repo/branches/{target_branch}"
+    )
     mock_post.assert_called_once()
     post_data = mock_post.call_args[1]["json"]
     assert post_data["base"] == target_branch
     assert post_data["head"] == "fork-owner:Forge-fix-issue-42"
     push_call = mock_run.call_args_list[1]
-    assert f"https://test-user:test-token@github.com/{fork_owner}/test-repo.git" in str(push_call)
+    assert f"https://test-user:test-token@github.com/{fork_owner}/test-repo.git" in str(
+        push_call
+    )
 
 
 @patch("subprocess.run")
@@ -354,7 +420,9 @@ def test_send_pull_request_target_branch_with_additional_message(
     target_branch = "feature-branch"
     additional_message = "Additional PR context"
     mock_get.side_effect = [MagicMock(status_code=404), MagicMock(status_code=200)]
-    mock_post.return_value.json.return_value = {"html_url": "https://github.com/test-owner/test-repo/pull/1"}
+    mock_post.return_value.json.return_value = {
+        "html_url": "https://github.com/test-owner/test-repo/pull/1"
+    }
     mock_run.side_effect = [MagicMock(returncode=0), MagicMock(returncode=0)]
     send_pull_request(
         issue=mock_issue,
@@ -375,11 +443,15 @@ def test_send_pull_request_target_branch_with_additional_message(
 
 
 @patch("httpx.get")
-def test_send_pull_request_invalid_target_branch(mock_get, mock_issue, mock_output_dir, mock_llm_config):
+def test_send_pull_request_invalid_target_branch(
+    mock_get, mock_issue, mock_output_dir, mock_llm_config
+):
     """Test that an error is raised when specifying a non-existent target branch."""
     repo_path = os.path.join(mock_output_dir, "repo")
     mock_get.side_effect = [MagicMock(status_code=404), MagicMock(status_code=404)]
-    with pytest.raises(ValueError, match="Target branch nonexistent-branch does not exist"):
+    with pytest.raises(
+        ValueError, match="Target branch nonexistent-branch does not exist"
+    ):
         send_pull_request(
             issue=mock_issue,
             token="test-token",
@@ -400,8 +472,13 @@ def test_send_pull_request_git_push_failure(
 ):
     repo_path = os.path.join(mock_output_dir, "repo")
     mock_get.return_value = MagicMock(json=lambda: {"default_branch": "main"})
-    mock_run.side_effect = [MagicMock(returncode=0), MagicMock(returncode=1, stderr="Error: failed to push some refs")]
-    with pytest.raises(RuntimeError, match="Failed to push changes to the remote repository"):
+    mock_run.side_effect = [
+        MagicMock(returncode=0),
+        MagicMock(returncode=1, stderr="Error: failed to push some refs"),
+    ]
+    with pytest.raises(
+        RuntimeError, match="Failed to push changes to the remote repository"
+    ):
         send_pull_request(
             issue=mock_issue,
             token="test-token",
@@ -412,7 +489,14 @@ def test_send_pull_request_git_push_failure(
         )
     assert mock_run.call_count == 2
     checkout_call = mock_run.call_args_list[0]
-    assert checkout_call[0][0] == ["git", "-C", repo_path, "checkout", "-b", "Forge-fix-issue-42"]
+    assert checkout_call[0][0] == [
+        "git",
+        "-C",
+        repo_path,
+        "checkout",
+        "-b",
+        "Forge-fix-issue-42",
+    ]
     push_call = mock_run.call_args_list[1]
     assert push_call[0][0] == [
         "git",
@@ -435,7 +519,9 @@ def test_send_pull_request_permission_error(
     mock_get.return_value = MagicMock(json=lambda: {"default_branch": "main"})
     mock_post.return_value.status_code = 403
     mock_run.side_effect = [MagicMock(returncode=0), MagicMock(returncode=0)]
-    with pytest.raises(RuntimeError, match="Failed to create pull request due to missing permissions."):
+    with pytest.raises(
+        RuntimeError, match="Failed to create pull request due to missing permissions."
+    ):
         send_pull_request(
             issue=mock_issue,
             token="test-token",
@@ -453,7 +539,9 @@ def test_reply_to_comment(mock_post, mock_issue):
     token = "test_token"
     comment_id = "test_comment_id"
     reply = "This is a test reply."
-    handler = GithubIssueHandler(owner="test-owner", repo="test-repo", token=token, username="test-user")
+    handler = GithubIssueHandler(
+        owner="test-owner", repo="test-repo", token=token, username="test-user"
+    )
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -477,7 +565,10 @@ def test_reply_to_comment(mock_post, mock_issue):
     mock_post.assert_called_once_with(
         "https://api.github.com/graphql",
         json={"query": query, "variables": expected_variables},
-        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
     )
     mock_response.raise_for_status.assert_called_once()
 
@@ -505,7 +596,9 @@ def test_process_single_pr_update(
             title="Issue 1",
             body="Body 1",
             closing_issues=[],
-            review_threads=[ReviewThread(comment="review comment for feedback", files=[])],
+            review_threads=[
+                ReviewThread(comment="review comment for feedback", files=[])
+            ],
             thread_ids=["1"],
             head_branch="branch 1",
         ),
@@ -520,7 +613,9 @@ def test_process_single_pr_update(
         result_explanation="[Test success 1]",
         error=None,
     )
-    mock_update_existing_pull_request.return_value = "https://github.com/test-owner/test-repo/pull/1"
+    mock_update_existing_pull_request.return_value = (
+        "https://github.com/test-owner/test-repo/pull/1"
+    )
     mock_initialize_repo.return_value = f"{mock_output_dir}/patches/pr_1"
     process_single_issue(
         mock_output_dir,
@@ -535,9 +630,15 @@ def test_process_single_pr_update(
         None,
     )
     mock_initialize_repo.assert_called_once_with(mock_output_dir, 1, "pr", "branch 1")
-    mock_apply_patch.assert_called_once_with(f"{mock_output_dir}/patches/pr_1", resolver_output.git_patch)
+    mock_apply_patch.assert_called_once_with(
+        f"{mock_output_dir}/patches/pr_1", resolver_output.git_patch
+    )
     mock_make_commit.assert_called_once_with(
-        f"{mock_output_dir}/patches/pr_1", resolver_output.issue, "pr", "forge", "Forge@all-hands.dev"
+        f"{mock_output_dir}/patches/pr_1",
+        resolver_output.issue,
+        "pr",
+        "forge",
+        "Forge@all-hands.dev",
     )
     mock_update_existing_pull_request.assert_called_once_with(
         issue=resolver_output.issue,
@@ -556,14 +657,25 @@ def test_process_single_pr_update(
 @patch("forge.resolver.send_pull_request.send_pull_request")
 @patch("forge.resolver.send_pull_request.make_commit")
 def test_process_single_issue(
-    mock_make_commit, mock_send_pull_request, mock_apply_patch, mock_initialize_repo, mock_output_dir, mock_llm_config
+    mock_make_commit,
+    mock_send_pull_request,
+    mock_apply_patch,
+    mock_initialize_repo,
+    mock_output_dir,
+    mock_llm_config,
 ):
     token = "test_token"
     username = "test_user"
     pr_type = "draft"
     platform = ProviderType.GITHUB
     resolver_output = ResolverOutput(
-        issue=Issue(owner="test-owner", repo="test-repo", number=1, title="Issue 1", body="Body 1"),
+        issue=Issue(
+            owner="test-owner",
+            repo="test-repo",
+            number=1,
+            title="Issue 1",
+            body="Body 1",
+        ),
         issue_type="issue",
         instruction="Test instruction 1",
         base_commit="def456",
@@ -575,15 +687,32 @@ def test_process_single_issue(
         result_explanation="Test success 1",
         error=None,
     )
-    mock_send_pull_request.return_value = "https://github.com/test-owner/test-repo/pull/1"
+    mock_send_pull_request.return_value = (
+        "https://github.com/test-owner/test-repo/pull/1"
+    )
     mock_initialize_repo.return_value = f"{mock_output_dir}/patches/issue_1"
     process_single_issue(
-        mock_output_dir, resolver_output, token, username, platform, pr_type, mock_llm_config, None, False, None
+        mock_output_dir,
+        resolver_output,
+        token,
+        username,
+        platform,
+        pr_type,
+        mock_llm_config,
+        None,
+        False,
+        None,
     )
     mock_initialize_repo.assert_called_once_with(mock_output_dir, 1, "issue", "def456")
-    mock_apply_patch.assert_called_once_with(f"{mock_output_dir}/patches/issue_1", resolver_output.git_patch)
+    mock_apply_patch.assert_called_once_with(
+        f"{mock_output_dir}/patches/issue_1", resolver_output.git_patch
+    )
     mock_make_commit.assert_called_once_with(
-        f"{mock_output_dir}/patches/issue_1", resolver_output.issue, "issue", "forge", "Forge@all-hands.dev"
+        f"{mock_output_dir}/patches/issue_1",
+        resolver_output.issue,
+        "issue",
+        "forge",
+        "Forge@all-hands.dev",
     )
     mock_send_pull_request.assert_called_once_with(
         issue=resolver_output.issue,
@@ -608,13 +737,24 @@ def test_process_single_issue(
 @patch("forge.resolver.send_pull_request.send_pull_request")
 @patch("forge.resolver.send_pull_request.make_commit")
 def test_process_single_issue_unsuccessful(
-    mock_make_commit, mock_send_pull_request, mock_apply_patch, mock_initialize_repo, mock_output_dir, mock_llm_config
+    mock_make_commit,
+    mock_send_pull_request,
+    mock_apply_patch,
+    mock_initialize_repo,
+    mock_output_dir,
+    mock_llm_config,
 ):
     token = "test_token"
     username = "test_user"
     pr_type = "draft"
     resolver_output = ResolverOutput(
-        issue=Issue(owner="test-owner", repo="test-repo", number=1, title="Issue 1", body="Body 1"),
+        issue=Issue(
+            owner="test-owner",
+            repo="test-repo",
+            number=1,
+            title="Issue 1",
+            body="Body 1",
+        ),
         issue_type="issue",
         instruction="Test instruction 1",
         base_commit="def456",
@@ -646,7 +786,9 @@ def test_process_single_issue_unsuccessful(
 
 @patch("httpx.get")
 @patch("subprocess.run")
-def test_send_pull_request_branch_naming(mock_run, mock_get, mock_issue, mock_output_dir, mock_llm_config):
+def test_send_pull_request_branch_naming(
+    mock_run, mock_get, mock_issue, mock_output_dir, mock_llm_config
+):
     repo_path = os.path.join(mock_output_dir, "repo")
     mock_get.side_effect = [
         MagicMock(status_code=200),
@@ -667,19 +809,32 @@ def test_send_pull_request_branch_naming(mock_run, mock_get, mock_issue, mock_ou
     assert mock_run.call_count == 2
     checkout_call, push_call = mock_run.call_args_list
     checkout_args, checkout_kwargs = checkout_call
-    assert checkout_args[0] == ["git", "-C", repo_path, "checkout", "-b", "Forge-fix-issue-42-try3"]
+    assert checkout_args[0] == [
+        "git",
+        "-C",
+        repo_path,
+        "checkout",
+        "-b",
+        "Forge-fix-issue-42-try3",
+    ]
     assert checkout_kwargs.get("capture_output") is True
     assert checkout_kwargs.get("text") is True
     assert checkout_kwargs.get("check") is False
 
     push_args, push_kwargs = push_call
-    assert push_args[0][4] == "https://test-user:test-token@github.com/test-owner/test-repo.git"
+    assert (
+        push_args[0][4]
+        == "https://test-user:test-token@github.com/test-owner/test-repo.git"
+    )
     assert push_args[0][-1] == "Forge-fix-issue-42-try3"
     assert push_kwargs.get("check") is False
     assert push_kwargs.get("capture_output") is True
     assert push_kwargs.get("text") is True
     assert push_kwargs.get("shell") in (None, False)
-    assert result == "https://github.com/test-owner/test-repo/compare/Forge-fix-issue-42-try3?expand=1"
+    assert (
+        result
+        == "https://github.com/test-owner/test-repo/compare/Forge-fix-issue-42-try3?expand=1"
+    )
 
 
 @patch("forge.resolver.send_pull_request.argparse.ArgumentParser")
@@ -700,7 +855,12 @@ def test_main(
     # Setup test data
     mock_args = _create_mock_args()
     _setup_mocks(
-        mock_parser, mock_getenv, mock_path_exists, mock_load_single_resolver_output, mock_identify_token, mock_args
+        mock_parser,
+        mock_getenv,
+        mock_path_exists,
+        mock_load_single_resolver_output,
+        mock_identify_token,
+        mock_args,
     )
 
     # Execute main function
@@ -742,11 +902,18 @@ def _create_mock_args():
 
 
 def _setup_mocks(
-    mock_parser, mock_getenv, mock_path_exists, mock_load_single_resolver_output, mock_identify_token, mock_args
+    mock_parser,
+    mock_getenv,
+    mock_path_exists,
+    mock_load_single_resolver_output,
+    mock_identify_token,
+    mock_args,
 ):
     """Setup all mocks for testing."""
     mock_parser.return_value.parse_args.return_value = mock_args
-    mock_getenv.side_effect = lambda key, default=None: "mock_token" if key == "GITHUB_TOKEN" else default
+    mock_getenv.side_effect = (
+        lambda key, default=None: "mock_token" if key == "GITHUB_TOKEN" else default
+    )
     mock_path_exists.return_value = True
     mock_resolver_output = MagicMock()
     mock_load_single_resolver_output.return_value = mock_resolver_output
@@ -767,13 +934,19 @@ def _verify_successful_execution(
     mock_identify_token.assert_called_with("mock_token", mock_args.base_domain)
 
     # Verify LLM config creation
-    llm_config = LLMConfig(model=mock_args.llm_model, base_url=mock_args.llm_base_url, api_key=mock_args.llm_api_key)
+    llm_config = LLMConfig(
+        model=mock_args.llm_model,
+        base_url=mock_args.llm_base_url,
+        api_key=mock_args.llm_api_key,
+    )
 
     # Verify process_single_issue call
     _verify_process_single_issue_call(mock_process_single_issue, mock_args, llm_config)
 
     # Verify other function calls
-    _verify_other_function_calls(mock_parser, mock_getenv, mock_path_exists, mock_load_single_resolver_output)
+    _verify_other_function_calls(
+        mock_parser, mock_getenv, mock_path_exists, mock_load_single_resolver_output
+    )
 
 
 def _verify_process_single_issue_call(mock_process_single_issue, mock_args, llm_config):
@@ -796,7 +969,9 @@ def _verify_process_single_issue_call(mock_process_single_issue, mock_args, llm_
     assert called_args[11] == mock_args.pr_title
 
 
-def _verify_other_function_calls(mock_parser, mock_getenv, mock_path_exists, mock_load_single_resolver_output):
+def _verify_other_function_calls(
+    mock_parser, mock_getenv, mock_path_exists, mock_load_single_resolver_output
+):
     """Verify other function calls were made correctly."""
     mock_parser.assert_called_once()
     mock_getenv.assert_any_call("GITHUB_TOKEN")
@@ -841,20 +1016,37 @@ def test_make_commit_escapes_issue_title(mock_subprocess_run):
         title='Issue with "quotes" and $pecial characters',
         body="Test body",
     )
-    mock_subprocess_run.return_value = MagicMock(returncode=0, stdout="sample output", stderr="")
+    mock_subprocess_run.return_value = MagicMock(
+        returncode=0, stdout="sample output", stderr=""
+    )
     issue_type = "issue"
     make_commit(repo_dir, issue, issue_type)
     calls = mock_subprocess_run.call_args_list
     assert len(calls) == 4
     git_commit_call = calls[3][0][0]
-    expected_commit_message = 'Fix issue #42: Issue with "quotes" and $pecial characters'
-    assert ["git", "-C", "/path/to/repo", "commit", "-m", expected_commit_message] == git_commit_call
+    expected_commit_message = (
+        'Fix issue #42: Issue with "quotes" and $pecial characters'
+    )
+    assert [
+        "git",
+        "-C",
+        "/path/to/repo",
+        "commit",
+        "-m",
+        expected_commit_message,
+    ] == git_commit_call
 
 
 @patch("subprocess.run")
 def test_make_commit_no_changes(mock_subprocess_run):
     repo_dir = "/path/to/repo"
-    issue = Issue(owner="test-owner", repo="test-repo", number=42, title="Issue with no changes", body="Test body")
+    issue = Issue(
+        owner="test-owner",
+        repo="test-repo",
+        number=42,
+        title="Issue with no changes",
+        body="Test body",
+    )
     mock_subprocess_run.side_effect = [
         MagicMock(returncode=0),
         MagicMock(returncode=0),
@@ -870,7 +1062,13 @@ def test_make_commit_no_changes(mock_subprocess_run):
 @patch("subprocess.run")
 def test_make_commit_with_custom_git_config(mock_subprocess_run):
     repo_dir = "/path/to/repo"
-    issue = Issue(owner="test-owner", repo="test-repo", number=42, title="Test Issue", body="Test body")
+    issue = Issue(
+        owner="test-owner",
+        repo="test-repo",
+        number=42,
+        title="Test Issue",
+        body="Test body",
+    )
     custom_git_user_name = "custom-user"
     custom_git_user_email = "custom@example.com"
     mock_subprocess_run.side_effect = [
@@ -886,9 +1084,30 @@ def test_make_commit_with_custom_git_config(mock_subprocess_run):
     calls = mock_subprocess_run.call_args_list
     assert len(calls) == 7
     assert calls[0][0][0] == ["git", "-C", repo_dir, "config", "user.name"]
-    assert calls[1][0][0] == ["git", "-C", repo_dir, "config", "user.name", custom_git_user_name]
-    assert calls[2][0][0] == ["git", "-C", repo_dir, "config", "user.email", custom_git_user_email]
-    assert calls[3][0][0] == ["git", "-C", repo_dir, "config", "alias.git", "git --no-pager"]
+    assert calls[1][0][0] == [
+        "git",
+        "-C",
+        repo_dir,
+        "config",
+        "user.name",
+        custom_git_user_name,
+    ]
+    assert calls[2][0][0] == [
+        "git",
+        "-C",
+        repo_dir,
+        "config",
+        "user.email",
+        custom_git_user_email,
+    ]
+    assert calls[3][0][0] == [
+        "git",
+        "-C",
+        repo_dir,
+        "config",
+        "alias.git",
+        "git --no-pager",
+    ]
     assert calls[4][0][0] == ["git", "-C", repo_dir, "add", "."]
     assert calls[5][0][0] == ["git", "-C", repo_dir, "status", "--porcelain"]
     assert calls[6][0][0] == [
@@ -904,7 +1123,13 @@ def test_make_commit_with_custom_git_config(mock_subprocess_run):
 @patch("subprocess.run")
 def test_make_commit_with_existing_git_config(mock_subprocess_run):
     repo_dir = "/path/to/repo"
-    issue = Issue(owner="test-owner", repo="test-repo", number=42, title="Test Issue", body="Test body")
+    issue = Issue(
+        owner="test-owner",
+        repo="test-repo",
+        number=42,
+        title="Test Issue",
+        body="Test body",
+    )
     mock_subprocess_run.side_effect = [
         MagicMock(returncode=0, stdout="existing-user\n"),
         MagicMock(returncode=0),
@@ -930,7 +1155,13 @@ def test_make_commit_with_existing_git_config(mock_subprocess_run):
 @patch("subprocess.run")
 def test_make_commit_with_special_characters_in_git_config(mock_subprocess_run):
     repo_dir = "/path/to/repo"
-    issue = Issue(owner="test-owner", repo="test-repo", number=42, title="Test Issue", body="Test body")
+    issue = Issue(
+        owner="test-owner",
+        repo="test-repo",
+        number=42,
+        title="Test Issue",
+        body="Test body",
+    )
     git_user_name = 'User "with quotes"'
     git_user_email = "user@domain.com"
     mock_subprocess_run.side_effect = [
@@ -946,9 +1177,30 @@ def test_make_commit_with_special_characters_in_git_config(mock_subprocess_run):
     calls = mock_subprocess_run.call_args_list
     assert len(calls) == 7
     assert calls[0][0][0] == ["git", "-C", repo_dir, "config", "user.name"]
-    assert calls[1][0][0] == ["git", "-C", repo_dir, "config", "user.name", git_user_name]
-    assert calls[2][0][0] == ["git", "-C", repo_dir, "config", "user.email", git_user_email]
-    assert calls[3][0][0] == ["git", "-C", repo_dir, "config", "alias.git", "git --no-pager"]
+    assert calls[1][0][0] == [
+        "git",
+        "-C",
+        repo_dir,
+        "config",
+        "user.name",
+        git_user_name,
+    ]
+    assert calls[2][0][0] == [
+        "git",
+        "-C",
+        repo_dir,
+        "config",
+        "user.email",
+        git_user_email,
+    ]
+    assert calls[3][0][0] == [
+        "git",
+        "-C",
+        repo_dir,
+        "config",
+        "alias.git",
+        "git --no-pager",
+    ]
     assert calls[4][0][0] == ["git", "-C", repo_dir, "add", "."]
     assert calls[5][0][0] == ["git", "-C", repo_dir, "status", "--porcelain"]
     assert calls[6][0][0] == [
@@ -964,10 +1216,14 @@ def test_make_commit_with_special_characters_in_git_config(mock_subprocess_run):
 def test_apply_patch_rename_directory(mock_output_dir):
     old_dir = os.path.join(mock_output_dir, "prompts", "resolve")
     os.makedirs(old_dir)
-    test_files = ["issue-success-check.jinja", "pr-feedback-check.jinja", "pr-thread-check.jinja"]
+    test_files = [
+        "issue-success-check.jinja",
+        "pr-feedback-check.jinja",
+        "pr-thread-check.jinja",
+    ]
     for filename in test_files:
         file_path = os.path.join(old_dir, filename)
-        with open(file_path, "w", encoding='utf-8') as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             f.write(f"Content of {filename}")
     patch_content = "diff --git a/prompts/resolve/issue-success-check.jinja b/prompts/guess_success/issue-success-check.jinja\nsimilarity index 100%\nrename from prompts/resolve/issue-success-check.jinja\nrename to prompts/guess_success/issue-success-check.jinja\ndiff --git a/prompts/resolve/pr-feedback-check.jinja b/prompts/guess_success/pr-feedback-check.jinja\nsimilarity index 100%\nrename from prompts/resolve/pr-feedback-check.jinja\nrename to prompts/guess_success/pr-feedback-check.jinja\ndiff --git a/prompts/resolve/pr-thread-check.jinja b/prompts/guess_success/pr-thread-check.jinja\nsimilarity index 100%\nrename from prompts/resolve/pr-thread-check.jinja\nrename to prompts/guess_success/pr-thread-check.jinja"
     apply_patch(mock_output_dir, patch_content)
@@ -979,6 +1235,6 @@ def test_apply_patch_rename_directory(mock_output_dir):
         new_path = os.path.join(new_dir, filename)
         assert not os.path.exists(old_path), f"Old file {filename} still exists"
         assert os.path.exists(new_path), f"New file {filename} was not created"
-        with open(new_path, "r", encoding='utf-8') as f:
+        with open(new_path, "r", encoding="utf-8") as f:
             content = f.read()
         assert content == f"Content of {filename}", f"Content mismatch for {filename}"

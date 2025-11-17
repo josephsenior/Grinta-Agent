@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package forge.runtime.v1;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/forge/runtime/v1;runtimev1";
+
+// Handle returned when a runtime sandbox is created.
+message RuntimeHandle {
+  string runtime_id = 1;
+  string session_id = 2;
+  string repository = 3;
+  string branch = 4;
+}
+
+// Request to create or attach to a runtime sandbox.
+message CreateRuntimeRequest {
+  string session_id = 1;
+  string repository = 2;
+  string branch = 3;
+  string repo_root = 4;
+  string user_request = 5;
+}
+
+// Request to close/teardown a runtime sandbox.
+message CloseRuntimeRequest {
+  string runtime_id = 1;
+  bool wait = 2;
+}
+
+// Step output schema definition (mirrors forge.metasop.models.StepOutputSpec).
+message StepOutputSpecMessage {
+  string schema = 1;
+}
+
+// Canonical SOP step envelope aligned with forge.metasop.models.SopStep.
+message SopStepMessage {
+  string id = 1;
+  string role = 2;
+  string task = 3;
+  StepOutputSpecMessage outputs = 4;
+  repeated string depends_on = 5;
+  string condition = 6;
+  string lock = 7;
+  uint32 priority = 8;
+}
+
+// Streaming request for step execution.
+message RunStepRequest {
+  string runtime_id = 1;
+  SopStepMessage step = 2;
+  uint32 max_retries = 3;
+  string trace_id = 4;
+}
+
+// Execution progress frame emitted while running a step.
+message StepUpdate {
+  string runtime_id = 1;
+  string step_id = 2;
+  string update_type = 3;
+  string status = 4;
+  map<string, string> metadata = 5;
+}
+
+service RuntimeService {
+  rpc CreateRuntime(CreateRuntimeRequest) returns (RuntimeHandle);
+  rpc RunStep(stream RunStepRequest) returns (stream StepUpdate);
+  rpc CloseRuntime(CloseRuntimeRequest) returns (google.protobuf.Empty);
+}

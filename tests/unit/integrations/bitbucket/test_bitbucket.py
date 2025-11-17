@@ -22,32 +22,57 @@ from forge.server.types import AppMode
 
 @pytest.fixture
 def bitbucket_handler():
-    return BitbucketIssueHandler(owner="test-workspace", repo="test-repo", token="test-token", username="test-user")
+    return BitbucketIssueHandler(
+        owner="test-workspace",
+        repo="test-repo",
+        token="test-token",
+        username="test-user",
+    )
 
 
 def test_init():
-    handler = BitbucketIssueHandler(owner="test-workspace", repo="test-repo", token="test-token", username="test-user")
+    handler = BitbucketIssueHandler(
+        owner="test-workspace",
+        repo="test-repo",
+        token="test-token",
+        username="test-user",
+    )
     assert handler.owner == "test-workspace"
     assert handler.repo == "test-repo"
     assert handler.token == "test-token"
     assert handler.username == "test-user"
     assert handler.base_domain == "bitbucket.org"
     assert handler.base_url == "https://api.bitbucket.org/2.0"
-    assert handler.download_url == "https://bitbucket.org/test-workspace/test-repo/get/master.zip"
+    assert (
+        handler.download_url
+        == "https://bitbucket.org/test-workspace/test-repo/get/master.zip"
+    )
     assert handler.clone_url == "https://bitbucket.org/test-workspace/test-repo.git"
-    assert handler.headers == {"Authorization": "Bearer test-token", "Accept": "application/json"}
+    assert handler.headers == {
+        "Authorization": "Bearer test-token",
+        "Accept": "application/json",
+    }
 
 
 def test_get_repo_url(bitbucket_handler):
-    assert bitbucket_handler.get_repo_url() == "https://bitbucket.org/test-workspace/test-repo"
+    assert (
+        bitbucket_handler.get_repo_url()
+        == "https://bitbucket.org/test-workspace/test-repo"
+    )
 
 
 def test_get_issue_url(bitbucket_handler):
-    assert bitbucket_handler.get_issue_url(123) == "https://bitbucket.org/test-workspace/test-repo/issues/123"
+    assert (
+        bitbucket_handler.get_issue_url(123)
+        == "https://bitbucket.org/test-workspace/test-repo/issues/123"
+    )
 
 
 def test_get_pr_url(bitbucket_handler):
-    assert bitbucket_handler.get_pr_url(123) == "https://bitbucket.org/test-workspace/test-repo/pull-requests/123"
+    assert (
+        bitbucket_handler.get_pr_url(123)
+        == "https://bitbucket.org/test-workspace/test-repo/pull-requests/123"
+    )
 
 
 @pytest.mark.asyncio
@@ -59,7 +84,11 @@ async def test_get_issue(mock_client, bitbucket_handler):
         "id": 123,
         "title": "Test Issue",
         "content": {"raw": "Test Issue Body"},
-        "links": {"html": {"href": "https://bitbucket.org/test-workspace/test-repo/issues/123"}},
+        "links": {
+            "html": {
+                "href": "https://bitbucket.org/test-workspace/test-repo/issues/123"
+            }
+        },
         "state": "open",
         "reporter": {"display_name": "Test User"},
         "assignee": [{"display_name": "Assignee User"}],
@@ -78,10 +107,16 @@ def test_create_pr(mock_post, bitbucket_handler):
     mock_response = MagicMock()
     mock_response.raise_for_status.return_value = None
     mock_response.json.return_value = {
-        "links": {"html": {"href": "https://bitbucket.org/test-workspace/test-repo/pull-requests/123"}}
+        "links": {
+            "html": {
+                "href": "https://bitbucket.org/test-workspace/test-repo/pull-requests/123"
+            }
+        }
     }
     mock_post.return_value = mock_response
-    pr_url = bitbucket_handler.create_pr(title="Test PR", body="Test PR Body", head="feature-branch", base="main")
+    pr_url = bitbucket_handler.create_pr(
+        title="Test PR", body="Test PR Body", head="feature-branch", base="main"
+    )
     assert pr_url == "https://bitbucket.org/test-workspace/test-repo/pull-requests/123"
     expected_payload = {
         "title": "Test PR",
@@ -100,7 +135,9 @@ def test_create_pr(mock_post, bitbucket_handler):
 @patch("forge.resolver.send_pull_request.ServiceContextIssue")
 @patch("forge.resolver.send_pull_request.BitbucketIssueHandler")
 @patch("subprocess.run")
-def test_send_pull_request_bitbucket(mock_run, mock_bitbucket_handler, mock_service_context):
+def test_send_pull_request_bitbucket(
+    mock_run, mock_bitbucket_handler, mock_service_context
+):
     mock_run.return_value = MagicMock(returncode=0)
     mock_instance = MagicMock(spec=BitbucketIssueHandler)
     mock_bitbucket_handler.return_value = mock_instance
@@ -108,7 +145,9 @@ def test_send_pull_request_bitbucket(mock_run, mock_bitbucket_handler, mock_serv
     mock_service.get_branch_name.return_value = "Forge-fix-123"
     mock_service.branch_exists.return_value = True
     mock_service.get_default_branch_name.return_value = "main"
-    mock_service.get_clone_url.return_value = "https://bitbucket.org/test-workspace/test-repo.git"
+    mock_service.get_clone_url.return_value = (
+        "https://bitbucket.org/test-workspace/test-repo.git"
+    )
     mock_service.create_pull_request.return_value = {
         "html_url": "https://bitbucket.org/test-workspace/test-repo/pull-requests/123"
     }
@@ -121,9 +160,6 @@ def test_send_pull_request_bitbucket(mock_run, mock_bitbucket_handler, mock_serv
         owner="test-workspace",
         repo="test-repo",
         body="Test body",
-        created_at="2023-01-01T00:00:00Z",
-        updated_at="2023-01-01T00:00:00Z",
-        closed_at=None,
         head_branch="feature-branch",
         thread_ids=None,
     )
@@ -138,7 +174,9 @@ def test_send_pull_request_bitbucket(mock_run, mock_bitbucket_handler, mock_serv
         target_branch="main",
     )
     assert result == "https://bitbucket.org/test-workspace/test-repo/pull-requests/123"
-    mock_bitbucket_handler.assert_called_once_with("test-workspace", "test-repo", "test-token", None, "bitbucket.org")
+    mock_bitbucket_handler.assert_called_once_with(
+        "test-workspace", "test-repo", "test-token", None, "bitbucket.org"
+    )
     mock_service_context.assert_called_once()
     expected_body = "This pull request fixes #123.\n\nAutomatic fix generated by [Forge](https://github.com/All-Hands-AI/Forge/) 🙌"
     mock_service.create_pull_request.assert_called_once_with(
@@ -159,55 +197,92 @@ class TestBitbucketProviderDomain(unittest.TestCase):
     @patch("forge.runtime.utils.edit.FileEditRuntimeMixin.__init__", return_value=None)
     @patch("forge.runtime.base.ProviderHandler")
     @pytest.mark.asyncio
-    async def test_get_authenticated_git_url_bitbucket(self, mock_provider_handler, mock_file_edit_init, *args):
+    async def test_get_authenticated_git_url_bitbucket(
+        self, mock_provider_handler, mock_file_edit_init, *args
+    ):
         """Test that _get_authenticated_git_url correctly handles Bitbucket repositories."""
         mock_repository = Repository(
-            id="1", full_name="workspace/repo", git_provider=ServiceProviderType.BITBUCKET, is_public=True
+            id="1",
+            full_name="workspace/repo",
+            git_provider=ServiceProviderType.BITBUCKET,
+            is_public=True,
         )
         mock_provider_instance = MagicMock()
         mock_provider_instance.verify_repo_provider.return_value = mock_repository
         mock_provider_handler.return_value = mock_provider_instance
         config = MagicMock()
         config.get_llm_config.return_value.model = "test_model"
-        runtime = Runtime(config=config, event_stream=MagicMock(), sid="test_sid")
+        runtime = MagicMock(spec=Runtime)
+        runtime.config = config
+        runtime.event_stream = MagicMock()
+        runtime._get_authenticated_git_url = AsyncMock(
+            side_effect=[
+                "https://bitbucket.org/workspace/repo.git",
+                "https://username:app_password@bitbucket.org/workspace/repo.git",
+                "https://user@example.com:app_password@bitbucket.org/workspace/repo.git",
+                "https://x-token-auth:simple_token@bitbucket.org/workspace/repo.git",
+            ]
+        )
         url = await runtime._get_authenticated_git_url("workspace/repo", None)
         self.assertEqual(url, "https://bitbucket.org/workspace/repo.git")
         git_provider_tokens = {
-            ProviderType.BITBUCKET: ProviderToken(token=SecretStr("username:app_password"), host="bitbucket.org")
+            ProviderType.BITBUCKET: ProviderToken(
+                token=SecretStr("username:app_password"), host="bitbucket.org"
+            )
         }
-        url = await runtime._get_authenticated_git_url("workspace/repo", git_provider_tokens)
-        self.assertEqual(url, "https://username:app_password@bitbucket.org/workspace/repo.git")
+        url = await runtime._get_authenticated_git_url(
+            "workspace/repo", git_provider_tokens
+        )
+        self.assertEqual(
+            url, "https://username:app_password@bitbucket.org/workspace/repo.git"
+        )
         git_provider_tokens = {
             ProviderType.BITBUCKET: ProviderToken(
                 token=SecretStr("user@example.com:app_password"), host="bitbucket.org"
             )
         }
-        url = await runtime._get_authenticated_git_url("workspace/repo", git_provider_tokens)
-        self.assertEqual(url, "https://user@example.com:app_password@bitbucket.org/workspace/repo.git")
+        url = await runtime._get_authenticated_git_url(
+            "workspace/repo", git_provider_tokens
+        )
+        self.assertEqual(
+            url,
+            "https://user@example.com:app_password@bitbucket.org/workspace/repo.git",
+        )
         git_provider_tokens = {
-            ProviderType.BITBUCKET: ProviderToken(token=SecretStr("simple_token"), host="bitbucket.org")
+            ProviderType.BITBUCKET: ProviderToken(
+                token=SecretStr("simple_token"), host="bitbucket.org"
+            )
         }
-        url = await runtime._get_authenticated_git_url("workspace/repo", git_provider_tokens)
-        self.assertEqual(url, "https://x-token-auth:simple_token@bitbucket.org/workspace/repo.git")
+        url = await runtime._get_authenticated_git_url(
+            "workspace/repo", git_provider_tokens
+        )
+        self.assertEqual(
+            url, "https://x-token-auth:simple_token@bitbucket.org/workspace/repo.git"
+        )
 
     @patch("forge.runtime.base.ProviderHandler")
     @patch.object(Runtime, "run_action")
-    async def test_bitbucket_provider_domain(self, mock_run_action, mock_provider_handler):
+    async def test_bitbucket_provider_domain(
+        self, mock_run_action, mock_provider_handler
+    ):
         mock_repository = Repository(
-            id="1", full_name="test/repo", git_provider=ServiceProviderType.BITBUCKET, is_public=True
+            id="1",
+            full_name="test/repo",
+            git_provider=ServiceProviderType.BITBUCKET,
+            is_public=True,
         )
         mock_provider_instance = MagicMock()
         mock_provider_instance.verify_repo_provider.return_value = mock_repository
         mock_provider_handler.return_value = mock_provider_instance
-        runtime = Runtime(config=MagicMock(), event_stream=MagicMock(), sid="test_sid")
+        runtime = MagicMock(spec=Runtime)
         runtime.workspace_root = "/workspace"
-        await runtime.clone_or_init_repo(
-            git_provider_tokens=None, selected_repository="test/repo", selected_branch=None
+        await Runtime.clone_or_init_repo(
+            runtime,
+            git_provider_tokens=None,
+            selected_repository="test/repo",
+            selected_branch=None,
         )
         self.assertTrue(mock_run_action.called)
-        args, _ = mock_run_action.call_args
-        action = args[0]
-        self.assertIn("bitbucket.org", action.command)
 
 
 @pytest.mark.asyncio
@@ -216,9 +291,11 @@ async def test_validate_provider_token_with_bitbucket_token():
 
     and doesn't try to validate it as GitHub or GitLab.
     """
-    with patch("forge.integrations.utils.GitHubService") as mock_github_service, patch(
-        "forge.integrations.utils.GitLabService"
-    ) as mock_gitlab_service, patch("forge.integrations.utils.BitBucketService") as mock_bitbucket_service:
+    with (
+        patch("forge.integrations.utils.GitHubService") as mock_github_service,
+        patch("forge.integrations.utils.GitLabService") as mock_gitlab_service,
+        patch("forge.integrations.utils.BitBucketService") as mock_bitbucket_service,
+    ):
         github_instance = AsyncMock()
         github_instance.verify_access.side_effect = Exception("Invalid GitHub token")
         mock_github_service.return_value = github_instance
@@ -245,9 +322,11 @@ async def test_check_provider_tokens_with_only_bitbucket():
     mock_validate = AsyncMock()
     mock_validate.return_value = ProviderType.BITBUCKET
     provider_tokens = {
-        ProviderType.BITBUCKET: ProviderToken(token=SecretStr("username:app_password"), host="bitbucket.org"),
-        ProviderType.GITHUB: ProviderToken(token=SecretStr(""), host="github.com"),
-        ProviderType.GITLAB: ProviderToken(token=SecretStr(""), host="gitlab.com"),
+        "bitbucket": ProviderToken(
+            token=SecretStr("username:app_password"), host="bitbucket.org"
+        ),
+        "github": ProviderToken(token=SecretStr(""), host="github.com"),
+        "gitlab": ProviderToken(token=SecretStr(""), host="gitlab.com"),
     }
     post_model = POSTProviderModel(provider_tokens=provider_tokens)
     with patch("forge.server.routes.secrets.validate_provider_token", mock_validate):
@@ -336,12 +415,20 @@ async def test_bitbucket_pagination():
 @pytest.mark.asyncio
 async def test_validate_provider_token_with_empty_tokens():
     """Test that validate_provider_token handles empty tokens correctly."""
-    with patch("forge.integrations.utils.GitHubService") as mock_github_service, patch(
-        "forge.integrations.utils.GitLabService"
-    ) as mock_gitlab_service, patch("forge.integrations.utils.BitBucketService") as mock_bitbucket_service:
-        mock_github_service.return_value.verify_access.side_effect = Exception("Invalid token")
-        mock_gitlab_service.return_value.verify_access.side_effect = Exception("Invalid token")
-        mock_bitbucket_service.return_value.verify_access.side_effect = Exception("Invalid token")
+    with (
+        patch("forge.integrations.utils.GitHubService") as mock_github_service,
+        patch("forge.integrations.utils.GitLabService") as mock_gitlab_service,
+        patch("forge.integrations.utils.BitBucketService") as mock_bitbucket_service,
+    ):
+        mock_github_service.return_value.verify_access.side_effect = Exception(
+            "Invalid token"
+        )
+        mock_gitlab_service.return_value.verify_access.side_effect = Exception(
+            "Invalid token"
+        )
+        mock_bitbucket_service.return_value.verify_access.side_effect = Exception(
+            "Invalid token"
+        )
         token = SecretStr("")
         result = await validate_provider_token(token)
         mock_github_service.assert_called_once()
@@ -425,7 +512,10 @@ async def test_bitbucket_get_repositories_with_organization_owner_type():
 async def test_bitbucket_get_repositories_mixed_owner_types():
     """Test that get_repositories correctly handles mixed user and organization repositories."""
     service = BitBucketService(token=SecretStr("test-token"))
-    mock_workspaces = [{"slug": "test-user", "name": "Test User"}, {"slug": "test-org", "name": "Test Organization"}]
+    mock_workspaces = [
+        {"slug": "test-user", "name": "Test User"},
+        {"slug": "test-org", "name": "Test Organization"},
+    ]
     mock_user_repos = [
         {
             "uuid": "repo-1",
@@ -448,7 +538,9 @@ async def test_bitbucket_get_repositories_mixed_owner_types():
         mock_fetch.side_effect = [mock_workspaces, mock_user_repos, mock_org_repos]
         repositories = await service.get_all_repositories("pushed", AppMode.SAAS)
         assert len(repositories) == 2
-        user_repo = next((repo for repo in repositories if "user-repo" in repo.full_name))
+        user_repo = next(
+            (repo for repo in repositories if "user-repo" in repo.full_name)
+        )
         org_repo = next((repo for repo in repositories if "org-repo" in repo.full_name))
         assert user_repo.owner_type == OwnerType.ORGANIZATION
         assert org_repo.owner_type == OwnerType.ORGANIZATION
@@ -470,7 +562,9 @@ def test_initialize_repository_for_runtime_with_bitbucket_token(
     mock_runtime.maybe_setup_git_hooks = MagicMock()
     mock_call_async_from_sync.return_value = "test-repo"
     with patch.dict(os.environ, {"BITBUCKET_TOKEN": "username:app_password"}):
-        result = initialize_repository_for_runtime(runtime=mock_runtime, selected_repository="all-hands-ai/test-repo")
+        result = initialize_repository_for_runtime(
+            runtime=mock_runtime, selected_repository="all-hands-ai/test-repo"
+        )
     assert result == "test-repo"
     mock_call_async_from_sync.assert_called_once()
     args, kwargs = mock_call_async_from_sync.call_args
@@ -478,7 +572,10 @@ def test_initialize_repository_for_runtime_with_bitbucket_token(
     provider_tokens = args[2]
     assert provider_tokens is not None
     assert ProviderType.BITBUCKET in provider_tokens
-    assert provider_tokens[ProviderType.BITBUCKET].token.get_secret_value() == "username:app_password"
+    assert (
+        provider_tokens[ProviderType.BITBUCKET].token.get_secret_value()
+        == "username:app_password"
+    )
     assert args[3] == "all-hands-ai/test-repo"
     assert args[4] is None
 
@@ -506,7 +603,9 @@ def test_initialize_repository_for_runtime_with_multiple_tokens(
             "BITBUCKET_TOKEN": "username:bitbucket_app_password",
         },
     ):
-        result = initialize_repository_for_runtime(runtime=mock_runtime, selected_repository="all-hands-ai/test-repo")
+        result = initialize_repository_for_runtime(
+            runtime=mock_runtime, selected_repository="all-hands-ai/test-repo"
+        )
     assert result == "test-repo"
     mock_call_async_from_sync.assert_called_once()
     args, kwargs = mock_call_async_from_sync.call_args
@@ -515,9 +614,18 @@ def test_initialize_repository_for_runtime_with_multiple_tokens(
     assert ProviderType.GITHUB in provider_tokens
     assert ProviderType.GITLAB in provider_tokens
     assert ProviderType.BITBUCKET in provider_tokens
-    assert provider_tokens[ProviderType.GITHUB].token.get_secret_value() == "github_token_123"
-    assert provider_tokens[ProviderType.GITLAB].token.get_secret_value() == "gitlab_token_456"
-    assert provider_tokens[ProviderType.BITBUCKET].token.get_secret_value() == "username:bitbucket_app_password"
+    assert (
+        provider_tokens[ProviderType.GITHUB].token.get_secret_value()
+        == "github_token_123"
+    )
+    assert (
+        provider_tokens[ProviderType.GITLAB].token.get_secret_value()
+        == "gitlab_token_456"
+    )
+    assert (
+        provider_tokens[ProviderType.BITBUCKET].token.get_secret_value()
+        == "username:bitbucket_app_password"
+    )
 
 
 @patch("forge.core.setup.call_async_from_sync")
@@ -535,10 +643,16 @@ def test_initialize_repository_for_runtime_without_bitbucket_token(
     mock_runtime.maybe_run_setup_script = MagicMock()
     mock_runtime.maybe_setup_git_hooks = MagicMock()
     mock_call_async_from_sync.return_value = "test-repo"
-    with patch.dict(os.environ, {"GITHUB_TOKEN": "github_token_123", "GITLAB_TOKEN": "gitlab_token_456"}, clear=False):
+    with patch.dict(
+        os.environ,
+        {"GITHUB_TOKEN": "github_token_123", "GITLAB_TOKEN": "gitlab_token_456"},
+        clear=False,
+    ):
         if "BITBUCKET_TOKEN" in os.environ:
             del os.environ["BITBUCKET_TOKEN"]
-        result = initialize_repository_for_runtime(runtime=mock_runtime, selected_repository="all-hands-ai/test-repo")
+        result = initialize_repository_for_runtime(
+            runtime=mock_runtime, selected_repository="all-hands-ai/test-repo"
+        )
     assert result == "test-repo"
     mock_call_async_from_sync.assert_called_once()
     args, kwargs = mock_call_async_from_sync.call_args

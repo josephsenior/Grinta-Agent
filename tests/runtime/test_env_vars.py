@@ -13,10 +13,14 @@ def test_env_vars_os_environ(temp_dir, runtime_cls, run_as_Forge):
         runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
         obs: CmdOutputObservation = runtime.run_action(CmdRunAction(command="env"))
         print(obs)
-        obs: CmdOutputObservation = runtime.run_action(CmdRunAction(command="echo $FOOBAR"))
+        obs: CmdOutputObservation = runtime.run_action(
+            CmdRunAction(command="echo $FOOBAR")
+        )
         print(obs)
         assert obs.exit_code == 0, "The exit code should be 0."
-        assert obs.content.strip().split("\n\r")[0].strip() == "BAZ", f"Output: [{obs.content}] for {runtime_cls}"
+        assert obs.content.strip().split("\n\r")[0].strip() == "BAZ", (
+            f"Output: [{obs.content}] for {runtime_cls}"
+        )
         _close_test_runtime(runtime)
 
 
@@ -24,24 +28,37 @@ def test_env_vars_runtime_operations(temp_dir, runtime_cls):
     runtime, config = _load_runtime(temp_dir, runtime_cls)
     runtime.add_env_vars({"QUUX": 'abc"def'})
     obs = runtime.run_action(CmdRunAction(command="echo $QUUX"))
-    assert obs.exit_code == 0 and obs.content.strip().split("\r\n")[0].strip() == 'abc"def'
+    assert (
+        obs.exit_code == 0 and obs.content.strip().split("\r\n")[0].strip() == 'abc"def'
+    )
     runtime.add_env_vars({"FOOBAR": "xyz"})
     obs = runtime.run_action(CmdRunAction(command="echo $QUUX $FOOBAR"))
-    assert obs.exit_code == 0 and obs.content.strip().split("\r\n")[0].strip() == 'abc"def xyz'
+    assert (
+        obs.exit_code == 0
+        and obs.content.strip().split("\r\n")[0].strip() == 'abc"def xyz'
+    )
     prev_env = runtime.run_action(CmdRunAction(command="env")).content
     runtime.add_env_vars({})
     current_env = runtime.run_action(CmdRunAction(command="env")).content
     assert prev_env == current_env
     runtime.add_env_vars({"QUUX": "new_value"})
     obs = runtime.run_action(CmdRunAction(command="echo $QUUX"))
-    assert obs.exit_code == 0 and obs.content.strip().split("\r\n")[0].strip() == "new_value"
+    assert (
+        obs.exit_code == 0
+        and obs.content.strip().split("\r\n")[0].strip() == "new_value"
+    )
     _close_test_runtime(runtime)
 
 
 def test_env_vars_added_by_config(temp_dir, runtime_cls):
-    runtime, config = _load_runtime(temp_dir, runtime_cls, runtime_startup_env_vars={"ADDED_ENV_VAR": "added_value"})
+    runtime, config = _load_runtime(
+        temp_dir, runtime_cls, runtime_startup_env_vars={"ADDED_ENV_VAR": "added_value"}
+    )
     obs = runtime.run_action(CmdRunAction(command="echo $ADDED_ENV_VAR"))
-    assert obs.exit_code == 0 and obs.content.strip().split("\r\n")[0].strip() == "added_value"
+    assert (
+        obs.exit_code == 0
+        and obs.content.strip().split("\r\n")[0].strip() == "added_value"
+    )
     _close_test_runtime(runtime)
 
 
@@ -62,7 +79,9 @@ def test_docker_runtime_env_vars_persist_after_restart(temp_dir):
     obs = runtime.run_action(CmdRunAction(command="echo $GITHUB_TOKEN"))
     assert obs.exit_code == 0
     assert obs.content.strip().split("\r\n")[0].strip() == "test_token"
-    obs = runtime.run_action(CmdRunAction(command='grep "^export GITHUB_TOKEN=" ~/.bashrc'))
+    obs = runtime.run_action(
+        CmdRunAction(command='grep "^export GITHUB_TOKEN=" ~/.bashrc')
+    )
     assert obs.exit_code == 0
     assert "export GITHUB_TOKEN=" in obs.content
     runtime.pause()

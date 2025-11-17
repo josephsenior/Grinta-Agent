@@ -13,7 +13,6 @@ from forge.utils.async_utils import (
 
 @pytest.mark.asyncio
 async def test_await_all():
-
     async def dummy(value: int):
         await asyncio.sleep(0.1)
         return value * 2
@@ -28,7 +27,6 @@ async def test_await_all():
 
 @pytest.mark.asyncio
 async def test_await_all_single_exception():
-
     async def dummy(value: int):
         await asyncio.sleep(0.1)
         if value == 1:
@@ -41,7 +39,6 @@ async def test_await_all_single_exception():
 
 @pytest.mark.asyncio
 async def test_await_all_multi_exception():
-
     async def dummy(value: int):
         await asyncio.sleep(0.1)
         if value & 1:
@@ -69,7 +66,6 @@ async def test_await_all_timeout():
 
 @pytest.mark.asyncio
 async def test_call_sync_from_async():
-
     def dummy(value: int = 2):
         return value * 2
 
@@ -83,7 +79,6 @@ async def test_call_sync_from_async():
 
 @pytest.mark.asyncio
 async def test_call_sync_from_async_error():
-
     def dummy():
         raise ValueError()
 
@@ -92,7 +87,6 @@ async def test_call_sync_from_async_error():
 
 
 def test_call_async_from_sync():
-
     async def dummy(value: int):
         return value * 2
 
@@ -101,7 +95,6 @@ def test_call_async_from_sync():
 
 
 def test_call_async_from_sync_error():
-
     async def dummy(value: int):
         raise ValueError()
 

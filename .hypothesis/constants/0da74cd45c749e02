@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\integrations\bitbucket\service\prs.py
+# hypothesis_version: 6.147.0
+
+['OPEN', 'branch', 'close_source_branch', 'description', 'destination', 'draft', 'href', 'html', 'links', 'name', 'source', 'state', 'title']

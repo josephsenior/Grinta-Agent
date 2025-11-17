@@ -23,10 +23,10 @@ class LocalFileStore(FileStore):
 
     def get_full_path(self, path: str) -> str:
         """Convert relative path to full filesystem path.
-        
+
         Args:
             path: Relative path
-            
+
         Returns:
             Absolute path within storage root
 
@@ -36,7 +36,7 @@ class LocalFileStore(FileStore):
 
     def write(self, path: str, contents: str | bytes) -> None:
         """Write file to local filesystem.
-        
+
         Args:
             path: File path relative to storage root
             contents: Content to write
@@ -54,10 +54,10 @@ class LocalFileStore(FileStore):
 
     def read(self, path: str) -> str:
         """Read file from local filesystem.
-        
+
         Args:
             path: File path relative to storage root
-            
+
         Returns:
             File content as string
 
@@ -68,10 +68,10 @@ class LocalFileStore(FileStore):
 
     def list(self, path: str) -> list[str]:
         """List files/directories in local filesystem path.
-        
+
         Args:
             path: Directory path relative to storage root
-            
+
         Returns:
             List of file/directory names
 
@@ -88,7 +88,7 @@ class LocalFileStore(FileStore):
 
     def delete(self, path: str) -> None:
         """Delete file or directory from local filesystem.
-        
+
         Args:
             path: Path to delete
 

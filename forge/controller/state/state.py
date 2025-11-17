@@ -16,7 +16,7 @@ from forge.controller.state.control_flags import (
     IterationControlFlag,
 )
 from forge.core.logger import forge_logger as logger
-from forge.core.schema import AgentState
+from forge.core.schemas import AgentState
 from forge.events.action import MessageAction
 from forge.events.action.agent import AgentFinishAction
 from forge.events.event import Event, EventSource
@@ -116,9 +116,9 @@ class State:
         user_id: str | None,
     ) -> None:
         """Save agent state to persistent storage.
-        
+
         Serializes state with pickle/base64 for session resumption.
-        
+
         Args:
             sid: Session ID
             file_store: File storage backend
@@ -244,7 +244,9 @@ class State:
 
         for event in reversed(self.view):
             if isinstance(event, MessageAction) and event.source == "user":
-                last_user_message, last_user_message_image_urls = self._process_user_message_event(event)
+                last_user_message, last_user_message_image_urls = (
+                    self._process_user_message_event(event)
+                )
             elif isinstance(event, AgentFinishAction):
                 finish_result = self._check_for_finish_action(event, last_user_message)
                 if finish_result is not None:
@@ -258,7 +260,7 @@ class State:
 
     def get_last_agent_message(self) -> MessageAction | None:
         """Get most recent message from agent in conversation history.
-        
+
         Returns:
             Last agent message, or None if no agent messages
 
@@ -267,14 +269,15 @@ class State:
             (
                 event
                 for event in reversed(self.view)
-                if isinstance(event, MessageAction) and event.source == EventSource.AGENT
+                if isinstance(event, MessageAction)
+                and event.source == EventSource.AGENT
             ),
             None,
         )
 
     def get_last_user_message(self) -> MessageAction | None:
         """Get most recent message from user in conversation history.
-        
+
         Returns:
             Last user message, or None if no user messages
 
@@ -290,11 +293,11 @@ class State:
 
     def to_llm_metadata(self, model_name: str, agent_name: str) -> dict:
         """Convert state to metadata dict for LLM tracing/logging.
-        
+
         Args:
             model_name: Name of LLM model being used
             agent_name: Name of agent being traced
-            
+
         Returns:
             Dictionary with session, version, and tag metadata
 
@@ -306,18 +309,14 @@ class State:
             "tags": [
                 f"model:{model_name}",
                 f"agent:{agent_name}",
-                f"web_host:{
-                    os.environ.get(
-                        'WEB_HOST',
-                        'unspecified')}",
-                f"FORGE_version:{
-                    forge.__version__}",
+                f"web_host:{os.environ.get('WEB_HOST', 'unspecified')}",
+                f"FORGE_version:{forge.__version__}",
             ],
         }
 
     def get_local_step(self):
         """Get iteration count for current subtask (delegate).
-        
+
         Returns:
             Local step count relative to parent, or global count if no parent
 
@@ -328,7 +327,7 @@ class State:
 
     def get_local_metrics(self):
         """Get metrics for current subtask (delegate).
-        
+
         Returns:
             Local metrics relative to parent snapshot, or global if no parent
 
@@ -340,7 +339,7 @@ class State:
     @property
     def view(self) -> View:
         """Get filtered view of conversation history for agent.
-        
+
         Returns:
             View object containing relevant events for agent context
 

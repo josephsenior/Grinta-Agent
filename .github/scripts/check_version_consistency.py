@@ -12,7 +12,9 @@ def find_version_references(directory: str) -> tuple[set[str], set[str]]:
         if ".git" in root or "docs/build" in root:
             continue
         for file in files:
-            if file.endswith((".md", ".yml", ".yaml", ".txt", ".html", ".py", ".js", ".ts")):
+            if file.endswith(
+                (".md", ".yml", ".yaml", ".txt", ".html", ".py", ".js", ".ts")
+            ):
                 file_path = os.path.join(root, file)
                 try:
                     with open(file_path, "r", encoding="utf-8") as f:

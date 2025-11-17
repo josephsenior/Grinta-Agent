@@ -11,14 +11,23 @@ from forge.storage.settings.file_settings_store import FileSettingsStore
 @pytest.mark.asyncio
 async def test_user_auth_mcp_merging_integration():
     """Test that MCP merging works in the user auth flow."""
-    config_settings = Settings(mcp_config=MCPConfig(sse_servers=[MCPSSEServerConfig(url="http://config-server.com")]))
+    config_settings = Settings(
+        mcp_config=MCPConfig(
+            sse_servers=[MCPSSEServerConfig(url="http://config-server.com")]
+        )
+    )
     stored_settings = Settings(
-        llm_model="gpt-4", mcp_config=MCPConfig(sse_servers=[MCPSSEServerConfig(url="http://frontend-server.com")])
+        llm_model="gpt-4",
+        mcp_config=MCPConfig(
+            sse_servers=[MCPSSEServerConfig(url="http://frontend-server.com")]
+        ),
     )
     user_auth = DefaultUserAuth()
     mock_settings_store = AsyncMock(spec=FileSettingsStore)
     mock_settings_store.load.return_value = stored_settings
-    with patch.object(user_auth, "get_user_settings_store", return_value=mock_settings_store):
+    with patch.object(
+        user_auth, "get_user_settings_store", return_value=mock_settings_store
+    ):
         with patch.object(Settings, "from_config", return_value=config_settings):
             merged_settings = await user_auth.get_user_settings()
     assert merged_settings is not None
@@ -32,15 +41,26 @@ async def test_user_auth_mcp_merging_integration():
 @pytest.mark.asyncio
 async def test_user_auth_caching_behavior():
     """Test that user auth caches the merged settings correctly."""
-    config_settings = Settings(mcp_config=MCPConfig(sse_servers=[MCPSSEServerConfig(url="http://config-server.com")]))
+    config_settings = Settings(
+        mcp_config=MCPConfig(
+            sse_servers=[MCPSSEServerConfig(url="http://config-server.com")]
+        )
+    )
     stored_settings = Settings(
-        llm_model="gpt-4", mcp_config=MCPConfig(sse_servers=[MCPSSEServerConfig(url="http://frontend-server.com")])
+        llm_model="gpt-4",
+        mcp_config=MCPConfig(
+            sse_servers=[MCPSSEServerConfig(url="http://frontend-server.com")]
+        ),
     )
     user_auth = DefaultUserAuth()
     mock_settings_store = AsyncMock(spec=FileSettingsStore)
     mock_settings_store.load.return_value = stored_settings
-    with patch.object(user_auth, "get_user_settings_store", return_value=mock_settings_store):
-        with patch.object(Settings, "from_config", return_value=config_settings) as mock_from_config:
+    with patch.object(
+        user_auth, "get_user_settings_store", return_value=mock_settings_store
+    ):
+        with patch.object(
+            Settings, "from_config", return_value=config_settings
+        ) as mock_from_config:
             settings1 = await user_auth.get_user_settings()
             settings2 = await user_auth.get_user_settings()
     assert settings1 is settings2
@@ -55,6 +75,8 @@ async def test_user_auth_no_stored_settings():
     user_auth = DefaultUserAuth()
     mock_settings_store = AsyncMock(spec=FileSettingsStore)
     mock_settings_store.load.return_value = None
-    with patch.object(user_auth, "get_user_settings_store", return_value=mock_settings_store):
+    with patch.object(
+        user_auth, "get_user_settings_store", return_value=mock_settings_store
+    ):
         settings = await user_auth.get_user_settings()
     assert settings is None

@@ -85,7 +85,11 @@ def get_token(ans_code: str, output_code: str):
     tokens_output, output_flag = _tokenize_code_safely(output_code)
 
     identifiers_ans = _extract_identifiers_from_tokens(tokens_ans, ans_flag)
-    identifiers_output = _extract_identifiers_from_tokenized_output(tokens_output) if output_flag else tokens_output
+    identifiers_output = (
+        _extract_identifiers_from_tokenized_output(tokens_output)
+        if output_flag
+        else tokens_output
+    )
 
     return (identifiers_ans, identifiers_output)
 
@@ -102,7 +106,9 @@ def get_token_per_line(code: str):
         tokens = tokenize.tokenize(io.BytesIO(line.encode("utf-8")).readline)
         identifiers = []
         try:
-            identifiers.extend((token.string for token in tokens if token.type == tokenize.NAME))
+            identifiers.extend(
+                (token.string for token in tokens if token.type == tokenize.NAME)
+            )
         except Exception:
             identifiers = line.split(" ")
         identifiers_per_line.append(identifiers)
@@ -119,11 +125,15 @@ def get_ISM(answer_code: str, model_output_list: list, answer_name: str) -> list
         if "```python" in code:
             code = code.replace("```python", "")
             code = code.replace("```", "")
-        if not re.search(f"\\b{re.escape(answer_name)}\\b", code) or not is_code_valid(code):
+        if not re.search(f"\\b{re.escape(answer_name)}\\b", code) or not is_code_valid(
+            code
+        ):
             score_list.append(0)
             continue
         identifiers_ans, identifiers_output = get_token(answer_code, code)
-        max_len, elements = longest_common_prefix_between_lists_with_elements(identifiers_ans, identifiers_output)
+        max_len, elements = longest_common_prefix_between_lists_with_elements(
+            identifiers_ans, identifiers_output
+        )
         if max_len != 0:
             base_element_len = max(len(elements[0]), len(elements[1]))
             temp_score = max_len / base_element_len
@@ -133,7 +143,9 @@ def get_ISM(answer_code: str, model_output_list: list, answer_name: str) -> list
     return sorted(score_list, reverse=True)
 
 
-def get_ISM_without_verification(answer_code: str, model_output_list: list, answer_name: str) -> list:
+def get_ISM_without_verification(
+    answer_code: str, model_output_list: list, answer_name: str
+) -> list:
     """Compute ISM without verification and return an ordered list of scores.
 
     :return:
@@ -144,7 +156,9 @@ def get_ISM_without_verification(answer_code: str, model_output_list: list, answ
             score_list.append(0)
             continue
         identifiers_ans, identifiers_output = get_token(answer_code, code)
-        max_len, elements = longest_common_prefix_between_lists_with_elements(identifiers_ans, identifiers_output)
+        max_len, elements = longest_common_prefix_between_lists_with_elements(
+            identifiers_ans, identifiers_output
+        )
         if max_len != 0:
             base_element_len = max(len(elements[0]), len(elements[1]))
             temp_score = max_len / base_element_len
@@ -190,12 +204,16 @@ def get_PM(answer_code: str, model_output_list: list, answer_name: str) -> list:
         if "```python" in code:
             code = code.replace("```python", "")
             code = code.replace("```", "")
-        if not re.search(f"\\b{re.escape(answer_name)}\\b", code) or not is_code_valid(code):
+        if not re.search(f"\\b{re.escape(answer_name)}\\b", code) or not is_code_valid(
+            code
+        ):
             score_list.append(0)
             continue
         ans_list = get_token_per_line(answer_code)
         output_token_list = get_token_per_line(code)
-        max_len, len1, len2 = longest_common_prefix_with_lengths(ans_list, output_token_list)
+        max_len, len1, len2 = longest_common_prefix_with_lengths(
+            ans_list, output_token_list
+        )
         base_element_len = max(len1, len2)
         if base_element_len != 0:
             temp_score = max_len / base_element_len
@@ -253,5 +271,9 @@ for model in model_list:
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.info("%s, %s completion task, ISM@%d score: %s", model, task, k, sum_ISM / data_len)
-    logger.info("%s, %s completion task, PM@%d score: %s", model, task, k, sum_PM / data_len)
+    logger.info(
+        "%s, %s completion task, ISM@%d score: %s", model, task, k, sum_ISM / data_len
+    )
+    logger.info(
+        "%s, %s completion task, PM@%d score: %s", model, task, k, sum_PM / data_len
+    )

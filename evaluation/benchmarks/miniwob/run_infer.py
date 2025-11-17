@@ -25,7 +25,10 @@ from forge.core.main import create_runtime, run_controller
 from forge.events.action import BrowseInteractiveAction, CmdRunAction, MessageAction
 from forge.events.observation import BrowserOutputObservation, CmdOutputObservation
 from forge.runtime.base import Runtime
-from forge.runtime.browser.browser_env import BROWSER_EVAL_GET_GOAL_ACTION, BROWSER_EVAL_GET_REWARDS_ACTION
+from forge.runtime.browser.browser_env import (
+    BROWSER_EVAL_GET_GOAL_ACTION,
+    BROWSER_EVAL_GET_REWARDS_ACTION,
+)
 from forge.utils.async_utils import call_async_from_sync
 
 SUPPORTED_AGENT_CLS = {"BrowsingAgent", "CodeActAgent"}
@@ -39,10 +42,14 @@ def get_config(metadata: EvalMetadata, env_id: str) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = "xingyaoww/od-eval-miniwob:v1.0"
     config = get_FORGE_config_for_eval(
-        metadata=metadata, runtime=os.environ.get("RUNTIME", "docker"), sandbox_config=sandbox_config
+        metadata=metadata,
+        runtime=os.environ.get("RUNTIME", "docker"),
+        sandbox_config=sandbox_config,
     )
     config.set_llm_config(
-        update_llm_config_for_completions_logging(metadata.llm_config, metadata.eval_output_dir, env_id)
+        update_llm_config_for_completions_logging(
+            metadata.llm_config, metadata.eval_output_dir, env_id
+        )
     )
     return config
 
@@ -88,7 +95,9 @@ def complete_runtime(runtime: Runtime) -> dict[str, Any]:
     return {"rewards": json.loads(obs.content)}
 
 
-def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True) -> EvalOutput:
+def process_instance(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True
+) -> EvalOutput:
     env_id = instance.instance_id
     config = get_config(metadata, env_id)
     if reset_logger:
@@ -99,19 +108,26 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
     runtime = create_runtime(config)
     call_async_from_sync(runtime.connect)
     task_str, obs = initialize_runtime(runtime)
-    task_str += f"\nInitial browser state (output of `noop(1000)`):\n{obs.get_agent_obs_text()}"
+    task_str += (
+        f"\nInitial browser state (output of `noop(1000)`):\n{obs.get_agent_obs_text()}"
+    )
     state: State | None = asyncio.run(
         run_controller(
             config=config,
             initial_user_action=MessageAction(content=task_str),
             runtime=runtime,
-            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[metadata.agent_class],
+            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN[
+                metadata.agent_class
+            ],
         )
     )
     if state is None:
         raise ValueError("State should not be None.")
     metrics = get_metrics(state)
-    instruction = next((event.content for event in state.history if isinstance(event, MessageAction)), "")
+    instruction = next(
+        (event.content for event in state.history if isinstance(event, MessageAction)),
+        "",
+    )
     return_val = complete_runtime(runtime)
     logger.info("Return value from complete_runtime: %s", return_val)
     reward = max(return_val["rewards"], default=0)
@@ -130,7 +146,13 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
 if __name__ == "__main__":
     args = parse_arguments()
     dataset = pd.DataFrame(
-        {"instance_id": [id for id in gym.envs.registry.keys() if id.startswith("browsergym/miniwob")]}
+        {
+            "instance_id": [
+                id
+                for id in gym.envs.registry.keys()
+                if id.startswith("browsergym/miniwob")
+            ]
+        }
     )
     llm_config = None
     if args.llm_config:
@@ -139,8 +161,15 @@ if __name__ == "__main__":
     if llm_config is None:
         raise ValueError(f"Could not find LLM config: --llm_config {args.llm_config}")
     metadata = make_metadata(
-        llm_config, "miniwob", args.agent_cls, args.max_iterations, args.eval_note, args.eval_output_dir
+        llm_config,
+        "miniwob",
+        args.agent_cls,
+        args.max_iterations,
+        args.eval_note,
+        args.eval_output_dir,
     )
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
     instances = prepare_dataset(dataset, output_file, args.eval_n_limit)
-    run_evaluation(instances, metadata, output_file, args.eval_num_workers, process_instance)
+    run_evaluation(
+        instances, metadata, output_file, args.eval_num_workers, process_instance
+    )

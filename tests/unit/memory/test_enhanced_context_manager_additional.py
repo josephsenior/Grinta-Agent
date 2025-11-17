@@ -8,7 +8,9 @@ def test_decision_tracking_and_anchors(tmp_path):
         EnhancedContextManager,
     )
 
-    manager = EnhancedContextManager(short_term_window=2, working_memory_size=3, long_term_max_size=4)
+    manager = EnhancedContextManager(
+        short_term_window=2, working_memory_size=3, long_term_max_size=4
+    )
     decision = manager.track_decision(
         description="Use PostgreSQL",
         rationale="Better relational support",
@@ -28,7 +30,9 @@ def test_decision_tracking_and_anchors(tmp_path):
 
     manager.add_to_short_term({"content": "step1", "has_anchor": True})
     manager.add_to_short_term({"content": "step2"})
-    manager.add_to_short_term({"content": "step3", "has_decision": True, "access_count": 5})
+    manager.add_to_short_term(
+        {"content": "step3", "has_decision": True, "access_count": 5}
+    )
 
     short = manager.get_all_memory()["short_term"]
     assert len(short) == 2  # one promoted
@@ -53,7 +57,10 @@ def test_decision_tracking_and_anchors(tmp_path):
 
 
 def test_contradiction_detection_and_context():
-    from forge.memory.enhanced_context_manager import EnhancedContextManager, DecisionType
+    from forge.memory.enhanced_context_manager import (
+        EnhancedContextManager,
+        DecisionType,
+    )
 
     manager = EnhancedContextManager()
     manager.track_decision(
@@ -86,7 +93,10 @@ def test_contradiction_detection_and_context():
 
 
 def test_decision_queries_and_search():
-    from forge.memory.enhanced_context_manager import DecisionType, EnhancedContextManager
+    from forge.memory.enhanced_context_manager import (
+        DecisionType,
+        EnhancedContextManager,
+    )
 
     manager = EnhancedContextManager()
     decision = manager.track_decision(
@@ -103,12 +113,20 @@ def test_decision_queries_and_search():
 def test_anchor_filtering_and_memory_search():
     from forge.memory.enhanced_context_manager import EnhancedContextManager
 
-    manager = EnhancedContextManager(short_term_window=1, working_memory_size=1, long_term_max_size=2)
-    anchor = manager.create_anchor("Critical requirement", "requirement", importance=0.6)
+    manager = EnhancedContextManager(
+        short_term_window=1, working_memory_size=1, long_term_max_size=2
+    )
+    anchor = manager.create_anchor(
+        "Critical requirement", "requirement", importance=0.6
+    )
     assert manager.get_anchors_by_category("requirement")[0] is anchor
-    manager.short_term_memory = [{"message": "short", "timestamp": "2025-01-01T00:00:00", "tier": "short_term"}]
+    manager.short_term_memory = [
+        {"message": "short", "timestamp": "2025-01-01T00:00:00", "tier": "short_term"}
+    ]
     manager.working_memory = [{"message": "working", "tier": "working"}]
-    manager.long_term_memory = [{"message": "long", "timestamp": "2025-01-01T00:00:00", "access_count": 0}]
+    manager.long_term_memory = [
+        {"message": "long", "timestamp": "2025-01-01T00:00:00", "access_count": 0}
+    ]
     results = manager.search_memory("message")
     assert results
 
@@ -137,7 +155,10 @@ def test_promote_and_cleanup_long_term():
 
 
 def test_get_relevant_context_flags():
-    from forge.memory.enhanced_context_manager import DecisionType, EnhancedContextManager
+    from forge.memory.enhanced_context_manager import (
+        DecisionType,
+        EnhancedContextManager,
+    )
 
     manager = EnhancedContextManager()
     manager.create_anchor("Keep context", "requirement", importance=0.9)
@@ -147,10 +168,18 @@ def test_get_relevant_context_flags():
         decision_type=DecisionType.WORKFLOW,
         context="task queue",
     )
-    manager.short_term_memory = [{"info": "task details", "timestamp": "2025-01-01T00:00:00", "tier": "short_term"}]
+    manager.short_term_memory = [
+        {
+            "info": "task details",
+            "timestamp": "2025-01-01T00:00:00",
+            "tier": "short_term",
+        }
+    ]
     manager.working_memory = []
     manager.long_term_memory = []
-    context = manager.get_relevant_context("task", include_anchors=False, include_decisions=False)
+    context = manager.get_relevant_context(
+        "task", include_anchors=False, include_decisions=False
+    )
     assert context["anchors"] == []
     assert context["decisions"] == []
     assert context["memory"]

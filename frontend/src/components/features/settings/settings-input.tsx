@@ -50,7 +50,7 @@ export function SettingsInput({
     <label className={cn("flex flex-col gap-2.5 w-fit", className)}>
       <div className="flex items-center gap-2">
         {startContent}
-        <span className="text-sm">{label}</span>
+        <span className="text-sm font-medium text-foreground">{label}</span>
         {showOptionalTag && <OptionalTag />}
       </div>
       <input
@@ -70,18 +70,22 @@ export function SettingsInput({
         required={required}
         pattern={pattern}
         className={cn(
-          "bg-background-secondary backdrop-blur-xl border border-border h-10 w-full rounded-xl p-3 placeholder:italic placeholder:text-foreground-secondary text-foreground transition-all duration-200 focus:border-brand-500/50 focus:bg-brand-500/5 focus:shadow-lg focus:shadow-brand-500/10 hover:border-brand-500/30 hover:bg-brand-500/3",
-          error ? "border-danger-500/80 bg-danger-500/5" : "",
-          "disabled:bg-background-tertiary disabled:border-border disabled:cursor-not-allowed disabled:opacity-50",
+          "bg-black/60 backdrop-blur-sm border h-10 w-full rounded-xl px-4 py-2.5 placeholder:text-foreground-tertiary text-foreground transition-all duration-200 focus:outline-none",
+          error
+            ? "border-danger-500/50 focus:border-danger-500"
+            : "border-white/10 focus:border-white/20 hover:border-white/15",
+          "disabled:bg-black/30 disabled:border-white/5 disabled:cursor-not-allowed disabled:opacity-50",
         )}
       />
 
       {error && (
-        <p id={errorId} role="alert" className="text-danger-500 text-sm mt-1">
+        <p id={errorId} role="alert" className="text-danger-400 text-sm mt-1">
           {error}
         </p>
       )}
-      {helpText && <p className="text-xs text-neutral-500 mt-1">{helpText}</p>}
+      {helpText && (
+        <p className="text-xs text-foreground-tertiary mt-1">{helpText}</p>
+      )}
     </label>
   );
 }

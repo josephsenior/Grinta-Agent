@@ -38,9 +38,15 @@ class PermissionRule(BaseModel):
     risk_level: RiskLevel
     requires_confirmation: bool = Field(default=False)
     enabled: bool = Field(default=True)
-    max_per_session: int | None = Field(default=None, description="Maximum uses per session, None for unlimited")
-    blocked_patterns: list[str] = Field(default_factory=list, description="Regex patterns to block")
-    allowed_patterns: list[str] = Field(default_factory=list, description="Regex patterns to allow (overrides blocks)")
+    max_per_session: int | None = Field(
+        default=None, description="Maximum uses per session, None for unlimited"
+    )
+    blocked_patterns: list[str] = Field(
+        default_factory=list, description="Regex patterns to block"
+    )
+    allowed_patterns: list[str] = Field(
+        default_factory=list, description="Regex patterns to allow (overrides blocks)"
+    )
 
     model_config = {"extra": "forbid"}
 
@@ -285,7 +291,9 @@ class PermissionsConfig(BaseModel):
 
         return True, None
 
-    def _check_category_permission(self, category: PermissionCategory) -> tuple[bool, str] | None:
+    def _check_category_permission(
+        self, category: PermissionCategory
+    ) -> tuple[bool, str] | None:
         """Check if a permission category is enabled.
 
         Args:
@@ -296,14 +304,35 @@ class PermissionsConfig(BaseModel):
 
         """
         category_checks = {
-            PermissionCategory.FILE_READ: (self.file_read_enabled, "File read operations are disabled"),
-            PermissionCategory.FILE_WRITE: (self.file_write_enabled, "File write operations are disabled"),
-            PermissionCategory.FILE_DELETE: (self.file_delete_enabled, "File delete operations are disabled"),
+            PermissionCategory.FILE_READ: (
+                self.file_read_enabled,
+                "File read operations are disabled",
+            ),
+            PermissionCategory.FILE_WRITE: (
+                self.file_write_enabled,
+                "File write operations are disabled",
+            ),
+            PermissionCategory.FILE_DELETE: (
+                self.file_delete_enabled,
+                "File delete operations are disabled",
+            ),
             PermissionCategory.GIT: (self.git_enabled, "Git operations are disabled"),
-            PermissionCategory.NETWORK: (self.network_enabled, "Network operations are disabled"),
-            PermissionCategory.SHELL: (self.shell_enabled, "Shell operations are disabled"),
-            PermissionCategory.BROWSER: (self.browser_enabled, "Browser operations are disabled"),
-            PermissionCategory.SYSTEM: (self.system_operations_enabled, "System operations are disabled"),
+            PermissionCategory.NETWORK: (
+                self.network_enabled,
+                "Network operations are disabled",
+            ),
+            PermissionCategory.SHELL: (
+                self.shell_enabled,
+                "Shell operations are disabled",
+            ),
+            PermissionCategory.BROWSER: (
+                self.browser_enabled,
+                "Browser operations are disabled",
+            ),
+            PermissionCategory.SYSTEM: (
+                self.system_operations_enabled,
+                "System operations are disabled",
+            ),
         }
 
         if category in category_checks:
@@ -325,7 +354,10 @@ class PermissionsConfig(BaseModel):
         """
         operation_checks = {
             "git_force_push": (self.git_allow_force_push, "Force push is not allowed"),
-            "git_branch_delete": (self.git_allow_branch_delete, "Branch deletion is not allowed"),
+            "git_branch_delete": (
+                self.git_allow_branch_delete,
+                "Branch deletion is not allowed",
+            ),
             "sudo_command": (self.shell_allow_sudo, "Sudo commands are not allowed"),
         }
 

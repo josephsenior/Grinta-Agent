@@ -33,7 +33,9 @@ class GitHubFeaturesMixin(GitHubMixinBase):
                 return TaskType.FAILING_CHECKS
 
         reviews = pr["reviews"]["nodes"]
-        if any(review["state"] in ["CHANGES_REQUESTED", "COMMENTED"] for review in reviews):
+        if any(
+            review["state"] in ["CHANGES_REQUESTED", "COMMENTED"] for review in reviews
+        ):
             return TaskType.UNRESOLVED_COMMENTS
 
         return TaskType.OPEN_PR
@@ -64,7 +66,9 @@ class GitHubFeaturesMixin(GitHubMixinBase):
         """Process pull requests and return suggested tasks."""
         tasks = []
         try:
-            pr_response = await self.execute_graphql_query(suggested_task_pr_graphql_query, variables)
+            pr_response = await self.execute_graphql_query(
+                suggested_task_pr_graphql_query, variables
+            )
             pr_data = pr_response["data"]["user"]
 
             for pr in pr_data["pullRequests"]["nodes"]:
@@ -76,7 +80,10 @@ class GitHubFeaturesMixin(GitHubMixinBase):
             logger.info(
                 "Error fetching suggested task for PRs: %s",
                 e,
-                extra={"signal": "github_suggested_tasks", "user_id": self.external_auth_id},
+                extra={
+                    "signal": "github_suggested_tasks",
+                    "user_id": self.external_auth_id,
+                },
             )
 
         return tasks
@@ -85,7 +92,9 @@ class GitHubFeaturesMixin(GitHubMixinBase):
         """Process issues and return suggested tasks."""
         tasks = []
         try:
-            issue_response = await self.execute_graphql_query(suggested_task_issue_graphql_query, variables)
+            issue_response = await self.execute_graphql_query(
+                suggested_task_issue_graphql_query, variables
+            )
             issue_data = issue_response["data"]["user"]
 
             for issue in issue_data["issues"]["nodes"]:
@@ -95,7 +104,10 @@ class GitHubFeaturesMixin(GitHubMixinBase):
             logger.info(
                 "Error fetching suggested task for issues: %s",
                 e,
-                extra={"signal": "github_suggested_tasks", "user_id": self.external_auth_id},
+                extra={
+                    "signal": "github_suggested_tasks",
+                    "user_id": self.external_auth_id,
+                },
             )
 
         return tasks
@@ -128,13 +140,19 @@ class GitHubFeaturesMixin(GitHubMixinBase):
         """Get the URL for checking .cursorrules file."""
         return f"{self.BASE_URL}/repos/{repository}/contents/.cursorrules"
 
-    async def _get_microagents_directory_url(self, repository: str, microagents_path: str) -> str:
+    async def _get_microagents_directory_url(
+        self, repository: str, microagents_path: str
+    ) -> str:
         """Get the URL for checking microagents directory."""
         return f"{self.BASE_URL}/repos/{repository}/contents/{microagents_path}"
 
     def _is_valid_microagent_file(self, item: dict) -> bool:
         """Check if an item represents a valid microagent file."""
-        return item["type"] == "file" and item["name"].endswith(".md") and (item["name"] != "README.md")
+        return (
+            item["type"] == "file"
+            and item["name"].endswith(".md")
+            and (item["name"] != "README.md")
+        )
 
     def _get_file_name_from_item(self, item: dict) -> str:
         """Extract file name from directory item."""
@@ -148,7 +166,9 @@ class GitHubFeaturesMixin(GitHubMixinBase):
         """Get parameters for the microagents directory request. Return None if no parameters needed."""
         return None
 
-    async def get_microagent_content(self, repository: str, file_path: str) -> MicroagentContentResponse:
+    async def get_microagent_content(
+        self, repository: str, file_path: str
+    ) -> MicroagentContentResponse:
         """Fetch individual file content from GitHub repository.
 
         Args:

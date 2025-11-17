@@ -111,7 +111,10 @@ def _prepare_image_messages(task: str, base64_image: str) -> list[dict[str, Any]
             "role": "user",
             "content": [
                 {"type": "text", "text": task},
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                },
             ],
         },
     ]
@@ -132,7 +135,9 @@ def parse_audio(file_path: str, model: str = "whisper-1") -> None:
         pass
 
 
-def parse_image(file_path: str, task: str = "Describe this image as detail as possible.") -> None:
+def parse_image(
+    file_path: str, task: str = "Describe this image as detail as possible."
+) -> None:
     """Parses the content of an image file and prints the description.
 
     Args:

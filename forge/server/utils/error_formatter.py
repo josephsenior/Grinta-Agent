@@ -29,22 +29,22 @@ from forge.core.logger import forge_logger as logger
 class ErrorSeverity(str, Enum):
     """Error severity levels for UX presentation."""
 
-    INFO = "info"           # ℹ️ Informational (blue)
-    WARNING = "warning"     # ⚠️ Warning (yellow)
-    ERROR = "error"         # ❌ Error (red)
-    CRITICAL = "critical"   # 🚨 Critical (red + urgent)
+    INFO = "info"  # ℹ️ Informational (blue)
+    WARNING = "warning"  # ⚠️ Warning (yellow)
+    ERROR = "error"  # ❌ Error (red)
+    CRITICAL = "critical"  # 🚨 Critical (red + urgent)
 
 
 class ErrorCategory(str, Enum):
     """Error categories for better UX grouping."""
 
-    USER_INPUT = "user_input"         # User made a mistake
-    SYSTEM = "system"                 # System/infrastructure issue
-    RATE_LIMIT = "rate_limit"         # Rate limiting/quota
-    AUTHENTICATION = "authentication" # Auth/permissions
-    NETWORK = "network"               # Network/connectivity
-    AI_MODEL = "ai_model"             # LLM/AI model issue
-    CONFIGURATION = "configuration"   # Config/setup issue
+    USER_INPUT = "user_input"  # User made a mistake
+    SYSTEM = "system"  # System/infrastructure issue
+    RATE_LIMIT = "rate_limit"  # Rate limiting/quota
+    AUTHENTICATION = "authentication"  # Auth/permissions
+    NETWORK = "network"  # Network/connectivity
+    AI_MODEL = "ai_model"  # LLM/AI model issue
+    CONFIGURATION = "configuration"  # Config/setup issue
 
 
 class ErrorAction:
@@ -56,7 +56,7 @@ class ErrorAction:
         action_type: str,
         url: Optional[str] = None,
         highlight: bool = False,
-        data: Optional[dict[str, Any]] = None
+        data: Optional[dict[str, Any]] = None,
     ):
         """Initialise a suggested follow-up action for the UI.
 
@@ -70,7 +70,9 @@ class ErrorAction:
 
         """
         self.label = label
-        self.action_type = action_type  # "retry", "new_session", "help", "upgrade", etc.
+        self.action_type = (
+            action_type  # "retry", "new_session", "help", "upgrade", etc.
+        )
         self.url = url
         self.highlight = highlight  # Primary action
         self.data = data or {}
@@ -82,7 +84,7 @@ class ErrorAction:
             "type": self.action_type,
             "url": self.url,
             "highlight": self.highlight,
-            "data": self.data
+            "data": self.data,
         }
 
 
@@ -104,7 +106,7 @@ class UserFriendlyError:
         retry_delay: Optional[int] = None,
         help_url: Optional[str] = None,
         reassurance: Optional[str] = None,
-        metadata: Optional[dict[str, Any]] = None
+        metadata: Optional[dict[str, Any]] = None,
     ):
         """Build a serialisable representation of an error response.
 
@@ -158,7 +160,7 @@ class UserFriendlyError:
             "help_url": self.help_url,
             "reassurance": self.reassurance,
             "metadata": self.metadata,
-            "timestamp": self.timestamp
+            "timestamp": self.timestamp,
         }
 
 
@@ -181,17 +183,21 @@ def format_llm_no_response_error(error: LLMNoResponseError) -> UserFriendlyError
         actions=[
             ErrorAction("Try Again", "retry", highlight=True),
             ErrorAction("Simplify Request", "simplify"),
-            ErrorAction("Get Help", "help", url="https://docs.forge.ai/errors/ai-timeout")
+            ErrorAction(
+                "Get Help", "help", url="https://docs.forge.ai/errors/ai-timeout"
+            ),
         ],
         technical_details=str(error),
         error_code="LLM_NO_RESPONSE",
         can_retry=True,
         retry_delay=60,
-        help_url="https://docs.forge.ai/errors/ai-timeout"
+        help_url="https://docs.forge.ai/errors/ai-timeout",
     )
 
 
-def format_context_window_error(error: LLMContextWindowExceedError) -> UserFriendlyError:
+def format_context_window_error(
+    error: LLMContextWindowExceedError,
+) -> UserFriendlyError:
     """Format context window exceeded error for users."""
     return UserFriendlyError(
         title="Conversation too long",
@@ -210,13 +216,13 @@ def format_context_window_error(error: LLMContextWindowExceedError) -> UserFrien
         actions=[
             ErrorAction("New Conversation", "new_conversation", highlight=True),
             ErrorAction("Summarize & Continue", "summarize"),
-            ErrorAction("Export Work", "export")
+            ErrorAction("Export Work", "export"),
         ],
         technical_details=str(error),
         error_code="CONTEXT_WINDOW_EXCEEDED",
         can_retry=False,
         help_url="https://docs.forge.ai/faq/context-limit",
-        reassurance="Don't worry - all your work is saved!"
+        reassurance="Don't worry - all your work is saved!",
     )
 
 
@@ -246,11 +252,13 @@ def format_agent_stuck_error(error: AgentStuckInLoopError) -> UserFriendlyError:
         technical_details=str(error),
         error_code="AGENT_STUCK_IN_LOOP",
         can_retry=True,
-        help_url="https://docs.forge.ai/troubleshooting/stuck-agent"
+        help_url="https://docs.forge.ai/troubleshooting/stuck-agent",
     )
 
 
-def format_runtime_unavailable_error(error: AgentRuntimeUnavailableError) -> UserFriendlyError:
+def format_runtime_unavailable_error(
+    error: AgentRuntimeUnavailableError,
+) -> UserFriendlyError:
     """Format runtime unavailable error for users."""
     return UserFriendlyError(
         title="Workspace not ready",
@@ -278,11 +286,13 @@ def format_runtime_unavailable_error(error: AgentRuntimeUnavailableError) -> Use
         can_retry=True,
         retry_delay=30,
         help_url="https://docs.forge.ai/troubleshooting/runtime-issues",
-        reassurance="Your work is safe! Just give it a moment."
+        reassurance="Your work is safe! Just give it a moment.",
     )
 
 
-def format_function_call_error(error: FunctionCallValidationError | FunctionCallNotExistsError) -> UserFriendlyError:
+def format_function_call_error(
+    error: FunctionCallValidationError | FunctionCallNotExistsError,
+) -> UserFriendlyError:
     """Format function call errors for users."""
     return UserFriendlyError(
         title="AI tried to use an unavailable tool",
@@ -300,12 +310,14 @@ def format_function_call_error(error: FunctionCallValidationError | FunctionCall
         suggestion="Rephrase your request",
         actions=[
             ErrorAction("Try Again", "retry", highlight=True),
-            ErrorAction("Report Issue", "report", url="https://github.com/your-repo/issues"),
+            ErrorAction(
+                "Report Issue", "report", url="https://github.com/your-repo/issues"
+            ),
         ],
         technical_details=str(error),
         error_code="FUNCTION_CALL_ERROR",
         can_retry=True,
-        help_url="https://docs.forge.ai/troubleshooting/tool-errors"
+        help_url="https://docs.forge.ai/troubleshooting/tool-errors",
     )
 
 
@@ -327,12 +339,14 @@ def format_malformed_action_error(error: LLMMalformedActionError) -> UserFriendl
         suggestion="Try sending your message again",
         actions=[
             ErrorAction("Retry", "retry", highlight=True),
-            ErrorAction("Report Bug", "report", url="https://github.com/your-repo/issues"),
+            ErrorAction(
+                "Report Bug", "report", url="https://github.com/your-repo/issues"
+            ),
         ],
         technical_details=str(error),
         error_code="MALFORMED_ACTION",
         can_retry=True,
-        help_url="https://docs.forge.ai/troubleshooting/ai-errors"
+        help_url="https://docs.forge.ai/troubleshooting/ai-errors",
     )
 
 
@@ -351,7 +365,7 @@ def format_user_cancelled_error(error: UserCancelledError) -> UserFriendlyError:
         technical_details=str(error),
         error_code="USER_CANCELLED",
         can_retry=False,
-        reassurance="Everything is safe - nothing was changed."
+        reassurance="Everything is safe - nothing was changed.",
     )
 
 
@@ -375,12 +389,17 @@ def _check_rate_limit_pattern(error_message: str) -> bool:
 
 def _check_auth_pattern(error_message: str) -> bool:
     """Check if error message indicates authentication failure."""
-    return any(keyword in error_message for keyword in ["authentication", "unauthorized", "invalid token"])
+    return any(
+        keyword in error_message
+        for keyword in ["authentication", "unauthorized", "invalid token"]
+    )
 
 
 def _check_network_pattern(error_message: str) -> bool:
     """Check if error message indicates network error."""
-    return any(keyword in error_message for keyword in ["connection", "timeout", "network"])
+    return any(
+        keyword in error_message for keyword in ["connection", "timeout", "network"]
+    )
 
 
 def _check_file_not_found_pattern(error_message: str) -> bool:
@@ -393,19 +412,21 @@ def _check_permission_pattern(error_message: str) -> bool:
     return "permission denied" in error_message or "forbidden" in error_message
 
 
-def _format_by_pattern(error: Exception, context: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
+def _format_by_pattern(
+    error: Exception, context: Optional[dict[str, Any]]
+) -> Optional[dict[str, Any]]:
     """Try to format error based on message patterns.
-    
+
     Args:
         error: The exception to format
         context: Optional context dict
-        
+
     Returns:
         Formatted error dict or None if no pattern matches
 
     """
     error_message = str(error).lower()
-    
+
     # Define pattern checkers and their corresponding formatters
     pattern_handlers = [
         (_check_rate_limit_pattern, format_rate_limit_error),
@@ -414,12 +435,12 @@ def _format_by_pattern(error: Exception, context: Optional[dict[str, Any]]) -> O
         (_check_file_not_found_pattern, format_file_not_found_error),
         (_check_permission_pattern, format_permission_error),
     ]
-    
+
     # Check each pattern and use its formatter if matched
     for checker, formatter in pattern_handlers:
         if checker(error_message):
             return formatter(error, context).to_dict()
-    
+
     return None
 
 
@@ -427,57 +448,60 @@ def _log_error(error: Exception, context: Optional[dict[str, Any]]) -> None:
     """Log error for monitoring."""
     logger.error(
         f"Error occurred: {type(error).__name__} - {str(error)}",
-        extra={"context": context or {}}
+        extra={"context": context or {}},
     )
 
 
 def format_error_for_user(
-    error: Exception,
-    context: Optional[dict[str, Any]] = None
+    error: Exception, context: Optional[dict[str, Any]] = None
 ) -> dict[str, Any]:
     """Format any error into a user-friendly response.
-    
+
     This is the main entry point for error formatting.
-    
+
     Args:
         error: The exception to format
         context: Optional context (user_id, conversation_id, etc.)
-        
+
     Returns:
         User-friendly error dict ready for JSON response
 
     """
     _log_error(error, context)
-    
+
     error_type = type(error)
-    
+
     # Try to find a specific formatter for this error type
     if error_type in ERROR_FORMATTERS:
-        formatter = cast(Callable[[Exception], UserFriendlyError], ERROR_FORMATTERS[error_type])
+        formatter = cast(
+            Callable[[Exception], UserFriendlyError], ERROR_FORMATTERS[error_type]
+        )
         user_error = formatter(error)
-        
+
         # Add context if provided
         if context:
             user_error.metadata.update(context)
-        
+
         return user_error.to_dict()
-    
+
     # Try to format based on error message patterns
     pattern_result = _format_by_pattern(error, context)
     if pattern_result:
         return pattern_result
-    
+
     # Fallback: Generic user-friendly error
     return format_generic_error(error, context).to_dict()
 
 
-def format_rate_limit_error(error: Exception, context: Optional[dict[str, Any]] = None) -> UserFriendlyError:
+def format_rate_limit_error(
+    error: Exception, context: Optional[dict[str, Any]] = None
+) -> UserFriendlyError:
     """Format rate limiting errors."""
     # Try to extract reset time from error message
     reset_time = None
     if context and "reset_time" in context:
         reset_time = context["reset_time"]
-    
+
     time_remaining = "a few minutes"
     if reset_time:
         try:
@@ -487,7 +511,7 @@ def format_rate_limit_error(error: Exception, context: Optional[dict[str, Any]] 
             time_remaining = f"{minutes} minute{'s' if minutes != 1 else ''}"
         except Exception:
             pass
-    
+
     return UserFriendlyError(
         title="You're going too fast!",
         message=(
@@ -510,11 +534,13 @@ def format_rate_limit_error(error: Exception, context: Optional[dict[str, Any]] 
         error_code="RATE_LIMIT_EXCEEDED",
         can_retry=True,
         retry_delay=300,  # 5 minutes
-        help_url="https://docs.forge.ai/billing/rate-limits"
+        help_url="https://docs.forge.ai/billing/rate-limits",
     )
 
 
-def format_authentication_error(error: Exception, context: Optional[dict[str, Any]] = None) -> UserFriendlyError:
+def format_authentication_error(
+    error: Exception, context: Optional[dict[str, Any]] = None
+) -> UserFriendlyError:
     """Format authentication errors."""
     return UserFriendlyError(
         title="Please sign in again",
@@ -537,11 +563,13 @@ def format_authentication_error(error: Exception, context: Optional[dict[str, An
         error_code="AUTHENTICATION_REQUIRED",
         can_retry=False,
         help_url="https://docs.forge.ai/auth/sessions",
-        reassurance="Your work is safe and saved"
+        reassurance="Your work is safe and saved",
     )
 
 
-def format_network_error(error: Exception, context: Optional[dict[str, Any]] = None) -> UserFriendlyError:
+def format_network_error(
+    error: Exception, context: Optional[dict[str, Any]] = None
+) -> UserFriendlyError:
     """Format network/connection errors."""
     return UserFriendlyError(
         title="Connection problem",
@@ -564,11 +592,13 @@ def format_network_error(error: Exception, context: Optional[dict[str, Any]] = N
         error_code="NETWORK_ERROR",
         can_retry=True,
         retry_delay=5,
-        help_url="https://docs.forge.ai/troubleshooting/connection"
+        help_url="https://docs.forge.ai/troubleshooting/connection",
     )
 
 
-def format_file_not_found_error(error: Exception, context: Optional[dict[str, Any]] = None) -> UserFriendlyError:
+def format_file_not_found_error(
+    error: Exception, context: Optional[dict[str, Any]] = None
+) -> UserFriendlyError:
     """Format file not found errors."""
     # Try to extract filename from error
     filename = "the file"
@@ -577,7 +607,7 @@ def format_file_not_found_error(error: Exception, context: Optional[dict[str, An
         parts = error_str.split("'")
         if len(parts) >= 2:
             filename = f"'{parts[1]}'"
-    
+
     return UserFriendlyError(
         title="File not found",
         message=(
@@ -598,11 +628,13 @@ def format_file_not_found_error(error: Exception, context: Optional[dict[str, An
         ],
         technical_details=str(error),
         error_code="FILE_NOT_FOUND",
-        can_retry=True
+        can_retry=True,
     )
 
 
-def format_permission_error(error: Exception, context: Optional[dict[str, Any]] = None) -> UserFriendlyError:
+def format_permission_error(
+    error: Exception, context: Optional[dict[str, Any]] = None
+) -> UserFriendlyError:
     """Format permission denied errors."""
     return UserFriendlyError(
         title="Permission denied",
@@ -627,14 +659,16 @@ def format_permission_error(error: Exception, context: Optional[dict[str, Any]] 
         ],
         technical_details=str(error),
         error_code="PERMISSION_DENIED",
-        can_retry=False
+        can_retry=False,
     )
 
 
-def format_generic_error(error: Exception, context: Optional[dict[str, Any]] = None) -> UserFriendlyError:
+def format_generic_error(
+    error: Exception, context: Optional[dict[str, Any]] = None
+) -> UserFriendlyError:
     """Format generic/unmapped errors."""
     error_type = type(error).__name__
-    
+
     return UserFriendlyError(
         title="Something went wrong",
         message=(
@@ -660,15 +694,17 @@ def format_generic_error(error: Exception, context: Optional[dict[str, Any]] = N
         technical_details=f"{error_type}: {str(error)}",
         error_code=error_type.upper(),
         can_retry=True,
-        help_url="https://docs.forge.ai/troubleshooting"
+        help_url="https://docs.forge.ai/troubleshooting",
     )
 
 
-def format_budget_exceeded_error(budget_info: Optional[dict[str, Any]] = None) -> UserFriendlyError:
+def format_budget_exceeded_error(
+    budget_info: Optional[dict[str, Any]] = None,
+) -> UserFriendlyError:
     """Format budget exceeded errors."""
     budget = budget_info.get("budget", "$20.00") if budget_info else "$20.00"
     spend = budget_info.get("spend", budget) if budget_info else budget
-    
+
     return UserFriendlyError(
         title="Budget limit reached",
         message=(
@@ -693,20 +729,22 @@ def format_budget_exceeded_error(budget_info: Optional[dict[str, Any]] = None) -
         error_code="BUDGET_EXCEEDED",
         can_retry=False,
         help_url="https://docs.forge.ai/billing/budgets",
-        reassurance="Your work is saved - just upgrade to continue!"
+        reassurance="Your work is saved - just upgrade to continue!",
     )
 
 
 # Helper function for graceful error handling
-def safe_format_error(error: Exception, context: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+def safe_format_error(
+    error: Exception, context: Optional[dict[str, Any]] = None
+) -> dict[str, Any]:
     """Safely format error with fallback to generic error.
-    
+
     This never raises an exception - even if formatting fails.
-    
+
     Args:
         error: Exception to format
         context: Optional context
-        
+
     Returns:
         User-friendly error dict (guaranteed)
 
@@ -715,7 +753,7 @@ def safe_format_error(error: Exception, context: Optional[dict[str, Any]] = None
         return format_error_for_user(error, context)
     except Exception as formatting_error:
         logger.error(f"Error formatting error (meta!): {formatting_error}")
-        
+
         # Ultra-safe fallback
         return {
             "title": "Unexpected error",
@@ -726,11 +764,15 @@ def safe_format_error(error: Exception, context: Optional[dict[str, Any]] = None
             "suggestion": "Refresh the page",
             "actions": [
                 {"label": "Refresh", "type": "refresh", "highlight": True},
-                {"label": "Support", "type": "support", "url": "mailto:support@forge.ai"}
+                {
+                    "label": "Support",
+                    "type": "support",
+                    "url": "mailto:support@forge.ai",
+                },
             ],
             "technical_details": f"{type(error).__name__}: {str(error)}",
             "error_code": "FORMATTING_FAILED",
-            "can_retry": True
+            "can_retry": True,
         }
 
 

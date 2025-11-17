@@ -1,0 +1,7 @@
+[run]
+source = forge.cli
+branch = True
+
+[report]
+include = forge/cli/*
+

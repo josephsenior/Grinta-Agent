@@ -40,7 +40,9 @@ try:
 except ImportError as e:
     logger = logging.getLogger(__name__)
     logger.exception("Error importing Forge modules: %s", e)
-    logger.error("Make sure you're running this script from the project root and dependencies are installed.")
+    logger.error(
+        "Make sure you're running this script from the project root and dependencies are installed."
+    )
     sys.exit(1)
 
 
@@ -119,7 +121,7 @@ def generate_openapi_spec():
 def load_current_spec(spec_path):
     """Load the current OpenAPI specification if it exists."""
     if spec_path.exists():
-        with open(spec_path, "r", encoding='utf-8') as f:
+        with open(spec_path, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
@@ -140,7 +142,7 @@ def update_openapi_spec(spec_path, backup=True):
         backup_path = spec_path.with_suffix(".json.backup")
         spec_path.rename(backup_path)
         logging.getLogger(__name__).info("Backed up current spec to %s", backup_path)
-    with open(spec_path, "w", encoding='utf-8') as f:
+    with open(spec_path, "w", encoding="utf-8") as f:
         json.dump(new_spec, f, indent=2)
     return new_spec
 
@@ -155,7 +157,9 @@ def main():
         new_spec = update_openapi_spec(spec_path)
         logger.info("✅ Successfully updated OpenAPI specification!")
         logger.info("   OpenAPI version: %s", new_spec.get("openapi", "N/A"))
-        logger.info("   API version: %s", new_spec.get("info", {}).get("version", "N/A"))
+        logger.info(
+            "   API version: %s", new_spec.get("info", {}).get("version", "N/A")
+        )
         logger.info("   Total endpoints: %d", len(new_spec.get("paths", {})))
         logger.info("   Servers: %d", len(new_spec.get("servers", [])))
         if paths := list(new_spec.get("paths", {}).keys()):

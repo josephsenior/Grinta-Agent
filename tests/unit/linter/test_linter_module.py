@@ -11,12 +11,16 @@ import pytest
 
 def _clear_module(name: str) -> None:
     """Remove a module (and its submodules) from sys.modules if present."""
-    to_delete = [mod for mod in sys.modules if mod == name or mod.startswith(f"{name}.")]
+    to_delete = [
+        mod for mod in sys.modules if mod == name or mod.startswith(f"{name}.")
+    ]
     for mod in to_delete:
         sys.modules.pop(mod, None)
 
 
-def test_stub_linter_used_when_dependency_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_stub_linter_used_when_dependency_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """forge.linter should expose stub classes when forge_aci is unavailable."""
     _clear_module("forge.linter")
     _clear_module("forge_aci")
@@ -63,5 +67,3 @@ def test_real_linter_imported_when_available(monkeypatch: pytest.MonkeyPatch) ->
         assert result.warnings == ["warn"]
     finally:
         _clear_module("forge_aci")
-
-

@@ -21,7 +21,9 @@ def app():
 
 def test_localhost_cors_middleware_init_with_env_var():
     """Test that the middleware correctly parses PERMITTED_CORS_ORIGINS environment variable."""
-    with patch.dict(os.environ, {"PERMITTED_CORS_ORIGINS": "https://example.com,https://test.com"}):
+    with patch.dict(
+        os.environ, {"PERMITTED_CORS_ORIGINS": "https://example.com,https://test.com"}
+    ):
         app = FastAPI()
         middleware = LocalhostCORSMiddleware(app)
         assert "https://example.com" in middleware.allow_origins
@@ -44,13 +46,22 @@ def test_localhost_cors_middleware_is_allowed_origin_localhost(app):
         with TestClient(app) as client:
             response = client.get("/test", headers={"Origin": "http://localhost:8000"})
             assert response.status_code == 200
-            assert response.headers["access-control-allow-origin"] == "http://localhost:8000"
+            assert (
+                response.headers["access-control-allow-origin"]
+                == "http://localhost:8000"
+            )
             response = client.get("/test", headers={"Origin": "http://localhost:3000"})
             assert response.status_code == 200
-            assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
+            assert (
+                response.headers["access-control-allow-origin"]
+                == "http://localhost:3000"
+            )
             response = client.get("/test", headers={"Origin": "http://127.0.0.1:8000"})
             assert response.status_code == 200
-            assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:8000"
+            assert (
+                response.headers["access-control-allow-origin"]
+                == "http://127.0.0.1:8000"
+            )
 
 
 def test_localhost_cors_middleware_is_allowed_origin_non_localhost(app):
@@ -60,7 +71,9 @@ def test_localhost_cors_middleware_is_allowed_origin_non_localhost(app):
         with TestClient(app) as client:
             response = client.get("/test", headers={"Origin": "https://example.com"})
             assert response.status_code == 200
-            assert response.headers["access-control-allow-origin"] == "https://example.com"
+            assert (
+                response.headers["access-control-allow-origin"] == "https://example.com"
+            )
             response = client.get("/test", headers={"Origin": "https://disallowed.com"})
             assert response.status_code == 200
             assert "access-control-allow-origin" not in response.headers

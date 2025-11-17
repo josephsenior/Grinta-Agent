@@ -3,39 +3,60 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 import tenacity
 import yaml
-from kubernetes import client, config
-from kubernetes.client.models import (
-    V1Container,
-    V1ContainerPort,
-    V1EnvVar,
-    V1HTTPIngressPath,
-    V1HTTPIngressRuleValue,
-    V1Ingress,
-    V1IngressBackend,
-    V1IngressRule,
-    V1IngressServiceBackend,
-    V1IngressSpec,
-    V1IngressTLS,
-    V1ObjectMeta,
-    V1PersistentVolumeClaim,
-    V1PersistentVolumeClaimSpec,
-    V1PersistentVolumeClaimVolumeSource,
-    V1Pod,
-    V1PodSpec,
-    V1ResourceRequirements,
-    V1SecurityContext,
-    V1Service,
-    V1ServiceBackendPort,
-    V1ServicePort,
-    V1ServiceSpec,
-    V1Toleration,
-    V1Volume,
-    V1VolumeMount,
-)
+
+try:
+    from kubernetes import client, config  # type: ignore[import-untyped]
+    from kubernetes.client.models import (  # type: ignore[import-untyped]
+        V1Container,
+        V1ContainerPort,
+        V1EnvVar,
+        V1HTTPIngressPath,
+        V1HTTPIngressRuleValue,
+        V1Ingress,
+        V1IngressBackend,
+        V1IngressRule,
+        V1IngressServiceBackend,
+        V1IngressSpec,
+        V1IngressTLS,
+        V1ObjectMeta,
+        V1PersistentVolumeClaim,
+        V1PersistentVolumeClaimSpec,
+        V1PersistentVolumeClaimVolumeSource,
+        V1Pod,
+        V1PodSpec,
+        V1ResourceRequirements,
+        V1SecurityContext,
+        V1Service,
+        V1ServiceBackendPort,
+        V1ServicePort,
+        V1ServiceSpec,
+        V1Toleration,
+        V1Volume,
+        V1VolumeMount,
+    )
+except ImportError:  # pragma: no cover - kubernetes not available
+    client = cast(Any, None)
+    config = cast(Any, None)
+    V1Container = V1ContainerPort = V1EnvVar = V1HTTPIngressPath = (
+        V1HTTPIngressRuleValue
+    ) = Any
+    V1Ingress = V1IngressBackend = V1IngressRule = V1IngressServiceBackend = (
+        V1IngressSpec
+    ) = Any
+    V1IngressTLS = V1ObjectMeta = V1PersistentVolumeClaim = (
+        V1PersistentVolumeClaimSpec
+    ) = Any
+    V1PersistentVolumeClaimVolumeSource = V1Pod = V1PodSpec = V1ResourceRequirements = (
+        Any
+    )
+    V1SecurityContext = V1Service = V1ServiceBackendPort = V1ServicePort = (
+        V1ServiceSpec
+    ) = Any
+    V1Toleration = V1Volume = V1VolumeMount = Any
 
 from forge.core.exceptions import (
     AgentRuntimeDisconnectedError,
@@ -60,6 +81,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from forge.core.config import ForgeConfig
+    from forge.core.config.kubernetes_config import KubernetesConfig
     from forge.events import EventStream
     from forge.integrations.provider import PROVIDER_TOKEN_TYPE
     from forge.llm.llm_registry import LLMRegistry
@@ -105,11 +127,11 @@ class KubernetesRuntime(ActionExecutionClient):
         git_provider_tokens: PROVIDER_TOKEN_TYPE | None = None,
     ) -> None:
         """Initialize a Kubernetes-based runtime for cloud-native agent execution.
-        
+
         Sets up Kubernetes client, pod configuration, and runtime infrastructure for executing
         agents in Kubernetes clusters. Manages cleanup through shutdown listeners and validates
         Kubernetes configuration before initialization.
-        
+
         Args:
             config: Forge configuration containing Kubernetes settings, image references, namespace
             event_stream: Event stream for status updates and logging
@@ -122,10 +144,10 @@ class KubernetesRuntime(ActionExecutionClient):
             headless_mode: If True, run without browser UI
             user_id: Optional user identifier for pod configuration
             git_provider_tokens: Git provider authentication tokens
-        
+
         Raises:
             ValueError: If Kubernetes configuration is missing from config
-        
+
         Side Effects:
             - Registers global shutdown listener for cleanup (only once per runtime class)
             - Initializes Kubernetes API clients (core API and networking API)
@@ -134,7 +156,7 @@ class KubernetesRuntime(ActionExecutionClient):
             - Determines pod image from config (runtime_container_image or base_container_image)
             - Constructs service URL using Kubernetes DNS naming convention
             - Initializes parent Runtime class with configuration
-        
+
         Notes:
             - Kubernetes configuration required in config file ([kubernetes] section)
             - Pod names include configurable prefix for resource identification
@@ -143,7 +165,7 @@ class KubernetesRuntime(ActionExecutionClient):
             - VSCode and app ports use Kubernetes NodePort ranges (30000-32767)
             - Shutdown listener automatically cleans PVCs and removes pods on process exit
             - Only one shutdown listener registered per runtime class (guards with _shutdown_listener_id)
-        
+
         Example:
             >>> config = ForgeConfig.from_file("config.toml")
             >>> # config must have [kubernetes] section configured
@@ -163,19 +185,23 @@ class KubernetesRuntime(ActionExecutionClient):
         self.config = config
         self._runtime_initialized: bool = False
         self.status_callback = status_callback
-        if self.config.kubernetes is None:
+        k8s_config: KubernetesConfig | None = getattr(self.config, "kubernetes", None)
+        if k8s_config is None:
             msg = "Kubernetes configuration is required when using KubernetesRuntime. Please add a [kubernetes] section to your configuration."
             raise ValueError(
                 msg,
             )
-        self._k8s_config = self.config.kubernetes
+        self._k8s_config = k8s_config
         self._k8s_namespace = self._k8s_config.namespace
         KubernetesRuntime._namespace = self._k8s_namespace
         self._container_port = 8080
         self._vscode_port = 8081
         self._app_ports: list[int] = [30082, 30083]
         self.k8s_client, self.k8s_networking_client = self._init_kubernetes_client()
-        self.pod_image = self.config.sandbox.runtime_container_image or self.config.sandbox.base_container_image
+        self.pod_image = (
+            self.config.sandbox.runtime_container_image
+            or self.config.sandbox.base_container_image
+        )
         self.pod_name = POD_NAME_PREFIX + sid
         self.k8s_local_url = f"http://{self._get_svc_name(self.pod_name)}.{self._k8s_namespace}.svc.cluster.local"
         self.api_url = f"{self.k8s_local_url}:{self._container_port}"
@@ -226,7 +252,7 @@ class KubernetesRuntime(ActionExecutionClient):
     @property
     def action_execution_server_url(self):
         """Get action execution server URL for Kubernetes runtime.
-        
+
         Returns:
             Server URL for action execution
 
@@ -236,19 +262,22 @@ class KubernetesRuntime(ActionExecutionClient):
     @property
     def node_selector(self) -> dict[str, str] | None:
         """Get Kubernetes node selector labels.
-        
+
         Returns:
             Node selector dictionary or None if not configured
 
         """
-        if not self._k8s_config.node_selector_key or not self._k8s_config.node_selector_val:
+        if (
+            not self._k8s_config.node_selector_key
+            or not self._k8s_config.node_selector_val
+        ):
             return None
         return {self._k8s_config.node_selector_key: self._k8s_config.node_selector_val}
 
     @property
     def tolerations(self) -> list[V1Toleration] | None:
         """Get Kubernetes pod tolerations.
-        
+
         Returns:
             List of tolerations or None if not configured
 
@@ -256,11 +285,13 @@ class KubernetesRuntime(ActionExecutionClient):
         if not self._k8s_config.tolerations_yaml:
             return None
         tolerations_yaml_str = self._k8s_config.tolerations_yaml
-        tolerations = []
+        tolerations: list[V1Toleration] = []
         try:
             tolerations_data = yaml.safe_load(tolerations_yaml_str)
             if isinstance(tolerations_data, list):
-                tolerations.extend(V1Toleration(**toleration) for toleration in tolerations_data)
+                tolerations.extend(
+                    V1Toleration(**toleration) for toleration in tolerations_data
+                )
             else:
                 logger.error(
                     "Invalid tolerations format. Should be type list: %s. Expected a list.",
@@ -268,7 +299,9 @@ class KubernetesRuntime(ActionExecutionClient):
                 )
                 return None
         except yaml.YAMLError as e:
-            logger.error("Error parsing tolerations YAML: %s. Error: %s", tolerations_yaml_str, e)
+            logger.error(
+                "Error parsing tolerations YAML: %s. Error: %s", tolerations_yaml_str, e
+            )
             return None
         return tolerations
 
@@ -282,12 +315,17 @@ class KubernetesRuntime(ActionExecutionClient):
             await call_sync_from_async(self._attach_to_pod)
         except client.rest.ApiException as e:
             if self.attach_to_existing:
-                self.log("error", f"Pod {self.pod_name} not found or cannot connect to it.")
+                self.log(
+                    "error", f"Pod {self.pod_name} not found or cannot connect to it."
+                )
                 raise AgentRuntimeDisconnectedError from e
             self.log("info", f"Starting runtime with image: {self.pod_image}")
             try:
                 await call_sync_from_async(self._init_k8s_resources)
-                self.log("info", f"Pod started: {self.pod_name}. VSCode URL: {self.vscode_url}")
+                self.log(
+                    "info",
+                    f"Pod started: {self.pod_name}. VSCode URL: {self.vscode_url}",
+                )
             except Exception as init_error:
                 self.log("error", f"Failed to initialize k8s resources: {init_error}")
                 msg = f"Failed to initialize kubernetes resources: {init_error}"
@@ -322,7 +360,9 @@ class KubernetesRuntime(ActionExecutionClient):
     def _attach_to_pod(self) -> bool | None:
         """Attach to an existing pod."""
         try:
-            pod = self.k8s_client.read_namespaced_pod(name=self.pod_name, namespace=self._k8s_namespace)
+            pod = self.k8s_client.read_namespaced_pod(
+                name=self.pod_name, namespace=self._k8s_namespace
+            )
             if pod.status.phase != "Running":
                 try:
                     self._wait_until_ready()
@@ -342,19 +382,26 @@ class KubernetesRuntime(ActionExecutionClient):
         retry=tenacity.retry_if_exception_type(TimeoutError),
         reraise=True,
         wait=tenacity.wait_fixed(2),
-        before_sleep=tenacity_before_sleep_factory("runtime.kubernetes.wait_until_ready"),
+        before_sleep=tenacity_before_sleep_factory(
+            "runtime.kubernetes.wait_until_ready"
+        ),
         after=tenacity_after_factory("runtime.kubernetes.wait_until_ready"),
     )
     def _wait_until_ready(self) -> bool:
         """Wait until the runtime server is alive by checking the pod status in Kubernetes."""
         self.log("info", f"Checking if pod {self.pod_name} is ready in Kubernetes")
-        pod = self.k8s_client.read_namespaced_pod(name=self.pod_name, namespace=self._k8s_namespace)
+        pod = self.k8s_client.read_namespaced_pod(
+            name=self.pod_name, namespace=self._k8s_namespace
+        )
         if pod.status.phase == "Running" and pod.status.conditions:
             for condition in pod.status.conditions:
                 if condition.type == "Ready" and condition.status == "True":
                     self.log("info", f"Pod {self.pod_name} is ready!")
                     return True
-        self.log("info", f"Pod {self.pod_name} is not ready yet. Current phase: {pod.status.phase}")
+        self.log(
+            "info",
+            f"Pod {self.pod_name} is not ready yet. Current phase: {pod.status.phase}",
+        )
         msg = f"Pod {self.pod_name} is not in Running state yet."
         raise TimeoutError(msg)
 
@@ -372,7 +419,9 @@ class KubernetesRuntime(ActionExecutionClient):
             raise
 
     @staticmethod
-    def _cleanup_k8s_resources(namespace: str, remove_pvc: bool = False, conversation_id: str = "") -> None:
+    def _cleanup_k8s_resources(
+        namespace: str, remove_pvc: bool = False, conversation_id: str = ""
+    ) -> None:
         """Clean up Kubernetes resources with our prefix in the namespace.
 
         :param remove_pvc: If True, also remove persistent volume claims (defaults to False).
@@ -392,13 +441,21 @@ class KubernetesRuntime(ActionExecutionClient):
                         body=client.V1DeleteOptions(),
                     )
                     logger.info("Deleted PVC %s", pvc_name)
-                k8s_api.delete_namespaced_pod(name=pod_name, namespace=namespace, body=client.V1DeleteOptions())
+                k8s_api.delete_namespaced_pod(
+                    name=pod_name, namespace=namespace, body=client.V1DeleteOptions()
+                )
                 logger.info("Deleted pod %s", pod_name)
-                k8s_api.delete_namespaced_service(name=service_name, namespace=namespace)
+                k8s_api.delete_namespaced_service(
+                    name=service_name, namespace=namespace
+                )
                 logger.info("Deleted service %s", service_name)
-                k8s_api.delete_namespaced_service(name=vscode_service_name, namespace=namespace)
+                k8s_api.delete_namespaced_service(
+                    name=vscode_service_name, namespace=namespace
+                )
                 logger.info("Deleted service %s", vscode_service_name)
-                k8s_networking_api.delete_namespaced_ingress(name=ingress_name, namespace=namespace)
+                k8s_networking_api.delete_namespaced_ingress(
+                    name=ingress_name, namespace=namespace
+                )
                 logger.info("Deleted ingress %s", ingress_name)
             except client.rest.ApiException:
                 pass
@@ -411,10 +468,14 @@ class KubernetesRuntime(ActionExecutionClient):
         return V1PersistentVolumeClaim(
             api_version="v1",
             kind="PersistentVolumeClaim",
-            metadata=V1ObjectMeta(name=self._get_pvc_name(self.pod_name), namespace=self._k8s_namespace),
+            metadata=V1ObjectMeta(
+                name=self._get_pvc_name(self.pod_name), namespace=self._k8s_namespace
+            ),
             spec=V1PersistentVolumeClaimSpec(
                 access_modes=["ReadWriteOnce"],
-                resources=client.V1ResourceRequirements(requests={"storage": self._k8s_config.pvc_storage_size}),
+                resources=client.V1ResourceRequirements(
+                    requests={"storage": self._k8s_config.pvc_storage_size}
+                ),
                 storage_class_name=self._k8s_config.pvc_storage_class,
             ),
         )
@@ -424,18 +485,32 @@ class KubernetesRuntime(ActionExecutionClient):
         vscode_service_spec = V1ServiceSpec(
             selector={"app": POD_LABEL, "session": self.sid},
             type="ClusterIP",
-            ports=[V1ServicePort(port=self._vscode_port, target_port="vscode", name="code")],
+            ports=[
+                V1ServicePort(port=self._vscode_port, target_port="vscode", name="code")
+            ],
         )
-        return V1Service(metadata=V1ObjectMeta(name=self._get_vscode_svc_name(self.pod_name)), spec=vscode_service_spec)
+        return V1Service(
+            metadata=V1ObjectMeta(name=self._get_vscode_svc_name(self.pod_name)),
+            spec=vscode_service_spec,
+        )
 
     def _get_runtime_service_manifest(self):
         """Create a service manifest for the runtime pod execution-server."""
         service_spec = V1ServiceSpec(
             selector={"app": POD_LABEL, "session": self.sid},
             type="ClusterIP",
-            ports=[V1ServicePort(port=self._container_port, target_port="http", name="execution-server")],
+            ports=[
+                V1ServicePort(
+                    port=self._container_port,
+                    target_port="http",
+                    name="execution-server",
+                )
+            ],
         )
-        return V1Service(metadata=V1ObjectMeta(name=self._get_svc_name(self.pod_name)), spec=service_spec)
+        return V1Service(
+            metadata=V1ObjectMeta(name=self._get_svc_name(self.pod_name)),
+            spec=service_spec,
+        )
 
     def _get_runtime_pod_manifest(self):
         """Create a pod manifest for the runtime sandbox."""
@@ -447,9 +522,17 @@ class KubernetesRuntime(ActionExecutionClient):
         if self.config.debug or DEBUG:
             environment.append(V1EnvVar(name="DEBUG", value="true"))
         environment.extend(
-            (V1EnvVar(name=key, value=value) for key, value in self.config.sandbox.runtime_startup_env_vars.items()),
+            (
+                V1EnvVar(name=key, value=value)
+                for key, value in self.config.sandbox.runtime_startup_env_vars.items()
+            ),
         )
-        volume_mounts = [V1VolumeMount(name="workspace-volume", mount_path=self.config.workspace_mount_path_in_sandbox)]
+        volume_mounts = [
+            V1VolumeMount(
+                name="workspace-volume",
+                mount_path=self.config.workspace_mount_path_in_sandbox,
+            )
+        ]
         volumes = [
             V1Volume(
                 name="workspace-volume",
@@ -458,9 +541,13 @@ class KubernetesRuntime(ActionExecutionClient):
                 ),
             ),
         ]
-        container_ports = [V1ContainerPort(container_port=self._container_port, name="http")]
+        container_ports = [
+            V1ContainerPort(container_port=self._container_port, name="http")
+        ]
         if self._vscode_enabled:
-            container_ports.append(V1ContainerPort(container_port=self._vscode_port, name="vscode"))
+            container_ports.append(
+                V1ContainerPort(container_port=self._vscode_port, name="vscode")
+            )
         for port in self._app_ports:
             container_ports.append(V1ContainerPort(container_port=port))
         health_check = client.V1Probe(
@@ -480,7 +567,10 @@ class KubernetesRuntime(ActionExecutionClient):
         )
         resources = V1ResourceRequirements(
             limits={"memory": self._k8s_config.resource_memory_limit},
-            requests={"cpu": self._k8s_config.resource_cpu_request, "memory": self._k8s_config.resource_memory_request},
+            requests={
+                "cpu": self._k8s_config.resource_cpu_request,
+                "memory": self._k8s_config.resource_memory_request,
+            },
         )
         security_context = V1SecurityContext(privileged=self._k8s_config.privileged)
         container = V1Container(
@@ -497,9 +587,13 @@ class KubernetesRuntime(ActionExecutionClient):
         )
         image_pull_secrets = None
         if self._k8s_config.image_pull_secret:
-            image_pull_secrets = [client.V1LocalObjectReference(name=self._k8s_config.image_pull_secret)]
+            image_pull_secrets = [
+                client.V1LocalObjectReference(name=self._k8s_config.image_pull_secret)
+            ]
         return V1Pod(
-            metadata=V1ObjectMeta(name=self.pod_name, labels={"app": POD_LABEL, "session": self.sid}),
+            metadata=V1ObjectMeta(
+                name=self.pod_name, labels={"app": POD_LABEL, "session": self.sid}
+            ),
             spec=V1PodSpec(
                 containers=[container],
                 volumes=volumes,
@@ -514,7 +608,10 @@ class KubernetesRuntime(ActionExecutionClient):
         """Create an ingress manifest for the VSCode server."""
         tls = []
         if self._k8s_config.ingress_tls_secret:
-            runtime_tls = V1IngressTLS(hosts=[self.ingress_domain], secret_name=self._k8s_config.ingress_tls_secret)
+            runtime_tls = V1IngressTLS(
+                hosts=[self.ingress_domain],
+                secret_name=self._k8s_config.ingress_tls_secret,
+            )
             tls = [runtime_tls]
         rules = [
             V1IngressRule(
@@ -540,7 +637,9 @@ class KubernetesRuntime(ActionExecutionClient):
             api_version="networking.k8s.io/v1",
             metadata=V1ObjectMeta(
                 name=self._get_vscode_ingress_name(self.pod_name),
-                annotations={"external-dns.alpha.kubernetes.io/hostname": self.ingress_domain},
+                annotations={
+                    "external-dns.alpha.kubernetes.io/hostname": self.ingress_domain
+                },
             ),
             spec=ingress_spec,
         )
@@ -575,14 +674,27 @@ class KubernetesRuntime(ActionExecutionClient):
                     body=pvc_manifest,
                 )
                 self.log("info", f"Created PVC {self._get_pvc_name(self.pod_name)}")
-            self.k8s_client.create_namespaced_pod(namespace=self._k8s_namespace, body=pod)
+            self.k8s_client.create_namespaced_pod(
+                namespace=self._k8s_namespace, body=pod
+            )
             self.log("info", f"Created pod {self.pod_name}.")
-            self.k8s_client.create_namespaced_service(namespace=self._k8s_namespace, body=service)
+            self.k8s_client.create_namespaced_service(
+                namespace=self._k8s_namespace, body=service
+            )
             self.log("info", f"Created service {self._get_svc_name(self.pod_name)}")
-            self.k8s_client.create_namespaced_service(namespace=self._k8s_namespace, body=vscode_service)
-            self.log("info", f"Created service {self._get_vscode_svc_name(self.pod_name)}")
-            self.k8s_networking_client.create_namespaced_ingress(namespace=self._k8s_namespace, body=ingress)
-            self.log("info", f"Created ingress {self._get_vscode_ingress_name(self.pod_name)}")
+            self.k8s_client.create_namespaced_service(
+                namespace=self._k8s_namespace, body=vscode_service
+            )
+            self.log(
+                "info", f"Created service {self._get_vscode_svc_name(self.pod_name)}"
+            )
+            self.k8s_networking_client.create_namespaced_ingress(
+                namespace=self._k8s_namespace, body=ingress
+            )
+            self.log(
+                "info",
+                f"Created ingress {self._get_vscode_ingress_name(self.pod_name)}",
+            )
             self._wait_until_ready()
         except client.rest.ApiException as e:
             self.log("error", f"Failed to create pod and services: {e}")
@@ -593,13 +705,22 @@ class KubernetesRuntime(ActionExecutionClient):
 
     def close(self) -> None:
         """Close the runtime and clean up resources."""
-        self.log("info", f"Closing runtime and cleaning up resources for conersation ID: {self.sid}")
+        self.log(
+            "info",
+            f"Closing runtime and cleaning up resources for conersation ID: {self.sid}",
+        )
         super().close()
         if self.config.sandbox.keep_runtime_alive or self.attach_to_existing:
-            self.log("info", "Keeping runtime alive due to configuration or attach mode")
+            self.log(
+                "info", "Keeping runtime alive due to configuration or attach mode"
+            )
             return
         try:
-            self._cleanup_k8s_resources(namespace=self._k8s_namespace, remove_pvc=False, conversation_id=self.sid)
+            self._cleanup_k8s_resources(
+                namespace=self._k8s_namespace,
+                remove_pvc=False,
+                conversation_id=self.sid,
+            )
         except Exception as e:
             self.log("error", f"Error closing runtime: {e}")
 
@@ -617,9 +738,7 @@ class KubernetesRuntime(ActionExecutionClient):
         if not token:
             return None
         protocol = "https" if self._k8s_config.ingress_tls_secret else "http"
-        vscode_url = (
-            f"{protocol}://{self.ingress_domain}/?tkn={token}&folder={self.config.workspace_mount_path_in_sandbox}"
-        )
+        vscode_url = f"{protocol}://{self.ingress_domain}/?tkn={token}&folder={self.config.workspace_mount_path_in_sandbox}"
         self.log("info", f"VSCode URL: {vscode_url}")
         return vscode_url
 
@@ -632,6 +751,12 @@ class KubernetesRuntime(ActionExecutionClient):
     async def delete(cls, conversation_id: str) -> None:
         """Delete resources associated with a conversation."""
         try:
-            cls._cleanup_k8s_resources(namespace=cls._namespace, remove_pvc=True, conversation_id=conversation_id)
+            cls._cleanup_k8s_resources(
+                namespace=cls._namespace,
+                remove_pvc=True,
+                conversation_id=conversation_id,
+            )
         except Exception as e:
-            logger.error("Error deleting resources for conversation %s: %s", conversation_id, e)
+            logger.error(
+                "Error deleting resources for conversation %s: %s", conversation_id, e
+            )

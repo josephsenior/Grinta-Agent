@@ -19,8 +19,13 @@ logger.info("conv_id: %s", conv_id)
 if not conv_id:
     logger.error("Could not create conversation; aborting")
 else:
-    r = client.post(f"/api/conversations/{conv_id}/metasop-debug", json={"message": "sop: hi"})
+    r = client.post(
+        f"/api/conversations/{conv_id}/metasop-debug", json={"message": "sop: hi"}
+    )
     logger.info("metasop-debug status: %s %s", r.status_code, r.text)
-    r2 = client.post(f"/api/conversations/{conv_id}/events/raw", data="sop: hi", headers={"content-type": "text/plain"})
+    r2 = client.post(
+        f"/api/conversations/{conv_id}/events/raw",
+        data={"content": "sop: hi"},
+    )
     logger.info("/events/raw status: %s %s", r2.status_code, r2.text)
     time.sleep(4)

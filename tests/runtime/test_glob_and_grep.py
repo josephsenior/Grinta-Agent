@@ -3,7 +3,10 @@
 import os
 import pytest
 from conftest import _close_test_runtime, _load_runtime
-from forge.agenthub.readonly_agent.function_calling import glob_to_cmdrun, grep_to_cmdrun
+from forge.agenthub.readonly_agent.function_calling import (
+    glob_to_cmdrun,
+    grep_to_cmdrun,
+)
 from forge.core.logger import forge_logger as logger
 from forge.events.action import CmdRunAction
 from forge.events.observation import CmdOutputObservation, ErrorObservation
@@ -149,7 +152,9 @@ def test_grep_to_cmdrun_paths_with_spaces(runtime_cls, run_as_Forge, temp_dir):
             assert "rg -li" in cmd
             obs = _run_cmd_action(runtime, cmd)
             assert obs.exit_code == 0, f"Grep command failed for path: {path}"
-            assert "function" in obs.content, f"Expected pattern not found in output for path: {path}"
+            assert "function" in obs.content, (
+                f"Expected pattern not found in output for path: {path}"
+            )
             if path == "src/my project":
                 assert "src/my project/test.js" in obs.content
             elif path == "test files/unit tests":
@@ -179,7 +184,14 @@ def _setup_glob_special_patterns_test_files(runtime):
 
 def _get_glob_special_patterns():
     """Get list of special glob patterns to test."""
-    return ["**/*.js", "**/{*.jsx,*.tsx}", "file[0-9].js", "temp?.js", "file.{js,ts,jsx}", "file with spaces.js"]
+    return [
+        "**/*.js",
+        "**/{*.jsx,*.tsx}",
+        "file[0-9].js",
+        "temp?.js",
+        "file.{js,ts,jsx}",
+        "file with spaces.js",
+    ]
 
 
 def _test_glob_pattern_execution(runtime, pattern):

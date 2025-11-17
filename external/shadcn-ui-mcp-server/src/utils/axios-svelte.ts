@@ -1,4 +1,4 @@
-import { Axios } from 'axios';
+import axiosLib from 'axios';
 import { logError, logWarning, logInfo } from './logger.js';
 
 // Constants for the v4 repository structure
@@ -9,7 +9,7 @@ const REGISTRY_PATH = `docs/src/lib/registry`;
 const BLOCKS = `${REGISTRY_PATH}/blocks`;
 
 // GitHub API for accessing repository structure and metadata
-const githubApi = new Axios({
+const githubApi = axiosLib.create({
   baseURL: 'https://api.github.com',
   headers: {
     'Content-Type': 'application/json',
@@ -21,7 +21,7 @@ const githubApi = new Axios({
   },
   timeout: 30000, // Increased from 15000 to 30000 (30 seconds)
   transformResponse: [
-    (data) => {
+    (data: string) => {
       try {
         return JSON.parse(data);
       } catch {
@@ -32,13 +32,13 @@ const githubApi = new Axios({
 });
 
 // GitHub Raw for directly fetching file contents
-const githubRaw = new Axios({
+const githubRaw = axiosLib.create({
   baseURL: `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${REPO_BRANCH}`,
   headers: {
     'User-Agent': 'Mozilla/5.0 (compatible; ShadcnUiMcpServer/1.0.0)',
   },
   timeout: 30000, // Increased from 15000 to 30000 (30 seconds)
-  transformResponse: [(data) => data], // Return raw data
+  transformResponse: [(data: string) => data], // Return raw data
 });
 
 /**

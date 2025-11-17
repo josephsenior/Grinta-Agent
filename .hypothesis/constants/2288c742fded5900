@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\runtime\runtime_status.py
+# hypothesis_version: 6.147.0
+
+['STATUS$ERROR', 'STATUS$ERROR_MEMORY', 'STATUS$LLM_RETRY', 'STATUS$READY', 'STATUS$STOPPED', 'UNKNOWN']

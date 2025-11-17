@@ -10,13 +10,17 @@ from __future__ import annotations
 import ast
 import os
 import platform
-from typing import Any
+from typing import Any, cast
 
-try:
-    from tree_sitter import Language, Parser
+try:  # pragma: no cover - exercised when tree_sitter is installed
+    from tree_sitter import Language as _TSLanguage, Parser as _TSParser
 
+    Language = cast(Any, _TSLanguage)
+    Parser = cast(Any, _TSParser)
     _HAS_TS = True
-except Exception:
+except Exception:  # pragma: no cover - optional dependency
+    Language = None  # type: ignore[assignment]
+    Parser = None  # type: ignore[assignment]
     _HAS_TS = False
 
 
@@ -32,7 +36,9 @@ def available() -> bool:
 
 
 def _find_lang_lib() -> str | None:
-    base = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "third_party"))
+    base = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "third_party")
+    )
     system = platform.system().lower()
     if system == "windows":
         ext = "dll"

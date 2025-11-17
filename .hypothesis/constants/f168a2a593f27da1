@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\runtime\plugins\agent_skills\file_reader\file_readers.py
+# hypothesis_version: 6.147.0
+
+['.jpg', 'content', 'image_url', 'parse_audio', 'parse_docx', 'parse_image', 'parse_latex', 'parse_pdf', 'parse_pptx', 'parse_video', 'rb', 'role', 'text', 'type', 'url', 'user', 'utf-8', 'whisper-1']

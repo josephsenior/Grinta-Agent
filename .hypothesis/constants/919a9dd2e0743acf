@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\core\schema\action.py
+# hypothesis_version: 6.147.0
+
+['browse', 'browse_interactive', 'call_tool_mcp', 'change_agent_state', 'condensation', 'condensation_request', 'delegate', 'edit', 'finish', 'message', 'null', 'pause', 'push', 'read', 'recall', 'reject', 'resume', 'run', 'run_ipython', 'send_pr', 'start', 'stop', 'streaming_chunk', 'system', 'task_tracking', 'think', 'write']

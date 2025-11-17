@@ -313,9 +313,9 @@ function DropdownOptionButton({
       type="button"
       className={cn(
         "w-full text-left px-4 py-3 text-sm transition-all duration-200",
-        "hover:bg-violet-500/10 hover:text-foreground",
-        "focus:bg-brand-500/10 focus:text-foreground focus:outline-none",
-        selectedKey === item.key && "bg-brand-500/20 text-foreground",
+        "hover:bg-white/5 hover:text-foreground",
+        "focus:bg-white/5 focus:text-foreground focus:outline-none",
+        selectedKey === item.key && "bg-white/10 text-foreground",
         item.disabled && "opacity-50 cursor-not-allowed",
         !item.disabled && "cursor-pointer",
       )}
@@ -440,7 +440,7 @@ function DropdownInput({
     <>
       {showLoadingSpinner && (
         <div className="p-1">
-          <div className="w-4 h-4 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
         </div>
       )}
 
@@ -450,7 +450,7 @@ function DropdownInput({
         <button
           type="button"
           onClick={onClear}
-          className="p-1 hover:bg-violet-500/10 rounded transition-colors"
+          className="p-1 hover:bg-white/5 rounded transition-colors"
           aria-label="Clear selection"
         >
           <svg
@@ -482,9 +482,9 @@ function DropdownInput({
         onClick={controller.toggleDropdown}
         className={cn(
           "p-1 rounded transition-colors",
-          "hover:bg-violet-500/10 focus:bg-brand-500/10 focus:outline-none",
+          "hover:bg-white/5 focus:bg-white/5 focus:outline-none",
           "disabled:opacity-50 disabled:cursor-not-allowed",
-          controller.isOpen && "bg-brand-500/10",
+          controller.isOpen && "bg-white/5",
         )}
         aria-label="Toggle dropdown"
         disabled={disabled}
@@ -515,14 +515,13 @@ function DropdownInput({
         data-testid={testId}
         className={cn(
           "w-full h-10 px-4 pr-10 rounded-xl",
-          "bg-background-secondary backdrop-blur-xl border",
-          "text-foreground placeholder:text-foreground-secondary",
+          "bg-black/60 backdrop-blur-sm border",
+          "text-foreground placeholder:text-foreground-tertiary",
           "transition-all duration-200",
           error
             ? "border-danger-500/50 bg-danger-500/5 focus:border-danger-500/70 focus:bg-danger-500/10"
-            : "border-border focus:border-brand-500/50 focus:bg-brand-500/5 focus:shadow-lg focus:shadow-brand-500/10",
-          !error && "hover:border-brand-500/30 hover:bg-brand-500/3",
-          "disabled:bg-background-tertiary disabled:border-border disabled:cursor-not-allowed disabled:opacity-50",
+            : "border-white/10 focus:border-white/20 hover:border-white/15",
+          "disabled:bg-black/30 disabled:border-white/5 disabled:cursor-not-allowed disabled:opacity-50",
           inputClassName,
         )}
       />
@@ -563,7 +562,7 @@ function DropdownMenu({
 
   return (
     <div
-      className="absolute z-50 mt-2 w-full rounded-xl border border-border bg-background-secondary shadow-lg overflow-hidden backdrop-blur-xl"
+      className="absolute z-50 mt-2 w-full rounded-xl border border-white/10 bg-black/90 shadow-lg overflow-hidden backdrop-blur-xl"
       role="listbox"
     >
       {controller.filteredItems && (

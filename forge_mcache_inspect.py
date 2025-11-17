@@ -58,12 +58,18 @@ def _make_single_engineer_template():
 
 
 metasop_cfg = {"enable_step_cache": True}
-config: Any = types.SimpleNamespace(extended=types.SimpleNamespace(metasop=metasop_cfg), runtime=types.SimpleNamespace())
-orch = MetaSOPOrchestrator(sop_name="feature_delivery", config=cast("ForgeConfig | None", config))
+config: Any = types.SimpleNamespace(
+    extended=types.SimpleNamespace(metasop=metasop_cfg), runtime=types.SimpleNamespace()
+)
+orch = MetaSOPOrchestrator(
+    sop_name="feature_delivery", config=cast("ForgeConfig | None", config)
+)
 orch.template = _make_single_engineer_template()
 orch.settings.enabled = True
 orch.step_executor = DummyExecutor()
 logger = logging.getLogger(__name__)
+if orch.profiles is None:
+    orch.profiles = {}
 orch.profiles["engineer"] = RoleProfile(
     name="engineer",
     goal="Implement feature",

@@ -80,12 +80,16 @@ class HTTPClient(ABC):
     def handle_http_status_error(
         self,
         e: HTTPStatusError,
-    ) -> AuthenticationError | RateLimitError | ResourceNotFoundError | UnknownException:
+    ) -> (
+        AuthenticationError | RateLimitError | ResourceNotFoundError | UnknownException
+    ):
         """Handle HTTP status errors and convert them to appropriate exceptions."""
         if e.response.status_code == 401:
             return AuthenticationError(f"Invalid {self.provider} token")
         if e.response.status_code == 404:
-            return ResourceNotFoundError(f"Resource not found on {self.provider} API: {e}")
+            return ResourceNotFoundError(
+                f"Resource not found on {self.provider} API: {e}"
+            )
         if e.response.status_code == 429:
             logger.warning("Rate limit exceeded on %s API: %s", self.provider, e)
             return RateLimitError(f"{self.provider} API rate limit exceeded")
@@ -94,5 +98,7 @@ class HTTPClient(ABC):
 
     def handle_http_error(self, e: HTTPError) -> UnknownException:
         """Handle general HTTP errors."""
-        logger.warning("HTTP error on %s API: %s : %s", self.provider, type(e).__name__, e)
+        logger.warning(
+            "HTTP error on %s API: %s : %s", self.provider, type(e).__name__, e
+        )
         return UnknownException(f"HTTP error {type(e).__name__} : {e}")

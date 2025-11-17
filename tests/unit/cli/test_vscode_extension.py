@@ -9,21 +9,20 @@ from forge.cli import vscode_extension
 @pytest.fixture
 def mock_env_and_dependencies():
     """A fixture to mock all external dependencies and manage the environment."""
-    with mock.patch.dict(os.environ, {}, clear=True), mock.patch("pathlib.Path.home") as mock_home, mock.patch(
-        "pathlib.Path.exists"
-    ) as mock_exists, mock.patch("pathlib.Path.touch") as mock_touch, mock.patch(
-        "pathlib.Path.mkdir"
-    ) as mock_mkdir, mock.patch(
-        "subprocess.run"
-    ) as mock_subprocess, mock.patch(
-        "importlib.resources.as_file"
-    ) as mock_as_file, mock.patch(
-        "forge.cli.vscode_extension.download_latest_vsix_from_github"
-    ) as mock_download, mock.patch(
-        "builtins.print"
-    ) as mock_print, mock.patch(
-        "forge.cli.vscode_extension.logger.debug"
-    ) as mock_logger:
+    with (
+        mock.patch.dict(os.environ, {}, clear=True),
+        mock.patch("pathlib.Path.home") as mock_home,
+        mock.patch("pathlib.Path.exists") as mock_exists,
+        mock.patch("pathlib.Path.touch") as mock_touch,
+        mock.patch("pathlib.Path.mkdir") as mock_mkdir,
+        mock.patch("subprocess.run") as mock_subprocess,
+        mock.patch("importlib.resources.as_file") as mock_as_file,
+        mock.patch(
+            "forge.cli.vscode_extension.download_latest_vsix_from_github"
+        ) as mock_download,
+        mock.patch("builtins.print") as mock_print,
+        mock.patch("forge.cli.vscode_extension.logger.debug") as mock_logger,
+    ):
         temp_dir = pathlib.Path.cwd() / "temp_test_home"
         temp_dir.mkdir(exist_ok=True)
         mock_home.return_value = temp_dir
@@ -84,7 +83,9 @@ def test_extension_already_installed_detected(mock_env_and_dependencies):
     mock_env_and_dependencies["subprocess"].assert_called_with(
         ["code", "--list-extensions"], capture_output=True, text=True, check=False
     )
-    mock_env_and_dependencies["print"].assert_any_call("INFO: Forge VS Code extension is already installed.")
+    mock_env_and_dependencies["print"].assert_any_call(
+        "INFO: Forge VS Code extension is already installed."
+    )
     mock_env_and_dependencies["touch"].assert_called_once()
     mock_env_and_dependencies["download"].assert_not_called()
 
@@ -94,10 +95,15 @@ def test_extension_detection_in_middle_of_list(mock_env_and_dependencies):
     os.environ["TERM_PROGRAM"] = "vscode"
     mock_env_and_dependencies["exists"].return_value = False
     mock_env_and_dependencies["subprocess"].return_value = subprocess.CompletedProcess(
-        returncode=0, args=[], stdout="first.extension\nforge.Forge-vscode\nlast.extension", stderr=""
+        returncode=0,
+        args=[],
+        stdout="first.extension\nforge.Forge-vscode\nlast.extension",
+        stderr="",
     )
     vscode_extension.attempt_vscode_extension_install()
-    mock_env_and_dependencies["print"].assert_any_call("INFO: Forge VS Code extension is already installed.")
+    mock_env_and_dependencies["print"].assert_any_call(
+        "INFO: Forge VS Code extension is already installed."
+    )
     mock_env_and_dependencies["touch"].assert_called_once()
 
 
@@ -107,14 +113,19 @@ def test_extension_detection_partial_match_ignored(mock_env_and_dependencies):
     mock_env_and_dependencies["exists"].return_value = False
     mock_env_and_dependencies["subprocess"].side_effect = [
         subprocess.CompletedProcess(
-            returncode=0, args=[], stdout="other.Forge-vscode-fork\nsome.extension", stderr=""
+            returncode=0,
+            args=[],
+            stdout="other.Forge-vscode-fork\nsome.extension",
+            stderr="",
         ),
         subprocess.CompletedProcess(returncode=0, args=[], stdout="", stderr=""),
     ]
     mock_vsix_path = mock.MagicMock()
     mock_vsix_path.exists.return_value = True
     mock_vsix_path.__str__.return_value = "/fake/path/to/bundled.vsix"
-    mock_env_and_dependencies["as_file"].return_value.__enter__.return_value = mock_vsix_path
+    mock_env_and_dependencies[
+        "as_file"
+    ].return_value.__enter__.return_value = mock_vsix_path
     vscode_extension.attempt_vscode_extension_install()
     assert mock_env_and_dependencies["subprocess"].call_count == 2
     mock_env_and_dependencies["as_file"].assert_called_once()
@@ -126,13 +137,17 @@ def test_list_extensions_fails_continues_installation(mock_env_and_dependencies)
     os.environ["TERM_PROGRAM"] = "vscode"
     mock_env_and_dependencies["exists"].return_value = False
     mock_env_and_dependencies["subprocess"].side_effect = [
-        subprocess.CompletedProcess(returncode=1, args=[], stdout="", stderr="Command failed"),
+        subprocess.CompletedProcess(
+            returncode=1, args=[], stdout="", stderr="Command failed"
+        ),
         subprocess.CompletedProcess(returncode=0, args=[], stdout="", stderr=""),
     ]
     mock_vsix_path = mock.MagicMock()
     mock_vsix_path.exists.return_value = True
     mock_vsix_path.__str__.return_value = "/fake/path/to/bundled.vsix"
-    mock_env_and_dependencies["as_file"].return_value.__enter__.return_value = mock_vsix_path
+    mock_env_and_dependencies[
+        "as_file"
+    ].return_value.__enter__.return_value = mock_vsix_path
     vscode_extension.attempt_vscode_extension_install()
     assert mock_env_and_dependencies["subprocess"].call_count == 2
     mock_env_and_dependencies["as_file"].assert_called_once()
@@ -150,7 +165,9 @@ def test_list_extensions_exception_continues_installation(mock_env_and_dependenc
     mock_vsix_path = mock.MagicMock()
     mock_vsix_path.exists.return_value = True
     mock_vsix_path.__str__.return_value = "/fake/path/to/bundled.vsix"
-    mock_env_and_dependencies["as_file"].return_value.__enter__.return_value = mock_vsix_path
+    mock_env_and_dependencies[
+        "as_file"
+    ].return_value.__enter__.return_value = mock_vsix_path
     vscode_extension.attempt_vscode_extension_install()
     assert mock_env_and_dependencies["subprocess"].call_count == 2
     mock_env_and_dependencies["as_file"].assert_called_once()
@@ -164,7 +181,9 @@ def test_mark_installation_successful_os_error(mock_env_and_dependencies):
     mock_vsix_path = mock.MagicMock()
     mock_vsix_path.exists.return_value = True
     mock_vsix_path.__str__.return_value = "/fake/path/to/bundled.vsix"
-    mock_env_and_dependencies["as_file"].return_value.__enter__.return_value = mock_vsix_path
+    mock_env_and_dependencies[
+        "as_file"
+    ].return_value.__enter__.return_value = mock_vsix_path
     mock_env_and_dependencies["subprocess"].side_effect = [
         subprocess.CompletedProcess(returncode=0, args=[], stdout="", stderr=""),
         subprocess.CompletedProcess(returncode=0, args=[], stdout="", stderr=""),
@@ -202,7 +221,9 @@ def test_install_succeeds_from_bundled(mock_env_and_dependencies):
     mock_vsix_path = mock.MagicMock()
     mock_vsix_path.exists.return_value = True
     mock_vsix_path.__str__.return_value = "/fake/path/to/bundled.vsix"
-    mock_env_and_dependencies["as_file"].return_value.__enter__.return_value = mock_vsix_path
+    mock_env_and_dependencies[
+        "as_file"
+    ].return_value.__enter__.return_value = mock_vsix_path
     mock_env_and_dependencies["subprocess"].side_effect = [
         subprocess.CompletedProcess(returncode=0, args=[], stdout="", stderr=""),
         subprocess.CompletedProcess(returncode=0, args=[], stdout="", stderr=""),
@@ -219,7 +240,9 @@ def test_install_succeeds_from_bundled(mock_env_and_dependencies):
         text=True,
         check=False,
     )
-    mock_env_and_dependencies["print"].assert_any_call("INFO: Bundled VS Code extension installed successfully.")
+    mock_env_and_dependencies["print"].assert_any_call(
+        "INFO: Bundled VS Code extension installed successfully."
+    )
     mock_env_and_dependencies["touch"].assert_called_once()
     mock_env_and_dependencies["download"].assert_not_called()
 
@@ -234,7 +257,10 @@ def test_bundled_fails_falls_back_to_github(mock_env_and_dependencies):
         subprocess.CompletedProcess(returncode=0, args=[], stdout="", stderr=""),
         subprocess.CompletedProcess(returncode=0, args=[], stdout="", stderr=""),
     ]
-    with mock.patch("os.remove") as mock_os_remove, mock.patch("os.path.exists", return_value=True):
+    with (
+        mock.patch("os.remove") as mock_os_remove,
+        mock.patch("os.path.exists", return_value=True),
+    ):
         vscode_extension.attempt_vscode_extension_install()
         mock_env_and_dependencies["as_file"].assert_called_once()
         mock_env_and_dependencies["download"].assert_called_once()
@@ -455,7 +481,9 @@ def test_flag_file_touch_os_error_windsurf(mock_env_and_dependencies):
     )
 
 
-def test_bundled_vsix_installation_failure_fallback_to_marketplace(mock_env_and_dependencies):
+def test_bundled_vsix_installation_failure_fallback_to_marketplace(
+    mock_env_and_dependencies,
+):
     """Test bundled VSIX failure shows appropriate message."""
     os.environ["TERM_PROGRAM"] = "vscode"
     mock_env_and_dependencies["exists"].return_value = False
@@ -463,11 +491,18 @@ def test_bundled_vsix_installation_failure_fallback_to_marketplace(mock_env_and_
     mock_vsix_path = mock.MagicMock()
     mock_vsix_path.exists.return_value = True
     mock_vsix_path.__str__.return_value = "/mock/path/Forge-vscode-0.0.1.vsix"
-    mock_env_and_dependencies["as_file"].return_value.__enter__.return_value = mock_vsix_path
+    mock_env_and_dependencies[
+        "as_file"
+    ].return_value.__enter__.return_value = mock_vsix_path
     mock_env_and_dependencies["subprocess"].side_effect = [
         subprocess.CompletedProcess(returncode=0, args=[], stdout="", stderr=""),
         subprocess.CompletedProcess(
-            args=["code", "--install-extension", "/mock/path/Forge-vscode-0.0.1.vsix", "--force"],
+            args=[
+                "code",
+                "--install-extension",
+                "/mock/path/Forge-vscode-0.0.1.vsix",
+                "--force",
+            ],
             returncode=1,
             stdout="Installation failed",
             stderr="Error installing extension",
@@ -487,7 +522,9 @@ def test_bundled_vsix_not_found_fallback_to_marketplace(mock_env_and_dependencie
     mock_env_and_dependencies["download"].return_value = None
     mock_vsix_path = mock.MagicMock()
     mock_vsix_path.exists.return_value = False
-    mock_env_and_dependencies["as_file"].return_value.__enter__.return_value = mock_vsix_path
+    mock_env_and_dependencies[
+        "as_file"
+    ].return_value.__enter__.return_value = mock_vsix_path
     mock_env_and_dependencies["subprocess"].return_value = subprocess.CompletedProcess(
         returncode=0, args=[], stdout="", stderr=""
     )
@@ -498,12 +535,16 @@ def test_bundled_vsix_not_found_fallback_to_marketplace(mock_env_and_dependencie
     )
 
 
-def test_importlib_resources_exception_fallback_to_marketplace(mock_env_and_dependencies):
+def test_importlib_resources_exception_fallback_to_marketplace(
+    mock_env_and_dependencies,
+):
     """Test importlib.resources exception shows appropriate message."""
     os.environ["TERM_PROGRAM"] = "vscode"
     mock_env_and_dependencies["exists"].return_value = False
     mock_env_and_dependencies["download"].return_value = None
-    mock_env_and_dependencies["as_file"].side_effect = FileNotFoundError("Resource not found")
+    mock_env_and_dependencies["as_file"].side_effect = FileNotFoundError(
+        "Resource not found"
+    )
     mock_env_and_dependencies["subprocess"].return_value = subprocess.CompletedProcess(
         returncode=0, args=[], stdout="", stderr=""
     )
@@ -516,7 +557,9 @@ def test_importlib_resources_exception_fallback_to_marketplace(mock_env_and_depe
 
 def test_comprehensive_windsurf_detection_path_based(mock_env_and_dependencies):
     """Test Windsurf detection via PATH environment variable but no marketplace installation."""
-    os.environ["PATH"] = "/usr/local/bin:/Applications/Windsurf.app/Contents/Resources/app/bin:/usr/bin"
+    os.environ["PATH"] = (
+        "/usr/local/bin:/Applications/Windsurf.app/Contents/Resources/app/bin:/usr/bin"
+    )
     mock_env_and_dependencies["exists"].return_value = False
     mock_env_and_dependencies["download"].return_value = None
     mock_env_and_dependencies["as_file"].side_effect = FileNotFoundError
@@ -549,10 +592,14 @@ def test_comprehensive_windsurf_detection_env_value_based(mock_env_and_dependenc
     )
 
 
-def test_comprehensive_windsurf_detection_multiple_indicators(mock_env_and_dependencies):
+def test_comprehensive_windsurf_detection_multiple_indicators(
+    mock_env_and_dependencies,
+):
     """Test Windsurf detection with multiple environment indicators."""
     os.environ["__CFBundleIdentifier"] = "com.exafunction.windsurf"
-    os.environ["PATH"] = "/usr/local/bin:/Applications/Windsurf.app/Contents/Resources/app/bin:/usr/bin"
+    os.environ["PATH"] = (
+        "/usr/local/bin:/Applications/Windsurf.app/Contents/Resources/app/bin:/usr/bin"
+    )
     os.environ["WINDSURF_CONFIG"] = "/Users/test/.windsurf/config"
     mock_env_and_dependencies["exists"].return_value = False
     mock_env_and_dependencies["download"].return_value = None
@@ -586,11 +633,18 @@ def test_both_bundled_and_marketplace_fail(mock_env_and_dependencies):
     mock_vsix_path = mock.MagicMock()
     mock_vsix_path.exists.return_value = True
     mock_vsix_path.__str__.return_value = "/mock/path/Forge-vscode-0.0.1.vsix"
-    mock_env_and_dependencies["as_file"].return_value.__enter__.return_value = mock_vsix_path
+    mock_env_and_dependencies[
+        "as_file"
+    ].return_value.__enter__.return_value = mock_vsix_path
     mock_env_and_dependencies["subprocess"].side_effect = [
         subprocess.CompletedProcess(returncode=0, args=[], stdout="", stderr=""),
         subprocess.CompletedProcess(
-            args=["code", "--install-extension", "/mock/path/Forge-vscode-0.0.1.vsix", "--force"],
+            args=[
+                "code",
+                "--install-extension",
+                "/mock/path/Forge-vscode-0.0.1.vsix",
+                "--force",
+            ],
             returncode=1,
             stdout="Bundled installation failed",
             stderr="Error installing bundled extension",

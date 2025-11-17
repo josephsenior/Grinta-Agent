@@ -1,8 +1,11 @@
 import type { ForgeEvent } from "#/types/core/base";
+import type { ForgeAction, ForgeObservation } from "#/types/core";
 import {
   isUserMessage,
+  isAssistantMessage,
   isStreamingChunkAction,
   isForgeAction,
+  isForgeObservation,
 } from "#/types/core/guards";
 
 export interface MessageTurn {
@@ -12,20 +15,253 @@ export interface MessageTurn {
   endIndex: number;
 }
 
+type ActionSummaryHandler = (event: ForgeAction) => string | null;
+type ObservationSummaryHandler = (event: ForgeObservation) => string | null;
+
+const toRecord = (value: unknown): Record<string, unknown> | undefined =>
+  typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : undefined;
+
+const extractFilename = (path: string): string => {
+  if (!path) {
+    return "";
+  }
+  const parts = path.split("/");
+  return parts[parts.length - 1] || path;
+};
+
+const summarizeRunAction = (event: ForgeAction): string | null => {
+  const args = toRecord(event.args);
+  const command = typeof args?.command === "string" ? args.command.trim() : "";
+  if (!command) {
+    return "Command executed";
+  }
+  return command.length > 40 ? `${command.slice(0, 40)}...` : command;
+};
+
+const summarizeWriteOrEditAction = (
+  verb: "Created" | "Edited",
+  event: ForgeAction,
+): string | null => {
+  const args = toRecord(event.args);
+  const path =
+    (typeof args?.path === "string" && args.path) ||
+    (typeof args?.file_path === "string" && args.file_path) ||
+    "";
+  const filename = extractFilename(path);
+  if (!filename) {
+    return `${verb} file`;
+  }
+  return `${verb} ${filename}`;
+};
+
+const summarizeBrowseAction = (event: ForgeAction): string | null => {
+  const args = toRecord(event.args);
+  const url = typeof args?.url === "string" ? args.url : "";
+  return url ? `Opened ${url}` : "Browsed page";
+};
+
+const summarizeRunObservation = (event: ForgeObservation): string | null => {
+  const extras = toRecord(event.extras);
+  const eventRecord = toRecord(event);
+  const exitCodeFromExtras = extras?.exit_code;
+  const exitCodeFromEvent = eventRecord?.exit_code;
+
+  let exitCode: number | undefined;
+  if (typeof exitCodeFromExtras === "number") {
+    exitCode = exitCodeFromExtras;
+  } else if (typeof exitCodeFromEvent === "number") {
+    exitCode = exitCodeFromEvent;
+  }
+
+  if (exitCode === 0) {
+    return "Command succeeded";
+  }
+
+  if (typeof exitCode === "number") {
+    return `Command failed (exit ${exitCode})`;
+  }
+
+  return "Command finished";
+};
+
+const summarizeReadObservation = (event: ForgeObservation): string | null => {
+  const extras = toRecord(event.extras);
+  const path = typeof extras?.path === "string" ? extras.path : "";
+  const filename = extractFilename(path);
+  if (!filename) {
+    return "Read file";
+  }
+  return `Read ${filename}`;
+};
+
+const ACTION_SUMMARIZERS: Record<string, ActionSummaryHandler> = {
+  run: summarizeRunAction,
+  write: (event) => summarizeWriteOrEditAction("Created", event),
+  edit: (event) => summarizeWriteOrEditAction("Edited", event),
+  browse: summarizeBrowseAction,
+  finish: () => "Task completed",
+};
+
+const OBSERVATION_SUMMARIZERS: Record<string, ObservationSummaryHandler> = {
+  run: summarizeRunObservation,
+  read: summarizeReadObservation,
+  browse: () => "Page loaded",
+};
+
+const summarizeActionEvent = (event: ForgeAction): string | null => {
+  const actionKey = typeof event.action === "string" ? event.action : "";
+  const handler = ACTION_SUMMARIZERS[actionKey];
+  return handler ? handler(event) : null;
+};
+
+const summarizeObservationEvent = (event: ForgeObservation): string | null => {
+  const observationKey =
+    typeof event.observation === "string" ? event.observation : "";
+  const handler = OBSERVATION_SUMMARIZERS[observationKey];
+  return handler ? handler(event) : null;
+};
+
+const findLastAssistantMessage = (events: ForgeEvent[]): number => {
+  for (let i = events.length - 1; i >= 0; i -= 1) {
+    const candidate = events[i];
+    if (
+      isForgeAction(candidate) &&
+      candidate.source === "agent" &&
+      candidate.action === "message"
+    ) {
+      return i;
+    }
+  }
+  return -1;
+};
+
+const extractAccumulatedContent = (
+  streamingEvent: ForgeEvent,
+): string | null => {
+  if (!isStreamingChunkAction(streamingEvent)) {
+    return null;
+  }
+  const streamingRecord = toRecord(streamingEvent);
+  const streamingArgs = toRecord(streamingRecord?.args);
+  const accumulated = streamingArgs?.accumulated;
+  return typeof accumulated === "string" ? accumulated : null;
+};
+
+const mergeStreamingChunkIntoTurn = (
+  turn: MessageTurn,
+  streamingEvent: ForgeEvent,
+): MessageTurn => {
+  const lastAssistantIndex = findLastAssistantMessage(turn.events);
+  if (lastAssistantIndex === -1) {
+    return turn;
+  }
+
+  const lastAssistant = turn.events[lastAssistantIndex];
+  if (!isForgeAction(lastAssistant) || lastAssistant.action !== "message") {
+    return turn;
+  }
+
+  const accumulated = extractAccumulatedContent(streamingEvent);
+  if (!accumulated) {
+    return turn;
+  }
+
+  let updatedAssistant: ForgeAction = lastAssistant;
+
+  if (isUserMessage(lastAssistant)) {
+    updatedAssistant = {
+      ...lastAssistant,
+      args: {
+        ...lastAssistant.args,
+        content: accumulated,
+      },
+    };
+  } else if (isAssistantMessage(lastAssistant)) {
+    updatedAssistant = {
+      ...lastAssistant,
+      args: {
+        ...lastAssistant.args,
+        thought: accumulated,
+      },
+    };
+  } else {
+    return turn;
+  }
+
+  const updatedEvents = [...turn.events];
+  updatedEvents.splice(lastAssistantIndex, 1, updatedAssistant);
+
+  return { ...turn, events: updatedEvents };
+};
+
+const createAgentTurn = (event: ForgeEvent, index: number): MessageTurn => {
+  const turn: MessageTurn = {
+    type: "agent",
+    events: [event],
+    startIndex: index,
+    endIndex: index,
+  };
+
+  if (isStreamingChunkAction(event)) {
+    return mergeStreamingChunkIntoTurn(turn, event);
+  }
+
+  return turn;
+};
+
+const appendAgentEvent = ({
+  currentTurn,
+  event,
+  index,
+}: {
+  currentTurn: MessageTurn | null;
+  event: ForgeEvent;
+  index: number;
+}): MessageTurn => {
+  if (!currentTurn || currentTurn.type !== "agent") {
+    return createAgentTurn(event, index);
+  }
+
+  const updatedTurn: MessageTurn = {
+    ...currentTurn,
+    events: [...currentTurn.events, event],
+    endIndex: index,
+  };
+
+  if (isStreamingChunkAction(event)) {
+    return mergeStreamingChunkIntoTurn(updatedTurn, event);
+  }
+
+  return updatedTurn;
+};
+
+const pushUserTurn = (
+  turns: MessageTurn[],
+  event: ForgeEvent,
+  index: number,
+): void => {
+  turns.push({
+    type: "user",
+    events: [event],
+    startIndex: index,
+    endIndex: index,
+  });
+};
+
+const finalizeCurrentTurn = (
+  turns: MessageTurn[],
+  currentTurn: MessageTurn | null,
+): MessageTurn | null => {
+  if (currentTurn) {
+    turns.push(currentTurn);
+  }
+  return null;
+};
+
 /**
  * Groups consecutive messages into "turns" for bolt.new-style rendering
- *
- * A "turn" is:
- * - User message (single event)
- * - Agent response (multiple consecutive agent events grouped together)
- *
- * This creates the conversational flow where:
- * - User says something → one bubble
- * - Agent responds with multiple actions → ONE grouped visual unit
- *
- * Special handling for StreamingChunkAction:
- * - Multiple streaming chunks update THE SAME turn (not create new turns)
- * - This gives real-time token-by-token updates within one message
  */
 export function groupMessagesIntoTurns(messages: ForgeEvent[]): MessageTurn[] {
   const turns: MessageTurn[] = [];
@@ -64,129 +300,30 @@ export function getTurnStreamingContent(turn: MessageTurn): string | null {
   const streamingEvents = turn.events.filter((event) =>
     isStreamingChunkAction(event),
   );
-  if (streamingEvents.length === 0) return null;
+  if (streamingEvents.length === 0) {
+    return null;
+  }
 
   const lastStreaming = streamingEvents[streamingEvents.length - 1];
-  if (typeof lastStreaming === "object" && lastStreaming !== null) {
-    const ls = lastStreaming as unknown as Record<string, unknown>;
-    const args = ls.args as Record<string, unknown> | undefined;
-    return (args?.accumulated as string) || null;
-  }
-  return null;
+  const streamingRecord = toRecord(lastStreaming);
+  const args = toRecord(streamingRecord?.args);
+  const accumulated = args?.accumulated;
+  return typeof accumulated === "string" ? accumulated : null;
 }
 
-function finalizeCurrentTurn(
-  turns: MessageTurn[],
-  currentTurn: MessageTurn | null,
-) {
-  if (currentTurn) {
-    turns.push(currentTurn);
-  }
-  return null;
-}
-
-function pushUserTurn(turns: MessageTurn[], event: ForgeEvent, index: number) {
-  turns.push({
-    type: "user",
-    events: [event],
-    startIndex: index,
-    endIndex: index,
-  });
-}
-
-function appendAgentEvent({
-  currentTurn,
-  event,
-  index,
-}: {
-  currentTurn: MessageTurn | null;
-  event: ForgeEvent;
-  index: number;
-}) {
-  if (!currentTurn || currentTurn.type !== "agent") {
-    return createAgentTurn(event, index);
+/**
+ * Extracts a summary label from an event for compact display
+ */
+export function getEventSummary(event: ForgeEvent): string {
+  if (isForgeAction(event)) {
+    const summary = summarizeActionEvent(event);
+    return summary ?? event.action ?? "Event";
   }
 
-  currentTurn.events.push(event);
-  currentTurn.endIndex = index;
-
-  if (isStreamingChunkAction(event)) {
-    mergeStreamingChunkIntoTurn(currentTurn, event);
+  if (isForgeObservation(event)) {
+    const summary = summarizeObservationEvent(event);
+    return summary ?? event.observation ?? "Event";
   }
 
-  return currentTurn;
-}
-
-function createAgentTurn(event: ForgeEvent, index: number): MessageTurn {
-  const turn: MessageTurn = {
-    type: "agent",
-    events: [event],
-    startIndex: index,
-    endIndex: index,
-  };
-
-  if (isStreamingChunkAction(event)) {
-    mergeStreamingChunkIntoTurn(turn, event);
-  }
-
-  return turn;
-}
-
-function mergeStreamingChunkIntoTurn(
-  turn: MessageTurn,
-  streamingEvent: ForgeEvent,
-) {
-  const lastAssistantIndex = findLastAssistantMessage(turn.events);
-  if (lastAssistantIndex === -1) {
-    return;
-  }
-
-  const lastAssistant = turn.events[lastAssistantIndex];
-  if (!isForgeAction(lastAssistant) || lastAssistant.action !== "message") {
-    return;
-  }
-
-  const newArgs = mergeStreamingArgs(lastAssistant.args, streamingEvent);
-  try {
-    const laRec = lastAssistant as unknown as Record<string, unknown>;
-    laRec.args = newArgs;
-    turn.events.pop();
-  } catch {
-    // ignore assignment failures
-  }
-}
-
-function findLastAssistantMessage(events: ForgeEvent[]) {
-  for (let i = events.length - 1; i >= 0; i -= 1) {
-    const candidate = events[i];
-    if (
-      isForgeAction(candidate) &&
-      candidate.source === "agent" &&
-      candidate.action === "message"
-    ) {
-      return i;
-    }
-  }
-  return -1;
-}
-
-function mergeStreamingArgs(previousArgs: unknown, streamingEvent: ForgeEvent) {
-  const prevRecord = toRecord(previousArgs);
-  const streamingRecord = toRecord(streamingEvent as unknown);
-  const streamingArgs = streamingRecord?.args as
-    | Record<string, unknown>
-    | undefined;
-
-  return {
-    ...prevRecord,
-    content:
-      (streamingArgs?.accumulated as string) ||
-      (prevRecord?.content as string | undefined),
-  };
-}
-
-function toRecord(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === "object" && value !== null
-    ? (value as Record<string, unknown>)
-    : undefined;
+  return "Event";
 }

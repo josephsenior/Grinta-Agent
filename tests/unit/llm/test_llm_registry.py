@@ -79,12 +79,16 @@ def test_request_extraneous_completion(monkeypatch: pytest.MonkeyPatch) -> None:
     registry = LLMRegistry(DummyForgeConfig())
 
     response = registry.request_extraneous_completion(
-        service_id="temp", llm_config=registry.config.get_llm_config_from_agent("agent"), messages=[{"role": "user"}]
+        service_id="temp",
+        llm_config=registry.config.get_llm_config_from_agent("agent"),
+        messages=[{"role": "user"}],
     )
     assert response == "ok"
 
 
-def test_get_llm_from_agent_config_reuses_existing(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_llm_from_agent_config_reuses_existing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(llm_registry, "LLM", FakeLLM)
     registry = LLMRegistry(DummyForgeConfig())
     service_id = "svc"
@@ -115,7 +119,11 @@ def test_notify_handles_subscriber_errors(monkeypatch: pytest.MonkeyPatch) -> No
     def warning(message, *args, **kwargs):
         logger.records.append(message % args if args else message)
 
-    monkeypatch.setattr(llm_registry, "logger", SimpleNamespace(warning=warning, info=lambda *a, **k: None))
+    monkeypatch.setattr(
+        llm_registry,
+        "logger",
+        SimpleNamespace(warning=warning, info=lambda *a, **k: None),
+    )
 
     def bad_subscriber(event):
         raise RuntimeError("boom")

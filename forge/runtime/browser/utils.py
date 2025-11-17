@@ -7,13 +7,13 @@ import contextlib
 import datetime
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, assert_never
 
 from browsergym.utils.obs import flatten_axtree_to_str  # type: ignore[import-untyped]
 from PIL import Image
 
 from forge.core.exceptions import BrowserUnavailableException
-from forge.core.schema import ActionType
+from forge.core.schemas import ActionType
 from forge.events.action import BrowseInteractiveAction, BrowseURLAction
 from forge.events.observation import BrowserOutputObservation
 from forge.runtime.browser.base64 import png_base64_url_to_image
@@ -60,14 +60,14 @@ def get_axtree_str(
     filter_visible_only: bool = False,
 ) -> str:
     """Convert accessibility tree object to string representation.
-    
+
     Flattens the accessibility tree with specified properties and filters.
-    
+
     Args:
         axtree_object: Accessibility tree object from browser
         extra_element_properties: Additional properties to include
         filter_visible_only: Whether to filter to visible elements only
-        
+
     Returns:
         String representation of the accessibility tree
 
@@ -92,7 +92,8 @@ def get_agent_obs_text(obs: BrowserOutputObservation) -> str:
         text += "\n"
         if obs.error:
             text += f"================ BEGIN error message ===============\nThe following error occurred when executing the last action:\n{
-                obs.last_browser_action_error}\n================ END error message ===============\n"
+                obs.last_browser_action_error
+            }\n================ END error message ===============\n"
         else:
             text += "[Action executed successfully.]\n"
         try:
@@ -112,7 +113,8 @@ def get_agent_obs_text(obs: BrowserOutputObservation) -> str:
         text = f"[Current URL: {obs.url}]\n"
         if obs.error:
             text += f"================ BEGIN error message ===============\nThe following error occurred when trying to visit the URL:\n{
-                obs.last_browser_action_error}\n================ END error message ===============\n"
+                obs.last_browser_action_error
+            }\n================ END error message ===============\n"
         text += "============== BEGIN webpage content ==============\n"
         text += obs.content
         text += "\n============== END webpage content ==============\n"
@@ -156,7 +158,9 @@ async def browse(
         return _create_error_observation(e, asked_url, action)
 
 
-def _prepare_browser_action(action: BrowseURLAction | BrowseInteractiveAction) -> tuple[str, str]:
+def _prepare_browser_action(
+    action: BrowseURLAction | BrowseInteractiveAction,
+) -> tuple[str, str]:
     """Prepare the browser action string based on action type.
 
     Returns: (action_string, asked_url)
@@ -169,11 +173,12 @@ def _prepare_browser_action(action: BrowseURLAction | BrowseInteractiveAction) -
         return (action_str, asked_url)
     if isinstance(action, BrowseInteractiveAction):
         return (action.browser_actions, "")
-    msg = f"Invalid action type: {action.action}"
-    raise ValueError(msg)
+    assert_never(action)
 
 
-async def _save_screenshot_if_needed(obs: dict[str, Any], workspace_dir: str | None) -> str | None:
+async def _save_screenshot_if_needed(
+    obs: dict[str, Any], workspace_dir: str | None
+) -> str | None:
     """Save screenshot to workspace if available.
 
     Returns: Path to saved screenshot or None.

@@ -17,11 +17,15 @@ ORGINAL = "from flask import Flask\napp = Flask(__name__)\n\n@app.route('/')\nde
 def test_edit_from_scratch(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
-        action = FileEditAction(content=ORGINAL, start=-1, path=os.path.join("/workspace", "app.py"))
+        action = FileEditAction(
+            content=ORGINAL, start=-1, path=os.path.join("/workspace", "app.py")
+        )
         logger.info(action, extra={"msg_type": "ACTION"})
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
-        assert isinstance(obs, FileEditObservation), "The observation should be a FileEditObservation."
+        assert isinstance(obs, FileEditObservation), (
+            "The observation should be a FileEditObservation."
+        )
         action = FileReadAction(path=os.path.join("/workspace", "app.py"))
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
@@ -37,11 +41,15 @@ EDIT = "# above stays the same\n@app.route('/')\ndef index():\n    numbers = lis
 def test_edit(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
-        action = FileEditAction(content=ORGINAL, path=os.path.join("/workspace", "app.py"))
+        action = FileEditAction(
+            content=ORGINAL, path=os.path.join("/workspace", "app.py")
+        )
         logger.info(action, extra={"msg_type": "ACTION"})
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
-        assert isinstance(obs, FileEditObservation), "The observation should be a FileEditObservation."
+        assert isinstance(obs, FileEditObservation), (
+            "The observation should be a FileEditObservation."
+        )
         action = FileReadAction(path=os.path.join("/workspace", "app.py"))
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
@@ -65,16 +73,25 @@ EDIT_LONG = "\nThis is line 100 + 10\nThis is line 101 + 10\n"
 def test_edit_long_file(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
-        action = FileEditAction(content=ORIGINAL_LONG, path=os.path.join("/workspace", "app.py"), start=-1)
+        action = FileEditAction(
+            content=ORIGINAL_LONG, path=os.path.join("/workspace", "app.py"), start=-1
+        )
         logger.info(action, extra={"msg_type": "ACTION"})
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
-        assert isinstance(obs, FileEditObservation), "The observation should be a FileEditObservation."
+        assert isinstance(obs, FileEditObservation), (
+            "The observation should be a FileEditObservation."
+        )
         action = FileReadAction(path=os.path.join("/workspace", "app.py"))
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert obs.content.strip() == ORIGINAL_LONG.strip()
-        action = FileEditAction(content=EDIT_LONG, path=os.path.join("/workspace", "app.py"), start=100, end=200)
+        action = FileEditAction(
+            content=EDIT_LONG,
+            path=os.path.join("/workspace", "app.py"),
+            start=100,
+            end=200,
+        )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
         assert (
@@ -113,7 +130,11 @@ def test_edit_obs_replace():
     )
     diff = get_diff(ORIGINAL_LONG, _new_content, "/workspace/app.py")
     obs = FileEditObservation(
-        content=diff, path="/workspace/app.py", prev_exist=True, old_content=ORIGINAL_LONG, new_content=_new_content
+        content=diff,
+        path="/workspace/app.py",
+        prev_exist=True,
+        old_content=ORIGINAL_LONG,
+        new_content=_new_content,
     )
     print(obs)
     assert (
@@ -131,7 +152,11 @@ def test_edit_obs_replace_with_empty_line():
     )
     diff = get_diff(ORIGINAL_LONG, _new_content, "/workspace/app.py")
     obs = FileEditObservation(
-        content=diff, path="/workspace/app.py", prev_exist=True, old_content=ORIGINAL_LONG, new_content=_new_content
+        content=diff,
+        path="/workspace/app.py",
+        prev_exist=True,
+        old_content=ORIGINAL_LONG,
+        new_content=_new_content,
     )
     print(obs)
     assert (
@@ -150,7 +175,11 @@ def test_edit_obs_multiple_edits():
     )
     diff = get_diff(ORIGINAL_LONG, _new_content, "/workspace/app.py")
     obs = FileEditObservation(
-        content=diff, path="/workspace/app.py", prev_exist=True, old_content=ORIGINAL_LONG, new_content=_new_content
+        content=diff,
+        path="/workspace/app.py",
+        prev_exist=True,
+        old_content=ORIGINAL_LONG,
+        new_content=_new_content,
     )
     assert (
         str(obs).strip()
@@ -168,7 +197,11 @@ def test_edit_visualize_failed_edit():
     )
     diff = get_diff(ORIGINAL_LONG, _new_content, "/workspace/app.py")
     obs = FileEditObservation(
-        content=diff, path="/workspace/app.py", prev_exist=True, old_content=ORIGINAL_LONG, new_content=_new_content
+        content=diff,
+        path="/workspace/app.py",
+        prev_exist=True,
+        old_content=ORIGINAL_LONG,
+        new_content=_new_content,
     )
     assert (
         obs.visualize_diff(change_applied=False).strip()

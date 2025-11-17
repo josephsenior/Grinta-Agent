@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\runtime\plugins\agent_skills\utils\config.py
+# hypothesis_version: 6.147.0
+
+['500', 'MAX_TOKEN', 'OPENAI_API_KEY', 'OPENAI_BASE_URL', 'OPENAI_MODEL', 'gpt-4o']

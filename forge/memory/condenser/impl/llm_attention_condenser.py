@@ -29,12 +29,12 @@ class LLMAttentionCondenser(RollingCondenser):
 
     def __init__(self, llm: LLM, max_size: int = 100, keep_first: int = 1) -> None:
         """Initialize the LLM-based attention condenser for intelligent event filtering.
-        
+
         This condenser uses an LLM with structured output (JSON schema) to intelligently rank events
         by importance and select which ones to keep when condensing memory. It preserves a fixed
         number of initial events (keep_first) and fills the remaining space with LLM-ranked events,
         backfilling with recent events if needed.
-        
+
         Args:
             llm: Language model instance with response_schema support capability for structured output.
                  Will raise ValueError if model doesn't support JSON schema formatting.
@@ -42,21 +42,21 @@ class LLMAttentionCondenser(RollingCondenser):
                      Target condensation reduces this to max_size // 2 events.
             keep_first: Number of initial events to always preserve without LLM evaluation.
                        Must be >= 0 and < max_size // 2 to leave room for ranked events.
-        
+
         Raises:
             ValueError: If keep_first >= max_size // 2, keep_first < 0, max_size < 1,
                        or if the LLM model doesn't support response_schema capability.
-        
+
         Side Effects:
             - Validates LLM capabilities via litellm.supports_response_schema()
             - Initializes parent RollingCondenser to set up event management infrastructure
-        
+
         Notes:
             - The condenser splits max_size into two halves: head preservation and ranked selection
             - Events are ranked by importance using prompt-based LLM evaluation
             - Recent events are used as backfill if ranked events don't fill target_size
             - Examples: max_size=100, keep_first=1 → keep 1 first event + ~49 LLM-ranked/recent events
-        
+
         Example:
             >>> from forge.llm.llm import LLM
             >>> llm = get_llm_with_schema_support()  # doctest: +SKIP
@@ -102,12 +102,22 @@ class LLMAttentionCondenser(RollingCondenser):
         events_from_tail = target_size - len(head_event_ids)
 
         response_ids = self._get_llm_ranked_ids(view)
-        response_ids = self._filter_head_events(response_ids, head_event_ids, events_from_tail)
-        response_ids = self._backfill_recent_events(view, response_ids, events_from_tail)
+        response_ids = self._filter_head_events(
+            response_ids, head_event_ids, events_from_tail
+        )
+        response_ids = self._backfill_recent_events(
+            view, response_ids, events_from_tail
+        )
 
-        forgotten_ids = [event.id for event in view if event.id not in response_ids and event.id not in head_event_ids]
+        forgotten_ids = [
+            event.id
+            for event in view
+            if event.id not in response_ids and event.id not in head_event_ids
+        ]
 
-        return Condensation(action=CondensationAction(forgotten_event_ids=forgotten_ids))
+        return Condensation(
+            action=CondensationAction(forgotten_event_ids=forgotten_ids)
+        )
 
     def _get_llm_ranked_ids(self, view: View) -> list:
         """Get event IDs ranked by LLM importance.
@@ -123,11 +133,18 @@ class LLMAttentionCondenser(RollingCondenser):
             "You will be given a list of actions, observations, and thoughts from a coding agent.\n"
             "        Each item in the list has an identifier. Please sort the identifiers in order of how important the\n"
             "        contents of the item are for the next step of the coding agent's task, from most important to least\n"
-            "        important.")
+            "        important."
+        )
 
         messages = [
             {"content": message, "role": "user"},
-            *[{"content": f"<ID>{e.id}</ID>\n<CONTENT>{e.message}</CONTENT>", "role": "user"} for e in view],
+            *[
+                {
+                    "content": f"<ID>{e.id}</ID>\n<CONTENT>{e.message}</CONTENT>",
+                    "role": "user",
+                }
+                for e in view
+            ],
         ]
 
         response = self.llm.completion(
@@ -142,9 +159,13 @@ class LLMAttentionCondenser(RollingCondenser):
         )
 
         self.add_metadata("metrics", self.llm.metrics.get())
-        return ImportantEventSelection.model_validate_json(response.choices[0].message.content).ids
+        return ImportantEventSelection.model_validate_json(
+            response.choices[0].message.content
+        ).ids
 
-    def _filter_head_events(self, response_ids: list, head_event_ids: list, events_from_tail: int) -> list:
+    def _filter_head_events(
+        self, response_ids: list, head_event_ids: list, events_from_tail: int
+    ) -> list:
         """Filter out head events and limit to tail size.
 
         Args:
@@ -156,9 +177,13 @@ class LLMAttentionCondenser(RollingCondenser):
             Filtered list of IDs
 
         """
-        return [rid for rid in response_ids if rid not in head_event_ids][:events_from_tail]
+        return [rid for rid in response_ids if rid not in head_event_ids][
+            :events_from_tail
+        ]
 
-    def _backfill_recent_events(self, view: View, response_ids: list, events_from_tail: int) -> list:
+    def _backfill_recent_events(
+        self, view: View, response_ids: list, events_from_tail: int
+    ) -> list:
         """Backfill with recent events if needed.
 
         Args:
@@ -182,26 +207,30 @@ class LLMAttentionCondenser(RollingCondenser):
         return len(view) > self.max_size
 
     @classmethod
-    def from_config(cls, config: "LLMAttentionCondenserConfig", llm_registry: "LLMRegistry") -> "LLMAttentionCondenser":
+    def from_config(
+        cls, config: "LLMAttentionCondenserConfig", llm_registry: "LLMRegistry"
+    ) -> "LLMAttentionCondenser":
         """Create an attention condenser using the registry-provided LLM."""
         llm_config = config.llm_config.model_copy()
         llm_config.caching_prompt = False
         llm = llm_registry.get_llm("condenser", llm_config)
-        return LLMAttentionCondenser(llm=llm, max_size=config.max_size, keep_first=config.keep_first)
+        return LLMAttentionCondenser(
+            llm=llm, max_size=config.max_size, keep_first=config.keep_first
+        )
 
 
 # Lazy registration to avoid circular imports
 def _register_config():
     """Register LLMAttentionCondenserConfig with the LLMAttentionCondenser factory.
-    
+
     Defers import of LLMAttentionCondenserConfig to avoid circular dependency between
     condenser implementations and their configuration classes. Called at module load time
     to enable from_config() factory method to instantiate condensers from config objects.
-    
+
     Side Effects:
         - Imports LLMAttentionCondenserConfig from forge.core.config.condenser_config
         - Registers config class with LLMAttentionCondenser.register_config() factory
-    
+
     Notes:
         - Must be called at module level after LLMAttentionCondenser class definition
         - Pattern reused across all condenser implementations (llm_attention, llm_summarizing, etc.)
@@ -209,6 +238,8 @@ def _register_config():
 
     """
     from forge.core.config.condenser_config import LLMAttentionCondenserConfig
+
     LLMAttentionCondenser.register_config(LLMAttentionCondenserConfig)
+
 
 _register_config()

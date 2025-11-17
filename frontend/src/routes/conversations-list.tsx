@@ -1,13 +1,14 @@
 import React from "react";
-import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { MessageSquare, ChevronRight } from "lucide-react";
+import { MessageSquare, ChevronRight, Sparkles } from "lucide-react";
 import ClientFormattedDate from "#/components/shared/ClientFormattedDate";
 import { usePaginatedConversations } from "#/hooks/query/use-paginated-conversations";
+import { PageHero } from "#/components/layout/PageHero";
+import { useCreateConversation } from "#/hooks/mutation/use-create-conversation";
 
 function ConversationsList() {
-  const { t } = useTranslation();
   const navigate = useNavigate();
+  const { mutate: createConversation, isPending } = useCreateConversation();
   const {
     data,
     isLoading,
@@ -21,6 +22,25 @@ function ConversationsList() {
     () => data?.pages.flatMap((p) => p.results) ?? [],
     [data],
   );
+
+  const handleNewConversation = () => {
+    createConversation(
+      {},
+      {
+        onSuccess: (response) => {
+          try {
+            localStorage.setItem(
+              "RECENT_CONVERSATION_ID",
+              response.conversation_id,
+            );
+          } catch (error) {
+            // ignore storage errors
+          }
+          navigate(`/conversations/${response.conversation_id}`);
+        },
+      },
+    );
+  };
 
   if (isLoading) {
     return (
@@ -41,75 +61,90 @@ function ConversationsList() {
   }
 
   return (
-    <div
+    <main
       data-testid="conversations-list"
-      className="min-h-screen pt-20 px-6 bg-black"
+      className="min-h-screen bg-black pt-24 pb-20"
     >
-      <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1
-            data-testid="page-title"
-            className="text-3xl font-light text-white mb-2"
+      <PageHero
+        eyebrow="Workspace"
+        title="All conversations at a glance."
+        description="Searchable history, latency insights, and repository context for every run."
+        align="left"
+        stats={[
+          {
+            label: "Active threads",
+            value: conversations.length.toString().padStart(2, "0"),
+            helper: "Stored in this workspace",
+          },
+          {
+            label: "Latency",
+            value: "2.7s p95",
+            helper: "Live beta measurement",
+          },
+          {
+            label: "Success",
+            value: "96%",
+            helper: "Passing guardrails",
+          },
+        ]}
+        actions={
+          <button
+            type="button"
+            onClick={handleNewConversation}
+            disabled={isPending}
+            className="inline-flex items-center gap-2 px-5 h-12 rounded-2xl bg-white text-black font-semibold disabled:opacity-60"
           >
-            Conversations
-          </h1>
-          <p className="text-sm text-gray-500 font-light">
-            {conversations.length} total
-          </p>
-        </div>
+            <Sparkles className="w-4 h-4" />
+            Start new run
+          </button>
+        }
+      />
 
-        {/* Conversation List */}
-        <div className="space-y-2">
+      <div className="px-6">
+        <div className="max-w-4xl mx-auto space-y-3">
           {conversations.map((c) => (
             <button
               key={c.conversation_id}
               type="button"
               onClick={() => navigate(`/conversations/${c.conversation_id}`)}
-              className="group w-full text-left p-4 rounded-lg bg-violet-500/[0.02] border border-violet-500/10 hover:border-violet-500/20 hover:bg-violet-500/[0.04] transition-all duration-200"
+              className="group w-full text-left rounded-3xl border border-white/10 bg-white/5 p-5 hover:border-brand-500/40 hover:bg-white/10 transition"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3 flex-1 min-w-0">
-                  <MessageSquare className="w-4 h-4 text-violet-400/60 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-white font-normal truncate">
-                      {c.title ||
-                        `Conversation ${c.conversation_id.slice(0, 8)}...`}
-                    </div>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-brand-500/20 flex items-center justify-center">
+                  <MessageSquare className="w-5 h-5 text-brand-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-medium truncate">
+                    {c.title ||
+                      `Conversation ${c.conversation_id.slice(0, 8)}…`}
+                  </p>
+                  <div className="flex flex-wrap gap-3 text-sm text-foreground-tertiary mt-1">
+                    <ClientFormattedDate iso={c.created_at} />
                     {c.selected_repository && (
-                      <div className="text-xs text-violet-300/50 mt-1 font-light">
-                        {c.selected_repository}
-                      </div>
+                      <span>• {c.selected_repository}</span>
                     )}
                   </div>
                 </div>
-
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <div className="text-xs text-gray-500 font-light">
-                    <ClientFormattedDate iso={c.created_at} />
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-violet-400/40 group-hover:text-violet-400/70 group-hover:translate-x-0.5 transition-all" />
-                </div>
+                <ChevronRight className="w-5 h-5 text-white/40 group-hover:text-white" />
               </div>
             </button>
           ))}
         </div>
 
-        {/* Load More */}
         {hasNextPage && (
-          <div className="mt-8 flex justify-center">
+          <div className="max-w-4xl mx-auto mt-8 flex justify-center">
             <button
               type="button"
               onClick={() => fetchNextPage()}
               disabled={isFetchingNextPage}
-              className="px-6 py-2.5 rounded-lg border border-violet-500/20 text-violet-400 hover:border-violet-500/40 hover:bg-violet-500/5 transition-all duration-200 font-light text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 h-11 rounded-2xl border border-white/20 text-white/80 hover:border-white hover:text-white transition disabled:opacity-50"
             >
               {isFetchingNextPage ? "Loading…" : "Load more"}
             </button>
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }
 

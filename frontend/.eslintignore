@@ -8,3 +8,4 @@ src/routes/+types/
 .*/declaration.d.ts
 src/i18n/declaration.d.ts
 src/routes/+types/**
+src/routes/changes-tab.backup.tsx

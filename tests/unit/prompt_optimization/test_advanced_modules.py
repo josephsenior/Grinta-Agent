@@ -41,7 +41,11 @@ from forge.prompt_optimization.advanced.multi_objective import (
     ObjectiveWeight,
     PERFORMANCE_FOCUSED_STRATEGY,
 )
-from forge.prompt_optimization.models import PromptCategory, PromptMetrics, PromptVariant
+from forge.prompt_optimization.models import (
+    PromptCategory,
+    PromptMetrics,
+    PromptVariant,
+)
 from forge.prompt_optimization.optimizer import PromptOptimizer
 from forge.prompt_optimization.registry import PromptRegistry
 from forge.prompt_optimization.tracker import PerformanceTracker
@@ -177,15 +181,28 @@ def test_context_aware_adaptation_and_insights() -> None:
     sample_strategy = ContextualStrategy(
         name="test_strategy",
         description="A synthetic strategy for tests",
-        applicable_contexts=[(TaskType.REASONING, Domain.GENERAL, ExecutionContext.DEVELOPMENT)],
-        optimization_weights={"performance": 0.3, "efficiency": 0.3, "reliability": 0.4},
+        applicable_contexts=[
+            (TaskType.REASONING, Domain.GENERAL, ExecutionContext.DEVELOPMENT)
+        ],
+        optimization_weights={
+            "performance": 0.3,
+            "efficiency": 0.3,
+            "reliability": 0.4,
+        },
         prompt_modifications={},
-        performance_expectations={"min_success_rate": 0.8, "max_execution_time": 5.0, "max_error_rate": 0.1},
+        performance_expectations={
+            "min_success_rate": 0.8,
+            "max_execution_time": 5.0,
+            "max_error_rate": 0.1,
+        },
         adaptation_rules=[
             {"condition": "success_rate < 0.9", "action": "increase_technical_depth"},
             {"condition": "execution_time > 2", "action": "simplify_approach"},
             {"condition": "error_rate > 0.05", "action": "add_validation"},
-            {"condition": "innovation_score < 0.5", "action": "increase_creativity_prompts"},
+            {
+                "condition": "innovation_score < 0.5",
+                "action": "increase_creativity_prompts",
+            },
             {"condition": "execution_time > 1", "action": "optimize_for_speed"},
             {"condition": "unsupported", "action": "no_op"},
         ],
@@ -214,7 +231,10 @@ def test_context_aware_adaptation_and_insights() -> None:
     assert adapted.name.endswith("_adapted")
     assert adapted.prompt_modifications["add_technical_depth"] is True
     assert adapted.prompt_modifications["add_validation"] is True
-    assert adapted.optimization_weights["efficiency"] > sample_strategy.optimization_weights["efficiency"]
+    assert (
+        adapted.optimization_weights["efficiency"]
+        > sample_strategy.optimization_weights["efficiency"]
+    )
 
     optimizer.context_history.append(
         {
@@ -264,7 +284,9 @@ def test_context_aware_detection_variations() -> None:
     optimizer = ContextAwareOptimizer()
 
     # Domain detection via content keywords
-    domain = optimizer._detect_domain({}, "We should use pandas and numpy for data analysis in python.")
+    domain = optimizer._detect_domain(
+        {}, "We should use pandas and numpy for data analysis in python."
+    )
     assert domain == Domain.DATA_SCIENCE
 
     # Invalid metadata falls back to general
@@ -272,9 +294,18 @@ def test_context_aware_detection_variations() -> None:
     assert domain_fallback == Domain.GENERAL
 
     # Execution context detection variations
-    assert optimizer._detect_execution_context({"name": "debug-environment"}) == ExecutionContext.DEBUG
-    assert optimizer._detect_execution_context({"name": "prod env"}) == ExecutionContext.PRODUCTION
-    assert optimizer._detect_execution_context({"name": "Staging Area"}) == ExecutionContext.STAGING
+    assert (
+        optimizer._detect_execution_context({"name": "debug-environment"})
+        == ExecutionContext.DEBUG
+    )
+    assert (
+        optimizer._detect_execution_context({"name": "prod env"})
+        == ExecutionContext.PRODUCTION
+    )
+    assert (
+        optimizer._detect_execution_context({"name": "Staging Area"})
+        == ExecutionContext.STAGING
+    )
 
     # Complexity levels
     high_complexity = optimizer._analyze_complexity("complex task " * 200)
@@ -314,10 +345,20 @@ def test_context_aware_detection_variations() -> None:
     optimizer.context_strategies["custom_match"] = ContextualStrategy(
         name="custom_match",
         description="Custom strategy",
-        applicable_contexts=[(TaskType.REASONING, Domain.SOFTWARE_DEVELOPMENT, ExecutionContext.PRODUCTION)],
+        applicable_contexts=[
+            (
+                TaskType.REASONING,
+                Domain.SOFTWARE_DEVELOPMENT,
+                ExecutionContext.PRODUCTION,
+            )
+        ],
         optimization_weights={"performance": 0.5},
         prompt_modifications={},
-        performance_expectations={"min_success_rate": 0.6, "max_execution_time": 3.0, "max_error_rate": 0.1},
+        performance_expectations={
+            "min_success_rate": 0.6,
+            "max_execution_time": 3.0,
+            "max_error_rate": 0.1,
+        },
         adaptation_rules=[],
     )
     selected = optimizer.select_strategy(context)
@@ -340,7 +381,13 @@ def test_multi_objective_scoring_and_pareto(monkeypatch: pytest.MonkeyPatch) -> 
         category=PromptCategory.CUSTOM,
     )
 
-    metrics = _make_metrics(success_rate=0.85, execution_time=1.5, error_rate=0.05, token_cost=20.0, sample_count=50)
+    metrics = _make_metrics(
+        success_rate=0.85,
+        execution_time=1.5,
+        error_rate=0.05,
+        token_cost=20.0,
+        sample_count=50,
+    )
     composite, objective_scores = optimizer.calculate_composite_score(variant, metrics)
     assert 0.0 < composite <= 1.0
     assert "performance" in objective_scores
@@ -355,17 +402,29 @@ def test_multi_objective_scoring_and_pareto(monkeypatch: pytest.MonkeyPatch) -> 
     assert added is True
 
     # Exploration vs exploitation
-    other_variant = PromptVariant(content="Stable baseline", metadata={}, category=PromptCategory.CUSTOM)
-    other_metrics = _make_metrics(success_rate=0.7, execution_time=2.5, error_rate=0.1, token_cost=30.0, sample_count=40)
+    other_variant = PromptVariant(
+        content="Stable baseline", metadata={}, category=PromptCategory.CUSTOM
+    )
+    other_metrics = _make_metrics(
+        success_rate=0.7,
+        execution_time=2.5,
+        error_rate=0.1,
+        token_cost=30.0,
+        sample_count=40,
+    )
     metric_map = {
         variant.id: metrics,
         other_variant.id: other_metrics,
     }
 
-    selected_explore = optimizer.select_exploration_variant([variant, other_variant], metric_map)
+    selected_explore = optimizer.select_exploration_variant(
+        [variant, other_variant], metric_map
+    )
     assert selected_explore.id in {variant.id, other_variant.id}
 
-    selected_exploit = optimizer.select_variant_for_exploitation([variant, other_variant], metric_map)
+    selected_exploit = optimizer.select_variant_for_exploitation(
+        [variant, other_variant], metric_map
+    )
     assert selected_exploit.id in {variant.id, other_variant.id}
 
     insights = optimizer.get_optimization_insights()
@@ -381,7 +440,13 @@ def test_multi_objective_internal_behaviour() -> None:
         metadata={"is_evolved": True, "strategy": "expansion"},
         category=PromptCategory.CUSTOM,
     )
-    metrics = _make_metrics(success_rate=0.4, execution_time=40.0, error_rate=0.4, token_cost=200.0, sample_count=20)
+    metrics = _make_metrics(
+        success_rate=0.4,
+        execution_time=40.0,
+        error_rate=0.4,
+        token_cost=200.0,
+        sample_count=20,
+    )
 
     innovation = optimizer._calculate_innovation_score(variant, {})
     assert innovation > 0.0
@@ -424,15 +489,33 @@ def test_multi_objective_internal_behaviour() -> None:
 
 
 def test_multi_objective_weight_and_dominance_logic() -> None:
-    weight = ObjectiveWeight(OptimizationObjective.PERFORMANCE, 0.4, min_value=1.0, max_value=1.0)
+    weight = ObjectiveWeight(
+        OptimizationObjective.PERFORMANCE, 0.4, min_value=1.0, max_value=1.0
+    )
     assert weight.normalize_value(5.0) == 0.5
 
     optimizer = MultiObjectiveOptimizer(BALANCED_STRATEGY)
-    variant_a = PromptVariant(content="Variant A creative innovative", category=PromptCategory.CUSTOM)
-    variant_b = PromptVariant(content="Variant B efficient reliable", category=PromptCategory.CUSTOM)
+    variant_a = PromptVariant(
+        content="Variant A creative innovative", category=PromptCategory.CUSTOM
+    )
+    variant_b = PromptVariant(
+        content="Variant B efficient reliable", category=PromptCategory.CUSTOM
+    )
 
-    metrics_a = _make_metrics(success_rate=0.6, execution_time=3.0, error_rate=0.2, token_cost=150.0, sample_count=30)
-    metrics_b = _make_metrics(success_rate=0.9, execution_time=1.0, error_rate=0.05, token_cost=50.0, sample_count=40)
+    metrics_a = _make_metrics(
+        success_rate=0.6,
+        execution_time=3.0,
+        error_rate=0.2,
+        token_cost=150.0,
+        sample_count=30,
+    )
+    metrics_b = _make_metrics(
+        success_rate=0.9,
+        execution_time=1.0,
+        error_rate=0.05,
+        token_cost=50.0,
+        sample_count=40,
+    )
 
     scores_a = optimizer.calculate_composite_score(variant_a, metrics_a)[1]
     scores_b = optimizer.calculate_composite_score(variant_b, metrics_b)[1]
@@ -442,7 +525,10 @@ def test_multi_objective_weight_and_dominance_logic() -> None:
     assert optimizer._dominates(scores_b, scores_a) is True
 
     # Shorten history to trigger slice logic
-    optimizer.performance_history = [{"metrics": {"success_rate": 0.8}, "objective_scores": scores_a} for _ in range(120)]
+    optimizer.performance_history = [
+        {"metrics": {"success_rate": 0.8}, "objective_scores": scores_a}
+        for _ in range(120)
+    ]
     optimizer.record_performance(variant_a, metrics_a, scores_a)
 
 
@@ -483,9 +569,15 @@ def test_hierarchical_optimizer_end_to_end(monkeypatch: pytest.MonkeyPatch) -> N
     # Deterministic optimization decision
     monkeypatch.setattr("random.random", lambda: 0.0)
 
-    optimizer.initialize_level_optimizer(OptimizationLevel.SYSTEM, _DummyLevelOptimizer("increase", 0.6))
-    optimizer.initialize_level_optimizer(OptimizationLevel.ROLE, _DummyLevelOptimizer("increase", 0.65))
-    optimizer.initialize_level_optimizer(OptimizationLevel.TOOL, _DummyLevelOptimizer("decrease_cost", 0.55))
+    optimizer.initialize_level_optimizer(
+        OptimizationLevel.SYSTEM, _DummyLevelOptimizer("increase", 0.6)
+    )
+    optimizer.initialize_level_optimizer(
+        OptimizationLevel.ROLE, _DummyLevelOptimizer("increase", 0.65)
+    )
+    optimizer.initialize_level_optimizer(
+        OptimizationLevel.TOOL, _DummyLevelOptimizer("decrease_cost", 0.55)
+    )
 
     request = {
         "context": {"user": "tester"},
@@ -499,7 +591,11 @@ def test_hierarchical_optimizer_end_to_end(monkeypatch: pytest.MonkeyPatch) -> N
 
     results = optimizer.optimize_hierarchically(request)
     assert results
-    for level in (OptimizationLevel.SYSTEM, OptimizationLevel.ROLE, OptimizationLevel.TOOL):
+    for level in (
+        OptimizationLevel.SYSTEM,
+        OptimizationLevel.ROLE,
+        OptimizationLevel.TOOL,
+    ):
         assert level in results
         assert "global_coordination_score" in results[level]
 
@@ -507,4 +603,3 @@ def test_hierarchical_optimizer_end_to_end(monkeypatch: pytest.MonkeyPatch) -> N
     assert insights["active_levels"]
     assert insights["coordination_history_size"] >= 1
     assert insights["strategy_name"] == BALANCED_HIERARCHICAL_STRATEGY.name
-

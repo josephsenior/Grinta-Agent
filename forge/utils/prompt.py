@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 @dataclass
 class RuntimeInfo:
     """Lightweight container describing current runtime environment for prompts."""
+
     date: str
     available_hosts: dict[str, int] = field(default_factory=dict)
     additional_agent_instructions: str = ""
@@ -58,7 +59,11 @@ class PromptManager:
 
     """
 
-    def __init__(self, prompt_dir: str, system_prompt_filename: str = "system_prompt.j2") -> None:
+    def __init__(
+        self,
+        prompt_dir: str | None,
+        system_prompt_filename: str = "system_prompt.j2",
+    ) -> None:
         """Initialize Jinja environment and load core prompt templates."""
         if prompt_dir is None:
             msg = "Prompt directory is not set"
@@ -68,8 +73,12 @@ class PromptManager:
         self.env = Environment(loader=FileSystemLoader(prompt_dir), autoescape=True)
         self.system_template: Template = self._load_template(system_prompt_filename)
         self.user_template: Template = self._load_template("user_prompt.j2")
-        self.additional_info_template: Template = self._load_template("additional_info.j2")
-        self.microagent_info_template: Template = self._load_template("microagent_info.j2")
+        self.additional_info_template: Template = self._load_template(
+            "additional_info.j2"
+        )
+        self.microagent_info_template: Template = self._load_template(
+            "microagent_info.j2"
+        )
 
     def _load_template(self, template_name: str) -> Template:
         """Load a template from the prompt directory.
@@ -134,7 +143,9 @@ class PromptManager:
                               about triggered microagents.
 
         """
-        return self.microagent_info_template.render(triggered_agents=triggered_agents).strip()
+        return self.microagent_info_template.render(
+            triggered_agents=triggered_agents
+        ).strip()
 
     def add_turns_left_reminder(self, messages: list[Message], state: State) -> None:
         """Append reminder about remaining turns to the most recent user message."""
@@ -143,13 +154,14 @@ class PromptManager:
                 (
                     m
                     for m in reversed(messages)
-                    if m.role == "user" and any((isinstance(c, TextContent) for c in m.content))
+                    if m.role == "user"
+                    and any((isinstance(c, TextContent) for c in m.content))
                 ),
                 1,
             ),
             None,
         ):
             reminder_text = f"\n\nENVIRONMENT REMINDER: You have {
-                state.iteration_flag.max_value -
-                state.iteration_flag.current_value} turns left to complete the task. When finished reply with <finish></finish>."
+                state.iteration_flag.max_value - state.iteration_flag.current_value
+            } turns left to complete the task. When finished reply with <finish></finish>."
             latest_user_message.content.append(TextContent(text=reminder_text))

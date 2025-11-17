@@ -178,6 +178,41 @@ Tool Usage → Performance Tracking → Variant Selection → Tool Optimization 
 └── categories.json        # Tool categories
 ```
 
+### Performance Tracker Internals
+
+The `PerformanceTracker` now delegates state management and analytics to explicit layers:
+
+- **PromptHistoryStore** (`forge.prompt_optimization.history_store`) owns raw `PromptPerformance` entries plus their cached `PromptMetrics`. Swapping to disk or Redis persistence only requires a new store implementation.
+- **PerformanceAnalytics** (`forge.prompt_optimization.performance_analytics`) provides pure helper functions for per-variant, per-day, and per-category summaries. This makes the math unit-testable in isolation and reusable by dashboards or batch jobs.
+
+For advanced inspection or test setup, prefer the public helpers `tracker.performance_records` and `tracker.get_performances_for_variant(...)` over reaching into private lists. Export/import automatically serializes through the store, so downstream tooling benefits from the cleaner boundary.
+
+#### Persistence example
+
+```python
+from forge.prompt_optimization import PerformanceTracker, JsonPromptHistoryStore
+
+history_store = JsonPromptHistoryStore("~/.Forge/prompt_optimization/history.json", auto_flush=True)
+tracker = PerformanceTracker(store=history_store)
+
+# ... record executions as normal ...
+tracker.record_execution(
+    variant_id="demo",
+    prompt_id="prompt-demo",
+    category=PromptCategory.CUSTOM,
+    success=True,
+    execution_time=1.2,
+)
+
+# Health snapshot for dashboards/alerts
+from forge.prompt_optimization import collect_health_snapshot
+
+health = collect_health_snapshot(registry, tracker)
+print(health["tracker"]["store"]["backend"])  # "json"
+```
+
+`JsonPromptHistoryStore` keeps the tracker state on disk so CLI restarts or separate processes can reuse the same history without custom plumbing.
+
 ## Optimization Process
 
 ### 1. **Initialization**

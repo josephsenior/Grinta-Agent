@@ -26,4 +26,3 @@ def test_sanitize_operation_label_max_length():
 
 def test_sanitize_operation_label_preserves_valid():
     assert sanitize_operation_label("valid_name") == "valid_name"
-

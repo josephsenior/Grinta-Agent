@@ -8,8 +8,8 @@ interface ModelUsageTableProps {
 export function ModelUsageTable({ models }: ModelUsageTableProps) {
   if (!models || models.length === 0) {
     return (
-      <div className="p-6 bg-background-secondary border border-border rounded-lg">
-        <h3 className="text-lg font-semibold text-foreground mb-4">
+      <div className="p-6 rounded-xl border border-brand-500/20 bg-black/60">
+        <h3 className="text-lg font-semibold text-foreground mb-2">
           Model Usage
         </h3>
         <p className="text-sm text-foreground-secondary">No data available</p>
@@ -21,15 +21,15 @@ export function ModelUsageTable({ models }: ModelUsageTableProps) {
   const sortedModels = [...models].sort((a, b) => b.totalCost - a.totalCost);
 
   return (
-    <div className="p-6 bg-background-secondary border border-border rounded-lg">
+    <div className="p-6 rounded-xl border border-brand-500/20 bg-black/60">
       <h3 className="text-lg font-semibold text-foreground mb-4">
         Model Usage & Costs
       </h3>
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border">
+          <thead className="bg-black/70 border-b border-brand-500/20">
+            <tr>
               <th className="text-left py-3 px-4 text-foreground-secondary font-medium">
                 Model
               </th>
@@ -50,7 +50,7 @@ export function ModelUsageTable({ models }: ModelUsageTableProps) {
               </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-brand-500/15">
             {sortedModels.map((model, index) => {
               const totalTokens =
                 model.totalPromptTokens + model.totalCompletionTokens;

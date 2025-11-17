@@ -1,162 +1,381 @@
-import asyncio
+from __future__ import annotations
+
+import importlib.util
 import sys
 import types
 from pathlib import Path, PurePosixPath
-if "tenacity.stop.stop_base" not in sys.modules:
-    stub_tenacity = types.ModuleType("tenacity.stop.stop_base")
-    stub_tenacity.StopBase = type("StopBase", (), {})
-    sys.modules["tenacity.stop.stop_base"] = stub_tenacity
-
 
 import pytest
 
-from forge.runtime.utils import files
+
+if "forge.events.observation" not in sys.modules:
+    obs_module = types.ModuleType("forge.events.observation")
+
+    class Observation:
+        def __init__(self, content: str | None = None, path: str | None = None):
+            self.content = content
+            self.path = path
+
+    class ErrorObservation(Observation):
+        pass
+
+    class FileReadObservation(Observation):
+        pass
+
+    class FileWriteObservation(Observation):
+        pass
+
+    setattr(obs_module, "Observation", Observation)
+    setattr(obs_module, "ErrorObservation", ErrorObservation)
+    setattr(obs_module, "FileReadObservation", FileReadObservation)
+    setattr(obs_module, "FileWriteObservation", FileWriteObservation)
+    sys.modules["forge.events.observation"] = obs_module
+obs_module = sys.modules["forge.events.observation"]
+ObservationType = getattr(obs_module, "Observation")
+ErrorObservationType = getattr(obs_module, "ErrorObservation")
+FileReadObservationType = getattr(obs_module, "FileReadObservation")
+FileWriteObservationType = getattr(obs_module, "FileWriteObservation")
 
 
-def test_normalize_posix_path_handles_relative_and_absolute():
-    rel = files._normalize_posix_path(PurePosixPath("a/./b/../c"))
-    abs_posix = files._normalize_posix_path(PurePosixPath("/workspace/../etc/passwd"))
+MODULE_PATH = (
+    Path(__file__).resolve().parents[4] / "forge" / "runtime" / "utils" / "files.py"
+)
+spec = importlib.util.spec_from_file_location("forge.runtime.utils.files", MODULE_PATH)
+assert spec and spec.loader
+files_mod = importlib.util.module_from_spec(spec)
+sys.modules["forge.runtime.utils.files"] = files_mod
+spec.loader.exec_module(files_mod)
 
-    assert str(rel) == "a/c"
-    assert str(abs_posix) == "/etc/passwd"
+
+def test_normalize_posix_path_absolute():
+    path = PurePosixPath("/workspace/foo/../bar/./baz")
+    assert files_mod._normalize_posix_path(path) == PurePosixPath("/workspace/bar/baz")
 
 
-def test_validate_path_access_outside_workspace_raises():
-    sandbox_root = Path("/sandbox/workspace")
-    outside = Path("/sandbox/../etc")
+def test_normalize_posix_path_relative():
+    path = PurePosixPath("a/.././b/..")
+    assert files_mod._normalize_posix_path(path) == PurePosixPath(".")
 
+
+def test_normalize_posix_path_dot_segments():
+    path = PurePosixPath("././folder")
+    assert files_mod._normalize_posix_path(path) == PurePosixPath("folder")
+
+
+def test_normalize_posix_path_absolute_dots():
+    path = PurePosixPath("/./a")
+    assert files_mod._normalize_posix_path(path) == PurePosixPath("/a")
+
+
+def test_normalize_posix_path_parent_segments():
+    path = PurePosixPath("../a/../../b")
+    assert files_mod._normalize_posix_path(path) == PurePosixPath("../../b")
+
+
+def test_validate_path_access_success():
+    abs_path = PurePosixPath("/workspace/project/file.txt")
+    sandbox_root = PurePosixPath("/workspace")
+    files_mod._validate_path_access(abs_path, sandbox_root, "file.txt")
+
+
+def test_validate_path_access_failure():
+    abs_path = PurePosixPath("/etc/passwd")
+    sandbox_root = PurePosixPath("/workspace")
     with pytest.raises(PermissionError):
-        files._validate_path_access(outside, sandbox_root, "../etc/passwd")
+        files_mod._validate_path_access(abs_path, sandbox_root, "/etc/passwd")
 
 
-def test_resolve_path_converts_to_host_path(tmp_path):
-    workspace_base = tmp_path
-    workdir = "/sandbox/workspace/project"
-    mount = "/sandbox/workspace"
+def test_validate_path_access_fallback(monkeypatch):
+    abs_path = PurePosixPath("/workspace/project/file.txt")
+    sandbox_root = PurePosixPath("/workspace")
 
-    resolved = files.resolve_path("src/main.py", workdir, str(workspace_base), mount)
+    def raise_attribute(self, other):
+        raise AttributeError("no method")
 
-    assert resolved == workspace_base / "project" / "src" / "main.py"
+    monkeypatch.setattr(PurePosixPath, "is_relative_to", raise_attribute, raising=False)
+    files_mod._validate_path_access(abs_path, sandbox_root, "file.txt")
 
 
-def test_resolve_path_denies_escape(tmp_path):
-    workspace_base = tmp_path
-    workdir = "/sandbox/workspace/project"
-    mount = "/sandbox/workspace"
+def test_resolve_path_success(tmp_path):
+    workspace_base = tmp_path / "workspace"
+    workspace_base.mkdir()
+    path = files_mod.resolve_path(
+        "src/main.py",
+        "/workspace",
+        str(workspace_base),
+        "/workspace",
+    )
+    assert path == workspace_base / "src" / "main.py"
 
+
+def test_resolve_path_variants(tmp_path):
+    workspace_base = tmp_path / "workspace"
+    nested = workspace_base / "project" / "sub"
+    nested.mkdir(parents=True)
+    CONTAINER_PATH = "/workspace"
+    host = str(workspace_base)
+
+    rel = files_mod.resolve_path(
+        "project/sub/test.txt", CONTAINER_PATH, host, CONTAINER_PATH
+    )
+    assert rel == workspace_base / "project" / "sub" / "test.txt"
+
+    sandbox_abs = files_mod.resolve_path(
+        f"{CONTAINER_PATH}/project/sub/test.txt", CONTAINER_PATH, host, CONTAINER_PATH
+    )
+    assert sandbox_abs == workspace_base / "project" / "sub" / "test.txt"
+
+    parent = files_mod.resolve_path(
+        f"{CONTAINER_PATH}/project/sub/../test.txt",
+        CONTAINER_PATH,
+        host,
+        CONTAINER_PATH,
+    )
+    assert parent == workspace_base / "project" / "test.txt"
+
+    nested_rel = files_mod.resolve_path(
+        "test.txt", f"{CONTAINER_PATH}/project", host, CONTAINER_PATH
+    )
+    assert nested_rel == workspace_base / "project" / "test.txt"
+
+
+def test_resolve_path_permission_error(tmp_path):
     with pytest.raises(PermissionError):
-        files.resolve_path("../../etc/passwd", workdir, str(workspace_base), mount)
+        files_mod.resolve_path(
+            "/etc/passwd",
+            "/workspace",
+            str(tmp_path),
+            "/workspace",
+        )
 
 
-def test_read_lines_bounds():
-    lines = [f"line {i}\n" for i in range(5)]
-    assert files.read_lines(lines, start=1, end=3) == ["line 1\n", "line 2\n"]
-    assert files.read_lines(lines, start=10) == []
+def test_read_lines():
+    lines = ["a\n", "b\n", "c\n", "d\n"]
+    assert files_mod.read_lines(lines, 1, 3) == ["b\n", "c\n"]
+    assert files_mod.read_lines(lines, 10, -1) == []
+    assert files_mod.read_lines(lines, 0, -1) == lines
 
 
 @pytest.mark.asyncio
 async def test_read_file_success(tmp_path):
-    workspace_base = tmp_path
-    mount = "/sandbox/workspace"
-    workdir = f"{mount}/project"
-    target = workspace_base / "project"
-    target.mkdir()
-    file_path = target / "hello.txt"
-    file_path.write_text("hello\nworld\n", encoding="utf-8")
-
-    result = await files.read_file("hello.txt", workdir, str(workspace_base), mount, start=0, end=1)
-
-    assert result.path == "hello.txt"
-    assert result.content == "hello\n"
+    workspace_base = tmp_path / "workspace"
+    workspace_base.mkdir()
+    file_path = workspace_base / "file.txt"
+    file_path.write_text("line1\nline2\nline3\n", encoding="utf-8")
+    obs = await files_mod.read_file(
+        "file.txt",
+        "/workspace",
+        str(workspace_base),
+        "/workspace",
+        start=1,
+        end=3,
+    )
+    assert isinstance(obs, FileReadObservationType)
+    assert obs.content == "line2\nline3\n"
 
 
 @pytest.mark.asyncio
 async def test_read_file_permission_error(tmp_path):
-    workspace_base = tmp_path
-    mount = "/sandbox/workspace"
-    workdir = f"{mount}/project"
-
-    result = await files.read_file("../../secret.txt", workdir, str(workspace_base), mount)
-    assert "not allowed" in result.message
+    workspace_base = tmp_path / "workspace"
+    workspace_base.mkdir()
+    obs = await files_mod.read_file(
+        "/etc/passwd",
+        "/workspace",
+        str(workspace_base),
+        "/workspace",
+    )
+    assert isinstance(obs, ErrorObservationType)
+    assert "not allowed" in obs.content
 
 
 @pytest.mark.asyncio
 async def test_read_file_not_found(tmp_path):
-    workspace_base = tmp_path
-    mount = "/sandbox/workspace"
-    workdir = f"{mount}/project"
-    (workspace_base / "project").mkdir()
-
-    result = await files.read_file("missing.txt", workdir, str(workspace_base), mount)
-    assert "File not found" in result.message
+    workspace_base = tmp_path / "workspace"
+    workspace_base.mkdir()
+    obs = await files_mod.read_file(
+        "missing.txt",
+        "/workspace",
+        str(workspace_base),
+        "/workspace",
+    )
+    assert isinstance(obs, ErrorObservationType)
+    assert "File not found" in obs.content
 
 
 @pytest.mark.asyncio
 async def test_read_file_unicode_error(tmp_path):
-    workspace_base = tmp_path
-    mount = "/sandbox/workspace"
-    workdir = f"{mount}/project"
-    target = workspace_base / "project"
-    target.mkdir()
-    binary_path = target / "binary.dat"
-    binary_path.write_bytes(b"\xff\xfe")
-
-    result = await files.read_file("binary.dat", workdir, str(workspace_base), mount)
-    assert "decoded as utf-8" in result.message
+    workspace_base = tmp_path / "workspace"
+    workspace_base.mkdir()
+    file_path = workspace_base / "binary.dat"
+    file_path.write_bytes(b"\xff\xfe")
+    obs = await files_mod.read_file(
+        "binary.dat",
+        "/workspace",
+        str(workspace_base),
+        "/workspace",
+    )
+    assert isinstance(obs, ErrorObservationType)
+    assert "utf-8" in obs.content
 
 
 @pytest.mark.asyncio
 async def test_read_file_directory_error(tmp_path, monkeypatch):
-    workspace_base = tmp_path
-    mount = "/sandbox/workspace"
-    workdir = f"{mount}/project"
-    directory = workspace_base / "project" / "dir"
-    directory.mkdir(parents=True)
-
-    monkeypatch.setattr(files, "resolve_path", lambda *args, **kwargs: directory)
+    workspace_base = tmp_path / "workspace"
+    workspace_base.mkdir()
+    directory = workspace_base / "folder"
+    directory.mkdir()
+    monkeypatch.setattr(
+        files_mod, "resolve_path", lambda *args, **kwargs: directory, raising=False
+    )
 
     def fake_open(*args, **kwargs):
-        raise IsADirectoryError("dir")
+        raise IsADirectoryError("directory")
 
     monkeypatch.setattr("builtins.open", fake_open)
+    obs = await files_mod.read_file(
+        "folder",
+        "/workspace",
+        str(workspace_base),
+        "/workspace",
+    )
+    assert isinstance(obs, ErrorObservationType)
+    assert "directory" in obs.content
 
-    result = await files.read_file("dir", workdir, str(workspace_base), mount)
-    assert "directory" in result.message
 
-
-@pytest.mark.asyncio
-async def test_write_file_creates_and_inserts(tmp_path):
-    workspace_base = tmp_path
-    mount = "/sandbox/workspace"
-    workdir = f"{mount}/project"
-    target_dir = workspace_base / "project"
-    target_dir.mkdir()
-    file_path = target_dir / "greeting.txt"
-    file_path.write_text("hello\nworld\n", encoding="utf-8")
-
-    await files.write_file("greeting.txt", workdir, str(workspace_base), mount, "NEW", start=1, end=2)
-
-    assert file_path.read_text(encoding="utf-8") == "hello\nNEW\n"
+def test_insert_lines():
+    result = files_mod.insert_lines(["x", "y"], ["a\n", "b\n", "c\n"], start=1, end=2)
+    assert result == ["a\n", "x\n", "y\n", "c\n"]
 
 
 @pytest.mark.asyncio
-async def test_write_file_permission_error(tmp_path):
-    workspace_base = tmp_path
-    mount = "/sandbox/workspace"
-    workdir = f"{mount}/project"
-
-    result = await files.write_file("../../secret.txt", workdir, str(workspace_base), mount, "data")
-    assert "Permission error" in result.message
+async def test_write_file_new(tmp_path):
+    workspace_base = tmp_path / "workspace"
+    workspace_base.mkdir()
+    obs = await files_mod.write_file(
+        "nested/new.txt",
+        "/workspace",
+        str(workspace_base),
+        "/workspace",
+        "hello",
+    )
+    assert isinstance(obs, FileWriteObservationType)
+    assert (workspace_base / "nested" / "new.txt").read_text(
+        encoding="utf-8"
+    ) == "hello\n"
 
 
 @pytest.mark.asyncio
-async def test_write_file_directory_error(tmp_path):
-    workspace_base = tmp_path
-    mount = "/sandbox/workspace"
-    workdir = f"{mount}/project"
-    directory = workspace_base / "project" / "dir"
-    directory.mkdir(parents=True)
+async def test_write_file_insert(tmp_path):
+    workspace_base = tmp_path / "workspace"
+    workspace_base.mkdir()
+    file_path = workspace_base / "file.txt"
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_text("a\nb\nc\n", encoding="utf-8")
+    obs = await files_mod.write_file(
+        "file.txt",
+        "/workspace",
+        str(workspace_base),
+        "/workspace",
+        "x\ny",
+        start=1,
+        end=2,
+    )
+    assert isinstance(obs, FileWriteObservationType)
+    assert file_path.read_text(encoding="utf-8") == "a\nx\ny\nc\n"
 
-    result = await files.write_file("dir", workdir, str(workspace_base), mount, "data")
-    assert "directory" in result.message
 
+@pytest.mark.asyncio
+async def test_write_file_permission_error(tmp_path, monkeypatch):
+    workspace_base = tmp_path / "workspace"
+    workspace_base.mkdir()
+    monkeypatch.setattr(
+        files_mod,
+        "resolve_path",
+        lambda *args, **kwargs: (_ for _ in ()).throw(PermissionError("denied")),
+        raising=False,
+    )
+    obs = await files_mod.write_file(
+        "file.txt",
+        "/workspace",
+        str(workspace_base),
+        "/workspace",
+        "content",
+    )
+    assert isinstance(obs, ErrorObservationType)
+    assert "Permission error" in obs.content
+
+
+@pytest.mark.asyncio
+async def test_write_file_directory_error(tmp_path, monkeypatch):
+    workspace_base = tmp_path / "workspace"
+    workspace_base.mkdir(parents=True, exist_ok=True)
+    directory = workspace_base / "dir"
+    directory.mkdir()
+    monkeypatch.setattr(
+        files_mod, "resolve_path", lambda *args, **kwargs: directory, raising=False
+    )
+
+    def fake_open(*args, **kwargs):
+        raise IsADirectoryError("directory")
+
+    monkeypatch.setattr("builtins.open", fake_open)
+    obs = await files_mod.write_file(
+        "dir",
+        "/workspace",
+        str(workspace_base),
+        "/workspace",
+        "content",
+    )
+    assert isinstance(obs, ErrorObservationType)
+    assert "directory" in obs.content
+
+
+@pytest.mark.asyncio
+async def test_write_file_unicode_error(tmp_path, monkeypatch):
+    workspace_base = tmp_path / "workspace"
+    workspace_base.mkdir()
+    file_path = workspace_base / "file.txt"
+    file_path.write_bytes(b"\xff\xfe")
+
+    def fake_open(*args, **kwargs):
+        raise UnicodeDecodeError("utf-8", b"", 0, 1, "error")
+
+    monkeypatch.setattr(
+        files_mod, "resolve_path", lambda *args, **kwargs: file_path, raising=False
+    )
+    monkeypatch.setattr("builtins.open", fake_open)
+    obs = await files_mod.write_file(
+        "file.txt",
+        "/workspace",
+        str(workspace_base),
+        "/workspace",
+        "content",
+    )
+    assert isinstance(obs, ErrorObservationType)
+    assert "utf-8" in obs.content
+
+
+@pytest.mark.asyncio
+async def test_write_file_file_not_found(tmp_path, monkeypatch):
+    workspace_base = tmp_path / "workspace"
+    workspace_base.mkdir()
+
+    def fake_open(*args, **kwargs):
+        raise FileNotFoundError("missing")
+
+    monkeypatch.setattr(
+        files_mod,
+        "resolve_path",
+        lambda *args, **kwargs: workspace_base / "file.txt",
+        raising=False,
+    )
+    monkeypatch.setattr("builtins.open", fake_open)
+    obs = await files_mod.write_file(
+        "file.txt",
+        "/workspace",
+        str(workspace_base),
+        "/workspace",
+        "content",
+    )
+    assert isinstance(obs, ErrorObservationType)
+    assert "File not found" in obs.content

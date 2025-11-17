@@ -15,14 +15,17 @@ from __future__ import annotations
 
 import random
 import time
-from typing import Callable, TypeVar
+from typing import Any, Callable, TypeVar
+
+def _noop_record_event(ev: dict[str, Any]) -> None:
+    """Fallback metrics recorder when metasop metrics are unavailable."""
+    return
+
 
 try:
     from forge.metasop.metrics import record_event as _record_metrics_event
-except Exception:
-
-    def _record_metrics_event(ev: dict) -> None:
-        return
+except Exception:  # pragma: no cover - optional dependency
+    _record_metrics_event = _noop_record_event
 
 
 import contextlib
@@ -34,6 +37,7 @@ T = TypeVar("T")
 
 class RetryError(Exception):
     """Exception raised when all retry attempts have been exhausted."""
+
     pass
 
 
@@ -41,7 +45,12 @@ def _record_attempt_metrics(op_name: str, attempt: int, max_attempts: int) -> No
     """Record metrics for retry attempt."""
     with contextlib.suppress(Exception):
         _record_metrics_event(
-            {"status": "attempt", "operation": op_name, "attempt_index": attempt, "max_attempts": max_attempts},
+            {
+                "status": "attempt",
+                "operation": op_name,
+                "attempt_index": attempt,
+                "max_attempts": max_attempts,
+            },
         )
 
 
@@ -49,11 +58,18 @@ def _record_success_metrics(op_name: str, attempt: int, max_attempts: int) -> No
     """Record metrics for successful retry."""
     with contextlib.suppress(Exception):
         _record_metrics_event(
-            {"status": "retry_success", "operation": op_name, "attempts": attempt, "max_attempts": max_attempts},
+            {
+                "status": "retry_success",
+                "operation": op_name,
+                "attempts": attempt,
+                "max_attempts": max_attempts,
+            },
         )
 
 
-def _record_error_metrics(op_name: str, attempt: int, max_attempts: int, error: Exception) -> None:
+def _record_error_metrics(
+    op_name: str, attempt: int, max_attempts: int, error: Exception
+) -> None:
     """Record metrics for retry error."""
     with contextlib.suppress(Exception):
         _record_metrics_event(
@@ -67,21 +83,29 @@ def _record_error_metrics(op_name: str, attempt: int, max_attempts: int, error: 
         )
 
 
-def _log_retry_attempt(logger, attempt: int, max_attempts: int, error: Exception) -> None:
+def _log_retry_attempt(
+    logger, attempt: int, max_attempts: int, error: Exception
+) -> None:
     """Log retry attempt if logger is provided."""
     if logger:
         with contextlib.suppress(Exception):
-            logger.debug("Retry attempt %d/%d failed: %s", attempt, max_attempts, str(error))
+            logger.debug(
+                "Retry attempt %d/%d failed: %s", attempt, max_attempts, str(error)
+            )
 
 
-def _should_retry_exception(error: Exception, allowed_exceptions: tuple[type, ...] | None) -> bool:
+def _should_retry_exception(
+    error: Exception, allowed_exceptions: tuple[type, ...] | None
+) -> bool:
     """Check if exception should be retried."""
     if allowed_exceptions is None:
         return True
     return isinstance(error, allowed_exceptions)
 
 
-def _calculate_sleep_time(attempt: int, base_delay: float, max_delay: float, jitter: float) -> float:
+def _calculate_sleep_time(
+    attempt: int, base_delay: float, max_delay: float, jitter: float
+) -> float:
     """Calculate sleep time for retry with exponential backoff and jitter."""
     backoff = min(max_delay, base_delay * 2 ** (attempt - 1))
     jitter_amt = backoff * jitter * (random.random() * 2 - 1)

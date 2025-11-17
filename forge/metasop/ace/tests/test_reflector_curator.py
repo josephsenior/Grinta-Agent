@@ -94,7 +94,9 @@ def test_reflector_analyze_success(context_playbook, trajectory, execution_resul
     assert metrics["success_rate"] == 1.0
 
 
-def test_reflector_analyze_handles_invalid_json(context_playbook, trajectory, execution_result):
+def test_reflector_analyze_handles_invalid_json(
+    context_playbook, trajectory, execution_result
+):
     """Reflector should tolerate malformed responses without raising."""
     llm = Mock()
     llm.completion = Mock(return_value=make_response(content="invalid-response"))
@@ -112,13 +114,19 @@ def test_reflector_analyze_handles_invalid_json(context_playbook, trajectory, ex
     assert result.insights == []
 
 
-def test_reflector_analyze_exception_path(context_playbook, trajectory, execution_result):
+def test_reflector_analyze_exception_path(
+    context_playbook, trajectory, execution_result
+):
     """Reflector should return a failure result when the LLM raises."""
     llm = Mock()
     llm.completion = Mock()
 
     reflector = ACEReflector(llm=llm, context_playbook=context_playbook)
-    reflector._perform_reflection_iteration = Mock(side_effect=RuntimeError("iteration failure"))
+    setattr(
+        reflector,
+        "_perform_reflection_iteration",
+        Mock(side_effect=RuntimeError("iteration failure")),
+    )
     result = reflector.analyze(
         trajectory=trajectory,
         execution_result=execution_result,
@@ -279,9 +287,9 @@ def test_curator_parses_wrapped_json_and_unknown_section(context_playbook):
     llm.completion = Mock(
         return_value=make_response(
             content=(
-                "Noise before {\"reasoning\": \"Valid reasoning\", "
-                "\"operations\": [{\"type\": \"ADD\", \"section\": \"not-a-section\", "
-                "\"content\": \"Document deployment runbooks.\"}] } trailing text"
+                'Noise before {"reasoning": "Valid reasoning", '
+                '"operations": [{"type": "ADD", "section": "not-a-section", '
+                '"content": "Document deployment runbooks."}] } trailing text'
             ),
             total_tokens=42,
         )
@@ -308,7 +316,11 @@ def test_curator_convert_to_delta_updates_handles_unknown_and_blank(context_play
     """Operations with unknown sections should fallback or be skipped."""
     curator = ACECurator(llm=Mock(), context_playbook=context_playbook)
     operations = [
-        {"type": "ADD", "section": "unknown_section", "content": "Adopt blue/green deploys"},
+        {
+            "type": "ADD",
+            "section": "unknown_section",
+            "content": "Adopt blue/green deploys",
+        },
         {"type": "ADD", "section": "strategies_and_hard_rules", "content": " "},
     ]
 
@@ -380,7 +392,14 @@ def test_curator_curate_batch_defaults(context_playbook, monkeypatch):
 
     calls = []
 
-    def fake_curate(insights, current_playbook, task_context, task_type, role=None, expected_outcome=None):
+    def fake_curate(
+        insights,
+        current_playbook,
+        task_context,
+        task_type,
+        role=None,
+        expected_outcome=None,
+    ):
         calls.append((task_context, task_type))
         return dummy_result
 
@@ -396,7 +415,9 @@ def test_curator_curate_batch_defaults(context_playbook, monkeypatch):
     assert calls == [("ctx-a", "general"), ("ctx-b", "general")]
 
 
-def test_reflector_perform_iteration_covers_branches(context_playbook, trajectory, execution_result):
+def test_reflector_perform_iteration_covers_branches(
+    context_playbook, trajectory, execution_result
+):
     """_perform_reflection_iteration should support task-specific formatting and JSON recovery."""
     llm = Mock()
     llm.completion = Mock(
@@ -437,12 +458,16 @@ def test_reflector_perform_iteration_covers_branches(context_playbook, trajector
         iteration=1,
     )
 
+    assert appworld_insight is not None
+    assert metasop_insight is not None
     assert appworld_insight.key_insight == "Capture regression cases"
     assert metasop_insight.key_insight == "Capture regression cases"
 
 
-def test_reflector_analyze_runs_multiple_iterations(context_playbook, trajectory, execution_result):
-    """analyze should iterate when confidence is low and update metrics."""
+def test_reflector_analyze_runs_multiple_iterations(
+    context_playbook, trajectory, execution_result
+):
+    """Analyze should iterate when confidence is low and update metrics."""
     llm = Mock()
     llm.completion = Mock(
         side_effect=[
@@ -485,7 +510,10 @@ def test_reflector_helpers_cover_edge_cases(context_playbook):
     reflector = ACEReflector(llm=Mock(), context_playbook=context_playbook)
 
     # _get_playbook_content_for_bullets empty lookup
-    assert reflector._get_playbook_content_for_bullets([]) == "No playbook content available."
+    assert (
+        reflector._get_playbook_content_for_bullets([])
+        == "No playbook content available."
+    )
 
     # _should_continue_iteration branches
     low_confidence = ACEInsight(
@@ -498,7 +526,12 @@ def test_reflector_helpers_cover_edge_cases(context_playbook):
         success=True,
         confidence=0.2,
     )
-    assert reflector._should_continue_iteration(low_confidence, iteration=0, max_iterations=3) is True
+    assert (
+        reflector._should_continue_iteration(
+            low_confidence, iteration=0, max_iterations=3
+        )
+        is True
+    )
 
     high_confidence = ACEInsight(
         reasoning="Reasoning",
@@ -510,7 +543,12 @@ def test_reflector_helpers_cover_edge_cases(context_playbook):
         success=True,
         confidence=0.9,
     )
-    assert reflector._should_continue_iteration(high_confidence, iteration=1, max_iterations=3) is False
+    assert (
+        reflector._should_continue_iteration(
+            high_confidence, iteration=1, max_iterations=3
+        )
+        is False
+    )
 
     near_max_iteration = ACEInsight(
         reasoning="",
@@ -522,10 +560,17 @@ def test_reflector_helpers_cover_edge_cases(context_playbook):
         success=True,
         confidence=0.1,
     )
-    assert reflector._should_continue_iteration(near_max_iteration, iteration=2, max_iterations=3) is False
+    assert (
+        reflector._should_continue_iteration(
+            near_max_iteration, iteration=2, max_iterations=3
+        )
+        is False
+    )
 
     # _update_playbook_content_for_iteration
-    updated = reflector._update_playbook_content_for_iteration("Playbook", low_confidence)
+    updated = reflector._update_playbook_content_for_iteration(
+        "Playbook", low_confidence
+    )
     assert "NEW INSIGHT FROM ITERATION" in updated
 
     # _calculate_overall_confidence empty case

@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+import asyncio
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel
 
 from forge.knowledge_base import KnowledgeBaseManager
+from forge.server.utils.responses import success, error
 from forge.storage.data_models.knowledge_base import (
     KnowledgeBaseCollection,
     KnowledgeBaseDocument,
@@ -21,6 +23,7 @@ router = APIRouter(prefix="/api/knowledge-base", tags=["knowledge-base"])
 
 
 # Request/Response models
+
 
 class CreateCollectionRequest(BaseModel):
     """Request to create a new collection."""
@@ -82,7 +85,41 @@ class SearchResultResponse(BaseModel):
     relevance_score: float
 
 
+class BulkUploadRequest(BaseModel):
+    """Request to upload multiple documents in one call."""
+
+    collection_id: str
+    documents: list[BulkDocumentInput]
+
+
+class BulkDocumentInput(BaseModel):
+    """Individual document in a bulk upload."""
+
+    filename: str
+    content: str
+    mime_type: str = "text/plain"
+
+
+class BulkUploadResultItem(BaseModel):
+    """Result of uploading a single document in bulk."""
+
+    filename: str
+    success: bool
+    document_id: str | None = None
+    error: str | None = None
+
+
+class BulkUploadResponse(BaseModel):
+    """Response from bulk document upload."""
+
+    total: int
+    successful: int
+    failed: int
+    results: list[BulkUploadResultItem]
+
+
 # Helper functions
+
 
 def _get_kb_manager(user_id: str = "default") -> KnowledgeBaseManager:
     """Create and return a KnowledgeBaseManager instance for a user.
@@ -170,7 +207,9 @@ def _document_to_response(document: KnowledgeBaseDocument) -> DocumentResponse:
     )
 
 
-def _search_result_to_response(result: KnowledgeBaseSearchResult) -> SearchResultResponse:
+def _search_result_to_response(
+    result: KnowledgeBaseSearchResult,
+) -> SearchResultResponse:
     """Convert KnowledgeBaseSearchResult to API response format.
 
     Transforms internal search result into a response object for HTTP endpoints,
@@ -198,7 +237,12 @@ def _search_result_to_response(result: KnowledgeBaseSearchResult) -> SearchResul
 
 # Collection endpoints
 
-@router.post("/collections", response_model=CollectionResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/collections",
+    response_model=CollectionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_collection(
     request: CreateCollectionRequest,
     user_id: str = "default",
@@ -318,7 +362,12 @@ async def delete_collection(
 
 # Document endpoints
 
-@router.post("/collections/{collection_id}/documents", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/collections/{collection_id}/documents",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def upload_document(
     collection_id: str,
     file: UploadFile = File(...),
@@ -329,7 +378,7 @@ async def upload_document(
         # Validate file size (max 10MB for MVP)
         MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
         content = await file.read()
-        
+
         if len(content) > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
@@ -347,7 +396,7 @@ async def upload_document(
 
         # Add document
         kb_manager = _get_kb_manager(user_id)
-        document = kb_manager.add_document(
+        document = await kb_manager.async_add_document(
             collection_id=collection_id,
             filename=file.filename or "untitled",
             content=text_content,
@@ -360,7 +409,9 @@ async def upload_document(
                 detail=f"Collection {collection_id} not found",
             )
 
-        logger.info(f"Uploaded document: {document.filename} to collection {collection_id}")
+        logger.info(
+            f"Uploaded document: {document.filename} to collection {collection_id}"
+        )
         return _document_to_response(document)
 
     except HTTPException:
@@ -373,7 +424,9 @@ async def upload_document(
         )
 
 
-@router.get("/collections/{collection_id}/documents", response_model=list[DocumentResponse])
+@router.get(
+    "/collections/{collection_id}/documents", response_model=list[DocumentResponse]
+)
 async def list_documents(
     collection_id: str,
     user_id: str = "default",
@@ -443,6 +496,7 @@ async def delete_document(
 
 # Search endpoint
 
+
 @router.post("/search", response_model=list[SearchResultResponse])
 async def search_knowledge_base(
     request: SearchRequest,
@@ -451,7 +505,7 @@ async def search_knowledge_base(
     """Search the knowledge base."""
     try:
         kb_manager = _get_kb_manager(user_id)
-        results = kb_manager.search(
+        results = await kb_manager.async_search(
             query=request.query,
             collection_ids=request.collection_ids,
             top_k=request.top_k,
@@ -468,6 +522,7 @@ async def search_knowledge_base(
 
 # Stats endpoint
 
+
 @router.get("/stats")
 async def get_stats(user_id: str = "default") -> dict[str, Any]:
     """Get knowledge base statistics."""
@@ -481,3 +536,142 @@ async def get_stats(user_id: str = "default") -> dict[str, Any]:
             detail=f"Failed to get stats: {str(e)}",
         )
 
+
+# Bulk upload endpoint
+
+
+@router.post(
+    "/collections/{collection_id}/documents/bulk", status_code=status.HTTP_201_CREATED
+)
+async def bulk_upload_documents(
+    collection_id: str,
+    files: list[UploadFile] = File(...),
+    user_id: str = "default",
+    max_concurrent: int = 5,
+) -> Any:
+    """Upload multiple documents to a collection in parallel.
+
+    Processes documents concurrently with bounded parallelism to improve
+    throughput while avoiding resource exhaustion. Returns detailed results
+    for each document including success/failure status.
+
+    Args:
+        collection_id: Target collection ID
+        files: List of files to upload
+        user_id: User identifier (default: "default")
+        max_concurrent: Maximum concurrent uploads (default: 5)
+
+    Returns:
+        Standardized response with bulk upload results
+
+    Example:
+        POST /api/knowledge-base/collections/{id}/documents/bulk
+        Files: [file1.txt, file2.md, file3.py]
+        Response: {
+            "status": "ok",
+            "data": {
+                "total": 3,
+                "successful": 2,
+                "failed": 1,
+                "results": [...]
+            }
+        }
+    """
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB per file
+
+    # Verify collection exists
+    kb_manager = _get_kb_manager(user_id)
+    collection = kb_manager.get_collection(collection_id)
+    if not collection:
+        return error(
+            message=f"Collection {collection_id} not found",
+            status_code=status.HTTP_404_NOT_FOUND,
+            error_code="COLLECTION_NOT_FOUND",
+        )
+
+    results: list[BulkUploadResultItem] = []
+
+    async def process_file(file: UploadFile) -> BulkUploadResultItem:
+        """Process a single file upload."""
+        try:
+            content_bytes = await file.read()
+
+            # Check file size
+            if len(content_bytes) > MAX_FILE_SIZE:
+                return BulkUploadResultItem(
+                    filename=file.filename or "untitled",
+                    success=False,
+                    error=f"File too large (max {MAX_FILE_SIZE / (1024 * 1024)}MB)",
+                )
+
+            # Decode content
+            try:
+                text_content = content_bytes.decode("utf-8")
+            except UnicodeDecodeError:
+                return BulkUploadResultItem(
+                    filename=file.filename or "untitled",
+                    success=False,
+                    error="File must be valid UTF-8 text",
+                )
+
+            # Add document via async manager method
+            document = await kb_manager.async_add_document(
+                collection_id=collection_id,
+                filename=file.filename or "untitled",
+                content=text_content,
+                mime_type=file.content_type or "text/plain",
+            )
+
+            if not document:
+                return BulkUploadResultItem(
+                    filename=file.filename or "untitled",
+                    success=False,
+                    error="Failed to create document",
+                )
+
+            return BulkUploadResultItem(
+                filename=file.filename or "untitled",
+                success=True,
+                document_id=document.id,
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to process file {file.filename}: {e}")
+            return BulkUploadResultItem(
+                filename=file.filename or "untitled",
+                success=False,
+                error=str(e),
+            )
+
+    # Process files with bounded concurrency
+    semaphore = asyncio.Semaphore(max_concurrent)
+
+    async def bounded_process(file: UploadFile) -> BulkUploadResultItem:
+        async with semaphore:
+            return await process_file(file)
+
+    # Execute all uploads concurrently with limit
+    results = await asyncio.gather(
+        *[bounded_process(f) for f in files],
+        return_exceptions=False,
+    )
+
+    # Calculate summary
+    successful = sum(1 for r in results if r.success)
+    failed = len(results) - successful
+
+    logger.info(
+        f"Bulk upload to collection {collection_id}: "
+        f"{successful}/{len(files)} successful, {failed} failed"
+    )
+
+    return success(
+        data={
+            "total": len(files),
+            "successful": successful,
+            "failed": failed,
+            "results": [r.dict() for r in results],
+        },
+        message=f"Processed {len(files)} files: {successful} successful, {failed} failed",
+        status_code=status.HTTP_201_CREATED,
+    )

@@ -20,4 +20,3 @@ def reset_streamable_session_manager(monkeypatch):
                 self._has_started = False
 
     monkeypatch.setattr(StreamableHTTPSessionManager, "run", run_with_reset)
-

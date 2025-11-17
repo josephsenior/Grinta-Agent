@@ -21,11 +21,13 @@ def test_alive_endpoint_returns_status_ok():
     assert response.json() == {"status": "ok"}
 
 
-def test_health_endpoint_returns_ok():
+def test_health_endpoint_is_deprecated_and_points_to_monitoring():
     client = _build_client()
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == "OK"
+    payload = response.json()
+    assert payload["status"] == "deprecated"
+    assert payload["use"] == "/api/monitoring/health"
 
 
 def test_server_info_returns_mocked_data(monkeypatch):

@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { useCreateConversation } from "#/hooks/mutation/use-create-conversation";
+import { valueComparison, valueBenefits } from "#/content/landing";
 
 export default function ValueProposition(): React.ReactElement {
   const navigate = useNavigate();
@@ -40,48 +41,15 @@ export default function ValueProposition(): React.ReactElement {
     );
   };
 
-  const traditionalApproach = [
-    { item: "Hire full development team", cost: "$300k+/year" },
-    { item: "Long onboarding process", cost: "2-3 months" },
-    { item: "Limited to working hours", cost: "40 hrs/week" },
-    { item: "Communication overhead", cost: "20% productivity loss" },
-    { item: "Bug fixes & maintenance", cost: "$50k+/year" },
-  ];
-
-  const withForge = [
-    { item: "AI-powered full team", cost: "Included" },
-    { item: "Instant availability", cost: "0 seconds" },
-    { item: "24/7 productivity", cost: "168 hrs/week" },
-    { item: "Zero communication lag", cost: "100% efficiency" },
-    { item: "Automated quality checks", cost: "Built-in" },
-  ];
-
-  const benefits = [
-    {
-      icon: TrendingUp,
-      title: "10x Faster",
-      description: "Deliver projects in days, not months",
-      color: "brand",
-    },
-    {
-      icon: Shield,
-      title: "Enterprise Quality",
-      description: "Production-ready code with tests",
-      color: "success",
-    },
-    {
-      icon: Zap,
-      title: "Instant Scaling",
-      description: "From prototype to production instantly",
-      color: "warning",
-    },
-    {
-      icon: Users,
-      title: "Full Team",
-      description: "PM, Architect, Engineer, QA, DevOps",
-      color: "accent",
-    },
-  ];
+  const benefits = valueBenefits.map((benefit, index) => {
+    const iconCycle = [TrendingUp, Shield, Zap, Users];
+    const colorCycle = ["brand", "success", "warning", "accent"] as const;
+    return {
+      ...benefit,
+      icon: iconCycle[index % iconCycle.length],
+      color: colorCycle[index % colorCycle.length],
+    };
+  });
 
   return (
     <section className="relative w-full py-24 px-6 overflow-hidden">
@@ -136,7 +104,7 @@ export default function ValueProposition(): React.ReactElement {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {traditionalApproach.map((item, index) => (
+              {valueComparison.traditional.map((item, index) => (
                 <div
                   key={index}
                   className="flex items-start gap-3 p-4 rounded-lg bg-background-tertiary/50 border border-border/30"
@@ -191,7 +159,7 @@ export default function ValueProposition(): React.ReactElement {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {withForge.map((item, index) => (
+              {valueComparison.forge.map((item, index) => (
                 <div
                   key={index}
                   className="flex items-start gap-3 p-4 rounded-lg bg-gradient-to-r from-success-500/5 to-brand-500/5 border border-success-500/20"

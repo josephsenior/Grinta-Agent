@@ -1,17 +1,18 @@
 """Database tools for CodeAct agent.
 
-These tools allow the agent to connect to and query databases from within
-the sandbox environment, ensuring credentials never leave the user's infrastructure.
+Constructed via compatibility helper so import-time remains resilient when
+`litellm` is stubbed in tests.
 """
 
 from litellm import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from ._compat import build_tool_param
 
 # Tool for connecting to databases using environment variables
-DatabaseConnectTool = ChatCompletionToolParam(
-    type="function",
-    function=ChatCompletionToolParamFunctionChunk(
-        name="database_connect",
-        description="""Connect to a database using credentials from environment variables.
+DatabaseConnectTool = build_tool_param(
+    ChatCompletionToolParam,
+    ChatCompletionToolParamFunctionChunk,
+    name="database_connect",
+    description="""Connect to a database using credentials from environment variables.
 
 The connection uses environment variables with a specified prefix:
 - PostgreSQL: {PREFIX}_HOST, {PREFIX}_PORT, {PREFIX}_DATABASE, {PREFIX}_USER, {PREFIX}_PASSWORD
@@ -22,34 +23,33 @@ The connection uses environment variables with a specified prefix:
 Example: If env_prefix is "PROD_DB", it will look for PROD_DB_HOST, PROD_DB_PORT, etc.
 
 The connection is established in the sandbox environment, so credentials never leave the user's infrastructure.""",
-        parameters={
-            "type": "object",
-            "properties": {
-                "connection_name": {
-                    "type": "string",
-                    "description": 'Unique name for this connection (e.g., "prod_postgres", "staging_mongo")',
-                },
-                "db_type": {
-                    "type": "string",
-                    "enum": ["postgresql", "mongodb", "mysql", "redis"],
-                    "description": "Type of database to connect to",
-                },
-                "env_prefix": {
-                    "type": "string",
-                    "description": 'Environment variable prefix (e.g., "PROD_DB", "STAGING_DB")',
-                },
+    parameters={
+        "type": "object",
+        "properties": {
+            "connection_name": {
+                "type": "string",
+                "description": 'Unique name for this connection (e.g., "prod_postgres", "staging_mongo")',
             },
-            "required": ["connection_name", "db_type", "env_prefix"],
+            "db_type": {
+                "type": "string",
+                "enum": ["postgresql", "mongodb", "mysql", "redis"],
+                "description": "Type of database to connect to",
+            },
+            "env_prefix": {
+                "type": "string",
+                "description": 'Environment variable prefix (e.g., "PROD_DB", "STAGING_DB")',
+            },
         },
-    ),
+        "required": ["connection_name", "db_type", "env_prefix"],
+    },
 )
 
 # Tool for fetching database schema
-DatabaseSchemaTool = ChatCompletionToolParam(
-    type="function",
-    function=ChatCompletionToolParamFunctionChunk(
-        name="database_schema",
-        description="""Fetch the schema of a database connection.
+DatabaseSchemaTool = build_tool_param(
+    ChatCompletionToolParam,
+    ChatCompletionToolParamFunctionChunk,
+    name="database_schema",
+    description="""Fetch the schema of a database connection.
 
 For SQL databases (PostgreSQL, MySQL):
 - Returns list of tables with columns, types, indexes, and foreign keys
@@ -61,25 +61,24 @@ For Redis:
 - Returns list of keys with types and TTL
 
 This helps understand the database structure before writing queries.""",
-        parameters={
-            "type": "object",
-            "properties": {
-                "connection_name": {
-                    "type": "string",
-                    "description": "Name of the established connection",
-                },
+    parameters={
+        "type": "object",
+        "properties": {
+            "connection_name": {
+                "type": "string",
+                "description": "Name of the established connection",
             },
-            "required": ["connection_name"],
         },
-    ),
+        "required": ["connection_name"],
+    },
 )
 
 # Tool for executing database queries
-DatabaseQueryTool = ChatCompletionToolParam(
-    type="function",
-    function=ChatCompletionToolParamFunctionChunk(
-        name="database_query",
-        description="""Execute a query against a database connection.
+DatabaseQueryTool = build_tool_param(
+    ChatCompletionToolParam,
+    ChatCompletionToolParamFunctionChunk,
+    name="database_query",
+    description="""Execute a query against a database connection.
 
 Query formats by database type:
 
@@ -95,26 +94,25 @@ Redis:
 - Use Redis commands: "GET mykey" or "HGETALL user:1001" or "LRANGE mylist 0 10"
 
 Returns query results with execution time and row count.""",
-        parameters={
-            "type": "object",
-            "properties": {
-                "connection_name": {
-                    "type": "string",
-                    "description": "Name of the established connection",
-                },
-                "query": {
-                    "type": "string",
-                    "description": "The query to execute (format depends on database type)",
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Maximum number of rows to return (default: 100)",
-                    "default": 100,
-                },
+    parameters={
+        "type": "object",
+        "properties": {
+            "connection_name": {
+                "type": "string",
+                "description": "Name of the established connection",
             },
-            "required": ["connection_name", "query"],
+            "query": {
+                "type": "string",
+                "description": "The query to execute (format depends on database type)",
+            },
+            "limit": {
+                "type": "integer",
+                "description": "Maximum number of rows to return (default: 100)",
+                "default": 100,
+            },
         },
-    ),
+        "required": ["connection_name", "query"],
+    },
 )
 
 

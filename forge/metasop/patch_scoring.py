@@ -19,6 +19,7 @@ import hashlib
 import json
 import os
 import subprocess
+from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -72,7 +73,7 @@ class PatchCandidate:
 
     content: str
     diff: str
-    meta: dict[str, Any]
+    meta: Mapping[str, Any] | None = None
     __test__ = False
 
 
@@ -421,7 +422,9 @@ def _run_lint_check(src_text: str) -> int:
             if not proc:
                 return 0
 
-            return 0 if proc.returncode not in (0, 1) else _parse_ruff_output(proc.stdout)
+            return (
+                0 if proc.returncode not in (0, 1) else _parse_ruff_output(proc.stdout)
+            )
     except Exception:
         return 0
 
@@ -626,7 +629,9 @@ def _count_dmp_chars(diffs: list[tuple[int, str]]) -> tuple[int, int]:
     return char_added, char_removed
 
 
-def _calculate_dmp_ratio(dmp: Any, diffs: list[tuple[int, str]], removed_text: str, added_text: str) -> float:
+def _calculate_dmp_ratio(
+    dmp: Any, diffs: list[tuple[int, str]], removed_text: str, added_text: str
+) -> float:
     """Calculate similarity ratio.
 
     Args:
@@ -755,7 +760,9 @@ def _diff_size_metrics(diff_text: str) -> DiffMetrics:
     removed_text = "\n".join(removed_lines)
 
     # Calculate advanced metrics
-    hunks, max_hunk_chars, char_added, char_removed, ratio = _calculate_advanced_metrics(removed_text, added_text)
+    hunks, max_hunk_chars, char_added, char_removed, ratio = (
+        _calculate_advanced_metrics(removed_text, added_text)
+    )
 
     # Calculate fingerprint
     fingerprint = _calculate_fingerprint(diff_text)
@@ -775,9 +782,11 @@ def _diff_size_metrics(diff_text: str) -> DiffMetrics:
 
 def _extract_base_content(candidate: PatchCandidate) -> str | None:
     """Extract base content from candidate metadata."""
-    if isinstance(candidate.meta, dict):
-        return candidate.meta.get("base_content")
-    return None
+    meta = candidate.meta
+    if not isinstance(meta, Mapping):
+        return None
+    base_content = meta.get("base_content")
+    return base_content if isinstance(base_content, str) else None
 
 
 def _compute_complexity_metrics(
@@ -796,7 +805,9 @@ def _compute_complexity_metrics(
     }
 
 
-def _compute_semantic_delta(candidate: PatchCandidate, base_src: str | None) -> SemanticDelta:
+def _compute_semantic_delta(
+    candidate: PatchCandidate, base_src: str | None
+) -> SemanticDelta:
     """Compute semantic delta for a candidate."""
     try:
         if structural_available():
@@ -845,7 +856,9 @@ def _normalize_low(values: Iterable[Numeric]) -> list[float]:
     return [1 - (v - mn) / (mx - mn) for v in vals]
 
 
-def _calculate_normalizations(raw_list: list[CandidateMetrics]) -> dict[str, list[float]]:
+def _calculate_normalizations(
+    raw_list: list[CandidateMetrics],
+) -> dict[str, list[float]]:
     """Calculate normalized values for all metrics."""
     complexity_values: list[float] = []
     lint_values: list[float] = []
@@ -857,20 +870,30 @@ def _calculate_normalizations(raw_list: list[CandidateMetrics]) -> dict[str, lis
         complex_val = metrics.get("complexity_delta")
         if not isinstance(complex_val, (int, float)):
             complex_val = metrics.get("complexity")
-        complexity_values.append(float(complex_val) if isinstance(complex_val, (int, float)) else 0.0)
+        complexity_values.append(
+            float(complex_val) if isinstance(complex_val, (int, float)) else 0.0
+        )
 
         lint_val = metrics.get("lint_issues")
-        lint_values.append(float(lint_val) if isinstance(lint_val, (int, float)) else 0.0)
+        lint_values.append(
+            float(lint_val) if isinstance(lint_val, (int, float)) else 0.0
+        )
 
         diff_val = metrics.get("diff_lines")
-        diff_values.append(float(diff_val) if isinstance(diff_val, (int, float)) else 0.0)
+        diff_values.append(
+            float(diff_val) if isinstance(diff_val, (int, float)) else 0.0
+        )
 
         length_val = metrics.get("content_len")
-        length_values.append(float(length_val) if isinstance(length_val, (int, float)) else 0.0)
+        length_values.append(
+            float(length_val) if isinstance(length_val, (int, float)) else 0.0
+        )
 
         sem_delta = metrics.get("semantic_delta")
         if isinstance(sem_delta, dict):
-            total_sem = sum(abs(float(v)) for v in sem_delta.values() if isinstance(v, (int, float)))
+            total_sem = sum(
+                abs(float(v)) for v in sem_delta.values() if isinstance(v, (int, float))
+            )
         else:
             total_sem = 0.0
         semantic_values.append(total_sem)
@@ -884,8 +907,11 @@ def _calculate_normalizations(raw_list: list[CandidateMetrics]) -> dict[str, lis
     }
 
 
-def _get_scoring_weights(settings: Any) -> tuple[float, float, float, float, float, float]:
+def _get_scoring_weights(
+    settings: Any,
+) -> tuple[float, float, float, float, float, float]:
     """Get scoring weights from settings with fallback defaults."""
+
     def _coerce(value: Any) -> float:
         return float(value) if isinstance(value, (int, float)) else 0.0
 
@@ -942,7 +968,9 @@ def _create_patch_score(
     return PatchScore(composite=round(composite, 4), features=features, raw=raw)
 
 
-def score_candidates(candidates: list[PatchCandidate], settings: Any) -> list[PatchScore]:
+def score_candidates(
+    candidates: list[PatchCandidate], settings: Any
+) -> list[PatchScore]:
     """Score patch candidates based on various metrics."""
     if not candidates:
         return []

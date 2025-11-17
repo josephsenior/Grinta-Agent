@@ -13,19 +13,20 @@ from forge.core.logger import forge_logger as logger
 
 class InvariantClient:
     """Client for interacting with Invariant security analysis server.
-    
+
     Manages session lifecycle and provides Policy and Monitor interfaces
     for security policy enforcement and monitoring.
     """
+
     timeout: int = 120
 
     def __init__(self, server_url: str, session_id: str | None = None) -> None:
         """Initialize Invariant client with server URL and optional session ID.
-        
+
         Args:
             server_url: URL of Invariant server
             session_id: Optional session ID to reuse
-            
+
         Raises:
             RuntimeError: If session creation fails
 
@@ -38,7 +39,9 @@ class InvariantClient:
         self.Policy = self._Policy(self)
         self.Monitor = self._Monitor(self)
 
-    def _create_session(self, session_id: str | None = None) -> tuple[str | None, Exception | None]:
+    def _create_session(
+        self, session_id: str | None = None
+    ) -> tuple[str | None, Exception | None]:
         """Create a new session with the Invariant server, with retry logic.
 
         Attempts to connect to the Invariant server within the configured timeout.
@@ -77,7 +80,9 @@ class InvariantClient:
         while elapsed < self.timeout:
             try:
                 if session_id:
-                    response = httpx.get(f"{self.server}/session/new?session_id={session_id}", timeout=60)
+                    response = httpx.get(
+                        f"{self.server}/session/new?session_id={session_id}", timeout=60
+                    )
                 else:
                     response = httpx.get(f"{self.server}/session/new", timeout=60)
                 response.raise_for_status()
@@ -99,13 +104,15 @@ class InvariantClient:
 
     def close_session(self) -> Exception | None:
         """Close the current session with the Invariant server.
-        
+
         Returns:
             Exception if close failed, None on success
 
         """
         try:
-            response = httpx.delete(f"{self.server}/session/?session_id={self.session_id}", timeout=60)
+            response = httpx.delete(
+                f"{self.server}/session/?session_id={self.session_id}", timeout=60
+            )
             response.raise_for_status()
         except (ConnectionError, httpx.TimeoutException, httpx.HTTPError) as err:
             return err
@@ -149,7 +156,7 @@ class InvariantClient:
 
         def get_template(self) -> tuple[str | None, Exception | None]:
             """Get policy template from Invariant server.
-            
+
             Returns:
                 tuple: (template, error) - template is None on failure, error is None on success
 
@@ -163,13 +170,13 @@ class InvariantClient:
 
         def from_string(self, rule: str) -> InvariantClient._Policy:
             """Create policy from rule string.
-            
+
             Args:
                 rule: Policy rule string in Invariant DSL
-                
+
             Returns:
                 Self for method chaining
-                
+
             Raises:
                 Exception: If policy creation fails
 
@@ -182,10 +189,10 @@ class InvariantClient:
 
         def analyze(self, trace: list[dict[str, Any]]) -> tuple[Any, Exception | None]:
             """Analyze trace against the policy.
-            
+
             Args:
                 trace: List of trace event dictionaries
-                
+
             Returns:
                 tuple: (analysis_result, error) - result is None on failure, error is None on success
 
@@ -206,7 +213,7 @@ class InvariantClient:
 
         def __init__(self, invariant: InvariantClient) -> None:
             """Initialize monitor with Invariant client.
-            
+
             Args:
                 invariant: InvariantClient instance
 
@@ -246,13 +253,13 @@ class InvariantClient:
 
         def from_string(self, rule: str) -> InvariantClient._Monitor:
             """Create monitor from rule string.
-            
+
             Args:
                 rule: Monitor rule string in Invariant DSL
-                
+
             Returns:
                 Self for method chaining
-                
+
             Raises:
                 Exception: If monitor creation fails
 
@@ -270,11 +277,11 @@ class InvariantClient:
             pending_events: list[dict[str, Any]],
         ) -> tuple[Any, Exception | None]:
             """Check new events against monitor policy.
-            
+
             Args:
                 past_events: Previous events in the trace
                 pending_events: New events to check
-                
+
             Returns:
                 tuple: (violations, error) - violations is list of violation strings, error is None on success
 

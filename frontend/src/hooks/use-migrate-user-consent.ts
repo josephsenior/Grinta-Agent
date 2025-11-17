@@ -27,7 +27,7 @@ export const useMigrateUserConsent = () => {
         localStorage.removeItem("analytics-consent");
       }
     },
-    [],
+    [saveUserSettings],
   );
 
   return { migrateUserConsent };

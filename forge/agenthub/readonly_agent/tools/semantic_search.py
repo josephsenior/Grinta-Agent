@@ -4,7 +4,7 @@ Search codebase by semantic meaning, not just text patterns.
 Better than grep for conceptual searches.
 """
 
-from litellm import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from forge.llm.tool_types import make_function_chunk, make_tool_param
 
 
 _SEMANTIC_SEARCH_DESCRIPTION = """Semantic code search - Find code by meaning, not just keywords
@@ -42,16 +42,16 @@ Returns:
 """
 
 
-def create_semantic_search_tool() -> ChatCompletionToolParam:
+def create_semantic_search_tool():
     """Create Semantic Search tool for ReadOnlyAgent.
-    
+
     Returns:
         ChatCompletionToolParam for semantic code search
 
     """
-    return ChatCompletionToolParam(
+    return make_tool_param(
         type="function",
-        function=ChatCompletionToolParamFunctionChunk(
+        function=make_function_chunk(
             name="semantic_search",
             description=_SEMANTIC_SEARCH_DESCRIPTION,
             parameters={
@@ -81,4 +81,3 @@ def create_semantic_search_tool() -> ChatCompletionToolParam:
             },
         ),
     )
-

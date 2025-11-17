@@ -22,13 +22,39 @@ def main() -> None:
         required=True,
         help="repository to resolve issues in form of `owner/repo`.",
     )
-    parser.add_argument("--token", type=str, default=None, help="token to access the repository.")
-    parser.add_argument("--username", type=str, default=None, help="username to access the repository.")
-    parser.add_argument("--base-container-image", type=str, default=None, help="base container image to use.")
-    parser.add_argument("--runtime-container-image", type=str, default=None, help="Container image to use.")
-    parser.add_argument("--runtime", type=str, default=None, help="Runtime environment to use (default: docker).")
-    parser.add_argument("--max-iterations", type=int, default=50, help="Maximum number of iterations to run.")
-    parser.add_argument("--issue-number", type=int, required=True, help="Issue number to resolve.")
+    parser.add_argument(
+        "--token", type=str, default=None, help="token to access the repository."
+    )
+    parser.add_argument(
+        "--username", type=str, default=None, help="username to access the repository."
+    )
+    parser.add_argument(
+        "--base-container-image",
+        type=str,
+        default=None,
+        help="base container image to use.",
+    )
+    parser.add_argument(
+        "--runtime-container-image",
+        type=str,
+        default=None,
+        help="Container image to use.",
+    )
+    parser.add_argument(
+        "--runtime",
+        type=str,
+        default=None,
+        help="Runtime environment to use (default: docker).",
+    )
+    parser.add_argument(
+        "--max-iterations",
+        type=int,
+        default=50,
+        help="Maximum number of iterations to run.",
+    )
+    parser.add_argument(
+        "--issue-number", type=int, required=True, help="Issue number to resolve."
+    )
     parser.add_argument(
         "--comment-id",
         type=int_or_none,
@@ -36,10 +62,19 @@ def main() -> None:
         default=None,
         help="Resolve a specific comment",
     )
-    parser.add_argument("--output-dir", type=str, default="output", help="Output directory to write the results.")
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="output",
+        help="Output directory to write the results.",
+    )
     parser.add_argument("--llm-model", type=str, default=None, help="LLM model to use.")
-    parser.add_argument("--llm-api-key", type=str, default=None, help="LLM API key to use.")
-    parser.add_argument("--llm-base-url", type=str, default=None, help="LLM base URL to use.")
+    parser.add_argument(
+        "--llm-api-key", type=str, default=None, help="LLM API key to use."
+    )
+    parser.add_argument(
+        "--llm-base-url", type=str, default=None, help="LLM base URL to use."
+    )
     parser.add_argument(
         "--prompt-file",
         type=str,

@@ -12,13 +12,21 @@ def OPENAI_TOPIC_GEN_MESSAGES(n=10):
             "content": f'Given `n`, come up with a list of `n` distinct topics and their descriptions. The topics can be absolutely anything. Be as creative as possible. Return your answer as a JSON object. \n\nFor example, for `n`=3, a valid answer might be:\n```json\n{
                 "topics": [\n  {
                     "id": 1, "topic": "cooking", "description": "Related to recipes, ingredients, chefs, etc."} ,\n  {
-                        "id": 2, "topic": "sports", "description": "Related to players, stadiums, trophies, etc."} ,\n  {
-                    "id": 3, "topic": "antiquing", "description": "Related to unique items, history, etc."} \n]} ```\n\nNow, give me a list for `n`={n}. Remember, pick diverse topics from everything possible. No consecutive topics should be broadly similar. Directly respond with the answer JSON object.',
+                    "id": 2, "topic": "sports", "description": "Related to players, stadiums, trophies, etc."} ,\n  {
+                    "id": 3, "topic": "antiquing", "description": "Related to unique items, history, etc."} \n]} ```\n\nNow, give me a list for `n`={
+                n
+            }. Remember, pick diverse topics from everything possible. No consecutive topics should be broadly similar. Directly respond with the answer JSON object.',
         },
     ]
 
 
-OPENAI_GEN_HYP = {"temperature": 1.0, "max_tokens": 4096, "top_p": 1.0, "frequency_penalty": 0, "presence_penalty": 0}
+OPENAI_GEN_HYP = {
+    "temperature": 1.0,
+    "max_tokens": 4096,
+    "top_p": 1.0,
+    "frequency_penalty": 0,
+    "presence_penalty": 0,
+}
 
 
 def OPENAI_SEMANTICS_GEN_MESSAGES(dependent, relationship, domain, domain_desc):
@@ -69,7 +77,9 @@ Respond only with the answer JSON. Make sure that you do not forget to include t
     ]
 
 
-def OPENAI_SEMANTICS_GEN_W_MAP_MESSAGES(dependent, relationship, domain, domain_desc, mapping):
+def OPENAI_SEMANTICS_GEN_W_MAP_MESSAGES(
+    dependent, relationship, domain, domain_desc, mapping
+):
     return [
         {
             "role": "system",
@@ -243,7 +253,9 @@ def create_prompt(usr_msg):
 def get_response(client, prompt, max_retry=5, model="gpt-3.5-turbo", verbose=False):
     n_try = 0
     while n_try < max_retry:
-        response = client.chat.completions.create(model=model, messages=create_prompt(prompt), **OPENAI_GEN_HYP)
+        response = client.chat.completions.create(
+            model=model, messages=create_prompt(prompt), **OPENAI_GEN_HYP
+        )
         content = response.choices[0].message.content
         cleaned_content = content.split("```json")[1].split("```")[0].strip()
         output = cleaned_content
@@ -261,7 +273,9 @@ def get_response(client, prompt, max_retry=5, model="gpt-3.5-turbo", verbose=Fal
     return None
 
 
-def get_code_fix(client, code, error, max_retry=5, model="gpt-3.5-turbo", verbose=False):
+def get_code_fix(
+    client, code, error, max_retry=5, model="gpt-3.5-turbo", verbose=False
+):
     prompt = f"""Given the following code snippet and error message, provide a single-line fix for the error. Note that the code is going to be executed using python `eval`. The code should be executable and should not produce the error message. Be as specific as possible.
 
 Here's the code and the error:
@@ -275,10 +289,14 @@ Return only a JSON object with the fixed code in the following format:
 {{
     "fixed_code": "..."
 }}"""
-    return get_response(client, prompt, max_retry=max_retry, model=model, verbose=verbose)
+    return get_response(
+        client, prompt, max_retry=max_retry, model=model, verbose=verbose
+    )
 
 
-def get_new_hypothesis(client, target, old, expr, cols, model="gpt-3.5-turbo", verbose=False):
+def get_new_hypothesis(
+    client, target, old, expr, cols, model="gpt-3.5-turbo", verbose=False
+):
     prompt = f"""Given a target column from a dataset, a pandas expression to derive the column from existing columns, a list of existing columns, and a previously written hypothesis text, carefully check if the hypothesis text is consistent with the pandas expression or not. If it is consistent, simply return the hypothesis as it is. If it is not consistent, provide a new natural language hypothesis that is consistent with the pandas expression using only the provided information. Be specific.
 
 Here's the information:

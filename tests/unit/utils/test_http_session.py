@@ -66,4 +66,3 @@ def test_http_session_verbs_delegate(reset_client):
     session.delete("http://example.com")
     session.options("http://example.com")
     assert client.request.call_count == 5
-

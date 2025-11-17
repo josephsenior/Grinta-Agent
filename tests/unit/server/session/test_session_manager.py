@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import cast
 
-from forge.server.session.session_manager import SessionManager
+from forge.server.session.session_manager import SessionManager, Session
 
 
-def make_session(session_id: str, **attributes):
-    attrs = {"sid": session_id}
-    attrs.update(attributes)
-    return SimpleNamespace(**attrs)
+def make_session(session_id: str, user_id: str | None = None) -> Session:
+    return cast(Session, SimpleNamespace(sid=session_id, user_id=user_id))
 
 
 def test_session_manager_add_and_get_session():
@@ -30,7 +29,7 @@ def test_session_manager_get_active_sessions_returns_copy():
 
     active = manager.get_active_sessions()
     assert active == {"session-1": session}
-    active["session-1"] = None
+    active.pop("session-1")
     assert manager.get_session("session-1") is session  # original unaffected
 
 

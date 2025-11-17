@@ -16,11 +16,14 @@ class TestThoughtDisplayOrder:
 
     @patch("forge.cli.tui.display_thought_if_new")
     @patch("forge.cli.tui.display_command")
-    def test_cmd_run_action_thought_before_command(self, mock_display_command, mock_display_thought_if_new):
+    def test_cmd_run_action_thought_before_command(
+        self, mock_display_command, mock_display_thought_if_new
+    ):
         """Test that for CmdRunAction, thought is displayed before command."""
         config = MagicMock(spec=ForgeConfig)
         cmd_action = CmdRunAction(
-            command="npm install", thought="I need to install the dependencies first before running the tests."
+            command="npm install",
+            thought="I need to install the dependencies first before running the tests.",
         )
         cmd_action.confirmation_state = ActionConfirmationStatus.AWAITING_CONFIRMATION
         display_event(cmd_action, config)
@@ -28,14 +31,21 @@ class TestThoughtDisplayOrder:
             "I need to install the dependencies first before running the tests."
         )
         mock_display_command.assert_called_once_with(cmd_action)
-        all_calls = [("display_thought_if_new", call) for call in mock_display_thought_if_new.call_args_list]
-        all_calls.extend([("display_command", call) for call in mock_display_command.call_args_list])
+        all_calls = [
+            ("display_thought_if_new", call)
+            for call in mock_display_thought_if_new.call_args_list
+        ]
+        all_calls.extend(
+            [("display_command", call) for call in mock_display_command.call_args_list]
+        )
         assert mock_display_thought_if_new.called
         assert mock_display_command.called
 
     @patch("forge.cli.tui.display_thought_if_new")
     @patch("forge.cli.tui.display_command")
-    def test_cmd_run_action_no_thought(self, mock_display_command, mock_display_thought_if_new):
+    def test_cmd_run_action_no_thought(
+        self, mock_display_command, mock_display_thought_if_new
+    ):
         """Test that CmdRunAction without thought only displays command."""
         config = MagicMock(spec=ForgeConfig)
         cmd_action = CmdRunAction(command="npm install")
@@ -46,7 +56,9 @@ class TestThoughtDisplayOrder:
 
     @patch("forge.cli.tui.display_thought_if_new")
     @patch("forge.cli.tui.display_command")
-    def test_cmd_run_action_empty_thought(self, mock_display_command, mock_display_thought_if_new):
+    def test_cmd_run_action_empty_thought(
+        self, mock_display_command, mock_display_thought_if_new
+    ):
         """Test that CmdRunAction with empty thought only displays command."""
         config = MagicMock(spec=ForgeConfig)
         cmd_action = CmdRunAction(command="npm install", thought="")
@@ -64,7 +76,8 @@ class TestThoughtDisplayOrder:
         """Test that confirmed CmdRunAction doesn't display command again but initializes streaming."""
         config = MagicMock(spec=ForgeConfig)
         cmd_action = CmdRunAction(
-            command="npm install", thought="I need to install the dependencies first before running the tests."
+            command="npm install",
+            thought="I need to install the dependencies first before running the tests.",
         )
         cmd_action.confirmation_state = ActionConfirmationStatus.CONFIRMED
         display_event(cmd_action, config)
@@ -81,7 +94,9 @@ class TestThoughtDisplayOrder:
         action = Action()
         action.thought = "This is a thought for a generic action."
         display_event(action, config)
-        mock_display_thought_if_new.assert_called_once_with("This is a thought for a generic action.")
+        mock_display_thought_if_new.assert_called_once_with(
+            "This is a thought for a generic action."
+        )
 
     @patch("forge.cli.tui.display_message")
     def test_other_action_final_thought_display(self, mock_display_message):
@@ -90,7 +105,9 @@ class TestThoughtDisplayOrder:
         action = Action()
         action.final_thought = "This is a final thought."
         display_event(action, config)
-        mock_display_message.assert_called_once_with("This is a final thought.", is_agent_message=True)
+        mock_display_message.assert_called_once_with(
+            "This is a final thought.", is_agent_message=True
+        )
 
     @patch("forge.cli.tui.display_thought_if_new")
     def test_message_action_from_agent(self, mock_display_thought_if_new):
@@ -99,7 +116,9 @@ class TestThoughtDisplayOrder:
         message_action = MessageAction(content="Hello from agent")
         message_action._source = EventSource.AGENT
         display_event(message_action, config)
-        mock_display_thought_if_new.assert_called_once_with("Hello from agent", is_agent_message=True)
+        mock_display_thought_if_new.assert_called_once_with(
+            "Hello from agent", is_agent_message=True
+        )
 
     @patch("forge.cli.tui.display_thought_if_new")
     def test_message_action_from_user_not_displayed(self, mock_display_thought_if_new):
@@ -112,7 +131,9 @@ class TestThoughtDisplayOrder:
 
     @patch("forge.cli.tui.display_thought_if_new")
     @patch("forge.cli.tui.display_command")
-    def test_cmd_run_action_with_both_thoughts(self, mock_display_command, mock_display_thought_if_new):
+    def test_cmd_run_action_with_both_thoughts(
+        self, mock_display_command, mock_display_thought_if_new
+    ):
         """Test CmdRunAction with both thought and final_thought."""
         config = MagicMock(spec=ForgeConfig)
         cmd_action = CmdRunAction(command="npm install", thought="Initial thought")
@@ -137,16 +158,22 @@ class TestThoughtDisplayIntegration:
         def track_display_command(event):
             call_order.append(f"COMMAND: {event.command}")
 
-        with patch("forge.cli.tui.display_message", side_effect=track_display_message), patch(
-            "forge.cli.tui.display_command", side_effect=track_display_command
+        with (
+            patch("forge.cli.tui.display_message", side_effect=track_display_message),
+            patch("forge.cli.tui.display_command", side_effect=track_display_command),
         ):
             cmd_action = CmdRunAction(
-                command="npm install", thought="I need to install the dependencies first before running the tests."
+                command="npm install",
+                thought="I need to install the dependencies first before running the tests.",
             )
-            cmd_action.confirmation_state = ActionConfirmationStatus.AWAITING_CONFIRMATION
+            cmd_action.confirmation_state = (
+                ActionConfirmationStatus.AWAITING_CONFIRMATION
+            )
             display_event(cmd_action, config)
         expected_order = [
             "THOUGHT: I need to install the dependencies first before running the tests.",
             "COMMAND: npm install",
         ]
-        assert call_order == expected_order, f"Expected {expected_order}, but got {call_order}"
+        assert call_order == expected_order, (
+            f"Expected {expected_order}, but got {call_order}"
+        )

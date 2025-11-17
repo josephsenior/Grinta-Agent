@@ -24,7 +24,9 @@ def temp_user_microagents_dir():
 
 def test_user_microagents_loading(temp_user_microagents_dir):
     """Test that user microagents are loaded from ~/.Forge/microagents/."""
-    with patch("forge.memory.memory.USER_MICROAGENTS_DIR", str(temp_user_microagents_dir)):
+    with patch(
+        "forge.memory.memory.USER_MICROAGENTS_DIR", str(temp_user_microagents_dir)
+    ):
         with tempfile.TemporaryDirectory() as temp_dir:
             file_store = get_file_store("local", temp_dir)
             event_stream = EventStream("test", file_store)
@@ -74,7 +76,9 @@ def test_user_microagents_loading_error_handling():
     """Test error handling when user microagents directory has issues."""
     with tempfile.TemporaryDirectory() as temp_dir:
         user_dir = Path(temp_dir)
-        invalid_agent = "---\nname: invalid\ntype: invalid_type\n---\n\n# Invalid Agent\n"
+        invalid_agent = (
+            "---\nname: invalid\ntype: invalid_type\n---\n\n# Invalid Agent\n"
+        )
         (user_dir / "invalid.md").write_text(invalid_agent)
         with patch("forge.memory.memory.USER_MICROAGENTS_DIR", str(user_dir)):
             with tempfile.TemporaryDirectory() as temp_store_dir:
@@ -104,7 +108,9 @@ def test_user_microagents_nested_directories(temp_user_microagents_dir):
     nested_dir.mkdir(parents=True)
     nested_agent = "---\nname: personal_tool\nversion: 1.0.0\nagent: CodeActAgent\ntriggers:\n  - personal-tool\n---\n\n# Personal Tool Agent\n\nMy personal development tools and workflows.\n"
     (nested_dir / "tool.md").write_text(nested_agent)
-    with patch("forge.memory.memory.USER_MICROAGENTS_DIR", str(temp_user_microagents_dir)):
+    with patch(
+        "forge.memory.memory.USER_MICROAGENTS_DIR", str(temp_user_microagents_dir)
+    ):
         with tempfile.TemporaryDirectory() as temp_store_dir:
             file_store = get_file_store("local", temp_store_dir)
             event_stream = EventStream("test", file_store)

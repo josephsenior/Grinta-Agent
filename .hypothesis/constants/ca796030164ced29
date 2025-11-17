@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\utils\responses.py
+# hypothesis_version: 6.147.0
+
+[200, 400, 'ERROR_STATUS', 'SUCCESS_STATUS', 'actions', 'data', 'details', 'error', 'error_code', 'message', 'meta', 'ok', 'status', 'success']

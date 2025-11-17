@@ -118,9 +118,116 @@ groups:
           team: performance
         for: 15m
 
+      # EventService RPC error rate high
+      - uid: forge-eventservice-error-rate
+        title: EventService RPC Error Rate High
+        condition: eventservice_error_high
+        data:
+          - refId: eventservice_error
+            queryType: prometheus
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'forge_eventservice_error_rate_5m'
+              refId: eventservice_error
+          - refId: eventservice_error_high
+            queryType: threshold
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [5]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [eventservice_error]
+                  type: query
+              refId: eventservice_error_high
+        annotations:
+          description: 'EventService RPC error rate {{ printf "%.2f" $values.eventservice_error.Value }}% (>5%)'
+          summary: EventService experiencing elevated failure rate
+        labels:
+          severity: warning
+          team: backend
+        for: 5m
+
+      # RuntimeService RPC latency high
+      - uid: forge-runtime-latency
+        title: RuntimeService RPC Latency High (p95)
+        condition: runtime_latency_high
+        data:
+          - refId: runtime_latency
+            queryType: prometheus
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'histogram_quantile(0.95, sum by (le) (rate(metasop_runtime_rpc_duration_seconds_bucket[5m])))'
+              refId: runtime_latency
+          - refId: runtime_latency_high
+            queryType: threshold
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [5]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [runtime_latency]
+                  type: query
+              refId: runtime_latency_high
+        annotations:
+          description: 'RuntimeService p95 latency {{ printf "%.2f" $values.runtime_latency.Value }}s (>5s)'
+          summary: RuntimeService RPC latency elevated
+        labels:
+          severity: warning
+          team: performance
+        for: 10m
+
   - name: forge-availability-alerts
     interval: 1m
     rules:
+      # Low overall success rate (<95%) over 10m
+      - uid: forge-low-success-rate
+        title: Low Success Rate (5m avg)
+        condition: success_rate_low
+        data:
+          - refId: success_rate
+            queryType: prometheus
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'forge_success_rate_5m'
+              refId: success_rate
+          - refId: success_rate_low
+            queryType: threshold
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [95]
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params: [success_rate]
+                  type: query
+              refId: success_rate_low
+        annotations:
+          description: 'Success rate is {{ printf "%.2f" $values.success_rate.Value }}% (threshold: 95%)'
+          summary: Overall success rate is low
+        labels:
+          severity: warning
+          team: reliability
+        for: 10m
       # Service down
       - uid: forge-service-down
         title: Forge Service Down
@@ -235,6 +342,41 @@ groups:
   - name: forge-new-alerts
     interval: 1m
     rules:
+      # Low retry success rate (<60%) indicates retry ineffectiveness
+      - uid: forge-low-retry-success-rate
+        title: Low Retry Success Rate (5m avg)
+        condition: retry_success_low
+        data:
+          - refId: retry_success_rate
+            queryType: prometheus
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'forge_retry_success_rate_5m'
+              refId: retry_success_rate
+          - refId: retry_success_low
+            queryType: threshold
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: [60]
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params: [retry_success_rate]
+                  type: query
+              refId: retry_success_low
+        annotations:
+          description: 'Retry success rate is {{ printf "%.2f" $values.retry_success_rate.Value }}% (threshold: 60%)'
+          summary: Retries are not recovering failures effectively
+        labels:
+          severity: warning
+          team: reliability
+        for: 10m
       # LLM cost spike (>2x daily average)
       - uid: forge-cost-spike
         title: LLM Cost Spike Detected

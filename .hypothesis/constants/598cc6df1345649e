@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\integrations\gitlab\service\resolver.py
+# hypothesis_version: 6.147.0
+
+['+00:00', 'Link', 'Z', 'asc', 'author', 'body', 'created_at', 'description', 'id', 'notes', 'order_by', 'page', 'per_page', 'rel="next"', 'sort', 'system', 'title', 'unknown', 'updated_at', 'username']

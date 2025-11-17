@@ -20,8 +20,17 @@ from forge.events.action.agent import (
 )
 from forge.events.action.browse import BrowseInteractiveAction, BrowseURLAction
 from forge.events.action.empty import NullAction
-from forge.events.action.files import FileEditAction, FileEditSource, FileReadAction, FileWriteAction
-from forge.events.action.message import MessageAction, StreamingChunkAction, SystemMessageAction
+from forge.events.action.files import (
+    FileEditAction,
+    FileEditSource,
+    FileReadAction,
+    FileWriteAction,
+)
+from forge.events.action.message import (
+    MessageAction,
+    StreamingChunkAction,
+    SystemMessageAction,
+)
 from forge.events.async_event_store_wrapper import AsyncEventStoreWrapper
 from forge.events.event import Event, EventSource, RecallType
 from forge.events.observation.agent import (
@@ -51,7 +60,13 @@ class _DummyEventStore:
         yield from self._events
 
 
-def _set_ids(event: Event, *, event_id: int, cause: int | None = None, source: EventSource | None = None) -> Event:
+def _set_ids(
+    event: Event,
+    *,
+    event_id: int,
+    cause: int | None = None,
+    source: EventSource | None = None,
+) -> Event:
     """Helper to set private metadata for tests."""
     event._id = event_id
     if cause is not None:
@@ -84,14 +99,18 @@ def test_async_event_store_wrapper_iterates_in_order() -> None:
 
 def test_get_pairs_from_events_matches_actions_and_observations() -> None:
     """Pairs should align actions with observations and fill in gaps."""
-    action_with_result = _set_ids(AgentFinishAction(final_thought="complete"), event_id=1)
+    action_with_result = _set_ids(
+        AgentFinishAction(final_thought="complete"), event_id=1
+    )
     observation_for_action = _set_ids(
         CmdOutputObservation(content="ok", command="ls", hidden=True),
         event_id=2,
         cause=1,
     )
 
-    action_without_observation = _set_ids(AgentThinkAction(thought="still working"), event_id=3)
+    action_without_observation = _set_ids(
+        AgentThinkAction(thought="still working"), event_id=3
+    )
     orphaned_observation = _set_ids(
         CmdOutputObservation(content="warning", command="cat", hidden=True),
         event_id=4,
@@ -99,12 +118,23 @@ def test_get_pairs_from_events_matches_actions_and_observations() -> None:
     )
 
     pairs = get_pairs_from_events(
-        [action_with_result, observation_for_action, action_without_observation, orphaned_observation],
+        [
+            action_with_result,
+            observation_for_action,
+            action_without_observation,
+            orphaned_observation,
+        ],
     )
 
     assert (action_with_result, observation_for_action) in pairs
-    assert any(pair[0] is action_without_observation and isinstance(pair[1], NullObservation) for pair in pairs)
-    assert any(isinstance(pair[0], NullAction) and pair[1] is orphaned_observation for pair in pairs)
+    assert any(
+        pair[0] is action_without_observation and isinstance(pair[1], NullObservation)
+        for pair in pairs
+    )
+    assert any(
+        isinstance(pair[0], NullAction) and pair[1] is orphaned_observation
+        for pair in pairs
+    )
 
 
 def test_get_pairs_logs_missing_identifiers(caplog: pytest.LogCaptureFixture) -> None:
@@ -123,8 +153,15 @@ def test_get_pairs_logs_missing_identifiers(caplog: pytest.LogCaptureFixture) ->
 
 def test_server_ready_observation_message_reflects_health() -> None:
     """Message should include status emoji depending on health."""
-    healthy = ServerReadyObservation(content="ready", port=8080, url="http://localhost:8080", health_status="healthy")
-    degraded = ServerReadyObservation(content="pending", port=8080, url="http://localhost:8080", health_status="probing")
+    healthy = ServerReadyObservation(
+        content="ready", port=8080, url="http://localhost:8080", health_status="healthy"
+    )
+    degraded = ServerReadyObservation(
+        content="pending",
+        port=8080,
+        url="http://localhost:8080",
+        health_status="probing",
+    )
 
     assert "✅" in healthy.message
     assert "🔄" in degraded.message
@@ -133,10 +170,18 @@ def test_server_ready_observation_message_reflects_health() -> None:
 def test_condensation_action_validations_and_output() -> None:
     """Condensation actions should validate and present state correctly."""
     with pytest.raises(ValueError):
-        CondensationAction(forgotten_event_ids=[1, 2], forgotten_events_start_id=1, forgotten_events_end_id=2)
+        CondensationAction(
+            forgotten_event_ids=[1, 2],
+            forgotten_events_start_id=1,
+            forgotten_events_end_id=2,
+        )
 
-    summary_action = CondensationAction(forgotten_event_ids=[7, 9], summary="summarised", summary_offset=5)
-    range_action = CondensationAction(forgotten_events_start_id=1, forgotten_events_end_id=3)
+    summary_action = CondensationAction(
+        forgotten_event_ids=[7, 9], summary="summarised", summary_offset=5
+    )
+    range_action = CondensationAction(
+        forgotten_events_start_id=1, forgotten_events_end_id=3
+    )
 
     assert summary_action.message == "Summary: summarised"
     assert range_action.forgotten == [1, 2, 3]
@@ -145,20 +190,44 @@ def test_condensation_action_validations_and_output() -> None:
 
 def test_agent_action_messages_cover_variants() -> None:
     """Exercise message helpers across the agent action classes."""
-    assert AgentFinishAction(final_thought="done", thought="Explained.").message == "Explained."
-    assert AgentRejectAction(outputs={"reason": "Not feasible"}).message.endswith("Reason: Not feasible")
-    assert ChangeAgentStateAction(agent_state="running").message == "Agent state changed to running"
-    assert AgentDelegateAction(agent="helper", inputs={}).message == "I'm asking helper for help with this task."
-    assert RecallAction(recall_type=RecallType.WORKSPACE_CONTEXT, query="documentation").message.startswith("Retrieving content")
-    assert "RecallAction" in str(RecallAction(recall_type=RecallType.WORKSPACE_CONTEXT, query="docs"))
-    assert CondensationRequestAction().message == "Requesting a condensation of the conversation history."
+    assert (
+        AgentFinishAction(final_thought="done", thought="Explained.").message
+        == "Explained."
+    )
+    assert AgentRejectAction(outputs={"reason": "Not feasible"}).message.endswith(
+        "Reason: Not feasible"
+    )
+    assert (
+        ChangeAgentStateAction(agent_state="running").message
+        == "Agent state changed to running"
+    )
+    assert (
+        AgentDelegateAction(agent="helper", inputs={}).message
+        == "I'm asking helper for help with this task."
+    )
+    assert RecallAction(
+        recall_type=RecallType.WORKSPACE_CONTEXT, query="documentation"
+    ).message.startswith("Retrieving content")
+    assert "RecallAction" in str(
+        RecallAction(recall_type=RecallType.WORKSPACE_CONTEXT, query="docs")
+    )
+    assert (
+        CondensationRequestAction().message
+        == "Requesting a condensation of the conversation history."
+    )
 
 
 def test_task_tracking_action_messages_scale_with_tasks() -> None:
     """Task tracking message should reflect number of tasks."""
     assert TaskTrackingAction(task_list=[]).message == "Clearing the task list."
-    assert TaskTrackingAction(task_list=[{"title": "one"}]).message == "Managing 1 task item."
-    assert TaskTrackingAction(task_list=[{"title": "one"}, {"title": "two"}]).message == "Managing 2 task items."
+    assert (
+        TaskTrackingAction(task_list=[{"title": "one"}]).message
+        == "Managing 1 task item."
+    )
+    assert (
+        TaskTrackingAction(task_list=[{"title": "one"}, {"title": "two"}]).message
+        == "Managing 2 task items."
+    )
 
 
 def test_message_action_str_and_images_alias() -> None:
@@ -175,14 +244,18 @@ def test_message_action_str_and_images_alias() -> None:
 
 def test_system_and_streaming_message_actions_repr() -> None:
     """Ensure system and streaming actions provide informative strings."""
-    system = SystemMessageAction(content="sys prompt", tools=[{"name": "tool"}], agent_class="AgentX")
+    system = SystemMessageAction(
+        content="sys prompt", tools=[{"name": "tool"}], agent_class="AgentX"
+    )
     system._source = EventSource.AGENT
     rendered = str(system)
     assert "TOOLS: 1 tools available" in rendered
     assert "AGENT_CLASS: AgentX" in rendered
     assert system.message == "sys prompt"
 
-    chunk = StreamingChunkAction(chunk="hello", accumulated="hello world", is_final=True)
+    chunk = StreamingChunkAction(
+        chunk="hello", accumulated="hello world", is_final=True
+    )
     output = str(chunk)
     assert "FINAL" in output
     assert "11 chars" in output
@@ -190,7 +263,9 @@ def test_system_and_streaming_message_actions_repr() -> None:
 
 def test_browse_actions_render_context() -> None:
     """Check browse action helpers for message and string output."""
-    browse_url = BrowseURLAction(url="https://example.com", thought="check docs", return_axtree=True)
+    browse_url = BrowseURLAction(
+        url="https://example.com", thought="check docs", return_axtree=True
+    )
     browse_interactive = BrowseInteractiveAction(
         browser_actions='click("submit")',
         thought="submit form",
@@ -202,8 +277,8 @@ def test_browse_actions_render_context() -> None:
     assert "THOUGHT: check docs" in str(browse_url)
     assert "return_axtree" not in str(browse_url)
 
-    assert "click(\"submit\")" in browse_interactive.message
-    assert "BROWSER_ACTIONS: click(\"submit\")" in str(browse_interactive)
+    assert 'click("submit")' in browse_interactive.message
+    assert 'BROWSER_ACTIONS: click("submit")' in str(browse_interactive)
 
 
 def test_agent_observations_messages_and_repr() -> None:
@@ -220,7 +295,9 @@ def test_agent_observations_messages_and_repr() -> None:
 
 def test_recall_observation_formats_workspace_details() -> None:
     knowledge = [
-        MicroagentKnowledge(name="python_best_practices", trigger="python", content="Always lint."),
+        MicroagentKnowledge(
+            name="python_best_practices", trigger="python", content="Always lint."
+        ),
         MicroagentKnowledge(name="git", trigger="git", content="Use branches."),
     ]
     recall = RecallObservation(
@@ -241,7 +318,11 @@ def test_recall_observation_formats_workspace_details() -> None:
     assert "recall_type=RecallType.WORKSPACE_CONTEXT" in description
     assert "microagent_knowledge=python_best_practices, git" in description
 
-    recall_microagent = RecallObservation(content="info", recall_type=RecallType.KNOWLEDGE, microagent_knowledge=knowledge[:1])
+    recall_microagent = RecallObservation(
+        content="info",
+        recall_type=RecallType.KNOWLEDGE,
+        microagent_knowledge=knowledge[:1],
+    )
     assert recall_microagent.message == "Added microagent knowledge"
     assert "RecallObservation" in str(recall_microagent)
 
@@ -325,4 +406,3 @@ def test_event_base_properties_cover_accessors() -> None:
 
     event.response_id = "resp-123"
     assert event.response_id == "resp-123"
-

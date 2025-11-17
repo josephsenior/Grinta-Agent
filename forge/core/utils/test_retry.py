@@ -4,22 +4,25 @@ from __future__ import annotations
 
 from typing import NoReturn
 
+import pytest
+
 from forge.core.utils.retry import RetryError, retry
 
 
 def test_retry_success_after_failure() -> None:
     """Test that retry succeeds after initial failure.
-    
+
     Verifies that the retry mechanism correctly handles transient failures
     and returns success when the function eventually succeeds.
     """
     attempts = {"count": 0}
 
-    def flaky() -> NoReturn:
+    def flaky() -> str:
         """Fail on first invocation to exercise retry logic."""
         attempts["count"] += 1
-        # Simulate flaky behavior: fail on first attempt, succeed on second
-        raise ValueError("fail") if attempts["count"] < 2 else None
+        if attempts["count"] < 2:
+            raise ValueError("fail")
+        return "ok"
 
     result = retry(flaky, max_attempts=3, base_delay=0.01, max_delay=0.02)
     assert result == "ok"
@@ -28,7 +31,7 @@ def test_retry_success_after_failure() -> None:
 
 def test_retry_gives_up() -> None:
     """Test that retry gives up after max attempts.
-    
+
     Verifies that RetryError is raised when all retry attempts are exhausted.
     """
 
@@ -37,9 +40,5 @@ def test_retry_gives_up() -> None:
         msg = "nope"
         raise RuntimeError(msg)
 
-    try:
+    with pytest.raises(RetryError):
         retry(always_fail, max_attempts=2, base_delay=0.01, max_delay=0.02)
-        msg = "should have raised RetryError"
-        raise AssertionError(msg)
-    except RetryError:
-        pass

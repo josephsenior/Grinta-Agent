@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\core\schema\observation.py
+# hypothesis_version: 6.147.0
+
+['agent_state_changed', 'browse', 'chat', 'condense', 'delegate', 'download', 'edit', 'error', 'mcp', 'message', 'null', 'read', 'recall', 'run', 'run_ipython', 'server_ready', 'success', 'task_tracking', 'think', 'user_rejected', 'write']

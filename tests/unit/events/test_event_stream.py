@@ -6,7 +6,7 @@ from datetime import datetime
 import psutil
 import pytest
 from pytest import TempPathFactory
-from forge.core.schema import ActionType, ObservationType
+from forge.core.schemas import ActionType, ObservationType
 from forge.events import EventSource, EventStream, EventStreamSubscriber
 from forge.events.action import CmdRunAction, NullAction
 from forge.events.action.files import FileEditAction, FileReadAction, FileWriteAction
@@ -14,7 +14,11 @@ from forge.events.action.message import MessageAction
 from forge.events.event import FileEditSource, FileReadSource
 from forge.events.event_filter import EventFilter
 from forge.events.observation import NullObservation
-from forge.events.observation.files import FileEditObservation, FileReadObservation, FileWriteObservation
+from forge.events.observation.files import (
+    FileEditObservation,
+    FileReadObservation,
+    FileWriteObservation,
+)
 from forge.events.serialization.event import event_to_dict
 from forge.storage import get_file_store
 from forge.storage.locations import get_conversation_event_filename
@@ -83,7 +87,10 @@ def test_get_matching_events_type_filter(temp_dir: str):
     assert all((isinstance(e, NullAction) for e in events))
     events = event_stream.get_matching_events(event_types=(NullObservation,))
     assert len(events) == 1
-    assert isinstance(events[0], NullObservation) and events[0].observation == ObservationType.NULL
+    assert (
+        isinstance(events[0], NullObservation)
+        and events[0].observation == ObservationType.NULL
+    )
     events = event_stream.get_matching_events(event_types=(NullAction, MessageAction))
     assert len(events) == 3
     events = event_stream.get_matching_events(reverse=True, limit=3)
@@ -114,16 +121,27 @@ def test_get_matching_events_source_filter(temp_dir: str):
     event_stream.add_event(NullObservation("test3"), EventSource.AGENT)
     events = event_stream.get_matching_events(source="agent")
     assert len(events) == 2
-    assert all((isinstance(e, NullObservation) and e.source == EventSource.AGENT for e in events))
+    assert all(
+        (
+            isinstance(e, NullObservation) and e.source == EventSource.AGENT
+            for e in events
+        )
+    )
     events = event_stream.get_matching_events(source="environment")
     assert len(events) == 1
-    assert isinstance(events[0], NullObservation) and events[0].source == EventSource.ENVIRONMENT
+    assert (
+        isinstance(events[0], NullObservation)
+        and events[0].source == EventSource.ENVIRONMENT
+    )
     null_source_event = NullObservation("test4")
     event_stream.add_event(null_source_event, EventSource.AGENT)
     event = event_stream.get_event(event_stream.get_latest_event_id())
     event._source = None
     data = event_to_dict(event)
-    event_stream.file_store.write(event_stream._get_filename_for_id(event.id, event_stream.user_id), json.dumps(data))
+    event_stream.file_store.write(
+        event_stream._get_filename_for_id(event.id, event_stream.user_id),
+        json.dumps(data),
+    )
     assert EventFilter(source="agent").exclude(event)
     assert EventFilter(source=None).include(event)
     events = event_stream.get_matching_events(source="agent")
@@ -174,7 +192,7 @@ def test_memory_usage_file_operations(temp_dir: str):
 
     test_file = os.path.join(temp_dir, "test_file.txt")
     test_content = "x" * (100 * 1024)
-    with open(test_file, "w", encoding='utf-8') as f:
+    with open(test_file, "w", encoding="utf-8") as f:
         f.write(test_content)
     file_store = get_file_store("local", temp_dir)
     gc.collect()
@@ -187,14 +205,19 @@ def test_memory_usage_file_operations(temp_dir: str):
             start=0,
             end=-1,
             thought="Reading file",
-            action=ActionType.READ,
             impl_source=FileReadSource.DEFAULT,
         )
         event_stream.add_event(read_action, EventSource.AGENT)
-        read_obs = FileReadObservation(path=test_file, impl_source=FileReadSource.DEFAULT, content=test_content)
+        read_obs = FileReadObservation(
+            path=test_file, impl_source=FileReadSource.DEFAULT, content=test_content
+        )
         event_stream.add_event(read_obs, EventSource.ENVIRONMENT)
         write_action = FileWriteAction(
-            path=test_file, content=test_content, start=0, end=-1, thought="Writing file", action=ActionType.WRITE
+            path=test_file,
+            content=test_content,
+            start=0,
+            end=-1,
+            thought="Writing file",
         )
         event_stream.add_event(write_action, EventSource.AGENT)
         write_obs = FileWriteObservation(path=test_file, content=test_content)
@@ -205,7 +228,6 @@ def test_memory_usage_file_operations(temp_dir: str):
             start=1,
             end=-1,
             thought="Editing file",
-            action=ActionType.EDIT,
             impl_source=FileEditSource.LLM_BASED_EDIT,
         )
         event_stream.add_event(edit_action, EventSource.AGENT)
@@ -224,7 +246,9 @@ def test_memory_usage_file_operations(temp_dir: str):
         memory_increase = current_memory - initial_memory
         max_memory_increase = max(max_memory_increase, memory_increase)
     os.remove(test_file)
-    assert max_memory_increase < 50, f"Memory increase of {max_memory_increase:.1f}MB exceeds limit of 50MB"
+    assert max_memory_increase < 50, (
+        f"Memory increase of {max_memory_increase:.1f}MB exceeds limit of 50MB"
+    )
 
 
 def test_cache_page_creation(temp_dir: str):
@@ -245,7 +269,9 @@ def test_cache_page_creation(temp_dir: str):
         cache_data = json.loads(cache_content)
         assert len(cache_data) == 5, "Cache page should contain 5 events"
         for i, event_data in enumerate(cache_data):
-            assert event_data["content"] == f"test{i}", f"Event {i} content should be 'test{i}'"
+            assert event_data["content"] == f"test{i}", (
+                f"Event {i} content should be 'test{i}'"
+            )
 
 
 def test_cache_page_loading(temp_dir: str):
@@ -260,7 +286,9 @@ def test_cache_page_loading(temp_dir: str):
     events = collect_events(new_stream)
     assert len(events) > 10, "Should retrieve most of the events"
     for i, event in enumerate(events):
-        assert isinstance(event, NullObservation), f"Event {i} should be a NullObservation"
+        assert isinstance(event, NullObservation), (
+            f"Event {i} should be a NullObservation"
+        )
         assert event.content == f"test{i}", f"Event {i} content should be 'test{i}'"
 
 
@@ -284,7 +312,9 @@ def test_cache_page_performance(temp_dir: str):
     uncached_time = time.time() - start_time
     assert len(cached_events) > 40, "Cached stream should return most of the events"
     assert len(uncached_events) > 40, "Uncached stream should return most of the events"
-    logger_message = f"Cached time: {cached_time:.4f}s, Uncached time: {uncached_time:.4f}s"
+    logger_message = (
+        f"Cached time: {cached_time:.4f}s, Uncached time: {uncached_time:.4f}s"
+    )
     print(logger_message)
 
 
@@ -308,7 +338,9 @@ def test_search_events_limit(temp_dir: str):
     assert [e.content for e in events] == ["test9", "test8", "test7", "test6"]
     event_stream.add_event(NullObservation("filter_me"), EventSource.AGENT)
     event_stream.add_event(NullObservation("filter_me_too"), EventSource.AGENT)
-    events = list(event_stream.search_events(filter=EventFilter(query="filter"), limit=1))
+    events = list(
+        event_stream.search_events(filter=EventFilter(query="filter"), limit=1)
+    )
     assert len(events) == 1
     assert events[0].content == "filter_me"
 
@@ -324,25 +356,40 @@ def test_search_events_limit_with_complex_filters(temp_dir: str):
     event_stream.add_event(NullAction(), EventSource.AGENT)
     event_stream.add_event(MessageAction(content="world"), EventSource.USER)
     event_stream.add_event(NullObservation("hello world"), EventSource.AGENT)
-    events = list(event_stream.search_events(filter=EventFilter(include_types=(NullAction,)), limit=1))
+    events = list(
+        event_stream.search_events(
+            filter=EventFilter(include_types=(NullAction,)), limit=1
+        )
+    )
     assert len(events) == 1
     assert isinstance(events[0], NullAction)
     assert events[0].id == 0
-    events = list(event_stream.search_events(filter=EventFilter(source="user"), limit=1))
+    events = list(
+        event_stream.search_events(filter=EventFilter(source="user"), limit=1)
+    )
     assert len(events) == 1
     assert events[0].source == EventSource.USER
     assert events[0].id == 2
-    events = list(event_stream.search_events(filter=EventFilter(query="hello"), limit=2))
+    events = list(
+        event_stream.search_events(filter=EventFilter(query="hello"), limit=2)
+    )
     assert len(events) == 2
     assert [e.id for e in events] == [2, 6]
     events = list(
-        event_stream.search_events(filter=EventFilter(source="agent", include_types=(NullObservation,)), limit=1)
+        event_stream.search_events(
+            filter=EventFilter(source="agent", include_types=(NullObservation,)),
+            limit=1,
+        )
     )
     assert len(events) == 1
     assert isinstance(events[0], NullObservation)
     assert events[0].source == EventSource.AGENT
     assert events[0].id == 1
-    events = list(event_stream.search_events(filter=EventFilter(source="agent"), reverse=True, limit=2))
+    events = list(
+        event_stream.search_events(
+            filter=EventFilter(source="agent"), reverse=True, limit=2
+        )
+    )
     assert len(events) == 2
     assert [e.id for e in events] == [6, 4]
 
@@ -361,7 +408,9 @@ def test_search_events_limit_edge_cases(temp_dir: str):
     assert len(events) in {0, 5}
     events = list(event_stream.search_events(limit=-1))
     assert len(events) == 1
-    events = list(event_stream.search_events(filter=EventFilter(query="nonexistent"), limit=5))
+    events = list(
+        event_stream.search_events(filter=EventFilter(query="nonexistent"), limit=5)
+    )
     assert not events
     events = list(event_stream.search_events(start_id=10, limit=5))
     assert not events
@@ -383,7 +432,9 @@ def test_callback_dictionary_modification(temp_dir: str):
 
     def callback1(event):
         callback_executed[0] = True
-        event_stream.subscribe(EventStreamSubscriber.TEST, callback_added_during_iteration, "callback3")
+        event_stream.subscribe(
+            EventStreamSubscriber.TEST, callback_added_during_iteration, "callback3"
+        )
 
     def callback2(event):
         callback_executed[1] = True
@@ -394,7 +445,9 @@ def test_callback_dictionary_modification(temp_dir: str):
     time.sleep(0.5)
     assert callback_executed[0] is True, "First callback should have been executed"
     assert callback_executed[1] is True, "Second callback should have been executed"
-    assert callback_executed[2] is False, "Third callback should not have been executed for this event"
+    assert callback_executed[2] is False, (
+        "Third callback should not have been executed for this event"
+    )
     callback_executed = [False, False, False]
     event_stream.add_event(NullObservation("test2"), EventSource.AGENT)
     time.sleep(0.5)
@@ -415,11 +468,15 @@ def test_cache_page_partial_retrieval(temp_dir: str):
     assert len(events) >= 8, "Should retrieve most events in the range"
     for i, event in enumerate(events):
         expected_content = f"test{i + 3}"
-        assert event.content == expected_content, f"Event {i} content should be '{expected_content}'"
+        assert event.content == expected_content, (
+            f"Event {i} content should be '{expected_content}'"
+        )
     reverse_events = list(event_stream.get_events(start_id=3, end_id=12, reverse=True))
     assert len(reverse_events) >= 8, "Should retrieve most events in reverse"
     if len(reverse_events) >= 3:
-        assert reverse_events[0].content.startswith("test1"), "First reverse event should be near the end of the range"
+        assert reverse_events[0].content.startswith("test1"), (
+            "First reverse event should be near the end of the range"
+        )
         assert int(reverse_events[0].content[4:]) > int(
             reverse_events[1].content[4:]
         ), "Events should be in descending order"
@@ -443,7 +500,9 @@ def test_cache_page_with_missing_events(temp_dir: str):
         reload_stream = EventStream("missing_test", file_store)
         reload_stream.cache_size = 5
         events_after_deletion = list(reload_stream.get_events())
-        assert len(events_after_deletion) <= initial_count, "Should have fewer or equal events after deletion"
+        assert len(events_after_deletion) <= initial_count, (
+            "Should have fewer or equal events after deletion"
+        )
         assert events_after_deletion, "Should still retrieve some events"
     except Exception as e:
         print(f"Note: Could not delete file {missing_filename}: {e}")
@@ -455,7 +514,9 @@ def test_secrets_replaced_in_content(temp_dir: str):
     file_store = get_file_store("local", temp_dir)
     stream = EventStream("test_session", file_store)
     stream.set_secrets({"api_key": "secret123"})
-    action = CmdRunAction(command='curl -H "Authorization: Bearer secret123" https://api.example.com')
+    action = CmdRunAction(
+        command='curl -H "Authorization: Bearer secret123" https://api.example.com'
+    )
     action._timestamp = datetime.now().isoformat()
     data = event_to_dict(action)
     data_with_secrets_replaced = stream._replace_secrets(data)
@@ -482,7 +543,9 @@ def test_protected_fields_not_affected_by_secret_replacement(temp_dir: str):
     """Test that protected system fields are not affected by secret replacement."""
     file_store = get_file_store("local", temp_dir)
     stream = EventStream("test_session", file_store)
-    stream.set_secrets({"secret1": "123", "secret2": "user", "secret3": "run", "secret4": "Running"})
+    stream.set_secrets(
+        {"secret1": "123", "secret2": "user", "secret3": "run", "secret4": "Running"}
+    )
     data = {
         "id": 123,
         "timestamp": "2025-07-18T17:01:36.799608",
@@ -526,3 +589,45 @@ def test_nested_dict_secret_replacement(temp_dir: str):
     assert "password123" not in data_with_secrets_replaced["args"]["command"]
     assert "password123" not in data_with_secrets_replaced["args"]["env"]["SECRET_KEY"]
     assert "password123" not in data_with_secrets_replaced["args"]["env"]["timestamp"]
+
+
+def test_activity_listener_notified(temp_dir: str):
+    file_store = get_file_store("local", temp_dir)
+    stream = EventStream("test_session", file_store)
+    observed: list[str] = []
+    handle = stream.add_activity_listener(lambda sid: observed.append(sid))
+    stream.add_event(NullObservation("ping"), EventSource.AGENT)
+    assert observed == ["test_session"]
+    stream.remove_activity_listener(handle)
+
+
+def test_secret_replacement_in_lists_and_tuples(temp_dir: str):
+    """Secrets inside lists/tuples should be masked."""
+    file_store = get_file_store("local", temp_dir)
+    stream = EventStream("test_session", file_store)
+    stream.set_secrets({"token": "SecretValue"})
+    data = {
+        "args": {
+            "list_values": ["prefix SecretValue suffix", 42],
+            "tuple_values": ("SECRETvalue within tuple", "safe"),
+        }
+    }
+    sanitized = stream._replace_secrets(data)
+    assert "<secret_hidden>" in sanitized["args"]["list_values"][0]
+    assert "SecretValue" not in sanitized["args"]["list_values"][0]
+    assert sanitized["args"]["tuple_values"][0].startswith("<secret_hidden>")
+    assert "SECRETvalue" not in sanitized["args"]["tuple_values"][0]
+    assert sanitized["args"]["tuple_values"][1] == "safe"
+
+
+def test_secret_replacement_handles_bytes(temp_dir: str):
+    """Bytes payloads should also be sanitized."""
+    file_store = get_file_store("local", temp_dir)
+    stream = EventStream("test_session", file_store)
+    stream.set_secrets({"api_key": "secret-456"})
+    data = {"payload": b"token=secret-456", "nested": {"blob": b"secret-456-data"}}
+    sanitized = stream._replace_secrets(data)
+    assert b"<secret_hidden>" in sanitized["payload"]
+    assert b"secret-456" not in sanitized["payload"]
+    assert sanitized["nested"]["blob"].startswith(b"<secret_hidden>")
+    assert b"secret-456" not in sanitized["nested"]["blob"]

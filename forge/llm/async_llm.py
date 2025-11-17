@@ -7,7 +7,42 @@ from functools import partial
 from importlib import import_module
 from typing import Any, Callable
 
-from litellm import acompletion as litellm_acompletion
+# Be resilient to litellm versions or environments without the package
+try:
+    from litellm import acompletion as litellm_acompletion  # type: ignore[attr-defined]
+except Exception:
+    try:
+        import litellm  # type: ignore
+    except Exception:
+        async def litellm_acompletion(*args: Any, **kwargs: Any) -> Any:  # type: ignore[override]
+            raise ImportError("litellm is not available")
+    else:
+        async def litellm_acompletion(*args: Any, **kwargs: Any) -> Any:  # type: ignore[override]
+            """Fallback async wrapper for synchronous `litellm.completion`.
+
+            Some litellm versions do not expose `acompletion` at the package root.
+            This wrapper allows imports to succeed during test collection.
+            """
+            func = getattr(litellm, "acompletion", None)
+            if callable(func):  # if available after monkeypatching
+                return await func(*args, **kwargs)  # type: ignore[misc]
+
+            sync_completion = getattr(litellm, "completion", None)
+            if not callable(sync_completion):
+                raise ImportError("litellm completion/acompletion not available")
+
+            loop = None
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                pass
+            if loop is None:
+                loop = asyncio.new_event_loop()
+                try:
+                    return await loop.run_in_executor(None, lambda: sync_completion(*args, **kwargs))
+                finally:
+                    loop.close()
+            return await loop.run_in_executor(None, lambda: sync_completion(*args, **kwargs))
 
 from forge.core.exceptions import UserCancelledError
 from forge.core.logger import forge_logger as logger
@@ -28,7 +63,9 @@ class AsyncLLM(LLM):
         # Build base completion parameters
         base_completion_kwargs = {
             "model": self.config.model,
-            "api_key": self.config.api_key.get_secret_value() if self.config.api_key else None,
+            "api_key": self.config.api_key.get_secret_value()
+            if self.config.api_key
+            else None,
             "max_tokens": self.config.max_output_tokens,
             "timeout": self.config.timeout,
             "temperature": self.config.temperature,
@@ -43,9 +80,13 @@ class AsyncLLM(LLM):
         if self.config.api_version is not None:
             base_completion_kwargs["api_version"] = self.config.api_version
         if self.config.custom_llm_provider is not None:
-            base_completion_kwargs["custom_llm_provider"] = self.config.custom_llm_provider
+            base_completion_kwargs["custom_llm_provider"] = (
+                self.config.custom_llm_provider
+            )
 
-        self._base_async_completion = partial(self._call_acompletion, **base_completion_kwargs)
+        self._base_async_completion = partial(
+            self._call_acompletion, **base_completion_kwargs
+        )
         logger.debug(
             "Async LLM setup for %s with %d base parameters",
             self.config.model,
@@ -72,11 +113,15 @@ class AsyncLLM(LLM):
             self.log_prompt(messages)
 
             # Execute completion with cancellation support
-            return await self._execute_completion_with_cancellation(self._base_async_completion, args, kwargs)
+            return await self._execute_completion_with_cancellation(
+                self._base_async_completion, args, kwargs
+            )
 
         self._async_completion = async_completion_wrapper
 
-    def _process_completion_args(self, args: tuple[Any, ...], kwargs: dict[str, Any]) -> list[dict[str, Any]]:
+    def _process_completion_args(
+        self, args: tuple[Any, ...], kwargs: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         """Process and extract messages from completion arguments.
 
         Args:

@@ -6,7 +6,9 @@ This tool provides a safe way to navigate to localhost URLs by ensuring server r
 from forge.core.logger import forge_logger as logger
 
 
-def safe_goto_localhost(url: str, max_wait: int = 30, check_interval: float = 1.0) -> str:
+def safe_goto_localhost(
+    url: str, max_wait: int = 30, check_interval: float = 1.0
+) -> str:
     """Safely navigate to a localhost URL by waiting for server readiness.
 
     Args:

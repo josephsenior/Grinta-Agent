@@ -29,7 +29,12 @@ class TestCLISetupFlow(unittest.TestCase):
     @patch("forge.cli.main.setup_config_from_args")
     @patch("forge.cli.main.parse_arguments")
     async def test_main_calls_setup_flow_when_no_settings(
-        self, mock_parse_args, mock_setup_config, mock_get_instance, mock_run_setup_flow, mock_print
+        self,
+        mock_parse_args,
+        mock_setup_config,
+        mock_get_instance,
+        mock_run_setup_flow,
+        mock_print,
     ):
         """Test that main calls run_setup_flow when no settings are found and exits."""
         mock_args = MagicMock()

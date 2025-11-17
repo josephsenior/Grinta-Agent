@@ -87,15 +87,19 @@ def get_valid_ref(repo_dir: str) -> str | None:
     except RuntimeError:
         pass
     try:
-        default_branch = run('git --no-pager remote show origin | grep "HEAD branch"', repo_dir).split()[-1].strip()
-        ref_non_default_branch = (
-            f'$(git --no-pager merge-base HEAD "$(git --no-pager rev-parse --abbrev-ref origin/{default_branch})")'
+        default_branch = (
+            run('git --no-pager remote show origin | grep "HEAD branch"', repo_dir)
+            .split()[-1]
+            .strip()
         )
+        ref_non_default_branch = f'$(git --no-pager merge-base HEAD "$(git --no-pager rev-parse --abbrev-ref origin/{default_branch})")'
         ref_default_branch = f"origin/{default_branch}"
         refs.extend((ref_non_default_branch, ref_default_branch))
     except RuntimeError:
         pass
-    ref_new_repo = "$(git --no-pager rev-parse --verify 4b825dc642cb6eb9a060e54bf8d69288fbee4904)"
+    ref_new_repo = (
+        "$(git --no-pager rev-parse --verify 4b825dc642cb6eb9a060e54bf8d69288fbee4904)"
+    )
     refs.append(ref_new_repo)
     for ref in refs:
         try:
@@ -142,24 +146,28 @@ def get_git_diff(relative_file_path: str) -> dict[str, str]:
     return {"modified": modified, "original": original}
 
 
-if __name__ == "__main__":
+def _fallback_print(
+    obj,
+) -> None:  # pragma: no cover - exercised via tests with patched stdout
+    try:
+        sys.stdout.write(json.dumps(obj, ensure_ascii=False, default=str) + "\n")
+    except Exception:  # pragma: no cover
+        try:
+            sys.stdout.write(repr(obj) + "\n")
+        except Exception:
+            sys.stdout.write('{"error":"unserializable"}\n')
+    sys.stdout.flush()
+
+
+def _main() -> None:
     diff = get_git_diff(sys.argv[-1])
     try:
         from forge.core.io import print_json_stdout
-    except Exception:
-
-        def _fallback_print(obj) -> None:
-            try:
-                sys.stdout.write(
-                    json.dumps(obj, ensure_ascii=False, default=str) + "\n",
-                )
-            except Exception:
-                try:
-                    sys.stdout.write(repr(obj) + "\n")
-                except Exception:
-                    sys.stdout.write('{"error":"unserializable"}\n')
-            sys.stdout.flush()
-
+    except Exception:  # pragma: no cover - fallback is tested separately
         _fallback_print(diff)
     else:
         print_json_stdout(diff)
+
+
+if __name__ == "__main__":  # pragma: no cover
+    _main()

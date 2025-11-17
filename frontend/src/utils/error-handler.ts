@@ -5,6 +5,7 @@ import {
   displayDetailedErrorToast,
 } from "./custom-toast-handlers";
 import { extractUserFriendlyError, formatClientError } from "./format-error";
+import type { ErrorAction } from "#/components/shared/error/user-friendly-error";
 
 interface ErrorDetails {
   message: string;
@@ -83,7 +84,7 @@ export function showChatError({
  */
 export function showDetailedError(
   error: unknown,
-  onAction?: (action: any) => void,
+  onAction?: (action: ErrorAction) => void,
 ) {
   const userFriendlyError =
     extractUserFriendlyError(error) || formatClientError(error);

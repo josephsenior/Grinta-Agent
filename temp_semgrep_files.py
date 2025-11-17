@@ -29,35 +29,37 @@ if TYPE_CHECKING:
     from forge.server.session.conversation import ServerConversation
     from forge.storage.conversation.conversation_store import ConversationStore
 
-app = APIRouter(prefix="/api/conversations/{conversation_id}/files", dependencies=get_dependencies())
+app = APIRouter(
+    prefix="/api/conversations/{conversation_id}/files", dependencies=get_dependencies()
+)
 
 
 def _sanitize_file_path(file_path: str) -> str:
     """Sanitize file path to prevent path traversal attacks.
-    
+
     Args:
         file_path: The file path to sanitize
-        
+
     Returns:
         str: Sanitized file path
-        
+
     Raises:
         ValueError: If the path contains directory traversal sequences
     """
     if not file_path:
         raise ValueError("File path cannot be empty")
-    
+
     # Normalize the path and check for directory traversal
     normalized_path = posixpath.normpath(file_path)
-    
+
     # Check for directory traversal attempts
     if ".." in normalized_path or normalized_path.startswith("/"):
         raise ValueError(f"Invalid file path: {file_path}")
-    
+
     # Ensure path doesn't start with current or parent directory markers
     if normalized_path.startswith("./") or normalized_path.startswith("../"):
         raise ValueError(f"Invalid file path: {file_path}")
-        
+
     return normalized_path
 
 
@@ -94,7 +96,9 @@ async def list_files(
         HTTPException: If there's an error listing the files.
     """
     if not conversation.runtime:
-        logger.debug("list-files request received before runtime ready; returning empty list")
+        logger.debug(
+            "list-files request received before runtime ready; returning empty list"
+        )
         return []
     runtime: Runtime = conversation.runtime
     try:
@@ -104,7 +108,9 @@ async def list_files(
         logger.error("Runtime container unavailable when listing files: %s", e)
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"error": "Runtime container is unavailable. Please start a new conversation."},
+            content={
+                "error": "Runtime container is unavailable. Please start a new conversation."
+            },
         )
     except AgentRuntimeUnavailableError as e:
         logger.error("Error listing files: %s", e)
@@ -129,13 +135,22 @@ async def list_files(
                     type(observation).__name__,
                 )
                 return file_list
-            spec = PathSpec.from_lines(GitWildMatchPattern, observation.content.splitlines())
+            spec = PathSpec.from_lines(
+                GitWildMatchPattern, observation.content.splitlines()
+            )
         except FileNotFoundError:
             # Common case: no .gitignore in workspace yet
-            logger.debug("No .gitignore found at %s; skipping gitignore filtering", gitignore_runtime_path)
+            logger.debug(
+                "No .gitignore found at %s; skipping gitignore filtering",
+                gitignore_runtime_path,
+            )
             return file_list
         except Exception as e:
-            logger.warning("Failed to load %s for gitignore filtering: %s", gitignore_runtime_path, e)
+            logger.warning(
+                "Failed to load %s for gitignore filtering: %s",
+                gitignore_runtime_path,
+                e,
+            )
             return file_list
         return [entry for entry in file_list if not spec.match_file(entry)]
 
@@ -146,5 +161,8 @@ async def list_files(
         logger.error("Runtime container unavailable when filtering files: %s", e)
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"error": "Runtime container is unavailable. Please start a new conversation."},
+            content={
+                "error": "Runtime container is unavailable. Please start a new conversation."
+            },
         )
+    return file_list

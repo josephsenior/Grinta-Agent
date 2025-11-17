@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\core\config\kubernetes_config.py
+# hypothesis_version: 6.147.0
+
+['1', '1Gi', '2Gi', 'default', 'forbid', 'kubernetes', 'localhost']

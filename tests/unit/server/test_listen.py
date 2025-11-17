@@ -3,7 +3,6 @@ from forge.core.config import ForgeConfig
 
 
 class MockStaticFiles:
-
     def __init__(self, *args, **kwargs):
         pass
 
@@ -26,7 +25,9 @@ def test_load_file_upload_config():
 
 def test_load_file_upload_config_invalid_max_size():
     config = ForgeConfig(
-        file_uploads_max_file_size_mb=-5, file_uploads_restrict_file_types=False, file_uploads_allowed_extensions=[]
+        file_uploads_max_file_size_mb=-5,
+        file_uploads_restrict_file_types=False,
+        file_uploads_allowed_extensions=[],
     )
     with patch("forge.server.shared.config", config):
         max_size, restrict_types, allowed_extensions = load_file_upload_config()
@@ -36,8 +37,9 @@ def test_load_file_upload_config_invalid_max_size():
 
 
 def test_is_extension_allowed():
-    with patch("forge.server.file_config.RESTRICT_FILE_TYPES", True), patch(
-        "forge.server.file_config.ALLOWED_EXTENSIONS", [".txt", ".pdf"]
+    with (
+        patch("forge.server.file_config.RESTRICT_FILE_TYPES", True),
+        patch("forge.server.file_config.ALLOWED_EXTENSIONS", [".txt", ".pdf"]),
     ):
         assert is_extension_allowed("file.txt")
         assert is_extension_allowed("file.pdf")
@@ -54,8 +56,9 @@ def test_is_extension_allowed_no_restrictions():
 
 
 def test_is_extension_allowed_wildcard():
-    with patch("forge.server.file_config.RESTRICT_FILE_TYPES", True), patch(
-        "forge.server.file_config.ALLOWED_EXTENSIONS", [".*"]
+    with (
+        patch("forge.server.file_config.RESTRICT_FILE_TYPES", True),
+        patch("forge.server.file_config.ALLOWED_EXTENSIONS", [".*"]),
     ):
         assert is_extension_allowed("file.txt")
         assert is_extension_allowed("file.pdf")

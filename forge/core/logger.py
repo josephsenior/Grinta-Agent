@@ -13,7 +13,10 @@ from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 from typing import TYPE_CHECKING, Any, Literal, TextIO
 
-import litellm
+try:
+    import litellm  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    litellm = None  # type: ignore
 from pythonjsonlogger.json import JsonFormatter
 from termcolor import colored
 
@@ -24,24 +27,63 @@ if TYPE_CHECKING:
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 DEBUG = os.getenv("DEBUG", "False").lower() in ["true", "1", "yes"]
 DEBUG_LLM = os.getenv("DEBUG_LLM", "False").lower() in ["true", "1", "yes"]
-LOG_JSON = os.getenv("LOG_JSON", "True").lower() in ["true", "1", "yes"]  # Default to JSON for production
+DEBUG_LLM_PROMPT = os.getenv("DEBUG_LLM_PROMPT", "False").lower() in [
+    "true",
+    "1",
+    "yes",
+]
+LOG_JSON = os.getenv("LOG_JSON", "True").lower() in [
+    "true",
+    "1",
+    "yes",
+]  # Default to JSON for production
 LOG_JSON_LEVEL_KEY = os.getenv("LOG_JSON_LEVEL_KEY", "level")
-if DEBUG_LLM:
-    confirmation = input(
-        "\n⚠️ WARNING: You are enabling DEBUG_LLM which may expose sensitive information like API keys.\nThis should NEVER be enabled in production.\nType 'y' to confirm you understand the risks: ",
+# Enable OTEL log correlation when explicitly requested, defaulting to OTEL_ENABLED
+OTEL_LOG_CORRELATION = os.getenv(
+    "OTEL_LOG_CORRELATION", os.getenv("OTEL_ENABLED", "false")
+).lower() in [
+    "true",
+    "1",
+    "yes",
+]
+# If DEBUG_LLM is set, optionally allow an interactive confirmation when explicitly
+# requested. We default to enabling verbose LLM logs without blocking stdin so
+# that headless services and CI runs cannot hang on an unexpected prompt.
+if DEBUG_LLM and litellm is not None:
+    logging.warning(
+        "DEBUG_LLM enabled via environment; verbose LLM logs may include sensitive content. Do NOT use in production.",
     )
-    if confirmation.lower() == "y":
-        litellm.suppress_debug_info = False
-        litellm.set_verbose = True
+    enable_verbose = True
+    interactive_prompt_requested = DEBUG_LLM_PROMPT and (
+        "pytest" in sys.modules or (hasattr(sys, "stdin") and sys.stdin.isatty())
+    )
+    if interactive_prompt_requested:
+        try:
+            ans = input(
+                "DEBUG_LLM is enabled by environment. Enable verbose LLM logs? [y/N]: "
+            )
+            enable_verbose = str(ans).strip().lower().startswith("y")
+        except Exception:
+            enable_verbose = True
+
+    if enable_verbose:
+        if litellm is not None:
+            litellm.suppress_debug_info = False
+            litellm.set_verbose = True
     else:
-        litellm.suppress_debug_info = True
-        litellm.set_verbose = False
-else:
+        if litellm is not None:
+            litellm.suppress_debug_info = True
+            litellm.set_verbose = False
+elif litellm is not None:
     litellm.suppress_debug_info = True
     litellm.set_verbose = False
 if DEBUG:
     LOG_LEVEL = "DEBUG"
-LOG_TO_FILE = os.getenv("LOG_TO_FILE", str(LOG_LEVEL == "DEBUG")).lower() in ["true", "1", "yes"]
+LOG_TO_FILE = os.getenv("LOG_TO_FILE", str(LOG_LEVEL == "DEBUG")).lower() in [
+    "true",
+    "1",
+    "yes",
+]
 DISABLE_COLOR_PRINTING = False
 LOG_ALL_EVENTS = os.getenv("LOG_ALL_EVENTS", "False").lower() in ["true", "1", "yes"]
 DEBUG_RUNTIME = os.getenv("DEBUG_RUNTIME", "False").lower() in ["true", "1", "yes"]
@@ -78,10 +120,10 @@ class StackInfoFilter(logging.Filter):
 
     def filter(self, record: logging.LogRecord) -> bool:
         """Add stack trace to error-level records.
-        
+
         Args:
             record: Log record to filter
-            
+
         Returns:
             True (always pass record through)
 
@@ -102,10 +144,10 @@ class NoColorFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         """Format log record without ANSI color codes.
-        
+
         Args:
             record: Log record to format
-            
+
         Returns:
             Formatted log message without colors
 
@@ -117,14 +159,14 @@ class NoColorFormatter(logging.Formatter):
 
 class EnhancedJSONFormatter(JsonFormatter):
     """Enhanced JSON formatter with request IDs and structured data.
-    
+
     Adds comprehensive context fields to all log entries for:
     - Request tracing (request_id, conversation_id)
     - Agent tracking (agent_type, action_type)
     - Cost monitoring (model_used, tokens_consumed, cost_usd)
     - Performance tracking (duration_ms)
     - Debugging (location, thread_name, process_id)
-    
+
     Example log output:
         {
             "timestamp": "2025-11-04T10:15:30.123Z",
@@ -142,57 +184,58 @@ class EnhancedJSONFormatter(JsonFormatter):
             "function": "step"
         }
     """
-    
+
     def add_fields(self, log_record, record, message_dict):
         """Add custom fields to JSON log output."""
         super().add_fields(log_record, record, message_dict)
-        
+
         # Request tracing
-        request_id = getattr(record, 'request_id', None)
+        request_id = getattr(record, "request_id", None)
         if request_id:
-            log_record['request_id'] = request_id
-        
-        conversation_id = getattr(record, 'conversation_id', None)
+            log_record["request_id"] = request_id
+
+        conversation_id = getattr(record, "conversation_id", None)
         if conversation_id:
-            log_record['conversation_id'] = conversation_id
-        
+            log_record["conversation_id"] = conversation_id
+
         # Add timestamp in ISO format
         from datetime import datetime
-        log_record['timestamp'] = datetime.utcnow().isoformat()
-        
+
+        log_record["timestamp"] = datetime.utcnow().isoformat()
+
         # Agent tracking
-        agent_type = getattr(record, 'agent_type', None)
+        agent_type = getattr(record, "agent_type", None)
         if agent_type:
-            log_record['agent_type'] = agent_type
-        
-        action_type = getattr(record, 'action_type', None)
+            log_record["agent_type"] = agent_type
+
+        action_type = getattr(record, "action_type", None)
         if action_type:
-            log_record['action_type'] = action_type
-        
+            log_record["action_type"] = action_type
+
         # Cost & performance monitoring
-        model_used = getattr(record, 'model_used', None)
+        model_used = getattr(record, "model_used", None)
         if model_used:
-            log_record['model_used'] = model_used
-        
-        tokens_consumed = getattr(record, 'tokens_consumed', None)
+            log_record["model_used"] = model_used
+
+        tokens_consumed = getattr(record, "tokens_consumed", None)
         if tokens_consumed is not None:
-            log_record['tokens_consumed'] = tokens_consumed
-        
-        cost_usd = getattr(record, 'cost_usd', None)
+            log_record["tokens_consumed"] = tokens_consumed
+
+        cost_usd = getattr(record, "cost_usd", None)
         if cost_usd is not None:
-            log_record['cost_usd'] = cost_usd
-        
-        duration_ms = getattr(record, 'duration_ms', None)
+            log_record["cost_usd"] = cost_usd
+
+        duration_ms = getattr(record, "duration_ms", None)
         if duration_ms is not None:
-            log_record['duration_ms'] = duration_ms
-        
+            log_record["duration_ms"] = duration_ms
+
         # Thread/process info for debugging
-        log_record['thread_name'] = record.threadName
-        log_record['process_id'] = record.process
-        
+        log_record["thread_name"] = record.threadName
+        log_record["process_id"] = record.process
+
         # Source location
-        log_record['location'] = f"{record.filename}:{record.lineno}"
-        log_record['function'] = record.funcName
+        log_record["location"] = f"{record.filename}:{record.lineno}"
+        log_record["function"] = record.funcName
 
 
 def strip_ansi(s: str) -> str:
@@ -236,10 +279,10 @@ class ColoredFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         """Format log record with color and special formatting for specific message types.
-        
+
         Args:
             record: Log record to format
-            
+
         Returns:
             Formatted log message string
 
@@ -273,10 +316,11 @@ llm_formatter = logging.Formatter("%(message)s")
 
 class RollingLogger:
     """Rolling logger for displaying rotating log messages in debug mode.
-    
+
     Maintains a fixed-size buffer of log lines that display in place
     when running in a TTY with debug mode enabled.
     """
+
     max_lines: int
     char_limit: int
     log_lines: list[str]
@@ -291,7 +335,7 @@ class RollingLogger:
 
     def is_enabled(self) -> bool:
         """Check if rolling logger should be active.
-        
+
         Returns:
             True if debug mode enabled and stdout is a TTY
 
@@ -300,7 +344,7 @@ class RollingLogger:
 
     def start(self, message: str = "") -> None:
         """Start rolling logger with optional initial message.
-        
+
         Args:
             message: Initial message to display
 
@@ -312,7 +356,7 @@ class RollingLogger:
 
     def add_line(self, line: str) -> None:
         """Add new line to rolling display buffer.
-        
+
         Args:
             line: Line to add (truncated to char_limit)
 
@@ -324,7 +368,7 @@ class RollingLogger:
 
     def write_immediately(self, line: str) -> None:
         """Write line immediately without buffering.
-        
+
         Args:
             line: Line to write to stdout
 
@@ -369,10 +413,10 @@ class SensitiveDataFilter(logging.Filter):
 
     def filter(self, record: logging.LogRecord) -> bool:
         """Redact sensitive environment variables and patterns from log record.
-        
+
         Args:
             record: Log record to filter
-            
+
         Returns:
             True (always pass record through after redaction)
 
@@ -422,10 +466,10 @@ class TraceContextFilter(logging.Filter):
 
     def filter(self, record: logging.LogRecord) -> bool:
         """Add trace context (request ID, session ID) to log record.
-        
+
         Args:
             record: Log record to filter
-            
+
         Returns:
             True (always passes record through)
 
@@ -436,6 +480,39 @@ class TraceContextFilter(logging.Filter):
                 if not hasattr(record, k):
                     setattr(record, k, v)
         except Exception:
+            pass
+        return True
+
+
+class OpenTelemetryTraceFilter(logging.Filter):
+    """Adds OpenTelemetry trace_id/span_id to log records when a current span exists.
+
+    This enables log-trace correlation in backends that index logs and traces together.
+    Does nothing if OpenTelemetry isn't installed or no active span is present.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:  # Import inside filter to avoid hard dependency
+            from opentelemetry import trace as _otel_trace  # type: ignore
+
+            span: Any = _otel_trace.get_current_span()
+            # Some instrumentations return a NonRecordingSpan when no active span exists
+            if span is None:
+                return True
+            ctx = span.get_span_context()
+            if not getattr(ctx, "is_valid", False):
+                return True
+
+            # Hex-encode to standard 16/32-char lowercase
+            trace_id_hex = f"{ctx.trace_id:032x}"
+            span_id_hex = f"{ctx.span_id:016x}"
+
+            if not hasattr(record, "trace_id"):
+                setattr(record, "trace_id", trace_id_hex)
+            if not hasattr(record, "span_id"):
+                setattr(record, "span_id", span_id_hex)
+        except Exception:
+            # Swallow all errors to keep logging robust even if OTEL changes
             pass
         return True
 
@@ -457,7 +534,7 @@ def set_trace_context(ctx: dict[str, object] | None) -> None:
 
 def clear_trace_context() -> None:
     """Clear the thread-local trace context.
-    
+
     Removes trace context from thread-local storage if it exists.
     Silently handles any exceptions during cleanup.
     """
@@ -466,6 +543,20 @@ def clear_trace_context() -> None:
             delattr(_TRACE_LOCAL, "context")
     except Exception:
         pass
+
+
+def get_trace_context() -> dict[str, object]:
+    """Return a shallow copy of the current thread-local trace context.
+
+    If no context exists, returns an empty dict. Safe for import anywhere.
+    """
+    try:
+        ctx = getattr(_TRACE_LOCAL, "context", None)
+        if isinstance(ctx, dict):
+            return dict(ctx)
+    except Exception:
+        pass
+    return {}
 
 
 def get_console_handler(log_level: int = logging.INFO) -> logging.StreamHandler:
@@ -503,16 +594,20 @@ def get_file_handler(
 
 def json_formatter() -> JsonFormatter:
     """Create JSON formatter for structured logging.
-    
+
     Returns:
         JsonFormatter configured with timestamp and custom level field naming
 
     """
     fmt = "{asctime} {message} {levelname}"
-    return JsonFormatter(fmt, style="{", rename_fields={"levelname": LOG_JSON_LEVEL_KEY}, timestamp=True)
+    return JsonFormatter(
+        fmt, style="{", rename_fields={"levelname": LOG_JSON_LEVEL_KEY}, timestamp=True
+    )
 
 
-def json_log_handler(level: int = logging.INFO, _out: TextIO = sys.stdout) -> logging.Handler:
+def json_log_handler(
+    level: int = logging.INFO, _out: TextIO = sys.stdout
+) -> logging.Handler:
     """Configure logger instance for structured logging as json lines."""
     handler = logging.StreamHandler(_out)
     handler.setLevel(level)
@@ -523,7 +618,9 @@ def json_log_handler(level: int = logging.INFO, _out: TextIO = sys.stdout) -> lo
 logging.basicConfig(level=logging.ERROR)
 
 
-def log_uncaught_exceptions(ex_cls: type[BaseException], ex: BaseException, tb: TracebackType | None) -> Any:
+def log_uncaught_exceptions(
+    ex_cls: type[BaseException], ex: BaseException, tb: TracebackType | None
+) -> Any:
     """Logs uncaught exceptions along with the traceback.
 
     Args:
@@ -542,30 +639,71 @@ def log_uncaught_exceptions(ex_cls: type[BaseException], ex: BaseException, tb: 
 
 sys.excepthook = log_uncaught_exceptions
 FORGE_logger = logging.getLogger("forge")
+ACCESS_logger = logging.getLogger("forge.access")
 current_log_level = logging.INFO
 if LOG_LEVEL in logging.getLevelNamesMapping():
     current_log_level = logging.getLevelNamesMapping()[LOG_LEVEL]
 FORGE_logger.setLevel(current_log_level)
+ACCESS_logger.setLevel(current_log_level)
 if DEBUG:
     FORGE_logger.addFilter(StackInfoFilter())
 if current_log_level == logging.DEBUG:
     FORGE_logger.debug("DEBUG mode enabled.")
 if LOG_JSON:
     FORGE_logger.addHandler(json_log_handler(current_log_level))
+    ACCESS_logger.addHandler(json_log_handler(current_log_level))
 else:
     FORGE_logger.addHandler(get_console_handler(current_log_level))
+    ACCESS_logger.addHandler(get_console_handler(current_log_level))
 FORGE_logger.addFilter(SensitiveDataFilter(FORGE_logger.name))
 FORGE_logger.addFilter(TraceContextFilter())
+# Optionally correlate logs with active OpenTelemetry spans
+if OTEL_LOG_CORRELATION:
+    FORGE_logger.addFilter(OpenTelemetryTraceFilter())
 FORGE_logger.propagate = False
+ACCESS_logger.addFilter(SensitiveDataFilter(ACCESS_logger.name))
+ACCESS_logger.addFilter(TraceContextFilter())
+# Apply OTEL correlation to access logs as well
+if OTEL_LOG_CORRELATION:
+    ACCESS_logger.addFilter(OpenTelemetryTraceFilter())
+ACCESS_logger.propagate = False
+
+# Add log shipping handler if enabled
+LOG_SHIPPING_ENABLED = os.getenv("LOG_SHIPPING_ENABLED", "false").lower() in [
+    "true",
+    "1",
+    "yes",
+]
+if LOG_SHIPPING_ENABLED:
+    try:
+        from forge.core.log_shipping import LogShippingHandler, get_log_shipper
+
+        log_shipper = get_log_shipper()
+        if log_shipper:
+            FORGE_logger.addHandler(LogShippingHandler(log_shipper))
+            ACCESS_logger.addHandler(LogShippingHandler(log_shipper))
+            FORGE_logger.debug("Log shipping handler added")
+    except Exception as e:
+        FORGE_logger.warning(f"Failed to initialize log shipping: {e}")
+
 FORGE_logger.debug("Logging initialized")
-LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "logs")
+LOG_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "logs"
+)
 if LOG_TO_FILE:
     FORGE_logger.addHandler(get_file_handler(LOG_DIR, current_log_level))
+    ACCESS_logger.addHandler(get_file_handler(LOG_DIR, current_log_level))
     FORGE_logger.debug(f"Logging to file in: {LOG_DIR}")
 logging.getLogger("LiteLLM").disabled = True
 logging.getLogger("LiteLLM Router").disabled = True
 logging.getLogger("LiteLLM Proxy").disabled = True
-LOQUACIOUS_LOGGERS = ["engineio", "engineio.server", "socketio", "socketio.client", "socketio.server"]
+LOQUACIOUS_LOGGERS = [
+    "engineio",
+    "engineio.server",
+    "socketio",
+    "socketio.client",
+    "socketio.server",
+]
 for logger_name in LOQUACIOUS_LOGGERS:
     logging.getLogger(logger_name).setLevel("WARNING")
 
@@ -573,7 +711,13 @@ for logger_name in LOQUACIOUS_LOGGERS:
 class LlmFileHandler(logging.FileHandler):
     """LLM prompt and response logging."""
 
-    def __init__(self, filename: str, mode: str = "a", encoding: str = "utf-8", delay: bool = False) -> None:
+    def __init__(
+        self,
+        filename: str,
+        mode: str = "a",
+        encoding: str = "utf-8",
+        delay: bool = False,
+    ) -> None:
         """Initialize the file handler for logging LLM prompts or responses.
 
         Args:
@@ -597,7 +741,9 @@ class LlmFileHandler(logging.FileHandler):
                 try:
                     os.unlink(file_path)
                 except Exception as e:
-                    FORGE_logger.exception("Failed to delete %s. Reason: %s", file_path, e)
+                    FORGE_logger.exception(
+                        "Failed to delete %s. Reason: %s", file_path, e
+                    )
         filename = f"{self.filename}_{self.message_counter:03}.log"
         self.baseFilename = os.path.join(self.log_directory, filename)
         super().__init__(self.baseFilename, mode, encoding, delay)
@@ -640,13 +786,16 @@ llm_response_logger = _setup_llm_logger("response", current_log_level)
 
 class ForgeLoggerAdapter(logging.LoggerAdapter):
     """Logger adapter with context binding support.
-    
+
     Allows binding contextual information (trace IDs, session IDs, etc.)
     to logger instances for structured logging.
     """
+
     extra: dict
 
-    def __init__(self, logger: logging.Logger = FORGE_logger, extra: dict | None = None) -> None:
+    def __init__(
+        self, logger: logging.Logger = FORGE_logger, extra: dict | None = None
+    ) -> None:
         """Initialize the adapter with a logger and optional context."""
         self.logger = logger
         self.extra = extra or {}
@@ -659,7 +808,9 @@ class ForgeLoggerAdapter(logging.LoggerAdapter):
         new_extra = {**self.extra, **context}
         return ForgeLoggerAdapter(self.logger, new_extra)
 
-    def process(self, msg: str, kwargs: MutableMapping[str, Any]) -> tuple[str, MutableMapping[str, Any]]:
+    def process(
+        self, msg: str, kwargs: MutableMapping[str, Any]
+    ) -> tuple[str, MutableMapping[str, Any]]:
         """If 'extra' is supplied in kwargs, merge it with the adapters 'extra' dict.
 
         Starting in Python 3.13, LoggerAdapter's merge_extra option will do this.
@@ -671,7 +822,9 @@ class ForgeLoggerAdapter(logging.LoggerAdapter):
         return (msg, kwargs)
 
 
-def bind_context(logger: logging.Logger | ForgeLoggerAdapter, **context: Any) -> ForgeLoggerAdapter:
+def bind_context(
+    logger: logging.Logger | ForgeLoggerAdapter, **context: Any
+) -> ForgeLoggerAdapter:
     """Utility to bind tracing/context information to a logger.
 
     Returns an ForgeLoggerAdapter which will include the provided context in all
@@ -688,6 +841,6 @@ forge_logger = FORGE_logger
 # Expose legacy FORGE_logger symbol globally for backward compatibility (tests rely on it).
 import builtins as _builtins  # noqa: E402  (import after logger initialization)
 
-_builtins.FORGE_logger = FORGE_logger
+setattr(_builtins, "FORGE_logger", FORGE_logger)
 # Create alias for backward compatibility - some imports use 'forgeLoggerAdapter'
 forgeLoggerAdapter = ForgeLoggerAdapter

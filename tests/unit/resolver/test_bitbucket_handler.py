@@ -11,8 +11,12 @@ import pytest
 from forge.resolver.interfaces.bitbucket import BitbucketIssueHandler
 
 
-def _make_handler(token: str = "token", username: str | None = None) -> BitbucketIssueHandler:
-    return BitbucketIssueHandler(owner="owner", repo="repo", token=token, username=username)
+def _make_handler(
+    token: str = "token", username: str | None = None
+) -> BitbucketIssueHandler:
+    return BitbucketIssueHandler(
+        owner="owner", repo="repo", token=token, username=username
+    )
 
 
 def test_get_headers_bearer():
@@ -75,7 +79,10 @@ def test_create_pr(monkeypatch):
 def test_create_pull_request(monkeypatch):
     response = MagicMock()
     response.raise_for_status.return_value = None
-    response.json.return_value = {"links": {"html": {"href": "https://bb/pr/2"}}, "id": 2}
+    response.json.return_value = {
+        "links": {"html": {"href": "https://bb/pr/2"}},
+        "id": 2,
+    }
     monkeypatch.setattr(httpx, "post", lambda *a, **k: response)
 
     handler = _make_handler()
@@ -129,8 +136,13 @@ def test_fetch_issue_content_http_error(monkeypatch):
 def test_get_urls_and_branch_helpers():
     handler = _make_handler()
     assert handler.get_repo_url() == "https://bitbucket.org/owner/repo"
-    assert handler.get_branch_url("feature") == "https://bitbucket.org/owner/repo/branch/feature"
-    assert handler.get_compare_url("feature") == "https://bitbucket.org/owner/repo/compare/master...feature"
+    assert (
+        handler.get_branch_url("feature")
+        == "https://bitbucket.org/owner/repo/branch/feature"
+    )
+    assert (
+        handler.get_compare_url("feature")
+        == "https://bitbucket.org/owner/repo/compare/master...feature"
+    )
     assert handler.get_branch_name("feature") == "feature-owner"
     assert handler.get_authorize_url() == "https://oauth2:token@bitbucket.org/"
-

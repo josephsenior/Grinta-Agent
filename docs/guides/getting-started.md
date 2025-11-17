@@ -39,7 +39,7 @@ cd frontend && npm run dev
 
 # 4. Access the platform
 # Frontend: http://localhost:3000
-# Backend API: http://localhost:8000
+# Backend API: http://localhost:3000
 ```
 
 **That's it!** 🎉 You now have Forge running locally.
@@ -127,8 +127,8 @@ docker-compose ps
 
 #### **Step 3: Access the Application**
 - **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8000
-- **WebSocket**: ws://localhost:8000
+- **Backend API**: http://localhost:3000/api
+- **Socket.IO**: http://localhost:3000/socket.io
 
 ### **Method 3: Development Installation**
 
@@ -308,7 +308,7 @@ npm run preview
 
 #### **API Interface**
 1. Open your browser
-2. Navigate to http://localhost:8000/docs
+2. Navigate to http://localhost:3000/docs
 3. You should see the API documentation
 
 ### **Step 3: Test Basic Functionality**
@@ -316,7 +316,7 @@ npm run preview
 #### **Test Agent**
 ```bash
 # Test CodeAct agent
-curl -X POST http://localhost:8000/api/agent/run \
+curl -X POST http://localhost:3000/api/conversations \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "Hello, can you help me?",
@@ -327,7 +327,7 @@ curl -X POST http://localhost:8000/api/agent/run \
 #### **Test Memory**
 ```bash
 # Test memory system
-curl -X POST http://localhost:8000/api/memory/conversations \
+curl -X POST http://localhost:3000/api/memory \
   -H "Content-Type: application/json" \
   -d '{
     "user_message": "Hello",
@@ -339,7 +339,7 @@ curl -X POST http://localhost:8000/api/memory/conversations \
 #### **Test Optimization**
 ```bash
 # Test optimization system
-curl -X GET http://localhost:8000/api/optimization/status
+curl -X GET http://localhost:3000/api/prompt-optimization/status
 ```
 
 ### **Step 4: Explore Features**
@@ -494,7 +494,7 @@ tail -f logs/Forge.log
 **Problem**: Frontend not loading
 ```bash
 # Solution: Check if backend is running
-curl http://localhost:8000/api/health
+curl http://localhost:8000/api/monitoring/health
 
 # Check frontend build
 cd frontend && npm run build
@@ -535,10 +535,10 @@ level = "DEBUG"
 #### **Check System Status**
 ```bash
 # Check system health
-curl http://localhost:8000/api/monitoring/health
+curl http://localhost:3000/api/monitoring/health
 
 # Check component status
-curl http://localhost:8000/api/monitoring/status
+curl http://localhost:3000/api/monitoring/metrics
 ```
 
 ---
@@ -585,16 +585,19 @@ python -m Forge.server --reload --debug
 #### **2. Monitor Performance**
 ```bash
 # Check system metrics
-curl http://localhost:8000/api/monitoring/metrics
+curl http://localhost:3000/api/monitoring/metrics
 
 # Check agent performance
-curl http://localhost:8000/api/agent/metrics
+curl http://localhost:3000/api/monitoring/agents/performance
 ```
 
 #### **3. Use WebSocket for Real-Time Updates**
 ```javascript
 // Connect to WebSocket for real-time updates
-const socket = io('ws://localhost:8000/ws');
+const socket = io('http://localhost:3000', {
+  path: '/socket.io',
+  query: { conversationId: 'your-conversation-id' }
+});
 socket.on('agent_response', (data) => {
   console.log('Real-time update:', data);
 });

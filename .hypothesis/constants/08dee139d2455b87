@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\runtime\utils\runtime_build.py
+# hypothesis_version: 6.147.0
+
+[128, 4096, '\nBuilt image: %s\n', '*.md', '*.pyc', '--base_image', '--build_folder', '--enable_browser', '--force_rebuild', '--no_enable_browser', '--platform', '.*/', '/', ':', ':latest', 'Building image: %s', 'Dockerfile', 'Dockerfile.j2', 'Reusing Image [%s]', '__main__', '__pycache__/', '_s_', '_t_', 'a', 'base_image', 'code', 'config.sh', 'enable_browser', 'forge', 'lock', 'md5', 'microagents', 'poetry.lock', 'pyproject.toml', 'rb', 'runtime_templates', 'scratch', 'store_false', 'store_true', 'utf-8', 'versioned', 'w']

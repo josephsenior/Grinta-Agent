@@ -25,7 +25,10 @@ def test_visit_page_tracks_navigation_history(tracker: BrowsingStateTracker) -> 
     # previous page moved to visited_pages
     assert len(tracker.session.visited_pages) == 1
     assert tracker.session.visited_pages[0].url == "https://example.com"
-    assert tracker.session.navigation_path == ["https://example.com", "https://example.com/docs"]
+    assert tracker.session.navigation_path == [
+        "https://example.com",
+        "https://example.com/docs",
+    ]
 
 
 def test_track_interaction_and_form_data(tracker: BrowsingStateTracker) -> None:
@@ -65,7 +68,9 @@ def test_navigation_history_helpers(tracker: BrowsingStateTracker) -> None:
     assert tracker.get_previous_url() == "https://example.com/docs"
 
 
-def test_get_context_summary_includes_key_sections(tracker: BrowsingStateTracker) -> None:
+def test_get_context_summary_includes_key_sections(
+    tracker: BrowsingStateTracker,
+) -> None:
     tracker.visit_page("https://example.com")
     tracker.track_form_data("query", "python testing best practices")
     tracker.track_error("404 Not Found")
@@ -90,4 +95,3 @@ def test_get_stats_reports_session_metrics(tracker: BrowsingStateTracker) -> Non
     assert stats["forms_filled"] == 1
     assert stats["errors"] == 1
     assert stats["duration_seconds"] >= 0.0
-

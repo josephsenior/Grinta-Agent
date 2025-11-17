@@ -23,7 +23,7 @@ class DebugMixin:
 
     def log_prompt(self, messages: list[dict[str, Any]] | dict[str, Any]) -> None:
         """Log prompt messages for debugging.
-        
+
         Args:
             messages: Message or list of messages to log
 
@@ -35,7 +35,9 @@ class DebugMixin:
             return
         messages = messages if isinstance(messages, list) else [messages]
         if debug_message := MESSAGE_SEPARATOR.join(
-            self._format_message_content(msg) for msg in messages if msg["content"] is not None
+            self._format_message_content(msg)
+            for msg in messages
+            if msg["content"] is not None
         ):
             llm_prompt_logger.debug(debug_message)
         else:
@@ -43,7 +45,7 @@ class DebugMixin:
 
     def log_response(self, resp: ModelResponse) -> None:
         """Log LLM response for debugging.
-        
+
         Args:
             resp: Model response to log
 
@@ -62,14 +64,20 @@ class DebugMixin:
     def _format_message_content(self, message: dict[str, Any]) -> str:
         content = message["content"]
         if isinstance(content, list):
-            return "\n".join(self._format_content_element(element) for element in content)
+            return "\n".join(
+                self._format_content_element(element) for element in content
+            )
         return str(content)
 
     def _format_content_element(self, element: dict[str, Any] | Any) -> str:
         if isinstance(element, dict):
             if "text" in element:
                 return str(element["text"])
-            if self.vision_is_active() and "image_url" in element and ("url" in element["image_url"]):
+            if (
+                self.vision_is_active()
+                and "image_url" in element
+                and ("url" in element["image_url"])
+            ):
                 return str(element["image_url"]["url"])
         return str(element)
 

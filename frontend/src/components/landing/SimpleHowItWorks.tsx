@@ -2,39 +2,26 @@ import React from "react";
 import { MessageSquare, Code, Rocket, ArrowRight } from "lucide-react";
 import { useScrollReveal } from "#/hooks/use-scroll-reveal";
 import { soundEffects } from "#/utils/sound-effects";
-
-const STEPS = [
-  {
-    icon: MessageSquare,
-    title: "1. Describe What You Want",
-    description:
-      "Just tell Forge what you want to build in plain English. No need to write detailed specs.",
-    color: "text-violet-500",
-    bgGradient: "from-brand-500 to-accent-500",
-  },
-  {
-    icon: Code,
-    title: "2. AI Writes the Code",
-    description:
-      "Our AI agents analyze, plan, and write production-ready code. Watch as your app comes to life.",
-    color: "text-accent-500",
-    bgGradient: "from-accent-500 to-brand-600",
-  },
-  {
-    icon: Rocket,
-    title: "3. Review & Deploy",
-    description:
-      "Review the code, request changes, and deploy. Forge handles testing and deployment preparation.",
-    color: "text-accent-emerald",
-    bgGradient: "from-accent-emerald to-success-500",
-  },
-];
+import { howItWorksSteps } from "#/content/landing";
 
 export function SimpleHowItWorks() {
   const { ref, isVisible } = useScrollReveal({
     threshold: 0.2,
     triggerOnce: true,
   });
+
+  const iconCycle = [MessageSquare, Code, Rocket];
+  const gradientCycle = [
+    "from-brand-500 to-accent-500",
+    "from-accent-500 to-brand-600",
+    "from-accent-emerald to-success-500",
+  ];
+  const steps = howItWorksSteps.map((step, index) => ({
+    ...step,
+    icon: iconCycle[index % iconCycle.length],
+    bgGradient: gradientCycle[index % gradientCycle.length],
+    title: `${index + 1}. ${step.title}`,
+  }));
 
   return (
     <section ref={ref} className="py-20 px-6 relative">
@@ -59,7 +46,7 @@ export function SimpleHowItWorks() {
           <div className="hidden md:block absolute top-24 left-0 right-0 h-1 bg-gradient-to-r from-brand-500/30 via-accent-500/30 to-accent-emerald/30 opacity-50 blur-sm" />
           <div className="hidden md:block absolute top-24 left-0 right-0 h-0.5 bg-gradient-to-r from-brand-500 via-accent-500 to-accent-emerald opacity-60" />
 
-          {STEPS.map((step, index) => {
+          {steps.map((step, index) => {
             const Icon = step.icon;
             return (
               <div

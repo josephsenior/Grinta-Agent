@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\storage\data_models\prompt_template.py
+# hypothesis_version: 6.147.0
+
+[100, 1000, '1.0.0', 'Additional metadata', 'Human-readable title', 'analysis', 'brainstorming', 'code_review', 'coding', 'custom', 'debugging', 'documentation', 'refactoring', 'summarization', 'testing', 'translation', 'writing']

@@ -55,6 +55,7 @@ AGENT_CLASS = "CodeActAgent"
 
 class IssueResolver:
     """High-level orchestrator that clones repos, runs agents, and posts fixes."""
+
     GITLAB_CI = os.getenv("GITLAB_CI") == "true"
 
     def __init__(self, args: Namespace) -> None:
@@ -72,7 +73,9 @@ class IssueResolver:
         repo_instruction = self._load_repo_instruction(args.repo_instruction_file)
 
         # Load prompt templates
-        user_instructions_prompt_template, conversation_instructions_prompt_template = self._load_prompt_templates(args)
+        user_instructions_prompt_template, conversation_instructions_prompt_template = (
+            self._load_prompt_templates(args)
+        )
 
         # Determine base domain
         base_domain = self._determine_base_domain(args.base_domain, platform)
@@ -92,7 +95,13 @@ class IssueResolver:
 
         # Create issue handler
         self.issue_handler = self._create_issue_handler(
-            owner, repo, token, username, platform, base_domain, args.issue_type,
+            owner,
+            repo,
+            token,
+            username,
+            platform,
+            base_domain,
+            args.issue_type,
         )
 
     def _parse_repository(self, selected_repo: str) -> tuple[str, str]:
@@ -105,7 +114,12 @@ class IssueResolver:
 
     def _get_credentials(self, args: Namespace) -> tuple[str, str]:
         """Get authentication token and username."""
-        token = args.token or os.getenv("GITHUB_TOKEN") or os.getenv("GITLAB_TOKEN") or os.getenv("BITBUCKET_TOKEN")
+        token = (
+            args.token
+            or os.getenv("GITHUB_TOKEN")
+            or os.getenv("GITLAB_TOKEN")
+            or os.getenv("BITBUCKET_TOKEN")
+        )
         username = args.username or os.getenv("GIT_USERNAME")
 
         if not username:
@@ -138,15 +152,24 @@ class IssueResolver:
             prompt_file = self._get_default_prompt_file(issue_type)
 
         user_instructions_prompt_template = self._read_prompt_file(prompt_file)
-        conversation_instructions_prompt_template = self._read_conversation_prompt_file(prompt_file)
+        conversation_instructions_prompt_template = self._read_conversation_prompt_file(
+            prompt_file
+        )
 
-        return user_instructions_prompt_template, conversation_instructions_prompt_template
+        return (
+            user_instructions_prompt_template,
+            conversation_instructions_prompt_template,
+        )
 
     def _get_default_prompt_file(self, issue_type: str) -> str:
         """Get default prompt file based on issue type."""
         if issue_type == "issue":
-            return os.path.join(os.path.dirname(__file__), "prompts/resolve/basic-with-tests.jinja")
-        return os.path.join(os.path.dirname(__file__), "prompts/resolve/basic-followup.jinja")
+            return os.path.join(
+                os.path.dirname(__file__), "prompts/resolve/basic-with-tests.jinja"
+            )
+        return os.path.join(
+            os.path.dirname(__file__), "prompts/resolve/basic-followup.jinja"
+        )
 
     def _read_prompt_file(self, prompt_file: str) -> str:
         """Read prompt template from file."""
@@ -155,10 +178,14 @@ class IssueResolver:
 
     def _read_conversation_prompt_file(self, prompt_file: str) -> str:
         """Read conversation instructions prompt template."""
-        conversation_prompt_file = prompt_file.replace(".jinja", "-conversation-instructions.jinja")
+        conversation_prompt_file = prompt_file.replace(
+            ".jinja", "-conversation-instructions.jinja"
+        )
         return pathlib.Path(conversation_prompt_file).read_text()
 
-    def _determine_base_domain(self, base_domain: str | None, platform: ProviderType) -> str:
+    def _determine_base_domain(
+        self, base_domain: str | None, platform: ProviderType
+    ) -> str:
         """Determine the base domain for the git server."""
         if base_domain is not None:
             return base_domain
@@ -185,7 +212,9 @@ class IssueResolver:
         self.output_dir = args.output_dir
         self.issue_type = issue_type
         self.issue_number = args.issue_number
-        self.workspace_base = self.build_workspace_base(self.output_dir, self.issue_type, self.issue_number)
+        self.workspace_base = self.build_workspace_base(
+            self.output_dir, self.issue_type, self.issue_number
+        )
         self.max_iterations = args.max_iterations
 
         # Update Forge configuration
@@ -204,7 +233,9 @@ class IssueResolver:
         self.repo = repo
         self.platform = platform
         self.user_instructions_prompt_template = user_instructions_prompt_template
-        self.conversation_instructions_prompt_template = conversation_instructions_prompt_template
+        self.conversation_instructions_prompt_template = (
+            conversation_instructions_prompt_template
+        )
         self.repo_instruction = repo_instruction
         self.comment_id = args.comment_id
 
@@ -250,7 +281,9 @@ class IssueResolver:
         config.workspace_base = workspace_base
         config.workspace_mount_path = workspace_base
         config.agents = {"CodeActAgent": AgentConfig(disabled_microagents=["github"])}
-        cls.update_sandbox_config(config, base_container_image, runtime_container_image, is_experimental)
+        cls.update_sandbox_config(
+            config, base_container_image, runtime_container_image, is_experimental
+        )
         return config
 
     @classmethod
@@ -283,11 +316,15 @@ class IssueResolver:
             is_experimental,
         )
 
-        sandbox_config = cls._create_sandbox_config(base_container_image, runtime_container_image)
+        sandbox_config = cls._create_sandbox_config(
+            base_container_image, runtime_container_image
+        )
         cls._apply_sandbox_config(FORGE_config, sandbox_config)
 
     @classmethod
-    def _resolve_runtime_image(cls, runtime_img: str | None, base_img: str | None, is_experimental: bool) -> str | None:
+    def _resolve_runtime_image(
+        cls, runtime_img: str | None, base_img: str | None, is_experimental: bool
+    ) -> str | None:
         """Resolve the runtime container image to use.
 
         Args:
@@ -304,7 +341,9 @@ class IssueResolver:
         return f"ghcr.io/all-hands-ai/runtime:{forge.__version__}-nikolaik"
 
     @classmethod
-    def _create_sandbox_config(cls, base_img: str | None, runtime_img: str | None) -> SandboxConfig:
+    def _create_sandbox_config(
+        cls, base_img: str | None, runtime_img: str | None
+    ) -> SandboxConfig:
         """Create sandbox configuration.
 
         Args:
@@ -324,7 +363,9 @@ class IssueResolver:
         )
 
         if cls.GITLAB_CI:
-            sandbox_config.local_runtime_url = os.getenv("LOCAL_RUNTIME_URL", "http://localhost")
+            sandbox_config.local_runtime_url = os.getenv(
+                "LOCAL_RUNTIME_URL", "http://localhost"
+            )
             user_id = os.getuid() if hasattr(os, "getuid") else 1000
             if user_id == 0:
                 sandbox_config.user_id = get_unique_uid()
@@ -332,7 +373,9 @@ class IssueResolver:
         return sandbox_config
 
     @classmethod
-    def _apply_sandbox_config(cls, FORGE_config: ForgeConfig, sandbox_config: SandboxConfig) -> None:
+    def _apply_sandbox_config(
+        cls, FORGE_config: ForgeConfig, sandbox_config: SandboxConfig
+    ) -> None:
         """Apply sandbox configuration to Forge config.
 
         Args:
@@ -341,7 +384,9 @@ class IssueResolver:
 
         """
         FORGE_config.sandbox.base_container_image = sandbox_config.base_container_image
-        FORGE_config.sandbox.runtime_container_image = sandbox_config.runtime_container_image
+        FORGE_config.sandbox.runtime_container_image = (
+            sandbox_config.runtime_container_image
+        )
         FORGE_config.sandbox.enable_auto_lint = sandbox_config.enable_auto_lint
         FORGE_config.sandbox.use_host_network = sandbox_config.use_host_network
         FORGE_config.sandbox.timeout = sandbox_config.timeout
@@ -382,7 +427,9 @@ class IssueResolver:
         logger.info("Checking for .Forge/pre-commit.sh script...")
         runtime.maybe_setup_git_hooks()
 
-    def _run_command_with_validation(self, runtime: Runtime, command: str, error_message: str) -> None:
+    def _run_command_with_validation(
+        self, runtime: Runtime, command: str, error_message: str
+    ) -> None:
         """Run a command and validate the result."""
         action = CmdRunAction(command=command)
         logger.info(action, extra={"msg_type": "ACTION"})
@@ -395,9 +442,13 @@ class IssueResolver:
 
     def _setup_git_config(self, runtime: Runtime) -> None:
         """Setup git configuration for the workspace."""
-        self._run_command_with_validation(runtime, "cd /workspace", "Failed to change directory to /workspace")
+        self._run_command_with_validation(
+            runtime, "cd /workspace", "Failed to change directory to /workspace"
+        )
 
-        self._run_command_with_validation(runtime, 'git config --global core.pager ""', "Failed to set git config")
+        self._run_command_with_validation(
+            runtime, 'git config --global core.pager ""', "Failed to set git config"
+        )
 
         self._run_command_with_validation(
             runtime,
@@ -414,7 +465,9 @@ class IssueResolver:
 
         self._run_command_with_validation(runtime, command, "Failed to git add")
 
-    async def _get_git_patch_with_retry(self, runtime: Runtime, base_commit: str) -> str | None:
+    async def _get_git_patch_with_retry(
+        self, runtime: Runtime, base_commit: str
+    ) -> str | None:
         """Get git patch with retry logic."""
         n_retries = 0
         git_patch = None
@@ -448,7 +501,9 @@ class IssueResolver:
         logger.info(message)
         logger.info("-" * 30)
 
-    async def complete_runtime(self, runtime: Runtime, base_commit: str) -> dict[str, Any]:
+    async def complete_runtime(
+        self, runtime: Runtime, base_commit: str
+    ) -> dict[str, Any]:
         """Complete the runtime for the agent.
 
         This function is called before the runtime is used to run the agent.
@@ -470,9 +525,13 @@ class IssueResolver:
         return {"git_patch": git_patch}
 
     @staticmethod
-    def build_workspace_base(output_dir: str, issue_type: str, issue_number: int) -> str:
+    def build_workspace_base(
+        output_dir: str, issue_type: str, issue_number: int
+    ) -> str:
         """Construct absolute workspace path for a specific issue run."""
-        workspace_base = os.path.join(output_dir, "workspace", f"{issue_type}_{issue_number}")
+        workspace_base = os.path.join(
+            output_dir, "workspace", f"{issue_type}_{issue_number}"
+        )
         return os.path.abspath(workspace_base)
 
     async def process_issue(
@@ -498,16 +557,26 @@ class IssueResolver:
         runtime = await self._setup_runtime()
 
         # Get instruction and run agent
-        instruction, conversation_instructions, images_urls = self._get_instruction(issue, issue_handler)
-        state, last_error = await self._run_agent(instruction, images_urls, conversation_instructions, runtime)
+        instruction, conversation_instructions, images_urls = self._get_instruction(
+            issue, issue_handler
+        )
+        state, last_error = await self._run_agent(
+            instruction, images_urls, conversation_instructions, runtime
+        )
 
         # Complete and get results
         return_val = await self.complete_runtime(runtime, base_commit)
         git_patch = return_val["git_patch"]
-        logger.info("Got git diff for instance %s:\n--------\n%s\n--------", issue.number, git_patch)
+        logger.info(
+            "Got git diff for instance %s:\n--------\n%s\n--------",
+            issue.number,
+            git_patch,
+        )
 
         # Build output
-        return self._build_resolver_output(issue, issue_handler, instruction, base_commit, git_patch, state, last_error)
+        return self._build_resolver_output(
+            issue, issue_handler, instruction, base_commit, git_patch, state, last_error
+        )
 
     def _setup_logging(self, issue: Issue, reset_logger: bool) -> None:
         """Setup logging for issue processing.
@@ -545,7 +614,13 @@ class IssueResolver:
             """Log runtime events as they stream in."""
             logger.info(evt)
 
-        runtime.event_stream.subscribe(EventStreamSubscriber.MAIN, on_event, str(uuid4()))
+        event_stream = runtime.event_stream
+        if event_stream is not None:
+            event_stream.subscribe(
+                EventStreamSubscriber.MAIN, on_event, str(uuid4())
+            )
+        else:
+            logger.warning("Runtime event stream unavailable; skipping subscription")
 
         self.initialize_runtime(runtime)
         return runtime
@@ -568,7 +643,9 @@ class IssueResolver:
             self.repo_instruction,
         )
 
-    async def _run_agent(self, instruction: str, images_urls, conversation_instructions, runtime):
+    async def _run_agent(
+        self, instruction: str, images_urls, conversation_instructions, runtime
+    ):
         """Run the agent with the given instruction.
 
         Args:
@@ -645,7 +722,9 @@ class IssueResolver:
 
         histories = [dataclasses.asdict(event) for event in state.history]
         metrics = state.metrics.get() if state.metrics else None
-        success, comment_success, result_explanation = issue_handler.guess_success(issue, state.history, git_patch)
+        success, comment_success, result_explanation = issue_handler.guess_success(
+            issue, state.history, git_patch
+        )
 
         # Log PR success details if applicable
         if issue_handler.issue_type == "pr" and comment_success:
@@ -678,11 +757,15 @@ class IssueResolver:
         try:
             explanations = json.loads(result_explanation)
         except json.JSONDecodeError:
-            logger.error("Failed to parse result_explanation as JSON: %s", result_explanation)
+            logger.error(
+                "Failed to parse result_explanation as JSON: %s", result_explanation
+            )
             explanations = [str(result_explanation)]
 
         for success_indicator, explanation in zip(comment_success, explanations):
-            status = colored("[X]", "red") if success_indicator else colored("[ ]", "red")
+            status = (
+                colored("[X]", "red") if success_indicator else colored("[ ]", "red")
+            )
             bullet_point = colored("-", "yellow")
             success_log += f"\n{bullet_point} {status}: {explanation}"
 
@@ -696,10 +779,12 @@ class IssueResolver:
         ):
             return issues[0]
         msg = f"No issues found for issue number {
-            self.issue_number}. Please verify that:\n1. The issue/PR #{
-            self.issue_number} exists in the repository {
-            self.owner}/{
-            self.repo}\n2. You have the correct permissions to access it\n3. The repository name is spelled correctly"
+            self.issue_number
+        }. Please verify that:\n1. The issue/PR #{
+            self.issue_number
+        } exists in the repository {self.owner}/{
+            self.repo
+        }\n2. You have the correct permissions to access it\n3. The repository name is spelled correctly"
         raise ValueError(
             msg,
         )
@@ -724,7 +809,9 @@ class IssueResolver:
         if self._is_issue_already_processed(output_file):
             return
 
-        await self._process_issue_with_output(issue, base_commit, repo_dir, output_file, reset_logger)
+        await self._process_issue_with_output(
+            issue, base_commit, repo_dir, output_file, reset_logger
+        )
 
     def _validate_comment_id(self, issue) -> None:
         """Validate comment ID if specified."""
@@ -748,7 +835,9 @@ class IssueResolver:
     def _setup_output_directories(self) -> None:
         """Set up output directories."""
         pathlib.Path(self.output_dir).mkdir(parents=True, exist_ok=True)
-        pathlib.Path(os.path.join(self.output_dir, "infer_logs")).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(os.path.join(self.output_dir, "infer_logs")).mkdir(
+            parents=True, exist_ok=True
+        )
         logger.info("Using output directory: %s", self.output_dir)
 
     def _setup_repository(self) -> str:
@@ -761,7 +850,12 @@ class IssueResolver:
     def _clone_repository(self, repo_dir: str) -> None:
         """Clone the repository."""
         checkout_output = subprocess.check_output(
-            ["git", "clone", self.issue_handler.get_clone_url(), f"{self.output_dir}/repo"],
+            [
+                "git",
+                "clone",
+                self.issue_handler.get_clone_url(),
+                f"{self.output_dir}/repo",
+            ],
         ).decode("utf-8")
         if "fatal" in checkout_output:
             msg = f"Failed to clone repository: {checkout_output}"
@@ -769,7 +863,11 @@ class IssueResolver:
 
     def _get_base_commit(self, repo_dir: str) -> str:
         """Get base commit hash."""
-        base_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo_dir).decode("utf-8").strip()
+        base_commit = (
+            subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo_dir)
+            .decode("utf-8")
+            .strip()
+        )
         logger.info("Base commit: %s", base_commit)
         return base_commit
 
@@ -792,9 +890,16 @@ class IssueResolver:
         if os.path.exists(output_file):
             with open(output_file, encoding="utf-8") as f:
                 for line in f:
-                    data = ResolverOutput.model_validate_json(line)
-                    if data.issue.number == self.issue_number:
-                        logger.warning("Issue %s was already processed. Skipping.", self.issue_number)
+                    payload = json.loads(line)
+                    issue_payload = payload.get("issue") if isinstance(payload, dict) else None
+                    issue_number = None
+                    if isinstance(issue_payload, dict):
+                        issue_number = issue_payload.get("number")
+                    if issue_number == self.issue_number:
+                        logger.warning(
+                            "Issue %s was already processed. Skipping.",
+                            self.issue_number,
+                        )
                         return True
         return False
 
@@ -821,7 +926,9 @@ class IssueResolver:
             if self.issue_type == "pr":
                 base_commit = self._handle_pr_branch(issue, repo_dir)
 
-            output = await self.process_issue(issue, base_commit, self.issue_handler, reset_logger)
+            output = await self.process_issue(
+                issue, base_commit, self.issue_handler, reset_logger
+            )
             from forge.core.pydantic_compat import model_dump_json
 
             output_fp.write(model_dump_json(output) + "\n")
@@ -833,7 +940,9 @@ class IssueResolver:
     def _handle_pr_branch(self, issue, repo_dir: str) -> str:
         """Handle PR branch checkout."""
         branch_to_use = issue.head_branch
-        logger.info("Checking out to PR branch %s for issue %s", branch_to_use, issue.number)
+        logger.info(
+            "Checking out to PR branch %s for issue %s", branch_to_use, issue.number
+        )
 
         if not branch_to_use:
             msg = "Branch name cannot be None"
@@ -845,4 +954,8 @@ class IssueResolver:
         checkout_cmd = ["git", "checkout", branch_to_use]
         subprocess.check_output(checkout_cmd, cwd=repo_dir)
 
-        return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo_dir).decode("utf-8").strip()
+        return (
+            subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo_dir)
+            .decode("utf-8")
+            .strip()
+        )

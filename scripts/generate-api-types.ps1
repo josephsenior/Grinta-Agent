@@ -17,7 +17,7 @@ Write-Host "🚀 Generating TypeScript types from OpenAPI spec..." -ForegroundCo
 
 # Check if backend is running
 try {
-    $response = Invoke-WebRequest -Uri "http://localhost:3000/api/health" -TimeoutSec 2 -UseBasicParsing
+    $response = Invoke-WebRequest -Uri "http://localhost:3000/api/monitoring/health" -TimeoutSec 2 -UseBasicParsing
     Write-Host "✅ Backend is running" -ForegroundColor Green
 } catch {
     Write-Host "⚠️  Backend not running. Please start it first:" -ForegroundColor Yellow

@@ -21,7 +21,7 @@ def _normalize_posix_path(p: PurePosixPath) -> PurePosixPath:
         PurePosixPath: The normalized path.
 
     """
-    parts = []
+    parts: list[str] = []
     for part in p.parts:
         if part in ("", "."):
             continue
@@ -38,7 +38,9 @@ def _normalize_posix_path(p: PurePosixPath) -> PurePosixPath:
     return PurePosixPath("/".join(parts) or ".")
 
 
-def _validate_path_access(abs_path_in_sandbox: PurePosixPath, sandbox_root: PurePosixPath, file_path: str) -> None:
+def _validate_path_access(
+    abs_path_in_sandbox: PurePosixPath, sandbox_root: PurePosixPath, file_path: str
+) -> None:
     """Validate that the resolved path is within the allowed sandbox directory.
 
     Args:
@@ -132,9 +134,9 @@ async def read_file(
     end: int = -1,
 ) -> Observation:
     """Read file content with optional line range.
-    
+
     Resolves path and reads file content, handling various error conditions.
-    
+
     Args:
         path: File path to read
         workdir: Current working directory
@@ -142,13 +144,15 @@ async def read_file(
         workspace_mount_path_in_sandbox: Workspace mount path in sandbox
         start: Starting line number (0-indexed)
         end: Ending line number (-1 for end of file)
-        
+
     Returns:
         FileReadObservation with content or ErrorObservation on failure
 
     """
     try:
-        whole_path = resolve_path(path, workdir, workspace_base, workspace_mount_path_in_sandbox)
+        whole_path = resolve_path(
+            path, workdir, workspace_base, workspace_mount_path_in_sandbox
+        )
     except PermissionError:
         return ErrorObservation(
             f"You're not allowed to access this path: {path}. You can only access paths inside the workspace.",
@@ -166,7 +170,9 @@ async def read_file(
     return FileReadObservation(path=path, content=code_view)
 
 
-def insert_lines(to_insert: list[str], original: list[str], start: int = 0, end: int = -1) -> list[str]:
+def insert_lines(
+    to_insert: list[str], original: list[str], start: int = 0, end: int = -1
+) -> list[str]:
     """Insert the new content to the original content based on start and end."""
     new_lines = [""] if start == 0 else original[:start]
     new_lines += [i + "\n" for i in to_insert]
@@ -184,9 +190,9 @@ async def write_file(
     end: int = -1,
 ) -> Observation:
     """Write content to file with optional line range insertion.
-    
+
     Resolves path and writes content, optionally inserting at specific line range.
-    
+
     Args:
         path: File path to write
         workdir: Current working directory
@@ -195,14 +201,16 @@ async def write_file(
         content: Content to write
         start: Starting line number for insertion (0-indexed)
         end: Ending line number for insertion (-1 for append)
-        
+
     Returns:
         FileWriteObservation on success or ErrorObservation on failure
 
     """
     insert = content.split("\n")
     try:
-        whole_path = resolve_path(path, workdir, workspace_base, workspace_mount_path_in_sandbox)
+        whole_path = resolve_path(
+            path, workdir, workspace_base, workspace_mount_path_in_sandbox
+        )
         if not os.path.exists(os.path.dirname(whole_path)):
             os.makedirs(os.path.dirname(whole_path))
         mode = "r+" if os.path.exists(whole_path) else "w"
@@ -219,7 +227,9 @@ async def write_file(
         except FileNotFoundError:
             return ErrorObservation(f"File not found: {path}")
         except IsADirectoryError:
-            return ErrorObservation(f"Path is a directory: {path}. You can only write to files")
+            return ErrorObservation(
+                f"Path is a directory: {path}. You can only write to files"
+            )
         except UnicodeDecodeError:
             return ErrorObservation(f"File could not be decoded as utf-8: {path}")
     except PermissionError as e:

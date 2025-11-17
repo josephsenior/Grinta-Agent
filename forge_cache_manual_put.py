@@ -6,7 +6,15 @@ import types
 from typing import Any, TYPE_CHECKING, cast
 
 from forge.metasop.cache import StepCacheEntry
-from forge.metasop.models import Artifact, RoleProfile, SopStep, SopTemplate, StepOutputSpec, StepResult, StepTrace
+from forge.metasop.models import (
+    Artifact,
+    RoleProfile,
+    SopStep,
+    SopTemplate,
+    StepOutputSpec,
+    StepResult,
+    StepTrace,
+)
 from forge.metasop.orchestrator import MetaSOPOrchestrator
 from forge.metasop.strategies import BaseStepExecutor
 
@@ -24,23 +32,38 @@ class DummyExecutor(BaseStepExecutor):
     ) -> StepResult:
         content = {"result": "ok", "value": 42}
         artifact = Artifact(step_id=step.id, role=step.role, content=content)
-        trace = StepTrace(step_id=step.id, role=step.role, total_tokens=20, model_name="dummy-model")
+        trace = StepTrace(
+            step_id=step.id, role=step.role, total_tokens=20, model_name="dummy-model"
+        )
         return StepResult(ok=True, artifact=artifact, trace=trace)
 
 
 def _make_single_engineer_template():
     return SopTemplate(
         name="feature_delivery",
-        steps=[SopStep(id="impl", role="engineer", task="t", outputs=StepOutputSpec(schema="dummy.json"))],
+        steps=[
+            SopStep(
+                id="impl",
+                role="engineer",
+                task="t",
+                outputs=StepOutputSpec(schema="dummy.json"),
+            )
+        ],
     )
 
 
 metasop_cfg = {"enable_step_cache": True}
-config: Any = types.SimpleNamespace(extended=types.SimpleNamespace(metasop=metasop_cfg), runtime=types.SimpleNamespace())
-orch = MetaSOPOrchestrator(sop_name="feature_delivery", config=cast("ForgeConfig | None", config))
+config: Any = types.SimpleNamespace(
+    extended=types.SimpleNamespace(metasop=metasop_cfg), runtime=types.SimpleNamespace()
+)
+orch = MetaSOPOrchestrator(
+    sop_name="feature_delivery", config=cast("ForgeConfig | None", config)
+)
 orch.template = _make_single_engineer_template()
 orch.settings.enabled = True
 orch.step_executor = DummyExecutor()
+if orch.profiles is None:
+    orch.profiles = {}
 orch.profiles["engineer"] = RoleProfile(
     name="engineer",
     goal="Implement task",

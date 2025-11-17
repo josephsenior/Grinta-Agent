@@ -33,14 +33,18 @@ AGENT_CLS_TO_INST_SUFFIX = {
 def get_config(metadata: EvalMetadata) -> ForgeConfig:
     sandbox_config = get_default_sandbox_config_for_eval()
     sandbox_config.base_container_image = "python:3.12-bookworm"
-    config = get_FORGE_config_for_eval(metadata=metadata, runtime="docker", sandbox_config=sandbox_config)
+    config = get_FORGE_config_for_eval(
+        metadata=metadata, runtime="docker", sandbox_config=sandbox_config
+    )
     config.set_llm_config(metadata.llm_config)
     agent_config = config.get_agent_config(metadata.agent_class)
     agent_config.enable_prompt_extensions = False
     return config
 
 
-def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True) -> EvalOutput:
+def process_instance(
+    instance: pd.Series, metadata: EvalMetadata, reset_logger: bool = True
+) -> EvalOutput:
     config = get_config(metadata)
     instance_id = instance["question_id"]
     question = instance["question"]
@@ -50,9 +54,7 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
     else:
         logger.info("Starting evaluation for instance %s.", instance_id)
     instruction = encode_question(question, instance["hub"])
-    instruction += (
-        "IMPORTANT: You should ONLY interact with the environment provided to you AND NEVER ASK FOR HUMAN HELP.\n"
-    )
+    instruction += "IMPORTANT: You should ONLY interact with the environment provided to you AND NEVER ASK FOR HUMAN HELP.\n"
     instruction += AGENT_CLS_TO_INST_SUFFIX[metadata.agent_class]
     runtime = create_runtime(config)
     call_async_from_sync(runtime.connect)
@@ -61,7 +63,9 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
             config=config,
             initial_user_action=MessageAction(content=instruction),
             runtime=runtime,
-            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN.get(metadata.agent_class),
+            fake_user_response_fn=AGENT_CLS_TO_FAKE_USER_RESPONSE_FN.get(
+                metadata.agent_class
+            ),
         )
     )
     if state is None:
@@ -71,7 +75,12 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
     ast_eval_fn = instance["ast_eval"]
     correct, hallucination = ast_eval_fn(instance_id, model_answer_raw)
     metrics = get_metrics(state)
-    logger.info("Final message: %s | Correctness: %s | Hallucination: %s", model_answer_raw, correct, hallucination)
+    logger.info(
+        "Final message: %s | Correctness: %s | Hallucination: %s",
+        model_answer_raw,
+        correct,
+        hallucination,
+    )
     histories = compatibility_for_eval_history_pairs(state.history)
     return EvalOutput(
         instance_id=instance_id,
@@ -79,7 +88,11 @@ def process_instance(instance: pd.Series, metadata: EvalMetadata, reset_logger: 
         history=histories,
         metrics=metrics,
         error=state.last_error if state and state.last_error else None,
-        test_result={"text": model_answer_raw, "correct": correct, "hallucination": hallucination},
+        test_result={
+            "text": model_answer_raw,
+            "correct": correct,
+            "hallucination": hallucination,
+        },
     )
 
 
@@ -118,7 +131,9 @@ if __name__ == "__main__":
         data_split=args.data_split,
     )
     output_file = os.path.join(metadata.eval_output_dir, "output.jsonl")
-    dataset = prepare_dataset(dataset_df, output_file=output_file, eval_n_limit=args.eval_n_limit)
+    dataset = prepare_dataset(
+        dataset_df, output_file=output_file, eval_n_limit=args.eval_n_limit
+    )
     file_path = os.path.join(os.path.dirname(__file__), "my-languages.so")
     if not os.path.exists(file_path):
         url = "https://raw.githubusercontent.com/ShishirPatil/gorilla/main/eval/eval-scripts/codebleu/parser/my-languages.so"
@@ -137,7 +152,7 @@ if __name__ == "__main__":
     total_correct = 0
     total_hallucination = 0
     output = []
-    with open(output_file, "r", encoding='utf-8') as f:
+    with open(output_file, "r", encoding="utf-8") as f:
         for line in f:
             data = json.loads(line)
             if data["test_result"]["correct"]:

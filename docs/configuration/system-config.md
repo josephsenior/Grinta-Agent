@@ -250,6 +250,10 @@ prompt_opt_max_variants_per_prompt = 5
 prompt_opt_storage_path = "data/prompt_optimization"
 prompt_opt_sync_interval = 60
 prompt_opt_auto_save = true
+prompt_opt_history_path = "data/prompt_optimization/history.json"
+prompt_opt_history_auto_flush = false
+prompt_opt_history_path = "data/prompt_optimization/history.json"
+prompt_opt_history_auto_flush = false
 ```
 
 ### **CodeAct Agent Configuration**
@@ -333,6 +337,8 @@ evolution_frequency = 100
 storage_path = "data/prompt_optimization"
 sync_interval = 60
 auto_save = true
+prompt_history_path = "data/prompt_optimization/history.json"
+prompt_history_auto_flush = false
 backup_enabled = true
 backup_frequency = 24
 
@@ -847,7 +853,17 @@ FORGE_TOOL_OPTIMIZATION_AB_SPLIT=0.1
 FORGE_WEBSOCKET_ENABLED=true
 FORGE_WEBSOCKET_PORT=8001
 FORGE_WEBSOCKET_MAX_CONNECTIONS=500
+
+# MetaSOP Services
+FORGE_EVENT_SERVICE_GRPC=false
+FORGE_RUNTIME_SERVICE_GRPC=false
+FORGE_EVENT_SERVICE_ENDPOINT=
+FORGE_RUNTIME_SERVICE_ENDPOINT=
 ```
+
+Enable the gRPC adapters by setting `FORGE_EVENT_SERVICE_GRPC` and `FORGE_RUNTIME_SERVICE_GRPC` to `true` and
+provide the corresponding `FORGE_EVENT_SERVICE_ENDPOINT` / `FORGE_RUNTIME_SERVICE_ENDPOINT` values (e.g.,
+`event-service:50051`). Leave the flags `false` to continue using the in-process adapters.
 
 ---
 
@@ -876,7 +892,7 @@ grep -r "enable_" config.toml
 env | grep FORGE_.*_ENABLED
 
 # Check runtime configuration
-curl http://localhost:8000/api/config/status
+curl http://localhost:3000/api/options/config
 ```
 
 #### **Performance Issues**
@@ -885,7 +901,7 @@ curl http://localhost:8000/api/config/status
 grep -r "max_\|limit" config.toml
 
 # Check monitoring
-curl http://localhost:8000/api/monitoring/metrics
+curl http://localhost:3000/api/monitoring/metrics
 
 # Check logs
 tail -f logs/Forge.log

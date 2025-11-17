@@ -22,16 +22,47 @@ class ModeDetector:
 
     # Keywords that indicate complex, enterprise-level work
     COMPLEXITY_INDICATORS = {
-        "high": ["feature", "system", "architecture", "integration", "infrastructure", "microservice"],
-        "medium": ["test", "qa", "validate", "compliance", "audit", "security", "refactor"],
+        "high": [
+            "feature",
+            "system",
+            "architecture",
+            "integration",
+            "infrastructure",
+            "microservice",
+        ],
+        "medium": [
+            "test",
+            "qa",
+            "validate",
+            "compliance",
+            "audit",
+            "security",
+            "refactor",
+        ],
         "low": [],
     }
 
     # Keywords that indicate simple, quick tasks
-    SIMPLICITY_INDICATORS = ["fix", "bug", "typo", "quick", "simple", "small", "minor", "hotfix"]
+    SIMPLICITY_INDICATORS = [
+        "fix",
+        "bug",
+        "typo",
+        "quick",
+        "simple",
+        "small",
+        "minor",
+        "hotfix",
+    ]
 
     # Keywords that indicate need for quality gates
-    QUALITY_INDICATORS = ["production", "deploy", "release", "critical", "enterprise", "regulated"]
+    QUALITY_INDICATORS = [
+        "production",
+        "deploy",
+        "release",
+        "critical",
+        "enterprise",
+        "regulated",
+    ]
 
     @staticmethod
     def detect_mode(user_request: str, auto_detect: bool = True) -> str:
@@ -148,7 +179,9 @@ class ModeDetector:
             logger.debug("Multiple 'and' conjunctions found (+2)")
 
         # Check for mentions of multiple files/components
-        file_mentions = len(re.findall(r"\b\w+\.(py|js|tsx|ts|java|go|rs)\b", request_lower))
+        file_mentions = len(
+            re.findall(r"\b\w+\.(py|js|tsx|ts|java|go|rs)\b", request_lower)
+        )
         if file_mentions > 3:
             score += 2
             logger.debug("Multiple file mentions found: %d (+2)", file_mentions)

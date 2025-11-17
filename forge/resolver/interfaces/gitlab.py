@@ -18,13 +18,18 @@ from forge.resolver.utils import extract_issue_references
 
 class GitlabIssueHandler(IssueHandlerInterface):
     """GitLab implementation of issue handler interface.
-    
+
     Handles GitLab-specific operations for issues, merge requests, branches,
     and comments using the GitLab REST and GraphQL APIs.
     """
 
     def __init__(
-        self, owner: str, repo: str, token: str, username: str | None = None, base_domain: str = "gitlab.com",
+        self,
+        owner: str,
+        repo: str,
+        token: str,
+        username: str | None = None,
+        base_domain: str = "gitlab.com",
     ) -> None:
         """Initialize a GitLab issue handler.
 
@@ -48,7 +53,7 @@ class GitlabIssueHandler(IssueHandlerInterface):
 
     def set_owner(self, owner: str) -> None:
         """Update repository owner.
-        
+
         Args:
             owner: New repository owner name
 
@@ -118,11 +123,15 @@ class GitlabIssueHandler(IssueHandlerInterface):
         converted_issues = []
         for issue in all_issues:
             if any(issue.get(key) is None for key in ["iid", "title"]):
-                logger.warning("Skipping issue %s as it is missing iid or title.", issue)
+                logger.warning(
+                    "Skipping issue %s as it is missing iid or title.", issue
+                )
                 continue
             if issue.get("description") is None:
                 issue["description"] = ""
-            thread_comments = self.get_issue_comments(issue["iid"], comment_id=comment_id)
+            thread_comments = self.get_issue_comments(
+                issue["iid"], comment_id=comment_id
+            )
             issue_details = Issue(
                 owner=self.owner,
                 repo=self.repo,
@@ -137,12 +146,17 @@ class GitlabIssueHandler(IssueHandlerInterface):
 
     def download_issues(self) -> list[Any]:
         """Download all open issues from GitLab repository.
-        
+
         Returns:
             List of issue dictionaries from GitLab API
 
         """
-        params: dict[str, int | str] = {"state": "opened", "scope": "all", "per_page": 100, "page": 1}
+        params: dict[str, int | str] = {
+            "state": "opened",
+            "scope": "all",
+            "per_page": 100,
+            "page": 1,
+        }
         all_issues = []
         while True:
             response = httpx.get(self.download_url, headers=self.headers, params=params)
@@ -150,7 +164,9 @@ class GitlabIssueHandler(IssueHandlerInterface):
             issues = response.json()
             if not issues:
                 break
-            if not isinstance(issues, list) or any(not isinstance(issue, dict) for issue in issues):
+            if not isinstance(issues, list) or any(
+                not isinstance(issue, dict) for issue in issues
+            ):
                 msg = "Expected list of dictionaries from Service Gitlab API."
                 raise ValueError(msg)
             all_issues.extend(issues)
@@ -158,13 +174,15 @@ class GitlabIssueHandler(IssueHandlerInterface):
             params["page"] += 1
         return all_issues
 
-    def get_issue_comments(self, issue_number: int, comment_id: int | None = None) -> list[str] | None:
+    def get_issue_comments(
+        self, issue_number: int, comment_id: int | None = None
+    ) -> list[str] | None:
         """Download comments for a specific issue from Gitlab.
-        
+
         Args:
             issue_number: Issue number to get comments for
             comment_id: Optional specific comment ID to retrieve
-            
+
         Returns:
             List of comment bodies or None if no comments
 
@@ -180,7 +198,11 @@ class GitlabIssueHandler(IssueHandlerInterface):
                 break
             if comment_id:
                 if matching_comment := next(
-                    (comment["body"] for comment in comments if comment["id"] == comment_id),
+                    (
+                        comment["body"]
+                        for comment in comments
+                        if comment["id"] == comment_id
+                    ),
                     None,
                 ):
                     return [matching_comment]
@@ -191,26 +213,28 @@ class GitlabIssueHandler(IssueHandlerInterface):
 
     def branch_exists(self, branch_name: str) -> bool:
         """Check if a branch exists in the repository.
-        
+
         Args:
             branch_name: Name of branch to check
-            
+
         Returns:
             True if branch exists, False otherwise
 
         """
         logger.info("Checking if branch %s exists...", branch_name)
-        response = httpx.get(f"{self.base_url}/repository/branches/{branch_name}", headers=self.headers)
+        response = httpx.get(
+            f"{self.base_url}/repository/branches/{branch_name}", headers=self.headers
+        )
         exists = response.status_code == 200
         logger.info("Branch %s exists: %s", branch_name, exists)
         return exists
 
     def get_branch_name(self, base_branch_name: str) -> str:
         """Generate unique branch name by appending attempt number if needed.
-        
+
         Args:
             base_branch_name: Base name for the branch
-            
+
         Returns:
             Unique branch name that doesn't exist yet
 
@@ -224,7 +248,7 @@ class GitlabIssueHandler(IssueHandlerInterface):
 
     def reply_to_comment(self, pr_number: int, comment_id: str, reply: str) -> None:
         """Reply to a discussion thread comment.
-        
+
         Args:
             pr_number: Merge request number
             comment_id: Discussion thread ID
@@ -262,20 +286,22 @@ class GitlabIssueHandler(IssueHandlerInterface):
 
     def create_pull_request(self, data: dict[str, Any] | None = None) -> dict[str, Any]:
         """Create a merge request with the provided data.
-        
+
         Args:
             data: MR data dictionary (title, description, source_branch, target_branch, etc.)
-            
+
         Returns:
             Dictionary with created MR data (normalized to match GitHub format)
-            
+
         Raises:
             RuntimeError: If token lacks push permissions
 
         """
         if data is None:
             data = {}
-        response = httpx.post(f"{self.base_url}/merge_requests", headers=self.headers, json=data)
+        response = httpx.post(
+            f"{self.base_url}/merge_requests", headers=self.headers, json=data
+        )
         if response.status_code == 403:
             msg = "Failed to create pull request due to missing permissions. Make sure that the provided token has push permissions for the repository."
             raise RuntimeError(
@@ -291,13 +317,16 @@ class GitlabIssueHandler(IssueHandlerInterface):
 
     def request_reviewers(self, reviewer: str, pr_number: int) -> None:
         """Request review from a user on a merge request.
-        
+
         Args:
             reviewer: GitLab username to request review from
             pr_number: Merge request number
 
         """
-        response = httpx.get(f"https://{self.base_domain}/api/v4/users?username={reviewer}", headers=self.headers)
+        response = httpx.get(
+            f"https://{self.base_domain}/api/v4/users?username={reviewer}",
+            headers=self.headers,
+        )
         response.raise_for_status()
         user_data = response.json()
         if len(user_data) > 0:
@@ -308,7 +337,11 @@ class GitlabIssueHandler(IssueHandlerInterface):
                 json=review_data,
             )
             if review_response.status_code != 200:
-                logger.warning("Failed to request review from %s: %s", reviewer, review_response.text)
+                logger.warning(
+                    "Failed to request review from %s: %s",
+                    reviewer,
+                    review_response.text,
+                )
 
     def send_comment_msg(self, issue_number: int, msg: str) -> None:
         """Send a comment message to a GitLab issue or merge request.
@@ -320,9 +353,15 @@ class GitlabIssueHandler(IssueHandlerInterface):
         """
         comment_url = f"{self.base_url}/issues/{issue_number}/notes"
         comment_data = {"body": msg}
-        comment_response = httpx.post(comment_url, headers=self.headers, json=comment_data)
+        comment_response = httpx.post(
+            comment_url, headers=self.headers, json=comment_data
+        )
         if comment_response.status_code != 201:
-            logger.error("Failed to post comment: %s %s", comment_response.status_code, comment_response.text)
+            logger.error(
+                "Failed to post comment: %s %s",
+                comment_response.status_code,
+                comment_response.text,
+            )
         else:
             logger.info("Comment added to the PR: %s", msg)
 
@@ -336,7 +375,7 @@ class GitlabIssueHandler(IssueHandlerInterface):
         thread_comments: list[str] | None,
     ) -> list[str]:
         """Extract context from external issue references.
-        
+
         Args:
             closing_issues: List of closing issue references
             closing_issue_numbers: List of closing issue numbers
@@ -344,23 +383,28 @@ class GitlabIssueHandler(IssueHandlerInterface):
             review_comments: Optional review comments
             review_threads: List of review threads
             thread_comments: Optional thread comments
-            
+
         Returns:
             List of context strings (empty for GitLab)
 
         """
-        return []
+        return closing_issues
 
 
 class GitlabPRHandler(GitlabIssueHandler):
     """GitLab handler specialized for merge request operations.
-    
+
     Extends GitlabIssueHandler with MR-specific functionality including
     discussion thread handling and MR metadata extraction.
     """
 
     def __init__(
-        self, owner: str, repo: str, token: str, username: str | None = None, base_domain: str = "gitlab.com",
+        self,
+        owner: str,
+        repo: str,
+        token: str,
+        username: str | None = None,
+        base_domain: str = "gitlab.com",
     ) -> None:
         """Initialize a GitLab PR handler.
 
@@ -377,15 +421,18 @@ class GitlabPRHandler(GitlabIssueHandler):
 
     def _fetch_closing_issues(self, pull_number: int) -> tuple[list[str], list[int]]:
         """Fetch issues that will be closed by the PR.
-        
+
         Args:
             pull_number: Merge request number
-            
+
         Returns:
             Tuple of (closing_issue_bodies, closing_issue_numbers)
 
         """
-        response = httpx.get(f"{self.base_url}/merge_requests/{pull_number}/related_issues", headers=self.headers)
+        response = httpx.get(
+            f"{self.base_url}/merge_requests/{pull_number}/related_issues",
+            headers=self.headers,
+        )
         response.raise_for_status()
         closing_issues = response.json()
         closing_issues_bodies = [issue["description"] for issue in closing_issues]
@@ -394,10 +441,10 @@ class GitlabPRHandler(GitlabIssueHandler):
 
     def _fetch_pr_discussions(self, pull_number: int) -> dict:
         """Fetch PR discussions via GraphQL.
-        
+
         Args:
             pull_number: Merge request number
-            
+
         Returns:
             GraphQL response dictionary with discussions data
 
@@ -413,13 +460,15 @@ class GitlabPRHandler(GitlabIssueHandler):
         response.raise_for_status()
         return response.json()
 
-    def _process_review_thread(self, my_review_threads: list, comment_id: int | None) -> tuple[str, list[str], bool]:
+    def _process_review_thread(
+        self, my_review_threads: list, comment_id: int | None
+    ) -> tuple[str, list[str], bool]:
         """Process review thread notes to build message and file list.
-        
+
         Args:
             my_review_threads: List of review thread note dictionaries
             comment_id: Optional comment ID to check for
-            
+
         Returns:
             Tuple of (message, files, thread_contains_comment_id)
 
@@ -429,7 +478,10 @@ class GitlabPRHandler(GitlabIssueHandler):
         thread_contains_comment_id = False
 
         for i, review_thread in enumerate(my_review_threads):
-            if comment_id is not None and int(review_thread["id"].split("/")[-1]) == comment_id:
+            if (
+                comment_id is not None
+                and int(review_thread["id"].split("/")[-1]) == comment_id
+            ):
                 thread_contains_comment_id = True
 
             if i == len(my_review_threads) - 1:
@@ -456,21 +508,25 @@ class GitlabPRHandler(GitlabIssueHandler):
         Retrieves information about:
             1. unresolved review comments
             2. referenced issues the pull request would close
-            
+
         Args:
             pull_number: Merge request number
             comment_id: Optional comment ID to filter by
-            
+
         Returns:
             Tuple of (closing_issues, closing_issue_numbers, review_comments, review_threads, thread_comments)
 
         """
         # Fetch closing issues
-        closing_issues_bodies, closing_issue_numbers = self._fetch_closing_issues(pull_number)
+        closing_issues_bodies, closing_issue_numbers = self._fetch_closing_issues(
+            pull_number
+        )
 
         # Fetch discussions
         response_json = self._fetch_pr_discussions(pull_number)
-        pr_data = response_json.get("data", {}).get("project", {}).get("mergeRequest", {})
+        pr_data = (
+            response_json.get("data", {}).get("project", {}).get("mergeRequest", {})
+        )
 
         # Process review threads
         review_threads = []
@@ -482,16 +538,26 @@ class GitlabPRHandler(GitlabIssueHandler):
             if not node.get("resolved", True) and node.get("resolvable", True):
                 thread_id = node.get("id")
                 my_review_threads = node.get("notes", {}).get("nodes", [])
-                message, files, thread_contains_comment_id = self._process_review_thread(my_review_threads, comment_id)
+                message, files, thread_contains_comment_id = (
+                    self._process_review_thread(my_review_threads, comment_id)
+                )
 
                 if comment_id is None or thread_contains_comment_id:
                     unresolved_thread = ReviewThread(comment=message, files=files)
                     review_threads.append(unresolved_thread)
                     thread_ids.append(thread_id)
 
-        return (closing_issues_bodies, closing_issue_numbers, None, review_threads, thread_ids)
+        return (
+            closing_issues_bodies,
+            closing_issue_numbers,
+            None,
+            review_threads,
+            thread_ids,
+        )
 
-    def get_pr_comments(self, pr_number: int, comment_id: int | None = None) -> list[str] | None:
+    def get_pr_comments(
+        self, pr_number: int, comment_id: int | None = None
+    ) -> list[str] | None:
         """Download comments for a specific pull request from Gitlab.
 
         Args:
@@ -512,7 +578,9 @@ class GitlabPRHandler(GitlabIssueHandler):
                 break
 
             if comment_id is not None:
-                if matching := next((c["body"] for c in comments if c["id"] == comment_id), None):
+                if matching := next(
+                    (c["body"] for c in comments if c["id"] == comment_id), None
+                ):
                     return [matching]
             else:
                 all_comments.extend([c["body"] for c in comments])
@@ -539,7 +607,11 @@ class GitlabPRHandler(GitlabIssueHandler):
         comments = response.json()
 
         # Filter out system and non-resolvable comments
-        return [comment for comment in comments if comment.get("resolvable", True) and not comment.get("system", True)]
+        return [
+            comment
+            for comment in comments
+            if comment.get("resolvable", True) and not comment.get("system", True)
+        ]
 
     def _collect_issue_references(
         self,
@@ -547,7 +619,7 @@ class GitlabPRHandler(GitlabIssueHandler):
         review_comments: list[str] | None,
         review_threads: list[ReviewThread],
         thread_comments: list[str] | None,
-    ) -> list[str]:
+    ) -> list[int]:
         """Collect issue references from various sources.
 
         Args:
@@ -557,10 +629,10 @@ class GitlabPRHandler(GitlabIssueHandler):
             thread_comments: List of thread comments.
 
         Returns:
-            list[str]: List of issue references found.
+            list[int]: List of issue references found.
 
         """
-        new_issue_references = []
+        new_issue_references: list[int] = []
 
         # Extract from issue body
         if issue_body:
@@ -574,7 +646,9 @@ class GitlabPRHandler(GitlabIssueHandler):
         # Extract from review threads
         if review_threads:
             for review_thread in review_threads:
-                new_issue_references.extend(extract_issue_references(review_thread.comment))
+                new_issue_references.extend(
+                    extract_issue_references(review_thread.comment)
+                )
 
         # Extract from thread comments
         if thread_comments:
@@ -636,7 +710,9 @@ class GitlabPRHandler(GitlabIssueHandler):
 
         # Remove duplicates and filter out already processed issues
         non_duplicate_references = set(new_issue_references)
-        unique_issue_references = non_duplicate_references.difference(closing_issue_numbers)
+        unique_issue_references = non_duplicate_references.difference(
+            closing_issue_numbers
+        )
 
         # Fetch content for unique issues
         for issue_number in unique_issue_references:
@@ -662,10 +738,16 @@ class GitlabPRHandler(GitlabIssueHandler):
             if any(issue.get(key) is None for key in ["iid", "title"]):
                 logger.warning("Skipping #%s as it is missing iid or title.", issue)
                 continue
-            body = issue.get("description") if issue.get("description") is not None else ""
-            closing_issues, closing_issues_numbers, review_comments, review_threads, thread_ids = (
-                self.download_pr_metadata(issue["iid"], comment_id=comment_id)
+            body = (
+                issue.get("description") if issue.get("description") is not None else ""
             )
+            (
+                closing_issues,
+                closing_issues_numbers,
+                review_comments,
+                review_threads,
+                thread_ids,
+            ) = self.download_pr_metadata(issue["iid"], comment_id=comment_id)
             head_branch = issue["source_branch"]
             thread_comments = self.get_pr_comments(issue["iid"], comment_id=comment_id)
             closing_issues = self.get_context_from_external_issues_references(

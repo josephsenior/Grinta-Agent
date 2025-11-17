@@ -45,6 +45,8 @@ rotation = "daily"  # or "size"
 LOG_LEVEL=INFO
 LOG_FORMAT=json
 LOG_OUTPUT=console,file
+# Split access (request) logs from application logs
+LOG_SPLIT_ACCESS=true
 ```
 
 ### **Component-Specific Logging**
@@ -390,6 +392,57 @@ output = ["console", "file"]
 [monitoring.metrics]
 enabled = true
 backend = "prometheus"
+
+### Route-Level Metrics & Cardinality
+
+Forge exposes `forge_request_total{method,status,route}` where `route` is the FastAPI path template (e.g. `/api/monitoring/health`).
+
+Guidelines:
+
+- Avoid embedding user identifiers into routes (keep templates static) to control label cardinality.
+- Use `topk()` and time-window `rate()` functions to surface hotspots without overloading dashboards.
+- Recording rules recommended:
+    - `record: forge_http_rps:route = sum by (route) (rate(forge_request_total{status!="exception"}[1m]))`
+    - `record: forge_http_error_rate:route = sum by (route) (rate(forge_request_total{status=~"5.."}[5m])) / sum by (route) (rate(forge_request_total{status!="exception"}[5m]))`
+
+### WebSocket Rate Limiting (Redis Option)
+
+Set `WS_RATE_LIMIT_BACKEND=redis` and define `REDIS_URL` to enable global rate limiting for `/api/monitoring/ws/live` across replicas.
+
+Environment variables:
+
+```
+WS_RATE_LIMIT_BACKEND=redis
+REDIS_URL=redis://localhost:6379
+```
+
+Fallback: If Redis unavailable, in-memory per-process limits are used with identical thresholds.
+
+### OpenTelemetry (Tracing)
+
+Minimal spans can be enabled for request correlation:
+
+```
+OTEL_ENABLED=true
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+```
+
+Adds span attributes: `http.method`, `http.route`, `http.status_code`, `forge.request_id`.
+
+### Production Security Defaults
+
+In production-like environments (`ENV=production` or `FORGE_ENV=prod`):
+
+- CSP defaults to `strict` unless overridden by `CSP_POLICY`.
+- CSRF protection enabled by default unless `CSRF_PROTECTION_ENABLED=false`.
+
+Override examples:
+
+```
+CSP_POLICY=permissive
+CSRF_PROTECTION_ENABLED=false
+```
+
 interval_seconds = 30
 
 [monitoring.dashboard]

@@ -1,171 +1,162 @@
 import React from "react";
 import {
+  ExternalLink,
+  FileText,
   Github,
   Heart,
   Info,
   Mail,
-  FileText,
   Shield,
-  ExternalLink,
 } from "lucide-react";
 import { BRAND } from "#/config/brand";
-import logoImage from "#/assets/branding/logo2.png";
+// Use public logo instead of bundled asset
+const logo = "/forge-logo.png";
+
+const FOOTER_LINKS = [
+  {
+    title: "Product",
+    links: [
+      { label: "About", href: "/about", icon: Info },
+      { label: "Pricing", href: "/pricing", icon: FileText },
+      {
+        label: "Docs",
+        href: BRAND.urls.docs,
+        icon: ExternalLink,
+        external: true,
+      },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { label: "Contact", href: "/contact", icon: Mail },
+      { label: "Privacy", href: "/privacy", icon: Shield },
+      { label: "Terms", href: "/terms", icon: FileText },
+    ],
+  },
+  {
+    title: "Resources",
+    links: [
+      { label: "Security", href: "/privacy", icon: Shield },
+      {
+        label: "Support",
+        href: BRAND.urls.support,
+        icon: Mail,
+        external: true,
+      },
+      {
+        label: "MIT License",
+        href: "https://opensource.org/licenses/MIT",
+        icon: ExternalLink,
+        external: true,
+      },
+    ],
+  },
+];
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer
-      className="relative z-10 py-12 px-6 border-t border-border bg-background-secondary/50 safe-area-bottom safe-area-left safe-area-right"
-      style={{
-        paddingBottom: "max(3rem, env(safe-area-inset-bottom))",
-        paddingLeft: "max(1.5rem, env(safe-area-inset-left))",
-        paddingRight: "max(1.5rem, env(safe-area-inset-right))",
-      }}
-    >
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12">
-          {/* Brand & Attribution */}
-          <div className="md:col-span-2">
-            <div className="flex items-center gap-3 mb-4">
-              <img
-                src={logoImage}
-                alt="Forge Pro Logo"
-                className="w-10 h-10 object-contain"
-              />
-              <div>
-                <span className="text-xl font-bold text-gradient-brand">
-                  {BRAND.name}
-                </span>
-                <p className="text-xs text-foreground-tertiary">
-                  {BRAND.tagline}
-                </p>
-              </div>
-            </div>
-
-            <p className="text-sm text-foreground-secondary leading-relaxed mb-4">
-              {BRAND.description}
-            </p>
-
-            {/* MIT Attribution */}
-            <div className="p-3 rounded-lg border border-border bg-background-tertiary/50">
-              <p className="text-xs text-foreground-tertiary flex items-center gap-2">
-                <Heart className="w-3 h-3 text-accent-500" />
-                <span>{BRAND.attribution.acknowledgment}</span>
-              </p>
-              <a
-                href="https://github.com/All-Hands-AI/Forge"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-accent-500 hover:text-accent-400 transition-colors inline-flex items-center gap-1 mt-1"
-              >
-                View Forge on GitHub →
-              </a>
-            </div>
+    <footer className="relative z-10 mt-12 sm:mt-16 safe-area-bottom safe-area-left safe-area-right">
+      <div className="w-full px-4 sm:px-6 lg:px-8 pb-6">
+        <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-white/5 via-black/40 to-black/80 shadow-[0_40px_120px_rgba(0,0,0,0.45)] backdrop-blur-xl mx-auto max-w-7xl">
+          {/* Gradient overlays */}
+          <div aria-hidden className="pointer-events-none absolute inset-0">
+            <div className="absolute inset-y-0 left-1/2 w-1/2 rounded-r-[32px] bg-gradient-to-r from-brand-500/10 via-accent-500/5 to-transparent blur-3xl" />
+            <div className="absolute -bottom-20 left-10 h-48 w-48 rounded-full bg-brand-500/20 blur-[110px]" />
+            <div className="absolute -top-20 right-10 h-52 w-52 rounded-full bg-accent-emerald/20 blur-[120px]" />
           </div>
 
-          {/* Product Links */}
-          <div>
-            <h3 className="font-semibold text-foreground mb-4 text-sm">
-              Product
-            </h3>
-            <ul className="space-y-2.5 text-sm">
-              <li>
-                <a
-                  href="/about"
-                  className="text-foreground-secondary hover:text-foreground transition-colors inline-flex items-center gap-2"
-                >
-                  <Info className="w-3.5 h-3.5" />
-                  About
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/contact"
-                  className="text-foreground-secondary hover:text-foreground transition-colors inline-flex items-center gap-2"
-                >
-                  <Mail className="w-3.5 h-3.5" />
-                  Contact
-                </a>
-              </li>
-              <li>
-                <a
-                  href={BRAND.urls.docs}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-foreground-secondary hover:text-foreground transition-colors inline-flex items-center gap-2"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  Documentation
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </li>
-              <li>
+          <div className="relative space-y-12 px-8 py-16">
+            {/* Main Footer Content */}
+            <div className="grid gap-10 md:grid-cols-[2fr,3fr]">
+              <div className="space-y-5">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={logo}
+                    alt="Forge"
+                    className="h-12 w-12 drop-shadow-[0_0_8px_rgba(139,92,246,0.3)]"
+                  />
+                  <div>
+                    <p className="text-lg font-semibold text-white">
+                      {BRAND.name}
+                    </p>
+                    <p className="text-xs text-white/60">{BRAND.tagline}</p>
+                  </div>
+                </div>
+                <p className="text-sm leading-relaxed text-white/70">
+                  {BRAND.description}
+                </p>
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[11px] uppercase tracking-[0.4em] text-white/60">
+                  Built with <Heart className="h-3.5 w-3.5 text-accent-500" />{" "}
+                  {BRAND.attribution.framework}
+                </div>
                 <a
                   href={BRAND.urls.github}
                   target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-foreground-secondary hover:text-foreground transition-colors inline-flex items-center gap-2"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
                 >
-                  <Github className="w-3.5 h-3.5" />
-                  GitHub
-                  <ExternalLink className="w-3 h-3" />
+                  <Github className="h-4 w-4" />
+                  Star the repo
                 </a>
-              </li>
-            </ul>
-          </div>
+              </div>
 
-          {/* Legal Links */}
-          <div>
-            <h3 className="font-semibold text-foreground mb-4 text-sm">
-              Legal
-            </h3>
-            <ul className="space-y-2.5 text-sm">
-              <li>
-                <a
-                  href="/terms"
-                  className="text-foreground-secondary hover:text-foreground transition-colors inline-flex items-center gap-2"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  Terms of Service
-                </a>
-              </li>
-              <li>
+              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                {FOOTER_LINKS.map(({ title, links }) => (
+                  <div key={title}>
+                    <p className="text-xs uppercase tracking-[0.35em] text-white/60">
+                      {title}
+                    </p>
+                    <ul className="mt-4 space-y-3">
+                      {links.map(({ label, href, icon: Icon, external }) => (
+                        <li key={label}>
+                          <a
+                            href={href}
+                            target={external ? "_blank" : undefined}
+                            rel={external ? "noreferrer" : undefined}
+                            className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-white/70 transition hover:bg-white/5 hover:text-white"
+                          >
+                            {Icon && <Icon className="h-4 w-4 text-white/50" />}
+                            {label}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom Bar */}
+            <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-white/10 bg-black/50 px-6 py-4 text-xs text-white/60 sm:flex-row">
+              <span>
+                © {currentYear} {BRAND.name}. All rights reserved.
+              </span>
+              <div className="flex items-center gap-4">
                 <a
                   href="/privacy"
-                  className="text-foreground-secondary hover:text-foreground transition-colors inline-flex items-center gap-2"
+                  className="rounded-lg px-3 py-1.5 transition hover:bg-white/5 hover:text-white"
                 >
-                  <Shield className="w-3.5 h-3.5" />
-                  Privacy Policy
+                  Privacy
                 </a>
-              </li>
-              <li>
+                <span className="h-3 w-px bg-white/20" aria-hidden />
                 <a
-                  href="https://opensource.org/licenses/MIT"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-foreground-secondary hover:text-foreground transition-colors inline-flex items-center gap-2"
+                  href="/terms"
+                  className="rounded-lg px-3 py-1.5 transition hover:bg-white/5 hover:text-white"
                 >
-                  <FileText className="w-3.5 h-3.5" />
-                  MIT License
-                  <ExternalLink className="w-3 h-3" />
+                  Terms
                 </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Bottom Bar */}
-        <div className="flex flex-col md:flex-row items-center justify-between mt-10 pt-6 border-t border-border gap-4">
-          <div className="text-sm text-foreground-tertiary text-center md:text-left">
-            © {currentYear} {BRAND.name}. All rights reserved.
-          </div>
-
-          <div className="text-xs text-foreground-tertiary text-center md:text-right">
-            <span className="inline-flex items-center gap-1">
-              Made with <Heart className="w-3 h-3 text-accent-500 inline" /> for
-              developers
-            </span>
+                <span className="h-3 w-px bg-white/20" aria-hidden />
+                <a
+                  href={BRAND.urls.support}
+                  className="rounded-lg px-3 py-1.5 transition hover:bg-white/5 hover:text-white"
+                >
+                  Support
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </div>

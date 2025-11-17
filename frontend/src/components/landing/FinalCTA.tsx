@@ -1,8 +1,9 @@
 import React, { useRef } from "react";
-import { Sparkles, ArrowRight, Github, CheckCircle } from "lucide-react";
+import { Sparkles, ArrowRight, CheckCircle, FileText } from "lucide-react";
 import { useScrollReveal } from "#/hooks/use-scroll-reveal";
 import { useMagneticHover } from "#/hooks/use-mouse-position";
 import { soundEffects } from "#/utils/sound-effects";
+import { finalCta } from "#/content/landing";
 
 export function FinalCTA() {
   const { ref, isVisible } = useScrollReveal({
@@ -48,14 +49,10 @@ export function FinalCTA() {
 
               {/* Heading - Benefit-driven */}
               <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 text-glow">
-                Stop Writing Boilerplate.{" "}
-                <span className="text-gradient-animated bg-gradient-to-r from-white via-accent-100 to-white bg-clip-text text-transparent">
-                  Start Shipping Features.
-                </span>
+                {finalCta.heading}
               </h2>
-              <p className="text-xl text-white/90 max-w-2xl mx-auto mb-10 leading-relaxed">
-                Join 50,000+ developers who eliminated 80% of repetitive coding.
-                From idea to deployed app in minutes, not weeks.
+              <p className="text-xl text-white/90 max-w-3xl mx-auto mb-10 leading-relaxed">
+                {finalCta.body}
               </p>
 
               {/* CTAs with magnetic hover */}
@@ -70,14 +67,12 @@ export function FinalCTA() {
                     transform: `translate(${primaryMagnetic.offset.x}px, ${primaryMagnetic.offset.y}px)`,
                   }}
                 >
-                  Try Free - No Credit Card
+                  {finalCta.primaryCta}
                   <ArrowRight className="w-5 h-5 ml-3 group-hover:translate-x-2 transition-transform duration-300" />
                 </a>
                 <a
                   ref={secondaryButtonRef}
-                  href="https://github.com/All-Hands-AI/Forge"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="/docs/beta"
                   onMouseEnter={() => soundEffects.hover()}
                   onClick={() => soundEffects.click()}
                   className="magnetic-button inline-flex items-center px-10 py-5 bg-white/10 backdrop-blur-md text-white font-semibold rounded-xl hover:bg-white/20 transition-all duration-300 border-2 border-white/30 hover:border-white/50 shadow-xl interactive-scale gpu-accelerated group"
@@ -85,8 +80,8 @@ export function FinalCTA() {
                     transform: `translate(${secondaryMagnetic.offset.x}px, ${secondaryMagnetic.offset.y}px)`,
                   }}
                 >
-                  <Github className="w-5 h-5 mr-3 group-hover:rotate-12 transition-transform duration-300" />
-                  Star on GitHub
+                  <FileText className="w-5 h-5 mr-3 group-hover:rotate-12 transition-transform duration-300" />
+                  {finalCta.secondaryCta}
                 </a>
               </div>
 

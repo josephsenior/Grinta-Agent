@@ -29,7 +29,10 @@ def encode_question(question, api_name):
         + domains
         + "\n2. The $API_CALL should have only 1 line of code that calls api.\n3. The $API_PROVIDER should be the programming framework used.\n4. $EXPLANATION should be a step-by-step explanation.\n5. The $CODE is the python code.\n6. Do not repeat the format in your answer."
     )
-    return "You are a helpful API writer who can write APIs based on requirements.\n" + prompt
+    return (
+        "You are a helpful API writer who can write APIs based on requirements.\n"
+        + prompt
+    )
 
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
@@ -39,13 +42,13 @@ os.makedirs(DATA_DIR, exist_ok=True)
 def fetch_data(url, filename):
     cache_path = os.path.join(DATA_DIR, filename)
     if os.path.exists(cache_path):
-        with open(cache_path, "r", encoding='utf-8') as f:
+        with open(cache_path, "r", encoding="utf-8") as f:
             return f.read()
     else:
         response = httpx.get(url)
         if response.status_code != 200:
             raise Exception(f"Failed to fetch data from {url}")
-        with open(cache_path, "w", encoding='utf-8') as f:
+        with open(cache_path, "w", encoding="utf-8") as f:
             f.write(response.text)
         return response.text
 
@@ -53,30 +56,18 @@ def fetch_data(url, filename):
 def get_data_for_hub(hub: str):
     if hub == "hf":
         question_data = "https://raw.githubusercontent.com/ShishirPatil/gorilla/refs/tags/v1.2/eval/eval-data/questions/huggingface/questions_huggingface_0_shot.jsonl"
-        api_dataset = (
-            "https://raw.githubusercontent.com/ShishirPatil/gorilla/refs/tags/v1.2/data/api/huggingface_api.jsonl"
-        )
-        apibench = (
-            "https://raw.githubusercontent.com/ShishirPatil/gorilla/refs/tags/v1.2/data/apibench/huggingface_eval.json"
-        )
+        api_dataset = "https://raw.githubusercontent.com/ShishirPatil/gorilla/refs/tags/v1.2/data/api/huggingface_api.jsonl"
+        apibench = "https://raw.githubusercontent.com/ShishirPatil/gorilla/refs/tags/v1.2/data/apibench/huggingface_eval.json"
         ast_eval = ast_eval_hf
     elif hub == "torch":
         question_data = "https://raw.githubusercontent.com/ShishirPatil/gorilla/refs/tags/v1.2/eval/eval-data/questions/torchhub/questions_torchhub_0_shot.jsonl"
-        api_dataset = (
-            "https://raw.githubusercontent.com/ShishirPatil/gorilla/refs/tags/v1.2/data/api/torchhub_api.jsonl"
-        )
-        apibench = (
-            "https://raw.githubusercontent.com/ShishirPatil/gorilla/refs/tags/v1.2/data/apibench/torchhub_eval.json"
-        )
+        api_dataset = "https://raw.githubusercontent.com/ShishirPatil/gorilla/refs/tags/v1.2/data/api/torchhub_api.jsonl"
+        apibench = "https://raw.githubusercontent.com/ShishirPatil/gorilla/refs/tags/v1.2/data/apibench/torchhub_eval.json"
         ast_eval = ast_eval_th
     elif hub == "tf":
         question_data = "https://raw.githubusercontent.com/ShishirPatil/gorilla/refs/tags/v1.2/eval/eval-data/questions/tensorflowhub/questions_tensorflowhub_0_shot.jsonl"
-        api_dataset = (
-            "https://raw.githubusercontent.com/ShishirPatil/gorilla/refs/tags/v1.2/data/api/tensorflowhub_api.jsonl"
-        )
-        apibench = (
-            "https://raw.githubusercontent.com/ShishirPatil/gorilla/refs/tags/v1.2/data/apibench/tensorflow_eval.json"
-        )
+        api_dataset = "https://raw.githubusercontent.com/ShishirPatil/gorilla/refs/tags/v1.2/data/api/tensorflowhub_api.jsonl"
+        apibench = "https://raw.githubusercontent.com/ShishirPatil/gorilla/refs/tags/v1.2/data/apibench/tensorflow_eval.json"
         ast_eval = ast_eval_tf
     question_data = fetch_data(question_data, "question_data.jsonl")
     api_dataset = fetch_data(api_dataset, "api_dataset.jsonl")

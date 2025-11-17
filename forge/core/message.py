@@ -1,18 +1,15 @@
-"""Core functionality for the Forge agent framework.
+"""Message models and serialization utilities for Forge.
 
 Classes:
-    ContentType
-    Content
-    TextContent
-    ImageContent
-    Message
+    - ContentType: Enum of supported content kinds (text, image_url)
+    - Content: Abstract base for message content with caching flag
+    - TextContent: Text message content with optional cache control
+    - ImageContent: One-or-more image URLs with optional cache control
+    - Message: LLM message supporting text, images, tools, and caching
 
-Functions:
-    serialize_model
-    serialize_model
-    serialize_model
-    contains_image
-    serialize_model
+Key APIs:
+    - serialize_model(): Pydantic serializers for content/message objects
+    - contains_image: Convenience property on Message to detect images
 """
 
 from __future__ import annotations
@@ -24,16 +21,18 @@ from pydantic import BaseModel, Field, model_serializer
 
 from forge.core.pydantic_compat import model_dump_with_options
 
-# Import ChatCompletionMessageToolCall at runtime, not just for type checking
-try:
-    from litellm import ChatCompletionMessageToolCall
-except ImportError:
-    # Fallback for when litellm is not available
-    ChatCompletionMessageToolCall = Any
+if TYPE_CHECKING:
+    from litellm import ChatCompletionMessageToolCall as ChatCompletionMessageToolCallType
+else:
+    try:
+        from litellm import ChatCompletionMessageToolCall as ChatCompletionMessageToolCallType
+    except ImportError:
+        ChatCompletionMessageToolCallType = Any
 
 
 class ContentType(Enum):
     """Content type enum for message content."""
+
     TEXT = "text"
     IMAGE_URL = "image_url"
     __test__ = False
@@ -41,17 +40,20 @@ class ContentType(Enum):
 
 class Content(BaseModel):
     """Abstract base class for message content with optional caching.
-    
+
     Attributes:
         type: Content type identifier
         cache_prompt: Whether to enable prompt caching for this content
 
     """
+
     type: str
     cache_prompt: bool = False
 
     @model_serializer(mode="plain")
-    def serialize_model(self) -> dict[str, str | dict[str, str]] | list[dict[str, str | dict[str, str]]]:
+    def serialize_model(
+        self,
+    ) -> dict[str, str | dict[str, str]] | list[dict[str, str | dict[str, str]]]:
         """Serialize content for LLM API (must be implemented by subclasses)."""
         msg = "Subclasses should implement this method."
         raise NotImplementedError(msg)
@@ -59,11 +61,12 @@ class Content(BaseModel):
 
 class TextContent(Content):
     """Text content for messages.
-    
+
     Attributes:
         text: The text content
 
     """
+
     type: str = ContentType.TEXT.value
     text: str
 
@@ -78,11 +81,12 @@ class TextContent(Content):
 
 class ImageContent(Content):
     """Image content for messages with multiple image URLs.
-    
+
     Attributes:
         image_urls: List of image URLs to include
 
     """
+
     type: str = ContentType.IMAGE_URL.value
     image_urls: list[str]
 
@@ -99,7 +103,7 @@ class ImageContent(Content):
 
 class Message(BaseModel):
     """LLM message with support for text, images, function calls, and caching.
-    
+
     Attributes:
         role: Message role (user/system/assistant/tool)
         content: List of content items (text/images)
@@ -112,28 +116,29 @@ class Message(BaseModel):
         force_string_serializer: Force string serialization format
 
     """
+
     role: Literal["user", "system", "assistant", "tool"]
     content: list[TextContent | ImageContent] = Field(default_factory=list)
     cache_enabled: bool = False
     vision_enabled: bool = False
     function_calling_enabled: bool = False
-    tool_calls: list[ChatCompletionMessageToolCall] | None = None
+    tool_calls: list[ChatCompletionMessageToolCallType] | None = None
     tool_call_id: str | None = None
-    
+
     name: str | None = None
     force_string_serializer: bool = False
-    
+
     # Rebuild the model to ensure all dependencies are properly resolved
     def __init_subclass__(cls, **kwargs):
         """Rebuild Pydantic models when subclasses are defined to refresh validators."""
         super().__init_subclass__(**kwargs)
-        if hasattr(cls, 'model_rebuild'):
+        if hasattr(cls, "model_rebuild"):
             cls.model_rebuild()
 
     @property
     def contains_image(self) -> bool:
         """Check if message contains any image content.
-        
+
         Returns:
             True if message has image content
 
@@ -143,10 +148,10 @@ class Message(BaseModel):
     @model_serializer(mode="plain")
     def serialize_model(self) -> dict[str, Any]:
         """Serialize message for LLM API.
-        
+
         Uses list serializer for advanced features (caching, vision, tools),
         string serializer for simple text-only messages.
-        
+
         Returns:
             Serialized message dictionary
 
@@ -158,7 +163,9 @@ class Message(BaseModel):
         return self._string_serializer()
 
     def _string_serializer(self) -> dict[str, Any]:
-        content = "\n".join(item.text for item in self.content if isinstance(item, TextContent))
+        content = "\n".join(
+            item.text for item in self.content if isinstance(item, TextContent)
+        )
         message_dict: dict[str, Any] = {"content": content, "role": self.role}
         return self._add_tool_call_keys(message_dict)
 
@@ -168,7 +175,9 @@ class Message(BaseModel):
 
         for item in self.content:
             d = model_dump_with_options(item)
-            role_tool_with_prompt_caching = self._process_item_caching(item, d, role_tool_with_prompt_caching)
+            role_tool_with_prompt_caching = self._process_item_caching(
+                item, d, role_tool_with_prompt_caching
+            )
             self._add_item_to_content(item, d, content)
 
         message_dict: dict[str, Any] = {"content": content, "role": self.role}
@@ -176,7 +185,9 @@ class Message(BaseModel):
             message_dict["cache_control"] = {"type": "ephemeral"}
         return self._add_tool_call_keys(message_dict)
 
-    def _process_item_caching(self, item: Any, d: dict, role_tool_with_prompt_caching: bool) -> bool:
+    def _process_item_caching(
+        self, item: Any, d: dict, role_tool_with_prompt_caching: bool
+    ) -> bool:
         """Process caching for tool items."""
         if self.role == "tool" and item.cache_prompt:
             role_tool_with_prompt_caching = True
@@ -193,7 +204,9 @@ class Message(BaseModel):
                 if hasattr(d_item, "pop"):
                     d_item.pop("cache_control", None)
 
-    def _add_item_to_content(self, item: Any, d: dict, content: list[dict[str, Any]]) -> None:
+    def _add_item_to_content(
+        self, item: Any, d: dict, content: list[dict[str, Any]]
+    ) -> None:
         """Add item to content list based on type."""
         if isinstance(item, TextContent):
             content.append(d)
@@ -210,12 +223,17 @@ class Message(BaseModel):
                 {
                     "id": tool_call.id,
                     "type": "function",
-                    "function": {"name": tool_call.function.name, "arguments": tool_call.function.arguments},
+                    "function": {
+                        "name": tool_call.function.name,
+                        "arguments": tool_call.function.arguments,
+                    },
                 }
                 for tool_call in self.tool_calls
             ]
         if self.tool_call_id is not None:
-            assert self.name is not None, "name is required when tool_call_id is not None"
+            assert self.name is not None, (
+                "name is required when tool_call_id is not None"
+            )
             message_dict["tool_call_id"] = self.tool_call_id
             message_dict["name"] = self.name
         return message_dict

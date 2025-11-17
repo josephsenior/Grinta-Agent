@@ -48,7 +48,9 @@ def test_event_property_accessors_roundtrip():
     event.set_hard_timeout(3.5, blocking=False)
 
     metrics = Metrics()
-    metrics.token_usages = [TokenUsage(prompt_tokens=1, completion_tokens=2, total_tokens=3)]
+    metrics.token_usages = [
+        TokenUsage(prompt_tokens=1, completion_tokens=2, total_tokens=3)
+    ]
     event.llm_metrics = metrics
 
     metadata = ToolCallMetadata(
@@ -102,7 +104,9 @@ def test_set_hard_timeout_updates_timeout_without_blocking_attribute():
 def test_get_pairs_from_events_matches_actions_and_observations():
     action = DummyAction()
     action._id = 10
-    observation = CmdOutputObservation(content="ok", command="ls", metadata={"exit_code": 0})
+    observation = CmdOutputObservation(
+        content="ok", command="ls", metadata={"exit_code": 0}
+    )
     observation._cause = 10
     stray_observation = CmdOutputObservation(content="lonely", command="pwd")
     stray_observation._cause = 999
@@ -182,4 +186,3 @@ def test_event_filter_exclusion_rules():
     assert default_filter.include(event) is True
 
     assert filt.exclude(event) is False
-

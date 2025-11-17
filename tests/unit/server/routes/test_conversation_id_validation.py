@@ -60,7 +60,12 @@ class TestConversationIdValidation:
 
     def test_conversation_id_with_control_characters_rejected(self):
         """Test that conversation IDs with control characters are rejected."""
-        invalid_ids = ["id\nwith\nnewlines", "id\twith\ttabs", "id\rwith\rcarriage", "id\x01with\x02control"]
+        invalid_ids = [
+            "id\nwith\nnewlines",
+            "id\twith\ttabs",
+            "id\rwith\rcarriage",
+            "id\x01with\x02control",
+        ]
         for invalid_id in invalid_ids:
             with pytest.raises(HTTPException) as exc_info:
                 validate_conversation_id(invalid_id)

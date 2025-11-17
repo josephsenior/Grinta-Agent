@@ -17,7 +17,10 @@ def make_events(*actions) -> list:
     ("actions", "git_patch", "expected"),
     [
         (
-            make_events(AgentThinkAction(thought="Working"), AgentFinishAction(final_thought="Done")),
+            make_events(
+                AgentThinkAction(thought="Working"),
+                AgentFinishAction(final_thought="Done"),
+            ),
             None,
             ("Agent finished.", 1),
         ),
@@ -33,7 +36,9 @@ def make_events(*actions) -> list:
         ),
     ],
 )
-def test_agent_finished_critic_evaluate_returns_expected(actions, git_patch, expected) -> None:
+def test_agent_finished_critic_evaluate_returns_expected(
+    actions, git_patch, expected
+) -> None:
     """Evaluate should score finish state and optional git patch correctly."""
     critic = AgentFinishedCritic()
 
@@ -51,5 +56,3 @@ def test_agent_finished_critic_handles_no_action_events() -> None:
 
     assert result.score == 0
     assert result.message == "Agent did not finish."
-
-

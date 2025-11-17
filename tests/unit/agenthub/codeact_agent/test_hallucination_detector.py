@@ -26,7 +26,9 @@ def test_file_creation_hallucination_detected() -> None:
 def test_no_hallucination_when_tool_called() -> None:
     detector = HallucinationDetector()
     text = "I created the file src/app.py"
-    result = detector.detect_text_hallucination(text, ["edit_file"], [FileEditAction(path="src/app.py")])
+    result = detector.detect_text_hallucination(
+        text, ["edit_file"], [FileEditAction(path="src/app.py")]
+    )
     assert result["hallucinated"] is False
 
 
@@ -44,15 +46,18 @@ def test_code_execution_hallucination_detected() -> None:
     text = "I ran the unit tests to ensure everything passes."
     result = detector.detect_text_hallucination(text, [], [])
     assert result["hallucinated"]
-    assert result["severity"] in {"medium", "high", "critical", "low"}  # severity depends on confidence
+    assert result["severity"] in {
+        "medium",
+        "high",
+        "critical",
+        "low",
+    }  # severity depends on confidence
     assert "code_execution" in [detail["type"] for detail in result["details"]]
 
 
 def test_severity_scaling_with_multiple_events() -> None:
     detector = HallucinationDetector()
-    text = (
-        "I created src/app.py. Then I edited src/utils.py and finally I ran pytest."
-    )
+    text = "I created src/app.py. Then I edited src/utils.py and finally I ran pytest."
     result = detector.detect_text_hallucination(text, [], [])
     assert result["hallucinated"]
     assert result["severity"] in {"high", "critical"}
@@ -78,4 +83,3 @@ def test_generate_correction_prompt_no_hallucination_returns_empty() -> None:
     detector = HallucinationDetector()
     prompt = detector.generate_correction_prompt({"hallucinated": False}, "Do nothing.")
     assert prompt == ""
-

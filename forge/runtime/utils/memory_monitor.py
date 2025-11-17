@@ -12,7 +12,7 @@ class LogStream:
 
     def write(self, message: str) -> None:
         """Write memory usage message to logger.
-        
+
         Args:
             message: Memory usage message to log
 

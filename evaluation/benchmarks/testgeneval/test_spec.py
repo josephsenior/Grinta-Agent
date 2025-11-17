@@ -33,18 +33,28 @@ class TestSpec:
 
     @property
     def test_script(self):
-        return "\n".join(["#!/bin/bash", "set -uo pipefail"] + self.test_script_list) + "\n"
+        return (
+            "\n".join(["#!/bin/bash", "set -uo pipefail"] + self.test_script_list)
+            + "\n"
+        )
 
     @property
     def mutation_script(self):
-        return "\n".join(["#!/bin/bash", "set -uo pipefail"] + self.mutation_script_list) + "\n"
+        return (
+            "\n".join(["#!/bin/bash", "set -uo pipefail"] + self.mutation_script_list)
+            + "\n"
+        )
 
 
 def make_test_setup(specs, env_name, repo_directory, includes_tox=False):
     eval_commands = []
     if includes_tox:
         eval_commands.append(UPDATE_TOX)
-    eval_commands += ["source /opt/miniconda3/bin/activate", f"conda activate {env_name}", f"cd {repo_directory}"]
+    eval_commands += [
+        "source /opt/miniconda3/bin/activate",
+        f"conda activate {env_name}",
+        f"cd {repo_directory}",
+    ]
     if "eval_commands" in specs:
         eval_commands += specs["eval_commands"]
     eval_commands += [
@@ -89,7 +99,9 @@ def make_mutation_script_list(specs, env_name, repo_directory, mutation_timeout)
     return eval_commands
 
 
-def make_test_spec(instance: TestGenEvalInstance, mutation_timeout: int, buffer: int) -> TestSpec:
+def make_test_spec(
+    instance: TestGenEvalInstance, mutation_timeout: int, buffer: int
+) -> TestSpec:
     if isinstance(instance, TestSpec):
         return instance
     instance_id = instance[KEY_INSTANCE_ID]
@@ -104,10 +116,17 @@ def make_test_spec(instance: TestGenEvalInstance, mutation_timeout: int, buffer:
     repo_directory = f"/{env_name}"
     specs = MAP_REPO_VERSION_TO_SPECS[repo][version]
     test_cmd = " ".join(
-        [MAP_REPO_VERSION_TO_SPECS[instance["repo"]][instance["version"]]["test_cmd"], *get_test_directives(instance)]
+        [
+            MAP_REPO_VERSION_TO_SPECS[instance["repo"]][instance["version"]][
+                "test_cmd"
+            ],
+            *get_test_directives(instance),
+        ]
     )
     test_script_list = make_test_script_list(test_cmd, specs, env_name, repo_directory)
-    mutation_script_list = make_mutation_script_list(specs, env_name, repo_directory, mutation_timeout - buffer)
+    mutation_script_list = make_mutation_script_list(
+        specs, env_name, repo_directory, mutation_timeout - buffer
+    )
     return TestSpec(
         instance_id=instance_id,
         id=id,

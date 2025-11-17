@@ -1,4 +1,5 @@
 """Helpers for loading and normalising Forge configuration data."""
+
 from types import UnionType
 from typing import Any, get_args, get_origin
 
@@ -6,7 +7,7 @@ from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
 OH_DEFAULT_AGENT = "CodeActAgent"
-OH_MAX_ITERATIONS = 500
+OH_MAX_ITERATIONS = 500  # Increased from 100 for complex tasks with dynamic iteration management
 DEFAULT_WORKSPACE_MOUNT_PATH_IN_SANDBOX = "/workspace"
 
 
@@ -23,14 +24,18 @@ def get_field_info(field: FieldInfo) -> dict[str, Any]:
     optional = False
     if get_origin(field_type) is UnionType:
         types = get_args(field_type)
-        non_none_arg = next((t for t in types if t is not None and t is not type(None)), None)
+        non_none_arg = next(
+            (t for t in types if t is not None and t is not type(None)), None
+        )
         if non_none_arg is not None:
             field_type = non_none_arg
             optional = True
     type_name = (
         str(field_type)
         if field_type is None
-        else field_type.__name__ if hasattr(field_type, "__name__") else str(field_type)
+        else field_type.__name__
+        if hasattr(field_type, "__name__")
+        else str(field_type)
     )
     default = field.default
     return {"type": type_name.lower(), "optional": optional, "default": default}

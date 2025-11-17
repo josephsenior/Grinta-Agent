@@ -401,23 +401,22 @@ print(f"Optimizations performed: {status['stats']['optimizations_performed']}")
 
 ### **REST API**
 ```bash
-# Get system status
-curl http://localhost:8000/api/optimization/status
+# Get optimization status
+curl http://localhost:3000/api/prompt-optimization/status
 
-# Trigger optimization
-curl -X POST http://localhost:8000/api/optimization/trigger \
+# Trigger optimization (evolve prompt)
+curl -X POST http://localhost:3000/api/prompt-optimization/prompts/{prompt_id}/evolve \
   -H "Content-Type: application/json" \
   -d '{
-    "prompt_id": "system_prompt_1",
     "priority": 8,
     "context": {"reason": "performance_drop"}
   }'
 
 # Get performance metrics
-curl http://localhost:8000/api/optimization/metrics/system_prompt_1
+curl http://localhost:3000/api/prompt-optimization/prompts/{prompt_id}/metrics
 
-# Get active alerts
-curl http://localhost:8000/api/optimization/alerts
+# Get analytics summary
+curl http://localhost:3000/api/prompt-optimization/analytics/summary
 ```
 
 ### **WebSocket API**

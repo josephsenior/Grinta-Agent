@@ -33,7 +33,9 @@ class KnowledgeBaseStore:
         self._lock = Lock()
         self._collections: dict[str, KnowledgeBaseCollection] = {}
         self._documents: dict[str, KnowledgeBaseDocument] = {}
-        self._collection_documents: dict[str, list[str]] = {}  # collection_id -> [doc_ids]
+        self._collection_documents: dict[
+            str, list[str]
+        ] = {}  # collection_id -> [doc_ids]
 
         # Setup storage directory
         if storage_dir is None:
@@ -90,8 +92,7 @@ class KnowledgeBaseStore:
             with open(self.documents_file, "w") as f:
                 data = {
                     "documents": {
-                        k: v.model_dump(mode="json")
-                        for k, v in self._documents.items()
+                        k: v.model_dump(mode="json") for k, v in self._documents.items()
                     }
                 }
                 json.dump(data, f, indent=2, default=str)
@@ -130,7 +131,10 @@ class KnowledgeBaseStore:
             return [c for c in self._collections.values() if c.user_id == user_id]
 
     def update_collection(
-        self, collection_id: str, name: str | None = None, description: str | None = None
+        self,
+        collection_id: str,
+        name: str | None = None,
+        description: str | None = None,
     ) -> KnowledgeBaseCollection | None:
         """Update a collection."""
         with self._lock:
@@ -144,6 +148,7 @@ class KnowledgeBaseStore:
                 collection.description = description
 
             from datetime import datetime
+
             collection.updated_at = datetime.utcnow()
             self._save_to_disk()
             return collection
@@ -184,6 +189,7 @@ class KnowledgeBaseStore:
                 collection.document_count += 1
                 collection.total_size_bytes += document.file_size_bytes
                 from datetime import datetime
+
                 collection.updated_at = datetime.utcnow()
 
             self._save_to_disk()
@@ -199,7 +205,11 @@ class KnowledgeBaseStore:
         """List all documents in a collection."""
         with self._lock:
             doc_ids = self._collection_documents.get(collection_id, [])
-            return [self._documents[doc_id] for doc_id in doc_ids if doc_id in self._documents]
+            return [
+                self._documents[doc_id]
+                for doc_id in doc_ids
+                if doc_id in self._documents
+            ]
 
     def delete_document(self, document_id: str) -> bool:
         """Delete a document."""
@@ -220,6 +230,7 @@ class KnowledgeBaseStore:
                 collection.document_count -= 1
                 collection.total_size_bytes -= document.file_size_bytes
                 from datetime import datetime
+
                 collection.updated_at = datetime.utcnow()
 
             # Delete the document
@@ -261,4 +272,3 @@ def get_knowledge_base_store() -> KnowledgeBaseStore:
     if _store is None:
         _store = KnowledgeBaseStore()
     return _store
-

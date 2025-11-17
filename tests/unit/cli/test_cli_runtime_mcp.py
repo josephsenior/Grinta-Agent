@@ -3,7 +3,11 @@
 from unittest.mock import MagicMock, patch
 import pytest
 from forge.core.config import ForgeConfig
-from forge.core.config.mcp_config import MCPConfig, MCPSSEServerConfig, MCPStdioServerConfig
+from forge.core.config.mcp_config import (
+    MCPConfig,
+    MCPSSEServerConfig,
+    MCPStdioServerConfig,
+)
 from forge.events.action.mcp import MCPAction
 from forge.events.observation import ErrorObservation
 from forge.events.observation.mcp import MCPObservation
@@ -20,7 +24,10 @@ class TestCLIRuntimeMCP:
         self.event_stream = MagicMock()
         llm_registry = LLMRegistry(config=ForgeConfig())
         self.runtime = CLIRuntime(
-            config=self.config, event_stream=self.event_stream, sid="test-session", llm_registry=llm_registry
+            config=self.config,
+            event_stream=self.event_stream,
+            sid="test-session",
+            llm_registry=llm_registry,
         )
 
     @pytest.mark.asyncio
@@ -37,7 +44,9 @@ class TestCLIRuntimeMCP:
     @patch("forge.mcp.utils.create_mcp_clients")
     async def test_call_tool_mcp_no_clients_created(self, mock_create_clients):
         """Test MCP call when no clients can be created."""
-        self.runtime.config.mcp = MCPConfig(sse_servers=[MCPSSEServerConfig(url="http://test.com")])
+        self.runtime.config.mcp = MCPConfig(
+            sse_servers=[MCPSSEServerConfig(url="http://test.com")]
+        )
         mock_create_clients.return_value = []
         action = MCPAction(name="test_tool", arguments={"arg1": "value1"})
         with patch("sys.platform", "linux"):
@@ -58,7 +67,9 @@ class TestCLIRuntimeMCP:
         mock_client = MagicMock()
         mock_create_clients.return_value = [mock_client]
         expected_observation = MCPObservation(
-            content='{"result": "success"}', name="test_tool", arguments={"arg1": "value1"}
+            content='{"result": "success"}',
+            name="test_tool",
+            arguments={"arg1": "value1"},
         )
         mock_call_tool.return_value = expected_observation
         action = MCPAction(name="test_tool", arguments={"arg1": "value1"})
@@ -77,7 +88,9 @@ class TestCLIRuntimeMCP:
     @patch("forge.mcp.utils.create_mcp_clients")
     async def test_call_tool_mcp_exception_handling(self, mock_create_clients):
         """Test exception handling in MCP tool call."""
-        self.runtime.config.mcp = MCPConfig(sse_servers=[MCPSSEServerConfig(url="http://test.com")])
+        self.runtime.config.mcp = MCPConfig(
+            sse_servers=[MCPSSEServerConfig(url="http://test.com")]
+        )
         mock_create_clients.side_effect = Exception("Connection error")
         action = MCPAction(name="test_tool", arguments={"arg1": "value1"})
         with patch("sys.platform", "linux"):

@@ -16,7 +16,9 @@ def _handle_help_request(parser) -> None:
 
 def _normalize_arguments() -> None:
     """Normalize command line arguments for backward compatibility."""
-    if len(sys.argv) == 1 or (len(sys.argv) > 1 and sys.argv[1] not in ["cli", "serve"]):
+    if len(sys.argv) == 1 or (
+        len(sys.argv) > 1 and sys.argv[1] not in ["cli", "serve"]
+    ):
         sys.argv.insert(1, "cli")
 
 

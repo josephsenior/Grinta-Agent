@@ -18,7 +18,7 @@ from forge.core.config.condenser_config import (
 from forge.core.config.llm_config import LLMConfig
 from forge.core.config.forge_config import ForgeConfig
 from forge.core.message import Message, TextContent
-from forge.core.schema.action import ActionType
+from forge.core.schemas import ActionType
 from forge.events.event import Event, EventSource
 from forge.events.observation import BrowserOutputObservation
 from forge.events.observation.agent import AgentCondensationObservation
@@ -49,7 +49,9 @@ from forge.memory.condenser.impl.pipeline import CondenserPipeline
 from forge.server.services.conversation_stats import ConversationStats
 
 
-def create_test_event(message: str, timestamp: datetime | None = None, id: int | None = None) -> Event:
+def create_test_event(
+    message: str, timestamp: datetime | None = None, id: int | None = None
+) -> Event:
     """Create a simple test event."""
     event = Event()
     event._message = message
@@ -63,7 +65,9 @@ def create_test_event(message: str, timestamp: datetime | None = None, id: int |
 @pytest.fixture
 def mock_llm() -> LLM:
     """Mocks an LLM object with a utility function for setting and resetting response contents in unit tests."""
-    real_config = LLMConfig(model="gpt-4o", api_key="test_key", custom_llm_provider=None)
+    real_config = LLMConfig(
+        model="gpt-4o", api_key="test_key", custom_llm_provider=None
+    )
     mock_llm = MagicMock(spec=LLM, config=real_config, metrics=MagicMock())
     _mock_content = None
     mock_message = MagicMock()
@@ -144,7 +148,10 @@ def test_condensed_history_sets_llm_metadata():
     state = SimpleNamespace(
         extra_data={},
         view=View(events=[]),
-        to_llm_metadata=lambda model_name, agent_name: {"model": model_name, "agent": agent_name},
+        to_llm_metadata=lambda model_name, agent_name: {
+            "model": model_name,
+            "agent": agent_name,
+        },
     )
 
     result = condenser.condensed_history(state)
@@ -243,7 +250,11 @@ def test_noop_condenser_from_config(mock_llm_registry):
 
 def test_noop_condenser():
     """Test that NoOpCondensers preserve their input events."""
-    events = [create_test_event("Event 1"), create_test_event("Event 2"), create_test_event("Event 3")]
+    events = [
+        create_test_event("Event 1"),
+        create_test_event("Event 2"),
+        create_test_event("Event 3"),
+    ]
     state = State()
     state.history = events
     condenser = NoOpCondenser()
@@ -372,7 +383,9 @@ def test_recent_events_condenser():
 def test_llm_summarizing_condenser_from_config(mock_llm_registry):
     """Test that LLMSummarizingCondenser objects can be made from config."""
     config = LLMSummarizingCondenserConfig(
-        max_size=50, keep_first=10, llm_config=LLMConfig(model="gpt-4o", api_key="test_key", caching_prompt=True)
+        max_size=50,
+        keep_first=10,
+        llm_config=LLMConfig(model="gpt-4o", api_key="test_key", caching_prompt=True),
     )
     condenser = Condenser.from_config(config, mock_llm_registry)
     assert isinstance(condenser, LLMSummarizingCondenser)
@@ -384,12 +397,16 @@ def test_llm_summarizing_condenser_from_config(mock_llm_registry):
 
 def test_llm_summarizing_condenser_invalid_config(mock_llm, mock_llm_registry):
     """Test that LLMSummarizingCondenser raises error when keep_first > max_size."""
-    pytest.raises(ValueError, LLMSummarizingCondenser, llm=mock_llm, max_size=4, keep_first=2)
+    pytest.raises(
+        ValueError, LLMSummarizingCondenser, llm=mock_llm, max_size=4, keep_first=2
+    )
     pytest.raises(ValueError, LLMSummarizingCondenser, llm=mock_llm, max_size=0)
     pytest.raises(ValueError, LLMSummarizingCondenser, llm=mock_llm, keep_first=-1)
 
 
-def test_llm_summarizing_condenser_gives_expected_view_size(mock_llm, mock_llm_registry):
+def test_llm_summarizing_condenser_gives_expected_view_size(
+    mock_llm, mock_llm_registry
+):
     """Test that LLMSummarizingCondenser maintains the correct view size."""
     max_size = 10
     condenser = LLMSummarizingCondenser(max_size=max_size, llm=mock_llm)
@@ -400,17 +417,23 @@ def test_llm_summarizing_condenser_gives_expected_view_size(mock_llm, mock_llm_r
         assert len(view) == harness.expected_size(i, max_size)
 
 
-def test_llm_summarizing_condenser_keeps_first_and_summary_events(mock_llm, mock_llm_registry):
+def test_llm_summarizing_condenser_keeps_first_and_summary_events(
+    mock_llm, mock_llm_registry
+):
     """Test that the LLM summarizing condenser appropriately maintains the event prefix and any summary events."""
     max_size = 10
     keep_first = 3
-    condenser = LLMSummarizingCondenser(max_size=max_size, keep_first=keep_first, llm=mock_llm)
+    condenser = LLMSummarizingCondenser(
+        max_size=max_size, keep_first=keep_first, llm=mock_llm
+    )
     mock_llm.set_mock_response_content("Summary of forgotten events")
     events = [create_test_event(f"Event {i}", id=i) for i in range(max_size * 10)]
     harness = RollingCondenserTestHarness(condenser)
     for i, view in enumerate(harness.views(events)):
         assert len(view) == harness.expected_size(i, max_size)
-        assert mock_llm.completion.call_count == harness.expected_condensations(i, max_size)
+        assert mock_llm.completion.call_count == harness.expected_condensations(
+            i, max_size
+        )
         assert view[:keep_first] == events[: min(keep_first, i + 1)]
         if i > max_size:
             assert isinstance(view[keep_first], AgentCondensationObservation)
@@ -420,7 +443,9 @@ def test_amortized_forgetting_condenser_from_config(mock_llm_registry):
     """Test that AmortizedForgettingCondenser objects can be made from config."""
     max_size = 50
     keep_first = 10
-    config = AmortizedForgettingCondenserConfig(max_size=max_size, keep_first=keep_first)
+    config = AmortizedForgettingCondenserConfig(
+        max_size=max_size, keep_first=keep_first
+    )
     condenser = Condenser.from_config(config, mock_llm_registry)
     assert isinstance(condenser, AmortizedForgettingCondenser)
     assert condenser.max_size == max_size
@@ -467,7 +492,9 @@ def test_amortized_forgetting_condenser_keeps_first_and_last_events():
 def test_llm_attention_condenser_from_config(mock_llm_registry):
     """Test that LLMAttentionCondenser objects can be made from config."""
     config = LLMAttentionCondenserConfig(
-        max_size=50, keep_first=10, llm_config=LLMConfig(model="gpt-4o", api_key="test_key", caching_prompt=True)
+        max_size=50,
+        keep_first=10,
+        llm_config=LLMConfig(model="gpt-4o", api_key="test_key", caching_prompt=True),
     )
     condenser = Condenser.from_config(config, mock_llm_registry)
     assert isinstance(condenser, LLMAttentionCondenser)
@@ -489,7 +516,9 @@ def test_llm_attention_condenser_gives_expected_view_size(mock_llm, mock_llm_reg
 
     def set_response_content(history: list[Event]):
         mock_llm.set_mock_response_content(
-            ImportantEventSelection(ids=[event.id for event in history]).model_dump_json()
+            ImportantEventSelection(
+                ids=[event.id for event in history]
+            ).model_dump_json()
         )
 
     harness = RollingCondenserTestHarness(condenser)
@@ -498,7 +527,9 @@ def test_llm_attention_condenser_gives_expected_view_size(mock_llm, mock_llm_reg
         assert len(view) == harness.expected_size(i, max_size)
 
 
-def test_llm_attention_condenser_handles_events_outside_history(mock_llm, mock_llm_registry):
+def test_llm_attention_condenser_handles_events_outside_history(
+    mock_llm, mock_llm_registry
+):
     """Test that the LLMAttentionCondenser handles event IDs that aren't from the event history."""
     max_size = 2
     condenser = LLMAttentionCondenser(max_size=max_size, keep_first=0, llm=mock_llm)
@@ -506,7 +537,9 @@ def test_llm_attention_condenser_handles_events_outside_history(mock_llm, mock_l
 
     def set_response_content(history: list[Event]):
         mock_llm.set_mock_response_content(
-            ImportantEventSelection(ids=[event.id for event in history] + [-1, -2, -3, -4]).model_dump_json()
+            ImportantEventSelection(
+                ids=[event.id for event in history] + [-1, -2, -3, -4]
+            ).model_dump_json()
         )
 
     harness = RollingCondenserTestHarness(condenser)
@@ -541,7 +574,9 @@ def test_llm_attention_condenser_handles_too_few_events(mock_llm, mock_llm_regis
     events = [create_test_event(f"Event {i}", id=i) for i in range(max_size * 10)]
 
     def set_response_content(history: list[Event]):
-        mock_llm.set_mock_response_content(ImportantEventSelection(ids=[]).model_dump_json())
+        mock_llm.set_mock_response_content(
+            ImportantEventSelection(ids=[]).model_dump_json()
+        )
 
     harness = RollingCondenserTestHarness(condenser)
     harness.add_callback(set_response_content)
@@ -553,11 +588,15 @@ def test_llm_attention_condenser_handles_keep_first_events(mock_llm, mock_llm_re
     """Test that LLMAttentionCondenser works when keep_first=1 is allowed (must be less than half of max_size)."""
     max_size = 12
     keep_first = 4
-    condenser = LLMAttentionCondenser(max_size=max_size, keep_first=keep_first, llm=mock_llm)
+    condenser = LLMAttentionCondenser(
+        max_size=max_size, keep_first=keep_first, llm=mock_llm
+    )
     events = [create_test_event(f"Event {i}", id=i) for i in range(max_size * 10)]
 
     def set_response_content(history: list[Event]):
-        mock_llm.set_mock_response_content(ImportantEventSelection(ids=[]).model_dump_json())
+        mock_llm.set_mock_response_content(
+            ImportantEventSelection(ids=[]).model_dump_json()
+        )
 
     harness = RollingCondenserTestHarness(condenser)
     harness.add_callback(set_response_content)
@@ -569,7 +608,9 @@ def test_llm_attention_condenser_handles_keep_first_events(mock_llm, mock_llm_re
 def test_structured_summary_condenser_from_config(mock_llm_registry):
     """Test that StructuredSummaryCondenser objects can be made from config."""
     config = StructuredSummaryCondenserConfig(
-        max_size=50, keep_first=10, llm_config=LLMConfig(model="gpt-4o", api_key="test_key", caching_prompt=True)
+        max_size=50,
+        keep_first=10,
+        llm_config=LLMConfig(model="gpt-4o", api_key="test_key", caching_prompt=True),
     )
     condenser = Condenser.from_config(config, mock_llm_registry)
     assert isinstance(condenser, StructuredSummaryCondenser)
@@ -582,15 +623,25 @@ def test_structured_summary_condenser_from_config(mock_llm_registry):
 def test_structured_summary_condenser_invalid_config(mock_llm):
     """Test that StructuredSummaryCondenser raises error when keep_first > max_size."""
     mock_llm.is_function_calling_active.return_value = True
-    pytest.raises(ValueError, StructuredSummaryCondenser, llm=mock_llm, max_size=4, keep_first=2)
+    pytest.raises(
+        ValueError, StructuredSummaryCondenser, llm=mock_llm, max_size=4, keep_first=2
+    )
     pytest.raises(ValueError, StructuredSummaryCondenser, llm=mock_llm, max_size=0)
     pytest.raises(ValueError, StructuredSummaryCondenser, llm=mock_llm, keep_first=-1)
     mock_llm_no_func = MagicMock()
     mock_llm_no_func.is_function_calling_active.return_value = False
-    pytest.raises(ValueError, StructuredSummaryCondenser, llm=mock_llm_no_func, max_size=40, keep_first=2)
+    pytest.raises(
+        ValueError,
+        StructuredSummaryCondenser,
+        llm=mock_llm_no_func,
+        max_size=40,
+        keep_first=2,
+    )
 
 
-def test_structured_summary_condenser_gives_expected_view_size(mock_llm, mock_llm_registry):
+def test_structured_summary_condenser_gives_expected_view_size(
+    mock_llm, mock_llm_registry
+):
     """Test that StructuredSummaryCondenser maintains the correct view size."""
     max_size = 10
     mock_llm.is_function_calling_active.return_value = True
@@ -602,18 +653,24 @@ def test_structured_summary_condenser_gives_expected_view_size(mock_llm, mock_ll
         assert len(view) == harness.expected_size(i, max_size)
 
 
-def test_structured_summary_condenser_keeps_first_and_summary_events(mock_llm, mock_llm_registry):
+def test_structured_summary_condenser_keeps_first_and_summary_events(
+    mock_llm, mock_llm_registry
+):
     """Test that the StructuredSummaryCondenser appropriately maintains the event prefix and any summary events."""
     max_size = 10
     keep_first = 3
     mock_llm.is_function_calling_active.return_value = True
-    condenser = StructuredSummaryCondenser(max_size=max_size, keep_first=keep_first, llm=mock_llm)
+    condenser = StructuredSummaryCondenser(
+        max_size=max_size, keep_first=keep_first, llm=mock_llm
+    )
     mock_llm.set_mock_response_content("Summary of forgotten events")
     events = [create_test_event(f"Event {i}", id=i) for i in range(max_size * 10)]
     harness = RollingCondenserTestHarness(condenser)
     for i, view in enumerate(harness.views(events)):
         assert len(view) == harness.expected_size(i, max_size)
-        assert mock_llm.completion.call_count == harness.expected_condensations(i, max_size)
+        assert mock_llm.completion.call_count == harness.expected_condensations(
+            i, max_size
+        )
         assert view[:keep_first] == events[: min(keep_first, i + 1)]
         if i > max_size:
             assert isinstance(view[keep_first], AgentCondensationObservation)
@@ -626,7 +683,9 @@ def test_condenser_pipeline_from_config(mock_llm_registry):
             NoOpCondenserConfig(),
             BrowserOutputCondenserConfig(attention_window=2),
             LLMSummarizingCondenserConfig(
-                max_size=50, keep_first=10, llm_config=LLMConfig(model="gpt-4o", api_key="test_key")
+                max_size=50,
+                keep_first=10,
+                llm_config=LLMConfig(model="gpt-4o", api_key="test_key"),
             ),
         ]
     )
@@ -644,12 +703,15 @@ def test_condenser_pipeline_chains_sub_condensers():
     ATTENTION_WINDOW = 2
     NUMBER_OF_CONDENSATIONS = 3
     condenser = CondenserPipeline(
-        AmortizedForgettingCondenser(max_size=MAX_SIZE), BrowserOutputCondenser(attention_window=ATTENTION_WINDOW)
+        AmortizedForgettingCondenser(max_size=MAX_SIZE),
+        BrowserOutputCondenser(attention_window=ATTENTION_WINDOW),
     )
     harness = RollingCondenserTestHarness(condenser)
     events = [
         (
-            BrowserOutputObservation(f"Observation {i}", url="", trigger_by_action=ActionType.BROWSE)
+            BrowserOutputObservation(
+                f"Observation {i}", url="", trigger_by_action=ActionType.BROWSE
+            )
             if i % 3 == 0
             else create_test_event(f"Event {i}")
         )
@@ -658,7 +720,11 @@ def test_condenser_pipeline_chains_sub_condensers():
     for index, view in enumerate(harness.views(events)):
         assert len(view) == harness.expected_size(index, MAX_SIZE)
         browser_outputs = [
-            event for event in view if isinstance(event, (BrowserOutputObservation, AgentCondensationObservation))
+            event
+            for event in view
+            if isinstance(
+                event, (BrowserOutputObservation, AgentCondensationObservation)
+            )
         ]
         for event in browser_outputs[:-ATTENTION_WINDOW]:
             assert "Content omitted" in str(event)

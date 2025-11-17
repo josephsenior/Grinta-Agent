@@ -46,7 +46,9 @@ class DefaultUserAuth(UserAuth):
         if settings_store:
             return settings_store
         user_id = await self.get_user_id()
-        settings_store = await shared.SettingsStoreImpl.get_instance(shared.config, user_id)
+        settings_store = await shared.SettingsStoreImpl.get_instance(
+            shared.config, user_id
+        )
         if settings_store is None:
             msg = "Failed to get settings store instance"
             raise ValueError(msg)
@@ -70,7 +72,9 @@ class DefaultUserAuth(UserAuth):
         if secrets_store := self._secrets_store:
             return secrets_store
         user_id = await self.get_user_id()
-        secret_store = await shared.SecretsStoreImpl.get_instance(shared.config, user_id)
+        secret_store = await shared.SecretsStoreImpl.get_instance(
+            shared.config, user_id
+        )
         if secret_store is None:
             msg = "Failed to get secrets store instance"
             raise ValueError(msg)
@@ -90,7 +94,11 @@ class DefaultUserAuth(UserAuth):
     async def get_provider_tokens(self) -> PROVIDER_TOKEN_TYPE | None:
         """Return provider tokens extracted from stored user secrets."""
         user_secrets = await self.get_user_secrets()
-        return None if user_secrets is None else cast("PROVIDER_TOKEN_TYPE", user_secrets.provider_tokens)
+        return (
+            None
+            if user_secrets is None
+            else cast("PROVIDER_TOKEN_TYPE", user_secrets.provider_tokens)
+        )
 
     @classmethod
     async def get_instance(cls, request: Request) -> UserAuth:

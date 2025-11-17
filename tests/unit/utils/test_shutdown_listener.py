@@ -154,7 +154,9 @@ async def test_async_sleep_if_should_continue_long(monkeypatch):
 
 def test_sleep_if_should_continue_short(monkeypatch):
     slept = []
-    monkeypatch.setattr(shutdown_listener.time, "sleep", lambda value: slept.append(value))
+    monkeypatch.setattr(
+        shutdown_listener.time, "sleep", lambda value: slept.append(value)
+    )
     sleep_if_should_continue(0.5)
     assert slept == [0.5]
 

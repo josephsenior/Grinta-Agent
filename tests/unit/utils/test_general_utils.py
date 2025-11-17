@@ -41,7 +41,9 @@ def test_setup_llm_config_updates_from_settings() -> None:
     assert cfg.base_url == "http://"
 
 
-def test_create_registry_and_conversation_stats(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_create_registry_and_conversation_stats(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     config = DummyConfig()
 
     class FakeRegistry:
@@ -64,9 +66,13 @@ def test_create_registry_and_conversation_stats(monkeypatch: pytest.MonkeyPatch)
 
     monkeypatch.setattr(general_utils, "LLMRegistry", FakeRegistry)
     monkeypatch.setattr(general_utils, "ConversationStats", FakeConversationStats)
-    monkeypatch.setattr(general_utils, "get_file_store", lambda **kwargs: {"store": "ok"})
+    monkeypatch.setattr(
+        general_utils, "get_file_store", lambda **kwargs: {"store": "ok"}
+    )
 
-    settings = DummySettings(llm_model="custom", llm_api_key="secret", llm_base_url="url", agent="agent")
+    settings = DummySettings(
+        llm_model="custom", llm_api_key="secret", llm_base_url="url", agent="agent"
+    )
     registry, stats, new_config = general_utils.create_registry_and_conversation_stats(
         config, "session", "user", user_settings=settings
     )
@@ -75,4 +81,3 @@ def test_create_registry_and_conversation_stats(monkeypatch: pytest.MonkeyPatch)
     assert stats.sid == "session"
     assert new_config.get_llm_config().model == "custom"
     assert registry.handlers[0]() == "registered"
-

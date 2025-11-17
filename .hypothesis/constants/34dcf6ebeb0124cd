@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\io\__init__.py
+# hypothesis_version: 6.147.0
+
+['dumps', 'loads', 'read_input', 'read_task', 'read_task_from_file']

@@ -15,12 +15,10 @@ SETTINGS_EXAMPLES = {
             "llm": {
                 "model": "anthropic/claude-3-5-sonnet-20241022",
                 "api_key": "sk-ant-...",
-                "temperature": 0.1
+                "temperature": 0.1,
             },
-            "agent": {
-                "name": "CodeActAgent"
-            }
-        }
+            "agent": {"name": "CodeActAgent"},
+        },
     },
     "advanced_settings": {
         "summary": "Advanced configuration",
@@ -31,20 +29,17 @@ SETTINGS_EXAMPLES = {
                 "api_key": "sk-ant-...",
                 "temperature": 0.1,
                 "max_output_tokens": 8192,
-                "timeout": 180
+                "timeout": 180,
             },
             "agent": {
                 "name": "CodeActAgent",
                 "max_iterations": 100,
                 "enable_ace": True,
-                "enable_enhanced_context": True
+                "enable_enhanced_context": True,
             },
-            "security": {
-                "confirmation_mode": True,
-                "security_analyzer": "default"
-            }
-        }
-    }
+            "security": {"confirmation_mode": True, "security_analyzer": "default"},
+        },
+    },
 }
 
 # Conversation creation examples
@@ -54,7 +49,7 @@ CONVERSATION_EXAMPLES = {
         "description": "Create a basic conversation for a coding task",
         "value": {
             "initial_query": "Create a Python function to calculate fibonacci numbers"
-        }
+        },
     },
     "with_repository": {
         "summary": "GitHub repository task",
@@ -62,17 +57,17 @@ CONVERSATION_EXAMPLES = {
         "value": {
             "github_repo": "owner/repo",
             "github_token": "ghp_...",
-            "initial_query": "Add unit tests to the main.py file"
-        }
+            "initial_query": "Add unit tests to the main.py file",
+        },
     },
     "metasop_orchestration": {
         "summary": "Multi-agent task",
         "description": "Complex task requiring multiple agents",
         "value": {
             "initial_query": "sop: Build a complete e-commerce platform with React frontend, Node backend, and PostgreSQL database",
-            "conversation_instructions": "Use MetaSOP for complex planning"
-        }
-    }
+            "conversation_instructions": "Use MetaSOP for complex planning",
+        },
+    },
 }
 
 # File operation examples
@@ -82,8 +77,8 @@ FILE_UPLOAD_EXAMPLES = {
         "description": "Upload one file to workspace",
         "value": {
             "file": "requirements.txt",
-            "content": "flask==3.0.0\nrequests==2.31.0"
-        }
+            "content": "flask==3.0.0\nrequests==2.31.0",
+        },
     },
     "multiple_files": {
         "summary": "Upload multiple files",
@@ -91,10 +86,10 @@ FILE_UPLOAD_EXAMPLES = {
         "value": {
             "files": [
                 {"file": "app.py", "content": "print('Hello')"},
-                {"file": "requirements.txt", "content": "flask==3.0.0"}
+                {"file": "requirements.txt", "content": "flask==3.0.0"},
             ]
-        }
-    }
+        },
+    },
 }
 
 # Error response examples
@@ -109,9 +104,9 @@ ERROR_EXAMPLES = {
             "icon": "⏰",
             "actions": [
                 {"label": "Retry", "type": "retry"},
-                {"label": "Upgrade", "type": "upgrade"}
-            ]
-        }
+                {"label": "Upgrade", "type": "upgrade"},
+            ],
+        },
     },
     "authentication_error": {
         "summary": "Authentication required",
@@ -120,8 +115,8 @@ ERROR_EXAMPLES = {
             "message": "Your session has expired...",
             "severity": "warning",
             "category": "authentication",
-            "icon": "🔒"
-        }
+            "icon": "🔒",
+        },
     },
     "validation_error": {
         "summary": "Invalid request",
@@ -130,9 +125,9 @@ ERROR_EXAMPLES = {
             "message": "Some fields are missing or incorrect...",
             "severity": "error",
             "category": "user_input",
-            "icon": "📝"
-        }
-    }
+            "icon": "📝",
+        },
+    },
 }
 
 # Success response examples
@@ -143,16 +138,13 @@ SUCCESS_EXAMPLES = {
             "conversation_id": "abc-123-def-456",
             "status": "active",
             "agent_state": "running",
-            "created_at": "2025-11-04T12:00:00Z"
-        }
+            "created_at": "2025-11-04T12:00:00Z",
+        },
     },
     "settings_saved": {
         "summary": "Settings saved successfully",
-        "value": {
-            "status": "success",
-            "message": "Settings saved successfully"
-        }
-    }
+        "value": {"status": "success", "message": "Settings saved successfully"},
+    },
 }
 
 # Metrics response example
@@ -165,10 +157,7 @@ METRICS_EXAMPLES = {
                 "active_conversations": 15,
                 "total_actions_today": 342,
                 "avg_response_time_ms": 450.2,
-                "cache_stats": {
-                    "hit_rate": 0.73,
-                    "total_requests": 1234
-                }
+                "cache_stats": {"hit_rate": 0.73, "total_requests": 1234},
             },
             "agents": [
                 {
@@ -177,10 +166,10 @@ METRICS_EXAMPLES = {
                     "successful_actions": 475,
                     "failed_actions": 25,
                     "success_rate": 0.95,
-                    "avg_action_time_ms": 623.4
+                    "avg_action_time_ms": 623.4,
                 }
-            ]
-        }
+            ],
+        },
     }
 }
 
@@ -193,12 +182,9 @@ ANALYTICS_EXAMPLES = {
             "conversations": 45,
             "messages": 678,
             "cost_usd": 12.34,
-            "tokens": {
-                "input": 1500000,
-                "output": 500000
-            },
-            "models_used": ["claude-sonnet-4", "gpt-4o", "claude-haiku-4.5"]
-        }
+            "tokens": {"input": 1500000, "output": 500000},
+            "models_used": ["claude-sonnet-4", "gpt-4o", "claude-haiku-4.5"],
+        },
     },
     "model_usage": {
         "summary": "Model usage breakdown",
@@ -208,17 +194,17 @@ ANALYTICS_EXAMPLES = {
                 "conversations": 30,
                 "cost_usd": 8.50,
                 "tokens": 1200000,
-                "avg_tokens_per_conversation": 40000
+                "avg_tokens_per_conversation": 40000,
             },
             {
                 "model": "claude-haiku-4-5-20251001",
                 "conversations": 15,
                 "cost_usd": 1.20,
                 "tokens": 600000,
-                "avg_tokens_per_conversation": 40000
-            }
-        ]
-    }
+                "avg_tokens_per_conversation": 40000,
+            },
+        ],
+    },
 }
 
 # Health check examples
@@ -232,12 +218,8 @@ HEALTH_EXAMPLES = {
             "database": "connected",
             "redis": "connected",
             "llm_provider": "anthropic",
-            "checks": {
-                "database": "pass",
-                "redis": "pass",
-                "disk_space": "pass"
-            }
-        }
+            "checks": {"database": "pass", "redis": "pass", "disk_space": "pass"},
+        },
     },
     "degraded": {
         "summary": "System degraded",
@@ -248,17 +230,13 @@ HEALTH_EXAMPLES = {
             "database": "connected",
             "redis": "disconnected",
             "llm_provider": "anthropic",
-            "checks": {
-                "database": "pass",
-                "redis": "fail",
-                "disk_space": "warning"
-            },
+            "checks": {"database": "pass", "redis": "fail", "disk_space": "warning"},
             "warnings": [
                 "Redis connection lost - using in-memory fallback",
-                "Disk space at 85% capacity"
-            ]
-        }
-    }
+                "Disk space at 85% capacity",
+            ],
+        },
+    },
 }
 
 # Model list example
@@ -275,8 +253,8 @@ MODEL_LIST_EXAMPLES = {
             "openrouter/x-ai/grok-4-fast",
             "gemini-2.5-pro",
             "o3-mini",
-            "devstral-small-2507"
-        ]
+            "devstral-small-2507",
+        ],
     }
 }
 
@@ -284,11 +262,7 @@ MODEL_LIST_EXAMPLES = {
 AGENT_LIST_EXAMPLES = {
     "available_agents": {
         "summary": "Available agent types",
-        "value": [
-            "CodeActAgent",
-            "PlannerAgent",
-            "BrowseAgent"
-        ]
+        "value": ["CodeActAgent", "PlannerAgent", "BrowseAgent"],
     }
 }
 
@@ -298,8 +272,8 @@ WEBSOCKET_EXAMPLES = {
         "summary": "Send message to agent",
         "value": {
             "type": "message",
-            "content": "Build a todo app with React and TypeScript"
-        }
+            "content": "Build a todo app with React and TypeScript",
+        },
     },
     "agent_action": {
         "summary": "Agent action event",
@@ -307,16 +281,16 @@ WEBSOCKET_EXAMPLES = {
             "type": "action",
             "action": "FileEditAction",
             "path": "src/App.tsx",
-            "timestamp": "2025-11-04T12:00:00Z"
-        }
+            "timestamp": "2025-11-04T12:00:00Z",
+        },
     },
     "agent_observation": {
         "summary": "Action result event",
         "value": {
             "type": "observation",
             "content": "File edited successfully",
-            "timestamp": "2025-11-04T12:00:05Z"
-        }
+            "timestamp": "2025-11-04T12:00:05Z",
+        },
     },
     "state_change": {
         "summary": "Agent state change",
@@ -325,8 +299,7 @@ WEBSOCKET_EXAMPLES = {
             "from": "running",
             "to": "paused",
             "reason": "User requested pause",
-            "timestamp": "2025-11-04T12:00:10Z"
-        }
-    }
+            "timestamp": "2025-11-04T12:00:10Z",
+        },
+    },
 }
-

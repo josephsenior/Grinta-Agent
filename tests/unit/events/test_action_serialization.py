@@ -18,18 +18,27 @@ from forge.events.action import (
 from forge.events.action.action import ActionConfirmationStatus, ActionSecurityRisk
 from forge.events.action.files import FileEditSource, FileReadSource
 from forge.events.serialization import event_from_dict, event_to_dict
-from forge.events.serialization.action import action_from_dict, handle_action_deprecated_args
+from forge.events.serialization.action import (
+    action_from_dict,
+    handle_action_deprecated_args,
+)
 
 
-def serialization_deserialization(original_action_dict, cls, max_message_chars: int = 10000):
+def serialization_deserialization(
+    original_action_dict, cls, max_message_chars: int = 10000
+):
     action_instance = event_from_dict(original_action_dict)
-    assert isinstance(action_instance, Action), "The action instance should be an instance of Action."
-    assert isinstance(action_instance, cls), f"The action instance should be an instance of {cls.__name__}."
+    assert isinstance(action_instance, Action), (
+        "The action instance should be an instance of Action."
+    )
+    assert isinstance(action_instance, cls), (
+        f"The action instance should be an instance of {cls.__name__}."
+    )
     serialized_action_dict = event_to_dict(action_instance)
     serialized_action_dict.pop("message")
-    assert (
-        serialized_action_dict == original_action_dict
-    ), "The serialized action should match the original action dict."
+    assert serialized_action_dict == original_action_dict, (
+        "The serialized action should match the original action dict."
+    )
 
 
 def test_event_props_serialization_deserialization():
@@ -64,7 +73,10 @@ def test_message_action_serialization_deserialization():
 
 
 def test_agent_finish_action_serialization_deserialization():
-    original_action_dict = {"action": "finish", "args": {"outputs": {}, "thought": "", "final_thought": ""}}
+    original_action_dict = {
+        "action": "finish",
+        "args": {"outputs": {}, "thought": "", "final_thought": ""},
+    }
     serialization_deserialization(original_action_dict, AgentFinishAction)
 
 
@@ -72,7 +84,12 @@ def test_agent_finish_action_legacy_task_completed_serialization():
     """Test that old conversations with task_completed can still be loaded."""
     original_action_dict = {
         "action": "finish",
-        "args": {"outputs": {}, "thought": "", "final_thought": "Task completed", "task_completed": "true"},
+        "args": {
+            "outputs": {},
+            "thought": "",
+            "final_thought": "Task completed",
+            "task_completed": "true",
+        },
     }
     event = event_from_dict(original_action_dict)
     assert isinstance(event, Action)
@@ -109,7 +126,12 @@ def test_cmd_run_action_serialization_deserialization():
 def test_browse_url_action_serialization_deserialization():
     original_action_dict = {
         "action": "browse",
-        "args": {"thought": "", "url": "https://www.example.com", "return_axtree": False, "security_risk": -1},
+        "args": {
+            "thought": "",
+            "url": "https://www.example.com",
+            "return_axtree": False,
+            "security_risk": -1,
+        },
     }
     serialization_deserialization(original_action_dict, BrowseURLAction)
 
@@ -221,7 +243,9 @@ def test_cmd_run_action_legacy_serialization():
     assert not hasattr(event, "keep_prompt")
     event_dict = event_to_dict(event)
     assert "keep_prompt" not in event_dict["args"]
-    assert event_dict["args"]["confirmation_state"] == ActionConfirmationStatus.CONFIRMED
+    assert (
+        event_dict["args"]["confirmation_state"] == ActionConfirmationStatus.CONFIRMED
+    )
     assert event_dict["args"]["blocking"] is False
     assert event_dict["args"]["command"] == 'echo "Hello world"'
     assert event_dict["args"]["thought"] == ""

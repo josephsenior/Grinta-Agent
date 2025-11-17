@@ -117,14 +117,22 @@ async def test_openhands_provider_authentication_error(
     mock_litellm_completion.side_effect = AuthenticationError(
         message=auth_error_message, llm_provider="litellm_proxy", model="o3"
     )
-    with patch("forge.cli.main.read_prompt_input", new_callable=AsyncMock) as mock_read_prompt:
+    with patch(
+        "forge.cli.main.read_prompt_input", new_callable=AsyncMock
+    ) as mock_read_prompt:
         mock_read_prompt.return_value = "/exit"
-        with patch("forge.cli.main.handle_commands", new_callable=AsyncMock) as mock_handle_commands:
+        with patch(
+            "forge.cli.main.handle_commands", new_callable=AsyncMock
+        ) as mock_handle_commands:
             mock_handle_commands.return_value = (True, False, False)
             with patch("forge.core.logger.FORGE_logger.error"):
                 initial_action_content = "Hello, I need help with a task"
                 result = await cli.run_session(
-                    loop, mock_config, mock_settings_store, "/test/dir", initial_action_content
+                    loop,
+                    mock_config,
+                    mock_settings_store,
+                    "/test/dir",
+                    initial_action_content,
                 )
     mock_runtime.event_stream.add_event.assert_called_once()
     call_args = mock_runtime.event_stream.add_event.call_args[0]

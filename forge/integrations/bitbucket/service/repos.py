@@ -21,20 +21,28 @@ class BitBucketReposMixin(BitBucketMixinBase):
         repositories = []
         try:
             parsed_url = urlparse(query)
-            path_segments = [segment for segment in parsed_url.path.split("/") if segment]
+            path_segments = [
+                segment for segment in parsed_url.path.split("/") if segment
+            ]
             if len(path_segments) >= 2:
                 workspace_slug = path_segments[0]
                 repo_name = path_segments[1]
-                repo = await self.get_repository_details_from_repo_name(f"{workspace_slug}/{repo_name}")
+                repo = await self.get_repository_details_from_repo_name(
+                    f"{workspace_slug}/{repo_name}"
+                )
                 repositories.append(repo)
         except (ValueError, IndexError):
             pass
         return repositories
 
-    async def _search_workspace_repository(self, query: str, per_page: int, sort: str) -> list[Repository]:
+    async def _search_workspace_repository(
+        self, query: str, per_page: int, sort: str
+    ) -> list[Repository]:
         """Search for repository within a specific workspace."""
         workspace_slug, repo_query = query.split("/", 1)
-        return await self.get_paginated_repos(1, per_page, sort, workspace_slug, repo_query)
+        return await self.get_paginated_repos(
+            1, per_page, sort, workspace_slug, repo_query
+        )
 
     async def _search_matching_workspaces(
         self,
@@ -45,11 +53,15 @@ class BitBucketReposMixin(BitBucketMixinBase):
     ) -> list[Repository]:
         """Search repositories in workspaces that match the query."""
         repositories = []
-        matching_workspace_slugs = [installation for installation in all_installations if query in installation]
+        matching_workspace_slugs = [
+            installation for installation in all_installations if query in installation
+        ]
 
         for workspace_slug in matching_workspace_slugs:
             try:
-                repos = await self.get_paginated_repos(1, per_page, sort, workspace_slug)
+                repos = await self.get_paginated_repos(
+                    1, per_page, sort, workspace_slug
+                )
                 repositories.extend(repos)
             except Exception:
                 continue
@@ -68,7 +80,9 @@ class BitBucketReposMixin(BitBucketMixinBase):
 
         for workspace_slug in all_installations:
             try:
-                repos = await self.get_paginated_repos(1, per_page, sort, workspace_slug, query)
+                repos = await self.get_paginated_repos(
+                    1, per_page, sort, workspace_slug, query
+                )
                 repositories.extend(repos)
             except Exception:
                 continue
@@ -94,11 +108,15 @@ class BitBucketReposMixin(BitBucketMixinBase):
         repositories = []
 
         # Search in matching workspaces
-        matching_repos = await self._search_matching_workspaces(query, per_page, sort, all_installations)
+        matching_repos = await self._search_matching_workspaces(
+            query, per_page, sort, all_installations
+        )
         repositories.extend(matching_repos)
 
         # Search across all workspaces
-        all_workspace_repos = await self._search_all_workspaces(query, per_page, sort, all_installations)
+        all_workspace_repos = await self._search_all_workspaces(
+            query, per_page, sort, all_installations
+        )
         repositories.extend(all_workspace_repos)
 
         return repositories
@@ -109,7 +127,9 @@ class BitBucketReposMixin(BitBucketMixinBase):
         data, _ = await self._make_request(url)
         return data.get("values", [])
 
-    async def get_installations(self, query: str | None = None, limit: int = 100) -> list[str]:
+    async def get_installations(
+        self, query: str | None = None, limit: int = 100
+    ) -> list[str]:
         """Return list of workspace slugs the authenticated user can access."""
         workspaces_url = f"{self.BASE_URL}/workspaces"
         params = {}
@@ -161,12 +181,19 @@ class BitBucketReposMixin(BitBucketMixinBase):
         if next_link:
             if page_match := re.search("[?&]page=(\\d+)", next_link):
                 next_page = page_match[1]
-                formatted_link_header = f'<{workspace_repos_url}?page={next_page}>; rel="next"'
+                formatted_link_header = (
+                    f'<{workspace_repos_url}?page={next_page}>; rel="next"'
+                )
             else:
                 formatted_link_header = f'<{next_link}>; rel="next"'
-        return [self._parse_repository(repo, link_header=formatted_link_header) for repo in repos]
+        return [
+            self._parse_repository(repo, link_header=formatted_link_header)
+            for repo in repos
+        ]
 
-    async def get_all_repositories(self, sort: str, app_mode: AppMode) -> list[Repository]:
+    async def get_all_repositories(
+        self, sort: str, app_mode: AppMode
+    ) -> list[Repository]:
         """Get repositories for the authenticated user using workspaces endpoint.
 
         This method gets all repositories (both public and private) that the user has access to

@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\core\config\utils.py
+# hypothesis_version: 6.147.0
+
+[',', '.Forge', '.jwt_secret', '/', '//', '/workspace', '1', ':', 'AGENT_', 'BaseModel', 'ConfigDict', 'Darwin', 'Field', 'LLMConfig', 'LLM_', 'LLM_API_KEY', 'Literal', 'ValidationError', '[]', '\\', '\\/', 'agent', 'agent.', 'agent_cls', 'api_key', 'cast', 'classpath', 'cli', 'condenser', 'condenser.', 'config.toml', 'core', 'enable_browsing', 'enable_jupyter', 'extended', 'kubernetes', 'llm', 'llm.', 'llm_attention', 'llm_config', 'max_budget_per_task', 'max_iterations', 'mcp', 'metasop', 'model', 'sandbox', 'security', 'selected_repo', 'structured', 'true', 'type', 'unknown', 'utf-8', '~']

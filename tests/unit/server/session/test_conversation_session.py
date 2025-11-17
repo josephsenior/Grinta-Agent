@@ -78,9 +78,16 @@ def test_conversation_init_with_existing_runtime(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_conversation_init_creates_runtime(monkeypatch):
-    monkeypatch.setattr("forge.server.session.conversation.EventStream", DummyEventStream)
-    monkeypatch.setattr("forge.server.session.conversation.LLMRegistry", DummyLLMRegistry)
-    monkeypatch.setattr("forge.server.session.conversation.get_runtime_cls", lambda runtime: DummyRuntime)
+    monkeypatch.setattr(
+        "forge.server.session.conversation.EventStream", DummyEventStream
+    )
+    monkeypatch.setattr(
+        "forge.server.session.conversation.LLMRegistry", DummyLLMRegistry
+    )
+    monkeypatch.setattr(
+        "forge.server.session.conversation.get_runtime_cls",
+        lambda runtime: DummyRuntime,
+    )
     config = make_config()
 
     convo = ServerConversation(
@@ -102,7 +109,14 @@ async def test_conversation_init_creates_runtime(monkeypatch):
 @pytest.mark.asyncio
 async def test_conversation_connect_skips_existing(monkeypatch):
     runtime = DummyRuntime()
-    convo = ServerConversation("sid", "fs", make_config(), "user", event_stream=DummyEventStream("sid", "fs", "user"), runtime=runtime)
+    convo = ServerConversation(
+        "sid",
+        "fs",
+        make_config(),
+        "user",
+        event_stream=DummyEventStream("sid", "fs", "user"),
+        runtime=runtime,
+    )
     await convo.connect()
     assert runtime.connected is False
 
@@ -114,12 +128,21 @@ async def test_disconnect_closes_runtime(monkeypatch):
     async def fake_call_sync(fn):
         fn()
 
-    monkeypatch.setattr("forge.server.session.conversation.call_sync_from_async", fake_call_sync)
+    monkeypatch.setattr(
+        "forge.server.session.conversation.call_sync_from_async", fake_call_sync
+    )
     monkeypatch.setattr("asyncio.create_task", lambda coro: created_tasks.append(coro))
 
-    monkeypatch.setattr("forge.server.session.conversation.EventStream", DummyEventStream)
-    monkeypatch.setattr("forge.server.session.conversation.LLMRegistry", DummyLLMRegistry)
-    monkeypatch.setattr("forge.server.session.conversation.get_runtime_cls", lambda runtime: DummyRuntime)
+    monkeypatch.setattr(
+        "forge.server.session.conversation.EventStream", DummyEventStream
+    )
+    monkeypatch.setattr(
+        "forge.server.session.conversation.LLMRegistry", DummyLLMRegistry
+    )
+    monkeypatch.setattr(
+        "forge.server.session.conversation.get_runtime_cls",
+        lambda runtime: DummyRuntime,
+    )
 
     convo = ServerConversation("sid", "fs", make_config(), "user")
     assert convo.runtime.closed is False
@@ -132,7 +155,9 @@ async def test_disconnect_closes_runtime(monkeypatch):
 async def test_disconnect_skips_when_attached():
     runtime = DummyRuntime()
     event_stream = DummyEventStream("sid", "fs", "user")
-    convo = ServerConversation("sid", "fs", make_config(), "user", event_stream=event_stream, runtime=runtime)
+    convo = ServerConversation(
+        "sid", "fs", make_config(), "user", event_stream=event_stream, runtime=runtime
+    )
     await convo.disconnect()
     assert event_stream.closed is False
     assert runtime.closed is False
@@ -140,11 +165,18 @@ async def test_disconnect_skips_when_attached():
 
 @pytest.mark.asyncio
 async def test_llm_registry_failure_logs_warning(monkeypatch, caplog):
-    monkeypatch.setattr("forge.server.session.conversation.EventStream", DummyEventStream)
-    monkeypatch.setattr("forge.server.session.conversation.get_runtime_cls", lambda runtime: DummyRuntime)
+    monkeypatch.setattr(
+        "forge.server.session.conversation.EventStream", DummyEventStream
+    )
+    monkeypatch.setattr(
+        "forge.server.session.conversation.get_runtime_cls",
+        lambda runtime: DummyRuntime,
+    )
     config = make_config()
     config.fail_first = True
-    monkeypatch.setattr("forge.server.session.conversation.LLMRegistry", DummyLLMRegistry)
+    monkeypatch.setattr(
+        "forge.server.session.conversation.LLMRegistry", DummyLLMRegistry
+    )
 
     records = []
 

@@ -5,7 +5,9 @@ from .lm_utils import run_chatgpt_query_multi_turn
 from .openai_helpers import get_response
 
 logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s", datefmt="%m/%d/%Y %H:%M:%S", level=logging.INFO
+    format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
+    datefmt="%m/%d/%Y %H:%M:%S",
+    level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
 
@@ -116,7 +118,11 @@ def ask_dimension_question(
     messages.append({"role": "user", "content": dimension_question_str})
     for _ in range(num_retries):
         response = run_chatgpt_query_multi_turn(
-            messages=messages, model_name=llm_used, max_tokens=num_tokens, temperature=0, json_response=json_response
+            messages=messages,
+            model_name=llm_used,
+            max_tokens=num_tokens,
+            temperature=0,
+            json_response=json_response,
         )
         if response is not None:
             break
@@ -136,7 +142,10 @@ def prepare_dataset_metadata_json(dataset_meta, dataset_type, use_column_metadat
                 {
                     "dataset_description": d["description"],
                     "columns": (
-                        [{"name": col["name"], "description": col["description"]} for col in d["columns"]["raw"]]
+                        [
+                            {"name": col["name"], "description": col["description"]}
+                            for col in d["columns"]["raw"]
+                        ]
                         if use_column_metadata
                         else []
                     ),
@@ -147,7 +156,10 @@ def prepare_dataset_metadata_json(dataset_meta, dataset_type, use_column_metadat
                 {
                     "dataset_description": d["description"],
                     "columns": (
-                        [{"name": col["name"], "description": col["description"]} for col in d["columns"]]
+                        [
+                            {"name": col["name"], "description": col["description"]}
+                            for col in d["columns"]
+                        ]
                         if use_column_metadata
                         else []
                     ),
@@ -156,10 +168,20 @@ def prepare_dataset_metadata_json(dataset_meta, dataset_type, use_column_metadat
     return datasets_json
 
 
-def get_sub_hypotheses(query, hypo, workflow, dataset_meta, llm_used, dataset_type, use_column_metadata=True):
+def get_sub_hypotheses(
+    query,
+    hypo,
+    workflow,
+    dataset_meta,
+    llm_used,
+    dataset_type,
+    use_column_metadata=True,
+):
     client = OpenAI()
     extraction_prompt = '        Given a set of dataset columns, a ground-truth hypothesis, and the analysis workflow used, your task is to extract three dimensions that define the hypothesis: Context, Variables, and Relations.         Here are the definitions for these dimensions:\n        - Contexts: Boundary conditions that limit the scope of a hypothesis. E.g., “for men over         the age of 30”, “in Asia and Europe”. If the context applies to the full dataset, then extract the context from the dataset_descrption.\n        - Variables: Known concepts that interact in a meaningful way under a given context to         produce the hypothesis. E.g., gender, age, income, or "None" if there is no interacting variable.\n        - Relations: Interactions between a given set of variables under a given context to produce         the hypothesis. E.g., “quadratic relationship”, “inversely proportional”, piecewise conditionals,         or "None" if there is no interacting relationship.\n        Make sure to only use the information present in the hypothesis and the workflow. Do not add any new information.         For each dimension, be specific, and do not omit any important details.\n\n        Here is the metadata for the task:\n        ```json\n        {\n        "datasets": %s,\n        "hypothesis": "%s",\n        "workflow": "%s"\n        }\n        ```\n\n        Return your answer as a JSON object in the following format:\n        ```json\n        {\n        "sub_hypo": [\n            {\n                "text": the hypothesis in natural language,\n                "context": a short text description of the context of the hypothesis,\n                "variables": a list of columns involved in the hypothesis,\n                "relations": a short text description of the relationship between the variables of the hypothesis\n            },\n            ...\n        ]\n        }```\n        '
-    datasets_json = prepare_dataset_metadata_json(dataset_meta, dataset_type, use_column_metadata=use_column_metadata)
+    datasets_json = prepare_dataset_metadata_json(
+        dataset_meta, dataset_type, use_column_metadata=use_column_metadata
+    )
     _prompt = extraction_prompt % (datasets_json, hypo, workflow)
     sub_hypo_json = get_response(client, _prompt, model=llm_used, max_retry=1)
     if sub_hypo_json is not None:
@@ -170,7 +192,9 @@ def get_sub_hypotheses(query, hypo, workflow, dataset_meta, llm_used, dataset_ty
     return sub_hypo_json
 
 
-def match_context_with_gpt(gold_hyp, gold_context, pred_hyp, pred_context, model="gpt-3.5-turbo"):
+def match_context_with_gpt(
+    gold_hyp, gold_context, pred_hyp, pred_context, model="gpt-3.5-turbo"
+):
     prompt = f'        Given a gold hypothesis, a gold context, a predicted hypothesis, and a predicted context, your task is         to determine if the predicted context semantically matches the ground-truth context.         Here is the definition for Context: Boundary conditions that limit the scope of a sub-hypothesis. E.g., “for men over the age of 30”, “in Asia and Europe”. If the context applies to the full dataset, then the context is derived from the dataset_descrption.         Here is the definition for Context: Boundary conditions that limit the scope of a sub-hypothesis. E.g., “for men over the age of 30”, “in Asia and Europe”. If the context applies to the full dataset, then the context is derived from the dataset_descrption.         If the predicted context matches the gold context, return true, otherwise return false.\n        If both gold and predicted hypotheses are defined over the context of the full dataset, then also return true.\n        If both gold and predicted hypotheses are defined over the context of the full dataset, then also return true.\n\n        Here is the metadata for the task:\n        ```json\n        {{\n            "gold_hypothesis": "{gold_hyp}",\n            "gold_context": "{gold_context}",\n            "predicted_hypothesis": "{pred_hyp}",\n            "predicted_context": "{pred_context}"\n        }}\n        ```\n\n        Return your answer as a JSON object in the following format:\n        ```json\n        {{\n            "match": true or false\n        }}\n        ```'
     client = OpenAI()
     output = get_response(client, prompt, model=model)
@@ -182,7 +206,9 @@ def is_matching_context(gold_hyp, gold_context, pred_hyp, pred_context, llm_used
         return True
     if "None" in [gold_context, pred_context]:
         return False
-    return match_context_with_gpt(gold_hyp, gold_context, pred_hyp, pred_context, model=llm_used)
+    return match_context_with_gpt(
+        gold_hyp, gold_context, pred_hyp, pred_context, model=llm_used
+    )
 
 
 def run_eval_gold_vs_gen_NL_subhypo(
@@ -220,12 +246,17 @@ def run_eval_gold_vs_gen_NL_subhypo(
         eval_rec[dimension] = {"question": question, "answer": answer, "score": score}
     eval_rec["context"] = context_score
     eval_rec["accuracy_score"] = (
-        1.0 * eval_rec["context"]["score"] * eval_rec["var"]["score"]["f1"] * eval_rec["rel"]["score"]
+        1.0
+        * eval_rec["context"]["score"]
+        * eval_rec["var"]["score"]["f1"]
+        * eval_rec["rel"]["score"]
     )
     return eval_rec
 
 
-def _get_sub_hypotheses_with_fallback(query, hypo, workflow, dataset_meta, llm_used, dataset_type, use_column_metadata):
+def _get_sub_hypotheses_with_fallback(
+    query, hypo, workflow, dataset_meta, llm_used, dataset_type, use_column_metadata
+):
     """Get sub-hypotheses with fallback if empty."""
     sub_hypo_json = get_sub_hypotheses(
         query=query,
@@ -239,13 +270,21 @@ def _get_sub_hypotheses_with_fallback(query, hypo, workflow, dataset_meta, llm_u
 
     if len(sub_hypo_json["sub_hypo"]) == 0:
         sub_hypo_json["sub_hypo"] = [
-            {"text": hypo, "context": "None", "variables": [], "relations": "", "explanation": "unable to segment"}
+            {
+                "text": hypo,
+                "context": "None",
+                "variables": [],
+                "relations": "",
+                "explanation": "unable to segment",
+            }
         ]
 
     return sub_hypo_json
 
 
-def _match_generated_to_gold_subhypotheses(gen_sub_hypo_json, gold_sub_hypo_json, llm_used):
+def _match_generated_to_gold_subhypotheses(
+    gen_sub_hypo_json, gold_sub_hypo_json, llm_used
+):
     """Match generated sub-hypotheses to gold sub-hypotheses."""
     gold_subh_covered = []
     gen_subh_to_gold_subh = {}
@@ -258,7 +297,11 @@ def _match_generated_to_gold_subhypotheses(gen_sub_hypo_json, gold_sub_hypo_json
                 continue
 
             context_bool = is_matching_context(
-                gold_subh["text"], gold_subh.get("context", ""), gen_subh["text"], gen_subh.get("context", ""), llm_used
+                gold_subh["text"],
+                gold_subh.get("context", ""),
+                gen_subh["text"],
+                gen_subh.get("context", ""),
+                llm_used,
             )
             context_score = 1.0 if context_bool else 0.0
 
@@ -336,12 +379,24 @@ def run_eval_gold_vs_gen_NL_hypo_workflow(
 
     # Get sub-hypotheses for both gold and generated
     gold_sub_hypo_json = _get_sub_hypotheses_with_fallback(
-        query, gold_hypo, gold_workflow, dataset_meta, llm_used, dataset_type, use_column_metadata
+        query,
+        gold_hypo,
+        gold_workflow,
+        dataset_meta,
+        llm_used,
+        dataset_type,
+        use_column_metadata,
     )
     print(f"gold_sub_hypo_json: {gold_sub_hypo_json}")
 
     gen_sub_hypo_json = _get_sub_hypotheses_with_fallback(
-        query, gen_hypo, gen_workflow, dataset_meta, llm_used, dataset_type, use_column_metadata
+        query,
+        gen_hypo,
+        gen_workflow,
+        dataset_meta,
+        llm_used,
+        dataset_type,
+        use_column_metadata,
     )
     print(f"gen_sub_hypo_json: {gen_sub_hypo_json}")
 
@@ -349,8 +404,10 @@ def run_eval_gold_vs_gen_NL_hypo_workflow(
     eval_rec["gen_sub_hypo"] = gen_sub_hypo_json
 
     # Match generated to gold sub-hypotheses
-    gen_subh_to_gold_subh, gold_subh_covered, gen_gold_subh_to_context = _match_generated_to_gold_subhypotheses(
-        gen_sub_hypo_json, gold_sub_hypo_json, llm_used
+    gen_subh_to_gold_subh, gold_subh_covered, gen_gold_subh_to_context = (
+        _match_generated_to_gold_subhypotheses(
+            gen_sub_hypo_json, gold_sub_hypo_json, llm_used
+        )
     )
 
     print(f"gen_subh_to_gold_subh: {gen_subh_to_gold_subh}")
@@ -374,12 +431,18 @@ def run_eval_gold_vs_gen_NL_hypo_workflow(
 
     eval_rec["matched_gold_gen_subh_evals"] = matched_gold_gen_subh_evals
     eval_rec["recall_context"] = (
-        len(gold_subh_covered) / len(gold_sub_hypo_json["sub_hypo"]) if len(gold_sub_hypo_json["sub_hypo"]) else 0.0
+        len(gold_subh_covered) / len(gold_sub_hypo_json["sub_hypo"])
+        if len(gold_sub_hypo_json["sub_hypo"])
+        else 0.0
     )
     eval_rec["mean_accuracy_score"] = (
-        sum_accuracy_score / len(gen_subh_to_gold_subh) if len(gen_subh_to_gold_subh) else 0.0
+        sum_accuracy_score / len(gen_subh_to_gold_subh)
+        if len(gen_subh_to_gold_subh)
+        else 0.0
     )
-    eval_rec["final_score"] = eval_rec["recall_context"] * eval_rec["mean_accuracy_score"]
+    eval_rec["final_score"] = (
+        eval_rec["recall_context"] * eval_rec["mean_accuracy_score"]
+    )
 
     print(f"eval_rec: {json.dumps(eval_rec, indent=2)}")
     return eval_rec

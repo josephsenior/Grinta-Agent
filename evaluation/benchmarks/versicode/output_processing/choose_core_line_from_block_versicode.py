@@ -33,7 +33,11 @@ def _find_replaced_lines(lines: list[str], core_token: str) -> dict[int, str]:
 
 
 def _process_line_for_replacement(
-    line: str, line_index: int, core_token: str, replaced_lines: dict, in_multi_line_comment: bool
+    line: str,
+    line_index: int,
+    core_token: str,
+    replaced_lines: dict,
+    in_multi_line_comment: bool,
 ) -> bool:
     """Process a single line for replacement logic."""
     if in_multi_line_comment:
@@ -45,12 +49,16 @@ def _process_line_for_replacement(
     elif _starts_multi_line_comment(line):
         return True
     else:
-        return _check_for_core_token(line, line_index, core_token, replaced_lines, in_multi_line_comment)
+        return _check_for_core_token(
+            line, line_index, core_token, replaced_lines, in_multi_line_comment
+        )
 
 
 def _handle_multi_line_comment(line: str, in_multi_line_comment: bool) -> bool:
     """Handle multi-line comment state."""
-    if ('"""' in line or "'''" in line) and (not re.findall("'''(.*?)'''|\\\"\\\"\\\"(.*?)\\\"\\\"\\\"", line)):
+    if ('"""' in line or "'''" in line) and (
+        not re.findall("'''(.*?)'''|\\\"\\\"\\\"(.*?)\\\"\\\"\\\"", line)
+    ):
         return False
     return in_multi_line_comment
 
@@ -67,11 +75,17 @@ def _is_single_line_docstring(line: str) -> bool:
 
 def _starts_multi_line_comment(line: str) -> bool:
     """Check if line starts a multi-line comment."""
-    return ('"""' in line or "'''" in line) and (not re.findall("'''(.*?)'''|\\\"\\\"\\\"(.*?)\\\"\\\"\\\"", line))
+    return ('"""' in line or "'''" in line) and (
+        not re.findall("'''(.*?)'''|\\\"\\\"\\\"(.*?)\\\"\\\"\\\"", line)
+    )
 
 
 def _check_for_core_token(
-    line: str, line_index: int, core_token: str, replaced_lines: dict, in_multi_line_comment: bool
+    line: str,
+    line_index: int,
+    core_token: str,
+    replaced_lines: dict,
+    in_multi_line_comment: bool,
 ) -> bool:
     """Check if line contains core token and should be replaced."""
     if re.search("\\bdef\\s+task_function\\b", line):

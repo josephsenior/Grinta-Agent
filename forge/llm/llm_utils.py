@@ -10,7 +10,9 @@ if TYPE_CHECKING:
     from litellm import ChatCompletionToolParam
 
 
-def check_tools(tools: list["ChatCompletionToolParam"], llm_config: LLMConfig) -> list["ChatCompletionToolParam"]:
+def check_tools(
+    tools: list["ChatCompletionToolParam"], llm_config: LLMConfig
+) -> list["ChatCompletionToolParam"]:
     """Checks and modifies tools for compatibility with the current LLM.
 
     Args:
@@ -33,7 +35,9 @@ def check_tools(tools: list["ChatCompletionToolParam"], llm_config: LLMConfig) -
     return _clean_tools_for_gemini(tools)
 
 
-def _clean_tools_for_gemini(tools: list["ChatCompletionToolParam"]) -> list["ChatCompletionToolParam"]:
+def _clean_tools_for_gemini(
+    tools: list["ChatCompletionToolParam"],
+) -> list["ChatCompletionToolParam"]:
     """Remove unsupported fields and formats for Gemini models.
 
     Args:

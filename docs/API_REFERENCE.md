@@ -4,8 +4,10 @@
 
 ```
 Development: http://localhost:3000
-Production: https://api.Forge.dev
+Production: https://api.forge.ai
 ```
+
+**Note:** The server runs on port 3000 by default (configurable via `port` environment variable). The server serves both the REST API and the frontend SPA from the same port.
 
 ## Authentication
 
@@ -145,7 +147,7 @@ PUT /api/settings
 #### Health Check
 
 ```http
-GET /api/health
+GET /api/monitoring/health
 ```
 
 **Response:**
@@ -271,12 +273,22 @@ GET /api/analytics/models?period=week
 ]
 ```
 
-## WebSocket API
+## WebSocket API (Socket.IO)
+
+The backend uses Socket.IO for real-time communication, not plain WebSocket.
 
 ### Connect
 
 ```javascript
-const ws = new WebSocket('ws://localhost:3000/ws/conversations/{conversation_id}');
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3000', {
+  path: '/socket.io',
+  query: {
+    conversationId: '{conversation_id}',
+  },
+  transports: ['websocket', 'polling'],
+});
 ```
 
 ### Events
@@ -284,46 +296,38 @@ const ws = new WebSocket('ws://localhost:3000/ws/conversations/{conversation_id}
 #### Receive Events
 
 ```javascript
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  
-  switch(data.type) {
-    case 'action':
-      // Agent performed an action
-      console.log('Action:', data.content);
-      break;
-    case 'observation':
-      // Action result received
-      console.log('Result:', data.content);
-      break;
-    case 'state_change':
-      // Agent state changed
-      console.log('State:', data.state);
-      break;
+socket.on('message', (event) => {
+  // Event is already parsed JSON
+  if (event.observation === 'agent_state_changed') {
+    console.log('Agent state:', event.extras.agent_state);
+  } else if (event.action) {
+    console.log('Action:', event.action);
+  } else if (event.observation) {
+    console.log('Observation:', event.observation);
   }
-};
+});
 ```
 
 #### Send Message
 
 ```javascript
-ws.send(JSON.stringify({
-  type: 'message',
+socket.emit('oh_user_action', {
+  action: 'message',
   content: 'Build a todo app'
-}));
+});
 ```
 
 #### Control Agent
 
 ```javascript
 // Pause agent
-ws.send(JSON.stringify({ type: 'pause' }));
+socket.emit('oh_user_action', { action: 'pause' });
 
 // Resume agent
-ws.send(JSON.stringify({ type: 'resume' }));
+socket.emit('oh_user_action', { action: 'resume' });
 
 // Stop agent
-ws.send(JSON.stringify({ type: 'stop' }));
+socket.emit('oh_user_action', { action: 'stop' });
 ```
 
 ## Rate Limits
@@ -493,6 +497,8 @@ messages = client.conversations.get_messages(conversation.id)
 - Swagger UI: `http://localhost:3000/docs`
 - ReDoc: `http://localhost:3000/redoc`
 - OpenAPI JSON: `http://localhost:3000/openapi.json`
+
+**Note:** The OpenAPI specification is automatically generated from the FastAPI application and includes all registered routes from `forge/server/routes/`.
 
 ## Versioning
 

@@ -59,21 +59,29 @@ def _load_manifest(path: str) -> dict[str, Any]:
 def _diff_sequence(label: str, observed: Sequence[str | None]) -> list[str]:
     diffs: list[str] = []
     if not observed:
-        diffs.append(f"{label}: empty sequence")
-        return diffs
+        return [f"{label}: empty sequence"]
 
+    diffs.extend(_collect_non_string_diffs(label, observed))
+    diffs.extend(_collect_duplicate_diffs(label, observed))
+    return diffs
+
+
+def _collect_non_string_diffs(label: str, observed: Sequence[str | None]) -> list[str]:
     non_str = [item for item in observed if not isinstance(item, str)]
-    if non_str:
-        diffs.append(
-            f"{label}: non-string entries detected: {sorted({str(item) for item in non_str})}",
-        )
+    if not non_str:
+        return []
+    return [
+        f"{label}: non-string entries detected: {sorted({str(item) for item in non_str})}"
+    ]
 
-    string_entries = [cast(str, item) for item in observed if isinstance(item, str)]
+
+def _collect_duplicate_diffs(label: str, observed: Sequence[str | None]) -> list[str]:
+    string_entries = [item for item in observed if isinstance(item, str)]
     counts = Counter(string_entries)
     duplicates = sorted({entry for entry, count in counts.items() if count > 1})
-    if duplicates:
-        diffs.append(f"{label}: duplicate entries detected: {duplicates}")
-    return diffs
+    if not duplicates:
+        return []
+    return [f"{label}: duplicate entries detected: {duplicates}"]
 
 
 def _validate_attempts(step: dict[str, Any]) -> list[str]:
@@ -88,8 +96,9 @@ def _validate_attempts(step: dict[str, Any]) -> list[str]:
     for expected, actual in enumerate(indices):
         if actual != expected:
             diffs.append(
-                f"step {
-                    step.get('step_id')}: attempt_index sequence mismatch expected {expected} got {actual}",
+                f"step {step.get('step_id')}: attempt_index sequence mismatch expected {
+                    expected
+                } got {actual}",
             )
             break
     return diffs
@@ -101,7 +110,9 @@ def _validate_step_sequence(steps: list[dict[str, Any]]) -> list[str]:
     return _diff_sequence("steps.step_id", step_ids)
 
 
-def _validate_provenance_chain(steps: list[dict[str, Any]], prov: dict[str, Any]) -> list[str]:
+def _validate_provenance_chain(
+    steps: list[dict[str, Any]], prov: dict[str, Any]
+) -> list[str]:
     """Validate provenance chain consistency."""
     diffs: list[str] = []
     chain_root = prov.get("chain_root")
@@ -114,10 +125,14 @@ def _validate_provenance_chain(steps: list[dict[str, Any]], prov: dict[str, Any]
     last_hash = steps[-1].get("step_hash")
 
     if chain_root and first_hash and (chain_root != first_hash):
-        diffs.append(f"provenance.chain_root mismatch: manifest={chain_root} first_step={first_hash}")
+        diffs.append(
+            f"provenance.chain_root mismatch: manifest={chain_root} first_step={first_hash}"
+        )
 
     if final_hash and last_hash and (final_hash != last_hash):
-        diffs.append(f"provenance.final_step_hash mismatch: manifest={final_hash} last_step={last_hash}")
+        diffs.append(
+            f"provenance.final_step_hash mismatch: manifest={final_hash} last_step={last_hash}"
+        )
 
     return diffs
 
@@ -150,7 +165,9 @@ def _validate_step_details(steps: list[dict[str, Any]]) -> list[str]:
     return diffs
 
 
-def _build_validation_summary(steps: list[dict[str, Any]], diffs: list[str], prov: dict[str, Any]) -> dict[str, Any]:
+def _build_validation_summary(
+    steps: list[dict[str, Any]], diffs: list[str], prov: dict[str, Any]
+) -> dict[str, Any]:
     """Build validation summary."""
     return {
         "steps": len(steps),
@@ -197,7 +214,12 @@ def replay_manifest(manifest_path: str, assert_mode: bool = False) -> dict[str, 
     summary = _build_validation_summary(steps, diffs, prov)
     ok = _determine_validation_result(diffs, assert_mode)
 
-    return {"manifest_path": manifest_path, "ok": ok, "diffs": diffs, "summary": summary}
+    return {
+        "manifest_path": manifest_path,
+        "ok": ok,
+        "diffs": diffs,
+        "summary": summary,
+    }
 
 
 __all__ = ["ReplayError", "replay_manifest"]

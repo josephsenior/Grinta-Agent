@@ -19,11 +19,20 @@ class Test(BaseIntegrationTest):
         action = CmdRunAction(command="cat /workspace/test.txt")
         obs = runtime.run_action(action)
         if obs.exit_code != 0:
-            return TestResult(success=False, reason=f"Failed to cat /workspace/test.txt: {obs.content}.")
+            return TestResult(
+                success=False,
+                reason=f"Failed to cat /workspace/test.txt: {obs.content}.",
+            )
         action = CmdRunAction(command="cat /workspace/test.txt")
         obs = runtime.run_action(action)
         if obs.exit_code != 0:
-            return TestResult(success=False, reason=f"Failed to cat /workspace/test.txt: {obs.content}.")
+            return TestResult(
+                success=False,
+                reason=f"Failed to cat /workspace/test.txt: {obs.content}.",
+            )
         if "hello world" not in obs.content.strip():
-            return TestResult(success=False, reason=f'File did not contain "hello world": {obs.content}.')
+            return TestResult(
+                success=False,
+                reason=f'File did not contain "hello world": {obs.content}.',
+            )
         return TestResult(success=True)

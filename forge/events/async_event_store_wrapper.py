@@ -10,13 +10,13 @@ from forge.events.event_store import EventStore
 
 class AsyncEventStoreWrapper:
     """Async wrapper for EventStore to enable async iteration over events.
-    
+
     Wraps synchronous event store operations to work in async context.
     """
 
     def __init__(self, event_store: EventStore, *args: Any, **kwargs: Any) -> None:
         """Initialize async wrapper with event store and search parameters.
-        
+
         Args:
             event_store: Event store to wrap
             *args: Positional arguments for search_events

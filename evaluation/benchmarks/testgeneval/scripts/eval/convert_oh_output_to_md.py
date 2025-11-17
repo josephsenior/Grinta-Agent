@@ -53,7 +53,7 @@ def write_row_to_md_file(row):
     filename = f"{id}.md"
     os.makedirs(output_md_folder, exist_ok=True)
     filepath = os.path.join(output_md_folder, filename)
-    with open(filepath, "w", encoding='utf-8') as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         f.write(f"# {id} (coverage: {coverage})\n")
         f.write(f"# {id} (mutation score: {mutation})\n")
         f.write("## MetaData\n")

@@ -11,7 +11,7 @@ from typing import Any, Self
 from pydantic import BaseModel
 
 from forge.core.logger import forge_logger as logger
-from forge.core.schema import ObservationType
+from forge.core.schemas import ObservationType
 from forge.events.observation.observation import Observation
 
 CMD_OUTPUT_PS1_BEGIN = "\n###PS1JSON###\n"
@@ -57,10 +57,10 @@ class CmdOutputMetadata(BaseModel):
     @classmethod
     def matches_ps1_metadata(cls, string: str) -> list[re.Match[str]]:
         """Find all PS1 metadata blocks in command output.
-        
+
         Args:
             string: Command output string to search
-            
+
         Returns:
             List of regex matches for PS1 metadata blocks
 
@@ -71,7 +71,9 @@ class CmdOutputMetadata(BaseModel):
                 json.loads(match.group(1).strip())
                 matches.append(match)
             except json.JSONDecodeError:
-                logger.warning(f"Failed to parse PS1 metadata: {match.group(1)}. Skipping.{traceback.format_exc()}")
+                logger.warning(
+                    f"Failed to parse PS1 metadata: {match.group(1)}. Skipping.{traceback.format_exc()}"
+                )
                 continue
         return matches
 
@@ -89,7 +91,10 @@ class CmdOutputMetadata(BaseModel):
             try:
                 processed["exit_code"] = int(float(str(metadata["exit_code"])))
             except (ValueError, TypeError):
-                logger.warning("Failed to parse exit code: %s. Setting to -1.", metadata["exit_code"])
+                logger.warning(
+                    "Failed to parse exit code: %s. Setting to -1.",
+                    metadata["exit_code"],
+                )
                 processed["exit_code"] = -1
         return cls(**processed)
 
@@ -147,8 +152,16 @@ class CmdOutputObservation(Observation):
             return content
         half = max_size // 2
         original_length = len(content)
-        truncated = content[:half] + "\n[... Observation truncated due to length ...]\n" + content[-half:]
-        logger.debug("Truncated large command output: %s -> %s chars", original_length, len(truncated))
+        truncated = (
+            content[:half]
+            + "\n[... Observation truncated due to length ...]\n"
+            + content[-half:]
+        )
+        logger.debug(
+            "Truncated large command output: %s -> %s chars",
+            original_length,
+            len(truncated),
+        )
         return truncated
 
     @property
@@ -156,10 +169,20 @@ class CmdOutputObservation(Observation):
         """Get command process ID."""
         return self.metadata.pid
 
+    @command_id.setter
+    def command_id(self, value: int) -> None:
+        """Set command process ID."""
+        self.metadata.pid = value
+
     @property
     def exit_code(self) -> int:
         """Get command exit code."""
         return self.metadata.exit_code
+
+    @exit_code.setter
+    def exit_code(self, value: int) -> None:
+        """Set command exit code."""
+        self.metadata.exit_code = value
 
     @property
     def error(self) -> bool:
@@ -184,14 +207,15 @@ class CmdOutputObservation(Observation):
             metadata_json = json.dumps(model_dump_with_options(self.metadata), indent=2)
         except Exception:
             metadata_json = repr(self.metadata)
-        return f"**CmdOutputObservation (source={
-            self.source}, exit code={
-            self.exit_code}, metadata={metadata_json})**\n--BEGIN AGENT OBSERVATION--\n{
-            self.to_agent_observation()}\n--END AGENT OBSERVATION--"
+        return f"**CmdOutputObservation (source={self.source}, exit code={
+            self.exit_code
+        }, metadata={metadata_json})**\n--BEGIN AGENT OBSERVATION--\n{
+            self.to_agent_observation()
+        }\n--END AGENT OBSERVATION--"
 
     def to_agent_observation(self) -> str:
         """Format observation for agent with metadata context.
-        
+
         Returns:
             Formatted observation string with working directory and exit code info
 

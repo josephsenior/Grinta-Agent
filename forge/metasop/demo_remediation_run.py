@@ -42,8 +42,12 @@ class DemoExecutor(BaseStepExecutor):
         self.calls += 1
         if self.calls == 1:
             return StepResult(ok=False, artifact=None, error="simulated_failure")
-        art = Artifact(step_id=step.id, role=step.role, content={"content": "remediated"})
-        trace = StepTrace(step_id=step.id, role=step.role, duration_ms=10, total_tokens=5)
+        art = Artifact(
+            step_id=step.id, role=step.role, content={"content": "remediated"}
+        )
+        trace = StepTrace(
+            step_id=step.id, role=step.role, duration_ms=10, total_tokens=5
+        )
         return StepResult(ok=True, artifact=art, trace=trace)
 
 
@@ -57,7 +61,11 @@ def main() -> None:
     out = StepOutputSpec(schema="")
     step = SopStep(id="impl", role="engineer", task="implement", outputs=out)
     orch.template = SopTemplate(name="demo", steps=[step])
-    orch.profiles = {"engineer": RoleProfile(name="engineer", goal="implement", capabilities=["write_code"])}
+    orch.profiles = {
+        "engineer": RoleProfile(
+            name="engineer", goal="implement", capabilities=["write_code"]
+        )
+    }
     orch.step_executor = DemoExecutor()
     _ok, _done = orch.run("please implement", repo_root=None)
     for _e in orch.step_events:

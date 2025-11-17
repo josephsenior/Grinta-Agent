@@ -14,7 +14,9 @@ def test_patch_apply_with_empty_lines():
     changes = parse_diff(patch)
     print("\nParsed changes:")
     for change in changes:
-        print(f"Change(old={change.old}, new={change.new}, line={repr(change.line)}, hunk={change.hunk})")
+        print(
+            f"Change(old={change.old}, new={change.new}, line={repr(change.line)}, hunk={change.hunk})"
+        )
     diff = diffobj(header=None, changes=changes, text=patch)
     result = apply_diff(diff, original_content)
     expected_result = [

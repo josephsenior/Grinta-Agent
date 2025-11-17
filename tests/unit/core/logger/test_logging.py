@@ -41,7 +41,9 @@ def test_openai_api_key_masking(test_handler):
 def test_azure_api_key_masking(test_handler):
     logger, stream = test_handler
     api_key = "1a2b3c4d5e6f7g8h9i0j"
-    message = f"""Azure API key: api_key='{api_key}' and chatty chat with ' and " and '"""
+    message = (
+        f"""Azure API key: api_key='{api_key}' and chatty chat with ' and " and '"""
+    )
     logger.info(message)
     log_output = stream.getvalue()
     assert api_key not in log_output
@@ -109,10 +111,16 @@ def test_sensitive_env_vars_masking(test_handler):
 
 def test_special_cases_masking(test_handler):
     logger, stream = test_handler
-    environ = {"LLM_API_KEY": "LLM_API_KEY_VALUE", "SANDBOX_ENV_GITHUB_TOKEN": "SANDBOX_ENV_GITHUB_TOKEN_VALUE"}
+    environ = {
+        "LLM_API_KEY": "LLM_API_KEY_VALUE",
+        "SANDBOX_ENV_GITHUB_TOKEN": "SANDBOX_ENV_GITHUB_TOKEN_VALUE",
+    }
     with patch.dict("forge.core.logger.os.environ", environ, clear=True):
         log_message = " ".join(
-            (f"{attr}={value} with no single quotes' and something" for attr, value in environ.items())
+            (
+                f"{attr}={value} with no single quotes' and something"
+                for attr, value in environ.items()
+            )
         )
         logger.info(log_message)
         log_output = stream.getvalue()
@@ -121,7 +129,6 @@ def test_special_cases_masking(test_handler):
 
 
 class TestJsonOutput:
-
     def test_info(self, json_handler):
         logger, string_io = json_handler
         logger.info("Test message")

@@ -3,19 +3,37 @@ import sys
 from datetime import datetime, timezone
 from json import JSONDecodeError
 from types import SimpleNamespace
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import status
+from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse
 
 from forge.microagent.microagent import KnowledgeMicroagent, RepoMicroagent
 from forge.microagent.types import MicroagentMetadata, MicroagentType
 from forge.server.routes import conversation as conversation_routes
-from forge.server.routes.conversation import add_event, add_event_raw, get_git_changes, get_git_diff
-from forge.server.routes.conversation import get_hosts, get_microagents, get_remote_runtime_config
-from forge.server.routes.conversation import get_vscode_url, metasop_debug, search_events, simple_test_endpoint
-from forge.server.routes.manage_conversations import UpdateConversationRequest, update_conversation
+from forge.server.routes.conversation import (
+    add_event,
+    add_event_raw,
+    get_git_changes,
+    get_git_diff,
+)
+from forge.server.routes.conversation import (
+    get_hosts,
+    get_microagents,
+    get_remote_runtime_config,
+)
+from forge.server.routes.conversation import (
+    get_vscode_url,
+    metasop_debug,
+    search_events,
+    simple_test_endpoint,
+)
+from forge.server.routes.manage_conversations import (
+    UpdateConversationRequest,
+    update_conversation,
+)
 from forge.server.session.conversation import ServerConversation
 from forge.storage.conversation.conversation_store import ConversationStore
 from forge.storage.data_models.conversation_metadata import ConversationMetadata
@@ -145,7 +163,9 @@ def _verify_repo_microagent(content, repo_microagent):
 
 def _verify_knowledge_microagent(content, knowledge_microagent):
     """Verify knowledge microagent content."""
-    knowledge_agent = next((m for m in content["microagents"] if m["name"] == "test_knowledge"))
+    knowledge_agent = next(
+        (m for m in content["microagents"] if m["name"] == "test_knowledge")
+    )
     assert knowledge_agent["type"] == "knowledge"
     assert knowledge_agent["content"] == "This is a test knowledge microagent"
     assert knowledge_agent["triggers"] == ["test", "knowledge"]
@@ -166,13 +186,22 @@ async def test_get_remote_runtime_config_success(monkeypatch):
     conversation = SimpleNamespace(runtime=runtime)
     attach_mock = AsyncMock(return_value=conversation)
     detach_mock = AsyncMock()
-    monkeypatch.setattr(conversation_routes.conversation_manager, "attach_to_conversation", attach_mock)
-    monkeypatch.setattr(conversation_routes.conversation_manager, "detach_from_conversation", detach_mock)
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager, "attach_to_conversation", attach_mock
+    )
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "detach_from_conversation",
+        detach_mock,
+    )
 
     response = await get_remote_runtime_config("conversation-123")
 
     assert response.status_code == 200
-    assert json.loads(response.body) == {"runtime_id": "rt-1", "session_id": "session-1"}
+    assert json.loads(response.body) == {
+        "runtime_id": "rt-1",
+        "session_id": "session-1",
+    }
     attach_mock.assert_awaited_once_with("conversation-123", "dev-user")
     detach_mock.assert_awaited_once_with(conversation)
 
@@ -214,7 +243,11 @@ async def test_get_vscode_url_success(monkeypatch):
         "attach_to_conversation",
         AsyncMock(return_value=conversation),
     )
-    monkeypatch.setattr(conversation_routes.conversation_manager, "detach_from_conversation", AsyncMock())
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "detach_from_conversation",
+        AsyncMock(),
+    )
 
     response = await get_vscode_url("conversation-123")
 
@@ -261,7 +294,11 @@ async def test_get_hosts_success(monkeypatch):
         "attach_to_conversation",
         AsyncMock(return_value=conversation),
     )
-    monkeypatch.setattr(conversation_routes.conversation_manager, "detach_from_conversation", AsyncMock())
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "detach_from_conversation",
+        AsyncMock(),
+    )
 
     response = await get_hosts("conversation-123")
 
@@ -314,6 +351,15 @@ async def test_search_events_success(monkeypatch):
     monkeypatch.setattr(conversation_routes, "EventStore", FakeEventStore)
     monkeypatch.setattr(conversation_routes, "event_to_dict", lambda event: event)
 
+    metadata = ConversationMetadata(
+        conversation_id="conv-1",
+        title="title",
+        selected_repository=None,
+        user_id="user-1",
+        created_at=datetime.now(timezone.utc),
+        last_updated_at=datetime.now(timezone.utc),
+        trigger=None,
+    )
     result = await search_events(
         conversation_id="conv-1",
         start_id=0,
@@ -321,7 +367,7 @@ async def test_search_events_success(monkeypatch):
         reverse=False,
         filter=None,
         limit=1,
-        metadata=SimpleNamespace(),
+        metadata=metadata,
         user_id="user-1",
     )
 
@@ -332,7 +378,16 @@ async def test_search_events_success(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_search_events_invalid_limit():
-    with pytest.raises(Exception) as exc:
+    metadata = ConversationMetadata(
+        conversation_id="conv",
+        title="title",
+        selected_repository=None,
+        user_id="user",
+        created_at=datetime.now(timezone.utc),
+        last_updated_at=datetime.now(timezone.utc),
+        trigger=None,
+    )
+    with pytest.raises(HTTPException) as exc:
         await search_events(
             conversation_id="conv",
             start_id=0,
@@ -340,7 +395,7 @@ async def test_search_events_invalid_limit():
             reverse=False,
             filter=None,
             limit=101,
-            metadata=SimpleNamespace(),
+            metadata=metadata,
             user_id="user",
         )
     assert exc.value.status_code == status.HTTP_400_BAD_REQUEST
@@ -350,10 +405,14 @@ async def test_search_events_invalid_limit():
 async def test_add_event_success(monkeypatch):
     request = AsyncMock()
     request.json = AsyncMock(return_value={"foo": "bar"})
-    conversation = SimpleNamespace(sid="sid-1")
+    conversation = cast(ServerConversation, SimpleNamespace(sid="sid-1"))
 
     send_mock = AsyncMock()
-    monkeypatch.setattr(conversation_routes.conversation_manager, "send_event_to_conversation", send_mock)
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "send_event_to_conversation",
+        send_mock,
+    )
 
     response = await add_event(request, conversation)
 
@@ -367,7 +426,7 @@ async def test_add_event_invalid_json(monkeypatch):
     request = AsyncMock()
     request.json = AsyncMock(side_effect=JSONDecodeError("err", "text", 0))
     request.body = AsyncMock(return_value=b"not-json")
-    conversation = SimpleNamespace(sid="sid-1")
+    conversation = cast(ServerConversation, SimpleNamespace(sid="sid-1"))
 
     response = await add_event(request, conversation)
 
@@ -380,7 +439,7 @@ async def test_add_event_invalid_json(monkeypatch):
 async def test_add_event_raw_success(monkeypatch):
     request = AsyncMock()
     request.body = AsyncMock(return_value=b"hello world")
-    conversation = SimpleNamespace(sid="sid-1")
+    conversation = cast(ServerConversation, SimpleNamespace(sid="sid-1"))
 
     monkeypatch.setattr(
         conversation_routes.conversation_manager,
@@ -388,9 +447,15 @@ async def test_add_event_raw_success(monkeypatch):
         AsyncMock(return_value=conversation),
     )
     send_mock = AsyncMock()
-    monkeypatch.setattr(conversation_routes.conversation_manager, "send_event_to_conversation", send_mock)
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "send_event_to_conversation",
+        send_mock,
+    )
 
-    response = await add_event_raw(request, conversation_id="sid-1", create=False, user_id="user")
+    response = await add_event_raw(
+        request, conversation_id="sid-1", create=False, user_id="user"
+    )
 
     assert response.status_code == 200
     send_mock.assert_awaited_once()
@@ -400,11 +465,17 @@ async def test_add_event_raw_success(monkeypatch):
 async def test_add_event_raw_creates_conversation(monkeypatch):
     request = AsyncMock()
     request.body = AsyncMock(return_value=b"hello")
-    conversation = SimpleNamespace(sid="sid-1")
+    conversation = cast(ServerConversation, SimpleNamespace(sid="sid-1"))
 
     attach_mock = AsyncMock(side_effect=[None, conversation])
-    monkeypatch.setattr(conversation_routes.conversation_manager, "attach_to_conversation", attach_mock)
-    monkeypatch.setattr(conversation_routes.conversation_manager, "send_event_to_conversation", AsyncMock())
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager, "attach_to_conversation", attach_mock
+    )
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "send_event_to_conversation",
+        AsyncMock(),
+    )
 
     store_holder = {}
 
@@ -417,7 +488,9 @@ async def test_add_event_raw_creates_conversation(monkeypatch):
     fake_utils = SimpleNamespace(get_conversation_store=fake_get_store)
     monkeypatch.setitem(sys.modules, "forge.server.utils", fake_utils)
 
-    response = await add_event_raw(request, conversation_id="sid-1", create=True, user_id="user")
+    response = await add_event_raw(
+        request, conversation_id="sid-1", create=True, user_id="user"
+    )
 
     assert response.status_code == 200
     assert attach_mock.await_count == 2
@@ -434,7 +507,9 @@ async def test_add_event_raw_not_found(monkeypatch):
         AsyncMock(return_value=None),
     )
 
-    response = await add_event_raw(request, conversation_id="missing", create=False, user_id="user")
+    response = await add_event_raw(
+        request, conversation_id="missing", create=False, user_id="user"
+    )
 
     assert response.status_code == 404
     assert "no_conversation" in json.loads(response.body)["error"]
@@ -444,13 +519,21 @@ async def test_add_event_raw_not_found(monkeypatch):
 async def test_add_event_raw_runtime_fallback(monkeypatch):
     request = AsyncMock()
     request.body = AsyncMock(return_value=b"hi")
-    conversation = SimpleNamespace(sid="sid-1")
+    conversation = cast(ServerConversation, SimpleNamespace(sid="sid-1"))
 
     send_mock = AsyncMock(side_effect=RuntimeError("no_conversation:sid-1"))
-    monkeypatch.setattr(conversation_routes.conversation_manager, "attach_to_conversation", AsyncMock(return_value=conversation))
-    monkeypatch.setattr(conversation_routes.conversation_manager, "send_event_to_conversation", send_mock)
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "attach_to_conversation",
+        AsyncMock(return_value=conversation),
+    )
+    monkeypatch.setattr(
+        conversation_routes.conversation_manager,
+        "send_event_to_conversation",
+        send_mock,
+    )
 
-    call_log = {}
+    call_log: dict[str, Any] = {}
 
     class FakeEventStream:
         def __init__(self, conversation_id, _file_store, user_id):
@@ -458,30 +541,38 @@ async def test_add_event_raw_runtime_fallback(monkeypatch):
             self.events = []
 
         def add_event(self, event_obj, source):
-            call_log.setdefault("events", []).append((event_obj, source))
+            events = cast(list[Any], call_log.setdefault("events", []))
+            events.append((event_obj, source))
 
     fake_event_module = SimpleNamespace(EventSource=SimpleNamespace(USER="USER"))
     fake_serialization_module = SimpleNamespace(event_from_dict=lambda data: data)
     fake_stream_module = SimpleNamespace(EventStream=FakeEventStream)
     monkeypatch.setitem(sys.modules, "forge.events.event", fake_event_module)
-    monkeypatch.setitem(sys.modules, "forge.events.serialization.event", fake_serialization_module)
+    monkeypatch.setitem(
+        sys.modules, "forge.events.serialization.event", fake_serialization_module
+    )
     monkeypatch.setitem(sys.modules, "forge.events.stream", fake_stream_module)
 
-    response = await add_event_raw(request, conversation_id="sid-1", create=False, user_id="user")
+    response = await add_event_raw(
+        request, conversation_id="sid-1", create=False, user_id="user"
+    )
 
     assert response.status_code == 200
     data = json.loads(response.body)
     assert data["success"] is True
     assert data["note"] == "persisted_to_event_store"
     assert call_log["init"] == ("sid-1", "user")
-    assert call_log["events"][0][0]["args"]["content"] == "hi"
+    events = cast(list[tuple[Any, Any]], call_log["events"])
+    assert events[0][0]["args"]["content"] == "hi"
 
 
 @pytest.mark.asyncio
 async def test_add_event_raw_empty_body():
     request = AsyncMock()
     request.body = AsyncMock(return_value=b"")
-    response = await add_event_raw(request, conversation_id="sid", create=False, user_id="user")
+    response = await add_event_raw(
+        request, conversation_id="sid", create=False, user_id="user"
+    )
     assert response.status_code == 400
     assert json.loads(response.body)["error"] == "Empty body"
 
@@ -490,7 +581,9 @@ async def test_add_event_raw_empty_body():
 async def test_add_event_raw_exception(monkeypatch):
     request = AsyncMock()
     request.body = AsyncMock(side_effect=RuntimeError("boom"))
-    response = await add_event_raw(request, conversation_id="sid", create=False, user_id="user")
+    response = await add_event_raw(
+        request, conversation_id="sid", create=False, user_id="user"
+    )
     assert response.status_code == 500
     assert json.loads(response.body)["error"] == "boom"
 
@@ -501,7 +594,9 @@ async def test_metasop_debug_requires_conversation_id(monkeypatch):
     request.json = AsyncMock(return_value={})
     response = await metasop_debug(request)
     assert response.status_code == 400
-    assert json.loads(response.body)["error"] == "conversation_id required in request body"
+    assert (
+        json.loads(response.body)["error"] == "conversation_id required in request body"
+    )
 
 
 @pytest.mark.asyncio
@@ -516,7 +611,11 @@ async def test_metasop_debug_starts_task(monkeypatch):
         tasks.append(coro)
         return SimpleNamespace()
 
-    monkeypatch.setitem(sys.modules, "forge.metasop.router", SimpleNamespace(run_metasop_for_conversation=AsyncMock()))
+    monkeypatch.setitem(
+        sys.modules,
+        "forge.metasop.router",
+        SimpleNamespace(run_metasop_for_conversation=AsyncMock()),
+    )
     monkeypatch.setattr("asyncio.create_task", fake_create_task)
 
     response = await metasop_debug(request)
@@ -529,7 +628,11 @@ async def test_metasop_debug_handles_exception(monkeypatch):
     request = AsyncMock()
     payload = {"conversation_id": "conv"}
     request.json = AsyncMock(return_value=payload)
-    monkeypatch.setitem(sys.modules, "forge.metasop.router", SimpleNamespace(run_metasop_for_conversation=AsyncMock()))
+    monkeypatch.setitem(
+        sys.modules,
+        "forge.metasop.router",
+        SimpleNamespace(run_metasop_for_conversation=AsyncMock()),
+    )
 
     def raise_task(_):
         raise RuntimeError("boom")
@@ -596,7 +699,9 @@ async def test_update_conversation_success():
     mock_conversation_store.save_metadata = AsyncMock()
     update_request = UpdateConversationRequest(title=new_title)
     mock_sio = AsyncMock()
-    with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
+    with patch(
+        "forge.server.routes.manage_conversations.conversation_manager"
+    ) as mock_manager:
         mock_manager.sio = mock_sio
         result = await update_conversation(
             conversation_id=conversation_id,
@@ -626,13 +731,15 @@ async def test_update_conversation_not_found():
     mock_conversation_store = MagicMock(spec=ConversationStore)
     mock_conversation_store.get_metadata = AsyncMock(side_effect=FileNotFoundError())
     update_request = UpdateConversationRequest(title="New Title")
-    result = await update_conversation(
-        conversation_id=conversation_id,
-        data=update_request,
-        user_id=user_id,
-        conversation_store=mock_conversation_store,
+    result = cast(
+        JSONResponse,
+        await update_conversation(
+            conversation_id=conversation_id,
+            data=update_request,
+            user_id=user_id,
+            conversation_store=mock_conversation_store,
+        ),
     )
-    assert isinstance(result, JSONResponse)
     assert result.status_code == status.HTTP_404_NOT_FOUND
     content = json.loads(result.body)
     assert content["status"] == "error"
@@ -657,17 +764,22 @@ async def test_update_conversation_permission_denied():
     mock_conversation_store = MagicMock(spec=ConversationStore)
     mock_conversation_store.get_metadata = AsyncMock(return_value=mock_metadata)
     update_request = UpdateConversationRequest(title="New Title")
-    result = await update_conversation(
-        conversation_id=conversation_id,
-        data=update_request,
-        user_id=user_id,
-        conversation_store=mock_conversation_store,
+    result = cast(
+        JSONResponse,
+        await update_conversation(
+            conversation_id=conversation_id,
+            data=update_request,
+            user_id=user_id,
+            conversation_store=mock_conversation_store,
+        ),
     )
-    assert isinstance(result, JSONResponse)
     assert result.status_code == status.HTTP_403_FORBIDDEN
     content = json.loads(result.body)
     assert content["status"] == "error"
-    assert content["message"] == "Permission denied: You can only update your own conversations"
+    assert (
+        content["message"]
+        == "Permission denied: You can only update your own conversations"
+    )
     assert content["msg_id"] == "AUTHORIZATION$PERMISSION_DENIED"
 
 
@@ -717,7 +829,9 @@ async def test_update_conversation_socket_emission_error():
     update_request = UpdateConversationRequest(title=new_title)
     mock_sio = AsyncMock()
     mock_sio.emit.side_effect = Exception("Socket error")
-    with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
+    with patch(
+        "forge.server.routes.manage_conversations.conversation_manager"
+    ) as mock_manager:
         mock_manager.sio = mock_sio
         result = await update_conversation(
             conversation_id=conversation_id,
@@ -736,15 +850,19 @@ async def test_update_conversation_general_exception():
     conversation_id = "test_conversation_123"
     user_id = "test_user_456"
     mock_conversation_store = MagicMock(spec=ConversationStore)
-    mock_conversation_store.get_metadata = AsyncMock(side_effect=Exception("Database error"))
-    update_request = UpdateConversationRequest(title="New Title")
-    result = await update_conversation(
-        conversation_id=conversation_id,
-        data=update_request,
-        user_id=user_id,
-        conversation_store=mock_conversation_store,
+    mock_conversation_store.get_metadata = AsyncMock(
+        side_effect=Exception("Database error")
     )
-    assert isinstance(result, JSONResponse)
+    update_request = UpdateConversationRequest(title="New Title")
+    result = cast(
+        JSONResponse,
+        await update_conversation(
+            conversation_id=conversation_id,
+            data=update_request,
+            user_id=user_id,
+            conversation_store=mock_conversation_store,
+        ),
+    )
     assert result.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     content = json.loads(result.body)
     assert content["status"] == "error"
@@ -772,7 +890,9 @@ async def test_update_conversation_title_whitespace_trimming():
     mock_conversation_store.save_metadata = AsyncMock()
     update_request = UpdateConversationRequest(title=title_with_whitespace)
     mock_sio = AsyncMock()
-    with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
+    with patch(
+        "forge.server.routes.manage_conversations.conversation_manager"
+    ) as mock_manager:
         mock_manager.sio = mock_sio
         result = await update_conversation(
             conversation_id=conversation_id,
@@ -805,7 +925,9 @@ async def test_update_conversation_user_owns_conversation():
     mock_conversation_store.save_metadata = AsyncMock()
     update_request = UpdateConversationRequest(title=new_title)
     mock_sio = AsyncMock()
-    with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
+    with patch(
+        "forge.server.routes.manage_conversations.conversation_manager"
+    ) as mock_manager:
         mock_manager.sio = mock_sio
         result = await update_conversation(
             conversation_id=conversation_id,
@@ -837,7 +959,9 @@ async def test_update_conversation_last_updated_at_set():
     mock_conversation_store.save_metadata = AsyncMock()
     update_request = UpdateConversationRequest(title=new_title)
     mock_sio = AsyncMock()
-    with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
+    with patch(
+        "forge.server.routes.manage_conversations.conversation_manager"
+    ) as mock_manager:
         mock_manager.sio = mock_sio
         result = await update_conversation(
             conversation_id=conversation_id,
@@ -870,7 +994,9 @@ async def test_update_conversation_no_user_id_no_metadata_user_id():
     mock_conversation_store.save_metadata = AsyncMock()
     update_request = UpdateConversationRequest(title=new_title)
     mock_sio = AsyncMock()
-    with patch("forge.server.routes.manage_conversations.conversation_manager") as mock_manager:
+    with patch(
+        "forge.server.routes.manage_conversations.conversation_manager"
+    ) as mock_manager:
         mock_manager.sio = mock_sio
         result = await update_conversation(
             conversation_id=conversation_id,

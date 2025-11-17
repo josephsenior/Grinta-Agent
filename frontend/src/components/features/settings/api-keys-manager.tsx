@@ -153,45 +153,46 @@ function ApiKeysTable({ apiKeys, isLoading, onDeleteKey }: ApiKeysTableProps) {
   }
 
   if (!Array.isArray(apiKeys) || apiKeys.length === 0) {
-    return null;
+    return (
+      <div className="rounded-xl border border-brand-500/20 bg-black/60 p-6 text-sm text-foreground-secondary text-center">
+        No API keys yet.
+      </div>
+    );
   }
 
   return (
-    <div className="border border-border rounded-md overflow-hidden">
-      <table className="w-full">
-        <thead className="bg-base-tertiary">
+    <div className="rounded-xl border border-brand-500/20 bg-black/60 overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-black/70 border-b border-brand-500/20">
           <tr>
-            <th className="text-left p-3 text-sm font-medium">
+            <th className="text-left px-4 py-3 font-medium text-foreground-secondary">
               {t(I18nKey.SETTINGS$NAME)}
             </th>
-            <th className="text-left p-3 text-sm font-medium">
+            <th className="text-left px-4 py-3 font-medium text-foreground-secondary">
               {t(I18nKey.SETTINGS$CREATED_AT)}
             </th>
-            <th className="text-left p-3 text-sm font-medium">
+            <th className="text-left px-4 py-3 font-medium text-foreground-secondary">
               {t(I18nKey.SETTINGS$LAST_USED)}
             </th>
-            <th className="text-right p-3 text-sm font-medium">
+            <th className="text-right px-4 py-3 font-medium text-foreground-secondary">
               {t(I18nKey.SETTINGS$ACTIONS)}
             </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-brand-500/15">
           {apiKeys.map((key) => (
-            <tr key={key.id} className="border-t border-border">
-              <td
-                className="p-3 text-sm truncate max-w-[160px]"
-                title={key.name}
-              >
+            <tr key={key.id} className="hover:bg-brand-500/5 transition-colors">
+              <td className="px-4 py-3 truncate max-w-[240px]" title={key.name}>
                 {key.name}
               </td>
-              <td className="p-3 text-sm">{formatDate(key.created_at)}</td>
-              <td className="p-3 text-sm">{formatDate(key.last_used_at)}</td>
-              <td className="p-3 text-right">
+              <td className="px-4 py-3">{formatDate(key.created_at)}</td>
+              <td className="px-4 py-3">{formatDate(key.last_used_at)}</td>
+              <td className="px-4 py-3 text-right">
                 <button
                   type="button"
                   onClick={() => onDeleteKey(key)}
                   aria-label={`Delete ${key.name}`}
-                  className="cursor-pointer"
+                  className="cursor-pointer text-foreground-secondary hover:text-foreground"
                 >
                   <FaTrash size={16} />
                 </button>

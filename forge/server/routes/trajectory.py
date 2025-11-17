@@ -14,7 +14,10 @@ from forge.server.dependencies import get_dependencies
 from forge.server.session.conversation import ServerConversation
 from forge.server.utils import get_conversation
 
-app = APIRouter(prefix="/api/conversations/{conversation_id}/trajectory", dependencies=get_dependencies())
+app = APIRouter(
+    prefix="/api/conversations/{conversation_id}/trajectory",
+    dependencies=get_dependencies(),
+)
 
 
 @app.get("/")

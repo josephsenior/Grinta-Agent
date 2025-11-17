@@ -35,7 +35,11 @@ def append_lineage(ctx, step_id: str, record: dict[str, Any], settings=None) -> 
         rec.setdefault("run_id", getattr(ctx, "run_id", None))
         lst.append(rec)
         try:
-            dirpath = getattr(settings, "remediation_lineage_dir", None) if settings is not None else None
+            dirpath = (
+                getattr(settings, "remediation_lineage_dir", None)
+                if settings is not None
+                else None
+            )
             if dirpath:
                 p = Path(dirpath)
                 p.mkdir(parents=True, exist_ok=True)

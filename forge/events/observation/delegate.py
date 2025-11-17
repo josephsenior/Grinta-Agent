@@ -2,8 +2,9 @@
 
 from dataclasses import dataclass
 
-from forge.core.schema import ObservationType
+from forge.core.schemas import ObservationType
 from forge.events.observation.observation import Observation
+from forge.events.tool import ToolCallMetadata
 
 
 @dataclass
@@ -19,6 +20,7 @@ class AgentDelegateObservation(Observation):
 
     outputs: dict
     observation: str = ObservationType.DELEGATE
+    tool_call_metadata: ToolCallMetadata | None = None
 
     @property
     def message(self) -> str:

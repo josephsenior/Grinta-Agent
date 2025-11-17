@@ -51,9 +51,15 @@ class MockUserAuth(UserAuth):
 
 @pytest.fixture
 def test_client():
-    with patch("forge.server.user_auth.user_auth.UserAuth.get_instance", return_value=MockUserAuth()), patch(
-        "forge.storage.settings.file_settings_store.FileSettingsStore.get_instance",
-        AsyncMock(return_value=FileSettingsStore(InMemoryFileStore())),
+    with (
+        patch(
+            "forge.server.user_auth.user_auth.UserAuth.get_instance",
+            return_value=MockUserAuth(),
+        ),
+        patch(
+            "forge.storage.settings.file_settings_store.FileSettingsStore.get_instance",
+            AsyncMock(return_value=FileSettingsStore(InMemoryFileStore())),
+        ),
     ):
         with TestClient(app) as client:
             yield client

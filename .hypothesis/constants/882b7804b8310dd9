@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\core\pydantic_compat.py
+# hypothesis_version: 6.147.0
+
+['__annotations__', '__fields__', 'dict', 'json', 'mode', 'model_dump', 'model_dump_json', 'model_fields']

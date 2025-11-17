@@ -86,14 +86,19 @@ class GitLabResolverMixin(GitLabMixinBase):
         page = 1
         per_page = min(max_comments, 10)
         url = (
-            f"{
-                self.BASE_URL}/projects/{project_id}/merge_requests/{issue_number}/discussions"
+            f"{self.BASE_URL}/projects/{project_id}/merge_requests/{
+                issue_number
+            }/discussions"
             if is_mr
-            else f"{
-                self.BASE_URL}/projects/{project_id}/issues/{issue_number}/notes"
+            else f"{self.BASE_URL}/projects/{project_id}/issues/{issue_number}/notes"
         )
         while len(all_comments) < max_comments:
-            params = {"per_page": per_page, "page": page, "order_by": "created_at", "sort": "asc"}
+            params = {
+                "per_page": per_page,
+                "page": page,
+                "order_by": "created_at",
+                "sort": "asc",
+            }
             response, headers = await self._make_request(url, params)
             if not response:
                 break
@@ -108,7 +113,9 @@ class GitLabResolverMixin(GitLabMixinBase):
             page += 1
         return self._process_raw_comments(all_comments)
 
-    def _process_raw_comments(self, comments: list, max_comments: int = 10) -> list[Comment]:
+    def _process_raw_comments(
+        self, comments: list, max_comments: int = 10
+    ) -> list[Comment]:
         """Helper method to fetch comments from a given URL with pagination."""
         all_comments: list[Comment] = []
         for comment_data in comments:
@@ -117,12 +124,16 @@ class GitLabResolverMixin(GitLabMixinBase):
                 body=self._truncate_comment(comment_data.get("body", "")),
                 author=comment_data.get("author", {}).get("username", "unknown"),
                 created_at=(
-                    datetime.fromisoformat(comment_data.get("created_at", "").replace("Z", "+00:00"))
+                    datetime.fromisoformat(
+                        comment_data.get("created_at", "").replace("Z", "+00:00")
+                    )
                     if comment_data.get("created_at")
                     else datetime.fromtimestamp(0)
                 ),
                 updated_at=(
-                    datetime.fromisoformat(comment_data.get("updated_at", "").replace("Z", "+00:00"))
+                    datetime.fromisoformat(
+                        comment_data.get("updated_at", "").replace("Z", "+00:00")
+                    )
                     if comment_data.get("updated_at")
                     else datetime.fromtimestamp(0)
                 ),

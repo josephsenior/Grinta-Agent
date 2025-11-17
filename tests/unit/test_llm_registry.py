@@ -7,11 +7,12 @@ from forge.llm.llm_registry import LLMRegistry, RegistryEvent
 
 
 class TestLLMRegistry(unittest.TestCase):
-
     def setUp(self):
         """Set up test environment before each test."""
         self.llm_config = LLMConfig(model="test-model")
-        self.config = ForgeConfig(llms={"llm": self.llm_config}, default_agent="CodeActAgent")
+        self.config = ForgeConfig(
+            llms={"llm": self.llm_config}, default_agent="CodeActAgent"
+        )
         self.registry = LLMRegistry(config=self.config)
 
     def test_get_llm_creates_new_llm(self):
@@ -23,7 +24,9 @@ class TestLLMRegistry(unittest.TestCase):
             mock_create.return_value = mock_llm
             llm = self.registry.get_llm(service_id, self.llm_config)
             self.assertEqual(llm, mock_llm)
-            mock_create.assert_called_once_with(config=self.llm_config, service_id=service_id)
+            mock_create.assert_called_once_with(
+                config=self.llm_config, service_id=service_id
+            )
 
     def test_get_llm_returns_existing_llm(self):
         """Test that get_llm returns existing LLM when service already exists."""
@@ -56,7 +59,9 @@ class TestLLMRegistry(unittest.TestCase):
         service_id = "test-service"
         with self.assertRaises(ValueError) as context:
             self.registry.get_llm(service_id, None)
-        self.assertIn("Requesting new LLM without specifying LLM config", str(context.exception))
+        self.assertIn(
+            "Requesting new LLM without specifying LLM config", str(context.exception)
+        )
 
     def test_request_extraneous_completion(self):
         """Test that requesting an extraneous completion creates a new LLM if needed."""
@@ -79,7 +84,9 @@ class TestLLMRegistry(unittest.TestCase):
                 service_id=service_id, llm_config=self.llm_config, messages=messages
             )
             self.assertEqual(response, "Hello from the LLM!")
-            mock_create.assert_called_once_with(config=self.llm_config, service_id=service_id, with_listener=False)
+            mock_create.assert_called_once_with(
+                config=self.llm_config, service_id=service_id, with_listener=False
+            )
             mock_llm.completion.assert_called_once_with(messages=messages)
 
     def test_get_active_llm(self):
@@ -97,7 +104,9 @@ class TestLLMRegistry(unittest.TestCase):
         self.registry.subscribe(callback)
         self.assertEqual(len(events_received), 1)
         self.assertEqual(events_received[0].llm, self.registry.active_agent_llm)
-        self.assertEqual(events_received[0].service_id, self.registry.active_agent_llm.service_id)
+        self.assertEqual(
+            events_received[0].service_id, self.registry.active_agent_llm.service_id
+        )
         self.assertIsNotNone(self.registry.subscriber)
         with patch.object(self.registry, "subscriber") as mock_subscriber:
             mock_event = MagicMock()

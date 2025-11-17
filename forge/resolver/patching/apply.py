@@ -65,14 +65,15 @@ def _apply_diff_with_subprocess(
 
 
 def _reverse(changes: list[Change]) -> list[Change]:
-
     def _reverse_change(c: Change) -> Change:
         return c._replace(old=c.new, new=c.old)
 
     return [_reverse_change(c) for c in changes]
 
 
-def _validate_context_line(old: int, line: str, lines: list[str], n_lines: int, hunk) -> None:
+def _validate_context_line(
+    old: int, line: str, lines: list[str], n_lines: int, hunk
+) -> None:
     """Validate that a context line matches the source."""
     if old > n_lines:
         msg = f'context line {old}, "{line}" does not exist in source'
@@ -117,7 +118,9 @@ def _apply_changes_to_lines(changes, lines: list[str]) -> list[str]:
     return lines
 
 
-def apply_diff(diff: diffobj, text: str | list[str], reverse: bool = False, use_patch: bool = False) -> list[str]:
+def apply_diff(
+    diff: diffobj, text: str | list[str], reverse: bool = False, use_patch: bool = False
+) -> list[str]:
     """Apply diffobj changes to text (string or lines) and return resulting lines."""
     lines = text.splitlines() if isinstance(text, str) else list(text)
 

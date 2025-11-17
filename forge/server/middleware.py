@@ -24,7 +24,9 @@ class LocalhostCORSMiddleware(CORSMiddleware):
     def __init__(self, app: ASGIApp) -> None:
         """Configure allowed origins while whitelisting localhost domains."""
         if allow_origins_str := os.getenv("PERMITTED_CORS_ORIGINS"):
-            allow_origins = tuple(origin.strip() for origin in allow_origins_str.split(","))
+            allow_origins = tuple(
+                origin.strip() for origin in allow_origins_str.split(",")
+            )
         else:
             allow_origins = ()
         super().__init__(
@@ -50,13 +52,17 @@ class LocalhostCORSMiddleware(CORSMiddleware):
 class CacheControlMiddleware(BaseHTTPMiddleware):
     """Middleware to disable caching for all routes by adding appropriate headers."""
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         """Set cache-control headers for static assets and dynamic responses."""
         response = await call_next(request)
         if request.url.path.startswith("/assets"):
             response.headers["Cache-Control"] = "public, max-age=2592000, immutable"
         else:
-            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+            response.headers["Cache-Control"] = (
+                "no-cache, no-store, must-revalidate, max-age=0"
+            )
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
         return response
@@ -64,12 +70,15 @@ class CacheControlMiddleware(BaseHTTPMiddleware):
 
 class InMemoryRateLimiter:
     """Naive in-memory rate limiter suitable for single-process deployments."""
+
     history: dict[str, list[datetime]]
     requests: int
     seconds: int
     sleep_seconds: int
 
-    def __init__(self, requests: int = 2, seconds: int = 1, sleep_seconds: int = 1) -> None:
+    def __init__(
+        self, requests: int = 2, seconds: int = 1, sleep_seconds: int = 1
+    ) -> None:
         """Configure rate limits and initialize request history."""
         self.requests = requests
         self.seconds = seconds
@@ -107,13 +116,19 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.rate_limiter = rate_limiter
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         """Apply rate limiting, falling back to next handler when within limits."""
         if not self.is_rate_limited_request(request):
             return await call_next(request)
         ok = await self.rate_limiter(request)
         if not ok:
-            return JSONResponse(status_code=429, content={"message": "Too many requests"}, headers={"Retry-After": "1"})
+            return JSONResponse(
+                status_code=429,
+                content={"message": "Too many requests"},
+                headers={"Retry-After": "1"},
+            )
         return await call_next(request)
 
     def is_rate_limited_request(self, request: StarletteRequest) -> bool:

@@ -22,14 +22,15 @@ if TYPE_CHECKING:
 
 class StuckDetector:
     """Detects when agent is stuck in unproductive loops or patterns.
-    
+
     Analyzes agent's action history to identify syntax errors, semantic loops,
     and repeated failures that indicate the agent needs intervention.
-    
+
     Attributes:
         SYNTAX_ERROR_MESSAGES: Common syntax error patterns to detect
 
     """
+
     SYNTAX_ERROR_MESSAGES = [
         "SyntaxError: unterminated string literal (detected at line",
         "SyntaxError: invalid syntax. Perhaps you forgot a comma?",
@@ -38,7 +39,7 @@ class StuckDetector:
 
     def __init__(self, state: State) -> None:
         """Initialize stuck detector with agent state.
-        
+
         Args:
             state: Current agent state to monitor
 
@@ -57,7 +58,7 @@ class StuckDetector:
             ),
             -1,
         )
-        return self.state.history[last_user_msg_idx + 1:]
+        return self.state.history[last_user_msg_idx + 1 :]
 
     def _filter_relevant_history(self, history: list[Event]) -> list[Event]:
         """Filter history to remove irrelevant events."""
@@ -70,7 +71,9 @@ class StuckDetector:
             )
         ]
 
-    def _collect_recent_events(self, filtered_history: list[Event]) -> tuple[list[Event], list[Event]]:
+    def _collect_recent_events(
+        self, filtered_history: list[Event]
+    ) -> tuple[list[Event], list[Event]]:
         """Collect the last 4 actions and 4 observations from filtered history."""
         last_actions: list[Event] = []
         last_observations: list[Event] = []
@@ -100,9 +103,14 @@ class StuckDetector:
 
     def _check_advanced_stuck_patterns(self, filtered_history: list[Event]) -> bool:
         """Check for advanced stuck patterns."""
-        if len(filtered_history) >= 6 and self._is_stuck_action_observation_pattern(filtered_history):
+        if len(filtered_history) >= 6 and self._is_stuck_action_observation_pattern(
+            filtered_history
+        ):
             return True
-        return bool(len(filtered_history) >= 10 and self._is_stuck_context_window_error(filtered_history))
+        return bool(
+            len(filtered_history) >= 10
+            and self._is_stuck_context_window_error(filtered_history)
+        )
 
     def is_stuck(self, headless_mode: bool = True) -> bool:
         """Check if the agent is stuck in a loop.
@@ -125,7 +133,9 @@ class StuckDetector:
         last_actions, last_observations = self._collect_recent_events(filtered_history)
 
         # Check basic stuck patterns
-        if self._check_basic_stuck_patterns(last_actions, last_observations, filtered_history):
+        if self._check_basic_stuck_patterns(
+            last_actions, last_observations, filtered_history
+        ):
             return True
 
         # Check advanced stuck patterns
@@ -145,9 +155,14 @@ class StuckDetector:
 
     def _check_observations_equal(self, last_observations: list[Event]) -> bool:
         """Check if all observations in the list are equal (ignoring PID)."""
-        return all(self._eq_no_pid(last_observations[0], observation) for observation in last_observations)
+        return all(
+            self._eq_no_pid(last_observations[0], observation)
+            for observation in last_observations
+        )
 
-    def _is_stuck_repeating_action_observation(self, last_actions: list[Event], last_observations: list[Event]) -> bool:
+    def _is_stuck_repeating_action_observation(
+        self, last_actions: list[Event], last_observations: list[Event]
+    ) -> bool:
         if len(last_actions) == 4 and len(last_observations) == 4:
             actions_equal = self._check_actions_equal(last_actions)
             observations_equal = self._check_observations_equal(last_observations)
@@ -156,10 +171,14 @@ class StuckDetector:
                 return True
         return False
 
-    def _is_stuck_repeating_action_error(self, last_actions: list[Event], last_observations: list[Event]) -> bool:
+    def _is_stuck_repeating_action_error(
+        self, last_actions: list[Event], last_observations: list[Event]
+    ) -> bool:
         """Check if there's a stuck repeating action-error pattern."""
         # Check if we have enough events to analyze
-        if not self._has_enough_events_for_error_analysis(last_actions, last_observations):
+        if not self._has_enough_events_for_error_analysis(
+            last_actions, last_observations
+        ):
             return False
 
         # Check if actions are repeating
@@ -169,13 +188,17 @@ class StuckDetector:
         # Check for error observation patterns
         return self._check_error_observation_patterns(last_observations)
 
-    def _has_enough_events_for_error_analysis(self, last_actions: list[Event], last_observations: list[Event]) -> bool:
+    def _has_enough_events_for_error_analysis(
+        self, last_actions: list[Event], last_observations: list[Event]
+    ) -> bool:
         """Check if we have enough events to analyze for error patterns."""
         return len(last_actions) >= 3 and len(last_observations) >= 3
 
     def _are_actions_repeating(self, last_actions: list[Event]) -> bool:
         """Check if the last 3 actions are all the same."""
-        return all(self._eq_no_pid(last_actions[0], action) for action in last_actions[:3])
+        return all(
+            self._eq_no_pid(last_actions[0], action) for action in last_actions[:3]
+        )
 
     def _check_error_observation_patterns(self, last_observations: list[Event]) -> bool:
         """Check for various error observation patterns."""
@@ -195,11 +218,17 @@ class StuckDetector:
 
     def _check_ipython_error_observations(self, last_observations: list[Event]) -> bool:
         """Check for IPython run cell error observation patterns."""
-        if not all(isinstance(obs, IPythonRunCellObservation) for obs in last_observations[:3]):
+        if not all(
+            isinstance(obs, IPythonRunCellObservation) for obs in last_observations[:3]
+        ):
             return False
 
         warning = "Action, IPythonRunCellObservation loop detected"
-        ipython_observations = [obs for obs in last_observations[:3] if isinstance(obs, IPythonRunCellObservation)]
+        ipython_observations = [
+            obs
+            for obs in last_observations[:3]
+            if isinstance(obs, IPythonRunCellObservation)
+        ]
 
         for error_message in self.SYNTAX_ERROR_MESSAGES:
             if self._check_specific_error_pattern(ipython_observations, error_message):
@@ -214,13 +243,19 @@ class StuckDetector:
         error_message: str,
     ) -> bool:
         """Check for specific error patterns in IPython observations."""
-        if error_message.startswith("SyntaxError: unterminated string literal (detected at line"):
-            return self._check_for_consistent_line_error(ipython_observations, error_message)
+        if error_message.startswith(
+            "SyntaxError: unterminated string literal (detected at line"
+        ):
+            return self._check_for_consistent_line_error(
+                ipython_observations, error_message
+            )
         if error_message in {
             "SyntaxError: invalid syntax. Perhaps you forgot a comma?",
             "SyntaxError: incomplete input",
         }:
-            return self._check_for_consistent_invalid_syntax(ipython_observations, error_message)
+            return self._check_for_consistent_invalid_syntax(
+                ipython_observations, error_message
+            )
         return False
 
     def _check_for_consistent_invalid_syntax(
@@ -248,10 +283,20 @@ class StuckDetector:
         return (
             len(set(first_lines)) == 1
             and len(valid_observations) == 3
-            and (len({obs.content.strip().split("\n")[:-2][-1] for obs in valid_observations}) == 1)
+            and (
+                len(
+                    {
+                        obs.content.strip().split("\n")[:-2][-1]
+                        for obs in valid_observations
+                    }
+                )
+                == 1
+            )
         )
 
-    def _extract_error_line_from_observation(self, obs: IPythonRunCellObservation, error_message: str) -> str | None:
+    def _extract_error_line_from_observation(
+        self, obs: IPythonRunCellObservation, error_message: str
+    ) -> str | None:
         """Extract error line from observation if it matches the error message."""
         content = obs.content
         lines = content.strip().split("\n")
@@ -289,28 +334,40 @@ class StuckDetector:
         ]
         if len(agent_message_actions) >= 3:
             last_agent_message_actions = agent_message_actions[-3:]
-            if all(last_agent_message_actions[0][1] == action[1] for action in last_agent_message_actions):
+            if all(
+                last_agent_message_actions[0][1] == action[1]
+                for action in last_agent_message_actions
+            ):
                 start_index = last_agent_message_actions[0][0]
                 end_index = last_agent_message_actions[-1][0]
                 has_observation_between = any(
-                    isinstance(event, Observation) for event in filtered_history[start_index + 1: end_index]
+                    isinstance(event, Observation)
+                    for event in filtered_history[start_index + 1 : end_index]
                 )
                 if not has_observation_between:
                     logger.warning("Repeated MessageAction with source=AGENT detected")
                     return True
         return False
 
-    def _is_stuck_action_observation_pattern(self, filtered_history: list[Event]) -> bool:
+    def _is_stuck_action_observation_pattern(
+        self, filtered_history: list[Event]
+    ) -> bool:
         """Check if there's a stuck action-observation pattern."""
         # Collect last 6 actions and observations
-        last_six_actions, last_six_observations = self._collect_last_six_events(filtered_history)
+        last_six_actions, last_six_observations = self._collect_last_six_events(
+            filtered_history
+        )
 
         # Check if we have enough events to analyze
-        if not self._has_enough_events_for_analysis(last_six_actions, last_six_observations):
+        if not self._has_enough_events_for_analysis(
+            last_six_actions, last_six_observations
+        ):
             return False
 
         # Check for repeating patterns
-        if self._has_repeating_action_pattern(last_six_actions) and self._has_repeating_observation_pattern(
+        if self._has_repeating_action_pattern(
+            last_six_actions
+        ) and self._has_repeating_observation_pattern(
             last_six_observations,
         ):
             logger.warning("Action, Observation pattern detected")
@@ -318,7 +375,9 @@ class StuckDetector:
 
         return False
 
-    def _collect_last_six_events(self, filtered_history: list[Event]) -> tuple[list[Event], list[Event]]:
+    def _collect_last_six_events(
+        self, filtered_history: list[Event]
+    ) -> tuple[list[Event], list[Event]]:
         """Collect the last 6 actions and observations from filtered history."""
         last_six_actions: list[Event] = []
         last_six_observations: list[Event] = []
@@ -351,7 +410,9 @@ class StuckDetector:
             and self._eq_no_pid(last_six_actions[1], last_six_actions[5])
         )
 
-    def _has_repeating_observation_pattern(self, last_six_observations: list[Event]) -> bool:
+    def _has_repeating_observation_pattern(
+        self, last_six_observations: list[Event]
+    ) -> bool:
         """Check if there's a repeating observation pattern."""
         return (
             self._eq_no_pid(last_six_observations[0], last_six_observations[2])
@@ -360,10 +421,14 @@ class StuckDetector:
             and self._eq_no_pid(last_six_observations[1], last_six_observations[5])
         )
 
-    def _get_condensation_events(self, filtered_history: list[Event]) -> list[tuple[int, Event]]:
+    def _get_condensation_events(
+        self, filtered_history: list[Event]
+    ) -> list[tuple[int, Event]]:
         """Get all condensation events with their indices."""
         return [
-            (i, event) for i, event in enumerate(filtered_history) if isinstance(event, AgentCondensationObservation)
+            (i, event)
+            for i, event in enumerate(filtered_history)
+            if isinstance(event, AgentCondensationObservation)
         ]
 
     def _check_consecutive_condensation_events(
@@ -377,10 +442,12 @@ class StuckDetector:
             end_idx = last_condensation_events[i + 1][0]
             has_other_events = any(
                 not isinstance(event, AgentCondensationObservation)
-                for event in filtered_history[start_idx + 1: end_idx]
+                for event in filtered_history[start_idx + 1 : end_idx]
             )
             if not has_other_events:
-                logger.warning("Context window error loop detected - repeated condensation events")
+                logger.warning(
+                    "Context window error loop detected - repeated condensation events"
+                )
                 return True
         return False
 
@@ -404,7 +471,9 @@ class StuckDetector:
             return False
 
         last_condensation_events = condensation_events[-10:]
-        return self._check_consecutive_condensation_events(last_condensation_events, filtered_history)
+        return self._check_consecutive_condensation_events(
+            last_condensation_events, filtered_history
+        )
 
     def _is_stuck_semantic_loop(self, filtered_history: list[Event]) -> bool:
         """Detect semantic loops: different actions achieving same no-progress result.
@@ -422,7 +491,9 @@ class StuckDetector:
 
         """
         recent_window = filtered_history[-20:]
-        action_intents, observation_outcomes = self._extract_intents_and_outcomes(recent_window)
+        action_intents, observation_outcomes = self._extract_intents_and_outcomes(
+            recent_window
+        )
 
         if len(action_intents) < 6 or len(observation_outcomes) < 6:
             return False
@@ -440,7 +511,9 @@ class StuckDetector:
 
         return False
 
-    def _extract_intents_and_outcomes(self, events: list[Event]) -> tuple[list[str], list[str]]:
+    def _extract_intents_and_outcomes(
+        self, events: list[Event]
+    ) -> tuple[list[str], list[str]]:
         """Extract action intents and observation outcomes from events.
 
         Args:
@@ -454,11 +527,15 @@ class StuckDetector:
         observation_outcomes = []
 
         for event in events:
-            if isinstance(event, Action) and not isinstance(event, (NullAction, MessageAction)):
+            if isinstance(event, Action) and not isinstance(
+                event, (NullAction, MessageAction)
+            ):
                 intent = self._extract_action_intent(event)
                 if intent:
                     action_intents.append(intent)
-            elif isinstance(event, Observation) and not isinstance(event, NullObservation):
+            elif isinstance(event, Observation) and not isinstance(
+                event, NullObservation
+            ):
                 outcome = self._extract_observation_outcome(event)
                 if outcome:
                     observation_outcomes.append(outcome)
@@ -494,7 +571,11 @@ class StuckDetector:
         if not observation_outcomes:
             return 0.0
 
-        failures = sum(1 for outcome in observation_outcomes if outcome in ["error", "no_change", "not_found"])
+        failures = sum(
+            1
+            for outcome in observation_outcomes
+            if outcome in ["error", "no_change", "not_found"]
+        )
         return failures / len(observation_outcomes)
 
     def _extract_action_intent(self, action: Action) -> str | None:
@@ -618,10 +699,20 @@ class StuckDetector:
         return "success"
 
     def _eq_no_pid(self, obj1: Event, obj2: Event) -> bool:
-        if isinstance(obj1, IPythonRunCellAction) and isinstance(obj2, IPythonRunCellAction):
-            if "edit_file_by_replace(" in obj1.code and "edit_file_by_replace(" in obj2.code:
-                return len(obj1.code.split("\n")) > 2 and obj1.code.split("\n")[:3] == obj2.code.split("\n")[:3]
+        if isinstance(obj1, IPythonRunCellAction) and isinstance(
+            obj2, IPythonRunCellAction
+        ):
+            if (
+                "edit_file_by_replace(" in obj1.code
+                and "edit_file_by_replace(" in obj2.code
+            ):
+                return (
+                    len(obj1.code.split("\n")) > 2
+                    and obj1.code.split("\n")[:3] == obj2.code.split("\n")[:3]
+                )
             return obj1 == obj2
-        if isinstance(obj1, CmdOutputObservation) and isinstance(obj2, CmdOutputObservation):
+        if isinstance(obj1, CmdOutputObservation) and isinstance(
+            obj2, CmdOutputObservation
+        ):
             return obj1.command == obj2.command and obj1.exit_code == obj2.exit_code
         return obj1 == obj2

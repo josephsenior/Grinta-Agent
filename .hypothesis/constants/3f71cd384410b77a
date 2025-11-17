@@ -1,0 +1,4 @@
+# file: C:\Users\GIGABYTE\Desktop\Forge\forge\agenthub\readonly_agent\function_calling.py
+# hypothesis_version: 6.147.0
+
+[' | head -n 100', '.', 'function', 'include', 'message', 'name', 'path', 'pattern', 'text', 'thought', 'tool_calls', 'type', 'view_range']

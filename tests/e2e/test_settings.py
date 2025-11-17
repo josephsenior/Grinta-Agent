@@ -69,7 +69,9 @@ def _handle_initial_modals(page: Page) -> None:
 def _navigate_to_integrations_tab(page: Page) -> None:
     """Navigate to the integrations tab in settings."""
     integrations_tab = page.locator("text=Integrations")
-    if integrations_tab.is_visible(timeout=3000) and (not page.url.endswith("/settings/integrations")):
+    if integrations_tab.is_visible(timeout=3000) and (
+        not page.url.endswith("/settings/integrations")
+    ):
         print("Clicking Integrations tab...")
         integrations_tab.click()
         page.wait_for_load_state("networkidle")
@@ -84,7 +86,9 @@ def _configure_github_token(page: Page, base_url: str) -> None:
         if github_token := os.getenv("GITHUB_TOKEN", ""):
             github_token_input.clear()
             github_token_input.fill(github_token)
-            print(f"Filled GitHub token from environment variable (length: {len(github_token)})")
+            print(
+                f"Filled GitHub token from environment variable (length: {len(github_token)})"
+            )
             if filled_value := github_token_input.input_value():
                 print(f"Token field now contains value of length: {len(filled_value)}")
             else:
@@ -110,7 +114,8 @@ def _save_github_token_configuration(page: Page, base_url: str) -> None:
             try:
                 page.wait_for_timeout(1000)
                 page.wait_for_function(
-                    "document.querySelector('[data-testid=\"submit-button\"]').disabled === true", timeout=10000
+                    "document.querySelector('[data-testid=\"submit-button\"]').disabled === true",
+                    timeout=10000,
                 )
                 print("Save operation completed - form is now clean")
             except Exception:
@@ -128,7 +133,9 @@ def _save_github_token_configuration(page: Page, base_url: str) -> None:
 def _handle_github_token_not_configured(page: Page, base_url: str) -> None:
     """Handle case when GitHub token is not configured."""
     print("GitHub token not configured. Need to navigate to settings...")
-    navigate_to_settings_button = page.locator('[data-testid="navigate-to-settings-button"]')
+    navigate_to_settings_button = page.locator(
+        '[data-testid="navigate-to-settings-button"]'
+    )
     if navigate_to_settings_button.is_visible(timeout=3000):
         navigate_to_settings_button.click()
         page.wait_for_load_state("networkidle", timeout=10000)
@@ -165,7 +172,9 @@ def _check_github_token_configuration(page: Page, base_url: str) -> None:
         connect_to_provider = page.locator("text=Connect to a Repository")
         if connect_to_provider.is_visible(timeout=3000):
             print('Found "Connect to a Repository" section')
-            navigate_to_settings_button = page.locator('[data-testid="navigate-to-settings-button"]')
+            navigate_to_settings_button = page.locator(
+                '[data-testid="navigate-to-settings-button"]'
+            )
             if navigate_to_settings_button.is_visible(timeout=3000):
                 _handle_github_token_not_configured(page, base_url)
             else:
