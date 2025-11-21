@@ -41,7 +41,6 @@ export type Settings = {
   AGENT: string;
   LANGUAGE: string;
   LLM_API_KEY_SET: boolean;
-  SEARCH_API_KEY_SET: boolean;
   CONFIRMATION_MODE: boolean;
   SECURITY_ANALYZER: string | null;
   REMOTE_RUNTIME_RESOURCE_FACTOR: number | null;
@@ -53,7 +52,6 @@ export type Settings = {
   ENABLE_PROACTIVE_CONVERSATION_STARTERS: boolean;
   ENABLE_SOLVABILITY_ANALYSIS: boolean;
   USER_CONSENTS_TO_ANALYTICS: boolean | null;
-  SEARCH_API_KEY?: string;
   IS_NEW_USER?: boolean;
   MCP_CONFIG?: MCPConfig;
   MAX_BUDGET_PER_TASK: number | null;
@@ -83,7 +81,6 @@ export type ApiSettings = {
   language: string;
   llm_api_key: string | null;
   llm_api_key_set: boolean;
-  search_api_key_set: boolean;
   confirmation_mode: boolean;
   security_analyzer: string | null;
   remote_runtime_resource_factor: number | null;
@@ -94,7 +91,6 @@ export type ApiSettings = {
   enable_proactive_conversation_starters: boolean;
   enable_solvability_analysis: boolean;
   user_consents_to_analytics: boolean | null;
-  search_api_key?: string;
   provider_tokens_set: Partial<Record<Provider, string | null>>;
   max_budget_per_task: number | null;
   mcp_config?: {
@@ -124,12 +120,10 @@ export type ApiSettings = {
 export type PostSettings = Settings & {
   user_consents_to_analytics: boolean | null;
   llm_api_key?: string | null;
-  search_api_key?: string;
   mcp_config?: MCPConfig;
 };
 
 export type PostApiSettings = ApiSettings & {
   user_consents_to_analytics: boolean | null;
-  search_api_key?: string;
   mcp_config?: MCPConfig;
 };

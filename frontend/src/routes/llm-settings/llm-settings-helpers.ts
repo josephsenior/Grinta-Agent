@@ -11,7 +11,6 @@ export type LlmSettingsView = "basic" | "advanced";
 export type DirtyInputs = {
   model: boolean;
   apiKey: boolean;
-  searchApiKey: boolean;
   baseUrl: boolean;
   agent: boolean;
   confirmationMode: boolean;
@@ -23,7 +22,6 @@ export type DirtyInputs = {
 export const createDefaultDirtyInputs = (): DirtyInputs => ({
   model: false,
   apiKey: false,
-  searchApiKey: false,
   baseUrl: false,
   agent: false,
   confirmationMode: false,
@@ -47,7 +45,6 @@ export const buildBasicPayload = ({
   const provider = providerDisplay ? getProviderId(providerDisplay) : undefined;
   const model = formData.get("llm-model-input")?.toString();
   const apiKey = formData.get("llm-api-key-input")?.toString();
-  const searchApiKey = formData.get("search-api-key-input")?.toString();
   const confirmationMode =
     formData.get("enable-confirmation-mode-switch")?.toString() === "on";
   const securityAnalyzer = formData.get("security-analyzer-input")?.toString();
@@ -57,7 +54,6 @@ export const buildBasicPayload = ({
   return {
     LLM_MODEL: fullLlmModel,
     llm_api_key: apiKey || null,
-    SEARCH_API_KEY: searchApiKey || "",
     CONFIRMATION_MODE: confirmationMode,
     SECURITY_ANALYZER:
       securityAnalyzer === "none"
@@ -114,7 +110,6 @@ export const buildAdvancedPayload = ({
   const model = formData.get("llm-custom-model-input")?.toString();
   const baseUrl = formData.get("base-url-input")?.toString();
   const apiKey = formData.get("llm-api-key-input")?.toString();
-  const searchApiKey = formData.get("search-api-key-input")?.toString();
   const agent = formData.get("agent-input")?.toString();
   const confirmationMode =
     formData.get("enable-confirmation-mode-switch")?.toString() === "on";
@@ -129,7 +124,6 @@ export const buildAdvancedPayload = ({
     LLM_MODEL: model || DEFAULT_SETTINGS.LLM_MODEL,
     LLM_BASE_URL: baseUrl ?? DEFAULT_SETTINGS.LLM_BASE_URL,
     llm_api_key: apiKey || null,
-    SEARCH_API_KEY: searchApiKey || "",
     AGENT: agent || DEFAULT_SETTINGS.AGENT,
     CONFIRMATION_MODE: confirmationMode,
     ENABLE_DEFAULT_CONDENSER: enableDefaultCondenser,

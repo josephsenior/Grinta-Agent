@@ -9,9 +9,9 @@ npx lint-staged
 echo "Running backend pre-commit..."
 cd ..
 if command -v poetry >/dev/null 2>&1 && command -v pre-commit >/dev/null 2>&1; then
-	poetry run pre-commit run --all-files --show-diff-on-failure --config ./dev_config/python/.pre-commit-config.yaml
+	poetry run pre-commit run --all-files --show-diff-on-failure --config ./backend/dev_config/python/.pre-commit-config.yaml
 else
 	echo "Skipping backend pre-commit: 'poetry' or 'pre-commit' not found in PATH."
 	echo "To run full backend checks locally, install Poetry and pre-commit, then run:"
-	echo "  poetry run pre-commit run --all-files --config ./dev_config/python/.pre-commit-config.yaml"
+		echo "  poetry run pre-commit run --all-files --config ./backend/dev_config/python/.pre-commit-config.yaml"
 fi

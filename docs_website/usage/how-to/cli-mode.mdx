@@ -196,13 +196,12 @@ To configure Model Context Protocol (MCP) servers, you can refer to the document
 
 This command modifies your `~/.Forge/config.toml` file and will prompt you to restart Forge for changes to take effect.
 
-By default, the [Fetch MCP server](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) will be automatically configured for Forge. You can also [enable search engine](../search-engine-setup) via the [Tavily MCP server](https://github.com/tavily-ai/tavily-mcp) by setting the `search_api_key` under the `[core]` section in the `~/.Forge/config.toml` file.
+By default, the [Fetch MCP server](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) will be automatically configured for Forge.
 
 ##### Example of the `config.toml` file with MCP server configuration:
 
 ```toml
 [core]
-search_api_key = "tvly-your-api-key-here"
 
 [mcp]
 stdio_servers = [

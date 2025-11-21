@@ -73,7 +73,6 @@ class Settings(BaseModel):
     sandbox_base_container_image: str | None = None
     sandbox_runtime_container_image: str | None = None
     mcp_config: MCPConfig | None = None
-    search_api_key: SecretStr | None = None
     # Knowledge Base Configuration
     kb_enabled: bool = True
     kb_active_collection_ids: list[str] = Field(default_factory=list)
@@ -90,7 +89,7 @@ class Settings(BaseModel):
     git_user_email: str | None = None
     model_config = ConfigDict(validate_assignment=True)
 
-    @field_serializer("llm_api_key", "search_api_key")
+    @field_serializer("llm_api_key")
     def api_key_serializer(self, api_key: SecretStr | None, info: SerializationInfo):
         """Serialize API keys, exposing secrets only when requested.
 
@@ -291,7 +290,6 @@ class Settings(BaseModel):
             llm_base_url=llm_config.base_url,
             remote_runtime_resource_factor=app_config.sandbox.remote_runtime_resource_factor,
             mcp_config=mcp_config,
-            search_api_key=getattr(app_config, "search_api_key", None),
             max_budget_per_task=app_config.max_budget_per_task,
         )
 

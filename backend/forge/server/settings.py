@@ -36,7 +36,6 @@ class GETSettingsModel(Settings):
 
     provider_tokens_set: dict["ProviderType", str | None] | None = None
     llm_api_key_set: bool
-    search_api_key_set: bool = False
     model_config = ConfigDict(use_enum_values=True, arbitrary_types_allowed=True)
 
 

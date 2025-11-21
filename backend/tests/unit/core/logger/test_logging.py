@@ -84,7 +84,7 @@ def test_llm_config_attributes_masking(test_handler):
 
 def test_app_config_attributes_masking(test_handler):
     logger, stream = test_handler
-    app_config = ForgeConfig(search_api_key=SecretStr("search-xyz789"))
+    app_config = ForgeConfig()
     logger.info("App Config: %s", app_config)
     log_output = stream.getvalue()
     assert "github_token" not in log_output

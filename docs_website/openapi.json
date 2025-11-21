@@ -2778,19 +2778,6 @@
               }
             ]
           },
-          "search_api_key": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "password",
-                "writeOnly": true
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Search Api Key"
-          },
           "sandbox_api_key": {
             "anyOf": [
               {
@@ -2887,11 +2874,6 @@
             "type": "boolean",
             "title": "Llm Api Key Set"
           },
-          "search_api_key_set": {
-            "type": "boolean",
-            "title": "Search Api Key Set",
-            "default": false
-          }
         },
         "type": "object",
         "required": ["llm_api_key_set"],
@@ -3580,19 +3562,6 @@
                 "type": "null"
               }
             ]
-          },
-          "search_api_key": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "password",
-                "writeOnly": true
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Search Api Key"
           },
           "sandbox_api_key": {
             "anyOf": [

@@ -21,7 +21,6 @@ describe("llm-settings helpers", () => {
     expect(payload).toMatchObject({
       LLM_MODEL: "openai/gpt-4o",
       llm_api_key: "secret",
-      SEARCH_API_KEY: "search-key",
       CONFIRMATION_MODE: true,
       SECURITY_ANALYZER: "llm",
       LLM_BASE_URL: DEFAULT_SETTINGS.LLM_BASE_URL,

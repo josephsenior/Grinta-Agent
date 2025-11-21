@@ -23,7 +23,6 @@ export interface AdvancedSettingsSectionProps {
   onCustomModelChange: (value: string) => void;
   onBaseUrlChange: (value: string) => void;
   onApiKeyChange: (value: string) => void;
-  onSearchApiKeyChange: (value: string) => void;
   onAgentChange: (value: string) => void;
   onAdvancedConfigChange: (config: Partial<Settings>) => void;
   onCondenserMaxSizeChange: (value: string) => void;
@@ -43,7 +42,6 @@ export function AdvancedSettingsSection({
   onCustomModelChange,
   onBaseUrlChange,
   onApiKeyChange,
-  onSearchApiKeyChange,
   onAgentChange,
   onAdvancedConfigChange,
   onCondenserMaxSizeChange,
@@ -111,29 +109,6 @@ export function AdvancedSettingsSection({
         text={t(I18nKey.SETTINGS$DONT_KNOW_API_KEY)}
         linkText={t(I18nKey.SETTINGS$CLICK_FOR_INSTRUCTIONS)}
         href="https://docs.all-hands.dev/usage/local-setup#getting-an-api-key"
-      />
-
-      <SettingsInput
-        testId="search-api-key-input"
-        name="search-api-key-input"
-        label={t(I18nKey.SETTINGS$SEARCH_API_KEY)}
-        type="password"
-        className="w-full sm:max-w-xs md:max-w-sm lg:max-w-[680px]"
-        defaultValue={settings.SEARCH_API_KEY || ""}
-        onChange={onSearchApiKeyChange}
-        placeholder={t(I18nKey.API$TAVILY_KEY_EXAMPLE)}
-        startContent={
-          settings.SEARCH_API_KEY_SET && (
-            <KeyStatusIcon isSet={settings.SEARCH_API_KEY_SET} />
-          )
-        }
-      />
-
-      <HelpLink
-        testId="search-api-key-help-anchor"
-        text={t(I18nKey.SETTINGS$SEARCH_API_KEY_OPTIONAL)}
-        linkText={t(I18nKey.SETTINGS$SEARCH_API_KEY_INSTRUCTIONS)}
-        href="https://tavily.com/"
       />
 
       <SettingsInput

@@ -85,9 +85,6 @@ class ForgeConfig(BaseModel):
     save_trajectory_path: str | None = Field(default=None)
     save_screenshots_in_trajectory: bool = Field(default=False)
     replay_trajectory_path: str | None = Field(default=None)
-    search_api_key: SecretStr | None = Field(
-        default=None, description="API key for legacy search integrations"
-    )
     workspace_base: str | None = Field(default=None)
     workspace_mount_path_in_sandbox: str = Field(
         default=DEFAULT_WORKSPACE_MOUNT_PATH_IN_SANDBOX

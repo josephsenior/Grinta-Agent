@@ -293,10 +293,11 @@ def compute_regression(results):
 
 
 def compute_readability(python_code):
-    import tree_sitter_python
-    from tree_sitter import Language, Parser
+    from tree_sitter import Parser
+    from tree_sitter_language_pack import get_language
 
-    parser = Parser(Language(tree_sitter_python.language()))
+    # Use installed language pack instead of local third_party grammar
+    parser = Parser(get_language("python"))
     results = code_stats(python_code)
     num_lines = len(python_code.strip().split("\n"))
     results.update(total_byte_entropy_stats(python_code))

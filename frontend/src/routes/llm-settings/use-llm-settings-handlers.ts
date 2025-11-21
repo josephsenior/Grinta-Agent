@@ -65,13 +65,6 @@ export function useLlmSettingsHandlers({
     [markDirty],
   );
 
-  const handleSearchApiKeyIsDirty = React.useCallback(
-    (apiKey: string) => {
-      markDirty("searchApiKey", apiKey !== (settings?.SEARCH_API_KEY ?? ""));
-    },
-    [settings, markDirty],
-  );
-
   const handleBaseUrlIsDirty = React.useCallback(
     (baseUrl: string) => {
       markDirty("baseUrl", baseUrl !== (settings?.LLM_BASE_URL ?? ""));
@@ -158,7 +151,6 @@ export function useLlmSettingsHandlers({
     handleModelIsDirty,
     handleCustomModelIsDirty,
     handleApiKeyIsDirty,
-    handleSearchApiKeyIsDirty,
     handleBaseUrlIsDirty,
     handleAgentChange,
     handleConfirmationModeChange,

@@ -225,7 +225,6 @@ function LlmSettingsScreen() {
                   isFetching={isFetching}
                   onModelChange={handlers.handleModelIsDirty}
                   onApiKeyChange={handlers.handleApiKeyIsDirty}
-                  onSearchApiKeyChange={handlers.handleSearchApiKeyIsDirty}
                   t={t}
                 />
               )}
@@ -243,7 +242,6 @@ function LlmSettingsScreen() {
                   onCustomModelChange={handlers.handleCustomModelIsDirty}
                   onBaseUrlChange={handlers.handleBaseUrlIsDirty}
                   onApiKeyChange={handlers.handleApiKeyIsDirty}
-                  onSearchApiKeyChange={handlers.handleSearchApiKeyIsDirty}
                   onAgentChange={handlers.handleAgentChange}
                   onAdvancedConfigChange={handleAdvancedConfigChange}
                   onCondenserMaxSizeChange={

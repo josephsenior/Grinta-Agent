@@ -490,8 +490,6 @@ def _build_settings_response(
     settings_with_token_data = GETSettingsModel(
         **model_dump_with_options(settings, exclude={"secrets_store"}),
         llm_api_key_set=settings.llm_api_key is not None and bool(settings.llm_api_key),
-        search_api_key_set=settings.search_api_key is not None
-        and bool(settings.search_api_key),
         provider_tokens_set=provider_tokens_set or None,
     )
 
@@ -499,7 +497,6 @@ def _build_settings_response(
     return settings_with_token_data.model_copy(
         update={
             "llm_api_key": None,
-            "search_api_key": None,
             "sandbox_api_key": None,
         },
     )
@@ -665,11 +662,6 @@ def convert_to_settings(settings_with_token_data: Settings) -> Settings:
         settings_with_token_data.llm_api_key,
         "llm_api_key",
     )
-    _preserve_secret_field(
-        filtered_settings_data,
-        settings_with_token_data.search_api_key,
-        "search_api_key",
-    )
     _apply_final_openrouter_fixes(filtered_settings_data)
     return Settings(**filtered_settings_data)
 
@@ -777,7 +769,6 @@ def _build_default_settings_response() -> GETSettingsModel:
         user_consents_to_analytics=False,
         enable_proactive_conversation_starters=False,
         enable_solvability_analysis=False,
-        search_api_key=None,
         max_budget_per_task=None,
         email="",
         email_verified=True,
@@ -803,14 +794,12 @@ def _build_default_settings_response() -> GETSettingsModel:
     settings_with_token_data = GETSettingsModel(
         **model_dump_with_options(default_settings, exclude={"secrets_store"}),
         llm_api_key_set=False,
-        search_api_key_set=False,
         provider_tokens_set=None,
     )
 
     return settings_with_token_data.model_copy(
         update={
             "llm_api_key": None,
-            "search_api_key": None,
             "sandbox_api_key": None,
         },
     )

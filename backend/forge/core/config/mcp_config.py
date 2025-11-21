@@ -318,7 +318,6 @@ class MCPConfig(BaseModel):
 class ForgeMCPConfig:
     """Utility class for creating default Forge MCP configurations."""
 
-    # Removed: Tavily search engine support (deprecated in favor of DuckDuckGo MCP)
 
     @staticmethod
     def create_default_mcp_server_config(
@@ -337,7 +336,6 @@ class ForgeMCPConfig:
 
         """
         stdio_servers: list[MCPStdioServerConfig] = []
-        # Removed: Tavily search engine auto-configuration (use config.toml for DuckDuckGo instead)
         shttp_servers = MCPSHTTPServerConfig(url=f"http://{host}/mcp/mcp", api_key=None)
         return (shttp_servers, stdio_servers)
 

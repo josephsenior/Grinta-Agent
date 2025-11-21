@@ -1119,13 +1119,11 @@ def reset_settings_cache(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_settings_api_key_serializer_exposes_when_requested() -> None:
     settings = settings_module.Settings(
         llm_api_key=SecretStr("secret"),
-        search_api_key=SecretStr("search"),
     )
     masked = settings.model_dump()
     assert masked["llm_api_key"] != "secret"
     revealed = settings.model_dump(context={"expose_secrets": True})
     assert revealed["llm_api_key"] == "secret"
-    assert revealed["search_api_key"] == "search"
 
 
 def test_settings_convert_provider_tokens() -> None:
@@ -1184,7 +1182,6 @@ def build_app_config(api_key: str | None = "secret") -> Any:
         security=security,
         sandbox=sandbox,
         mcp=MCPConfig(sse_servers=[], stdio_servers=[], shttp_servers=[]),
-        search_api_key=SecretStr("search"),
         max_budget_per_task=123.0,
         llms={},
         get_llm_config=lambda: llm_config,

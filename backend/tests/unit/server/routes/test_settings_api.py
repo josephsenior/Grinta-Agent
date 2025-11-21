@@ -206,7 +206,6 @@ def test_build_settings_response_masks_keys():
     settings = Settings(
         llm_model="openai/gpt-4",
         llm_api_key=SecretStr("secret"),
-        search_api_key=SecretStr("search"),
         sandbox_api_key=SecretStr("sandbox"),
     )
     provider_tokens: dict[ProviderType, str | None] = {
@@ -215,7 +214,6 @@ def test_build_settings_response_masks_keys():
     response = settings_routes._build_settings_response(settings, provider_tokens)
     assert isinstance(response, GETSettingsModel)
     assert response.llm_api_key is None
-    assert response.search_api_key is None
     assert response.llm_api_key_set is True
     assert response.provider_tokens_set == {"github": "github.com"}
 
@@ -534,9 +532,7 @@ def test_convert_to_settings_converts_string_keys():
         {
             "llm_model": "model",
             "llm_api_key": "plain-key",
-            "search_api_key": "search-key",
         }
     )
     result = settings_routes.convert_to_settings(settings)
     assert isinstance(result.llm_api_key, SecretStr)
-    assert isinstance(result.search_api_key, SecretStr)

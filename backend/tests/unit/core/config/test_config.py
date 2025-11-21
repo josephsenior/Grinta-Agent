@@ -693,15 +693,12 @@ def _test_app_config_api_key_redaction():
     app_config = ForgeConfig(
         llms={"llm": llm_config},
         agents={"agent": agent_config},
-        search_api_key="my_search_api_key",
     )
-    assert "my_search_api_key" not in repr(app_config)
-    assert "my_search_api_key" not in str(app_config)
 
 
 def _validate_app_config_attributes():
     """Validate app config attributes don't contain unexpected key/token names."""
-    known_key_token_attrs_app = ["search_api_key"]
+    known_key_token_attrs_app = []
     for attr_name in ForgeConfig.model_fields.keys():
         if (
             not attr_name.startswith("__")

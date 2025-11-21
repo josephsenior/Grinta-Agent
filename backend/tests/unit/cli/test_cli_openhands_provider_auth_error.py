@@ -45,9 +45,6 @@ def mock_config():
     llm_config.model = "Openhands/o3"
     config.get_llm_config.return_value = llm_config
     config.get_llm_config_from_agent.return_value = llm_config
-    search_api_key_mock = MagicMock()
-    search_api_key_mock.get_secret_value.return_value = ""
-    config.search_api_key = search_api_key_mock
     config.sandbox = MagicMock()
     config.sandbox.volumes = None
     return config

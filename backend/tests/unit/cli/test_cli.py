@@ -100,9 +100,6 @@ def mock_config():
     config.runtime = "local"
     config.cli_multiline_input = False
     config.workspace_base = "/test/dir"
-    search_api_key_mock = MagicMock()
-    search_api_key_mock.get_secret_value.return_value = ""
-    config.search_api_key = search_api_key_mock
     config.get_llm_config_from_agent.return_value = LLMConfig(model="model")
     config.sandbox = MagicMock()
     config.sandbox.volumes = None

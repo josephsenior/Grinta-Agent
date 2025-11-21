@@ -21,7 +21,6 @@ from forge.cli.settings import (
     display_settings,
     modify_llm_settings_advanced,
     modify_llm_settings_basic,
-    modify_search_api_settings,
 )
 from forge.cli.tui import (
     COLOR_GREY,
@@ -581,7 +580,6 @@ async def handle_settings_command(
     elif modify_settings == 1:
         await modify_llm_settings_advanced(config, settings_store)
     elif modify_settings == 2:
-        await modify_search_api_settings(config, settings_store)
 
 
 async def handle_resume_command(

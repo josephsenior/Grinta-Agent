@@ -1,5 +1,8 @@
-import tree_sitter_python as tspython
-from tree_sitter import Language, Parser
+from tree_sitter import Parser
+from tree_sitter_language_pack import get_language
+
+# Use installed language pack instead of local third_party grammar
+LANGUAGE = get_language("python")
 
 
 def get_all_sub_trees(root_node):
@@ -22,7 +25,6 @@ def get_all_sub_trees(root_node):
 
 
 def ast_parse(candidate):
-    LANGUAGE = Language(tspython.language())
     parser = Parser(LANGUAGE)
     return parser.parse(bytes(candidate, "utf8")).root_node
 

@@ -740,9 +740,6 @@ async def run_setup_flow(
         ["Yes", "No"],
     )
     if setup_search == 0:
-        from forge.cli.settings import modify_search_api_settings
-
-        await modify_search_api_settings(config, settings_store)
 
 
 def run_alias_setup_flow(config: ForgeConfig) -> None:
@@ -875,8 +872,6 @@ def _apply_settings_to_config(config, settings) -> None:
 
     config.security.confirmation_mode = settings.confirmation_mode or False
 
-    if settings.search_api_key and (not config.search_api_key):
-        config.search_api_key = settings.search_api_key
         logger.debug("Using search API key from settings.json")
 
     _configure_condenser(config, settings)

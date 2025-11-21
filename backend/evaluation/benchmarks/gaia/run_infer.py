@@ -65,7 +65,6 @@ def get_config(metadata: EvalMetadata) -> ForgeConfig:
         agent_config.enable_prompt_extensions = False
     config_copy = copy.deepcopy(config)
     load_from_toml(config_copy)
-    config.search_api_key = config_copy.search_api_key
     return config
 
 
@@ -392,7 +391,7 @@ if __name__ == "__main__":
         data_split=args.data_split,
         details={
             "gaia-level": args.level,
-            "mcp-servers": ["tavily"] if toml_config.search_api_key else [],
+            "mcp-servers": [],
         },
         agent_config=agent_config,
     )

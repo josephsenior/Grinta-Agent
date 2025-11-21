@@ -34,7 +34,6 @@ def _build_config(runtime: str = "local", mcp_config: MCPConfig | None = None):
     config.default_model = "claude-3-5-sonnet"
     config.security = SimpleNamespace(confirmation_mode=False)
     config.enable_default_condenser = False
-    config.search_api_key = None
     config.file_store_path = "/tmp"
     config.get_llm_config.return_value = SimpleNamespace(
         model=config.default_model, api_key=""
@@ -258,7 +257,7 @@ class TestDisplayMcpServers:
         config = _build_config(
             mcp_config=MCPConfig(
             sse_servers=[MCPSSEServerConfig(url="https://example.com/sse")],
-            stdio_servers=[MCPStdioServerConfig(name="tavily", command="npx")],
+            stdio_servers=[MCPStdioServerConfig(name="duckduckgo", command="npx")],
             shttp_servers=[MCPSHTTPServerConfig(url="http://localhost:3000/mcp")],
             )
         )

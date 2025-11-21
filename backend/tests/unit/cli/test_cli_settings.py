@@ -7,7 +7,6 @@ from forge.cli.settings import (
     display_settings,
     modify_llm_settings_advanced,
     modify_llm_settings_basic,
-    modify_search_api_settings,
 )
 from forge.cli.tui import UserCancelledError
 from forge.core.config import ForgeConfig
@@ -49,7 +48,6 @@ class TestDisplaySettings:
         security_mock.confirmation_mode = True
         config.security = security_mock
         config.enable_default_condenser = True
-        config.search_api_key = SecretStr("tvly-test-key")
         return config
 
     @pytest.fixture
@@ -66,7 +64,6 @@ class TestDisplaySettings:
         security_mock.confirmation_mode = True
         config.security = security_mock
         config.enable_default_condenser = True
-        config.search_api_key = SecretStr("tvly-test-key")
         return config
 
     @patch("forge.cli.settings.print_container")
@@ -993,65 +990,3 @@ class TestGetValidatedInput:
         assert 'Input must start with "valid"' in args[0].value
         assert result == "valid-input"
 
-
-class TestModifySearchApiSettings:
-    @pytest.fixture
-    def app_config(self):
-        config = MagicMock(spec=ForgeConfig)
-        config.search_api_key = SecretStr("tvly-existing-key")
-        return config
-
-    @pytest.fixture
-    def settings_store(self):
-        store = MagicMock(spec=FileSettingsStore)
-        store.load = AsyncMock(return_value=Settings())
-        store.store = AsyncMock()
-        return store
-
-    @pytest.mark.asyncio
-    @patch("forge.cli.settings.PromptSession")
-    @patch("forge.cli.settings.cli_confirm")
-    @patch("forge.cli.settings.print_formatted_text")
-    async def test_modify_search_api_settings_set_new_key(
-        self, mock_print, mock_confirm, mock_session, app_config, settings_store
-    ):
-        session_instance = MagicMock()
-        session_instance.prompt_async = AsyncMock(return_value="tvly-new-key")
-        mock_session.return_value = session_instance
-        mock_confirm.side_effect = [0, 0]
-        await modify_search_api_settings(app_config, settings_store)
-        assert app_config.search_api_key.get_secret_value() == "tvly-new-key"
-        settings_store.store.assert_called_once()
-        args, kwargs = settings_store.store.call_args
-        settings = args[0]
-        assert settings.search_api_key.get_secret_value() == "tvly-new-key"
-
-    @pytest.mark.asyncio
-    @patch("forge.cli.settings.PromptSession")
-    @patch("forge.cli.settings.cli_confirm")
-    @patch("forge.cli.settings.print_formatted_text")
-    async def test_modify_search_api_settings_remove_key(
-        self, mock_print, mock_confirm, mock_session, app_config, settings_store
-    ):
-        session_instance = MagicMock()
-        mock_session.return_value = session_instance
-        mock_confirm.side_effect = [1, 0]
-        await modify_search_api_settings(app_config, settings_store)
-        assert app_config.search_api_key is None
-        settings_store.store.assert_called_once()
-        args, kwargs = settings_store.store.call_args
-        settings = args[0]
-        assert settings.search_api_key is None
-
-    @pytest.mark.asyncio
-    @patch("forge.cli.settings.PromptSession")
-    @patch("forge.cli.settings.cli_confirm")
-    @patch("forge.cli.settings.print_formatted_text")
-    async def test_modify_search_api_settings_keep_current(
-        self, mock_print, mock_confirm, mock_session, app_config, settings_store
-    ):
-        session_instance = MagicMock()
-        mock_session.return_value = session_instance
-        mock_confirm.return_value = 2
-        await modify_search_api_settings(app_config, settings_store)
-        settings_store.store.assert_not_called()

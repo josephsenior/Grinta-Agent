@@ -99,7 +99,6 @@ def _get_general_settings_labels(config: ForgeConfig) -> list[tuple[str, str]]:
             "   Memory Condensation",
             "Enabled" if config.enable_default_condenser else "Disabled",
         ),
-        ("   Search API Key", "********" if config.search_api_key else "Not Set"),
         ("   Configuration File", str(Path(config.file_store_path) / "settings.json")),
     ]
 
@@ -825,78 +824,3 @@ async def modify_llm_settings_advanced(
     )
 
 
-def _display_search_api_info(config: ForgeConfig) -> None:
-    """Display information about search API configuration (DEPRECATED)."""
-    current_value = "********" if config.search_api_key else "Not Set"
-    print_formatted_text("")
-    print_formatted_text(
-        HTML(f"<grey>Current Tavily Search API key: {current_value}</grey>")
-    )
-    print_formatted_text("")
-
-
-async def _get_new_search_api_key(
-    session: PromptSession,
-    config: ForgeConfig,
-    current_key: str,
-) -> str:
-    """Prompt user for a new search API key."""
-    return await session.prompt_async(
-        HTML("Enter Tavily Search API key (leave blank to cancel): "),
-        default=current_key,
-    )
-
-
-async def _save_search_api_key(
-    config: ForgeConfig, settings_store: FileSettingsStore, search_api_key: str
-) -> None:
-    """Save search API key to config and settings store."""
-    config.search_api_key = SecretStr(search_api_key) if search_api_key else None
-    settings = await settings_store.load() or Settings()
-    settings.search_api_key = SecretStr(search_api_key) if search_api_key else None
-    await settings_store.store(settings)
-
-
-async def modify_search_api_settings(
-    config: ForgeConfig, settings_store: FileSettingsStore
-) -> None:
-    """Modify search API settings."""
-    session: PromptSession[str] = PromptSession(
-        key_bindings=kb_cancel(), style=get_cli_style()
-    )
-
-    try:
-        _display_search_api_info(config)
-        current_key = (
-            config.search_api_key.get_secret_value() if config.search_api_key else ""
-        )
-        action = cli_confirm(
-            config,
-            "\nHow would you like to update the Tavily Search API key?",
-            ["Set new key", "Remove key", "Keep current key"],
-        )
-
-        if action == 2:
-            return
-
-        if action == 0:
-            search_api_key = await _get_new_search_api_key(session, config, current_key)
-            if search_api_key is None or not search_api_key.strip():
-                return
-            if not save_settings_confirmation(config):
-                return
-            await _save_search_api_key(config, settings_store, search_api_key.strip())
-            return
-
-        if action == 1:
-            if (
-                cli_confirm(
-                    config, "\nRemove the Tavily Search API key?", ["Yes", "No"]
-                )
-                != 0
-            ):
-                return
-            await _save_search_api_key(config, settings_store, "")
-            return
-    except (UserCancelledError, KeyboardInterrupt, EOFError):
-        return
