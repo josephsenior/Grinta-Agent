@@ -9,3 +9,6 @@ src/routes/+types/
 src/i18n/declaration.d.ts
 src/routes/+types/**
 src/routes/changes-tab.backup.tsx
+
+# Ignore generated manifest files
+src/assets/manifest-*.js

@@ -91,33 +91,6 @@ function extractFilename(path: string): string {
   return parts[parts.length - 1] || path;
 }
 
-const ACTION_SUMMARIZERS: Record<string, ActionSummaryHandler> = {
-  run: summarizeRunAction,
-  write: (event) => summarizeWriteOrEditAction("Created", event),
-  edit: (event) => summarizeWriteOrEditAction("Edited", event),
-  browse: summarizeBrowseAction,
-  finish: () => "Task completed",
-};
-
-const OBSERVATION_SUMMARIZERS: Record<string, ObservationSummaryHandler> = {
-  run: summarizeRunObservation,
-  read: summarizeReadObservation,
-  browse: () => "Page loaded",
-};
-
-function summarizeActionEvent(event: ForgeAction): string | null {
-  const actionKey = typeof event.action === "string" ? event.action : "";
-  const handler = ACTION_SUMMARIZERS[actionKey];
-  return handler ? handler(event) : null;
-}
-
-function summarizeObservationEvent(event: ForgeObservation): string | null {
-  const observationKey =
-    typeof event.observation === "string" ? event.observation : "";
-  const handler = OBSERVATION_SUMMARIZERS[observationKey];
-  return handler ? handler(event) : null;
-}
-
 function summarizeRunAction(event: ForgeAction): string | null {
   const args = toRecord(event.args);
   const command = typeof args?.command === "string" ? args.command.trim() : "";
@@ -155,12 +128,14 @@ function summarizeRunObservation(event: ForgeObservation): string | null {
   const exitCodeFromExtras = extras?.exit_code;
   const exitCodeFromEvent = eventRecord?.exit_code;
 
-  const exitCode =
-    typeof exitCodeFromExtras === "number"
-      ? exitCodeFromExtras
-      : typeof exitCodeFromEvent === "number"
-        ? exitCodeFromEvent
-        : undefined;
+  let exitCode: number | undefined;
+  if (typeof exitCodeFromExtras === "number") {
+    exitCode = exitCodeFromExtras;
+  } else if (typeof exitCodeFromEvent === "number") {
+    exitCode = exitCodeFromEvent;
+  } else {
+    exitCode = undefined;
+  }
 
   if (exitCode === 0) {
     return "Command succeeded";
@@ -181,6 +156,33 @@ function summarizeReadObservation(event: ForgeObservation): string | null {
     return "Read file";
   }
   return `Read ${filename}`;
+}
+
+const ACTION_SUMMARIZERS: Record<string, ActionSummaryHandler> = {
+  run: summarizeRunAction,
+  write: (event) => summarizeWriteOrEditAction("Created", event),
+  edit: (event) => summarizeWriteOrEditAction("Edited", event),
+  browse: summarizeBrowseAction,
+  finish: () => "Task completed",
+};
+
+const OBSERVATION_SUMMARIZERS: Record<string, ObservationSummaryHandler> = {
+  run: summarizeRunObservation,
+  read: summarizeReadObservation,
+  browse: () => "Page loaded",
+};
+
+function summarizeActionEvent(event: ForgeAction): string | null {
+  const actionKey = typeof event.action === "string" ? event.action : "";
+  const handler = ACTION_SUMMARIZERS[actionKey];
+  return handler ? handler(event) : null;
+}
+
+function summarizeObservationEvent(event: ForgeObservation): string | null {
+  const observationKey =
+    typeof event.observation === "string" ? event.observation : "";
+  const handler = OBSERVATION_SUMMARIZERS[observationKey];
+  return handler ? handler(event) : null;
 }
 
 /**

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Play, Loader2, Database as DatabaseIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { LazyMonaco } from "#/components/shared/lazy-monaco";
 import { BrandButton } from "#/components/features/settings/brand-button";
 
@@ -14,6 +15,7 @@ export function QueryEditor({
   isExecuting = false,
   defaultQuery = "",
 }: QueryEditorProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState(defaultQuery);
 
   const handleExecute = () => {
@@ -32,8 +34,10 @@ export function QueryEditor({
       <div className="flex items-center justify-between p-3 border-b border-border bg-background-secondary">
         <div className="flex items-center gap-2 text-sm text-foreground-secondary">
           <DatabaseIcon className="w-4 h-4" />
-          <span>Query Editor</span>
-          <span className="text-xs opacity-70">(Ctrl+Enter to run)</span>
+          <span>{t("queryEditor.title", "Query Editor")}</span>
+          <span className="text-xs opacity-70">
+            {t("queryEditor.shortcut", "(Ctrl+Enter to run)")}
+          </span>
         </div>
         <BrandButton
           variant="primary"
@@ -46,12 +50,12 @@ export function QueryEditor({
           {isExecuting ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Running...
+              {t("queryEditor.running", "Running...")}
             </>
           ) : (
             <>
               <Play className="w-4 h-4" />
-              Run Query
+              {t("queryEditor.runQuery", "Run Query")}
             </>
           )}
         </BrandButton>
@@ -68,7 +72,6 @@ export function QueryEditor({
           options={{
             fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
             tabSize: 2,
-            wordWrap: "on",
             formatOnPaste: true,
             formatOnType: true,
             suggestOnTriggerCharacters: true,
@@ -76,19 +79,49 @@ export function QueryEditor({
             renderWhitespace: "selection",
             padding: { top: 16, bottom: 16 },
           }}
-          onMount={(editor: any, monaco: any) => {
+          onMount={(editor: unknown, monaco: unknown) => {
             // Add Ctrl+Enter shortcut to execute query
-            editor.addAction({
-              id: "execute-query",
-              label: "Execute Query",
-              keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
-              run: () => {
-                handleExecute();
-              },
-            });
+            if (
+              editor &&
+              typeof editor === "object" &&
+              "addAction" in editor &&
+              typeof editor.addAction === "function" &&
+              "focus" in editor &&
+              typeof editor.focus === "function" &&
+              monaco &&
+              typeof monaco === "object" &&
+              "KeyMod" in monaco &&
+              "KeyCode" in monaco
+            ) {
+              const monacoEditor = editor as {
+                addAction: (action: {
+                  id: string;
+                  label: string;
+                  keybindings: number[];
+                  run: () => void;
+                }) => void;
+                focus: () => void;
+              };
+              const monacoInstance = monaco as {
+                KeyMod: { CtrlCmd: number };
+                KeyCode: { Enter: number };
+              };
+              // Combine key modifiers - Monaco uses bitwise OR for key combinations
+              const keyBinding =
+                // eslint-disable-next-line no-bitwise
+                monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.Enter;
+              monacoEditor.addAction({
+                id: "execute-query",
+                label: t("queryEditor.executeQuery", "Execute Query"),
+                keybindings: [keyBinding],
+                run: () => {
+                  handleExecute();
+                },
+              });
 
-            // Focus editor on mount
-            editor.focus();
+              // Focus editor on mount
+              monacoEditor.focus();
+            }
           }}
         />
       </div>

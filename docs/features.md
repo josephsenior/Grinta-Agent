@@ -26,20 +26,58 @@ This page documents features that are implemented and available in Forge.
 
 ## APIs
 
-### Knowledge Base API
-- REST endpoints for document management
-- Vector search capabilities
-- Collections and document CRUD operations
+Forge provides a comprehensive REST API with 32 route modules:
 
-### WebSocket API
+### Authentication & User Management
+- **Authentication API** (`/api/auth`) - User registration, login, JWT token management
+- **User Management API** (`/api/users`) - User CRUD operations, profile management, role-based access control
+
+### Core Platform APIs
+- **Conversations API** (`/api/conversations`) - Conversation lifecycle, message management
+- **Files API** (`/api/files`) - File operations, workspace management
+- **Settings API** (`/api/settings`) - User and system configuration
+- **Secrets API** (`/api/secrets`) - Encrypted secrets storage and management
+
+### Advanced Features
+- **Knowledge Base API** (`/api/knowledge`) - Vector search, document management, collections
+- **Memory API** (`/api/memory`) - Conversation memory and context management
+- **MetaSOP API** (`/api/metasop`) - Multi-agent orchestration and coordination
+- **Prompt Optimization API** (`/api/prompt-optimization`) - AI-powered prompt optimization
+
+### Analytics & Monitoring
+- **Analytics API** (`/api/analytics`) - Usage statistics, cost tracking, model usage
+- **Monitoring API** (`/api/monitoring`) - Health checks, metrics, system status
+- **Dashboard API** (`/api/dashboard`) - Quick stats, recent conversations, activity feed
+- **Profile API** (`/api/profile`) - User statistics and activity timeline
+
+### Platform Features
+- **Search API** (`/api/search`) - Global search across conversations, files, snippets
+- **Activity API** (`/api/activity`) - Activity feed and timeline
+- **Notifications API** (`/api/notifications`) - User notifications management
+- **Billing API** (`/api/billing`) - Payment processing, subscriptions, balance management
+
+### Content Management
+- **Snippets API** (`/api/snippets`) - Code snippet management
+- **Templates API** (`/api/templates`) - Template management
+- **Prompts API** (`/api/prompts`) - Prompt management
+- **Trajectory API** (`/api/trajectory`) - Agent trajectory tracking and replay
+
+### Integrations
+- **Git API** (`/api/git`) - Git operations (OSS mode only)
+- **Slack API** (`/api/slack`) - Slack integration
+- **MCP API** (`/mcp`) - Model Context Protocol server
+- **Database Connections API** (`/api/database`) - Database connection management
+
+### WebSocket API (Socket.IO)
 - Real-time communication for live updates
 - Streaming agent responses
 - Event-driven architecture
+- Connection management and presence
 
-### REST API
-- Full HTTP API for all platform features
-- OpenAPI specification available
-- Programmatic access to agents and tools
+### OpenAPI Documentation
+- Interactive Swagger UI at `/docs`
+- ReDoc alternative at `/redoc`
+- OpenAPI JSON specification at `/openapi.json`
 
 ## Runtime Environments
 

@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { I18nKey } from "#/i18n/declaration";
 
 interface SafetyScoreGaugeProps {
   score: number; // 0-100
@@ -13,6 +15,7 @@ export function SafetyScoreGauge({
   size = "md",
   className = "",
 }: SafetyScoreGaugeProps) {
+  const { t } = useTranslation();
   const [animatedScore, setAnimatedScore] = useState(0);
 
   // Animate score on mount and when it changes
@@ -86,7 +89,9 @@ export function SafetyScoreGauge({
           <span className={`${fontSize} font-bold ${text}`}>
             {Math.round(animatedScore)}
           </span>
-          <span className="text-xs text-gray-400 mt-1">/ 100</span>
+          <span className="text-xs text-gray-400 mt-1">
+            {t(I18nKey.MONITORING$SCORE_DIVIDER)}
+          </span>
         </div>
       </div>
 

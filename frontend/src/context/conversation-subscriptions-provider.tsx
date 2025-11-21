@@ -10,17 +10,16 @@ import { Socket } from "socket.io-client";
 import { ForgeParsedEvent } from "#/types/core";
 import {
   isForgeEvent,
-  isForgeAction,
-  isForgeObservation,
   isAgentStateChangeObservation,
-  isStatusUpdate,
 } from "#/types/core/guards";
 import { AgentState } from "#/types/agent-state";
+import { logger } from "#/utils/logger";
 import {
-  renderConversationErroredToast,
-  renderConversationCreatedToast,
-  renderConversationFinishedToast,
-} from "#/components/features/chat/microagent/microagent-status-toast";
+  handleForgeEvent,
+  handleErrorEvents,
+  handleStatusEvents,
+  handleAgentStateEvents,
+} from "./conversation-subscriptions-provider/event-handlers";
 
 interface ConversationSocket {
   socket: Socket;
@@ -63,7 +62,8 @@ const ConversationSubscriptionsContext =
     getEventsForConversation: () => [],
   });
 
-const isErrorEvent = (
+// Type guards for error event detection - useful for runtime type checking
+export const isErrorEvent = (
   event: unknown,
 ): event is { error: true; message: string } =>
   typeof event === "object" &&
@@ -73,7 +73,7 @@ const isErrorEvent = (
   "message" in event &&
   typeof event.message === "string";
 
-const isAgentStatusError = (event: unknown): event is ForgeParsedEvent =>
+export const isAgentStatusError = (event: unknown): event is ForgeParsedEvent =>
   isForgeEvent(event) &&
   isAgentStateChangeObservation(event) &&
   event.extras.agent_state === AgentState.ERROR;
@@ -165,75 +165,39 @@ export function ConversationSubscriptionsProvider({
         // Update the events for this subscription
         if (isForgeEvent(event)) {
           setConversationSockets((prev) => {
-            // Make sure the conversation still exists in our state
             if (!prev[conversationId]) {
               return prev;
             }
 
             const currentEvents = prev[conversationId]?.events || [];
+            const updatedEvents = handleForgeEvent(
+              event,
+              conversationId,
+              currentEvents,
+            ) as ForgeParsedEvent[];
 
-            // Check if this event already exists (deduplication)
-            const eventExists = currentEvents.some((existingEvent) => {
-              if (existingEvent.id === event.id) return true;
-
-              // If both are actions, compare source/action/args
-              if (isForgeAction(existingEvent) && isForgeAction(event)) {
-                return (
-                  existingEvent.source === event.source &&
-                  existingEvent.action === event.action &&
-                  JSON.stringify(existingEvent.args) ===
-                    JSON.stringify(event.args)
-                );
-              }
-
-              // If both are observations, compare source/observation/extras
-              if (
-                isForgeObservation(existingEvent) &&
-                isForgeObservation(event)
-              ) {
-                return (
-                  existingEvent.source === event.source &&
-                  existingEvent.observation === event.observation &&
-                  JSON.stringify(existingEvent.extras) ===
-                    JSON.stringify(event.extras)
-                );
-              }
-
-              return false;
-            });
-
-            // Only add if it doesn't already exist
-            if (!eventExists) {
-              return {
-                ...prev,
-                [conversationId]: {
-                  ...prev[conversationId],
-                  events: [...currentEvents, event],
-                },
-              };
+            if (updatedEvents === currentEvents) {
+              return prev;
             }
 
-            return prev; // No change if event already exists
+            return {
+              ...prev,
+              [conversationId]: {
+                ...prev[conversationId],
+                events: updatedEvents,
+              },
+            };
           });
         }
 
-        // Handle error events
-        if (isErrorEvent(event) || isAgentStatusError(event)) {
-          renderConversationErroredToast(
+        handleErrorEvents(event, conversationId);
+        handleStatusEvents(event, conversationId);
+        if (isForgeEvent(event)) {
+          handleAgentStateEvents(
+            event,
             conversationId,
-            isErrorEvent(event) ? event.message : "MICROAGENT$UNKNOWN_ERROR",
+            unsubscribeFromConversation,
           );
-        } else if (isStatusUpdate(event)) {
-          if (event.type === "info" && event.id === "STATUS$STARTING_RUNTIME") {
-            renderConversationCreatedToast(conversationId);
-          }
-        } else if (
-          isForgeEvent(event) &&
-          isAgentStateChangeObservation(event) &&
-          event.extras.agent_state === AgentState.FINISHED
-        ) {
-          renderConversationFinishedToast(conversationId);
-          unsubscribeFromConversation(conversationId);
         }
       };
 
@@ -301,8 +265,7 @@ export function ConversationSubscriptionsProvider({
               });
             } catch (e) {
               // swallow test harness errors
-              // eslint-disable-next-line no-console
-              console.warn("Playwright synthetic convo events failed", e);
+              logger.warn("Playwright synthetic convo events failed", e);
             }
           }, 0);
         }

@@ -15,6 +15,7 @@ export function SuggestionItem({ suggestion, onClick }: SuggestionItemProps) {
       <button
         type="button"
         data-testid="suggestion"
+        data-suggestion-item
         onClick={() => onClick(suggestion.value)}
         className="text-[16px] leading-6 -tracking-[0.01em] text-center w-full p-3 font-semibold cursor-pointer"
       >

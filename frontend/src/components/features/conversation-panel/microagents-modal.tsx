@@ -10,33 +10,126 @@ import { useConversationMicroagents } from "#/hooks/query/use-conversation-micro
 import { RootState } from "#/store";
 import { AgentState } from "#/types/agent-state";
 import { BrandButton } from "../settings/brand-button";
+import { Microagent } from "#/api/open-hands.types";
 
 interface MicroagentsModalProps {
   onClose: () => void;
 }
 
-export function MicroagentsModal({ onClose }: MicroagentsModalProps) {
-  const { t } = useTranslation();
-  const { curAgentState } = useSelector((state: RootState) => state.agent);
-  const controller = useMicroagentsModalController(curAgentState);
-
+// Leaf components (no dependencies on other local components)
+function EmptyState({ message }: { message: string }) {
   return (
-    <ModalBackdrop onClose={onClose}>
-      <ModalBody
-        width="medium"
-        className="max-h-[80vh] flex flex-col items-start"
-        testID="microagents-modal"
-      >
-        <ModalHeader controller={controller} t={t} />
-
-        <AgentWarning isVisible={controller.isAgentReady} t={t} />
-
-        <MicroagentsContent controller={controller} t={t} />
-      </ModalBody>
-    </ModalBackdrop>
+    <div className="w-full h-full flex items-center text-center justify-center text-2xl text-foreground-secondary">
+      {message}
+    </div>
   );
 }
 
+function LoadingState() {
+  return (
+    <div className="flex justify-center items-center py-8">
+      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-brand-500" />
+    </div>
+  );
+}
+
+function TriggerSection({
+  triggers,
+  t,
+}: {
+  triggers: string[];
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  return (
+    <div className="mt-2 mb-3">
+      <h4 className="text-sm font-semibold text-foreground-secondary mb-2">
+        {t(I18nKey.MICROAGENTS_MODAL$TRIGGERS)}
+      </h4>
+      <div className="flex flex-wrap gap-1">
+        {triggers.map((trigger) => (
+          <span
+            key={trigger}
+            className="px-2 py-1 text-xs rounded-full bg-accent-500/10 text-accent-500 border border-accent-500/20"
+          >
+            {trigger}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Components that use leaf components
+function MicroagentDetails({
+  agent,
+  t,
+}: {
+  agent: Microagent;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  return (
+    <div className="px-2 pb-3 pt-1">
+      {agent.triggers?.length ? (
+        <TriggerSection triggers={agent.triggers} t={t} />
+      ) : null}
+
+      <div className="mt-2">
+        <h4 className="text-sm font-semibold text-foreground-secondary mb-2">
+          {t(I18nKey.MICROAGENTS_MODAL$CONTENT)}
+        </h4>
+        <div className="text-sm mt-2 p-3 bg-background-tertiary rounded-md overflow-auto text-foreground-secondary max-h-[400px]">
+          <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed">
+            {agent.content || t(I18nKey.MICROAGENTS_MODAL$NO_CONTENT)}
+          </pre>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MicroagentAccordion({
+  agent,
+  isExpanded,
+  onToggle,
+  t,
+}: {
+  agent: Microagent;
+  isExpanded: boolean;
+  onToggle: (name: string) => void;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  const badgeLabel = agent.type === "repo" ? "Repository" : "Knowledge";
+
+  return (
+    <div className="rounded-md overflow-hidden">
+      <button
+        type="button"
+        onClick={() => onToggle(agent.name)}
+        className="w-full py-3 px-2 text-left flex items-center justify-between hover:bg-background-tertiary transition-colors rounded-lg"
+      >
+        <div className="flex items-center">
+          <h3 className="font-bold text-foreground">{agent.name}</h3>
+        </div>
+        <div className="flex items-center">
+          <span className="px-2 py-1 text-xs rounded-full bg-brand-500/10 text-violet-500 border border-brand-500/20 mr-2">
+            {badgeLabel}
+          </span>
+          <span className="text-foreground-secondary">
+            {isExpanded ? (
+              <ChevronDown size={18} />
+            ) : (
+              <ChevronRight size={18} />
+            )}
+          </span>
+        </div>
+      </button>
+
+      {isExpanded && <MicroagentDetails agent={agent} t={t} />}
+    </div>
+  );
+}
+
+// Hook
 function useMicroagentsModalController(curAgentState: AgentState) {
   const [expandedAgents, setExpandedAgents] = useState<Record<string, boolean>>(
     {},
@@ -57,12 +150,67 @@ function useMicroagentsModalController(curAgentState: AgentState) {
     ),
     expandedAgents,
     toggleAgent,
-    microagents: data,
+    microagents: (data ?? []) as Microagent[],
     isLoading,
     isError,
     refetch,
     isRefetching,
-  } as const;
+  };
+}
+
+// Components that use other local components
+function MicroagentsContentBody({
+  controller,
+  t,
+}: {
+  controller: ReturnType<typeof useMicroagentsModalController>;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  if (!controller.isAgentReady) {
+    return <EmptyState message={t(I18nKey.DIFF_VIEWER$WAITING_FOR_RUNTIME)} />;
+  }
+
+  if (controller.isLoading) {
+    return <LoadingState />;
+  }
+
+  if (!controller.microagents || controller.microagents.length === 0) {
+    return <EmptyState message={t(I18nKey.CONVERSATION$NO_MICROAGENTS)} />;
+  }
+
+  if (controller.isError) {
+    return <EmptyState message={t(I18nKey.MICROAGENTS_MODAL$FETCH_ERROR)} />;
+  }
+
+  return (
+    <div className="p-2 space-y-3">
+      {controller.microagents
+        .filter((agent): agent is Microagent => !!agent.name)
+        .map((agent) => (
+          <MicroagentAccordion
+            key={agent.name}
+            agent={agent}
+            isExpanded={controller.expandedAgents[agent.name] || false}
+            onToggle={controller.toggleAgent}
+            t={t}
+          />
+        ))}
+    </div>
+  );
+}
+
+function MicroagentsContent({
+  controller,
+  t,
+}: {
+  controller: ReturnType<typeof useMicroagentsModalController>;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  return (
+    <div className="w-full h-[60vh] overflow-auto rounded-md">
+      <MicroagentsContentBody controller={controller} t={t} />
+    </div>
+  );
 }
 
 function ModalHeader({
@@ -115,165 +263,25 @@ function AgentWarning({
   );
 }
 
-function MicroagentsContent({
-  controller,
-  t,
-}: {
-  controller: ReturnType<typeof useMicroagentsModalController>;
-  t: ReturnType<typeof useTranslation>["t"];
-}) {
-  return (
-    <div className="w-full h-[60vh] overflow-auto rounded-md">
-      <MicroagentsContentBody controller={controller} t={t} />
-    </div>
-  );
-}
-
-function MicroagentsContentBody({
-  controller,
-  t,
-}: {
-  controller: ReturnType<typeof useMicroagentsModalController>;
-  t: ReturnType<typeof useTranslation>["t"];
-}) {
-  if (!controller.isAgentReady) {
-    return <EmptyState message={t(I18nKey.DIFF_VIEWER$WAITING_FOR_RUNTIME)} />;
-  }
-
-  if (controller.isLoading) {
-    return <LoadingState />;
-  }
-
-  if (!controller.microagents || controller.microagents.length === 0) {
-    return <EmptyState message={t(I18nKey.CONVERSATION$NO_MICROAGENTS)} />;
-  }
-
-  if (controller.isError) {
-    return <EmptyState message={t(I18nKey.MICROAGENTS_MODAL$FETCH_ERROR)} />;
-  }
+// Main component
+export function MicroagentsModal({ onClose }: MicroagentsModalProps) {
+  const { t } = useTranslation();
+  const { curAgentState } = useSelector((state: RootState) => state.agent);
+  const controller = useMicroagentsModalController(curAgentState);
 
   return (
-    <div className="p-2 space-y-3">
-      {controller.microagents.map((agent: any) => (
-        <MicroagentAccordion
-          key={agent.name}
-          agent={agent}
-          isExpanded={controller.expandedAgents[agent.name] || false}
-          onToggle={controller.toggleAgent}
-          t={t}
-        />
-      ))}
-    </div>
-  );
-}
-
-function EmptyState({ message }: { message: string }) {
-  return (
-    <div className="w-full h-full flex items-center text-center justify-center text-2xl text-foreground-secondary">
-      {message}
-    </div>
-  );
-}
-
-function LoadingState() {
-  return (
-    <div className="flex justify-center items-center py-8">
-      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-brand-500" />
-    </div>
-  );
-}
-
-function MicroagentAccordion({
-  agent,
-  isExpanded,
-  onToggle,
-  t,
-}: {
-  agent: any;
-  isExpanded: boolean;
-  onToggle: (name: string) => void;
-  t: ReturnType<typeof useTranslation>["t"];
-}) {
-  const badgeLabel = agent.type === "repo" ? "Repository" : "Knowledge";
-
-  return (
-    <div className="rounded-md overflow-hidden">
-      <button
-        type="button"
-        onClick={() => onToggle(agent.name)}
-        className="w-full py-3 px-2 text-left flex items-center justify-between hover:bg-background-tertiary transition-colors rounded-lg"
+    <ModalBackdrop onClose={onClose}>
+      <ModalBody
+        width="medium"
+        className="max-h-[80vh] flex flex-col items-start"
+        testID="microagents-modal"
       >
-        <div className="flex items-center">
-          <h3 className="font-bold text-foreground">{agent.name}</h3>
-        </div>
-        <div className="flex items-center">
-          <span className="px-2 py-1 text-xs rounded-full bg-brand-500/10 text-violet-500 border border-brand-500/20 mr-2">
-            {badgeLabel}
-          </span>
-          <span className="text-foreground-secondary">
-            {isExpanded ? (
-              <ChevronDown size={18} />
-            ) : (
-              <ChevronRight size={18} />
-            )}
-          </span>
-        </div>
-      </button>
+        <ModalHeader controller={controller} t={t} />
 
-      {isExpanded && <MicroagentDetails agent={agent} t={t} />}
-    </div>
-  );
-}
+        <AgentWarning isVisible={controller.isAgentReady} t={t} />
 
-function MicroagentDetails({
-  agent,
-  t,
-}: {
-  agent: any;
-  t: ReturnType<typeof useTranslation>["t"];
-}) {
-  return (
-    <div className="px-2 pb-3 pt-1">
-      {agent.triggers?.length ? (
-        <TriggerSection triggers={agent.triggers} t={t} />
-      ) : null}
-
-      <div className="mt-2">
-        <h4 className="text-sm font-semibold text-foreground-secondary mb-2">
-          {t(I18nKey.MICROAGENTS_MODAL$CONTENT)}
-        </h4>
-        <div className="text-sm mt-2 p-3 bg-background-tertiary rounded-md overflow-auto text-foreground-secondary max-h-[400px]">
-          <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed">
-            {agent.content || t(I18nKey.MICROAGENTS_MODAL$NO_CONTENT)}
-          </pre>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TriggerSection({
-  triggers,
-  t,
-}: {
-  triggers: string[];
-  t: ReturnType<typeof useTranslation>["t"];
-}) {
-  return (
-    <div className="mt-2 mb-3">
-      <h4 className="text-sm font-semibold text-foreground-secondary mb-2">
-        {t(I18nKey.MICROAGENTS_MODAL$TRIGGERS)}
-      </h4>
-      <div className="flex flex-wrap gap-1">
-        {triggers.map((trigger) => (
-          <span
-            key={trigger}
-            className="px-2 py-1 text-xs rounded-full bg-accent-500/10 text-accent-500 border border-accent-500/20"
-          >
-            {trigger}
-          </span>
-        ))}
-      </div>
-    </div>
+        <MicroagentsContent controller={controller} t={t} />
+      </ModalBody>
+    </ModalBackdrop>
   );
 }

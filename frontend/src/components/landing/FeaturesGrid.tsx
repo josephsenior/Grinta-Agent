@@ -1,261 +1,191 @@
-import React, { useState, useRef } from "react";
-import {
-  Sparkles,
-  Workflow,
-  Gauge,
-  Brain,
-  ShieldCheck,
-  LineChart,
-  ArrowRight,
-  CheckCircle,
-  Star,
-} from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "#/components/ui/card";
-import { Badge } from "#/components/ui/badge";
-import { Button } from "#/components/ui/button";
-import { Progress } from "#/components/ui/progress";
-import { useScrollReveal } from "#/hooks/use-scroll-reveal";
-import { capabilityShowcase } from "#/content/landing";
+import { useEffect, useRef } from "react";
+import { Zap, Shield, Layers, GitBranch, Globe, Lock } from "lucide-react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { featureHighlights } from "#/content/landing";
 
-export default function FeaturesGrid(): React.ReactElement {
-  const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
-  const [mousePosition, setMousePosition] = useState({ x: 50, y: 50 });
-  const containerRef = useRef<HTMLDivElement>(null);
+// Register ScrollTrigger
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
-  const { ref: sectionRef, isVisible } = useScrollReveal({
-    threshold: 0.1,
-    triggerOnce: true,
-  });
+const featureIcons: Record<string, typeof Zap> = {
+  "CodeAct, merge-grade edits": Zap,
+  "Ultimate Editor": Layers,
+  "ACE learning loops": GitBranch,
+  "Hybrid memory": Globe,
+  "Guardrails & cost controls": Shield,
+  "Observability from day one": Lock,
+};
 
-  const getColorClasses = (color: string) => {
-    switch (color) {
-      case "brand":
-        return {
-          bg: "bg-brand-500/10",
-          ring: "ring-brand-500/20",
-          text: "text-violet-500",
-          shadow: "shadow-brand-500/20",
-          button:
-            "text-violet-500 hover:bg-violet-500/10 group-hover:bg-brand-500/15",
-        };
-      case "success":
-        return {
-          bg: "bg-success-500/10",
-          ring: "ring-success-500/20",
-          text: "text-success-500",
-          shadow: "shadow-success-500/20",
-          button:
-            "text-success-500 hover:bg-success-500/10 group-hover:bg-success-500/15",
-        };
-      case "accent":
-        return {
-          bg: "bg-accent-500/10",
-          ring: "ring-accent-500/20",
-          text: "text-accent-500",
-          shadow: "shadow-accent-500/20",
-          button:
-            "text-accent-500 hover:bg-accent-500/10 group-hover:bg-accent-500/15",
-        };
-      case "warning":
-        return {
-          bg: "bg-warning-500/10",
-          ring: "ring-warning-500/20",
-          text: "text-warning-500",
-          shadow: "shadow-warning-500/20",
-          button:
-            "text-warning-500 hover:bg-warning-500/10 group-hover:bg-warning-500/15",
-        };
-      default:
-        return {
-          bg: "bg-brand-500/10",
-          ring: "ring-brand-500/20",
-          text: "text-violet-500",
-          shadow: "shadow-brand-500/20",
-          button:
-            "text-violet-500 hover:bg-violet-500/10 group-hover:bg-brand-500/15",
-        };
+const features = featureHighlights.map((feature) => ({
+  icon: featureIcons[feature.title] || Zap,
+  title: feature.title,
+  description: feature.description,
+}));
+
+export default function FeaturesGrid() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const headingRef = useRef<HTMLDivElement>(null);
+  const cardsRef = useRef<HTMLDivElement>(null);
+
+  // GSAP scroll animations
+  useEffect(() => {
+    if (!sectionRef.current || typeof window === "undefined") {
+      return (): void => {
+        // No cleanup needed
+      };
     }
-  };
 
-  const iconMap = {
-    sparkles: Sparkles,
-    workflow: Workflow,
-    gauge: Gauge,
-    brain: Brain,
-    shield: ShieldCheck,
-    lineChart: LineChart,
-  } as const;
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (prefersReducedMotion) {
+      gsap.set([headingRef.current, cardsRef.current?.children], {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+      });
+      return (): void => {
+        // No cleanup needed for reduced motion
+      };
+    }
 
-  const features = capabilityShowcase;
+    // Heading animation
+    if (headingRef.current) {
+      gsap.from(headingRef.current.children, {
+        opacity: 0,
+        y: 30,
+        duration: 0.8,
+        stagger: 0.1,
+        ease: "power3.out",
+        scrollTrigger: {
+          trigger: headingRef.current,
+          start: "top 85%",
+          toggleActions: "play none none none",
+        },
+      });
+    }
 
-  // Track mouse for spotlight effect
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
+    // Cards stagger animation
+    if (cardsRef.current) {
+      const cards = Array.from(cardsRef.current.children);
 
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
+      // Set initial state
+      gsap.set(cards, {
+        opacity: 0,
+        y: 60,
+        scale: 0.9,
+      });
 
-    setMousePosition({ x, y });
-  };
+      // Animate on scroll
+      gsap.to(cards, {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        duration: 0.8,
+        stagger: 0.15,
+        ease: "back.out(1.2)",
+        scrollTrigger: {
+          trigger: cardsRef.current,
+          start: "top 75%",
+          toggleActions: "play none none none",
+        },
+      });
+
+      // Enhanced hover effects with GSAP
+      cards.forEach((card) => {
+        const cardElement = card as HTMLElement;
+
+        cardElement.addEventListener("mouseenter", () => {
+          gsap.to(cardElement, {
+            y: -10,
+            scale: 1.02,
+            duration: 0.3,
+            ease: "power2.out",
+          });
+        });
+
+        cardElement.addEventListener("mouseleave", () => {
+          gsap.to(cardElement, {
+            y: 0,
+            scale: 1,
+            duration: 0.3,
+            ease: "power2.out",
+          });
+        });
+      });
+    }
+
+    return (): void => {
+      ScrollTrigger.getAll().forEach((trigger) => {
+        if (
+          trigger.vars.trigger === sectionRef.current ||
+          trigger.vars.trigger === headingRef.current ||
+          trigger.vars.trigger === cardsRef.current
+        ) {
+          trigger.kill();
+        }
+      });
+    };
+  }, []);
 
   return (
-    <section ref={sectionRef} className="relative py-24 px-6">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(124,58,237,0.15),_transparent_60%)]" />
-      <div className="relative max-w-7xl mx-auto">
-        {/* Header */}
-        <div
-          className={`text-center mb-16 max-w-3xl mx-auto ${isVisible ? "stagger-item delay-0" : "opacity-0"}`}
-        >
-          <div className="inline-flex items-center gap-3 mb-8">
-            <Badge
-              variant="secondary"
-              className="glass-modern border-brand-500/30 text-violet-500 px-5 py-2.5 text-sm font-medium shadow-lg interactive-scale"
-            >
-              <Star className="w-4 h-4 mr-2 floating-icon" />
-              Features
-            </Badge>
-            <Badge
-              variant="outline"
-              className="border-success-500/40 text-success-500 bg-success-500/10 backdrop-blur-sm px-5 py-2.5 shadow-lg interactive-scale"
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              All Included
-            </Badge>
+    <section
+      ref={sectionRef}
+      id="features"
+      className="relative w-full min-w-0 py-20 lg:py-32"
+    >
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-brand-violet/5 to-transparent" />
+
+      <div className="relative w-full min-w-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div ref={headingRef} className="text-center mb-16 lg:mb-20">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-brand-violet/10 border border-brand-violet/20 rounded-full text-sm text-brand-violetLight mb-6">
+            <span>Features</span>
           </div>
-
-          <h2 className="text-4xl md:text-5xl font-semibold mb-6 leading-tight tracking-tight text-white">
-            The full stack Forge ships with every workspace.
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 w-full">
+            Everything You Need,
+            <br />
+            <span className="text-gradient">Right Out of the Box</span>
           </h2>
-
-          <p className="text-lg md:text-xl text-foreground-secondary max-w-3xl mx-auto mb-8 leading-relaxed">
-            Purpose-built capabilities for planning, editing, validating, and
-            deploying with enterprise guardrails.
+          <p className="text-lg text-text-secondary w-full">
+            Powerful features designed to accelerate your development workflow
+            and scale with your business.
           </p>
-
-          <Button
-            variant="outline"
-            className="border-white/20 text-white hover:bg-white/10 px-8 py-3 text-base font-semibold backdrop-blur-sm hover:shadow-lg transition-all duration-300"
-          >
-            Explore the full roadmap
-            <ArrowRight className="w-5 h-5 ml-3" />
-          </Button>
         </div>
 
-        {/* Bento Box Grid Layout (asymmetric like bolt.new) */}
         <div
-          ref={containerRef}
-          onMouseMove={handleMouseMove}
-          className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-fr"
-          style={
-            {
-              "--mouse-x": `${mousePosition.x}%`,
-              "--mouse-y": `${mousePosition.y}%`,
-            } as React.CSSProperties
-          }
+          ref={cardsRef}
+          className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 min-w-0"
         >
-          {features.map((feature: any, index: number) => {
-            const colors = getColorClasses(feature.theme);
-
-            // Bento box layout classes (asymmetric)
-            const sizeClassMap = {
-              large: "md:col-span-8 md:row-span-1",
-              medium: "md:col-span-6 md:row-span-1",
-              small: "md:col-span-6 md:row-span-1",
-            } as const;
-
-            const sizeClasses =
-              sizeClassMap[feature.size as keyof typeof sizeClassMap] ??
-              sizeClassMap.small;
-
-            const Icon =
-              iconMap[feature.icon as keyof typeof iconMap] ?? Sparkles;
-
+          {features.map((feature) => {
+            const Icon = feature.icon;
             return (
-              <Card
+              <div
                 key={feature.title}
-                className={`
-                  ${sizeClasses}
-                  glass-modern gradient-border-animated spotlight-effect 
-                  card-hover-lift group relative overflow-hidden 
-                  gpu-accelerated
-                  ${isVisible ? `bento-card delay-${index * 100}` : "opacity-0"}
-                `}
-                onMouseEnter={() => setHoveredFeature(index)}
-                onMouseLeave={() => setHoveredFeature(null)}
+                className="group glass-effect rounded-2xl p-8 transition-all duration-300 hover-lift min-w-0"
+                onMouseEnter={(e) => {
+                  const target = e.currentTarget;
+                  target.style.backgroundColor = "var(--bg-elevated)";
+                }}
+                onMouseLeave={(e) => {
+                  const target = e.currentTarget;
+                  target.style.backgroundColor = "var(--glass-bg)";
+                }}
               >
-                {/* Spotlight follows mouse */}
-                <div
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                  style={{
-                    background: `radial-gradient(600px circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(139, 92, 246, 0.1), transparent 40%)`,
-                  }}
-                />
-
-                <CardHeader className="space-y-4 relative z-10">
-                  <div className="flex items-start justify-between">
-                    <div
-                      className={`w-14 h-14 rounded-xl ${colors.bg} flex items-center justify-center ring-1 ${colors.ring} group-hover:scale-110 transition-all duration-300 morphing-icon`}
-                    >
-                      <Icon
-                        className={`w-7 h-7 ${colors.text} floating-icon`}
-                        style={{ animationDelay: `${index * 0.2}s` }}
-                      />
-                    </div>
-                    <Badge
-                      variant="secondary"
-                      className={`text-xs ${colors.bg} ${colors.text} border ${colors.ring} interactive-scale`}
-                    >
-                      {feature.badge}
-                    </Badge>
-                  </div>
-
-                  <div>
-                    <CardTitle className="text-xl mb-3 text-foreground font-bold group-hover:text-violet-500 transition-colors duration-300">
-                      {feature.title}
-                    </CardTitle>
-                    <CardDescription className="text-sm leading-relaxed text-foreground-secondary">
-                      {feature.description}
-                    </CardDescription>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-4 relative z-10">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-foreground-secondary font-medium">
-                      Performance
-                    </span>
-                    <span className={`font-bold ${colors.text}`}>
-                      {feature.stat}
-                    </span>
-                  </div>
-
-                  <div className="relative">
-                    <Progress
-                      value={feature.progress}
-                      className="h-2.5 bg-background-tertiary"
-                    />
-                    {hoveredFeature === index && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer pointer-events-none" />
-                    )}
-                  </div>
-
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`w-full ${colors.button} font-medium transition-all duration-300 interactive-scale`}
-                  >
-                    Learn More
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-2 transition-transform duration-300" />
-                  </Button>
-                </CardContent>
-              </Card>
+                <div className="w-12 h-12 rounded-xl bg-brand-violet/20 flex items-center justify-center mb-6 group-hover:bg-brand-violet/30 transition-colors duration-300">
+                  <Icon size={24} className="text-brand-violetLight" />
+                </div>
+                <h3
+                  className="text-xl font-semibold mb-3 w-full"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {feature.title}
+                </h3>
+                <p className="text-text-secondary leading-relaxed w-full">
+                  {feature.description}
+                </p>
+              </div>
             );
           })}
         </div>

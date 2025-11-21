@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import type { ModelUsageStats } from "#/types/analytics";
 
 interface ModelUsageTableProps {
@@ -6,13 +7,16 @@ interface ModelUsageTableProps {
 }
 
 export function ModelUsageTable({ models }: ModelUsageTableProps) {
+  const { t } = useTranslation();
   if (!models || models.length === 0) {
     return (
       <div className="p-6 rounded-xl border border-brand-500/20 bg-black/60">
         <h3 className="text-lg font-semibold text-foreground mb-2">
-          Model Usage
+          {t("analytics.modelUsage", "Model Usage")}
         </h3>
-        <p className="text-sm text-foreground-secondary">No data available</p>
+        <p className="text-sm text-foreground-secondary">
+          {t("analytics.noDataAvailable", "No data available")}
+        </p>
       </div>
     );
   }
@@ -23,7 +27,7 @@ export function ModelUsageTable({ models }: ModelUsageTableProps) {
   return (
     <div className="p-6 rounded-xl border border-brand-500/20 bg-black/60">
       <h3 className="text-lg font-semibold text-foreground mb-4">
-        Model Usage & Costs
+        {t("analytics.modelUsageAndCosts", "Model Usage & Costs")}
       </h3>
 
       <div className="overflow-x-auto">
@@ -31,22 +35,22 @@ export function ModelUsageTable({ models }: ModelUsageTableProps) {
           <thead className="bg-black/70 border-b border-brand-500/20">
             <tr>
               <th className="text-left py-3 px-4 text-foreground-secondary font-medium">
-                Model
+                {t("analytics.model", "Model")}
               </th>
               <th className="text-right py-3 px-4 text-foreground-secondary font-medium">
-                Requests
+                {t("analytics.requests", "Requests")}
               </th>
               <th className="text-right py-3 px-4 text-foreground-secondary font-medium">
-                Tokens
+                {t("analytics.tokens", "Tokens")}
               </th>
               <th className="text-right py-3 px-4 text-foreground-secondary font-medium">
-                Avg Latency
+                {t("analytics.avgLatency", "Avg Latency")}
               </th>
               <th className="text-right py-3 px-4 text-foreground-secondary font-medium">
-                Cache Hits
+                {t("analytics.cacheHits", "Cache Hits")}
               </th>
               <th className="text-right py-3 px-4 text-foreground-secondary font-medium">
-                Total Cost
+                {t("analytics.totalCost", "Total Cost")}
               </th>
             </tr>
           </thead>
@@ -68,7 +72,7 @@ export function ModelUsageTable({ models }: ModelUsageTableProps) {
                     <div className="flex items-center gap-2">
                       {index === 0 && (
                         <span className="px-1.5 py-0.5 text-xs bg-brand-500/10 text-violet-500 rounded">
-                          Top
+                          {t("analytics.top", "Top")}
                         </span>
                       )}
                       <span className="text-foreground font-medium">
@@ -84,12 +88,16 @@ export function ModelUsageTable({ models }: ModelUsageTableProps) {
                       {totalTokens.toLocaleString()}
                     </div>
                     <div className="text-xs text-foreground-secondary">
-                      {model.totalPromptTokens.toLocaleString()} in /{" "}
-                      {model.totalCompletionTokens.toLocaleString()} out
+                      {t("analytics.tokensInOut", "{{in}} in / {{out}} out", {
+                        in: model.totalPromptTokens.toLocaleString(),
+                        out: model.totalCompletionTokens.toLocaleString(),
+                      })}
                     </div>
                   </td>
                   <td className="py-3 px-4 text-right text-foreground">
-                    {model.avgLatency.toFixed(2)}s
+                    {t("analytics.latencySeconds", "{{seconds}}s", {
+                      seconds: model.avgLatency.toFixed(2),
+                    })}
                   </td>
                   <td className="py-3 px-4 text-right">
                     <div className="text-foreground">
@@ -97,7 +105,13 @@ export function ModelUsageTable({ models }: ModelUsageTableProps) {
                     </div>
                     {cacheHitPercentage > 0 && (
                       <div className="text-xs text-success-500">
-                        {cacheHitPercentage.toFixed(1)}% hit rate
+                        {t(
+                          "analytics.cacheHitRate",
+                          "{{percentage}}% hit rate",
+                          {
+                            percentage: cacheHitPercentage.toFixed(1),
+                          },
+                        )}
                       </div>
                     )}
                   </td>
@@ -112,7 +126,9 @@ export function ModelUsageTable({ models }: ModelUsageTableProps) {
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-border font-semibold">
-              <td className="py-3 px-4 text-foreground">Total</td>
+              <td className="py-3 px-4 text-foreground">
+                {t("analytics.total", "Total")}
+              </td>
               <td className="py-3 px-4 text-right text-foreground">
                 {sortedModels
                   .reduce((sum, m) => sum + m.requestCount, 0)

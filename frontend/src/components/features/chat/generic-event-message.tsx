@@ -21,6 +21,7 @@ export function GenericEventMessage({
     <div className="my-2 w-full bg-gradient-to-r from-success-500/10 to-success-600/5 border border-success-500/20 rounded-xl backdrop-blur-sm overflow-hidden">
       {/* Header - clickable to expand/collapse */}
       <button
+        type="button"
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex items-center justify-between gap-3 px-4 py-3 text-sm w-full hover:bg-success-500/5 transition-colors"
       >

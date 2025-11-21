@@ -5,22 +5,23 @@ import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Copy, Check } from "lucide-react";
 import { cn } from "#/utils/utils";
 import { MermaidDiagramViewer } from "#/components/features/orchestration/mermaid-diagram-viewer";
+import { logger } from "#/utils/logger";
 
 // See https://github.com/remarkjs/react-markdown?tab=readme-ov-file#use-custom-components-syntax-highlight
 
 /**
  * Copy button component for code blocks
  */
-function CopyCodeButton({ code }: { code: string }) {
+function CopyCodeButton({ code: codeContent }: { code: string }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(code);
+      await navigator.clipboard.writeText(codeContent);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error("Failed to copy code:", err);
+      logger.error("Failed to copy code:", err);
     }
   };
 

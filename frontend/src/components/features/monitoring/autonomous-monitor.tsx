@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { Play, Pause, Square, Shield, Activity, FileText } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { I18nKey } from "#/i18n/declaration";
 import { SafetyScoreGauge } from "./safety-score-gauge";
 import { RiskLevelChart } from "./risk-level-chart";
 import { CommandBlockingCard } from "./command-blocking-card";
 import { AnimatedAlertBanner } from "./animated-alert-banner";
 import { EnhancedAuditTrail } from "./enhanced-audit-trail";
 import { LiveMetricsCards } from "./live-metrics-cards";
+import { logger } from "#/utils/logger";
 
 interface SessionStatus {
   session_id: string;
@@ -99,9 +101,13 @@ export function AutonomousMonitor({
     if (auditTrail.length > 0) {
       const counts = auditTrail.reduce(
         (acc, entry) => {
-          if (entry.risk_level === "LOW") acc.low++;
-          else if (entry.risk_level === "MEDIUM") acc.medium++;
-          else if (entry.risk_level === "HIGH") acc.high++;
+          if (entry.risk_level === "LOW") {
+            acc.low += 1;
+          } else if (entry.risk_level === "MEDIUM") {
+            acc.medium += 1;
+          } else if (entry.risk_level === "HIGH") {
+            acc.high += 1;
+          }
           return acc;
         },
         { low: 0, medium: 0, high: 0 },
@@ -131,7 +137,7 @@ export function AutonomousMonitor({
           setAuditTrail(data);
         }
       } catch (err) {
-        console.error("Failed to fetch audit trail:", err);
+        logger.error("Failed to fetch audit trail:", err);
       }
     };
 
@@ -153,7 +159,7 @@ export function AutonomousMonitor({
           setAlerts(data);
         }
       } catch (err) {
-        console.error("Failed to fetch alerts:", err);
+        logger.error("Failed to fetch alerts:", err);
       }
     };
 
@@ -178,7 +184,7 @@ export function AutonomousMonitor({
         onIntervene?.(action);
       }
     } catch (err) {
-      console.error("Failed to perform intervention:", err);
+      logger.error("Failed to perform intervention:", err);
     }
   };
 
@@ -207,12 +213,12 @@ export function AutonomousMonitor({
     const errorPenalty = status.consecutive_errors * 10;
     const highRiskPenalty = status.high_risk_actions_count * 5;
     const stagnationPenalty = status.stagnation_iterations * 2;
-    const circuitBreakerPenalty =
-      status.circuit_breaker_status === "tripped"
-        ? 30
-        : status.circuit_breaker_status === "warning"
-          ? 15
-          : 0;
+    let circuitBreakerPenalty = 0;
+    if (status.circuit_breaker_status === "tripped") {
+      circuitBreakerPenalty = 30;
+    } else if (status.circuit_breaker_status === "warning") {
+      circuitBreakerPenalty = 15;
+    }
 
     return Math.max(
       0,
@@ -276,10 +282,10 @@ export function AutonomousMonitor({
           </div>
           <div>
             <h2 className="text-xl font-bold text-white bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              Autonomous Safety Monitor
+              {t(I18nKey.MONITORING$AUTONOMOUS_SAFETY_MONITOR)}
             </h2>
             <p className="text-xs text-gray-400">
-              Real-time security & performance tracking
+              {t(I18nKey.MONITORING$REAL_TIME_TRACKING)}
             </p>
           </div>
         </div>
@@ -288,27 +294,30 @@ export function AutonomousMonitor({
         <div className="flex gap-2">
           {status.agent_state === "paused" ? (
             <button
+              type="button"
               onClick={() => handleIntervention("resume")}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg shadow-green-500/30"
             >
               <Play className="w-4 h-4" />
-              Resume
+              {t(I18nKey.MONITORING$RESUME)}
             </button>
           ) : (
             <button
+              type="button"
               onClick={() => handleIntervention("pause")}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-gradient-to-r from-yellow-500 to-orange-600 text-white rounded-lg hover:from-yellow-600 hover:to-orange-700 transition-all duration-200 shadow-lg shadow-yellow-500/30"
             >
               <Pause className="w-4 h-4" />
-              Pause
+              {t(I18nKey.MONITORING$PAUSE)}
             </button>
           )}
           <button
+            type="button"
             onClick={() => handleIntervention("stop")}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-lg hover:from-red-600 hover:to-rose-700 transition-all duration-200 shadow-lg shadow-red-500/30"
           >
             <Square className="w-4 h-4" />
-            Stop
+            {t(I18nKey.MONITORING$STOP)}
           </button>
         </div>
       </div>
@@ -335,7 +344,7 @@ export function AutonomousMonitor({
         <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
           <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
             <Activity className="w-4 h-4 text-blue-400" />
-            Risk Levels Over Time
+            {t(I18nKey.MONITORING$RISK_LEVELS_OVER_TIME)}
           </h3>
           {riskHistory.length > 1 ? (
             <RiskLevelChart data={riskHistory} />
@@ -356,7 +365,9 @@ export function AutonomousMonitor({
       <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
           <FileText className="w-4 h-4 text-purple-400" />
-          Audit Trail ({auditTrail.length} entries)
+          {t(I18nKey.MONITORING$AUDIT_TRAIL_ENTRIES, {
+            count: auditTrail.length,
+          })}
         </h3>
         <EnhancedAuditTrail entries={auditTrail.slice(0, 20)} />
       </div>
@@ -364,33 +375,43 @@ export function AutonomousMonitor({
       {/* Footer Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-700/50">
         <div className="text-center">
-          <p className="text-xs text-gray-400 mb-1">Agent State</p>
+          <p className="text-xs text-gray-400 mb-1">
+            {t(I18nKey.MONITORING$AGENT_STATE)}
+          </p>
           <p className="text-sm font-semibold text-white capitalize">
             {status.agent_state}
           </p>
         </div>
         <div className="text-center">
-          <p className="text-xs text-gray-400 mb-1">Iterations</p>
+          <p className="text-xs text-gray-400 mb-1">
+            {t(I18nKey.MONITORING$ITERATIONS)}
+          </p>
           <p className="text-sm font-semibold text-white">
             {status.current_iteration} / {status.max_iterations}
           </p>
         </div>
         <div className="text-center">
-          <p className="text-xs text-gray-400 mb-1">Circuit Breaker</p>
+          <p className="text-xs text-gray-400 mb-1">
+            {t(I18nKey.MONITORING$CIRCUIT_BREAKER)}
+          </p>
           <p
-            className={`text-sm font-semibold capitalize ${
-              status.circuit_breaker_status === "tripped"
-                ? "text-red-400"
-                : status.circuit_breaker_status === "warning"
-                  ? "text-yellow-400"
-                  : "text-green-400"
-            }`}
+            className={(() => {
+              if (status.circuit_breaker_status === "tripped") {
+                return "text-sm font-semibold capitalize text-red-400";
+              }
+              if (status.circuit_breaker_status === "warning") {
+                return "text-sm font-semibold capitalize text-yellow-400";
+              }
+              return "text-sm font-semibold capitalize text-green-400";
+            })()}
           >
             {status.circuit_breaker_status}
           </p>
         </div>
         <div className="text-center">
-          <p className="text-xs text-gray-400 mb-1">Last Action</p>
+          <p className="text-xs text-gray-400 mb-1">
+            {t(I18nKey.MONITORING$LAST_ACTION)}
+          </p>
           <p className="text-sm font-mono text-white truncate">
             {status.last_action_type || "N/A"}
           </p>

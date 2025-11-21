@@ -51,9 +51,42 @@ export async function deleteDatabaseConnection(
 }
 
 /**
+ * Database schema structure
+ */
+export interface DatabaseSchema {
+  tables?: Array<{
+    name: string;
+    columns?: Array<{
+      name: string;
+      type: string;
+      nullable?: boolean;
+    }>;
+  }>;
+  collections?: string[];
+  keys?: string[];
+  type: "sql" | "nosql" | "key-value";
+}
+
+/**
+ * Query execution result
+ */
+export interface QueryResult {
+  success: boolean;
+  data?: Array<Record<string, unknown>>;
+  rows?: unknown[];
+  columns?: string[];
+  affectedRows?: number;
+  rowCount?: number;
+  executionTime?: number;
+  error?: string;
+}
+
+/**
  * Get database schema (tables, collections, or keys)
  */
-export async function getDatabaseSchema(connectionId: string): Promise<any> {
+export async function getDatabaseSchema(
+  connectionId: string,
+): Promise<DatabaseSchema> {
   const response = await Forge.get(
     `/api/database-connections/${connectionId}/schema`,
   );
@@ -68,7 +101,7 @@ export async function executeQuery(
   query: string,
   limit?: number,
   timeout?: number,
-): Promise<any> {
+): Promise<QueryResult> {
   const response = await Forge.post(
     `/api/database-connections/${connectionId}/query`,
     {

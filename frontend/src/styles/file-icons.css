@@ -20,31 +20,31 @@
 
 /* File type specific colors */
 .file-icon[data-category="programming"] {
-  color: #3B82F6; /* Blue for programming files */
+  color: #3b82f6; /* Blue for programming files */
 }
 
 .file-icon[data-category="web"] {
-  color: #10B981; /* Green for web files */
+  color: #10b981; /* Green for web files */
 }
 
 .file-icon[data-category="config"] {
-  color: #F59E0B; /* Amber for config files */
+  color: #f59e0b; /* Amber for config files */
 }
 
 .file-icon[data-category="documentation"] {
-  color: #8B5CF6; /* Purple for documentation */
+  color: #8b5cf6; /* Purple for documentation */
 }
 
 .file-icon[data-category="data"] {
-  color: #06B6D4; /* Cyan for data files */
+  color: #06b6d4; /* Cyan for data files */
 }
 
 .file-icon[data-category="image"] {
-  color: #EC4899; /* Pink for images */
+  color: #ec4899; /* Pink for images */
 }
 
 .file-icon[data-category="archive"] {
-  color: #F97316; /* Orange for archives */
+  color: #f97316; /* Orange for archives */
 }
 
 /* Hover effects */
@@ -82,15 +82,15 @@
 
 /* Folder icons with better styling */
 .folder-icon {
-  color: #F59E0B;
+  color: #f59e0b;
   transition: all 0.2s ease;
 }
 
 .folder-icon:hover {
-  color: #FCD34D;
+  color: #fcd34d;
   transform: scale(1.05);
 }
 
 .folder-icon.open {
-  color: #FCD34D;
+  color: #fcd34d;
 }

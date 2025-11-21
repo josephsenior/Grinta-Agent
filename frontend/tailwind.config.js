@@ -25,14 +25,14 @@ export default {
         mono: ["JetBrains Mono", "monospace"],
       },
       fontSize: {
-        xxs: "0.75rem", // 12px
-        xs: "0.875rem", // 14px
-        s: "1rem", // 16px
-        m: "1.125rem", // 18px
-        l: "1.5rem", // 24px
-        xl: "2rem", // 32px
-        xxl: "2.25rem", // 36px
-        xxxl: "3rem", // 48px
+        xxs: ["0.75rem", { lineHeight: "1.5" }], // 12px, lineHeight 1.5
+        xs: ["0.875rem", { lineHeight: "1.5" }], // 14px, lineHeight 1.5
+        s: ["1rem", { lineHeight: "1.5" }], // 16px, lineHeight 1.5
+        m: ["1.125rem", { lineHeight: "1.5" }], // 18px, lineHeight 1.5
+        l: ["1.5rem", { lineHeight: "1.2" }], // 24px, lineHeight 1.2
+        xl: ["2rem", { lineHeight: "1.2" }], // 32px, lineHeight 1.2
+        xxl: ["2.25rem", { lineHeight: "1.2" }], // 36px, lineHeight 1.2
+        xxxl: ["3rem", { lineHeight: "1.2" }], // 48px, lineHeight 1.2
       },
       colors: {
         // Sophisticated enterprise palette - inspired by premium tech brands
@@ -63,13 +63,20 @@ export default {
 
         // Violet Brand Colors
         brand: {
+          // Design token brand colors
+          violet: "#8b5cf6", // Main violet brand
+          violetDark: "#7c3aed", // Dark violet variant (camelCase)
+          "violet-dark": "#7c3aed", // Dark violet variant (kebab-case for Tailwind classes)
+          violetLight: "#a78bfa", // Light violet variant
+          "violet-light": "#a78bfa", // Light violet variant (kebab-case for Tailwind classes)
+          // Extended brand color scale
           50: "#f5f3ff",
           100: "#ede9fe",
           200: "#ddd6fe",
           300: "#c4b5fd",
           400: "#a78bfa",
-          500: "#8b5cf6", // Main violet brand
-          600: "#7c3aed",
+          500: "#8b5cf6", // Main violet brand (alias for violet)
+          600: "#7c3aed", // Dark violet (alias for violetDark)
           700: "#6d28d9",
           800: "#5b21b6",
           900: "#4c1d95",
@@ -113,9 +120,9 @@ export default {
           100: "rgba(245, 158, 11, 0.2)",
         },
         info: { 
-          DEFAULT: "#06B6D4",
-          50: "rgba(6, 182, 212, 0.1)",
-          100: "rgba(6, 182, 212, 0.2)",
+          DEFAULT: "#3B82F6", // Sapphire blue as per design spec
+          50: "rgba(59, 130, 246, 0.1)",
+          100: "rgba(59, 130, 246, 0.2)",
         },
 
         // Professional neutral grays
@@ -171,6 +178,16 @@ export default {
       },
 
       spacing: {
+        // Design token spacing scale
+        xs: "0.25rem", // 4px
+        sm: "0.5rem", // 8px
+        md: "1rem", // 16px
+        lg: "1.5rem", // 24px
+        xl: "2rem", // 32px
+        "2xl": "3rem", // 48px
+        "3xl": "4rem", // 64px
+        "4xl": "6rem", // 96px
+        // Additional custom spacing
         18: "4.5rem",
         22: "5.5rem",
         88: "22rem",
@@ -178,18 +195,38 @@ export default {
         128: "32rem",
       },
 
+      lineHeight: {
+        tight: "1.2", // Headings
+        normal: "1.5", // Body
+        relaxed: "1.75", // Long-form content (as per design spec)
+      },
+      transitionDuration: {
+        fast: "150ms", // Micro-interactions
+        normal: "300ms", // Standard transitions
+        slow: "500ms", // Page transitions
+      },
+      transitionTimingFunction: {
+        "ease-out": "cubic-bezier(0.16, 1, 0.3, 1)", // Entrance
+        "ease-in": "cubic-bezier(0.4, 0, 1, 1)", // Exit
+        spring: "cubic-bezier(0.68, -0.55, 0.265, 1.55)", // Bouncy
+      },
       borderRadius: {
-        xl: "1rem",
-        "2xl": "1.5rem",
-        "3xl": "2rem",
+        // Design token border radius scale
+        sm: "0.25rem", // 4px
+        md: "0.5rem", // 8px
+        lg: "0.75rem", // 12px
+        xl: "1rem", // 16px
+        "2xl": "1.5rem", // 24px
+        "3xl": "2rem", // 32px
+        full: "9999px", // Pills, circles
       },
 
       boxShadow: {
         luxury: "0 4px 20px rgba(0, 0, 0, 0.15)",
         "luxury-lg": "0 8px 40px rgba(0, 0, 0, 0.2)",
         "luxury-xl": "0 20px 60px rgba(0, 0, 0, 0.3)",
-        glow: "0 0 20px rgba(245, 158, 11, 0.3)",
-        "glow-lg": "0 0 40px rgba(245, 158, 11, 0.4)",
+        glow: "0 0 20px rgba(139, 92, 246, 0.3)",
+        "glow-lg": "0 0 40px rgba(139, 92, 246, 0.4)",
         "glow-gold": "0 0 30px rgba(245, 158, 11, 0.5)",
         "glow-emerald": "0 0 30px rgba(16, 185, 129, 0.4)",
         "glow-sapphire": "0 0 30px rgba(59, 130, 246, 0.4)",
@@ -310,9 +347,8 @@ export default {
             {},
         },
         ".btn-primary": {
-          background:
-            "linear-gradient(90deg,var(--color-brand-gold-start),var(--color-brand-gold-mid),var(--color-brand-gold-end))",
-          color: "#0b1020",
+          background: "var(--color-luxury-gradient)",
+          color: "#ffffff",
           "@apply shadow-glow hover:brightness-110 active:brightness-95": {},
         },
         ".btn-icon": {
@@ -339,7 +375,7 @@ export default {
       addUtilities({
         ".gradient-brand-text": {
           background:
-            "linear-gradient(90deg,var(--color-brand-gold-start),var(--color-brand-gold-mid),var(--color-brand-gold-end))",
+            "linear-gradient(90deg,var(--color-brand-violet-start),var(--color-brand-violet-mid),var(--color-brand-violet-end))",
           "-webkit-background-clip": "text",
           color: "transparent",
         },
@@ -348,6 +384,12 @@ export default {
             "linear-gradient(135deg, #FBBF24 0%, #F59E0B 50%, #10B981 100%)",
           "-webkit-background-clip": "text",
           color: "transparent",
+        },
+        ".shadow-glow": {
+          boxShadow: "0 0 20px rgba(139, 92, 246, 0.3)",
+        },
+        ".shadow-glow-lg": {
+          boxShadow: "0 0 40px rgba(139, 92, 246, 0.4)",
         },
       });
     },

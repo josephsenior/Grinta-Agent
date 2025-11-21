@@ -28,198 +28,79 @@ interface MCPServerFormProps {
   onCancel: () => void;
 }
 
-export function MCPServerForm({
-  mode,
-  server,
-  existingServers,
-  onSubmit,
-  onCancel,
-}: MCPServerFormProps) {
-  const controller = useMcpServerFormController({
-    mode,
-    server,
-    existingServers,
-    onSubmit,
-    onCancel,
-  });
-  const {
-    t,
-    serverType,
-    setServerType,
-    error,
-    serverTypeOptions,
-    formatEnvironmentVariables,
-    handleSubmit,
-  } = controller;
-
-  return (
-    <form
-      data-testid="mcp-server-form"
-      onSubmit={handleSubmit}
-      className="flex flex-col items-start gap-6"
-    >
-      {mode === "add" && (
-        <SettingsDropdownInput
-          testId="server-type-input"
-          name="type"
-          defaultSelectedKey={serverType}
-          onSelectionChange={(value) => setServerType(value as MCPServerType)}
-          items={serverTypeOptions}
-        />
-      )}
-
-      {error && (
-        <div className="text-danger text-sm" data-testid="form-error">
-          {error}
-        </div>
-      )}
-
-      <ServerSpecificFields
-        serverType={serverType}
-        server={server}
-        formatEnvironmentVariables={formatEnvironmentVariables}
-        t={controller.t}
-      />
-
-      <div className="flex items-center gap-4">
-        <BrandButton
-          testId="cancel-button"
-          type="button"
-          variant="secondary"
-          onClick={onCancel}
-        >
-          {t(I18nKey.BUTTON$CANCEL)}
-        </BrandButton>
-        <BrandButton testId="submit-button" type="submit" variant="primary">
-          {mode === "add" && t(I18nKey.SETTINGS$MCP_ADD_SERVER)}
-          {mode === "edit" && t(I18nKey.SETTINGS$MCP_SAVE_SERVER)}
-        </BrandButton>
-      </div>
-    </form>
-  );
+function extractArgs(value: FormDataEntryValue | null): string[] {
+  const raw = value?.toString().trim() || "";
+  if (!raw) {
+    return [];
+  }
+  return raw
+    .split("\n")
+    .map((arg) => arg.trim())
+    .filter(Boolean);
 }
 
-function ServerSpecificFields({
-  serverType,
-  server,
-  formatEnvironmentVariables,
-  t,
+function buildUrlServerPayload({
+  formData,
+  baseConfig,
 }: {
+  formData: FormData;
+  baseConfig: { id: string; type: MCPServerType };
+}): MCPServerConfig {
+  const url = formData.get("url")?.toString().trim() || "";
+  const apiKey = formData.get("api_key")?.toString().trim();
+
+  return {
+    ...baseConfig,
+    url,
+    ...(apiKey && { api_key: apiKey }),
+  };
+}
+
+const SERVER_PAYLOAD_BUILDERS: Record<
+  MCPServerType,
+  ({
+    formData,
+    baseConfig,
+    parseEnvironmentVariables,
+  }: {
+    formData: FormData;
+    baseConfig: { id: string; type: MCPServerType };
+    parseEnvironmentVariables: (envString: string) => Record<string, string>;
+  }) => MCPServerConfig
+> = {
+  stdio: ({ formData, baseConfig, parseEnvironmentVariables }) => {
+    const name = formData.get("name")?.toString().trim() || "";
+    const command = formData.get("command")?.toString().trim() || "";
+    const args = extractArgs(formData.get("args"));
+    const envString = formData.get("env")?.toString() || "";
+
+    return {
+      ...baseConfig,
+      name,
+      command,
+      args,
+      env: parseEnvironmentVariables(envString),
+    };
+  },
+  sse: ({ formData, baseConfig }) =>
+    buildUrlServerPayload({ formData, baseConfig }),
+  shttp: ({ formData, baseConfig }) =>
+    buildUrlServerPayload({ formData, baseConfig }),
+};
+
+function buildServerPayload({
+  formData,
+  serverType,
+  baseConfig,
+  parseEnvironmentVariables,
+}: {
+  formData: FormData;
   serverType: MCPServerType;
-  server?: MCPServerConfig;
-  formatEnvironmentVariables: (env?: Record<string, string>) => string;
-  t: ReturnType<typeof useTranslation>["t"];
-}) {
-  if (serverType === "stdio") {
-    return (
-      <>
-        <SettingsInput
-          testId="name-input"
-          name="name"
-          label={t(I18nKey.SETTINGS$MCP_SERVER_TYPE)}
-          type="text"
-          defaultValue={server?.name}
-          placeholder="my-stdio-server"
-          className={cn(
-            "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl px-3 py-2 placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
-            "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
-          )}
-          required
-        />
-
-        <SettingsInput
-          testId="command-input"
-          name="command"
-          label={t(I18nKey.SETTINGS$MCP_COMMAND)}
-          type="text"
-          defaultValue={server?.command}
-          placeholder="python"
-          className={cn(
-            "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl px-3 py-2 placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
-            "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
-          )}
-          required
-        />
-
-        <label className="flex flex-col gap-2.5 w-full sm:max-w-xs md:max-w-sm lg:max-w-[680px]">
-          <div className="flex items-center gap-2">
-            <span className="text-sm">
-              {t(I18nKey.SETTINGS$MCP_COMMAND_ARGUMENTS)}
-            </span>
-            <OptionalTag />
-          </div>
-          <textarea
-            data-testid="args-input"
-            name="args"
-            rows={4}
-            defaultValue={server?.args?.join("\n")}
-            placeholder="--option value"
-            className={cn(
-              "resize-none",
-              "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl p-3 placeholder:italic placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
-              "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
-            )}
-          />
-          <p className="text-xs text-foreground-secondary-alt">
-            {t(I18nKey.SETTINGS$MCP_COMMAND_ARGUMENTS_HELP)}
-          </p>
-        </label>
-
-        <label className="flex flex-col gap-2.5 w-full sm:max-w-xs md:max-w-sm lg:max-w-[680px]">
-          <div className="flex items-center gap-2">
-            <span className="text-sm">
-              {t(I18nKey.SETTINGS$MCP_ENVIRONMENT_VARIABLES)}
-            </span>
-            <OptionalTag />
-          </div>
-          <textarea
-            data-testid="env-input"
-            name="env"
-            rows={4}
-            defaultValue={formatEnvironmentVariables(server?.env)}
-            placeholder="KEY1=value1&#10;KEY2=value2"
-            className={cn(
-              "resize-none",
-              "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl p-3 placeholder:italic placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
-              "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
-            )}
-          />
-        </label>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <SettingsInput
-        testId="url-input"
-        name="url"
-        label={t(I18nKey.SETTINGS$MCP_URL)}
-        type="url"
-        defaultValue={server?.url}
-        placeholder="https://your-mcp-server.com"
-        className={cn(
-          "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl px-3 py-2 placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
-          "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
-        )}
-        required
-      />
-
-      <SettingsInput
-        testId="api-key-input"
-        name="api_key"
-        label={t(I18nKey.SETTINGS$MCP_API_KEY)}
-        showOptionalTag
-        type="password"
-        defaultValue={server?.api_key}
-        placeholder={t(I18nKey.SETTINGS$MCP_API_KEY_PLACEHOLDER)}
-        className={cn(
-          "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl px-3 py-2 placeholder:italic placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
-          "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
-        )}
-      />
-    </>
-  );
+  baseConfig: { id: string; type: MCPServerType };
+  parseEnvironmentVariables: (envString: string) => Record<string, string>;
+}): MCPServerConfig {
+  const builder = SERVER_PAYLOAD_BUILDERS[serverType];
+  return builder({ formData, baseConfig, parseEnvironmentVariables });
 }
 
 function createValidatorHelpers({
@@ -381,79 +262,135 @@ function createValidatorHelpers({
   };
 }
 
-function buildServerPayload({
-  formData,
+function ServerSpecificFields({
   serverType,
-  baseConfig,
-  parseEnvironmentVariables,
+  server,
+  formatEnvironmentVariables,
+  t,
 }: {
-  formData: FormData;
   serverType: MCPServerType;
-  baseConfig: { id: string; type: MCPServerType };
-  parseEnvironmentVariables: (envString: string) => Record<string, string>;
-}): MCPServerConfig {
-  const builder = SERVER_PAYLOAD_BUILDERS[serverType];
-  return builder({ formData, baseConfig, parseEnvironmentVariables });
-}
+  server?: MCPServerConfig;
+  formatEnvironmentVariables: (env?: Record<string, string>) => string;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  if (serverType === "stdio") {
+    return (
+      <>
+        <SettingsInput
+          testId="name-input"
+          name="name"
+          label={t(I18nKey.SETTINGS$MCP_SERVER_TYPE)}
+          type="text"
+          defaultValue={server?.name}
+          placeholder="my-stdio-server"
+          className={cn(
+            "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl px-3 py-2 placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
+            "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
+          )}
+          required
+        />
 
-const SERVER_PAYLOAD_BUILDERS: Record<
-  MCPServerType,
-  ({
-    formData,
-    baseConfig,
-    parseEnvironmentVariables,
-  }: {
-    formData: FormData;
-    baseConfig: { id: string; type: MCPServerType };
-    parseEnvironmentVariables: (envString: string) => Record<string, string>;
-  }) => MCPServerConfig
-> = {
-  stdio: ({ formData, baseConfig, parseEnvironmentVariables }) => {
-    const name = formData.get("name")?.toString().trim() || "";
-    const command = formData.get("command")?.toString().trim() || "";
-    const args = extractArgs(formData.get("args"));
-    const envString = formData.get("env")?.toString() || "";
+        <SettingsInput
+          testId="command-input"
+          name="command"
+          label={t(I18nKey.SETTINGS$MCP_COMMAND)}
+          type="text"
+          defaultValue={server?.command}
+          placeholder="python"
+          className={cn(
+            "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl px-3 py-2 placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
+            "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
+          )}
+          required
+        />
 
-    return {
-      ...baseConfig,
-      name,
-      command,
-      args,
-      env: parseEnvironmentVariables(envString),
-    };
-  },
-  sse: ({ formData, baseConfig }) =>
-    buildUrlServerPayload({ formData, baseConfig }),
-  shttp: ({ formData, baseConfig }) =>
-    buildUrlServerPayload({ formData, baseConfig }),
-};
+        <label
+          htmlFor="args-input"
+          className="flex flex-col gap-2.5 w-full sm:max-w-xs md:max-w-sm lg:max-w-[680px]"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-sm">
+              {t(I18nKey.SETTINGS$MCP_COMMAND_ARGUMENTS)}
+            </span>
+            <OptionalTag />
+          </div>
+          <textarea
+            id="args-input"
+            data-testid="args-input"
+            name="args"
+            rows={4}
+            defaultValue={server?.args?.join("\n")}
+            placeholder="--option value"
+            className={cn(
+              "resize-none",
+              "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl p-3 placeholder:italic placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
+              "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
+            )}
+          />
+          <p className="text-xs text-foreground-secondary-alt">
+            {t(I18nKey.SETTINGS$MCP_COMMAND_ARGUMENTS_HELP)}
+          </p>
+        </label>
 
-function extractArgs(value: FormDataEntryValue | null): string[] {
-  const raw = value?.toString().trim() || "";
-  if (!raw) {
-    return [];
+        <label
+          htmlFor="env-input"
+          className="flex flex-col gap-2.5 w-full sm:max-w-xs md:max-w-sm lg:max-w-[680px]"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-sm">
+              {t(I18nKey.SETTINGS$MCP_ENVIRONMENT_VARIABLES)}
+            </span>
+            <OptionalTag />
+          </div>
+          <textarea
+            id="env-input"
+            data-testid="env-input"
+            name="env"
+            rows={4}
+            defaultValue={formatEnvironmentVariables(server?.env)}
+            placeholder="KEY1=value1&#10;KEY2=value2"
+            className={cn(
+              "resize-none",
+              "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl p-3 placeholder:italic placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
+              "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
+            )}
+          />
+        </label>
+      </>
+    );
   }
-  return raw
-    .split("\n")
-    .map((arg) => arg.trim())
-    .filter(Boolean);
-}
 
-function buildUrlServerPayload({
-  formData,
-  baseConfig,
-}: {
-  formData: FormData;
-  baseConfig: { id: string; type: MCPServerType };
-}): MCPServerConfig {
-  const url = formData.get("url")?.toString().trim() || "";
-  const apiKey = formData.get("api_key")?.toString().trim();
+  return (
+    <>
+      <SettingsInput
+        testId="url-input"
+        name="url"
+        label={t(I18nKey.SETTINGS$MCP_URL)}
+        type="url"
+        defaultValue={server?.url}
+        placeholder="https://your-mcp-server.com"
+        className={cn(
+          "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl px-3 py-2 placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
+          "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
+        )}
+        required
+      />
 
-  return {
-    ...baseConfig,
-    url,
-    ...(apiKey && { api_key: apiKey }),
-  };
+      <SettingsInput
+        testId="api-key-input"
+        name="api_key"
+        label={t(I18nKey.SETTINGS$MCP_API_KEY)}
+        showOptionalTag
+        type="password"
+        defaultValue={server?.api_key}
+        placeholder={t(I18nKey.SETTINGS$MCP_API_KEY_PLACEHOLDER)}
+        className={cn(
+          "bg-background-glass backdrop-blur-xl border border-border-glass rounded-xl px-3 py-2 placeholder:italic placeholder:text-text-foreground-secondary text-text-primary transition-all duration-200 focus:border-primary-500/50 focus:bg-primary-500/5 focus:shadow-lg focus:shadow-primary-500/10",
+          "disabled:bg-background-surface disabled:border-border-subtle disabled:cursor-not-allowed disabled:opacity-50",
+        )}
+      />
+    </>
+  );
 }
 
 function useMcpServerFormController({
@@ -461,7 +398,6 @@ function useMcpServerFormController({
   server,
   existingServers,
   onSubmit,
-  onCancel,
 }: MCPServerFormProps) {
   const { t } = useTranslation();
   const [serverType, setServerType] = React.useState<MCPServerType>(
@@ -576,4 +512,75 @@ function useMcpServerFormController({
     formatEnvironmentVariables,
     handleSubmit,
   } as const;
+}
+
+export function MCPServerForm({
+  mode,
+  server,
+  existingServers,
+  onSubmit,
+  onCancel,
+}: MCPServerFormProps) {
+  const controller = useMcpServerFormController({
+    mode,
+    server,
+    existingServers,
+    onSubmit,
+    onCancel,
+  });
+  const {
+    t,
+    serverType,
+    setServerType,
+    error,
+    serverTypeOptions,
+    formatEnvironmentVariables,
+    handleSubmit,
+  } = controller;
+
+  return (
+    <form
+      data-testid="mcp-server-form"
+      onSubmit={handleSubmit}
+      className="flex flex-col items-start gap-6"
+    >
+      {mode === "add" && (
+        <SettingsDropdownInput
+          testId="server-type-input"
+          name="type"
+          defaultSelectedKey={serverType}
+          onSelectionChange={(value) => setServerType(value as MCPServerType)}
+          items={serverTypeOptions}
+        />
+      )}
+
+      {error && (
+        <div className="text-danger text-sm" data-testid="form-error">
+          {error}
+        </div>
+      )}
+
+      <ServerSpecificFields
+        serverType={serverType}
+        server={server}
+        formatEnvironmentVariables={formatEnvironmentVariables}
+        t={controller.t}
+      />
+
+      <div className="flex items-center gap-4">
+        <BrandButton
+          testId="cancel-button"
+          type="button"
+          variant="secondary"
+          onClick={onCancel}
+        >
+          {t(I18nKey.BUTTON$CANCEL)}
+        </BrandButton>
+        <BrandButton testId="submit-button" type="submit" variant="primary">
+          {mode === "add" && t(I18nKey.SETTINGS$MCP_ADD_SERVER)}
+          {mode === "edit" && t(I18nKey.SETTINGS$MCP_SAVE_SERVER)}
+        </BrandButton>
+      </div>
+    </form>
+  );
 }

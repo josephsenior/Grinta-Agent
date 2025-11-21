@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { NavLink, Outlet, redirect, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, redirect, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   User,
@@ -17,7 +17,6 @@ import {
   Workflow,
   Bot,
   Menu,
-  ArrowLeft,
 } from "lucide-react";
 import { cn } from "#/utils/utils";
 import { useConfig } from "#/hooks/query/use-config";
@@ -26,8 +25,9 @@ import Forge from "#/api/forge";
 import { queryClient } from "#/query-client-config";
 import { GetConfigResponse } from "#/api/forge.types";
 import { useSubscriptionAccess } from "#/hooks/query/use-subscription-access";
-import { Button } from "#/components/ui/button";
-import AnimatedBackground from "#/components/landing/AnimatedBackground";
+import { AppLayout } from "#/components/layout/AppLayout";
+import { AuthGuard } from "#/components/features/auth/auth-guard";
+import { SettingsBreadcrumbs } from "#/components/layout/SettingsBreadcrumbs";
 
 const SAAS_ONLY_PATHS = [
   "/settings/user",
@@ -53,10 +53,10 @@ const SAAS_NAV_GROUPS = [
     title: "AI & Models",
     items: [
       {
-        to: "/settings",
+        to: "/settings/llm",
         text: "SETTINGS$NAV_LLM",
         icon: Bot,
-        requiresPro: true,
+        requiresPro: false, // LLM Settings are always visible
       },
       { to: "/settings/mcp", text: "SETTINGS$NAV_MCP", icon: Workflow },
       { to: "/settings/prompts", text: "SETTINGS$NAV_PROMPTS", icon: FileText },
@@ -114,7 +114,7 @@ const OSS_NAV_GROUPS = [
   {
     title: "AI & Models",
     items: [
-      { to: "/settings", text: "SETTINGS$NAV_LLM", icon: Bot },
+      { to: "/settings/llm", text: "SETTINGS$NAV_LLM", icon: Bot },
       { to: "/settings/mcp", text: "SETTINGS$NAV_MCP", icon: Workflow },
       { to: "/settings/prompts", text: "SETTINGS$NAV_PROMPTS", icon: FileText },
       { to: "/settings/memory", text: "SETTINGS$NAV_MEMORY", icon: Brain },
@@ -181,9 +181,10 @@ export const clientLoader = async (args: Route.ClientLoaderArgs) => {
 
   const isSaas = config?.APP_MODE === "saas";
 
-  if (isSaas && pathname === "/settings") {
-    return redirect("/settings/user");
-  }
+  // Don't redirect /settings anymore - show the hub instead
+  // if (isSaas && pathname === "/settings") {
+  //   return redirect("/settings/user");
+  // }
 
   if (!isSaas && SAAS_ONLY_PATHS.includes(pathname)) {
     return redirect("/settings");
@@ -283,10 +284,9 @@ function MobileNavigation({ groups }: { groups: NavGroup[] }) {
 }
 
 function SettingsScreen() {
-  const { t } = useTranslation();
+  const location = useLocation();
   const { data: config } = useConfig();
   const { data: subscriptionAccess } = useSubscriptionAccess();
-  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const isSaas = config?.APP_MODE === "saas";
@@ -302,66 +302,76 @@ function SettingsScreen() {
       .filter((group) => group.items.length > 0);
   }, [isSaas, subscriptionAccess]);
 
-  return (
-    <main
-      data-testid="settings-screen"
-      className="relative min-h-screen overflow-hidden bg-black text-foreground"
-    >
-      <div aria-hidden className="pointer-events-none">
-        <AnimatedBackground />
-      </div>
-      {/* Main Content */}
-      <div className="relative z-[1] mx-auto max-w-7xl px-6 py-6">
-        <div className="flex gap-8">
-          {/* Desktop Sidebar */}
-          {/* Desktop Sidebar - Always visible on desktop */}
-          <aside className="hidden md:block w-[280px] flex-shrink-0">
-            <SettingsSidebar groups={navGroups} />
-          </aside>
+  const isHubPage = location.pathname === "/settings";
 
-          {/* Mobile Sidebar - Toggleable */}
-          {sidebarOpen && (
-            <aside className="md:hidden fixed inset-y-0 left-0 z-50 w-[280px] bg-black/95 backdrop-blur-xl border-r border-white/10 overflow-y-auto">
+  return (
+    <AuthGuard>
+      <AppLayout>
+        <div className="flex gap-8">
+          {/* Settings Sub-navigation Sidebar - Hidden on hub page */}
+          {!isHubPage && (
+            <aside className="hidden md:block w-[280px] flex-shrink-0">
               <SettingsSidebar groups={navGroups} />
             </aside>
           )}
 
-          {/* Content Area */}
-          <div className="flex-1 min-w-0">
-            {/* Header - Always visible */}
-            <div className="mb-4 flex items-center gap-3">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="rounded-xl border border-white/10 bg-black/60 p-2 text-foreground-secondary hover:bg-white/5 hover:text-foreground transition-all"
-                aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
-              >
-                <Menu className="h-4 w-4" />
-              </button>
-              <Button
-                variant="outline"
-                onClick={() => navigate("/")}
-                className="ml-auto border border-white/20 bg-transparent text-foreground hover:bg-white/10 text-xs h-8 px-3"
-              >
-                <ArrowLeft className="mr-1.5 h-3 w-3" />
-                Back
-              </Button>
-            </div>
+          {/* Mobile Sidebar - Toggleable - Hidden on hub page */}
+          {!isHubPage && sidebarOpen && (
+            <aside className="md:hidden fixed inset-y-0 left-0 z-50 w-[280px] bg-black/95 backdrop-blur-xl border-r border-white/10 overflow-y-auto">
+              <div className="p-4">
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(false)}
+                  className="mb-4 rounded-xl border border-white/10 bg-black/60 p-2 text-foreground-secondary hover:bg-white/5 hover:text-foreground transition-all"
+                  aria-label="Close sidebar"
+                >
+                  <Menu className="h-4 w-4" />
+                </button>
+                <SettingsSidebar groups={navGroups} />
+              </div>
+            </aside>
+          )}
 
-            {/* Mobile Navigation - Hidden on desktop, shown when sidebar is hidden */}
-            {!sidebarOpen && (
-              <div className="mb-6 md:hidden">
+          {/* Content Area */}
+          <div className="flex-1 min-w-0 w-full space-y-6">
+            {/* Breadcrumbs - Only show when not on index route */}
+            {location.pathname !== "/settings" && <SettingsBreadcrumbs />}
+
+            {/* Page Title: Settings - Only show when not on index route */}
+            {location.pathname !== "/settings" && (
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-[2.25rem] font-bold text-[#FFFFFF] leading-[1.2] mb-2">
+                    Settings
+                  </h1>
+                </div>
+                {/* Mobile Menu Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="md:hidden rounded-xl border border-white/10 bg-black/60 p-2 text-foreground-secondary hover:bg-white/5 hover:text-foreground transition-all"
+                  aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+                >
+                  <Menu className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Mobile Navigation - Hidden on desktop and hub page, shown when sidebar is hidden */}
+            {!isHubPage && !sidebarOpen && (
+              <div className="md:hidden">
                 <MobileNavigation groups={navGroups} />
               </div>
             )}
 
             {/* Settings Content */}
-            <div className="rounded-3xl border border-white/10 bg-black/60 backdrop-blur-xl">
+            <div>
               <Outlet />
             </div>
           </div>
         </div>
-      </div>
-    </main>
+      </AppLayout>
+    </AuthGuard>
   );
 }
 

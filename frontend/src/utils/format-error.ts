@@ -114,25 +114,6 @@ function formatJavaScriptError(error: Error): UserFriendlyErrorData {
   };
 }
 
-function extractAxiosDetails(
-  error: unknown,
-): { status?: number; message?: string } | null {
-  const response = extractAxiosResponse(error);
-  if (!response) {
-    return null;
-  }
-
-  const status =
-    typeof response.status === "number" ? response.status : undefined;
-  const message =
-    extractAxiosMessage(response) ?? (error as Record<string, unknown>).message;
-
-  return {
-    status,
-    message: typeof message === "string" ? message : undefined,
-  };
-}
-
 function extractAxiosResponse(error: unknown) {
   if (!error || typeof error !== "object" || !("response" in error)) {
     return null;
@@ -154,6 +135,44 @@ function extractAxiosMessage(response: Record<string, unknown>) {
   }
 
   return undefined;
+}
+
+function extractAxiosDetails(
+  error: unknown,
+): { status?: number; message?: string } | null {
+  const response = extractAxiosResponse(error);
+  if (!response) {
+    return null;
+  }
+
+  const status =
+    typeof response.status === "number" ? response.status : undefined;
+  const message =
+    extractAxiosMessage(response) ?? (error as Record<string, unknown>).message;
+
+  return {
+    status,
+    message: typeof message === "string" ? message : undefined,
+  };
+}
+
+function buildDefaultAxiosError(
+  message: string | undefined,
+): UserFriendlyErrorData {
+  return {
+    title: "Something went wrong",
+    message: message || "An unexpected error occurred.",
+    severity: "error",
+    category: "system",
+    icon: "❌",
+    suggestion: "Try refreshing the page",
+    actions: [
+      { label: "Refresh", type: "refresh", highlight: true },
+      { label: "Support", type: "support", url: "mailto:support@forge.ai" },
+    ],
+    technical_details: message,
+    can_retry: true,
+  };
 }
 
 function mapHttpStatusToError(
@@ -242,25 +261,6 @@ function mapHttpStatusToError(
     default:
       return status === undefined ? null : buildDefaultAxiosError(message);
   }
-}
-
-function buildDefaultAxiosError(
-  message: string | undefined,
-): UserFriendlyErrorData {
-  return {
-    title: "Something went wrong",
-    message: message || "An unexpected error occurred.",
-    severity: "error",
-    category: "system",
-    icon: "❌",
-    suggestion: "Try refreshing the page",
-    actions: [
-      { label: "Refresh", type: "refresh", highlight: true },
-      { label: "Support", type: "support", url: "mailto:support@forge.ai" },
-    ],
-    technical_details: message,
-    can_retry: true,
-  };
 }
 
 /**

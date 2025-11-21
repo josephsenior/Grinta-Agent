@@ -91,6 +91,7 @@ export interface SchemaInfo {
       columns: string[];
       unique: boolean;
     }>;
+    rowCount?: number;
   }>;
 
   // For MongoDB

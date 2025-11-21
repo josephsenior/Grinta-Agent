@@ -47,6 +47,7 @@ Comprehensive error handling with recovery options:
 The main chat interface component that orchestrates all chat functionality.
 
 **Responsibilities:**
+
 - Layout and structure
 - State coordination
 - Event handling
@@ -59,12 +60,14 @@ The main chat interface component that orchestrates all chat functionality.
 Renders the conversation messages with turn-based grouping.
 
 **Responsibilities:**
+
 - Message rendering
 - Turn grouping
 - Microagent status
 - Event filtering
 
 **Props:**
+
 ```tsx
 interface MessagesProps {
   messages: (ForgeAction | ForgeObservation)[];
@@ -80,6 +83,7 @@ interface MessagesProps {
 Renders individual events with appropriate styling and actions.
 
 **Responsibilities:**
+
 - Event type detection
 - Content rendering
 - Action buttons
@@ -90,6 +94,7 @@ Renders individual events with appropriate styling and actions.
 The chat input component with file upload and message sending.
 
 **Responsibilities:**
+
 - Message input
 - File uploads
 - Message sending
@@ -119,9 +124,9 @@ Shared state is managed through context:
 Computed state is derived using `useMemo`:
 
 ```tsx
-const filteredEvents = useMemo(() => 
-  events.filter(shouldRenderEvent), 
-  [events, showTechnicalDetails]
+const filteredEvents = useMemo(
+  () => events.filter(shouldRenderEvent),
+  [events, showTechnicalDetails],
 );
 ```
 
@@ -199,11 +204,9 @@ const renderWithProviders = (component) => {
   return render(
     <Provider store={mockStore}>
       <BrowserRouter>
-        <TaskProvider>
-          {component}
-        </TaskProvider>
+        <TaskProvider>{component}</TaskProvider>
       </BrowserRouter>
-    </Provider>
+    </Provider>,
   );
 };
 ```

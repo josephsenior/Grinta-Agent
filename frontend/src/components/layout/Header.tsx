@@ -1,101 +1,39 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import {
-  MessageCircle,
-  User,
-  Plus,
-  Menu,
-  Info,
-  DollarSign,
-  Bell,
-} from "lucide-react";
+import { MessageCircle, Plus, Menu, Settings, PanelLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useSidebar } from "#/contexts/sidebar-context";
 import { I18nKey } from "#/i18n/declaration";
 import { ThemeToggle } from "#/components/ui/theme-toggle";
 import { useScrollY } from "#/hooks/use-scroll-reveal";
-import { useCreateConversation } from "#/hooks/mutation/use-create-conversation";
-import { useIsCreatingConversation } from "#/hooks/use-is-creating-conversation";
 import { cn } from "#/utils/utils";
+import { useHeaderHandlers } from "./Header/use-header-handlers";
+import { useHeaderNavigation } from "./Header/use-header-navigation";
+import { usePlaywrightDetection } from "./Header/use-playwright-detection";
 import { UserProfileDropdown } from "#/components/features/user/user-profile-dropdown";
 import { NotificationsCenter } from "#/components/features/notifications/notifications-center";
 import { GlobalSearch } from "#/components/features/search/global-search";
-import { HelpCenter } from "#/components/features/help/help-center";
+// HelpCenter moved to sidebar - removed from header
 // Use public logo instead of bundled asset
 const logo = "/forge-logo.png";
 
 export function Header() {
-  const navigate = useNavigate();
-  const { mutate: createConversation, isPending } = useCreateConversation();
-  const isCreatingConversationElsewhere = useIsCreatingConversation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const isConversationRoute = pathname.startsWith("/conversations/");
   const isLandingRoute = pathname === "/";
   const scrollY = useScrollY(16);
   const { t } = useTranslation();
-  const navLinks = useMemo(
-    () => [
-      {
-        to: "/dashboard",
-        label: t("COMMON$DASHBOARD", { defaultValue: "Dashboard" }),
-        icon: MessageCircle,
-      },
-      {
-        to: "/profile",
-        label: t("COMMON$PROFILE", { defaultValue: "Profile" }),
-        icon: User,
-      },
-      {
-        to: "/notifications",
-        label: t("COMMON$NOTIFICATIONS", { defaultValue: "Notifications" }),
-        icon: Bell,
-      },
-      {
-        to: "/help",
-        label: t("COMMON$HELP", { defaultValue: "Help" }),
-        icon: Info,
-      },
-      {
-        to: "/pricing",
-        label: t("PRICING", { defaultValue: "Pricing" }),
-        icon: DollarSign,
-      },
-    ],
-    [t],
-  );
-
-  const handleCreateConversation = () => {
-    if (isPending) {
-      return;
-    }
-    createConversation(
-      {},
-      {
-        onSuccess: (data) => {
-          try {
-            localStorage.setItem(
-              "RECENT_CONVERSATION_ID",
-              data.conversation_id,
-            );
-          } catch (e) {
-            // ignore errors when persisting recent conversation id (e.g., storage disabled)
-          }
-          navigate(`/conversations/${data.conversation_id}`);
-        },
-      },
-    );
-  };
-
-  const handleOpenMessages = () => {
-    // Request opening the conversation overlay panel via a custom event
-    const event = new CustomEvent("Forge:open-conversation-panel");
-    window.dispatchEvent(event);
-  };
-  // Detect Playwright test runs; test harness sets __Forge_PLAYWRIGHT on window
-  type WindowWithE2E = Window & { __Forge_PLAYWRIGHT?: boolean };
-  const isPlaywrightRun =
-    typeof window !== "undefined" &&
-    (window as unknown as WindowWithE2E).__Forge_PLAYWRIGHT === true;
+  const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
+  const {
+    handleCreateConversation,
+    handleOpenMessages,
+    isPending,
+    isCreatingConversationElsewhere,
+  } = useHeaderHandlers();
+  const navLinks = useHeaderNavigation();
+  const isPlaywrightRun = usePlaywrightDetection();
 
   return (
     <header
@@ -126,10 +64,10 @@ export function Header() {
             <div className="absolute -top-12 right-4 h-32 w-32 rounded-full bg-brand-500/20 blur-[100px]" />
           </div>
 
-          <div className="relative flex items-center justify-between gap-4 px-4 sm:px-6 py-3 sm:py-4">
-            {/* Logo */}
+          <div className="relative flex items-center gap-4 px-4 sm:px-6 py-3 sm:py-4">
+            {/* Logo (left) */}
             <div
-              className="flex items-center space-x-3 select-none group cursor-pointer"
+              className="flex items-center space-x-3 select-none group cursor-pointer flex-shrink-0"
               onClick={() => navigate("/")}
             >
               <img
@@ -140,31 +78,56 @@ export function Header() {
               />
             </div>
 
-            {/* Navigation */}
-            <nav className="hidden md:flex items-center gap-1">
-              {navLinks.map(({ to, label, icon: Icon }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  aria-label={label}
-                  className={cn(
-                    "relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
-                    "text-white/80 hover:text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-                    pathname === to && "text-white bg-white/10",
-                  )}
-                  title={label}
-                >
-                  <Icon className="h-3.5 w-3.5 text-white/60" />
-                  <span>{label}</span>
-                </Link>
-              ))}
-            </nav>
+            {/* Search bar (center) */}
+            {!isConversationRoute && (
+              <div className="flex-1 max-w-2xl mx-4 hidden md:block">
+                <GlobalSearch variant="inline" />
+              </div>
+            )}
 
-            {/* Action buttons */}
-            <div className="flex items-center gap-2">
+            {/* Navigation (hidden on mobile, shown when no search) */}
+            {isConversationRoute && (
+              <nav className="hidden md:flex items-center gap-1 flex-1">
+                {navLinks.map(({ to, label, icon: Icon }) => (
+                  <Link
+                    key={to}
+                    to={to}
+                    aria-label={label}
+                    className={cn(
+                      "relative flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+                      "text-white/80 hover:text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+                      pathname === to && "text-white bg-white/10",
+                    )}
+                    title={label}
+                  >
+                    <Icon className="h-3.5 w-3.5 text-white/60" />
+                    <span>{label}</span>
+                  </Link>
+                ))}
+              </nav>
+            )}
+
+            {/* Action buttons (right) */}
+            <div className="flex items-center gap-2 flex-shrink-0">
               {!isConversationRoute && (
                 <>
                   <div className="flex items-center gap-1.5">
+                    {/* Sidebar Toggle Button - Always visible in header */}
+                    <button
+                      type="button"
+                      onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                      aria-label={
+                        sidebarCollapsed ? "Show sidebar" : "Hide sidebar"
+                      }
+                      title={
+                        sidebarCollapsed
+                          ? "Show sidebar (Ctrl/Cmd + B)"
+                          : "Hide sidebar (Ctrl/Cmd + B)"
+                      }
+                      className="relative p-2 rounded-lg transition-all duration-200 text-white/70 hover:text-white hover:bg-white/10"
+                    >
+                      <PanelLeft className="w-4 h-4" />
+                    </button>
                     <ThemeToggle variant="icon" />
                     <button
                       type="button"
@@ -177,8 +140,20 @@ export function Header() {
                       <MessageCircle className="w-4 h-4" />
                     </button>
                     <NotificationsCenter />
-                    <GlobalSearch />
-                    <HelpCenter />
+                    {/* Mobile search button */}
+                    <div className="md:hidden">
+                      <GlobalSearch />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/settings")}
+                      aria-label={t("COMMON$SETTINGS", {
+                        defaultValue: "Settings",
+                      })}
+                      className="relative p-2 rounded-lg transition-all duration-200 text-white/70 hover:text-white hover:bg-white/10"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </button>
                     <UserProfileDropdown />
                   </div>
 
@@ -205,7 +180,7 @@ export function Header() {
                 </>
               )}
 
-              {/* Mobile menu toggle */}
+              {/* Mobile menu toggle - Always visible on mobile */}
               <button
                 type="button"
                 onClick={() => setMobileOpen((o) => !o)}
@@ -213,7 +188,7 @@ export function Header() {
                   defaultValue: "Toggle navigation",
                 })}
                 aria-expanded={mobileOpen}
-                className="md:hidden relative p-2 rounded-lg transition-all duration-200 text-white/70 hover:text-white hover:bg-white/10"
+                className="md:hidden relative p-2 rounded-lg transition-all duration-200 text-white/70 hover:text-white hover:bg-white/10 z-50"
               >
                 <Menu className="w-5 h-5" />
               </button>

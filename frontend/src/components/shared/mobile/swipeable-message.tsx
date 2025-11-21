@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { Trash2, Reply } from "lucide-react";
+import { Trash2, Reply, Copy } from "lucide-react";
 import { cn } from "#/utils/utils";
 import { triggerHaptic } from "#/utils/haptic-feedback";
 
@@ -76,10 +76,15 @@ export function SwipeableMessage({
         onSwipeRight?.();
         onReply?.(); // Default action for right swipe
       } else {
-        // Swipe left
+        // Swipe left - check if it's a long swipe for copy, otherwise delete
         triggerHaptic("warning");
         onSwipeLeft?.();
-        onDelete?.(); // Default action for left swipe
+        // Long swipe (2x threshold) triggers copy, otherwise delete
+        if (absDistance >= threshold * 2 && onCopy) {
+          onCopy();
+        } else {
+          onDelete?.(); // Default action for left swipe
+        }
       }
     }
 
@@ -118,19 +123,31 @@ export function SwipeableMessage({
         className={cn(
           "absolute right-0 top-0 bottom-0 z-0",
           "flex items-center justify-end pr-4",
-          "bg-red-500/20 transition-all duration-200",
+          "transition-all duration-200",
+          Math.abs(swipeDistance) >= threshold * 2 && onCopy
+            ? "bg-blue-500/20"
+            : "bg-red-500/20",
         )}
         style={{
           width: `${Math.max(0, -swipeDistance)}px`,
           opacity: swipeDistance < 0 ? progress / 100 : 0,
         }}
       >
-        <Trash2
-          className={cn(
-            "w-5 h-5 transition-all duration-200",
-            isTriggered ? "text-red-500 scale-110" : "text-red-500/70",
-          )}
-        />
+        {Math.abs(swipeDistance) >= threshold * 2 && onCopy ? (
+          <Copy
+            className={cn(
+              "w-5 h-5 transition-all duration-200",
+              isTriggered ? "text-blue-500 scale-110" : "text-blue-500/70",
+            )}
+          />
+        ) : (
+          <Trash2
+            className={cn(
+              "w-5 h-5 transition-all duration-200",
+              isTriggered ? "text-red-500 scale-110" : "text-red-500/70",
+            )}
+          />
+        )}
       </div>
 
       {/* Swipeable Content */}

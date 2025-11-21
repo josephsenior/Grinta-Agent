@@ -5,6 +5,7 @@ import { displayErrorToast } from "#/utils/custom-toast-handlers";
 import { I18nKey } from "#/i18n/declaration";
 import { getTrajectory } from "#/services/trajectory-service";
 import { downloadTrajectory } from "#/utils/download-trajectory";
+import { logger } from "#/utils/logger";
 
 /**
  * Custom hook to handle feedback and action operations
@@ -40,7 +41,7 @@ export function useChatFeedbackActions() {
         data,
       );
     } catch (error) {
-      console.error("Failed to export trajectory:", error);
+      logger.error("Failed to export trajectory:", error);
       displayErrorToast(t(I18nKey.CONVERSATION$DOWNLOAD_ERROR));
     }
   }, [params.conversationId, t]);

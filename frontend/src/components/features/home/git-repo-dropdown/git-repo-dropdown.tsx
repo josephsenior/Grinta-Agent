@@ -99,7 +99,7 @@ export function GitRepoDropdown({
       ? processedSearchInput
       : inputValue;
 
-    return repositories.filter((repo) =>
+    return repositories.filter((repo: GitRepository) =>
       repo.full_name.toLowerCase().includes(filterText.toLowerCase()),
     );
   }, [

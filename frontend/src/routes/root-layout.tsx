@@ -33,6 +33,10 @@ import { RoutePreloader } from "#/utils/route-preloader";
 import { injectCriticalCSS } from "#/utils/critical-css";
 import { cn } from "#/utils/utils";
 import { Button } from "#/components/ui/button";
+import { SkipLink } from "#/components/layout/SkipLink";
+import { SidebarProvider, useSidebar } from "#/contexts/sidebar-context";
+import { FloatingFeedbackWidget } from "#/components/features/feedback/floating-feedback-widget";
+import { useGlobalNavigationShortcuts } from "#/hooks/use-global-navigation-shortcuts";
 
 const ConversationPanelWrapper = React.lazy(() =>
   import(
@@ -63,9 +67,6 @@ const Sidebar = React.lazy(() =>
   import("#/components/features/sidebar/sidebar").then((m) => ({
     default: m.Sidebar,
   })),
-);
-const Header = React.lazy(() =>
-  import("#/components/layout/Header").then((m) => ({ default: m.Header })),
 );
 const Footer = React.lazy(() =>
   import("#/components/layout/Footer").then((m) => ({ default: m.Footer })),
@@ -100,7 +101,7 @@ export function ErrorBoundary() {
 
     // Handle other HTTP errors
     return (
-      <div className="relative min-h-screen overflow-hidden bg-black text-foreground">
+      <div className="relative min-h-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
         <div className="relative z-[1] flex min-h-screen flex-col items-center justify-center px-6 py-20">
           <div className="mx-auto max-w-2xl text-center">
             <div className="mb-8">
@@ -109,10 +110,10 @@ export function ErrorBoundary() {
               </h1>
             </div>
             <div className="mb-8 space-y-4">
-              <h2 className="text-3xl font-semibold text-white sm:text-4xl">
+              <h2 className="text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">
                 {error.statusText || "Something went wrong"}
               </h2>
-              <p className="text-lg text-white/70">
+              <p className="text-lg text-[var(--text-tertiary)]">
                 {error.data instanceof Object
                   ? JSON.stringify(error.data)
                   : error.data || "An error occurred while loading this page."}
@@ -141,7 +142,7 @@ export function ErrorBoundary() {
 
   if (error instanceof Error) {
     return (
-      <div className="relative min-h-screen overflow-hidden bg-black text-foreground">
+      <div className="relative min-h-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
         <div className="relative z-[1] flex min-h-screen flex-col items-center justify-center px-6 py-20">
           <div className="mx-auto max-w-2xl text-center">
             <div className="mb-8">
@@ -150,10 +151,10 @@ export function ErrorBoundary() {
               </h1>
             </div>
             <div className="mb-8 space-y-4">
-              <h2 className="text-3xl font-semibold text-white sm:text-4xl">
+              <h2 className="text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">
                 {t(I18nKey.ERROR$GENERIC)}
               </h2>
-              <p className="text-lg text-white/70">
+              <p className="text-lg text-[var(--text-tertiary)]">
                 {error.message || "An unexpected error occurred."}
               </p>
             </div>
@@ -179,7 +180,10 @@ export function ErrorBoundary() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-black text-foreground">
+    <div
+      className="relative min-h-screen overflow-hidden text-foreground"
+      style={{ backgroundColor: "var(--bg-primary)" }}
+    >
       <div className="relative z-[1] flex min-h-screen flex-col items-center justify-center px-6 py-20">
         <div className="mx-auto max-w-2xl text-center">
           <div className="mb-8">
@@ -188,10 +192,13 @@ export function ErrorBoundary() {
             </h1>
           </div>
           <div className="mb-8 space-y-4">
-            <h2 className="text-3xl font-semibold text-white sm:text-4xl">
+            <h2
+              className="text-3xl font-semibold sm:text-4xl"
+              style={{ color: "var(--text-primary)" }}
+            >
               {t(I18nKey.ERROR$UNKNOWN)}
             </h2>
-            <p className="text-lg text-white/70">
+            <p className="text-lg" style={{ color: "var(--text-secondary)" }}>
               An unknown error occurred. Please try again.
             </p>
           </div>
@@ -218,6 +225,8 @@ export function ErrorBoundary() {
 
 interface MainAppController {
   isConversationPage: boolean;
+  isLandingPage: boolean;
+  isAuthPage: boolean;
   showHeader: boolean;
   status: {
     renderAuthModal: boolean;
@@ -240,8 +249,17 @@ function useRouteContext() {
   const { pathname } = useLocation();
   const isOnTosPage = useIsOnTosPage();
   const isConversationPage = pathname.startsWith("/conversations/");
+  const isLandingPage = pathname === "/";
+  const isAuthPage = pathname.startsWith("/auth/");
 
-  return { navigate, pathname, isOnTosPage, isConversationPage };
+  return {
+    navigate,
+    pathname,
+    isOnTosPage,
+    isConversationPage,
+    isLandingPage,
+    isAuthPage,
+  };
 }
 
 function useMainAppData() {
@@ -501,8 +519,14 @@ function useConsentFormState({
 }
 
 function useMainAppController(): MainAppController {
-  const { navigate, pathname, isOnTosPage, isConversationPage } =
-    useRouteContext();
+  const {
+    navigate,
+    pathname,
+    isOnTosPage,
+    isConversationPage,
+    isLandingPage,
+    isAuthPage,
+  } = useRouteContext();
   const { t } = useTranslation();
 
   const appData = useMainAppData();
@@ -541,7 +565,9 @@ function useMainAppController(): MainAppController {
 
   return {
     isConversationPage,
-    showHeader: !isConversationPage,
+    isLandingPage,
+    isAuthPage,
+    showHeader: false, // Header removed
     status: {
       renderAuthModal: authModalState.renderAuthModal,
       renderReAuthModal: authModalState.renderReAuthModal,
@@ -561,26 +587,13 @@ function useMainAppController(): MainAppController {
 
 function MainLayoutShell({ controller }: { controller: MainAppController }) {
   const maintenanceEnabled = controller.config?.MAINTENANCE;
+  const { sidebarCollapsed } = useSidebar();
 
   return (
     <>
-      {controller.showHeader && (
-        <Suspense
-          fallback={
-            <div className="h-16 bg-background-tertiary animate-pulse" />
-          }
-        >
-          <Header />
-        </Suspense>
-      )}
-
       <Suspense
         fallback={
-          <div
-            className={`fixed left-0 w-64 h-full bg-background-tertiary animate-pulse ${
-              controller.showHeader ? "top-16" : "top-0"
-            }`}
-          />
+          <div className="fixed left-0 w-64 h-full bg-background-tertiary animate-pulse top-0" />
         }
       >
         <Sidebar />
@@ -588,18 +601,24 @@ function MainLayoutShell({ controller }: { controller: MainAppController }) {
 
       <div
         className={cn(
-          "flex flex-1 h-full min-h-0",
-          controller.showHeader ? "pt-[88px] sm:pt-[96px]" : "",
+          "flex flex-1 min-h-0 transition-all duration-300",
+          // Add left padding when sidebar is visible and not collapsed (not on landing, conversation, or auth pages)
+          !controller.isLandingPage &&
+            !controller.isConversationPage &&
+            !controller.isAuthPage &&
+            !sidebarCollapsed
+            ? "md:pl-64"
+            : "",
         )}
       >
         <div
           className={
             controller.isConversationPage
               ? "w-full h-full"
-              : "p-3 md:p-4 lg:p-6 w-full pb-12 sm:pb-16"
+              : "w-full pb-12 sm:pb-16"
           }
         >
-          <div className="flex flex-col flex-1 gap-3 md:gap-4 lg:gap-5 min-w-0 h-full">
+          <div className="flex flex-col flex-1 gap-3 md:gap-4 lg:gap-5 min-w-0 min-h-full">
             {maintenanceEnabled &&
               controller.config?.MAINTENANCE?.startTime && (
                 <div className="flex-shrink-0 animate-slide-down">
@@ -617,24 +636,25 @@ function MainLayoutShell({ controller }: { controller: MainAppController }) {
                 </div>
               )}
 
-            <div
-              id="root-outlet"
-              className="flex-1 relative rounded-2xl bg-black h-full min-h-0"
+            <main
+              id="main-content"
+              tabIndex={-1}
+              className="flex-1 relative rounded-2xl bg-[var(--bg-primary)] min-h-0 focus:outline-none"
             >
-              <div className="h-full min-h-0 overflow-auto scrollbar-thin scrollbar-thumb-grey-700 scrollbar-track-transparent">
+              <div className="min-h-full overflow-auto scrollbar-thin scrollbar-thumb-grey-700 scrollbar-track-transparent">
                 <Suspense
                   fallback={
-                    <div className="h-full bg-background-secondary animate-pulse" />
+                    <div className="min-h-screen bg-background-secondary animate-pulse" />
                   }
                 >
                   <EmailVerificationGuard>
-                    <div className="h-full min-h-0">
+                    <div className="min-h-full w-full">
                       <Outlet />
                     </div>
                   </EmailVerificationGuard>
                 </Suspense>
               </div>
-            </div>
+            </main>
           </div>
         </div>
       </div>
@@ -642,8 +662,9 @@ function MainLayoutShell({ controller }: { controller: MainAppController }) {
   );
 }
 
-function AppFooter({ isConversationPage }: { isConversationPage: boolean }) {
-  if (isConversationPage) {
+function AppFooter({ isLandingPage }: { isLandingPage: boolean }) {
+  // Only show footer on landing page
+  if (!isLandingPage) {
     return null;
   }
 
@@ -658,7 +679,10 @@ function AppFooter({ isConversationPage }: { isConversationPage: boolean }) {
 
 function ModalFallback() {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+    <div
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ backgroundColor: "var(--bg-primary)", opacity: 0.5 }}
+    >
       <div className="bg-background-tertiary w-96 h-64 animate-pulse rounded-lg" />
     </div>
   );
@@ -670,7 +694,7 @@ function OverlayModals({ controller }: { controller: MainAppController }) {
       {controller.conversationPanelIsOpen && (
         <Suspense
           fallback={
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+            <div className="fixed inset-0 bg-[var(--bg-primary)]/50 flex items-center justify-center">
               <div className="bg-background-tertiary w-96 h-96 animate-pulse rounded-lg" />
             </div>
           }
@@ -721,21 +745,49 @@ function OverlayModals({ controller }: { controller: MainAppController }) {
 export default function MainApp() {
   const controller = useMainAppController();
 
+  // Enable global navigation shortcuts (only active on authenticated pages)
+  useGlobalNavigationShortcuts();
+
+  // Landing page and auth pages bypass all layout constraints
+  if (controller.isLandingPage || controller.isAuthPage) {
+    return (
+      <AppErrorBoundary>
+        <ToastProvider>
+          <div
+            data-testid="root-layout"
+            className="w-full min-w-0 font-sans overflow-x-hidden"
+          >
+            <SkipLink />
+            <div className="w-full min-w-0">
+              <Outlet />
+            </div>
+            <OverlayModals controller={controller} />
+            <RoutePreloader />
+          </div>
+        </ToastProvider>
+      </AppErrorBoundary>
+    );
+  }
+
   return (
     <AppErrorBoundary>
       <ToastProvider>
-        <div
-          data-testid="root-layout"
-          className="min-h-screen w-full bg-black font-sans safe-area-top safe-area-bottom safe-area-left safe-area-right"
-        >
-          <div className="relative z-10 h-screen lg:min-w-[1024px] flex flex-col overflow-hidden">
-            <MainLayoutShell controller={controller} />
-          </div>
+        <SidebarProvider>
+          <div
+            data-testid="root-layout"
+            className="min-h-screen w-full bg-[var(--bg-primary)] font-sans safe-area-top safe-area-bottom safe-area-left safe-area-right"
+          >
+            <SkipLink />
+            <div className="relative min-h-screen lg:min-w-[1024px] flex flex-col">
+              <MainLayoutShell controller={controller} />
+            </div>
 
-          <AppFooter isConversationPage={controller.isConversationPage} />
-          <OverlayModals controller={controller} />
-          <RoutePreloader />
-        </div>
+            <AppFooter isLandingPage={controller.isLandingPage} />
+            <OverlayModals controller={controller} />
+            <RoutePreloader />
+            <FloatingFeedbackWidget />
+          </div>
+        </SidebarProvider>
       </ToastProvider>
     </AppErrorBoundary>
   );

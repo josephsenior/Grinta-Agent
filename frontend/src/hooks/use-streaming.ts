@@ -212,24 +212,37 @@ export function useTypingStreaming(
   } = options;
 
   const getTypingSpeed = useCallback(
-    (char: string, index: number) => {
+    (char: string, index: number, totalLength: number) => {
       if (!realisticTyping) return speed;
 
       // Simulate human typing patterns
       const baseSpeed = speed;
       let variation = 1;
 
+      // Position-based variation: slower at start (warming up), faster in middle, slower at end (tiring)
+      const positionRatio = index / Math.max(1, totalLength);
+      if (positionRatio < 0.1) {
+        // First 10% - warming up, slightly slower
+        variation *= 1.2;
+      } else if (positionRatio > 0.9) {
+        // Last 10% - tiring, slightly slower
+        variation *= 1.15;
+      } else {
+        // Middle 80% - peak performance, slightly faster
+        variation *= 0.95;
+      }
+
       // Slower on punctuation
       if (pauseOnPunctuation && /[.!?;:,]/.test(char)) {
-        variation = 2;
+        variation *= 2;
       }
 
       // Faster on spaces
       if (char === " ") {
-        variation = 0.7;
+        variation *= 0.7;
       }
 
-      // Random variation
+      // Random variation for natural feel
       variation *= 0.5 + Math.random() * 1;
 
       return Math.max(1, Math.round(baseSpeed * variation));
@@ -264,19 +277,48 @@ export function useTypingStreaming(
       }
 
       const char = text[currentIndexRef.current];
-      const currentSpeed = getTypingSpeed(char, currentIndexRef.current);
 
       setDisplayedText((prev) => prev + char);
-      currentIndexRef.current++;
+      currentIndexRef.current += 1;
 
-      // Schedule next character
-      const nextDelay = char === " " ? interval : interval + Math.random() * 20;
+      // Calculate delay based on character type
+      let nextDelay = interval;
+
+      if (char === " ") {
+        // Faster on spaces
+        nextDelay = interval;
+      } else if (pauseOnPunctuation && /[.!?;:,]/.test(char)) {
+        // Use punctuationDelay for punctuation marks
+        nextDelay = punctuationDelay + Math.random() * 50;
+      } else if (realisticTyping) {
+        // Apply realistic typing variation with position awareness
+        const speedVariation = getTypingSpeed(
+          char,
+          currentIndexRef.current,
+          text.length,
+        );
+        nextDelay = interval * speedVariation + Math.random() * 20;
+      } else {
+        // Default variation
+        nextDelay = interval + Math.random() * 20;
+      }
+
       intervalRef.current = setTimeout(streamNext, nextDelay);
     };
 
     // Start streaming after delay
     delayTimeoutRef.current = setTimeout(streamNext, restOptions.delay || 0);
-  }, [text, getTypingSpeed, interval, isStreaming, isComplete, restOptions]);
+  }, [
+    text,
+    getTypingSpeed,
+    interval,
+    isStreaming,
+    isComplete,
+    pauseOnPunctuation,
+    punctuationDelay,
+    realisticTyping,
+    restOptions,
+  ]);
 
   const stopStreaming = useCallback(() => {
     if (intervalRef.current) {

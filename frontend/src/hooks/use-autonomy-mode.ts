@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { AutonomyMode } from "#/components/features/controls/autonomy-mode-selector";
 import { useSettings } from "./query/use-settings";
 import { useSaveSettings } from "./mutation/use-save-settings";
+import { logger } from "#/utils/logger";
 
 /**
  * Custom hook to manage autonomy mode state and API calls
@@ -39,7 +40,7 @@ export function useAutonomyMode() {
     async (mode: AutonomyMode) => {
       setIsLoading(true);
 
-      console.log(`[useAutonomyMode] Changing mode: ${currentMode} → ${mode}`);
+      logger.debug(`[useAutonomyMode] Changing mode: ${currentMode} → ${mode}`);
 
       // Save to backend API - React Query will automatically update the cache
       saveSettings(
@@ -48,11 +49,11 @@ export function useAutonomyMode() {
         },
         {
           onSuccess: () => {
-            console.log(`[useAutonomyMode] Successfully saved mode: ${mode}`);
+            logger.debug(`[useAutonomyMode] Successfully saved mode: ${mode}`);
             setIsLoading(false);
           },
           onError: (error) => {
-            console.error("[useAutonomyMode] Failed to save mode:", error);
+            logger.error("[useAutonomyMode] Failed to save mode:", error);
             setIsLoading(false);
           },
         },

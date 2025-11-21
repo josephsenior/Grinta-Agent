@@ -37,11 +37,11 @@ const getRunObservationStatus = (
     return "success";
   }
 
-  return typeof exitCode === "number"
-    ? "error"
-    : hasContent
-      ? "success"
-      : "error";
+  if (typeof exitCode === "number") {
+    return "error";
+  }
+
+  return hasContent ? "success" : "error";
 };
 
 const isContentError = (event: ForgeObservation, hasContent: boolean) => {

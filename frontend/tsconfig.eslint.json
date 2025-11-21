@@ -11,11 +11,23 @@
     "tests/**/*.tsx",
     "**/*.d.ts",
     "vite.config.ts",
+    "vite.config.prod.ts",
     "playwright.config.ts",
+    "playwright.local.config.ts",
+    "playwright.local.noserver.config.ts",
+    "playwright.static.config.ts",
+    "react-router.config.ts",
+    "hero.ts",
     "scripts/**/*.ts",
     "scripts/**/*.js",
     "test-utils.tsx",
     "test-utils/**/*.ts",
-    "test-utils/**/*.tsx"
+    "test-utils/**/*.tsx",
+    "@/**/*.ts",
+    "@/**/*.tsx",
+    "components/**/*.ts",
+    "components/**/*.tsx",
+    "repro-react-router-plugin/**/*.ts",
+    "repro-react-router-plugin/**/*.tsx"
   ]
 }

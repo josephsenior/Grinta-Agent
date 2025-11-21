@@ -1,4 +1,5 @@
 import { Download, Clock, Hash } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface QueryResultsProps {
   results: QueryResult | null;
@@ -36,62 +37,90 @@ type QueryState =
       rowCount?: number;
     };
 
-const renderLoadingState = () => (
+const renderLoadingState = (t: ReturnType<typeof useTranslation>["t"]) => (
   <div className="flex items-center justify-center p-12">
     <div className="text-center">
       <div className="animate-spin w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full mx-auto mb-4" />
-      <p className="text-sm text-foreground-secondary">Executing query...</p>
+      <p className="text-sm text-foreground-secondary">
+        {t("queryResults.executing", "Executing query...")}
+      </p>
     </div>
   </div>
 );
 
-const renderErrorState = (message: string) => (
+const renderErrorState = (
+  message: string,
+  t: ReturnType<typeof useTranslation>["t"],
+) => (
   <div className="p-6">
     <div className="p-4 bg-error-500/10 border border-error-500 rounded-lg text-error-500">
-      <p className="font-medium mb-2">Query Error</p>
+      <p className="font-medium mb-2">
+        {t("queryResults.queryError", "Query Error")}
+      </p>
       <pre className="text-sm font-mono whitespace-pre-wrap">{message}</pre>
     </div>
   </div>
 );
 
-const renderEmptyState = () => (
+const renderEmptyState = (t: ReturnType<typeof useTranslation>["t"]) => (
   <div className="flex items-center justify-center p-12">
     <p className="text-foreground-secondary text-sm">
-      Run a query to see results
+      {t("queryResults.runQueryToSeeResults", "Run a query to see results")}
     </p>
   </div>
 );
 
-const renderFailureState = (message: string) => (
+const renderFailureState = (
+  message: string,
+  t: ReturnType<typeof useTranslation>["t"],
+) => (
   <div className="p-6">
     <div className="p-4 bg-error-500/10 border border-error-500 rounded-lg text-error-500">
-      <p className="font-medium">Query failed</p>
+      <p className="font-medium">
+        {t("queryResults.queryFailed", "Query failed")}
+      </p>
       <p className="text-sm mt-1">{message}</p>
     </div>
   </div>
 );
 
-const renderNonSelectState = ({
-  affectedRows,
-  executionTime,
-}: {
-  affectedRows?: number;
-  executionTime?: number;
-}) => (
+const renderNonSelectState = (
+  {
+    affectedRows,
+    executionTime,
+  }: {
+    affectedRows?: number;
+    executionTime?: number;
+  },
+  t: ReturnType<typeof useTranslation>["t"],
+) => (
   <div className="p-6">
     <div className="p-4 bg-success-500/10 border border-success-500 rounded-lg text-success-500">
-      <p className="font-medium">Query executed successfully</p>
+      <p className="font-medium">
+        {t(
+          "queryResults.queryExecutedSuccessfully",
+          "Query executed successfully",
+        )}
+      </p>
       <div className="flex items-center gap-4 mt-2 text-sm">
         {typeof affectedRows === "number" && (
           <div className="flex items-center gap-1">
             <Hash className="w-4 h-4" />
-            <span>{affectedRows} rows affected</span>
+            <span>
+              {t("queryResults.rowsAffected", "{{count}} rows affected", {
+                count: affectedRows,
+              })}
+            </span>
           </div>
         )}
         {typeof executionTime === "number" && (
           <div className="flex items-center gap-1">
             <Clock className="w-4 h-4" />
-            <span>{executionTime}s</span>
+            <span>
+              {t("queryResults.executionTime", "{{time}}s", {
+                time: executionTime,
+              })}
+            </span>
           </div>
         )}
       </div>
@@ -118,23 +147,34 @@ const handleCsvExport = (columns: string[], data: QueryDataRow[]) => {
   URL.revokeObjectURL(url);
 };
 
-const renderTableState = ({
-  data,
-  displayColumns,
-  executionTime,
-  rowCount,
-}: Extract<QueryState, { type: "table" }>) => (
+const renderTableState = (
+  {
+    data,
+    displayColumns,
+    executionTime,
+    rowCount,
+  }: Extract<QueryState, { type: "table" }>,
+  t: ReturnType<typeof useTranslation>["t"],
+) => (
   <div className="flex flex-col h-full">
     <div className="flex items-center justify-between p-3 border-b border-border bg-background-secondary">
       <div className="flex items-center gap-4 text-sm">
         <div className="flex items-center gap-1 text-foreground">
           <Hash className="w-4 h-4" />
-          <span className="font-medium">{rowCount ?? data.length} rows</span>
+          <span className="font-medium">
+            {t("queryResults.rows", "{{count}} rows", {
+              count: rowCount ?? data.length,
+            })}
+          </span>
         </div>
         {typeof executionTime === "number" && (
           <div className="flex items-center gap-1 text-foreground-secondary">
             <Clock className="w-4 h-4" />
-            <span>{executionTime}s</span>
+            <span>
+              {t("queryResults.executionTime", "{{time}}s", {
+                time: executionTime,
+              })}
+            </span>
           </div>
         )}
       </div>
@@ -144,7 +184,7 @@ const renderTableState = ({
         className="flex items-center gap-2 px-3 py-1.5 text-sm text-foreground-secondary hover:text-foreground bg-background-tertiary hover:bg-background-primary rounded transition-colors"
       >
         <Download className="w-4 h-4" />
-        Export CSV
+        {t("queryResults.exportCsv", "Export CSV")}
       </button>
     </div>
 
@@ -185,23 +225,6 @@ const renderTableState = ({
     </div>
   </div>
 );
-
-const getQueryState = ({
-  isLoading,
-  error,
-  results,
-}: {
-  isLoading: boolean;
-  error: string | null;
-  results: QueryResult | null;
-}): QueryState => {
-  const earlyState = evaluateQueryStatus({ isLoading, error, results });
-  if (earlyState) {
-    return earlyState;
-  }
-
-  return buildTableState(results!);
-};
 
 function evaluateQueryStatus({
   isLoading,
@@ -253,26 +276,44 @@ function buildTableState(results: QueryResult): QueryState {
   };
 }
 
+const getQueryState = ({
+  isLoading,
+  error,
+  results,
+}: {
+  isLoading: boolean;
+  error: string | null;
+  results: QueryResult | null;
+}): QueryState => {
+  const earlyState = evaluateQueryStatus({ isLoading, error, results });
+  if (earlyState) {
+    return earlyState;
+  }
+
+  return buildTableState(results!);
+};
+
 export function QueryResults({
   results,
   isLoading = false,
   error = null,
 }: QueryResultsProps) {
+  const { t } = useTranslation();
   const state = getQueryState({ isLoading, error, results });
 
   switch (state.type) {
     case "loading":
-      return renderLoadingState();
+      return renderLoadingState(t);
     case "error":
-      return renderErrorState(state.message);
+      return renderErrorState(state.message, t);
     case "empty":
-      return renderEmptyState();
+      return renderEmptyState(t);
     case "failure":
-      return renderFailureState(state.message);
+      return renderFailureState(state.message, t);
     case "nonSelect":
-      return renderNonSelectState(state);
+      return renderNonSelectState(state, t);
     case "table":
-      return renderTableState(state);
+      return renderTableState(state, t);
     default:
       return null;
   }

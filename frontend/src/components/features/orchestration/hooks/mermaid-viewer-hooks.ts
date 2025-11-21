@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import EventLogger from "#/utils/event-logger";
 import { ensureMermaid } from "../mermaid-helpers";
+import { logger } from "#/utils/logger";
 
 interface UseMermaidDiagramOptions {
   diagram: string;
@@ -53,7 +54,7 @@ export function useMermaidDiagram({
     try {
       EventLogger.error("Mermaid rendering error");
     } catch (eventLoggerError) {
-      console.warn("Mermaid rendering failed", eventLoggerError);
+      logger.warn("Mermaid rendering failed", eventLoggerError);
     }
   }, []);
 
@@ -234,7 +235,11 @@ export function useZoomPan({ enabled }: ZoomPanOptions): ZoomPanResult {
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
-    cursor: isPanning ? "grabbing" : enabled ? "grab" : "default",
+    cursor: (() => {
+      if (isPanning) return "grabbing";
+      if (enabled) return "grab";
+      return "default";
+    })(),
     transformStyle,
   };
 }
@@ -248,6 +253,53 @@ interface FullscreenShortcutsOptions {
   resetZoom: () => void;
   enterFullscreen: () => void;
   exitFullscreen: () => void;
+}
+
+// Helper functions - defined before use
+function shouldIgnoreKeyboardTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement
+  );
+}
+
+function processZoomShortcut(
+  event: KeyboardEvent,
+  actions: { zoomIn: () => void; zoomOut: () => void; resetZoom: () => void },
+): boolean {
+  switch (event.key) {
+    case "=":
+    case "+":
+      event.preventDefault();
+      actions.zoomIn();
+      return true;
+    case "-":
+      event.preventDefault();
+      actions.zoomOut();
+      return true;
+    case "0":
+      event.preventDefault();
+      actions.resetZoom();
+      return true;
+    default:
+      return false;
+  }
+}
+
+function processFullscreenShortcut(
+  event: KeyboardEvent,
+  options: {
+    isFullscreen: boolean;
+    enterFullscreen: () => void;
+    exitFullscreen: () => void;
+  },
+): void {
+  if (event.key === " " && !options.isFullscreen) {
+    event.preventDefault();
+    options.enterFullscreen();
+  } else if (event.key === "Escape" && options.isFullscreen) {
+    event.preventDefault();
+    options.exitFullscreen();
+  }
 }
 
 export function useFullscreenShortcuts({
@@ -298,53 +350,4 @@ export function useFullscreenShortcuts({
     enterFullscreen,
     exitFullscreen,
   ]);
-}
-
-function shouldIgnoreKeyboardTarget(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement
-  );
-}
-
-function processZoomShortcut(
-  event: KeyboardEvent,
-  actions: { zoomIn: () => void; zoomOut: () => void; resetZoom: () => void },
-): boolean {
-  switch (event.key) {
-    case "=":
-    case "+":
-      event.preventDefault();
-      actions.zoomIn();
-      return true;
-    case "-":
-      event.preventDefault();
-      actions.zoomOut();
-      return true;
-    case "0":
-      event.preventDefault();
-      actions.resetZoom();
-      return true;
-    default:
-      return false;
-  }
-}
-
-function processFullscreenShortcut(
-  event: KeyboardEvent,
-  options: {
-    isFullscreen: boolean;
-    enterFullscreen: () => void;
-    exitFullscreen: () => void;
-  },
-): void {
-  if (event.key === " " && !options.isFullscreen) {
-    event.preventDefault();
-    options.enterFullscreen();
-    return;
-  }
-
-  if (event.key === "Escape" && options.isFullscreen) {
-    event.preventDefault();
-    options.exitFullscreen();
-  }
 }

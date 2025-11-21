@@ -8,7 +8,7 @@ import type { Config } from "@react-router/dev/config";
  *
  * This script is used in the buildEnd function of the Vite config.
  */
-const unpackClientDirectory = async () => {
+const _unpackClientDirectory = async () => {
   const fs = await import("fs");
   const path = await import("path");
 

@@ -22,7 +22,6 @@ interface SettingsDropdownInputProps {
   error?: string;
   onSelectionChange?: (key: React.Key | null) => void;
   onInputChange?: (value: string) => void;
-  defaultFilter?: (textValue: string, inputValue: string) => boolean;
 }
 
 export function SettingsDropdownInput({
@@ -43,7 +42,6 @@ export function SettingsDropdownInput({
   error,
   onSelectionChange,
   onInputChange,
-  defaultFilter,
 }: SettingsDropdownInputProps) {
   const { t } = useTranslation();
   const [currentKey, setCurrentKey] = React.useState(
@@ -83,7 +81,7 @@ export function SettingsDropdownInput({
       {label && (
         <div className="flex items-center gap-1">
           <span className="text-sm font-medium text-foreground">{label}</span>
-          {showOptionalTag && <OptionalTag />}
+          {showOptionalTag && !required && <OptionalTag />}
         </div>
       )}
       <CustomDropdown
@@ -97,7 +95,6 @@ export function SettingsDropdownInput({
         onSelectionChange={handleSelectionChange}
         onInputChange={handleInputChange}
         isClearable={isClearable}
-        allowsCustomValue={allowsCustomValue}
         isLoading={isLoading}
         loadingText={t("HOME$LOADING")}
         error={error}

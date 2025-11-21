@@ -50,9 +50,10 @@ const notificationsSlice = createSlice({
       }
     },
     markAllAsRead: (state) => {
-      state.notifications.forEach((n) => {
-        n.read = true;
-      });
+      state.notifications = state.notifications.map((n) => ({
+        ...n,
+        read: true,
+      }));
     },
     removeNotification: (state, action: PayloadAction<string>) => {
       state.notifications = state.notifications.filter(

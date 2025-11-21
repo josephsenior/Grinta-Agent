@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from "react";
+import { logger } from "#/utils/logger";
 
 // Hook for performance optimizations
 export const usePerformanceOptimization = () => {
@@ -43,7 +44,7 @@ export const usePerformanceOptimization = () => {
     if ("requestIdleCallback" in window) {
       requestIdleCallback(() => {
         // Preload non-critical resources during idle time
-        console.log("Idle time available for background tasks");
+        logger.debug("Idle time available for background tasks");
       });
     }
   }, [preloadCriticalResources, optimizeFontLoading, enableResourceHints]);

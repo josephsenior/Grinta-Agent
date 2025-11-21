@@ -1,11 +1,12 @@
 import React from "react";
 import { AlertTriangle, RefreshCw, Bug } from "lucide-react";
+import i18n from "#/i18n";
 import { Button } from "#/components/ui/button";
+import { logger } from "#/utils/logger";
 
 interface GlobalErrorBoundaryState {
   hasError: boolean;
   error?: Error;
-  errorInfo?: React.ErrorInfo;
 }
 
 interface GlobalErrorBoundaryProps {
@@ -35,39 +36,37 @@ export class GlobalErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("GlobalErrorBoundary caught an error:", error, errorInfo);
+    logger.error("GlobalErrorBoundary caught an error:", error, errorInfo);
 
+    const { onError } = this.props;
     // Log error to monitoring service
-    if (this.props.onError) {
-      this.props.onError(error, errorInfo);
+    if (onError) {
+      onError(error, errorInfo);
     }
 
     // Update state with error info
     this.setState({
       error,
-      errorInfo,
     });
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false, error: undefined, errorInfo: undefined });
+    this.setState({ hasError: false, error: undefined });
   };
 
-  handleReload = () => {
+  static handleReload = (): void => {
     window.location.reload();
   };
 
   render() {
-    if (this.state.hasError) {
+    const { hasError, error } = this.state;
+    const { fallback, children } = this.props;
+
+    if (hasError) {
       // Use custom fallback if provided
-      if (this.props.fallback && this.state.error) {
-        const FallbackComponent = this.props.fallback;
-        return (
-          <FallbackComponent
-            error={this.state.error}
-            retry={this.handleRetry}
-          />
-        );
+      if (fallback && error) {
+        const FallbackComponent = fallback;
+        return <FallbackComponent error={error} retry={this.handleRetry} />;
       }
 
       // Default error UI
@@ -77,33 +76,40 @@ export class GlobalErrorBoundary extends React.Component<
             <div className="mb-8">
               <AlertTriangle className="w-20 h-20 text-destructive mx-auto mb-6" />
               <h1 className="text-2xl font-bold text-text-primary mb-3">
-                Something went wrong
+                {i18n.t("error.somethingWentWrong", "Something went wrong")}
               </h1>
               <p className="text-text-secondary mb-6">
-                We encountered an unexpected error. This has been logged and
-                we'll look into it.
+                {i18n.t(
+                  "error.unexpectedErrorLogged",
+                  "We encountered an unexpected error. This has been logged and we'll look into it.",
+                )}
               </p>
             </div>
 
-            {process.env.NODE_ENV === "development" && this.state.error && (
+            {process.env.NODE_ENV === "development" && error && (
               <details className="mb-8 text-left">
                 <summary className="cursor-pointer text-sm font-medium text-text-secondary mb-3">
-                  Error Details (Development)
+                  {i18n.t(
+                    "error.errorDetailsDevelopment",
+                    "Error Details (Development)",
+                  )}
                 </summary>
                 <div className="bg-background-secondary p-4 rounded border">
                   <div className="mb-3">
-                    <strong className="text-text-primary">Error:</strong>
+                    <strong className="text-text-primary">
+                      {i18n.t("error.error", "Error")}:
+                    </strong>
                     <pre className="text-xs text-text-tertiary mt-1 overflow-auto max-h-32">
-                      {this.state.error.message}
+                      {error.message}
                     </pre>
                   </div>
-                  {this.state.error.stack && (
+                  {error.stack && (
                     <div>
                       <strong className="text-text-primary">
-                        Stack Trace:
+                        {i18n.t("error.stackTrace", "Stack Trace")}:
                       </strong>
                       <pre className="text-xs text-text-tertiary mt-1 overflow-auto max-h-48">
-                        {this.state.error.stack}
+                        {error.stack}
                       </pre>
                     </div>
                   )}
@@ -118,29 +124,31 @@ export class GlobalErrorBoundary extends React.Component<
                 className="flex items-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
-                Try Again
+                {i18n.t("common.tryAgain", "Try Again")}
               </Button>
 
               <Button
-                onClick={this.handleReload}
+                onClick={GlobalErrorBoundary.handleReload}
                 variant="outline"
                 className="flex items-center gap-2"
               >
                 <Bug className="w-4 h-4" />
-                Reload Page
+                {i18n.t("common.reloadPage", "Reload Page")}
               </Button>
             </div>
 
             <div className="mt-8 text-xs text-text-tertiary">
-              If this problem persists, please contact support with the error
-              details above.
+              {i18n.t(
+                "error.contactSupportIfPersists",
+                "If this problem persists, please contact support with the error details above.",
+              )}
             </div>
           </div>
         </div>
       );
     }
 
-    return this.props.children;
+    return children;
   }
 }
 
@@ -154,9 +162,9 @@ export function useGlobalErrorBoundary() {
     setError(null);
   }, []);
 
-  const captureError = React.useCallback((error: Error) => {
-    console.error("Captured global error:", error);
-    setError(error);
+  const captureError = React.useCallback((err: Error) => {
+    logger.error("Captured global error:", err);
+    setError(err);
   }, []);
 
   React.useEffect(() => {

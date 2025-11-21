@@ -29,6 +29,7 @@ import {
 import type { CreatePromptRequest, PromptTemplate } from "#/types/prompt";
 import { PromptCategory, PROMPT_CATEGORY_LABELS } from "#/types/prompt";
 import { useDebounce } from "#/hooks/use-debounce";
+import { logger } from "#/utils/logger";
 
 function usePromptsSettingsController() {
   const { t } = useTranslation();
@@ -189,8 +190,7 @@ function usePromptsSettingsController() {
         );
       } catch (error) {
         toast.error(t("PROMPTS$IMPORT_ERROR"));
-        // eslint-disable-next-line no-console
-        console.error("Import error:", error);
+        logger.error("Import error:", error);
       }
     };
     input.click();
@@ -255,12 +255,12 @@ function PromptsHeader({
   importDisabled: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">
+    <div className="flex items-center justify-between w-full">
+      <div className="w-full">
+        <h1 className="text-2xl font-semibold text-foreground w-full">
           {t("PROMPTS$TITLE")}
         </h1>
-        <p className="text-foreground-secondary mt-1">
+        <p className="text-foreground-secondary mt-1 w-full">
           {t("PROMPTS$SUBTITLE")}
         </p>
       </div>
@@ -318,7 +318,7 @@ function StatsCard({
           icon
         )}
       </div>
-      <p className="text-lg font-semibold text-foreground">{value}</p>
+      <p className="text-lg font-semibold text-foreground w-full">{value}</p>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { Conversation } from "#/api/forge.types";
+import { logger } from "#/utils/logger";
 import { ForgeParsedEvent } from "#/types/core";
 import {
   isAgentStateChangeObservation,
@@ -40,8 +41,7 @@ export const warnIfNullPayload = (event: Record<string, unknown>): void => {
 
     for (const candidate of candidates) {
       if (typeof candidate === "string" && candidate.toUpperCase() === "NULL") {
-        // eslint-disable-next-line no-console
-        console.warn("Received event with literal 'NULL' in payload", {
+        logger.warn("Received event with literal 'NULL' in payload", {
           id: getEventId(event),
           field: candidate,
           event,
@@ -81,7 +81,7 @@ export interface ServerReadyInfo {
   port: number;
   url: string;
   protocol: string;
-  health_status: string;
+  healthStatus: string;
 }
 
 const normalizeServerReadyPartial = (
@@ -90,7 +90,7 @@ const normalizeServerReadyPartial = (
   port: typeof value?.port === "number" ? value.port : 0,
   url: typeof value?.url === "string" ? value.url : "",
   protocol: typeof value?.protocol === "string" ? value.protocol : "http",
-  health_status:
+  healthStatus:
     typeof value?.health_status === "string" ? value.health_status : "unknown",
 });
 

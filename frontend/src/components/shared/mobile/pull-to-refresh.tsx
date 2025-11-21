@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Loader2, RefreshCw } from "lucide-react";
 import { cn } from "#/utils/utils";
 import { triggerHaptic } from "#/utils/haptic-feedback";
+import { logger } from "#/utils/logger";
 
 interface PullToRefreshProps {
   onRefresh: () => Promise<void>;
@@ -71,7 +72,7 @@ export function PullToRefresh({
       try {
         await onRefresh();
       } catch (error) {
-        console.error("Refresh failed:", error);
+        logger.error("Refresh failed:", error);
         triggerHaptic("error");
       } finally {
         setIsRefreshing(false);
@@ -87,7 +88,7 @@ export function PullToRefresh({
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container) return undefined;
 
     container.addEventListener("touchstart", handleTouchStart, {
       passive: true,
@@ -154,11 +155,11 @@ export function PullToRefresh({
 
           {/* Progress Text */}
           <div className="text-xs text-foreground-secondary font-medium">
-            {isRefreshing
-              ? "Refreshing..."
-              : isTriggered
-                ? "Release to refresh"
-                : "Pull to refresh"}
+            {(() => {
+              if (isRefreshing) return "Refreshing...";
+              if (isTriggered) return "Release to refresh";
+              return "Pull to refresh";
+            })()}
           </div>
         </div>
       </div>

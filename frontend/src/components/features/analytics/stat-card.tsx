@@ -19,12 +19,13 @@ export function StatCard({
   trend,
   subtitle,
 }: StatCardProps) {
-  const trendColor =
-    trend && trend.value > 0
-      ? "text-success-500"
-      : trend && trend.value < 0
-        ? "text-error-500"
-        : "text-foreground-secondary";
+  const getTrendColor = () => {
+    if (!trend) return "text-foreground-secondary";
+    if (trend.value > 0) return "text-success-500";
+    if (trend.value < 0) return "text-error-500";
+    return "text-foreground-secondary";
+  };
+  const trendColor = getTrendColor();
 
   return (
     <div className="p-6 bg-background-secondary border border-border rounded-lg hover:border-brand-500/50 transition-all">

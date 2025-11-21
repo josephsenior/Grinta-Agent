@@ -39,17 +39,17 @@ export function PageHero({
           alignment,
         )}
       >
-        <div className="space-y-4 max-w-3xl">
+        <div className="space-y-4 max-w-3xl min-w-[400px]">
           {eyebrow && (
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-brand-500/40 bg-white/10 text-xs font-semibold uppercase tracking-[0.25em] text-white/90">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-brand-500/40 bg-white/10 text-xs font-semibold uppercase tracking-[0.25em] text-white/90 whitespace-normal">
               {eyebrow}
             </span>
           )}
-          <h1 className="text-3xl md:text-5xl font-semibold text-white leading-tight">
+          <h1 className="text-3xl md:text-5xl font-semibold text-white leading-tight whitespace-normal">
             {title}
           </h1>
           {description && (
-            <p className="text-lg text-white/75 leading-relaxed">
+            <p className="text-lg text-white/75 leading-relaxed whitespace-normal">
               {description}
             </p>
           )}

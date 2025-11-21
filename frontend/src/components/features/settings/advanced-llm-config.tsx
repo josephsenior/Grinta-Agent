@@ -2,9 +2,11 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { I18nKey } from "#/i18n/declaration";
 import { SettingsInput } from "./settings-input";
-import { SettingsSwitch } from "./settings-switch";
 import { LLMPreset, LLM_PRESETS, detectPreset } from "#/constants/llm-presets";
 import { Settings } from "#/types/settings";
+import { PresetSelector } from "./advanced-llm-config/preset-selector";
+import { SliderInput } from "./advanced-llm-config/slider-input";
+import { SwitchInput } from "./advanced-llm-config/switch-input";
 
 interface AdvancedLLMConfigProps {
   settings: Settings;
@@ -19,7 +21,6 @@ export function AdvancedLLMConfig({
 }: AdvancedLLMConfigProps) {
   const { t } = useTranslation();
 
-  // Detect current preset
   const currentPreset = React.useMemo(
     () =>
       detectPreset({
@@ -67,106 +68,33 @@ export function AdvancedLLMConfig({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Preset Selector */}
-      <div className="flex flex-col gap-3">
-        <label className="text-sm font-medium text-neutral-400">
-          {t(I18nKey.LLM_SETTINGS$PRESET_LABEL)}
-        </label>
-        <div className="grid grid-cols-3 gap-2">
-          {(["conservative", "balanced", "creative"] as LLMPreset[]).map(
-            (preset) => {
-              const presetConfig = LLM_PRESETS[preset];
-              const isSelected = currentPreset === preset;
+      <PresetSelector
+        currentPreset={currentPreset}
+        onPresetSelect={handlePresetSelect}
+      />
 
-              return (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => handlePresetSelect(preset)}
-                  className={`
-                  flex flex-col items-start p-4 rounded-lg border-2 transition-all
-                  ${
-                    isSelected
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:border-primary/50"
-                  }
-                `}
-                >
-                  <span
-                    className={`text-sm font-semibold ${isSelected ? "text-primary" : "text-white"}`}
-                  >
-                    {presetConfig.name}
-                  </span>
-                  <span className="text-xs text-neutral-400 mt-1 text-left">
-                    {presetConfig.description}
-                  </span>
-                </button>
-              );
-            },
-          )}
-        </div>
-        {currentPreset === "custom" && (
-          <p className="text-xs text-neutral-400">
-            {t(I18nKey.LLM_SETTINGS$CUSTOM_PRESET_INFO)}
-          </p>
-        )}
-      </div>
+      <SliderInput
+        name="LLM_TEMPERATURE"
+        label={I18nKey.LLM_SETTINGS$TEMPERATURE_LABEL}
+        value={settings.LLM_TEMPERATURE ?? 0.1}
+        min={0}
+        max={2}
+        step={0.1}
+        helpText={I18nKey.LLM_SETTINGS$TEMPERATURE_HELP}
+        onChange={(value) => handleSliderChange("LLM_TEMPERATURE", value)}
+      />
 
-      {/* Temperature Slider */}
-      <div className="flex flex-col gap-2">
-        <div className="flex justify-between items-center">
-          <label className="text-sm font-medium text-neutral-400">
-            {t(I18nKey.LLM_SETTINGS$TEMPERATURE_LABEL)}
-          </label>
-          <span className="text-sm text-white font-mono">
-            {settings.LLM_TEMPERATURE ?? 0.1}
-          </span>
-        </div>
-        <input
-          type="range"
-          name="LLM_TEMPERATURE"
-          min="0"
-          max="2"
-          step="0.1"
-          value={settings.LLM_TEMPERATURE ?? 0.1}
-          onChange={(e) =>
-            handleSliderChange("LLM_TEMPERATURE", parseFloat(e.target.value))
-          }
-          className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer slider-thumb"
-        />
-        <p className="text-xs text-neutral-500">
-          {t(I18nKey.LLM_SETTINGS$TEMPERATURE_HELP)}
-        </p>
-      </div>
+      <SliderInput
+        name="LLM_TOP_P"
+        label={I18nKey.LLM_SETTINGS$TOP_P_LABEL}
+        value={settings.LLM_TOP_P ?? 1.0}
+        min={0}
+        max={1}
+        step={0.05}
+        helpText={I18nKey.LLM_SETTINGS$TOP_P_HELP}
+        onChange={(value) => handleSliderChange("LLM_TOP_P", value)}
+      />
 
-      {/* Top P Slider */}
-      <div className="flex flex-col gap-2">
-        <div className="flex justify-between items-center">
-          <label className="text-sm font-medium text-neutral-400">
-            {t(I18nKey.LLM_SETTINGS$TOP_P_LABEL)}
-          </label>
-          <span className="text-sm text-white font-mono">
-            {settings.LLM_TOP_P ?? 1.0}
-          </span>
-        </div>
-        <input
-          type="range"
-          name="LLM_TOP_P"
-          min="0"
-          max="1"
-          step="0.05"
-          value={settings.LLM_TOP_P ?? 1.0}
-          onChange={(e) =>
-            handleSliderChange("LLM_TOP_P", parseFloat(e.target.value))
-          }
-          className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer slider-thumb"
-        />
-        <p className="text-xs text-neutral-500">
-          {t(I18nKey.LLM_SETTINGS$TOP_P_HELP)}
-        </p>
-      </div>
-
-      {/* Max Output Tokens */}
       <SettingsInput
         testId="max-output-tokens-input"
         name="LLM_MAX_OUTPUT_TOKENS"
@@ -179,7 +107,6 @@ export function AdvancedLLMConfig({
         helpText={t(I18nKey.LLM_SETTINGS$MAX_OUTPUT_TOKENS_HELP)}
       />
 
-      {/* Timeout */}
       <SettingsInput
         testId="timeout-input"
         name="LLM_TIMEOUT"
@@ -190,7 +117,6 @@ export function AdvancedLLMConfig({
         helpText={t(I18nKey.LLM_SETTINGS$TIMEOUT_HELP)}
       />
 
-      {/* Number of Retries */}
       <SettingsInput
         testId="num-retries-input"
         name="LLM_NUM_RETRIES"
@@ -201,35 +127,22 @@ export function AdvancedLLMConfig({
         helpText={t(I18nKey.LLM_SETTINGS$NUM_RETRIES_HELP)}
       />
 
-      {/* Caching Prompt Switch */}
-      <div className="flex flex-col gap-2">
-        <SettingsSwitch
-          testId="caching-prompt-switch"
-          isToggled={settings.LLM_CACHING_PROMPT ?? true}
-          onToggle={(value) => handleSwitchChange("LLM_CACHING_PROMPT", value)}
-        >
-          {t(I18nKey.LLM_SETTINGS$CACHING_PROMPT_LABEL)}
-        </SettingsSwitch>
-        <p className="text-xs text-neutral-500">
-          {t(I18nKey.LLM_SETTINGS$CACHING_PROMPT_HELP)}
-        </p>
-      </div>
+      <SwitchInput
+        testId="caching-prompt-switch"
+        label={I18nKey.LLM_SETTINGS$CACHING_PROMPT_LABEL}
+        helpText={I18nKey.LLM_SETTINGS$CACHING_PROMPT_HELP}
+        value={settings.LLM_CACHING_PROMPT ?? true}
+        onChange={(value) => handleSwitchChange("LLM_CACHING_PROMPT", value)}
+      />
 
-      {/* Disable Vision Switch */}
-      <div className="flex flex-col gap-2">
-        <SettingsSwitch
-          testId="disable-vision-switch"
-          isToggled={settings.LLM_DISABLE_VISION ?? false}
-          onToggle={(value) => handleSwitchChange("LLM_DISABLE_VISION", value)}
-        >
-          {t(I18nKey.LLM_SETTINGS$DISABLE_VISION_LABEL)}
-        </SettingsSwitch>
-        <p className="text-xs text-neutral-500">
-          {t(I18nKey.LLM_SETTINGS$DISABLE_VISION_HELP)}
-        </p>
-      </div>
+      <SwitchInput
+        testId="disable-vision-switch"
+        label={I18nKey.LLM_SETTINGS$DISABLE_VISION_LABEL}
+        helpText={I18nKey.LLM_SETTINGS$DISABLE_VISION_HELP}
+        value={settings.LLM_DISABLE_VISION ?? false}
+        onChange={(value) => handleSwitchChange("LLM_DISABLE_VISION", value)}
+      />
 
-      {/* Custom LLM Provider (Advanced) */}
       <SettingsInput
         testId="custom-provider-input"
         name="LLM_CUSTOM_LLM_PROVIDER"
@@ -243,7 +156,6 @@ export function AdvancedLLMConfig({
         placeholder="e.g., anthropic, openai, azure"
       />
 
-      {/* Info about autonomy settings location */}
       <div className="border-t border-border pt-6">
         <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
           <div className="flex items-start gap-3">

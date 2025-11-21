@@ -38,6 +38,7 @@ import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { cn } from "#/utils/utils";
 import toast from "#/utils/toast";
+import { logger } from "#/utils/logger";
 
 const GIT_REPO_ERROR_PATTERN = /not a git repository/i;
 
@@ -190,7 +191,7 @@ function useGitChangesController(): GitChangesController {
       setAllFiles(normalized);
       setFileTree(buildFileTree(normalized));
     } catch (err) {
-      console.error("Failed to load all files:", err);
+      logger.error("Failed to load all files:", err);
       toast.error("load-files-error", "Failed to load workspace files");
     } finally {
       setLoadingAllFiles(false);
@@ -211,7 +212,7 @@ function useGitChangesController(): GitChangesController {
         const response = await Forge.getFile(conversationId, filePath);
         setSelectedFileContent(response || "");
       } catch (err) {
-        console.error("Failed to load file content:", err);
+        logger.error("Failed to load file content:", err);
         toast.error("load-content-error", "Failed to load file content");
         setSelectedFileContent("");
       } finally {
@@ -249,7 +250,7 @@ function useGitChangesController(): GitChangesController {
         toast.success("copy-success", "File content copied to clipboard");
       })
       .catch((err) => {
-        console.error("Failed to copy:", err);
+        logger.error("Failed to copy:", err);
         toast.error("copy-error", "Failed to copy to clipboard");
       });
   }, [selectedFileContent]);

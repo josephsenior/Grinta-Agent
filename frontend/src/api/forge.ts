@@ -1,4 +1,4 @@
-import { AxiosHeaders } from "axios";
+import { AxiosHeaders, AxiosError } from "axios";
 import {
   Feedback,
   FeedbackResponse,
@@ -33,6 +33,7 @@ import { RepositoryMicroagent } from "#/types/microagent-management";
 import { BatchFeedbackData } from "#/hooks/query/use-batch-feedback";
 import { SubscriptionAccess } from "#/types/billing";
 import { getAPIBase, CURRENT_API_VERSION } from "#/config/api-config";
+import { logger } from "#/utils/logger";
 
 /**
  * Safely extract a user-friendly error message from unknown error values.
@@ -794,8 +795,10 @@ class ForgeClient {
     const maxRetries = 3;
     const retryDelayMs = 1000;
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    let attempt = 1;
+    while (attempt <= maxRetries) {
       try {
+        // eslint-disable-next-line no-await-in-loop
         const { data } = await Forge.get<GetFilesResponse>(url, {
           params: { path },
           headers: this.getConversationHeaders(),
@@ -805,14 +808,18 @@ class ForgeClient {
         const errorMsg = safeErrorMessage(err);
 
         // 503 = Runtime container is permanently dead/crashed - don't retry
-        if ((err as any)?.response?.status === 503) {
-          console.error(
+        const axiosError = err as AxiosError;
+        if (axiosError?.response?.status === 503) {
+          logger.error(
             "❌ Runtime container permanently unavailable:",
             errorMsg,
           );
           // Mark agent as errored so UI can recover
+          // eslint-disable-next-line no-await-in-loop
           const { setCurrentAgentState } = await import("#/state/agent-slice");
+          // eslint-disable-next-line no-await-in-loop
           const { default: store } = await import("#/store");
+          // eslint-disable-next-line no-await-in-loop
           const { AgentState } = await import("#/types/agent-state");
           store.dispatch(setCurrentAgentState(AgentState.ERROR));
           throw new Error(
@@ -824,20 +831,25 @@ class ForgeClient {
         const isRuntimeUnavailable =
           errorMsg.includes("Runtime unavailable") ||
           errorMsg.includes("Connection refused") ||
-          (err as any)?.response?.status === 500;
+          axiosError?.response?.status === 500;
 
         if (isRuntimeUnavailable && attempt < maxRetries) {
-          console.warn(
+          logger.warn(
             `Runtime temporarily unavailable, retrying file list (${attempt}/${maxRetries})...`,
           );
-          await new Promise((resolve) =>
-            setTimeout(resolve, retryDelayMs * attempt),
-          ); // Exponential backoff
-          continue;
+          // Capture attempt value to avoid unsafe loop reference
+          const currentAttempt = attempt;
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise<void>((resolve) => {
+            setTimeout(() => {
+              resolve();
+            }, retryDelayMs * currentAttempt);
+          }); // Exponential backoff
+          attempt += 1;
+        } else {
+          // Final attempt failed
+          throw err;
         }
-
-        // Final attempt failed
-        throw err;
       }
     }
 
@@ -868,7 +880,7 @@ class ForgeClient {
     };
 
     const handlePermanentFailure = async (errorMsg: string) => {
-      console.error("❌ Runtime container permanently unavailable:", errorMsg);
+      logger.error("❌ Runtime container permanently unavailable:", errorMsg);
       const { setCurrentAgentState } = await import("#/state/agent-slice");
       const { default: store } = await import("#/store");
       const { AgentState } = await import("#/types/agent-state");
@@ -886,34 +898,43 @@ class ForgeClient {
     const maxRetries = 3;
     const retryDelayMs = 1000;
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    let attempt = 1;
+    while (attempt <= maxRetries) {
       try {
+        // eslint-disable-next-line no-await-in-loop
         const { data } = await Forge.get<GetFileResponse>(url, {
           params: { file: path },
           headers: this.getConversationHeaders(),
         });
         return data.code;
       } catch (err: unknown) {
-        const responseStatus = (err as any)?.response?.status;
+        const axiosError = err as AxiosError;
+        const responseStatus = axiosError?.response?.status;
         const errorMsg = safeErrorMessage(err);
 
         nonRetryableError(errorMsg, responseStatus);
 
         if (responseStatus === 503) {
+          // eslint-disable-next-line no-await-in-loop
           await handlePermanentFailure(errorMsg);
         }
 
         if (shouldRetry(errorMsg, responseStatus) && attempt < maxRetries) {
-          console.warn(
+          logger.warn(
             `Runtime temporarily unavailable, retrying (${attempt}/${maxRetries})...`,
           );
-          await new Promise((resolve) =>
-            setTimeout(resolve, retryDelayMs * attempt),
-          );
-          continue;
+          // Capture attempt value to avoid unsafe loop reference
+          const currentAttempt = attempt;
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise<void>((resolve) => {
+            setTimeout(() => {
+              resolve();
+            }, retryDelayMs * currentAttempt);
+          });
+          attempt += 1;
+        } else {
+          throw err;
         }
-
-        throw err;
       }
     }
 

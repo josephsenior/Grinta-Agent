@@ -1,6 +1,7 @@
 import React from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "#/components/ui/button";
+import { logger } from "#/utils/logger";
 
 interface SettingsErrorBoundaryProps {
   children: React.ReactNode;
@@ -36,11 +37,12 @@ export class SettingsErrorBoundary extends React.Component<
     return {
       hasError: true,
       error,
+      errorInfo: null,
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("[SettingsErrorBoundary] Caught error:", error, errorInfo);
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+    logger.error("[SettingsErrorBoundary] Caught error:", error, errorInfo);
     this.setState({
       error,
       errorInfo,
@@ -58,7 +60,7 @@ export class SettingsErrorBoundary extends React.Component<
     window.location.reload();
   };
 
-  handleResetSettings = () => {
+  static handleResetSettings = (): void => {
     // Clear localStorage settings
     const settingsKeys = Object.keys(localStorage).filter(
       (key) => key.startsWith("Forge.") || key.includes("settings"),
@@ -71,10 +73,10 @@ export class SettingsErrorBoundary extends React.Component<
   };
 
   render() {
-    if (this.state.hasError) {
-      const { fallbackMessage } = this.props;
-      const { error, errorInfo } = this.state;
+    const { hasError, error, errorInfo } = this.state;
+    const { fallbackMessage, children } = this.props;
 
+    if (hasError) {
       return (
         <div className="flex items-center justify-center min-h-[400px] p-6">
           <div className="max-w-md w-full bg-background-secondary border border-danger-500/20 rounded-xl p-6 space-y-4">
@@ -87,6 +89,7 @@ export class SettingsErrorBoundary extends React.Component<
 
             {/* Title */}
             <div className="text-center">
+              {/* eslint-disable-next-line i18next/no-literal-string */}
               <h2 className="text-lg font-semibold text-text-primary mb-2">
                 Settings Error
               </h2>
@@ -99,6 +102,7 @@ export class SettingsErrorBoundary extends React.Component<
             {/* Error Details (Development Only) */}
             {process.env.NODE_ENV === "development" && error && (
               <details className="mt-4 p-3 bg-background-tertiary rounded-lg">
+                {/* eslint-disable-next-line i18next/no-literal-string */}
                 <summary className="text-xs font-medium text-text-secondary cursor-pointer hover:text-text-primary">
                   Error Details (Dev Only)
                 </summary>
@@ -117,7 +121,9 @@ export class SettingsErrorBoundary extends React.Component<
 
             {/* Actions */}
             <div className="flex flex-col gap-2 pt-2">
+              {/* eslint-disable-next-line i18next/no-literal-string */}
               <Button
+                type="button"
                 onClick={this.handleReset}
                 className="w-full bg-brand-500 hover:bg-brand-600 text-white"
               >
@@ -125,8 +131,12 @@ export class SettingsErrorBoundary extends React.Component<
                 Reload Page
               </Button>
 
+              {/* eslint-disable-next-line i18next/no-literal-string */}
               <Button
-                onClick={this.handleResetSettings}
+                type="button"
+                onClick={() => {
+                  SettingsErrorBoundary.handleResetSettings();
+                }}
                 variant="outline"
                 className="w-full border-danger-500/20 hover:bg-danger-500/10 text-danger-500"
               >
@@ -134,6 +144,7 @@ export class SettingsErrorBoundary extends React.Component<
                 Reset Settings & Reload
               </Button>
 
+              {/* eslint-disable-next-line i18next/no-literal-string */}
               <p className="text-xs text-text-tertiary text-center mt-2">
                 If the problem persists, try clearing your browser cache or
                 contact support.
@@ -144,6 +155,6 @@ export class SettingsErrorBoundary extends React.Component<
       );
     }
 
-    return this.props.children;
+    return children;
   }
 }

@@ -1,6 +1,7 @@
 import posthog from "posthog-js";
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { gsap } from "gsap";
 import { SuggestionItem } from "#/components/features/suggestions/suggestion-item";
 import { I18nKey } from "#/i18n/declaration";
 import { useUserProviders } from "#/hooks/use-user-providers";
@@ -46,10 +47,42 @@ export function ActionSuggestions({
     pushToPR: `Please push the latest changes to the existing ${pr}.`,
   };
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (prefersReducedMotion) {
+      gsap.set(containerRef.current.children, { opacity: 1, x: 0 });
+      return;
+    }
+
+    // Stagger animation for suggestion buttons
+    const buttons = Array.from(
+      containerRef.current.querySelectorAll("[data-suggestion-item]"),
+    ) as HTMLElement[];
+    if (buttons.length > 0) {
+      gsap.set(buttons, { opacity: 0, x: -20 });
+      gsap.to(buttons, {
+        opacity: 1,
+        x: 0,
+        duration: 0.4,
+        stagger: 0.08,
+        ease: "power2.out",
+      });
+    }
+  }, [providersAreSet, conversation?.selected_repository, hasPullRequest]);
+
   return (
     <div className="flex flex-col gap-2 mb-2">
       {providersAreSet && conversation?.selected_repository && (
-        <div className="flex flex-row gap-2 justify-center w-full">
+        <div
+          ref={containerRef}
+          className="flex flex-row gap-2 justify-center w-full"
+        >
           {!hasPullRequest ? (
             <>
               <SuggestionItem

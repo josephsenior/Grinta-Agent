@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Copy,
   Check,
@@ -12,6 +13,7 @@ import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
 import { cn } from "#/utils/utils";
 import { LazyMonaco } from "#/components/shared/lazy-monaco";
+import { logger } from "#/utils/logger";
 
 interface CodeArtifactProps {
   filePath: string;
@@ -43,6 +45,7 @@ export function CodeArtifact({
   onApply,
   className,
 }: CodeArtifactProps) {
+  const { t } = useTranslation();
   const [isCopied, setIsCopied] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -53,7 +56,7 @@ export function CodeArtifact({
       onCopy?.();
       setTimeout(() => setIsCopied(false), 2000);
     } catch (error) {
-      console.error("Failed to copy:", error);
+      logger.error("Failed to copy:", error);
     }
   };
 
@@ -126,12 +129,12 @@ export function CodeArtifact({
                 {isCollapsed ? (
                   <>
                     <ChevronDown className="w-3.5 h-3.5 mr-1" />
-                    Expand
+                    {t("chat.codeArtifact.expand", "Expand")}
                   </>
                 ) : (
                   <>
                     <ChevronUp className="w-3.5 h-3.5 mr-1" />
-                    Collapse
+                    {t("chat.codeArtifact.collapse", "Collapse")}
                   </>
                 )}
               </Button>
@@ -148,12 +151,14 @@ export function CodeArtifact({
               {isCopied ? (
                 <>
                   <Check className="w-3.5 h-3.5 mr-1.5 text-success-500" />
-                  <span className="text-success-500">Copied!</span>
+                  <span className="text-success-500">
+                    {t("chat.codeArtifact.copied", "Copied!")}
+                  </span>
                 </>
               ) : (
                 <>
                   <Copy className="w-3.5 h-3.5 mr-1.5" />
-                  Copy
+                  {t("chat.codeArtifact.copy", "Copy")}
                 </>
               )}
             </Button>
@@ -168,7 +173,7 @@ export function CodeArtifact({
                 className="h-8 px-3 text-xs bg-primary-500 hover:bg-primary-600"
               >
                 <Code2 className="w-3.5 h-3.5 mr-1.5" />
-                Apply
+                {t("chat.codeArtifact.apply", "Apply")}
               </Button>
             )}
           </div>
@@ -210,7 +215,13 @@ export function CodeArtifact({
       {isCollapsed && (
         <CardContent className="px-4 py-3 bg-background-surface/50">
           <p className="text-xs text-foreground-muted italic">
-            Code collapsed ({lineCount} lines)
+            {t(
+              "chat.codeArtifact.collapsed",
+              "Code collapsed ({{count}} lines)",
+              {
+                count: lineCount,
+              },
+            )}
           </p>
         </CardContent>
       )}

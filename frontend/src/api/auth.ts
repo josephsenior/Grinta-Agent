@@ -82,4 +82,21 @@ export const authApi = {
   async resetPassword(data: ResetPasswordRequest): Promise<void> {
     await Forge.post("/api/auth/reset-password", data);
   },
+
+  /**
+   * Get OAuth authorization URL
+   */
+  async getOAuthUrl(
+    provider: "github" | "google",
+    redirectUri?: string,
+  ): Promise<string> {
+    const params = redirectUri
+      ? `?redirect_uri=${encodeURIComponent(redirectUri)}`
+      : "";
+    const response = await Forge.get<{
+      status: string;
+      data: { auth_url: string; state: string };
+    }>(`/api/auth/oauth/${provider}/authorize${params}`);
+    return response.data.data.auth_url;
+  },
 };

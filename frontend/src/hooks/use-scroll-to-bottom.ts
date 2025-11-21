@@ -1,4 +1,5 @@
 import { RefObject, useEffect, useState, useCallback, useRef } from "react";
+import { logger } from "#/utils/logger";
 
 export function useScrollToBottom(scrollRef: RefObject<HTMLDivElement | null>) {
   // Track whether we should auto-scroll to the bottom when content changes
@@ -133,14 +134,7 @@ export function useScrollToBottom(scrollRef: RefObject<HTMLDivElement | null>) {
     } catch (e) {
       // Some environments may throw when observing with these options.
       // Swallow intentionally — this is a best-effort observer only.
-      // eslint-disable-next-line no-console
-      if (typeof console !== "undefined" && console.warn) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          "useScrollToBottom: MutationObserver not supported fully",
-          e,
-        );
-      }
+      logger.warn("useScrollToBottom: MutationObserver not supported fully", e);
     }
 
     return () => {

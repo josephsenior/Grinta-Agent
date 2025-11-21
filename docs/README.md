@@ -10,10 +10,10 @@ Welcome to the comprehensive documentation for Forge - a production-grade AI cod
 
 ## 📚 Core Documentation
 
-- **[Architecture](./ARCHITECTURE.md)** - System design and components
-- **[API Reference](./API_REFERENCE.md)** - Complete API documentation
-- **[Monitoring](./MONITORING.md)** - Metrics, dashboards, and alerts
-- **[Troubleshooting](./TROUBLESHOOTING.md)** - Common issues and solutions
+- **[Architecture](./architecture.md)** - System design and components
+- **[API Reference](./api-reference.md)** - Complete API documentation
+- **[Monitoring](./monitoring.md)** - Metrics, dashboards, and alerts
+- **[Troubleshooting](./troubleshooting.md)** - Common issues and solutions
 - [Configuration](./configuration.md) - Configuration options
 
 ## 🎯 Features
@@ -73,7 +73,7 @@ Welcome to the comprehensive documentation for Forge - a production-grade AI cod
 
 ## 📊 Monitoring & Analytics
 
-- **[Monitoring Guide](./MONITORING.md)** - Complete monitoring reference
+- **[Monitoring Guide](./monitoring.md)** - Complete monitoring reference
 - [Live Monitoring](./features/live-monitoring.md) - Real-time dashboards
 - **3 Grafana Dashboards** - LLM performance, system metrics, error tracking
 - **30+ Prometheus Metrics** - Operational telemetry
@@ -108,13 +108,13 @@ Welcome to the comprehensive documentation for Forge - a production-grade AI cod
 3. Explore [Features](./features.md)
 
 **Developers:**
-1. Read [Architecture](./ARCHITECTURE.md)
+1. Read [Architecture](./architecture.md)
 2. Review [Development Guide](./development.md)
 3. Check [Contributing](./contributing.md)
 
 **DevOps/SRE:**
-1. Review [Monitoring](./MONITORING.md)
-2. Configure [Alerts](./MONITORING.md#alerting-rules)
+1. Review [Monitoring](./monitoring.md)
+2. Configure [Alerts](./monitoring.md#alerting-rules)
 3. Read [Production Deployment](./production_deployment.md)
 
 ## Quick Links

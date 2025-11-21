@@ -298,13 +298,13 @@ netstat -ano | findstr :3000  # Windows
 # In .env: PORT=3001
 ```
 
-For more issues, see [Troubleshooting Guide](./TROUBLESHOOTING.md)
+For more issues, see [Troubleshooting Guide](./troubleshooting.md)
 
 ## Next Steps
 
-- **Read:** [Architecture Guide](./ARCHITECTURE.md) - Understand the system
-- **Explore:** [API Reference](./API_REFERENCE.md) - Build integrations
-- **Monitor:** [Monitoring Guide](./MONITORING.md) - Track performance
+- **Read:** [Architecture Guide](./architecture.md) - Understand the system
+- **Explore:** [API Reference](./api-reference.md) - Build integrations
+- **Monitor:** [Monitoring Guide](./monitoring.md) - Track performance
 - **Contribute:** [Contributing Guide](./CONTRIBUTING.md) - Help improve Forge
 
 ## Getting Help

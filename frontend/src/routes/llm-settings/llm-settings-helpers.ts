@@ -1,6 +1,10 @@
+import React from "react";
 import { DEFAULT_SETTINGS } from "#/services/settings";
 import { getProviderId } from "#/utils/map-provider";
-import type { PostSettings } from "#/types/settings";
+import type { PostSettings, Settings } from "#/types/settings";
+import { hasAdvancedSettingsSet } from "#/utils/has-advanced-settings-set";
+import { isCustomModel } from "#/utils/is-custom-model";
+import { useAIConfigOptions } from "#/hooks/query/use-ai-config-options";
 
 export type LlmSettingsView = "basic" | "advanced";
 
@@ -161,3 +165,292 @@ export const normalizeSecurityAnalyzerSelection = (
 
   return analyzer;
 };
+
+export const mergeAdvancedSettings = (
+  settings: Settings | undefined,
+  overrides: Partial<Settings>,
+  enableDefaultCondenser: boolean,
+  condenserMaxSize: number | null,
+  confirmationModeEnabled: boolean,
+  securityAnalyzer: string,
+  agentValue: string,
+): Settings => {
+  const base = settings ?? DEFAULT_SETTINGS;
+
+  return {
+    ...DEFAULT_SETTINGS,
+    ...base,
+    ...overrides,
+    ENABLE_DEFAULT_CONDENSER: enableDefaultCondenser,
+    CONDENSER_MAX_SIZE: condenserMaxSize ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE,
+    CONFIRMATION_MODE: confirmationModeEnabled,
+    SECURITY_ANALYZER:
+      securityAnalyzer === "none"
+        ? null
+        : securityAnalyzer || base.SECURITY_ANALYZER,
+    AGENT: agentValue || DEFAULT_SETTINGS.AGENT,
+  };
+};
+
+// ============================================================================
+// Handler Functions
+// ============================================================================
+
+export function onModelDirtyChange({
+  model,
+  settings,
+  markDirty,
+  setCurrentSelectedModel,
+}: {
+  model: string | null;
+  settings?: import("#/types/settings").Settings;
+  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
+  setCurrentSelectedModel: (value: string | null) => void;
+}) {
+  const normalized = settings?.LLM_MODEL ?? DEFAULT_SETTINGS.LLM_MODEL;
+  const cleanModel = normalized.startsWith("openai/")
+    ? normalized.replace("openai/", "")
+    : normalized;
+  markDirty("model", model !== cleanModel);
+  setCurrentSelectedModel(model);
+}
+
+export function onCustomModelDirtyChange({
+  model,
+  settings,
+  markDirty,
+  setCurrentSelectedModel,
+}: {
+  model: string;
+  settings?: import("#/types/settings").Settings;
+  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
+  setCurrentSelectedModel: (value: string | null) => void;
+}) {
+  const current = settings?.LLM_MODEL ?? "";
+  const isDirty = model !== "" && model !== current;
+  markDirty("model", isDirty);
+  setCurrentSelectedModel(model);
+}
+
+export function onAgentChange({
+  agent,
+  settings,
+  setAgentValue,
+  markDirty,
+}: {
+  agent: string;
+  settings?: import("#/types/settings").Settings;
+  setAgentValue: (value: string) => void;
+  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
+}) {
+  setAgentValue(agent);
+  const current = settings?.AGENT ?? "";
+  const isDirty = agent !== "" && agent !== current;
+  markDirty("agent", isDirty);
+}
+
+export function onConfirmationModeChange({
+  isToggled,
+  settings,
+  selectedSecurityAnalyzer,
+  setConfirmationModeEnabled,
+  setSelectedSecurityAnalyzer,
+  markDirty,
+}: {
+  isToggled: boolean;
+  settings?: import("#/types/settings").Settings;
+  selectedSecurityAnalyzer: string;
+  setConfirmationModeEnabled: (value: boolean) => void;
+  setSelectedSecurityAnalyzer: (value: string) => void;
+  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
+}) {
+  setConfirmationModeEnabled(isToggled);
+  markDirty(
+    "confirmationMode",
+    isToggled !== (settings?.CONFIRMATION_MODE ?? false),
+  );
+
+  if (isToggled && !selectedSecurityAnalyzer) {
+    setSelectedSecurityAnalyzer(DEFAULT_SETTINGS.SECURITY_ANALYZER ?? "llm");
+    markDirty("securityAnalyzer", true);
+  }
+}
+
+export function onCondenserMaxSizeChange({
+  value,
+  settings,
+  setCondenserMaxSize,
+  markDirty,
+}: {
+  value: string;
+  settings?: import("#/types/settings").Settings;
+  setCondenserMaxSize: (value: number | null) => void;
+  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
+}) {
+  const parsed = value ? Number.parseInt(value, 10) : null;
+  const bounded =
+    parsed !== null && Number.isFinite(parsed) ? Math.max(20, parsed) : null;
+  setCondenserMaxSize(bounded);
+  const previous =
+    settings?.CONDENSER_MAX_SIZE ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE;
+  const next = bounded ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE;
+  markDirty("condenserMaxSize", next !== previous);
+}
+
+export function onSecurityAnalyzerChange({
+  value,
+  settings,
+  setSelectedSecurityAnalyzer,
+  markDirty,
+}: {
+  value: string;
+  settings?: import("#/types/settings").Settings;
+  setSelectedSecurityAnalyzer: (value: string) => void;
+  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
+}) {
+  setSelectedSecurityAnalyzer(value);
+  markDirty(
+    "securityAnalyzer",
+    value !== normalizeSecurityAnalyzerSelection(settings?.SECURITY_ANALYZER),
+  );
+}
+
+export function onSecurityAnalyzerClear({
+  settings,
+  setSelectedSecurityAnalyzer,
+  markDirty,
+}: {
+  settings?: import("#/types/settings").Settings;
+  setSelectedSecurityAnalyzer: (value: string) => void;
+  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
+}) {
+  setSelectedSecurityAnalyzer("");
+  markDirty(
+    "securityAnalyzer",
+    normalizeSecurityAnalyzerSelection(settings?.SECURITY_ANALYZER) !== "",
+  );
+}
+
+// ============================================================================
+// State Initialization Functions
+// ============================================================================
+
+function applyPrimarySettings({
+  settings,
+  setCurrentSelectedModel,
+  setAgentValue,
+  setConfirmationModeEnabled,
+  setSelectedSecurityAnalyzer,
+  setEnableDefaultCondenser,
+  setCondenserMaxSize,
+}: {
+  settings: Settings;
+  setCurrentSelectedModel: (value: string | null) => void;
+  setAgentValue: (value: string) => void;
+  setConfirmationModeEnabled: (value: boolean) => void;
+  setSelectedSecurityAnalyzer: (value: string) => void;
+  setEnableDefaultCondenser: (value: boolean) => void;
+  setCondenserMaxSize: (value: number | null) => void;
+}) {
+  setCurrentSelectedModel(settings.LLM_MODEL ?? null);
+  setAgentValue(settings.AGENT ?? DEFAULT_SETTINGS.AGENT ?? "CodeActAgent");
+  setConfirmationModeEnabled(
+    settings.CONFIRMATION_MODE ?? DEFAULT_SETTINGS.CONFIRMATION_MODE,
+  );
+  setSelectedSecurityAnalyzer(
+    normalizeSecurityAnalyzerSelection(settings.SECURITY_ANALYZER),
+  );
+  setEnableDefaultCondenser(
+    settings.ENABLE_DEFAULT_CONDENSER ??
+      DEFAULT_SETTINGS.ENABLE_DEFAULT_CONDENSER,
+  );
+  setCondenserMaxSize(
+    settings.CONDENSER_MAX_SIZE ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE,
+  );
+}
+
+function applyAdvancedOverrides({
+  settings,
+  setAdvancedOverrides,
+}: {
+  settings: Settings;
+  setAdvancedOverrides: React.Dispatch<React.SetStateAction<Partial<Settings>>>;
+}) {
+  setAdvancedOverrides({
+    LLM_TEMPERATURE: settings.LLM_TEMPERATURE ?? null,
+    LLM_TOP_P: settings.LLM_TOP_P ?? null,
+    LLM_MAX_OUTPUT_TOKENS: settings.LLM_MAX_OUTPUT_TOKENS ?? null,
+    LLM_TIMEOUT: settings.LLM_TIMEOUT ?? null,
+    LLM_NUM_RETRIES: settings.LLM_NUM_RETRIES ?? null,
+    LLM_CACHING_PROMPT: settings.LLM_CACHING_PROMPT ?? null,
+    LLM_DISABLE_VISION: settings.LLM_DISABLE_VISION ?? null,
+    LLM_CUSTOM_LLM_PROVIDER: settings.LLM_CUSTOM_LLM_PROVIDER ?? null,
+  });
+}
+
+export function initializeStateFromSettings({
+  settings,
+  setCurrentSelectedModel,
+  setAgentValue,
+  setConfirmationModeEnabled,
+  setSelectedSecurityAnalyzer,
+  setEnableDefaultCondenser,
+  setCondenserMaxSize,
+  setAdvancedOverrides,
+  setDirtyInputs,
+}: {
+  settings?: Settings;
+  setCurrentSelectedModel: (value: string | null) => void;
+  setAgentValue: (value: string) => void;
+  setConfirmationModeEnabled: (value: boolean) => void;
+  setSelectedSecurityAnalyzer: (value: string) => void;
+  setEnableDefaultCondenser: (value: boolean) => void;
+  setCondenserMaxSize: (value: number | null) => void;
+  setAdvancedOverrides: React.Dispatch<React.SetStateAction<Partial<Settings>>>;
+  setDirtyInputs: React.Dispatch<React.SetStateAction<DirtyInputs>>;
+}) {
+  if (!settings) {
+    return;
+  }
+
+  applyPrimarySettings({
+    settings,
+    setCurrentSelectedModel,
+    setAgentValue,
+    setConfirmationModeEnabled,
+    setSelectedSecurityAnalyzer,
+    setEnableDefaultCondenser,
+    setCondenserMaxSize,
+  });
+
+  applyAdvancedOverrides({ settings, setAdvancedOverrides });
+  setDirtyInputs(createDefaultDirtyInputs());
+}
+
+export function updateViewFromSettings({
+  settings,
+  resources,
+  userToggledView,
+  setView,
+}: {
+  settings?: Settings;
+  resources?: ReturnType<typeof useAIConfigOptions>["data"];
+  userToggledView: boolean;
+  setView: React.Dispatch<React.SetStateAction<"basic" | "advanced">>;
+}) {
+  if (!settings || userToggledView) {
+    return;
+  }
+
+  if (hasAdvancedSettingsSet(settings)) {
+    setView("advanced");
+    return;
+  }
+
+  if (resources && isCustomModel(resources.models, settings.LLM_MODEL)) {
+    setView("advanced");
+    return;
+  }
+
+  setView("basic");
+}

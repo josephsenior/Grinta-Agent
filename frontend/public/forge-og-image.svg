@@ -1,0 +1,121 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background - Pure Black -->
+  <rect width="1200" height="630" fill="#000000"/>
+  
+  <!-- Gradient Overlay -->
+  <defs>
+    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:0.15" />
+      <stop offset="50%" style="stop-color:#7c3aed;stop-opacity:0.1" />
+      <stop offset="100%" style="stop-color:#6d28d9;stop-opacity:0.05" />
+    </linearGradient>
+    
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8b5cf6" />
+      <stop offset="100%" style="stop-color:#a78bfa" />
+    </linearGradient>
+    
+    <!-- Glow effect -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background gradient -->
+  <rect width="1200" height="630" fill="url(#brandGradient)"/>
+  
+  <!-- Decorative circles -->
+  <circle cx="100" cy="100" r="80" fill="#8b5cf6" opacity="0.1" filter="url(#glow)"/>
+  <circle cx="1100" cy="530" r="120" fill="#7c3aed" opacity="0.08" filter="url(#glow)"/>
+  <circle cx="600" cy="50" r="60" fill="#a78bfa" opacity="0.1" filter="url(#glow)"/>
+  
+  <!-- Main Content Container -->
+  <g transform="translate(600, 315)">
+    <!-- Logo/Brand Name -->
+    <text 
+      x="0" 
+      y="-80" 
+      font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" 
+      font-size="96" 
+      font-weight="800" 
+      fill="url(#textGradient)" 
+      text-anchor="middle"
+      filter="url(#glow)"
+    >
+      Forge
+    </text>
+    
+    <!-- Tagline -->
+    <text 
+      x="0" 
+      y="20" 
+      font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" 
+      font-size="42" 
+      font-weight="600" 
+      fill="#FFFFFF" 
+      text-anchor="middle"
+      opacity="0.95"
+    >
+      Forge your software with AI
+    </text>
+    
+    <!-- Subtitle -->
+    <text 
+      x="0" 
+      y="80" 
+      font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" 
+      font-size="28" 
+      font-weight="400" 
+      fill="#94A3B8" 
+      text-anchor="middle"
+      opacity="0.8"
+    >
+      Code less, build more
+    </text>
+    
+    <!-- Feature highlights -->
+    <g transform="translate(0, 140)">
+      <text 
+        x="-200" 
+        y="0" 
+        font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" 
+        font-size="20" 
+        font-weight="500" 
+        fill="#8b5cf6" 
+        text-anchor="middle"
+      >
+        AI Agents
+      </text>
+      <text 
+        x="0" 
+        y="0" 
+        font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" 
+        font-size="20" 
+        font-weight="500" 
+        fill="#8b5cf6" 
+        text-anchor="middle"
+      >
+        Real-time
+      </text>
+      <text 
+        x="200" 
+        y="0" 
+        font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" 
+        font-size="20" 
+        font-weight="500" 
+        fill="#8b5cf6" 
+        text-anchor="middle"
+      >
+        Intelligent
+      </text>
+    </g>
+  </g>
+  
+  <!-- Bottom accent line -->
+  <line x1="0" y1="600" x2="1200" y2="600" stroke="#8b5cf6" stroke-width="2" opacity="0.3"/>
+</svg>
+

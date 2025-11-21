@@ -32,6 +32,7 @@ import {
 import { useOptimisticUserMessage } from "#/hooks/use-optimistic-user-message";
 import { useWSErrorMessage } from "#/hooks/use-ws-error-message";
 import Forge from "#/api/forge";
+import { logger } from "#/utils/logger";
 
 export type WebSocketStatus = "CONNECTING" | "CONNECTED" | "DISCONNECTED";
 
@@ -203,6 +204,109 @@ function createSyntheticPlaywrightEvents(conversationId: string) {
   ] as Record<string, unknown>[];
 }
 
+function extractTrajectoryMessageCandidate(item: Record<string, unknown>) {
+  const messageProp = getProp(item, "message");
+  const contentProp = getProp(item, "content");
+  const argsProp = getProp(item, "args") as Record<string, unknown> | undefined;
+
+  const candidates = [
+    typeof messageProp === "string" ? messageProp : undefined,
+    typeof contentProp === "string" ? contentProp : undefined,
+    typeof argsProp?.content === "string" ? argsProp.content : undefined,
+    typeof argsProp?.command === "string" ? argsProp.command : undefined,
+  ];
+
+  return candidates.find((value): value is string => Boolean(value));
+}
+
+function logTrajectoryNullCandidate(item: Record<string, unknown>) {
+  try {
+    const candidate = extractTrajectoryMessageCandidate(item);
+    if (!candidate) {
+      return;
+    }
+
+    if (candidate.toUpperCase() === "NULL") {
+      logger.warn("Trajectory contains literal 'NULL'", {
+        id: getProp(item, "id"),
+        item,
+      });
+    }
+  } catch (error) {
+    // ignore logging failures
+  }
+}
+
+function extractTrajectoryId(item: Record<string, unknown>): string {
+  const rawId = getProp(item, "id");
+  if (typeof rawId === "string" && rawId.trim().length > 0) {
+    return rawId;
+  }
+  if (typeof rawId === "number" && Number.isFinite(rawId)) {
+    return String(rawId);
+  }
+  return Math.random().toString(36).slice(2, 9);
+}
+
+function markItemAsHydrated(
+  item: Record<string, unknown>,
+  hydratedIds: Set<string>,
+  id: string,
+) {
+  try {
+    // eslint-disable-next-line no-param-reassign
+    (item as Record<string, unknown>).__hydrated = true;
+  } catch (error) {
+    // ignore if flag cannot be set
+  }
+  hydratedIds.add(id);
+}
+
+function isTrajectoryCandidate(item: Record<string, unknown>): boolean {
+  return (
+    "id" in item && "source" in item && "message" in item && "timestamp" in item
+  );
+}
+
+function mergeTrajectoryEvents(
+  prev: (ForgeAction | ForgeObservation)[],
+  trajectory: unknown[],
+  hydratedIds: Set<string>,
+): (ForgeAction | ForgeObservation)[] {
+  const existingIds = new Set(
+    prev.map((event) => String(getProp(event, "id") ?? "")),
+  );
+  const merged = [...prev];
+
+  for (const rawItem of trajectory) {
+    const item = rawItem as Record<string, unknown>;
+    if (item && typeof item === "object") {
+      logTrajectoryNullCandidate(item);
+      const id = extractTrajectoryId(item);
+      if (!existingIds.has(id)) {
+        markItemAsHydrated(item, hydratedIds, id);
+        if (isTrajectoryCandidate(item)) {
+          if (
+            isForgeAction(item as unknown) ||
+            isForgeObservation(item as unknown)
+          ) {
+            merged.push(item as unknown as ForgeParsedEvent);
+            existingIds.add(id);
+          } else {
+            logger.debug("Skipping non-event trajectory item", { id, item });
+          }
+        } else {
+          logger.debug("Skipping incomplete trajectory item", { id, item });
+        }
+      }
+    } else {
+      logger.debug("Skipping non-object trajectory item", { item });
+    }
+  }
+
+  return merged;
+}
+
 async function hydrateTrajectoryState({
   conversationId,
   setParsedEvents,
@@ -230,111 +334,109 @@ async function hydrateTrajectoryState({
   }
 }
 
-function mergeTrajectoryEvents(
-  prev: (ForgeAction | ForgeObservation)[],
-  trajectory: unknown[],
-  hydratedIds: Set<string>,
-): (ForgeAction | ForgeObservation)[] {
-  const existingIds = new Set(
-    prev.map((event) => String(getProp(event, "id") ?? "")),
-  );
-  const merged = [...prev];
-
-  for (const rawItem of trajectory) {
-    const item = rawItem as Record<string, unknown>;
-    if (!item || typeof item !== "object") {
-      // eslint-disable-next-line no-console
-      console.debug("Skipping non-object trajectory item", { item });
-      continue;
-    }
-
-    logTrajectoryNullCandidate(item);
-    const id = extractTrajectoryId(item);
-    if (existingIds.has(id)) {
-      continue;
-    }
-
-    markItemAsHydrated(item, hydratedIds, id);
-    if (!isTrajectoryCandidate(item)) {
-      // eslint-disable-next-line no-console
-      console.debug("Skipping incomplete trajectory item", { id, item });
-      continue;
-    }
-
-    if (isForgeAction(item as unknown) || isForgeObservation(item as unknown)) {
-      merged.push(item as unknown as ForgeParsedEvent);
-      existingIds.add(id);
-    } else {
-      // eslint-disable-next-line no-console
-      console.debug("Skipping non-event trajectory item", { id, item });
-    }
-  }
-
-  return merged;
-}
-
-function logTrajectoryNullCandidate(item: Record<string, unknown>) {
-  try {
-    const candidate = extractTrajectoryMessageCandidate(item);
-    if (!candidate) {
-      return;
-    }
-
-    if (candidate.toUpperCase() === "NULL") {
-      // eslint-disable-next-line no-console
-      console.warn("Trajectory contains literal 'NULL'", {
-        id: getProp(item, "id"),
-        item,
+function registerSocketHandlers({
+  socket,
+  conversationId,
+  handleConnect,
+  handleMessage,
+  handleError,
+  handleDisconnect,
+  lastEventRef,
+  setWebSocketStatus,
+}: {
+  socket: Socket;
+  conversationId: string;
+  handleConnect: () => void;
+  handleMessage: (event: Record<string, unknown>) => void;
+  handleError: (data: unknown) => void;
+  handleDisconnect: (data: unknown) => void;
+  lastEventRef: React.MutableRefObject<Record<string, unknown> | null>;
+  setWebSocketStatus: (status: WebSocketStatus) => void;
+}): () => void {
+  const reconnectHandler = async () => {
+    const lastEventId = lastEventRef.current?.id ?? -1;
+    try {
+      const resp = await Forge.getTrajectory(conversationId);
+      const trajectory = resp?.trajectory ?? [];
+      const missedEvents = trajectory.filter((item) => {
+        const eventId = Number(getProp(item, "id") ?? -1);
+        return Number.isFinite(eventId) && eventId > Number(lastEventId);
       });
+
+      if (missedEvents.length > 0) {
+        missedEvents.forEach((item) => {
+          handleMessage(item as Record<string, unknown>);
+        });
+      }
+    } catch (error) {
+      EventLogger.error(
+        `Failed to recover missed events on reconnect: ${String(error)}`,
+      );
+    }
+
+    setWebSocketStatus("CONNECTED");
+  };
+
+  socket.on("reconnect", reconnectHandler);
+  socket.on("connect", handleConnect);
+  socket.on("oh_event", handleMessage);
+  socket.on("connect_error", handleError);
+  socket.on("connect_failed", handleError);
+  socket.on("disconnect", handleDisconnect);
+
+  return () => {
+    socket.off("reconnect", reconnectHandler);
+    socket.off("connect", handleConnect);
+    socket.off("oh_event", handleMessage);
+    socket.off("connect_error", handleError);
+    socket.off("connect_failed", handleError);
+    socket.off("disconnect", handleDisconnect);
+    socket.disconnect();
+  };
+}
+
+function setupPlaywrightSocket({
+  conversationId,
+  handleMessage,
+  sioRef,
+  setWebSocketStatus,
+}: {
+  conversationId: string;
+  handleMessage: (event: Record<string, unknown>) => void;
+  sioRef: React.MutableRefObject<Socket | null>;
+  setWebSocketStatus: (status: WebSocketStatus) => void;
+}) {
+  const noopSocket = {
+    connected: true,
+    emit: () => undefined,
+    off: () => undefined,
+    on: () => undefined,
+    disconnect: () => undefined,
+  } as unknown as Socket;
+
+  // eslint-disable-next-line no-param-reassign
+  sioRef.current = noopSocket;
+  setWebSocketStatus("CONNECTED");
+
+  const syntheticEvents = createSyntheticPlaywrightEvents(conversationId);
+  setTimeout(() => {
+    try {
+      syntheticEvents.forEach((event) => handleMessage(event));
+    } catch (error) {
+      logger.warn("Playwright synthetic ws events failed", error);
+    }
+  }, 0);
+
+  try {
+    if (
+      typeof window !== "undefined" &&
+      typeof window.dispatchEvent === "function"
+    ) {
+      window.dispatchEvent(new CustomEvent("Forge:open-conversation-panel"));
     }
   } catch (error) {
-    // ignore logging failures
+    // ignore errors in test environment
   }
-}
-
-function extractTrajectoryMessageCandidate(item: Record<string, unknown>) {
-  const messageProp = getProp(item, "message");
-  const contentProp = getProp(item, "content");
-  const argsProp = getProp(item, "args") as Record<string, unknown> | undefined;
-
-  const candidates = [
-    typeof messageProp === "string" ? messageProp : undefined,
-    typeof contentProp === "string" ? contentProp : undefined,
-    typeof argsProp?.content === "string" ? argsProp.content : undefined,
-    typeof argsProp?.command === "string" ? argsProp.command : undefined,
-  ];
-
-  return candidates.find((value): value is string => Boolean(value));
-}
-
-function extractTrajectoryId(item: Record<string, unknown>): string {
-  const rawId = getProp(item, "id");
-  if (typeof rawId === "string" && rawId.trim().length > 0) {
-    return rawId;
-  }
-  if (typeof rawId === "number" && Number.isFinite(rawId)) {
-    return String(rawId);
-  }
-  return Math.random().toString(36).slice(2, 9);
-}
-
-function markItemAsHydrated(
-  item: Record<string, unknown>,
-  hydratedIds: Set<string>,
-  id: string,
-) {
-  try {
-    (item as Record<string, unknown>).__hydrated = true;
-  } catch (error) {
-    // ignore if flag cannot be set
-  }
-  hydratedIds.add(id);
-}
-
-function isTrajectoryCandidate(item: Record<string, unknown>): boolean {
-  return (
-    "id" in item && "source" in item && "message" in item && "timestamp" in item
-  );
 }
 
 export function updateStatusWhenErrorMessagePresent(data: unknown) {
@@ -707,114 +809,13 @@ export function WsClientProvider({
     ],
   );
 
-  return <WsClientContext value={value}>{children}</WsClientContext>;
+  return (
+    <WsClientContext.Provider value={value}>
+      {children}
+    </WsClientContext.Provider>
+  );
 }
 
 export function useWsClient() {
   return React.useContext(WsClientContext);
-}
-
-function registerSocketHandlers({
-  socket,
-  conversationId,
-  handleConnect,
-  handleMessage,
-  handleError,
-  handleDisconnect,
-  lastEventRef,
-  setWebSocketStatus,
-}: {
-  socket: Socket;
-  conversationId: string;
-  handleConnect: () => void;
-  handleMessage: (event: Record<string, unknown>) => void;
-  handleError: (data: unknown) => void;
-  handleDisconnect: (data: unknown) => void;
-  lastEventRef: React.MutableRefObject<Record<string, unknown> | null>;
-  setWebSocketStatus: (status: WebSocketStatus) => void;
-}): () => void {
-  const reconnectHandler = async () => {
-    const lastEventId = lastEventRef.current?.id ?? -1;
-    try {
-      const resp = await Forge.getTrajectory(conversationId);
-      const trajectory = resp?.trajectory ?? [];
-      const missedEvents = trajectory.filter((item) => {
-        const eventId = Number(getProp(item, "id") ?? -1);
-        return Number.isFinite(eventId) && eventId > Number(lastEventId);
-      });
-
-      if (missedEvents.length > 0) {
-        missedEvents.forEach((item) => {
-          handleMessage(item as Record<string, unknown>);
-        });
-      }
-    } catch (error) {
-      EventLogger.error(
-        `Failed to recover missed events on reconnect: ${String(error)}`,
-      );
-    }
-
-    setWebSocketStatus("CONNECTED");
-  };
-
-  socket.on("reconnect", reconnectHandler);
-  socket.on("connect", handleConnect);
-  socket.on("oh_event", handleMessage);
-  socket.on("connect_error", handleError);
-  socket.on("connect_failed", handleError);
-  socket.on("disconnect", handleDisconnect);
-
-  return () => {
-    socket.off("reconnect", reconnectHandler);
-    socket.off("connect", handleConnect);
-    socket.off("oh_event", handleMessage);
-    socket.off("connect_error", handleError);
-    socket.off("connect_failed", handleError);
-    socket.off("disconnect", handleDisconnect);
-    socket.disconnect();
-  };
-}
-
-function setupPlaywrightSocket({
-  conversationId,
-  handleMessage,
-  sioRef,
-  setWebSocketStatus,
-}: {
-  conversationId: string;
-  handleMessage: (event: Record<string, unknown>) => void;
-  sioRef: React.MutableRefObject<Socket | null>;
-  setWebSocketStatus: (status: WebSocketStatus) => void;
-}) {
-  const noopSocket = {
-    connected: true,
-    emit: () => undefined,
-    off: () => undefined,
-    on: () => undefined,
-    disconnect: () => undefined,
-  } as unknown as Socket;
-
-  sioRef.current = noopSocket;
-  setWebSocketStatus("CONNECTED");
-
-  const syntheticEvents = createSyntheticPlaywrightEvents(conversationId);
-  setTimeout(() => {
-    try {
-      syntheticEvents.forEach((event) => handleMessage(event));
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.warn("Playwright synthetic ws events failed", error);
-    }
-  }, 0);
-
-  try {
-    if (
-      typeof window !== "undefined" &&
-      typeof window.dispatchEvent === "function"
-    ) {
-      window.dispatchEvent(new CustomEvent("Forge:open-conversation-panel"));
-    }
-  } catch (error) {
-    // ignore errors in test environment
-  }
 }

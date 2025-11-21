@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Database, ArrowLeft } from "lucide-react";
+import { Database } from "lucide-react";
 import {
   useDatabaseConnections,
   useExecuteQuery,
@@ -12,6 +12,10 @@ import {
   displayErrorToast,
   displaySuccessToast,
 } from "#/utils/custom-toast-handlers";
+import { AppLayout } from "#/components/layout/AppLayout";
+import { AuthGuard } from "#/components/features/auth/auth-guard";
+import { Button } from "#/components/ui/button";
+import { Card } from "#/components/ui/card";
 
 function DatabaseBrowserScreen() {
   const [searchParams] = useSearchParams();
@@ -66,98 +70,110 @@ function DatabaseBrowserScreen() {
 
   if (!connectionId || !connection) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background-primary">
-        <div className="text-center">
-          <Database className="w-12 h-12 text-foreground-secondary mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-foreground mb-2">
-            No Connection Selected
-          </h2>
-          <p className="text-foreground-secondary mb-4">
-            Please select a database connection to browse
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate("/settings/databases")}
-            className="px-4 py-2 bg-brand-500 text-white rounded-md hover:bg-brand-600 transition-colors"
-          >
-            Go to Database Settings
-          </button>
-        </div>
-      </div>
+      <AuthGuard>
+        <AppLayout>
+          <div className="space-y-8">
+            {/* Page Title: Database Browser */}
+            <div>
+              <h1 className="text-[2.25rem] font-bold text-[#FFFFFF] leading-[1.2] mb-2">
+                Database Browser
+              </h1>
+            </div>
+
+            {/* No Connection Selected */}
+            <Card className="bg-[#000000] border border-[#1a1a1a] rounded-xl p-12 shadow-[0_4px_20px_rgba(0,0,0,0.15)] text-center">
+              <Database className="w-12 h-12 text-[#94A3B8] mx-auto mb-4 opacity-50" />
+              <h2 className="text-xl font-semibold text-[#FFFFFF] mb-2">
+                No Connection Selected
+              </h2>
+              <p className="text-sm text-[#94A3B8] mb-4">
+                Please select a database connection to browse
+              </p>
+              <Button
+                onClick={() => navigate("/settings/databases")}
+                className="bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-lg px-6 py-3 hover:brightness-110 active:brightness-95"
+              >
+                Go to Database Settings
+              </Button>
+            </Card>
+          </div>
+        </AppLayout>
+      </AuthGuard>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background-primary">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-background-secondary">
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="p-2 hover:bg-background-tertiary rounded-md transition-colors"
-            title="Back to home"
-          >
-            <ArrowLeft className="w-5 h-5 text-foreground-secondary" />
-          </button>
-          <div className="flex items-center gap-3">
-            <Database className="w-6 h-6 text-brand-500" />
+    <AuthGuard>
+      <AppLayout>
+        <div className="flex flex-col h-full min-h-0 space-y-6">
+          {/* Page Title: Database Browser */}
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-semibold text-foreground">
-                {connection.name}
+              <h1 className="text-[2.25rem] font-bold text-[#FFFFFF] leading-[1.2] mb-2">
+                Database Browser
               </h1>
-              <p className="text-sm text-foreground-secondary">
-                {connection.type.toUpperCase()} • {connection.host}:
-                {connection.port}
-              </p>
+              <div className="flex items-center gap-3 mt-2">
+                <div className="flex items-center gap-2">
+                  <Database className="w-5 h-5 text-[#8b5cf6]" />
+                  <span className="text-sm font-medium text-[#FFFFFF]">
+                    {connection.name}
+                  </span>
+                </div>
+                <span className="text-xs text-[#94A3B8]">•</span>
+                <span className="text-xs text-[#94A3B8]">
+                  {connection.type.toUpperCase()}
+                </span>
+                <span className="text-xs text-[#94A3B8]">•</span>
+                <span className="text-xs text-[#94A3B8]">
+                  {connection.host}:{connection.port}
+                </span>
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                    connection.status === "connected"
+                      ? "bg-[rgba(16,185,129,0.12)] text-[#10B981]"
+                      : "bg-[rgba(148,163,184,0.12)] text-[#94A3B8]"
+                  }`}
+                >
+                  {connection.status || "untested"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Main content: Schema Browser + Query Editor/Results */}
+          <div className="flex flex-1 gap-6 min-h-0 overflow-hidden">
+            {/* Left sidebar - Schema Browser */}
+            <div className="w-64 flex-shrink-0 border border-[#1a1a1a] rounded-xl bg-[#000000] overflow-hidden">
+              <SchemaBrowser
+                connection={connection}
+                onTableSelect={handleTableSelect}
+              />
+            </div>
+
+            {/* Right side - Query Editor and Results */}
+            <div className="flex-1 flex flex-col gap-6 min-h-0">
+              {/* Query Editor */}
+              <div className="flex-1 min-h-0 border border-[#1a1a1a] rounded-xl bg-[#000000] overflow-hidden">
+                <QueryEditor
+                  onExecute={handleExecuteQuery}
+                  isExecuting={isPending}
+                  defaultQuery={currentQuery}
+                />
+              </div>
+
+              {/* Query Results */}
+              <div className="flex-1 min-h-0 border border-[#1a1a1a] rounded-xl bg-[#000000] overflow-hidden">
+                <QueryResults
+                  results={queryResults ?? null}
+                  isLoading={isPending}
+                  error={queryResults?.error || null}
+                />
+              </div>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span
-            className={`px-2 py-1 text-xs font-medium rounded ${
-              connection.status === "connected"
-                ? "bg-success-500/10 text-success-500"
-                : "bg-foreground-secondary/10 text-foreground-secondary"
-            }`}
-          >
-            {connection.status || "untested"}
-          </span>
-        </div>
-      </div>
-
-      {/* Main content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left sidebar - Schema Browser */}
-        <div className="w-64 border-r border-border bg-background-secondary overflow-y-auto">
-          <SchemaBrowser
-            connection={connection}
-            onTableSelect={handleTableSelect}
-          />
-        </div>
-
-        {/* Right side - Query Editor and Results */}
-        <div className="flex-1 flex flex-col">
-          {/* Query Editor (top half) */}
-          <div className="h-1/2 border-b border-border">
-            <QueryEditor
-              onExecute={handleExecuteQuery}
-              isExecuting={isPending}
-              defaultQuery={currentQuery}
-            />
-          </div>
-
-          {/* Query Results (bottom half) */}
-          <div className="h-1/2 bg-background-primary">
-            <QueryResults
-              results={queryResults}
-              isLoading={isPending}
-              error={queryResults?.error || null}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
+      </AppLayout>
+    </AuthGuard>
   );
 }
 

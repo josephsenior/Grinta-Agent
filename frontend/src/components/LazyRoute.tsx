@@ -18,7 +18,7 @@ function RouteLoading() {
 }
 
 // Route wrapper with lazy loading
-export const LazyRoute: React.FC<{ route: string }> = ({ route }) => {
+export function LazyRoute({ route }: { route: string }) {
   const renderRoute = () => {
     switch (route) {
       case "home":
@@ -33,4 +33,4 @@ export const LazyRoute: React.FC<{ route: string }> = ({ route }) => {
   };
 
   return <Suspense fallback={<RouteLoading />}>{renderRoute()}</Suspense>;
-};
+}

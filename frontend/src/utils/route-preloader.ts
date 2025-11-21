@@ -58,27 +58,8 @@ function getRouteHash(route: string): string {
   return Math.abs(h).toString(36);
 }
 
-// Function to preload a specific route
-export function preloadRoute(
-  route: string,
-  priority: "high" | "medium" | "low" = "medium",
-): void {
-  if (typeof window === "undefined") return;
-
-  // Create a link element for preloading
-  const link = document.createElement("link");
-  link.rel = "prefetch";
-  link.href = route;
-
-  // Add priority hints
-  if (priority === "high") {
-    link.setAttribute("fetchpriority", "high");
-  } else if (priority === "low") {
-    link.setAttribute("fetchpriority", "low");
-  }
-
-  document.head.appendChild(link);
-}
+// Re-export preloadRoute from core module to maintain API compatibility
+export { preloadRoute } from "./route-preloader/preload-core";
 
 // Function to preload route modules
 export function preloadRouteModule(route: string): Promise<void> {
@@ -149,7 +130,10 @@ function schedulePreloads(
 
     if (!shouldSkip) {
       const timeoutId = window.setTimeout(() => {
-        preloadRoute(route, priority);
+        // Import dynamically to avoid circular dependency
+        import("./route-preloader/preload-core").then(({ preloadRoute }) => {
+          preloadRoute(route, priority);
+        });
         markPreloaded(route);
       }, delay || 0);
 
@@ -178,7 +162,23 @@ export function RoutePreloader(): React.ReactElement {
     );
 
     return () => {
+      // Cleanup: clear all timeouts
       timeouts.forEach((id: number) => clearTimeout(id));
+
+      // Cleanup: remove preload links from document.head to prevent accumulation
+      if (typeof document !== "undefined") {
+        const preloadLinks = document.querySelectorAll(
+          'link[rel="prefetch"], link[rel="modulepreload"]',
+        );
+        preloadLinks.forEach((link) => {
+          // Only remove links that were added by this preloader
+          // (identified by having a route-like href)
+          const href = link.getAttribute("href");
+          if (href && (href.startsWith("/") || href.includes("route"))) {
+            link.remove();
+          }
+        });
+      }
     };
   }, [preloadedRoutes]);
 
@@ -247,27 +247,14 @@ export function useIntelligentPreloading() {
 
   // Preload routes based on user behavior
   useEffect(() => {
-    const { timeOnPage, scrollDepth, interactions } = userBehavior;
-
-    // Preload conversation route if user is engaged
-    if (timeOnPage > 3000 && (scrollDepth > 20 || interactions > 2)) {
-      preloadRoute("/conversation", "high");
-    }
-
-    // Preload settings if user has been exploring
-    if (timeOnPage > 10000 && interactions > 5) {
-      preloadRoute("/settings", "medium");
-    }
-
-    // Preload about if user seems to be exploring
-    if (timeOnPage > 15000 && scrollDepth > 50 && interactions > 3) {
-      preloadRoute("/about", "low");
-    }
-
-    // Preload contact if user seems lost
-    if (timeOnPage > 20000 && scrollDepth > 70 && interactions < 3) {
-      preloadRoute("/contact", "low");
-    }
+    // Use dynamic import to avoid circular dependency
+    const loadStrategies = async () => {
+      const { applyPreloadStrategies } = await import(
+        "./route-preloader/preload-strategies"
+      );
+      applyPreloadStrategies(userBehavior);
+    };
+    loadStrategies();
   }, [userBehavior]);
 
   return userBehavior;
@@ -277,7 +264,10 @@ export function useIntelligentPreloading() {
 export function useHoverPreloading() {
   const handleMouseEnter = (route: string) => {
     // Preload route when user hovers over navigation
-    preloadRoute(route, "high");
+    // Import dynamically to avoid circular dependency
+    import("./route-preloader/preload-core").then(({ preloadRoute }) => {
+      preloadRoute(route, "high");
+    });
   };
 
   return { handleMouseEnter };
@@ -287,7 +277,10 @@ export function useHoverPreloading() {
 export function useFocusPreloading() {
   const handleFocus = (route: string) => {
     // Preload route when user focuses on navigation
-    preloadRoute(route, "high");
+    // Import dynamically to avoid circular dependency
+    import("./route-preloader/preload-core").then(({ preloadRoute }) => {
+      preloadRoute(route, "high");
+    });
   };
 
   return { handleFocus };

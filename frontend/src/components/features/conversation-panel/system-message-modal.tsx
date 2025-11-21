@@ -33,89 +33,7 @@ interface ToolData {
   parameters?: Record<string, unknown>;
 }
 
-export function SystemMessageModal({
-  isOpen,
-  onClose,
-  systemMessage,
-}: SystemMessageModalProps) {
-  const { t } = useTranslation();
-  if (!isOpen || !systemMessage) {
-    return null;
-  }
-
-  const controller = useSystemMessageModalController(systemMessage);
-
-  return (
-    <ModalBackdrop onClose={onClose}>
-      <ModalBody
-        width="medium"
-        className="max-h-[80vh] flex flex-col items-start"
-      >
-        <div className="flex flex-col gap-6 w-full">
-          <BaseModalTitle title={t("SYSTEM_MESSAGE_MODAL$TITLE")} />
-          <SystemMessageMetadata
-            agentClass={systemMessage.agent_class}
-            forgeVersion={systemMessage.Forge_version}
-            t={t}
-          />
-        </div>
-
-        <div className="w-full">
-          <SystemMessageTabs
-            activeTab={controller.activeTab}
-            hasTools={controller.tools.length > 0}
-            onSelect={controller.setActiveTab}
-            t={t}
-          />
-
-          <div className="max-h-[51vh] overflow-auto rounded-md">
-            {controller.activeTab === "system" && (
-              <div className="p-4 whitespace-pre-wrap font-mono text-sm leading-relaxed text-foreground-secondary bg-background-tertiary rounded-lg">
-                {systemMessage.content}
-              </div>
-            )}
-
-            {controller.activeTab === "tools" && (
-              <ToolsTabContent controller={controller} t={t} />
-            )}
-          </div>
-        </div>
-      </ModalBody>
-    </ModalBackdrop>
-  );
-}
-
-function useSystemMessageModalController(
-  systemMessage: SystemMessageModalProps["systemMessage"],
-) {
-  const [activeTab, setActiveTab] = useState<"system" | "tools">("system");
-  const [expandedTools, setExpandedTools] = useState<Record<number, boolean>>(
-    {},
-  );
-
-  const tools = useMemo(
-    () => normalizeTools(systemMessage?.tools ?? []),
-    [systemMessage?.tools],
-  );
-
-  const toggleTool = (index: number) => {
-    setExpandedTools((previous) => ({
-      ...previous,
-      [index]: !previous[index],
-    }));
-  };
-
-  const isToolExpanded = (index: number) => Boolean(expandedTools[index]);
-
-  return {
-    activeTab,
-    setActiveTab,
-    tools,
-    toggleTool,
-    isToolExpanded,
-  } as const;
-}
-
+// Helper functions
 const resolveFunctionData = (toolData: ToolData): FunctionData => {
   if (toolData.type === "function" && toolData.function) {
     return toolData.function;
@@ -159,71 +77,12 @@ type NormalizedTool = {
   parameters: Record<string, unknown> | null;
 };
 
-function SystemMessageMetadata({
-  agentClass,
-  forgeVersion,
-  t,
-}: {
-  agentClass: string | null;
-  forgeVersion: string | null;
-  t: ReturnType<typeof useTranslation>["t"];
-}) {
-  if (!agentClass && !forgeVersion) {
-    return null;
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      {agentClass && (
-        <MetadataRow
-          label={t("SYSTEM_MESSAGE_MODAL$AGENT_CLASS")}
-          value={agentClass}
-        />
-      )}
-      {forgeVersion && (
-        <MetadataRow
-          label={t("SYSTEM_MESSAGE_MODAL$Forge_VERSION")}
-          value={forgeVersion}
-        />
-      )}
-    </div>
-  );
-}
-
+// Leaf components (no dependencies on other local components)
 function MetadataRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="text-sm">
       <span className="font-semibold text-foreground-secondary">{label}</span>{" "}
       <span className="font-medium text-foreground">{value}</span>
-    </div>
-  );
-}
-
-function SystemMessageTabs({
-  activeTab,
-  hasTools,
-  onSelect,
-  t,
-}: {
-  activeTab: "system" | "tools";
-  hasTools: boolean;
-  onSelect: (tab: "system" | "tools") => void;
-  t: ReturnType<typeof useTranslation>["t"];
-}) {
-  return (
-    <div className="flex border-b border-border mb-2">
-      <TabButton
-        isActive={activeTab === "system"}
-        onClick={() => onSelect("system")}
-        label={t("SYSTEM_MESSAGE_MODAL$SYSTEM_MESSAGE_TAB")}
-      />
-      {hasTools && (
-        <TabButton
-          isActive={activeTab === "tools"}
-          onClick={() => onSelect("tools")}
-          label={t("SYSTEM_MESSAGE_MODAL$TOOLS_TAB")}
-        />
-      )}
     </div>
   );
 }
@@ -250,38 +109,6 @@ function TabButton({
     >
       {label}
     </button>
-  );
-}
-
-function ToolsTabContent({
-  controller,
-  t,
-}: {
-  controller: ReturnType<typeof useSystemMessageModalController>;
-  t: ReturnType<typeof useTranslation>["t"];
-}) {
-  if (controller.tools.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full p-4">
-        <p className="text-foreground-secondary">
-          {t("SYSTEM_MESSAGE_MODAL$NO_TOOLS")}
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-2 space-y-3">
-      {controller.tools.map((tool, index) => (
-        <ToolAccordion
-          key={tool.key || `tool-${index}`}
-          tool={tool}
-          isExpanded={controller.isToolExpanded(index)}
-          onToggle={() => controller.toggleTool(index)}
-          parametersLabel={t("SYSTEM_MESSAGE_MODAL$PARAMETERS")}
-        />
-      ))}
-    </div>
   );
 }
 
@@ -338,5 +165,184 @@ function ToolAccordion({
         </div>
       )}
     </div>
+  );
+}
+
+// Components that use leaf components
+function SystemMessageMetadata({
+  agentClass,
+  forgeVersion,
+  t,
+}: {
+  agentClass: string | null;
+  forgeVersion: string | null;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  if (!agentClass && !forgeVersion) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {agentClass && (
+        <MetadataRow
+          label={t("SYSTEM_MESSAGE_MODAL$AGENT_CLASS")}
+          value={agentClass}
+        />
+      )}
+      {forgeVersion && (
+        <MetadataRow
+          label={t("SYSTEM_MESSAGE_MODAL$Forge_VERSION")}
+          value={forgeVersion}
+        />
+      )}
+    </div>
+  );
+}
+
+function SystemMessageTabs({
+  activeTab,
+  hasTools,
+  onSelect,
+  t,
+}: {
+  activeTab: "system" | "tools";
+  hasTools: boolean;
+  onSelect: (tab: "system" | "tools") => void;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  return (
+    <div className="flex border-b border-border mb-2">
+      <TabButton
+        isActive={activeTab === "system"}
+        onClick={() => onSelect("system")}
+        label={t("SYSTEM_MESSAGE_MODAL$SYSTEM_MESSAGE_TAB")}
+      />
+      {hasTools && (
+        <TabButton
+          isActive={activeTab === "tools"}
+          onClick={() => onSelect("tools")}
+          label={t("SYSTEM_MESSAGE_MODAL$TOOLS_TAB")}
+        />
+      )}
+    </div>
+  );
+}
+
+function ToolsTabContent({
+  controller,
+  t,
+}: {
+  controller: ReturnType<typeof useSystemMessageModalController>;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  if (controller.tools.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full p-4">
+        <p className="text-foreground-secondary">
+          {t("SYSTEM_MESSAGE_MODAL$NO_TOOLS")}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-2 space-y-3">
+      {controller.tools.map((tool, index) => (
+        <ToolAccordion
+          key={tool.key || `tool-${index}`}
+          tool={tool}
+          isExpanded={controller.isToolExpanded(index)}
+          onToggle={() => controller.toggleTool(index)}
+          parametersLabel={t("SYSTEM_MESSAGE_MODAL$PARAMETERS")}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Hook
+function useSystemMessageModalController(
+  systemMessage: SystemMessageModalProps["systemMessage"],
+) {
+  const [activeTab, setActiveTab] = useState<"system" | "tools">("system");
+  const [expandedTools, setExpandedTools] = useState<Record<number, boolean>>(
+    {},
+  );
+
+  const tools = useMemo(
+    () => normalizeTools(systemMessage?.tools ?? []),
+    [systemMessage?.tools],
+  );
+
+  const toggleTool = (index: number) => {
+    setExpandedTools((previous) => ({
+      ...previous,
+      [index]: !previous[index],
+    }));
+  };
+
+  const isToolExpanded = (index: number) => Boolean(expandedTools[index]);
+
+  return {
+    activeTab,
+    setActiveTab,
+    tools,
+    toggleTool,
+    isToolExpanded,
+  } as const;
+}
+
+// Main component
+export function SystemMessageModal({
+  isOpen,
+  onClose,
+  systemMessage,
+}: SystemMessageModalProps) {
+  const { t } = useTranslation();
+  // Hook must be called before early return to satisfy React Hooks rules
+  const controller = useSystemMessageModalController(systemMessage);
+
+  if (!isOpen || !systemMessage) {
+    return null;
+  }
+
+  return (
+    <ModalBackdrop onClose={onClose}>
+      <ModalBody
+        width="medium"
+        className="max-h-[80vh] flex flex-col items-start"
+      >
+        <div className="flex flex-col gap-6 w-full">
+          <BaseModalTitle title={t("SYSTEM_MESSAGE_MODAL$TITLE")} />
+          <SystemMessageMetadata
+            agentClass={systemMessage.agent_class}
+            forgeVersion={systemMessage.Forge_version}
+            t={t}
+          />
+        </div>
+
+        <div className="w-full">
+          <SystemMessageTabs
+            activeTab={controller.activeTab}
+            hasTools={controller.tools.length > 0}
+            onSelect={controller.setActiveTab}
+            t={t}
+          />
+
+          <div className="max-h-[51vh] overflow-auto rounded-md">
+            {controller.activeTab === "system" && (
+              <div className="p-4 whitespace-pre-wrap font-mono text-sm leading-relaxed text-foreground-secondary bg-background-tertiary rounded-lg">
+                {systemMessage.content}
+              </div>
+            )}
+
+            {controller.activeTab === "tools" && (
+              <ToolsTabContent controller={controller} t={t} />
+            )}
+          </div>
+        </div>
+      </ModalBody>
+    </ModalBackdrop>
   );
 }

@@ -3,7 +3,7 @@ let fileIcons: unknown = null;
 let fileIconsPromise: Promise<unknown> | null = null;
 
 // Async loader for file-icons-js
-const loadFileIcons = async (): Promise<any> => {
+const loadFileIcons = async (): Promise<unknown> => {
   if (fileIcons) return fileIcons;
 
   if (!fileIconsPromise) {
@@ -12,9 +12,9 @@ const loadFileIcons = async (): Promise<any> => {
         // Try to load file-icons-js asynchronously
         if (typeof window !== "undefined") {
           // Check if already loaded on window
-          // @ts-ignore
+          // @ts-expect-error - fileIconsJs may be loaded on window
           if (window.fileIconsJs) {
-            // @ts-ignore
+            // @ts-expect-error - fileIconsJs may be loaded on window
             return window.fileIconsJs;
           }
 
@@ -22,13 +22,11 @@ const loadFileIcons = async (): Promise<any> => {
           const module = await import("file-icons-js");
           return module.default || module;
         }
-        // Server-side fallback
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        return require("file-icons-js");
-      } catch (error) {
-        console.debug(
-          "file-icons-js not available, using optimized fallback icons",
-        );
+        // Server-side fallback using dynamic import
+        const srvModule = await import("file-icons-js");
+        return srvModule.default || srvModule;
+      } catch (_err) {
+        // file-icons-js not available; fall back to built-in icons silently
         return null;
       }
     })();
@@ -40,16 +38,10 @@ const loadFileIcons = async (): Promise<any> => {
 
 // Initialize on client side with logging
 if (typeof window !== "undefined") {
-  loadFileIcons()
-    .then(() => {
-      console.log("[file-icons] Successfully loaded file-icons-js");
-    })
-    .catch((error) => {
-      console.warn(
-        "[file-icons] Failed to load file-icons-js, using fallback icons:",
-        error,
-      );
-    });
+  // Initialize loader on client; failures are handled by the loader itself.
+  loadFileIcons().catch(() => {
+    /* silently fallback to built-in icons */
+  });
 }
 
 export interface FileIconProps {
@@ -78,8 +70,7 @@ export function getFileIconClass(filename: string): string {
       return iconClass || "default-icon";
     }
     return "default-icon";
-  } catch (error) {
-    console.error("[file-icons] Error getting class for", filename, error);
+  } catch (_) {
     return "default-icon";
   }
 }
@@ -105,8 +96,7 @@ export async function getFileIconClassAsync(filename: string): Promise<string> {
       return iconClass || "default-icon";
     }
     return "default-icon";
-  } catch (error) {
-    console.error("[file-icons] Error getting class for", filename, error);
+  } catch (_) {
     return "default-icon";
   }
 }
@@ -133,12 +123,7 @@ export function getFileIconClassWithColor(filename: string): string {
       return iconClassWithColor || "default-icon";
     }
     return "default-icon";
-  } catch (error) {
-    console.error(
-      "[file-icons] Error getting class with color for",
-      filename,
-      error,
-    );
+  } catch (_) {
     return "default-icon";
   }
 }
@@ -163,8 +148,7 @@ export function hasFileIcon(filename: string): boolean {
       return !!iconClass && iconClass !== "default-icon";
     }
     return false;
-  } catch (error) {
-    // Silently handle error and return false
+  } catch (_) {
     return false;
   }
 }

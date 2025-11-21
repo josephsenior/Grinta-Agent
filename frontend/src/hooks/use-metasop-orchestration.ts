@@ -12,12 +12,24 @@ export interface OrchestrationStep {
   timestamp?: string;
 }
 
-interface MetaSOPEvent {
+// MetaSOPEvent interface for type safety when working with MetaSOP events
+export interface MetaSOPEvent {
   type: "metasop_step_start" | "metasop_step_complete" | "metasop_step_failed";
   step_id: string;
   role: string;
   artifact?: any;
+  artifact_hash?: string;
   error?: string;
+  timestamp?: string;
+  message?: string;
+  observation?: "metasop_step";
+  extras?: {
+    step_id?: string;
+    role?: string;
+    status?: "pending" | "running" | "success" | "failed";
+    artifact?: any;
+    artifact_hash?: string;
+  };
 }
 
 type MetaSopAction =
@@ -34,89 +46,132 @@ type MetaSopAction =
   | { type: "FAIL_RUNNING_STEP"; payload: { error: string } }
   | { type: "MARK_RUNNING_SUCCESS" };
 
-export function useMetaSOPOrchestration() {
-  const { parsedEvents } = useWsClient();
-  const [steps, dispatch] = useReducer(metaSopReducer, []);
-  const [isOrchestrating, setIsOrchestrating] = useState(false);
+// Helper functions defined before they're used
+function getLatestEvent(events: unknown[] | undefined) {
+  if (!Array.isArray(events) || events.length === 0) {
+    return undefined;
+  }
+  return events[events.length - 1];
+}
 
-  useEffect(() => {
-    const latestEvent = getLatestEvent(parsedEvents);
-    if (!latestEvent) {
-      return;
-    }
+function extractMetaSopMessage(event: unknown): string | null {
+  // Type guard for status update events
+  if (isStatusUpdate(event) && typeof event.message === "string") {
+    return event.message;
+  }
 
-    const message = extractMetaSopMessage(latestEvent);
-    if (message) {
-      handleMetaSopMessage(message, {
-        dispatch,
-        setIsOrchestrating,
-        parsedEvents,
-      });
-    }
+  // Type guard for MetaSOP events
+  if (
+    event &&
+    typeof event === "object" &&
+    "message" in event &&
+    typeof event.message === "string"
+  ) {
+    return event.message;
+  }
 
-    const observationStep = extractMetaSopObservation(latestEvent);
-    if (observationStep) {
-      dispatch({ type: "UPSERT_STEP", payload: observationStep });
-    }
-  }, [parsedEvents]);
+  return null;
+}
 
-  const clearSteps = useCallback(() => {
-    dispatch({ type: "RESET" });
-    setIsOrchestrating(false);
-  }, []);
+function extractMetaSopObservation(event: unknown): OrchestrationStep | null {
+  // Type guard for MetaSOP observation events
+  if (!event || typeof event !== "object") {
+    return null;
+  }
 
+  const metaSopEvent = event as Partial<MetaSOPEvent>;
+  if (metaSopEvent.observation !== "metasop_step") {
+    return null;
+  }
+
+  const extras = metaSopEvent.extras || {};
   return {
-    steps,
-    isOrchestrating,
-    clearSteps,
-    hasSteps: steps.length > 0,
+    step_id: extras.step_id || metaSopEvent.step_id || "unknown",
+    role: extras.role || metaSopEvent.role || "Unknown",
+    status: extras.status || "pending",
+    artifact: extras.artifact || metaSopEvent.artifact,
+    artifact_hash: extras.artifact_hash || metaSopEvent.artifact_hash,
+    timestamp: metaSopEvent.timestamp || new Date().toISOString(),
   };
 }
 
-function metaSopReducer(
-  state: OrchestrationStep[],
-  action: MetaSopAction,
-): OrchestrationStep[] {
-  const handler = META_SOP_REDUCER_HANDLERS[action.type];
-  if (!handler) {
-    return state;
-  }
-  return handler(state, action as any);
+function isOrchestrationStartMessage(message: string): boolean {
+  return (
+    message.includes("MetaSOP orchestration started") ||
+    message.includes("Running SOP:")
+  );
 }
 
-const META_SOP_REDUCER_HANDLERS: {
-  [Type in MetaSopAction["type"]]: (
-    state: OrchestrationStep[],
-    action: Extract<MetaSopAction, { type: Type }>,
-  ) => OrchestrationStep[];
-} = {
-  RESET: () => [],
-  UPSERT_STEP: (state, action) => upsertStep(state, action.payload),
-  ATTACH_ARTIFACT_REFERENCE: (state, action) =>
-    state.map((step) =>
-      step.step_id === action.payload.stepId
-        ? {
-            ...step,
-            artifact: action.payload.artifact,
-            artifact_hash: action.payload.artifact.hash,
-          }
-        : step,
-    ),
-  ATTACH_ARTIFACT_DATA: (state, action) =>
-    attachArtifactData(state, action.payload.artifact),
-  FAIL_RUNNING_STEP: (state, action) =>
-    failRunningStep(state, action.payload.error),
-  MARK_RUNNING_SUCCESS: (state) =>
-    state.map((step) =>
-      step.status === "running"
-        ? {
-            ...step,
-            status: "success",
-            timestamp: new Date().toISOString(),
-          }
-        : step,
-    ),
-};
+function isOrchestrationEndMessage(message: string): boolean {
+  return (
+    message.includes("MetaSOP orchestration completed") ||
+    message.includes("MetaSOP finished successfully") ||
+    message.includes("MetaSOP failed") ||
+    message.includes("Orchestration complete") ||
+    message.includes("All steps completed")
+  );
+}
+
+function parseStepEvent(message: string) {
+  const match = message.match(/step:(\S+)\s+role:([^:]+)\s+status:(\S+)/i);
+  if (!match) {
+    return null;
+  }
+
+  const [, stepId, role, status] = match;
+  return {
+    step_id: stepId,
+    role: role.trim(),
+    status: status.toLowerCase() as OrchestrationStep["status"],
+  };
+}
+
+function parseArtifactReference(message: string) {
+  const match = message.match(/artifact:(\S+)\s+step:(\S+)\s+type:(\S+)/i);
+  if (!match) {
+    return null;
+  }
+
+  const [, artifactHash, stepId, artifactType] = match;
+  return { artifactHash, stepId, artifactType };
+}
+
+function findMostRecentExecutedStepId(events: unknown[] | undefined) {
+  if (!Array.isArray(events)) {
+    return undefined;
+  }
+
+  for (let i = events.length - 1; i >= 0; i -= 1) {
+    const event = events[i];
+    if (isStatusUpdate(event) && typeof event.message === "string") {
+      const match = event.message.match(
+        /step:(\S+)\s+role:([^:]+)\s+status:(\S+)/i,
+      );
+      if (match && match[3] === "executed") {
+        return match[1];
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function parseArtifactJson(message: string) {
+  const jsonMatch = message.match(/```json\s*([\s\S]*?)\s*```/i);
+  if (!jsonMatch) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(jsonMatch[1]);
+  } catch (error) {
+    return null;
+  }
+}
+
+function isStepFailureMessage(message: string): boolean {
+  return message.includes("Step failed") || message.includes("Error in step");
+}
 
 function upsertStep(state: OrchestrationStep[], payload: OrchestrationStep) {
   const index = state.findIndex((step) => step.step_id === payload.step_id);
@@ -156,23 +211,49 @@ function failRunningStep(state: OrchestrationStep[], error: string) {
   return updated;
 }
 
-function getLatestEvent(events: unknown[] | undefined) {
-  if (!Array.isArray(events) || events.length === 0) {
-    return undefined;
-  }
-  return events[events.length - 1];
-}
+const META_SOP_REDUCER_HANDLERS: {
+  [Type in MetaSopAction["type"]]: (
+    state: OrchestrationStep[],
+    action: Extract<MetaSopAction, { type: Type }>,
+  ) => OrchestrationStep[];
+} = {
+  RESET: () => [],
+  UPSERT_STEP: (state, action) => upsertStep(state, action.payload),
+  ATTACH_ARTIFACT_REFERENCE: (state, action) =>
+    state.map((step) =>
+      step.step_id === action.payload.stepId
+        ? {
+            ...step,
+            artifact: action.payload.artifact,
+            artifact_hash: action.payload.artifact.hash,
+          }
+        : step,
+    ),
+  ATTACH_ARTIFACT_DATA: (state, action) =>
+    attachArtifactData(state, action.payload.artifact),
+  FAIL_RUNNING_STEP: (state, action) =>
+    failRunningStep(state, action.payload.error),
+  MARK_RUNNING_SUCCESS: (state) =>
+    state.map((step) =>
+      step.status === "running"
+        ? {
+            ...step,
+            status: "success",
+            timestamp: new Date().toISOString(),
+          }
+        : step,
+    ),
+};
 
-function extractMetaSopMessage(event: any): string | null {
-  if (isStatusUpdate(event) && typeof event.message === "string") {
-    return event.message;
+function metaSopReducer(
+  state: OrchestrationStep[],
+  action: MetaSopAction,
+): OrchestrationStep[] {
+  const handler = META_SOP_REDUCER_HANDLERS[action.type];
+  if (!handler) {
+    return state;
   }
-
-  if (event && typeof event === "object" && typeof event.message === "string") {
-    return event.message;
-  }
-
-  return null;
+  return handler(state, action as any);
 }
 
 function handleMetaSopMessage(
@@ -182,15 +263,17 @@ function handleMetaSopMessage(
     setIsOrchestrating: (value: boolean) => void;
     parsedEvents: unknown[] | undefined;
   },
-) {
+): void {
   if (isOrchestrationStartMessage(message)) {
     context.setIsOrchestrating(true);
     context.dispatch({ type: "RESET" });
+    return;
   }
 
   if (isOrchestrationEndMessage(message)) {
     context.setIsOrchestrating(false);
     context.dispatch({ type: "MARK_RUNNING_SUCCESS" });
+    return;
   }
 
   const stepEvent = parseStepEvent(message);
@@ -202,6 +285,7 @@ function handleMetaSopMessage(
         timestamp: new Date().toISOString(),
       },
     });
+    return;
   }
 
   const artifactReference = parseArtifactReference(message);
@@ -220,6 +304,7 @@ function handleMetaSopMessage(
         },
       });
     }
+    return;
   }
 
   const artifactData = parseArtifactJson(message);
@@ -228,6 +313,7 @@ function handleMetaSopMessage(
       type: "ATTACH_ARTIFACT_DATA",
       payload: { artifact: artifactData },
     });
+    return;
   }
 
   if (isStepFailureMessage(message)) {
@@ -238,100 +324,41 @@ function handleMetaSopMessage(
   }
 }
 
-function isOrchestrationStartMessage(message: string) {
-  return (
-    message.includes("MetaSOP orchestration started") ||
-    message.includes("Running SOP:")
-  );
-}
+export function useMetaSOPOrchestration() {
+  const { parsedEvents } = useWsClient();
+  const [steps, dispatch] = useReducer(metaSopReducer, []);
+  const [isOrchestrating, setIsOrchestrating] = useState(false);
 
-function isOrchestrationEndMessage(message: string) {
-  return (
-    message.includes("MetaSOP orchestration completed") ||
-    message.includes("MetaSOP finished successfully") ||
-    message.includes("MetaSOP failed") ||
-    message.includes("Orchestration complete") ||
-    message.includes("All steps completed")
-  );
-}
-
-function parseStepEvent(message: string) {
-  const match = message.match(/step:(\S+)\s+role:([^:]+)\s+status:(\S+)/i);
-  if (!match) {
-    return null;
-  }
-
-  const [, stepId, role, status] = match;
-  return {
-    step_id: stepId,
-    role: role.trim(),
-    status: status.toLowerCase() as OrchestrationStep["status"],
-  };
-}
-
-function parseArtifactReference(message: string) {
-  const match = message.match(/artifact:(\S+)\s+step:(\S+)\s+type:(\S+)/i);
-  if (!match) {
-    return null;
-  }
-
-  const [, artifactHash, stepId, artifactType] = match;
-  return { artifactHash, stepId, artifactType };
-}
-
-function parseArtifactJson(message: string) {
-  const jsonMatch = message.match(/```json\s*([\s\S]*?)\s*```/i);
-  if (!jsonMatch) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(jsonMatch[1]);
-  } catch (error) {
-    return null;
-  }
-}
-
-function isStepFailureMessage(message: string) {
-  return message.includes("Step failed") || message.includes("Error in step");
-}
-
-function findMostRecentExecutedStepId(events: unknown[] | undefined) {
-  if (!Array.isArray(events)) {
-    return undefined;
-  }
-
-  for (let i = events.length - 1; i >= 0; i -= 1) {
-    const event = events[i];
-    if (isStatusUpdate(event) && typeof event.message === "string") {
-      const match = event.message.match(
-        /step:(\S+)\s+role:([^:]+)\s+status:(\S+)/i,
-      );
-      if (match && match[3] === "executed") {
-        return match[1];
-      }
+  useEffect(() => {
+    const latestEvent = getLatestEvent(parsedEvents);
+    if (!latestEvent) {
+      return;
     }
-  }
 
-  return undefined;
-}
+    const message = extractMetaSopMessage(latestEvent);
+    if (message) {
+      handleMetaSopMessage(message, {
+        dispatch,
+        setIsOrchestrating,
+        parsedEvents,
+      });
+    }
 
-function extractMetaSopObservation(event: any): OrchestrationStep | null {
-  if (!event || typeof event !== "object") {
-    return null;
-  }
+    const observationStep = extractMetaSopObservation(latestEvent);
+    if (observationStep) {
+      dispatch({ type: "UPSERT_STEP", payload: observationStep });
+    }
+  }, [parsedEvents]);
 
-  if (event.observation !== "metasop_step") {
-    return null;
-  }
+  const clearSteps = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setIsOrchestrating(false);
+  }, []);
 
-  const extras = event.extras || {};
   return {
-    step_id: extras.step_id || "unknown",
-    role: extras.role || "Unknown",
-    status: extras.status || "pending",
-    artifact: extras.artifact,
-    artifact_hash: extras.artifact_hash,
-    timestamp: new Date().toISOString(),
+    steps,
+    isOrchestrating,
+    clearSteps,
+    hasSteps: steps.length > 0,
   };
 }

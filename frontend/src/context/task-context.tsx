@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
 
 interface Task {
   id: string;
@@ -52,17 +58,18 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setIsTaskPanelOpen((prev) => !prev);
   }, []);
 
+  const contextValue = useMemo(
+    () => ({
+      tasks,
+      updateTasks,
+      isTaskPanelOpen,
+      toggleTaskPanel,
+    }),
+    [tasks, updateTasks, isTaskPanelOpen, toggleTaskPanel],
+  );
+
   return (
-    <TaskContext.Provider
-      value={{
-        tasks,
-        updateTasks,
-        isTaskPanelOpen,
-        toggleTaskPanel,
-      }}
-    >
-      {children}
-    </TaskContext.Provider>
+    <TaskContext.Provider value={contextValue}>{children}</TaskContext.Provider>
   );
 }
 

@@ -60,23 +60,25 @@ export default function ValueProposition(): React.ReactElement {
 
       <div className="relative max-w-7xl mx-auto z-10">
         {/* Header */}
-        <div className="text-center mb-16 space-y-4">
+        <div className="text-center mb-16 space-y-4 max-w-3xl min-w-[400px] mx-auto">
           <Badge
             variant="secondary"
-            className="glass border-brand-500/30 text-violet-500 px-6 py-3 text-sm font-medium"
+            className="glass border-brand-500/30 text-violet-500 px-6 py-3 text-sm font-medium whitespace-normal"
           >
             <Sparkles className="w-4 h-4 mr-2" />
             Value Proposition
           </Badge>
 
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold">
-            <span className="text-foreground block mb-2">
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold whitespace-normal">
+            <span className="text-foreground block mb-2 whitespace-normal">
               Why Choose Forge Pro?
             </span>
-            <span className="text-gradient-brand">The Smart Alternative</span>
+            <span className="text-gradient-brand whitespace-normal">
+              The Smart Alternative
+            </span>
           </h2>
 
-          <p className="text-lg md:text-xl text-foreground-secondary max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-foreground-secondary max-w-3xl min-w-[400px] mx-auto leading-relaxed whitespace-normal">
             Compare the traditional development approach with the power of
             AI-driven orchestration
           </p>

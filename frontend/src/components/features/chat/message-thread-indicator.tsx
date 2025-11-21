@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "#/utils/utils";
 import { Button } from "#/components/ui/button";
@@ -11,6 +12,104 @@ interface MessageThreadIndicatorProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   className?: string;
+}
+
+// Helper components defined before use
+function ThreadConnector({
+  isFirstInThread,
+  isLastInThread,
+}: Pick<MessageThreadIndicatorProps, "isFirstInThread" | "isLastInThread">) {
+  return (
+    <div
+      className={cn(
+        "absolute left-0 w-0.5 bg-gradient-to-b from-primary-500/30 to-primary-500/10",
+        isFirstInThread ? "top-0" : "-top-4",
+        isLastInThread ? "bottom-1/2" : "bottom-0",
+      )}
+    />
+  );
+}
+
+function ThreadToggleButton({
+  onToggleCollapse,
+  isCollapsed,
+}: {
+  onToggleCollapse: () => void;
+  isCollapsed: boolean;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={onToggleCollapse}
+      className="h-6 px-2 text-xs rounded-full hover:bg-primary-500/10"
+      title={
+        isCollapsed
+          ? t("chat.expandThread", "Expand thread")
+          : t("chat.collapseThread", "Collapse thread")
+      }
+    >
+      {isCollapsed ? (
+        <>
+          <ChevronDown className="h-3 w-3 mr-1" />
+          {t("chat.expand", "Expand")}
+        </>
+      ) : (
+        <>
+          <ChevronUp className="h-3 w-3 mr-1" />
+          {t("chat.collapse", "Collapse")}
+        </>
+      )}
+    </Button>
+  );
+}
+
+function ThreadBadge({
+  isFirstInThread,
+  threadSize,
+  isCollapsed,
+  onToggleCollapse,
+}: {
+  isFirstInThread: boolean;
+  threadSize: number;
+  isCollapsed: boolean;
+  onToggleCollapse?: () => void;
+}) {
+  const { t } = useTranslation();
+  if (!isFirstInThread) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center gap-2 mb-2 ml-3">
+      <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary-500/10 border border-primary-500/20">
+        <MessageSquare className="h-3 w-3 text-primary-500" />
+        <span className="text-xs font-medium text-primary-500">
+          {t("chat.thread", "Thread")} ({threadSize})
+        </span>
+      </div>
+
+      {onToggleCollapse && threadSize > 2 && (
+        <ThreadToggleButton
+          onToggleCollapse={onToggleCollapse}
+          isCollapsed={isCollapsed}
+        />
+      )}
+    </div>
+  );
+}
+
+function ThreadDot({ isFirstInThread }: { isFirstInThread: boolean }) {
+  return (
+    <div
+      className={cn(
+        "absolute left-[-3px] w-2 h-2 rounded-full",
+        "bg-primary-500 border-2 border-background",
+        isFirstInThread ? "top-2" : "top-1/2 -translate-y-1/2",
+      )}
+    />
+  );
 }
 
 export function MessageThreadIndicator({
@@ -42,97 +141,6 @@ export function MessageThreadIndicator({
   );
 }
 
-function ThreadConnector({
-  isFirstInThread,
-  isLastInThread,
-}: Pick<MessageThreadIndicatorProps, "isFirstInThread" | "isLastInThread">) {
-  return (
-    <div
-      className={cn(
-        "absolute left-0 w-0.5 bg-gradient-to-b from-primary-500/30 to-primary-500/10",
-        isFirstInThread ? "top-0" : "-top-4",
-        isLastInThread ? "bottom-1/2" : "bottom-0",
-      )}
-    />
-  );
-}
-
-function ThreadBadge({
-  isFirstInThread,
-  threadSize,
-  isCollapsed,
-  onToggleCollapse,
-}: {
-  isFirstInThread: boolean;
-  threadSize: number;
-  isCollapsed: boolean;
-  onToggleCollapse?: () => void;
-}) {
-  if (!isFirstInThread) {
-    return null;
-  }
-
-  return (
-    <div className="flex items-center gap-2 mb-2 ml-3">
-      <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary-500/10 border border-primary-500/20">
-        <MessageSquare className="h-3 w-3 text-primary-500" />
-        <span className="text-xs font-medium text-primary-500">
-          Thread ({threadSize})
-        </span>
-      </div>
-
-      {onToggleCollapse && threadSize > 2 && (
-        <ThreadToggleButton
-          onToggleCollapse={onToggleCollapse}
-          isCollapsed={isCollapsed}
-        />
-      )}
-    </div>
-  );
-}
-
-function ThreadToggleButton({
-  onToggleCollapse,
-  isCollapsed,
-}: {
-  onToggleCollapse: () => void;
-  isCollapsed: boolean;
-}) {
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={onToggleCollapse}
-      className="h-6 px-2 text-xs rounded-full hover:bg-primary-500/10"
-      title={isCollapsed ? "Expand thread" : "Collapse thread"}
-    >
-      {isCollapsed ? (
-        <>
-          <ChevronDown className="h-3 w-3 mr-1" />
-          Expand
-        </>
-      ) : (
-        <>
-          <ChevronUp className="h-3 w-3 mr-1" />
-          Collapse
-        </>
-      )}
-    </Button>
-  );
-}
-
-function ThreadDot({ isFirstInThread }: { isFirstInThread: boolean }) {
-  return (
-    <div
-      className={cn(
-        "absolute left-[-3px] w-2 h-2 rounded-full",
-        "bg-primary-500 border-2 border-background",
-        isFirstInThread ? "top-2" : "top-1/2 -translate-y-1/2",
-      )}
-    />
-  );
-}
-
 // Hook to manage message threading
 export function useMessageThreading(
   messages: Array<{
@@ -161,7 +169,7 @@ export function useMessageThreading(
           threadMap.set(`thread-${threadId}`, currentThread);
         }
         currentThread = [];
-        threadId++;
+        threadId += 1;
       }
 
       currentThread.push(index);

@@ -26,6 +26,46 @@ interface CodeActionsProps {
   onToggleLineNumbers?: () => void;
 }
 
+// Helper functions
+function isExecutable(lang?: string): boolean {
+  if (!lang) return false;
+  const executableLanguages = [
+    "python",
+    "javascript",
+    "typescript",
+    "bash",
+    "sh",
+    "shell",
+  ];
+  return executableLanguages.includes(lang.toLowerCase());
+}
+
+function getFileExtension(lang?: string): string {
+  const extensions: Record<string, string> = {
+    javascript: ".js",
+    typescript: ".ts",
+    python: ".py",
+    java: ".java",
+    cpp: ".cpp",
+    c: ".c",
+    rust: ".rs",
+    go: ".go",
+    ruby: ".rb",
+    php: ".php",
+    swift: ".swift",
+    kotlin: ".kt",
+    bash: ".sh",
+    shell: ".sh",
+    sh: ".sh",
+    css: ".css",
+    html: ".html",
+    json: ".json",
+    yaml: ".yaml",
+    yml: ".yml",
+  };
+  return extensions[lang?.toLowerCase() || ""] || ".txt";
+}
+
 function CodeActions({
   code,
   language,
@@ -76,45 +116,6 @@ function CodeActions({
     if (onAskAbout) {
       onAskAbout(code);
     }
-  };
-
-  const isExecutable = (lang?: string): boolean => {
-    if (!lang) return false;
-    const executableLanguages = [
-      "python",
-      "javascript",
-      "typescript",
-      "bash",
-      "sh",
-      "shell",
-    ];
-    return executableLanguages.includes(lang.toLowerCase());
-  };
-
-  const getFileExtension = (lang?: string): string => {
-    const extensions: Record<string, string> = {
-      javascript: ".js",
-      typescript: ".ts",
-      python: ".py",
-      java: ".java",
-      cpp: ".cpp",
-      c: ".c",
-      rust: ".rs",
-      go: ".go",
-      ruby: ".rb",
-      php: ".php",
-      swift: ".swift",
-      kotlin: ".kt",
-      bash: ".sh",
-      shell: ".sh",
-      sh: ".sh",
-      css: ".css",
-      html: ".html",
-      json: ".json",
-      yaml: ".yaml",
-      yml: ".yml",
-    };
-    return extensions[lang?.toLowerCase() || ""] || ".txt";
   };
 
   return (
@@ -212,6 +213,9 @@ export function enhancedCode(
   }: React.ClassAttributes<HTMLElement> &
     React.HTMLAttributes<HTMLElement> &
     ExtraProps) {
+    // Hooks must be called unconditionally at the top level
+    const [showLineNumbers, setShowLineNumbers] = React.useState(false);
+
     const match = /language-(\w+)/.exec(className || "");
     const codeString = String(children).replace(/\n$/, "");
 
@@ -258,8 +262,6 @@ export function enhancedCode(
         </div>
       );
     }
-
-    const [showLineNumbers, setShowLineNumbers] = React.useState(false);
 
     return (
       <div className="relative group">

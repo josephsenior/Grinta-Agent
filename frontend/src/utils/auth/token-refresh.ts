@@ -1,5 +1,6 @@
 import { authApi } from "../../api/auth";
 import { tokenStorage } from "./token-storage";
+import { logger } from "../logger";
 
 let refreshTimer: NodeJS.Timeout | null = null;
 
@@ -18,11 +19,12 @@ export function setupTokenRefresh(expiresIn: number): void {
   if (refreshTime > 0) {
     refreshTimer = setTimeout(async () => {
       try {
-        const { token, expires_in } = await authApi.refreshToken();
+        const { token, expires_in: newExpiresIn } =
+          await authApi.refreshToken();
         tokenStorage.setToken(token);
-        setupTokenRefresh(expires_in); // Setup next refresh
+        setupTokenRefresh(newExpiresIn); // Setup next refresh
       } catch (error) {
-        console.error("Token refresh failed:", error);
+        logger.error("Token refresh failed:", error);
         // Token refresh failed, user will need to login again
         tokenStorage.clear();
         if (

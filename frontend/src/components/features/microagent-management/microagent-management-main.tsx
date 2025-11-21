@@ -7,13 +7,37 @@ import { MicroagentManagementViewMicroagent } from "./microagent-management-view
 import { MicroagentManagementError } from "./microagent-management-error";
 import { MicroagentManagementConversationStopped } from "./microagent-management-conversation-stopped";
 
-export function MicroagentManagementMain() {
-  const { selectedMicroagentItem } = useSelector(
-    (state: RootState) => state.microagentManagement,
-  );
+// Helper functions
+const isConversationOpeningPr = (
+  conversation: NonNullable<
+    RootState["microagentManagement"]["selectedMicroagentItem"]
+  >["conversation"],
+) => {
+  if (!conversation) return false;
 
-  return resolveMicroagentContent(selectedMicroagentItem);
-}
+  const isStarting =
+    conversation.status === "STARTING" ||
+    conversation.runtime_status === "STATUS$STARTING_RUNTIME";
+
+  const isOpeningPr =
+    conversation.status === "RUNNING" &&
+    conversation.runtime_status === "STATUS$READY";
+
+  return isStarting || isOpeningPr;
+};
+
+const isConversationStopped = (
+  conversation: NonNullable<
+    RootState["microagentManagement"]["selectedMicroagentItem"]
+  >["conversation"],
+) => {
+  if (!conversation) return false;
+
+  return (
+    conversation.status === "STOPPED" ||
+    conversation.runtime_status === "STATUS$STOPPED"
+  );
+};
 
 const resolveMicroagentContent = (
   selectedMicroagentItem: RootState["microagentManagement"]["selectedMicroagentItem"],
@@ -50,33 +74,11 @@ const resolveMicroagentContent = (
   return <MicroagentManagementDefault />;
 };
 
-const isConversationOpeningPr = (
-  conversation: NonNullable<
-    RootState["microagentManagement"]["selectedMicroagentItem"]
-  >["conversation"],
-) => {
-  if (!conversation) return false;
-
-  const isStarting =
-    conversation.status === "STARTING" ||
-    conversation.runtime_status === "STATUS$STARTING_RUNTIME";
-
-  const isOpeningPr =
-    conversation.status === "RUNNING" &&
-    conversation.runtime_status === "STATUS$READY";
-
-  return isStarting || isOpeningPr;
-};
-
-const isConversationStopped = (
-  conversation: NonNullable<
-    RootState["microagentManagement"]["selectedMicroagentItem"]
-  >["conversation"],
-) => {
-  if (!conversation) return false;
-
-  return (
-    conversation.status === "STOPPED" ||
-    conversation.runtime_status === "STATUS$STOPPED"
+// Main component
+export function MicroagentManagementMain() {
+  const { selectedMicroagentItem } = useSelector(
+    (state: RootState) => state.microagentManagement,
   );
-};
+
+  return resolveMicroagentContent(selectedMicroagentItem);
+}

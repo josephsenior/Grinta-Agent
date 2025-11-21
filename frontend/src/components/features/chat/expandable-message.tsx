@@ -1,5 +1,5 @@
 import { PayloadAction } from "@reduxjs/toolkit";
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import { Link } from "react-router-dom";
@@ -17,8 +17,6 @@ import { cn } from "#/utils/utils";
 import { code } from "../markdown/code";
 import { ol, ul } from "../markdown/list";
 import { paragraph } from "../markdown/paragraph";
-import { MonoComponent } from "./mono-component";
-import { PathComponent } from "./path-component";
 
 const trimText = (text: string, maxLength: number): string => {
   if (!text) {
@@ -27,214 +25,46 @@ const trimText = (text: string, maxLength: number): string => {
   return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
 };
 
-interface ExpandableMessageProps {
-  id?: string;
-  message: string;
-  type: string;
-  success?: boolean;
-  observation?: PayloadAction<ForgeObservation>;
-  action?: PayloadAction<ForgeAction>;
-}
-
-export function ExpandableMessage({
-  id,
-  message,
-  type,
-  success,
-  observation,
-  action,
-}: ExpandableMessageProps) {
-  const { data: config } = useConfig();
-  const { t, i18n } = useTranslation();
-  const {
-    showDetails,
-    toggleDetails,
-    translationId,
-    translationParams,
-    details,
-  } = useExpandableMessageTranslation({
-    id,
-    message,
-    observation,
-    action,
-    i18n,
-  });
-
-  const statusIconClasses = "h-4 w-4 ml-2 inline";
-  const billingNotice = buildBillingNotice({ config, id, t });
-  if (billingNotice) {
-    return billingNotice;
+function trimRunCommand(
+  payload?: PayloadAction<ForgeAction>,
+): PayloadAction<ForgeAction> | undefined {
+  if (!payload || payload.payload.action !== "run") {
+    return payload;
   }
 
-  const heading = buildMessageHeading({
-    translationId,
-    translationParams,
-    message,
-  });
-  const toggleIcon = getToggleIcon({ showDetails, type });
-  const statusIcon = getStatusIcon({
-    type,
-    success,
-    classes: statusIconClasses,
-  });
-
-  return (
-    <div
-      className={cn(
-        "flex gap-2 items-center justify-start border-l-2 pl-2 my-2 py-2",
-        type === "error" ? "border-danger" : "border-neutral-300",
-      )}
-    >
-      <div className="text-sm w-full">
-        <div className="flex flex-row justify-between items-center w-full">
-          <span
-            className={cn(
-              "font-bold",
-              type === "error" ? "text-danger" : "text-foreground",
-            )}
-          >
-            {heading}
-            <button
-              type="button"
-              onClick={toggleDetails}
-              className="cursor-pointer text-left"
-            >
-              {toggleIcon}
-            </button>
-          </span>
-          {statusIcon}
-        </div>
-        {showDetails && (
-          <div className="text-sm">
-            <Markdown
-              components={{
-                code,
-                ul,
-                ol,
-                p: paragraph,
-              }}
-              remarkPlugins={[remarkGfm, remarkBreaks]}
-            >
-              {details}
-            </Markdown>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  const command = trimText(payload.payload.args.command, 80);
+  return {
+    ...payload,
+    payload: {
+      ...payload.payload,
+      args: { ...payload.payload.args, command },
+    },
+  };
 }
 
-function buildBillingNotice({
-  config,
-  id,
-  t,
-}: {
-  config: ReturnType<typeof useConfig>["data"];
-  id?: string;
-  t: ReturnType<typeof useTranslation>["t"];
-}) {
-  if (
-    !config?.FEATURE_FLAGS?.ENABLE_BILLING ||
-    config?.APP_MODE !== "saas" ||
-    id !== I18nKey.STATUS$ERROR_LLM_OUT_OF_CREDITS
-  ) {
-    return null;
+function trimObservationCommand(
+  payload?: PayloadAction<ForgeObservation>,
+): PayloadAction<ForgeObservation> | undefined {
+  if (!payload || payload.payload.observation !== "run") {
+    return payload;
   }
 
-  return (
-    <div
-      data-testid="out-of-credits"
-      className="flex gap-2 items-center justify-start border-l-2 pl-2 my-2 py-2 border-danger"
-    >
-      <div className="text-sm w-full">
-        <div className="font-bold text-danger">
-          {t(I18nKey.STATUS$ERROR_LLM_OUT_OF_CREDITS)}
-        </div>
-        <Link
-          className="mt-2 mb-2 w-full h-10 rounded-sm flex items-center justify-center gap-2 bg-primary text-[#0D0F11]"
-          to="/settings/billing"
-        >
-          {t(I18nKey.BILLING$CLICK_TO_TOP_UP)}
-        </Link>
-      </div>
-    </div>
-  );
+  const command = trimText(payload.payload.extras.command, 80);
+  return {
+    ...payload,
+    payload: {
+      ...payload.payload,
+      extras: { ...payload.payload.extras, command },
+    },
+  };
 }
 
-function buildMessageHeading({
-  translationId,
-  translationParams,
-  message,
-}: {
+type TranslationState = {
+  showDetails: boolean;
   translationId?: string;
   translationParams: Record<string, unknown>;
-  message: string;
-}) {
-  if (!translationId) {
-    return message;
-  }
-
-  return (
-    <Trans
-      i18nKey={translationId}
-      values={translationParams}
-      components={{
-        bold: <strong />,
-        path: <PathComponent />,
-        cmd: <MonoComponent />,
-      }}
-    />
-  );
-}
-
-function getToggleIcon({
-  showDetails,
-  type,
-}: {
-  showDetails: boolean;
-  type: string;
-}) {
-  const iconClasses = cn(
-    "h-4 w-4 ml-2 inline",
-    type === "error" ? "fill-error-500" : "fill-foreground",
-  );
-
-  return showDetails ? (
-    <ArrowUp className={iconClasses} />
-  ) : (
-    <ArrowDown className={iconClasses} />
-  );
-}
-
-function getStatusIcon({
-  type,
-  success,
-  classes,
-}: {
-  type: string;
-  success?: boolean;
-  classes: string;
-}) {
-  if (type !== "action" || success === undefined) {
-    return null;
-  }
-
-  return (
-    <span className="flex-shrink-0">
-      {success ? (
-        <CheckCircle
-          data-testid="status-icon"
-          className={cn(classes, "fill-success")}
-        />
-      ) : (
-        <XCircle
-          data-testid="status-icon"
-          className={cn(classes, "fill-danger")}
-        />
-      )}
-    </span>
-  );
-}
+  details: string;
+};
 
 function useExpandableMessageTranslation({
   id,
@@ -297,43 +127,186 @@ function useExpandableMessageTranslation({
   };
 }
 
-type TranslationState = {
-  showDetails: boolean;
-  translationId?: string;
-  translationParams: Record<string, unknown>;
-  details: string;
-};
-
-function trimRunCommand(
-  payload?: PayloadAction<ForgeAction>,
-): PayloadAction<ForgeAction> | undefined {
-  if (!payload || payload.payload.action !== "run") {
-    return payload;
+function buildBillingNotice({
+  config,
+  id,
+}: {
+  config: ReturnType<typeof useConfig>["data"];
+  id?: string;
+}) {
+  if (!config?.APP_MODE || config.APP_MODE === "saas") {
+    return null;
   }
 
-  const command = trimText(payload.payload.args.command, 80);
-  return {
-    ...payload,
-    payload: {
-      ...payload.payload,
-      args: { ...payload.payload.args, command },
-    },
-  };
+  if (id !== "OBSERVATION$BILLING_NOTICE") {
+    return null;
+  }
+
+  return (
+    <div className="my-2 p-3 bg-warning-500/10 border border-warning-500/20 rounded-lg">
+      <p className="text-sm text-warning-600 dark:text-warning-400">
+        <Trans
+          i18nKey="OBSERVATION$BILLING_NOTICE"
+          components={{
+            link: <Link to="/settings" className="underline" />,
+          }}
+        />
+      </p>
+    </div>
+  );
 }
 
-function trimObservationCommand(
-  payload?: PayloadAction<ForgeObservation>,
-): PayloadAction<ForgeObservation> | undefined {
-  if (!payload || payload.payload.observation !== "run") {
-    return payload;
+function buildMessageHeading({
+  translationId,
+  translationParams,
+  message,
+}: {
+  translationId?: string;
+  translationParams: Record<string, unknown>;
+  message: string;
+}) {
+  if (translationId) {
+    // Use React.createElement to avoid complex union type inference
+    return React.createElement(Trans, {
+      i18nKey: translationId as I18nKey,
+      values: translationParams as Record<string, string>,
+    });
+  }
+  return message;
+}
+
+function getToggleIcon({
+  showDetails,
+  type,
+}: {
+  showDetails: boolean;
+  type: string;
+}) {
+  if (type === "error") {
+    return showDetails ? (
+      <ArrowUp className="h-4 w-4 inline" />
+    ) : (
+      <ArrowDown className="h-4 w-4 inline" />
+    );
+  }
+  return showDetails ? (
+    <ArrowUp className="h-4 w-4 inline" />
+  ) : (
+    <ArrowDown className="h-4 w-4 inline" />
+  );
+}
+
+function getStatusIcon({
+  type,
+  success,
+  classes,
+}: {
+  type: string;
+  success?: boolean;
+  classes: string;
+}) {
+  if (type === "error") {
+    return <XCircle className={classes} />;
+  }
+  if (success) {
+    return <CheckCircle className={classes} />;
+  }
+  return null;
+}
+
+interface ExpandableMessageProps {
+  id?: string;
+  message: string;
+  type: string;
+  success?: boolean;
+  observation?: PayloadAction<ForgeObservation>;
+  action?: PayloadAction<ForgeAction>;
+}
+
+export function ExpandableMessage({
+  id,
+  message,
+  type,
+  success,
+  observation,
+  action,
+}: ExpandableMessageProps) {
+  const { data: config } = useConfig();
+  const { i18n } = useTranslation();
+  const {
+    showDetails,
+    toggleDetails,
+    translationId,
+    translationParams,
+    details,
+  } = useExpandableMessageTranslation({
+    id,
+    message,
+    observation,
+    action,
+    i18n,
+  });
+
+  const statusIconClasses = "h-4 w-4 ml-2 inline";
+  const billingNotice = buildBillingNotice({ config, id });
+  if (billingNotice) {
+    return billingNotice;
   }
 
-  const command = trimText(payload.payload.extras.command, 80);
-  return {
-    ...payload,
-    payload: {
-      ...payload.payload,
-      extras: { ...payload.payload.extras, command },
-    },
-  };
+  const heading = buildMessageHeading({
+    translationId,
+    translationParams,
+    message,
+  });
+  const toggleIcon = getToggleIcon({ showDetails, type });
+  const statusIcon = getStatusIcon({
+    type,
+    success,
+    classes: statusIconClasses,
+  });
+
+  return (
+    <div
+      className={cn(
+        "flex gap-2 items-center justify-start border-l-2 pl-2 my-2 py-2",
+        type === "error" ? "border-danger" : "border-neutral-300",
+      )}
+    >
+      <div className="text-sm w-full">
+        <div className="flex flex-row justify-between items-center w-full">
+          <span
+            className={cn(
+              "font-bold",
+              type === "error" ? "text-danger" : "text-foreground",
+            )}
+          >
+            {heading}
+            <button
+              type="button"
+              onClick={toggleDetails}
+              className="cursor-pointer text-left"
+            >
+              {toggleIcon}
+            </button>
+          </span>
+          {statusIcon}
+        </div>
+        {showDetails && (
+          <div className="text-sm">
+            <Markdown
+              components={{
+                code,
+                ul,
+                ol,
+                p: paragraph,
+              }}
+              remarkPlugins={[remarkGfm, remarkBreaks]}
+            >
+              {details}
+            </Markdown>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

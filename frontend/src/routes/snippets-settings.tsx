@@ -46,6 +46,7 @@ import {
   SNIPPET_LANGUAGE_LABELS,
   SNIPPET_CATEGORY_LABELS,
 } from "#/types/snippet";
+import { logger } from "#/utils/logger";
 
 // Snippet Card Component
 function SnippetCard({
@@ -1077,8 +1078,7 @@ function useSnippetsSettingsController() {
         );
       } catch (error) {
         toast.error("Failed to import snippets. Please check the file format.");
-        // eslint-disable-next-line no-console
-        console.error("Import error:", error);
+        logger.error("Import error:", error);
       }
     };
     input.click();

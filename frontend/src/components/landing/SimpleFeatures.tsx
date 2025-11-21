@@ -19,15 +19,15 @@ export function SimpleFeatures() {
     <section ref={ref} className="py-20 px-6 relative">
       <div className="max-w-7xl mx-auto">
         <div
-          className={`text-center mb-16 ${isVisible ? "stagger-item delay-0" : "opacity-0"}`}
+          className={`text-center mb-16 max-w-3xl min-w-[400px] mx-auto ${isVisible ? "stagger-item delay-0" : "opacity-0"}`}
         >
-          <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
+          <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4 whitespace-normal">
             Everything You Need to{" "}
-            <span className="bg-gradient-to-r from-brand-500 to-accent-500 bg-clip-text text-transparent gradient-shimmer">
+            <span className="bg-gradient-to-r from-brand-500 to-accent-500 bg-clip-text text-transparent gradient-shimmer whitespace-normal">
               Dominate Development
             </span>
           </h2>
-          <p className="text-lg text-foreground-secondary max-w-2xl mx-auto">
+          <p className="text-lg text-foreground-secondary max-w-2xl min-w-[400px] mx-auto whitespace-normal">
             Enterprise-grade features that eliminate 80% of repetitive coding
             and let you focus on what matters
           </p>
@@ -54,10 +54,10 @@ export function SimpleFeatures() {
                     style={{ animationDelay: `${index * 0.3}s` }}
                   />
                 </div>
-                <h3 className="text-xl font-semibold text-foreground mb-3 group-hover:text-violet-500 transition-colors duration-300">
+                <h3 className="text-xl font-semibold text-foreground mb-3 group-hover:text-violet-500 transition-colors duration-300 whitespace-normal">
                   {feature.title}
                 </h3>
-                <p className="text-foreground-secondary leading-relaxed">
+                <p className="text-foreground-secondary leading-relaxed whitespace-normal">
                   {feature.description}
                 </p>
               </div>

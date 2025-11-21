@@ -1,7 +1,7 @@
 import { Spinner } from "@heroui/react";
 import { useTranslation } from "react-i18next";
 import safeToast from "#/utils/safe-hot-toast";
-import { TOAST_OPTIONS } from "#/utils/custom-toast-handlers";
+import { TOAST_OPTIONS } from "#/utils/custom-toast-handlers/toast-config";
 import CloseIcon from "#/icons/close.svg?react";
 import { SuccessIndicator } from "../success-indicator";
 

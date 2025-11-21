@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { X, CheckCircle, AlertTriangle, Info, AlertCircle } from "lucide-react";
 import { cn } from "#/utils/utils";
+import { logger } from "#/utils/logger";
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
@@ -205,8 +206,7 @@ export function ToastProvider({
       }
     } catch (err) {
       if (process.env.NODE_ENV === "development") {
-        // eslint-disable-next-line no-console
-        console.warn(
+        logger.warn(
           "crypto.randomUUID failed, falling back to Math.random()",
           err,
         );

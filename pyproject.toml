@@ -13,13 +13,13 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/All-Hands-AI/Forge"
 packages = [
-  { include = "forge/**/*" },
+  { include = "backend/forge/**/*" },
   { include = "pyproject.toml", to = "forge" },
   { include = "poetry.lock", to = "forge" },
 ]
 include = [
-  "forge/integrations/vscode/forge-vscode-0.0.1.vsix",
-  "microagents/**/*",
+  "backend/forge/integrations/vscode/forge-vscode-0.0.1.vsix",
+  "backend/microagents/**/*",
 ]
 build = "build_vscode.py" # Build VSCode extension during Poetry build
 
@@ -51,6 +51,7 @@ zope-interface = "7.2"
 pathspec = "^0.12.1"
 pyjwt = "^2.9.0"
 bcrypt = "^4.0.0"  # Password hashing for authentication
+stripe = "^10.0.0"  # Stripe payment processing
 dirhash = "*"
 tornado = "*"
 python-dotenv = "*"

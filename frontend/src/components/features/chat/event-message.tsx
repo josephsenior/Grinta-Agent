@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-use-before-define */
 import React, { useMemo, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { ConfirmationButtons } from "#/components/shared/buttons/confirmation-buttons";
@@ -64,6 +65,159 @@ const isImportantCommand = (cmd?: string | null): boolean => {
   return importantPatterns.some((pattern) => pattern.test(command));
 };
 
+const hasThoughtProperty = (
+  obj: Record<string, unknown>,
+): obj is { thought: string } => "thought" in obj && !!obj.thought;
+
+function resolvePairedDecision(
+  event: ForgeAction | ForgeObservation,
+  hasObservationPair: boolean,
+  args: Record<string, unknown>,
+): RenderDecision | null {
+  if (!hasObservationPair || !isForgeAction(event)) {
+    return null;
+  }
+
+  if (hasThoughtProperty(args) && event.action !== "think") {
+    return { type: "paired-thought" };
+  }
+
+  return { type: "paired-indicator" };
+}
+
+function resolveObservationSpecificDecision(
+  event: ForgeAction | ForgeObservation,
+): RenderDecision | null {
+  if (!isForgeObservation(event)) {
+    return null;
+  }
+
+  const observation = event as ForgeObservation;
+
+  if (isMcpObservation(observation)) {
+    return { type: "mcp" };
+  }
+
+  if (isTaskTrackingObservation(observation)) {
+    return { type: "task-tracking" };
+  }
+
+  if (
+    observation.observation === "run" &&
+    typeof observation.content === "string" &&
+    observation.content
+  ) {
+    return { type: "run" };
+  }
+
+  return null;
+}
+
+function canRenderMcpObservation(event: ForgeAction | ForgeObservation) {
+  return isForgeObservation(event) && isMcpObservation(event);
+}
+
+function hasRenderableMcpTitle(
+  event: ForgeObservation,
+  eventContent: ReturnType<typeof getEventContent>,
+) {
+  if (event.observation == null) {
+    return false;
+  }
+
+  const { title } = eventContent;
+  if (typeof title !== "string") {
+    return Boolean(title);
+  }
+
+  const trimmedTitle = title.trim();
+  return trimmedTitle.length > 0 && trimmedTitle.toUpperCase() !== "NULL";
+}
+
+function shouldAnimateChatMessage(context: RenderContext) {
+  const { event, hydratedEventIds, getEventHydratedFlag, isLastMessage } =
+    context;
+  return (
+    isAssistantMessage(event) &&
+    isLastMessage &&
+    !hydratedEventIds.has(String(event.id)) &&
+    !getEventHydratedFlag(event)
+  );
+}
+
+function renderChatMessageChildren(context: RenderContext) {
+  const elements: React.ReactNode[] = [];
+  const { attachments, shouldShowConfirmationButtons } = context;
+
+  if (
+    Array.isArray(attachments.image_urls) &&
+    attachments.image_urls.length > 0
+  ) {
+    elements.push(
+      <ImageCarousel
+        key="images"
+        size="small"
+        images={attachments.image_urls as string[]}
+      />,
+    );
+  }
+
+  if (
+    Array.isArray(attachments.file_urls) &&
+    attachments.file_urls.length > 0
+  ) {
+    elements.push(
+      <FileList key="files" files={attachments.file_urls as string[]} />,
+    );
+  }
+
+  if (shouldShowConfirmationButtons) {
+    elements.push(<ConfirmationButtons key="confirm" />);
+  }
+
+  return elements.length > 0 ? elements : null;
+}
+
+function shouldRenderLikertAfterChat(context: RenderContext) {
+  const { event } = context;
+  return isAssistantMessage(event) && event.action === "message";
+}
+
+// Helper functions defined before use
+function isTitleEmpty(title: unknown): boolean {
+  if (typeof title !== "string") {
+    return false;
+  }
+  const trimmed = title.trim();
+  return trimmed === "" || trimmed.toUpperCase() === "NULL";
+}
+
+function isDetailsEmpty(details: unknown): boolean {
+  return typeof details === "string" && details.trim() === "";
+}
+
+function shouldRenderGenericContent(
+  event: ForgeAction | ForgeObservation,
+  eventContent: ReturnType<typeof getEventContent>,
+) {
+  if (!isForgeObservation(event)) {
+    return true;
+  }
+
+  if (event.observation === null || event.observation === undefined) {
+    return false;
+  }
+
+  if (
+    isTitleEmpty(eventContent.title) &&
+    isDetailsEmpty(eventContent.details)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 // small heuristic reused from CommandConsole to detect shell-like lines
 export const looksLikeShell = (s?: string | null): boolean => {
   if (!s) {
@@ -97,10 +251,6 @@ export const looksLikeShell = (s?: string | null): boolean => {
   }
   return false;
 };
-
-const hasThoughtProperty = (
-  obj: Record<string, unknown>,
-): obj is { thought: string } => "thought" in obj && !!obj.thought;
 
 // Detect language from file extension
 const getLanguageFromPath = (filePath: string): string => {
@@ -235,50 +385,6 @@ const determineRenderDecision = ({
 
   return { type: "generic" };
 };
-
-function resolvePairedDecision(
-  event: ForgeAction | ForgeObservation,
-  hasObservationPair: boolean,
-  args: Record<string, unknown>,
-): RenderDecision | null {
-  if (!hasObservationPair || !isForgeAction(event)) {
-    return null;
-  }
-
-  if (hasThoughtProperty(args) && event.action !== "think") {
-    return { type: "paired-thought" };
-  }
-
-  return { type: "paired-indicator" };
-}
-
-function resolveObservationSpecificDecision(
-  event: ForgeAction | ForgeObservation,
-): RenderDecision | null {
-  if (!isForgeObservation(event)) {
-    return null;
-  }
-
-  const observation = event as ForgeObservation;
-
-  if (isMcpObservation(observation)) {
-    return { type: "mcp" };
-  }
-
-  if (isTaskTrackingObservation(observation)) {
-    return { type: "task-tracking" };
-  }
-
-  if (
-    observation.observation === "run" &&
-    typeof observation.content === "string" &&
-    observation.content
-  ) {
-    return { type: "run" };
-  }
-
-  return null;
-}
 
 const extractEditCode = (args: Record<string, unknown>): string => {
   if (typeof args.content === "string") return args.content;
@@ -536,27 +642,6 @@ const renderTaskTrackingDecision: DecisionHandler = ({ event }) =>
     <TaskTrackingObservationContent event={event} />
   ) : null;
 
-function canRenderMcpObservation(event: ForgeAction | ForgeObservation) {
-  return isForgeObservation(event) && isMcpObservation(event);
-}
-
-function hasRenderableMcpTitle(
-  event: ForgeObservation,
-  eventContent: ReturnType<typeof getEventContent>,
-) {
-  if (event.observation == null) {
-    return false;
-  }
-
-  const { title } = eventContent;
-  if (typeof title !== "string") {
-    return Boolean(title);
-  }
-
-  const trimmedTitle = title.trim();
-  return trimmedTitle.length > 0 && trimmedTitle.toUpperCase() !== "NULL";
-}
-
 const renderRunDecision: DecisionHandler = ({
   event,
   extras,
@@ -628,89 +713,6 @@ const decisionHandlers: Record<RenderDecisionType, DecisionHandler> = {
   generic: renderGenericDecision,
 };
 
-function shouldAnimateChatMessage(context: RenderContext) {
-  const { event, hydratedEventIds, getEventHydratedFlag, isLastMessage } =
-    context;
-  return (
-    isAssistantMessage(event) &&
-    isLastMessage &&
-    !hydratedEventIds.has(String(event.id)) &&
-    !getEventHydratedFlag(event)
-  );
-}
-
-function renderChatMessageChildren(context: RenderContext) {
-  const elements: React.ReactNode[] = [];
-  const { attachments, shouldShowConfirmationButtons } = context;
-
-  if (
-    Array.isArray(attachments.image_urls) &&
-    attachments.image_urls.length > 0
-  ) {
-    elements.push(
-      <ImageCarousel
-        key="images"
-        size="small"
-        images={attachments.image_urls as string[]}
-      />,
-    );
-  }
-
-  if (
-    Array.isArray(attachments.file_urls) &&
-    attachments.file_urls.length > 0
-  ) {
-    elements.push(
-      <FileList key="files" files={attachments.file_urls as string[]} />,
-    );
-  }
-
-  if (shouldShowConfirmationButtons) {
-    elements.push(<ConfirmationButtons key="confirm" />);
-  }
-
-  return elements.length > 0 ? elements : null;
-}
-
-function shouldRenderLikertAfterChat(context: RenderContext) {
-  const { event } = context;
-  return isAssistantMessage(event) && event.action === "message";
-}
-
-function shouldRenderGenericContent(
-  event: ForgeAction | ForgeObservation,
-  eventContent: ReturnType<typeof getEventContent>,
-) {
-  if (!isForgeObservation(event)) {
-    return true;
-  }
-
-  if (event.observation === null || event.observation === undefined) {
-    return false;
-  }
-
-  if (
-    isTitleEmpty(eventContent.title) &&
-    isDetailsEmpty(eventContent.details)
-  ) {
-    return false;
-  }
-
-  return true;
-}
-
-function isTitleEmpty(title: unknown): boolean {
-  if (typeof title !== "string") {
-    return false;
-  }
-  const trimmed = title.trim();
-  return trimmed === "" || trimmed.toUpperCase() === "NULL";
-}
-
-function isDetailsEmpty(details: unknown): boolean {
-  return typeof details === "string" && details.trim() === "";
-}
-
 interface EventMessageProps {
   event: ForgeAction | ForgeObservation;
   hasObservationPair: boolean;
@@ -733,8 +735,38 @@ interface EventMessageProps {
   compactMode?: boolean;
 }
 
-function EventMessageComponent(props: EventMessageProps) {
-  const controller = useEventMessageController(props);
+function EventMessageComponent({
+  event,
+  hasObservationPair,
+  isAwaitingUserConfirmation,
+  isLastMessage,
+  showTechnicalDetails,
+  microagentStatus,
+  microagentConversationId,
+  microagentPRUrl,
+  actions,
+  isInLast10Actions,
+  onAskAboutCode,
+  onRunCode,
+  hideAvatar,
+  compactMode,
+}: EventMessageProps) {
+  const controller = useEventMessageController({
+    event,
+    hasObservationPair,
+    isAwaitingUserConfirmation,
+    isLastMessage,
+    showTechnicalDetails,
+    microagentStatus,
+    microagentConversationId,
+    microagentPRUrl,
+    actions,
+    isInLast10Actions,
+    onAskAboutCode,
+    onRunCode,
+    hideAvatar,
+    compactMode,
+  });
 
   if (!controller.shouldRender) {
     return null;
@@ -858,7 +890,6 @@ function useEventMessageController({
               language={language}
               code={code}
               action={action}
-              eventId={String(event.id)}
               isStreaming
               onCopy={() => {}}
             />

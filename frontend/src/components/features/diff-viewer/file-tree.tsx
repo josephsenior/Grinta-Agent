@@ -6,7 +6,6 @@ import React, {
   useState,
 } from "react";
 import clsx from "clsx";
-import { useTranslation } from "react-i18next";
 import { ChevronRight, Folder, FolderOpen } from "lucide-react";
 import FileIcon from "#/components/ui/file-icon";
 
@@ -102,7 +101,6 @@ export default function FileTree({
   onSelect,
   className,
 }: FileTreeProps) {
-  const { t } = useTranslation();
   const tree = useMemo(() => buildTree(changes || []), [changes]);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const heights = useRef(new Map<string, number>());

@@ -1,5 +1,7 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { AlertCircle } from "lucide-react";
+import { I18nKey } from "#/i18n/declaration";
 import type {
   ParsedArtifact,
   PMSpecArtifact,
@@ -26,23 +28,37 @@ const ROLE_VISUALIZATIONS: Record<
   ParsedArtifact["role"],
   VisualizationRenderer
 > = {
-  product_manager: ({ artifact, ...rest }) => (
-    <PMVisualization artifact={artifact as PMSpecArtifact} {...rest} />
+  product_manager: ({ artifact, animated, className, onInteraction }) => (
+    <PMVisualization
+      artifact={artifact as PMSpecArtifact}
+      animated={animated}
+      className={className}
+      onInteraction={onInteraction}
+    />
   ),
-  architect: ({ artifact, ...rest }) => (
+  architect: ({ artifact, animated, className, onInteraction }) => (
     <ArchitectVisualization
       artifact={artifact as ArchitectSpecArtifact}
-      {...rest}
+      animated={animated}
+      className={className}
+      onInteraction={onInteraction}
     />
   ),
-  engineer: ({ artifact, ...rest }) => (
+  engineer: ({ artifact, animated, className, onInteraction }) => (
     <EngineerVisualization
       artifact={artifact as EngineerSpecArtifact}
-      {...rest}
+      animated={animated}
+      className={className}
+      onInteraction={onInteraction}
     />
   ),
-  qa: ({ artifact, ...rest }) => (
-    <QAVisualization artifact={artifact as QASpecArtifact} {...rest} />
+  qa: ({ artifact, animated, className, onInteraction }) => (
+    <QAVisualization
+      artifact={artifact as QASpecArtifact}
+      animated={animated}
+      className={className}
+      onInteraction={onInteraction}
+    />
   ),
 };
 
@@ -52,6 +68,7 @@ export function CleanVisualAdapter({
   className = "",
   onInteraction,
 }: VisualizationProps) {
+  const { t } = useTranslation();
   if (artifact.error) {
     return (
       <div className={`metasop-viz-error ${className}`}>
@@ -66,7 +83,7 @@ export function CleanVisualAdapter({
   if (!renderer) {
     return (
       <div className={`metasop-viz-unknown ${className}`}>
-        <p>Unknown role: {artifact.role}</p>
+        <p>{t(I18nKey.ORCHESTRATION$UNKNOWN_ROLE, { role: artifact.role })}</p>
       </div>
     );
   }

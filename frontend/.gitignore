@@ -8,3 +8,10 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 .react-router/
+
+# Vitest cache and coverage
+.vitest/
+coverage/
+
+# Build artifacts
+build-extracted/

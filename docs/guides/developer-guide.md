@@ -411,6 +411,6 @@ async def upload_file(request: Request, file_path: str):
 
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Socket.IO Documentation](https://socket.io/docs/v4/)
-- [Forge Architecture](./ARCHITECTURE.md)
-- [API Reference](./API_REFERENCE.md)
+- [Forge Architecture](./architecture.md)
+- [API Reference](./api-reference.md)
 

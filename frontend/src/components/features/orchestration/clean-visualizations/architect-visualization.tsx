@@ -1,6 +1,8 @@
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Settings, Database, Globe, Lock, Zap, Package } from "lucide-react";
+import { I18nKey } from "#/i18n/declaration";
 import type { ArchitectSpecArtifact } from "#/types/metasop-artifacts";
 
 export interface ArchitectVisualizationProps {
@@ -10,123 +12,49 @@ export interface ArchitectVisualizationProps {
   onInteraction?: (action: string, data: unknown) => void;
 }
 
-export function ArchitectVisualization({
-  artifact,
-  animated = true,
-  className = "",
-}: ArchitectVisualizationProps) {
-  const sections = useMemo(
-    () => buildArchitectSections(artifact, animated),
-    [artifact, animated],
-  );
-
-  if (sections.length === 0) {
-    return (
-      <div className={`metasop-viz-empty ${className}`}>
-        <Settings className="w-12 h-12 text-blue-400 opacity-50 mb-2" />
-        <p className="text-sm text-neutral-400">
-          No architecture details yet...
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`metasop-viz-architect ${className}`}>
-      <div className="metasop-viz-header bg-blue-500/10 border-blue-500/20">
-        <Settings className="w-5 h-5 text-blue-400" />
-        <h3 className="text-sm font-semibold text-blue-300">Architect</h3>
-        <span className="text-xs text-blue-400/60">
-          System Design & Architecture
-        </span>
-      </div>
-
-      <div className="p-4 space-y-6">
-        {sections.map((section) => (
-          <React.Fragment key={section.key}>{section.node}</React.Fragment>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 type ArchitectSection = {
   key: string;
   node: React.ReactNode;
 };
 
-function buildArchitectSections(
-  artifact: ArchitectSpecArtifact,
-  animated: boolean,
-): ArchitectSection[] {
-  const sections: ArchitectSection[] = [];
-
-  if (artifact.system_architecture?.components?.length) {
-    sections.push({
-      key: "system-components",
-      node: (
-        <SystemComponentsSection
-          components={artifact.system_architecture.components}
-          animated={animated}
-        />
-      ),
-    });
-  }
-
-  if (artifact.api_endpoints?.length) {
-    sections.push({
-      key: "api-endpoints",
-      node: (
-        <ApiEndpointsSection
-          endpoints={artifact.api_endpoints}
-          animated={animated}
-        />
-      ),
-    });
-  }
-
-  if (artifact.database_schema?.length) {
-    sections.push({
-      key: "database-schema",
-      node: (
-        <DatabaseSchemaSection
-          schemas={artifact.database_schema}
-          animated={animated}
-        />
-      ),
-    });
-  }
-
-  if (artifact.technical_decisions?.length) {
-    sections.push({
-      key: "technical-decisions",
-      node: (
-        <TechnicalDecisionsSection
-          decisions={artifact.technical_decisions}
-          animated={animated}
-        />
-      ),
-    });
-  }
-
-  if (
-    artifact.technology_stack &&
-    Object.keys(artifact.technology_stack).length
-  ) {
-    sections.push({
-      key: "technology-stack",
-      node: (
-        <TechnologyStackSection
-          stack={artifact.technology_stack}
-          animated={animated}
-        />
-      ),
-    });
-  }
-
-  return sections;
+// Helper components
+function DatabaseSchemaMoreColumns({ count }: { count: number }) {
+  const { t } = useTranslation();
+  return (
+    <p className="text-neutral-500">
+      {t(I18nKey.ORCHESTRATION$MORE_COLUMNS, { count })}
+    </p>
+  );
 }
 
+// Helper functions
+function getMethodColor(method: string): string {
+  const colors: Record<string, string> = {
+    GET: "bg-green-500/20 text-green-300 border border-green-500/30",
+    POST: "bg-blue-500/20 text-blue-300 border border-blue-500/30",
+    PUT: "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30",
+    PATCH: "bg-orange-500/20 text-orange-300 border border-orange-500/30",
+    DELETE: "bg-red-500/20 text-red-300 border border-red-500/30",
+  };
+  return (
+    colors[method] ||
+    "bg-neutral-500/20 text-neutral-300 border border-neutral-500/30"
+  );
+}
+
+function getConfidenceColor(confidence: string): string {
+  const colors: Record<string, string> = {
+    high: "bg-green-500/20 text-green-300 border border-green-500/30",
+    medium: "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30",
+    low: "bg-orange-500/20 text-orange-300 border border-orange-500/30",
+  };
+  return (
+    colors[confidence] ||
+    "bg-neutral-500/20 text-neutral-300 border border-neutral-500/30"
+  );
+}
+
+// Section components
 function SectionTitle({
   icon,
   title,
@@ -145,11 +73,13 @@ function SectionTitle({
 function SystemComponentsSection({
   components,
   animated,
+  onInteraction,
 }: {
   components: NonNullable<
     ArchitectSpecArtifact["system_architecture"]
   >["components"];
   animated: boolean;
+  onInteraction?: (action: string, data: unknown) => void;
 }) {
   if (!components || components.length === 0) {
     return null;
@@ -168,7 +98,8 @@ function SystemComponentsSection({
             initial={animated ? { opacity: 0, scale: 0.95 } : undefined}
             animate={animated ? { opacity: 1, scale: 1 } : undefined}
             transition={{ delay: index * 0.05 }}
-            className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3"
+            className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3 hover:bg-blue-500/10 transition-colors cursor-pointer"
+            onClick={() => onInteraction?.("component_click", component)}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
@@ -211,9 +142,11 @@ function SystemComponentsSection({
 function ApiEndpointsSection({
   endpoints,
   animated,
+  onInteraction,
 }: {
   endpoints: NonNullable<ArchitectSpecArtifact["api_endpoints"]>;
   animated: boolean;
+  onInteraction?: (action: string, data: unknown) => void;
 }) {
   return (
     <div className="space-y-3">
@@ -227,7 +160,8 @@ function ApiEndpointsSection({
           initial={animated ? { opacity: 0, x: -20 } : undefined}
           animate={animated ? { opacity: 1, x: 0 } : undefined}
           transition={{ delay: index * 0.05 }}
-          className="bg-blue-500/5 border border-blue-500/20 rounded p-3"
+          className="bg-blue-500/5 border border-blue-500/20 rounded p-3 hover:bg-blue-500/10 transition-colors cursor-pointer"
+          onClick={() => onInteraction?.("endpoint_click", endpoint)}
         >
           <div className="flex items-center gap-2 mb-2">
             <span
@@ -254,9 +188,11 @@ function ApiEndpointsSection({
 function DatabaseSchemaSection({
   schemas,
   animated,
+  onInteraction,
 }: {
   schemas: NonNullable<ArchitectSpecArtifact["database_schema"]>;
   animated: boolean;
+  onInteraction?: (action: string, data: unknown) => void;
 }) {
   return (
     <div className="space-y-3">
@@ -270,7 +206,8 @@ function DatabaseSchemaSection({
           initial={animated ? { opacity: 0, y: 20 } : undefined}
           animate={animated ? { opacity: 1, y: 0 } : undefined}
           transition={{ delay: index * 0.05 }}
-          className="bg-blue-500/5 border border-blue-500/20 rounded p-3"
+          className="bg-blue-500/5 border border-blue-500/20 rounded p-3 hover:bg-blue-500/10 transition-colors cursor-pointer"
+          onClick={() => onInteraction?.("schema_click", schema)}
         >
           <h5 className="text-sm font-mono text-blue-300 mb-2">
             {schema.table_name}
@@ -284,9 +221,7 @@ function DatabaseSchemaSection({
                 </div>
               ))}
               {schema.columns.length > 5 && (
-                <p className="text-neutral-500">
-                  + {schema.columns.length - 5} more columns
-                </p>
+                <DatabaseSchemaMoreColumns count={schema.columns.length - 5} />
               )}
             </div>
           ) : null}
@@ -299,10 +234,13 @@ function DatabaseSchemaSection({
 function TechnicalDecisionsSection({
   decisions,
   animated,
+  onInteraction,
 }: {
   decisions: NonNullable<ArchitectSpecArtifact["technical_decisions"]>;
   animated: boolean;
+  onInteraction?: (action: string, data: unknown) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-3">
       <SectionTitle
@@ -315,7 +253,8 @@ function TechnicalDecisionsSection({
           initial={animated ? { opacity: 0, scale: 0.95 } : undefined}
           animate={animated ? { opacity: 1, scale: 1 } : undefined}
           transition={{ delay: index * 0.05 }}
-          className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3"
+          className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3 hover:bg-blue-500/10 transition-colors cursor-pointer"
+          onClick={() => onInteraction?.("decision_click", decision)}
         >
           <div className="flex items-start justify-between mb-2">
             <h5 className="text-sm font-medium text-blue-200">
@@ -337,7 +276,7 @@ function TechnicalDecisionsSection({
           {decision.alternatives?.length ? (
             <div className="mt-2">
               <p className="text-xs text-blue-400 mb-1">
-                Alternatives considered:
+                {t(I18nKey.ORCHESTRATION$ALTERNATIVES_CONSIDERED)}
               </p>
               <ul className="text-xs text-neutral-500 space-y-0.5 pl-4">
                 {decision.alternatives.map((alt, alternativeIndex) => (
@@ -387,28 +326,125 @@ function TechnologyStackSection({
   );
 }
 
-function getMethodColor(method: string): string {
-  const colors: Record<string, string> = {
-    GET: "bg-green-500/20 text-green-300 border border-green-500/30",
-    POST: "bg-blue-500/20 text-blue-300 border border-blue-500/30",
-    PUT: "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30",
-    PATCH: "bg-orange-500/20 text-orange-300 border border-orange-500/30",
-    DELETE: "bg-red-500/20 text-red-300 border border-red-500/30",
-  };
-  return (
-    colors[method] ||
-    "bg-neutral-500/20 text-neutral-300 border border-neutral-500/30"
-  );
+// Builder function
+function buildArchitectSections(
+  artifact: ArchitectSpecArtifact,
+  animated: boolean,
+  onInteraction?: (action: string, data: unknown) => void,
+): ArchitectSection[] {
+  const sections: ArchitectSection[] = [];
+
+  if (artifact.system_architecture?.components?.length) {
+    sections.push({
+      key: "system-components",
+      node: (
+        <SystemComponentsSection
+          components={artifact.system_architecture.components}
+          animated={animated}
+          onInteraction={onInteraction}
+        />
+      ),
+    });
+  }
+
+  if (artifact.api_endpoints?.length) {
+    sections.push({
+      key: "api-endpoints",
+      node: (
+        <ApiEndpointsSection
+          endpoints={artifact.api_endpoints}
+          animated={animated}
+          onInteraction={onInteraction}
+        />
+      ),
+    });
+  }
+
+  if (artifact.database_schema?.length) {
+    sections.push({
+      key: "database-schema",
+      node: (
+        <DatabaseSchemaSection
+          schemas={artifact.database_schema}
+          animated={animated}
+          onInteraction={onInteraction}
+        />
+      ),
+    });
+  }
+
+  if (artifact.technical_decisions?.length) {
+    sections.push({
+      key: "technical-decisions",
+      node: (
+        <TechnicalDecisionsSection
+          decisions={artifact.technical_decisions}
+          animated={animated}
+          onInteraction={onInteraction}
+        />
+      ),
+    });
+  }
+
+  if (
+    artifact.technology_stack &&
+    Object.keys(artifact.technology_stack).length
+  ) {
+    sections.push({
+      key: "technology-stack",
+      node: (
+        <TechnologyStackSection
+          stack={artifact.technology_stack}
+          animated={animated}
+        />
+      ),
+    });
+  }
+
+  return sections;
 }
 
-function getConfidenceColor(confidence: string): string {
-  const colors: Record<string, string> = {
-    high: "bg-green-500/20 text-green-300 border border-green-500/30",
-    medium: "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30",
-    low: "bg-orange-500/20 text-orange-300 border border-orange-500/30",
-  };
+// Main component
+export function ArchitectVisualization({
+  artifact,
+  animated = true,
+  className = "",
+  onInteraction,
+}: ArchitectVisualizationProps) {
+  const { t } = useTranslation();
+  const sections = useMemo(
+    () => buildArchitectSections(artifact, animated, onInteraction),
+    [artifact, animated, onInteraction],
+  );
+
+  if (sections.length === 0) {
+    return (
+      <div className={`metasop-viz-empty ${className}`}>
+        <Settings className="w-12 h-12 text-blue-400 opacity-50 mb-2" />
+        <p className="text-sm text-neutral-400">
+          No architecture details yet...
+        </p>
+      </div>
+    );
+  }
+
   return (
-    colors[confidence] ||
-    "bg-neutral-500/20 text-neutral-300 border border-neutral-500/30"
+    <div className={`metasop-viz-architect ${className}`}>
+      <div className="metasop-viz-header bg-blue-500/10 border-blue-500/20">
+        <Settings className="w-5 h-5 text-blue-400" />
+        <h3 className="text-sm font-semibold text-blue-300">
+          {t(I18nKey.ORCHESTRATION$ARCHITECT)}
+        </h3>
+        <span className="text-xs text-blue-400/60">
+          {t(I18nKey.ORCHESTRATION$SYSTEM_DESIGN_ARCHITECTURE)}
+        </span>
+      </div>
+
+      <div className="p-4 space-y-6">
+        {sections.map((section) => (
+          <React.Fragment key={section.key}>{section.node}</React.Fragment>
+        ))}
+      </div>
+    </div>
   );
 }

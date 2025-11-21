@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Loader2, CheckCircle, Circle, Container } from "lucide-react";
 import { Card, CardContent } from "#/components/ui/card";
 
@@ -38,30 +39,45 @@ const LOADING_STEPS: LoadingStep[] = [
 export function RuntimeLoadingScreen({
   onComplete,
 }: RuntimeLoadingScreenProps) {
+  const { t } = useTranslation();
   const [steps, setSteps] = useState<LoadingStep[]>(LOADING_STEPS);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
   useEffect(() => {
     const processSteps = async () => {
-      for (let i = 0; i < LOADING_STEPS.length; i++) {
+      for (let i = 0; i < LOADING_STEPS.length; i += 1) {
+        const step = LOADING_STEPS[i];
         // Set current step to loading
         setCurrentStepIndex(i);
         setSteps((prev) =>
-          prev.map((step, idx) => ({
-            ...step,
-            status: idx === i ? "loading" : idx < i ? "complete" : "pending",
-          })),
+          prev.map((stepItem, idx) => {
+            let status: "pending" | "loading" | "complete";
+            if (idx === i) {
+              status = "loading";
+            } else if (idx < i) {
+              status = "complete";
+            } else {
+              status = "pending";
+            }
+            return {
+              ...stepItem,
+              status,
+            };
+          }),
         );
 
         // Wait for step duration
-        await new Promise((resolve) =>
-          setTimeout(resolve, LOADING_STEPS[i].duration),
-        );
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise<void>((resolve) => {
+          setTimeout(() => {
+            resolve();
+          }, step.duration || 1000);
+        });
 
         // Mark step as complete
         setSteps((prev) =>
-          prev.map((step, idx) => ({
-            ...step,
+          prev.map((stepItem, idx) => ({
+            ...stepItem,
             status: idx <= i ? "complete" : "pending",
           })),
         );
@@ -88,7 +104,7 @@ export function RuntimeLoadingScreen({
               <Container className="w-8 h-8 text-white animate-pulse" />
             </div>
             <h2 className="text-2xl font-bold text-foreground mb-2">
-              Starting Forge
+              {t("beta.startingForge", "Starting Forge")}
             </h2>
             <p className="text-sm text-foreground-secondary">
               Preparing your development environment...
@@ -110,38 +126,52 @@ export function RuntimeLoadingScreen({
 
           {/* Loading Steps */}
           <div className="space-y-3">
-            {steps.map((step, index) => (
-              <div
-                key={step.id}
-                className="flex items-center gap-3 text-sm transition-all duration-300"
-              >
-                {step.status === "complete" ? (
-                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                ) : step.status === "loading" ? (
-                  <Loader2 className="w-5 h-5 text-violet-500 flex-shrink-0 animate-spin" />
-                ) : (
+            {steps.map((step) => {
+              const getIcon = () => {
+                if (step.status === "complete") {
+                  return (
+                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  );
+                }
+                if (step.status === "loading") {
+                  return (
+                    <Loader2 className="w-5 h-5 text-violet-500 flex-shrink-0 animate-spin" />
+                  );
+                }
+                return (
                   <Circle className="w-5 h-5 text-foreground-secondary/30 flex-shrink-0" />
-                )}
-                <span
-                  className={
-                    step.status === "complete"
-                      ? "text-foreground"
-                      : step.status === "loading"
-                        ? "text-foreground font-medium"
-                        : "text-foreground-secondary"
-                  }
+                );
+              };
+              const icon = getIcon();
+
+              const getTextClassName = () => {
+                if (step.status === "complete") return "text-foreground";
+                if (step.status === "loading")
+                  return "text-foreground font-medium";
+                return "text-foreground-secondary";
+              };
+              const textClassName = getTextClassName();
+
+              return (
+                <div
+                  key={step.id}
+                  className="flex items-center gap-3 text-sm transition-all duration-300"
                 >
-                  {step.label}
-                </span>
-              </div>
-            ))}
+                  {icon}
+                  <span className={textClassName}>{step.label}</span>
+                </div>
+              );
+            })}
           </div>
 
           {/* Tip */}
           <div className="mt-6 pt-6 border-t border-border">
             <p className="text-xs text-foreground-secondary text-center">
-              💡 First startup may take a moment. Subsequent loads will be
-              faster.
+              💡{" "}
+              {t(
+                "beta.firstStartupTip",
+                "First startup may take a moment. Subsequent loads will be faster.",
+              )}
             </p>
           </div>
         </CardContent>

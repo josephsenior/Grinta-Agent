@@ -17,54 +17,150 @@ interface LikertScaleProps {
   initialReason?: string;
 }
 
-export function LikertScale({
-  eventId,
-  initiallySubmitted = false,
-  initialRating,
-  initialReason,
-}: LikertScaleProps) {
-  const controller = useLikertController({
-    eventId,
-    initiallySubmitted,
-    initialRating,
-    initialReason,
-  });
-  const { t } = controller;
+// Helper functions
+function getButtonClass({
+  rating,
+  isSubmitted,
+  selectedRating,
+}: {
+  rating: number;
+  isSubmitted: boolean;
+  selectedRating: number | null;
+}) {
+  if (isSubmitted) {
+    return selectedRating && selectedRating >= rating
+      ? "text-yellow-400 cursor-not-allowed"
+      : "text-foreground-secondary opacity-50 cursor-not-allowed";
+  }
 
-  return (
-    <div className="mt-3 flex flex-col gap-1">
-      <div className="text-sm text-foreground-secondary mb-1">
-        {controller.isSubmitted
-          ? t(I18nKey.FEEDBACK$THANK_YOU_FOR_FEEDBACK)
-          : t("Rate this response")}
-      </div>
-      <div className="flex items-center gap-2">
-        {[1, 2, 3, 4, 5].map((rating) => (
-          <button
-            key={rating}
-            type="button"
-            aria-label={`Rate ${rating} star${rating === 1 ? "" : "s"}`}
-            className={cn(
-              "transition-colors",
-              getButtonClass({
-                rating,
-                isSubmitted: controller.isSubmitted ?? false,
-                selectedRating: controller.selectedRating,
-              }),
-            )}
-            onClick={() => controller.handleRatingClick(rating)}
-            disabled={controller.isSubmitted ?? false}
-          >
-            <FaStar className="w-5 h-5" />
-          </button>
-        ))}
-      </div>
+  return selectedRating && selectedRating >= rating
+    ? "text-yellow-400"
+    : "text-foreground-secondary hover:text-yellow-200";
+}
 
-      <LikertReasons controller={controller} />
-    </div>
+function buildFeedbackReasons(t: ReturnType<typeof useTranslation>["t"]) {
+  return [
+    t(I18nKey.FEEDBACK$REASON_MISUNDERSTOOD_INSTRUCTION),
+    t(I18nKey.FEEDBACK$REASON_FORGOT_CONTEXT),
+    t(I18nKey.FEEDBACK$REASON_UNNECESSARY_CHANGES),
+    t(I18nKey.FEEDBACK$REASON_SHOULD_ASK_FIRST),
+    t(I18nKey.FEEDBACK$REASON_DIDNT_FINISH_JOB),
+    t(I18nKey.FEEDBACK$REASON_OTHER),
+  ];
+}
+
+function attemptScroll({
+  scrollContext,
+}: {
+  scrollContext?: ScrollContextType;
+}) {
+  const scrollToBottom = scrollContext?.scrollDomToBottom;
+  if (scrollToBottom && scrollContext?.autoScroll) {
+    setTimeout(() => scrollToBottom(), 100);
+  }
+}
+
+function startReasonFlow({
+  rating,
+  setShowReasons,
+  setCountdown,
+  setReasonTimeout,
+  submitFeedback,
+  scrollContext,
+}: {
+  rating: number;
+  setShowReasons: React.Dispatch<React.SetStateAction<boolean>>;
+  setCountdown: React.Dispatch<React.SetStateAction<number>>;
+  setReasonTimeout: React.Dispatch<React.SetStateAction<NodeJS.Timeout | null>>;
+  submitFeedback: (rating: number, reason?: string) => void;
+  scrollContext?: ScrollContextType;
+}) {
+  setShowReasons(true);
+  setCountdown(Math.ceil(AUTO_SUBMIT_TIMEOUT / 1000));
+
+  const timeout = setTimeout(() => {
+    submitFeedback(rating);
+  }, AUTO_SUBMIT_TIMEOUT);
+
+  setReasonTimeout(timeout);
+  attemptScroll({ scrollContext });
+}
+
+// Hooks
+function useCountdownEffect({
+  countdown,
+  showReasons,
+  isSubmitted,
+  setCountdown,
+}: {
+  countdown: number;
+  showReasons: boolean;
+  isSubmitted: boolean;
+  setCountdown: React.Dispatch<React.SetStateAction<number>>;
+}) {
+  useEffect(() => {
+    if (countdown > 0 && showReasons && !isSubmitted) {
+      const timer = setTimeout(() => {
+        setCountdown((value) => value - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+    return () => {};
+  }, [countdown, showReasons, isSubmitted, setCountdown]);
+}
+
+function useCleanupTimeout(reasonTimeout: NodeJS.Timeout | null) {
+  useEffect(
+    () => () => {
+      if (reasonTimeout) {
+        clearTimeout(reasonTimeout);
+      }
+    },
+    [reasonTimeout],
   );
 }
 
+function useAutoScrollOnMount({
+  scrollContext,
+  isSubmitted,
+}: {
+  scrollContext?: ScrollContextType;
+  isSubmitted: boolean;
+}) {
+  useEffect(() => {
+    if (
+      scrollContext?.scrollDomToBottom &&
+      scrollContext.autoScroll &&
+      !isSubmitted
+    ) {
+      setTimeout(() => {
+        scrollContext.scrollDomToBottom?.();
+      }, 100);
+    }
+  }, [isSubmitted, scrollContext]);
+}
+
+function useAutoScrollOnReasons({
+  scrollContext,
+  showReasons,
+}: {
+  scrollContext?: ScrollContextType;
+  showReasons: boolean;
+}) {
+  useEffect(() => {
+    if (
+      scrollContext?.scrollDomToBottom &&
+      scrollContext.autoScroll &&
+      showReasons
+    ) {
+      setTimeout(() => {
+        scrollContext.scrollDomToBottom?.();
+      }, 100);
+    }
+  }, [scrollContext, showReasons]);
+}
+
+// Main hook
 function useLikertController({
   eventId,
   initiallySubmitted,
@@ -180,147 +276,7 @@ function useLikertController({
   };
 }
 
-function buildFeedbackReasons(t: ReturnType<typeof useTranslation>["t"]) {
-  return [
-    t(I18nKey.FEEDBACK$REASON_MISUNDERSTOOD_INSTRUCTION),
-    t(I18nKey.FEEDBACK$REASON_FORGOT_CONTEXT),
-    t(I18nKey.FEEDBACK$REASON_UNNECESSARY_CHANGES),
-    t(I18nKey.FEEDBACK$REASON_SHOULD_ASK_FIRST),
-    t(I18nKey.FEEDBACK$REASON_DIDNT_FINISH_JOB),
-    t(I18nKey.FEEDBACK$REASON_OTHER),
-  ];
-}
-
-function startReasonFlow({
-  rating,
-  setShowReasons,
-  setCountdown,
-  setReasonTimeout,
-  submitFeedback,
-  scrollContext,
-}: {
-  rating: number;
-  setShowReasons: React.Dispatch<React.SetStateAction<boolean>>;
-  setCountdown: React.Dispatch<React.SetStateAction<number>>;
-  setReasonTimeout: React.Dispatch<React.SetStateAction<NodeJS.Timeout | null>>;
-  submitFeedback: (rating: number, reason?: string) => void;
-  scrollContext?: ScrollContextType;
-}) {
-  setShowReasons(true);
-  setCountdown(Math.ceil(AUTO_SUBMIT_TIMEOUT / 1000));
-
-  const timeout = setTimeout(() => {
-    submitFeedback(rating);
-  }, AUTO_SUBMIT_TIMEOUT);
-
-  setReasonTimeout(timeout);
-  attemptScroll({ scrollContext });
-}
-
-function attemptScroll({
-  scrollContext,
-}: {
-  scrollContext?: ScrollContextType;
-}) {
-  const scrollToBottom = scrollContext?.scrollDomToBottom;
-  if (scrollToBottom && scrollContext?.autoScroll) {
-    setTimeout(() => scrollToBottom(), 100);
-  }
-}
-
-function useCountdownEffect({
-  countdown,
-  showReasons,
-  isSubmitted,
-  setCountdown,
-}: {
-  countdown: number;
-  showReasons: boolean;
-  isSubmitted: boolean;
-  setCountdown: React.Dispatch<React.SetStateAction<number>>;
-}) {
-  useEffect(() => {
-    if (countdown > 0 && showReasons && !isSubmitted) {
-      const timer = setTimeout(() => {
-        setCountdown((value) => value - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-    return () => {};
-  }, [countdown, showReasons, isSubmitted, setCountdown]);
-}
-
-function useCleanupTimeout(reasonTimeout: NodeJS.Timeout | null) {
-  useEffect(
-    () => () => {
-      if (reasonTimeout) {
-        clearTimeout(reasonTimeout);
-      }
-    },
-    [reasonTimeout],
-  );
-}
-
-function useAutoScrollOnMount({
-  scrollContext,
-  isSubmitted,
-}: {
-  scrollContext?: ScrollContextType;
-  isSubmitted: boolean;
-}) {
-  useEffect(() => {
-    if (
-      scrollContext?.scrollDomToBottom &&
-      scrollContext.autoScroll &&
-      !isSubmitted
-    ) {
-      setTimeout(() => {
-        scrollContext.scrollDomToBottom?.();
-      }, 100);
-    }
-  }, [isSubmitted, scrollContext]);
-}
-
-function useAutoScrollOnReasons({
-  scrollContext,
-  showReasons,
-}: {
-  scrollContext?: ScrollContextType;
-  showReasons: boolean;
-}) {
-  useEffect(() => {
-    if (
-      scrollContext?.scrollDomToBottom &&
-      scrollContext.autoScroll &&
-      showReasons
-    ) {
-      setTimeout(() => {
-        scrollContext.scrollDomToBottom?.();
-      }, 100);
-    }
-  }, [scrollContext, showReasons]);
-}
-
-function getButtonClass({
-  rating,
-  isSubmitted,
-  selectedRating,
-}: {
-  rating: number;
-  isSubmitted: boolean;
-  selectedRating: number | null;
-}) {
-  if (isSubmitted) {
-    return selectedRating && selectedRating >= rating
-      ? "text-yellow-400 cursor-not-allowed"
-      : "text-foreground-secondary opacity-50 cursor-not-allowed";
-  }
-
-  return selectedRating && selectedRating >= rating
-    ? "text-yellow-400"
-    : "text-foreground-secondary hover:text-yellow-200";
-}
-
+// Component
 function LikertReasons({
   controller,
 }: {
@@ -354,6 +310,55 @@ function LikertReasons({
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+// Main component
+export function LikertScale({
+  eventId,
+  initiallySubmitted = false,
+  initialRating,
+  initialReason,
+}: LikertScaleProps) {
+  const controller = useLikertController({
+    eventId,
+    initiallySubmitted,
+    initialRating,
+    initialReason,
+  });
+  const { t } = controller;
+
+  return (
+    <div className="mt-3 flex flex-col gap-1">
+      <div className="text-sm text-foreground-secondary mb-1">
+        {controller.isSubmitted
+          ? t(I18nKey.FEEDBACK$THANK_YOU_FOR_FEEDBACK)
+          : t("Rate this response")}
+      </div>
+      <div className="flex items-center gap-2">
+        {[1, 2, 3, 4, 5].map((rating) => (
+          <button
+            key={rating}
+            type="button"
+            aria-label={`Rate ${rating} star${rating === 1 ? "" : "s"}`}
+            className={cn(
+              "transition-colors",
+              getButtonClass({
+                rating,
+                isSubmitted: controller.isSubmitted ?? false,
+                selectedRating: controller.selectedRating,
+              }),
+            )}
+            onClick={() => controller.handleRatingClick(rating)}
+            disabled={controller.isSubmitted ?? false}
+          >
+            <FaStar className="w-5 h-5" />
+          </button>
+        ))}
+      </div>
+
+      <LikertReasons controller={controller} />
     </div>
   );
 }

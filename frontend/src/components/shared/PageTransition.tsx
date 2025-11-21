@@ -27,7 +27,11 @@ export function PageTransition({
   }, [location, displayLocation, reducedMotion]);
 
   useEffect(() => {
-    if (reducedMotion) return;
+    if (reducedMotion) {
+      return (): void => {
+        // No cleanup needed
+      };
+    }
 
     if (transitionStage === "fadeOut") {
       const timeout = setTimeout(() => {
@@ -35,12 +39,18 @@ export function PageTransition({
         setTransitionStage("fadeIn");
       }, 200);
 
-      return () => clearTimeout(timeout);
+      return (): void => {
+        clearTimeout(timeout);
+      };
     }
+
+    return (): void => {
+      // No cleanup needed
+    };
   }, [transitionStage, location, reducedMotion]);
 
   if (reducedMotion) {
-    return <>{children}</>;
+    return children as React.ReactElement;
   }
 
   return (

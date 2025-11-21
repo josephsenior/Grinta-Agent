@@ -50,90 +50,20 @@ const USERNAME_PLACEHOLDER: Record<DatabaseType, string> = {
   redis: "default",
 };
 
-export function DatabaseConnectionForm({
-  type,
-  onSubmit,
-  onCancel,
-  existingConnection,
-}: DatabaseConnectionFormProps) {
-  const {
-    values,
-    setValue,
-    isMongoConnection,
-    isRedisConnection,
-    formIsValid,
-    showPassword,
-    toggleShowPassword,
-    handleTest,
-    handleSubmit,
-    testResult,
-    isTesting,
-  } = useDatabaseConnectionFormState({ type, onSubmit, existingConnection });
-
-  return (
-    <div className="space-y-6 p-6 bg-background-secondary border border-border rounded-lg">
-      <ConnectionHeader type={type} existingConnection={existingConnection} />
-      <SecurityNoticeCard />
-
-      <div className="space-y-4">
-        <ConnectionNameInput
-          value={values.name}
-          onChange={(value) => setValue("name", value)}
-        />
-        {isMongoConnection ? (
-          <MongoConnectionStringInput
-            value={values.connectionString}
-            onChange={(value) => setValue("connectionString", value)}
-          />
-        ) : null}
-        <HostPortFields
-          host={values.host}
-          onHostChange={(value) => setValue("host", value)}
-          port={values.port}
-          onPortChange={(value) => setValue("port", value)}
-          portPlaceholder={getDefaultPort(type).toString()}
-        />
-        {!isRedisConnection && (
-          <DatabaseField
-            database={values.database}
-            onChange={(value) => setValue("database", value)}
-            type={type}
-            isMongoConnection={isMongoConnection}
-          />
-        )}
-        {!isRedisConnection && (
-          <UsernameField
-            username={values.username}
-            onChange={(value) => setValue("username", value)}
-            type={type}
-            isMongoConnection={isMongoConnection}
-          />
-        )}
-        <PasswordField
-          password={values.password}
-          onChange={(value) => setValue("password", value)}
-          showPassword={showPassword}
-          onTogglePassword={toggleShowPassword}
-        />
-        <SslToggle
-          ssl={values.ssl}
-          onToggle={(value) => setValue("ssl", value)}
-        />
-      </div>
-
-      <TestResultAlert testResult={testResult} />
-
-      <FormActions
-        existingConnection={existingConnection}
-        onCancel={onCancel}
-        onTest={handleTest}
-        onSubmit={handleSubmit}
-        isTesting={isTesting}
-        formIsValid={formIsValid}
-        testResult={testResult}
-      />
-    </div>
-  );
+// Helper functions and components - defined before use
+function getDefaultPort(type: DatabaseType): number {
+  switch (type) {
+    case "postgresql":
+      return 5432;
+    case "mongodb":
+      return 27017;
+    case "mysql":
+      return 3306;
+    case "redis":
+      return 6379;
+    default:
+      return 5432;
+  }
 }
 
 function useDatabaseConnectionFormState({
@@ -291,10 +221,14 @@ function ConnectionNameInput({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-foreground mb-2">
+      <label
+        htmlFor="connection-name-input"
+        className="block text-sm font-medium text-foreground mb-2"
+      >
         Connection Name *
       </label>
       <input
+        id="connection-name-input"
         type="text"
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -314,13 +248,17 @@ function MongoConnectionStringInput({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-foreground mb-2">
+      <label
+        htmlFor="connection-string-input"
+        className="block text-sm font-medium text-foreground mb-2"
+      >
         Connection String
         <span className="text-foreground-secondary text-xs ml-2">
           (Optional - or use host/port below)
         </span>
       </label>
       <input
+        id="connection-string-input"
         type="text"
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -347,10 +285,14 @@ function HostPortFields({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
+        <label
+          htmlFor="host-input"
+          className="block text-sm font-medium text-foreground mb-2"
+        >
           Host *
         </label>
         <input
+          id="host-input"
           type="text"
           value={host}
           onChange={(event) => onHostChange(event.target.value)}
@@ -359,10 +301,14 @@ function HostPortFields({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
+        <label
+          htmlFor="port-input"
+          className="block text-sm font-medium text-foreground mb-2"
+        >
           Port *
         </label>
         <input
+          id="port-input"
           type="number"
           value={port}
           onChange={(event) =>
@@ -392,10 +338,14 @@ function DatabaseField({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-foreground mb-2">
+      <label
+        htmlFor="database-input"
+        className="block text-sm font-medium text-foreground mb-2"
+      >
         Database {labelSuffix}
       </label>
       <input
+        id="database-input"
         type="text"
         value={database}
         onChange={(event) => onChange(event.target.value)}
@@ -422,10 +372,14 @@ function UsernameField({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-foreground mb-2">
+      <label
+        htmlFor="username-input"
+        className="block text-sm font-medium text-foreground mb-2"
+      >
         Username {labelSuffix}
       </label>
       <input
+        id="username-input"
         type="text"
         value={username}
         onChange={(event) => onChange(event.target.value)}
@@ -449,11 +403,15 @@ function PasswordField({
 }) {
   return (
     <div className="relative">
-      <label className="block text-sm font-medium text-foreground mb-2">
+      <label
+        htmlFor="password-input"
+        className="block text-sm font-medium text-foreground mb-2"
+      >
         Password
       </label>
       <div className="relative">
         <input
+          id="password-input"
           type={showPassword ? "text" : "password"}
           value={password}
           onChange={(event) => onChange(event.target.value)}
@@ -586,17 +544,88 @@ function FormActions({
   );
 }
 
-function getDefaultPort(type: DatabaseType): number {
-  switch (type) {
-    case "postgresql":
-      return 5432;
-    case "mongodb":
-      return 27017;
-    case "mysql":
-      return 3306;
-    case "redis":
-      return 6379;
-    default:
-      return 5432;
-  }
+export function DatabaseConnectionForm({
+  type,
+  onSubmit,
+  onCancel,
+  existingConnection,
+}: DatabaseConnectionFormProps) {
+  const {
+    values,
+    setValue,
+    isMongoConnection,
+    isRedisConnection,
+    formIsValid,
+    showPassword,
+    toggleShowPassword,
+    handleTest,
+    handleSubmit,
+    testResult,
+    isTesting,
+  } = useDatabaseConnectionFormState({ type, onSubmit, existingConnection });
+
+  return (
+    <div className="space-y-6 p-6 bg-background-secondary border border-border rounded-lg">
+      <ConnectionHeader type={type} existingConnection={existingConnection} />
+      <SecurityNoticeCard />
+
+      <div className="space-y-4">
+        <ConnectionNameInput
+          value={values.name}
+          onChange={(value) => setValue("name", value)}
+        />
+        {isMongoConnection ? (
+          <MongoConnectionStringInput
+            value={values.connectionString}
+            onChange={(value) => setValue("connectionString", value)}
+          />
+        ) : null}
+        <HostPortFields
+          host={values.host}
+          onHostChange={(value) => setValue("host", value)}
+          port={values.port}
+          onPortChange={(value) => setValue("port", value)}
+          portPlaceholder={getDefaultPort(type).toString()}
+        />
+        {!isRedisConnection && (
+          <DatabaseField
+            database={values.database}
+            onChange={(value) => setValue("database", value)}
+            type={type}
+            isMongoConnection={isMongoConnection}
+          />
+        )}
+        {!isRedisConnection && (
+          <UsernameField
+            username={values.username}
+            onChange={(value) => setValue("username", value)}
+            type={type}
+            isMongoConnection={isMongoConnection}
+          />
+        )}
+        <PasswordField
+          password={values.password}
+          onChange={(value) => setValue("password", value)}
+          showPassword={showPassword}
+          onTogglePassword={toggleShowPassword}
+        />
+        <SslToggle
+          ssl={values.ssl}
+          onToggle={(value) => setValue("ssl", value)}
+        />
+      </div>
+
+      <TestResultAlert testResult={testResult} />
+
+      <FormActions
+        existingConnection={existingConnection}
+        onCancel={onCancel}
+        onTest={handleTest}
+        onSubmit={handleSubmit}
+        isTesting={isTesting}
+        formIsValid={formIsValid}
+        testResult={testResult}
+      />
+    </div>
+  );
 }

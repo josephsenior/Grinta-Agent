@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useTranslation } from "react-i18next";
 import {
   Folder,
   FolderOpen,
@@ -14,6 +13,7 @@ import {
   RefreshCw,
   Search,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
 import { Badge } from "#/components/ui/badge";
@@ -27,6 +27,7 @@ import {
 import { cn } from "#/utils/utils";
 import Forge from "#/api/forge";
 import { FileIcon } from "#/components/ui/file-icon";
+import { logger } from "#/utils/logger";
 
 export interface FileNode {
   name: string;
@@ -44,6 +45,8 @@ interface FileExplorerProps {
   onFileSelect?: (filePath: string) => void;
   onFileOpen?: (filePath: string) => void;
   onFileDelete?: (filePath: string) => void;
+  // onFileRename is reserved for future use
+  // eslint-disable-next-line react/no-unused-prop-types
   onFileRename?: (oldPath: string, newPath: string) => void;
   className?: string;
   showActions?: boolean;
@@ -53,7 +56,7 @@ interface FileExplorerProps {
 
 // Removed custom getFileIcon - now using FileIcon component from ui/file-icon.tsx
 
-// Status color mapping
+// Helper functions
 const getStatusColor = (status?: string) => {
   switch (status) {
     case "new":
@@ -67,7 +70,6 @@ const getStatusColor = (status?: string) => {
   }
 };
 
-// Build tree structure from flat file list
 const buildFileTree = (files: string[]): FileNode[] => {
   const tree: FileNode[] = [];
   const nodeMap = new Map<string, FileNode>();
@@ -79,7 +81,7 @@ const buildFileTree = (files: string[]): FileNode[] => {
     const parts = filePath.split("/").filter(Boolean);
     let currentPath = "";
 
-    for (let i = 0; i < parts.length; i++) {
+    for (let i = 0; i < parts.length; i += 1) {
       const part = parts[i];
       const parentPath = currentPath;
       currentPath = currentPath ? `${currentPath}/${part}` : part;
@@ -115,223 +117,6 @@ const buildFileTree = (files: string[]): FileNode[] => {
   return tree;
 };
 
-export function FileExplorer({
-  conversationId,
-  onFileSelect,
-  onFileOpen,
-  onFileDelete,
-  onFileRename,
-  className,
-  showActions = true,
-  showStatus = true,
-  showSearch = true,
-}: FileExplorerProps) {
-  const { t } = useTranslation();
-  const [files, setFiles] = useState<string[]>([]);
-  const [fileTree, setFileTree] = useState<FileNode[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    new Set(),
-  );
-  const [isClient, setIsClient] = useState(false);
-
-  // Prevent hydration issues
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // Load files from API
-  const loadFiles = useCallback(async () => {
-    if (!conversationId) return;
-
-    setLoading(true);
-    try {
-      const response = await Forge.getFiles(conversationId);
-      const normalized: string[] = (response || []).map((entry: any) =>
-        typeof entry === "string" ? entry : (entry?.path ?? ""),
-      );
-      setFiles(normalized);
-      setFileTree(buildFileTree(normalized));
-    } catch (error) {
-      console.error("Failed to load files:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [conversationId]);
-
-  // Load files on mount and when conversation changes
-  useEffect(() => {
-    loadFiles();
-  }, [loadFiles]);
-
-  // Toggle folder expansion
-  const toggleFolder = (folderPath: string) => {
-    setExpandedFolders((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(folderPath)) {
-        newSet.delete(folderPath);
-      } else {
-        newSet.add(folderPath);
-      }
-      return newSet;
-    });
-  };
-
-  // Handle file selection
-  const handleFileSelect = (filePath: string) => {
-    setSelectedFile(filePath);
-    onFileSelect?.(filePath);
-  };
-
-  // Handle file actions
-  const handleFileAction = (action: string, filePath: string) => {
-    switch (action) {
-      case "open":
-        onFileOpen?.(filePath);
-        break;
-      case "delete":
-        onFileDelete?.(filePath);
-        break;
-      case "rename":
-        // TODO: Implement rename functionality
-        break;
-      case "download":
-        // TODO: Implement download functionality
-        break;
-    }
-  };
-
-  // Filter files based on search term
-  const filteredTree = React.useMemo(() => {
-    if (!searchTerm) return fileTree;
-
-    return fileTree
-      .map((node) => filterNodeBySearch(node, searchTerm))
-      .filter((node): node is FileNode => node !== null);
-  }, [fileTree, searchTerm]);
-
-  // Render file/folder node
-  const renderNode = React.useCallback(
-    (node: FileNode, depth = 0): React.JSX.Element | null =>
-      renderFileNode({
-        node,
-        depth,
-        expandedFolders,
-        selectedFile,
-        toggleFolder,
-        onSelect: handleFileSelect,
-        showStatus,
-        showActions,
-        handleFileAction,
-        renderChild: (child, childDepth): React.JSX.Element | null =>
-          renderNode(child, childDepth),
-      }),
-    [
-      expandedFolders,
-      selectedFile,
-      toggleFolder,
-      handleFileSelect,
-      showStatus,
-      showActions,
-      handleFileAction,
-    ],
-  );
-
-  // Don't render on server side to prevent hydration issues
-  if (!isClient) {
-    return (
-      <div
-        className={cn(
-          "flex flex-col h-full bg-background-primary border border-border rounded-lg",
-          className,
-        )}
-      >
-        <div
-          className="flex items-center justify-center h-32"
-          data-testid="file-explorer-loading"
-        >
-          <div className="text-text-secondary">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={cn(
-        "flex flex-col h-full bg-black/95 backdrop-blur-xl border border-brand-500/10 rounded-lg shadow-lg",
-        className,
-      )}
-    >
-      {/* Header - Violet themed */}
-      <div className="flex items-center justify-between p-3 border-b border-brand-500/10 bg-brand-500/5">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-foreground">Files</h3>
-          <Badge
-            variant="secondary"
-            className="text-xs bg-brand-500/20 text-brand-400 border-brand-500/30"
-          >
-            {files.length} {files.length === 1 ? "file" : "files"}
-          </Badge>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={loadFiles}
-            disabled={loading}
-            className="h-7 w-7 p-0"
-          >
-            <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
-          </Button>
-        </div>
-      </div>
-
-      {/* Search - Violet themed */}
-      {showSearch && (
-        <div className="p-3 border-b border-brand-500/10">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-violet-500/60" />
-            <Input
-              placeholder="Search files..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 h-8 text-sm bg-brand-500/5 border-brand-500/20 focus:border-brand-500/40 focus:ring-brand-500/20"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* File Tree */}
-      <div className="flex-1 overflow-y-auto p-2">
-        {loading ? (
-          <div
-            className="flex items-center justify-center h-32"
-            data-testid="file-explorer-loading"
-          >
-            <RefreshCw className="w-5 h-5 animate-spin text-text-secondary" />
-          </div>
-        ) : filteredTree.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-text-secondary">
-            <File className="w-8 h-8 mb-2 opacity-50" />
-            <p className="text-sm">No files found</p>
-            {searchTerm && (
-              <p className="text-xs mt-1">Try adjusting your search</p>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {filteredTree.map((node) => renderNode(node))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function filterNodeBySearch(
   node: FileNode,
   searchTerm: string,
@@ -360,72 +145,7 @@ function filterNodeBySearch(
   return null;
 }
 
-function renderFileNode({
-  node,
-  depth,
-  expandedFolders,
-  selectedFile,
-  toggleFolder,
-  onSelect,
-  showStatus,
-  showActions,
-  handleFileAction,
-  renderChild,
-}: {
-  node: FileNode;
-  depth: number;
-  expandedFolders: Set<string>;
-  selectedFile: string | null;
-  toggleFolder: (path: string) => void;
-  onSelect: (path: string) => void;
-  showStatus: boolean;
-  showActions: boolean;
-  handleFileAction: (
-    action: "open" | "rename" | "delete" | "download",
-    path: string,
-  ) => void;
-  renderChild: (node: FileNode, depth: number) => React.ReactNode;
-}) {
-  const isExpanded = expandedFolders.has(node.path);
-  const isSelected = selectedFile === node.path;
-
-  return (
-    <div key={node.path}>
-      <div
-        className={cn(
-          "flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer group transition-all duration-200",
-          "hover:bg-brand-500/5 hover:border-l-2 hover:border-brand-500/30",
-          isSelected &&
-            "bg-brand-500/10 border-l-2 border-brand-500 shadow-sm shadow-brand-500/10",
-          "text-sm",
-        )}
-        style={{ paddingLeft: `${8 + depth * 16}px` }}
-        onClick={() => {
-          if (node.type === "folder") {
-            toggleFolder(node.path);
-          } else {
-            onSelect(node.path);
-          }
-        }}
-      >
-        <NodeIndicator node={node} isExpanded={isExpanded} />
-        <NodeIcon node={node} isExpanded={isExpanded} />
-        <NodeLabel node={node} isSelected={isSelected} />
-        <NodeStatusBadge node={node} showStatus={showStatus} />
-        <NodeActions
-          node={node}
-          showActions={showActions}
-          onAction={handleFileAction}
-        />
-      </div>
-
-      {node.type === "folder" && isExpanded && node.children && (
-        <div>{node.children.map((child) => renderChild(child, depth + 1))}</div>
-      )}
-    </div>
-  );
-}
-
+// Leaf components
 function NodeIndicator({
   node,
   isExpanded,
@@ -508,8 +228,14 @@ function NodeStatusBadge({
     return null;
   }
 
-  const label =
-    node.status === "new" ? "N" : node.status === "modified" ? "M" : "D";
+  let label = "?";
+  if (node.status === "new") {
+    label = "N";
+  } else if (node.status === "modified") {
+    label = "M";
+  } else if (node.status === "deleted") {
+    label = "D";
+  }
 
   return (
     <Badge
@@ -533,6 +259,8 @@ function NodeActions({
     path: string,
   ) => void;
 }) {
+  const { t } = useTranslation();
+
   if (!showActions) {
     return null;
   }
@@ -552,17 +280,17 @@ function NodeActions({
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => onAction("open", node.path)}>
           <Eye className="w-4 h-4 mr-2" />
-          Open
+          {t("fileExplorer.open", "Open")}
         </DropdownMenuItem>
         {node.type === "file" && (
           <>
             <DropdownMenuItem onClick={() => onAction("download", node.path)}>
               <Download className="w-4 h-4 mr-2" />
-              Download
+              {t("fileExplorer.download", "Download")}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onAction("rename", node.path)}>
               <Edit3 className="w-4 h-4 mr-2" />
-              Rename
+              {t("fileExplorer.rename", "Rename")}
             </DropdownMenuItem>
           </>
         )}
@@ -572,9 +300,311 @@ function NodeActions({
           className="text-red-500"
         >
           <Trash2 className="w-4 h-4 mr-2" />
-          Delete
+          {t("fileExplorer.delete", "Delete")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+// Component that uses leaf components
+function renderFileNode({
+  node,
+  depth,
+  expandedFolders,
+  selectedFile,
+  toggleFolder,
+  onSelect,
+  showStatus,
+  showActions,
+  handleFileAction,
+  renderChild,
+}: {
+  node: FileNode;
+  depth: number;
+  expandedFolders: Set<string>;
+  selectedFile: string | null;
+  toggleFolder: (path: string) => void;
+  onSelect: (path: string) => void;
+  showStatus: boolean;
+  showActions: boolean;
+  handleFileAction: (
+    action: "open" | "rename" | "delete" | "download",
+    path: string,
+  ) => void;
+  renderChild: (node: FileNode, depth: number) => React.ReactNode;
+}) {
+  const isExpanded = expandedFolders.has(node.path);
+  const isSelected = selectedFile === node.path;
+
+  return (
+    <div key={node.path}>
+      <div
+        className={cn(
+          "flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer group transition-all duration-200",
+          "hover:bg-brand-500/5 hover:border-l-2 hover:border-brand-500/30",
+          isSelected &&
+            "bg-brand-500/10 border-l-2 border-brand-500 shadow-sm shadow-brand-500/10",
+          "text-sm",
+        )}
+        style={{ paddingLeft: `${8 + depth * 16}px` }}
+        onClick={() => {
+          if (node.type === "folder") {
+            toggleFolder(node.path);
+          } else {
+            onSelect(node.path);
+          }
+        }}
+      >
+        <NodeIndicator node={node} isExpanded={isExpanded} />
+        <NodeIcon node={node} isExpanded={isExpanded} />
+        <NodeLabel node={node} isSelected={isSelected} />
+        <NodeStatusBadge node={node} showStatus={showStatus} />
+        <NodeActions
+          node={node}
+          showActions={showActions}
+          onAction={handleFileAction}
+        />
+      </div>
+
+      {node.type === "folder" && isExpanded && node.children && (
+        <div>{node.children.map((child) => renderChild(child, depth + 1))}</div>
+      )}
+    </div>
+  );
+}
+
+// Main component
+export function FileExplorer({
+  conversationId,
+  onFileSelect,
+  onFileOpen,
+  onFileDelete,
+  className,
+  showActions = true,
+  showStatus = true,
+  showSearch = true,
+}: FileExplorerProps) {
+  const { t } = useTranslation();
+  const [files, setFiles] = useState<string[]>([]);
+  const [fileTree, setFileTree] = useState<FileNode[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set(),
+  );
+  const [isClient, setIsClient] = useState(false);
+
+  // Prevent hydration issues
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Load files from API
+  const loadFiles = useCallback(async () => {
+    if (!conversationId) return;
+
+    setLoading(true);
+    try {
+      const response = await Forge.getFiles(conversationId);
+      const normalized: string[] = (response || []).map(
+        (entry: string | { path?: string }) =>
+          typeof entry === "string" ? entry : (entry?.path ?? ""),
+      );
+      setFiles(normalized);
+      setFileTree(buildFileTree(normalized));
+    } catch (error) {
+      logger.error("Failed to load files:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [conversationId]);
+
+  // Load files on mount and when conversation changes
+  useEffect(() => {
+    loadFiles();
+  }, [loadFiles]);
+
+  // Toggle folder expansion
+  const toggleFolder = (folderPath: string) => {
+    setExpandedFolders((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(folderPath)) {
+        newSet.delete(folderPath);
+      } else {
+        newSet.add(folderPath);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle file selection
+  const handleFileSelect = (filePath: string) => {
+    setSelectedFile(filePath);
+    onFileSelect?.(filePath);
+  };
+
+  // Handle file actions
+  const handleFileAction = (action: string, filePath: string) => {
+    switch (action) {
+      case "open":
+        onFileOpen?.(filePath);
+        break;
+      case "delete":
+        onFileDelete?.(filePath);
+        break;
+      case "rename":
+        // TODO: Implement rename functionality
+        break;
+      case "download":
+        // TODO: Implement download functionality
+        break;
+      default:
+        // Unknown action, do nothing
+        break;
+    }
+  };
+
+  // Filter files based on search term
+  const filteredTree = React.useMemo(() => {
+    if (!searchTerm) return fileTree;
+
+    return fileTree
+      .map((node) => filterNodeBySearch(node, searchTerm))
+      .filter((node): node is FileNode => node !== null);
+  }, [fileTree, searchTerm]);
+
+  // Render file/folder node
+  const renderNode = React.useCallback(
+    (node: FileNode, depth = 0): React.JSX.Element | null =>
+      renderFileNode({
+        node,
+        depth,
+        expandedFolders,
+        selectedFile,
+        toggleFolder,
+        onSelect: handleFileSelect,
+        showStatus,
+        showActions,
+        handleFileAction,
+        renderChild: (child, childDepth): React.JSX.Element | null =>
+          renderNode(child, childDepth),
+      }),
+    [
+      expandedFolders,
+      selectedFile,
+      toggleFolder,
+      handleFileSelect,
+      showStatus,
+      showActions,
+      handleFileAction,
+    ],
+  );
+
+  // Don't render on server side to prevent hydration issues
+  if (!isClient) {
+    return (
+      <div
+        className={cn(
+          "flex flex-col h-full bg-background-primary border border-border rounded-lg",
+          className,
+        )}
+      >
+        <div
+          className="flex items-center justify-center h-32"
+          data-testid="file-explorer-loading"
+        >
+          <div className="text-text-secondary">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex flex-col h-full bg-black/95 backdrop-blur-xl border border-brand-500/10 rounded-lg shadow-lg",
+        className,
+      )}
+    >
+      {/* Header - Violet themed */}
+      <div className="flex items-center justify-between p-3 border-b border-brand-500/10 bg-brand-500/5">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-foreground">
+            {t("fileExplorer.files", "Files")}
+          </h3>
+          <Badge
+            variant="secondary"
+            className="text-xs bg-brand-500/20 text-brand-400 border-brand-500/30"
+          >
+            {files.length}{" "}
+            {files.length === 1
+              ? t("fileExplorer.file", "file")
+              : t("fileExplorer.files", "files")}
+          </Badge>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={loadFiles}
+            disabled={loading}
+            className="h-7 w-7 p-0"
+          >
+            <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
+          </Button>
+        </div>
+      </div>
+
+      {/* Search - Violet themed */}
+      {showSearch && (
+        <div className="p-3 border-b border-brand-500/10">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-violet-500/60" />
+            <Input
+              placeholder="Search files..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 h-8 text-sm bg-brand-500/5 border-brand-500/20 focus:border-brand-500/40 focus:ring-brand-500/20"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* File Tree */}
+      <div className="flex-1 overflow-y-auto p-2">
+        {loading && (
+          <div
+            className="flex items-center justify-center h-32"
+            data-testid="file-explorer-loading"
+          >
+            <RefreshCw className="w-5 h-5 animate-spin text-text-secondary" />
+          </div>
+        )}
+        {!loading && filteredTree.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-32 text-text-secondary">
+            <File className="w-8 h-8 mb-2 opacity-50" />
+            <p className="text-sm">
+              {t("fileExplorer.noFilesFound", "No files found")}
+            </p>
+            {searchTerm && (
+              <p className="text-xs mt-1">
+                {t(
+                  "fileExplorer.tryAdjustingSearch",
+                  "Try adjusting your search",
+                )}
+              </p>
+            )}
+          </div>
+        )}
+        {!loading && filteredTree.length > 0 && (
+          <div className="space-y-1">
+            {filteredTree.map((node) => renderNode(node))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   Keyboard,
   Search,
@@ -9,6 +10,12 @@ import {
   Save,
   MessageSquare,
   X,
+  LayoutDashboard,
+  Search as SearchIcon,
+  Database,
+  User,
+  Settings,
+  HelpCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -16,7 +23,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "#/components/ui/dialog";
-import { Card } from "#/components/ui/card";
 import { Badge } from "#/components/ui/badge";
 import { cn } from "#/utils/utils";
 
@@ -34,6 +40,77 @@ interface KeyboardShortcutsPanelProps {
 }
 
 const SHORTCUTS: KeyboardShortcut[] = [
+  // Navigation shortcuts - Global
+  {
+    id: "nav-dashboard",
+    keys: ["⌘", "1"],
+    description: "Go to Dashboard",
+    category: "navigation",
+    icon: <LayoutDashboard className="h-3 w-3" />,
+  },
+  {
+    id: "nav-conversations",
+    keys: ["⌘", "2"],
+    description: "Go to Conversations",
+    category: "navigation",
+    icon: <MessageSquare className="h-3 w-3" />,
+  },
+  {
+    id: "nav-search",
+    keys: ["⌘", "3"],
+    description: "Go to Search",
+    category: "navigation",
+    icon: <SearchIcon className="h-3 w-3" />,
+  },
+  {
+    id: "nav-database",
+    keys: ["⌘", "4"],
+    description: "Go to Database Browser",
+    category: "navigation",
+    icon: <Database className="h-3 w-3" />,
+  },
+  {
+    id: "nav-profile",
+    keys: ["⌘", "5"],
+    description: "Go to Profile",
+    category: "navigation",
+    icon: <User className="h-3 w-3" />,
+  },
+  {
+    id: "nav-settings",
+    keys: ["⌘", ","],
+    description: "Go to Settings",
+    category: "navigation",
+    icon: <Settings className="h-3 w-3" />,
+  },
+  {
+    id: "nav-help",
+    keys: ["⌘", "H"],
+    description: "Go to Help",
+    category: "navigation",
+    icon: <HelpCircle className="h-3 w-3" />,
+  },
+  {
+    id: "toggle-sidebar",
+    keys: ["⌘", "B"],
+    description: "Toggle sidebar",
+    category: "navigation",
+  },
+  {
+    id: "search-conversation",
+    keys: ["⌘", "K"],
+    description: "Search conversation",
+    category: "navigation",
+    icon: <Search className="h-3 w-3" />,
+  },
+  {
+    id: "quick-search",
+    keys: ["Ctrl", "P"],
+    description: "Quick search (coming soon)",
+    category: "navigation",
+    icon: <Search className="h-3 w-3" />,
+  },
+
   // Editing shortcuts
   {
     id: "edit-last",
@@ -59,7 +136,7 @@ const SHORTCUTS: KeyboardShortcut[] = [
     id: "focus-input",
     keys: ["/"],
     description: "Focus message input",
-    category: "navigation",
+    category: "editing",
   },
 
   // Code actions
@@ -92,28 +169,6 @@ const SHORTCUTS: KeyboardShortcut[] = [
     icon: <MessageSquare className="h-3 w-3" />,
   },
 
-  // Navigation shortcuts
-  {
-    id: "search-conversation",
-    keys: ["⌘", "K"],
-    description: "Search conversation",
-    category: "navigation",
-    icon: <Search className="h-3 w-3" />,
-  },
-  {
-    id: "bookmarks",
-    keys: ["⌘", "B"],
-    description: "Open bookmarks",
-    category: "navigation",
-  },
-  {
-    id: "quick-search",
-    keys: ["Ctrl", "P"],
-    description: "Quick search (coming soon)",
-    category: "navigation",
-    icon: <Search className="h-3 w-3" />,
-  },
-
   // General actions
   {
     id: "show-shortcuts",
@@ -138,7 +193,7 @@ function KeyBadge({ keyName }: { keyName: string }) {
   return (
     <Badge
       variant="outline"
-      className="px-2 py-0.5 font-mono text-xs bg-background-surface border-border-glass"
+      className="px-2 py-0.5 font-mono text-xs bg-[var(--bg-elevated)] border-[var(--border-primary)] text-[var(--text-primary)]"
     >
       {displayKey}
     </Badge>
@@ -147,12 +202,12 @@ function KeyBadge({ keyName }: { keyName: string }) {
 
 function ShortcutRow({ shortcut }: { shortcut: KeyboardShortcut }) {
   return (
-    <div className="flex items-center justify-between py-2 group hover:bg-primary-500/5 px-2 rounded-lg transition-colors">
+    <div className="flex items-center justify-between py-2 group hover:bg-white/5 px-2 rounded-lg transition-colors">
       <div className="flex items-center gap-3 flex-1">
         {shortcut.icon && (
-          <div className="flex-shrink-0 text-primary-500">{shortcut.icon}</div>
+          <div className="flex-shrink-0 text-[#8b5cf6]">{shortcut.icon}</div>
         )}
-        <span className="text-sm text-text-primary">
+        <span className="text-sm text-[var(--text-primary)]">
           {shortcut.description}
         </span>
       </div>
@@ -160,7 +215,7 @@ function ShortcutRow({ shortcut }: { shortcut: KeyboardShortcut }) {
         {shortcut.keys.map((key, index) => (
           <React.Fragment key={index}>
             {index > 0 && (
-              <span className="text-xs text-text-foreground-secondary mx-1">
+              <span className="text-xs text-[var(--text-tertiary)] mx-1">
                 +
               </span>
             )}
@@ -176,6 +231,7 @@ export function KeyboardShortcutsPanel({
   isOpen,
   onClose,
 }: KeyboardShortcutsPanelProps) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = React.useState("");
 
   React.useEffect(() => {
@@ -210,25 +266,25 @@ export function KeyboardShortcutsPanel({
   }, [filteredShortcuts]);
 
   const categoryTitles: Record<string, string> = {
-    editing: "Message Editing",
     navigation: "Navigation",
+    editing: "Message Editing",
     code: "Code Actions",
     actions: "General Actions",
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col bg-[var(--bg-primary)] border-[var(--border-primary)]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 text-[var(--text-primary)]">
             <Keyboard className="h-5 w-5" />
-            Keyboard Shortcuts
+            {t("chat.keyboardShortcuts", "Keyboard Shortcuts")}
           </DialogTitle>
         </DialogHeader>
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-foreground-secondary" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-tertiary)]" />
           <input
             type="text"
             placeholder="Search shortcuts..."
@@ -236,9 +292,9 @@ export function KeyboardShortcutsPanel({
             onChange={(e) => setSearchQuery(e.target.value)}
             className={cn(
               "w-full pl-10 pr-4 py-2 rounded-lg",
-              "bg-background-surface border border-border-glass",
-              "text-text-primary placeholder:text-text-foreground-secondary",
-              "focus:outline-none focus:ring-2 focus:ring-primary-500/50",
+              "bg-[var(--bg-input)] border border-[var(--border-primary)]",
+              "text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]",
+              "focus:outline-none focus:ring-2 focus:ring-[rgba(139,92,246,0.2)] focus:border-[var(--border-accent)]",
               "text-sm",
             )}
           />
@@ -251,31 +307,40 @@ export function KeyboardShortcutsPanel({
 
             return (
               <div key={category}>
-                <h3 className="text-sm font-semibold text-text-secondary mb-2 px-2">
+                <h3 className="text-sm font-semibold text-white/70 mb-2 px-2">
                   {categoryTitles[category]}
                 </h3>
-                <Card className="bg-background-surface/50 border-border-glass p-2">
+                <div className="bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded-lg p-2">
                   <div className="space-y-0.5">
                     {shortcuts.map((shortcut) => (
                       <ShortcutRow key={shortcut.id} shortcut={shortcut} />
                     ))}
                   </div>
-                </Card>
+                </div>
               </div>
             );
           })}
 
           {filteredShortcuts.length === 0 && (
-            <div className="text-center py-8 text-text-foreground-secondary">
+            <div className="text-center py-8 text-[var(--text-tertiary)]">
               <Keyboard className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>No shortcuts found matching "{searchQuery}"</p>
+              <p>
+                {t(
+                  "chat.noShortcutsFound",
+                  'No shortcuts found matching "{{query}}"',
+                  {
+                    query: searchQuery,
+                  },
+                )}
+              </p>
             </div>
           )}
         </div>
 
         {/* Footer tip */}
-        <div className="border-t border-border-glass pt-3 text-xs text-text-foreground-secondary text-center">
-          Press <KeyBadge keyName="Esc" /> to close this dialog
+        <div className="border-t border-[var(--border-primary)] pt-3 text-xs text-[var(--text-tertiary)] text-center">
+          {t("chat.pressEscToClose", "Press")} <KeyBadge keyName="Esc" />{" "}
+          {t("chat.toCloseDialog", "to close this dialog")}
         </div>
       </DialogContent>
     </Dialog>
@@ -288,11 +353,12 @@ export function useKeyboardShortcuts(
   isInputFocused: boolean,
 ) {
   React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
       // Ctrl/Cmd + ? to show shortcuts
       if ((e.ctrlKey || e.metaKey) && e.key === "?") {
         e.preventDefault();
         onShowPanel();
+        return;
       }
 
       // / to focus input (when not already focused)

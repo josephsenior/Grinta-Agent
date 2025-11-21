@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "#/utils/utils";
 
 interface StreamingTypingIndicatorProps {
@@ -103,6 +104,7 @@ export function StreamingFileGeneration({
   isComplete,
   className,
 }: StreamingFileGenerationProps) {
+  const { t } = useTranslation();
   return (
     <div
       className={cn(
@@ -125,7 +127,9 @@ export function StreamingFileGeneration({
           </span>
           {isComplete && (
             <div className="w-4 h-4 bg-success-500 rounded-full flex items-center justify-center">
-              <span className="text-xs text-white">✓</span>
+              <span className="text-xs text-white">
+                {t("common.checkmark", "✓")}
+              </span>
             </div>
           )}
         </div>

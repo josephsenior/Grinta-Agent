@@ -1,5 +1,7 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight, Shield, AlertTriangle } from "lucide-react";
+import { I18nKey } from "#/i18n/declaration";
 
 interface AuditEntry {
   id: string;
@@ -22,6 +24,7 @@ export function EnhancedAuditTrail({
   entries,
   className = "",
 }: EnhancedAuditTrailProps) {
+  const { t } = useTranslation();
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const toggleRow = (id: string) => {
@@ -70,7 +73,7 @@ export function EnhancedAuditTrail({
   if (entries.length === 0) {
     return (
       <div className={`text-center text-gray-400 py-8 ${className}`}>
-        No audit entries yet
+        {t(I18nKey.MONITORING$NO_AUDIT_ENTRIES)}
       </div>
     );
   }
@@ -155,7 +158,7 @@ export function EnhancedAuditTrail({
                 {/* Action Content with Syntax Highlighting */}
                 <div>
                   <p className="text-xs text-gray-400 mb-2 font-semibold">
-                    Action Content:
+                    {t(I18nKey.MONITORING$ACTION_CONTENT)}
                   </p>
                   <pre className="text-xs font-mono bg-black/60 text-gray-300 p-3 rounded border border-gray-700 overflow-x-auto">
                     <code className="language-bash">
@@ -168,7 +171,7 @@ export function EnhancedAuditTrail({
                 {entry.blocked_reason && (
                   <div>
                     <p className="text-xs text-gray-400 mb-2 font-semibold">
-                      Blocked Reason:
+                      {t(I18nKey.MONITORING$BLOCKED_REASON)}
                     </p>
                     <div className="bg-red-500/10 border border-red-500/30 rounded p-3">
                       <p className="text-xs text-red-300">
@@ -182,7 +185,7 @@ export function EnhancedAuditTrail({
                 {entry.matched_risk_patterns.length > 0 && (
                   <div>
                     <p className="text-xs text-gray-400 mb-2 font-semibold">
-                      Matched Risk Patterns:
+                      {t(I18nKey.MONITORING$MATCHED_RISK_PATTERNS)}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {entry.matched_risk_patterns.map((pattern, i) => (
@@ -199,7 +202,7 @@ export function EnhancedAuditTrail({
 
                 {/* Full Timestamp */}
                 <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t border-gray-700">
-                  <span>ID: {entry.id}</span>
+                  <span>{t(I18nKey.MONITORING$ID, { id: entry.id })}</span>
                   <span>•</span>
                   <span>{new Date(entry.timestamp).toLocaleString()}</span>
                 </div>

@@ -89,23 +89,25 @@ export default function MetaSOPShowcase(): React.ReactElement {
 
       <div className="relative max-w-7xl mx-auto z-10">
         {/* Section Header */}
-        <div className="text-center mb-16 space-y-4">
+        <div className="text-center mb-16 space-y-4 max-w-3xl min-w-[400px] mx-auto">
           <Badge
             variant="secondary"
-            className="glass border-brand-500/30 text-violet-500 px-6 py-3 text-sm font-medium"
+            className="glass border-brand-500/30 text-violet-500 px-6 py-3 text-sm font-medium whitespace-normal"
           >
             <Sparkles className="w-4 h-4 mr-2" />
             MetaSOP Orchestration
           </Badge>
 
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold">
-            <span className="bg-gradient-to-r from-foreground to-foreground-secondary bg-clip-text text-transparent">
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold whitespace-normal">
+            <span className="bg-gradient-to-r from-foreground to-foreground-secondary bg-clip-text text-transparent whitespace-normal">
               Full Team,
             </span>{" "}
-            <span className="text-gradient-brand">One AI</span>
+            <span className="text-gradient-brand whitespace-normal">
+              One AI
+            </span>
           </h2>
 
-          <p className="text-lg md:text-xl text-foreground-secondary max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-foreground-secondary max-w-3xl min-w-[400px] mx-auto leading-relaxed whitespace-normal">
             Watch as MetaSOP orchestrates an entire development team - from
             product managers to QA engineers - working in perfect harmony to
             deliver your project.
@@ -125,26 +127,30 @@ export default function MetaSOPShowcase(): React.ReactElement {
               return (
                 <Card
                   key={step.id}
-                  className={`group transition-all duration-500 cursor-pointer ${
-                    isActive
-                      ? `${colors.border} ${colors.glow} shadow-xl scale-105 border-2`
-                      : isCompleted
-                        ? "border-success-500/20 bg-success-500/5"
-                        : "border-border/30 opacity-60"
-                  }`}
+                  className={`group transition-all duration-500 cursor-pointer ${(() => {
+                    if (isActive) {
+                      return `${colors.border} ${colors.glow} shadow-xl scale-105 border-2`;
+                    }
+                    if (isCompleted) {
+                      return "border-success-500/20 bg-success-500/5";
+                    }
+                    return "border-border/30 opacity-60";
+                  })()}`}
                   onClick={() => setActiveStep(index)}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
                       {/* Icon */}
                       <div
-                        className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${
-                          isActive
-                            ? `${colors.bg} ${colors.border} border-2`
-                            : isCompleted
-                              ? "bg-success-500/20 border-success-500/30 border"
-                              : "bg-background-tertiary border border-border"
-                        }`}
+                        className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${(() => {
+                          if (isActive) {
+                            return `${colors.bg} ${colors.border} border-2`;
+                          }
+                          if (isCompleted) {
+                            return "bg-success-500/20 border-success-500/30 border";
+                          }
+                          return "bg-background-tertiary border border-border";
+                        })()}`}
                       >
                         {isCompleted ? (
                           <CheckCircle className="w-6 h-6 text-success-500" />
@@ -245,15 +251,13 @@ export default function MetaSOPShowcase(): React.ReactElement {
                     <div className="w-2.5 h-2.5 bg-success-500 rounded-full" />
                     <span className="text-xs text-foreground-tertiary ml-2">
                       output.
-                      {activeStep === 0
-                        ? "json"
-                        : activeStep === 1
-                          ? "yaml"
-                          : activeStep === 2
-                            ? "py"
-                            : activeStep === 3
-                              ? "test"
-                              : "sh"}
+                      {(() => {
+                        if (activeStep === 0) return "json";
+                        if (activeStep === 1) return "yaml";
+                        if (activeStep === 2) return "py";
+                        if (activeStep === 3) return "test";
+                        return "sh";
+                      })()}
                     </span>
                   </div>
                   <div className="text-foreground-secondary space-y-1">

@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Settings, Zap, Clock, Play, Pause, RotateCcw } from "lucide-react";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
@@ -33,23 +34,25 @@ export function StreamingControls({
   onResetStreaming,
   className,
 }: StreamingControlsProps) {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = React.useState(false);
 
   const speedLabels = {
-    1: "Slow",
-    2: "Normal",
-    3: "Fast",
-    4: "Very Fast",
-    5: "Instant",
+    1: t("chat.slow", "Slow"),
+    2: t("chat.normal", "Normal"),
+    3: t("chat.fast", "Fast"),
+    4: t("chat.veryFast", "Very Fast"),
+    5: t("chat.instant", "Instant"),
   };
 
-  const delayLabels = {
-    0: "No Delay",
-    100: "Short",
-    300: "Medium",
-    500: "Long",
-    1000: "Very Long",
-  };
+  // Delay labels for future use
+  // const delayLabels = {
+  //   0: "No Delay",
+  //   100: "Short",
+  //   300: "Medium",
+  //   500: "Long",
+  //   1000: "Very Long",
+  // };
 
   return (
     <Card className={cn("w-full", className)}>
@@ -57,7 +60,7 @@ export function StreamingControls({
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Zap className="w-4 h-4" />
-            Streaming Controls
+            {t("chat.streamingControls", "Streaming Controls")}
           </CardTitle>
           <Button
             variant="ghost"
@@ -75,7 +78,9 @@ export function StreamingControls({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Play className="w-4 h-4 text-primary-500" />
-            <span className="text-sm font-medium">Enable Streaming</span>
+            <span className="text-sm font-medium">
+              {t("chat.enableStreaming", "Enable Streaming")}
+            </span>
           </div>
           <Switch
             checked={isStreamingEnabled}
@@ -94,7 +99,7 @@ export function StreamingControls({
               className="h-8 px-3"
             >
               <Play className="w-3 h-3 mr-1" />
-              Start
+              {t("chat.start", "Start")}
             </Button>
             <Button
               variant="ghost"
@@ -104,7 +109,7 @@ export function StreamingControls({
               className="h-8 px-3"
             >
               <Pause className="w-3 h-3 mr-1" />
-              Pause
+              {t("chat.pause", "Pause")}
             </Button>
             <Button
               variant="ghost"
@@ -113,7 +118,7 @@ export function StreamingControls({
               className="h-8 px-3"
             >
               <RotateCcw className="w-3 h-3 mr-1" />
-              Reset
+              {t("chat.reset", "Reset")}
             </Button>
           </div>
         )}
@@ -127,12 +132,12 @@ export function StreamingControls({
                 <div className="flex items-center gap-2">
                   <Zap className="w-4 h-4 text-warning-500" />
                   <span className="text-sm font-medium text-foreground">
-                    Speed
+                    {t("chat.speed", "Speed")}
                   </span>
                 </div>
                 <span className="text-xs text-foreground-secondary">
                   {speedLabels[streamingSpeed as keyof typeof speedLabels] ||
-                    "Custom"}
+                    t("chat.custom", "Custom")}
                 </span>
               </div>
               <Slider
@@ -144,8 +149,8 @@ export function StreamingControls({
                 className="w-full"
               />
               <div className="flex justify-between text-xs text-foreground-secondary">
-                <span>Slow</span>
-                <span>Instant</span>
+                <span>{t("chat.slow", "Slow")}</span>
+                <span>{t("chat.instant", "Instant")}</span>
               </div>
             </div>
 
@@ -155,11 +160,11 @@ export function StreamingControls({
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-violet-500" />
                   <span className="text-sm font-medium text-foreground">
-                    Start Delay
+                    {t("chat.startDelay", "Start Delay")}
                   </span>
                 </div>
                 <span className="text-xs text-foreground-secondary">
-                  {streamingDelay}ms
+                  {t("chat.delayMs", "{{delay}}ms", { delay: streamingDelay })}
                 </span>
               </div>
               <Slider
@@ -171,18 +176,20 @@ export function StreamingControls({
                 className="w-full"
               />
               <div className="flex justify-between text-xs text-foreground-secondary">
-                <span>No Delay</span>
-                <span>1s Delay</span>
+                <span>{t("chat.noDelay", "No Delay")}</span>
+                <span>{t("chat.oneSecondDelay", "1s Delay")}</span>
               </div>
             </div>
 
             {/* Preview */}
             <div className="p-3 bg-background-tertiary rounded-lg border border-border">
               <div className="text-xs text-foreground-secondary mb-2">
-                Preview:
+                {t("chat.preview", "Preview")}:
               </div>
               <div className="text-sm text-foreground font-mono">
-                <span className="text-success-500">Hello world!</span>
+                <span className="text-success-500">
+                  {t("chat.helloWorld", "Hello world!")}
+                </span>
                 <span className="inline-block w-0.5 h-4 bg-brand-500 ml-0.5 animate-pulse" />
               </div>
             </div>

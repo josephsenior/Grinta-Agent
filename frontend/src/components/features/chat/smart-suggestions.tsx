@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Sparkles,
   Code,
@@ -16,6 +17,7 @@ import {
   Edit,
   TestTube,
 } from "lucide-react";
+import { gsap } from "gsap";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { cn } from "#/utils/utils";
@@ -279,6 +281,7 @@ export function SmartSuggestions({
   className,
   lastEvent,
 }: SmartSuggestionsProps) {
+  const { t } = useTranslation();
   const [isVisible, setIsVisible] = React.useState(true);
 
   const getSuggestions = (): Suggestion[] => {
@@ -306,32 +309,69 @@ export function SmartSuggestions({
   };
 
   const suggestions = getSuggestions();
+  const cardRef = useRef<HTMLDivElement>(null);
+  const buttonsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isVisible || !cardRef.current || !buttonsRef.current) return;
+
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (prefersReducedMotion) {
+      gsap.set(cardRef.current, { opacity: 1, y: 0 });
+      gsap.set(buttonsRef.current.children, { opacity: 1, scale: 1 });
+      return;
+    }
+
+    // Animate card entrance
+    gsap.fromTo(
+      cardRef.current,
+      { opacity: 0, y: 20 },
+      { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" },
+    );
+
+    // Stagger animation for suggestion buttons
+    const buttons = Array.from(buttonsRef.current.children) as HTMLElement[];
+    if (buttons.length > 0) {
+      gsap.set(buttons, { opacity: 0, scale: 0.9 });
+      gsap.to(buttons, {
+        opacity: 1,
+        scale: 1,
+        duration: 0.3,
+        stagger: 0.05,
+        ease: "back.out(1.2)",
+        delay: 0.1,
+      });
+    }
+  }, [isVisible, suggestions]);
 
   if (!isVisible) return null;
 
   return (
     <Card
-      className={cn(
-        "bg-black border border-violet-500/20 p-2 animate-slide-up",
-        className,
-      )}
+      ref={cardRef}
+      className={cn("bg-black border border-violet-500/20 p-2", className)}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-1.5">
           <Sparkles className="h-3.5 w-3.5 text-violet-500" />
-          <h3 className="text-xs font-medium text-violet-400">Quick Actions</h3>
+          <h3 className="text-xs font-medium text-violet-400">
+            {t("chat.quickActions", "Quick Actions")}
+          </h3>
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setIsVisible(false)}
           className="h-5 w-5 p-0 text-text-foreground-secondary hover:text-violet-400"
+          aria-label={t("common.close", "Close")}
         >
-          ✕
+          {t("common.closeIcon", "✕")}
         </Button>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div ref={buttonsRef} className="flex flex-wrap gap-1.5">
         {suggestions.slice(0, 3).map((suggestion) => (
           <Button
             key={suggestion.id}

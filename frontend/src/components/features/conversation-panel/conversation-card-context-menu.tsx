@@ -38,62 +38,17 @@ type MenuItemConfig = {
 
 type MenuSection = MenuItemConfig[];
 
-export function ConversationCardContextMenu({
-  onClose,
-  onDelete,
-  onStop,
-  onEdit,
-  onDisplayCost,
-  onShowAgentTools,
-  onShowMicroagents,
-  onDownloadViaVSCode,
-  position = "bottom",
-}: ConversationCardContextMenuProps) {
-  const { t } = useTranslation();
-  const ref = useClickOutsideElement<HTMLUListElement>(onClose);
+function getSectionKey(section: MenuSection, index: number) {
+  if (section.length === 0) {
+    return `section-empty-${index}`;
+  }
+  return section.map((item) => item.testId).join(":");
+}
 
-  const sections = useMemo<MenuSection[]>(
-    () =>
-      buildMenuSections({
-        onEdit,
-        onDownloadViaVSCode,
-        onShowAgentTools,
-        onShowMicroagents,
-        onDisplayCost,
-        onStop,
-        onDelete,
-      }),
-    [
-      onEdit,
-      onDownloadViaVSCode,
-      onShowAgentTools,
-      onShowMicroagents,
-      onDisplayCost,
-      onStop,
-      onDelete,
-    ],
-  );
-
-  return (
-    <ContextMenu
-      ref={ref}
-      testId="context-menu"
-      className={cn(
-        "right-0 absolute mt-3",
-        position === "top" && "bottom-full",
-        position === "bottom" && "top-full",
-      )}
-    >
-      {sections.map((section, sectionIndex) => (
-        <MenuSectionRenderer
-          key={getSectionKey(section, sectionIndex)}
-          section={section}
-          sectionIndex={sectionIndex}
-          translator={t}
-        />
-      ))}
-    </ContextMenu>
-  );
+function createMenuSection(
+  items: Array<MenuItemConfig | false | undefined>,
+): MenuSection {
+  return items.filter(Boolean) as MenuSection;
 }
 
 function MenuSectionRenderer({
@@ -209,15 +164,60 @@ function buildMenuSections(handlers: {
   return sections.filter((section) => section.length > 0);
 }
 
-function createMenuSection(
-  items: Array<MenuItemConfig | false | undefined>,
-): MenuSection {
-  return items.filter(Boolean) as MenuSection;
-}
+export function ConversationCardContextMenu({
+  onClose,
+  onDelete,
+  onStop,
+  onEdit,
+  onDisplayCost,
+  onShowAgentTools,
+  onShowMicroagents,
+  onDownloadViaVSCode,
+  position = "bottom",
+}: ConversationCardContextMenuProps) {
+  const { t } = useTranslation();
+  const ref = useClickOutsideElement<HTMLUListElement>(onClose);
 
-function getSectionKey(section: MenuSection, index: number) {
-  if (section.length === 0) {
-    return `section-empty-${index}`;
-  }
-  return section.map((item) => item.testId).join(":");
+  const sections = useMemo<MenuSection[]>(
+    () =>
+      buildMenuSections({
+        onEdit,
+        onDownloadViaVSCode,
+        onShowAgentTools,
+        onShowMicroagents,
+        onDisplayCost,
+        onStop,
+        onDelete,
+      }),
+    [
+      onEdit,
+      onDownloadViaVSCode,
+      onShowAgentTools,
+      onShowMicroagents,
+      onDisplayCost,
+      onStop,
+      onDelete,
+    ],
+  );
+
+  return (
+    <ContextMenu
+      ref={ref}
+      testId="context-menu"
+      className={cn(
+        "right-0 absolute mt-3",
+        position === "top" && "bottom-full",
+        position === "bottom" && "top-full",
+      )}
+    >
+      {sections.map((section, sectionIndex) => (
+        <MenuSectionRenderer
+          key={getSectionKey(section, sectionIndex)}
+          section={section}
+          sectionIndex={sectionIndex}
+          translator={t}
+        />
+      ))}
+    </ContextMenu>
+  );
 }

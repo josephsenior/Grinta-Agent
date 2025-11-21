@@ -2,6 +2,127 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { useWsClient } from "#/context/ws-client-provider";
 import ClientFormattedDate from "#/components/shared/ClientFormattedDate";
+import { logger } from "#/utils/logger";
+
+function getNestedProperty(source: unknown, key: string) {
+  if (source && typeof source === "object") {
+    return (source as Record<string, unknown>)[key];
+  }
+  return undefined;
+}
+
+function extractCommandText(event: {
+  args?: unknown;
+  content?: unknown;
+  message?: unknown;
+}) {
+  const props = ["command", "cmd", "shell_command", "message"];
+  const { args } = event;
+
+  const directCandidates = props
+    .map((key) => getNestedProperty(args, key))
+    .filter(Boolean);
+
+  const additional = [
+    event.content,
+    event.message,
+    typeof args === "string" ? args : undefined,
+  ]
+    .filter(Boolean)
+    .map((value) => String(value));
+
+  const candidates = [...directCandidates.map(String), ...additional];
+  const text = candidates.join(" ").trim();
+  return text || null;
+}
+
+function looksLikeShellCommand(value: string) {
+  if (!value) {
+    return false;
+  }
+
+  if (value.startsWith("Ran ") || value.startsWith("ran ")) {
+    return true;
+  }
+
+  const shellTokens = [
+    "rm -",
+    "&&",
+    "||",
+    "npm ",
+    "yarn ",
+    "docker ",
+    "kubectl ",
+    "/workspace/",
+    "cd ",
+    "git ",
+    "ls ",
+    "pwd",
+    "echo ",
+  ];
+
+  if (shellTokens.some((token) => value.includes(token))) {
+    return true;
+  }
+
+  return /\/[A-Za-z0-9_.~-]/.test(value);
+}
+
+function generateCommandId() {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof (crypto as any).randomUUID === "function"
+  ) {
+    return (crypto as any).randomUUID();
+  }
+  return Math.random().toString(36).slice(2, 9);
+}
+
+function parseCommandEvent(event: unknown) {
+  try {
+    const normalized = event as {
+      id?: string;
+      args?: unknown;
+      content?: unknown;
+      message?: unknown;
+      action?: string;
+      timestamp?: string;
+    };
+
+    const text = extractCommandText(normalized);
+    if (!text) {
+      return null;
+    }
+
+    const shouldRecord =
+      normalized.action === "run" || looksLikeShellCommand(text);
+    if (!shouldRecord) {
+      return null;
+    }
+
+    return {
+      id: normalized.id ? String(normalized.id) : generateCommandId(),
+      commandText: text,
+      timestamp: normalized.timestamp ?? "",
+    };
+  } catch (error) {
+    logger.warn("command-console: failed to parse event", error);
+    return null;
+  }
+}
+
+function buildCommandHistory(events: unknown[]) {
+  const commands: { id: string; commandText: string; timestamp: string }[] = [];
+
+  for (const event of events) {
+    const parsed = parseCommandEvent(event);
+    if (parsed) {
+      commands.push(parsed);
+    }
+  }
+
+  return commands.slice(-10).reverse();
+}
 
 export default function CommandConsole() {
   const { t } = useTranslation();
@@ -126,125 +247,4 @@ export default function CommandConsole() {
       )}
     </div>
   );
-}
-
-function buildCommandHistory(events: unknown[]) {
-  const commands: { id: string; commandText: string; timestamp: string }[] = [];
-
-  for (const event of events) {
-    const parsed = parseCommandEvent(event);
-    if (parsed) {
-      commands.push(parsed);
-    }
-  }
-
-  return commands.slice(-10).reverse();
-}
-
-function parseCommandEvent(event: unknown) {
-  try {
-    const normalized = event as {
-      id?: string;
-      args?: unknown;
-      content?: unknown;
-      message?: unknown;
-      action?: string;
-      timestamp?: string;
-    };
-
-    const text = extractCommandText(normalized);
-    if (!text) {
-      return null;
-    }
-
-    const shouldRecord =
-      normalized.action === "run" || looksLikeShellCommand(text);
-    if (!shouldRecord) {
-      return null;
-    }
-
-    return {
-      id: normalized.id ? String(normalized.id) : generateCommandId(),
-      commandText: text,
-      timestamp: normalized.timestamp ?? "",
-    };
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.warn("command-console: failed to parse event", error);
-    return null;
-  }
-}
-
-function extractCommandText(event: {
-  args?: unknown;
-  content?: unknown;
-  message?: unknown;
-}) {
-  const props = ["command", "cmd", "shell_command", "message"];
-  const { args } = event;
-
-  const directCandidates = props
-    .map((key) => getNestedProperty(args, key))
-    .filter(Boolean);
-
-  const additional = [
-    event.content,
-    event.message,
-    typeof args === "string" ? args : undefined,
-  ]
-    .filter(Boolean)
-    .map((value) => String(value));
-
-  const candidates = [...directCandidates.map(String), ...additional];
-  const text = candidates.join(" ").trim();
-  return text || null;
-}
-
-function getNestedProperty(source: unknown, key: string) {
-  if (source && typeof source === "object") {
-    return (source as Record<string, unknown>)[key];
-  }
-  return undefined;
-}
-
-function looksLikeShellCommand(value: string) {
-  if (!value) {
-    return false;
-  }
-
-  if (value.startsWith("Ran ") || value.startsWith("ran ")) {
-    return true;
-  }
-
-  const shellTokens = [
-    "rm -",
-    "&&",
-    "||",
-    "npm ",
-    "yarn ",
-    "docker ",
-    "kubectl ",
-    "/workspace/",
-    "cd ",
-    "git ",
-    "ls ",
-    "pwd",
-    "echo ",
-  ];
-
-  if (shellTokens.some((token) => value.includes(token))) {
-    return true;
-  }
-
-  return /\/[A-Za-z0-9_.~-]/.test(value);
-}
-
-function generateCommandId() {
-  if (
-    typeof crypto !== "undefined" &&
-    typeof (crypto as any).randomUUID === "function"
-  ) {
-    return (crypto as any).randomUUID();
-  }
-  return Math.random().toString(36).slice(2, 9);
 }

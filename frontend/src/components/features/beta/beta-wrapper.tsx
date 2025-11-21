@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { RuntimeLoadingScreen } from "./runtime-loading-screen";
 import { InlineLLMSetup } from "./inline-llm-setup";
 import { useSettings } from "#/hooks/query/use-settings";
@@ -16,6 +17,7 @@ interface BetaWrapperProps {
  * 4. Renders children when ready
  */
 export function BetaWrapper({ children }: BetaWrapperProps) {
+  const { t } = useTranslation();
   const { data: settings, isLoading: settingsLoading } = useSettings();
   const runtimeStatus = useBackgroundRuntimeInit();
   const [setupComplete, setSetupComplete] = useState(false);
@@ -64,16 +66,19 @@ export function BetaWrapper({ children }: BetaWrapperProps) {
             </svg>
           </div>
           <h2 className="text-xl font-bold text-foreground mb-2">
-            Initialization Failed
+            {t("beta.initializationFailed", "Initialization Failed")}
           </h2>
           <p className="text-sm text-foreground-secondary mb-4">
             {runtimeStatus.error}
           </p>
           <button
-            onClick={() => window.location.reload()}
+            type="button"
+            onClick={() => {
+              window.location.reload();
+            }}
             className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors"
           >
-            Retry
+            {t("common.retry", "Retry")}
           </button>
         </div>
       </div>
@@ -81,5 +86,5 @@ export function BetaWrapper({ children }: BetaWrapperProps) {
   }
 
   // Render children when everything is ready
-  return <>{children}</>;
+  return children as React.ReactElement;
 }

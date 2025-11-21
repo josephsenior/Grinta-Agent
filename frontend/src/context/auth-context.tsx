@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useState,
   useCallback,
+  useMemo,
 } from "react";
 import type { User, LoginRequest, RegisterRequest } from "../types/auth";
 import { authApi } from "../api/auth";
@@ -12,6 +13,7 @@ import {
   setupTokenRefresh,
   clearTokenRefresh,
 } from "../utils/auth/token-refresh";
+import { logger } from "../utils/logger";
 
 interface AuthContextType {
   user: User | null;
@@ -55,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch (err) {
-        console.error("Auth initialization error:", err);
+        logger.error("Auth initialization error:", err);
         tokenStorage.clear();
       } finally {
         setIsLoading(false);
@@ -116,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await authApi.logout();
     } catch (err) {
-      console.error("Logout error:", err);
+      logger.error("Logout error:", err);
     } finally {
       tokenStorage.clear();
       clearTokenRefresh();
@@ -131,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(currentUser);
       tokenStorage.setUser(currentUser);
     } catch (err) {
-      console.error("Failed to refresh user:", err);
+      logger.error("Failed to refresh user:", err);
       // If refresh fails, user might be logged out
       tokenStorage.clear();
       setUser(null);
@@ -143,22 +145,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
   }, []);
 
+  const contextValue = useMemo(
+    () => ({
+      user,
+      isAuthenticated,
+      isLoading,
+      error,
+      login,
+      register,
+      logout,
+      refreshUser,
+      clearError,
+    }),
+    [
+      user,
+      isAuthenticated,
+      isLoading,
+      error,
+      login,
+      register,
+      logout,
+      refreshUser,
+      clearError,
+    ],
+  );
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated,
-        isLoading,
-        error,
-        login,
-        register,
-        logout,
-        refreshUser,
-        clearError,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 }
 

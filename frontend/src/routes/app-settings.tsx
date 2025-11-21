@@ -6,10 +6,7 @@ import { useSettings } from "#/hooks/query/use-settings";
 import { AvailableLanguages } from "#/i18n";
 import { DEFAULT_SETTINGS } from "#/services/settings";
 import { BrandButton } from "#/components/features/settings/brand-button";
-import { SettingsSwitch } from "#/components/features/settings/settings-switch";
-import { SettingsInput } from "#/components/features/settings/settings-input";
 import { I18nKey } from "#/i18n/declaration";
-import { LanguageInput } from "#/components/features/settings/app-settings/language-input";
 import { handleCaptureConsent } from "#/utils/handle-capture-consent";
 import {
   displayErrorToast,
@@ -19,6 +16,10 @@ import { retrieveAxiosErrorMessage } from "#/utils/retrieve-axios-error-message"
 import { AppSettingsInputsSkeleton } from "#/components/features/settings/app-settings/app-settings-inputs-skeleton";
 import { useConfig } from "#/hooks/query/use-config";
 import { parseMaxBudgetPerTask } from "#/utils/settings-utils";
+import { LanguageSection } from "./app-settings/language-section";
+import { PreferencesSection } from "./app-settings/preferences-section";
+import { BudgetSection } from "./app-settings/budget-section";
+import { GitSection } from "./app-settings/git-section";
 
 type DirtyFlagKey =
   | "language"
@@ -217,9 +218,6 @@ function AppSettingsScreen() {
   const controller = useAppSettingsController(t);
   const { settings, config, viewSettings } = controller;
 
-  const panelClass =
-    "relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 via-black/40 to-black/80 backdrop-blur-xl p-6 shadow-[0_40px_120px_rgba(0,0,0,0.45)]";
-
   return (
     <form
       data-testid="app-settings-screen"
@@ -229,159 +227,45 @@ function AppSettingsScreen() {
       {controller.shouldBeLoading && <AppSettingsInputsSkeleton />}
       {!controller.shouldBeLoading && settings && (
         <div className="flex-1 p-6 sm:p-8 lg:p-10">
-          <div className="mx-auto max-w-6xl space-y-6 lg:space-y-8">
-            {/* Language Settings */}
-            <div className={panelClass}>
-              <div aria-hidden className="pointer-events-none absolute inset-0">
-                <div className="absolute inset-y-0 left-1/2 w-1/2 bg-gradient-to-r from-brand-500/5 via-accent-500/3 to-transparent blur-2xl" />
-              </div>
-              <div className="relative z-[1]">
-                <h2 className="text-xl font-semibold text-foreground mb-6">
-                  {t("SETTINGS$LANGUAGE_AND_REGION", "Language & Region")}
-                </h2>
-                <div className="grid gap-4">
-                  <div className="max-w-md">
-                    <LanguageInput
-                      name="language-input"
-                      defaultKey={viewSettings.LANGUAGE}
-                      onChange={controller.handlers.onLanguageChange}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="mx-auto max-w-6xl w-full space-y-6 lg:space-y-8">
+            <LanguageSection
+              language={viewSettings.LANGUAGE}
+              onLanguageChange={controller.handlers.onLanguageChange}
+            />
 
-            {/* Preferences */}
-            <div className={panelClass}>
-              <div aria-hidden className="pointer-events-none absolute inset-0">
-                <div className="absolute inset-y-0 left-1/2 w-1/2 bg-gradient-to-r from-brand-500/5 via-accent-500/3 to-transparent blur-2xl" />
-              </div>
-              <div className="relative z-[1]">
-                <h2 className="text-xl font-semibold text-foreground mb-6">
-                  {t("SETTINGS$PREFERENCES", "Preferences")}
-                </h2>
-                <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
-                  <SettingsSwitch
-                    testId="enable-analytics-switch"
-                    name="enable-analytics-switch"
-                    defaultIsToggled={!!viewSettings.USER_CONSENTS_TO_ANALYTICS}
-                    onToggle={controller.handlers.onAnalyticsToggle}
-                  >
-                    {t(I18nKey.ANALYTICS$SEND_ANONYMOUS_DATA)}
-                  </SettingsSwitch>
+            <PreferencesSection
+              enableAnalytics={!!viewSettings.USER_CONSENTS_TO_ANALYTICS}
+              enableSound={!!viewSettings.ENABLE_SOUND_NOTIFICATIONS}
+              enableProactive={
+                !!viewSettings.ENABLE_PROACTIVE_CONVERSATION_STARTERS
+              }
+              enableSolvability={!!viewSettings.ENABLE_SOLVABILITY_ANALYSIS}
+              isSaas={config?.APP_MODE === "saas"}
+              onAnalyticsToggle={controller.handlers.onAnalyticsToggle}
+              onSoundToggle={controller.handlers.onSoundToggle}
+              onProactiveToggle={controller.handlers.onProactiveToggle}
+              onSolvabilityToggle={controller.handlers.onSolvabilityToggle}
+            />
 
-                  <SettingsSwitch
-                    testId="enable-sound-notifications-switch"
-                    name="enable-sound-notifications-switch"
-                    defaultIsToggled={!!viewSettings.ENABLE_SOUND_NOTIFICATIONS}
-                    onToggle={controller.handlers.onSoundToggle}
-                  >
-                    {t(I18nKey.SETTINGS$SOUND_NOTIFICATIONS)}
-                  </SettingsSwitch>
+            <BudgetSection
+              maxBudget={viewSettings.MAX_BUDGET_PER_TASK?.toString() || ""}
+              onBudgetChange={controller.handlers.onBudgetChange}
+            />
 
-                  {config?.APP_MODE === "saas" && (
-                    <SettingsSwitch
-                      testId="enable-proactive-conversations-switch"
-                      name="enable-proactive-conversations-switch"
-                      defaultIsToggled={
-                        !!viewSettings.ENABLE_PROACTIVE_CONVERSATION_STARTERS
-                      }
-                      onToggle={controller.handlers.onProactiveToggle}
-                    >
-                      {t(I18nKey.SETTINGS$PROACTIVE_CONVERSATION_STARTERS)}
-                    </SettingsSwitch>
-                  )}
-
-                  {config?.APP_MODE === "saas" && (
-                    <SettingsSwitch
-                      testId="enable-solvability-analysis-switch"
-                      name="enable-solvability-analysis-switch"
-                      defaultIsToggled={
-                        !!viewSettings.ENABLE_SOLVABILITY_ANALYSIS
-                      }
-                      onToggle={controller.handlers.onSolvabilityToggle}
-                    >
-                      {t(I18nKey.SETTINGS$SOLVABILITY_ANALYSIS)}
-                    </SettingsSwitch>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Budget Settings */}
-            <div className={panelClass}>
-              <div aria-hidden className="pointer-events-none absolute inset-0">
-                <div className="absolute inset-y-0 left-1/2 w-1/2 bg-gradient-to-r from-brand-500/5 via-accent-500/3 to-transparent blur-2xl" />
-              </div>
-              <div className="relative z-[1]">
-                <h2 className="text-xl font-semibold text-foreground mb-6">
-                  {t("SETTINGS$BUDGET_AND_USAGE", "Budget & Usage")}
-                </h2>
-                <div className="grid gap-4">
-                  <div className="max-w-md">
-                    <SettingsInput
-                      testId="max-budget-per-task-input"
-                      name="max-budget-per-task-input"
-                      type="number"
-                      label={t(I18nKey.SETTINGS$MAX_BUDGET_PER_CONVERSATION)}
-                      defaultValue={
-                        viewSettings.MAX_BUDGET_PER_TASK?.toString() || ""
-                      }
-                      onChange={controller.handlers.onBudgetChange}
-                      placeholder={t(I18nKey.SETTINGS$MAXIMUM_BUDGET_USD)}
-                      min={1}
-                      step={1}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Git Settings */}
-            <div className={panelClass}>
-              <div aria-hidden className="pointer-events-none absolute inset-0">
-                <div className="absolute inset-y-0 left-1/2 w-1/2 bg-gradient-to-r from-brand-500/5 via-accent-500/3 to-transparent blur-2xl" />
-              </div>
-              <div className="relative z-[1]">
-                <h2 className="text-xl font-semibold text-foreground mb-3">
-                  {t(I18nKey.SETTINGS$GIT_SETTINGS)}
-                </h2>
-                <p className="text-sm text-foreground-secondary mb-4">
-                  {t(I18nKey.SETTINGS$GIT_SETTINGS_DESCRIPTION)}
-                </p>
-                <div className="grid gap-6 md:grid-cols-2">
-                  <SettingsInput
-                    testId="git-user-name-input"
-                    name="git-user-name-input"
-                    type="text"
-                    label={t(I18nKey.SETTINGS$GIT_USERNAME)}
-                    defaultValue={viewSettings.GIT_USER_NAME || ""}
-                    onChange={controller.handlers.onGitUserNameChange}
-                    placeholder="Username for git commits"
-                    className="w-full"
-                  />
-                  <SettingsInput
-                    testId="git-user-email-input"
-                    name="git-user-email-input"
-                    type="email"
-                    label={t(I18nKey.SETTINGS$GIT_EMAIL)}
-                    defaultValue={viewSettings.GIT_USER_EMAIL || ""}
-                    onChange={controller.handlers.onGitUserEmailChange}
-                    placeholder="Email for git commits"
-                    className="w-full"
-                  />
-                </div>
-              </div>
-            </div>
+            <GitSection
+              gitUserName={viewSettings.GIT_USER_NAME || ""}
+              gitUserEmail={viewSettings.GIT_USER_EMAIL || ""}
+              onGitUserNameChange={controller.handlers.onGitUserNameChange}
+              onGitUserEmailChange={controller.handlers.onGitUserEmailChange}
+            />
           </div>
         </div>
       )}
 
       {/* Fixed footer */}
       <div className="flex-shrink-0 border-t border-white/10 bg-black/80 backdrop-blur-xl">
-        <div className="mx-auto max-w-5xl px-10 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <span className="text-sm text-foreground-secondary">
+        <div className="mx-auto max-w-5xl px-10 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
+          <span className="text-sm text-foreground-secondary w-full">
             Unsaved changes apply instantly to your workspace.
           </span>
           <BrandButton

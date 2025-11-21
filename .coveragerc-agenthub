@@ -1,7 +1,0 @@
-[run]
-source = forge.agenthub
-branch = True
-
-[report]
-include = forge/agenthub/*
-

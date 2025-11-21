@@ -11,11 +11,12 @@ save_trajectory_path = "./trajectories"
 #   2. Fetch - HTTP requests and HTML→markdown conversion
 #   3. DuckDuckGo - Web search for discovery
 #   4. Playwright - Browser automation (heavy, use sparingly)
+#   5. GitHub - GitHub integration (repos, issues, PRs, code search)
 # ============================================================================
 
 [mcp]
 # STDIO Servers (direct process spawning - for development)
-# ⚡ ALL 4 MCP SERVERS ENABLED - Full agent capability
+# ⚡ ALL 5 MCP SERVERS ENABLED - Full agent capability
 stdio_servers = [
     # shadcn-ui - Fast UI component access (bolt.new-like speed)
     { name = "shadcn-ui", command = "npx", args = ["-y", "@jpisnice/shadcn-ui-mcp-server"], 
@@ -30,6 +31,10 @@ stdio_servers = [
     # Playwright - Browser automation (✅ ENABLED - heavy, 500MB RAM per instance)
     # Note: This is resource-intensive. Monitor memory usage.
     { name = "playwright", command = "npx", args = ["-y", "@modelcontextprotocol/server-playwright"] },
+    
+    # GitHub - GitHub integration (repos, issues, PRs, commits, code search)
+    # Uses GITHUB_PERSONAL_ACCESS_TOKEN from .env file (already configured)
+    { name = "github", command = "npx", args = ["-y", "@modelcontextprotocol/server-github"] },
 ]
 
 # SSE Servers (proxy mode via SuperGateway - recommended for production)

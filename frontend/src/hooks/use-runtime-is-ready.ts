@@ -2,6 +2,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "#/store";
 import { RUNTIME_INACTIVE_STATES } from "#/types/agent-state";
 import { useActiveConversation } from "./query/use-active-conversation";
+import { logger } from "#/utils/logger";
 
 /**
  * Hook to determine if the runtime is ready for operations
@@ -50,7 +51,7 @@ export const useRuntimeIsReady = (): boolean => {
     curAgentState && !RUNTIME_INACTIVE_STATES.includes(curAgentState);
 
   // Debug logging
-  console.log("🔍 Runtime ready check:", {
+  logger.debug("🔍 Runtime ready check:", {
     conversationStatus: conversation?.status,
     curAgentState,
     conversationRunning,

@@ -8,6 +8,7 @@ import React, {
 import { Copy, Check, Terminal as TerminalIcon } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "#/store";
+import { logger } from "#/utils/logger";
 import {
   selectIsStreaming,
   selectStreamingEnabled,
@@ -24,53 +25,94 @@ interface StreamingTerminalProps {
   className?: string;
 }
 
-export function StreamingTerminal({
+function useStreamingTerminalController({
   eventId,
   streamId,
   content,
   exitCode,
-  command,
   onComplete,
-  className,
 }: StreamingTerminalProps) {
-  const controller = useStreamingTerminalController({
-    eventId,
-    streamId,
-    content,
-    exitCode,
-    command,
-    onComplete,
-  });
+  const resolvedEventId = eventId || streamId || "";
+  const terminalRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [displayedContent, setDisplayedContent] = useState("");
+  const [isCopied, setIsCopied] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  return (
-    <div
-      ref={controller.terminalRef}
-      role="region"
-      className={`streaming-terminal rounded-lg overflow-hidden border border-border/40 bg-[#0a0a0a] my-2 shadow-lg w-full ${controller.isStreaming ? "streaming" : ""} ${className ?? ""}`}
-    >
-      <StreamingTerminalHeader
-        command={command}
-        exitCode={exitCode}
-        exitCodeColor={controller.exitCodeColor}
-        lineCount={controller.lineCount}
-        isLongOutput={controller.isLongOutput}
-        isExpanded={controller.isExpanded}
-        onToggleExpand={controller.toggleExpand}
-        onCopy={controller.handleCopy}
-        isCopied={controller.isCopied}
-      />
-
-      <StreamingTerminalContent
-        contentRef={controller.contentRef}
-        displayedContent={controller.displayedContent}
-        isStreaming={controller.isStreaming}
-        maxHeight={controller.maxHeight}
-      />
-    </div>
+  const resolvedContentFromStore = useSelector((state: RootState) =>
+    resolvedEventId ? selectStreamContent(state, resolvedEventId) : "",
   );
-}
 
-export { useStreamingTerminalController };
+  const resolvedContent = content ?? resolvedContentFromStore;
+  const isStreaming = useSelector((state: RootState) =>
+    resolvedEventId ? selectIsStreaming(state, resolvedEventId) : false,
+  );
+  const streamingEnabled = useSelector((state: RootState) =>
+    selectStreamingEnabled(state),
+  );
+
+  useEffect(() => {
+    if (!streamingEnabled || !isStreaming) {
+      setDisplayedContent(resolvedContent);
+      return;
+    }
+
+    if (!resolvedContent || resolvedContent.length === 0) {
+      setDisplayedContent("");
+      return;
+    }
+
+    setDisplayedContent(resolvedContent);
+
+    if (contentRef.current) {
+      contentRef.current.scrollTop = contentRef.current.scrollHeight;
+    }
+  }, [resolvedContent, isStreaming, streamingEnabled, onComplete]);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(displayedContent || "");
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (error) {
+      logger.error("Failed to copy:", error);
+    }
+  }, [displayedContent]);
+
+  const exitCodeColor = useMemo(() => {
+    if (exitCode === undefined) {
+      return "text-foreground-secondary";
+    }
+    return exitCode === 0 ? "text-green-500" : "text-red-500";
+  }, [exitCode]);
+
+  const lineCount = useMemo(
+    () => (displayedContent ? displayedContent.split("\n").length : 0),
+    [displayedContent],
+  );
+
+  const isLongOutput = lineCount > 8;
+  const maxHeight = isExpanded ? "32rem" : "12rem";
+
+  const toggleExpand = useCallback(() => {
+    setIsExpanded((prev) => !prev);
+  }, []);
+
+  return {
+    terminalRef: terminalRef as React.RefObject<HTMLDivElement>,
+    contentRef: contentRef as React.RefObject<HTMLDivElement>,
+    displayedContent,
+    isCopied,
+    isExpanded,
+    exitCodeColor,
+    lineCount,
+    isLongOutput,
+    maxHeight,
+    isStreaming,
+    handleCopy,
+    toggleExpand,
+  };
+}
 
 function StreamingTerminalHeader({
   command,
@@ -174,7 +216,7 @@ function StreamingTerminalContent({
         transition: "max-height 0.2s ease-in-out",
       }}
     >
-      <pre className="whitespace-pre-wrap break-words text-foreground-secondary/90">
+      <pre className="whitespace-pre-wrap text-foreground-secondary/90">
         {displayedContent}
         {isStreaming && (
           <span className="inline-block w-1.5 h-3 bg-green-500 ml-1 animate-pulse" />
@@ -184,91 +226,50 @@ function StreamingTerminalContent({
   );
 }
 
-function useStreamingTerminalController({
+export function StreamingTerminal({
   eventId,
   streamId,
   content,
   exitCode,
+  command,
   onComplete,
+  className,
 }: StreamingTerminalProps) {
-  const resolvedEventId = eventId || streamId || "";
-  const terminalRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [displayedContent, setDisplayedContent] = useState("");
-  const [isCopied, setIsCopied] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const controller = useStreamingTerminalController({
+    eventId,
+    streamId,
+    content,
+    exitCode,
+    command,
+    onComplete,
+  });
 
-  const resolvedContentFromStore = useSelector((state: RootState) =>
-    resolvedEventId ? selectStreamContent(state, resolvedEventId) : "",
+  return (
+    <div
+      ref={controller.terminalRef}
+      role="region"
+      className={`streaming-terminal rounded-lg overflow-hidden border border-border/40 bg-[#0a0a0a] my-2 shadow-lg w-full ${controller.isStreaming ? "streaming" : ""} ${className ?? ""}`}
+    >
+      <StreamingTerminalHeader
+        command={command}
+        exitCode={exitCode}
+        exitCodeColor={controller.exitCodeColor}
+        lineCount={controller.lineCount}
+        isLongOutput={controller.isLongOutput}
+        isExpanded={controller.isExpanded}
+        onToggleExpand={controller.toggleExpand}
+        onCopy={controller.handleCopy}
+        isCopied={controller.isCopied}
+      />
+
+      <StreamingTerminalContent
+        contentRef={controller.contentRef}
+        displayedContent={controller.displayedContent}
+        isStreaming={controller.isStreaming}
+        maxHeight={controller.maxHeight}
+      />
+    </div>
   );
-
-  const resolvedContent = content ?? resolvedContentFromStore;
-  const isStreaming = useSelector((state: RootState) =>
-    resolvedEventId ? selectIsStreaming(state, resolvedEventId) : false,
-  );
-  const streamingEnabled = useSelector((state: RootState) =>
-    selectStreamingEnabled(state),
-  );
-
-  useEffect(() => {
-    if (!streamingEnabled || !isStreaming) {
-      setDisplayedContent(resolvedContent);
-      return;
-    }
-
-    if (!resolvedContent || resolvedContent.length === 0) {
-      setDisplayedContent("");
-      return;
-    }
-
-    setDisplayedContent(resolvedContent);
-
-    if (contentRef.current) {
-      contentRef.current.scrollTop = contentRef.current.scrollHeight;
-    }
-  }, [resolvedContent, isStreaming, streamingEnabled, onComplete]);
-
-  const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(displayedContent || "");
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    } catch (error) {
-      console.error("Failed to copy:", error);
-    }
-  }, [displayedContent]);
-
-  const exitCodeColor = useMemo(() => {
-    if (exitCode === undefined) {
-      return "text-foreground-secondary";
-    }
-    return exitCode === 0 ? "text-green-500" : "text-red-500";
-  }, [exitCode]);
-
-  const lineCount = useMemo(
-    () => (displayedContent ? displayedContent.split("\n").length : 0),
-    [displayedContent],
-  );
-
-  const isLongOutput = lineCount > 8;
-  const maxHeight = isExpanded ? "32rem" : "12rem";
-
-  const toggleExpand = useCallback(() => {
-    setIsExpanded((prev) => !prev);
-  }, []);
-
-  return {
-    terminalRef: terminalRef as React.RefObject<HTMLDivElement>,
-    contentRef: contentRef as React.RefObject<HTMLDivElement>,
-    displayedContent,
-    isCopied,
-    isExpanded,
-    exitCodeColor,
-    lineCount,
-    isLongOutput,
-    maxHeight,
-    isStreaming,
-    handleCopy,
-    toggleExpand,
-  };
 }
+
+export { useStreamingTerminalController };

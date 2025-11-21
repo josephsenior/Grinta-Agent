@@ -65,16 +65,16 @@
 
 /* Combined effect (recommended) */
 .interactive {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .interactive:hover {
-  transform: translateY(-1px);
+  transform: scale(1.02);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .interactive:active {
-  transform: translateY(0) scale(0.98);
+  transform: scale(0.98);
 }
 
 /* ============================================ */
@@ -82,13 +82,13 @@
 /* ============================================ */
 
 .card-interactive {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
 }
 
 .card-interactive:hover {
   transform: translateY(-2px);
-  box-shadow: 
+  box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.3),
     0 0 0 1px rgba(139, 92, 246, 0.15);
   border-color: rgba(139, 92, 246, 0.25);
@@ -96,7 +96,7 @@
 
 .card-interactive:active {
   transform: translateY(-1px);
-  box-shadow: 
+  box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.25),
     0 0 0 1px rgba(139, 92, 246, 0.1);
 }
@@ -106,12 +106,16 @@
 /* ============================================ */
 
 /* Smooth focus transition */
-input, textarea, select {
+input,
+textarea,
+select {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-input:focus, textarea:focus, select:focus {
-  transform: scale(1.01);  /* Subtle grow */
+input:focus,
+textarea:focus,
+select:focus {
+  transform: scale(1.01); /* Subtle grow */
 }
 
 /* Label float animation */
@@ -141,7 +145,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .link-slide::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   bottom: -2px;
@@ -182,9 +186,16 @@ input:focus, textarea:focus, select:focus {
 
 /* Wiggle on hover */
 @keyframes wiggle {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-5deg); }
-  75% { transform: rotate(5deg); }
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-5deg);
+  }
+  75% {
+    transform: rotate(5deg);
+  }
 }
 
 .icon-wiggle-hover:hover {
@@ -197,7 +208,8 @@ input:focus, textarea:focus, select:focus {
 
 /* Pulse animation */
 @keyframes badge-pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
@@ -213,14 +225,15 @@ input:focus, textarea:focus, select:focus {
 
 /* Ping effect */
 @keyframes badge-ping {
-  75%, 100% {
+  75%,
+  100% {
     transform: scale(2);
     opacity: 0;
   }
 }
 
 .badge-ping::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
@@ -333,7 +346,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .toggle-thumb {
-  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);  /* Bounce */
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); /* Bounce */
 }
 
 /* ============================================ */
@@ -354,7 +367,8 @@ input:focus, textarea:focus, select:focus {
 
 /* Animated focus ring */
 @keyframes focus-ring-pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.4);
   }
   50% {
@@ -382,7 +396,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .progress-shimmer::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
@@ -398,8 +412,12 @@ input:focus, textarea:focus, select:focus {
 }
 
 @keyframes shimmer-slide {
-  0% { left: -100%; }
-  100% { left: 100%; }
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
 }
 
 /* ============================================ */
@@ -411,7 +429,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .hover-glow-violet:hover {
-  box-shadow: 
+  box-shadow:
     0 0 20px rgba(139, 92, 246, 0.25),
     0 4px 12px rgba(0, 0, 0, 0.3);
   border-color: rgba(139, 92, 246, 0.3);
@@ -422,7 +440,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .hover-glow-success:hover {
-  box-shadow: 
+  box-shadow:
     0 0 20px rgba(16, 185, 129, 0.25),
     0 4px 12px rgba(0, 0, 0, 0.3);
   border-color: rgba(16, 185, 129, 0.3);
@@ -448,11 +466,21 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* Stagger delays for lists */
-.scroll-reveal:nth-child(1) { animation-delay: 0ms; }
-.scroll-reveal:nth-child(2) { animation-delay: 50ms; }
-.scroll-reveal:nth-child(3) { animation-delay: 100ms; }
-.scroll-reveal:nth-child(4) { animation-delay: 150ms; }
-.scroll-reveal:nth-child(5) { animation-delay: 200ms; }
+.scroll-reveal:nth-child(1) {
+  animation-delay: 0ms;
+}
+.scroll-reveal:nth-child(2) {
+  animation-delay: 50ms;
+}
+.scroll-reveal:nth-child(3) {
+  animation-delay: 100ms;
+}
+.scroll-reveal:nth-child(4) {
+  animation-delay: 150ms;
+}
+.scroll-reveal:nth-child(5) {
+  animation-delay: 200ms;
+}
 
 /* ============================================ */
 /* 15. CURSOR-SPECIFIC POLISH                  */
@@ -531,4 +559,3 @@ input:focus, textarea:focus, select:focus {
     transition: none !important;
   }
 }
-

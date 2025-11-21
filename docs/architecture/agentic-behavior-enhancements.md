@@ -345,4 +345,4 @@ max_iterations = 500  # Maximum for complex tasks
 - [CodeAct Agent Architecture](../features/codeact-agent.md)
 - [ACE Framework](../features/ace-framework.md)
 - [Task Tracker Tool](../features/tool-integration.md)
-- [Middleware Pipeline](./ARCHITECTURE.md#middleware-pipeline)
+- [Middleware Pipeline](../architecture.md#middleware-pipeline)

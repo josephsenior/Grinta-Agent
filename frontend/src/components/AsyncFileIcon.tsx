@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  getFileIconClassAsync,
-  getFileTypeCategory,
-  getFallbackIcon,
-} from "../utils/file-icons";
+import { getFileIconClassAsync } from "../utils/file-icons";
 
 interface AsyncFileIconProps {
   filename: string;
@@ -11,11 +7,11 @@ interface AsyncFileIconProps {
   size?: number;
 }
 
-export const AsyncFileIcon: React.FC<AsyncFileIconProps> = ({
+export function AsyncFileIcon({
   filename,
   className = "",
   size = 16,
-}) => {
+}: AsyncFileIconProps) {
   const [iconClass, setIconClass] = useState<string>("default-icon");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -33,8 +29,6 @@ export const AsyncFileIcon: React.FC<AsyncFileIconProps> = ({
       } catch (error) {
         if (isMounted) {
           // Use fallback icon based on file type
-          const category = getFileTypeCategory(filename);
-          const fallback = getFallbackIcon(category);
           setIconClass("default-icon");
         }
       } finally {
@@ -69,4 +63,4 @@ export const AsyncFileIcon: React.FC<AsyncFileIconProps> = ({
       title={filename}
     />
   );
-};
+}

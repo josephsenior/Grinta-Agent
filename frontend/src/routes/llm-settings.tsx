@@ -4,10 +4,8 @@ import { AxiosError } from "axios";
 import { organizeModelsAndProviders } from "#/utils/organize-models-and-providers";
 import { useAIConfigOptions } from "#/hooks/query/use-ai-config-options";
 import { useSettings } from "#/hooks/query/use-settings";
-import { hasAdvancedSettingsSet } from "#/utils/has-advanced-settings-set";
 import { useSaveSettings } from "#/hooks/mutation/use-save-settings";
 import { useConfig } from "#/hooks/query/use-config";
-import { isCustomModel } from "#/utils/is-custom-model";
 import { LlmSettingsInputsSkeleton } from "#/components/features/settings/llm-settings/llm-settings-inputs-skeleton";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { SettingsSwitch } from "#/components/features/settings/settings-switch";
@@ -16,7 +14,6 @@ import {
   displaySuccessToast,
 } from "#/utils/custom-toast-handlers";
 import { retrieveAxiosErrorMessage } from "#/utils/retrieve-axios-error-message";
-import { DEFAULT_SETTINGS } from "#/services/settings";
 import { SettingsErrorBoundary } from "#/components/features/settings/settings-error-boundary";
 import { BasicSettingsSection } from "./llm-settings/basic-settings-section";
 import { AdvancedSettingsSection } from "./llm-settings/advanced-settings-section";
@@ -25,9 +22,10 @@ import {
   buildAdvancedPayload,
   buildBasicPayload,
   createDefaultDirtyInputs,
-  DirtyInputs,
-  normalizeSecurityAnalyzerSelection,
+  type DirtyInputs,
 } from "./llm-settings/llm-settings-helpers";
+import { useLlmSettingsHandlers } from "./llm-settings/use-llm-settings-handlers";
+import { useLlmSettingsState } from "./llm-settings/use-llm-settings-state";
 import type { Settings } from "#/types/settings";
 
 type SecurityAnalyzerOption = { key: string; label: string };
@@ -80,290 +78,9 @@ const getAgentOptions = (agent?: string) => {
   return defaults;
 };
 
-const mergeAdvancedSettings = (
-  settings: Settings | undefined,
-  overrides: Partial<Settings>,
-  enableDefaultCondenser: boolean,
-  condenserMaxSize: number | null,
-  confirmationModeEnabled: boolean,
-  securityAnalyzer: string,
-  agentValue: string,
-): Settings => {
-  const base = settings ?? DEFAULT_SETTINGS;
-
-  return {
-    ...DEFAULT_SETTINGS,
-    ...base,
-    ...overrides,
-    ENABLE_DEFAULT_CONDENSER: enableDefaultCondenser,
-    CONDENSER_MAX_SIZE: condenserMaxSize ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE,
-    CONFIRMATION_MODE: confirmationModeEnabled,
-    SECURITY_ANALYZER:
-      securityAnalyzer === "none"
-        ? null
-        : securityAnalyzer || base.SECURITY_ANALYZER,
-    AGENT: agentValue || DEFAULT_SETTINGS.AGENT,
-  };
-};
-
 // ============================================================================
 // Helper Utilities
 // ============================================================================
-
-function applyPrimarySettings({
-  settings,
-  setCurrentSelectedModel,
-  setAgentValue,
-  setConfirmationModeEnabled,
-  setSelectedSecurityAnalyzer,
-  setEnableDefaultCondenser,
-  setCondenserMaxSize,
-}: {
-  settings: Settings;
-  setCurrentSelectedModel: (value: string | null) => void;
-  setAgentValue: (value: string) => void;
-  setConfirmationModeEnabled: (value: boolean) => void;
-  setSelectedSecurityAnalyzer: (value: string) => void;
-  setEnableDefaultCondenser: (value: boolean) => void;
-  setCondenserMaxSize: (value: number | null) => void;
-}) {
-  setCurrentSelectedModel(settings.LLM_MODEL ?? null);
-  setAgentValue(settings.AGENT ?? DEFAULT_SETTINGS.AGENT ?? "CodeActAgent");
-  setConfirmationModeEnabled(
-    settings.CONFIRMATION_MODE ?? DEFAULT_SETTINGS.CONFIRMATION_MODE,
-  );
-  setSelectedSecurityAnalyzer(
-    normalizeSecurityAnalyzerSelection(settings.SECURITY_ANALYZER),
-  );
-  setEnableDefaultCondenser(
-    settings.ENABLE_DEFAULT_CONDENSER ??
-      DEFAULT_SETTINGS.ENABLE_DEFAULT_CONDENSER,
-  );
-  setCondenserMaxSize(
-    settings.CONDENSER_MAX_SIZE ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE,
-  );
-}
-
-function applyAdvancedOverrides({
-  settings,
-  setAdvancedOverrides,
-}: {
-  settings: Settings;
-  setAdvancedOverrides: React.Dispatch<React.SetStateAction<Partial<Settings>>>;
-}) {
-  setAdvancedOverrides({
-    LLM_TEMPERATURE: settings.LLM_TEMPERATURE ?? null,
-    LLM_TOP_P: settings.LLM_TOP_P ?? null,
-    LLM_MAX_OUTPUT_TOKENS: settings.LLM_MAX_OUTPUT_TOKENS ?? null,
-    LLM_TIMEOUT: settings.LLM_TIMEOUT ?? null,
-    LLM_NUM_RETRIES: settings.LLM_NUM_RETRIES ?? null,
-    LLM_CACHING_PROMPT: settings.LLM_CACHING_PROMPT ?? null,
-    LLM_DISABLE_VISION: settings.LLM_DISABLE_VISION ?? null,
-    LLM_CUSTOM_LLM_PROVIDER: settings.LLM_CUSTOM_LLM_PROVIDER ?? null,
-  });
-}
-
-function initializeStateFromSettings({
-  settings,
-  setCurrentSelectedModel,
-  setAgentValue,
-  setConfirmationModeEnabled,
-  setSelectedSecurityAnalyzer,
-  setEnableDefaultCondenser,
-  setCondenserMaxSize,
-  setAdvancedOverrides,
-  setDirtyInputs,
-}: {
-  settings?: Settings;
-  setCurrentSelectedModel: (value: string | null) => void;
-  setAgentValue: (value: string) => void;
-  setConfirmationModeEnabled: (value: boolean) => void;
-  setSelectedSecurityAnalyzer: (value: string) => void;
-  setEnableDefaultCondenser: (value: boolean) => void;
-  setCondenserMaxSize: (value: number | null) => void;
-  setAdvancedOverrides: React.Dispatch<React.SetStateAction<Partial<Settings>>>;
-  setDirtyInputs: React.Dispatch<React.SetStateAction<DirtyInputs>>;
-}) {
-  if (!settings) {
-    return;
-  }
-
-  applyPrimarySettings({
-    settings,
-    setCurrentSelectedModel,
-    setAgentValue,
-    setConfirmationModeEnabled,
-    setSelectedSecurityAnalyzer,
-    setEnableDefaultCondenser,
-    setCondenserMaxSize,
-  });
-
-  applyAdvancedOverrides({ settings, setAdvancedOverrides });
-  setDirtyInputs(createDefaultDirtyInputs());
-}
-
-function updateViewFromSettings({
-  settings,
-  resources,
-  userToggledView,
-  setView,
-}: {
-  settings?: Settings;
-  resources?: ReturnType<typeof useAIConfigOptions>["data"];
-  userToggledView: boolean;
-  setView: React.Dispatch<React.SetStateAction<"basic" | "advanced">>;
-}) {
-  if (!settings || userToggledView) {
-    return;
-  }
-
-  if (hasAdvancedSettingsSet(settings)) {
-    setView("advanced");
-    return;
-  }
-
-  if (resources && isCustomModel(resources.models, settings.LLM_MODEL)) {
-    setView("advanced");
-    return;
-  }
-
-  setView("basic");
-}
-
-function onModelDirtyChange({
-  model,
-  settings,
-  markDirty,
-  setCurrentSelectedModel,
-}: {
-  model: string | null;
-  settings?: Settings;
-  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
-  setCurrentSelectedModel: (value: string | null) => void;
-}) {
-  const normalized = settings?.LLM_MODEL ?? DEFAULT_SETTINGS.LLM_MODEL;
-  const cleanModel = normalized.startsWith("openai/")
-    ? normalized.replace("openai/", "")
-    : normalized;
-  markDirty("model", model !== cleanModel);
-  setCurrentSelectedModel(model);
-}
-
-function onCustomModelDirtyChange({
-  model,
-  settings,
-  markDirty,
-  setCurrentSelectedModel,
-}: {
-  model: string;
-  settings?: Settings;
-  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
-  setCurrentSelectedModel: (value: string | null) => void;
-}) {
-  const current = settings?.LLM_MODEL ?? "";
-  const isDirty = model !== "" && model !== current;
-  markDirty("model", isDirty);
-  setCurrentSelectedModel(model);
-}
-
-function onAgentChange({
-  agent,
-  settings,
-  setAgentValue,
-  markDirty,
-}: {
-  agent: string;
-  settings?: Settings;
-  setAgentValue: (value: string) => void;
-  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
-}) {
-  setAgentValue(agent);
-  const current = settings?.AGENT ?? "";
-  const isDirty = agent !== "" && agent !== current;
-  markDirty("agent", isDirty);
-}
-
-function onConfirmationModeChange({
-  isToggled,
-  settings,
-  selectedSecurityAnalyzer,
-  setConfirmationModeEnabled,
-  setSelectedSecurityAnalyzer,
-  markDirty,
-}: {
-  isToggled: boolean;
-  settings?: Settings;
-  selectedSecurityAnalyzer: string;
-  setConfirmationModeEnabled: (value: boolean) => void;
-  setSelectedSecurityAnalyzer: (value: string) => void;
-  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
-}) {
-  setConfirmationModeEnabled(isToggled);
-  markDirty(
-    "confirmationMode",
-    isToggled !== (settings?.CONFIRMATION_MODE ?? false),
-  );
-
-  if (isToggled && !selectedSecurityAnalyzer) {
-    setSelectedSecurityAnalyzer(DEFAULT_SETTINGS.SECURITY_ANALYZER ?? "llm");
-    markDirty("securityAnalyzer", true);
-  }
-}
-
-function onCondenserMaxSizeChange({
-  value,
-  settings,
-  setCondenserMaxSize,
-  markDirty,
-}: {
-  value: string;
-  settings?: Settings;
-  setCondenserMaxSize: (value: number | null) => void;
-  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
-}) {
-  const parsed = value ? Number.parseInt(value, 10) : null;
-  const bounded =
-    parsed !== null && Number.isFinite(parsed) ? Math.max(20, parsed) : null;
-  setCondenserMaxSize(bounded);
-  const previous =
-    settings?.CONDENSER_MAX_SIZE ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE;
-  const next = bounded ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE;
-  markDirty("condenserMaxSize", next !== previous);
-}
-
-function onSecurityAnalyzerChange({
-  value,
-  settings,
-  setSelectedSecurityAnalyzer,
-  markDirty,
-}: {
-  value: string;
-  settings?: Settings;
-  setSelectedSecurityAnalyzer: (value: string) => void;
-  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
-}) {
-  setSelectedSecurityAnalyzer(value);
-  markDirty(
-    "securityAnalyzer",
-    value !== normalizeSecurityAnalyzerSelection(settings?.SECURITY_ANALYZER),
-  );
-}
-
-function onSecurityAnalyzerClear({
-  settings,
-  setSelectedSecurityAnalyzer,
-  markDirty,
-}: {
-  settings?: Settings;
-  setSelectedSecurityAnalyzer: (value: string) => void;
-  markDirty: (field: keyof DirtyInputs, isDirty: boolean) => void;
-}) {
-  setSelectedSecurityAnalyzer("");
-  markDirty(
-    "securityAnalyzer",
-    normalizeSecurityAnalyzerSelection(settings?.SECURITY_ANALYZER) !== "",
-  );
-}
 
 function buildPayloadForView(view: "basic" | "advanced", formData: FormData) {
   if (view === "basic") {
@@ -387,50 +104,32 @@ function LlmSettingsScreen() {
 
   const [view, setView] = React.useState<"basic" | "advanced">("basic");
   const [userToggledView, setUserToggledView] = React.useState(false);
-  const [dirtyInputs, setDirtyInputs] = React.useState<DirtyInputs>(
-    createDefaultDirtyInputs,
-  );
-  const [currentSelectedModel, setCurrentSelectedModel] = React.useState<
-    string | null
-  >(null);
-  const [confirmationModeEnabled, setConfirmationModeEnabled] = React.useState(
-    settings?.CONFIRMATION_MODE ?? DEFAULT_SETTINGS.CONFIRMATION_MODE,
-  );
-  const [selectedSecurityAnalyzer, setSelectedSecurityAnalyzer] =
-    React.useState(
-      normalizeSecurityAnalyzerSelection(settings?.SECURITY_ANALYZER),
-    );
-  const [agentValue, setAgentValue] = React.useState(
-    settings?.AGENT ?? DEFAULT_SETTINGS.AGENT ?? "CodeActAgent",
-  );
-  const [enableDefaultCondenser, setEnableDefaultCondenser] = React.useState(
-    settings?.ENABLE_DEFAULT_CONDENSER ??
-      DEFAULT_SETTINGS.ENABLE_DEFAULT_CONDENSER,
-  );
-  const [condenserMaxSize, setCondenserMaxSize] = React.useState<number | null>(
-    settings?.CONDENSER_MAX_SIZE ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE,
-  );
-  const [advancedOverrides, setAdvancedOverrides] = React.useState<
-    Partial<Settings>
-  >({});
 
-  React.useEffect(() => {
-    initializeStateFromSettings({
-      settings,
-      setCurrentSelectedModel,
-      setAgentValue,
-      setConfirmationModeEnabled,
-      setSelectedSecurityAnalyzer,
-      setEnableDefaultCondenser,
-      setCondenserMaxSize,
-      setAdvancedOverrides,
-      setDirtyInputs,
-    });
-  }, [settings]);
+  const state = useLlmSettingsState({
+    settings,
+    resources,
+    userToggledView,
+    setView,
+  });
 
-  React.useEffect(() => {
-    updateViewFromSettings({ settings, resources, userToggledView, setView });
-  }, [settings, resources, userToggledView]);
+  const {
+    dirtyInputs,
+    setDirtyInputs,
+    currentSelectedModel,
+    setCurrentSelectedModel,
+    confirmationModeEnabled,
+    setConfirmationModeEnabled,
+    selectedSecurityAnalyzer,
+    setSelectedSecurityAnalyzer,
+    agentValue,
+    setAgentValue,
+    enableDefaultCondenser,
+    setEnableDefaultCondenser,
+    condenserMaxSize,
+    setCondenserMaxSize,
+    setAdvancedOverrides,
+    advancedSettings,
+  } = state;
 
   const agentOptions = React.useMemo(
     () => getAgentOptions(settings?.AGENT),
@@ -440,28 +139,6 @@ function LlmSettingsScreen() {
   const securityAnalyzerOptions = React.useMemo(
     () => getSecurityAnalyzerOptions(resources?.securityAnalyzers, t),
     [resources?.securityAnalyzers, t],
-  );
-
-  const advancedSettings = React.useMemo(
-    () =>
-      mergeAdvancedSettings(
-        settings,
-        advancedOverrides,
-        enableDefaultCondenser,
-        condenserMaxSize,
-        confirmationModeEnabled,
-        selectedSecurityAnalyzer,
-        agentValue,
-      ),
-    [
-      settings,
-      advancedOverrides,
-      enableDefaultCondenser,
-      condenserMaxSize,
-      confirmationModeEnabled,
-      selectedSecurityAnalyzer,
-      agentValue,
-    ],
   );
 
   const handleSuccessfulMutation = () => {
@@ -484,89 +161,17 @@ function LlmSettingsScreen() {
     setDirtyInputs((prev) => ({ ...prev, [field]: isDirty }));
   };
 
-  const handleModelIsDirty = (model: string | null) => {
-    onModelDirtyChange({
-      model,
-      settings,
-      markDirty,
-      setCurrentSelectedModel,
-    });
-  };
-
-  const handleCustomModelIsDirty = (model: string) => {
-    onCustomModelDirtyChange({
-      model,
-      settings,
-      markDirty,
-      setCurrentSelectedModel,
-    });
-  };
-
-  const handleApiKeyIsDirty = (apiKey: string) => {
-    markDirty("apiKey", apiKey.trim() !== "");
-  };
-
-  const handleSearchApiKeyIsDirty = (apiKey: string) => {
-    markDirty("searchApiKey", apiKey !== (settings?.SEARCH_API_KEY ?? ""));
-  };
-
-  const handleBaseUrlIsDirty = (baseUrl: string) => {
-    markDirty("baseUrl", baseUrl !== (settings?.LLM_BASE_URL ?? ""));
-  };
-
-  const handleAgentChange = (agent: string) => {
-    onAgentChange({
-      agent,
-      settings,
-      setAgentValue,
-      markDirty,
-    });
-  };
-
-  const handleConfirmationModeChange = (isToggled: boolean) => {
-    onConfirmationModeChange({
-      isToggled,
-      settings,
-      selectedSecurityAnalyzer,
-      setConfirmationModeEnabled,
-      setSelectedSecurityAnalyzer,
-      markDirty,
-    });
-  };
-
-  const handleEnableDefaultCondenserChange = (isToggled: boolean) => {
-    setEnableDefaultCondenser(isToggled);
-    markDirty(
-      "enableDefaultCondenser",
-      isToggled !== (settings?.ENABLE_DEFAULT_CONDENSER ?? true),
-    );
-  };
-
-  const handleCondenserMaxSizeChange = (value: string) => {
-    onCondenserMaxSizeChange({
-      value,
-      settings,
-      setCondenserMaxSize,
-      markDirty,
-    });
-  };
-
-  const handleSecurityAnalyzerChange = (value: string) => {
-    onSecurityAnalyzerChange({
-      value,
-      settings,
-      setSelectedSecurityAnalyzer,
-      markDirty,
-    });
-  };
-
-  const handleSecurityAnalyzerClear = () => {
-    onSecurityAnalyzerClear({
-      settings,
-      setSelectedSecurityAnalyzer,
-      markDirty,
-    });
-  };
+  const handlers = useLlmSettingsHandlers({
+    settings,
+    selectedSecurityAnalyzer,
+    setCurrentSelectedModel,
+    setAgentValue,
+    setConfirmationModeEnabled,
+    setSelectedSecurityAnalyzer,
+    setEnableDefaultCondenser,
+    setCondenserMaxSize,
+    markDirty,
+  });
 
   const handleAdvancedConfigChange = (updates: Partial<Settings>) => {
     setAdvancedOverrides((prev) => ({ ...prev, ...updates }));
@@ -618,9 +223,9 @@ function LlmSettingsScreen() {
                   currentSelectedModel={currentSelectedModel}
                   isLoading={isLoading}
                   isFetching={isFetching}
-                  onModelChange={handleModelIsDirty}
-                  onApiKeyChange={handleApiKeyIsDirty}
-                  onSearchApiKeyChange={handleSearchApiKeyIsDirty}
+                  onModelChange={handlers.handleModelIsDirty}
+                  onApiKeyChange={handlers.handleApiKeyIsDirty}
+                  onSearchApiKeyChange={handlers.handleSearchApiKeyIsDirty}
                   t={t}
                 />
               )}
@@ -635,15 +240,17 @@ function LlmSettingsScreen() {
                   appMode={config?.APP_MODE}
                   enableDefaultCondenser={enableDefaultCondenser}
                   condenserMaxSize={condenserMaxSize}
-                  onCustomModelChange={handleCustomModelIsDirty}
-                  onBaseUrlChange={handleBaseUrlIsDirty}
-                  onApiKeyChange={handleApiKeyIsDirty}
-                  onSearchApiKeyChange={handleSearchApiKeyIsDirty}
-                  onAgentChange={handleAgentChange}
+                  onCustomModelChange={handlers.handleCustomModelIsDirty}
+                  onBaseUrlChange={handlers.handleBaseUrlIsDirty}
+                  onApiKeyChange={handlers.handleApiKeyIsDirty}
+                  onSearchApiKeyChange={handlers.handleSearchApiKeyIsDirty}
+                  onAgentChange={handlers.handleAgentChange}
                   onAdvancedConfigChange={handleAdvancedConfigChange}
-                  onCondenserMaxSizeChange={handleCondenserMaxSizeChange}
+                  onCondenserMaxSizeChange={
+                    handlers.handleCondenserMaxSizeChange
+                  }
                   onEnableDefaultCondenserToggle={
-                    handleEnableDefaultCondenserChange
+                    handlers.handleEnableDefaultCondenserChange
                   }
                   t={t}
                 />
@@ -653,9 +260,11 @@ function LlmSettingsScreen() {
                 confirmationModeEnabled={confirmationModeEnabled}
                 selectedSecurityAnalyzer={selectedSecurityAnalyzer}
                 securityAnalyzerOptions={securityAnalyzerOptions}
-                onToggleConfirmationMode={handleConfirmationModeChange}
-                onSecurityAnalyzerChange={handleSecurityAnalyzerChange}
-                onSecurityAnalyzerInputClear={handleSecurityAnalyzerClear}
+                onToggleConfirmationMode={handlers.handleConfirmationModeChange}
+                onSecurityAnalyzerChange={handlers.handleSecurityAnalyzerChange}
+                onSecurityAnalyzerInputClear={
+                  handlers.handleSecurityAnalyzerClear
+                }
                 t={t}
               />
             </div>

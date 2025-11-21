@@ -2,6 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { I18nKey } from "#/i18n/declaration";
 import { BrandButton } from "../brand-button";
+import { logger } from "#/utils/logger";
 
 export function InstallSlackAppAnchor() {
   const { t } = useTranslation();
@@ -31,7 +32,7 @@ export function InstallSlackAppAnchor() {
       setError(
         err instanceof Error ? err.message : "Failed to install Slack app",
       );
-      console.error("Slack install error:", err);
+      logger.error("Slack install error:", err);
     } finally {
       setLoading(false);
     }

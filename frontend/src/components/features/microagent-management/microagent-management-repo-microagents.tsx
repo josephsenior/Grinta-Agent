@@ -16,77 +16,6 @@ interface MicroagentManagementRepoMicroagentsProps {
   repository: GitRepository;
 }
 
-export function MicroagentManagementRepoMicroagents({
-  repository,
-}: MicroagentManagementRepoMicroagentsProps) {
-  const controller = useRepoMicroagentsController({ repository });
-  const { t } = useTranslation();
-
-  if (controller.isLoading) {
-    return (
-      <div className="pb-4 flex justify-center">
-        <Spinner size="sm" data-testid="loading-spinner" />
-      </div>
-    );
-  }
-
-  // If there's an error with microagents, show the learn this repo component
-  if (controller.isError) {
-    return (
-      <div>
-        <MicroagentManagementLearnThisRepo repository={repository} />
-      </div>
-    );
-  }
-
-  const numberOfMicroagents = controller.microagents.length;
-  const numberOfConversations = controller.conversations.length;
-  const totalItems = numberOfMicroagents + numberOfConversations;
-  const hasMicroagents = numberOfMicroagents > 0;
-  const hasConversations = numberOfConversations > 0;
-
-  return (
-    <div>
-      {totalItems === 0 && (
-        <MicroagentManagementLearnThisRepo repository={repository} />
-      )}
-      {/* Render microagents */}
-      {hasMicroagents && (
-        <div className="flex flex-col">
-          <span className="text-md text-white font-medium leading-5 mb-4">
-            {t(I18nKey.MICROAGENT_MANAGEMENT$EXISTING_MICROAGENTS)}
-          </span>
-          {controller.microagents.map((microagent) => (
-            <div key={microagent.name} className="pb-4 last:pb-0">
-              <MicroagentManagementMicroagentCard
-                microagent={microagent}
-                repository={repository}
-              />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Render conversations */}
-      {hasConversations && (
-        <div className={cn("flex flex-col", hasMicroagents && "mt-4")}>
-          <span className="text-md text-white font-medium leading-5 mb-4">
-            {t(I18nKey.COMMON$IN_PROGRESS)}
-          </span>
-          {controller.conversations.map((conversation) => (
-            <div key={conversation.conversation_id} className="pb-4 last:pb-0">
-              <MicroagentManagementMicroagentCard
-                conversation={conversation}
-                repository={repository}
-              />
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function useRepoMicroagentsController({
   repository,
 }: {
@@ -147,4 +76,75 @@ function useRepoMicroagentsController({
     isLoading: microagentQuery.isLoading || conversationsQuery.isLoading,
     isError: microagentQuery.isError || conversationsQuery.isError,
   };
+}
+
+export function MicroagentManagementRepoMicroagents({
+  repository,
+}: MicroagentManagementRepoMicroagentsProps) {
+  const controller = useRepoMicroagentsController({ repository });
+  const { t } = useTranslation();
+
+  if (controller.isLoading) {
+    return (
+      <div className="pb-4 flex justify-center">
+        <Spinner size="sm" data-testid="loading-spinner" />
+      </div>
+    );
+  }
+
+  // If there's an error with microagents, show the learn this repo component
+  if (controller.isError) {
+    return (
+      <div>
+        <MicroagentManagementLearnThisRepo repository={repository} />
+      </div>
+    );
+  }
+
+  const numberOfMicroagents = controller.microagents.length;
+  const numberOfConversations = controller.conversations.length;
+  const totalItems = numberOfMicroagents + numberOfConversations;
+  const hasMicroagents = numberOfMicroagents > 0;
+  const hasConversations = numberOfConversations > 0;
+
+  return (
+    <div>
+      {totalItems === 0 && (
+        <MicroagentManagementLearnThisRepo repository={repository} />
+      )}
+      {/* Render microagents */}
+      {hasMicroagents && (
+        <div className="flex flex-col">
+          <span className="text-md text-white font-medium leading-5 mb-4">
+            {t(I18nKey.MICROAGENT$EXISTING_GUIDES)}
+          </span>
+          {controller.microagents.map((microagent) => (
+            <div key={microagent.name} className="pb-4 last:pb-0">
+              <MicroagentManagementMicroagentCard
+                microagent={microagent}
+                repository={repository}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Render conversations */}
+      {hasConversations && (
+        <div className={cn("flex flex-col", hasMicroagents && "mt-4")}>
+          <span className="text-md text-white font-medium leading-5 mb-4">
+            {t(I18nKey.COMMON$IN_PROGRESS)}
+          </span>
+          {controller.conversations.map((conversation) => (
+            <div key={conversation.conversation_id} className="pb-4 last:pb-0">
+              <MicroagentManagementMicroagentCard
+                conversation={conversation}
+                repository={repository}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }

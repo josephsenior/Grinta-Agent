@@ -1,324 +1,295 @@
-import React, { useMemo, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import {
-  Settings,
-  MessageCircle,
-  User,
-  Plus,
-  Menu,
-  Info,
-  FileText,
-  Shield,
-  DollarSign,
-} from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { I18nKey } from "#/i18n/declaration";
+import { useState, useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Menu, X } from "lucide-react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ThemeToggle } from "#/components/ui/theme-toggle";
-import { useScrollY } from "#/hooks/use-scroll-reveal";
-import { useCreateConversation } from "#/hooks/mutation/use-create-conversation";
-import { useIsCreatingConversation } from "#/hooks/use-is-creating-conversation";
-import { cn } from "#/utils/utils";
-// Use public logo instead of bundled asset
-const logo = "/forge-logo.png";
 
-export default function Header(): React.ReactElement {
+// Register ScrollTrigger
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+export default function Header() {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
-  const { mutate: createConversation, isPending } = useCreateConversation();
-  const isCreatingConversationElsewhere = useIsCreatingConversation();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const { pathname } = useLocation();
-  const isConversationRoute = pathname.startsWith("/conversations/");
-  const isLandingRoute = pathname === "/";
-  const scrollY = useScrollY(16);
-  const { t } = useTranslation();
-  const navLinks = useMemo(
-    () => [
-      {
-        to: "/about",
-        label: t(I18nKey.LANDING$START_HELP, { defaultValue: "About" }),
-        icon: Info,
-      },
-      {
-        to: "/pricing",
-        label: t("PRICING", { defaultValue: "Pricing" }),
-        icon: DollarSign,
-      },
-      {
-        to: "/contact",
-        label: t(I18nKey.COMMON$HERE, { defaultValue: "Contact" }),
-        icon: MessageCircle,
-      },
-      {
-        to: "/terms",
-        label: t(I18nKey.TOS$TERMS, { defaultValue: "Terms" }),
-        icon: FileText,
-      },
-      {
-        to: "/privacy",
-        label: t(I18nKey.COMMON$PRIVACY_POLICY, { defaultValue: "Privacy" }),
-        icon: Shield,
-      },
-    ],
-    [t],
-  );
+  const headerRef = useRef<HTMLElement>(null);
+  const logoRef = useRef<HTMLAnchorElement>(null);
 
-  // Calculate blur amount based on scroll (0-20px)
-  const blurAmount = Math.min(scrollY / 10, 20);
-  // Calculate opacity for background (0.8-0.95)
-  const bgOpacity = Math.min(0.8 + scrollY / 500, 0.95);
-  // Calculate shadow intensity
-  const shadowOpacity = Math.min(scrollY / 500, 0.3);
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
-  const handleCreateConversation = () => {
-    if (isPending) {
-      return;
+  // GSAP scroll effects for header
+  useEffect(() => {
+    if (!headerRef.current || typeof window === "undefined") {
+      return () => {
+        // No cleanup needed
+      };
     }
-    createConversation(
-      {},
-      {
-        onSuccess: (data) => {
-          try {
-            localStorage.setItem(
-              "RECENT_CONVERSATION_ID",
-              data.conversation_id,
-            );
-          } catch (e) {
-            // ignore errors when persisting recent conversation id (e.g., storage disabled)
-          }
-          navigate(`/conversations/${data.conversation_id}`);
-        },
+
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (prefersReducedMotion) {
+      return () => {
+        // No cleanup needed for reduced motion
+      };
+    }
+
+    const header = headerRef.current;
+
+    // Smooth header background transition on scroll
+    ScrollTrigger.create({
+      trigger: document.body,
+      start: "top -80",
+      end: "top -100",
+      onEnter: () => {
+        gsap.to(header, {
+          backgroundColor: "var(--bg-glass)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          borderBottom: "1px solid var(--border-subtle)",
+          duration: 0.3,
+          ease: "power2.out",
+        });
       },
-    );
-  };
+      onLeaveBack: () => {
+        gsap.to(header, {
+          backgroundColor: "transparent",
+          backdropFilter: "blur(0px)",
+          WebkitBackdropFilter: "blur(0px)",
+          borderBottom: "1px solid transparent",
+          duration: 0.3,
+          ease: "power2.out",
+        });
+      },
+    });
 
-  const handleOpenMessages = () => {
-    // Request opening the conversation overlay panel via a custom event
-    const event = new CustomEvent("Forge:open-conversation-panel");
-    window.dispatchEvent(event);
-  };
+    // Logo subtle glow on scroll
+    if (logoRef.current) {
+      ScrollTrigger.create({
+        trigger: document.body,
+        start: "top -100",
+        onEnter: () => {
+          gsap.to(logoRef.current, {
+            filter: "drop-shadow(0 0 8px rgba(139, 92, 246, 0.4))",
+            duration: 0.5,
+            ease: "power2.out",
+          });
+        },
+        onLeaveBack: () => {
+          gsap.to(logoRef.current, {
+            filter: "drop-shadow(0 0 0px rgba(139, 92, 246, 0))",
+            duration: 0.5,
+            ease: "power2.out",
+          });
+        },
+      });
+    }
 
-  const handleOpenUserSettings = () => navigate("/settings/user");
-  const handleOpenAppSettings = () => navigate("/settings/app");
-  // Detect Playwright test runs; test harness sets __Forge_PLAYWRIGHT on window
-  type WindowWithE2E = Window & { __Forge_PLAYWRIGHT?: boolean };
-  const isPlaywrightRun =
-    typeof window !== "undefined" &&
-    (window as unknown as WindowWithE2E).__Forge_PLAYWRIGHT === true;
+    return () => {
+      ScrollTrigger.getAll().forEach((trigger) => {
+        if (
+          trigger.vars.trigger === document.body ||
+          trigger.vars.trigger === header
+        ) {
+          trigger.kill();
+        }
+      });
+    };
+  }, []);
+
+  const navigation = [
+    { name: "Features", href: "#features" },
+    { name: "How It Works", href: "#how-it-works" },
+    { name: "Pricing", href: "#pricing" },
+    { name: "Testimonials", href: "#testimonials" },
+  ];
+
+  const handleNavClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    href: string,
+  ) => {
+    if (href.startsWith("#")) {
+      e.preventDefault();
+      const element = document.querySelector(href);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
 
   return (
     <header
-      className={cn(
-        "fixed top-0 left-0 right-0 transition-all duration-500 gpu-accelerated",
-        isPlaywrightRun ? "z-[9999] pointer-events-auto" : "z-50",
-      )}
+      ref={headerRef}
+      className="fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300"
+      style={{
+        backgroundColor: isScrolled ? "var(--bg-glass)" : "transparent",
+        backdropFilter: isScrolled ? "blur(24px)" : "none",
+        WebkitBackdropFilter: isScrolled ? "blur(24px)" : "none",
+        borderBottom: isScrolled ? "1px solid var(--border-subtle)" : "none",
+      }}
     >
-      <div className="mx-auto max-w-6xl px-6 pt-6">
-        <div
-          className={cn(
-            "relative overflow-hidden rounded-[24px] border transition-all duration-500",
-            isLandingRoute
-              ? "border-white/10 bg-gradient-to-br from-white/5 via-black/40 to-black/80 shadow-[0_20px_60px_rgba(0,0,0,0.3)] backdrop-blur-xl"
-              : "border-white/5 bg-black/60 backdrop-blur-md",
-          )}
-          style={
-            isLandingRoute
-              ? {
-                  backdropFilter: `blur(${Math.min(scrollY / 8, 24)}px) saturate(180%)`,
-                }
-              : undefined
-          }
-        >
-          {/* Gradient overlay for landing route */}
-          {isLandingRoute && (
-            <div aria-hidden className="pointer-events-none absolute inset-0">
-              <div className="absolute inset-y-0 left-1/2 w-1/2 rounded-r-[24px] bg-gradient-to-r from-brand-500/10 via-accent-500/5 to-transparent blur-2xl" />
-              <div className="absolute -top-12 right-4 h-32 w-32 rounded-full bg-brand-500/20 blur-[100px]" />
+      <nav
+        className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+        aria-label="Main navigation"
+      >
+        <div className="flex items-center justify-between h-16 lg:h-20">
+          <Link ref={logoRef} to="/" className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-violet to-brand-violet-dark flex items-center justify-center">
+              <span className="text-white font-bold text-lg">F</span>
             </div>
-          )}
-
-          <div className="relative flex items-center justify-between gap-4 px-6 py-4">
-            {/* Logo */}
-            <div
-              className="flex items-center space-x-3 select-none group cursor-pointer"
-              onClick={() => navigate("/")}
+            <span
+              className="text-xl font-bold"
+              style={{ color: "var(--text-primary)" }}
             >
-              <img
-                src={logo}
-                alt="Forge"
-                className={cn(
-                  "h-8 w-auto transition-all duration-300",
-                  isLandingRoute
-                    ? "group-hover:opacity-90 drop-shadow-[0_0_8px_rgba(139,92,246,0.3)]"
-                    : "group-hover:opacity-80",
-                )}
-                draggable={false}
-              />
-            </div>
+              Forge
+            </span>
+          </Link>
 
-            {/* Navigation */}
-            <nav className="hidden md:flex items-center gap-1">
-              {navLinks.map(({ to, label, icon: Icon }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  aria-label={label}
-                  className={cn(
-                    "relative flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2",
-                    isLandingRoute
-                      ? "text-white/90 hover:text-white hover:bg-white/10 focus-visible:ring-white/50"
-                      : "text-foreground-secondary hover:text-foreground hover:bg-white/5 focus-visible:ring-brand-500/40",
-                  )}
-                  title={label}
-                >
-                  <Icon
-                    className={cn(
-                      "h-4 w-4 transition-transform duration-300",
-                      isLandingRoute
-                        ? "text-white/70"
-                        : "text-foreground-tertiary",
-                    )}
-                  />
-                  <span>{label}</span>
-                </Link>
-              ))}
-            </nav>
-
-            {/* Action buttons */}
-            <div className="flex items-center gap-2">
-              {!isConversationRoute && (
-                <>
-                  <ThemeToggle variant="icon" />
-
-                  <button
-                    data-testid="header-launch-button"
-                    type="button"
-                    onClick={handleCreateConversation}
-                    disabled={isPending || isCreatingConversationElsewhere}
-                    aria-label={t("COMMON$NEW_CONVERSATION", {
-                      defaultValue: "New conversation",
-                    })}
-                    className={cn(
-                      "relative flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed overflow-hidden",
-                      isLandingRoute
-                        ? "bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/40 hover:shadow-xl hover:shadow-brand-500/50 hover:scale-[1.02]"
-                        : "bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-md shadow-brand-500/30 hover:shadow-lg",
-                    )}
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>
-                      {t(I18nKey.CONVERSATION$START_NEW, {
-                        defaultValue: "Start new",
-                      })}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleOpenMessages}
-                    aria-label={t("COMMON$OPEN_CONVERSATIONS", {
-                      defaultValue: "Open conversations",
-                    })}
-                    className={cn(
-                      "relative p-2.5 rounded-xl transition-all duration-300",
-                      isLandingRoute
-                        ? "text-white/80 hover:text-white hover:bg-white/10"
-                        : "text-foreground-secondary hover:text-brand-400 hover:bg-white/5",
-                    )}
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleOpenUserSettings}
-                    aria-label={t("COMMON$USER_SETTINGS", {
-                      defaultValue: "User settings",
-                    })}
-                    className={cn(
-                      "relative p-2.5 rounded-xl transition-all duration-300",
-                      isLandingRoute
-                        ? "text-white/80 hover:text-white hover:bg-white/10"
-                        : "text-foreground-secondary hover:text-brand-400 hover:bg-white/5",
-                    )}
-                  >
-                    <User className="w-5 h-5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleOpenAppSettings}
-                    aria-label={t(I18nKey.USER$ACCOUNT_SETTINGS, {
-                      defaultValue: "Forge Pro settings",
-                    })}
-                    className={cn(
-                      "relative p-2.5 rounded-xl transition-all duration-300",
-                      isLandingRoute
-                        ? "text-white/80 hover:text-white hover:bg-white/10"
-                        : "text-foreground-secondary hover:text-brand-400 hover:bg-white/5",
-                    )}
-                  >
-                    <Settings className="w-5 h-5" />
-                    <span className="sr-only">
-                      {t(I18nKey.USER$ACCOUNT_SETTINGS, {
-                        defaultValue: "Forge Pro settings",
-                      })}
-                    </span>
-                  </button>
-                </>
-              )}
-
-              {/* Mobile menu toggle */}
-              <button
-                type="button"
-                onClick={() => setMobileOpen((o) => !o)}
-                aria-label={t("COMMON$TOGGLE_NAVIGATION", {
-                  defaultValue: "Toggle navigation",
-                })}
-                aria-expanded={mobileOpen}
-                className={cn(
-                  "md:hidden relative p-2.5 rounded-xl transition-all duration-300",
-                  isLandingRoute
-                    ? "text-white/80 hover:text-white hover:bg-white/10"
-                    : "text-foreground-secondary hover:text-brand-400 hover:bg-white/5",
-                )}
+          <div className="hidden md:flex items-center space-x-8">
+            {navigation.map((item) => (
+              <a
+                key={item.name}
+                href={item.href}
+                onClick={(e) => handleNavClick(e, item.href)}
+                className="transition-colors duration-200 text-sm font-medium"
+                style={{ color: "var(--text-secondary)" }}
+                onMouseEnter={(e) => {
+                  const target = e.currentTarget;
+                  target.style.color = "var(--text-primary)";
+                }}
+                onMouseLeave={(e) => {
+                  const target = e.currentTarget;
+                  target.style.color = "var(--text-secondary)";
+                }}
               >
-                <Menu className="w-5 h-5" />
-              </button>
-            </div>
+                {item.name}
+              </a>
+            ))}
           </div>
 
-          {/* Mobile menu */}
-          {mobileOpen && (
-            <div
-              className={cn(
-                "md:hidden border-t px-6 py-4 space-y-2",
-                isLandingRoute ? "border-white/10" : "border-white/5",
-              )}
+          <div className="hidden md:flex items-center space-x-4">
+            <ThemeToggle variant="icon" className="mr-2" />
+            <button
+              type="button"
+              onClick={() => navigate("/auth/login")}
+              className="px-4 py-2 text-sm font-medium transition-colors duration-200"
+              style={{ color: "var(--text-secondary)" }}
+              onMouseEnter={(e) => {
+                const target = e.currentTarget;
+                target.style.color = "var(--text-primary)";
+              }}
+              onMouseLeave={(e) => {
+                const target = e.currentTarget;
+                target.style.color = "var(--text-secondary)";
+              }}
             >
-              {navLinks.map(({ to, label, icon: Icon }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  className={cn(
-                    "flex items-center gap-3 rounded-xl px-4 py-3 text-sm transition-all duration-300",
-                    isLandingRoute
-                      ? "text-white/90 hover:text-white hover:bg-white/10"
-                      : "text-foreground-secondary hover:text-foreground hover:bg-white/5",
-                  )}
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <Icon
-                    className={cn(
-                      "h-4 w-4",
-                      isLandingRoute
-                        ? "text-white/70"
-                        : "text-foreground-tertiary",
-                    )}
-                  />
-                  {label}
-                </Link>
-              ))}
-            </div>
-          )}
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/auth/register")}
+              className="px-6 py-2.5 bg-brand-violet hover:bg-brand-violet-dark text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-glow hover:shadow-glow-lg"
+            >
+              Get Started
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="lg:hidden p-2 transition-colors"
+            style={{ color: "var(--text-secondary)" }}
+            onMouseEnter={(e) => {
+              const target = e.currentTarget;
+              target.style.color = "var(--text-primary)";
+            }}
+            onMouseLeave={(e) => {
+              const target = e.currentTarget;
+              target.style.color = "var(--text-secondary)";
+            }}
+            aria-label="Toggle mobile menu"
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
-      </div>
+
+        {isMobileMenuOpen && (
+          <div className="lg:hidden border-t border-border-subtle">
+            <div className="px-2 pt-2 pb-3 space-y-1">
+              {navigation.map((item) => (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  onClick={(e) => {
+                    handleNavClick(e, item.href);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="block px-3 py-2 text-base font-medium rounded-lg transition-all duration-200"
+                  style={{
+                    color: "var(--text-secondary)",
+                  }}
+                  onMouseEnter={(e) => {
+                    const target = e.currentTarget;
+                    target.style.color = "var(--text-primary)";
+                    target.style.backgroundColor = "var(--bg-tertiary)";
+                  }}
+                  onMouseLeave={(e) => {
+                    const target = e.currentTarget;
+                    target.style.color = "var(--text-secondary)";
+                    target.style.backgroundColor = "transparent";
+                  }}
+                >
+                  {item.name}
+                </a>
+              ))}
+              <div className="pt-4 space-y-2">
+                <div className="flex items-center justify-center pb-2">
+                  <ThemeToggle variant="icon" />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigate("/auth/login");
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200"
+                  style={{ color: "var(--text-secondary)" }}
+                  onMouseEnter={(e) => {
+                    const target = e.currentTarget;
+                    target.style.color = "var(--text-primary)";
+                    target.style.backgroundColor = "var(--bg-tertiary)";
+                  }}
+                  onMouseLeave={(e) => {
+                    const target = e.currentTarget;
+                    target.style.color = "var(--text-secondary)";
+                    target.style.backgroundColor = "transparent";
+                  }}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigate("/auth/register");
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full px-6 py-2.5 bg-brand-violet hover:bg-brand-violet-dark text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-glow"
+                >
+                  Get Started
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </nav>
     </header>
   );
 }

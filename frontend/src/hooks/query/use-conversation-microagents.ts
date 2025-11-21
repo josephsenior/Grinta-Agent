@@ -16,7 +16,7 @@ export const useConversationMicroagents = () => {
         throw new Error("No conversation ID provided");
       }
       const data = await Forge.getMicroagents(conversationId);
-      return data.microagents;
+      return data.microagents ?? [];
     },
     enabled:
       !!conversationId &&

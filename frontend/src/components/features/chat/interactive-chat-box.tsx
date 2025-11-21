@@ -29,7 +29,9 @@ interface InteractiveChatBoxProps {
   onFocus?: () => void;
   onBlur?: () => void;
   // Optional MetaSOP toggle support
+  // eslint-disable-next-line react/no-unused-prop-types
   sopEnabled?: boolean;
+  // eslint-disable-next-line react/no-unused-prop-types
   onToggleSop?: (enabled: boolean) => void;
   // Quick edit last message (↑ key)
   onEditLastMessage?: () => string | null;
@@ -45,12 +47,16 @@ export function InteractiveChatBox({
   placeholder,
   onFocus,
   onBlur,
-  sopEnabled,
-  onToggleSop,
   onEditLastMessage,
+  // sopEnabled and onToggleSop are intentionally unused for now but kept for future MetaSOP integration
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  sopEnabled,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onToggleSop,
 }: InteractiveChatBoxProps) {
   const { t } = useTranslation();
-  const { currentMode, handleModeChange } = useAutonomyMode();
+  // useAutonomyMode is called but values not currently used
+  useAutonomyMode();
   type ImageEntry = { file: File; previewUrl: string };
   const [images, setImages] = React.useState<ImageEntry[]>([]);
   const [files, setFiles] = React.useState<File[]>([]);
@@ -60,22 +66,6 @@ export function InteractiveChatBox({
   const [isDraggingOverContainer, setIsDraggingOverContainer] =
     React.useState(false); // For drag-drop overlay
   const hiddenFileInputRef = React.useRef<HTMLInputElement | null>(null);
-
-  // Helper to safely extract HTTP status from various error shapes.
-  const extractResponseStatus = (err: unknown): number | undefined => {
-    if (!err || typeof err !== "object") {
-      return undefined;
-    }
-
-    const errObj = err as Record<string, unknown>;
-    const resp = errObj.response;
-    if (!resp || typeof resp !== "object") {
-      return undefined;
-    }
-
-    const st = (resp as Record<string, unknown>).status;
-    return typeof st === "number" ? st : undefined;
-  };
 
   const revokePreviewUrl = (entry: ImageEntry) => {
     try {
@@ -216,7 +206,9 @@ export function InteractiveChatBox({
       const selectedFiles = Array.from(event.target.files);
       handleUpload(selectedFiles);
       // Allow selecting the same file repeatedly by resetting the value
-      event.target.value = "";
+      if (hiddenFileInputRef.current) {
+        hiddenFileInputRef.current.value = "";
+      }
     }
   };
 
@@ -249,10 +241,13 @@ export function InteractiveChatBox({
           <div className="text-center space-y-2">
             <Upload className="h-12 w-12 text-violet-500 mx-auto animate-bounce" />
             <p className="text-lg font-semibold text-text-primary">
-              Drop files here
+              {t("chat.dropFilesHere", "Drop files here")}
             </p>
             <p className="text-sm text-text-secondary">
-              Release to upload images and documents
+              {t(
+                "chat.releaseToUpload",
+                "Release to upload images and documents",
+              )}
             </p>
           </div>
         </div>
@@ -264,7 +259,7 @@ export function InteractiveChatBox({
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-medium text-text-primary">
-                Upload Files
+                {t("chat.uploadFiles", "Upload Files")}
               </h3>
               <Button
                 type="button"
@@ -287,9 +282,9 @@ export function InteractiveChatBox({
 
               <div className="flex items-center gap-2 text-xs text-text-foreground-secondary">
                 <ImageIcon className="h-3 w-3" />
-                <span>Images</span>
+                <span>{t("chat.images", "Images")}</span>
                 <FileText className="h-3 w-3 ml-2" />
-                <span>Documents</span>
+                <span>{t("chat.documents", "Documents")}</span>
               </div>
             </div>
           </CardContent>

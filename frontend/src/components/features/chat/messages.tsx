@@ -33,6 +33,7 @@ import { AgentState } from "#/types/agent-state";
 import { getFirstPRUrl } from "#/utils/parse-pr-url";
 import MemoryIcon from "#/icons/memory_icon.svg?react";
 import { cn } from "#/utils/utils";
+import { logger } from "#/utils/logger";
 
 // Small runtime helper to safely treat unknown values as records when appropriate
 const asRecord = (v: unknown): Record<string, unknown> | undefined =>
@@ -100,8 +101,7 @@ const logStreamingDebug = (
     return;
   }
 
-  // eslint-disable-next-line no-console
-  console.log("⚡ LIVE STREAMING (no coalescing):", {
+  logger.debug("⚡ LIVE STREAMING (no coalescing):", {
     totalMessages: messages.length,
     totalTurns: turns.length,
     turnsBreakdown: turns.map((turnItem, index) => ({
@@ -110,7 +110,9 @@ const logStreamingDebug = (
       eventCount: turnItem.events.length,
       eventIds: turnItem.events
         .map((event) =>
-          hasId(event as unknown) ? (event as any).id : undefined,
+          hasId(event as unknown)
+            ? (event as { id: number | string }).id
+            : undefined,
         )
         .filter(Boolean)
         .join(","),
@@ -131,6 +133,145 @@ const buildTurns = (messages: Array<ForgeAction | ForgeObservation>) => {
   logStreamingDebug(messages, grouped);
   return grouped;
 };
+
+// Type definitions for microagent processors
+type MicroagentProcessorContext = {
+  socketEvent: unknown;
+  conversationId: string;
+};
+
+type ConversationStatusUpdater = (
+  conversationId: string,
+  updater: (entry: EventMicroagentStatus) => EventMicroagentStatus,
+) => void;
+
+type MicroagentProcessorFactoryParams = {
+  updateStatus: ConversationStatusUpdater;
+  unsubscribe: (conversationId: string) => void;
+};
+
+type MicroagentProcessor = (context: MicroagentProcessorContext) => boolean;
+
+// Helper functions for microagent processors
+function canProcessAgentStateChange(
+  socketEvent: unknown,
+): socketEvent is ForgeObservation {
+  if (typeof socketEvent !== "object" || socketEvent === null) {
+    return false;
+  }
+  return (
+    isForgeEvent(socketEvent) &&
+    isAgentStateChangeObservation(socketEvent) &&
+    hasExtras(socketEvent)
+  );
+}
+
+function extractAgentState(event: ForgeObservation): AgentState | undefined {
+  try {
+    const record = asRecord(event);
+    const extras = asRecord(record?.extras);
+    const state = extras?.agent_state;
+    return typeof state === "number"
+      ? (state as unknown as AgentState)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function isTerminalAgentState(state: AgentState | undefined) {
+  return (
+    state === AgentState.FINISHED || state === AgentState.AWAITING_USER_INPUT
+  );
+}
+
+function createMicroagentErrorProcessor(
+  updateStatus: ConversationStatusUpdater,
+): MicroagentProcessor {
+  return ({ socketEvent, conversationId }) => {
+    if (!isErrorEvent(socketEvent) && !isAgentStatusError(socketEvent)) {
+      return false;
+    }
+
+    updateStatus(conversationId, (entry) => ({
+      ...entry,
+      status: MicroagentStatus.ERROR,
+    }));
+    return true;
+  };
+}
+
+function createMicroagentStateChangeProcessor(
+  updateStatus: ConversationStatusUpdater,
+  unsubscribe: (conversationId: string) => void,
+): MicroagentProcessor {
+  return ({ socketEvent, conversationId }) => {
+    if (!canProcessAgentStateChange(socketEvent)) {
+      return false;
+    }
+
+    const agentState = extractAgentState(socketEvent);
+    if (!isTerminalAgentState(agentState)) {
+      return false;
+    }
+
+    updateStatus(conversationId, (entry) => ({
+      ...entry,
+      status: MicroagentStatus.COMPLETED,
+    }));
+    unsubscribe(conversationId);
+    return true;
+  };
+}
+
+function createMicroagentFinishProcessor(
+  updateStatus: ConversationStatusUpdater,
+  unsubscribe: (conversationId: string) => void,
+): MicroagentProcessor {
+  return ({ socketEvent, conversationId }) => {
+    if (!isForgeEvent(socketEvent) || !isFinishAction(socketEvent)) {
+      return false;
+    }
+
+    let prUrl: string | undefined;
+
+    if (hasArgs(socketEvent)) {
+      try {
+        const record = asRecord(socketEvent);
+        const args = asRecord(record?.args);
+        const finalThought = args?.final_thought;
+        prUrl =
+          getFirstPRUrl(
+            typeof finalThought === "string"
+              ? finalThought
+              : String(finalThought ?? ""),
+          ) || undefined;
+      } catch {
+        prUrl = undefined;
+      }
+    }
+
+    updateStatus(conversationId, (entry) => ({
+      ...entry,
+      status: MicroagentStatus.COMPLETED,
+      prUrl: prUrl ?? entry.prUrl,
+    }));
+
+    unsubscribe(conversationId);
+    return true;
+  };
+}
+
+function createMicroagentProcessors({
+  updateStatus,
+  unsubscribe,
+}: MicroagentProcessorFactoryParams): MicroagentProcessor[] {
+  return [
+    createMicroagentErrorProcessor(updateStatus),
+    createMicroagentStateChangeProcessor(updateStatus, unsubscribe),
+    createMicroagentFinishProcessor(updateStatus, unsubscribe),
+  ];
+}
 
 function useMicroagentStatusManager(
   unsubscribeFromConversation: (conversationId: string) => void,
@@ -244,6 +385,362 @@ interface MessagesProps {
   showTechnicalDetails?: boolean;
   onAskAboutCode?: (code: string) => void;
   onRunCode?: (code: string, language: string) => void;
+}
+
+// Type definitions for helper functions
+interface TurnRenderContext {
+  turns: Array<{
+    type: string;
+    events: Array<ForgeAction | ForgeObservation>;
+    startIndex: number;
+  }>;
+  isAwaitingUserConfirmation: boolean;
+  showTechnicalDetails: boolean;
+  onAskAboutCode?: (code: string) => void;
+  onRunCode?: (code: string, language: string) => void;
+  actionHasObservationPair: (event: unknown) => boolean;
+  getMicroagentStatusForEvent: (eventId: number) => MicroagentStatus | null;
+  getMicroagentConversationIdForEvent: (eventId: number) => string | undefined;
+  getMicroagentPRUrlForEvent: (eventId: number) => string | undefined;
+  conversation: ReturnType<typeof useUserConversation>["data"];
+  setSelectedEventId: React.Dispatch<React.SetStateAction<number | null>>;
+  setShowLaunchMicroagentModal: React.Dispatch<React.SetStateAction<boolean>>;
+  t: TFunction;
+}
+
+type EventGroup = {
+  type: "message" | "other";
+  events: Array<ForgeAction | ForgeObservation>;
+};
+
+// Helper functions - defined in dependency order
+function extractMessageContent(event: ForgeAction | ForgeObservation): string {
+  try {
+    const args = hasArgs(event) ? (event as ForgeAction).args : undefined;
+    if (args) {
+      const record = args as Record<string, unknown>;
+      if (typeof record.content === "string") return record.content;
+      if (typeof record.message === "string") return record.message;
+      if (typeof record.thought === "string") return record.thought;
+    }
+
+    const ev = asRecord(event);
+    if (typeof ev?.message === "string") return ev.message;
+    if (typeof ev?.content === "string") return ev.content;
+  } catch {
+    return "";
+  }
+
+  return "";
+}
+
+function groupEventsByType(
+  events: Array<ForgeAction | ForgeObservation>,
+): EventGroup[] {
+  const groups: EventGroup[] = [];
+  let currentGroup: EventGroup | null = null;
+
+  events.forEach((event) => {
+    const isMessage = isAssistantMessage(event);
+    const groupType: EventGroup["type"] = isMessage ? "message" : "other";
+
+    if (!currentGroup || currentGroup.type !== groupType) {
+      currentGroup = { type: groupType, events: [event] };
+      groups.push(currentGroup);
+    } else {
+      currentGroup.events.push(event);
+    }
+  });
+
+  return groups;
+}
+
+function buildEventActions({
+  event,
+  context,
+}: {
+  event: ForgeAction | ForgeObservation;
+  context: TurnRenderContext;
+}):
+  | Array<{ icon: React.ReactNode; onClick: () => void; tooltip?: string }>
+  | undefined {
+  if (!context.conversation?.selected_repository) {
+    return undefined;
+  }
+
+  return [
+    {
+      icon: <MemoryIcon className="w-[14px] h-[14px] text-white" />,
+      onClick: () => {
+        if (hasId(event)) {
+          context.setSelectedEventId(Number(event.id));
+          context.setShowLaunchMicroagentModal(true);
+        }
+      },
+      tooltip: context.t("MICROAGENT$ADD_TO_MEMORY"),
+    },
+  ];
+}
+
+function renderCombinedMessageGroup({
+  group,
+  groupIndex,
+  turnIndex,
+  isLastTurn,
+  context,
+}: {
+  group: EventGroup;
+  groupIndex: number;
+  turnIndex: number;
+  isLastTurn: boolean;
+  context: TurnRenderContext;
+}) {
+  const combinedContent = group.events
+    .map(extractMessageContent)
+    .filter(Boolean)
+    .join("\n\n");
+
+  const firstEvent = group.events[0];
+  const eventKey = hasId(firstEvent)
+    ? `agent-message-group-${turnIndex}-${groupIndex}-${firstEvent.id}`
+    : `agent-message-group-${turnIndex}-${groupIndex}`;
+
+  const combinedEvent = {
+    ...(firstEvent as ForgeAction | ForgeObservation),
+    content: combinedContent,
+    message: combinedContent,
+  };
+
+  return (
+    <div key={eventKey} className="event-message mb-2">
+      <EventMessage
+        event={combinedEvent as ForgeAction | ForgeObservation}
+        hasObservationPair={false}
+        isAwaitingUserConfirmation={context.isAwaitingUserConfirmation}
+        isLastMessage={groupIndex === group.events.length - 1}
+        showTechnicalDetails={context.showTechnicalDetails}
+        isInLast10Actions={isLastTurn}
+        onAskAboutCode={context.onAskAboutCode}
+        onRunCode={context.onRunCode}
+        hideAvatar
+        compactMode
+      />
+    </div>
+  );
+}
+
+function renderAgentEvent({
+  event,
+  eventIndex,
+  group,
+  groupIndex,
+  turnIndex,
+  isLastTurn,
+  context,
+}: {
+  event: ForgeAction | ForgeObservation;
+  eventIndex: number;
+  group: EventGroup;
+  groupIndex: number;
+  turnIndex: number;
+  isLastTurn: boolean;
+  context: TurnRenderContext;
+}) {
+  const nextEvent = group.events[eventIndex + 1];
+  const eventKey = hasId(event)
+    ? `agent-event-${turnIndex}-${groupIndex}-${eventIndex}-${event.id}`
+    : `agent-event-${turnIndex}-${groupIndex}-${eventIndex}`;
+  const eventId = hasId(event) ? Number(event.id) : undefined;
+  const spacingClass = getEventSpacing(event, nextEvent);
+
+  return (
+    <div key={eventKey} className={cn("event-message", spacingClass)}>
+      <EventMessage
+        event={event}
+        hasObservationPair={context.actionHasObservationPair(event)}
+        isAwaitingUserConfirmation={context.isAwaitingUserConfirmation}
+        isLastMessage={
+          groupIndex === group.events.length - 1 &&
+          eventIndex === group.events.length - 1
+        }
+        showTechnicalDetails={context.showTechnicalDetails}
+        microagentStatus={
+          eventId ? context.getMicroagentStatusForEvent(eventId) : undefined
+        }
+        microagentConversationId={
+          eventId
+            ? context.getMicroagentConversationIdForEvent(eventId)
+            : undefined
+        }
+        microagentPRUrl={
+          eventId ? context.getMicroagentPRUrlForEvent(eventId) : undefined
+        }
+        actions={buildEventActions({ event, context })}
+        isInLast10Actions={isLastTurn}
+        onAskAboutCode={context.onAskAboutCode}
+        onRunCode={context.onRunCode}
+        hideAvatar
+        compactMode
+      />
+    </div>
+  );
+}
+
+function renderEventGroup({
+  group,
+  groupIndex,
+  turnIndex,
+  isLastTurn,
+  context,
+}: {
+  group: EventGroup;
+  groupIndex: number;
+  turnIndex: number;
+  isLastTurn: boolean;
+  context: TurnRenderContext;
+}) {
+  if (group.type === "message") {
+    return renderCombinedMessageGroup({
+      group,
+      groupIndex,
+      turnIndex,
+      isLastTurn,
+      context,
+    });
+  }
+
+  return group.events.map((event, eventIndex) =>
+    renderAgentEvent({
+      event,
+      eventIndex,
+      group,
+      groupIndex,
+      turnIndex,
+      isLastTurn,
+      context,
+    }),
+  );
+}
+
+function renderUserTurn({
+  turn,
+  turnIndex,
+  isLastTurn,
+  context,
+}: {
+  turn: { events: Array<ForgeAction | ForgeObservation> };
+  turnIndex: number;
+  isLastTurn: boolean;
+  context: TurnRenderContext;
+}) {
+  const message = turn.events[0] as ForgeAction | ForgeObservation;
+  const messageKey = hasId(message)
+    ? `user-turn-${turnIndex}-${message.id}`
+    : `user-turn-${turnIndex}`;
+
+  return (
+    <div key={messageKey} className={cn("w-full group relative", "mb-3")}>
+      <EventMessage
+        event={message as ForgeAction | ForgeObservation}
+        hasObservationPair={false}
+        isAwaitingUserConfirmation={context.isAwaitingUserConfirmation}
+        isLastMessage={false}
+        showTechnicalDetails={context.showTechnicalDetails}
+        isInLast10Actions={isLastTurn}
+        onAskAboutCode={context.onAskAboutCode}
+        onRunCode={context.onRunCode}
+      />
+    </div>
+  );
+}
+
+function renderAgentTurn({
+  turn,
+  turnIndex,
+  key,
+  isLastTurn,
+  context,
+}: {
+  turn: { events: Array<ForgeAction | ForgeObservation> };
+  turnIndex: number;
+  key: string;
+  isLastTurn: boolean;
+  context: TurnRenderContext;
+}) {
+  const filteredEvents = turn.events.filter((event) =>
+    shouldRenderEvent(event, context.showTechnicalDetails),
+  );
+  const groups = groupEventsByType(filteredEvents);
+
+  return (
+    <div
+      key={key}
+      className={cn("w-full flex items-start gap-2 group relative", "mb-3")}
+    >
+      <div
+        aria-label="Agent"
+        className="shrink-0 w-8 h-8 flex items-center justify-center"
+      >
+        <img
+          src="/agent-icon.png?v=2"
+          alt="Forge Agent"
+          className="w-8 h-8 object-contain"
+        />
+      </div>
+
+      <div className="flex-1 min-w-0 flex flex-col">
+        {groups.map((group, groupIndex) =>
+          renderEventGroup({
+            group,
+            groupIndex,
+            turnIndex,
+            isLastTurn,
+            context,
+          }),
+        )}
+
+        {turn.events.length > 1 && !context.showTechnicalDetails && (
+          <ActionSummary
+            events={turn.events.filter((event) => !isAssistantMessage(event))}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function renderTurn({
+  turn,
+  turnIndex,
+  context,
+}: {
+  turn: {
+    type: string;
+    events: Array<ForgeAction | ForgeObservation>;
+    startIndex: number;
+  };
+  turnIndex: number;
+  context: TurnRenderContext;
+}) {
+  const isLastTurn = turnIndex === context.turns.length - 1;
+  const key = `turn-${turnIndex}-${turn.type}-${turn.startIndex}`;
+
+  if (turn.type === "user") {
+    return renderUserTurn({
+      turn,
+      turnIndex,
+      isLastTurn,
+      context,
+    });
+  }
+
+  return renderAgentTurn({
+    turn,
+    turnIndex,
+    key,
+    isLastTurn,
+    context,
+  });
 }
 
 export const Messages: React.FC<MessagesProps> = React.memo(
@@ -366,7 +863,7 @@ export const Messages: React.FC<MessagesProps> = React.memo(
 
     return (
       <>
-        {turns.map((turn: any, turnIndex: number) =>
+        {turns.map((turn: Turn, turnIndex: number) =>
           renderTurn({
             turn,
             turnIndex,
@@ -403,497 +900,3 @@ export const Messages: React.FC<MessagesProps> = React.memo(
 );
 
 Messages.displayName = "Messages";
-
-interface TurnRenderContext {
-  turns: Array<{
-    type: string;
-    events: Array<ForgeAction | ForgeObservation>;
-    startIndex: number;
-  }>;
-  isAwaitingUserConfirmation: boolean;
-  showTechnicalDetails: boolean;
-  onAskAboutCode?: (code: string) => void;
-  onRunCode?: (code: string, language: string) => void;
-  actionHasObservationPair: (event: unknown) => boolean;
-  getMicroagentStatusForEvent: (eventId: number) => MicroagentStatus | null;
-  getMicroagentConversationIdForEvent: (eventId: number) => string | undefined;
-  getMicroagentPRUrlForEvent: (eventId: number) => string | undefined;
-  conversation: ReturnType<typeof useUserConversation>["data"];
-  setSelectedEventId: React.Dispatch<React.SetStateAction<number | null>>;
-  setShowLaunchMicroagentModal: React.Dispatch<React.SetStateAction<boolean>>;
-  t: TFunction;
-}
-
-function renderTurn({
-  turn,
-  turnIndex,
-  context,
-}: {
-  turn: {
-    type: string;
-    events: Array<ForgeAction | ForgeObservation>;
-    startIndex: number;
-  };
-  turnIndex: number;
-  context: TurnRenderContext;
-}) {
-  const isLastTurn = turnIndex === context.turns.length - 1;
-  const key = `turn-${turnIndex}-${turn.type}-${turn.startIndex}`;
-
-  if (turn.type === "user") {
-    return renderUserTurn({
-      turn,
-      turnIndex,
-      key,
-      isLastTurn,
-      context,
-    });
-  }
-
-  return renderAgentTurn({
-    turn,
-    turnIndex,
-    key,
-    isLastTurn,
-    context,
-  });
-}
-
-function renderUserTurn({
-  turn,
-  turnIndex,
-  key,
-  isLastTurn,
-  context,
-}: {
-  turn: { events: Array<ForgeAction | ForgeObservation> };
-  turnIndex: number;
-  key: string;
-  isLastTurn: boolean;
-  context: TurnRenderContext;
-}) {
-  const message = turn.events[0] as ForgeAction | ForgeObservation;
-  const messageKey = hasId(message)
-    ? `user-turn-${turnIndex}-${message.id}`
-    : `user-turn-${turnIndex}`;
-
-  return (
-    <div key={messageKey} className={cn("w-full group relative", "mb-3")}>
-      <EventMessage
-        event={message as ForgeAction | ForgeObservation}
-        hasObservationPair={false}
-        isAwaitingUserConfirmation={context.isAwaitingUserConfirmation}
-        isLastMessage={false}
-        showTechnicalDetails={context.showTechnicalDetails}
-        isInLast10Actions={isLastTurn}
-        onAskAboutCode={context.onAskAboutCode}
-        onRunCode={context.onRunCode}
-      />
-    </div>
-  );
-}
-
-function renderAgentTurn({
-  turn,
-  turnIndex,
-  key,
-  isLastTurn,
-  context,
-}: {
-  turn: { events: Array<ForgeAction | ForgeObservation> };
-  turnIndex: number;
-  key: string;
-  isLastTurn: boolean;
-  context: TurnRenderContext;
-}) {
-  const filteredEvents = turn.events.filter((event) =>
-    shouldRenderEvent(event, context.showTechnicalDetails),
-  );
-  const groups = groupEventsByType(filteredEvents);
-
-  return (
-    <div
-      key={key}
-      className={cn("w-full flex items-start gap-2 group relative", "mb-3")}
-    >
-      <div
-        aria-label="Agent"
-        className="shrink-0 w-8 h-8 flex items-center justify-center"
-      >
-        <img
-          src="/agent-icon.png?v=2"
-          alt="Forge Agent"
-          className="w-8 h-8 object-contain"
-        />
-      </div>
-
-      <div className="flex-1 min-w-0 flex flex-col">
-        {groups.map((group, groupIndex) =>
-          renderEventGroup({
-            group,
-            groupIndex,
-            turnIndex,
-            isLastTurn,
-            context,
-          }),
-        )}
-
-        {turn.events.length > 1 && !context.showTechnicalDetails && (
-          <ActionSummary
-            events={turn.events.filter((event) => !isAssistantMessage(event))}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-type EventGroup = {
-  type: "message" | "other";
-  events: Array<ForgeAction | ForgeObservation>;
-};
-
-function groupEventsByType(
-  events: Array<ForgeAction | ForgeObservation>,
-): EventGroup[] {
-  const groups: EventGroup[] = [];
-  let currentGroup: EventGroup | null = null;
-
-  events.forEach((event) => {
-    const isMessage = isAssistantMessage(event);
-    const groupType: EventGroup["type"] = isMessage ? "message" : "other";
-
-    if (!currentGroup || currentGroup.type !== groupType) {
-      currentGroup = { type: groupType, events: [event] };
-      groups.push(currentGroup);
-    } else {
-      currentGroup.events.push(event);
-    }
-  });
-
-  return groups;
-}
-
-function renderEventGroup({
-  group,
-  groupIndex,
-  turnIndex,
-  isLastTurn,
-  context,
-}: {
-  group: EventGroup;
-  groupIndex: number;
-  turnIndex: number;
-  isLastTurn: boolean;
-  context: TurnRenderContext;
-}) {
-  if (group.type === "message") {
-    return renderCombinedMessageGroup({
-      group,
-      groupIndex,
-      turnIndex,
-      isLastTurn,
-      context,
-    });
-  }
-
-  return group.events.map((event, eventIndex) =>
-    renderAgentEvent({
-      event,
-      eventIndex,
-      group,
-      groupIndex,
-      turnIndex,
-      isLastTurn,
-      context,
-    }),
-  );
-}
-
-function renderCombinedMessageGroup({
-  group,
-  groupIndex,
-  turnIndex,
-  isLastTurn,
-  context,
-}: {
-  group: EventGroup;
-  groupIndex: number;
-  turnIndex: number;
-  isLastTurn: boolean;
-  context: TurnRenderContext;
-}) {
-  const combinedContent = group.events
-    .map(extractMessageContent)
-    .filter(Boolean)
-    .join("\n\n");
-
-  const firstEvent = group.events[0];
-  const eventKey = hasId(firstEvent)
-    ? `agent-message-group-${turnIndex}-${groupIndex}-${firstEvent.id}`
-    : `agent-message-group-${turnIndex}-${groupIndex}`;
-
-  const combinedEvent = {
-    ...(firstEvent as ForgeAction | ForgeObservation),
-    content: combinedContent,
-    message: combinedContent,
-  };
-
-  return (
-    <div key={eventKey} className="event-message mb-2">
-      <EventMessage
-        event={combinedEvent as ForgeAction | ForgeObservation}
-        hasObservationPair={false}
-        isAwaitingUserConfirmation={context.isAwaitingUserConfirmation}
-        isLastMessage={groupIndex === group.events.length - 1}
-        showTechnicalDetails={context.showTechnicalDetails}
-        isInLast10Actions={isLastTurn}
-        onAskAboutCode={context.onAskAboutCode}
-        onRunCode={context.onRunCode}
-        hideAvatar
-        compactMode
-      />
-    </div>
-  );
-}
-
-function renderAgentEvent({
-  event,
-  eventIndex,
-  group,
-  groupIndex,
-  turnIndex,
-  isLastTurn,
-  context,
-}: {
-  event: ForgeAction | ForgeObservation;
-  eventIndex: number;
-  group: EventGroup;
-  groupIndex: number;
-  turnIndex: number;
-  isLastTurn: boolean;
-  context: TurnRenderContext;
-}) {
-  const nextEvent = group.events[eventIndex + 1];
-  const eventKey = hasId(event)
-    ? `agent-event-${turnIndex}-${groupIndex}-${eventIndex}-${event.id}`
-    : `agent-event-${turnIndex}-${groupIndex}-${eventIndex}`;
-  const eventId = hasId(event) ? Number(event.id) : undefined;
-  const spacingClass = getEventSpacing(event, nextEvent);
-
-  return (
-    <div key={eventKey} className={cn("event-message", spacingClass)}>
-      <EventMessage
-        event={event}
-        hasObservationPair={context.actionHasObservationPair(event)}
-        isAwaitingUserConfirmation={context.isAwaitingUserConfirmation}
-        isLastMessage={
-          groupIndex === group.events.length - 1 &&
-          eventIndex === group.events.length - 1
-        }
-        showTechnicalDetails={context.showTechnicalDetails}
-        microagentStatus={
-          eventId ? context.getMicroagentStatusForEvent(eventId) : undefined
-        }
-        microagentConversationId={
-          eventId
-            ? context.getMicroagentConversationIdForEvent(eventId)
-            : undefined
-        }
-        microagentPRUrl={
-          eventId ? context.getMicroagentPRUrlForEvent(eventId) : undefined
-        }
-        actions={buildEventActions({ event, context })}
-        isInLast10Actions={isLastTurn}
-        onAskAboutCode={context.onAskAboutCode}
-        onRunCode={context.onRunCode}
-        hideAvatar
-        compactMode
-      />
-    </div>
-  );
-}
-
-function extractMessageContent(event: ForgeAction | ForgeObservation): string {
-  try {
-    const args = hasArgs(event) ? (event as ForgeAction).args : undefined;
-    if (args) {
-      const record = args as Record<string, unknown>;
-      if (typeof record.content === "string") return record.content;
-      if (typeof record.message === "string") return record.message;
-      if (typeof record.thought === "string") return record.thought;
-    }
-
-    const ev = asRecord(event);
-    if (typeof ev?.message === "string") return ev.message;
-    if (typeof ev?.content === "string") return ev.content;
-  } catch {
-    return "";
-  }
-
-  return "";
-}
-
-function buildEventActions({
-  event,
-  context,
-}: {
-  event: ForgeAction | ForgeObservation;
-  context: TurnRenderContext;
-}):
-  | Array<{ icon: React.ReactNode; onClick: () => void; tooltip?: string }>
-  | undefined {
-  if (!context.conversation?.selected_repository) {
-    return undefined;
-  }
-
-  return [
-    {
-      icon: <MemoryIcon className="w-[14px] h-[14px] text-white" />,
-      onClick: () => {
-        if (hasId(event)) {
-          context.setSelectedEventId(Number(event.id));
-          context.setShowLaunchMicroagentModal(true);
-        }
-      },
-      tooltip: context.t("MICROAGENT$ADD_TO_MEMORY"),
-    },
-  ];
-}
-
-type MicroagentProcessorContext = {
-  socketEvent: unknown;
-  conversationId: string;
-};
-
-type ConversationStatusUpdater = (
-  conversationId: string,
-  updater: (entry: EventMicroagentStatus) => EventMicroagentStatus,
-) => void;
-
-type MicroagentProcessorFactoryParams = {
-  updateStatus: ConversationStatusUpdater;
-  unsubscribe: (conversationId: string) => void;
-};
-
-type MicroagentProcessor = (context: MicroagentProcessorContext) => boolean;
-
-function createMicroagentProcessors({
-  updateStatus,
-  unsubscribe,
-}: MicroagentProcessorFactoryParams): MicroagentProcessor[] {
-  return [
-    createMicroagentErrorProcessor(updateStatus),
-    createMicroagentStateChangeProcessor(updateStatus, unsubscribe),
-    createMicroagentFinishProcessor(updateStatus, unsubscribe),
-  ];
-}
-
-function createMicroagentErrorProcessor(
-  updateStatus: ConversationStatusUpdater,
-): MicroagentProcessor {
-  return ({ socketEvent, conversationId }) => {
-    if (!isErrorEvent(socketEvent) && !isAgentStatusError(socketEvent)) {
-      return false;
-    }
-
-    updateStatus(conversationId, (entry) => ({
-      ...entry,
-      status: MicroagentStatus.ERROR,
-    }));
-    return true;
-  };
-}
-
-function createMicroagentStateChangeProcessor(
-  updateStatus: ConversationStatusUpdater,
-  unsubscribe: (conversationId: string) => void,
-): MicroagentProcessor {
-  return ({ socketEvent, conversationId }) => {
-    if (!canProcessAgentStateChange(socketEvent)) {
-      return false;
-    }
-
-    const agentState = extractAgentState(socketEvent);
-    if (!isTerminalAgentState(agentState)) {
-      return false;
-    }
-
-    updateStatus(conversationId, (entry) => ({
-      ...entry,
-      status: MicroagentStatus.COMPLETED,
-    }));
-    unsubscribe(conversationId);
-    return true;
-  };
-}
-
-function canProcessAgentStateChange(
-  socketEvent: unknown,
-): socketEvent is ForgeObservation {
-  if (typeof socketEvent !== "object" || socketEvent === null) {
-    return false;
-  }
-  return (
-    isForgeEvent(socketEvent) &&
-    isAgentStateChangeObservation(socketEvent) &&
-    hasExtras(socketEvent)
-  );
-}
-
-function extractAgentState(event: ForgeObservation): AgentState | undefined {
-  try {
-    const record = asRecord(event);
-    const extras = asRecord(record?.extras);
-    const state = extras?.agent_state;
-    return typeof state === "number"
-      ? (state as unknown as AgentState)
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function isTerminalAgentState(state: AgentState | undefined) {
-  return (
-    state === AgentState.FINISHED || state === AgentState.AWAITING_USER_INPUT
-  );
-}
-
-function createMicroagentFinishProcessor(
-  updateStatus: ConversationStatusUpdater,
-  unsubscribe: (conversationId: string) => void,
-): MicroagentProcessor {
-  return ({ socketEvent, conversationId }) => {
-    if (!isForgeEvent(socketEvent) || !isFinishAction(socketEvent)) {
-      return false;
-    }
-
-    let prUrl: string | undefined;
-
-    if (hasArgs(socketEvent)) {
-      try {
-        const record = asRecord(socketEvent);
-        const args = asRecord(record?.args);
-        const finalThought = args?.final_thought;
-        prUrl =
-          getFirstPRUrl(
-            typeof finalThought === "string"
-              ? finalThought
-              : String(finalThought ?? ""),
-          ) || undefined;
-      } catch {
-        prUrl = undefined;
-      }
-    }
-
-    updateStatus(conversationId, (entry) => ({
-      ...entry,
-      status: MicroagentStatus.COMPLETED,
-      prUrl: prUrl ?? entry.prUrl,
-    }));
-
-    unsubscribe(conversationId);
-    return true;
-  };
-}

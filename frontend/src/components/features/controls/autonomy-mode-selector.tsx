@@ -81,7 +81,7 @@ export function AutonomyModeSelector({
 
   // Click outside to close dropdown
   React.useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return undefined;
 
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -115,7 +115,6 @@ export function AutonomyModeSelector({
         ?.getBoundingClientRect();
       if (buttonRect) {
         const spaceAbove = buttonRect.top;
-        const spaceBelow = window.innerHeight - buttonRect.bottom;
         setDropdownPosition(spaceAbove > 200 ? "above" : "below");
       }
     }
@@ -147,11 +146,11 @@ export function AutonomyModeSelector({
         <div
           className={cn(
             "absolute -top-1 -right-1 w-2 h-2 rounded-full animate-pulse",
-            currentMode === "full"
-              ? "bg-green-500"
-              : currentMode === "supervised"
-                ? "bg-orange-500"
-                : "bg-blue-500",
+            (() => {
+              if (currentMode === "full") return "bg-green-500";
+              if (currentMode === "supervised") return "bg-orange-500";
+              return "bg-blue-500";
+            })(),
           )}
         />
 
@@ -163,7 +162,7 @@ export function AutonomyModeSelector({
         {/* Keyboard hint */}
         <span className="hidden group-hover:inline-flex items-center gap-1 ml-1 text-[10px] text-text-tertiary">
           <kbd className="px-1 py-0.5 bg-background-tertiary rounded text-[9px]">
-            ⌃⇧A
+            {t("controls.autonomyModeShortcut", "⌃⇧A")}
           </kbd>
         </span>
       </Button>
@@ -182,7 +181,7 @@ export function AutonomyModeSelector({
               <div className="flex items-center gap-2">
                 <Settings className="w-4 h-4 text-text-secondary" />
                 <span className="text-xs font-medium text-text-secondary">
-                  Autonomy Mode
+                  {t("controls.autonomyMode", "Autonomy Mode")}
                 </span>
               </div>
             </div>

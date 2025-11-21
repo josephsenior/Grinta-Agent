@@ -12,56 +12,7 @@ interface StreamingTerminalProps {
   className?: string;
 }
 
-export function StreamingTerminalClean({
-  eventId,
-  streamId,
-  content,
-  exitCode,
-  command,
-  onComplete,
-  className,
-}: StreamingTerminalProps) {
-  const controller = useStreamingTerminalController({
-    eventId,
-    streamId,
-    content,
-    exitCode,
-    command,
-    onComplete,
-  });
-
-  const exitCodeSymbol =
-    exitCode === undefined ? "" : exitCode === 0 ? "✓" : "✗";
-
-  return (
-    <div
-      ref={controller.terminalRef}
-      role="region"
-      className={`streaming-terminal rounded-lg overflow-hidden border border-border/40 bg-[#0a0a0a] my-2 shadow-lg w-full ${controller.isStreaming ? "streaming" : ""} ${className ?? ""}`}
-    >
-      <StreamingTerminalCleanHeader
-        command={command}
-        exitCode={exitCode}
-        exitCodeColor={controller.exitCodeColor}
-        exitCodeSymbol={exitCodeSymbol}
-        lineCount={controller.lineCount}
-        isLongOutput={controller.isLongOutput}
-        isExpanded={controller.isExpanded}
-        onToggleExpand={controller.toggleExpand}
-        onCopy={controller.handleCopy}
-        isCopied={controller.isCopied}
-      />
-
-      <StreamingTerminalContent
-        contentRef={controller.contentRef}
-        displayedContent={controller.displayedContent}
-        isStreaming={controller.isStreaming}
-        maxHeight={controller.maxHeight}
-      />
-    </div>
-  );
-}
-
+// Helper components - defined before use
 function StreamingTerminalCleanHeader({
   command,
   exitCode,
@@ -166,12 +117,65 @@ function StreamingTerminalContent({
         transition: "max-height 0.2s ease-in-out",
       }}
     >
-      <pre className="whitespace-pre-wrap break-words text-foreground-secondary/90">
+      <pre className="whitespace-pre-wrap text-foreground-secondary/90">
         {displayedContent}
         {isStreaming && (
           <span className="inline-block w-1.5 h-3 bg-green-500 ml-1 animate-pulse" />
         )}
       </pre>
+    </div>
+  );
+}
+
+export function StreamingTerminalClean({
+  eventId,
+  streamId,
+  content,
+  exitCode,
+  command,
+  onComplete,
+  className,
+}: StreamingTerminalProps) {
+  const controller = useStreamingTerminalController({
+    eventId,
+    streamId,
+    content,
+    exitCode,
+    command,
+    onComplete,
+  });
+
+  const exitCodeSymbol = (() => {
+    if (exitCode === undefined) return "";
+    if (exitCode === 0) return "✓";
+    return "✗";
+  })();
+
+  return (
+    <div
+      ref={controller.terminalRef}
+      role="region"
+      className={`streaming-terminal rounded-lg overflow-hidden border border-border/40 bg-[#0a0a0a] my-2 shadow-lg w-full ${controller.isStreaming ? "streaming" : ""} ${className ?? ""}`}
+    >
+      <StreamingTerminalCleanHeader
+        command={command}
+        exitCode={exitCode}
+        exitCodeColor={controller.exitCodeColor}
+        exitCodeSymbol={exitCodeSymbol}
+        lineCount={controller.lineCount}
+        isLongOutput={controller.isLongOutput}
+        isExpanded={controller.isExpanded}
+        onToggleExpand={controller.toggleExpand}
+        onCopy={controller.handleCopy}
+        isCopied={controller.isCopied}
+      />
+
+      <StreamingTerminalContent
+        contentRef={controller.contentRef}
+        displayedContent={controller.displayedContent}
+        isStreaming={controller.isStreaming}
+        maxHeight={controller.maxHeight}
+      />
     </div>
   );
 }

@@ -3,12 +3,15 @@ import { createRoot } from "react-dom/client";
 import { HydratedRouter } from "react-router/dom";
 import { Provider } from "react-redux";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import store from "./store";
 import { queryClient } from "./query-client-config";
-import "./i18n";
+import i18n from "./i18n";
+import { logger } from "./utils/logger";
 
 // Small, accessible fallback shown while route modules or client loaders run.
 function HydrateFallback() {
+  const { t } = useTranslation();
   return (
     <div
       role="status"
@@ -44,9 +47,14 @@ function HydrateFallback() {
           />
         </path>
       </svg>
-      <div style={{ marginTop: 12, color: "#222" }}>Loading application…</div>
+      <div style={{ marginTop: 12, color: "#222" }}>
+        {t("MAIN$LOADING_APPLICATION", "Loading application…")}
+      </div>
       <div style={{ marginTop: 6, color: "#666", fontSize: 13 }}>
-        Preparing UI — this usually only takes a moment.
+        {t(
+          "MAIN$PREPARING_UI",
+          "Preparing UI — this usually only takes a moment.",
+        )}
       </div>
     </div>
   );
@@ -55,25 +63,27 @@ function HydrateFallback() {
 // Minimal ErrorBoundary to avoid showing a blank page on hydration/runtime errors
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
-  { hasError: boolean; error?: Error | null }
+  { hasError: boolean }
 > {
   constructor(props: { children: React.ReactNode }) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
+  static getDerivedStateFromError() {
+    return { hasError: true };
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    // Keep console output readable during development
-    // eslint-disable-next-line no-console
-    console.error("Hydration/runtime error:", error, info);
+    // Log error for debugging
+    logger.error("Hydration/runtime error:", error, info);
   }
 
   render() {
-    if (this.state.hasError) {
+    const { hasError } = this.state;
+    const { children } = this.props;
+
+    if (hasError) {
       return (
         <div
           role="alert"
@@ -87,24 +97,29 @@ class ErrorBoundary extends React.Component<
             textAlign: "center",
           }}
         >
-          <h1 style={{ margin: 0 }}>Something went wrong</h1>
+          <h1 style={{ margin: 0 }}>
+            {i18n.t("MAIN$SOMETHING_WENT_WRONG", "Something went wrong")}
+          </h1>
           <p style={{ color: "#666" }}>
-            We encountered an error while starting the app. You can try
-            reloading the page or open the console for details.
+            {i18n.t(
+              "MAIN$ERROR_STARTING_APP",
+              "We encountered an error while starting the app. You can try reloading the page or open the console for details.",
+            )}
           </p>
           <div style={{ marginTop: 12 }}>
             <button
+              type="button"
               onClick={() => window.location.reload()}
               style={{ padding: "8px 12px", cursor: "pointer" }}
             >
-              Reload
+              {i18n.t("MAIN$RELOAD", "Reload")}
             </button>
           </div>
         </div>
       );
     }
 
-    return this.props.children as React.ReactElement;
+    return children as React.ReactElement;
   }
 }
 

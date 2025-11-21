@@ -132,23 +132,7 @@ export function buildOrchestrationDiagramState(
   };
 }
 
-export function convertToOrchestrationStep(step: StepInput): OrchestrationStep {
-  return {
-    id: step.step_id || step.id || "",
-    role: mapRoleString(step.role ?? ""),
-    title: step.title || step.role || "Untitled Step",
-    description: step.description,
-    status: mapStatusString(step.status ?? ""),
-    artifact: step.artifact
-      ? parseArtifact(step.artifact, mapRoleString(step.role ?? ""))
-      : undefined,
-    started_at: step.started_at,
-    completed_at: step.completed_at,
-    error: step.error,
-    progress: step.progress,
-  };
-}
-
+// Helper functions - defined before use
 export function mapRoleString(
   role: string,
 ): "product_manager" | "architect" | "engineer" | "qa" {
@@ -177,4 +161,21 @@ export function mapStatusString(
     return "blocked";
   }
   return "pending";
+}
+
+export function convertToOrchestrationStep(step: StepInput): OrchestrationStep {
+  return {
+    id: step.step_id || step.id || "",
+    role: mapRoleString(step.role ?? ""),
+    title: step.title || step.role || "Untitled Step",
+    description: step.description,
+    status: mapStatusString(step.status ?? ""),
+    artifact: step.artifact
+      ? parseArtifact(step.artifact, mapRoleString(step.role ?? ""))
+      : undefined,
+    started_at: step.started_at,
+    completed_at: step.completed_at,
+    error: step.error,
+    progress: step.progress,
+  };
 }

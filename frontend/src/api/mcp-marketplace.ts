@@ -4,6 +4,100 @@ import type {
   MCPMarketplaceFilters,
   MCPCategory,
 } from "#/types/mcp-marketplace";
+import { logger } from "#/utils/logger";
+
+/**
+ * Type definitions for external API responses
+ */
+interface SmitheryServer {
+  id?: string;
+  name?: string;
+  qualifiedName?: string;
+  slug?: string;
+  description?: string;
+  longDescription?: string;
+  author?: string;
+  publisher?: string;
+  icon?: string;
+  transport?: "sse" | "stdio" | "shttp";
+  featured?: boolean;
+  popular?: boolean;
+  installCount?: number;
+  downloads?: number;
+  rating?: number | string;
+  stars?: number;
+  version?: string;
+  homepage?: string;
+  url?: string;
+  repository?: string;
+  repo?: string;
+  documentation?: string;
+  tags?: string[];
+  requirements?: {
+    os?: ("windows" | "macos" | "linux")[];
+    node?: string;
+    python?: string;
+    other?: string[];
+  };
+  config?: {
+    command?: string;
+    args?: string[];
+    env?: Record<string, string>;
+    url?: string;
+  };
+}
+
+interface NpmPackageInfo {
+  name?: string;
+  description?: string;
+  version?: string;
+  homepage?: string;
+  repository?: {
+    url?: string;
+  };
+  author?: {
+    name?: string;
+  };
+  maintainers?: Array<{
+    name?: string;
+  }>;
+}
+
+interface NpmPackage {
+  package?: NpmPackageInfo;
+  score?: {
+    final?: number;
+  };
+}
+
+interface GitHubRepository {
+  name?: string;
+  description?: string;
+  html_url?: string;
+  homepage?: string;
+  stargazers_count?: number;
+  topics?: string[];
+  owner?: {
+    login?: string;
+  };
+  full_name?: string;
+}
+
+interface OfficialRegistryServer {
+  id?: string;
+  name?: string;
+  slug?: string;
+  description?: string;
+  type?: "sse" | "stdio" | "shttp";
+  homepage?: string;
+  repository?: string;
+  documentation?: string;
+  tags?: string[];
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  url?: string;
+}
 
 /**
  * MCP Marketplace API
@@ -988,7 +1082,7 @@ function getCachedData(): MCPMarketplaceItem[] | null {
     localStorage.removeItem(CACHE_KEY);
     return null;
   } catch (error) {
-    console.error("Error reading cache:", error);
+    logger.error("Error reading cache:", error);
     return null;
   }
 }
@@ -1001,8 +1095,501 @@ function setCachedData(data: MCPMarketplaceItem[]): void {
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
   } catch (error) {
-    console.error("Error writing cache:", error);
+    logger.error("Error writing cache:", error);
   }
+}
+
+const CATEGORY_RULES: Array<{ pattern: RegExp; category: string }> = [
+  {
+    pattern: /browser|playwright|puppeteer|chrome|selenium/,
+    category: "browser",
+  },
+  {
+    pattern: /database|postgres|mysql|sqlite|mongo|redis/,
+    category: "database",
+  },
+  { pattern: /cloud|aws|azure|gcp|s3|lambda/, category: "cloud" },
+  { pattern: /ai|llm|gpt|claude|model/, category: "ai-tools" },
+  { pattern: /git|github|gitlab|code|dev|vscode/, category: "development" },
+  { pattern: /file|filesystem|drive|storage/, category: "file-system" },
+  { pattern: /api|rest|graphql|http/, category: "api-integration" },
+  { pattern: /test|jest|mocha|cypress/, category: "testing" },
+  { pattern: /monitor|observability|sentry|logging/, category: "monitoring" },
+  { pattern: /security|auth|vault|secret/, category: "security" },
+  { pattern: /slack|discord|email|communication/, category: "communication" },
+  { pattern: /memory|context|knowledge/, category: "productivity" },
+];
+
+/**
+ * Infer category from server metadata
+ */
+function inferCategory(
+  name: string,
+  description?: string,
+  tags?: string[],
+): string[] {
+  const text =
+    `${name} ${description || ""} ${(tags || []).join(" ")}`.toLowerCase();
+  const categories = new Set<string>();
+
+  for (const rule of CATEGORY_RULES) {
+    if (rule.pattern.test(text)) {
+      categories.add(rule.category);
+    }
+  }
+
+  return categories.size > 0 ? Array.from(categories) : ["other"];
+}
+
+/**
+ * Get icon emoji for category
+ */
+function getIconForCategory(category: string): string {
+  const icons: Record<string, string> = {
+    browser: "🌐",
+    database: "🗄️",
+    cloud: "☁️",
+    "ai-tools": "🤖",
+    development: "💻",
+    productivity: "⚡",
+    "file-system": "📁",
+    "api-integration": "🔌",
+    testing: "🧪",
+    monitoring: "📊",
+    security: "🔒",
+    communication: "💬",
+    other: "📦",
+  };
+  return icons[category] || "📦";
+}
+
+function resolveRating(rating: unknown, stars?: number): number | undefined {
+  if (typeof rating === "number") {
+    return rating;
+  }
+
+  if (typeof rating === "string") {
+    const parsed = Number.parseFloat(rating);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }
+
+  if (typeof stars === "number") {
+    return Math.min(5, stars / 20);
+  }
+
+  return undefined;
+}
+
+function getSmitheryName(server: SmitheryServer): string {
+  return server?.name ?? server?.qualifiedName ?? "Unknown Server";
+}
+
+function getSmitheryDescription(server: SmitheryServer): string {
+  return server?.description ?? "No description available";
+}
+
+function getSmitheryLongDescription(
+  server: SmitheryServer,
+  fallback: string,
+): string {
+  return server?.longDescription ?? fallback;
+}
+
+function getSmitheryAuthor(server: SmitheryServer): string {
+  return server?.author ?? server?.publisher ?? "Smithery";
+}
+
+function getSmitheryCategory(
+  server: SmitheryServer,
+  name: string,
+  description: string,
+): MCPCategory {
+  const categories = inferCategory(name, description, server?.tags ?? []);
+  return (categories[0] as MCPCategory | undefined) ?? "other";
+}
+
+function getSmitheryIcon(
+  server: SmitheryServer,
+  category: MCPCategory,
+): string {
+  return server?.icon ?? getIconForCategory(category);
+}
+
+function getSmitheryInstallCount(server: SmitheryServer): number {
+  const downloads = server?.downloads ?? 0;
+  return server?.installCount ?? downloads;
+}
+
+function getSmitheryId(server: SmitheryServer, index: number): string {
+  return server?.id ?? `smithery-${index}`;
+}
+
+function getSmitherySlug(server: SmitheryServer): string {
+  const slugSource = server?.slug ?? server?.qualifiedName ?? "";
+  return slugSource.toLowerCase().replace(/[^a-z0-9]/g, "-");
+}
+
+function getSmitheryTransport(
+  server: SmitheryServer,
+): "sse" | "stdio" | "shttp" {
+  return server?.transport ?? "shttp";
+}
+
+function isSmitheryFeatured(server: SmitheryServer): boolean {
+  return Boolean(server?.featured ?? server?.popular);
+}
+
+function isSmitheryPopular(
+  server: SmitheryServer,
+  installCount: number,
+): boolean {
+  if (typeof server?.popular === "boolean") {
+    return server.popular;
+  }
+  return installCount > 1000;
+}
+
+function buildSmitheryConfig(server: SmitheryServer) {
+  return {
+    command: server?.config?.command,
+    args: server?.config?.args,
+    env: server?.config?.env,
+    url:
+      server?.config?.url ??
+      (server?.qualifiedName
+        ? `https://server.smithery.ai/${server.qualifiedName}/mcp`
+        : undefined),
+    requiresApiKey: true,
+    apiKeyDescription: "Smithery API key required",
+  };
+}
+
+function deriveNpmNames(packageInfo: NpmPackageInfo, index: number) {
+  const rawName =
+    typeof packageInfo?.name === "string"
+      ? packageInfo.name
+      : `unknown-${index}`;
+  const displayName = rawName.replace("@modelcontextprotocol/", "");
+
+  return {
+    id: `npm-${index}`,
+    rawName,
+    displayName,
+    slug: rawName.toLowerCase().replace(/[@/]/g, "-"),
+  } as const;
+}
+
+function derivePrimaryCategory(
+  name: string,
+  description: string,
+  tags: string[] = [],
+): MCPCategory {
+  const categories = inferCategory(name, description, tags);
+  return (categories[0] as MCPCategory | undefined) ?? "other";
+}
+
+function resolveNpmRepository(
+  packageInfo: NpmPackageInfo,
+  displayName: string,
+): string {
+  const repositoryUrl = packageInfo?.repository?.url;
+  if (typeof repositoryUrl === "string" && repositoryUrl.length > 0) {
+    return repositoryUrl;
+  }
+  return `https://github.com/modelcontextprotocol/${displayName}`;
+}
+
+function resolveNpmAuthor(packageInfo: NpmPackageInfo): string {
+  const authorName = packageInfo?.author?.name;
+  if (typeof authorName === "string" && authorName.trim().length > 0) {
+    return authorName;
+  }
+
+  const maintainerName = packageInfo?.maintainers?.[0]?.name;
+  if (typeof maintainerName === "string" && maintainerName.trim().length > 0) {
+    return maintainerName;
+  }
+
+  return "Community";
+}
+
+function buildNpmTags(displayName: string): string[] {
+  const suffix = displayName.split("-").pop();
+  return suffix ? [suffix] : ["mcp"];
+}
+
+function buildNpmConfig(rawName: string) {
+  return {
+    command: "npx",
+    args: ["-y", rawName] as string[],
+    requiresApiKey: false,
+  };
+}
+
+function deriveNpmMetadata(
+  pkg: NpmPackage,
+  packageInfo: NpmPackageInfo,
+  names: ReturnType<typeof deriveNpmNames>,
+) {
+  const description = packageInfo?.description ?? "No description available";
+  const category = derivePrimaryCategory(names.rawName, description);
+  const popularityScore = pkg?.score?.final ?? 0;
+
+  return {
+    description,
+    category,
+    icon: getIconForCategory(category),
+    homepage: packageInfo?.homepage,
+    repository: resolveNpmRepository(packageInfo, names.displayName),
+    author: resolveNpmAuthor(packageInfo),
+    featured: names.rawName.includes("server-"),
+    popular: popularityScore > 0.5,
+    installCount: Math.floor(popularityScore * 10000) || 0,
+    rating: popularityScore ? popularityScore * 5 : undefined,
+    tags: buildNpmTags(names.displayName),
+  } as const;
+}
+
+function buildOfficialServerConfig(server: OfficialRegistryServer) {
+  return {
+    command: server?.command,
+    args: Array.isArray(server?.args) ? server.args : undefined,
+    env: server?.env,
+    url: typeof server?.url === "string" ? server.url : undefined,
+  };
+}
+
+function deriveOfficialServerMetadata(
+  server: OfficialRegistryServer,
+  index: number,
+) {
+  const name =
+    typeof server?.name === "string" ? server.name : "Unknown Server";
+  const description = server?.description ?? "No description available";
+  const category = derivePrimaryCategory(name, description, server?.tags ?? []);
+  const slugSource = typeof server?.slug === "string" ? server.slug : name;
+
+  return {
+    id: server?.id ?? `official-${index}`,
+    name,
+    description,
+    category,
+    icon: getIconForCategory(category),
+    slug: slugSource.toLowerCase().replace(/\s+/g, "-"),
+    type: server?.type ?? "stdio",
+    homepage:
+      typeof server?.homepage === "string" ? server.homepage : undefined,
+    repository:
+      typeof server?.repository === "string" ? server.repository : undefined,
+    documentation:
+      typeof server?.documentation === "string"
+        ? server.documentation
+        : "https://docs.all-hands.dev/usage/mcp",
+  } as const;
+}
+
+function normalizeSmitheryServer(
+  server: SmitheryServer,
+  index: number,
+): MCPMarketplaceItem {
+  const name = getSmitheryName(server);
+  const description = getSmitheryDescription(server);
+  const longDescription = getSmitheryLongDescription(server, description);
+  const author = getSmitheryAuthor(server);
+  const category = getSmitheryCategory(server, name, description);
+  const icon = getSmitheryIcon(server, category);
+  const installCount = getSmitheryInstallCount(server);
+  const stars = typeof server?.stars === "number" ? server.stars : undefined;
+
+  return {
+    id: getSmitheryId(server, index),
+    name,
+    slug: getSmitherySlug(server),
+    description,
+    longDescription,
+    author,
+    icon,
+    category,
+    type: getSmitheryTransport(server),
+    featured: isSmitheryFeatured(server),
+    popular: isSmitheryPopular(server, installCount),
+    installCount,
+    rating: resolveRating(server?.rating, stars),
+    version: server?.version ?? "latest",
+    homepage: server?.homepage ?? server?.url,
+    repository: server?.repository ?? server?.repo,
+    documentation: server?.documentation ?? server?.homepage,
+    config: buildSmitheryConfig(server),
+    tags: server?.tags ?? [],
+    requirements: server?.requirements,
+  };
+}
+
+function normalizeNpmPackage(
+  pkg: NpmPackage,
+  index: number,
+): MCPMarketplaceItem {
+  const packageInfo = pkg?.package ?? {};
+  const names = deriveNpmNames(packageInfo, index);
+  const metadata = deriveNpmMetadata(pkg, packageInfo, names);
+
+  return {
+    id: names.id,
+    name: names.displayName,
+    slug: names.slug,
+    description: metadata.description,
+    longDescription: metadata.description,
+    author: metadata.author,
+    icon: metadata.icon,
+    category: metadata.category,
+    type: "stdio",
+    featured: metadata.featured,
+    popular: metadata.popular,
+    installCount: metadata.installCount,
+    rating: metadata.rating,
+    version: packageInfo.version,
+    homepage: metadata.homepage,
+    repository: metadata.repository,
+    documentation: metadata.homepage,
+    config: buildNpmConfig(names.rawName),
+    tags: metadata.tags,
+    requirements: {
+      node: ">=18.0.0",
+    },
+  };
+}
+
+function normalizeGitHubRepo(
+  repo: GitHubRepository,
+  index: number,
+): MCPMarketplaceItem {
+  const name = repo?.name ?? `github-${index}`;
+  const description = repo?.description ?? "No description available";
+  const topics = repo?.topics ?? [];
+  const categories = inferCategory(name, description, topics);
+  const category = (categories[0] as MCPCategory | undefined) ?? "other";
+  const icon = getIconForCategory(category);
+  const stars = repo?.stargazers_count ?? 0;
+  const rating = stars ? Math.min(5, stars / 100) : undefined;
+  const homepage = repo?.homepage;
+  const repository = repo?.html_url;
+  const documentation = homepage ?? repository;
+
+  return {
+    id: `github-${index}`,
+    name,
+    slug: name.toLowerCase().replace(/\s+/g, "-"),
+    description,
+    longDescription: description,
+    author: repo?.owner?.login ?? "Community",
+    icon,
+    category,
+    type: "stdio",
+    featured: stars > 100,
+    popular: stars > 50,
+    installCount: stars,
+    rating,
+    version: "latest",
+    homepage,
+    repository,
+    documentation,
+    config: {
+      command: "npx",
+      args: ["-y", repo?.full_name ?? name],
+      requiresApiKey: false,
+    },
+    tags: topics,
+    requirements: {
+      node: ">=18.0.0",
+    },
+  };
+}
+
+function normalizeOfficialRegistryServer(
+  server: OfficialRegistryServer,
+  index: number,
+): MCPMarketplaceItem {
+  const metadata = deriveOfficialServerMetadata(server, index);
+
+  return {
+    id: metadata.id,
+    name: metadata.name,
+    slug: metadata.slug,
+    description: metadata.description,
+    author: "Anthropic",
+    icon: metadata.icon,
+    category: metadata.category,
+    type: metadata.type,
+    featured: true,
+    popular: true,
+    homepage: metadata.homepage,
+    repository: metadata.repository,
+    documentation: metadata.documentation,
+    config: buildOfficialServerConfig(server),
+    tags: Array.isArray(server?.tags) ? server.tags : [],
+  };
+}
+
+/**
+ * Transform Smithery registry data to our format
+ */
+interface SmitheryResponse {
+  servers?: SmitheryServer[];
+}
+
+function transformSmitheryData(data: SmitheryResponse): MCPMarketplaceItem[] {
+  if (!data || !Array.isArray(data.servers)) return [];
+
+  return data.servers.map((server: SmitheryServer, index: number) =>
+    normalizeSmitheryServer(server, index),
+  );
+}
+
+/**
+ * Transform npm registry data to our format
+ */
+interface NpmResponse {
+  objects?: NpmPackage[];
+}
+
+function transformNPMData(data: NpmResponse): MCPMarketplaceItem[] {
+  if (!data || !Array.isArray(data.objects)) return [];
+
+  return data.objects.map((pkg: NpmPackage, index: number) =>
+    normalizeNpmPackage(pkg, index),
+  );
+}
+
+/**
+ * Transform GitHub search data to our format
+ */
+interface GitHubResponse {
+  items?: GitHubRepository[];
+}
+
+function transformGitHubData(data: GitHubResponse): MCPMarketplaceItem[] {
+  if (!data || !Array.isArray(data.items)) return [];
+
+  return data.items.map((repo: GitHubRepository, index: number) =>
+    normalizeGitHubRepo(repo, index),
+  );
+}
+
+/**
+ * Transform Official Registry data to our format
+ */
+interface OfficialRegistryResponse {
+  servers?: OfficialRegistryServer[];
+}
+
+function transformOfficialRegistryData(
+  data: OfficialRegistryResponse,
+): MCPMarketplaceItem[] {
+  if (!data || !Array.isArray(data.servers)) return [];
+
+  return data.servers.map((server: OfficialRegistryServer, index: number) =>
+    normalizeOfficialRegistryServer(server, index),
+  );
 }
 
 /**
@@ -1060,467 +1647,6 @@ async function fetchFromOfficialRegistry(): Promise<MCPMarketplaceItem[]> {
 }
 
 /**
- * Transform Smithery registry data to our format
- */
-function transformSmitheryData(data: any): MCPMarketplaceItem[] {
-  if (!data || !Array.isArray(data.servers)) return [];
-
-  return data.servers.map((server: any, index: number) =>
-    normalizeSmitheryServer(server, index),
-  );
-}
-
-function normalizeSmitheryServer(
-  server: any,
-  index: number,
-): MCPMarketplaceItem {
-  const name = getSmitheryName(server);
-  const description = getSmitheryDescription(server);
-  const longDescription = getSmitheryLongDescription(server, description);
-  const author = getSmitheryAuthor(server);
-  const category = getSmitheryCategory(server, name, description);
-  const icon = getSmitheryIcon(server, category);
-  const installCount = getSmitheryInstallCount(server);
-  const stars = typeof server?.stars === "number" ? server.stars : undefined;
-
-  return {
-    id: getSmitheryId(server, index),
-    name,
-    slug: getSmitherySlug(server),
-    description,
-    longDescription,
-    author,
-    icon,
-    category,
-    type: getSmitheryTransport(server),
-    featured: isSmitheryFeatured(server),
-    popular: isSmitheryPopular(server, installCount),
-    installCount,
-    rating: resolveRating(server?.rating, stars),
-    version: server?.version ?? "latest",
-    homepage: server?.homepage ?? server?.url,
-    repository: server?.repository ?? server?.repo,
-    documentation: server?.documentation ?? server?.homepage,
-    config: buildSmitheryConfig(server),
-    tags: server?.tags ?? [],
-    requirements: server?.requirements,
-  };
-}
-
-function getSmitheryName(server: any): string {
-  return server?.name ?? server?.qualifiedName ?? "Unknown Server";
-}
-
-function getSmitheryDescription(server: any): string {
-  return server?.description ?? "No description available";
-}
-
-function getSmitheryLongDescription(server: any, fallback: string): string {
-  return server?.longDescription ?? fallback;
-}
-
-function getSmitheryAuthor(server: any): string {
-  return server?.author ?? server?.publisher ?? "Smithery";
-}
-
-function getSmitheryCategory(
-  server: any,
-  name: string,
-  description: string,
-): MCPCategory {
-  const categories = inferCategory(name, description, server?.tags ?? []);
-  return (categories[0] as MCPCategory | undefined) ?? "other";
-}
-
-function getSmitheryIcon(server: any, category: MCPCategory): string {
-  return server?.icon ?? getIconForCategory(category);
-}
-
-function getSmitheryInstallCount(server: any): number {
-  const downloads = server?.downloads ?? 0;
-  return server?.installCount ?? downloads;
-}
-
-function getSmitheryId(server: any, index: number): string {
-  return server?.id ?? `smithery-${index}`;
-}
-
-function getSmitherySlug(server: any): string {
-  const slugSource = server?.slug ?? server?.qualifiedName ?? "";
-  return slugSource.toLowerCase().replace(/[^a-z0-9]/g, "-");
-}
-
-function getSmitheryTransport(server: any): "sse" | "stdio" | "shttp" {
-  return server?.transport ?? "shttp";
-}
-
-function isSmitheryFeatured(server: any): boolean {
-  return Boolean(server?.featured ?? server?.popular);
-}
-
-function isSmitheryPopular(server: any, installCount: number): boolean {
-  if (typeof server?.popular === "boolean") {
-    return server.popular;
-  }
-  return installCount > 1000;
-}
-
-function buildSmitheryConfig(server: any) {
-  return {
-    command: server?.config?.command,
-    args: server?.config?.args,
-    env: server?.config?.env,
-    url:
-      server?.config?.url ??
-      (server?.qualifiedName
-        ? `https://server.smithery.ai/${server.qualifiedName}/mcp`
-        : undefined),
-    requiresApiKey: true,
-    apiKeyDescription: "Smithery API key required",
-  };
-}
-
-function resolveRating(rating: unknown, stars?: number): number | undefined {
-  if (typeof rating === "number") {
-    return rating;
-  }
-
-  if (typeof rating === "string") {
-    const parsed = Number.parseFloat(rating);
-    return Number.isNaN(parsed) ? undefined : parsed;
-  }
-
-  if (typeof stars === "number") {
-    return Math.min(5, stars / 20);
-  }
-
-  return undefined;
-}
-
-/**
- * Transform npm registry data to our format
- */
-function transformNPMData(data: any): MCPMarketplaceItem[] {
-  if (!data || !Array.isArray(data.objects)) return [];
-
-  return data.objects.map((pkg: any, index: number) =>
-    normalizeNpmPackage(pkg, index),
-  );
-}
-
-function normalizeNpmPackage(pkg: any, index: number): MCPMarketplaceItem {
-  const packageInfo = pkg?.package ?? {};
-  const names = deriveNpmNames(packageInfo, index);
-  const metadata = deriveNpmMetadata(pkg, packageInfo, names);
-
-  return {
-    id: names.id,
-    name: names.displayName,
-    slug: names.slug,
-    description: metadata.description,
-    longDescription: metadata.description,
-    author: metadata.author,
-    icon: metadata.icon,
-    category: metadata.category,
-    type: "stdio",
-    featured: metadata.featured,
-    popular: metadata.popular,
-    installCount: metadata.installCount,
-    rating: metadata.rating,
-    version: packageInfo.version,
-    homepage: metadata.homepage,
-    repository: metadata.repository,
-    documentation: metadata.homepage,
-    config: buildNpmConfig(names.rawName),
-    tags: metadata.tags,
-    requirements: {
-      node: ">=18.0.0",
-    },
-  };
-}
-
-function deriveNpmNames(packageInfo: any, index: number) {
-  const rawName =
-    typeof packageInfo?.name === "string"
-      ? packageInfo.name
-      : `unknown-${index}`;
-  const displayName = rawName.replace("@modelcontextprotocol/", "");
-
-  return {
-    id: `npm-${index}`,
-    rawName,
-    displayName,
-    slug: rawName.toLowerCase().replace(/[@\/]/g, "-"),
-  } as const;
-}
-
-function deriveNpmMetadata(
-  pkg: any,
-  packageInfo: any,
-  names: ReturnType<typeof deriveNpmNames>,
-) {
-  const description = packageInfo?.description ?? "No description available";
-  const category = derivePrimaryCategory(names.rawName, description);
-  const popularityScore = pkg?.score?.final ?? 0;
-
-  return {
-    description,
-    category,
-    icon: getIconForCategory(category),
-    homepage: packageInfo?.homepage,
-    repository: resolveNpmRepository(packageInfo, names.displayName),
-    author: resolveNpmAuthor(packageInfo),
-    featured: names.rawName.includes("server-"),
-    popular: popularityScore > 0.5,
-    installCount: Math.floor(popularityScore * 10000) || 0,
-    rating: popularityScore ? popularityScore * 5 : undefined,
-    tags: buildNpmTags(names.displayName),
-  } as const;
-}
-
-function derivePrimaryCategory(
-  name: string,
-  description: string,
-  tags: string[] = [],
-): MCPCategory {
-  const categories = inferCategory(name, description, tags);
-  return (categories[0] as MCPCategory | undefined) ?? "other";
-}
-
-function resolveNpmRepository(packageInfo: any, displayName: string): string {
-  const repositoryUrl = packageInfo?.repository?.url;
-  if (typeof repositoryUrl === "string" && repositoryUrl.length > 0) {
-    return repositoryUrl;
-  }
-  return `https://github.com/modelcontextprotocol/${displayName}`;
-}
-
-function resolveNpmAuthor(packageInfo: any): string {
-  const authorName = packageInfo?.author?.name;
-  if (typeof authorName === "string" && authorName.trim().length > 0) {
-    return authorName;
-  }
-
-  const maintainerName = packageInfo?.maintainers?.[0]?.name;
-  if (typeof maintainerName === "string" && maintainerName.trim().length > 0) {
-    return maintainerName;
-  }
-
-  return "Community";
-}
-
-function buildNpmTags(displayName: string): string[] {
-  const suffix = displayName.split("-").pop();
-  return suffix ? [suffix] : ["mcp"];
-}
-
-function buildNpmConfig(rawName: string) {
-  return {
-    command: "npx",
-    args: ["-y", rawName] as string[],
-    requiresApiKey: false,
-  };
-}
-
-/**
- * Transform GitHub search data to our format
- */
-function transformGitHubData(data: any): MCPMarketplaceItem[] {
-  if (!data || !Array.isArray(data.items)) return [];
-
-  return data.items.map((repo: any, index: number) =>
-    normalizeGitHubRepo(repo, index),
-  );
-}
-
-function normalizeGitHubRepo(repo: any, index: number): MCPMarketplaceItem {
-  const name = repo?.name ?? `github-${index}`;
-  const description = repo?.description ?? "No description available";
-  const topics = repo?.topics ?? [];
-  const categories = inferCategory(name, description, topics);
-  const category = (categories[0] as MCPCategory | undefined) ?? "other";
-  const icon = getIconForCategory(category);
-  const stars = repo?.stargazers_count ?? 0;
-  const rating = stars ? Math.min(5, stars / 100) : undefined;
-  const homepage = repo?.homepage;
-  const repository = repo?.html_url;
-  const documentation = homepage ?? repository;
-
-  return {
-    id: `github-${index}`,
-    name,
-    slug: name.toLowerCase().replace(/\s+/g, "-"),
-    description,
-    longDescription: description,
-    author: repo?.owner?.login ?? "Community",
-    icon,
-    category,
-    type: "stdio",
-    featured: stars > 100,
-    popular: stars > 50,
-    installCount: stars,
-    rating,
-    version: "latest",
-    homepage,
-    repository,
-    documentation,
-    config: {
-      command: "npx",
-      args: ["-y", repo?.full_name ?? name],
-      requiresApiKey: false,
-    },
-    tags: topics,
-    requirements: {
-      node: ">=18.0.0",
-    },
-  };
-}
-
-/**
- * Transform Official Registry data to our format
- */
-function transformOfficialRegistryData(data: any): MCPMarketplaceItem[] {
-  if (!data || !Array.isArray(data.servers)) return [];
-
-  return data.servers.map((server: any, index: number) =>
-    normalizeOfficialRegistryServer(server, index),
-  );
-}
-
-function normalizeOfficialRegistryServer(
-  server: any,
-  index: number,
-): MCPMarketplaceItem {
-  const metadata = deriveOfficialServerMetadata(server, index);
-
-  return {
-    id: metadata.id,
-    name: metadata.name,
-    slug: metadata.slug,
-    description: metadata.description,
-    author: "Anthropic",
-    icon: metadata.icon,
-    category: metadata.category,
-    type: metadata.type,
-    featured: true,
-    popular: true,
-    homepage: metadata.homepage,
-    repository: metadata.repository,
-    documentation: metadata.documentation,
-    config: buildOfficialServerConfig(server),
-    tags: Array.isArray(server?.tags) ? server.tags : [],
-  };
-}
-
-function deriveOfficialServerMetadata(server: any, index: number) {
-  const name =
-    typeof server?.name === "string" ? server.name : "Unknown Server";
-  const description = server?.description ?? "No description available";
-  const category = derivePrimaryCategory(name, description, server?.tags ?? []);
-  const slugSource = typeof server?.slug === "string" ? server.slug : name;
-
-  return {
-    id: server?.id ?? `official-${index}`,
-    name,
-    description,
-    category,
-    icon: getIconForCategory(category),
-    slug: slugSource.toLowerCase().replace(/\s+/g, "-"),
-    type: server?.type ?? "stdio",
-    homepage:
-      typeof server?.homepage === "string" ? server.homepage : undefined,
-    repository:
-      typeof server?.repository === "string" ? server.repository : undefined,
-    documentation:
-      typeof server?.documentation === "string"
-        ? server.documentation
-        : "https://docs.all-hands.dev/usage/mcp",
-  } as const;
-}
-
-function resolvePrimaryCategory(
-  name: string,
-  description: string,
-  tags?: string[],
-): MCPCategory {
-  const categories = inferCategory(name, description, tags ?? []);
-  return (categories[0] as MCPCategory | undefined) ?? "other";
-}
-
-function buildOfficialServerConfig(server: any) {
-  return {
-    command: server?.command,
-    args: Array.isArray(server?.args) ? server.args : undefined,
-    env: server?.env,
-    url: typeof server?.url === "string" ? server.url : undefined,
-  };
-}
-
-/**
- * Infer category from server metadata
- */
-function inferCategory(
-  name: string,
-  description?: string,
-  tags?: string[],
-): string[] {
-  const text =
-    `${name} ${description || ""} ${(tags || []).join(" ")}`.toLowerCase();
-  const categories = new Set<string>();
-
-  for (const rule of CATEGORY_RULES) {
-    if (rule.pattern.test(text)) {
-      categories.add(rule.category);
-    }
-  }
-
-  return categories.size > 0 ? Array.from(categories) : ["other"];
-}
-
-const CATEGORY_RULES: Array<{ pattern: RegExp; category: string }> = [
-  {
-    pattern: /browser|playwright|puppeteer|chrome|selenium/,
-    category: "browser",
-  },
-  {
-    pattern: /database|postgres|mysql|sqlite|mongo|redis/,
-    category: "database",
-  },
-  { pattern: /cloud|aws|azure|gcp|s3|lambda/, category: "cloud" },
-  { pattern: /ai|llm|gpt|claude|model/, category: "ai-tools" },
-  { pattern: /git|github|gitlab|code|dev|vscode/, category: "development" },
-  { pattern: /file|filesystem|drive|storage/, category: "file-system" },
-  { pattern: /api|rest|graphql|http/, category: "api-integration" },
-  { pattern: /test|jest|mocha|cypress/, category: "testing" },
-  { pattern: /monitor|observability|sentry|logging/, category: "monitoring" },
-  { pattern: /security|auth|vault|secret/, category: "security" },
-  { pattern: /slack|discord|email|communication/, category: "communication" },
-  { pattern: /memory|context|knowledge/, category: "productivity" },
-];
-
-/**
- * Get icon emoji for category
- */
-function getIconForCategory(category: string): string {
-  const icons: Record<string, string> = {
-    browser: "🌐",
-    database: "🗄️",
-    cloud: "☁️",
-    "ai-tools": "🤖",
-    development: "💻",
-    productivity: "⚡",
-    "file-system": "📁",
-    "api-integration": "🔌",
-    testing: "🧪",
-    monitoring: "📊",
-    security: "🔒",
-    communication: "💬",
-    other: "📦",
-  };
-  return icons[category] || "📦";
-}
-
-/**
  * Merge and deduplicate MCPs from multiple sources
  */
 function mergeAndDeduplicateMCPs(
@@ -1544,35 +1670,19 @@ function mergeAndDeduplicateMCPs(
   return merged;
 }
 
-async function loadMarketplaceInventory(): Promise<MCPMarketplaceItem[]> {
-  const cached = getCachedData();
-  if (cached) {
-    return cached;
-  }
-
-  try {
-    const liveData = await fetchLiveMCPs();
-    setCachedData(liveData);
-    return liveData;
-  } catch (error) {
-    console.error("Error fetching marketplace data:", error);
-    return CURATED_MCPS;
-  }
-}
-
-function filterMarketplaceItems(
-  items: MCPMarketplaceItem[],
-  filters?: MCPMarketplaceFilters,
-): MCPMarketplaceItem[] {
-  if (!filters) {
-    return [...items];
-  }
-
-  const searchQuery = filters.search?.toLowerCase();
-
-  return items.filter((item) =>
-    matchesMarketplaceFilters(item, filters, searchQuery),
+function matchesSearchQuery(
+  item: MCPMarketplaceItem,
+  searchQuery: string,
+): boolean {
+  const nameMatches = item.name.toLowerCase().includes(searchQuery);
+  const descriptionMatches = item.description
+    .toLowerCase()
+    .includes(searchQuery);
+  const tagMatches = item.tags?.some((tag) =>
+    tag.toLowerCase().includes(searchQuery),
   );
+
+  return Boolean(nameMatches || descriptionMatches || tagMatches);
 }
 
 function matchesMarketplaceFilters(
@@ -1594,19 +1704,93 @@ function matchesMarketplaceFilters(
   return searchQuery ? matchesSearchQuery(item, searchQuery) : true;
 }
 
-function matchesSearchQuery(
-  item: MCPMarketplaceItem,
-  searchQuery: string,
-): boolean {
-  const nameMatches = item.name.toLowerCase().includes(searchQuery);
-  const descriptionMatches = item.description
-    .toLowerCase()
-    .includes(searchQuery);
-  const tagMatches = item.tags?.some((tag) =>
-    tag.toLowerCase().includes(searchQuery),
-  );
+function filterMarketplaceItems(
+  items: MCPMarketplaceItem[],
+  filters?: MCPMarketplaceFilters,
+): MCPMarketplaceItem[] {
+  if (!filters) {
+    return [...items];
+  }
 
-  return Boolean(nameMatches || descriptionMatches || tagMatches);
+  const searchQuery = filters.search?.toLowerCase();
+
+  return items.filter((item) =>
+    matchesMarketplaceFilters(item, filters, searchQuery),
+  );
+}
+
+/**
+ * Fetch MCPs with multi-source fallback strategy
+ */
+async function fetchLiveMCPs(): Promise<MCPMarketplaceItem[]> {
+  const sources: MCPMarketplaceItem[][] = [];
+
+  // Try Smithery first (primary source with 139 servers)
+  try {
+    const smitheryData = await fetchFromSmithery();
+    if (smitheryData.length > 0) {
+      sources.push(smitheryData);
+    }
+  } catch (error) {
+    logger.warn("Smithery registry unavailable:", error);
+  }
+
+  // Try npm registry (official @modelcontextprotocol packages)
+  try {
+    const npmData = await fetchFromNPMRegistry();
+    if (npmData.length > 0) {
+      sources.push(npmData);
+    }
+  } catch (error) {
+    logger.warn("npm registry unavailable:", error);
+  }
+
+  // Try GitHub search for MCP repositories
+  try {
+    const githubData = await fetchFromGitHub();
+    if (githubData.length > 0) {
+      sources.push(githubData);
+    }
+  } catch (error) {
+    logger.warn("GitHub API unavailable:", error);
+  }
+
+  // Try Official Registry
+  try {
+    const officialData = await fetchFromOfficialRegistry();
+    if (officialData.length > 0) {
+      sources.push(officialData);
+    }
+  } catch (error) {
+    logger.warn("Official Registry unavailable:", error);
+  }
+
+  // If all APIs failed, use static fallback
+  if (sources.length === 0) {
+    logger.warn("All APIs failed, using static fallback");
+    return CURATED_MCPS;
+  }
+
+  // Merge and deduplicate
+  const merged = mergeAndDeduplicateMCPs(sources);
+
+  return merged;
+}
+
+async function loadMarketplaceInventory(): Promise<MCPMarketplaceItem[]> {
+  const cached = getCachedData();
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const liveData = await fetchLiveMCPs();
+    setCachedData(liveData);
+    return liveData;
+  } catch (error) {
+    logger.error("Error fetching marketplace data:", error);
+    return CURATED_MCPS;
+  }
 }
 
 function extractFeaturedItems(
@@ -1636,64 +1820,6 @@ function buildCategoryStats(items: MCPMarketplaceItem[]): Array<{
     category,
     count,
   }));
-}
-
-/**
- * Fetch MCPs with multi-source fallback strategy
- */
-async function fetchLiveMCPs(): Promise<MCPMarketplaceItem[]> {
-  const sources: MCPMarketplaceItem[][] = [];
-
-  // Try Smithery first (primary source with 139 servers)
-  try {
-    const smitheryData = await fetchFromSmithery();
-    if (smitheryData.length > 0) {
-      sources.push(smitheryData);
-    }
-  } catch (error) {
-    console.warn("Smithery registry unavailable:", error);
-  }
-
-  // Try npm registry (official @modelcontextprotocol packages)
-  try {
-    const npmData = await fetchFromNPMRegistry();
-    if (npmData.length > 0) {
-      sources.push(npmData);
-    }
-  } catch (error) {
-    console.warn("npm registry unavailable:", error);
-  }
-
-  // Try GitHub search for MCP repositories
-  try {
-    const githubData = await fetchFromGitHub();
-    if (githubData.length > 0) {
-      sources.push(githubData);
-    }
-  } catch (error) {
-    console.warn("GitHub API unavailable:", error);
-  }
-
-  // Try Official Registry
-  try {
-    const officialData = await fetchFromOfficialRegistry();
-    if (officialData.length > 0) {
-      sources.push(officialData);
-    }
-  } catch (error) {
-    console.warn("Official Registry unavailable:", error);
-  }
-
-  // If all APIs failed, use static fallback
-  if (sources.length === 0) {
-    console.warn("All APIs failed, using static fallback");
-    return CURATED_MCPS;
-  }
-
-  // Merge and deduplicate
-  const merged = mergeAndDeduplicateMCPs(sources);
-
-  return merged;
 }
 
 /**

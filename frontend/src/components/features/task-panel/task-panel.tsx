@@ -66,6 +66,7 @@ export function TaskPanel({ tasks, isOpen, onToggle }: TaskPanelProps) {
     <div className="w-full border-b border-border bg-background-secondary/50 backdrop-blur-sm">
       {/* Compact Header - Always Visible */}
       <button
+        type="button"
         onClick={onToggle}
         className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-background-tertiary/50 transition-colors"
       >
@@ -122,11 +123,15 @@ export function TaskPanel({ tasks, isOpen, onToggle }: TaskPanelProps) {
                 key={task.id}
                 className={cn(
                   "p-1.5 rounded border transition-all duration-200",
-                  task.status === "done"
-                    ? "bg-success-500/5 border-success-500/20"
-                    : task.status === "in_progress"
-                      ? "bg-warning-500/5 border-warning-500/20"
-                      : "bg-background-tertiary/30 border-border-subtle",
+                  (() => {
+                    if (task.status === "done") {
+                      return "bg-success-500/5 border-success-500/20";
+                    }
+                    if (task.status === "in_progress") {
+                      return "bg-warning-500/5 border-warning-500/20";
+                    }
+                    return "bg-background-tertiary/30 border-border-subtle";
+                  })(),
                 )}
               >
                 <div className="flex items-start gap-1.5">

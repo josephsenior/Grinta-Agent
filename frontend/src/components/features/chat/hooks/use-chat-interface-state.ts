@@ -18,6 +18,65 @@ import { useMetaSOPOrchestration } from "#/hooks/use-metasop-orchestration";
 import { useUploadFiles } from "#/hooks/mutation/use-upload-files";
 
 /**
+ * Hook for SOP preference with localStorage persistence
+ */
+function useSopPreference() {
+  const [useSop, setUseSop] = React.useState<boolean>(() => {
+    try {
+      return localStorage.getItem("Forge.useSop") === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem("Forge.useSop", useSop ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }, [useSop]);
+
+  return [useSop, setUseSop] as const;
+}
+
+/**
+ * Hook for optimistic SOP indicator
+ */
+function useOptimisticSopIndicator(isOrchestrating: boolean) {
+  const [optimisticSopStarting, setOptimisticSopStarting] =
+    React.useState(false);
+  const timerRef = React.useRef<number | null>(null);
+
+  const clearTimer = React.useCallback(() => {
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (isOrchestrating && optimisticSopStarting) {
+      setOptimisticSopStarting(false);
+      clearTimer();
+    }
+  }, [isOrchestrating, optimisticSopStarting, clearTimer]);
+
+  React.useEffect(() => () => clearTimer(), [clearTimer]);
+
+  const triggerOptimisticSop = React.useCallback(() => {
+    setOptimisticSopStarting(true);
+    clearTimer();
+    timerRef.current = window.setTimeout(() => {
+      setOptimisticSopStarting(false);
+      timerRef.current = null;
+    }, 8000);
+  }, [clearTimer]);
+
+  return { optimisticSopStarting, triggerOptimisticSop } as const;
+}
+
+/**
  * Custom hook to manage ChatInterface state and side effects
  * Separates complex state logic from the UI component
  */
@@ -35,6 +94,9 @@ export function useChatInterfaceState() {
 
   // State selectors
   const { curAgentState } = useSelector((state: RootState) => state.agent);
+  const { selectedRepository, replayJson } = useSelector(
+    (state: RootState) => state.initialQuery,
+  );
   const { tasks, isTaskPanelOpen, toggleTaskPanel } = useTasks();
 
   // Refs
@@ -55,6 +117,11 @@ export function useChatInterfaceState() {
   const bookmarksHook = useConversationBookmarks();
   const { steps, isOrchestrating, hasSteps } = useMetaSOPOrchestration();
 
+  // SOP support
+  const [useSop, setUseSop] = useSopPreference();
+  const { optimisticSopStarting, triggerOptimisticSop } =
+    useOptimisticSopIndicator(isOrchestrating);
+
   // Component state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [feedbackPolarity, setFeedbackPolarity] = React.useState<
@@ -65,7 +132,6 @@ export function useChatInterfaceState() {
   const [lastUserMessage, setLastUserMessage] = React.useState<string | null>(
     null,
   );
-  const [showShortcutsPanel, setShowShortcutsPanel] = React.useState(false);
   const [isInputFocused, setIsInputFocused] = React.useState(false);
   const [showOrchestrationPanel, setShowOrchestrationPanel] =
     React.useState(false);
@@ -114,6 +180,10 @@ export function useChatInterfaceState() {
     send,
     uploadFiles,
 
+    // Redux state
+    selectedRepository,
+    replayJson,
+
     // Refs
     scrollRef,
 
@@ -136,8 +206,6 @@ export function useChatInterfaceState() {
     setMessageToSend,
     lastUserMessage,
     setLastUserMessage,
-    showShortcutsPanel,
-    setShowShortcutsPanel,
     isInputFocused,
     setIsInputFocused,
     showOrchestrationPanel,
@@ -154,6 +222,12 @@ export function useChatInterfaceState() {
     steps,
     isOrchestrating,
     hasSteps,
+
+    // SOP support
+    useSop,
+    setUseSop,
+    optimisticSopStarting,
+    triggerOptimisticSop,
 
     // Messages
     optimisticUserMessage,

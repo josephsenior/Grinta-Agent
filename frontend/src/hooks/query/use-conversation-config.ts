@@ -3,6 +3,7 @@ import React from "react";
 import { useConversationId } from "#/hooks/use-conversation-id";
 import Forge from "#/api/forge";
 import { useRuntimeIsReady } from "../use-runtime-is-ready";
+import { logger } from "#/utils/logger";
 
 export const useConversationConfig = () => {
   const { conversationId } = useConversationId();
@@ -25,12 +26,7 @@ export const useConversationConfig = () => {
     if (query.data) {
       const { runtime_id: runtimeId } = query.data;
 
-      // eslint-disable-next-line no-console
-      console.log(
-        "Runtime ID: %c%s",
-        "background: #444; color: #ffeb3b; font-weight: bold; padding: 2px 4px; border-radius: 4px;",
-        runtimeId,
-      );
+      logger.debug("Runtime ID:", runtimeId);
     }
   }, [query.data]);
 

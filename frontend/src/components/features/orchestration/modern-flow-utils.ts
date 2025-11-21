@@ -84,6 +84,30 @@ const STATUS_LOOKUP: Record<FlowStatus, Omit<StatusMeta, "id">> = {
   },
 };
 
+export function normalizeStatus(status: unknown): FlowStatus {
+  if (typeof status !== "string") {
+    return "unknown";
+  }
+  const normalized = status.toLowerCase().replace(/[-\s]/g, "_");
+  if (normalized in STATUS_LOOKUP) {
+    return normalized as FlowStatus;
+  }
+  // Map common aliases
+  if (["running", "active"].includes(normalized)) {
+    return "in_progress";
+  }
+  if (["success", "completed", "done"].includes(normalized)) {
+    return "complete";
+  }
+  if (["failed", "error"].includes(normalized)) {
+    return "blocked";
+  }
+  if (["waiting", "queued"].includes(normalized)) {
+    return "pending";
+  }
+  return "unknown";
+}
+
 export function getStatusMeta(status: unknown): StatusMeta {
   const normalized = normalizeStatus(status);
   const definition = STATUS_LOOKUP[normalized];
@@ -138,6 +162,29 @@ const ROLE_LOOKUP: Record<FlowRole, Omit<RoleMeta, "id">> = {
   },
 };
 
+const ROLE_PATTERNS: Array<{ patterns: string[]; role: FlowRole }> = [
+  { patterns: ["product", "pm"], role: "product_manager" },
+  { patterns: ["architect", "arch"], role: "architect" },
+  { patterns: ["engineer", "eng"], role: "engineer" },
+  { patterns: ["qa", "test"], role: "qa" },
+];
+
+export function normalizeRole(role: unknown): FlowRole {
+  if (typeof role !== "string") {
+    return "other";
+  }
+  const normalized = role.toLowerCase().replace(/[-\s]/g, "_");
+  if (normalized in ROLE_LOOKUP) {
+    return normalized as FlowRole;
+  }
+  for (const { patterns, role: mappedRole } of ROLE_PATTERNS) {
+    if (patterns.some((pattern) => normalized.includes(pattern))) {
+      return mappedRole;
+    }
+  }
+  return "other";
+}
+
 export function getRoleMeta(role: unknown): RoleMeta {
   const normalized = normalizeRole(role);
   const definition = ROLE_LOOKUP[normalized];
@@ -173,50 +220,3 @@ export function formatStepDateTime(
   }
   return date.toLocaleString();
 }
-
-export function normalizeStatus(status: unknown): FlowStatus {
-  if (typeof status !== "string") {
-    return "unknown";
-  }
-  const normalized = status.toLowerCase().replace(/[-\s]/g, "_");
-  if (normalized in STATUS_LOOKUP) {
-    return normalized as FlowStatus;
-  }
-  // Map common aliases
-  if (["running", "active"].includes(normalized)) {
-    return "in_progress";
-  }
-  if (["success", "completed", "done"].includes(normalized)) {
-    return "complete";
-  }
-  if (["failed", "error"].includes(normalized)) {
-    return "blocked";
-  }
-  if (["waiting", "queued"].includes(normalized)) {
-    return "pending";
-  }
-  return "unknown";
-}
-
-export function normalizeRole(role: unknown): FlowRole {
-  if (typeof role !== "string") {
-    return "other";
-  }
-  const normalized = role.toLowerCase().replace(/[-\s]/g, "_");
-  if (normalized in ROLE_LOOKUP) {
-    return normalized as FlowRole;
-  }
-  for (const { patterns, role: mappedRole } of ROLE_PATTERNS) {
-    if (patterns.some((pattern) => normalized.includes(pattern))) {
-      return mappedRole;
-    }
-  }
-  return "other";
-}
-
-const ROLE_PATTERNS: Array<{ patterns: string[]; role: FlowRole }> = [
-  { patterns: ["product", "pm"], role: "product_manager" },
-  { patterns: ["architect", "arch"], role: "architect" },
-  { patterns: ["engineer", "eng"], role: "engineer" },
-  { patterns: ["qa", "test"], role: "qa" },
-];

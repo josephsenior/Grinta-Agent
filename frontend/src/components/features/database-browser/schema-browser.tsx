@@ -8,8 +8,9 @@ import {
   Loader2,
   FileJson,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useDatabaseSchema } from "#/hooks/query/use-database-connections";
-import type { DatabaseConnection } from "#/types/database";
+import type { DatabaseConnection, SchemaInfo } from "#/types/database";
 
 interface SchemaBrowserProps {
   connection: DatabaseConnection;
@@ -20,8 +21,12 @@ export function SchemaBrowser({
   connection,
   onTableSelect,
 }: SchemaBrowserProps) {
+  const { t } = useTranslation();
   const { data: schema, isLoading, error } = useDatabaseSchema(connection.id);
   const [expandedTables, setExpandedTables] = useState<Set<string>>(new Set());
+
+  // Type assertion to use SchemaInfo type which has proper object types
+  const schemaInfo = schema as SchemaInfo | undefined;
 
   const toggleTable = (tableName: string) => {
     const newExpanded = new Set(expandedTables);
@@ -44,21 +49,23 @@ export function SchemaBrowser({
   if (error) {
     return (
       <div className="p-4 text-error-500 text-sm">
-        <p className="font-medium">Failed to load schema</p>
+        <p className="font-medium">
+          {t("schemaBrowser.failedToLoadSchema", "Failed to load schema")}
+        </p>
         <p className="mt-1 opacity-80">{String(error)}</p>
       </div>
     );
   }
 
   // Render SQL database schema (PostgreSQL, MySQL)
-  if (schema?.tables) {
+  if (schemaInfo?.tables) {
     return (
       <div className="p-4 space-y-2">
         <div className="flex items-center gap-2 text-xs font-medium text-foreground-secondary uppercase mb-3">
           <Database className="w-4 h-4" />
-          Tables ({schema.tables.length})
+          {t("schemaBrowser.tables", "Tables")} ({schemaInfo.tables.length})
         </div>
-        {schema.tables.map((table: any) => (
+        {schemaInfo.tables.map((table) => (
           <div key={table.name} className="space-y-1">
             {/* Table name */}
             <button
@@ -80,7 +87,9 @@ export function SchemaBrowser({
               </span>
               {table.rowCount !== undefined && (
                 <span className="ml-auto text-xs text-foreground-secondary">
-                  {table.rowCount.toLocaleString()} rows
+                  {t("schemaBrowser.rowCount", "{{count}} rows", {
+                    count: table.rowCount,
+                  })}
                 </span>
               )}
             </button>
@@ -88,7 +97,7 @@ export function SchemaBrowser({
             {/* Columns (when expanded) */}
             {expandedTables.has(table.name) && (
               <div className="ml-6 space-y-0.5">
-                {table.columns.map((column: any) => (
+                {table.columns?.map((column) => (
                   <div
                     key={column.name}
                     className="flex items-center gap-2 px-2 py-1 text-xs rounded hover:bg-background-tertiary"
@@ -108,7 +117,7 @@ export function SchemaBrowser({
                     </span>
                     {!column.nullable && (
                       <span className="text-error-500 text-[10px]">
-                        NOT NULL
+                        {t("schemaBrowser.notNull", "NOT NULL")}
                       </span>
                     )}
                     {column.isForeignKey && (
@@ -125,14 +134,15 @@ export function SchemaBrowser({
   }
 
   // Render MongoDB schema (collections)
-  if (schema?.collections) {
+  if (schemaInfo?.collections) {
     return (
       <div className="p-4 space-y-2">
         <div className="flex items-center gap-2 text-xs font-medium text-foreground-secondary uppercase mb-3">
           <FileJson className="w-4 h-4" />
-          Collections ({schema.collections.length})
+          {t("schemaBrowser.collections", "Collections")} (
+          {schemaInfo.collections.length})
         </div>
-        {schema.collections.map((collection: any) => (
+        {schemaInfo.collections.map((collection) => (
           <button
             key={collection.name}
             type="button"
@@ -145,7 +155,9 @@ export function SchemaBrowser({
             </span>
             {collection.documentCount !== undefined && (
               <span className="ml-auto text-xs text-foreground-secondary">
-                {collection.documentCount.toLocaleString()} docs
+                {t("schemaBrowser.documentCount", "{{count}} docs", {
+                  count: collection.documentCount,
+                })}
               </span>
             )}
           </button>
@@ -155,14 +167,14 @@ export function SchemaBrowser({
   }
 
   // Render Redis keys
-  if (schema?.keys) {
+  if (schemaInfo?.keys) {
     return (
       <div className="p-4 space-y-2">
         <div className="flex items-center gap-2 text-xs font-medium text-foreground-secondary uppercase mb-3">
           <Key className="w-4 h-4" />
-          Keys ({schema.keys.length})
+          {t("schemaBrowser.keys", "Keys")} ({schemaInfo.keys.length})
         </div>
-        {schema.keys.map((keyInfo: any) => (
+        {schemaInfo.keys.map((keyInfo) => (
           <button
             key={keyInfo.key}
             type="button"
@@ -184,7 +196,7 @@ export function SchemaBrowser({
 
   return (
     <div className="p-4 text-foreground-secondary text-sm text-center">
-      No schema information available
+      {t("schemaBrowser.noSchemaInfo", "No schema information available")}
     </div>
   );
 }

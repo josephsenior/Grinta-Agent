@@ -24,8 +24,8 @@ html {
 body {
   margin: 0;
   padding: 0;
-  background: #000;
-  color: #fff;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   overflow-x: hidden;
 }
 
@@ -40,7 +40,7 @@ body {
 }
 
 .bg-black {
-  background-color: #000;
+  background-color: var(--bg-primary);
 }
 
 .bg-gradient-to-br {
@@ -146,11 +146,11 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #000;
+  background: var(--bg-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: 9998; /* Lower than header z-index */
 }
 
 .route-loading::after {
@@ -319,6 +319,33 @@ body {
 .duration-300 {
   transition-duration: 300ms;
 }
+
+/* Page transition animations - Fade out 150ms, Fade in 300ms (Total 450ms) */
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.route-fade-out {
+  animation: fade-out 0.15s ease-out forwards;
+}
+
+.route-fade-in {
+  animation: fade-in 0.3s ease-in forwards;
+}
 `;
 
 // Function to inject critical CSS into the document head
@@ -391,27 +418,19 @@ export function extractCriticalCSS(
   selectors: string[],
   options: CriticalCSSOptions = {},
 ): string {
-  const {
-    includeAboveFold = true,
-    includeKeyframes = true,
-    includeFonts = true,
-    maxWidth = 1920,
-    maxHeight = 1080,
-  } = options;
+  // Options are reserved for future implementation
+  // Access options to prevent unused parameter warning
+  // eslint-disable-next-line no-void
+  void options;
 
   // This would typically be implemented with a tool like critical
   // For now, we return the predefined critical CSS
   return CRITICAL_CSS;
 }
 
-// Auto-inject critical CSS on module load
-if (typeof window !== "undefined") {
-  // Inject critical CSS immediately
-  injectCriticalCSS();
-
-  // Load non-critical CSS after page load
-  window.addEventListener("load", () => {
-    // Load main stylesheet asynchronously
-    loadNonCriticalCSS("/assets/root-DfQ5Otw6.css").catch(console.warn);
-  });
-}
+// NOTE: Critical CSS injection has been moved to React lifecycle (root-layout.tsx)
+// to prevent DOM manipulation before React components mount.
+// This prevents conflicts with component rendering and layout calculations.
+//
+// If you need to inject critical CSS, use the injectCriticalCSS() function
+// in a React useEffect hook instead of at module load time.

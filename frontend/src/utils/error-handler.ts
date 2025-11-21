@@ -84,7 +84,8 @@ export function showChatError({
  */
 export function showDetailedError(
   error: unknown,
-  onAction?: (action: ErrorAction) => void,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _onAction?: (action: ErrorAction) => void,
 ) {
   const userFriendlyError =
     extractUserFriendlyError(error) || formatClientError(error);
@@ -96,5 +97,5 @@ export function showDetailedError(
     rawError: error,
   });
 
-  displayDetailedErrorToast(userFriendlyError, onAction);
+  displayDetailedErrorToast(userFriendlyError);
 }

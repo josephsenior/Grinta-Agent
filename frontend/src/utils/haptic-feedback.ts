@@ -1,3 +1,5 @@
+import { logger } from "./logger";
+
 /**
  * Haptic Feedback Utility
  *
@@ -40,7 +42,7 @@ export function triggerHaptic(style: HapticStyle = "light"): void {
     navigator.vibrate(pattern);
   } catch (error) {
     // Silently fail if vibration API throws
-    console.debug("Haptic feedback not available:", error);
+    logger.debug("Haptic feedback not available:", error);
   }
 }
 

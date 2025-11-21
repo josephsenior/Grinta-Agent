@@ -1,8 +1,10 @@
 import React, { useState, useRef } from "react";
 import { Upload, X, FileText, AlertCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "#/components/ui/button";
 import { ModalBackdrop } from "#/components/shared/modals/modal-backdrop";
 import { useUploadDocument } from "#/hooks/mutation/use-knowledge-base-mutations";
+import { logger } from "#/utils/logger";
 
 interface KBDocumentUploadProps {
   collectionId: string;
@@ -27,6 +29,7 @@ export function KBDocumentUpload({
   collectionName,
   onClose,
 }: KBDocumentUploadProps) {
+  const { t } = useTranslation();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -67,9 +70,9 @@ export function KBDocumentUpload({
         file: selectedFile,
       });
       onClose();
-    } catch (error) {
+    } catch (uploadError) {
       // Error handled by mutation
-      console.error("Upload failed:", error);
+      logger.error("Upload failed:", uploadError);
     }
   };
 
@@ -96,13 +99,16 @@ export function KBDocumentUpload({
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-semibold text-foreground">
-              Upload Document
+              {t("KB$UPLOAD_DOCUMENT_TITLE", "Upload Document")}
             </h2>
             <p className="text-sm text-foreground-secondary mt-1">
-              to "{collectionName}"
+              {t("KB$UPLOAD_TO_COLLECTION", 'to "{{collectionName}}"', {
+                collectionName,
+              })}
             </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg hover:bg-background-tertiary/70 transition-colors"
             title="Close"
@@ -130,17 +136,23 @@ export function KBDocumentUpload({
                 {selectedFile.name}
               </span>
               <span className="text-xs text-foreground-secondary">
-                ({(selectedFile.size / 1024).toFixed(1)} KB)
+                (
+                {t("KB$FILE_SIZE_KB", "{{size}} KB", {
+                  size: (selectedFile.size / 1024).toFixed(1),
+                })}
+                )
               </span>
             </div>
           ) : (
             <div>
               <p className="text-sm text-foreground mb-1">
-                Click to browse or drag & drop
+                {t("KB$CLICK_BROWSE_OR_DRAG", "Click to browse or drag & drop")}
               </p>
               <p className="text-xs text-foreground-secondary">
-                {ALLOWED_FILE_TYPES.join(", ")} • Max{" "}
-                {MAX_FILE_SIZE / (1024 * 1024)}MB
+                {ALLOWED_FILE_TYPES.join(", ")} •{" "}
+                {t("KB$MAX_SIZE", "Max {{size}}MB", {
+                  size: MAX_FILE_SIZE / (1024 * 1024),
+                })}
               </p>
             </div>
           )}
@@ -170,14 +182,16 @@ export function KBDocumentUpload({
             className="flex-1"
             disabled={uploadMutation.isPending}
           >
-            Cancel
+            {t("KB$CANCEL", "Cancel")}
           </Button>
           <Button
             onClick={handleUpload}
             className="flex-1"
             disabled={!selectedFile || uploadMutation.isPending}
           >
-            {uploadMutation.isPending ? "Uploading..." : "Upload Document"}
+            {uploadMutation.isPending
+              ? t("KB$UPLOADING", "Uploading...")
+              : t("KB$UPLOAD_DOCUMENT", "Upload Document")}
           </Button>
         </div>
       </div>

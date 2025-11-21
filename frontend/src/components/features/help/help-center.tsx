@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   HelpCircle,
   Book,
@@ -8,7 +9,6 @@ import {
   Keyboard,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { cn } from "#/utils/utils";
 import { BRAND } from "#/config/brand";
 import { KeyboardShortcutsPanel } from "#/components/features/chat/keyboard-shortcuts-panel";
@@ -51,6 +51,8 @@ export function HelpCenter() {
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
+
+    return undefined;
   }, [isOpen]);
 
   return (
@@ -76,7 +78,9 @@ export function HelpCenter() {
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-              <h2 className="text-xl font-semibold text-white">Help Center</h2>
+              <h2 className="text-xl font-semibold text-white">
+                {t("helpCenter.title", "Help Center")}
+              </h2>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
@@ -100,7 +104,7 @@ export function HelpCenter() {
                 )}
               >
                 <Keyboard className="w-4 h-4 inline mr-2" />
-                Shortcuts
+                {t("helpCenter.shortcuts", "Shortcuts")}
               </button>
               <button
                 type="button"
@@ -113,7 +117,7 @@ export function HelpCenter() {
                 )}
               >
                 <Book className="w-4 h-4 inline mr-2" />
-                Documentation
+                {t("helpCenter.documentation", "Documentation")}
               </button>
               <button
                 type="button"
@@ -126,7 +130,7 @@ export function HelpCenter() {
                 )}
               >
                 <MessageCircle className="w-4 h-4 inline mr-2" />
-                Support
+                {t("helpCenter.support", "Support")}
               </button>
             </div>
 
@@ -136,7 +140,10 @@ export function HelpCenter() {
                 <div className="space-y-4">
                   <div className="text-center py-4">
                     <p className="text-sm text-white/60 mb-4">
-                      View all keyboard shortcuts and commands
+                      {t(
+                        "helpCenter.viewShortcuts",
+                        "View all keyboard shortcuts and commands",
+                      )}
                     </p>
                     <button
                       type="button"
@@ -146,16 +153,19 @@ export function HelpCenter() {
                       }}
                       className="px-6 py-3 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white font-semibold transition-all"
                     >
-                      Open Keyboard Shortcuts
+                      {t("helpCenter.openShortcuts", "Open Keyboard Shortcuts")}
                     </button>
                   </div>
                   <div className="pt-4 border-t border-white/10">
                     <p className="text-xs text-white/50 text-center">
-                      Press{" "}
+                      {t("helpCenter.pressKey", "Press")}{" "}
                       <kbd className="px-2 py-1 rounded border border-white/10 bg-white/5 text-xs font-mono">
                         ?
                       </kbd>{" "}
-                      anywhere to show shortcuts
+                      {t(
+                        "helpCenter.showShortcuts",
+                        "anywhere to show shortcuts",
+                      )}
                     </p>
                   </div>
                 </div>
@@ -172,10 +182,13 @@ export function HelpCenter() {
                     >
                       <div>
                         <h3 className="text-sm font-semibold text-white mb-1">
-                          Documentation
+                          {t("helpCenter.documentation", "Documentation")}
                         </h3>
                         <p className="text-xs text-white/60">
-                          Complete guides and API reference
+                          {t(
+                            "helpCenter.docsDescription",
+                            "Complete guides and API reference",
+                          )}
                         </p>
                       </div>
                       <ExternalLink className="w-4 h-4 text-white/40 group-hover:text-white/60" />
@@ -189,10 +202,13 @@ export function HelpCenter() {
                     >
                       <div>
                         <h3 className="text-sm font-semibold text-white mb-1">
-                          GitHub Repository
+                          {t("helpCenter.githubRepo", "GitHub Repository")}
                         </h3>
                         <p className="text-xs text-white/60">
-                          Source code and contributions
+                          {t(
+                            "helpCenter.githubDescription",
+                            "Source code and contributions",
+                          )}
                         </p>
                       </div>
                       <ExternalLink className="w-4 h-4 text-white/40 group-hover:text-white/60" />
@@ -212,10 +228,13 @@ export function HelpCenter() {
                     >
                       <div>
                         <h3 className="text-sm font-semibold text-white mb-1">
-                          Get Support
+                          {t("helpCenter.getSupport", "Get Support")}
                         </h3>
                         <p className="text-xs text-white/60">
-                          Contact our support team
+                          {t(
+                            "helpCenter.supportDescription",
+                            "Contact our support team",
+                          )}
                         </p>
                       </div>
                       <ExternalLink className="w-4 h-4 text-white/40 group-hover:text-white/60" />
@@ -231,10 +250,13 @@ export function HelpCenter() {
                     >
                       <div>
                         <h3 className="text-sm font-semibold text-white mb-1">
-                          Contact Us
+                          {t("helpCenter.contactUs", "Contact Us")}
                         </h3>
                         <p className="text-xs text-white/60">
-                          Send us a message
+                          {t(
+                            "helpCenter.contactDescription",
+                            "Send us a message",
+                          )}
                         </p>
                       </div>
                       <ExternalLink className="w-4 h-4 text-white/40 group-hover:text-white/60" />

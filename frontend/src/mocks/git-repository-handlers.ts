@@ -64,6 +64,112 @@ const MOCK_BRANCHES = generateMockBranches(25);
 // Mock microagents (same for all repos for simplicity)
 const MOCK_MICROAGENTS = generateMockMicroagents(5);
 
+// Helper functions - defined before use
+function extractRepositoryQueryParams(params: URLSearchParams) {
+  return {
+    selectedProvider: params.get("selected_provider"),
+    page: parseInt(params.get("page") || "1", 10),
+    perPage: parseInt(params.get("per_page") || "30", 10),
+    sort: params.get("sort") || "pushed",
+    installationId: params.get("installation_id"),
+  } as const;
+}
+
+function resolveRepositories(provider: string | null) {
+  if (!provider) {
+    return [] as GitRepository[];
+  }
+  return MOCK_REPOSITORIES[provider as keyof typeof MOCK_REPOSITORIES] || [];
+}
+
+function sortRepositories(repositories: GitRepository[], sort: string) {
+  if (sort === "stars") {
+    return [...repositories].sort(
+      (a, b) => (b.stargazers_count || 0) - (a.stargazers_count || 0),
+    );
+  }
+
+  if (sort === "pushed") {
+    return [...repositories].sort(
+      (a, b) =>
+        new Date(b.pushed_at!).getTime() - new Date(a.pushed_at!).getTime(),
+    );
+  }
+
+  return repositories;
+}
+
+function filterRepositoriesByInstallation(
+  repositories: GitRepository[],
+  provider: string | null,
+  installationId: string | null,
+) {
+  if (!installationId || provider !== "github") {
+    return repositories;
+  }
+
+  const installationIndex = parseInt(installationId, 10) || 0;
+  const startRepo = installationIndex * 20;
+  return repositories.slice(startRepo, startRepo + 20);
+}
+
+function paginateRepositories(
+  repositories: GitRepository[],
+  page: number,
+  perPage: number,
+) {
+  const startIndex = (page - 1) * perPage;
+  const endIndex = startIndex + perPage;
+  const items = repositories.slice(startIndex, endIndex);
+
+  return {
+    items,
+    hasNextPage: endIndex < repositories.length,
+    hasPrevPage: page > 1,
+    totalPages: Math.ceil(repositories.length / perPage),
+    page,
+    perPage,
+  } as const;
+}
+
+function buildLinkHeader(
+  params: ReturnType<typeof extractRepositoryQueryParams>,
+  pagination: ReturnType<typeof paginateRepositories>,
+) {
+  if (!pagination.hasNextPage && !pagination.hasPrevPage) {
+    return "";
+  }
+
+  const links = [];
+  if (pagination.hasPrevPage) {
+    links.push(
+      `</api/user/repositories?page=${pagination.page - 1}&per_page=${pagination.perPage}>; rel="prev"`,
+    );
+  }
+  if (pagination.hasNextPage) {
+    links.push(
+      `</api/user/repositories?page=${pagination.page + 1}&per_page=${pagination.perPage}>; rel="next"`,
+    );
+  }
+  links.push(
+    `</api/user/repositories?page=${pagination.totalPages}&per_page=${pagination.perPage}>; rel="last"`,
+  );
+  links.push(
+    `</api/user/repositories?page=1&per_page=${pagination.perPage}>; rel="first"`,
+  );
+
+  return links.join(", ");
+}
+
+function attachLinkHeader(repositories: GitRepository[], linkHeader: string) {
+  if (!linkHeader || repositories.length === 0) {
+    return repositories;
+  }
+
+  const [first, ...rest] = repositories;
+  return [{ ...first, link_header: linkHeader }, ...rest];
+}
+
 export const GIT_REPOSITORY_HANDLERS = [
   http.get("/api/user/repositories", async ({ request }) => {
     await delay(500); // Simulate network delay
@@ -277,108 +383,3 @@ This microagent helps with specific tasks related to the repository.
     },
   ),
 ];
-
-function extractRepositoryQueryParams(params: URLSearchParams) {
-  return {
-    selectedProvider: params.get("selected_provider"),
-    page: parseInt(params.get("page") || "1", 10),
-    perPage: parseInt(params.get("per_page") || "30", 10),
-    sort: params.get("sort") || "pushed",
-    installationId: params.get("installation_id"),
-  } as const;
-}
-
-function resolveRepositories(provider: string | null) {
-  if (!provider) {
-    return [] as GitRepository[];
-  }
-  return MOCK_REPOSITORIES[provider as keyof typeof MOCK_REPOSITORIES] || [];
-}
-
-function sortRepositories(repositories: GitRepository[], sort: string) {
-  if (sort === "stars") {
-    return [...repositories].sort(
-      (a, b) => (b.stargazers_count || 0) - (a.stargazers_count || 0),
-    );
-  }
-
-  if (sort === "pushed") {
-    return [...repositories].sort(
-      (a, b) =>
-        new Date(b.pushed_at!).getTime() - new Date(a.pushed_at!).getTime(),
-    );
-  }
-
-  return repositories;
-}
-
-function filterRepositoriesByInstallation(
-  repositories: GitRepository[],
-  provider: string | null,
-  installationId: string | null,
-) {
-  if (!installationId || provider !== "github") {
-    return repositories;
-  }
-
-  const installationIndex = parseInt(installationId, 10) || 0;
-  const startRepo = installationIndex * 20;
-  return repositories.slice(startRepo, startRepo + 20);
-}
-
-function paginateRepositories(
-  repositories: GitRepository[],
-  page: number,
-  perPage: number,
-) {
-  const startIndex = (page - 1) * perPage;
-  const endIndex = startIndex + perPage;
-  const items = repositories.slice(startIndex, endIndex);
-
-  return {
-    items,
-    hasNextPage: endIndex < repositories.length,
-    hasPrevPage: page > 1,
-    totalPages: Math.ceil(repositories.length / perPage),
-    page,
-    perPage,
-  } as const;
-}
-
-function buildLinkHeader(
-  params: ReturnType<typeof extractRepositoryQueryParams>,
-  pagination: ReturnType<typeof paginateRepositories>,
-) {
-  if (!pagination.hasNextPage && !pagination.hasPrevPage) {
-    return "";
-  }
-
-  const links = [];
-  if (pagination.hasPrevPage) {
-    links.push(
-      `</api/user/repositories?page=${pagination.page - 1}&per_page=${pagination.perPage}>; rel="prev"`,
-    );
-  }
-  if (pagination.hasNextPage) {
-    links.push(
-      `</api/user/repositories?page=${pagination.page + 1}&per_page=${pagination.perPage}>; rel="next"`,
-    );
-  }
-  links.push(
-    `</api/user/repositories?page=${pagination.totalPages}&per_page=${pagination.perPage}>; rel="last"`,
-  );
-  links.push(
-    `</api/user/repositories?page=1&per_page=${pagination.perPage}>; rel="first"`,
-  );
-
-  return links.join(", ");
-}
-
-function attachLinkHeader(repositories: GitRepository[], linkHeader: string) {
-  if (!linkHeader || repositories.length === 0) {
-    return repositories;
-  }
-
-  const [first, ...rest] = repositories;
-  return [{ ...first, link_header: linkHeader }, ...rest];
-}

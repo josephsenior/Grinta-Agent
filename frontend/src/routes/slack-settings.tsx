@@ -13,6 +13,7 @@ import {
   useUninstallSlackWorkspace,
 } from "#/hooks/query/use-slack";
 import { LoadingSpinner } from "#/components/shared/loading-spinner";
+import { logger } from "#/utils/logger";
 
 function SlackSettingsScreen() {
   const { data: workspaces, isLoading } = useSlackWorkspaces();
@@ -30,8 +31,7 @@ function SlackSettingsScreen() {
         window.location.href = response.url;
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("Failed to start Slack installation:", error);
+      logger.error("Failed to start Slack installation:", error);
     }
   };
 
@@ -121,12 +121,12 @@ function SlackSettingsScreen() {
     <div className="p-6 sm:p-8 lg:p-10 flex flex-col gap-6 lg:gap-8">
       <div className="mx-auto max-w-6xl w-full space-y-6 lg:space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">
+        <div className="flex items-center justify-between w-full">
+          <div className="w-full">
+            <h1 className="text-2xl font-semibold text-foreground w-full">
               Slack Integration
             </h1>
-            <p className="text-foreground-secondary mt-1">
+            <p className="text-foreground-secondary mt-1 w-full">
               Connect your Slack workspace to use Forge from Slack threads
             </p>
           </div>

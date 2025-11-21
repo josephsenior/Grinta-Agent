@@ -49,6 +49,32 @@ export function applyNodeAnimations(
 }
 
 /**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text: string): string {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/**
+ * Generate status badge HTML
+ */
+function getStatusBadge(status: string): string {
+  const statusColors: Record<string, string> = {
+    running: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+    success: "bg-green-500/20 text-green-400 border-green-500/30",
+    failed: "bg-red-500/20 text-red-400 border-red-500/30",
+    pending: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+  };
+
+  const colorClass = statusColors[status] || statusColors.pending;
+  const label = status.charAt(0).toUpperCase() + status.slice(1);
+
+  return `<span class="px-2 py-0.5 rounded-full text-xs font-medium border ${colorClass}">${label}</span>`;
+}
+
+/**
  * Create and show tooltip on node hover
  */
 export function createNodeTooltip(
@@ -205,33 +231,6 @@ export function attachNodeHighlight(svgElement: SVGElement): void {
       element.style.filter = "";
     });
   });
-}
-
-/**
- * Helper: Get status badge HTML
- */
-function getStatusBadge(status: string): string {
-  const badges = {
-    success:
-      '<span class="px-2 py-0.5 text-xs bg-success-500/20 text-green-300 rounded border border-green-500/40">✓ Success</span>',
-    running:
-      '<span class="px-2 py-0.5 text-xs bg-brand-500/20 text-blue-300 rounded border border-brand-500/40 animate-pulse">● Running</span>',
-    failed:
-      '<span class="px-2 py-0.5 text-xs bg-error-500/20 text-error-500 rounded border border-error-500/40">✗ Failed</span>',
-    pending:
-      '<span class="px-2 py-0.5 text-xs bg-gray-500/20 text-foreground-secondary rounded border border-border-hover/40">○ Pending</span>',
-  };
-
-  return badges[status as keyof typeof badges] || badges.pending;
-}
-
-/**
- * Helper: Escape HTML to prevent XSS
- */
-function escapeHtml(text: string): string {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
 }
 
 /**

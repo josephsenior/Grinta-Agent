@@ -497,10 +497,10 @@ function MCPSettingsScreen({
     return (
       <div className="p-6 sm:p-8 lg:p-10">
         <div className="bg-black/60 border border-white/10 rounded-2xl p-6 text-center space-y-3">
-          <h2 className="text-lg font-semibold text-foreground">
+          <h2 className="text-lg font-semibold text-foreground w-full">
             {t(I18nKey.SETTINGS$MCP_CONFIG_ERROR)}
           </h2>
-          <p className="text-sm text-foreground-secondary">
+          <p className="text-sm text-foreground-secondary w-full">
             {t(I18nKey.SETTINGS$MCP_CONFIG_DESCRIPTION)}
           </p>
           <BrandButton

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Bot, Key, Sparkles } from "lucide-react";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
@@ -26,6 +27,7 @@ const POPULAR_MODELS = [
 ];
 
 export function InlineLLMSetup({ onComplete }: InlineLLMSetupProps) {
+  const { t } = useTranslation();
   const { data: settings } = useSettings();
   const { mutate: saveSettings, isPending } = useSaveSettings();
   const [selectedModel, setSelectedModel] = useState(
@@ -65,24 +67,34 @@ export function InlineLLMSetup({ onComplete }: InlineLLMSetupProps) {
             <Sparkles className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-2xl font-bold text-foreground mb-2">
-            Configure Your AI
+            {t("beta.configureAI", "Configure Your AI")}
           </h2>
           <p className="text-foreground-secondary">
-            Choose your model and enter your API key to get started
+            {t(
+              "beta.configureAIDescription",
+              "Choose your model and enter your API key to get started",
+            )}
           </p>
         </div>
 
         {/* Model Selection */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-foreground mb-3">
+          <div className="block text-sm font-medium text-foreground mb-3">
             <Bot className="w-4 h-4 inline mr-2" />
-            Choose Model
-          </label>
-          <div className="grid grid-cols-2 gap-3">
+            {t("beta.chooseModel", "Choose Model")}
+          </div>
+          <div
+            className="grid grid-cols-2 gap-3"
+            role="radiogroup"
+            aria-label="Choose Model"
+          >
             {POPULAR_MODELS.map((model) => (
               <button
                 key={model.id}
-                onClick={() => setSelectedModel(model.id)}
+                type="button"
+                onClick={() => {
+                  setSelectedModel(model.id);
+                }}
                 className={`p-4 rounded-lg border-2 transition-all text-left ${
                   selectedModel === model.id
                     ? "border-brand-500 bg-brand-500/10"
@@ -104,7 +116,7 @@ export function InlineLLMSetup({ onComplete }: InlineLLMSetupProps) {
         <div className="mb-6">
           <label className="block text-sm font-medium text-foreground mb-2">
             <Key className="w-4 h-4 inline mr-2" />
-            {provider} API Key
+            {t("beta.apiKeyLabel", "{{provider}} API Key", { provider })}
           </label>
           <Input
             type="password"
@@ -114,7 +126,7 @@ export function InlineLLMSetup({ onComplete }: InlineLLMSetupProps) {
             className="w-full"
           />
           <p className="text-xs text-foreground-secondary mt-2">
-            Get your key from:{" "}
+            {t("beta.getApiKeyFrom", "Get your key from:")}{" "}
             {provider === "Anthropic" && (
               <a
                 href="https://console.anthropic.com/settings/keys"
@@ -122,7 +134,7 @@ export function InlineLLMSetup({ onComplete }: InlineLLMSetupProps) {
                 rel="noopener noreferrer"
                 className="text-violet-500 hover:underline"
               >
-                console.anthropic.com
+                {t("beta.anthropicConsole", "console.anthropic.com")}
               </a>
             )}
             {provider === "OpenAI" && (
@@ -132,7 +144,7 @@ export function InlineLLMSetup({ onComplete }: InlineLLMSetupProps) {
                 rel="noopener noreferrer"
                 className="text-violet-500 hover:underline"
               >
-                platform.openai.com
+                {t("beta.openaiPlatform", "platform.openai.com")}
               </a>
             )}
           </p>
@@ -141,8 +153,14 @@ export function InlineLLMSetup({ onComplete }: InlineLLMSetupProps) {
         {/* Info Box */}
         <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
           <p className="text-sm text-blue-400">
-            💡 <strong>Your API key stays on your device.</strong> We never
-            store or transmit it to our servers.
+            💡{" "}
+            <strong>
+              {t("beta.apiKeyPrivacy", "Your API key stays on your device.")}
+            </strong>{" "}
+            {t(
+              "beta.apiKeyPrivacyDescription",
+              "We never store or transmit it to our servers.",
+            )}
           </p>
         </div>
 
@@ -163,7 +181,7 @@ export function InlineLLMSetup({ onComplete }: InlineLLMSetupProps) {
             href="/settings"
             className="text-sm text-foreground-secondary hover:text-violet-500 transition-colors"
           >
-            Advanced settings →
+            {t("beta.advancedSettings", "Advanced settings")} →
           </a>
         </div>
       </CardContent>

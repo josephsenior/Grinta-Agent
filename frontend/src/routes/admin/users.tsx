@@ -7,7 +7,9 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  Filter,
 } from "lucide-react";
+import type { AxiosError } from "axios";
 import { useUsers, useDeleteUser } from "../../hooks/query/use-users";
 import { useAuth } from "../../context/auth-context";
 import { AuthGuard } from "../../components/features/auth/auth-guard";
@@ -20,19 +22,31 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import { AppLayout } from "../../components/layout/AppLayout";
-import { PageHero } from "../../components/layout/PageHero";
-import AnimatedBackground from "../../components/landing/AnimatedBackground";
 import {
   displaySuccessToast,
   displayErrorToast,
 } from "../../utils/custom-toast-handlers";
+import { filterUsers } from "./users/user-filters";
+import type { User } from "#/types/auth";
 
 export default function AdminUsersPage() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const limit = 20;
 
   const { data, isLoading, error } = useUsers(page, limit);
@@ -43,9 +57,9 @@ export default function AdminUsersPage() {
     return (
       <AuthGuard requireRole="admin">
         <div className="min-h-screen flex items-center justify-center bg-black">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>Access Denied</CardTitle>
+          <Card className="max-w-md">
+            <CardHeader className="min-w-[400px]">
+              <CardTitle className="whitespace-normal">Access Denied</CardTitle>
             </CardHeader>
             <CardContent>
               <p>You need admin privileges to access this page.</p>
@@ -59,86 +73,121 @@ export default function AdminUsersPage() {
     );
   }
 
-  const filteredUsers =
-    data?.items.filter((user) => {
-      if (!searchQuery) return true;
-      const query = searchQuery.toLowerCase();
-      return (
-        user.email.toLowerCase().includes(query) ||
-        user.username.toLowerCase().includes(query) ||
-        user.id.toLowerCase().includes(query)
-      );
-    }) || [];
+  const filteredUsers = filterUsers(data?.items || [], {
+    searchQuery,
+    roleFilter,
+    statusFilter,
+  });
 
-  const handleDelete = async (userId: string) => {
+  const handleDeleteClick = (userId: string) => {
     if (userId === currentUser?.id) {
       displayErrorToast("You cannot delete your own account");
       return;
     }
-    if (
-      confirm(
-        "Are you sure you want to delete this user? This action cannot be undone.",
-      )
-    ) {
-      try {
-        await deleteUserMutation.mutateAsync(userId);
-        displaySuccessToast("User deleted successfully");
-      } catch (err: any) {
-        const errorMessage =
-          err.response?.data?.message || "Failed to delete user";
-        displayErrorToast(errorMessage);
-      }
+    setUserToDelete(userId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!userToDelete) return;
+    try {
+      await deleteUserMutation.mutateAsync(userToDelete);
+      displaySuccessToast("User deleted successfully");
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+    } catch (err) {
+      const deleteError = err as AxiosError<{ message?: string }>;
+      const errorMessage =
+        deleteError.response?.data?.message || "Failed to delete user";
+      displayErrorToast(errorMessage);
     }
   };
 
   return (
     <AuthGuard requireRole="admin">
-      <main className="relative min-h-screen overflow-hidden bg-black text-foreground">
-        <div aria-hidden className="pointer-events-none">
-          <AnimatedBackground />
-        </div>
-        <AppLayout>
-          <div className="rounded-3xl border border-white/10 bg-black/60 backdrop-blur-xl p-6 sm:p-8 lg:p-10">
-            <PageHero
-              eyebrow="Admin"
-              title="User Management"
-              description="Manage user accounts, roles, and permissions"
-              align="left"
-            />
+      <AppLayout>
+        <div className="space-y-6">
+          {/* Page Title: User Management */}
+          <div>
+            <h1 className="text-[2.25rem] font-bold text-[#FFFFFF] leading-[1.2] mb-2">
+              User Management
+            </h1>
+          </div>
 
+          {/* Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-4">
             {/* Search */}
-            <div className="mb-6">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/40" />
-                <Input
-                  type="text"
-                  placeholder="Search users by email, username, or ID..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+            <div className="flex-1 relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[#94A3B8]" />
+              <Input
+                type="text"
+                placeholder="Search users by email, username, or ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 pr-4 py-3 bg-[#000000] border-[#1a1a1a] text-[#FFFFFF] placeholder:text-[#94A3B8] rounded-xl focus:border-[#8b5cf6] focus:ring-1 focus:ring-[#8b5cf6]"
+              />
             </div>
 
-            {/* Users Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Users ({data?.total || 0})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500" />
-                  </div>
-                ) : error ? (
-                  <div className="text-center py-12 text-danger-500">
-                    Failed to load users. Please try again.
-                  </div>
-                ) : filteredUsers.length === 0 ? (
-                  <div className="text-center py-12 text-white/60">
-                    No users found
-                  </div>
-                ) : (
+            {/* Filters */}
+            <div className="flex gap-2">
+              {/* Role Filter */}
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#94A3B8] pointer-events-none" />
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="pl-10 pr-4 py-3 bg-[#000000] border border-[#1a1a1a] text-[#FFFFFF] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] text-sm"
+                >
+                  <option value="all">All Roles</option>
+                  <option value="admin">Admin</option>
+                  <option value="user">User</option>
+                </select>
+              </div>
+
+              {/* Status Filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-4 py-3 bg-[#000000] border border-[#1a1a1a] text-[#FFFFFF] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] text-sm"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Users Table */}
+          <Card className="bg-[#000000] border border-[#1a1a1a] rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
+            <CardHeader className="min-w-[400px]">
+              <CardTitle className="text-[#FFFFFF] whitespace-normal">
+                Users ({data?.total || 0})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                if (isLoading) {
+                  return (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500" />
+                    </div>
+                  );
+                }
+                if (error) {
+                  return (
+                    <div className="text-center py-12 text-danger-500">
+                      Failed to load users. Please try again.
+                    </div>
+                  );
+                }
+                if (filteredUsers.length === 0) {
+                  return (
+                    <div className="text-center py-12 text-white/60">
+                      No users found
+                    </div>
+                  );
+                }
+                return (
                   <>
                     <div className="overflow-x-auto">
                       <table className="w-full">
@@ -165,7 +214,7 @@ export default function AdminUsersPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredUsers.map((user) => (
+                          {filteredUsers.map((user: User) => (
                             <tr
                               key={user.id}
                               className="border-b border-white/5 hover:bg-white/5"
@@ -236,7 +285,7 @@ export default function AdminUsersPage() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => handleDelete(user.id)}
+                                      onClick={() => handleDeleteClick(user.id)}
                                       disabled={deleteUserMutation.isPending}
                                     >
                                       <Trash2 className="h-4 w-4 text-danger-400" />
@@ -286,12 +335,43 @@ export default function AdminUsersPage() {
                       </div>
                     )}
                   </>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </AppLayout>
-      </main>
+                );
+              })()}
+            </CardContent>
+          </Card>
+
+          {/* Delete Confirmation Dialog */}
+          <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete User</DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to delete this user? This action cannot
+                  be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDeleteDialogOpen(false);
+                    setUserToDelete(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteConfirm}
+                  disabled={deleteUserMutation.isPending}
+                >
+                  {deleteUserMutation.isPending ? "Deleting..." : "Delete"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </AppLayout>
     </AuthGuard>
   );
 }

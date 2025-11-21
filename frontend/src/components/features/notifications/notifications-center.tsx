@@ -3,6 +3,7 @@ import { Bell, Check, X, AlertCircle, Info, CheckCircle } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { I18nKey } from "#/i18n/declaration";
 import { cn } from "#/utils/utils";
 import type { RootState } from "#/store";
 import {
@@ -32,6 +33,7 @@ export function NotificationsCenter() {
       ) {
         setIsOpen(false);
       }
+      return undefined;
     }
 
     if (isOpen) {
@@ -39,6 +41,8 @@ export function NotificationsCenter() {
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
+
+    return undefined;
   }, [isOpen]);
 
   const getIcon = (type: Notification["type"]) => {
@@ -105,7 +109,9 @@ export function NotificationsCenter() {
         <div className="absolute right-0 mt-2 w-80 rounded-xl border border-white/10 bg-black/90 backdrop-blur-xl shadow-2xl z-50 overflow-hidden">
           {/* Header */}
           <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-white">Notifications</h3>
+            <h3 className="text-sm font-semibold text-white">
+              {t(I18nKey.NOTIFICATIONS$TITLE)}
+            </h3>
             {unreadCount > 0 && (
               <button
                 type="button"
@@ -114,7 +120,7 @@ export function NotificationsCenter() {
                 }}
                 className="text-xs text-white/60 hover:text-white transition-colors"
               >
-                Mark all read
+                {t(I18nKey.NOTIFICATIONS$MARK_ALL_READ)}
               </button>
             )}
           </div>
@@ -124,7 +130,9 @@ export function NotificationsCenter() {
             {notifications.length === 0 ? (
               <div className="px-4 py-8 text-center">
                 <Bell className="h-8 w-8 text-white/20 mx-auto mb-2" />
-                <p className="text-sm text-white/60">No notifications</p>
+                <p className="text-sm text-white/60">
+                  {t(I18nKey.NOTIFICATIONS$NO_NOTIFICATIONS)}
+                </p>
               </div>
             ) : (
               <div className="py-2">

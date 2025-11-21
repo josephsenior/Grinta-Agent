@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Brain } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "#/store";
@@ -112,7 +113,7 @@ export function StreamingThought({
       })
     ) {
       setDisplayedText(content);
-      return;
+      return undefined;
     }
 
     let currentIndex = 0;
@@ -126,7 +127,9 @@ export function StreamingThought({
       }
     }, intervalDelay);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+    };
   }, [content, isStreaming, isTestEnv, streamingEnabled, speed, testMode]);
 
   // Test-only instrumentation: log displayedText/content during tests to help
@@ -154,7 +157,7 @@ export function StreamingThought({
         >
           <p
             data-testid="streaming-text"
-            className="text-[11.5px] font-light leading-relaxed text-violet-300/70 whitespace-pre-wrap break-words tracking-wide"
+            className="text-[11.5px] font-light leading-relaxed text-violet-300/70 whitespace-pre-wrap tracking-wide"
           >
             {displayedText}
             {/* Subtle cursor while streaming */}
@@ -203,6 +206,7 @@ export function StreamingThought({
  * Shows when agent is generating thoughts before content appears
  */
 export function ThinkingIndicator() {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-2 py-2 px-3 my-2 max-w-3xl">
       {/* Minimal icon */}
@@ -210,7 +214,7 @@ export function ThinkingIndicator() {
 
       {/* Simple text */}
       <span className="text-[13px] text-foreground-secondary/70 font-normal">
-        Thinking
+        {t("chat.thinking", "Thinking")}
       </span>
 
       {/* Minimal animated dots */}

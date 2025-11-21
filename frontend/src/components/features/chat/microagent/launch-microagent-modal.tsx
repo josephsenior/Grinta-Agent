@@ -116,7 +116,7 @@ export function LaunchMicroagentModal({
               allowsCustomValue
               isLoading={microagentsIsLoading}
               items={
-                microagents?.map((item: any) => ({
+                microagents?.map((item: string) => ({
                   key: item,
                   label: item,
                 })) || []

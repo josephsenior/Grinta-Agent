@@ -2,10 +2,15 @@ import { useEffect, useState, useMemo } from "react";
 import { useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { Spinner } from "@heroui/react";
+import type { InfiniteData } from "@tanstack/react-query";
 import { MicroagentManagementSidebarHeader } from "./microagent-management-sidebar-header";
 import { MicroagentManagementSidebarTabs } from "./microagent-management-sidebar-tabs";
 import { useGitRepositories } from "#/hooks/query/use-git-repositories";
 import { useSearchRepositories } from "#/hooks/query/use-search-repositories";
+import type {
+  UserRepositoriesResponse,
+  InstallationRepositoriesResponse,
+} from "#/hooks/query/use-git-repositories/query-functions";
 import { GitProviderDropdown } from "#/components/features/home/git-provider-dropdown";
 import {
   setPersonalRepositories,
@@ -76,12 +81,20 @@ export function MicroagentManagementSidebar({
     }
 
     // If no search query or no search results, use paginated repositories
-    if (!repositories?.pages) {
+    const data = repositories as
+      | InfiniteData<
+          UserRepositoriesResponse | InstallationRepositoriesResponse
+        >
+      | undefined;
+    if (!data?.pages) {
       return [];
     }
 
     // Flatten all pages to get all repositories
-    const allRepositories = repositories.pages.flatMap((page) => page.data);
+    const allRepositories = data.pages.flatMap(
+      (page: UserRepositoriesResponse | InstallationRepositoriesResponse) =>
+        page.data,
+    );
 
     // If no search query, return all repositories
     if (!debouncedSearchQuery.trim()) {

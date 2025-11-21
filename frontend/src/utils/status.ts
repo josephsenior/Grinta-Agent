@@ -116,31 +116,6 @@ export function getIndicatorColor(
   return IndicatorColor.GREEN;
 }
 
-export function getStatusCode(
-  statusMessage: StatusMessage,
-  webSocketStatus: WebSocketStatus,
-  conversationStatus: ConversationStatus | null,
-  runtimeStatus: RuntimeStatus | null,
-  agentState: AgentState | null,
-) {
-  const context: StatusContext = {
-    statusMessage,
-    webSocketStatus,
-    conversationStatus,
-    runtimeStatus,
-    agentState,
-  };
-
-  for (const resolver of STATUS_RESOLVERS) {
-    const result = resolver(context);
-    if (result) {
-      return result;
-    }
-  }
-
-  return I18nKey.CHAT_INTERFACE$AGENT_ERROR_MESSAGE;
-}
-
 type StatusContext = {
   statusMessage: StatusMessage;
   webSocketStatus: WebSocketStatus;
@@ -150,6 +125,19 @@ type StatusContext = {
 };
 
 type StatusResolver = (context: StatusContext) => string | null | undefined;
+
+function resolveRuntimeStatus(
+  runtimeStatus: RuntimeStatus | null,
+): string | null | undefined {
+  if (!runtimeStatus) {
+    return null;
+  }
+  if (["STATUS$READY", "STATUS$RUNTIME_STARTED"].includes(runtimeStatus)) {
+    return null;
+  }
+  const mapped = (I18nKey as { [key: string]: string })[runtimeStatus];
+  return mapped ?? runtimeStatus;
+}
 
 const STATUS_RESOLVERS: StatusResolver[] = [
   ({ conversationStatus, runtimeStatus }) =>
@@ -176,13 +164,27 @@ const STATUS_RESOLVERS: StatusResolver[] = [
       : null,
 ];
 
-function resolveRuntimeStatus(runtimeStatus: RuntimeStatus | null) {
-  if (!runtimeStatus) {
-    return null;
+export function getStatusCode(
+  statusMessage: StatusMessage,
+  webSocketStatus: WebSocketStatus,
+  conversationStatus: ConversationStatus | null,
+  runtimeStatus: RuntimeStatus | null,
+  agentState: AgentState | null,
+) {
+  const context: StatusContext = {
+    statusMessage,
+    webSocketStatus,
+    conversationStatus,
+    runtimeStatus,
+    agentState,
+  };
+
+  for (const resolver of STATUS_RESOLVERS) {
+    const result = resolver(context);
+    if (result) {
+      return result;
+    }
   }
-  if (["STATUS$READY", "STATUS$RUNTIME_STARTED"].includes(runtimeStatus)) {
-    return null;
-  }
-  const mapped = (I18nKey as { [key: string]: string })[runtimeStatus];
-  return mapped ?? runtimeStatus;
+
+  return I18nKey.CHAT_INTERFACE$AGENT_ERROR_MESSAGE;
 }

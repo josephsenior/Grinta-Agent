@@ -87,7 +87,8 @@ export function useMagneticHover(
     element.addEventListener("mouseleave", handleMouseLeave);
     element.addEventListener("mousemove", handleMouseMove);
 
-    return () => {
+    // eslint-disable-next-line consistent-return
+    return (): void => {
       element.removeEventListener("mouseenter", handleMouseEnter);
       element.removeEventListener("mouseleave", handleMouseLeave);
       element.removeEventListener("mousemove", handleMouseMove);

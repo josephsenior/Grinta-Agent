@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import type { TimeSeriesDataPoint } from "#/types/analytics";
 
 interface CostChartProps {
@@ -7,11 +8,14 @@ interface CostChartProps {
 }
 
 export function CostChart({ data, title }: CostChartProps) {
+  const { t } = useTranslation();
   if (!data || data.length === 0) {
     return (
       <div className="p-6 bg-background-secondary border border-border rounded-lg">
         <h3 className="text-lg font-semibold text-foreground mb-4">{title}</h3>
-        <p className="text-sm text-foreground-secondary">No data available</p>
+        <p className="text-sm text-foreground-secondary">
+          {t("analytics.noDataAvailable", "No data available")}
+        </p>
       </div>
     );
   }

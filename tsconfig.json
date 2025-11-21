@@ -10,7 +10,7 @@
     "resolveJsonModule": true,
     "jsx": "react-jsx"
   },
-  "include": ["**/*.ts", "**/*.tsx", "vitest.config.ts", "types/**/*.d.ts"],
+  "include": ["**/*.ts", "**/*.tsx", "types/**/*.d.ts"],
   "exclude": ["frontend", "node_modules", "dist"],
   "references": []
 }

@@ -182,9 +182,9 @@ export function useAsyncOperation<T = any>() {
       setData(result);
       return result;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      setError(error);
-      throw error;
+      const caughtError = err instanceof Error ? err : new Error(String(err));
+      setError(caughtError);
+      throw caughtError;
     } finally {
       setIsLoading(false);
     }

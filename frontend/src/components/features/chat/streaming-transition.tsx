@@ -9,52 +9,6 @@ interface StreamingTransitionProps {
   className?: string;
 }
 
-export function StreamingTransition({
-  children,
-  isVisible,
-  delay = 0,
-  duration = 300,
-  className,
-}: StreamingTransitionProps) {
-  const [shouldRender, setShouldRender] = React.useState(isVisible);
-  const [isAnimating, setIsAnimating] = React.useState(false);
-
-  React.useEffect(() => {
-    if (isVisible) {
-      setShouldRender(true);
-      const timer = setTimeout(() => {
-        setIsAnimating(true);
-      }, delay);
-      return () => clearTimeout(timer);
-    }
-    setIsAnimating(false);
-    const timer = setTimeout(() => {
-      setShouldRender(false);
-    }, duration);
-    return () => clearTimeout(timer);
-  }, [isVisible, delay, duration]);
-
-  if (!shouldRender) return null;
-
-  return (
-    <div
-      className={cn(
-        "transition-all ease-in-out",
-        isAnimating
-          ? "opacity-100 scale-100 translate-y-0"
-          : "opacity-0 scale-95 translate-y-2",
-        className,
-      )}
-      style={{
-        transitionDuration: `${duration}ms`,
-        transitionDelay: isVisible ? `${delay}ms` : "0ms",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
 interface StreamingFadeInProps {
   children: React.ReactNode;
   delay?: number;
@@ -98,6 +52,52 @@ export function StreamingFadeIn({
       style={{
         transitionDuration: `${duration}ms`,
         transitionDelay: `${delay}ms`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function StreamingTransition({
+  children,
+  isVisible,
+  delay = 0,
+  duration = 300,
+  className,
+}: StreamingTransitionProps) {
+  const [shouldRender, setShouldRender] = React.useState(isVisible);
+  const [isAnimating, setIsAnimating] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isVisible) {
+      setShouldRender(true);
+      const timer = setTimeout(() => {
+        setIsAnimating(true);
+      }, delay);
+      return () => clearTimeout(timer);
+    }
+    setIsAnimating(false);
+    const timer = setTimeout(() => {
+      setShouldRender(false);
+    }, duration);
+    return () => clearTimeout(timer);
+  }, [isVisible, delay, duration]);
+
+  if (!shouldRender) return null;
+
+  return (
+    <div
+      className={cn(
+        "transition-all ease-in-out",
+        isAnimating
+          ? "opacity-100 scale-100 translate-y-0"
+          : "opacity-0 scale-95 translate-y-2",
+        className,
+      )}
+      style={{
+        transitionDuration: `${duration}ms`,
+        transitionDelay: isVisible ? `${delay}ms` : "0ms",
       }}
     >
       {children}
@@ -192,7 +192,7 @@ export function StreamingTypewriter({
   React.useEffect(() => {
     if (currentIndex >= text.length) {
       onComplete?.();
-      return;
+      return undefined;
     }
 
     const timer = setTimeout(() => {
@@ -200,7 +200,9 @@ export function StreamingTypewriter({
       setCurrentIndex((prev) => prev + 1);
     }, speed);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+    };
   }, [currentIndex, text, speed, onComplete]);
 
   React.useEffect(() => {

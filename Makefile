@@ -2,24 +2,24 @@ PYTHON ?= python
 
 .PHONY: pretest
 pretest:
-	@bash ./scripts/clean_pycache.sh
+	@bash ./backend/scripts/clean_pycache.sh
 
 .PHONY: test-unit
 test-unit: pretest
-	@$(PYTHON) -m pytest -q tests/unit
+	@$(PYTHON) -m pytest -q backend/tests/unit
 
 .PHONY: test-metasop
 test-metasop: pretest
-	@$(PYTHON) -m pytest -q tests/unit/metasop
+	@$(PYTHON) -m pytest -q backend/tests/unit/metasop
 .PHONY: test-unit test-metasop
 
 # Run all unit tests (fast)
 test-unit:
-	poetry run pytest -q tests/unit
+	poetry run pytest -q backend/tests/unit
 
 # Run only metasop unit tests
 test-metasop:
-	poetry run pytest -q tests/unit/metasop
+	poetry run pytest -q backend/tests/unit/metasop
 SHELL=/usr/bin/env bash
 # Makefile for Forge project
 
@@ -32,7 +32,7 @@ FRONTEND_PORT ?= 3001
 DEFAULT_WORKSPACE_DIR = "./workspace"
 DEFAULT_MODEL = "gpt-4o"
 CONFIG_FILE = config.toml
-PRE_COMMIT_CONFIG_PATH = "./dev_config/python/.pre-commit-config.yaml"
+PRE_COMMIT_CONFIG_PATH = "./backend/dev_config/python/.pre-commit-config.yaml"
 PYTHON_VERSION = 3.12
 KIND_CLUSTER_NAME = "local-hands"
 
@@ -236,7 +236,7 @@ kind:
 		kubectl config use-context kind-$(KIND_CLUSTER_NAME); \
 	else \
 		echo "$(YELLOW)Creating kind cluster '$(KIND_CLUSTER_NAME)'...$(RESET)"; \
-		kind create cluster --name $(KIND_CLUSTER_NAME) --config kind/cluster.yaml; \
+		kind create cluster --name $(KIND_CLUSTER_NAME) --config backend/kind/cluster.yaml; \
 	fi
 	@echo "$(YELLOW)Checking if mirrord is installed...$(RESET)"
 	@if ! command -v mirrord > /dev/null; then \
@@ -246,7 +246,7 @@ kind:
 		echo "$(BLUE)mirrord $(shell mirrord --version) is already installed.$(RESET)"; \
 	fi
 	@echo "$(YELLOW)Installing k8s mirrord resources...$(RESET)"
-	@kubectl apply -f kind/manifests
+	@kubectl apply -f backend/kind/manifests
 	@echo "$(GREEN)Mirrord resources installed successfully.$(RESET)"
 	@echo "$(YELLOW)Waiting for Mirrord pod to be ready.$(RESET)"
 	@sleep 5
@@ -267,7 +267,7 @@ test:
 .PHONY: compile-protos
 compile-protos:
 	@echo "$(GREEN)Compiling Protocol Buffer definitions...$(RESET)"
-	@python scripts/compile_protos.py
+	@python backend/scripts/compile_protos.py
 	@echo "$(GREEN)Proto compilation completed.$(RESET)"
 
 build-frontend:
@@ -322,7 +322,7 @@ docker-run:
 		export WORKSPACE_BASE=${WORKSPACE_BASE}; \
 		export SANDBOX_USER_ID=$(shell id -u); \
 		export DATE=$(shell date +%Y%m%d%H%M%S); \
-		docker compose up $(OPTIONS); \
+		docker compose -f backend/docker-compose.yml up $(OPTIONS); \
 	fi
 
 
@@ -375,7 +375,7 @@ docker-dev:
 		exit 0; \
 	else \
 		echo "$(YELLOW)Build and run in Docker $(OPTIONS)...$(RESET)"; \
-		./containers/dev/dev.sh $(OPTIONS); \
+		./backend/containers/dev/dev.sh $(OPTIONS); \
 	fi
 
 # Clean up all caches

@@ -40,6 +40,26 @@ const hasThoughtProperty = (
 ): args is { thought: string } =>
   "thought" in args && typeof args.thought === "string";
 
+function eventHasImportantCommand(event: ForgeEvent): boolean {
+  if (!isForgeObservation(event)) {
+    return false;
+  }
+
+  if (event.observation !== "run") {
+    return false;
+  }
+
+  return isImportantCommand(event.extras?.command);
+}
+
+function eventContainsAgentThought(event: ForgeEvent): boolean {
+  if (!isForgeAction(event)) {
+    return false;
+  }
+
+  return event.action !== "think" && hasThoughtProperty(event.args);
+}
+
 type RenderPredicate = (event: ForgeEvent) => boolean;
 
 const ALWAYS_RENDER_PREDICATES: RenderPredicate[] = [
@@ -63,24 +83,4 @@ export function shouldRenderEvent(
   }
 
   return ALWAYS_RENDER_PREDICATES.some((predicate) => predicate(event));
-}
-
-function eventHasImportantCommand(event: ForgeEvent): boolean {
-  if (!isForgeObservation(event)) {
-    return false;
-  }
-
-  if (event.observation !== "run") {
-    return false;
-  }
-
-  return isImportantCommand(event.extras?.command);
-}
-
-function eventContainsAgentThought(event: ForgeEvent): boolean {
-  if (!isForgeAction(event)) {
-    return false;
-  }
-
-  return event.action !== "think" && hasThoughtProperty(event.args);
 }

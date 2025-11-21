@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
 import { Textarea } from "#/components/ui/textarea";
 import { ModalBackdrop } from "#/components/shared/modals/modal-backdrop";
 import { useCreateCollection } from "#/hooks/mutation/use-knowledge-base-mutations";
+import { logger } from "#/utils/logger";
 
 interface KBCreateCollectionModalProps {
   onClose: () => void;
@@ -13,6 +15,7 @@ interface KBCreateCollectionModalProps {
 export function KBCreateCollectionModal({
   onClose,
 }: KBCreateCollectionModalProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const createMutation = useCreateCollection();
@@ -32,7 +35,7 @@ export function KBCreateCollectionModal({
       onClose();
     } catch (error) {
       // Error handled by mutation
-      console.error("Failed to create collection:", error);
+      logger.error("Failed to create collection:", error);
     }
   };
 
@@ -42,9 +45,13 @@ export function KBCreateCollectionModal({
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-foreground">
-            Create Knowledge Base Collection
+            {t(
+              "KB$CREATE_COLLECTION_TITLE",
+              "Create Knowledge Base Collection",
+            )}
           </h2>
           <button
+            type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg hover:bg-background-tertiary/70 transition-colors"
             title="Close"
@@ -60,7 +67,7 @@ export function KBCreateCollectionModal({
               htmlFor="collection-name"
               className="block text-sm font-medium text-foreground mb-2"
             >
-              Collection Name *
+              {t("KB$COLLECTION_NAME", "Collection Name *")}
             </label>
             <Input
               id="collection-name"
@@ -79,7 +86,7 @@ export function KBCreateCollectionModal({
               htmlFor="collection-description"
               className="block text-sm font-medium text-foreground mb-2"
             >
-              Description (optional)
+              {t("KB$DESCRIPTION_OPTIONAL", "Description (optional)")}
             </label>
             <Textarea
               id="collection-description"
@@ -100,14 +107,16 @@ export function KBCreateCollectionModal({
               className="flex-1"
               disabled={createMutation.isPending}
             >
-              Cancel
+              {t("KB$CANCEL", "Cancel")}
             </Button>
             <Button
               type="submit"
               className="flex-1"
               disabled={!name.trim() || createMutation.isPending}
             >
-              {createMutation.isPending ? "Creating..." : "Create Collection"}
+              {createMutation.isPending
+                ? t("KB$CREATING", "Creating...")
+                : t("KB$CREATE_COLLECTION", "Create Collection")}
             </Button>
           </div>
         </form>

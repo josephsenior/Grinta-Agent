@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { cn } from "#/utils/utils";
 import { usePaginatedConversations } from "#/hooks/query/use-paginated-conversations";
+import { useSearchKeyboardShortcuts } from "#/hooks/use-search-keyboard-shortcuts";
 
 interface SearchResult {
   id: string;
@@ -21,7 +22,11 @@ interface SearchResult {
   icon: React.ElementType;
 }
 
-export function GlobalSearch() {
+interface GlobalSearchProps {
+  variant?: "button" | "inline";
+}
+
+export function GlobalSearch({ variant = "button" }: GlobalSearchProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
@@ -43,32 +48,38 @@ export function GlobalSearch() {
         {
           id: "new-conversation",
           type: "action",
-          title: "New Conversation",
-          description: "Start a new AI conversation",
+          title: t("search.newConversation", "New Conversation"),
+          description: t(
+            "search.startNewConversation",
+            "Start a new AI conversation",
+          ),
           path: "/conversations/new",
           icon: MessageSquare,
         },
         {
           id: "conversations",
           type: "settings",
-          title: "All Conversations",
-          description: "View all conversations",
+          title: t("search.allConversations", "All Conversations"),
+          description: t(
+            "search.viewAllConversations",
+            "View all conversations",
+          ),
           path: "/conversations",
           icon: MessageSquare,
         },
         {
           id: "settings",
           type: "settings",
-          title: "Settings",
-          description: "Manage your settings",
+          title: t("search.settings", "Settings"),
+          description: t("search.manageSettings", "Manage your settings"),
           path: "/settings",
           icon: Settings,
         },
         {
           id: "analytics",
           type: "settings",
-          title: "Analytics",
-          description: "View usage analytics",
+          title: t("search.analytics", "Analytics"),
+          description: t("search.viewAnalytics", "View usage analytics"),
           path: "/settings/analytics",
           icon: FileText,
         },
@@ -127,61 +138,52 @@ export function GlobalSearch() {
     return searchResults.slice(0, 8);
   }, [query, conversations]);
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      // Cmd+K or Ctrl+K to open global search (only when not in conversation)
-      // Conversation search uses Cmd+K within conversations, so we check the pathname
-      const isInConversation =
-        window.location.pathname.startsWith("/conversations/");
+  const handleSelectResult = React.useCallback(
+    (result: SearchResult) => {
+      navigate(result.path);
+      setIsOpen(false);
+      setQuery("");
+      setSelectedIndex(0);
+    },
+    [navigate],
+  );
 
-      if (
-        (event.metaKey || event.ctrlKey) &&
-        event.key === "k" &&
-        !isInConversation
-      ) {
-        // Check if we're in an input/textarea to avoid conflicts
-        const target = event.target as HTMLElement;
-        if (
-          target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable
-        ) {
-          return; // Let the input handle it
-        }
-
-        event.preventDefault();
-        setIsOpen(true);
-        setTimeout(() => inputRef.current?.focus(), 0);
+  const handleSelectByIndex = React.useCallback(
+    (index: number) => {
+      if (results[index]) {
+        handleSelectResult(results[index]);
       }
+    },
+    [results, handleSelectResult],
+  );
 
-      // Escape to close
-      if (event.key === "Escape" && isOpen) {
-        setIsOpen(false);
-        setQuery("");
-        setSelectedIndex(0);
-      }
-
-      // Arrow keys to navigate
-      if (isOpen && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
-        event.preventDefault();
-        setSelectedIndex((prev) => {
-          if (event.key === "ArrowDown") {
-            return prev < results.length - 1 ? prev + 1 : 0;
-          }
-          return prev > 0 ? prev - 1 : results.length - 1;
-        });
-      }
-
-      // Enter to select
-      if (isOpen && event.key === "Enter" && results[selectedIndex]) {
-        event.preventDefault();
-        handleSelectResult(results[selectedIndex]);
-      }
+  const handleClose = React.useCallback(() => {
+    if (variant === "button") {
+      setQuery("");
     }
+    setSelectedIndex(0);
+  }, [variant]);
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, results, selectedIndex]);
+  // Use shared keyboard shortcuts hook
+  useSearchKeyboardShortcuts({
+    isOpen,
+    setIsOpen,
+    inputRef,
+    selectedIndex,
+    setSelectedIndex,
+    results,
+    onSelect: handleSelectByIndex,
+    onClose: handleClose,
+    shouldOpen: (event) => {
+      // Only open when not in conversation
+      // Use event to check if it's a keyboard shortcut and handle Escape key
+      if (event instanceof KeyboardEvent && event.key === "Escape") {
+        return false;
+      }
+      return !window.location.pathname.startsWith("/conversations/");
+    },
+    variant,
+  });
 
   useEffect(() => {
     if (isOpen) {
@@ -189,17 +191,118 @@ export function GlobalSearch() {
     }
   }, [isOpen]);
 
+  // Close dropdown when clicking outside (for inline mode)
+  useEffect(() => {
+    if (variant === "inline" && isOpen) {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          dropdownRef.current &&
+          !dropdownRef.current.contains(event.target as Node) &&
+          inputRef.current &&
+          !inputRef.current.contains(event.target as Node)
+        ) {
+          setIsOpen(false);
+        }
+      };
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+    return undefined;
+  }, [isOpen, variant]);
+
   useEffect(() => {
     setSelectedIndex(0);
   }, [query]);
 
-  const handleSelectResult = (result: SearchResult) => {
-    navigate(result.path);
-    setIsOpen(false);
-    setQuery("");
-    setSelectedIndex(0);
-  };
+  // Inline mode: always show search input in header center
+  if (variant === "inline") {
+    return (
+      <div className="relative w-full">
+        <div className="relative flex items-center">
+          <Search className="absolute left-3 w-4 h-4 text-white/60 pointer-events-none" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setIsOpen(true);
+            }}
+            onFocus={() => setIsOpen(true)}
+            placeholder="Search conversations, settings..."
+            className="w-full pl-10 pr-10 py-2 rounded-lg border border-white/10 bg-black/60 text-white placeholder:text-white/40 hover:border-white/20 focus:outline-none focus:ring-2 focus:ring-[rgba(139,92,246,0.2)] focus:border-[#8b5cf6] transition-all duration-200 text-sm"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                setIsOpen(false);
+              }}
+              className="absolute right-3 text-white/40 hover:text-white/60 transition-colors"
+            >
+              <span className="text-xs">✕</span>
+            </button>
+          )}
+          <kbd className="absolute right-3 hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-xs font-mono text-white/40">
+            <Command className="w-3 h-3" />K
+          </kbd>
+        </div>
 
+        {/* Dropdown results */}
+        {isOpen && query && (
+          <div
+            ref={dropdownRef}
+            className="absolute top-full left-0 right-0 mt-2 rounded-xl border border-white/10 bg-black/90 backdrop-blur-xl shadow-2xl overflow-hidden z-50"
+          >
+            <div className="max-h-96 overflow-y-auto">
+              {results.length === 0 ? (
+                <div className="px-4 py-8 text-center">
+                  <Search className="h-8 w-8 text-white/20 mx-auto mb-2" />
+                  <p className="text-sm text-white/60">No results found</p>
+                </div>
+              ) : (
+                <div className="py-2">
+                  {results.map((result, index) => {
+                    const Icon = result.icon;
+                    return (
+                      <button
+                        key={result.id}
+                        type="button"
+                        onClick={() => handleSelectResult(result)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors",
+                          index === selectedIndex && "bg-white/10",
+                        )}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                          <Icon className="w-4 h-4 text-white/60" />
+                        </div>
+                        <div className="flex-1 min-w-0 text-left">
+                          <p className="text-sm font-medium text-white truncate">
+                            {result.title}
+                          </p>
+                          {result.description && (
+                            <p className="text-xs text-white/50 truncate">
+                              {result.description}
+                            </p>
+                          )}
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-white/40 flex-shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Button mode: button that opens modal
   if (!isOpen) {
     return (
       <button

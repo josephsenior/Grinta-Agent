@@ -19,6 +19,35 @@ interface AuthModalProps {
   providersConfigured?: Provider[];
 }
 
+interface AuthProviderOption {
+  key: Provider;
+  labelKey: I18nKey;
+  icon?: React.ReactNode | null;
+  url: string;
+}
+
+function AuthProviderButton({
+  label,
+  icon,
+  onClick,
+}: {
+  label: string;
+  icon?: React.ReactNode | null;
+  onClick: () => void;
+}) {
+  return (
+    <BrandButton
+      type="button"
+      variant="primary"
+      onClick={onClick}
+      className="w-full"
+      startContent={icon ?? undefined}
+    >
+      {label}
+    </BrandButton>
+  );
+}
+
 export function AuthModal({
   githubAuthUrl,
   appMode,
@@ -164,34 +193,5 @@ export function AuthModal({
         </p>
       </ModalBody>
     </ModalBackdrop>
-  );
-}
-
-interface AuthProviderOption {
-  key: Provider;
-  labelKey: I18nKey;
-  icon?: React.ReactNode | null;
-  url: string;
-}
-
-function AuthProviderButton({
-  label,
-  icon,
-  onClick,
-}: {
-  label: string;
-  icon?: React.ReactNode | null;
-  onClick: () => void;
-}) {
-  return (
-    <BrandButton
-      type="button"
-      variant="primary"
-      onClick={onClick}
-      className="w-full"
-      startContent={icon ?? undefined}
-    >
-      {label}
-    </BrandButton>
   );
 }

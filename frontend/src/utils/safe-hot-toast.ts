@@ -1,5 +1,6 @@
 import React from "react";
 import type { ToastOptions } from "react-hot-toast";
+import { logger } from "./logger";
 // Minimal normalize helper (avoid importing other utils to keep shim self-contained)
 function normalizeToastMessage(input: unknown): string {
   if (input == null) {
@@ -15,15 +16,13 @@ function normalizeToastMessage(input: unknown): string {
     }
   } catch (e) {
     // ignore parse errors when inspecting message property
-    // eslint-disable-next-line no-console
-    console.warn("safe-hot-toast: normalizeToastMessage parse error", e);
+    logger.warn("safe-hot-toast: normalizeToastMessage parse error", e);
   }
   try {
     return String(input);
   } catch (e) {
     // Fallback to empty string if toString fails
-    // eslint-disable-next-line no-console
-    console.warn("safe-hot-toast: normalizeToastMessage stringify failed", e);
+    logger.warn("safe-hot-toast: normalizeToastMessage stringify failed", e);
     return "";
   }
 }
@@ -116,16 +115,14 @@ function flushQueuedCalls() {
     const queuedCall = queue.shift()!;
     try {
       const rt = realToast;
-      if (!rt) {
-        continue;
-      }
-      const fn = rt[queuedCall.method];
-      if (typeof fn === "function") {
-        (fn as (...args: unknown[]) => unknown)(...queuedCall.args);
+      if (rt) {
+        const fn = rt[queuedCall.method];
+        if (typeof fn === "function") {
+          (fn as (...args: unknown[]) => unknown)(...queuedCall.args);
+        }
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.warn("safe-hot-toast shim queued call failed", error);
+      logger.warn("safe-hot-toast shim queued call failed", error);
     }
   }
 }
@@ -145,19 +142,16 @@ function scheduleImport() {
   }
   importScheduled = true;
   // Emit diagnostic only when the allow flag is present (dev client)
-  // eslint-disable-next-line no-console
-  console.warn("safe-hot-toast: scheduling dynamic import of react-hot-toast");
+  logger.warn("safe-hot-toast: scheduling dynamic import of react-hot-toast");
 
   setTimeout(() => {
     if (!isDevRuntime()) {
-      // eslint-disable-next-line no-console
-      console.warn("safe-hot-toast: skipping dynamic import outside of dev");
+      logger.warn("safe-hot-toast: skipping dynamic import outside of dev");
       importScheduled = false;
       return;
     }
 
-    // eslint-disable-next-line no-console
-    console.warn("safe-hot-toast: starting dynamic import");
+    logger.warn("safe-hot-toast: starting dynamic import");
     import("react-hot-toast")
       .then((m) => {
         const imported = m as Record<string, unknown>;
@@ -166,8 +160,7 @@ function scheduleImport() {
         flushQueuedCalls();
       })
       .catch((err) => {
-        // eslint-disable-next-line no-console
-        console.warn("safe-hot-toast shim: dynamic import failed", err);
+        logger.warn("safe-hot-toast shim: dynamic import failed", err);
       });
   }, 0);
 }
@@ -220,9 +213,9 @@ if (IS_PROD_BUILD) {
           }
           return realToast.show?.(resolvedMsg, opts);
         }
+        return undefined;
       } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn("safe-hot-toast shim: show failed", err);
+        logger.warn("safe-hot-toast shim: show failed", err);
         return undefined;
       }
     },
@@ -241,8 +234,7 @@ if (IS_PROD_BUILD) {
         }
         return undefined;
       } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn("safe-hot-toast shim: success failed", err);
+        logger.warn("safe-hot-toast shim: success failed", err);
         return undefined;
       }
     },
@@ -261,8 +253,7 @@ if (IS_PROD_BUILD) {
         }
         return undefined;
       } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn("safe-hot-toast shim: error failed", err);
+        logger.warn("safe-hot-toast shim: error failed", err);
         return undefined;
       }
     },
@@ -278,8 +269,7 @@ if (IS_PROD_BUILD) {
         }
         return undefined;
       } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn("safe-hot-toast shim: dismiss failed", err);
+        logger.warn("safe-hot-toast shim: dismiss failed", err);
         return undefined;
       }
     },

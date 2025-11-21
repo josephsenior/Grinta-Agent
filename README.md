@@ -50,19 +50,24 @@
 All documentation is now consolidated in the `docs/` directory:
 
 - **[Documentation Index](docs/index.md)** - Start here
+- **[Quick Reference](docs/quick-reference.md)** - ⚡ Commands, APIs, and patterns
+- **[FAQ](docs/faq.md)** - Frequently asked questions
 - **[Getting Started](docs/getting_started.md)** - Quick setup guide  
+- **[Tutorials](docs/tutorials/README.md)** - Step-by-step guides
 - **[Features](docs/features.md)** - Complete feature overview
-- **[Code Quality](docs/CODE_QUALITY.md)** - ⭐ Code quality metrics and standards
+- **[Code Quality](docs/code-quality.md)** - ⭐ Code quality metrics and standards
 - **[Configuration](docs/configuration.md)** - LLM setup and runtime configuration
 - **[Production Deployment](docs/production_deployment.md)** - Scaling and deployment
 - **[Development Guide](docs/development.md)** - For contributors
 - **[Contributing](docs/contributing.md)** - How to contribute
 - **[Testing](docs/testing.md)** - Testing guide
 - **[Security](docs/security.md)** - Security policy
-- **[API Reference](docs/api.md)** - Complete API documentation
+- **[API Reference](docs/api-reference.md)** - Complete API documentation
+- **[Use Cases](docs/use-cases/README.md)** - Real-world examples
+- **[Changelog](docs/changelog.md)** - Version history
 
 ### Beta Launch
-- **[Beta Release Notes](BETA_RELEASE_NOTES.md)** - Beta launch strategy and disabled features
+- **[Beta Release Notes](docs/beta-release-notes.md)** - Beta launch strategy and disabled features
 - **[Advanced Features - Beta Section](docs/advanced_features.md#beta-launch-temporarily-disabled-ui-features)** - Re-activation guide
 
 For website documentation (e.g., Mintlify/Docusaurus), see `docs_website/`.
@@ -76,13 +81,13 @@ Forge is **production-ready** with enterprise-grade infrastructure:
 | Feature | Rating | Status |
 |---------|--------|--------|
 | **Error Handling** | 9.5/10 | Tenacity + Circuit Breaker ✅ |
-| **Code Quality** | 10/10 | Avg complexity 3.13, 0% high-complexity ✅ |
+| **Code Quality** | 10/10 | Backend: 3.06, Frontend: 2.21, 0% high-complexity ✅ |
 | **Monitoring** | 8.5/10 | Prometheus + Grafana ✅ |
 | **Rate Limiting** | 9.0/10 | Redis + Cost Quotas ✅ |
 | **UX/UI** | 9.3/10 | Cursor-level Polish ✅ |
 | **Tests** | 8.5/10 | 3,461 test cases ✅ |
 
-**Code Quality Achievement:** 🏆 **125K+ lines, 5,931 functions, ZERO high-complexity functions**
+**Code Quality Achievement:** 🏆 **245,527 lines of production code (144K backend + 101K frontend), 704 Python files, 983 frontend files, ZERO high-complexity functions**
 
 **See:** `docs/honest-reassessment-corrected.md` for full assessment
 
@@ -98,7 +103,7 @@ Forge is **production-ready** with enterprise-grade infrastructure:
 **Features:**
 - [Ultimate Editor Guide](docs/ultimate-editor.md)
 - [Cost Quotas](Forge/server/middleware/cost_quota.py)
-- [Monitoring Stack](monitoring/README.md)
+- [Monitoring Stack](docs/monitoring/README.md)
 
 **Development:**
 - [Tool Quick Reference](docs/tool-quick-reference.md)

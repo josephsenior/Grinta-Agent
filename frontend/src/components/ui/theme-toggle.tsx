@@ -1,5 +1,6 @@
 import React from "react";
 import { Sun, Moon, Monitor } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   useTheme,
   type Theme,
@@ -9,35 +10,6 @@ import {
 interface ThemeToggleProps {
   variant?: "icon" | "button" | "dropdown";
   className?: string;
-}
-
-/**
- * Theme toggle component with multiple variants
- */
-export function ThemeToggle({
-  variant = "icon",
-  className = "",
-}: ThemeToggleProps) {
-  const { theme, resolvedTheme, setTheme, toggleTheme } = useTheme();
-
-  const sharedProps = {
-    className,
-    theme,
-    resolvedTheme,
-    setTheme,
-    toggleTheme,
-  } as const;
-
-  switch (variant) {
-    case "icon":
-      return <ThemeToggleIcon {...sharedProps} />;
-    case "button":
-      return <ThemeToggleButton {...sharedProps} />;
-    case "dropdown":
-      return <ThemeToggleDropdown {...sharedProps} />;
-    default:
-      return null;
-  }
 }
 
 function ThemeToggleIcon({
@@ -51,44 +23,61 @@ function ThemeToggleIcon({
   toggleTheme: () => void;
   theme: Theme;
 }) {
+  const isLight = resolvedTheme === "light";
+  const sunOpacity = isLight ? 1 : 0;
+  const sunTransform = isLight
+    ? "rotate(0deg) scale(1)"
+    : "rotate(90deg) scale(0.5)";
+  const moonOpacity = resolvedTheme === "dark" ? 1 : 0;
+  const moonTransform =
+    resolvedTheme === "dark"
+      ? "rotate(0deg) scale(1)"
+      : "rotate(-90deg) scale(0.5)";
+
   return (
     <button
       type="button"
-      onClick={toggleTheme}
-      className={`
-          group relative p-2 rounded-lg
-          bg-background-surface hover:bg-background-elevated
-          border border-border-secondary hover:border-accent-gold/30
-          transition-all duration-200
-          ${className}
-        `}
+      onClick={() => {
+        toggleTheme();
+        return undefined;
+      }}
+      className={`group relative p-2 rounded-lg transition-all duration-200 ${className}`}
+      style={{
+        color: "var(--text-secondary)",
+      }}
+      onMouseEnter={(e) => {
+        const target = e.currentTarget;
+        target.style.color = "var(--text-primary)";
+        target.style.backgroundColor = "var(--bg-tertiary)";
+        return undefined;
+      }}
+      onMouseLeave={(e) => {
+        const target = e.currentTarget;
+        target.style.color = "var(--text-secondary)";
+        target.style.backgroundColor = "transparent";
+        return undefined;
+      }}
       title={`Current: ${theme} (${resolvedTheme}). Click to toggle`}
       aria-label="Toggle theme"
     >
       <div className="relative w-5 h-5">
         <Sun
-          className={`
-              absolute inset-0 w-5 h-5 text-accent-gold
-              transition-all duration-300
-              ${resolvedTheme === "light" ? "opacity-100 rotate-0 scale-100" : "opacity-0 rotate-90 scale-50"}
-            `}
+          className="absolute inset-0 w-5 h-5 transition-all duration-300"
+          style={{
+            opacity: sunOpacity,
+            transform: sunTransform,
+            color: "#F59E0B",
+          }}
         />
         <Moon
-          className={`
-              absolute inset-0 w-5 h-5 text-text-accent
-              transition-all duration-300
-              ${resolvedTheme === "dark" ? "opacity-100 rotate-0 scale-100" : "opacity-0 -rotate-90 scale-50"}
-            `}
+          className="absolute inset-0 w-5 h-5 transition-all duration-300"
+          style={{
+            opacity: moonOpacity,
+            transform: moonTransform,
+            color: "var(--text-primary)",
+          }}
         />
       </div>
-
-      <div
-        className="
-            absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100
-            transition-opacity duration-200
-            bg-gradient-to-r from-accent-gold/5 to-text-accent/5
-          "
-      />
     </button>
   );
 }
@@ -102,10 +91,21 @@ function ThemeToggleButton({
   resolvedTheme: ResolvedTheme;
   toggleTheme: () => void;
 }) {
+  const { t } = useTranslation();
+  const isDark = resolvedTheme === "dark";
+  const IconComponent = isDark ? Moon : Sun;
+  const iconClassName = isDark
+    ? "w-4 h-4 text-text-accent"
+    : "w-4 h-4 text-accent-gold";
+  const modeText = isDark ? "Dark" : "Light";
+
   return (
     <button
       type="button"
-      onClick={toggleTheme}
+      onClick={() => {
+        toggleTheme();
+        return undefined;
+      }}
       className={`
           group flex items-center gap-2 px-4 py-2 rounded-lg
           bg-background-surface hover:bg-background-elevated
@@ -116,14 +116,40 @@ function ThemeToggleButton({
         `}
       aria-label="Toggle theme"
     >
-      {resolvedTheme === "dark" ? (
-        <Moon className="w-4 h-4 text-text-accent" />
-      ) : (
-        <Sun className="w-4 h-4 text-accent-gold" />
-      )}
+      <IconComponent className={iconClassName} />
       <span className="text-sm font-medium">
-        {resolvedTheme === "dark" ? "Dark" : "Light"} Mode
+        {t("UI$MODE", "{{mode}} Mode", { mode: modeText })}
       </span>
+    </button>
+  );
+}
+
+function ThemeDropdownOption({
+  label,
+  icon,
+  isActive,
+  onClick,
+  activeClasses,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  isActive: boolean;
+  onClick: () => void;
+  activeClasses: string;
+}) {
+  const baseClasses =
+    "flex items-center gap-3 px-3 py-2 rounded-md text-left transition-all duration-150";
+  const inactiveClasses =
+    "text-text-secondary hover:bg-background-elevated hover:text-text-primary";
+  const buttonClassName = isActive
+    ? `${baseClasses} ${activeClasses}`
+    : `${baseClasses} ${inactiveClasses}`;
+
+  return (
+    <button type="button" onClick={onClick} className={buttonClassName}>
+      {icon}
+      <span className="text-sm font-medium">{label}</span>
+      {isActive && <div className="ml-auto w-2 h-2 rounded-full bg-current" />}
     </button>
   );
 }
@@ -139,6 +165,7 @@ function ThemeToggleDropdown({
   resolvedTheme: ResolvedTheme;
   setTheme: (theme: Theme) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className={`relative ${className}`}>
       <div className="flex flex-col gap-1 p-1 bg-background-surface border border-border-secondary rounded-lg">
@@ -169,43 +196,44 @@ function ThemeToggleDropdown({
 
       {theme === "system" && (
         <p className="mt-2 px-3 text-xs text-text-muted">
-          Using system preference: {resolvedTheme}
+          {t(
+            "UI$USING_SYSTEM_PREFERENCE",
+            "Using system preference: {{theme}}",
+            {
+              theme: resolvedTheme,
+            },
+          )}
         </p>
       )}
     </div>
   );
 }
 
-function ThemeDropdownOption({
-  label,
-  icon,
-  isActive,
-  onClick,
-  activeClasses,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  isActive: boolean;
-  onClick: () => void;
-  activeClasses: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`
-              flex items-center gap-3 px-3 py-2 rounded-md text-left
-              transition-all duration-150
-              ${
-                isActive
-                  ? activeClasses
-                  : "text-text-secondary hover:bg-background-elevated hover:text-text-primary"
-              }
-            `}
-    >
-      {icon}
-      <span className="text-sm font-medium">{label}</span>
-      {isActive && <div className="ml-auto w-2 h-2 rounded-full bg-current" />}
-    </button>
-  );
+/**
+ * Theme toggle component with multiple variants
+ */
+export function ThemeToggle({
+  variant = "icon",
+  className = "",
+}: ThemeToggleProps) {
+  const { theme, resolvedTheme, setTheme, toggleTheme } = useTheme();
+
+  const sharedProps = {
+    className,
+    theme,
+    resolvedTheme,
+    setTheme,
+    toggleTheme,
+  } as const;
+
+  if (variant === "icon") {
+    return <ThemeToggleIcon {...sharedProps} />;
+  }
+  if (variant === "button") {
+    return <ThemeToggleButton {...sharedProps} />;
+  }
+  if (variant === "dropdown") {
+    return <ThemeToggleDropdown {...sharedProps} />;
+  }
+  return null;
 }

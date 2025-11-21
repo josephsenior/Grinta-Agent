@@ -1,53 +1,8 @@
 import React from "react";
 import ReactJsonView from "@microlink/react-json-view";
-import { useTranslation } from "react-i18next";
 import { MCPObservation } from "#/types/core/observations";
 import { hasExtras } from "#/types/core/guards";
 import { JSON_VIEW_THEME } from "#/utils/constants";
-
-interface MCPObservationContentProps {
-  event: MCPObservation;
-}
-
-export function MCPObservationContent({ event }: MCPObservationContentProps) {
-  const { t } = useTranslation();
-  const data = useMcpObservationData(event);
-  const outputLabel = t("MCP_OBSERVATION$OUTPUT");
-
-  return (
-    <div className="flex flex-col gap-4">
-      {data.hasArguments && (
-        <ArgumentsSection
-          argumentsObject={data.argumentsObject}
-          label={t("MCP_OBSERVATION$ARGUMENTS")}
-        />
-      )}
-
-      <OutputSection
-        output={data.output}
-        fallback={t("OBSERVATION$MCP_NO_OUTPUT", {
-          defaultValue: data.fallbackText,
-        })}
-        label={outputLabel}
-      />
-    </div>
-  );
-}
-
-function useMcpObservationData(event: MCPObservation) {
-  return React.useMemo(() => {
-    const output = parseObservationOutput(event.content);
-    const { argumentsObject, hasArguments } =
-      extractObservationArguments(event);
-
-    return {
-      output,
-      argumentsObject,
-      hasArguments,
-      fallbackText: String(event.content || "").trim(),
-    } as const;
-  }, [event]);
-}
 
 function parseObservationOutput(content: unknown) {
   if (typeof content !== "string") {
@@ -77,6 +32,21 @@ function extractObservationArguments(event: MCPObservation) {
     argumentsObject: castedArgs,
     hasArguments: Object.keys(castedArgs).length > 0,
   } as const;
+}
+
+function useMcpObservationData(event: MCPObservation) {
+  return React.useMemo(() => {
+    const output = parseObservationOutput(event.content);
+    const { argumentsObject, hasArguments } =
+      extractObservationArguments(event);
+
+    return {
+      output,
+      argumentsObject,
+      hasArguments,
+      fallbackText: String(event.content || "").trim(),
+    } as const;
+  }, [event]);
 }
 
 function ArgumentsSection({
@@ -138,5 +108,19 @@ function OutputSection({
         )}
       </div>
     </section>
+  );
+}
+
+export function MCPObservationContent({ event }: { event: MCPObservation }) {
+  const { output, argumentsObject, hasArguments, fallbackText } =
+    useMcpObservationData(event);
+
+  return (
+    <div className="flex flex-col gap-4">
+      {hasArguments && (
+        <ArgumentsSection argumentsObject={argumentsObject} label="Arguments" />
+      )}
+      <OutputSection output={output} fallback={fallbackText} label="Output" />
+    </div>
   );
 }

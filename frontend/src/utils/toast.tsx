@@ -13,12 +13,17 @@ export default {
     const toastId = safeToast.show(text, {
       duration: 4000,
       style: {
-        background: "#ef4444",
-        color: "#fff",
+        background: "var(--bg-primary)",
+        color: "var(--text-primary)",
+        border: "1px solid var(--text-danger)",
+        borderRadius: "12px",
+        padding: "16px",
+        fontSize: "14px",
+        maxWidth: "400px",
       },
       iconTheme: {
-        primary: "#ef4444",
-        secondary: "#fff",
+        primary: "var(--text-danger)",
+        secondary: "var(--text-primary)",
       },
     });
     idMap.set(id, String(toastId));
@@ -31,12 +36,17 @@ export default {
     const toastId = safeToast.success(text, {
       duration,
       style: {
-        background: "#333",
-        color: "#fff",
+        background: "var(--bg-primary)",
+        color: "var(--text-primary)",
+        border: "1px solid var(--text-success)",
+        borderRadius: "12px",
+        padding: "16px",
+        fontSize: "14px",
+        maxWidth: "400px",
       },
       iconTheme: {
-        primary: "#333",
-        secondary: "#fff",
+        primary: "var(--text-success)",
+        secondary: "var(--text-primary)",
       },
     });
     idMap.set(id, String(toastId));
@@ -49,8 +59,13 @@ export default {
       duration: calculateToastDuration(msg, 5000),
       icon: "⚙️",
       style: {
-        background: "#333",
-        color: "#fff",
+        background: "var(--bg-primary)",
+        color: "var(--text-primary)",
+        border: "1px solid var(--border-primary)",
+        borderRadius: "12px",
+        padding: "16px",
+        fontSize: "14px",
+        maxWidth: "400px",
       },
     });
   },
@@ -60,10 +75,14 @@ export default {
     safeToast.show(text, {
       position: "top-center",
       className: "bg-background-secondary",
-
       style: {
-        background: "#333",
+        background: "#000",
         color: "#fff",
+        border: "1px solid rgba(255, 255, 255, 0.1)",
+        borderRadius: "12px",
+        padding: "16px",
+        fontSize: "14px",
+        maxWidth: "400px",
         lineBreak: "anywhere",
       },
     });

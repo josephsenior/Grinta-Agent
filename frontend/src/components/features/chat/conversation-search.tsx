@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   Search,
   X,
@@ -18,11 +19,11 @@ import {
 import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
 import { cn } from "#/utils/utils";
-import { ForgeAction } from "#/types/core/actions";
-import { ForgeObservation } from "#/types/core/observations";
+import { ForgeAction, ForgeObservation } from "#/types/core";
 import { isUserMessage, isAssistantMessage } from "#/types/core/guards";
-
 import ClientTimeDelta from "#/components/shared/ClientTimeDelta";
+import { useConversationSearch } from "./conversation-search/hooks/use-conversation-search";
+import { SearchFilter } from "./conversation-search/types";
 
 interface ConversationSearchProps {
   isOpen: boolean;
@@ -30,16 +31,6 @@ interface ConversationSearchProps {
   messages: (ForgeAction | ForgeObservation)[];
   onSelectMessage: (messageIndex: number) => void;
 }
-
-interface SearchResult {
-  index: number;
-  message: ForgeAction | ForgeObservation;
-  snippet: string;
-  timestamp?: Date;
-  matchScore: number;
-}
-
-type SearchFilter = "all" | "user" | "agent" | "code" | "errors";
 
 function highlightText(text: string, query: string): React.ReactNode {
   if (!query.trim()) return text;
@@ -59,131 +50,19 @@ function highlightText(text: string, query: string): React.ReactNode {
   );
 }
 
-const STRING_FIELDS: Array<keyof ForgeAction | keyof ForgeObservation> = [
-  "message",
-  "content",
-  "observation",
-];
-
-const extractStringField = (message: ForgeAction | ForgeObservation) => {
-  for (const field of STRING_FIELDS) {
-    if (field in message && typeof (message as any)[field] === "string") {
-      return (message as any)[field] as string;
-    }
-  }
-
-  return null;
-};
-
-const extractArgsText = (args: unknown): string | null => {
-  if (!args) {
-    return null;
-  }
-
-  if (typeof args === "string") {
-    return args;
-  }
-
-  if (
-    typeof args === "object" &&
-    "thought" in (args as Record<string, unknown>)
-  ) {
-    const { thought } = args as Record<string, unknown>;
-    return thought != null ? String(thought) : "";
-  }
-
-  return null;
-};
-
-function getMessageText(message: ForgeAction | ForgeObservation): string {
-  const stringField = extractStringField(message);
-  if (stringField !== null) {
-    return stringField;
-  }
-
-  if ("args" in message) {
-    const argsText = extractArgsText(message.args);
-    if (argsText !== null) {
-      return argsText;
-    }
-  }
-
-  return JSON.stringify(message);
-}
-
 export function ConversationSearch({
   isOpen,
   onClose,
   messages,
   onSelectMessage,
 }: ConversationSearchProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = React.useState("");
   const [filter, setFilter] = React.useState<SearchFilter>("all");
-  const [results, setResults] = React.useState<SearchResult[]>([]);
 
-  // Search logic
-  React.useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
-      return;
-    }
+  const results = useConversationSearch({ messages, query, filter });
 
-    const searchQuery = query.toLowerCase();
-    const searchResults: SearchResult[] = [];
-
-    messages.forEach((message, index) => {
-      // Apply filter
-      if (filter === "user" && !isUserMessage(message)) return;
-      if (filter === "agent" && !isAssistantMessage(message)) return;
-
-      const text = getMessageText(message);
-      const lowerText = text.toLowerCase();
-
-      // Check if message matches query
-      if (lowerText.includes(searchQuery)) {
-        // Calculate match score
-        const exactMatch = lowerText === searchQuery;
-        const startsWithMatch = lowerText.startsWith(searchQuery);
-        const wordMatch = lowerText
-          .split(/\s+/)
-          .some((word) => word === searchQuery);
-
-        let matchScore = 1;
-        if (exactMatch) matchScore = 100;
-        else if (startsWithMatch) matchScore = 80;
-        else if (wordMatch) matchScore = 60;
-        else matchScore = 40;
-
-        // Create snippet with context
-        const matchIndex = lowerText.indexOf(searchQuery);
-        const snippetStart = Math.max(0, matchIndex - 50);
-        const snippetEnd = Math.min(
-          text.length,
-          matchIndex + searchQuery.length + 50,
-        );
-        let snippet = text.slice(snippetStart, snippetEnd);
-
-        if (snippetStart > 0) snippet = `...${snippet}`;
-        if (snippetEnd < text.length) snippet += "...";
-
-        searchResults.push({
-          index,
-          message,
-          snippet,
-          timestamp: message.timestamp
-            ? new Date(message.timestamp)
-            : undefined,
-          matchScore,
-        });
-      }
-    });
-
-    // Sort by match score
-    searchResults.sort((a, b) => b.matchScore - a.matchScore);
-    setResults(searchResults.slice(0, 50)); // Limit to 50 results
-  }, [query, filter, messages]);
-
-  const handleSelectResult = (result: SearchResult) => {
+  const handleSelectResult = (result: { index: number }) => {
     onSelectMessage(result.index);
     onClose();
   };
@@ -202,19 +81,19 @@ export function ConversationSearch({
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-border-glass">
           <DialogTitle className="flex items-center gap-2">
             <Search className="h-5 w-5" />
-            Search Conversation
+            {t("chat.search.title", "Search Conversation")}
           </DialogTitle>
         </DialogHeader>
 
-        {/* Search Input */}
         <div className="px-6 pt-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-foreground-secondary" />
             <input
               type="text"
-              placeholder="Search messages..."
+              placeholder={t("chat.search.placeholder", "Search messages...")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              // eslint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
               className={cn(
                 "w-full pl-10 pr-10 py-3 rounded-lg",
@@ -226,6 +105,7 @@ export function ConversationSearch({
             />
             {query && (
               <button
+                type="button"
                 onClick={() => setQuery("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-text-foreground-secondary hover:text-text-primary"
               >
@@ -234,7 +114,6 @@ export function ConversationSearch({
             )}
           </div>
 
-          {/* Filters */}
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             <Filter className="h-3 w-3 text-text-foreground-secondary" />
             {(["all", "user", "agent"] as SearchFilter[]).map((filterType) => (
@@ -267,16 +146,18 @@ export function ConversationSearch({
           </div>
         </div>
 
-        {/* Results */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {query && results.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Search className="h-12 w-12 text-text-foreground-secondary opacity-50 mb-3" />
               <p className="text-sm font-medium text-text-primary mb-1">
-                No results found
+                {t("chat.search.noResults", "No results found")}
               </p>
               <p className="text-xs text-text-foreground-secondary">
-                Try different keywords or filters
+                {t(
+                  "chat.search.tryDifferent",
+                  "Try different keywords or filters",
+                )}
               </p>
             </div>
           )}
@@ -285,10 +166,16 @@ export function ConversationSearch({
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Search className="h-12 w-12 text-text-foreground-secondary opacity-50 mb-3" />
               <p className="text-sm font-medium text-text-primary mb-1">
-                Search your conversation
+                {t(
+                  "chat.search.searchConversation",
+                  "Search your conversation",
+                )}
               </p>
               <p className="text-xs text-text-foreground-secondary">
-                Type to search through all messages
+                {t(
+                  "chat.search.typeToSearch",
+                  "Type to search through all messages",
+                )}
               </p>
             </div>
           )}
@@ -296,12 +183,15 @@ export function ConversationSearch({
           {results.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs text-text-foreground-secondary mb-3">
-                Found {results.length}{" "}
-                {results.length === 1 ? "result" : "results"}
+                {t("chat.search.foundResults", "Found {{count}} {{results}}", {
+                  count: results.length,
+                  results: results.length === 1 ? "result" : "results",
+                })}
               </p>
               {results.map((result) => (
                 <button
                   key={result.index}
+                  type="button"
                   onClick={() => handleSelectResult(result)}
                   className={cn(
                     "w-full text-left p-3 rounded-lg transition-all duration-200",
@@ -349,34 +239,14 @@ export function ConversationSearch({
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-6 py-3 border-t border-border-glass text-xs text-text-foreground-secondary text-center">
-          Press{" "}
+          {t("chat.search.pressToClose", "Press")}{" "}
           <kbd className="px-1.5 py-0.5 rounded bg-background-surface border border-border-glass">
-            Esc
+            {t("chat.search.escKey", "Esc")}
           </kbd>{" "}
-          to close
+          {t("chat.search.toClose", "to close")}
         </div>
       </DialogContent>
     </Dialog>
   );
-}
-
-// Hook for keyboard shortcut
-export function useConversationSearch() {
-  const [isOpen, setIsOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        setIsOpen(true);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  return { isOpen, setIsOpen };
 }

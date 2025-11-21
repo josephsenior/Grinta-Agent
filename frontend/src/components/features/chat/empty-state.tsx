@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Sparkles,
   Code,
@@ -11,8 +12,10 @@ import {
   BookOpen,
   Wand2,
 } from "lucide-react";
+import { gsap } from "gsap";
 import { Button } from "#/components/ui/button";
 import { cn } from "#/utils/utils";
+import { useGSAPFadeIn } from "#/hooks/use-gsap-animations";
 
 interface Example {
   id: string;
@@ -124,35 +127,9 @@ const EXAMPLES: Example[] = [
   },
 ];
 
-const CATEGORY_INFO = {
-  build: {
-    label: "Build",
-    color: "text-violet-500",
-    bg: "bg-violet-500/10",
-    border: "border-violet-500/20",
-  },
-  debug: {
-    label: "Debug",
-    color: "text-violet-400",
-    bg: "bg-violet-400/10",
-    border: "border-violet-400/20",
-  },
-  learn: {
-    label: "Learn",
-    color: "text-violet-300",
-    bg: "bg-violet-300/10",
-    border: "border-violet-300/20",
-  },
-  optimize: {
-    label: "Optimize",
-    color: "text-violet-600",
-    bg: "bg-violet-600/10",
-    border: "border-violet-600/20",
-  },
-};
-
 export function EmptyState({ onSelectExample, className }: EmptyStateProps) {
-  const [selectedCategory, setSelectedCategory] = React.useState<
+  const { t } = useTranslation();
+  const [selectedCategory] = React.useState<
     "all" | "build" | "debug" | "learn" | "optimize"
   >("all");
 
@@ -163,10 +140,41 @@ export function EmptyState({ onSelectExample, className }: EmptyStateProps) {
     return EXAMPLES.filter((e) => e.category === selectedCategory);
   }, [selectedCategory]);
 
+  const containerRef = useGSAPFadeIn<HTMLDivElement>({
+    delay: 0.1,
+    duration: 0.6,
+  });
+  const examplesRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!examplesRef.current) return;
+
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (prefersReducedMotion) {
+      gsap.set(examplesRef.current.children, { opacity: 1, y: 0 });
+      return;
+    }
+
+    // Stagger animation for example cards
+    const cards = Array.from(examplesRef.current.children) as HTMLElement[];
+    gsap.set(cards, { opacity: 0, y: 20 });
+    gsap.to(cards, {
+      opacity: 1,
+      y: 0,
+      duration: 0.5,
+      stagger: 0.1,
+      ease: "power2.out",
+      delay: 0.3,
+    });
+  }, [filteredExamples]);
+
   return (
     <div
+      ref={containerRef}
       className={cn(
-        "w-full max-w-2xl mx-auto space-y-6 animate-fade-in",
+        "w-full max-w-2xl mx-auto space-y-6 transition-all duration-500",
         className,
       )}
     >
@@ -200,10 +208,16 @@ export function EmptyState({ onSelectExample, className }: EmptyStateProps) {
       {/* Compact Header */}
       <div className="text-center space-y-2">
         <h2 className="text-xl font-semibold text-text-primary bg-gradient-to-r from-text-primary to-brand-500 bg-clip-text">
-          What would you like to build?
+          {t(
+            "emptyState.whatWouldYouLikeToBuild",
+            "What would you like to build?",
+          )}
         </h2>
         <p className="text-text-secondary text-sm max-w-lg mx-auto">
-          Choose a suggestion below or type your own message to get started
+          {t(
+            "emptyState.chooseSuggestionOrType",
+            "Choose a suggestion below or type your own message to get started",
+          )}
         </p>
       </div>
 
@@ -212,14 +226,14 @@ export function EmptyState({ onSelectExample, className }: EmptyStateProps) {
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20">
           <Sparkles className="h-3.5 w-3.5 text-brand-500" />
           <span className="text-xs font-medium text-brand-500">
-            Popular Tasks
+            {t("emptyState.popularTasks", "Popular Tasks")}
           </span>
         </div>
       </div>
 
       {/* Enhanced Examples - Only show 3 popular ones */}
-      <div className="grid grid-cols-1 gap-3">
-        {filteredExamples.slice(0, 3).map((example, index) => (
+      <div ref={examplesRef} className="grid grid-cols-1 gap-3">
+        {filteredExamples.slice(0, 3).map((example) => (
           <Button
             key={example.id}
             variant="ghost"
@@ -231,9 +245,6 @@ export function EmptyState({ onSelectExample, className }: EmptyStateProps) {
               "transition-all duration-300 hover:shadow-lg hover:shadow-brand-500/10",
               "hover:scale-[1.01] active:scale-[0.99]",
             )}
-            style={{
-              animationDelay: `${index * 100}ms`,
-            }}
           >
             {/* Subtle gradient overlay on hover */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-brand-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -277,17 +288,20 @@ export function EmptyState({ onSelectExample, className }: EmptyStateProps) {
       {/* Enhanced Footer Hint */}
       <div className="text-center pt-3 space-y-2">
         <p className="text-sm text-text-secondary font-medium">
-          I can help you code, debug, refactor, and learn
+          {t(
+            "emptyState.iCanHelpYou",
+            "I can help you code, debug, refactor, and learn",
+          )}
         </p>
         <div className="flex items-center justify-center gap-2 text-xs text-text-tertiary">
           <div className="flex items-center gap-1">
             <div className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-            <span>Always available</span>
+            <span>{t("emptyState.alwaysAvailable", "Always available")}</span>
           </div>
           <span>•</span>
           <div className="flex items-center gap-1">
             <Zap className="h-3 w-3 text-brand-500" />
-            <span>Instant responses</span>
+            <span>{t("emptyState.instantResponses", "Instant responses")}</span>
           </div>
         </div>
       </div>

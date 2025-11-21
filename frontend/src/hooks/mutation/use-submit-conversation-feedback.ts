@@ -5,6 +5,7 @@ import {
   BatchFeedbackData,
   getFeedbackQueryKey,
 } from "../query/use-batch-feedback";
+import { logger } from "#/utils/logger";
 
 type SubmitConversationFeedbackArgs = {
   rating: number;
@@ -61,8 +62,7 @@ export const useSubmitConversationFeedback = () => {
         );
       }
       // Log error but don't show toast - user will just see the UI stay in unsubmitted state
-      // eslint-disable-next-line no-console
-      console.error(error);
+      logger.error("Failed to submit conversation feedback", error);
     },
     onSettled: (_, __, { eventId }) => {
       if (eventId) {

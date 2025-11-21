@@ -1,0 +1,109 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Scrape Forge application logs
+  - job_name: forge-app
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: forge
+          app: forge-backend
+          log_type: application
+          __path__: /var/log/forge/*.log
+
+  # Scrape Forge access logs (if split)
+  - job_name: forge-access
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: forge
+          app: forge-backend
+          log_type: access
+          __path__: /var/log/forge/*access*.log
+
+  # Scrape LLM logs (if in subdirectory)
+  - job_name: forge-llm
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: forge
+          app: forge-backend
+          log_type: llm
+          __path__: /var/log/forge/llm/**/*.log
+
+  # Pipeline for JSON logs
+  - job_name: forge-json
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: forge
+          app: forge-backend
+          log_type: json
+          __path__: /var/log/forge/*.log
+    pipeline_stages:
+      # Try to parse JSON logs
+      - json:
+          expressions:
+            timestamp: timestamp
+            level: level
+            message: message
+            request_id: request_id
+            conversation_id: conversation_id
+            agent_type: agent_type
+            action_type: action_type
+            model_used: model_used
+            tokens_consumed: tokens_consumed
+            cost_usd: cost_usd
+            duration_ms: duration_ms
+            logger: logger
+            module: module
+            function: function
+            line: line
+            error: error
+            stack_trace: stack_trace
+      
+      # Extract timestamp if present
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+          fallback_formats:
+            - RFC3339Nano
+            - Unix
+            - UnixMs
+            - UnixUs
+            - UnixNs
+      
+      # Set labels from parsed JSON
+      - labels:
+          level:
+          request_id:
+          conversation_id:
+          agent_type:
+          action_type:
+          model_used:
+          logger:
+          module:
+      
+      # Add log level as a label for filtering
+      - match:
+          selector: '{job="forge"}'
+          stages:
+            - labels:
+                log_level: level
+      
+      # Output the message field as the log line
+      - output:
+          source: message
+

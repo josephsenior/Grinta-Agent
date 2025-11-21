@@ -1,25 +1,36 @@
 import React, { useEffect, useRef } from "react";
 import { prefersReducedMotion } from "#/utils/animation-utils";
+import { logger } from "#/utils/logger";
 
 /**
  * WebGL Particle System with collision physics
  * Handles 1000+ particles at 60fps
  */
-export default function WebGLParticles(): React.ReactElement {
+export default function WebGLParticles(): React.ReactElement | null {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reducedMotion = prefersReducedMotion();
 
   useEffect(() => {
-    if (reducedMotion) return;
+    if (reducedMotion) {
+      return (): void => {
+        // No cleanup needed
+      };
+    }
 
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      return (): void => {
+        // No cleanup needed
+      };
+    }
 
     const gl = (canvas.getContext("webgl") ||
       canvas.getContext("experimental-webgl")) as WebGLRenderingContext | null;
     if (!gl) {
-      console.warn("WebGL not supported, falling back to CSS particles");
-      return;
+      logger.warn("WebGL not supported, falling back to CSS particles");
+      return (): void => {
+        // No cleanup needed
+      };
     }
 
     // Particle system
@@ -35,7 +46,7 @@ export default function WebGLParticles(): React.ReactElement {
     }> = [];
 
     // Initialize particles
-    for (let i = 0; i < particleCount; i++) {
+    for (let i = 0; i < particleCount; i += 1) {
       particles.push({
         x: Math.random(),
         y: Math.random(),
@@ -85,19 +96,22 @@ export default function WebGLParticles(): React.ReactElement {
 
     // Compile shader
     function createShader(
-      gl: WebGLRenderingContext,
+      glContext: WebGLRenderingContext,
       type: number,
       source: string,
     ) {
-      const shader = gl.createShader(type);
+      const shader = glContext.createShader(type);
       if (!shader) return null;
 
-      gl.shaderSource(shader, source);
-      gl.compileShader(shader);
+      glContext.shaderSource(shader, source);
+      glContext.compileShader(shader);
 
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error("Shader compile error:", gl.getShaderInfoLog(shader));
-        gl.deleteShader(shader);
+      if (!glContext.getShaderParameter(shader, glContext.COMPILE_STATUS)) {
+        logger.error(
+          "Shader compile error:",
+          glContext.getShaderInfoLog(shader),
+        );
+        glContext.deleteShader(shader);
         return null;
       }
 
@@ -112,18 +126,28 @@ export default function WebGLParticles(): React.ReactElement {
       fragmentShaderSource,
     );
 
-    if (!vertexShader || !fragmentShader) return;
+    if (!vertexShader || !fragmentShader) {
+      return (): void => {
+        // No cleanup needed
+      };
+    }
 
     const program = gl.createProgram();
-    if (!program) return;
+    if (!program) {
+      return (): void => {
+        // No cleanup needed
+      };
+    }
 
     gl.attachShader(program, vertexShader);
     gl.attachShader(program, fragmentShader);
     gl.linkProgram(program);
 
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      console.error("Program link error:", gl.getProgramInfoLog(program));
-      return;
+      logger.error("Program link error:", gl.getProgramInfoLog(program));
+      return (): void => {
+        // No cleanup needed
+      };
     }
 
     gl.useProgram(program);
@@ -147,7 +171,7 @@ export default function WebGLParticles(): React.ReactElement {
 
     const render = () => {
       // Update particles
-      for (let i = 0; i < particles.length; i++) {
+      for (let i = 0; i < particles.length; i += 1) {
         const p = particles[i];
 
         p.x += p.vx;
@@ -162,7 +186,7 @@ export default function WebGLParticles(): React.ReactElement {
         p.y = Math.max(0, Math.min(1, p.y));
 
         // Collision detection with nearby particles
-        for (let j = i + 1; j < particles.length; j++) {
+        for (let j = i + 1; j < particles.length; j += 1) {
           const p2 = particles[j];
           const dx = p2.x - p.x;
           const dy = p2.y - p.y;
@@ -185,7 +209,7 @@ export default function WebGLParticles(): React.ReactElement {
       const sizes = new Float32Array(particles.length);
       const colors = new Float32Array(particles.length * 3);
 
-      for (let i = 0; i < particles.length; i++) {
+      for (let i = 0; i < particles.length; i += 1) {
         const p = particles[i];
         positions[i * 2] = p.x;
         positions[i * 2 + 1] = p.y;
@@ -226,13 +250,13 @@ export default function WebGLParticles(): React.ReactElement {
 
     render();
 
-    return () => {
+    return (): void => {
       cancelAnimationFrame(animationId);
       window.removeEventListener("resize", resizeCanvas);
     };
   }, [reducedMotion]);
 
-  if (reducedMotion) return <></>;
+  if (reducedMotion) return null;
 
   return (
     <canvas

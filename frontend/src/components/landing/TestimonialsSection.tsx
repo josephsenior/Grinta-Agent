@@ -16,18 +16,18 @@ export default function TestimonialsSection(): React.ReactElement {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(139,92,246,0.15),_transparent_55%)]" />
       <div className="relative max-w-6xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-16 max-w-3xl mx-auto">
+        <div className="text-center mb-16 max-w-3xl min-w-[400px] mx-auto">
           <div className="inline-flex items-center gap-2 mb-6">
             <div className="w-2 h-2 bg-brand-500 rounded-full shadow-lg shadow-brand-500/50" />
             <div className="w-8 h-px bg-gradient-to-r from-brand-500 to-accent-500" />
             <div className="w-2 h-2 bg-accent-500 rounded-full shadow-lg shadow-accent-500/50" />
           </div>
 
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white whitespace-normal">
             What our beta partners report from production workloads.
           </h2>
 
-          <p className="text-lg text-foreground-secondary max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg text-foreground-secondary max-w-3xl min-w-[400px] mx-auto leading-relaxed whitespace-normal">
             Every quote comes from a current pilot sending Forge into their
             regulated repos.
           </p>
@@ -68,7 +68,8 @@ export default function TestimonialsSection(): React.ReactElement {
                         alt={testimonial.name}
                         onError={(e) => {
                           // Hide the image on error, fallback will show
-                          e.currentTarget.style.display = "none";
+                          const target = e.currentTarget;
+                          target.style.display = "none";
                         }}
                       />
                     )}

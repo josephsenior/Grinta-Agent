@@ -90,10 +90,21 @@ export async function exportMemories(): Promise<MemoryExport> {
 }
 
 /**
+ * Memory import data structure
+ */
+export interface MemoryImportData {
+  memories?: Array<{
+    content: string;
+    metadata?: Record<string, unknown>;
+  }>;
+  [key: string]: unknown;
+}
+
+/**
  * Import memories from JSON
  */
 export async function importMemories(
-  data: any,
+  data: MemoryImportData,
   merge: boolean = false,
 ): Promise<{ status: string; imported: number; total: number }> {
   const response = await Forge.post(`/api/memory/import?merge=${merge}`, data);

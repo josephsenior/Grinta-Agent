@@ -1,5 +1,4 @@
 import React from "react";
-import { useTranslation } from "react-i18next";
 import {
   Folder,
   FolderOpen,
@@ -23,6 +22,7 @@ import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
 import { cn } from "#/utils/utils";
 import toast from "#/utils/toast";
+import { logger } from "#/utils/logger";
 
 /**
  * Simple, bolt.new-style file explorer
@@ -49,7 +49,7 @@ const buildFileTree = (files: string[]): FileNode[] => {
     const parts = filePath.split("/").filter(Boolean);
     let currentPath = "";
 
-    for (let i = 0; i < parts.length; i++) {
+    for (let i = 0; i < parts.length; i += 1) {
       const part = parts[i];
       const parentPath = currentPath;
       currentPath = currentPath ? `${currentPath}/${part}` : part;
@@ -151,7 +151,6 @@ const getLanguageFromPath = (path: string): string => {
 };
 
 function WorkspaceFilesTab() {
-  const { t } = useTranslation();
   const { conversationId } = useConversationId();
 
   // State
@@ -166,6 +165,43 @@ function WorkspaceFilesTab() {
     new Set(),
   );
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Load file content
+  const loadFileContent = React.useCallback(
+    async (filePath: string) => {
+      if (!conversationId) return;
+
+      // Safety check: Don't try to load directories
+      if (filePath.endsWith("/")) {
+        logger.warn("Attempted to load directory as file:", filePath);
+        toast.error("not-a-file", "Cannot view directory contents");
+        return;
+      }
+
+      setLoadingContent(true);
+      try {
+        const content = await Forge.getFile(conversationId, filePath);
+        setFileContent(content || "");
+      } catch (err: any) {
+        logger.error("Failed to load file:", err);
+
+        // Check if it's a "is a directory" error
+        if (
+          err?.message?.includes("Is a directory") ||
+          err?.response?.data?.includes("Is a directory")
+        ) {
+          toast.error("is-directory", "This is a folder, not a file");
+        } else {
+          toast.error("load-file-error", "Failed to load file content");
+        }
+
+        setFileContent("");
+      } finally {
+        setLoadingContent(false);
+      }
+    },
+    [conversationId],
+  );
 
   // Load workspace files
   const loadFiles = React.useCallback(async () => {
@@ -191,49 +227,12 @@ function WorkspaceFilesTab() {
         }
       }
     } catch (err) {
-      console.error("Failed to load workspace files:", err);
+      logger.error("Failed to load workspace files:", err);
       toast.error("load-files-error", "Failed to load workspace files");
     } finally {
       setLoading(false);
     }
-  }, [conversationId, selectedFile]);
-
-  // Load file content
-  const loadFileContent = React.useCallback(
-    async (filePath: string) => {
-      if (!conversationId) return;
-
-      // Safety check: Don't try to load directories
-      if (filePath.endsWith("/")) {
-        console.warn("Attempted to load directory as file:", filePath);
-        toast.error("not-a-file", "Cannot view directory contents");
-        return;
-      }
-
-      setLoadingContent(true);
-      try {
-        const content = await Forge.getFile(conversationId, filePath);
-        setFileContent(content || "");
-      } catch (err: any) {
-        console.error("Failed to load file:", err);
-
-        // Check if it's a "is a directory" error
-        if (
-          err?.message?.includes("Is a directory") ||
-          err?.response?.data?.includes("Is a directory")
-        ) {
-          toast.error("is-directory", "This is a folder, not a file");
-        } else {
-          toast.error("load-file-error", "Failed to load file content");
-        }
-
-        setFileContent("");
-      } finally {
-        setLoadingContent(false);
-      }
-    },
-    [conversationId],
-  );
+  }, [conversationId, selectedFile, loadFileContent]);
 
   // Initial load
   React.useEffect(() => {
@@ -257,13 +256,13 @@ function WorkspaceFilesTab() {
   const handleFileSelect = (filePath: string, nodeType?: "file" | "folder") => {
     // Safety check: Don't try to load folders as files
     if (nodeType === "folder") {
-      console.warn("Attempted to select a folder as a file:", filePath);
+      logger.warn("Attempted to select a folder as a file:", filePath);
       return;
     }
 
     // Also check if path ends with '/' which typically indicates a directory
     if (filePath.endsWith("/")) {
-      console.warn("File path ends with /, skipping:", filePath);
+      logger.warn("File path ends with /, skipping:", filePath);
       return;
     }
 
@@ -315,7 +314,7 @@ function WorkspaceFilesTab() {
       // Reload files to show the uploaded ones
       await loadFiles();
     } catch (err) {
-      console.error("Failed to upload files:", err);
+      logger.error("Failed to upload files:", err);
       toast.error("upload-error", "Failed to upload files");
     }
 
@@ -394,15 +393,16 @@ function WorkspaceFilesTab() {
 
           {/* Icon */}
           <div className="flex-shrink-0">
-            {node.type === "folder" ? (
-              isExpanded ? (
-                <FolderOpen className="w-4 h-4 text-violet-400" />
-              ) : (
-                <Folder className="w-4 h-4 text-violet-500" />
-              )
-            ) : (
-              getFileIcon(node.name)
-            )}
+            {(() => {
+              if (node.type === "folder") {
+                return isExpanded ? (
+                  <FolderOpen className="w-4 h-4 text-violet-400" />
+                ) : (
+                  <Folder className="w-4 h-4 text-violet-500" />
+                );
+              }
+              return getFileIcon(node.name);
+            })()}
           </div>
 
           {/* Name */}
@@ -481,24 +481,32 @@ function WorkspaceFilesTab() {
         {/* File Tree Sidebar */}
         <aside className="w-80 max-w-[40%] min-w-[280px] border-r border-violet-500/20 bg-black overflow-hidden flex flex-col">
           <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 custom-scrollbar">
-            {loading ? (
-              <div className="flex items-center justify-center h-32">
-                <RefreshCw className="w-5 h-5 animate-spin text-gray-400" />
-              </div>
-            ) : filteredTree.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-32 text-gray-500">
-                <Folder className="w-8 h-8 mb-2 opacity-50" />
-                <p className="text-xs">
-                  {searchQuery
-                    ? "No files match your search"
-                    : "No files in workspace"}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-0.5">
-                {filteredTree.map((node) => renderNode(node, 0))}
-              </div>
-            )}
+            {(() => {
+              if (loading) {
+                return (
+                  <div className="flex items-center justify-center h-32">
+                    <RefreshCw className="w-5 h-5 animate-spin text-gray-400" />
+                  </div>
+                );
+              }
+              if (filteredTree.length === 0) {
+                return (
+                  <div className="flex flex-col items-center justify-center h-32 text-gray-500">
+                    <Folder className="w-8 h-8 mb-2 opacity-50" />
+                    <p className="text-xs">
+                      {searchQuery
+                        ? "No files match your search"
+                        : "No files in workspace"}
+                    </p>
+                  </div>
+                );
+              }
+              return (
+                <div className="space-y-0.5">
+                  {filteredTree.map((node) => renderNode(node, 0))}
+                </div>
+              );
+            })()}
           </div>
         </aside>
 

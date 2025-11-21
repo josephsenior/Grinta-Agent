@@ -1,4 +1,4 @@
-/* eslint-disable no-console, class-methods-use-this, @typescript-eslint/no-empty-function, @typescript-eslint/no-useless-constructor */
+/* eslint-disable no-console, class-methods-use-this, @typescript-eslint/no-empty-function, @typescript-eslint/no-useless-constructor, max-classes-per-file */
 
 import "@testing-library/jest-dom";
 

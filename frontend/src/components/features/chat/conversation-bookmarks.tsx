@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   Bookmark,
   BookmarkCheck,
@@ -19,6 +20,7 @@ import {
 import { Button } from "#/components/ui/button";
 import { Badge } from "#/components/ui/badge";
 import { cn } from "#/utils/utils";
+import { logger } from "#/utils/logger";
 
 interface BookmarkedMessage {
   id: string;
@@ -44,6 +46,7 @@ export function ConversationBookmarks({
   onSelectBookmark,
   onRemoveBookmark,
 }: ConversationBookmarksProps) {
+  const { t } = useTranslation();
   const [hoveredId, setHoveredId] = React.useState<string | null>(null);
 
   return (
@@ -52,7 +55,7 @@ export function ConversationBookmarks({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bookmark className="h-5 w-5" />
-            Bookmarked Messages
+            {t("chat.bookmarks.title", "Bookmarked Messages")}
             <Badge variant="outline" className="ml-auto">
               {bookmarks.length}
             </Badge>
@@ -64,11 +67,13 @@ export function ConversationBookmarks({
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Bookmark className="h-12 w-12 text-text-foreground-secondary opacity-50 mb-3" />
               <p className="text-sm font-medium text-text-primary mb-1">
-                No bookmarks yet
+                {t("chat.bookmarks.noBookmarks", "No bookmarks yet")}
               </p>
-              <p className="text-xs text-text-foreground-secondary max-w-xs">
-                Click the bookmark icon on any message to save it for quick
-                access later
+              <p className="text-xs text-text-foreground-secondary min-w-[300px] whitespace-normal">
+                {t(
+                  "chat.bookmarks.noBookmarksDescription",
+                  "Click the bookmark icon on any message to save it for quick access later",
+                )}
               </p>
             </div>
           )}
@@ -88,6 +93,7 @@ export function ConversationBookmarks({
                   onMouseLeave={() => setHoveredId(null)}
                 >
                   <button
+                    type="button"
                     onClick={() => onSelectBookmark(bookmark.messageIndex)}
                     className="w-full text-left"
                   >
@@ -164,7 +170,12 @@ export function ConversationBookmarks({
         {/* Footer */}
         <div className="border-t border-border-glass pt-3 text-xs text-text-foreground-secondary text-center">
           {bookmarks.length > 0 && (
-            <p>Click any bookmark to jump to that message</p>
+            <p>
+              {t(
+                "chat.bookmarks.clickToJump",
+                "Click any bookmark to jump to that message",
+              )}
+            </p>
           )}
         </div>
       </DialogContent>
@@ -189,7 +200,7 @@ export function useConversationBookmarks() {
     try {
       localStorage.setItem("Forge.bookmarks", JSON.stringify(bookmarks));
     } catch (e) {
-      console.error("Failed to save bookmarks:", e);
+      logger.error("Failed to save bookmarks:", e);
     }
   }, [bookmarks]);
 
@@ -267,6 +278,9 @@ export function BookmarkButton({
   onToggle,
   className,
 }: BookmarkButtonProps) {
+  // messageIndex is part of the interface but not currently used in rendering
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const unusedMessageIndex = messageIndex;
   return (
     <Button
       variant="ghost"

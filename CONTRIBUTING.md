@@ -82,7 +82,9 @@ npm run format
 ### Code Quality Requirements
 
 **Forge maintains industry-leading code quality standards:**
-- ✅ Average complexity: **3.13** (A-rated)
+- ✅ Backend average complexity: **3.06** (A-rated) across 8,100 functions/methods
+- ✅ Frontend average complexity: **2.21** (A-rated)
+- ✅ **0% high-complexity functions** (0 above B complexity level)
 - ✅ **0%** high-complexity functions
 - ✅ **85.8%** A-rated functions (complexity 1-5)
 - ✅ **14.2%** B-rated functions (complexity 6-10)
@@ -97,7 +99,7 @@ radon cc forge/path/to/your/file.py -s
 # Requires refactoring: C+ (complexity > 10)
 ```
 
-See [docs/CODE_QUALITY.md](docs/CODE_QUALITY.md) for detailed guidelines.
+See [docs/code-quality.md](docs/code-quality.md) for detailed guidelines.
 
 ### Python
 

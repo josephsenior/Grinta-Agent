@@ -147,7 +147,7 @@ function SecurityInvariant() {
                 borderWidth: log.confirmed_changed ? "2px" : "0",
               }}
             >
-              <p className="text-sm relative break-words">
+              <p className="text-sm relative">
                 {log.content}
                 {(log.confirmation_state === "awaiting_confirmation" ||
                   log.confirmed_changed) && (

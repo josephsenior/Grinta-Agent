@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useConversationId } from "#/hooks/use-conversation-id";
+import { logger } from "#/utils/logger";
 
 interface RuntimeInitStatus {
   isInitializing: boolean;
@@ -23,11 +24,11 @@ export function useBackgroundRuntimeInit() {
   useEffect(() => {
     let cleanupFn: (() => void) | undefined;
 
-    const checkRuntimeStatus = async () => {
+    const checkRuntimeStatus = async (): Promise<(() => void) | undefined> => {
       try {
         // Check if conversation is initialized
         if (!conversationId) {
-          return;
+          return undefined;
         }
 
         setStatus({ isInitializing: true, isReady: false, error: null });
@@ -61,7 +62,7 @@ export function useBackgroundRuntimeInit() {
               clearInterval(checkInterval);
             }
           } catch (error) {
-            console.error("Error checking runtime status:", error);
+            logger.error("Error checking runtime status:", error);
           }
         }, 2000); // Poll every 2 seconds
 
@@ -86,6 +87,7 @@ export function useBackgroundRuntimeInit() {
           isReady: false,
           error: error instanceof Error ? error.message : "Unknown error",
         });
+        return undefined;
       }
     };
 

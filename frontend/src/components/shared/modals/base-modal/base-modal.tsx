@@ -6,6 +6,7 @@ import {
   ModalHeader,
 } from "@heroui/react";
 import React from "react";
+import { cn } from "#/utils/utils";
 import { Action, FooterContent } from "./footer-content";
 import { HeaderContent } from "./header-content";
 
@@ -26,7 +27,7 @@ export function BaseModal({
   isOpen,
   onOpenChange,
   title,
-  contentClassName = "max-w-[30rem] p-8 backdrop-blur-xl",
+  contentClassName = "max-w-[30rem]",
   bodyClassName = "px-0 py-6",
   isDismissable = true,
   subtitle = undefined,
@@ -43,13 +44,13 @@ export function BaseModal({
       backdrop="blur"
       hideCloseButton
       size="sm"
-      className="bg-gradient-to-br from-grey-900/95 to-grey-950/98 backdrop-blur-xl border border-grey-700/30 rounded-2xl shadow-2xl"
+      className="bg-[#000000] border border-[#1a1a1a] rounded-2xl shadow-luxury-xl"
       classNames={{
-        backdrop: "bg-grey-950/60 backdrop-blur-lg",
-        base: "border border-grey-700/20 shadow-xl",
+        backdrop: "bg-[rgba(0,0,0,0.8)] backdrop-blur-[8px]",
+        base: "border border-[#1a1a1a] max-w-[600px]",
       }}
     >
-      <ModalContent className={contentClassName}>
+      <ModalContent className={cn("p-8", contentClassName)}>
         {(closeModal) => (
           <>
             {title && (

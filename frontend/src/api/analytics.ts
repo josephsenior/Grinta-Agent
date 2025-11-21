@@ -60,12 +60,21 @@ export async function getCostBreakdown(
 }
 
 /**
+ * Analytics export data structure
+ */
+export interface AnalyticsExportData {
+  format: string;
+  exported_at: string;
+  data: AnalyticsDashboard | string; // string for CSV format, AnalyticsDashboard for JSON
+}
+
+/**
  * Export analytics data
  */
 export async function exportAnalytics(
   period: AnalyticsPeriod = "week",
   format: "json" | "csv" = "json",
-): Promise<{ format: string; exported_at: string; data: any }> {
+): Promise<AnalyticsExportData> {
   const response = await Forge.get(`/api/analytics/export`, {
     params: { period, format },
   });

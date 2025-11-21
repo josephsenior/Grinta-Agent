@@ -7,66 +7,14 @@ import { useIsOnTosPage } from "#/hooks/use-is-on-tos-page";
 import { Settings } from "#/types/settings";
 import { useIsAuthed } from "./use-is-authed";
 
-const getSettingsQueryFn = async (): Promise<Settings> => {
-  const apiSettings = await Forge.getSettings();
+function shouldRetrySettings(_: number, error: { status?: number }) {
+  return error.status !== 404;
+}
 
-  return mapApiSettingsToClient(apiSettings);
-};
-
-export const useSettings = () => {
-  const isOnTosPage = useIsOnTosPage();
-  const { data: userIsAuthenticated } = useIsAuthed();
-
-  const query = useQuery({
-    queryKey: ["settings"],
-    queryFn: getSettingsQueryFn,
-    retry: shouldRetrySettings,
-    refetchOnWindowFocus: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 15, // 15 minutes
-    enabled: !isOnTosPage && !!userIsAuthenticated,
-    meta: {
-      disableToast: true,
-    },
-  });
-
-  React.useEffect(() => {
-    trackUserActivation(query);
-  }, [query.data?.LLM_API_KEY_SET, query.isFetched]);
-
-  // We want to return the defaults if the settings aren't found so the user can still see the
-  // options to make their initial save. We don't set the defaults in `initialData` above because
-  // that would prepopulate the data to the cache and mess with expectations. Read more:
-  // https://tanstack.com/query/latest/docs/framework/react/guides/initial-query-data#using-initialdata-to-prepopulate-a-query
-  if (query.error?.status === 404) {
-    // Create a new object with only the properties we need, avoiding rest destructuring
-    return {
-      data: DEFAULT_SETTINGS,
-      error: query.error,
-      isError: query.isError,
-      isLoading: query.isLoading,
-      isFetching: query.isFetching,
-      isFetched: query.isFetched,
-      isSuccess: query.isSuccess,
-      status: query.status,
-      fetchStatus: query.fetchStatus,
-      refetch: query.refetch,
-    };
+function trackUserActivation(query: UseQueryResult<Settings, unknown>) {
+  if (query.isFetched && query.data?.LLM_API_KEY_SET) {
+    posthog.capture("user_activated");
   }
-
-  return query;
-};
-
-function mapApiSettingsToClient(
-  apiSettings: Awaited<ReturnType<typeof Forge.getSettings>>,
-): Settings {
-  return {
-    ...DEFAULT_SETTINGS,
-    ...buildPrimarySettings(apiSettings),
-    ...buildAutonomySettings(apiSettings),
-    ...buildAdvancedLlmSettings(apiSettings),
-    IS_NEW_USER: false,
-  };
 }
 
 function buildPrimarySettings(
@@ -138,12 +86,64 @@ function buildAdvancedLlmSettings(
   } as Partial<Settings>;
 }
 
-function shouldRetrySettings(_: number, error: { status?: number }) {
-  return error.status !== 404;
+function mapApiSettingsToClient(
+  apiSettings: Awaited<ReturnType<typeof Forge.getSettings>>,
+): Settings {
+  return {
+    ...DEFAULT_SETTINGS,
+    ...buildPrimarySettings(apiSettings),
+    ...buildAutonomySettings(apiSettings),
+    ...buildAdvancedLlmSettings(apiSettings),
+    IS_NEW_USER: false,
+  };
 }
 
-function trackUserActivation(query: UseQueryResult<Settings, unknown>) {
-  if (query.isFetched && query.data?.LLM_API_KEY_SET) {
-    posthog.capture("user_activated");
+const getSettingsQueryFn = async (): Promise<Settings> => {
+  const apiSettings = await Forge.getSettings();
+
+  return mapApiSettingsToClient(apiSettings);
+};
+
+export const useSettings = () => {
+  const isOnTosPage = useIsOnTosPage();
+  const { data: userIsAuthenticated } = useIsAuthed();
+
+  const query = useQuery({
+    queryKey: ["settings"],
+    queryFn: getSettingsQueryFn,
+    retry: shouldRetrySettings,
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 15, // 15 minutes
+    enabled: !isOnTosPage && !!userIsAuthenticated,
+    meta: {
+      disableToast: true,
+    },
+  });
+
+  React.useEffect(() => {
+    trackUserActivation(query);
+  }, [query.data?.LLM_API_KEY_SET, query.isFetched]);
+
+  // We want to return the defaults if the settings aren't found so the user can still see the
+  // options to make their initial save. We don't set the defaults in `initialData` above because
+  // that would prepopulate the data to the cache and mess with expectations. Read more:
+  // https://tanstack.com/query/latest/docs/framework/react/guides/initial-query-data#using-initialdata-to-prepopulate-a-query
+  if (query.error?.status === 404) {
+    // Create a new object with only the properties we need, avoiding rest destructuring
+    return {
+      data: DEFAULT_SETTINGS,
+      error: query.error,
+      isError: query.isError,
+      isLoading: query.isLoading,
+      isFetching: query.isFetching,
+      isFetched: query.isFetched,
+      isSuccess: query.isSuccess,
+      status: query.status,
+      fetchStatus: query.fetchStatus,
+      refetch: query.refetch,
+    };
   }
-}
+
+  return query;
+};

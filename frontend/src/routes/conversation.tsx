@@ -25,6 +25,7 @@ import { useIsAuthed } from "#/hooks/query/use-is-authed";
 import { ConversationSubscriptionsProvider } from "#/context/conversation-subscriptions-provider";
 import { useUserProviders } from "#/hooks/use-user-providers";
 import { ConversationTabs } from "#/components/features/conversation/conversation-tabs";
+import { logger } from "#/utils/logger";
 
 // Lazy load heavy conversation components for better performance
 const ChatInterface = React.lazy(() =>
@@ -63,8 +64,7 @@ function AppContent() {
     if (process.env.NODE_ENV === "development") {
       // Reference settings in dev builds to avoid unused variable warnings
       // and provide a tiny debug hook for manual inspection.
-      // eslint-disable-next-line no-console
-      console.debug("dev settings:", settings);
+      logger.debug("dev settings:", settings);
     }
   }, [settings]);
 
@@ -109,7 +109,8 @@ function AppContent() {
   }, []);
 
   function renderMain() {
-    if (width <= 1024) {
+    // Mobile: < 640px - Stack panels vertically
+    if (width < 640) {
       return (
         <div className="flex flex-col gap-3 w-full h-full min-h-0">
           <div className="rounded-xl overflow-hidden border border-border w-full bg-background-primary flex-1 min-h-0">
@@ -127,6 +128,7 @@ function AppContent() {
         </div>
       );
     }
+    // Tablet (640px - 1024px) and Desktop (>= 1024px): 2-column layout with resizable panels
     return (
       <ResizablePanel
         orientation={Orientation.HORIZONTAL}

@@ -60,6 +60,15 @@ export function AnimatedAlertBanner({
           bgPulse: "bg-blue-400/10",
           animation: "",
         };
+      default:
+        return {
+          icon: Info,
+          gradient: "from-blue-500/20 via-blue-400/10 to-blue-500/20",
+          border: "border-blue-400",
+          iconColor: "text-blue-300",
+          bgPulse: "bg-blue-400/10",
+          animation: "",
+        };
     }
   };
 
@@ -107,6 +116,7 @@ export function AnimatedAlertBanner({
               {/* Dismiss Button */}
               {onDismiss && (
                 <button
+                  type="button"
                   onClick={() => onDismiss(alert.id)}
                   className="flex-shrink-0 p-1 rounded-lg hover:bg-white/10 transition-colors"
                   aria-label="Dismiss alert"

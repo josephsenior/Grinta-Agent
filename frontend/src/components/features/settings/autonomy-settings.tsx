@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Shield, Eye, Zap, Info } from "lucide-react";
 import { SettingsSwitch } from "./settings-switch";
 import { SettingsDropdownInput } from "./settings-dropdown-input";
+import { logger } from "#/utils/logger";
 
 interface AutonomySettingsProps {
   autonomyLevel?: string;
@@ -30,15 +31,15 @@ export function AutonomySettings({
   const autonomyOptions = [
     {
       key: "supervised",
-      label: "Supervised Mode",
+      label: t("settings.autonomy.supervised", "Supervised Mode"),
     },
     {
       key: "balanced",
-      label: "Balanced Mode",
+      label: t("settings.autonomy.balanced", "Balanced Mode"),
     },
     {
       key: "full",
-      label: "Full Autonomous Mode",
+      label: t("settings.autonomy.full", "Full Autonomous Mode"),
     },
   ];
 
@@ -55,8 +56,8 @@ export function AutonomySettings({
 
         {/* Wrap in a div to isolate from form events */}
         <div
-          onClick={(e) => {
-            console.log("[AutonomySettings] Wrapper clicked");
+          onClick={() => {
+            logger.debug("[AutonomySettings] Wrapper clicked");
             // Don't prevent propagation, just log to debug
           }}
         >
@@ -68,13 +69,13 @@ export function AutonomySettings({
             placeholder="Select autonomy mode"
             selectedKey={autonomyLevel}
             onSelectionChange={(key) => {
-              console.log(
+              logger.debug(
                 "═══════════════════════════════════════════════════",
               );
-              console.log("[AutonomySettings] 🎯 SELECTION CHANGED:", key);
-              console.log("[AutonomySettings] Previous value:", autonomyLevel);
-              console.log("[AutonomySettings] New value:", key);
-              console.log(
+              logger.debug("[AutonomySettings] 🎯 SELECTION CHANGED:", key);
+              logger.debug("[AutonomySettings] Previous value:", autonomyLevel);
+              logger.debug("[AutonomySettings] New value:", key);
+              logger.debug(
                 "═══════════════════════════════════════════════════",
               );
               onAutonomyLevelChange?.(key as string);

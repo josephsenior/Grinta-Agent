@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Database, Plus } from "lucide-react";
 import { BrandButton } from "#/components/features/settings/brand-button";
-import { DatabaseConnectionForm } from "#/components/features/settings/database-connections/database-connection-form";
 import { DatabaseConnectionsList } from "#/components/features/settings/database-connections/database-connections-list";
 import { ConfirmationModal } from "#/components/shared/modals/confirmation-modal";
 import {
@@ -14,6 +13,9 @@ import {
   displayErrorToast,
   displaySuccessToast,
 } from "#/utils/custom-toast-handlers";
+import { useDatabaseSettingsMessages } from "./database-settings/messages";
+import { useDatabaseOptions } from "./database-settings/database-options";
+import { DatabaseViewRenderer } from "./database-settings/database-view-renderer";
 
 type DatabaseSettingsMessages = {
   saveSuccess: string;
@@ -127,52 +129,8 @@ function useDatabaseSettingsController(messages: DatabaseSettingsMessages) {
 function DatabaseSettingsScreen() {
   const { t } = useTranslation("settings");
 
-  const messages = useMemo<DatabaseSettingsMessages>(
-    () => ({
-      saveSuccess: t(
-        "databaseSettings.toast.saveSuccess",
-        "Database connection saved successfully",
-      ),
-      deleteSuccess: t(
-        "databaseSettings.toast.deleteSuccess",
-        "Database connection deleted successfully",
-      ),
-      saveError: (message: string) =>
-        t("databaseSettings.toast.saveError", {
-          message,
-          defaultValue: "Failed to save connection: {{message}}",
-        }),
-      deleteError: (message: string) =>
-        t("databaseSettings.toast.deleteError", {
-          message,
-          defaultValue: "Failed to delete connection: {{message}}",
-        }),
-    }),
-    [t],
-  );
-
-  const databaseOptions = useMemo(
-    () =>
-      [
-        {
-          type: "postgresql" as DatabaseType,
-          label: t("databaseSettings.types.postgresql", "PostgreSQL"),
-        },
-        {
-          type: "mongodb" as DatabaseType,
-          label: t("databaseSettings.types.mongodb", "MongoDB"),
-        },
-        {
-          type: "mysql" as DatabaseType,
-          label: t("databaseSettings.types.mysql", "MySQL"),
-        },
-        {
-          type: "redis" as DatabaseType,
-          label: t("databaseSettings.types.redis", "Redis"),
-        },
-      ] satisfies Array<{ type: DatabaseType; label: string }>,
-    [t],
-  );
+  const messages = useDatabaseSettingsMessages(t);
+  const databaseOptions = useDatabaseOptions(t);
 
   const controller = useDatabaseSettingsController(messages);
 
@@ -182,11 +140,11 @@ function DatabaseSettingsScreen() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Database className="w-8 h-8 text-foreground-tertiary" />
-            <div>
-              <h2 className="text-2xl font-bold text-foreground">
+            <div className="w-full">
+              <h2 className="text-2xl font-bold text-foreground w-full">
                 {t("databaseSettings.title", "Database Connections")}
               </h2>
-              <p className="text-sm text-foreground-secondary mt-1">
+              <p className="text-sm text-foreground-secondary mt-1 w-full">
                 {t(
                   "databaseSettings.subtitle",
                   "Configure connections to PostgreSQL, MongoDB, MySQL, and Redis",
@@ -217,19 +175,21 @@ function DatabaseSettingsScreen() {
                       aria-hidden="true"
                     />
                     <div className="absolute right-0 top-full mt-2 w-48 bg-black/90 border border-white/10 rounded-xl shadow-lg overflow-hidden z-50 backdrop-blur-xl">
-                      {databaseOptions.map((option) => (
-                        <button
-                          key={option.type}
-                          type="button"
-                          onClick={() =>
-                            controller.handleAddConnection(option.type)
-                          }
-                          className="w-full px-4 py-2 text-left text-foreground hover:bg-black transition-colors flex items-center gap-2"
-                        >
-                          <Database className="w-4 h-4 text-foreground-tertiary" />
-                          {option.label}
-                        </button>
-                      ))}
+                      {databaseOptions.map(
+                        (option: { type: DatabaseType; label: string }) => (
+                          <button
+                            key={option.type}
+                            type="button"
+                            onClick={() =>
+                              controller.handleAddConnection(option.type)
+                            }
+                            className="w-full px-4 py-2 text-left text-foreground hover:bg-black transition-colors flex items-center gap-2"
+                          >
+                            <Database className="w-4 h-4 text-foreground-tertiary" />
+                            {option.label}
+                          </button>
+                        ),
+                      )}
                     </div>
                   </>
                 )}
@@ -245,43 +205,11 @@ function DatabaseSettingsScreen() {
           />
         )}
 
-        {controller.view === "add-postgresql" && (
-          <DatabaseConnectionForm
-            type="postgresql"
-            onSubmit={controller.handleSaveConnection}
-            onCancel={controller.handleCancel}
-          />
-        )}
-
-        {controller.view === "add-mongodb" && (
-          <DatabaseConnectionForm
-            type="mongodb"
-            onSubmit={controller.handleSaveConnection}
-            onCancel={controller.handleCancel}
-          />
-        )}
-
-        {controller.view === "add-mysql" && (
-          <DatabaseConnectionForm
-            type="mysql"
-            onSubmit={controller.handleSaveConnection}
-            onCancel={controller.handleCancel}
-          />
-        )}
-
-        {controller.view === "add-redis" && (
-          <DatabaseConnectionForm
-            type="redis"
-            onSubmit={controller.handleSaveConnection}
-            onCancel={controller.handleCancel}
-          />
-        )}
-
-        {controller.view === "edit" && controller.editingConnection && (
-          <DatabaseConnectionForm
-            type={controller.editingConnection.type}
-            existingConnection={controller.editingConnection}
-            onSubmit={controller.handleSaveConnection}
+        {controller.view !== "list" && (
+          <DatabaseViewRenderer
+            view={controller.view}
+            editingConnection={controller.editingConnection}
+            onSave={controller.handleSaveConnection}
             onCancel={controller.handleCancel}
           />
         )}

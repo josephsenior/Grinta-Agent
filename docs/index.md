@@ -7,6 +7,8 @@ Forge is an AI-powered development platform that helps developers build software
 ## Quick Start
 
 - [Getting Started](getting_started.md) - Basic setup and first steps
+- [Quick Reference](quick-reference.md) - ⚡ Quick reference for commands, APIs, and patterns
+- [FAQ](faq.md) - Frequently asked questions
 - [Configuration](configuration.md) - LLM profiles, API keys, and runtime settings
 - [Production Deployment](production_deployment.md) - Performance tuning and scaling
 
@@ -20,9 +22,11 @@ Forge is an AI-powered development platform that helps developers build software
 - [Advanced Features](advanced_features.md) - Error handling, causal reasoning, ACE framework, and Tree-sitter integration
 
 ### APIs and Integrations
+- [API Reference](api-reference.md) - Complete REST API documentation (32 route modules)
 - [Knowledge Base API](api/knowledge_base.md) - Vector search and document management
-- [WebSocket API](api/websocket.md) - Real-time communication
-- [REST API](api/rest.md) - HTTP endpoints
+- [WebSocket API](api/websocket-api.md) - Real-time communication via Socket.IO
+- [Python SDK](api/python-sdk.md) - Backend integration
+- [TypeScript SDK](api/typescript-sdk.md) - Frontend integration
 
 ### Runtime and Performance
 - Warm Runtime Pool - Fast startup via reusable sandboxes with policy controls
@@ -35,7 +39,7 @@ Forge is an AI-powered development platform that helps developers build software
 ## Development
 
 - [Development Guide](development.md) - Setting up for contributors
-- [Code Quality](CODE_QUALITY.md) - ⭐ Code quality metrics and refactoring guide
+- [Code Quality](code-quality.md) - ⭐ Code quality metrics and refactoring guide
 - [Contributing](contributing.md) - How to contribute
 - [Testing](testing.md) - Running and writing tests
 - [Security](security.md) - Security considerations
@@ -45,8 +49,32 @@ Forge is an AI-powered development platform that helps developers build software
 - [Python SDK](api/python_sdk.md) - Backend integration
 - [TypeScript SDK](api/typescript_sdk.md) - Frontend integration
 
+## Tutorials
+
+Step-by-step guides to help you get the most out of Forge:
+
+- [Tutorials Overview](tutorials/README.md) - Complete tutorial index
+- [Your First Conversation](tutorials/01-first-conversation.md) - Learn the basics of interacting with Forge agents
+
 ## Guides
 
 - [Best Practices](guides/best_practices.md) - Development guidelines
-- [Troubleshooting](guides/troubleshooting.md) - Common issues
+- [Troubleshooting](troubleshooting.md) - Common issues and solutions
 - [Performance Tuning](guides/performance_tuning.md) - Optimization tips
+
+## Examples
+
+- [Code Examples](examples/README.md) - Practical code examples and recipes
+- [API Examples](examples/README.md#api-examples) - REST API and WebSocket examples
+- [SDK Examples](examples/README.md#sdk-examples) - Python and TypeScript SDK examples
+
+## Use Cases
+
+- [Use Case Guides](use-cases/README.md) - Real-world use cases and examples
+- [Building a Web Application](use-cases/01-build-web-app.md) - Complete full-stack app guide
+
+## Reference
+
+- [Changelog](changelog.md) - Version history and release notes
+- [Quick Reference](quick-reference.md) - ⚡ Quick reference for commands, APIs, and patterns
+- [FAQ](faq.md) - Frequently asked questions

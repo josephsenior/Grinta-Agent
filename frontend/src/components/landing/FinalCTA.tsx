@@ -1,106 +1,181 @@
-import React, { useRef } from "react";
-import { Sparkles, ArrowRight, CheckCircle, FileText } from "lucide-react";
-import { useScrollReveal } from "#/hooks/use-scroll-reveal";
-import { useMagneticHover } from "#/hooks/use-mouse-position";
-import { soundEffects } from "#/utils/sound-effects";
+import { useEffect, useRef } from "react";
+import { ArrowRight, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { finalCta } from "#/content/landing";
+import { CheckIcon } from "./CheckIcon";
 
-export function FinalCTA() {
-  const { ref, isVisible } = useScrollReveal({
-    threshold: 0.2,
-    triggerOnce: true,
-  });
-  const primaryButtonRef = useRef<HTMLAnchorElement>(null);
-  const secondaryButtonRef = useRef<HTMLAnchorElement>(null);
+// Register ScrollTrigger
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
-  const primaryMagnetic = useMagneticHover(primaryButtonRef, 0.3);
-  const secondaryMagnetic = useMagneticHover(secondaryButtonRef, 0.25);
+export default function FinalCTA() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // GSAP scroll animations
+  useEffect(() => {
+    if (!sectionRef.current || typeof window === "undefined") {
+      return () => {
+        // No cleanup needed
+      };
+    }
+
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (prefersReducedMotion) {
+      gsap.set([cardRef.current, contentRef.current?.children], {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+      });
+      return () => {
+        // No cleanup needed for reduced motion
+      };
+    }
+
+    // Card entrance animation
+    if (cardRef.current) {
+      gsap.from(cardRef.current, {
+        opacity: 0,
+        y: 60,
+        scale: 0.95,
+        duration: 0.8,
+        ease: "back.out(1.2)",
+        scrollTrigger: {
+          trigger: cardRef.current,
+          start: "top 80%",
+          toggleActions: "play none none none",
+        },
+      });
+    }
+
+    // Content stagger animation
+    if (contentRef.current) {
+      gsap.from(contentRef.current.children, {
+        opacity: 0,
+        y: 30,
+        duration: 0.6,
+        stagger: 0.1,
+        ease: "power3.out",
+        scrollTrigger: {
+          trigger: cardRef.current,
+          start: "top 80%",
+          toggleActions: "play none none none",
+        },
+      });
+    }
+
+    // Trust signals animation
+    const trustSignals = contentRef.current?.querySelectorAll(".trust-signal");
+    if (trustSignals && trustSignals.length > 0) {
+      gsap.from(trustSignals, {
+        opacity: 0,
+        x: -20,
+        duration: 0.4,
+        stagger: 0.1,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: cardRef.current,
+          start: "top 80%",
+          toggleActions: "play none none none",
+        },
+      });
+    }
+
+    return () => {
+      ScrollTrigger.getAll().forEach((trigger) => {
+        if (
+          trigger.vars.trigger === sectionRef.current ||
+          trigger.vars.trigger === cardRef.current
+        ) {
+          trigger.kill();
+        }
+      });
+    };
+  }, []);
 
   return (
-    <section ref={ref} className="py-20 px-6 relative">
-      <div className="max-w-5xl mx-auto">
+    <section
+      ref={sectionRef}
+      className="relative w-full min-w-0 py-20 lg:py-32 overflow-hidden"
+    >
+      <div className="absolute inset-0 bg-gradient-to-b from-brand-violet/10 via-brand-violet/5 to-transparent" />
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 1px 1px, rgba(139, 92, 246, 0.15) 1px, transparent 0)",
+          backgroundSize: "40px 40px",
+        }}
+      />
+
+      <div className="relative w-full min-w-0 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div
-          className={`relative overflow-hidden rounded-3xl ${isVisible ? "bento-card delay-0" : "opacity-0"}`}
+          ref={cardRef}
+          className="glass-effect rounded-3xl p-12 lg:p-16 text-center relative overflow-hidden min-w-0"
         >
-          {/* Enhanced gradient background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-500 via-brand-600 to-purple-600 opacity-95" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-brand-violet/20 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl" />
 
-          {/* Animated background elements */}
-          <div
-            className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse"
-            style={{ animationDelay: "0s" }}
-          />
-          <div
-            className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-accent-500/20 rounded-full blur-3xl animate-pulse"
-            style={{ animationDelay: "1s" }}
-          />
-          <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-brand-400/15 rounded-full blur-2xl animate-pulse"
-            style={{ animationDelay: "2s" }}
-          />
+          <div ref={contentRef} className="relative z-10">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-brand-violet/20 border border-brand-violet/30 rounded-full text-sm text-brand-violetLight mb-8">
+              <Sparkles size={16} className="animate-pulse" />
+              <span>Private Beta</span>
+            </div>
 
-          {/* Content */}
-          <div className="relative z-10 p-12 md:p-16">
-            <div className="text-center">
-              {/* Icon with enhanced glow */}
-              <div className="w-20 h-20 mx-auto mb-8 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center morphing-icon shadow-2xl shadow-white/20 interactive-scale">
-                <Sparkles className="w-10 h-10 text-white floating-icon" />
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 w-full">
+              {finalCta.heading}
+            </h2>
+
+            <p className="text-lg text-text-secondary w-full mb-10">
+              {finalCta.body}
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Link
+                to="/auth/register"
+                className="group px-8 py-4 bg-brand-violet hover:bg-brand-violet-dark text-white font-semibold rounded-xl transition-all duration-300 shadow-glow hover:shadow-glow-lg flex items-center gap-2 whitespace-nowrap"
+              >
+                <span>{finalCta.primaryCta}</span>
+                <ArrowRight
+                  size={20}
+                  className="group-hover:translate-x-1 transition-transform flex-shrink-0"
+                />
+              </Link>
+              <Link
+                to="/pricing"
+                className="px-8 py-4 glass-effect font-semibold rounded-xl transition-all duration-300 whitespace-nowrap"
+                style={{ color: "var(--text-primary)" }}
+                onMouseEnter={(e) => {
+                  const target = e.currentTarget;
+                  target.style.backgroundColor = "var(--bg-elevated)";
+                }}
+                onMouseLeave={(e) => {
+                  const target = e.currentTarget;
+                  target.style.backgroundColor = "var(--glass-bg)";
+                }}
+              >
+                {finalCta.secondaryCta}
+              </Link>
+            </div>
+
+            <div className="mt-10 flex items-center justify-center gap-8 text-sm text-text-tertiary flex-wrap">
+              <div className="trust-signal flex items-center gap-2">
+                <CheckIcon />
+                <span className="w-full">$1/day free tier</span>
               </div>
-
-              {/* Heading - Benefit-driven */}
-              <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 text-glow">
-                {finalCta.heading}
-              </h2>
-              <p className="text-xl text-white/90 max-w-3xl mx-auto mb-10 leading-relaxed">
-                {finalCta.body}
-              </p>
-
-              {/* CTAs with magnetic hover */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-                <a
-                  ref={primaryButtonRef}
-                  href="/conversations/new"
-                  onMouseEnter={() => soundEffects.hover()}
-                  onClick={() => soundEffects.success()}
-                  className="magnetic-button button-shine inline-flex items-center px-10 py-5 bg-white text-brand-600 font-bold rounded-xl hover:bg-gray-50 transition-all duration-300 shadow-2xl shadow-black/50 interactive-scale overflow-hidden gpu-accelerated group"
-                  style={{
-                    transform: `translate(${primaryMagnetic.offset.x}px, ${primaryMagnetic.offset.y}px)`,
-                  }}
-                >
-                  {finalCta.primaryCta}
-                  <ArrowRight className="w-5 h-5 ml-3 group-hover:translate-x-2 transition-transform duration-300" />
-                </a>
-                <a
-                  ref={secondaryButtonRef}
-                  href="/docs/beta"
-                  onMouseEnter={() => soundEffects.hover()}
-                  onClick={() => soundEffects.click()}
-                  className="magnetic-button inline-flex items-center px-10 py-5 bg-white/10 backdrop-blur-md text-white font-semibold rounded-xl hover:bg-white/20 transition-all duration-300 border-2 border-white/30 hover:border-white/50 shadow-xl interactive-scale gpu-accelerated group"
-                  style={{
-                    transform: `translate(${secondaryMagnetic.offset.x}px, ${secondaryMagnetic.offset.y}px)`,
-                  }}
-                >
-                  <FileText className="w-5 h-5 mr-3 group-hover:rotate-12 transition-transform duration-300" />
-                  {finalCta.secondaryCta}
-                </a>
+              <div className="trust-signal flex items-center gap-2">
+                <CheckIcon />
+                <span className="w-full">No credit card</span>
               </div>
-
-              {/* Trust indicators with enhanced styling */}
-              <div className="pt-8 border-t border-white/20">
-                <div className="flex flex-wrap justify-center gap-6 text-white/90 text-sm">
-                  <div className="flex items-center gap-2 glass-modern px-4 py-2 rounded-full interactive-scale">
-                    <CheckCircle className="w-5 h-5 text-white" />
-                    <span>Free & Open Source</span>
-                  </div>
-                  <div className="flex items-center gap-2 glass-modern px-4 py-2 rounded-full interactive-scale">
-                    <CheckCircle className="w-5 h-5 text-white" />
-                    <span>No Credit Card Required</span>
-                  </div>
-                  <div className="flex items-center gap-2 glass-modern px-4 py-2 rounded-full interactive-scale">
-                    <CheckCircle className="w-5 h-5 text-white" />
-                    <span>2 Minute Setup</span>
-                  </div>
-                </div>
+              <div className="trust-signal flex items-center gap-2">
+                <CheckIcon />
+                <span className="w-full">Cancel anytime</span>
               </div>
             </div>
           </div>
@@ -109,5 +184,3 @@ export function FinalCTA() {
     </section>
   );
 }
-
-export default FinalCTA;

@@ -16,7 +16,7 @@
   --color-foreground-secondary: #e0e0e0;
   --color-border: #8b5cf6;
   --color-border-hover: #a78bfa;
-  
+
   /* Brand colors - Violet theme */
   --color-brand-500: #8b5cf6;
   --color-brand-600: #7c3aed;
@@ -24,7 +24,7 @@
   --color-accent-500: #8b5cf6;
   --color-warning-500: #f59e0b;
   --color-error-500: #ef4444;
-  
+
   /* Card-specific */
   --color-card: #000000;
   --color-card-foreground: #ffffff;
@@ -62,40 +62,90 @@
    ============================================ */
 
 /* Background colors */
-.bg-background-primary { background-color: var(--color-background-primary); }
-.bg-background-secondary { background-color: var(--color-background-secondary); }
-.bg-background-tertiary { background-color: var(--color-background-tertiary); }
+.bg-background-primary {
+  background-color: var(--color-background-primary);
+}
+.bg-background-secondary {
+  background-color: var(--color-background-secondary);
+}
+.bg-background-tertiary {
+  background-color: var(--color-background-tertiary);
+}
 
 /* Text colors */
-.text-foreground { color: var(--color-foreground); }
-.text-foreground-secondary { color: var(--color-foreground-secondary); }
+.text-foreground {
+  color: var(--color-foreground);
+}
+.text-foreground-secondary {
+  color: var(--color-foreground-secondary);
+}
 
 /* Border colors */
-.border-border { border-color: var(--color-border); }
-.border-border-hover { border-color: var(--color-border-hover); }
+.border-border {
+  border-color: var(--color-border);
+}
+.border-border-hover {
+  border-color: var(--color-border-hover);
+}
 
 /* Brand colors */
-.text-brand-500 { color: var(--color-brand-500); }
-.bg-brand-500 { background-color: var(--color-brand-500); }
-.bg-brand-500\/10 { background-color: rgba(139, 92, 246, 0.1); }
-.bg-brand-500\/15 { background-color: rgba(139, 92, 246, 0.15); }
-.text-brand-500 { color: var(--color-brand-500); }
-.ring-brand-500\/20 { --tw-ring-color: rgba(139, 92, 246, 0.2); }
+.text-brand-500 {
+  color: var(--color-brand-500);
+}
+.bg-brand-500 {
+  background-color: var(--color-brand-500);
+}
+.bg-brand-500\/10 {
+  background-color: rgba(139, 92, 246, 0.1);
+}
+.bg-brand-500\/15 {
+  background-color: rgba(139, 92, 246, 0.15);
+}
+.text-brand-500 {
+  color: var(--color-brand-500);
+}
+.ring-brand-500\/20 {
+  --tw-ring-color: rgba(139, 92, 246, 0.2);
+}
 
-.text-success-500 { color: var(--color-success-500); }
-.bg-success-500\/10 { background-color: rgba(16, 185, 129, 0.1); }
-.bg-success-500\/15 { background-color: rgba(16, 185, 129, 0.15); }
-.ring-success-500\/20 { --tw-ring-color: rgba(16, 185, 129, 0.2); }
+.text-success-500 {
+  color: var(--color-success-500);
+}
+.bg-success-500\/10 {
+  background-color: rgba(16, 185, 129, 0.1);
+}
+.bg-success-500\/15 {
+  background-color: rgba(16, 185, 129, 0.15);
+}
+.ring-success-500\/20 {
+  --tw-ring-color: rgba(16, 185, 129, 0.2);
+}
 
-.text-accent-500 { color: var(--color-accent-500); }
-.bg-accent-500\/10 { background-color: rgba(139, 92, 246, 0.1); }
-.bg-accent-500\/15 { background-color: rgba(139, 92, 246, 0.15); }
-.ring-accent-500\/20 { --tw-ring-color: rgba(139, 92, 246, 0.2); }
+.text-accent-500 {
+  color: var(--color-accent-500);
+}
+.bg-accent-500\/10 {
+  background-color: rgba(139, 92, 246, 0.1);
+}
+.bg-accent-500\/15 {
+  background-color: rgba(139, 92, 246, 0.15);
+}
+.ring-accent-500\/20 {
+  --tw-ring-color: rgba(139, 92, 246, 0.2);
+}
 
-.text-warning-500 { color: var(--color-warning-500); }
-.bg-warning-500\/10 { background-color: rgba(245, 158, 11, 0.1); }
-.bg-warning-500\/15 { background-color: rgba(245, 158, 11, 0.15); }
-.ring-warning-500\/20 { --tw-ring-color: rgba(245, 158, 11, 0.2); }
+.text-warning-500 {
+  color: var(--color-warning-500);
+}
+.bg-warning-500\/10 {
+  background-color: rgba(245, 158, 11, 0.1);
+}
+.bg-warning-500\/15 {
+  background-color: rgba(245, 158, 11, 0.15);
+}
+.ring-warning-500\/20 {
+  --tw-ring-color: rgba(245, 158, 11, 0.2);
+}
 
 /* ============================================
    COMPONENT PATTERNS
@@ -183,7 +233,8 @@
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
   50% {
@@ -193,7 +244,11 @@
 
 /* Gradient text */
 .text-gradient-brand {
-  background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));
+  background: linear-gradient(
+    135deg,
+    var(--color-brand-500),
+    var(--color-accent-500)
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -209,7 +264,11 @@
 
 /* Forge logo */
 .Forge-logo {
-  background: linear-gradient(135deg, var(--color-brand-500), var(--color-accent-500));
+  background: linear-gradient(
+    135deg,
+    var(--color-brand-500),
+    var(--color-accent-500)
+  );
 }
 
 /* Syntax highlighting */
@@ -269,7 +328,7 @@
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .features-grid {
     grid-template-columns: 1fr;
   }
@@ -279,7 +338,7 @@
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .features-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -289,7 +348,7 @@
   .stats-grid {
     grid-template-columns: repeat(4, 1fr);
   }
-  
+
   .features-grid {
     grid-template-columns: repeat(3, 1fr);
   }

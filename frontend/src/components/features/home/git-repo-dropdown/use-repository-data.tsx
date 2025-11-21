@@ -1,8 +1,13 @@
 import { useMemo, useEffect } from "react";
+import type { InfiniteData } from "@tanstack/react-query";
 import { Provider } from "#/types/settings";
 import { GitRepository } from "#/types/git";
 import { useGitRepositories } from "#/hooks/query/use-git-repositories";
 import { useSearchRepositories } from "#/hooks/query/use-search-repositories";
+import type {
+  UserRepositoriesResponse,
+  InstallationRepositoriesResponse,
+} from "#/hooks/query/use-git-repositories/query-functions";
 
 export function useRepositoryData(
   provider: Provider,
@@ -30,10 +35,20 @@ export function useRepositoryData(
     useSearchRepositories(processedSearchInput, provider);
 
   // Combine all repositories from paginated data
-  const allRepositories = useMemo(
-    () => repoData?.pages?.flatMap((page) => page.data) || [],
-    [repoData],
-  );
+  const allRepositories = useMemo(() => {
+    const data = repoData as
+      | InfiniteData<
+          UserRepositoriesResponse | InstallationRepositoriesResponse
+        >
+      | undefined;
+    if (!data?.pages) {
+      return [];
+    }
+    return data.pages.flatMap(
+      (page: UserRepositoriesResponse | InstallationRepositoriesResponse) =>
+        page.data,
+    );
+  }, [repoData]);
 
   // Find selected repository from all possible sources
   const selectedRepository = useMemo(() => {

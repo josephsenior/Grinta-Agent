@@ -6,6 +6,7 @@ import {
   Dispatch,
   SetStateAction,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { Search, Filter, X, Sparkles, TrendingUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type {
@@ -165,48 +166,6 @@ function useMarketplaceController({
   };
 }
 
-export function MCPMarketplace({
-  installedServers,
-  onInstall,
-}: MCPMarketplaceProps) {
-  const controller = useMarketplaceController({ installedServers });
-
-  if (controller.error) {
-    return (
-      <div className="p-8 text-center">
-        <p className="text-error-500 text-sm">
-          Failed to load marketplace. Please try again later.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <MarketplaceStatsBanner
-        data={controller.data}
-        onRefresh={controller.refetch}
-      />
-      <MarketplaceSearchBar
-        searchInput={controller.searchInput}
-        setSearchInput={controller.setSearchInput}
-        showFilters={controller.showFilters}
-        toggleFilters={controller.toggleFilters}
-        activeFiltersCount={controller.activeFiltersCount}
-      />
-      <MarketplaceFilterPanel controller={controller} />
-      <MarketplaceResultsSection
-        controller={controller}
-        onInstall={onInstall}
-      />
-      <MarketplaceDetailsModalWrapper
-        controller={controller}
-        onInstall={onInstall}
-      />
-    </div>
-  );
-}
-
 function MarketplaceStatsBanner({
   data,
   onRefresh,
@@ -277,44 +236,6 @@ function MarketplaceSearchBar({
           </span>
         )}
       </button>
-    </div>
-  );
-}
-
-function MarketplaceFilterPanel({
-  controller,
-}: {
-  controller: MarketplaceController;
-}) {
-  if (!controller.showFilters) {
-    return null;
-  }
-
-  return (
-    <div className="bg-background-secondary border border-border rounded-lg p-4 space-y-4">
-      <MarketplaceQuickFilters
-        featured={controller.filters.featured ?? false}
-        popular={controller.filters.popular ?? false}
-        onToggleFeatured={controller.handleFeaturedFilter}
-        onTogglePopular={controller.handlePopularFilter}
-      />
-      <MarketplaceTypeFilter
-        selectedType={controller.filters.type}
-        onSelectType={controller.handleTypeFilter}
-      />
-      <MarketplaceCategoryFilter
-        selectedCategory={controller.filters.category}
-        onSelectCategory={controller.handleCategoryFilter}
-      />
-      {controller.activeFiltersCount > 0 && (
-        <button
-          type="button"
-          onClick={controller.clearFilters}
-          className="text-sm text-brand-400 hover:text-brand-300 transition-colors"
-        >
-          Clear all filters
-        </button>
-      )}
     </div>
   );
 }
@@ -435,21 +356,40 @@ function MarketplaceCategoryFilter({
   );
 }
 
-function MarketplaceResultsSection({
+function MarketplaceFilterPanel({
   controller,
-  onInstall,
 }: {
   controller: MarketplaceController;
-  onInstall: (mcp: MCPMarketplaceItem) => void;
 }) {
+  if (!controller.showFilters) {
+    return null;
+  }
+
   return (
-    <div className="space-y-4">
-      <MarketplaceResultsSummary
-        isLoading={controller.isLoading}
-        total={controller.data?.total ?? 0}
-        activeFiltersCount={controller.activeFiltersCount}
+    <div className="bg-background-secondary border border-border rounded-lg p-4 space-y-4">
+      <MarketplaceQuickFilters
+        featured={controller.filters.featured ?? false}
+        popular={controller.filters.popular ?? false}
+        onToggleFeatured={controller.handleFeaturedFilter}
+        onTogglePopular={controller.handlePopularFilter}
       />
-      <MarketplaceResultsGrid controller={controller} onInstall={onInstall} />
+      <MarketplaceTypeFilter
+        selectedType={controller.filters.type}
+        onSelectType={controller.handleTypeFilter}
+      />
+      <MarketplaceCategoryFilter
+        selectedCategory={controller.filters.category}
+        onSelectCategory={controller.handleCategoryFilter}
+      />
+      {controller.activeFiltersCount > 0 && (
+        <button
+          type="button"
+          onClick={controller.clearFilters}
+          className="text-sm text-brand-400 hover:text-brand-300 transition-colors"
+        >
+          Clear all filters
+        </button>
+      )}
     </div>
   );
 }
@@ -530,6 +470,25 @@ function MarketplaceResultsGrid({
   );
 }
 
+function MarketplaceResultsSection({
+  controller,
+  onInstall,
+}: {
+  controller: MarketplaceController;
+  onInstall: (mcp: MCPMarketplaceItem) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <MarketplaceResultsSummary
+        isLoading={controller.isLoading}
+        total={controller.data?.total ?? 0}
+        activeFiltersCount={controller.activeFiltersCount}
+      />
+      <MarketplaceResultsGrid controller={controller} onInstall={onInstall} />
+    </div>
+  );
+}
+
 function MarketplaceDetailsModalWrapper({
   controller,
   onInstall,
@@ -549,5 +508,52 @@ function MarketplaceDetailsModalWrapper({
       onInstall={onInstall}
       onClose={() => controller.setSelectedMCP(null)}
     />
+  );
+}
+
+export function MCPMarketplace({
+  installedServers,
+  onInstall,
+}: MCPMarketplaceProps) {
+  const controller = useMarketplaceController({ installedServers });
+
+  const { t } = useTranslation();
+
+  if (controller.error) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-error-500 text-sm">
+          {t(
+            "Failed to load marketplace. Please try again later.",
+            "Failed to load marketplace. Please try again later.",
+          )}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <MarketplaceStatsBanner
+        data={controller.data}
+        onRefresh={controller.refetch}
+      />
+      <MarketplaceSearchBar
+        searchInput={controller.searchInput}
+        setSearchInput={controller.setSearchInput}
+        showFilters={controller.showFilters}
+        toggleFilters={controller.toggleFilters}
+        activeFiltersCount={controller.activeFiltersCount}
+      />
+      <MarketplaceFilterPanel controller={controller} />
+      <MarketplaceResultsSection
+        controller={controller}
+        onInstall={onInstall}
+      />
+      <MarketplaceDetailsModalWrapper
+        controller={controller}
+        onInstall={onInstall}
+      />
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import Forge from "#/api/forge";
 import toast from "#/utils/toast";
+import { logger } from "#/utils/logger";
 
 interface UseFileOperationsProps {
   conversationId: string;
@@ -19,7 +20,7 @@ export function useFileOperations({
       try {
         // Skip special directories that cause 500 errors
         if (filePath === ".downloads" || filePath.startsWith(".downloads/")) {
-          console.warn("Skipping special directory:", filePath);
+          logger.warn("Skipping special directory:", filePath);
           return null;
         }
 
@@ -32,7 +33,7 @@ export function useFileOperations({
         }
         return null;
       } catch (error) {
-        console.error("Failed to get file content:", error);
+        logger.error("Failed to get file content:", error);
         // Only show toast for non-404/500 errors from special dirs
         if (!filePath.startsWith(".")) {
           toast.error("file-content-error", "Failed to load file content");
@@ -56,7 +57,7 @@ export function useFileOperations({
         toast.info(`File ${filePath} would be deleted`);
         onFilesChanged?.();
       } catch (error) {
-        console.error("Failed to delete file:", error);
+        logger.error("Failed to delete file:", error);
         toast.error("file-delete-error", "Failed to delete file");
       } finally {
         setLoading(false);
@@ -76,7 +77,7 @@ export function useFileOperations({
         toast.info(`File renamed from ${oldPath} to ${newPath}`);
         onFilesChanged?.();
       } catch (error) {
-        console.error("Failed to rename file:", error);
+        logger.error("Failed to rename file:", error);
         toast.error("file-rename-error", "Failed to rename file");
       } finally {
         setLoading(false);
@@ -96,7 +97,7 @@ export function useFileOperations({
         toast.info(`Folder ${folderPath} would be created`);
         onFilesChanged?.();
       } catch (error) {
-        console.error("Failed to create folder:", error);
+        logger.error("Failed to create folder:", error);
         toast.error("folder-create-error", "Failed to create folder");
       } finally {
         setLoading(false);
@@ -124,7 +125,7 @@ export function useFileOperations({
           toast.success("file-download-success", `Downloaded ${filePath}`);
         }
       } catch (error) {
-        console.error("Failed to download file:", error);
+        logger.error("Failed to download file:", error);
         toast.error("file-download-error", "Failed to download file");
       } finally {
         setLoading(false);

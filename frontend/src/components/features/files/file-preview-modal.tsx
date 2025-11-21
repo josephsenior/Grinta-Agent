@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   X,
   File,
@@ -58,6 +59,7 @@ export function FilePreviewModal({
   onCancel,
   isOpen,
 }: FilePreviewModalProps) {
+  const { t } = useTranslation();
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>(files);
   const [previewUrls, setPreviewUrls] = React.useState<Map<string, string>>(
     new Map(),
@@ -98,14 +100,22 @@ export function FilePreviewModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <File className="h-5 w-5" />
-            File Preview
+            {t("filePreview.title", "File Preview")}
             <Badge variant="outline" className="ml-auto">
-              {selectedFiles.length}{" "}
-              {selectedFiles.length === 1 ? "file" : "files"}
+              {t("filePreview.fileCount", "{{count}} {{files}}", {
+                count: selectedFiles.length,
+                files:
+                  selectedFiles.length === 1
+                    ? t("filePreview.file", "file")
+                    : t("filePreview.files", "files"),
+              })}
             </Badge>
           </DialogTitle>
           <DialogDescription className="text-sm text-text-secondary">
-            Review your selected files and remove any you do not want to upload.
+            {t(
+              "filePreview.description",
+              "Review your selected files and remove any you do not want to upload.",
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -114,7 +124,7 @@ export function FilePreviewModal({
           {hasImages && (
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-text-secondary">
-                Images
+                {t("filePreview.images", "Images")}
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {selectedFiles
@@ -161,7 +171,7 @@ export function FilePreviewModal({
           {selectedFiles.some((f) => !f.type.startsWith("image/")) && (
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-text-secondary">
-                Documents
+                {t("filePreview.documents", "Documents")}
               </h3>
               <div className="space-y-2">
                 {selectedFiles
@@ -206,19 +216,26 @@ export function FilePreviewModal({
 
         <DialogFooter className="flex items-center justify-between border-t border-border-glass pt-4">
           <div className="text-sm text-text-foreground-secondary">
-            Total: {formatFileSize(totalSize)}
+            {t("filePreview.total", "Total: {{size}}", {
+              size: formatFileSize(totalSize),
+            })}
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onCancel}>
-              Cancel
+              {t("filePreview.cancel", "Cancel")}
             </Button>
             <Button
               onClick={handleConfirm}
               disabled={selectedFiles.length === 0}
               className="bg-primary-500 hover:bg-primary-600"
             >
-              Upload {selectedFiles.length}{" "}
-              {selectedFiles.length === 1 ? "file" : "files"}
+              {t("filePreview.upload", "Upload {{count}} {{files}}", {
+                count: selectedFiles.length,
+                files:
+                  selectedFiles.length === 1
+                    ? t("filePreview.file", "file")
+                    : t("filePreview.files", "files"),
+              })}
             </Button>
           </div>
         </DialogFooter>

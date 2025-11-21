@@ -79,7 +79,7 @@ poetry run pytest tests/e2e/
 
 ## Code Quality
 
-Forge maintains **exceptional code quality** with an average cyclomatic complexity of **3.13** (A-rated) across 5,931 functions. See [CODE_QUALITY.md](CODE_QUALITY.md) for detailed metrics and standards.
+Forge maintains **exceptional code quality** with an average cyclomatic complexity of **3.06** (A-rated) across **8,100 backend functions/methods** and **2.21** for frontend. The codebase consists of **245,527 lines of production code** (144K backend + 101K frontend) with **0% high-complexity functions** (0 above B complexity level). See [code-quality.md](code-quality.md) for detailed metrics and standards.
 
 ### Complexity Analysis
 ```bash

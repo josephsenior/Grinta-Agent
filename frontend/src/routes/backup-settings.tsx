@@ -178,11 +178,11 @@ function BackupSettingsScreen() {
   return (
     <div className="px-11 py-9 flex flex-col gap-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">
+      <div className="w-full">
+        <h1 className="text-2xl font-semibold text-foreground w-full">
           {t("backupSettings.title", "Backup & Restore")}
         </h1>
-        <p className="text-foreground-secondary mt-1">
+        <p className="text-foreground-secondary mt-1 w-full">
           {t(
             "backupSettings.subtitle",
             "Export and import all your data in one place",
@@ -196,18 +196,18 @@ function BackupSettingsScreen() {
           <div className="p-3 bg-white/5 rounded-lg">
             <Download className="w-6 h-6 text-foreground-tertiary" />
           </div>
-          <div className="flex-1">
-            <h2 className="text-lg font-semibold text-foreground mb-2">
+          <div className="flex-1 w-full">
+            <h2 className="text-lg font-semibold text-foreground mb-2 w-full">
               {t("backupSettings.export.heading", "Export Your Data")}
             </h2>
-            <p className="text-foreground-secondary text-sm mb-4">
+            <p className="text-foreground-secondary text-sm mb-4 w-full">
               {t(
                 "backupSettings.export.description",
                 "Download a complete backup of all your memories, prompts, code snippets, and conversation templates. This file can be used to restore your data or transfer it to another system.",
               )}
             </p>
-            <div className="p-3 bg-black/60 rounded border border-white/10 mb-4">
-              <h3 className="text-sm font-medium text-foreground mb-2">
+            <div className="p-3 bg-black/60 rounded border border-white/10 mb-4 w-full">
+              <h3 className="text-sm font-medium text-foreground mb-2 w-full">
                 {t("backupSettings.export.included", "What's included:")}
               </h3>
               <ul className="list-disc pl-5 text-sm text-foreground-secondary space-y-1">
@@ -237,11 +237,11 @@ function BackupSettingsScreen() {
           <div className="p-3 bg-white/5 rounded-lg">
             <Upload className="w-6 h-6 text-foreground-tertiary" />
           </div>
-          <div className="flex-1">
-            <h2 className="text-lg font-semibold text-foreground mb-2">
+          <div className="flex-1 w-full">
+            <h2 className="text-lg font-semibold text-foreground mb-2 w-full">
               {t("backupSettings.import.heading", "Import Your Data")}
             </h2>
-            <p className="text-foreground-secondary text-sm mb-4">
+            <p className="text-foreground-secondary text-sm mb-4 w-full">
               {t(
                 "backupSettings.import.description",
                 "Restore your data from a previous backup or import data from another system. Existing items with the same ID will be updated.",
@@ -282,8 +282,8 @@ function BackupSettingsScreen() {
           <div className="p-3 bg-foreground-secondary/10 rounded-lg">
             <Database className="w-6 h-6 text-foreground-secondary" />
           </div>
-          <div className="flex-1">
-            <h2 className="text-lg font-semibold text-foreground mb-2">
+          <div className="flex-1 w-full">
+            <h2 className="text-lg font-semibold text-foreground mb-2 w-full">
               {t(
                 "backupSettings.bestPractices.heading",
                 "Backup Best Practices",

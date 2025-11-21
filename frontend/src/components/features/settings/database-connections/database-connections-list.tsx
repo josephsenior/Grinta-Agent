@@ -8,6 +8,7 @@ import {
   Search,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   useDatabaseConnections,
   useDeleteDatabaseConnection,
@@ -19,10 +20,36 @@ interface DatabaseConnectionsListProps {
   onDelete: (connectionId: string) => void;
 }
 
+// Helper functions - defined before use
+function getStatusIcon(status?: string) {
+  switch (status) {
+    case "connected":
+      return <CheckCircle className="w-4 h-4 text-success-500" />;
+    case "error":
+    case "disconnected":
+      return <XCircle className="w-4 h-4 text-error-500" />;
+    default:
+      return <Circle className="w-4 h-4 text-foreground-secondary" />;
+  }
+}
+
+function getStatusColor(status?: string): string {
+  switch (status) {
+    case "connected":
+      return "text-success-500";
+    case "error":
+    case "disconnected":
+      return "text-error-500";
+    default:
+      return "text-foreground-secondary";
+  }
+}
+
 export function DatabaseConnectionsList({
   onEdit,
   onDelete,
 }: DatabaseConnectionsListProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: connections, isLoading } = useDatabaseConnections();
   const { mutate: deleteConnection } = useDeleteDatabaseConnection();
@@ -40,10 +67,13 @@ export function DatabaseConnectionsList({
       <div className="text-center p-12 bg-background-secondary border border-border rounded-lg">
         <Database className="w-12 h-12 text-foreground-secondary mx-auto mb-4" />
         <h3 className="text-lg font-medium text-foreground mb-2">
-          No Database Connections
+          {t("databaseConnections.noConnections", "No Database Connections")}
         </h3>
         <p className="text-sm text-foreground-secondary">
-          Add your first database connection to get started
+          {t(
+            "databaseConnections.addFirstConnection",
+            "Add your first database connection to get started",
+          )}
         </p>
       </div>
     );
@@ -82,7 +112,12 @@ export function DatabaseConnectionsList({
             <div className="flex items-center gap-2 px-4">
               {getStatusIcon(connection.status)}
               <span className={`text-sm ${getStatusColor(connection.status)}`}>
-                {connection.status || "untested"}
+                {connection.status
+                  ? t(
+                      `databaseConnections.status.${connection.status}`,
+                      connection.status,
+                    )
+                  : t("databaseConnections.status.untested", "untested")}
               </span>
             </div>
 
@@ -94,24 +129,39 @@ export function DatabaseConnectionsList({
                   navigate(`/database-browser?connection=${connection.id}`)
                 }
                 className="px-3 py-1.5 text-sm flex items-center gap-2 text-violet-500 hover:text-white hover:bg-brand-500 border border-brand-500 rounded-md transition-colors"
-                title="Browse database"
+                title={t(
+                  "databaseConnections.browseDatabase",
+                  "Browse database",
+                )}
               >
                 <Search className="w-4 h-4" />
-                Browse
+                {t("databaseConnections.browse", "Browse")}
               </button>
               <button
                 type="button"
                 onClick={() => onEdit(connection)}
                 className="p-2 text-foreground-secondary hover:text-foreground hover:bg-background-tertiary rounded-md transition-colors"
-                title="Edit connection"
+                title={t(
+                  "databaseConnections.editConnection",
+                  "Edit connection",
+                )}
               >
                 <Edit className="w-4 h-4" />
               </button>
               <button
                 type="button"
-                onClick={() => onDelete(connection.id)}
+                onClick={() => {
+                  deleteConnection(connection.id, {
+                    onSuccess: () => {
+                      onDelete(connection.id);
+                    },
+                  });
+                }}
                 className="p-2 text-foreground-secondary hover:text-error-500 hover:bg-error-500/10 rounded-md transition-colors"
-                title="Delete connection"
+                title={t(
+                  "databaseConnections.deleteConnection",
+                  "Delete connection",
+                )}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -120,28 +170,4 @@ export function DatabaseConnectionsList({
         ))}
     </div>
   );
-}
-
-function getStatusIcon(status?: string) {
-  switch (status) {
-    case "connected":
-      return <CheckCircle className="w-4 h-4 text-success-500" />;
-    case "error":
-    case "disconnected":
-      return <XCircle className="w-4 h-4 text-error-500" />;
-    default:
-      return <Circle className="w-4 h-4 text-foreground-secondary" />;
-  }
-}
-
-function getStatusColor(status?: string): string {
-  switch (status) {
-    case "connected":
-      return "text-success-500";
-    case "error":
-    case "disconnected":
-      return "text-error-500";
-    default:
-      return "text-foreground-secondary";
-  }
 }

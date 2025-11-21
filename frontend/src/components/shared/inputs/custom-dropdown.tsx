@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronDown, Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "#/utils/utils";
 
 export interface DropdownItem {
@@ -24,15 +25,13 @@ interface CustomDropdownProps {
   onSelectionChange?: (key: string) => void;
   onInputChange?: (value: string) => void;
   isClearable?: boolean;
-  // Allow a free-form custom value to be entered and reported back
-  allowsCustomValue?: boolean;
-  onCustomValue?: (value: string) => void;
   "data-testid"?: string;
   "aria-label"?: string;
   isLoading?: boolean;
   loadingText?: string;
   error?: string;
   name?: string;
+  id?: string;
 }
 
 function isFlatItemList(
@@ -175,16 +174,20 @@ function useCustomDropdownController({
     }
 
     document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
+    // eslint-disable-next-line consistent-return
+    return (): void => {
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, [isOpen, closeDropdown]);
 
   useEffect(() => {
     if (!isUserTyping) {
       setFilteredItems(items);
-      return;
+      return undefined;
     }
 
     setFilteredItems(filterItemsByQuery(items, inputValue));
+    return undefined;
   }, [inputValue, items, isUserTyping]);
 
   const handleInputChange = useCallback(
@@ -251,53 +254,6 @@ function useCustomDropdownController({
   };
 }
 
-function DropdownItemsList({
-  items,
-  selectedKey,
-  onSelect,
-}: {
-  items: DropdownItem[] | DropdownSection[];
-  selectedKey: string;
-  onSelect: (item: DropdownItem) => void;
-}) {
-  if (isFlatItemList(items)) {
-    return (
-      <>
-        {items.map((item) => (
-          <DropdownOptionButton
-            key={item.key}
-            item={item}
-            selectedKey={selectedKey}
-            onSelect={onSelect}
-          />
-        ))}
-      </>
-    );
-  }
-
-  const sections = items as DropdownSection[];
-
-  return (
-    <>
-      {sections.map((section) => (
-        <div key={section.title || section.items[0]?.key}>
-          <div className="px-4 py-2 text-xs font-medium text-foreground-secondary border-b border-border/50">
-            {section.title}
-          </div>
-          {section.items.map((item) => (
-            <DropdownOptionButton
-              key={item.key}
-              item={item}
-              selectedKey={selectedKey}
-              onSelect={onSelect}
-            />
-          ))}
-        </div>
-      ))}
-    </>
-  );
-}
-
 function DropdownOptionButton({
   item,
   selectedKey,
@@ -339,67 +295,69 @@ function DropdownOptionButton({
   );
 }
 
-export function CustomDropdown({
+function DropdownItemsList({
   items,
-  value,
-  defaultValue,
-  placeholder = "Select an option",
-  disabled = false,
-  className,
-  inputClassName,
-  onSelectionChange,
-  onInputChange,
-  isClearable = false,
-  "data-testid": testId,
-  "aria-label": ariaLabel,
-  isLoading = false,
-  loadingText = "Loading...",
-  error,
-  name,
-}: CustomDropdownProps) {
-  const controller = useCustomDropdownController({
-    items,
-    value,
-    defaultValue,
-    onSelectionChange,
-    onInputChange,
-    disabled,
-    isLoading,
-  });
+  selectedKey,
+  onSelect,
+}: {
+  items: DropdownItem[] | DropdownSection[];
+  selectedKey: string;
+  onSelect: (item: DropdownItem) => void;
+}) {
+  if (isFlatItemList(items)) {
+    return (
+      <div>
+        {items.map((item) => (
+          <DropdownOptionButton
+            key={item.key}
+            item={item}
+            selectedKey={selectedKey}
+            onSelect={onSelect}
+          />
+        ))}
+      </div>
+    );
+  }
 
-  const handleClearClick = useCallback(
-    (event: React.MouseEvent) => {
-      event.stopPropagation();
-      controller.clearSelection();
-    },
-    [controller],
-  );
+  const sections = items as DropdownSection[];
 
   return (
-    <div
-      ref={controller.dropdownRef}
-      className={cn("relative w-full", className)}
-    >
-      <DropdownInput
-        controller={controller}
-        disabled={disabled}
-        isLoading={isLoading}
-        loadingText={loadingText}
-        placeholder={placeholder}
-        ariaLabel={ariaLabel}
-        testId={testId}
-        inputClassName={inputClassName}
-        name={name}
-        error={error}
-        isClearable={isClearable}
-        onClear={handleClearClick}
-      />
-      <DropdownErrorMessage error={error} />
-      <DropdownMenu
-        controller={controller}
-        disabled={disabled}
-        isLoading={isLoading}
-      />
+    <div>
+      {sections.map((section) => (
+        <div key={section.title || section.items[0]?.key}>
+          <div className="px-4 py-2 text-xs font-medium text-foreground-secondary border-b border-border/50">
+            {section.title}
+          </div>
+          {section.items.map((item) => (
+            <DropdownOptionButton
+              key={item.key}
+              item={item}
+              selectedKey={selectedKey}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DropdownErrorIcon() {
+  return (
+    <div className="p-1">
+      <svg
+        className="w-4 h-4 text-danger-500"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+        />
+      </svg>
     </div>
   );
 }
@@ -417,6 +375,7 @@ function DropdownInput({
   error,
   isClearable,
   onClear,
+  id,
 }: {
   controller: CustomDropdownController;
   disabled: boolean;
@@ -430,6 +389,7 @@ function DropdownInput({
   error?: string;
   isClearable: boolean;
   onClear: (event: React.MouseEvent) => void;
+  id?: string;
 }) {
   const showClearButton = isClearable && controller.inputValue && !isLoading;
   const showErrorIcon = Boolean(error) && !isLoading;
@@ -504,6 +464,7 @@ function DropdownInput({
       <input
         ref={controller.inputRef}
         type="text"
+        id={id}
         name={name}
         value={controller.inputValue}
         onChange={controller.handleInputChange}
@@ -549,13 +510,12 @@ function DropdownErrorMessage({ error }: { error?: string }) {
 
 function DropdownMenu({
   controller,
-  disabled,
   isLoading,
 }: {
   controller: CustomDropdownController;
-  disabled: boolean;
   isLoading: boolean;
 }) {
+  const { t } = useTranslation();
   if (!controller.isOpen || isLoading) {
     return null;
   }
@@ -569,7 +529,7 @@ function DropdownMenu({
         <div className="max-h-60 overflow-y-auto custom-scrollbar">
           {controller.filteredItems.length === 0 && (
             <div className="px-4 py-3 text-sm text-foreground-secondary">
-              No results found
+              {t("UI$NO_RESULTS_FOUND", "No results found")}
             </div>
           )}
           <DropdownItemsList
@@ -583,22 +543,65 @@ function DropdownMenu({
   );
 }
 
-function DropdownErrorIcon() {
+export function CustomDropdown({
+  items,
+  value,
+  defaultValue,
+  placeholder = "Select an option",
+  disabled = false,
+  className,
+  inputClassName,
+  onSelectionChange,
+  onInputChange,
+  isClearable = false,
+  "data-testid": testId,
+  "aria-label": ariaLabel,
+  isLoading = false,
+  loadingText = "Loading...",
+  error,
+  name,
+  id,
+}: CustomDropdownProps) {
+  const controller = useCustomDropdownController({
+    items,
+    value,
+    defaultValue,
+    onSelectionChange,
+    onInputChange,
+    disabled,
+    isLoading,
+  });
+
+  const handleClearClick = useCallback(
+    (event: React.MouseEvent) => {
+      event.stopPropagation();
+      controller.clearSelection();
+    },
+    [controller],
+  );
+
   return (
-    <div className="p-1">
-      <svg
-        className="w-4 h-4 text-danger-500"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-        />
-      </svg>
+    <div
+      ref={controller.dropdownRef}
+      className={cn("relative w-full", className)}
+    >
+      <DropdownInput
+        controller={controller}
+        disabled={disabled}
+        isLoading={isLoading}
+        loadingText={loadingText}
+        placeholder={placeholder}
+        id={id}
+        ariaLabel={ariaLabel}
+        testId={testId}
+        inputClassName={inputClassName}
+        name={name}
+        error={error}
+        isClearable={isClearable}
+        onClear={handleClearClick}
+      />
+      <DropdownErrorMessage error={error} />
+      <DropdownMenu controller={controller} isLoading={isLoading} />
     </div>
   );
 }

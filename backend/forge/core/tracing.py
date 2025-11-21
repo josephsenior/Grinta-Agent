@@ -1,0 +1,286 @@
+"""Distributed tracing module with OpenTelemetry defaults and exporters."""
+
+from __future__ import annotations
+
+import os
+import logging
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+# Global tracing configuration
+_tracing_initialized = False
+_tracer = None
+_trace_provider = None
+
+
+def initialize_tracing(
+    service_name: str = "forge",
+    service_version: str = "1.0.0",
+    exporter: str = "console",
+    endpoint: str | None = None,
+    sample_rate: float = 0.1,
+    enabled: bool = True,
+) -> None:
+    """Initialize OpenTelemetry tracing with defaults.
+
+    Args:
+        service_name: Service name for tracing
+        service_version: Service version for tracing
+        exporter: Tracing exporter ('jaeger', 'zipkin', 'otlp', 'console')
+        endpoint: Tracing endpoint URL
+        sample_rate: Trace sampling rate (0.0 to 1.0)
+        enabled: Whether tracing is enabled
+
+    """
+    global _tracing_initialized, _tracer, _trace_provider
+
+    if not _should_initialize(enabled):
+        return
+
+    try:
+        trace, tracer_provider, resource = _setup_tracer_provider(
+            service_name, service_version
+        )
+        span_exporter, exporter_type = _configure_exporter(exporter, endpoint)
+        if span_exporter:
+            _apply_span_processor(tracer_provider, span_exporter, sample_rate)
+        _finalize_tracer(trace, tracer_provider, service_name, service_version)
+        _set_initialized()
+        _log_tracing_initialized(service_name, service_version, exporter_type, sample_rate)
+    except ImportError as exc:
+        logger.warning(f"OpenTelemetry not available: {exc}. Tracing disabled.")
+    except Exception as exc:
+        logger.error(f"Failed to initialize tracing: {exc}", exc_info=True)
+
+
+def _should_initialize(enabled: bool) -> bool:
+    if not enabled:
+        logger.debug("Tracing disabled")
+        return False
+    if _tracing_initialized:
+        logger.debug("Tracing already initialized")
+        return False
+    return True
+
+
+def _setup_tracer_provider(service_name: str, service_version: str):
+    from opentelemetry import trace
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.resources import Resource
+
+    resource = Resource.create(
+        {
+            "service.name": service_name,
+            "service.version": service_version,
+            "service.instance.id": os.getenv("HOSTNAME", "forge"),
+        }
+    )
+    tracer_provider = TracerProvider(resource=resource)
+    trace.set_tracer_provider(tracer_provider)
+    return trace, tracer_provider, resource
+
+
+def _configure_exporter(
+    exporter: str, endpoint: str | None
+) -> tuple[Any | None, str]:
+    exporter_type = exporter
+    if exporter == "jaeger":
+        exporter_instance = _configure_jaeger(endpoint)
+    elif exporter == "zipkin":
+        exporter_instance = _configure_zipkin(endpoint)
+    elif exporter == "otlp":
+        exporter_instance = _configure_otlp(endpoint)
+    else:
+        exporter_instance = _configure_console()
+        exporter_type = "console"
+    return exporter_instance, exporter_type
+
+
+def _configure_jaeger(endpoint: str | None):
+    """Configure Jaeger exporter with support for both OTLP and Thrift protocols."""
+    try:
+        # Check if OTLP endpoint is explicitly configured
+        otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        use_otlp = otlp_endpoint is not None or (
+            endpoint and ("4318" in endpoint or "/v1/traces" in endpoint)
+        )
+        
+        if use_otlp:
+            # Try OTLP exporter (recommended for Jaeger all-in-one with OTLP support)
+            try:
+                from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+                    OTLPSpanExporter,
+                )
+                
+                otlp_endpoint = otlp_endpoint or endpoint or "http://localhost:4318/v1/traces"
+                
+                # Ensure endpoint ends with /v1/traces
+                if not otlp_endpoint.endswith("/v1/traces"):
+                    if otlp_endpoint.endswith("/"):
+                        otlp_endpoint = otlp_endpoint.rstrip("/")
+                    otlp_endpoint = f"{otlp_endpoint}/v1/traces"
+                
+                exporter = OTLPSpanExporter(endpoint=otlp_endpoint)
+                logger.info("Jaeger OTLP exporter configured: %s", otlp_endpoint)
+                return exporter
+            except ImportError:
+                logger.warning("OTLP exporter not available, falling back to Thrift")
+        
+        # Use legacy Jaeger Thrift exporter (default)
+        try:
+            from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+
+            endpoint = endpoint or os.getenv(
+                "JAEGER_ENDPOINT", "http://localhost:14268/api/traces"
+            )
+            exporter = JaegerExporter(
+                agent_host_name=os.getenv("JAEGER_AGENT_HOST", "localhost"),
+                agent_port=int(os.getenv("JAEGER_AGENT_PORT", "6831")),
+                endpoint=endpoint,
+            )
+            logger.info("Jaeger Thrift exporter configured: %s", endpoint)
+            return exporter
+        except ImportError:
+            logger.warning("Jaeger Thrift exporter not available, falling back to console")
+            return _configure_console()
+    except Exception as e:
+        logger.error(f"Failed to configure Jaeger exporter: {e}", exc_info=True)
+        return _configure_console()
+
+
+def _configure_zipkin(endpoint: str | None):
+    try:
+        from opentelemetry.exporter.zipkin.json import ZipkinExporter
+
+        endpoint = endpoint or os.getenv(
+            "ZIPKIN_ENDPOINT", "http://localhost:9411/api/v2/spans"
+        )
+        exporter = ZipkinExporter(endpoint=endpoint)
+        logger.info("Zipkin exporter configured: %s", endpoint)
+        return exporter
+    except ImportError:
+        logger.warning("Zipkin exporter not available, falling back to console")
+        return _configure_console()
+
+
+def _configure_otlp(endpoint: str | None):
+    try:
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+            OTLPSpanExporter,
+        )
+
+        endpoint = endpoint or os.getenv(
+            "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"
+        )
+        exporter = OTLPSpanExporter(endpoint=endpoint)
+        logger.info("OTLP exporter configured: %s", endpoint)
+        return exporter
+    except ImportError:
+        logger.warning("OTLP exporter not available, falling back to console")
+        return _configure_console()
+
+
+def _configure_console():
+    from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+
+    logger.info("Console exporter configured")
+    return ConsoleSpanExporter()
+
+
+def _apply_span_processor(
+    tracer_provider, span_exporter: Any, sample_rate: float
+) -> None:
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
+
+    sampler = TraceIdRatioBased(sample_rate)
+    tracer_provider.sampler = sampler
+    tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
+
+
+def _finalize_tracer(trace_module, tracer_provider, service_name, service_version):
+    global _trace_provider, _tracer
+    _trace_provider = tracer_provider
+    _tracer = trace_module.get_tracer(service_name, service_version)
+
+
+def _set_initialized():
+    global _tracing_initialized
+    _tracing_initialized = True
+
+
+def _log_tracing_initialized(
+    service_name: str, service_version: str, exporter: str, sample_rate: float
+) -> None:
+    logger.info(
+        "Tracing initialized: service=%s, version=%s, exporter=%s, sample_rate=%s",
+        service_name,
+        service_version,
+        exporter,
+        sample_rate,
+    )
+
+
+def get_tracer(name: str | None = None) -> Any:
+    """Get tracer instance.
+
+    Args:
+        name: Tracer name (defaults to service name)
+
+    Returns:
+        Tracer instance or None if tracing not initialized
+
+    """
+    global _tracer
+
+    if not _tracing_initialized:
+        # Auto-initialize with defaults
+        initialize_tracing(
+            service_name=os.getenv("TRACING_SERVICE_NAME", "forge"),
+            service_version=os.getenv("TRACING_SERVICE_VERSION", "1.0.0"),
+            exporter=os.getenv("TRACING_EXPORTER", "console"),
+            endpoint=os.getenv("TRACING_ENDPOINT"),
+            sample_rate=float(os.getenv("TRACING_SAMPLE_RATE", "0.1")),
+            enabled=os.getenv("TRACING_ENABLED", "true").lower() == "true",
+        )
+
+    if _tracer is None:
+        try:
+            from opentelemetry import trace
+
+            service_name = os.getenv("TRACING_SERVICE_NAME", "forge")
+            _tracer = trace.get_tracer(name or service_name)
+        except ImportError:
+            logger.warning("OpenTelemetry not available")
+            return None
+
+    return _tracer
+
+
+def shutdown_tracing() -> None:
+    """Shutdown tracing provider."""
+    global _tracing_initialized, _trace_provider
+
+    if _trace_provider:
+        try:
+            _trace_provider.shutdown()
+            logger.info("Tracing shutdown")
+        except Exception as e:
+            logger.error(f"Error shutting down tracing: {e}", exc_info=True)
+        finally:
+            _trace_provider = None
+            _tracing_initialized = False
+
+
+# Auto-initialize tracing on module import if enabled
+if os.getenv("TRACING_ENABLED", "true").lower() == "true":
+    initialize_tracing(
+        service_name=os.getenv("TRACING_SERVICE_NAME", "forge"),
+        service_version=os.getenv("TRACING_SERVICE_VERSION", "1.0.0"),
+        exporter=os.getenv("TRACING_EXPORTER", "console"),
+        endpoint=os.getenv("TRACING_ENDPOINT"),
+        sample_rate=float(os.getenv("TRACING_SAMPLE_RATE", "0.1")),
+        enabled=True,
+    )
+

@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import {
   CheckCircle,
   Clock,
@@ -34,143 +35,58 @@ interface ModernFlowDiagramProps {
   animated?: boolean;
   showControls?: boolean;
 }
-
 // ============================================================================
-// MAIN COMPONENT
+// HELPER FUNCTIONS (defined before use)
 // ============================================================================
 
-export function ModernFlowDiagram({
-  steps,
-  status,
-  onStepClick,
-  className = "",
-  layout = "vertical",
-  animated = true,
-  showControls = true,
-}: ModernFlowDiagramProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const handleRefresh = useCallback(() => window.location.reload(), []);
-  const {
-    hasSteps,
-    statusMeta,
-    totalSteps,
-    selectedStep,
-    selectedStepId,
-    handleStepSelect,
-    clearSelection,
-    isPaused,
-    togglePause,
-    zoom,
-    zoomIn,
-    zoomOut,
-    resetZoom,
-    animatedState,
-  } = useModernFlowDiagramState({ steps, status, onStepClick, animated });
-
-  if (!hasSteps) {
-    return <ModernFlowEmpty className={className} />;
+function getStatusBannerLabel(meta: ReturnType<typeof getStatusMeta>): string {
+  if (meta.isInProgress) {
+    return "Orchestration in Progress";
   }
 
-  return (
-    <div className={`modern-flow-diagram ${className}`} ref={containerRef}>
-      {showControls && (
-        <FlowControls
-          isPaused={isPaused}
-          onTogglePause={togglePause}
-          zoom={zoom}
-          onZoomOut={zoomOut}
-          onZoomIn={zoomIn}
-          onResetZoom={resetZoom}
-          onRefresh={handleRefresh}
-        />
-      )}
+  if (meta.isComplete) {
+    return "Orchestration Complete";
+  }
 
-      <FlowStatusBanner statusMeta={statusMeta} totalSteps={totalSteps} />
+  if (meta.isBlocked) {
+    return "Orchestration Failed";
+  }
 
-      <FlowCanvas
-        layout={layout}
-        steps={steps}
-        zoom={zoom}
-        selectedStepId={selectedStepId}
-        animated={animatedState}
-        onStepSelect={handleStepSelect}
-      />
-
-      <StepDetailsSection
-        selectedStep={selectedStep}
-        onClose={clearSelection}
-      />
-    </div>
-  );
+  return `Status: ${meta.label}`;
 }
 
-function useModernFlowDiagramState({
-  steps,
-  status,
-  onStepClick,
-  animated,
-}: {
-  steps: OrchestrationStep[];
-  status: string;
-  onStepClick?: (step: OrchestrationStep) => void;
-  animated: boolean;
-}) {
-  const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
-  const [isPaused, setIsPaused] = useState(false);
-  const [zoom, setZoom] = useState(1);
+function getStatusIconClass(statusMeta: ReturnType<typeof getStatusMeta>) {
+  if (statusMeta.isInProgress) {
+    return "w-4 h-4 text-brand-400 animate-spin";
+  }
+  if (statusMeta.isComplete) {
+    return "w-4 h-4 text-green-400";
+  }
+  if (statusMeta.isBlocked) {
+    return "w-4 h-4 text-red-400";
+  }
+  return "w-4 h-4 text-neutral-400";
+}
 
-  const hasSteps = steps.length > 0;
-  const statusMeta = useMemo(() => getStatusMeta(status), [status]);
-  const totalSteps = steps.length;
-
-  const selectedStep = useMemo(
-    () => steps.find((step) => step.id === selectedStepId) ?? null,
-    [selectedStepId, steps],
+function createFlowStepMeta(step: OrchestrationStep) {
+  const status = getStatusMeta(step.status);
+  const role = getRoleMeta(step.role);
+  const progress = normalizeProgress(
+    (step as Record<string, unknown>).progress,
   );
-
-  const handleStepSelect = useCallback(
-    (step: OrchestrationStep) => {
-      setSelectedStepId(step.id);
-      onStepClick?.(step);
-    },
-    [onStepClick],
-  );
-
-  const clearSelection = useCallback(() => setSelectedStepId(null), []);
-  const togglePause = useCallback(() => setIsPaused((prev) => !prev), []);
-
-  const zoomIn = useCallback(
-    () =>
-      setZoom((value) => Math.min(2, Math.round((value + 0.1) * 100) / 100)),
-    [],
-  );
-
-  const zoomOut = useCallback(
-    () =>
-      setZoom((value) => Math.max(0.5, Math.round((value - 0.1) * 100) / 100)),
-    [],
-  );
-
-  const resetZoom = useCallback(() => setZoom(1), []);
-
-  const animatedState = animated && !isPaused;
+  const startedAt = formatStepTimestamp(step.started_at);
+  const completedAt = formatStepTimestamp(step.completed_at);
 
   return {
-    hasSteps,
-    statusMeta,
-    totalSteps,
-    selectedStep,
-    selectedStepId,
-    handleStepSelect,
-    clearSelection,
-    isPaused,
-    togglePause,
-    zoom,
-    zoomIn,
-    zoomOut,
-    resetZoom,
-    animatedState,
-  };
+    status: {
+      ...status,
+      iconClass: getStatusIconClass(status),
+    },
+    role,
+    progress,
+    startedAt,
+    completedAt,
+  } as const;
 }
 
 function ModernFlowEmpty({ className }: { className: string }) {
@@ -208,6 +124,7 @@ function FlowControls({
   return (
     <div className="flow-controls">
       <button
+        type="button"
         onClick={onTogglePause}
         className="flow-control-btn"
         title={isPaused ? "Resume" : "Pause"}
@@ -218,21 +135,37 @@ function FlowControls({
           <Pause className="w-4 h-4" />
         )}
       </button>
-      <button onClick={onZoomOut} className="flow-control-btn" title="Zoom Out">
+      <button
+        type="button"
+        onClick={onZoomOut}
+        className="flow-control-btn"
+        title="Zoom Out"
+      >
         -
       </button>
       <span className="text-xs text-neutral-400 mx-2">{zoomPercentage}%</span>
-      <button onClick={onZoomIn} className="flow-control-btn" title="Zoom In">
+      <button
+        type="button"
+        onClick={onZoomIn}
+        className="flow-control-btn"
+        title="Zoom In"
+      >
         +
       </button>
       <button
+        type="button"
         onClick={onResetZoom}
         className="flow-control-btn"
         title="Reset Zoom"
       >
         <Maximize2 className="w-4 h-4" />
       </button>
-      <button onClick={onRefresh} className="flow-control-btn" title="Refresh">
+      <button
+        type="button"
+        onClick={onRefresh}
+        className="flow-control-btn"
+        title="Refresh"
+      >
         <RotateCw className="w-4 h-4" />
       </button>
     </div>
@@ -262,163 +195,98 @@ function FlowStatusBanner({
   );
 }
 
-function getStatusBannerLabel(meta: ReturnType<typeof getStatusMeta>): string {
-  if (meta.isInProgress) {
-    return "Orchestration in Progress";
+function FlowStepProgress({
+  progress,
+  isActive,
+}: {
+  progress: number | undefined;
+  isActive: boolean;
+}) {
+  if (!isActive || progress === undefined) {
+    return null;
   }
 
-  if (meta.isComplete) {
-    return "Orchestration Complete";
-  }
-
-  if (meta.isBlocked) {
-    return "Orchestration Failed";
-  }
-
-  return `Status: ${meta.label}`;
+  return (
+    <div className="mt-2">
+      <div className="w-full bg-neutral-800 rounded-full h-1.5">
+        <motion.div
+          className="bg-brand-500 h-1.5 rounded-full"
+          initial={{ width: 0 }}
+          animate={{ width: `${progress}%` }}
+          transition={{ duration: 0.5 }}
+        />
+      </div>
+      <p className="text-xs text-neutral-500 mt-1">{progress}% complete</p>
+    </div>
+  );
 }
 
-function FlowCanvas({
-  layout,
-  steps,
-  selectedStepId,
-  animated,
-  zoom,
-  onStepSelect,
+function FlowStepTimestamps({
+  startedAt,
+  completedAt,
 }: {
-  layout: "vertical" | "horizontal";
-  steps: OrchestrationStep[];
-  selectedStepId: string | null;
-  animated: boolean;
-  zoom: number;
-  onStepSelect: (step: OrchestrationStep) => void;
+  startedAt?: string | null;
+  completedAt?: string | null;
 }) {
+  if (!startedAt && !completedAt) {
+    return null;
+  }
+
   return (
-    <div
-      className="flow-canvas"
-      style={{
-        transform: `scale(${zoom})`,
-        transformOrigin: "top center",
+    <div className="flex items-center gap-3 mt-2 text-xs text-neutral-500">
+      {startedAt && <span>Started: {startedAt}</span>}
+      {completedAt && <span>Completed: {completedAt}</span>}
+    </div>
+  );
+}
+
+// Inline progress rendering helper removed — render directly below.
+
+function FlowStepError({ error }: { error?: string | null }) {
+  if (!error) {
+    return null;
+  }
+
+  return (
+    <div className="mt-2 bg-red-500/10 border border-red-500/20 rounded p-2">
+      <p className="text-xs text-red-300">{error}</p>
+    </div>
+  );
+}
+
+function FlowStepArtifactBadge({ hasArtifact }: { hasArtifact: boolean }) {
+  if (!hasArtifact) {
+    return null;
+  }
+
+  return (
+    <div className="flow-step-artifact-badge">
+      <CheckCircle className="w-3 h-3 text-green-400" />
+      <span className="text-xs">Artifact</span>
+    </div>
+  );
+}
+
+function FlowStepGlow({ isActive }: { isActive: boolean }) {
+  if (!isActive) {
+    return null;
+  }
+
+  return (
+    <motion.div
+      className="flow-step-glow"
+      animate={{
+        opacity: [0.3, 0.6, 0.3],
+        scale: [1, 1.05, 1],
       }}
-    >
-      {layout === "vertical" ? (
-        <VerticalFlow
-          steps={steps}
-          selectedStepId={selectedStepId}
-          onStepClick={onStepSelect}
-          animated={animated}
-        />
-      ) : (
-        <HorizontalFlow
-          steps={steps}
-          selectedStepId={selectedStepId}
-          onStepClick={onStepSelect}
-          animated={animated}
-        />
-      )}
-    </div>
+      transition={{
+        duration: 2,
+        repeat: Infinity,
+        ease: "easeInOut",
+      }}
+    />
   );
 }
-
-function StepDetailsSection({
-  selectedStep,
-  onClose,
-}: {
-  selectedStep: OrchestrationStep | null;
-  onClose: () => void;
-}) {
-  return (
-    <AnimatePresence>
-      {selectedStep && (
-        <StepDetailsPanel step={selectedStep} onClose={onClose} />
-      )}
-    </AnimatePresence>
-  );
-}
-
-// ============================================================================
-// VERTICAL FLOW LAYOUT
-// ============================================================================
-
-function VerticalFlow({
-  steps,
-  selectedStepId,
-  onStepClick,
-  animated,
-}: {
-  steps: OrchestrationStep[];
-  selectedStepId: string | null;
-  onStepClick: (step: OrchestrationStep) => void;
-  animated: boolean;
-}) {
-  return (
-    <div className="flow-vertical">
-      {steps.map((step, index) => (
-        <React.Fragment key={step.id}>
-          <FlowStepNode
-            step={step}
-            index={index}
-            isSelected={selectedStepId === step.id}
-            onClick={() => onStepClick(step)}
-            animated={animated}
-          />
-          {index < steps.length - 1 && (
-            <FlowConnector
-              type="vertical"
-              fromStep={step}
-              toStep={steps[index + 1]}
-              animated={animated}
-            />
-          )}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-}
-
-// ============================================================================
-// HORIZONTAL FLOW LAYOUT
-// ============================================================================
-
-function HorizontalFlow({
-  steps,
-  selectedStepId,
-  onStepClick,
-  animated,
-}: {
-  steps: OrchestrationStep[];
-  selectedStepId: string | null;
-  onStepClick: (step: OrchestrationStep) => void;
-  animated: boolean;
-}) {
-  return (
-    <div className="flow-horizontal">
-      {steps.map((step, index) => (
-        <React.Fragment key={step.id}>
-          <FlowStepNode
-            step={step}
-            index={index}
-            isSelected={selectedStepId === step.id}
-            onClick={() => onStepClick(step)}
-            animated={animated}
-          />
-          {index < steps.length - 1 && (
-            <FlowConnector
-              type="horizontal"
-              fromStep={step}
-              toStep={steps[index + 1]}
-              animated={animated}
-            />
-          )}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-}
-
-// ============================================================================
-// FLOW STEP NODE
-// ============================================================================
 
 function FlowStepNode({
   step,
@@ -496,135 +364,6 @@ function FlowStepNode({
   );
 }
 
-function createFlowStepMeta(step: OrchestrationStep) {
-  const status = getStatusMeta(step.status);
-  const role = getRoleMeta(step.role);
-  const progress = normalizeProgress(
-    (step as Record<string, unknown>).progress,
-  );
-  const startedAt = formatStepTimestamp(step.started_at);
-  const completedAt = formatStepTimestamp(step.completed_at);
-
-  return {
-    status: {
-      ...status,
-      iconClass: getStatusIconClass(status),
-    },
-    role,
-    progress,
-    startedAt,
-    completedAt,
-  } as const;
-}
-
-function getStatusIconClass(statusMeta: ReturnType<typeof getStatusMeta>) {
-  if (statusMeta.isInProgress) {
-    return "w-4 h-4 text-brand-400 animate-spin";
-  }
-  if (statusMeta.isComplete) {
-    return "w-4 h-4 text-green-400";
-  }
-  if (statusMeta.isBlocked) {
-    return "w-4 h-4 text-red-400";
-  }
-  return "w-4 h-4 text-neutral-400";
-}
-
-function FlowStepProgress({
-  progress,
-  isActive,
-}: {
-  progress: number | undefined;
-  isActive: boolean;
-}) {
-  if (!isActive || progress === undefined) {
-    return null;
-  }
-
-  return (
-    <div className="mt-2">
-      <div className="w-full bg-neutral-800 rounded-full h-1.5">
-        <motion.div
-          className="bg-brand-500 h-1.5 rounded-full"
-          initial={{ width: 0 }}
-          animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.5 }}
-        />
-      </div>
-      <p className="text-xs text-neutral-500 mt-1">{progress}% complete</p>
-    </div>
-  );
-}
-
-function FlowStepTimestamps({
-  startedAt,
-  completedAt,
-}: {
-  startedAt?: string | null;
-  completedAt?: string | null;
-}) {
-  if (!startedAt && !completedAt) {
-    return null;
-  }
-
-  return (
-    <div className="flex items-center gap-3 mt-2 text-xs text-neutral-500">
-      {startedAt && <span>Started: {startedAt}</span>}
-      {completedAt && <span>Completed: {completedAt}</span>}
-    </div>
-  );
-}
-
-function FlowStepError({ error }: { error?: string | null }) {
-  if (!error) {
-    return null;
-  }
-
-  return (
-    <div className="mt-2 bg-red-500/10 border border-red-500/20 rounded p-2">
-      <p className="text-xs text-red-300">{error}</p>
-    </div>
-  );
-}
-
-function FlowStepArtifactBadge({ hasArtifact }: { hasArtifact: boolean }) {
-  if (!hasArtifact) {
-    return null;
-  }
-
-  return (
-    <div className="flow-step-artifact-badge">
-      <CheckCircle className="w-3 h-3 text-green-400" />
-      <span className="text-xs">Artifact</span>
-    </div>
-  );
-}
-
-function FlowStepGlow({ isActive }: { isActive: boolean }) {
-  if (!isActive) {
-    return null;
-  }
-
-  return (
-    <motion.div
-      className="flow-step-glow"
-      animate={{
-        opacity: [0.3, 0.6, 0.3],
-        scale: [1, 1.05, 1],
-      }}
-      transition={{
-        duration: 2,
-        repeat: Infinity,
-        ease: "easeInOut",
-      }}
-    />
-  );
-}
-
-// ============================================================================
-// FLOW CONNECTOR
-// ============================================================================
-
 function FlowConnector({
   type,
   fromStep,
@@ -672,9 +411,119 @@ function FlowConnector({
   );
 }
 
-// ============================================================================
-// STEP DETAILS PANEL
-// ============================================================================
+function VerticalFlow({
+  steps,
+  selectedStepId,
+  onStepClick,
+  animated,
+}: {
+  steps: OrchestrationStep[];
+  selectedStepId: string | null;
+  onStepClick: (step: OrchestrationStep) => void;
+  animated: boolean;
+}) {
+  return (
+    <div className="flow-vertical">
+      {steps.map((step, index) => (
+        <React.Fragment key={step.id}>
+          <FlowStepNode
+            step={step}
+            index={index}
+            isSelected={selectedStepId === step.id}
+            onClick={() => onStepClick(step)}
+            animated={animated}
+          />
+          {index < steps.length - 1 && (
+            <FlowConnector
+              type="vertical"
+              fromStep={step}
+              toStep={steps[index + 1]}
+              animated={animated}
+            />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function HorizontalFlow({
+  steps,
+  selectedStepId,
+  onStepClick,
+  animated,
+}: {
+  steps: OrchestrationStep[];
+  selectedStepId: string | null;
+  onStepClick: (step: OrchestrationStep) => void;
+  animated: boolean;
+}) {
+  return (
+    <div className="flow-horizontal">
+      {steps.map((step, index) => (
+        <React.Fragment key={step.id}>
+          <FlowStepNode
+            step={step}
+            index={index}
+            isSelected={selectedStepId === step.id}
+            onClick={() => onStepClick(step)}
+            animated={animated}
+          />
+          {index < steps.length - 1 && (
+            <FlowConnector
+              type="horizontal"
+              fromStep={step}
+              toStep={steps[index + 1]}
+              animated={animated}
+            />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function FlowCanvas({
+  layout,
+  steps,
+  selectedStepId,
+  animated,
+  zoom,
+  onStepSelect,
+}: {
+  layout: "vertical" | "horizontal";
+  steps: OrchestrationStep[];
+  selectedStepId: string | null;
+  animated: boolean;
+  zoom: number;
+  onStepSelect: (step: OrchestrationStep) => void;
+}) {
+  return (
+    <div
+      className="flow-canvas"
+      style={{
+        transform: `scale(${zoom})`,
+        transformOrigin: "top center",
+      }}
+    >
+      {layout === "vertical" ? (
+        <VerticalFlow
+          steps={steps}
+          selectedStepId={selectedStepId}
+          onStepClick={onStepSelect}
+          animated={animated}
+        />
+      ) : (
+        <HorizontalFlow
+          steps={steps}
+          selectedStepId={selectedStepId}
+          onStepClick={onStepSelect}
+          animated={animated}
+        />
+      )}
+    </div>
+  );
+}
 
 function StepDetailsPanel({
   step,
@@ -683,14 +532,19 @@ function StepDetailsPanel({
   step: OrchestrationStep;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const roleMeta = getRoleMeta(step.role);
   const statusMeta = getStatusMeta(step.status);
-  const progressValue = normalizeProgress(
-    (step as Record<string, unknown>).progress,
-  );
-  const progress = progressValue as number | undefined;
-  const startedAt = formatStepDateTime(step.started_at);
-  const completedAt = formatStepDateTime(step.completed_at);
+  // Calculate progress with proper type handling
+  const progress: number | undefined =
+    typeof step.progress === "number" && Number.isFinite(step.progress)
+      ? Math.min(100, Math.max(0, Math.round(step.progress)))
+      : undefined;
+
+  // Progress will be rendered inline below when it's a number
+  const startedAt: string | undefined = formatStepDateTime(step.started_at);
+  const completedAt: string | undefined = formatStepDateTime(step.completed_at);
+  const hasTimestamps = startedAt !== undefined || completedAt !== undefined;
 
   return (
     <motion.div
@@ -716,6 +570,7 @@ function StepDetailsPanel({
             </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="text-neutral-400 hover:text-white transition-colors"
           >
@@ -735,50 +590,55 @@ function StepDetailsPanel({
           )}
 
           {/* Timestamps */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            {startedAt && (
-              <div>
-                <p className="text-xs text-neutral-500 mb-1">Started</p>
-                <p className="text-sm text-neutral-300">{startedAt}</p>
-              </div>
-            )}
-            {completedAt && (
-              <div>
-                <p className="text-xs text-neutral-500 mb-1">Completed</p>
-                <p className="text-sm text-neutral-300">{completedAt}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Progress */}
-          {
-            (progress !== undefined && typeof progress === "number" && (
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium text-neutral-300">
-                    Progress
-                  </h4>
-                  <span className="text-sm text-brand-400">
-                    {progress as number}%
-                  </span>
+          {hasTimestamps && (
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {startedAt !== undefined && (
+                <div>
+                  <p className="text-xs text-neutral-500 mb-1">Started</p>
+                  <p className="text-sm text-neutral-300">{startedAt}</p>
                 </div>
-                <div className="w-full bg-neutral-800 rounded-full h-2">
-                  <div
-                    className="bg-brand-500 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${progress}%` }}
-                  />
+              )}
+              {completedAt !== undefined && (
+                <div>
+                  <p className="text-xs text-neutral-500 mb-1">Completed</p>
+                  <p className="text-sm text-neutral-300">{completedAt}</p>
                 </div>
-              </div>
-            )) as any
-          }
-
-          {/* Error */}
-          {step.error && (
-            <div className="mb-4 bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-              <h4 className="text-sm font-medium text-red-300 mb-2">Error</h4>
-              <p className="text-sm text-red-400">{step.error}</p>
+              )}
             </div>
           )}
+          {/* @ts-expect-error - Type inference issue with conditional rendering */}
+
+          {/* Progress */}
+          {typeof progress === "number" ? (
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-medium text-neutral-300">
+                  Progress
+                </h4>
+                <span className="text-sm text-brand-400">{progress}%</span>
+              </div>
+              <div className="w-full bg-neutral-800 rounded-full h-2">
+                <div
+                  className="bg-brand-500 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {/* Error */}
+          {step.error ? (
+            <div className="mb-4 bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+              <h4 className="text-sm font-medium text-red-300 mb-2">
+                {t("Error", "Error")}
+              </h4>
+              <p className="text-sm text-red-400">
+                {typeof step.error === "string"
+                  ? step.error
+                  : String(step.error)}
+              </p>
+            </div>
+          ) : null}
 
           {/* Artifact */}
           {step.artifact && (
@@ -800,6 +660,7 @@ function StepDetailsPanel({
         {/* Footer */}
         <div className="flow-details-footer">
           <button
+            type="button"
             onClick={onClose}
             className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg transition-colors"
           >
@@ -811,54 +672,89 @@ function StepDetailsPanel({
   );
 }
 
-// ============================================================================
-// COMPACT FLOW VIEW (for smaller spaces)
-// ============================================================================
+function StepDetailsSection({
+  selectedStep,
+  onClose,
+}: {
+  selectedStep: OrchestrationStep | null;
+  onClose: () => void;
+}) {
+  return (
+    <AnimatePresence>
+      {selectedStep && (
+        <StepDetailsPanel step={selectedStep} onClose={onClose} />
+      )}
+    </AnimatePresence>
+  );
+}
 
-export function CompactFlowView({
+function useModernFlowDiagramState({
   steps,
   status,
   onStepClick,
-  className = "",
+  animated,
 }: {
   steps: OrchestrationStep[];
   status: string;
   onStepClick?: (step: OrchestrationStep) => void;
-  className?: string;
+  animated: boolean;
 }) {
-  const hasSteps = steps && steps.length > 0;
+  const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [zoom, setZoom] = useState(1);
+
+  const hasSteps = steps.length > 0;
   const statusMeta = useMemo(() => getStatusMeta(status), [status]);
-  const StatusIcon = statusMeta.icon;
+  const totalSteps = steps.length;
 
-  if (!hasSteps) {
-    return (
-      <div className={`compact-flow-empty ${className}`}>
-        <Loader2 className="w-6 h-6 text-brand-400 animate-spin" />
-      </div>
-    );
-  }
-
-  return (
-    <div className={`compact-flow-view ${className}`}>
-      <div className="compact-flow-steps">
-        {steps.map((step, index) => (
-          <CompactStepBadge
-            key={step.id}
-            step={step}
-            index={index}
-            total={steps.length}
-            onClick={() => onStepClick?.(step)}
-          />
-        ))}
-      </div>
-      <div className={`compact-flow-status ${statusMeta.bannerClass}`}>
-        <StatusIcon
-          className={`w-3 h-3 ${statusMeta.isInProgress ? "animate-spin" : ""}`}
-        />
-        <span className="text-xs font-medium ml-1">{statusMeta.label}</span>
-      </div>
-    </div>
+  const selectedStep = useMemo(
+    () => steps.find((step) => step.id === selectedStepId) ?? null,
+    [selectedStepId, steps],
   );
+
+  const handleStepSelect = useCallback(
+    (step: OrchestrationStep) => {
+      setSelectedStepId(step.id);
+      onStepClick?.(step);
+    },
+    [onStepClick],
+  );
+
+  const clearSelection = useCallback(() => setSelectedStepId(null), []);
+  const togglePause = useCallback(() => setIsPaused((prev) => !prev), []);
+
+  const zoomIn = useCallback(
+    () =>
+      setZoom((value) => Math.min(2, Math.round((value + 0.1) * 100) / 100)),
+    [],
+  );
+
+  const zoomOut = useCallback(
+    () =>
+      setZoom((value) => Math.max(0.5, Math.round((value - 0.1) * 100) / 100)),
+    [],
+  );
+
+  const resetZoom = useCallback(() => setZoom(1), []);
+
+  const animatedState = animated && !isPaused;
+
+  return {
+    hasSteps,
+    statusMeta,
+    totalSteps,
+    selectedStep,
+    selectedStepId,
+    handleStepSelect,
+    clearSelection,
+    isPaused,
+    togglePause,
+    zoom,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    animatedState,
+  };
 }
 
 function CompactStepBadge({
@@ -881,6 +777,7 @@ function CompactStepBadge({
   return (
     <div className="compact-step-wrapper">
       <motion.button
+        type="button"
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: index * 0.05 }}
@@ -914,44 +811,6 @@ function CompactStepBadge({
           />
         </div>
       )}
-    </div>
-  );
-}
-
-// ============================================================================
-// TIMELINE VIEW (alternative visualization)
-// ============================================================================
-
-export function TimelineView({
-  steps,
-  onStepClick,
-  className = "",
-}: {
-  steps: OrchestrationStep[];
-  onStepClick?: (step: OrchestrationStep) => void;
-  className?: string;
-}) {
-  const hasSteps = steps && steps.length > 0;
-
-  if (!hasSteps) {
-    return (
-      <div className={`timeline-empty ${className}`}>
-        <p className="text-sm text-neutral-400">No steps yet</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`timeline-view ${className}`}>
-      {steps.map((step, index) => (
-        <TimelineItem
-          key={step.id}
-          step={step}
-          index={index}
-          isLast={index === steps.length - 1}
-          onClick={() => onStepClick?.(step)}
-        />
-      ))}
     </div>
   );
 }
@@ -1013,5 +872,162 @@ function TimelineItem({
         )}
       </div>
     </motion.div>
+  );
+}
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export function ModernFlowDiagram({
+  steps,
+  status,
+  onStepClick,
+  className = "",
+  layout = "vertical",
+  animated = true,
+  showControls = true,
+}: ModernFlowDiagramProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const handleRefresh = useCallback(() => window.location.reload(), []);
+  const {
+    hasSteps,
+    statusMeta,
+    totalSteps,
+    selectedStep,
+    selectedStepId,
+    handleStepSelect,
+    clearSelection,
+    isPaused,
+    togglePause,
+    zoom,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    animatedState,
+  } = useModernFlowDiagramState({ steps, status, onStepClick, animated });
+
+  if (!hasSteps) {
+    return <ModernFlowEmpty className={className} />;
+  }
+
+  return (
+    <div className={`modern-flow-diagram ${className}`} ref={containerRef}>
+      {showControls && (
+        <FlowControls
+          isPaused={isPaused}
+          onTogglePause={togglePause}
+          zoom={zoom}
+          onZoomOut={zoomOut}
+          onZoomIn={zoomIn}
+          onResetZoom={resetZoom}
+          onRefresh={handleRefresh}
+        />
+      )}
+
+      <FlowStatusBanner statusMeta={statusMeta} totalSteps={totalSteps} />
+
+      <FlowCanvas
+        layout={layout}
+        steps={steps}
+        zoom={zoom}
+        selectedStepId={selectedStepId}
+        animated={animatedState}
+        onStepSelect={handleStepSelect}
+      />
+
+      <StepDetailsSection
+        selectedStep={selectedStep}
+        onClose={clearSelection}
+      />
+    </div>
+  );
+}
+
+// ============================================================================
+// COMPACT FLOW VIEW (for smaller spaces)
+// ============================================================================
+
+export function CompactFlowView({
+  steps,
+  status,
+  onStepClick,
+  className = "",
+}: {
+  steps: OrchestrationStep[];
+  status: string;
+  onStepClick?: (step: OrchestrationStep) => void;
+  className?: string;
+}) {
+  const hasSteps = steps && steps.length > 0;
+  const statusMeta = useMemo(() => getStatusMeta(status), [status]);
+  const StatusIcon = statusMeta.icon;
+
+  if (!hasSteps) {
+    return (
+      <div className={`compact-flow-empty ${className}`}>
+        <Loader2 className="w-6 h-6 text-brand-400 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`compact-flow-view ${className}`}>
+      <div className="compact-flow-steps">
+        {steps.map((step, index) => (
+          <CompactStepBadge
+            key={step.id}
+            step={step}
+            index={index}
+            total={steps.length}
+            onClick={() => onStepClick?.(step)}
+          />
+        ))}
+      </div>
+      <div className={`compact-flow-status ${statusMeta.bannerClass}`}>
+        <StatusIcon
+          className={`w-3 h-3 ${statusMeta.isInProgress ? "animate-spin" : ""}`}
+        />
+        <span className="text-xs font-medium ml-1">{statusMeta.label}</span>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// TIMELINE VIEW (alternative visualization)
+// ============================================================================
+
+export function TimelineView({
+  steps,
+  onStepClick,
+  className = "",
+}: {
+  steps: OrchestrationStep[];
+  onStepClick?: (step: OrchestrationStep) => void;
+  className?: string;
+}) {
+  const hasSteps = steps && steps.length > 0;
+
+  if (!hasSteps) {
+    return (
+      <div className={`timeline-empty ${className}`}>
+        <p className="text-sm text-neutral-400">No steps yet</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`timeline-view ${className}`}>
+      {steps.map((step, index) => (
+        <TimelineItem
+          key={step.id}
+          step={step}
+          index={index}
+          isLast={index === steps.length - 1}
+          onClick={() => onStepClick?.(step)}
+        />
+      ))}
+    </div>
   );
 }

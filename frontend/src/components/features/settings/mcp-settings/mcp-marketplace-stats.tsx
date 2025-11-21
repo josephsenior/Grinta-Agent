@@ -57,10 +57,14 @@ export function MCPMarketplaceStats({
       <div className="flex items-center gap-3">
         {/* Smithery API Key Input */}
         <div className="flex items-center gap-2">
-          <label className="text-xs text-foreground-secondary">
+          <label
+            htmlFor="smithery-api-key-input"
+            className="text-xs text-foreground-secondary"
+          >
             Smithery API:
           </label>
           <input
+            id="smithery-api-key-input"
             type="password"
             value={smitheryApiKey}
             onChange={(e) => handleApiKeyChange(e.target.value)}

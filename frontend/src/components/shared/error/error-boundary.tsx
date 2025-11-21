@@ -1,5 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { AlertTriangle, RefreshCw, Home, Bug } from "lucide-react";
+import i18n from "#/i18n";
+import { logger } from "#/utils/logger";
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -36,17 +38,20 @@ export class ErrorBoundary extends Component<
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     this.setState({
       error,
     });
 
+    const { onError } = this.props;
     // Call the onError callback if provided
-    this.props.onError?.(error, errorInfo);
+    if (onError) {
+      onError(error, errorInfo);
+    }
 
-    // Log error to console in development
+    // Log error in development
     if (process.env.NODE_ENV === "development") {
-      console.error("ErrorBoundary caught an error:", error, errorInfo);
+      logger.error("ErrorBoundary caught an error:", error, errorInfo);
     }
   }
 
@@ -56,7 +61,7 @@ export class ErrorBoundary extends Component<
     }
   }
 
-  handleRetry = () => {
+  handleRetry = (): void => {
     const { maxRetries = 3 } = this.props;
     const { retryCount } = this.state;
 
@@ -69,7 +74,7 @@ export class ErrorBoundary extends Component<
     }
   };
 
-  handleReset = () => {
+  handleReset = (): void => {
     this.setState({
       hasError: false,
       error: null,
@@ -77,7 +82,8 @@ export class ErrorBoundary extends Component<
     });
   };
 
-  handleGoHome = () => {
+  // eslint-disable-next-line class-methods-use-this
+  handleGoHome = (): void => {
     window.location.href = "/";
   };
 
@@ -142,10 +148,16 @@ export class ErrorBoundary extends Component<
                     marginBottom: "0.5rem",
                   }}
                 >
-                  Oops! Something went wrong
+                  {i18n.t(
+                    "error.oopsSomethingWentWrong",
+                    "Oops! Something went wrong",
+                  )}
                 </h2>
                 <p style={{ color: "#d1d5db" }}>
-                  We encountered an unexpected error. Don't worry, we're on it!
+                  {i18n.t(
+                    "error.unexpectedErrorDontWorry",
+                    "We encountered an unexpected error. Don't worry, we're on it!",
+                  )}
                 </p>
               </div>
 
@@ -169,7 +181,10 @@ export class ErrorBoundary extends Component<
                       marginBottom: "0.5rem",
                     }}
                   >
-                    Error Details (Development)
+                    {i18n.t(
+                      "error.errorDetailsDevelopment",
+                      "Error Details (Development)",
+                    )}
                   </summary>
                   <pre
                     style={{
@@ -211,25 +226,26 @@ export class ErrorBoundary extends Component<
                       cursor: "pointer",
                       fontWeight: "500",
                     }}
-                    onMouseOver={(e) => {
-                      const t = e.target as HTMLElement | null;
-                      if (t) t.style.backgroundColor = "#2563eb";
+                    onMouseOver={(e): void => {
+                      const target = e.currentTarget;
+                      target.style.backgroundColor = "#2563eb";
                     }}
-                    onMouseOut={(e) => {
-                      const t = e.target as HTMLElement | null;
-                      if (t) t.style.backgroundColor = "#3b82f6";
+                    onMouseOut={(e): void => {
+                      const target = e.currentTarget;
+                      target.style.backgroundColor = "#3b82f6";
                     }}
-                    onFocus={(e) => {
-                      const t = e.target as HTMLElement | null;
-                      if (t) t.style.backgroundColor = "#2563eb";
+                    onFocus={(e): void => {
+                      const target = e.currentTarget;
+                      target.style.backgroundColor = "#2563eb";
                     }}
-                    onBlur={(e) => {
-                      const t = e.target as HTMLElement | null;
-                      if (t) t.style.backgroundColor = "#3b82f6";
+                    onBlur={(e): void => {
+                      const target = e.currentTarget;
+                      target.style.backgroundColor = "#3b82f6";
                     }}
                   >
                     <RefreshCw style={{ width: "1rem", height: "1rem" }} />
-                    Try Again ({maxRetries - retryCount} left)
+                    {i18n.t("common.tryAgain", "Try Again")} (
+                    {maxRetries - retryCount} {i18n.t("common.left", "left")})
                   </button>
                 )}
 
@@ -250,25 +266,25 @@ export class ErrorBoundary extends Component<
                     cursor: "pointer",
                     fontWeight: "500",
                   }}
-                  onMouseOver={(e) => {
-                    const t = e.target as HTMLElement | null;
-                    if (t) t.style.backgroundColor = "#4b5563";
+                  onMouseOver={(e): void => {
+                    const target = e.currentTarget;
+                    target.style.backgroundColor = "#4b5563";
                   }}
-                  onMouseOut={(e) => {
-                    const t = e.target as HTMLElement | null;
-                    if (t) t.style.backgroundColor = "#374151";
+                  onMouseOut={(e): void => {
+                    const target = e.currentTarget;
+                    target.style.backgroundColor = "#374151";
                   }}
-                  onFocus={(e) => {
-                    const t = e.target as HTMLElement | null;
-                    if (t) t.style.backgroundColor = "#4b5563";
+                  onFocus={(e): void => {
+                    const target = e.currentTarget;
+                    target.style.backgroundColor = "#4b5563";
                   }}
-                  onBlur={(e) => {
-                    const t = e.target as HTMLElement | null;
-                    if (t) t.style.backgroundColor = "#374151";
+                  onBlur={(e): void => {
+                    const target = e.currentTarget;
+                    target.style.backgroundColor = "#374151";
                   }}
                 >
                   <Bug style={{ width: "1rem", height: "1rem" }} />
-                  Reset
+                  {i18n.t("common.reset", "Reset")}
                 </button>
 
                 <button
@@ -288,30 +304,30 @@ export class ErrorBoundary extends Component<
                     cursor: "pointer",
                     fontWeight: "500",
                   }}
-                  onMouseOver={(e) => {
-                    const t = e.target as HTMLElement | null;
-                    if (t) t.style.backgroundColor = "#4b5563";
+                  onMouseOver={(e): void => {
+                    const target = e.currentTarget;
+                    target.style.backgroundColor = "#4b5563";
                   }}
-                  onMouseOut={(e) => {
-                    const t = e.target as HTMLElement | null;
-                    if (t) t.style.backgroundColor = "#374151";
+                  onMouseOut={(e): void => {
+                    const target = e.currentTarget;
+                    target.style.backgroundColor = "#374151";
                   }}
-                  onFocus={(e) => {
-                    const t = e.target as HTMLElement | null;
-                    if (t) t.style.backgroundColor = "#4b5563";
+                  onFocus={(e): void => {
+                    const target = e.currentTarget;
+                    target.style.backgroundColor = "#4b5563";
                   }}
-                  onBlur={(e) => {
-                    const t = e.target as HTMLElement | null;
-                    if (t) t.style.backgroundColor = "#374151";
+                  onBlur={(e): void => {
+                    const target = e.currentTarget;
+                    target.style.backgroundColor = "#374151";
                   }}
                 >
                   <Home style={{ width: "1rem", height: "1rem" }} />
-                  Go Home
+                  {i18n.t("common.goHome", "Go Home")}
                 </button>
               </div>
 
               {/* Retry Count Info */}
-              {retryCount > 0 && (
+              {retryCount > 0 ? (
                 <p
                   style={{
                     fontSize: "0.875rem",
@@ -319,9 +335,10 @@ export class ErrorBoundary extends Component<
                     marginTop: "1rem",
                   }}
                 >
-                  Retry attempt: {retryCount}/{maxRetries}
+                  {i18n.t("error.retryAttempt", "Retry attempt")}: {retryCount}/
+                  {maxRetries}
                 </p>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -334,9 +351,9 @@ export class ErrorBoundary extends Component<
 
 // Hook for functional components to trigger error boundary
 export function useErrorHandler() {
-  return (error: Error) => {
+  return (err: Error) => {
     // This will be caught by the nearest ErrorBoundary
-    throw error;
+    throw err;
   };
 }
 

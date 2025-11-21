@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { logger } from "#/utils/logger";
 
 interface LazyImageProps {
   src: string;
@@ -207,8 +208,7 @@ export const useImagePreload = (srcs: string[]) => {
         await Promise.allSettled(promises);
       } catch (error) {
         if (process.env.NODE_ENV === "development") {
-          // eslint-disable-next-line no-console
-          console.warn("Some images failed to preload:", error);
+          logger.warn("Some images failed to preload:", error);
         }
       }
     };

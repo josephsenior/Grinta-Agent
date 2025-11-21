@@ -7,7 +7,6 @@ import React, {
 } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import axios from "axios";
 import { I18nKey } from "#/i18n/declaration";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { SettingsInput } from "#/components/features/settings/settings-input";
@@ -77,103 +76,7 @@ interface ConfigureModalProps {
   } | null;
 }
 
-export function ConfigureModal({
-  isOpen,
-  onClose,
-  onConfirm,
-  onLink,
-  onUnlink,
-  platformName,
-  platform,
-  integrationData,
-}: ConfigureModalProps) {
-  const { t } = useTranslation();
-  const existingWorkspace = integrationData?.workspace ?? null;
-
-  const state = useConfigureModalState({
-    isOpen,
-    existingWorkspace,
-    platform,
-    onClose,
-    onConfirm,
-    onLink,
-    t,
-  });
-
-  if (!isOpen) {
-    return null;
-  }
-
-  const workspacePlaceholder = t(state.workspacePlaceholderKey);
-  const workspaceLabel = t(I18nKey.PROJECT_MANAGEMENT$WORKSPACE_NAME_LABEL);
-  const connectLabel = getConnectButtonLabel({
-    existingWorkspace,
-    showConfigurationFields: state.showConfigurationFields,
-    t,
-  });
-  const cancelLabel = t(I18nKey.FEEDBACK$CANCEL_LABEL);
-  const unlinkLabel = t(I18nKey.PROJECT_MANAGEMENT$UNLINK_BUTTON_LABEL);
-  const modalTitle = state.showConfigurationFields
-    ? t(I18nKey.PROJECT_MANAGEMENT$CONFIGURE_MODAL_TITLE, {
-        platform: platformName,
-      })
-    : t(I18nKey.PROJECT_MANAGEMENT$LINK_CONFIRMATION_TITLE);
-  const descriptionVariant: "link" | "configure" = state.showConfigurationFields
-    ? "configure"
-    : "link";
-  const configurationLabels = buildConfigurationLabels(t);
-
-  return (
-    <ModalBackdrop onClose={state.handleClose}>
-      <ModalBody className="items-start border border-border w-96">
-        <BaseModalTitle title={modalTitle} />
-        <BaseModalDescription>
-          <ConfigureModalDescription
-            variant={descriptionVariant}
-            platformName={platformName}
-          />
-          <p className="mt-4">
-            {t(I18nKey.PROJECT_MANAGEMENT$WORKSPACE_NAME_HINT, {
-              platform: platformName,
-            })}
-          </p>
-        </BaseModalDescription>
-        <div className="w-full flex flex-col gap-4 mt-1">
-          <WorkspaceSection
-            value={state.workspace}
-            onChange={state.handleWorkspaceChange}
-            error={state.workspaceError}
-            label={workspaceLabel}
-            placeholder={workspacePlaceholder}
-            existingWorkspace={existingWorkspace}
-            onUnlink={onUnlink}
-            unlinkLabel={unlinkLabel}
-          />
-
-          {state.showConfigurationFields && (
-            <ConfigurationFieldsSection
-              values={state.configurationFields}
-              errors={state.configurationErrors}
-              onChange={state.configurationHandlers}
-              onToggleActive={state.handleActiveToggle}
-              isActive={state.isActive}
-              labels={configurationLabels}
-            />
-          )}
-        </div>
-        <ModalActions
-          showConnectButton={!existingWorkspace || state.isWorkspaceEditable}
-          onConnect={state.handleConnect}
-          onCancel={state.handleClose}
-          connectLabel={connectLabel}
-          cancelLabel={cancelLabel}
-          isConnectDisabled={state.isConnectDisabled}
-        />
-      </ModalBody>
-    </ModalBackdrop>
-  );
-}
-
+// Helper functions and components - defined before use
 interface ConfigureModalStateOptions {
   isOpen: boolean;
   existingWorkspace: {
@@ -217,6 +120,85 @@ type ConfigureModalStateReturn = {
   isConnectDisabled: boolean;
   workspacePlaceholderKey: I18nKey;
 };
+
+function getWorkspacePlaceholderKey(platform: "jira" | "jira-dc" | "linear") {
+  if (platform === "jira") {
+    return I18nKey.PROJECT_MANAGEMENT$JIRA_WORKSPACE_NAME_PLACEHOLDER;
+  }
+  if (platform === "jira-dc") {
+    return I18nKey.PROJECT_MANAGEMENT$JIRA_DC_WORKSPACE_NAME_PLACEHOLDER;
+  }
+  return I18nKey.PROJECT_MANAGEMENT$LINEAR_WORKSPACE_NAME_PLACEHOLDER;
+}
+
+function buildConfigurationLabels(t: TFunction) {
+  return {
+    webhookSecretLabel: t(I18nKey.PROJECT_MANAGEMENT$WEBHOOK_SECRET_LABEL),
+    webhookSecretPlaceholder: t(
+      I18nKey.PROJECT_MANAGEMENT$WEBHOOK_SECRET_PLACEHOLDER,
+    ),
+    serviceAccountEmailLabel: t(
+      I18nKey.PROJECT_MANAGEMENT$SERVICE_ACCOUNT_EMAIL_LABEL,
+    ),
+    serviceAccountEmailPlaceholder: t(
+      I18nKey.PROJECT_MANAGEMENT$SERVICE_ACCOUNT_EMAIL_PLACEHOLDER,
+    ),
+    serviceAccountApiKeyLabel: t(
+      I18nKey.PROJECT_MANAGEMENT$SERVICE_ACCOUNT_API_LABEL,
+    ),
+    serviceAccountApiKeyPlaceholder: t(
+      I18nKey.PROJECT_MANAGEMENT$SERVICE_ACCOUNT_API_PLACEHOLDER,
+    ),
+    activeToggleLabel: t(I18nKey.PROJECT_MANAGEMENT$ACTIVE_TOGGLE_LABEL),
+  };
+}
+
+function getConnectButtonLabel({
+  existingWorkspace,
+  showConfigurationFields,
+  t,
+}: {
+  existingWorkspace: {
+    id: number;
+    name: string;
+    status: string;
+    editable: boolean;
+  } | null;
+  showConfigurationFields: boolean;
+  t: TFunction;
+}): string {
+  if (existingWorkspace && showConfigurationFields) {
+    return t(I18nKey.PROJECT_MANAGEMENT$UPDATE_BUTTON_LABEL);
+  }
+  return t(I18nKey.PROJECT_MANAGEMENT$CONNECT_BUTTON_LABEL);
+}
+
+function validateWorkspaceValue(value: string, t: TFunction): string | null {
+  const isValid = /^[a-zA-Z0-9\-_.]*$/.test(value);
+  if (!isValid && value.length > 0) {
+    return t(I18nKey.PROJECT_MANAGEMENT$WORKSPACE_NAME_VALIDATION_ERROR);
+  }
+  return null;
+}
+
+function validateNoSpacesValue(
+  value: string,
+  errorKey: I18nKey,
+  t: TFunction,
+): string | null {
+  if (value && /\s/.test(value)) {
+    return t(errorKey);
+  }
+  return null;
+}
+
+function validateEmailValue(value: string, t: TFunction): string | null {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (value && !emailRegex.test(value)) {
+    return t(I18nKey.PROJECT_MANAGEMENT$SVC_ACC_EMAIL_VALIDATION_ERROR);
+  }
+  return null;
+}
 
 function useConfigureModalState({
   isOpen,
@@ -287,21 +269,15 @@ function useConfigureModalState({
         setIsActive(true);
       }
     },
-    onError: (error) => {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        setShowConfigurationFields(true);
-        setIsActive(true);
-        return;
-      }
-      setShowConfigurationFields(true);
-      setIsActive(true);
+    onError: () => {
+      // Error handling is done in the hook
     },
   });
 
   const handleWorkspaceChange = useCallback(
     (value: string) => {
-      workspaceRef.current = value;
       setWorkspace(value);
+      workspaceRef.current = value;
       setWorkspaceError(validateWorkspaceValue(value, t));
     },
     [t],
@@ -347,70 +323,90 @@ function useConfigureModalState({
     setIsActive(value);
   }, []);
 
-  const handleClose = useCallback(() => {
-    resetForm();
-    onClose();
-  }, [onClose, resetForm]);
-
   const handleConnect = useCallback(() => {
-    const trimmedWorkspace = workspace.trim();
-    workspaceRef.current = trimmedWorkspace;
-
-    if (showConfigurationFields) {
-      onConfirm({
-        workspace: trimmedWorkspace,
-        webhookSecret: webhookSecret.trim(),
-        serviceAccountEmail: serviceAccountEmail.trim(),
-        serviceAccountApiKey: serviceAccountApiKey.trim(),
-        isActive,
-      });
+    const workspaceValidationError = validateWorkspaceValue(workspace, t);
+    if (workspaceValidationError) {
+      setWorkspaceError(workspaceValidationError);
       return;
     }
 
-    if (!existingWorkspace) {
-      validateMutation.mutate(trimmedWorkspace);
-    }
-  }, [
-    existingWorkspace,
-    isActive,
-    onConfirm,
-    serviceAccountApiKey,
-    serviceAccountEmail,
-    showConfigurationFields,
-    validateMutation,
-    webhookSecret,
-    workspace,
-  ]);
-
-  const isConnectDisabled = useMemo(() => {
     if (showConfigurationFields) {
-      return (
-        !workspace.trim() ||
-        !webhookSecret.trim() ||
-        !serviceAccountEmail.trim() ||
-        !serviceAccountApiKey.trim() ||
-        Boolean(
-          workspaceError || webhookSecretError || emailError || apiKeyError,
-        ) ||
-        validateMutation.isPending
+      const webhookSecretValidationError = validateNoSpacesValue(
+        webhookSecret,
+        I18nKey.PROJECT_MANAGEMENT$WEBHOOK_SECRET_NAME_VALIDATION_ERROR,
+        t,
       );
-    }
+      const emailValidationError = validateEmailValue(serviceAccountEmail, t);
+      const apiKeyValidationError = validateNoSpacesValue(
+        serviceAccountApiKey,
+        I18nKey.PROJECT_MANAGEMENT$SVC_ACC_API_KEY_VALIDATION_ERROR,
+        t,
+      );
 
-    return (
-      !workspace.trim() || workspaceError !== null || validateMutation.isPending
-    );
+      if (
+        webhookSecretValidationError ||
+        emailValidationError ||
+        apiKeyValidationError
+      ) {
+        setWebhookSecretError(webhookSecretValidationError);
+        setEmailError(emailValidationError);
+        setApiKeyError(apiKeyValidationError);
+        return;
+      }
+
+      onConfirm({
+        workspace: workspaceRef.current,
+        webhookSecret,
+        serviceAccountEmail,
+        serviceAccountApiKey,
+        isActive,
+      });
+    } else {
+      validateMutation.mutate(workspaceRef.current);
+    }
   }, [
-    apiKeyError,
-    emailError,
-    serviceAccountApiKey,
-    serviceAccountEmail,
-    showConfigurationFields,
-    validateMutation.isPending,
-    webhookSecret,
-    webhookSecretError,
     workspace,
-    workspaceError,
+    showConfigurationFields,
+    webhookSecret,
+    serviceAccountEmail,
+    serviceAccountApiKey,
+    isActive,
+    validateMutation,
+    onConfirm,
+    t,
   ]);
+
+  const handleClose = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  const isConnectDisabled = useMemo(
+    () =>
+      Boolean(
+        workspaceError ||
+          webhookSecretError ||
+          emailError ||
+          apiKeyError ||
+          !workspace ||
+          (showConfigurationFields &&
+            (!webhookSecret ||
+              !serviceAccountEmail ||
+              !serviceAccountApiKey)) ||
+          validateMutation.isPending,
+      ),
+    [
+      apiKeyError,
+      emailError,
+      serviceAccountApiKey,
+      serviceAccountEmail,
+      showConfigurationFields,
+      validateMutation.isPending,
+      webhookSecret,
+      webhookSecretError,
+      workspace,
+      workspaceError,
+    ],
+  );
 
   return {
     workspace,
@@ -668,81 +664,99 @@ function ConfigureModalDescription({
   );
 }
 
-function buildConfigurationLabels(t: TFunction) {
-  return {
-    webhookSecretLabel: t(I18nKey.PROJECT_MANAGEMENT$WEBHOOK_SECRET_LABEL),
-    webhookSecretPlaceholder: t(
-      I18nKey.PROJECT_MANAGEMENT$WEBHOOK_SECRET_PLACEHOLDER,
-    ),
-    serviceAccountEmailLabel: t(
-      I18nKey.PROJECT_MANAGEMENT$SERVICE_ACCOUNT_EMAIL_LABEL,
-    ),
-    serviceAccountEmailPlaceholder: t(
-      I18nKey.PROJECT_MANAGEMENT$SERVICE_ACCOUNT_EMAIL_PLACEHOLDER,
-    ),
-    serviceAccountApiKeyLabel: t(
-      I18nKey.PROJECT_MANAGEMENT$SERVICE_ACCOUNT_API_LABEL,
-    ),
-    serviceAccountApiKeyPlaceholder: t(
-      I18nKey.PROJECT_MANAGEMENT$SERVICE_ACCOUNT_API_PLACEHOLDER,
-    ),
-    activeToggleLabel: t(I18nKey.PROJECT_MANAGEMENT$ACTIVE_TOGGLE_LABEL),
-  };
-}
+export function ConfigureModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  onLink,
+  onUnlink,
+  platformName,
+  platform,
+  integrationData,
+}: ConfigureModalProps) {
+  const { t } = useTranslation();
+  const existingWorkspace = integrationData?.workspace ?? null;
 
-function getConnectButtonLabel({
-  existingWorkspace,
-  showConfigurationFields,
-  t,
-}: {
-  existingWorkspace: {
-    id: number;
-    name: string;
-    status: string;
-    editable: boolean;
-  } | null;
-  showConfigurationFields: boolean;
-  t: TFunction;
-}): string {
-  if (existingWorkspace && showConfigurationFields) {
-    return t(I18nKey.PROJECT_MANAGEMENT$UPDATE_BUTTON_LABEL);
-  }
-  return t(I18nKey.PROJECT_MANAGEMENT$CONNECT_BUTTON_LABEL);
-}
+  const state = useConfigureModalState({
+    isOpen,
+    existingWorkspace,
+    platform,
+    onClose,
+    onConfirm,
+    onLink,
+    t,
+  });
 
-function getWorkspacePlaceholderKey(platform: "jira" | "jira-dc" | "linear") {
-  if (platform === "jira") {
-    return I18nKey.PROJECT_MANAGEMENT$JIRA_WORKSPACE_NAME_PLACEHOLDER;
+  if (!isOpen) {
+    return null;
   }
-  if (platform === "jira-dc") {
-    return I18nKey.PROJECT_MANAGEMENT$JIRA_DC_WORKSPACE_NAME_PLACEHOLDER;
-  }
-  return I18nKey.PROJECT_MANAGEMENT$LINEAR_WORKSPACE_NAME_PLACEHOLDER;
-}
 
-function validateWorkspaceValue(value: string, t: TFunction): string | null {
-  const isValid = /^[a-zA-Z0-9\-_.]*$/.test(value);
-  if (!isValid && value.length > 0) {
-    return t(I18nKey.PROJECT_MANAGEMENT$WORKSPACE_NAME_VALIDATION_ERROR);
-  }
-  return null;
-}
+  const workspacePlaceholder = t(state.workspacePlaceholderKey);
+  const workspaceLabel = t(I18nKey.PROJECT_MANAGEMENT$WORKSPACE_NAME_LABEL);
+  const connectLabel = getConnectButtonLabel({
+    existingWorkspace,
+    showConfigurationFields: state.showConfigurationFields,
+    t,
+  });
+  const cancelLabel = t(I18nKey.FEEDBACK$CANCEL_LABEL);
+  const unlinkLabel = t(I18nKey.PROJECT_MANAGEMENT$UNLINK_BUTTON_LABEL);
+  const modalTitle = state.showConfigurationFields
+    ? t(I18nKey.PROJECT_MANAGEMENT$CONFIGURE_MODAL_TITLE, {
+        platform: platformName,
+      })
+    : t(I18nKey.PROJECT_MANAGEMENT$LINK_CONFIRMATION_TITLE);
+  const descriptionVariant: "link" | "configure" = state.showConfigurationFields
+    ? "configure"
+    : "link";
+  const configurationLabels = buildConfigurationLabels(t);
 
-function validateNoSpacesValue(
-  value: string,
-  errorKey: I18nKey,
-  t: TFunction,
-): string | null {
-  if (value && /\s/.test(value)) {
-    return t(errorKey);
-  }
-  return null;
-}
+  return (
+    <ModalBackdrop onClose={state.handleClose}>
+      <ModalBody className="items-start border border-border w-96">
+        <BaseModalTitle title={modalTitle} />
+        <BaseModalDescription>
+          <ConfigureModalDescription
+            variant={descriptionVariant}
+            platformName={platformName}
+          />
+          <p className="mt-4">
+            {t(I18nKey.PROJECT_MANAGEMENT$WORKSPACE_NAME_HINT, {
+              platform: platformName,
+            })}
+          </p>
+        </BaseModalDescription>
+        <div className="w-full flex flex-col gap-4 mt-1">
+          <WorkspaceSection
+            value={state.workspace}
+            onChange={state.handleWorkspaceChange}
+            error={state.workspaceError}
+            label={workspaceLabel}
+            placeholder={workspacePlaceholder}
+            existingWorkspace={existingWorkspace}
+            onUnlink={onUnlink}
+            unlinkLabel={unlinkLabel}
+          />
 
-function validateEmailValue(value: string, t: TFunction): string | null {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (value && !emailRegex.test(value)) {
-    return t(I18nKey.PROJECT_MANAGEMENT$SVC_ACC_EMAIL_VALIDATION_ERROR);
-  }
-  return null;
+          {state.showConfigurationFields && (
+            <ConfigurationFieldsSection
+              values={state.configurationFields}
+              errors={state.configurationErrors}
+              onChange={state.configurationHandlers}
+              onToggleActive={state.handleActiveToggle}
+              isActive={state.isActive}
+              labels={configurationLabels}
+            />
+          )}
+        </div>
+        <ModalActions
+          showConnectButton={!existingWorkspace || state.isWorkspaceEditable}
+          onConnect={state.handleConnect}
+          onCancel={state.handleClose}
+          connectLabel={connectLabel}
+          cancelLabel={cancelLabel}
+          isConnectDisabled={state.isConnectDisabled}
+        />
+      </ModalBody>
+    </ModalBackdrop>
+  );
 }

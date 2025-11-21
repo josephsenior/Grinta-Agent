@@ -20,6 +20,157 @@ interface StreamingCodeProps {
   streamingInterval?: number; // Milliseconds between updates
 }
 
+// Helper functions
+function isExecutable(lang?: string): boolean {
+  if (!lang) return false;
+  const executableLanguages = [
+    "python",
+    "javascript",
+    "typescript",
+    "bash",
+    "sh",
+    "shell",
+  ];
+  return executableLanguages.includes(lang.toLowerCase());
+}
+
+function getFileExtension(lang?: string): string {
+  const extensions: Record<string, string> = {
+    javascript: ".js",
+    typescript: ".ts",
+    python: ".py",
+    java: ".java",
+    cpp: ".cpp",
+    c: ".c",
+    rust: ".rs",
+    go: ".go",
+    ruby: ".rb",
+    php: ".php",
+    swift: ".swift",
+    kotlin: ".kt",
+    bash: ".sh",
+    shell: ".sh",
+    sh: ".sh",
+    css: ".css",
+    html: ".html",
+    json: ".json",
+    yaml: ".yaml",
+    yml: ".yml",
+  };
+  return extensions[lang?.toLowerCase() || ""] || ".txt";
+}
+
+// Leaf component
+function TypingCursor() {
+  return (
+    <span
+      className="inline-block w-0.5 h-4 bg-primary-500 ml-0.5 animate-pulse"
+      style={{
+        animation: "blink 1s infinite",
+      }}
+    />
+  );
+}
+
+// Hook
+type StreamingCodeMode = "inline" | "plainBlock" | "syntax";
+
+function useStreamingCodeState({
+  code,
+  isStreaming,
+  streamingSpeed,
+  streamingInterval,
+}: {
+  code: string;
+  isStreaming: boolean;
+  streamingSpeed: number;
+  streamingInterval: number;
+}) {
+  const [displayedCode, setDisplayedCode] = React.useState("");
+  const [isComplete, setIsComplete] = React.useState(!isStreaming);
+  const intervalRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  React.useEffect(() => {
+    if (!isStreaming) {
+      setDisplayedCode(code);
+      setIsComplete(true);
+      return undefined;
+    }
+
+    setDisplayedCode("");
+    setIsComplete(false);
+
+    const interval = setInterval(() => {
+      setDisplayedCode((previous) => {
+        const nextLength = Math.min(
+          previous.length + streamingSpeed,
+          code.length,
+        );
+        const nextCode = code.slice(0, nextLength);
+
+        if (nextLength >= code.length) {
+          setIsComplete(true);
+          clearInterval(interval);
+        }
+
+        return nextCode;
+      });
+    }, streamingInterval);
+
+    intervalRef.current = interval;
+
+    return () => clearInterval(interval);
+  }, [code, isStreaming, streamingInterval, streamingSpeed]);
+
+  React.useEffect(
+    () => () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    },
+    [],
+  );
+
+  return { displayedCode, isComplete } as const;
+}
+
+// Helper functions for rendering
+const getStreamingMode = ({
+  code,
+  language,
+}: {
+  code: string;
+  language?: string;
+}): StreamingCodeMode => {
+  if (language) {
+    return "syntax";
+  }
+
+  return code.includes("\n") ? "plainBlock" : "inline";
+};
+
+const renderInlineCode = ({
+  displayedCode,
+  isComplete,
+}: {
+  displayedCode: string;
+  isComplete: boolean;
+}) => (
+  <code
+    style={{
+      backgroundColor: "#2a3038",
+      padding: "0.2em 0.4em",
+      borderRadius: "4px",
+      color: "#e6edf3",
+      border: "1px solid #30363d",
+    }}
+  >
+    {displayedCode}
+    {!isComplete && <TypingCursor />}
+  </code>
+);
+
+// Component that uses helper functions
 function StreamingCodeActions({
   code,
   language,
@@ -71,45 +222,6 @@ function StreamingCodeActions({
     if (onAskAbout) {
       onAskAbout(code);
     }
-  };
-
-  const isExecutable = (lang?: string): boolean => {
-    if (!lang) return false;
-    const executableLanguages = [
-      "python",
-      "javascript",
-      "typescript",
-      "bash",
-      "sh",
-      "shell",
-    ];
-    return executableLanguages.includes(lang.toLowerCase());
-  };
-
-  const getFileExtension = (lang?: string): string => {
-    const extensions: Record<string, string> = {
-      javascript: ".js",
-      typescript: ".ts",
-      python: ".py",
-      java: ".java",
-      cpp: ".cpp",
-      c: ".c",
-      rust: ".rs",
-      go: ".go",
-      ruby: ".rb",
-      php: ".php",
-      swift: ".swift",
-      kotlin: ".kt",
-      bash: ".sh",
-      shell: ".sh",
-      sh: ".sh",
-      css: ".css",
-      html: ".html",
-      json: ".json",
-      yaml: ".yaml",
-      yml: ".yml",
-    };
-    return extensions[lang?.toLowerCase() || ""] || ".txt";
   };
 
   return (
@@ -175,157 +287,6 @@ function StreamingCodeActions({
     </div>
   );
 }
-
-function TypingCursor() {
-  return (
-    <span
-      className="inline-block w-0.5 h-4 bg-primary-500 ml-0.5 animate-pulse"
-      style={{
-        animation: "blink 1s infinite",
-      }}
-    />
-  );
-}
-
-export function StreamingCode({
-  code,
-  language,
-  onAskAbout,
-  onRun,
-  isStreaming = false,
-  streamingSpeed = 3,
-  streamingInterval = 50,
-}: StreamingCodeProps) {
-  const streamingState = useStreamingCodeState({
-    code,
-    isStreaming,
-    streamingSpeed,
-    streamingInterval,
-  });
-
-  const mode = getStreamingMode({ code, language });
-
-  if (mode === "inline") {
-    return renderInlineCode({
-      displayedCode: streamingState.displayedCode,
-      isComplete: streamingState.isComplete,
-    });
-  }
-
-  if (mode === "plainBlock") {
-    return renderPlainBlock({
-      displayedCode: streamingState.displayedCode,
-      isComplete: streamingState.isComplete,
-      language,
-      onAskAbout,
-      onRun,
-    });
-  }
-
-  return renderSyntaxHighlightedBlock({
-    displayedCode: streamingState.displayedCode,
-    isComplete: streamingState.isComplete,
-    language,
-    onAskAbout,
-    onRun,
-  });
-}
-
-type StreamingCodeMode = "inline" | "plainBlock" | "syntax";
-
-function useStreamingCodeState({
-  code,
-  isStreaming,
-  streamingSpeed,
-  streamingInterval,
-}: {
-  code: string;
-  isStreaming: boolean;
-  streamingSpeed: number;
-  streamingInterval: number;
-}) {
-  const [displayedCode, setDisplayedCode] = React.useState("");
-  const [isComplete, setIsComplete] = React.useState(!isStreaming);
-  const intervalRef = React.useRef<NodeJS.Timeout | null>(null);
-
-  React.useEffect(() => {
-    if (!isStreaming) {
-      setDisplayedCode(code);
-      setIsComplete(true);
-      return undefined;
-    }
-
-    setDisplayedCode("");
-    setIsComplete(false);
-
-    const interval = setInterval(() => {
-      setDisplayedCode((previous) => {
-        const nextLength = Math.min(
-          previous.length + streamingSpeed,
-          code.length,
-        );
-        const nextCode = code.slice(0, nextLength);
-
-        if (nextLength >= code.length) {
-          setIsComplete(true);
-          clearInterval(interval);
-        }
-
-        return nextCode;
-      });
-    }, streamingInterval);
-
-    intervalRef.current = interval;
-
-    return () => clearInterval(interval);
-  }, [code, isStreaming, streamingInterval, streamingSpeed]);
-
-  React.useEffect(
-    () => () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    },
-    [],
-  );
-
-  return { displayedCode, isComplete } as const;
-}
-
-const getStreamingMode = ({
-  code,
-  language,
-}: {
-  code: string;
-  language?: string;
-}): StreamingCodeMode => {
-  if (language) {
-    return "syntax";
-  }
-
-  return code.includes("\n") ? "plainBlock" : "inline";
-};
-
-const renderInlineCode = ({
-  displayedCode,
-  isComplete,
-}: {
-  displayedCode: string;
-  isComplete: boolean;
-}) => (
-  <code
-    style={{
-      backgroundColor: "#2a3038",
-      padding: "0.2em 0.4em",
-      borderRadius: "4px",
-      color: "#e6edf3",
-      border: "1px solid #30363d",
-    }}
-  >
-    {displayedCode}
-    {!isComplete && <TypingCursor />}
-  </code>
-);
 
 const renderPlainBlock = ({
   displayedCode,
@@ -402,6 +363,51 @@ const renderSyntaxHighlightedBlock = ({
     </div>
   </div>
 );
+
+// Main component
+export function StreamingCode({
+  code,
+  language,
+  onAskAbout,
+  onRun,
+  isStreaming = false,
+  streamingSpeed = 3,
+  streamingInterval = 50,
+}: StreamingCodeProps) {
+  const streamingState = useStreamingCodeState({
+    code,
+    isStreaming,
+    streamingSpeed,
+    streamingInterval,
+  });
+
+  const mode = getStreamingMode({ code, language });
+
+  if (mode === "inline") {
+    return renderInlineCode({
+      displayedCode: streamingState.displayedCode,
+      isComplete: streamingState.isComplete,
+    });
+  }
+
+  if (mode === "plainBlock") {
+    return renderPlainBlock({
+      displayedCode: streamingState.displayedCode,
+      isComplete: streamingState.isComplete,
+      language,
+      onAskAbout,
+      onRun,
+    });
+  }
+
+  return renderSyntaxHighlightedBlock({
+    displayedCode: streamingState.displayedCode,
+    isComplete: streamingState.isComplete,
+    language,
+    onAskAbout,
+    onRun,
+  });
+}
 
 // Enhanced streaming component for markdown integration
 export function streamingCode(

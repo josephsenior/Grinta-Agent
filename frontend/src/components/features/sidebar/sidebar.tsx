@@ -1,94 +1,86 @@
-import React from "react";
-import { useLocation } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Menu } from "lucide-react";
+import { useLogout } from "#/hooks/mutation/use-logout";
 import { useGitUser } from "#/hooks/query/use-git-user";
-import { SettingsModal } from "#/components/shared/modals/settings/settings-modal";
-import { useSettings } from "#/hooks/query/use-settings";
+import { useSidebar } from "#/contexts/sidebar-context";
 import { ConversationPanel } from "../conversation-panel/conversation-panel";
 import { ConversationPanelWrapper } from "../conversation-panel/conversation-panel-wrapper";
-import { useLogout } from "#/hooks/mutation/use-logout";
-import { useConfig } from "#/hooks/query/use-config";
-import { displayErrorToast } from "#/utils/custom-toast-handlers";
+import { SettingsModal } from "#/components/shared/modals/settings/settings-modal";
+import { useSidebarVisibility } from "./hooks/use-sidebar-visibility";
+import { useSidebarKeyboardShortcuts } from "./hooks/use-sidebar-keyboard-shortcuts";
+import { useConversationPanel } from "./hooks/use-conversation-panel";
+import { useSidebarSettings } from "./hooks/use-sidebar-settings";
+import { DesktopSidebar } from "./components/desktop-sidebar";
+import { MobileSidebar } from "./components/mobile-sidebar";
 
 export function Sidebar() {
-  const location = useLocation();
-  // removed isConversationRoute usage since the top-aside header is removed globally
   useGitUser();
-  const { data: config } = useConfig();
-  const {
-    data: settings,
-    error: settingsError,
-    isError: settingsIsError,
-    isFetching: isFetchingSettings,
-  } = useSettings();
   useLogout();
 
-  const [settingsModalIsOpen, setSettingsModalIsOpen] = React.useState(false);
+  const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
+  const { showSidebar, hasHeader } = useSidebarVisibility();
+  const { conversationPanelIsOpen, setConversationPanelIsOpen } =
+    useConversationPanel();
+  const { settingsModalIsOpen, setSettingsModalIsOpen, settings } =
+    useSidebarSettings();
 
-  const [conversationPanelIsOpen, setConversationPanelIsOpen] =
-    React.useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
+  useSidebarKeyboardShortcuts(sidebarCollapsed, setSidebarCollapsed);
+
+  // Listen for external toggle events
+  useEffect(() => {
+    const handleToggle = () => {
+      setSidebarCollapsed(!sidebarCollapsed);
+    };
+    window.addEventListener("Forge:toggle-sidebar", handleToggle);
+    return () =>
+      window.removeEventListener("Forge:toggle-sidebar", handleToggle);
+  }, [sidebarCollapsed, setSidebarCollapsed]);
+
+  if (!showSidebar) {
+    return null;
+  }
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
 
   interface WindowWithE2E extends Window {
     __Forge_PLAYWRIGHT?: boolean;
   }
-
   const win =
     typeof window !== "undefined"
       ? (window as unknown as WindowWithE2E)
       : undefined;
-
   const isPlaywrightRun = win?.__Forge_PLAYWRIGHT === true;
-
-  // TODO: Remove HIDE_LLM_SETTINGS check once released
-  const shouldHideLlmSettings =
-    config?.FEATURE_FLAGS?.HIDE_LLM_SETTINGS && config?.APP_MODE === "saas";
-
-  React.useEffect(() => {
-    // Open conversation panel when an external trigger requests it
-    const openHandler = () => setConversationPanelIsOpen(true);
-    window.addEventListener("Forge:open-conversation-panel", openHandler);
-
-    // If Playwright is running, open immediately to guard against the
-    // event being dispatched before this listener attaches.
-    if (win?.__Forge_PLAYWRIGHT === true) {
-      openHandler();
-    }
-
-    return () => {
-      window.removeEventListener("Forge:open-conversation-panel", openHandler);
-    };
-  }, []);
-
-  React.useEffect(() => {
-    if (shouldHideLlmSettings) {
-      return;
-    }
-
-    if (location.pathname === "/settings") {
-      setSettingsModalIsOpen(false);
-    } else if (
-      !isFetchingSettings &&
-      settingsIsError &&
-      settingsError?.status !== 404
-    ) {
-      // We don't show toast errors for settings in the global error handler
-      // because we have a special case for 404 errors
-      displayErrorToast(
-        "Something went wrong while fetching settings. Please reload the page.",
-      );
-    } else if (config?.APP_MODE === "oss" && settingsError?.status === 404) {
-      setSettingsModalIsOpen(true);
-    }
-  }, [
-    settingsError?.status,
-    settingsError,
-    isFetchingSettings,
-    location.pathname,
-  ]);
 
   return (
     <>
-      {/* Top header removed globally per user request (logo + top buttons + settings/avatar). */}
-      {/* Keep the conversation panel rendering (if open) and settings modal. */}
+      <DesktopSidebar
+        sidebarCollapsed={sidebarCollapsed}
+        hasHeader={hasHeader}
+        onToggle={toggleSidebar}
+      />
+
+      {sidebarCollapsed && (
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className="fixed left-0 top-1/2 -translate-y-1/2 p-3 rounded-r-lg bg-black/80 border-r border-y border-white/20 text-white/70 hover:text-white hover:bg-black/90 transition-all z-[10001] flex items-center justify-center backdrop-blur-sm shadow-lg"
+          aria-label="Expand sidebar (or press Ctrl/Cmd + B)"
+          data-sidebar-toggle
+          title="Show sidebar (Ctrl/Cmd + B)"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+      )}
+
+      <MobileSidebar
+        mobileDrawerOpen={mobileDrawerOpen}
+        onClose={() => setMobileDrawerOpen(!mobileDrawerOpen)}
+      />
+
       {conversationPanelIsOpen && !isPlaywrightRun && (
         <ConversationPanelWrapper isOpen={conversationPanelIsOpen}>
           <div className="animate-slide-up">
@@ -99,7 +91,6 @@ export function Sidebar() {
         </ConversationPanelWrapper>
       )}
 
-      {/* Enhanced Settings Modal */}
       {settingsModalIsOpen && (
         <div className="animate-scale-in">
           <SettingsModal

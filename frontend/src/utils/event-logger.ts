@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+import { logger } from "./logger";
 
 /**
  * A utility class for logging events. This class will only log events in development mode.
@@ -12,7 +12,7 @@ class EventLogger {
    */
   static message(event: MessageEvent) {
     if (this.isDevMode) {
-      console.warn(JSON.stringify(JSON.parse(event.data.toString()), null, 2));
+      logger.debug(JSON.stringify(JSON.parse(event.data.toString()), null, 2));
     }
   }
 
@@ -23,7 +23,7 @@ class EventLogger {
    */
   static event(event: Event, name?: string) {
     if (this.isDevMode) {
-      console.warn(name || "EVENT", event);
+      logger.debug(name || "EVENT", event);
     }
   }
 
@@ -33,7 +33,7 @@ class EventLogger {
    */
   static warning(warning: string) {
     if (this.isDevMode) {
-      console.warn(warning);
+      logger.warn(warning);
     }
   }
 
@@ -43,7 +43,7 @@ class EventLogger {
    */
   static error(error: string) {
     if (this.isDevMode) {
-      console.error(error);
+      logger.error(error);
     }
   }
 }

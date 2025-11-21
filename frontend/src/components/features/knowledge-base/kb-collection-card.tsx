@@ -1,5 +1,6 @@
 import React from "react";
 import { Trash2, Edit2, FileText, Upload } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "#/components/ui/card";
 import { Button } from "#/components/ui/button";
 import type { KnowledgeBaseCollection } from "#/types/knowledge-base";
@@ -19,6 +20,7 @@ export function KBCollectionCard({
   onUploadDocument,
   onViewDocuments,
 }: KBCollectionCardProps) {
+  const { t } = useTranslation();
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString(undefined, {
@@ -81,8 +83,14 @@ export function KBCollectionCard({
         </div>
 
         <div className="flex items-center justify-between text-xs text-foreground-secondary mb-4">
-          <span>Created {formatDate(collection.created_at)}</span>
-          <span>Updated {formatDate(collection.updated_at)}</span>
+          <span>
+            {t("kbCollection.created", "Created")}{" "}
+            {formatDate(collection.created_at)}
+          </span>
+          <span>
+            {t("kbCollection.updated", "Updated")}{" "}
+            {formatDate(collection.updated_at)}
+          </span>
         </div>
 
         <div className="flex gap-2">
@@ -94,7 +102,7 @@ export function KBCollectionCard({
               className="flex-1"
             >
               <FileText className="w-4 h-4 mr-2" />
-              View Documents
+              {t("kbCollection.viewDocuments", "View Documents")}
             </Button>
           )}
           {onUploadDocument && (
@@ -104,7 +112,7 @@ export function KBCollectionCard({
               className="flex-1"
             >
               <Upload className="w-4 h-4 mr-2" />
-              Upload
+              {t("KB$UPLOAD", "Upload")}
             </Button>
           )}
         </div>

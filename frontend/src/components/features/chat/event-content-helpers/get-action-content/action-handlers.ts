@@ -1,0 +1,122 @@
+import {
+  FileWriteAction,
+  CommandAction,
+  IPythonAction,
+  BrowseAction,
+  BrowseInteractiveAction,
+  MCPAction,
+  ThinkAction,
+  FinishAction,
+  TaskTrackingAction,
+} from "#/types/core/actions";
+import { ActionSecurityRisk } from "#/state/security-analyzer-slice";
+import { MAX_CONTENT_LENGTH } from "../shared";
+import i18n from "#/i18n";
+
+export function getRiskText(risk: ActionSecurityRisk): string {
+  switch (risk) {
+    case ActionSecurityRisk.LOW:
+      return i18n.t("SECURITY$LOW_RISK");
+    case ActionSecurityRisk.MEDIUM:
+      return i18n.t("SECURITY$MEDIUM_RISK");
+    case ActionSecurityRisk.HIGH:
+      return i18n.t("SECURITY$HIGH_RISK");
+    case ActionSecurityRisk.UNKNOWN:
+    default:
+      return i18n.t("SECURITY$UNKNOWN_RISK");
+  }
+}
+
+export function getWriteActionContent(event: FileWriteAction): string {
+  let { content } = event.args;
+  if (content.length > MAX_CONTENT_LENGTH) {
+    content = `${event.args.content.slice(0, MAX_CONTENT_LENGTH)}...`;
+  }
+  return `${event.args.path}\n${content}`;
+}
+
+export function getRunActionContent(event: CommandAction): string {
+  let content = `Command:\n\`${event.args.command}\``;
+
+  if (event.args.confirmation_state === "awaiting_confirmation") {
+    content += `\n\n${getRiskText(event.args.security_risk)}`;
+  }
+
+  return content;
+}
+
+export function getIPythonActionContent(event: IPythonAction): string {
+  let content = `\`\`\`\n${event.args.code}\n\`\`\``;
+
+  if (event.args.confirmation_state === "awaiting_confirmation") {
+    content += `\n\n${getRiskText(event.args.security_risk)}`;
+  }
+
+  return content;
+}
+
+export function getBrowseActionContent(event: BrowseAction): string {
+  return `Browsing ${event.args.url}`;
+}
+
+export function getBrowseInteractiveActionContent(
+  event: BrowseInteractiveAction,
+): string {
+  return `**Action:**\n\n\`\`\`python\n${event.args.browser_actions}\n\`\`\``;
+}
+
+export function getMcpActionContent(event: MCPAction): string {
+  const name = event.args.name || "";
+  const args = event.args.arguments || {};
+  let details = `**MCP Tool Call:** ${name}\n\n`;
+  if (event.args.thought) {
+    details += `\n\n**Thought:**\n${event.args.thought}`;
+  }
+  details += `\n\n**Arguments:**\n\`\`\`json\n${JSON.stringify(args, null, 2)}\n\`\`\``;
+  return details;
+}
+
+export function getThinkActionContent(event: ThinkAction): string {
+  return event.args.thought;
+}
+
+export function getFinishActionContent(event: FinishAction): string {
+  return event.args.final_thought.trim();
+}
+
+export function getTaskTrackingActionContent(
+  event: TaskTrackingAction,
+): string {
+  let content = `**Command:** \`${event.args.command}\``;
+
+  if (
+    event.args.command === "plan" &&
+    event.args.task_list &&
+    event.args.task_list.length > 0
+  ) {
+    content += `\n\n**Task List (${event.args.task_list.length} ${event.args.task_list.length === 1 ? "item" : "items"}):**\n`;
+
+    event.args.task_list.forEach((task, index) => {
+      const statusIcon =
+        {
+          todo: "⏳",
+          in_progress: "🔄",
+          done: "✅",
+        }[task.status] || "❓";
+
+      content += `\n${index + 1}. ${statusIcon} **[${task.status.toUpperCase().replace("_", " ")}]** ${task.title}`;
+      content += `\n   *ID: ${task.id}*`;
+      if (task.notes) {
+        content += `\n   *Notes: ${task.notes}*`;
+      }
+    });
+  } else if (event.args.command === "plan") {
+    content += "\n\n**Task List:** Empty";
+  }
+
+  return content;
+}
+
+export function getNoContentActionContent(): string {
+  return "";
+}

@@ -12,6 +12,7 @@ import "./styles/forge-theme.css";
 import React, { useEffect } from "react";
 import ToasterClient from "./components/ToasterClient";
 import { ThemeProvider } from "./context/theme-context";
+import { logger } from "./utils/logger";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -70,8 +71,8 @@ export function HydrateFallback() {
         justifyContent: "center",
         alignItems: "center",
         height: "100vh",
-        backgroundColor: "#0f1117",
-        color: "#8b949e",
+        backgroundColor: "var(--bg-primary)",
+        color: "var(--text-tertiary)",
       }}
     >
       <div style={{ textAlign: "center" }}>
@@ -79,8 +80,8 @@ export function HydrateFallback() {
           style={{
             width: "48px",
             height: "48px",
-            border: "4px solid #21262d",
-            borderTop: "4px solid #58a6ff",
+            border: "4px solid var(--border-primary)",
+            borderTop: "4px solid var(--text-accent)",
             borderRadius: "50%",
             animation: "spin 0.8s linear infinite",
             margin: "0 auto 24px",
@@ -125,8 +126,7 @@ export default function App() {
       }
     } catch (e) {
       // Swallow: best-effort feature flag set for dev only
-      // eslint-disable-next-line no-console
-      console.warn?.("root: allow toast imports feature flag set failed", e);
+      logger.warn("root: allow toast imports feature flag set failed", e);
     }
   }, []);
   return <Outlet />;

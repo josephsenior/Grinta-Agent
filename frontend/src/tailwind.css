@@ -101,6 +101,24 @@
   animation: fadeIn 0.3s ease-out forwards;
 }
 
+/* Page transition animations - Fade out 150ms, Fade in 300ms (Total 450ms) */
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.route-fade-out {
+  animation: fade-out 0.15s ease-out forwards;
+}
+
+.route-fade-in {
+  animation: fadeIn 0.3s ease-in forwards;
+}
+
 /* Scale in animation for modals/menus */
 @keyframes scaleIn {
   from {
@@ -119,7 +137,8 @@
 
 /* Pulse animation for live indicators */
 @keyframes livePulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -133,7 +152,8 @@
 
 /* Node animations for orchestration steps */
 @keyframes nodePulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
@@ -168,7 +188,8 @@
 }
 
 @keyframes errorShake {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateX(0);
   }
   25% {

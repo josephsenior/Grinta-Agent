@@ -97,89 +97,7 @@ const getUpdateConversationInstructions = (
 - Step 3: Please push the changes to your branch on ${getProviderName(gitProvider)} and create a ${pr}. Please create a meaningful branch name that describes the changes. If a ${pr} template exists in the repository, please follow it when creating the ${prShort} description.
 `;
 
-export function MicroagentManagementContent() {
-  const width = useWindowWidth();
-
-  const {
-    addMicroagentModalVisible,
-    updateMicroagentModalVisible,
-    selectedRepository,
-    learnThisRepoModalVisible,
-  } = useSelector((state: RootState) => state.microagentManagement);
-
-  const { providers } = useUserProviders();
-
-  const { t } = useTranslation();
-
-  const dispatch = useDispatch();
-
-  const { createConversationAndSubscribe, isPending } =
-    useCreateConversationAndSubscribeMultiple();
-
-  const microagentHandlers = useMicroagentHandlers({
-    selectedRepository,
-    dispatch,
-    createConversationAndSubscribe,
-    t,
-  });
-
-  const modals = (
-    <MicroagentModals
-      addVisible={addMicroagentModalVisible}
-      updateVisible={updateMicroagentModalVisible}
-      learnVisible={learnThisRepoModalVisible}
-      onConfirmUpsert={microagentHandlers.handleUpsertMicroagent}
-      onConfirmLearn={microagentHandlers.handleLearnThisRepoConfirm}
-      onCancelUpsert={microagentHandlers.hideUpsertMicroagentModal}
-      onCancelLearn={microagentHandlers.hideLearnThisRepoModal}
-      isLoading={isPending}
-    />
-  );
-
-  const providersAreSet = providers.length > 0;
-
-  if (width < 1024) {
-    return (
-      <div className="w-full h-full flex flex-col gap-6">
-        <div className="w-full rounded-lg border border-[#525252] bg-[#24272E] max-h-[494px] min-h-[494px]">
-          {providersAreSet && (
-            <MicroagentManagementSidebar
-              isSmallerScreen
-              providers={providers}
-            />
-          )}
-        </div>
-        <div className="w-full rounded-lg border border-[#525252] bg-[#24272E] flex-1 min-h-[494px]">
-          <MicroagentManagementMain />
-        </div>
-        {modals}
-      </div>
-    );
-  }
-
-  return (
-    <div className="w-full h-full flex rounded-lg border border-[#525252] bg-[#24272E] overflow-hidden">
-      {providersAreSet && <MicroagentManagementSidebar providers={providers} />}
-      <div className="flex-1">
-        <MicroagentManagementMain />
-      </div>
-      {modals}
-    </div>
-  );
-}
-
-function useWindowWidth() {
-  const [width, setWidth] = useState(() => window.innerWidth);
-
-  useEffect(() => {
-    const handleResize = () => setWidth(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  return width;
-}
-
+// Helper functions
 function getRepositoryNameFromSelection(
   selectedRepository: RootState["microagentManagement"]["selectedRepository"],
 ) {
@@ -237,6 +155,19 @@ function maybeInvalidateMicroagentConversations(
   if (shouldInvalidateConversationsList(socketEvent)) {
     invalidate(repositoryName);
   }
+}
+
+// Hooks
+function useWindowWidth() {
+  const [width, setWidth] = useState(() => window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return width;
 }
 
 function useMicroagentHandlers({
@@ -407,6 +338,7 @@ function useMicroagentHandlers({
   } as const;
 }
 
+// Component
 function MicroagentModals({
   addVisible,
   updateVisible,
@@ -447,9 +379,12 @@ function MicroagentModals({
   );
 }
 
-const isCompactLayout = (width: number) => width < 1024;
+// Layout helper functions
+function isCompactLayout(width: number): boolean {
+  return width < 1024;
+}
 
-const renderCompactLayout = ({
+function renderCompactLayout({
   providersAreSet,
   providers,
   modals,
@@ -457,21 +392,23 @@ const renderCompactLayout = ({
   providersAreSet: boolean;
   providers: ReturnType<typeof useUserProviders>["providers"];
   modals: React.ReactNode;
-}) => (
-  <div className="w-full h-full flex flex-col gap-6">
-    <div className="w-full rounded-lg border border-[#525252] bg-[#24272E] max-h-[494px] min-h-[494px]">
-      {providersAreSet && (
-        <MicroagentManagementSidebar isSmallerScreen providers={providers} />
-      )}
+}) {
+  return (
+    <div className="w-full h-full flex flex-col gap-6">
+      <div className="w-full rounded-lg border border-[#525252] bg-[#24272E] max-h-[494px] min-h-[494px]">
+        {providersAreSet && (
+          <MicroagentManagementSidebar isSmallerScreen providers={providers} />
+        )}
+      </div>
+      <div className="w-full rounded-lg border border-[#525252] bg-[#24272E] flex-1 min-h-[494px]">
+        <MicroagentManagementMain />
+      </div>
+      {modals}
     </div>
-    <div className="w-full rounded-lg border border-[#525252] bg-[#24272E] flex-1 min-h-[494px]">
-      <MicroagentManagementMain />
-    </div>
-    {modals}
-  </div>
-);
+  );
+}
 
-const renderDesktopLayout = ({
+function renderDesktopLayout({
   providersAreSet,
   providers,
   modals,
@@ -479,12 +416,63 @@ const renderDesktopLayout = ({
   providersAreSet: boolean;
   providers: ReturnType<typeof useUserProviders>["providers"];
   modals: React.ReactNode;
-}) => (
-  <div className="w-full h-full flex rounded-lg border border-[#525252] bg-[#24272E] overflow-hidden">
-    {providersAreSet && <MicroagentManagementSidebar providers={providers} />}
-    <div className="flex-1">
-      <MicroagentManagementMain />
+}) {
+  return (
+    <div className="w-full h-full flex rounded-lg border border-[#525252] bg-[#24272E] overflow-hidden">
+      {providersAreSet && <MicroagentManagementSidebar providers={providers} />}
+      <div className="flex-1">
+        <MicroagentManagementMain />
+      </div>
+      {modals}
     </div>
-    {modals}
-  </div>
-);
+  );
+}
+
+// Main component
+export function MicroagentManagementContent() {
+  const width = useWindowWidth();
+
+  const {
+    addMicroagentModalVisible,
+    updateMicroagentModalVisible,
+    selectedRepository,
+    learnThisRepoModalVisible,
+  } = useSelector((state: RootState) => state.microagentManagement);
+
+  const { providers } = useUserProviders();
+
+  const { t } = useTranslation();
+
+  const dispatch = useDispatch();
+
+  const { createConversationAndSubscribe, isPending } =
+    useCreateConversationAndSubscribeMultiple();
+
+  const microagentHandlers = useMicroagentHandlers({
+    selectedRepository,
+    dispatch,
+    createConversationAndSubscribe,
+    t,
+  });
+
+  const modals = (
+    <MicroagentModals
+      addVisible={addMicroagentModalVisible}
+      updateVisible={updateMicroagentModalVisible}
+      learnVisible={learnThisRepoModalVisible}
+      onConfirmUpsert={microagentHandlers.handleUpsertMicroagent}
+      onConfirmLearn={microagentHandlers.handleLearnThisRepoConfirm}
+      onCancelUpsert={microagentHandlers.hideUpsertMicroagentModal}
+      onCancelLearn={microagentHandlers.hideLearnThisRepoModal}
+      isLoading={isPending}
+    />
+  );
+
+  const providersAreSet = providers.length > 0;
+
+  if (isCompactLayout(width)) {
+    return renderCompactLayout({ providersAreSet, providers, modals });
+  }
+
+  return renderDesktopLayout({ providersAreSet, providers, modals });
+}

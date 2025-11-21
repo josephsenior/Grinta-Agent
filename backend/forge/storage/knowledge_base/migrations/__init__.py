@@ -1,0 +1,2 @@
+"""Knowledge base database migrations."""
+

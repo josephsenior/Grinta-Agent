@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "#/utils/utils";
 import { LoadingSpinner } from "../loading-spinner";
 import { SkeletonLoader } from "./skeleton-loader";
@@ -31,11 +32,11 @@ export function LoadingState({
   overlay = false,
 }: LoadingStateProps) {
   if (!isLoading) {
-    return <>{children}</>;
+    return children;
   }
 
   if (fallback) {
-    return <>{fallback}</>;
+    return fallback;
   }
 
   if (skeleton) {
@@ -84,7 +85,7 @@ export function LoadingState({
 export function LoadingButton({
   isLoading,
   children,
-  loadingText = "Loading...",
+  loadingText,
   disabled,
   className,
   type = "button",
@@ -93,9 +94,18 @@ export function LoadingButton({
   isLoading: boolean;
   loadingText?: string;
 }) {
+  const { t } = useTranslation();
+  const defaultLoadingText = loadingText || t("common.loading", "Loading...");
+  let buttonType: "button" | "submit" | "reset" = "button";
+  if (type === "submit") {
+    buttonType = "submit";
+  } else if (type === "reset") {
+    buttonType = "reset";
+  }
   return (
     <button
-      type={type}
+      // eslint-disable-next-line react/button-has-type
+      type={buttonType}
       {...props}
       disabled={disabled || isLoading}
       className={cn(
@@ -108,7 +118,7 @@ export function LoadingButton({
     >
       {isLoading && <LoadingSpinner size="small" variant="default" />}
       <span className={cn(isLoading && "opacity-0")}>
-        {isLoading ? loadingText : children}
+        {isLoading ? defaultLoadingText : children}
       </span>
     </button>
   );

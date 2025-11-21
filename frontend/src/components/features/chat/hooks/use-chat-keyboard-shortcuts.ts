@@ -1,22 +1,43 @@
 import React from "react";
-import { useKeyboardShortcuts } from "../keyboard-shortcuts-panel";
 import { useConversationSearch } from "./use-conversation-search";
 import { useConversationBookmarks } from "./use-conversation-bookmarks";
+
+function isSearchShortcut(event: KeyboardEvent) {
+  return (event.ctrlKey || event.metaKey) && event.key === "k";
+}
+
+function isBookmarkShortcut(event: KeyboardEvent) {
+  return (event.ctrlKey || event.metaKey) && event.key === "b";
+}
+
+function closePanels({
+  event,
+  isSearchOpen,
+  setIsSearchOpen,
+  bookmarksHook,
+}: {
+  event: KeyboardEvent;
+  isSearchOpen: boolean;
+  setIsSearchOpen: (open: boolean) => void;
+  bookmarksHook: ReturnType<typeof useConversationBookmarks>;
+}) {
+  event.preventDefault();
+  if (isSearchOpen) {
+    setIsSearchOpen(false);
+  }
+  if (bookmarksHook.isOpen) {
+    bookmarksHook.setIsOpen(false);
+  }
+}
 
 /**
  * Custom hook to manage keyboard shortcuts for the chat interface
  * Centralizes all keyboard shortcut logic
  */
-export function useChatKeyboardShortcuts(
-  isInputFocused: boolean,
-  setShowShortcutsPanel: (show: boolean) => void,
-) {
+export function useChatKeyboardShortcuts(isInputFocused: boolean) {
   const { isOpen: isSearchOpen, setIsOpen: setIsSearchOpen } =
     useConversationSearch();
   const bookmarksHook = useConversationBookmarks();
-
-  // Use existing keyboard shortcuts hook
-  useKeyboardShortcuts(() => setShowShortcutsPanel(true), isInputFocused);
 
   // Additional keyboard shortcuts for search and bookmarks
   React.useEffect(() => {
@@ -39,7 +60,6 @@ export function useChatKeyboardShortcuts(
           isSearchOpen,
           setIsSearchOpen,
           bookmarksHook,
-          setShowShortcutsPanel,
         });
       }
     };
@@ -51,42 +71,11 @@ export function useChatKeyboardShortcuts(
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isInputFocused, isSearchOpen, bookmarksHook, setShowShortcutsPanel]);
+  }, [isInputFocused, isSearchOpen, bookmarksHook]);
 
   return {
     isSearchOpen,
     setIsSearchOpen,
     bookmarksHook,
   };
-}
-
-function isSearchShortcut(event: KeyboardEvent) {
-  return (event.ctrlKey || event.metaKey) && event.key === "k";
-}
-
-function isBookmarkShortcut(event: KeyboardEvent) {
-  return (event.ctrlKey || event.metaKey) && event.key === "b";
-}
-
-function closePanels({
-  event,
-  isSearchOpen,
-  setIsSearchOpen,
-  bookmarksHook,
-  setShowShortcutsPanel,
-}: {
-  event: KeyboardEvent;
-  isSearchOpen: boolean;
-  setIsSearchOpen: (open: boolean) => void;
-  bookmarksHook: ReturnType<typeof useConversationBookmarks>;
-  setShowShortcutsPanel: (show: boolean) => void;
-}) {
-  event.preventDefault();
-  if (isSearchOpen) {
-    setIsSearchOpen(false);
-  }
-  if (bookmarksHook.isOpen) {
-    bookmarksHook.setIsOpen(false);
-  }
-  setShowShortcutsPanel(false);
 }

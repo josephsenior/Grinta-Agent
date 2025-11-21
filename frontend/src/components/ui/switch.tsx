@@ -2,7 +2,7 @@ import * as React from "react";
 import * as SwitchPrimitive from "@radix-ui/react-switch";
 import { cn } from "#/utils/utils";
 
-type _RadixElementRef<T> =
+type RadixElementRef<T> =
   T extends React.ForwardRefExoticComponent<React.RefAttributes<infer R>>
     ? R
     : T extends React.ComponentType<any>
@@ -10,7 +10,7 @@ type _RadixElementRef<T> =
       : unknown;
 
 const Switch = React.forwardRef<
-  _RadixElementRef<typeof SwitchPrimitive.Root>,
+  RadixElementRef<typeof SwitchPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof SwitchPrimitive.Root>
 >(({ className, ...props }, ref) => (
   <SwitchPrimitive.Root

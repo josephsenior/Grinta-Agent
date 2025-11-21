@@ -1,4 +1,6 @@
 import { Edit, Trash2, Clock, Hash, Tag } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { I18nKey } from "#/i18n/declaration";
 import type { Memory } from "#/types/memory";
 
 interface MemoryCardProps {
@@ -8,6 +10,8 @@ interface MemoryCardProps {
 }
 
 export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
+  const { t } = useTranslation();
+
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case "technical":
@@ -57,11 +61,21 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMins < 1) return "just now";
-    if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? "s" : ""} ago`;
+    if (diffMins < 1) return t(I18nKey.MEMORY$RELATIVE_TIME_JUST_NOW);
+    if (diffMins < 60)
+      return t(I18nKey.MEMORY$RELATIVE_TIME_MINUTES_AGO, {
+        count: diffMins,
+        plural: diffMins > 1 ? "s" : "",
+      });
     if (diffHours < 24)
-      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
-    return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+      return t(I18nKey.MEMORY$RELATIVE_TIME_HOURS_AGO, {
+        count: diffHours,
+        plural: diffHours > 1 ? "s" : "",
+      });
+    return t(I18nKey.MEMORY$RELATIVE_TIME_DAYS_AGO, {
+      count: diffDays,
+      plural: diffDays > 1 ? "s" : "",
+    });
   };
 
   return (
@@ -102,7 +116,7 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
             type="button"
             onClick={() => onEdit(memory)}
             className="p-2 text-foreground-secondary hover:text-foreground hover:bg-background-tertiary rounded-md transition-colors"
-            title="Edit memory"
+            title={t(I18nKey.MEMORY$BUTTON_EDIT)}
           >
             <Edit className="w-4 h-4" />
           </button>
@@ -110,7 +124,7 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
             type="button"
             onClick={() => onDelete(memory.id)}
             className="p-2 text-foreground-secondary hover:text-error-500 hover:bg-error-500/10 rounded-md transition-colors"
-            title="Delete memory"
+            title={t(I18nKey.MEMORY$BUTTON_DELETE)}
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -141,12 +155,18 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
       <div className="flex items-center gap-4 text-xs text-foreground-secondary">
         <div className="flex items-center gap-1">
           <Hash className="w-3 h-3" />
-          <span>Used {memory.usageCount}×</span>
+          <span>
+            {t(I18nKey.MEMORY$USED_COUNT, { count: memory.usageCount })}
+          </span>
         </div>
         {memory.lastUsed && (
           <div className="flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            <span>Last: {getRelativeTime(memory.lastUsed)}</span>
+            <span>
+              {t(I18nKey.MEMORY$LAST_USED, {
+                time: getRelativeTime(memory.lastUsed),
+              })}
+            </span>
           </div>
         )}
       </div>

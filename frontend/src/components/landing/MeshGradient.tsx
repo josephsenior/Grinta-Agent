@@ -11,13 +11,20 @@ export default function MeshGradient(): React.ReactElement {
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      return (): void => {
+        // No cleanup needed
+      };
+    }
 
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!ctx) {
+      return (): void => {
+        // No cleanup needed
+      };
+    }
 
     let animationId: number;
-    let time = 0;
 
     // Set canvas size
     const resizeCanvas = () => {
@@ -36,20 +43,25 @@ export default function MeshGradient(): React.ReactElement {
     ];
 
     const animate = () => {
-      time += 0.01;
-
       // Update mesh points
-      meshPoints.forEach((point) => {
-        point.x += point.vx;
-        point.y += point.vy;
+      meshPoints.forEach((point, index) => {
+        const newX = point.x + point.vx;
+        const newY = point.y + point.vy;
 
         // Bounce off edges
-        if (point.x <= 0 || point.x >= 1) point.vx *= -1;
-        if (point.y <= 0 || point.y >= 1) point.vy *= -1;
+        let newVx = point.vx;
+        let newVy = point.vy;
+        if (newX <= 0 || newX >= 1) newVx *= -1;
+        if (newY <= 0 || newY >= 1) newVy *= -1;
 
-        // Keep in bounds
-        point.x = Math.max(0, Math.min(1, point.x));
-        point.y = Math.max(0, Math.min(1, point.y));
+        // Keep in bounds - update array element instead of mutating parameter
+        meshPoints[index] = {
+          ...point,
+          x: Math.max(0, Math.min(1, newX)),
+          y: Math.max(0, Math.min(1, newY)),
+          vx: newVx,
+          vy: newVy,
+        };
       });
 
       // Clear canvas
@@ -105,7 +117,7 @@ export default function MeshGradient(): React.ReactElement {
 
     animate();
 
-    return () => {
+    return (): void => {
       cancelAnimationFrame(animationId);
       window.removeEventListener("resize", resizeCanvas);
     };

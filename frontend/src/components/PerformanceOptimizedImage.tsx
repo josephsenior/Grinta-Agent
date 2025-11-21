@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
 interface PerformanceOptimizedImageProps {
   src: string;
@@ -9,9 +10,15 @@ interface PerformanceOptimizedImageProps {
   priority?: boolean;
 }
 
-export const PerformanceOptimizedImage: React.FC<
-  PerformanceOptimizedImageProps
-> = ({ src, alt, className = "", width, height, priority = false }) => {
+export function PerformanceOptimizedImage({
+  src,
+  alt,
+  className = "",
+  width,
+  height,
+  priority = false,
+}: PerformanceOptimizedImageProps) {
+  const { t } = useTranslation();
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
@@ -30,7 +37,7 @@ export const PerformanceOptimizedImage: React.FC<
         style={{ width, height }}
       >
         <span className="text-foreground-secondary text-sm">
-          Image failed to load
+          {t("common.imageLoadError", "Image failed to load")}
         </span>
       </div>
     );
@@ -58,4 +65,4 @@ export const PerformanceOptimizedImage: React.FC<
       />
     </div>
   );
-};
+}

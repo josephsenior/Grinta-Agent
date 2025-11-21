@@ -20,63 +20,6 @@ interface ContainerProps {
   variant?: "glass" | "plain" | "dark";
 }
 
-export function Container({
-  label,
-  labels,
-  children,
-  className,
-  variant = "glass",
-}: ContainerProps) {
-  const scroll = useContainerScroll(labels);
-
-  return (
-    <div
-      ref={scroll.containerRef}
-      className={clsx(
-        "rounded-2xl flex flex-col h-full w-full",
-        variant === "glass" && [
-          "glass border-grey-800/50 shadow-luxury backdrop-blur-xl",
-          "bg-gradient-to-br from-grey-950/80 to-grey-900/60",
-          "transition-all duration-300 hover:shadow-luxury-lg hover:border-grey-700/60",
-        ],
-        variant === "plain" && "bg-black",
-        variant === "dark" && "bg-black lavender-gradient-border",
-        className,
-      )}
-    >
-      {labels && (
-        <ContainerTabsHeader
-          labels={labels}
-          variant={variant}
-          scroll={scroll}
-        />
-      )}
-      {!labels && label && (
-        <div
-          className={clsx(
-            "px-4 h-[42px] text-sm font-medium flex items-center rounded-t-2xl text-foreground-secondary",
-            variant === "glass"
-              ? "border-b border-grey-800/50 bg-gradient-to-r from-grey-900/50 to-grey-950/30"
-              : "border-b border-grey-900 bg-black",
-          )}
-        >
-          {label}
-        </div>
-      )}
-      <div
-        className={clsx(
-          "overflow-hidden flex-grow rounded-b-2xl",
-          variant === "glass"
-            ? "bg-gradient-to-br from-grey-970/50 to-grey-985/80 backdrop-blur-sm"
-            : "bg-black",
-        )}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
 function useContainerScroll(labels?: ContainerProps["labels"]) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -202,6 +145,63 @@ function ContainerTabsHeader({
           />
         </div>
       )}
+    </div>
+  );
+}
+
+export function Container({
+  label,
+  labels,
+  children,
+  className,
+  variant = "glass",
+}: ContainerProps) {
+  const scroll = useContainerScroll(labels);
+
+  return (
+    <div
+      ref={scroll.containerRef}
+      className={clsx(
+        "rounded-2xl flex flex-col h-full w-full",
+        variant === "glass" && [
+          "glass border-grey-800/50 shadow-luxury backdrop-blur-xl",
+          "bg-gradient-to-br from-grey-950/80 to-grey-900/60",
+          "transition-all duration-300 hover:shadow-luxury-lg hover:border-grey-700/60",
+        ],
+        variant === "plain" && "bg-black",
+        variant === "dark" && "bg-black lavender-gradient-border",
+        className,
+      )}
+    >
+      {labels && (
+        <ContainerTabsHeader
+          labels={labels}
+          variant={variant}
+          scroll={scroll}
+        />
+      )}
+      {!labels && label && (
+        <div
+          className={clsx(
+            "px-4 h-[42px] text-sm font-medium flex items-center rounded-t-2xl text-foreground-secondary",
+            variant === "glass"
+              ? "border-b border-grey-800/50 bg-gradient-to-r from-grey-900/50 to-grey-950/30"
+              : "border-b border-grey-900 bg-black",
+          )}
+        >
+          {label}
+        </div>
+      )}
+      <div
+        className={clsx(
+          "overflow-hidden flex-grow rounded-b-2xl",
+          variant === "glass"
+            ? "bg-gradient-to-br from-grey-970/50 to-grey-985/80 backdrop-blur-sm"
+            : "bg-black",
+        )}
+      >
+        {children}
+      </div>
     </div>
   );
 }

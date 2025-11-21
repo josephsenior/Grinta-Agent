@@ -14,12 +14,13 @@
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useConversationId } from "#/hooks/use-conversation-id";
+import { logger } from "#/utils/logger";
 
 interface ServerReadyEvent {
   port: number;
   url: string;
   protocol: string;
-  health_status: string;
+  health_status: string; // Backend sends this, we'll map it
 }
 
 /**
@@ -33,22 +34,22 @@ export function useAutoNavigateToApp() {
 
   useEffect(() => {
     const handleServerReady = (event: CustomEvent<ServerReadyEvent>) => {
-      const { url, health_status } = event.detail;
+      const { url, health_status: healthStatus } = event.detail;
 
-      console.warn(
+      logger.debug(
         `[Auto-Navigate] 🔍 RECEIVED SERVER-READY EVENT:`,
         event.detail,
       );
 
       // Only navigate if health check passed or is unknown (some servers take time to initialize)
-      if (health_status === "unhealthy") {
-        console.warn(
+      if (healthStatus === "unhealthy") {
+        logger.warn(
           `[Auto-Navigate] Server at ${url} failed health check, skipping navigation`,
         );
         return;
       }
 
-      console.log(
+      logger.debug(
         `[Auto-Navigate] Server ready at ${url}, navigating to browser tab`,
       );
 

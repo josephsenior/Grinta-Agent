@@ -82,6 +82,7 @@ function DetailsSection({
   return (
     <>
       <button
+        type="button"
         onClick={onToggle}
         className="mt-2 text-xs opacity-75 hover:opacity-100 transition-opacity"
       >
@@ -89,7 +90,7 @@ function DetailsSection({
       </button>
       {showFullDetails && (
         <div className="mt-3 p-3 bg-background-elevated/50 rounded-lg text-xs font-mono">
-          <pre className="whitespace-pre-wrap break-words">{rawMessage}</pre>
+          <pre className="whitespace-pre-wrap">{rawMessage}</pre>
         </div>
       )}
     </>
@@ -169,6 +170,7 @@ export function ErrorMessageBanner({
         <div className="flex items-center gap-2 flex-shrink-0">
           {onRetry && (
             <button
+              type="button"
               onClick={onRetry}
               className={cn(
                 "p-1.5 rounded-lg transition-colors",
@@ -183,6 +185,7 @@ export function ErrorMessageBanner({
 
           {dismissible && (
             <button
+              type="button"
               onClick={handleDismiss}
               className={cn(
                 "p-1.5 rounded-lg transition-colors",

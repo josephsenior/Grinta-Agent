@@ -49,7 +49,25 @@ export function FileIcon({
     );
   }
 
-  // Fallback to emoji (always use fallback if file-icons-js not loaded)
+  // If showFallback is false and no icon class, return empty div
+  if (!showFallback) {
+    return (
+      <div
+        className={cn(
+          "file-icon inline-flex items-center justify-center",
+          className,
+        )}
+        data-category={dataCategory || category}
+        data-status={dataStatus || status}
+        style={{ width: size, height: size }}
+        title={`${filename} (${category})`}
+        data-testid={dataTestId}
+        aria-label={`${filename} icon`}
+      />
+    );
+  }
+
+  // Fallback to emoji (use fallback if file-icons-js not loaded and showFallback is true)
   return (
     <div
       className={cn(

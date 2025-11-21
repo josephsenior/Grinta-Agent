@@ -14,6 +14,32 @@ interface SkeletonLoaderProps {
  * Enhanced Skeleton Loader with multiple variants
  * Provides better loading states than simple spinners
  */
+function Skeleton({
+  baseClasses,
+  variantClasses,
+  variant,
+  width,
+  height,
+  className,
+}: {
+  baseClasses: string;
+  variantClasses: Record<string, string>;
+  variant: SkeletonLoaderProps["variant"];
+  width?: string | number;
+  height?: string | number;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(baseClasses, variantClasses[variant || "text"], className)}
+      style={{
+        width: width || (variant === "circular" ? height : "100%"),
+        height: height || undefined,
+      }}
+    />
+  );
+}
+
 export function EnhancedSkeletonLoader({
   variant = "text",
   width,
@@ -36,26 +62,31 @@ export function EnhancedSkeletonLoader({
     card: "h-48 rounded-2xl",
   };
 
-  function Skeleton() {
+  if (count === 1) {
     return (
-      <div
-        className={cn(baseClasses, variantClasses[variant], className)}
-        style={{
-          width: width || (variant === "circular" ? height : "100%"),
-          height: height || undefined,
-        }}
+      <Skeleton
+        baseClasses={baseClasses}
+        variantClasses={variantClasses}
+        variant={variant}
+        width={width}
+        height={height}
+        className={className}
       />
     );
-  }
-
-  if (count === 1) {
-    return <Skeleton />;
   }
 
   return (
     <div className="space-y-2">
       {Array.from({ length: count }).map((_, index) => (
-        <Skeleton key={index} />
+        <Skeleton
+          key={index}
+          baseClasses={baseClasses}
+          variantClasses={variantClasses}
+          variant={variant}
+          width={width}
+          height={height}
+          className={className}
+        />
       ))}
     </div>
   );

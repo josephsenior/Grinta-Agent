@@ -10,33 +10,90 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global dark high-contrast base */
-:root, ::backdrop {
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(to right, #a78bfa, #8b5cf6, #7c3aed);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .glass-effect {
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+  }
+
+  .hover-lift {
+    transition-property: transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-4px);
+  }
+
+  /* Fix for Tailwind v4 responsive display classes */
+  @media (min-width: 768px) {
+    .hidden.md\:flex {
+      display: flex !important;
+    }
+  }
+}
+
+/* Global theme-aware base */
+:root {
   color-scheme: dark;
 }
 
+[data-theme="light"] {
+  color-scheme: light;
+}
+
 @layer base {
-  html, body, #root, #__next {
-    background-color: #000000;
-    color: var(--text-primary);
+  html, body {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
   }
+  
+  html, body, #root, #__next {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    min-height: 100%;
+  }
+  
+  #root, #__next {
+    width: 100%;
+    min-height: 100vh;
+  }
+  
+  
   /* Default borders and panels */
   * {
     border-color: var(--border-primary);
   }
   ::selection {
     background: rgba(139, 92, 246, 0.35);
-    color: #ffffff;
+    color: var(--text-primary);
   }
-  /* Inputs high-contrast baseline */
+  [data-theme="light"] ::selection {
+    background: rgba(139, 92, 246, 0.25);
+    color: var(--text-primary);
+  }
+  /* Inputs theme-aware - Matching design specification */
   input, textarea, select {
-    background-color: #000000;
+    background-color: var(--bg-input);
     color: var(--text-primary);
     border-color: var(--border-primary);
   }
 }
 
-::root {
+:root {
   /* Pure Black OLED-Optimized Color System */
   /* Pure black backgrounds for modern OLED displays */
   --bg-primary: #000000; /* Pure black for true OLED */
@@ -59,15 +116,15 @@
   --border-subtle: #151515;
   --border-glass: rgba(139, 92, 246, 0.1);
 
-  /* Enhanced text hierarchy */
-  --text-primary: #f8f8f2; /* Main content */
-  --text-secondary: #bfbfc8; /* Secondary text */
-  --text-tertiary: #8b8fb0; /* Muted text */
+  /* Enhanced text hierarchy - Matching design specification */
+  --text-primary: #FFFFFF; /* Main content */
+  --text-secondary: #F1F5F9; /* Secondary text */
+  --text-tertiary: #94A3B8; /* Muted text */
   --text-muted: #6a6f7f; /* Very muted text */
   --text-accent: #8b5cf6; /* Violet brand color */
   --text-success: #10B981; /* Success states - emerald */
-  --text-danger: #ff6e6e; /* Error states */
-  --text-warning: #FCD34D; /* Warning states - amber */
+  --text-danger: #EF4444; /* Error states - red as per design spec */
+  --text-warning: #F59E0B; /* Warning states - gold as per design spec */
   --text-info: #3B82F6; /* Info states - sapphire */
 
   /* Syntax token colors (stronger contrast) */
@@ -97,8 +154,6 @@
   --violet-2: #ede9fe;
   --violet-3: #ddd6fe;
   --violet-4: #8b5cf6; /* brand mid */
-
-  background-color: #000000 !important;
 }
 
 /* Light mode color system */
@@ -120,16 +175,16 @@
   /* Light borders */
   --border-primary: #E2E8F0;
   --border-secondary: #CBD5E1;
-  --border-accent: #F59E0B;
+  --border-accent: #8b5cf6; /* Keep violet brand */
   --border-subtle: #F1F5F9;
-  --border-glass: rgba(245, 158, 11, 0.2);
+  --border-glass: rgba(139, 92, 246, 0.15);
 
   /* Light text hierarchy */
   --text-primary: #0F172A;
   --text-secondary: #475569;
   --text-tertiary: #64748B;
   --text-muted: #94A3B8;
-  --text-accent: #F59E0B;
+  --text-accent: #8b5cf6; /* Keep violet brand */
   --text-success: #059669;
   --text-danger: #DC2626;
   --text-warning: #D97706;
@@ -147,10 +202,16 @@
 
   /* Light glass effect */
   --glass-bg: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(245, 158, 11, 0.15);
+  --glass-border: rgba(139, 92, 246, 0.15);
   
-  /* Update background */
-  background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%) !important;
+  /* Legacy variables for light mode */
+  --bg-dark: var(--bg-primary);
+  --bg-light: var(--bg-secondary);
+  --border: var(--border-primary);
+  --text-editor-base: var(--text-secondary);
+  --text-editor-active: var(--text-primary);
+  --border-editor-sidebar: var(--border-secondary);
+  --bg-neutral-muted: rgba(100, 116, 139, 0.1);
 }
 
 body {
@@ -172,8 +233,8 @@ body {
   font-weight: 400;
   line-height: 1.6;
   color: var(--text-primary);
-  /* Pure black background for OLED */
-  background: #000000;
+  background: var(--bg-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

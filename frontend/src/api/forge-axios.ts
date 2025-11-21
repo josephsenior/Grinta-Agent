@@ -4,6 +4,7 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 import { tokenStorage } from "../utils/auth/token-storage";
+import { logger } from "../utils/logger";
 
 export const Forge = axios.create({
   baseURL: `${window.location.protocol}//${import.meta.env.VITE_BACKEND_BASE_URL || window?.location.host}`,
@@ -14,6 +15,7 @@ Forge.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = tokenStorage.getToken();
     if (token && config.headers) {
+      // eslint-disable-next-line no-param-reassign
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -64,8 +66,7 @@ Forge.interceptors.response.use(
     // If there's no response at all (network error / backend down), log a
     // concise message instead of spamming the console with full stack traces.
     if (!error.response) {
-      // eslint-disable-next-line no-console
-      console.warn(
+      logger.warn(
         "Forge API: no response from backend (is the server running?)",
         error.message,
       );
@@ -100,7 +101,7 @@ Forge.interceptors.response.use(
       import("#/state/agent-slice").then(({ setCurrentAgentState }) => {
         import("#/store").then(({ default: store }) => {
           import("#/types/agent-state").then(({ AgentState }) => {
-            console.error(
+            logger.error(
               "🔴 Runtime container permanently unavailable, setting agent to ERROR state",
             );
             store.dispatch(setCurrentAgentState(AgentState.ERROR));

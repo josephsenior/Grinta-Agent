@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS } from "#/services/settings";
 import Forge from "#/api/forge";
 import { PostSettings, PostApiSettings } from "#/types/settings";
 import { useSettings } from "../query/use-settings";
+import { logger } from "#/utils/logger";
 
 const saveSettingsMutationFn = async (settings: Partial<PostSettings>) => {
   const apiSettings: Partial<PostApiSettings> = {
@@ -49,13 +50,50 @@ const saveSettingsMutationFn = async (settings: Partial<PostSettings>) => {
     enable_checkpoints: settings.ENABLE_CHECKPOINTS,
   };
 
-  console.log("[useSaveSettings] Sending to backend:", apiSettings);
-  console.log(
+  logger.debug("[useSaveSettings] Sending to backend:", apiSettings);
+  logger.debug(
     "[useSaveSettings] autonomy_level specifically:",
     apiSettings.autonomy_level,
   );
   await Forge.saveSettings(apiSettings);
 };
+
+async function saveSettingsWithRetry(settings: Partial<PostSettings>) {
+  const maxRetries = process.env.NODE_ENV === "test" ? 0 : 3;
+  const baseDelay = 1000;
+
+  let attempt = 0;
+  while (attempt <= maxRetries) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await saveSettingsMutationFn(settings);
+      if (attempt > 0) {
+        posthog.capture("settings_save_retry_success", { retries: attempt });
+      }
+      return;
+    } catch (error) {
+      if (attempt >= maxRetries) {
+        posthog.capture("settings_save_failed", {
+          retries: attempt,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+        throw error;
+      }
+
+      const delay = baseDelay * 2 ** attempt;
+      logger.warn(
+        `[useSaveSettings] Retry ${attempt + 1}/${maxRetries} after ${delay}ms...`,
+      );
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise<void>((resolve) => {
+        setTimeout(() => {
+          resolve();
+        }, delay);
+      });
+      attempt += 1;
+    }
+  }
+}
 
 export const useSaveSettings = () => {
   const queryClient = useQueryClient();
@@ -96,7 +134,7 @@ export const useSaveSettings = () => {
       // Optimistically update to the new value
       queryClient.setQueryData(["settings"], (old: any) => {
         const updated = { ...old, ...settings };
-        console.log("[useSaveSettings] Optimistic update:", settings);
+        logger.debug("[useSaveSettings] Optimistic update:", settings);
         return updated;
       });
 
@@ -105,7 +143,7 @@ export const useSaveSettings = () => {
     },
     onSuccess: async () => {
       // Keep the optimistic update - no need to refetch since we know the save succeeded
-      console.log(
+      logger.debug(
         "[useSaveSettings] Settings saved successfully, keeping optimistic update",
       );
     },
@@ -114,7 +152,7 @@ export const useSaveSettings = () => {
       if (context?.previousSettings) {
         queryClient.setQueryData(["settings"], context.previousSettings);
       }
-      console.error(
+      logger.error(
         "[useSaveSettings] Failed to save settings after all retries:",
         err,
       );
@@ -124,32 +162,3 @@ export const useSaveSettings = () => {
     },
   });
 };
-
-async function saveSettingsWithRetry(settings: Partial<PostSettings>) {
-  const maxRetries = process.env.NODE_ENV === "test" ? 0 : 3;
-  const baseDelay = 1000;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
-    try {
-      await saveSettingsMutationFn(settings);
-      if (attempt > 0) {
-        posthog.capture("settings_save_retry_success", { retries: attempt });
-      }
-      return;
-    } catch (error) {
-      if (attempt >= maxRetries) {
-        posthog.capture("settings_save_failed", {
-          retries: attempt,
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
-        throw error;
-      }
-
-      const delay = baseDelay * 2 ** attempt;
-      console.warn(
-        `[useSaveSettings] Retry ${attempt + 1}/${maxRetries} after ${delay}ms...`,
-      );
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
-}

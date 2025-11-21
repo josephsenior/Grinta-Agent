@@ -9,51 +9,6 @@ interface MCPMarketplaceDetailsModalProps {
   onClose: () => void;
 }
 
-export function MCPMarketplaceDetailsModal({
-  mcp,
-  isInstalled,
-  onInstall,
-  onClose,
-}: MCPMarketplaceDetailsModalProps) {
-  const handleInstall = () => {
-    onInstall(mcp);
-    onClose();
-  };
-
-  const badges = buildMcpBadges(mcp);
-  const stats = buildMcpStats(mcp);
-  const configSections = buildConfigSections(mcp);
-  const requirements = buildRequirements(mcp);
-  const links = buildExternalLinks(mcp);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-background-secondary border border-border rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-        <ModalHeader mcp={mcp} badges={badges} onClose={onClose} />
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          <DescriptionSection
-            description={mcp.longDescription || mcp.description}
-          />
-          <StatsSection stats={stats} />
-          <TagsSection tags={mcp.tags} />
-          <ConfigurationSection sections={configSections} />
-          <ApiKeyRequirement
-            requiresApiKey={mcp.config.requiresApiKey ?? false}
-            description={mcp.config.apiKeyDescription}
-          />
-          <RequirementsSection requirements={requirements} />
-          <LinksSection links={links} />
-        </div>
-        <ModalFooter
-          isInstalled={isInstalled}
-          onInstall={handleInstall}
-          onClose={onClose}
-        />
-      </div>
-    </div>
-  );
-}
-
 type Badge = { label: string; className: string };
 
 type StatDisplay = { label: string; value: string };
@@ -68,6 +23,7 @@ type RequirementDisplay = { label: string; value: string };
 
 type LinkDisplay = { label: string; url: string };
 
+// Helper functions and components - defined before use
 function buildMcpBadges(mcp: MCPMarketplaceItem): Badge[] {
   const badges: Badge[] = [];
   if (mcp.featured) {
@@ -185,6 +141,12 @@ function buildExternalLinks(mcp: MCPMarketplaceItem): LinkDisplay[] {
     links.push({ label: "Documentation", url: mcp.documentation });
   }
   return links;
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="text-sm font-semibold text-foreground mb-2">{children}</h3>
+  );
 }
 
 function ModalHeader({
@@ -430,8 +392,47 @@ function ModalFooter({
   );
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
+export function MCPMarketplaceDetailsModal({
+  mcp,
+  isInstalled,
+  onInstall,
+  onClose,
+}: MCPMarketplaceDetailsModalProps) {
+  const handleInstall = () => {
+    onInstall(mcp);
+    onClose();
+  };
+
+  const badges = buildMcpBadges(mcp);
+  const stats = buildMcpStats(mcp);
+  const configSections = buildConfigSections(mcp);
+  const requirements = buildRequirements(mcp);
+  const links = buildExternalLinks(mcp);
+
   return (
-    <h3 className="text-sm font-semibold text-foreground mb-2">{children}</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-background-secondary border border-border rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        <ModalHeader mcp={mcp} badges={badges} onClose={onClose} />
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <DescriptionSection
+            description={mcp.longDescription || mcp.description}
+          />
+          <StatsSection stats={stats} />
+          <TagsSection tags={mcp.tags} />
+          <ConfigurationSection sections={configSections} />
+          <ApiKeyRequirement
+            requiresApiKey={mcp.config.requiresApiKey ?? false}
+            description={mcp.config.apiKeyDescription}
+          />
+          <RequirementsSection requirements={requirements} />
+          <LinksSection links={links} />
+        </div>
+        <ModalFooter
+          isInstalled={isInstalled}
+          onInstall={handleInstall}
+          onClose={onClose}
+        />
+      </div>
+    </div>
   );
 }

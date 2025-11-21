@@ -24,6 +24,7 @@ import Forge from "./api/forge";
 import { displayErrorToast } from "./utils/custom-toast-handlers";
 import { queryClient } from "./query-client-config";
 import { performanceMonitor } from "./utils/performanceMonitor";
+import { initSentry } from "./utils/sentry";
 
 if (typeof performance === "undefined") {
   (globalThis as any).performance = {
@@ -218,7 +219,8 @@ function EnsurePortalRoot() {
 // Import skeleton loader
 const SkeletonLoader = lazy(() => import("./components/SkeletonLoader"));
 
-// Optimized loading component
+// Optimized loading component for Suspense boundaries
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function LoadingFallback() {
   return (
     <Suspense
@@ -267,6 +269,9 @@ function LoadingFallback() {
 }
 
 prepareApp().then(async () => {
+  // Initialize error tracking (Sentry)
+  await initSentry();
+
   // Initialize performance monitoring
   performanceMonitor.init();
 
@@ -348,6 +353,35 @@ prepareApp().then(async () => {
                     Component: m.default,
                   })),
               },
+              // Auth routes
+              {
+                path: "auth/login",
+                lazy: () =>
+                  import("./routes/auth/login").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "auth/register",
+                lazy: () =>
+                  import("./routes/auth/register").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "auth/forgot-password",
+                lazy: () =>
+                  import("./routes/auth/forgot-password").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "auth/reset-password",
+                lazy: () =>
+                  import("./routes/auth/reset-password").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
               {
                 path: "accept-tos",
                 lazy: () =>
@@ -422,6 +456,13 @@ prepareApp().then(async () => {
                     path: "databases",
                     lazy: () =>
                       import("./routes/database-settings").then((m) => ({
+                        Component: m.default,
+                      })),
+                  },
+                  {
+                    path: "knowledge-base",
+                    lazy: () =>
+                      import("./routes/knowledge-base-settings").then((m) => ({
                         Component: m.default,
                       })),
                   },
@@ -570,13 +611,6 @@ prepareApp().then(async () => {
                 ],
               },
               {
-                path: "microagent-management",
-                lazy: () =>
-                  import("./routes/microagent-management").then((m) => ({
-                    Component: m.default,
-                  })),
-              },
-              {
                 path: "dashboard",
                 lazy: () =>
                   import("./routes/dashboard").then((m) => ({
@@ -601,6 +635,41 @@ prepareApp().then(async () => {
                 path: "notifications",
                 lazy: () =>
                   import("./routes/notifications").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "search",
+                lazy: () =>
+                  import("./routes/search").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "pricing",
+                lazy: () =>
+                  import("./routes/pricing").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "admin/users",
+                lazy: () =>
+                  import("./routes/admin/users").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "admin/users/:userId",
+                lazy: () =>
+                  import("./routes/admin/users/[userId]").then((m) => ({
+                    Component: m.default,
+                  })),
+              },
+              {
+                path: "*",
+                lazy: () =>
+                  import("./routes/404").then((m) => ({
                     Component: m.default,
                   })),
               },

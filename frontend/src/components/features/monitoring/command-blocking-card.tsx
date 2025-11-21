@@ -1,5 +1,7 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Shield, AlertTriangle, X } from "lucide-react";
+import { I18nKey } from "#/i18n/declaration";
 
 interface BlockedCommand {
   id: string;
@@ -19,6 +21,7 @@ export function CommandBlockingCard({
   blockedCommands,
   className = "",
 }: CommandBlockingCardProps) {
+  const { t } = useTranslation();
   if (blockedCommands.length === 0) {
     return (
       <div
@@ -27,7 +30,7 @@ export function CommandBlockingCard({
         <div className="flex items-center justify-center gap-3 text-green-400">
           <Shield className="w-5 h-5" />
           <p className="text-sm font-medium">
-            No blocked commands - All clear!
+            {t(I18nKey.MONITORING$NO_BLOCKED_COMMANDS)}
           </p>
         </div>
       </div>
@@ -39,7 +42,9 @@ export function CommandBlockingCard({
       <div className="flex items-center gap-2 mb-4">
         <AlertTriangle className="w-5 h-5 text-red-400" />
         <h3 className="text-sm font-semibold text-white">
-          Blocked Commands ({blockedCommands.length})
+          {t(I18nKey.MONITORING$BLOCKED_COMMANDS_COUNT, {
+            count: blockedCommands.length,
+          })}
         </h3>
       </div>
 
@@ -70,7 +75,9 @@ export function CommandBlockingCard({
 
             {/* Command */}
             <div className="mb-3">
-              <p className="text-xs text-gray-400 mb-1">Blocked Command:</p>
+              <p className="text-xs text-gray-400 mb-1">
+                {t(I18nKey.MONITORING$BLOCKED_COMMAND)}
+              </p>
               <code className="block text-xs font-mono bg-black/40 text-red-300 p-2 rounded border border-red-500/20 break-all">
                 {cmd.command}
               </code>
@@ -78,14 +85,18 @@ export function CommandBlockingCard({
 
             {/* Reason */}
             <div className="mb-3">
-              <p className="text-xs text-gray-400 mb-1">Reason:</p>
+              <p className="text-xs text-gray-400 mb-1">
+                {t(I18nKey.MONITORING$REASON)}
+              </p>
               <p className="text-xs text-gray-200">{cmd.reason}</p>
             </div>
 
             {/* Matched Patterns */}
             {cmd.patterns.length > 0 && (
               <div>
-                <p className="text-xs text-gray-400 mb-1">Matched Patterns:</p>
+                <p className="text-xs text-gray-400 mb-1">
+                  {t(I18nKey.MONITORING$MATCHED_PATTERNS)}
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {cmd.patterns.map((pattern, i) => (
                     <span

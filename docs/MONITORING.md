@@ -3,11 +3,14 @@
 ## Overview
 
 Forge includes comprehensive production-grade monitoring with:
-- **3 Grafana Dashboards** - Visual metrics and trends
+- **8 Grafana Dashboards** - Visual metrics, trends, and log exploration
 - **30+ Prometheus Metrics** - Operational telemetry
 - **6 Alerting Rules** - Proactive issue detection
 - **7 Frontend Components** - Real-time monitoring UI
 - **Structured JSON Logging** - Request tracing and debugging
+- **Loki Log Aggregation** - Centralized log storage and search
+- **Promtail Log Shipping** - Real-time log collection
+- **Jaeger Distributed Tracing** - End-to-end request flow visualization
 
 ## Quick Start
 
@@ -28,20 +31,58 @@ docker compose up -d --force-recreate prometheus grafana
 
 **Services Started:**
 - Prometheus: `http://localhost:9090`
-- Grafana: `http://localhost:3001` (admin/admin) - Note: Grafana runs on port 3001, separate from the Forge backend which runs on port 3000
+- Grafana: `http://localhost:3030` (admin/forge_admin_2025)
+- Loki: `http://localhost:3100`
+- Promtail: Log shipper (no web UI)
 
 ### Access Dashboards
 
-1. Open Grafana: `http://localhost:3001`
-2. Login: `admin` / `admin`
+1. Open Grafana: `http://localhost:3030`
+2. Login: `admin` / `forge_admin_2025`
 3. Navigate to Dashboards:
+   - **Logs Explorer** - Centralized log search and analysis
    - LLM Performance
    - System Metrics
    - Error Tracking
 
 ## Grafana Dashboards
 
-### 1. LLM Performance Dashboard
+### 1. Logs Explorer Dashboard
+
+**File:** `monitoring/grafana/dashboards/logs-explorer.json`
+
+**Features:**
+- **Real-time Log Streaming** - Live log tail with auto-refresh
+- **Log Volume by Level** - Visual breakdown of INFO, WARN, ERROR logs
+- **Error Rate Tracking** - Errors per minute with alerts
+- **Request Tracing** - Filter logs by request_id for end-to-end debugging
+- **Agent Type Filtering** - View logs by agent type (CodeActAgent, etc.)
+- **JSON Log Parsing** - Automatic extraction of structured fields
+- **LogQL Queries** - Powerful log query language support
+
+**Key Capabilities:**
+- Search across all Forge logs in one place
+- Filter by log level, agent type, request_id, conversation_id
+- Track errors and warnings in real-time
+- Correlate logs with metrics using request_id
+- Export log queries for sharing
+
+**Example LogQL Queries:**
+```logql
+# Find all errors
+{job="forge", level="ERROR"}
+
+# Search for specific request
+{job="forge"} |= "request_id=req_abc123"
+
+# Count logs by level
+sum(count_over_time({job="forge"}[1m])) by (level)
+
+# Find slow requests (>3s)
+{job="forge"} | json | duration_ms > 3000
+```
+
+### 2. LLM Performance Dashboard
 
 **File:** `monitoring/grafana/dashboards/llm-performance.json`
 
@@ -65,7 +106,7 @@ metasop_cache_hits / (metasop_cache_hits + metasop_cache_stores)  # Cache rate
 - Cache hit rate < 30% → Poor caching
 - Token spikes → Cost issues
 
-### 2. System Metrics Dashboard
+### 3. System Metrics Dashboard
 
 **File:** `monitoring/grafana/dashboards/system-metrics.json`
 
@@ -81,7 +122,7 @@ metasop_cache_hits / (metasop_cache_hits + metasop_cache_stores)  # Cache rate
 - Memory growing → Potential leak
 - Success rate < 90% → System issues
 
-### 3. Error Tracking Dashboard
+### 4. Error Tracking Dashboard
 
 **File:** `monitoring/grafana/dashboards/error-tracking.json`
 
@@ -416,6 +457,117 @@ Overall safety score (0-100)
 **File:** `frontend/src/components/features/monitoring/enhanced-audit-trail.tsx`
 
 Complete action history with timestamps
+
+## Log Aggregation with Loki
+
+### Overview
+
+Forge uses **Loki** for centralized log aggregation, providing:
+- **Centralized Storage** - All logs in one place
+- **Fast Search** - LogQL query language for powerful searches
+- **Label-based Indexing** - Efficient filtering by labels
+- **Grafana Integration** - Seamless log exploration in dashboards
+- **30-day Retention** - Configurable retention policies
+
+### How It Works
+
+1. **Forge** writes structured JSON logs to `logs/` directory
+2. **Promtail** watches log files and ships them to Loki
+3. **Loki** stores logs with labels extracted from JSON fields
+4. **Grafana** queries Loki using LogQL for visualization
+
+### Log Labels
+
+Promtail automatically extracts labels from JSON log fields:
+- `level` - Log level (INFO, WARN, ERROR, DEBUG)
+- `request_id` - Request correlation ID
+- `conversation_id` - Conversation identifier
+- `agent_type` - Agent type (CodeActAgent, etc.)
+- `action_type` - Action type (FileEditAction, etc.)
+- `model_used` - LLM model name
+- `logger` - Logger name
+- `module` - Python module name
+
+### LogQL Query Examples
+
+**Find all errors:**
+```logql
+{job="forge", level="ERROR"}
+```
+
+**Trace a specific request:**
+```logql
+{job="forge"} |= "request_id=req_abc123"
+```
+
+**Count logs by level:**
+```logql
+sum(count_over_time({job="forge"}[1m])) by (level)
+```
+
+**Find slow requests (>3 seconds):**
+```logql
+{job="forge"} | json | duration_ms > 3000
+```
+
+**Filter by agent type:**
+```logql
+{job="forge", agent_type="CodeActAgent"}
+```
+
+**Error rate over time:**
+```logql
+sum(rate({job="forge", level="ERROR"}[5m]))
+```
+
+**Search for specific error message:**
+```logql
+{job="forge"} |= "ConnectionError" | json
+```
+
+### Accessing Logs
+
+**Via Grafana:**
+1. Open Grafana: `http://localhost:3030`
+2. Go to "Explore" (compass icon)
+3. Select "Loki" datasource
+4. Enter LogQL query
+5. View logs in real-time
+
+**Via Loki API:**
+```bash
+# Query logs
+curl -G -s "http://localhost:3100/loki/api/v1/query_range" \
+  --data-urlencode 'query={job="forge", level="ERROR"}' \
+  --data-urlencode 'start=1699128000000000000' \
+  --data-urlencode 'end=1699131600000000000' \
+  --data-urlencode 'limit=100' | jq
+```
+
+### Configuration
+
+**Loki Configuration:** `monitoring/loki/loki-config.yml`
+- Retention: 30 days
+- Storage: Filesystem (local)
+- Limits: 16 MB/s ingestion, 256 KB max line size
+
+**Promtail Configuration:** `monitoring/promtail/promtail-config.yml`
+- Watches: `logs/*.log` and `logs/llm/**/*.log`
+- Parses: JSON logs automatically
+- Labels: Extracted from JSON fields
+
+### Troubleshooting
+
+**Logs not appearing in Loki:**
+1. Check Promtail is running: `docker ps | grep promtail`
+2. Verify log files exist: `ls -la logs/`
+3. Check Promtail logs: `docker logs forge-promtail`
+4. Verify Loki is accessible: `curl http://localhost:3100/ready`
+
+**High log volume:**
+- Adjust retention in `loki-config.yml`
+- Enable log sampling in Promtail
+- Filter logs at source (adjust LOG_LEVEL)
 
 ## Structured Logging
 
@@ -771,19 +923,84 @@ GET /api/analytics/usage?period=week
 - [ ] Plan capacity (if growing)
 - [ ] Update alert thresholds
 
+## Distributed Tracing with Jaeger
+
+### Overview
+
+Forge uses **Jaeger** for distributed tracing, providing:
+- **End-to-End Tracing** - Follow requests through the entire system
+- **Latency Analysis** - Identify bottlenecks and slow operations
+- **Service Dependencies** - Visualize service call graphs
+- **Error Tracking** - See where errors occur in request flows
+- **Trace Correlation** - Link traces with logs and metrics
+
+### Quick Start
+
+**1. Start Monitoring Stack:**
+```bash
+cd monitoring
+docker-compose up -d
+```
+
+**2. Configure Forge:**
+```bash
+# .env file
+TRACING_ENABLED=true
+TRACING_EXPORTER=jaeger
+TRACING_ENDPOINT=http://localhost:14268/api/traces
+TRACING_SAMPLE_RATE=0.1  # 10% sampling
+```
+
+**3. Access Jaeger UI:**
+- Open: http://localhost:16686
+- Select service: `forge-server`
+- Click "Find Traces"
+
+### Trace Correlation
+
+**With Logs (Loki):**
+```logql
+# Find logs for a specific trace
+{job="forge"} |= "trace_id=abc123def456"
+```
+
+**With Metrics (Prometheus):**
+- Use `request_id` to link traces to request metrics
+- Use `conversation_id` to link traces to conversation metrics
+
+### Configuration
+
+See [Jaeger Setup Guide](./monitoring/jaeger-setup.md) for detailed configuration options.
+
+## Alerting Integrations
+
+Forge has comprehensive alert rules configured, but notifications need to be set up. See the complete guide:
+
+- **[Alerting Integrations Guide](./monitoring/alerting-integrations.md)** - Slack & PagerDuty setup
+
+This guide covers:
+- Setting up Slack notifications for team collaboration
+- Configuring PagerDuty for on-call management
+- Alert routing strategies (critical → PagerDuty, warnings → Slack)
+- Testing and troubleshooting
+
 ## References
 
-- [Architecture](./ARCHITECTURE.md) - System overview
-- [Troubleshooting](./TROUBLESHOOTING.md) - Debug issues
+- [Architecture](./architecture.md) - System overview
+- [Troubleshooting](./troubleshooting.md) - Debug issues
 - [Performance Tuning](./guides/performance-tuning.md) - Optimization guide
+- [Jaeger Setup](./monitoring/jaeger-setup.md) - Distributed tracing setup
+- [Alerting Integrations](./monitoring/alerting-integrations.md) - Slack & PagerDuty setup
 
 ## Monitoring Resources
 
 - **Prometheus Docs:** https://prometheus.io/docs/
 - **Grafana Docs:** https://grafana.com/docs/
 - **PromQL Tutorial:** https://prometheus.io/docs/prometheus/latest/querying/basics/
+- **Jaeger Docs:** https://www.jaegertracing.io/docs/
+- **Loki Docs:** https://grafana.com/docs/loki/latest/
 
-For questions about monitoring, see [Troubleshooting](./TROUBLESHOOTING.md) or open a GitHub issue.
+For questions about monitoring, see [Troubleshooting](./troubleshooting.md) or open a GitHub issue.
 
 
 ## Operators Appendix

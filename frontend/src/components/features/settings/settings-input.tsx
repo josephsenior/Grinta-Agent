@@ -47,7 +47,7 @@ export function SettingsInput({
   const errorId = `${name ?? testId}-error`;
 
   return (
-    <label className={cn("flex flex-col gap-2.5 w-fit", className)}>
+    <label className={cn("flex flex-col gap-2.5", className)}>
       <div className="flex items-center gap-2">
         {startContent}
         <span className="text-sm font-medium text-foreground">{label}</span>

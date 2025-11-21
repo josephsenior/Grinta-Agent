@@ -1,22 +1,57 @@
 import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "#/utils/utils";
 
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      // High-contrast glass card for dark theme across the app
-      "rounded-2xl border border-white/10 bg-black/60 backdrop-blur-sm text-foreground transition-colors",
-      "hover:border-white/20",
-      className,
-    )}
-    {...props}
-  />
-));
+const cardVariants = cva("block text-foreground transition-colors", {
+  variants: {
+    variant: {
+      standard: "border rounded-[12px] shadow-luxury",
+      elevated: "border rounded-[12px] shadow-luxury-lg",
+      glass: "backdrop-blur-[12px] border rounded-[12px]",
+    },
+  },
+  defaultVariants: {
+    variant: "standard",
+  },
+});
+
+export interface CardProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof cardVariants> {}
+
+const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className, variant, ...props }, ref) => {
+    const getCardStyle = () => {
+      switch (variant) {
+        case "elevated":
+          return {
+            backgroundColor: "var(--bg-primary)",
+            borderColor: "var(--border-accent)",
+          };
+        case "glass":
+          return {
+            backgroundColor: "var(--glass-bg)",
+            borderColor: "var(--glass-border)",
+          };
+        default:
+          return {
+            backgroundColor: "var(--bg-primary)",
+            borderColor: "var(--border-primary)",
+          };
+      }
+    };
+
+    return (
+      <div
+        ref={ref}
+        className={cn(cardVariants({ variant, className }))}
+        style={getCardStyle()}
+        {...props}
+      />
+    );
+  },
+);
 Card.displayName = "Card";
 
 const CardHeader = React.forwardRef<

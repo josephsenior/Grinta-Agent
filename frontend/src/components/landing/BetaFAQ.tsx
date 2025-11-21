@@ -54,6 +54,7 @@ export function BetaFAQ() {
               className="bg-background-primary/80 border border-white/10 rounded-2xl hover:border-brand-500/40 transition-colors"
             >
               <button
+                type="button"
                 onClick={() => toggleFAQ(index)}
                 className="w-full px-6 py-5 flex items-center justify-between text-left"
                 aria-expanded={openIndex === index}

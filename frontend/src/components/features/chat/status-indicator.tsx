@@ -6,8 +6,11 @@ import {
   FileEdit,
   Code,
   Search,
+  Workflow,
+  Loader2,
 } from "lucide-react";
 import { cn } from "#/utils/utils";
+import { logger } from "#/utils/logger";
 
 interface StatusIndicatorProps {
   type:
@@ -19,7 +22,9 @@ interface StatusIndicatorProps {
     | "edit"
     | "browse"
     | "read"
-    | "message";
+    | "message"
+    | "sop"
+    | "orchestrating";
   message?: string;
   className?: string;
 }
@@ -70,6 +75,16 @@ const STATUS_MAP = {
     text: "Reading file",
     color: "text-primary-500",
   },
+  sop: {
+    icon: <Workflow className="w-3.5 h-3.5" />,
+    text: "Starting SOP orchestration",
+    color: "text-violet-500",
+  },
+  orchestrating: {
+    icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />,
+    text: "Orchestrating",
+    color: "text-violet-500",
+  },
 };
 
 export function StatusIndicator({
@@ -81,7 +96,7 @@ export function StatusIndicator({
 
   // Guard against undefined status
   if (!status) {
-    console.warn(`Unknown status type: ${type}`);
+    logger.warn(`Unknown status type: ${type}`);
     return null;
   }
 

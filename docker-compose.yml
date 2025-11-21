@@ -16,7 +16,7 @@ services:
   forge:
     build:
       context: ./
-      dockerfile: ./containers/app/Dockerfile
+      dockerfile: ./backend/containers/app/Dockerfile
     image: forge:latest
     container_name: forge-app-${DATE:-}
     environment:
@@ -39,6 +39,13 @@ services:
       - FORGE_RUNTIME_SERVICE_GRPC=${FORGE_RUNTIME_SERVICE_GRPC:-false}
       - FORGE_EVENT_SERVICE_ENDPOINT=${FORGE_EVENT_SERVICE_ENDPOINT:-}
       - FORGE_RUNTIME_SERVICE_ENDPOINT=${FORGE_RUNTIME_SERVICE_ENDPOINT:-}
+      # User Storage Configuration
+      - USER_STORAGE_TYPE=${USER_STORAGE_TYPE:-database}
+      - DB_HOST=${DB_HOST:-localhost}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-forge}
+      - DB_USER=${DB_USER:-forge}
+      - DB_PASSWORD=${DB_PASSWORD:-forge}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/monitoring/readiness"]
       interval: 30s

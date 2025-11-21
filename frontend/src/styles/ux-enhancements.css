@@ -16,21 +16,21 @@
 
 /* Chat messages container max-width (optimal readability) */
 .chat-messages-container {
-  max-width: 480px !important;  /* Mobile-friendly initial width */
-  margin: 0 auto;  /* Center align */
+  max-width: 480px !important; /* Mobile-friendly initial width */
+  margin: 0 auto; /* Center align */
   transition: max-width 0.3s ease;
 }
 
 /* Wider on larger screens - Cursor's golden ratio */
 @media (min-width: 768px) {
   .chat-messages-container {
-    max-width: 680px !important;  /* Increased for tablets */
+    max-width: 680px !important; /* Increased for tablets */
   }
 }
 
 @media (min-width: 1024px) {
   .chat-messages-container {
-    max-width: 780px !important;  /* Cursor's optimal reading width */
+    max-width: 780px !important; /* Cursor's optimal reading width */
   }
 }
 
@@ -121,18 +121,22 @@ button[type="submit"]:active {
 
 /* Base chat message bubble - Cursor-level spacing */
 .chat-bubble {
-  padding: 1.25rem 1.5rem !important;  /* +43% padding for breathing room */
+  padding: 1.25rem 1.5rem !important; /* +43% padding for breathing room */
   border-radius: 1rem !important;
-  margin-bottom: 1rem !important;  /* +33% vertical spacing */
+  margin-bottom: 1rem !important; /* +33% vertical spacing */
   backdrop-filter: blur(10px) !important;
   transition: all 0.2s ease !important;
-  font-size: 0.9375rem !important;  /* 15px - Cursor's base size */
-  line-height: 1.7 !important;  /* +13% for readability */
+  font-size: 0.9375rem !important; /* 15px - Cursor's base size */
+  line-height: 1.7 !important; /* +13% for readability */
 }
 
 /* User message bubble (right-aligned, violet) */
 .chat-bubble-user {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(124, 58, 237, 0.1) 100%) !important;
+  background: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.15) 0%,
+    rgba(124, 58, 237, 0.1) 100%
+  ) !important;
   border: 1px solid rgba(139, 92, 246, 0.3) !important;
   border-radius: 1rem 1rem 0.25rem 1rem !important;
   box-shadow: 0 2px 8px rgba(139, 92, 246, 0.1) !important;
@@ -141,14 +145,22 @@ button[type="submit"]:active {
 }
 
 .chat-bubble-user:hover {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.15) 100%) !important;
+  background: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.2) 0%,
+    rgba(124, 58, 237, 0.15) 100%
+  ) !important;
   border-color: rgba(139, 92, 246, 0.4) !important;
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2) !important;
 }
 
 /* Agent message bubble (left-aligned, dark) */
 .chat-bubble-agent {
-  background: linear-gradient(135deg, rgba(15, 15, 15, 0.95) 0%, rgba(20, 20, 20, 0.9) 100%) !important;
+  background: linear-gradient(
+    135deg,
+    rgba(15, 15, 15, 0.95) 0%,
+    rgba(20, 20, 20, 0.9) 100%
+  ) !important;
   border: 1px solid rgba(139, 92, 246, 0.15) !important;
   border-radius: 1rem 1rem 1rem 0.25rem !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
@@ -157,7 +169,11 @@ button[type="submit"]:active {
 }
 
 .chat-bubble-agent:hover {
-  background: linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(25, 25, 25, 0.9) 100%) !important;
+  background: linear-gradient(
+    135deg,
+    rgba(20, 20, 20, 0.95) 0%,
+    rgba(25, 25, 25, 0.9) 100%
+  ) !important;
   border-color: rgba(139, 92, 246, 0.25) !important;
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.1) !important;
 }
@@ -167,38 +183,38 @@ button[type="submit"]:active {
 /* Message text styling - Enhanced readability */
 .chat-bubble p {
   margin: 0 !important;
-  line-height: 1.7 !important;  /* Cursor-level spacing */
+  line-height: 1.7 !important; /* Cursor-level spacing */
   color: var(--text-primary) !important;
-  font-size: 0.9375rem !important;  /* 15px */
+  font-size: 0.9375rem !important; /* 15px */
 }
 
 .chat-bubble p + p {
-  margin-top: 0.75rem !important;  /* Paragraph spacing */
+  margin-top: 0.75rem !important; /* Paragraph spacing */
 }
 
 /* Code blocks inside bubbles - Cursor-level premium */
 .chat-bubble pre {
-  background: rgba(5, 5, 5, 0.8) !important;  /* Darker for contrast */
+  background: rgba(5, 5, 5, 0.8) !important; /* Darker for contrast */
   border: 1px solid rgba(139, 92, 246, 0.2) !important;
-  border-radius: 0.875rem !important;  /* More rounded */
-  padding: 1.25rem 1.5rem !important;  /* +67% padding */
-  margin: 1rem 0 !important;  /* +100% vertical spacing */
+  border-radius: 0.875rem !important; /* More rounded */
+  padding: 1.25rem 1.5rem !important; /* +67% padding */
+  margin: 1rem 0 !important; /* +100% vertical spacing */
   overflow-x: auto !important;
-  box-shadow: 
+  box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(139, 92, 246, 0.1) !important;  /* Subtle depth + glow */
-  font-size: 0.875rem !important;  /* 14px for code */
+    inset 0 1px 0 rgba(139, 92, 246, 0.1) !important; /* Subtle depth + glow */
+  font-size: 0.875rem !important; /* 14px for code */
 }
 
 .chat-bubble code {
   background: rgba(139, 92, 246, 0.15) !important;
   border: 1px solid rgba(139, 92, 246, 0.3) !important;
-  padding: 0.25rem 0.5rem !important;  /* +100% padding for better contrast */
-  border-radius: 0.375rem !important;  /* More rounded */
-  font-size: 0.875rem !important;  /* 14px for inline code */
-  font-weight: 500 !important;  /* Slightly bolder */
+  padding: 0.25rem 0.5rem !important; /* +100% padding for better contrast */
+  border-radius: 0.375rem !important; /* More rounded */
+  font-size: 0.875rem !important; /* 14px for inline code */
+  font-weight: 500 !important; /* Slightly bolder */
   letter-spacing: -0.01em !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;  /* Subtle depth */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important; /* Subtle depth */
 }
 
 /* ============================================ */
@@ -272,32 +288,34 @@ button[type="submit"]:active {
   /* Chat container - full width on mobile */
   .chat-messages-container {
     max-width: 100% !important;
-    padding: 0 1rem !important;  /* More padding for mobile */
+    padding: 0 1rem !important; /* More padding for mobile */
     margin: 0 !important;
   }
 
   /* Message bubbles - slightly wider on mobile */
   .chat-bubble-user,
   .chat-bubble-agent {
-    max-width: 92% !important;  /* Slightly wider for readability */
-    padding: 1.125rem 1.25rem !important;  /* Optimized for mobile screens */
+    max-width: 92% !important; /* Slightly wider for readability */
+    padding: 1.125rem 1.25rem !important; /* Optimized for mobile screens */
   }
 
   /* Mobile typography - prevent iOS zoom */
   .chat-input-textarea {
-    font-size: 16px !important;  /* iOS won't zoom */
+    font-size: 16px !important; /* iOS won't zoom */
     line-height: 1.5 !important;
   }
 
   /* All text inputs must be 16px+ on iOS */
-  input, textarea, select {
+  input,
+  textarea,
+  select {
     font-size: 16px !important;
   }
 
   /* Message text - larger on mobile */
   .chat-bubble {
-    font-size: 1rem !important;  /* 16px on mobile (larger than desktop 15px) */
-    line-height: 1.65 !important;  /* Slightly tighter for mobile */
+    font-size: 1rem !important; /* 16px on mobile (larger than desktop 15px) */
+    line-height: 1.65 !important; /* Slightly tighter for mobile */
   }
 
   .chat-bubble p {
@@ -306,18 +324,20 @@ button[type="submit"]:active {
 
   /* Code blocks - optimized padding for mobile */
   .chat-bubble pre {
-    padding: 1rem 1.25rem !important;  /* Reduced from desktop */
+    padding: 1rem 1.25rem !important; /* Reduced from desktop */
     margin: 0.875rem 0 !important;
     border-radius: 0.75rem !important;
-    font-size: 0.8125rem !important;  /* 13px - slightly smaller on mobile */
+    font-size: 0.8125rem !important; /* 13px - slightly smaller on mobile */
   }
 
   .chat-bubble code {
-    font-size: 0.8125rem !important;  /* 13px inline code */
+    font-size: 0.8125rem !important; /* 13px inline code */
   }
 
   /* Touch targets - iOS guidelines (44px minimum) */
-  button, .btn, .btn-icon {
+  button,
+  .btn,
+  .btn-icon {
     min-height: 44px !important;
     min-width: 44px !important;
   }
@@ -339,7 +359,7 @@ button[type="submit"]:active {
   .event-message {
     padding: 1rem 1.25rem !important;
     margin-bottom: 1rem !important;
-    font-size: 0.9375rem !important;  /* 15px */
+    font-size: 0.9375rem !important; /* 15px */
   }
 
   /* Safe area insets for notched devices */
@@ -362,8 +382,9 @@ button[type="submit"]:active {
   }
 
   /* Mobile-specific touch feedback */
-  button:active, .btn:active {
-    transform: scale(0.96) !important;  /* Tactile feedback */
+  button:active,
+  .btn:active {
+    transform: scale(0.96) !important; /* Tactile feedback */
     transition: transform 0.1s ease-out !important;
   }
 
@@ -376,7 +397,7 @@ button[type="submit"]:active {
 
   /* Reduce animation complexity on mobile */
   .event-message {
-    animation-duration: 0.25s !important;  /* Faster on mobile */
+    animation-duration: 0.25s !important; /* Faster on mobile */
   }
 
   .stagger-item {
@@ -391,28 +412,31 @@ button[type="submit"]:active {
 /* Mobile-optimized buttons - 44px minimum everywhere */
 @media (max-width: 640px) {
   /* Primary action buttons - larger on mobile */
-  .btn-primary, button[type="submit"] {
-    min-height: 48px !important;  /* Extra comfort */
+  .btn-primary,
+  button[type="submit"] {
+    min-height: 48px !important; /* Extra comfort */
     padding: 0.875rem 1.5rem !important;
-    font-size: 1rem !important;  /* 16px */
+    font-size: 1rem !important; /* 16px */
   }
 
   /* Secondary buttons */
   .btn-secondary {
     min-height: 44px !important;
     padding: 0.75rem 1.25rem !important;
-    font-size: 0.9375rem !important;  /* 15px */
+    font-size: 0.9375rem !important; /* 15px */
   }
 
   /* Icon-only buttons */
-  .btn-icon, button[aria-label]:not([aria-label=""]) {
+  .btn-icon,
+  button[aria-label]:not([aria-label=""]) {
     min-height: 48px !important;
     min-width: 48px !important;
     padding: 0.75rem !important;
   }
 
   /* Dropdown/menu items */
-  [role="menuitem"], [role="option"] {
+  [role="menuitem"],
+  [role="option"] {
     min-height: 48px !important;
     padding: 0.875rem 1.125rem !important;
     font-size: 1rem !important;
@@ -427,7 +451,8 @@ button[type="submit"]:active {
   }
 
   /* Navigation items */
-  .nav-link, .nav-item {
+  .nav-link,
+  .nav-item {
     min-height: 48px !important;
     padding: 0.875rem 1rem !important;
   }
@@ -441,7 +466,7 @@ button[type="submit"]:active {
 
   /* Mobile swipe gestures - smooth */
   .swipeable {
-    touch-action: pan-y;  /* Allow vertical scroll, prevent horizontal */
+    touch-action: pan-y; /* Allow vertical scroll, prevent horizontal */
   }
 
   /* Prevent double-tap zoom */
@@ -460,23 +485,26 @@ button[type="submit"]:active {
   .gradient-border-animated,
   .morphing-icon,
   .floating-icon {
-    animation: none !important;  /* Disable heavy animations */
+    animation: none !important; /* Disable heavy animations */
   }
 
   /* Simplify shadows on mobile */
-  .shadow-lg, .shadow-xl, .shadow-2xl {
+  .shadow-lg,
+  .shadow-xl,
+  .shadow-2xl {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
   }
 
   /* Reduce backdrop blur for performance */
-  .backdrop-blur-md, .backdrop-blur-lg {
-    backdrop-filter: blur(8px) !important;  /* Reduced from 12-16px */
+  .backdrop-blur-md,
+  .backdrop-blur-lg {
+    backdrop-filter: blur(8px) !important; /* Reduced from 12-16px */
   }
 
   /* Keep essential animations smooth */
   .animate-message-enter,
   .bubble-slide-in {
-    animation-duration: 0.2s !important;  /* Faster */
+    animation-duration: 0.2s !important; /* Faster */
   }
 }
 
@@ -486,10 +514,12 @@ button[type="submit"]:active {
 
 /* Modern Terminal with Glassmorphism (Bolt.new-inspired) */
 .streaming-terminal {
-  background: linear-gradient(135deg,
+  background: linear-gradient(
+    135deg,
     rgba(10, 10, 10, 0.95) 0%,
     rgba(15, 15, 15, 0.95) 50%,
-    rgba(10, 10, 10, 0.95) 100%) !important;
+    rgba(10, 10, 10, 0.95) 100%
+  ) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
   border: 1px solid rgba(139, 92, 246, 0.15) !important;
@@ -573,10 +603,10 @@ button[type="submit"]:active {
   backdrop-filter: blur(12px) !important;
   border: 1px solid rgba(139, 92, 246, 0.1) !important;
   border-radius: 1rem !important;
-  padding: 1.25rem 1.5rem !important;  /* +25% padding */
-  margin-bottom: 1.25rem !important;  /* +25% spacing */
+  padding: 1.25rem 1.5rem !important; /* +25% padding */
+  margin-bottom: 1.25rem !important; /* +25% spacing */
   transition: all 0.2s ease !important;
-  font-size: 0.9375rem !important;  /* 15px */
+  font-size: 0.9375rem !important; /* 15px */
   line-height: 1.7 !important;
 }
 
@@ -584,7 +614,7 @@ button[type="submit"]:active {
   background: rgba(15, 15, 15, 0.7) !important;
   border-color: rgba(139, 92, 246, 0.2) !important;
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.1) !important;
-  transform: translateY(-1px);  /* Subtle lift on hover */
+  transform: translateY(-1px); /* Subtle lift on hover */
 }
 
 /* Message Header */
@@ -602,7 +632,11 @@ button[type="submit"]:active {
   width: 2rem;
   height: 2rem;
   border-radius: 0.5rem;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(124, 58, 237, 0.2));
+  background: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.2),
+    rgba(124, 58, 237, 0.2)
+  );
   border: 1px solid rgba(139, 92, 246, 0.3);
   display: flex;
   align-items: center;
@@ -612,9 +646,11 @@ button[type="submit"]:active {
 
 /* Streaming Thought Component */
 .streaming-thought {
-  background: linear-gradient(135deg,
+  background: linear-gradient(
+    135deg,
     rgba(139, 92, 246, 0.08),
-    rgba(124, 58, 237, 0.05));
+    rgba(124, 58, 237, 0.05)
+  );
   border: 1px solid rgba(139, 92, 246, 0.2);
   border-radius: 0.75rem;
   padding: 0.875rem 1rem;
@@ -630,10 +666,12 @@ button[type="submit"]:active {
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg,
+  background: linear-gradient(
+    90deg,
     transparent,
     rgba(139, 92, 246, 0.5),
-    transparent);
+    transparent
+  );
   background-size: 200% 100%;
   animation: thought-shimmer 2s linear infinite;
 }
@@ -669,20 +707,20 @@ button[type="submit"]:active {
 
 /* Code Block Enhancements - Cursor-level premium */
 .code-block {
-  background: rgba(5, 5, 5, 0.95) !important;  /* Darker background */
+  background: rgba(5, 5, 5, 0.95) !important; /* Darker background */
   border: 1px solid rgba(139, 92, 246, 0.2) !important;
-  border-radius: 0.875rem !important;  /* More rounded */
+  border-radius: 0.875rem !important; /* More rounded */
   overflow: hidden !important;
-  margin: 1rem 0 !important;  /* +33% spacing */
-  box-shadow: 
+  margin: 1rem 0 !important; /* +33% spacing */
+  box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(139, 92, 246, 0.08) !important;  /* Depth + glow */
+    inset 0 1px 0 rgba(139, 92, 246, 0.08) !important; /* Depth + glow */
   transition: all 0.2s ease !important;
 }
 
 .code-block:hover {
   border-color: rgba(139, 92, 246, 0.3) !important;
-  box-shadow: 
+  box-shadow:
     0 6px 16px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(139, 92, 246, 0.12) !important;
 }
@@ -690,17 +728,17 @@ button[type="submit"]:active {
 .code-block-header {
   background: rgba(15, 15, 15, 0.9) !important;
   border-bottom: 1px solid rgba(139, 92, 246, 0.15) !important;
-  padding: 0.75rem 1.25rem !important;  /* More padding */
+  padding: 0.75rem 1.25rem !important; /* More padding */
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.8125rem;  /* 13px - slightly larger */
+  font-size: 0.8125rem; /* 13px - slightly larger */
   font-weight: 500;
 }
 
 .code-block pre {
   margin: 0 !important;
-  padding: 1.25rem 1.5rem !important;  /* +25% padding */
+  padding: 1.25rem 1.5rem !important; /* +25% padding */
   overflow-x: auto !important;
   background: transparent !important;
 }
@@ -709,8 +747,8 @@ button[type="submit"]:active {
   background: transparent !important;
   border: none !important;
   padding: 0 !important;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
-  font-size: 0.875rem !important;  /* 14px */
+  font-family: "JetBrains Mono", "Fira Code", monospace !important;
+  font-size: 0.875rem !important; /* 14px */
   line-height: 1.6 !important;
   color: var(--text-primary) !important;
 }
@@ -748,23 +786,43 @@ button[type="submit"]:active {
 }
 
 .event-message {
-  animation: fade-slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;  /* Smoother easing */
+  animation: fade-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; /* 300ms as per design spec */
   animation-fill-mode: both;
 }
 
 /* Stagger consecutive events for smoother flow (reduced delays) */
-.event-message:nth-child(1) { animation-delay: 0ms; }
-.event-message:nth-child(2) { animation-delay: 40ms; }
-.event-message:nth-child(3) { animation-delay: 80ms; }
-.event-message:nth-child(4) { animation-delay: 120ms; }
-.event-message:nth-child(5) { animation-delay: 160ms; }
-.event-message:nth-child(6) { animation-delay: 200ms; }
-.event-message:nth-child(7) { animation-delay: 240ms; }
-.event-message:nth-child(8) { animation-delay: 280ms; }
+.event-message:nth-child(1) {
+  animation-delay: 0ms;
+}
+.event-message:nth-child(2) {
+  animation-delay: 40ms;
+}
+.event-message:nth-child(3) {
+  animation-delay: 80ms;
+}
+.event-message:nth-child(4) {
+  animation-delay: 120ms;
+}
+.event-message:nth-child(5) {
+  animation-delay: 160ms;
+}
+.event-message:nth-child(6) {
+  animation-delay: 200ms;
+}
+.event-message:nth-child(7) {
+  animation-delay: 240ms;
+}
+.event-message:nth-child(8) {
+  animation-delay: 280ms;
+}
 
 /* Action summary compact display */
 .action-summary {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.03) 0%, rgba(124, 58, 237, 0.02) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.03) 0%,
+    rgba(124, 58, 237, 0.02) 100%
+  );
   border: 1px solid rgba(139, 92, 246, 0.1);
   border-radius: 0.75rem;
   padding: 0.5rem;
@@ -804,7 +862,8 @@ button[type="submit"]:active {
 
 /* Button glow effect */
 @keyframes violet-glow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
   }
   50% {
@@ -818,7 +877,8 @@ button[type="submit"]:active {
 
 /* Terminal pulse animation */
 @keyframes terminal-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -831,4 +891,3 @@ button[type="submit"]:active {
 }
 
 /* Old message fade-in replaced with staggered fade-slide-up animation above */
-

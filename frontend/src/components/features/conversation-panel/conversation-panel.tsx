@@ -41,6 +41,8 @@ interface ErrorStateProps {
 }
 
 function ErrorState({ error }: ErrorStateProps) {
+  const { t } = useTranslation();
+
   if (!error) {
     return null;
   }
@@ -52,7 +54,9 @@ function ErrorState({ error }: ErrorStateProps) {
           <div className="w-8 h-8 rounded-full bg-error-500/20 flex items-center justify-center">
             <div className="w-3 h-3 rounded-full bg-error-500" />
           </div>
-          <h3 className="text-lg font-semibold text-error-500">Error</h3>
+          <h3 className="text-lg font-semibold text-error-500">
+            {t("Error", "Error")}
+          </h3>
         </div>
         <p className="text-foreground-secondary text-sm font-medium">
           {error.message}
@@ -179,128 +183,6 @@ function ExitConversationDialog({
   }
 
   return <ExitConversationModal onConfirm={onConfirm} onClose={onClose} />;
-}
-
-export function ConversationPanel({ onClose }: ConversationPanelProps) {
-  const { t } = useTranslation();
-  const controller = useConversationPanelController({ onClose, t });
-  const { ref } = controller;
-
-  const showEmptyState =
-    controller.conversations.length === 0 &&
-    !controller.isFetching &&
-    !controller.error;
-
-  return (
-    <div className="relative h-full" ref={ref}>
-      <LoadingOverlay isVisible={controller.isFetching} />
-
-      <div className="flex flex-col h-full">
-        <ErrorState error={controller.error as Error | null} />
-        <EmptyState
-          isVisible={showEmptyState}
-          title={t("No conversations yet")}
-          subtitle={t("Start a new conversation to begin")}
-        />
-
-        {controller.conversations.length > 0 && (
-          <div className="flex flex-col h-full">
-            <div className="flex-none">
-              <PlaywrightButton
-                show={controller.isPlaywrightRun}
-                label={t("View in Browser")}
-              />
-            </div>
-
-            <div
-              className="flex-1 overflow-y-auto"
-              ref={controller.scrollContainerRef}
-            >
-              <div className="p-3">
-                {controller.conversations.map((conversation) => (
-                  <NavLink
-                    key={conversation.conversation_id}
-                    to={`/c/${conversation.conversation_id}`}
-                    className={({ isActive }) =>
-                      cn(
-                        "block rounded-lg mb-2 border border-transparent hover:border-border",
-                        isActive && "border-brand-500",
-                      )
-                    }
-                    onClick={() =>
-                      controller.handleCardClick(conversation.conversation_id)
-                    }
-                  >
-                    <ConversationCard
-                      title={conversation.title || t("Untitled")}
-                      lastUpdatedAt={conversation.last_updated_at || ""}
-                      createdAt={conversation.created_at || ""}
-                      selectedRepository={(conversation as any).repo}
-                      conversationStatus={conversation.status}
-                      showOptions
-                      conversationId={conversation.conversation_id}
-                      contextMenuOpen={
-                        controller.openContextMenuId ===
-                        conversation.conversation_id
-                      }
-                      onContextMenuToggle={() =>
-                        controller.handleContextMenuToggle(
-                          conversation.conversation_id,
-                        )
-                      }
-                      onClick={() =>
-                        controller.handleCardClick(conversation.conversation_id)
-                      }
-                      onDelete={() =>
-                        controller.handleDeleteProject(
-                          conversation.conversation_id,
-                        )
-                      }
-                      onStop={() =>
-                        controller.handleStopConversation(
-                          conversation.conversation_id,
-                        )
-                      }
-                      onChangeTitle={(title) =>
-                        controller.handleConversationTitleChange(
-                          conversation.conversation_id,
-                          title,
-                        )
-                      }
-                      variant="default"
-                    />
-                  </NavLink>
-                ))}
-              </div>
-              <FetchMoreIndicator isVisible={controller.isFetchingNextPage} />
-            </div>
-          </div>
-        )}
-      </div>
-
-      <ConfirmDeleteDialog
-        isOpen={controller.confirmDeleteModalVisible}
-        onConfirm={() => {
-          controller.handleConfirmDelete();
-          controller.closeDeleteModal();
-        }}
-        onCancel={controller.closeDeleteModal}
-      />
-      <ConfirmStopDialog
-        isOpen={controller.confirmStopModalVisible}
-        onConfirm={() => {
-          controller.handleConfirmStop();
-          controller.closeStopModal();
-        }}
-        onCancel={controller.closeStopModal}
-      />
-      <ExitConversationDialog
-        isOpen={controller.confirmExitConversationModalVisible}
-        onConfirm={controller.handleConfirmExit}
-        onClose={() => controller.setConfirmExitConversationModalVisible(false)}
-      />
-    </div>
-  );
 }
 
 function useConversationPanelController({
@@ -472,4 +354,135 @@ function useConversationPanelController({
     handleContextMenuToggle,
     handleCardClick,
   };
+}
+
+export function ConversationPanel({ onClose }: ConversationPanelProps) {
+  const { t } = useTranslation();
+  const controller = useConversationPanelController({ onClose, t });
+  const { ref } = controller;
+
+  const showEmptyState =
+    controller.conversations.length === 0 &&
+    !controller.isFetching &&
+    !controller.error;
+
+  return (
+    <div className="relative h-full" ref={ref}>
+      <LoadingOverlay isVisible={controller.isFetching} />
+
+      <div className="flex flex-col h-full">
+        <ErrorState error={controller.error as Error | null} />
+        <EmptyState
+          isVisible={showEmptyState}
+          title={t("No conversations yet")}
+          subtitle={t("Start a new conversation to begin")}
+        />
+
+        {controller.conversations.length > 0 && (
+          <div className="flex flex-col h-full">
+            <div className="flex-none">
+              <PlaywrightButton
+                show={controller.isPlaywrightRun}
+                label={t("View in Browser")}
+              />
+            </div>
+
+            <div
+              className="flex-1 overflow-y-auto"
+              ref={controller.scrollContainerRef}
+            >
+              <div className="p-3">
+                {controller.conversations.map((conversation) => (
+                  <NavLink
+                    key={conversation.conversation_id}
+                    to={`/c/${conversation.conversation_id}`}
+                    className={({ isActive }) =>
+                      cn(
+                        "block rounded-lg mb-2 border border-transparent hover:border-border",
+                        isActive && "border-brand-500",
+                      )
+                    }
+                    onClick={() =>
+                      controller.handleCardClick(conversation.conversation_id)
+                    }
+                  >
+                    <ConversationCard
+                      title={conversation.title || t("Untitled")}
+                      lastUpdatedAt={conversation.last_updated_at || ""}
+                      createdAt={conversation.created_at || ""}
+                      selectedRepository={
+                        conversation.selected_repository
+                          ? {
+                              selected_repository:
+                                conversation.selected_repository,
+                              selected_branch: conversation.selected_branch,
+                              git_provider: conversation.git_provider,
+                            }
+                          : null
+                      }
+                      conversationStatus={conversation.status}
+                      showOptions
+                      conversationId={conversation.conversation_id}
+                      contextMenuOpen={
+                        controller.openContextMenuId ===
+                        conversation.conversation_id
+                      }
+                      onContextMenuToggle={() =>
+                        controller.handleContextMenuToggle(
+                          conversation.conversation_id,
+                        )
+                      }
+                      onClick={() =>
+                        controller.handleCardClick(conversation.conversation_id)
+                      }
+                      onDelete={() =>
+                        controller.handleDeleteProject(
+                          conversation.conversation_id,
+                        )
+                      }
+                      onStop={() =>
+                        controller.handleStopConversation(
+                          conversation.conversation_id,
+                        )
+                      }
+                      onChangeTitle={(title) =>
+                        controller.handleConversationTitleChange(
+                          conversation.conversation_id,
+                          title,
+                        )
+                      }
+                      variant="default"
+                    />
+                  </NavLink>
+                ))}
+              </div>
+              <FetchMoreIndicator isVisible={controller.isFetchingNextPage} />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <ConfirmDeleteDialog
+        isOpen={controller.confirmDeleteModalVisible}
+        onConfirm={() => {
+          controller.handleConfirmDelete();
+          controller.closeDeleteModal();
+        }}
+        onCancel={controller.closeDeleteModal}
+      />
+      <ConfirmStopDialog
+        isOpen={controller.confirmStopModalVisible}
+        onConfirm={() => {
+          controller.handleConfirmStop();
+          controller.closeStopModal();
+        }}
+        onCancel={controller.closeStopModal}
+      />
+      <ExitConversationDialog
+        isOpen={controller.confirmExitConversationModalVisible}
+        onConfirm={controller.handleConfirmExit}
+        onClose={() => controller.setConfirmExitConversationModalVisible(false)}
+      />
+    </div>
+  );
 }

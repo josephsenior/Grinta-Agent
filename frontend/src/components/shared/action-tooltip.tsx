@@ -30,7 +30,14 @@ export function ActionTooltip({ type, onClick }: ActionTooltipProps) {
       });
 
   return (
-    <Tooltip content={content} closeDelay={100}>
+    <Tooltip
+      content={content}
+      closeDelay={100}
+      classNames={{
+        base: "bg-[rgba(0,0,0,0.9)] border border-[#1a1a1a] py-2 px-3 rounded-[6px] text-xs shadow-xl before:bg-[rgba(0,0,0,0.9)] before:border-[#1a1a1a] [&>svg]:text-[#8b5cf6] [&>svg]:fill-[#8b5cf6]",
+        content: "text-white",
+      }}
+    >
       <button
         data-testid={`action-${type}-button`}
         type="button"

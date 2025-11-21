@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
+import { logger } from "#/utils/logger";
 
 export type Theme = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
@@ -77,15 +78,20 @@ export function ThemeProvider({
         return stored as Theme;
       }
     } catch (error) {
-      console.error("Failed to read theme from localStorage:", error);
+      logger.error("Failed to read theme from localStorage:", error);
     }
 
     return defaultTheme;
   });
 
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() =>
-    resolveTheme(theme),
-  );
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() => {
+    const resolved = resolveTheme(theme);
+    // Apply theme immediately on mount to prevent flash
+    if (typeof window !== "undefined") {
+      applyTheme(resolved);
+    }
+    return resolved;
+  });
 
   // Update resolved theme when theme or system preference changes
   useEffect(() => {
@@ -96,7 +102,9 @@ export function ThemeProvider({
 
   // Listen for system theme changes
   useEffect(() => {
-    if (theme !== "system") return;
+    if (theme !== "system") {
+      return undefined;
+    }
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
@@ -109,14 +117,22 @@ export function ThemeProvider({
     // Modern browsers
     if (mediaQuery.addEventListener) {
       mediaQuery.addEventListener("change", handleChange);
-      return () => mediaQuery.removeEventListener("change", handleChange);
+      return () => {
+        mediaQuery.removeEventListener("change", handleChange);
+        return undefined;
+      };
     }
 
     // Fallback for older browsers
     if (mediaQuery.addListener) {
       mediaQuery.addListener(handleChange);
-      return () => mediaQuery.removeListener(handleChange);
+      return () => {
+        mediaQuery.removeListener(handleChange);
+        return undefined;
+      };
     }
+
+    return undefined;
   }, [theme]);
 
   // Set theme and persist to localStorage
@@ -126,7 +142,7 @@ export function ThemeProvider({
     try {
       localStorage.setItem(STORAGE_KEY, newTheme);
     } catch (error) {
-      console.error("Failed to save theme to localStorage:", error);
+      logger.error("Failed to save theme to localStorage:", error);
     }
   }, []);
 
@@ -135,12 +151,15 @@ export function ThemeProvider({
     setTheme(resolvedTheme === "dark" ? "light" : "dark");
   }, [resolvedTheme, setTheme]);
 
-  const value = {
-    theme,
-    resolvedTheme,
-    setTheme,
-    toggleTheme,
-  };
+  const value = React.useMemo(
+    () => ({
+      theme,
+      resolvedTheme,
+      setTheme,
+      toggleTheme,
+    }),
+    [theme, resolvedTheme, setTheme, toggleTheme],
+  );
 
   return (
     <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

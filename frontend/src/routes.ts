@@ -17,6 +17,7 @@ export default [
     route("profile", "routes/profile.tsx"), // Profile page
     route("help", "routes/help.tsx"),
     route("notifications", "routes/notifications.tsx"),
+    route("search", "routes/search.tsx"),
     route("accept-tos", "routes/accept-tos.tsx"),
     route("about", "routes/about.tsx"),
     route("pricing", "routes/pricing.tsx"),
@@ -29,7 +30,7 @@ export default [
       route("user", "routes/user-settings.tsx"),
       route("integrations", "routes/git-settings.tsx"),
       route("databases", "routes/database-settings.tsx"),
-      route("knowledge-base", "routes/settings.knowledge-base.tsx"),
+      route("knowledge-base", "routes/knowledge-base-settings.tsx"),
       route("memory", "routes/memory-settings.tsx"),
       route("analytics", "routes/analytics-settings.tsx"),
       route("prompts", "routes/prompts-settings.tsx"),
@@ -52,7 +53,6 @@ export default [
       route("terminal", "routes/terminal-tab.tsx"),
       route("vscode", "routes/vscode-tab.tsx"),
     ]),
-    route("microagent-management", "routes/microagent-management.tsx"),
     // Admin routes (requires admin role)
     route("admin/users", "routes/admin/users.tsx"),
     route("admin/users/:userId", "routes/admin/users/[userId].tsx"),

@@ -5,6 +5,7 @@ import { useSettings } from "#/hooks/query/use-settings";
 import { Forge } from "#/api/forge-axios";
 import { displaySuccessToast } from "#/utils/custom-toast-handlers";
 import { ThemeToggle } from "#/components/ui/theme-toggle";
+import { logger } from "#/utils/logger";
 
 // Email validation regex pattern
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -185,8 +186,7 @@ function UserSettingsScreen() {
       displaySuccessToast(t("SETTINGS$EMAIL_SAVED_SUCCESSFULLY"));
       queryClient.invalidateQueries({ queryKey: ["settings"] });
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(t("SETTINGS$FAILED_TO_SAVE_EMAIL"), error);
+      logger.error(t("SETTINGS$FAILED_TO_SAVE_EMAIL"), error);
     } finally {
       setIsSaving(false);
     }
@@ -199,8 +199,7 @@ function UserSettingsScreen() {
       // Display toast notification instead of setting state
       displaySuccessToast(t("SETTINGS$VERIFICATION_EMAIL_SENT"));
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(t("SETTINGS$FAILED_TO_RESEND_VERIFICATION"), error);
+      logger.error(t("SETTINGS$FAILED_TO_RESEND_VERIFICATION"), error);
     } finally {
       setIsResendingVerification(false);
     }
@@ -230,7 +229,7 @@ function UserSettingsScreen() {
                   <div className="absolute inset-y-0 left-1/2 w-1/2 bg-gradient-to-r from-brand-500/5 via-accent-500/3 to-transparent blur-2xl" />
                 </div>
                 <div className="relative z-[1]">
-                  <h2 className="text-lg font-semibold text-foreground mb-4">
+                  <h2 className="text-lg font-semibold text-foreground mb-4 w-full">
                     {t("SETTINGS$USER_EMAIL", "Email Settings")}
                   </h2>
                   <EmailInputSection
@@ -268,13 +267,13 @@ function UserSettingsScreen() {
                   >
                     <h3
                       id={themeTitleId}
-                      className="text-xl font-semibold text-foreground"
+                      className="text-xl font-semibold text-foreground w-full"
                     >
                       {t("userSettings.theme.title", "Theme Preference")}
                     </h3>
                     <p
                       id={themeDescriptionId}
-                      className="text-sm text-foreground-secondary mb-2"
+                      className="text-sm text-foreground-secondary mb-2 w-full"
                     >
                       {t(
                         "userSettings.theme.description",

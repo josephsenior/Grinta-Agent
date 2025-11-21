@@ -1,4 +1,6 @@
 import React, { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
+import { I18nKey } from "#/i18n/declaration";
 
 interface RiskDataPoint {
   timestamp: string;
@@ -18,6 +20,7 @@ export function RiskLevelChart({
   maxDataPoints = 20,
   className = "",
 }: RiskLevelChartProps) {
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -54,7 +57,7 @@ export function RiskLevelChart({
     // Draw grid lines
     ctx.strokeStyle = "#374151";
     ctx.lineWidth = 1;
-    for (let i = 0; i <= 4; i++) {
+    for (let i = 0; i <= 4; i += 1) {
       const y = padding.top + (chartHeight / 4) * i;
       ctx.beginPath();
       ctx.moveTo(padding.left, y);
@@ -99,7 +102,7 @@ export function RiskLevelChart({
       });
 
       // Draw bottom line (previous data or baseline)
-      for (let i = displayData.length - 1; i >= 0; i--) {
+      for (let i = displayData.length - 1; i >= 0; i -= 1) {
         const x = padding.left + (chartWidth / (displayData.length - 1)) * i;
         const value = previousData?.[i] || 0;
         const y = padding.top + chartHeight - (value / maxValue) * chartHeight;
@@ -170,15 +173,21 @@ export function RiskLevelChart({
       <div className="flex items-center justify-center gap-4 mt-4">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-green-500" />
-          <span className="text-xs text-gray-400">Low Risk</span>
+          <span className="text-xs text-gray-400">
+            {t(I18nKey.MONITORING$LOW_RISK)}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-yellow-500" />
-          <span className="text-xs text-gray-400">Medium Risk</span>
+          <span className="text-xs text-gray-400">
+            {t(I18nKey.MONITORING$MEDIUM_RISK)}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-red-500" />
-          <span className="text-xs text-gray-400">High Risk</span>
+          <span className="text-xs text-gray-400">
+            {t(I18nKey.MONITORING$HIGH_RISK)}
+          </span>
         </div>
       </div>
     </div>

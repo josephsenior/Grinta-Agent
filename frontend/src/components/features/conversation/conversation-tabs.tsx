@@ -2,13 +2,10 @@ import { useTranslation } from "react-i18next";
 import { TbFileCode, TbTerminal2, TbWorld } from "react-icons/tb";
 import { Container } from "#/components/layout/container";
 import { I18nKey } from "#/i18n/declaration";
-import { useRuntimeIsReady } from "#/hooks/use-runtime-is-ready";
 import { TabContent } from "#/components/layout/tab-content";
 import { useConversationId } from "#/hooks/use-conversation-id";
 
 export function ConversationTabs() {
-  const runtimeIsReady = useRuntimeIsReady();
-
   const { conversationId } = useConversationId();
 
   const { t } = useTranslation();
@@ -21,7 +18,7 @@ export function ConversationTabs() {
       variant="dark"
       labels={[
         {
-          label: "Files",
+          label: "Workspace",
           to: "",
           icon: <TbFileCode className="w-4 h-4" />,
         },

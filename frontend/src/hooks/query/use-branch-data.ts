@@ -3,6 +3,11 @@ import { useRepositoryBranchesPaginated } from "./use-repository-branches";
 import { useSearchBranches } from "./use-search-branches";
 import { Branch } from "#/types/git";
 import { Provider } from "#/types/settings";
+import {
+  shouldUseSearchResults,
+  prioritizeDefaultBranch,
+  mergeDefaultBranchIfNeeded,
+} from "./use-branch-data/branch-selection";
 
 export function useBranchData(
   repository: string | null,
@@ -63,41 +68,30 @@ export function useBranchData(
 
   // Get branches to display with default branch prioritized
   const branches = useMemo(() => {
-    // Don't use search results if input exactly matches selected branch
-    const shouldUseSearch =
-      processedSearchInput &&
-      searchData &&
-      !(selectedBranch && inputValue === selectedBranch.name);
+    const useSearch = shouldUseSearchResults(
+      processedSearchInput,
+      searchData,
+      selectedBranch ?? null,
+      inputValue,
+    );
 
-    let branchesToUse = shouldUseSearch ? searchData : allBranches;
+    let branchesToUse: Branch[] = useSearch ? (searchData ?? []) : allBranches;
 
-    // If we have a default branch, ensure it's at the top of the list
     if (defaultBranch) {
-      // Use the already computed defaultBranchInLoaded or check in current branches
-      let defaultBranchObj = shouldUseSearch
-        ? branchesToUse.find((branch) => branch.name === defaultBranch)
-        : defaultBranchInLoaded;
-
-      // If not found in current branches, check if we have it from the default branch search
-      if (
-        !defaultBranchObj &&
-        defaultBranchData &&
-        defaultBranchData.length > 0
-      ) {
-        defaultBranchObj = defaultBranchData.find(
-          (branch) => branch.name === defaultBranch,
+      if (useSearch) {
+        branchesToUse = mergeDefaultBranchIfNeeded(
+          branchesToUse,
+          defaultBranch,
+          defaultBranchData,
         );
-
-        // Add the default branch to the beginning of the list
-        if (defaultBranchObj) {
-          branchesToUse = [defaultBranchObj, ...branchesToUse];
-        }
-      } else if (defaultBranchObj) {
-        // If found in current branches, move it to the front
-        const otherBranches = branchesToUse.filter(
-          (branch) => branch.name !== defaultBranch,
-        );
-        branchesToUse = [defaultBranchObj, ...otherBranches];
+      } else {
+        branchesToUse = defaultBranchInLoaded
+          ? prioritizeDefaultBranch(branchesToUse, defaultBranch)
+          : mergeDefaultBranchIfNeeded(
+              branchesToUse,
+              defaultBranch,
+              defaultBranchData,
+            );
       }
     }
 

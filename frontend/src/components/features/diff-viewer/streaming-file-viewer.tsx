@@ -2,8 +2,10 @@ import React from "react";
 import { Editor } from "@monaco-editor/react";
 import { editor as editor_t } from "monaco-editor";
 import { Copy, Check, FileText, Zap } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "#/utils/utils";
 import { getLanguageFromPath } from "#/utils/get-language-from-path";
+import { logger } from "#/utils/logger";
 
 interface StreamingFileViewerProps {
   path: string;
@@ -18,6 +20,7 @@ export function StreamingFileViewer({
   isStreaming = false,
   className,
 }: StreamingFileViewerProps) {
+  const { t } = useTranslation();
   const editorRef = React.useRef<editor_t.IStandaloneCodeEditor | null>(null);
   const [copied, setCopied] = React.useState(false);
   const [lineCount, setLineCount] = React.useState(0);
@@ -46,7 +49,6 @@ export function StreamingFileViewer({
       readOnly: true,
       minimap: { enabled: false },
       scrollBeyondLastLine: false,
-      wordWrap: "on",
       lineNumbers: "on",
       folding: false,
       automaticLayout: true,
@@ -65,6 +67,9 @@ export function StreamingFileViewer({
       // Cleanup on unmount
       return () => disposable.dispose();
     }
+
+    // Return undefined if no model
+    return undefined;
   };
 
   const copyToClipboard = async () => {
@@ -73,7 +78,7 @@ export function StreamingFileViewer({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error("Failed to copy to clipboard:", err);
+      logger.error("Failed to copy to clipboard:", err);
     }
   };
 
@@ -93,16 +98,19 @@ export function StreamingFileViewer({
               <div className="flex items-center gap-1.5">
                 <Zap className="w-3.5 h-3.5 text-violet-500 animate-pulse" />
                 <span className="text-xs text-violet-500 font-medium">
-                  Streaming
+                  {t("streamingFileViewer.streaming", "Streaming")}
                 </span>
               </div>
             )}
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-foreground-secondary">
-              {lineCount} lines
+              {t("streamingFileViewer.lineCount", "{{count}} lines", {
+                count: lineCount,
+              })}
             </span>
             <button
+              type="button"
               onClick={copyToClipboard}
               className="flex items-center gap-1.5 px-2 py-1 text-xs text-foreground-secondary hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
               title="Copy to clipboard"
@@ -142,7 +150,6 @@ export function StreamingFileViewer({
             readOnly: true,
             minimap: { enabled: false },
             scrollBeyondLastLine: false,
-            wordWrap: "on",
             lineNumbers: "on",
             folding: false,
             automaticLayout: true,
