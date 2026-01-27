@@ -2,10 +2,8 @@ import {
   Trash,
   Power,
   Pencil,
-  Download,
   Wallet,
   Wrench,
-  Bot,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useMemo } from "react";
@@ -24,8 +22,6 @@ interface ConversationCardContextMenuProps {
   onEdit?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   onDisplayCost?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   onShowAgentTools?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  onShowMicroagents?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  onDownloadViaVSCode?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   position?: "top" | "bottom";
 }
 
@@ -85,9 +81,7 @@ function MenuSectionRenderer({
 
 function buildMenuSections(handlers: {
   onEdit?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  onDownloadViaVSCode?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   onShowAgentTools?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  onShowMicroagents?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   onDisplayCost?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   onStop?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   onDelete?: (event: React.MouseEvent<HTMLButtonElement>) => void;
@@ -102,39 +96,12 @@ function buildMenuSections(handlers: {
         i18nKey: I18nKey.BUTTON$EDIT_TITLE,
         onClick: handlers.onEdit,
       },
-    ]),
-  );
-
-  sections.push(
-    createMenuSection([
-      handlers.onDownloadViaVSCode && {
-        testId: "download-vscode-button",
-        icon: Download,
-        i18nKey: I18nKey.BUTTON$DOWNLOAD_VIA_VSCODE,
-        onClick: handlers.onDownloadViaVSCode,
-      },
-    ]),
-  );
-
-  sections.push(
-    createMenuSection([
       handlers.onShowAgentTools && {
         testId: "show-agent-tools-button",
         icon: Wrench,
         i18nKey: I18nKey.BUTTON$SHOW_AGENT_TOOLS_AND_METADATA,
         onClick: handlers.onShowAgentTools,
       },
-      handlers.onShowMicroagents && {
-        testId: "show-microagents-button",
-        icon: Bot,
-        i18nKey: I18nKey.CONVERSATION$SHOW_MICROAGENTS,
-        onClick: handlers.onShowMicroagents,
-      },
-    ]),
-  );
-
-  sections.push(
-    createMenuSection([
       handlers.onDisplayCost && {
         testId: "display-cost-button",
         icon: Wallet,
@@ -149,7 +116,7 @@ function buildMenuSections(handlers: {
       handlers.onStop && {
         testId: "stop-button",
         icon: Power,
-        i18nKey: I18nKey.BUTTON$PAUSE,
+        i18nKey: I18nKey.BUTTON$STOP,
         onClick: handlers.onStop,
       },
       handlers.onDelete && {
@@ -171,8 +138,6 @@ export function ConversationCardContextMenu({
   onEdit,
   onDisplayCost,
   onShowAgentTools,
-  onShowMicroagents,
-  onDownloadViaVSCode,
   position = "bottom",
 }: ConversationCardContextMenuProps) {
   const { t } = useTranslation();
@@ -182,18 +147,14 @@ export function ConversationCardContextMenu({
     () =>
       buildMenuSections({
         onEdit,
-        onDownloadViaVSCode,
         onShowAgentTools,
-        onShowMicroagents,
         onDisplayCost,
         onStop,
         onDelete,
       }),
     [
       onEdit,
-      onDownloadViaVSCode,
       onShowAgentTools,
-      onShowMicroagents,
       onDisplayCost,
       onStop,
       onDelete,

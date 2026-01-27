@@ -19,9 +19,7 @@ from forge.events.observation.browse import BrowserOutputObservation
 from forge.events.observation.commands import (
     CmdOutputMetadata,
     CmdOutputObservation,
-    IPythonRunCellObservation,
 )
-from forge.events.observation.delegate import AgentDelegateObservation
 from forge.events.observation.empty import NullObservation
 from forge.events.observation.error import ErrorObservation
 from forge.events.observation.file_download import FileDownloadObservation
@@ -39,12 +37,10 @@ from forge.events.observation.task_tracking import TaskTrackingObservation
 observations = (
     NullObservation,
     CmdOutputObservation,
-    IPythonRunCellObservation,
     BrowserOutputObservation,
     FileReadObservation,
     FileWriteObservation,
     FileEditObservation,
-    AgentDelegateObservation,
     SuccessObservation,
     ErrorObservation,
     AgentStateChangedObservation,
@@ -222,9 +218,9 @@ def observation_from_dict(observation: dict) -> Observation:
     observation_class = _get_observation_class(observation["observation"])
     content, extras, metadata = _extract_observation_data(observation)
 
-    if observation_class is CmdOutputObservation:
+    if observation_class.__name__ == "CmdOutputObservation":
         _process_cmd_output_metadata(extras)
-    if observation_class is RecallObservation:
+    if observation_class.__name__ == "RecallObservation":
         _process_recall_observation_data(extras)
 
     obs = observation_class(content=content, **extras)

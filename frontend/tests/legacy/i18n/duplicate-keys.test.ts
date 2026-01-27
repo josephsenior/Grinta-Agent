@@ -7,7 +7,7 @@ describe("translation.json", () => {
     // Read the translation.json file
     const translationPath = path.join(
       __dirname,
-      "../../src/i18n/translation.json",
+      "../../../src/i18n/translation.json",
     );
     const translationContent = fs.readFileSync(translationPath, "utf-8");
 
@@ -45,7 +45,7 @@ describe("translation.json", () => {
     // Read the translation.json file
     const translationPath = path.join(
       __dirname,
-      "../../src/i18n/translation.json",
+      "../../../src/i18n/translation.json",
     );
     const translationContent = fs.readFileSync(translationPath, "utf-8");
     const translations = JSON.parse(translationContent);

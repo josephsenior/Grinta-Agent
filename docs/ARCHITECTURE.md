@@ -4,6 +4,15 @@
 
 Forge is a production-grade AI coding agent system built on a 5-layer architecture, currently optimized for the CodeAct agent (beta launch focus).
 
+**Last Updated:** 2025-01-27
+
+### Recent Improvements
+- ✅ **Consistent Patterns** - Type-safe validation across 42 files, 100+ models
+- ✅ **Security Enhancements** - Request limits, SQL injection blocking, resource limits, timeouts
+- ✅ **Runtime Optimization** - Image size reduced from ~13GB to ~8-10GB
+- ✅ **Dependency Cleanup** - Removed evaluation, ML dependencies, unused packages
+- ✅ **OpenVSCode Removal** - Removed unused OpenVSCode server from runtime
+
 ### Code Quality
 - **144,110 lines of production backend code** (Python)
 - **101,417 lines of production frontend code** (TypeScript/TSX)
@@ -27,7 +36,7 @@ Forge is a production-grade AI coding agent system built on a 5-layer architectu
 └──────────────────────┬──────────────────────────────────┘
                        │
 ┌──────────────────────▼──────────────────────────────────┐
-│  Layer 2: FastAPI Server (32 Route Files)               │
+│  Layer 2: FastAPI Server (31 Route Files)               │
 │  • REST API with OpenAPI documentation                  │
 │  • WebSocket for real-time updates                      │
 │  • Middleware: CORS, Security, Rate Limiting, Caching   │
@@ -38,13 +47,13 @@ Forge is a production-grade AI coding agent system built on a 5-layer architectu
 │  Layer 3: CodeAct Agent (Beta Focus)                    │
 │  • Event-driven architecture (EventStream)              │
 │  • State machine (INIT→RUNNING→PAUSED→FINISHED)         │
-│  • Tool execution (edit, bash, browse, IPython)         │
+│  • Tool execution (edit, bash, browse)                 │
 │  • Circuit breaker for safety                           │
 └──────────────────────┬──────────────────────────────────┘
                        │
 ┌──────────────────────▼──────────────────────────────────┐
 │  Layer 4: LLM Abstraction (200+ Models)                 │
-│  • LiteLLM integration (30+ providers)                  │
+│  • Direct SDK integration (OpenAI, Anthropic, Gemini)   │
 │  • Secure API key management                            │
 │  • Feature detection (function calling, caching)        │
 │  • Cost tracking and metrics                            │
@@ -56,6 +65,8 @@ Forge is a production-grade AI coding agent system built on a 5-layer architectu
 │  • Warm/Single-use pools with per-key policies          │
 │  • Watchdog for idle/stuck termination                  │
 │  • Scaling advisories + Prometheus telemetry            │
+│  • Docker volumes for workspace isolation               │
+│  • Automatic volume creation per conversation           │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -71,8 +82,8 @@ Event published to EventStream
 AgentController.step() invoked
    ↓
 CodeAct agent analyzes state and generates prompt
-   ↓
-LLM.completion() called via LiteLLM
+↓
+LLM.completion() called via direct SDK clients
    ↓
 Response parsed into Action (FileEditAction, CmdRunAction, etc.)
    ↓
@@ -108,7 +119,7 @@ ProviderConfigManager.validate_and_clean_params()
    ↓
 Environment variables set (OPENROUTER_API_KEY=...)
    ↓
-LiteLLM.completion(model="openrouter/gpt-4o", ...)
+LLM.completion(model="openrouter/gpt-4o", ...)
    ↓
 Response + cost tracking + metrics
 ```
@@ -243,7 +254,6 @@ To keep the `AgentController` lean and production-focused, the controller delega
 | `BudgetGuardService` | Budget tracking and enforcement | `forge/controller/services/budget_guard_service.py` |
 | `SafetyService` | Safety validation and checks | `forge/controller/services/safety_service.py` |
 | `StateTransitionService` | State machine transitions | `forge/controller/services/state_transition_service.py` |
-| `DelegateService` | Delegate spawn/teardown and bookkeeping | `forge/controller/services/delegate_service.py` |
 
 `AgentController` composes these services in `__init__`, so new production safeguards can be added without expanding the controller's surface area. When integrating new behavior, prefer creating a service over extending the controller directly.
 
@@ -256,7 +266,7 @@ To avoid digging through logs when a run misbehaves, Forge now exposes a consoli
 - event-stream backpressure metrics for the session’s `EventStream`
 - warnings array (e.g., `iteration_limit_reached`, `retry_pending`, `stuck_detector_triggered`)
 
-This endpoint powers dashboards/alerts and mirrors the prompt-optimization health snapshot so operators can inspect safeguards across both tiers.
+This endpoint powers dashboards/alerts.
 
 ##### Runtime / Process Manager Health (New)
 
@@ -269,8 +279,7 @@ Optional middlewares can be toggled via `agent_config`:
 
 **Available Actions:**
 - `FileEditAction` - Edit files with structure-aware parsing
-- `CmdRunAction` - Execute shell commands
-- `IPythonRunCellAction` - Run Python code
+- `CmdRunAction` - Run shell commands
 - `BrowseInteractiveAction` - Browser automation
 - `MessageAction` - Communicate with user
 - `AgentFinishAction` - Complete task
@@ -324,9 +333,9 @@ forge_runtime_pool_idle_reclaim_total            # TTL-driven warm reclaims
 forge_runtime_pool_eviction_total                # Capacity evictions
 forge_runtime_scaling_signals_overprovision      # Idle-reclaim spikes
 forge_runtime_scaling_signals_capacity_exhausted # Eviction spikes
-metasop_guardrail_concurrency_total              # Active step concurrency
-metasop_guardrail_concurrency_peak               # Peak concurrency
-metasop_guardrail_runtime_avg_ms                 # Avg per-step runtime
+guardrail_concurrency_total              # Active step concurrency
+guardrail_concurrency_peak               # Peak concurrency
+guardrail_runtime_avg_ms                 # Avg per-step runtime
 ```
 
 **Alerting Rules (6):**
@@ -352,7 +361,7 @@ metasop_guardrail_runtime_avg_ms                 # Avg per-step runtime
 
 **Features:**
 - FastMCP server implementation
-- GitHub/Bitbucket/GitLab integrations via MCP
+- GitHub integration via MCP
 - Marketplace support (shadcn-ui MCP server)
 - Tool registration and discovery
 - SSE and HTTP transport support
@@ -393,7 +402,7 @@ Cache-Control: no-cache, no-store, must-revalidate
 - **Framework:** FastAPI (async, high performance)
 - **Server:** Uvicorn with httptools (production: gunicorn with UvicornWorker)
 - **Real-time:** Socket.IO (Python socketio library)
-- **LLM Integration:** LiteLLM (200+ models, 30+ providers)
+- **LLM Integration:** Direct SDK (OpenAI, Anthropic, Gemini)
 - **Database:** SQLAlchemy (async) with conversation storage
 - **Containerization:** Docker (with Kubernetes support)
 - **Monitoring:** Prometheus + Grafana (3 dashboards, 30+ metrics)
@@ -448,8 +457,6 @@ SECRET_KEY=...
 ALLOWED_ORIGINS=http://localhost:3000
 
 # Features (Beta)
-ENABLE_METASOP=false
-ENABLE_ACE=true
 ENABLE_BROWSER=true
 ```
 
@@ -490,7 +497,7 @@ For deep dives into specific components:
 
 ## API Routes (32 Route Files)
 
-The FastAPI server includes **32 route modules** covering all backend functionality:
+The FastAPI server includes **31 route modules** covering all backend functionality:
 
 | Route | Purpose | Endpoints |
 |-------|---------|-----------|
@@ -510,23 +517,19 @@ The FastAPI server includes **32 route modules** covering all backend functional
 | `knowledge_base.py` | Knowledge base management | `/api/knowledge/*` |
 | `manage_conversations.py` | Conversation administration | `/api/conversations/*` |
 | `mcp.py` | Model Context Protocol server | `/mcp/*` |
-| `memory.py` | Memory and vector storage | `/api/memory/*` |
-| `metasop.py` | Multi-agent orchestration | `/api/metasop/*` |
-| `metrics_expansion.py` | Expanded metrics collection | `/api/monitoring/metrics/expanded` |
+| `memory.py`| memory.py | Memory and vector storage | `/api/memory/*` |
+| metrics_expansion.py | Expanded metrics collection | `/api/monitoring/metrics/expanded` |
 | `monitoring.py` | System monitoring and health | `/api/monitoring/*` |
 | `notifications.py` | User notifications | `/api/notifications/*` |
 | `profile.py` | User profile and statistics | `/api/profile/*` |
-| `prompt_optimization.py` | Prompt optimization | `/api/optimization/*` |
-| `prompts.py` | Prompt management | `/api/prompts/*` |
 | `public.py` | Public API endpoints | `/api/public/*` |
 | `search.py` | Global search across resources | `/api/search/*` |
 | `secrets.py` | Secrets management | `/api/secrets/*` |
 | `security.py` | Security features | `/api/security/*` |
 | `settings.py` | User settings | `/api/settings/*` |
 | `slack.py` | Slack integration | `/api/slack/*` |
-| `snippets.py` | Code snippets | `/api/snippets/*` |
 | `templates.py` | Template management | `/api/templates/*` |
-| `trajectory.py` | Agent trajectory tracking | `/api/trajectory/*` |
+| `trajectory.py` | Agent trajectory tracking and replay | `/api/trajectory/*` |
 | `user_management.py` | User administration | `/api/users/*` |
 
 ## Middleware Stack (14 Middleware Components)
@@ -596,7 +599,7 @@ This section provides a comprehensive breakdown of each major folder in the back
 - **`codeact_agent/`** (56 files) - Primary agent for beta launch
   - Core agent logic with 29 classes/functions
   - 19 Jinja2 prompt templates (system prompts, user prompts, examples)
-  - Tools: bash, file editing, IPython, browser, database, task tracking
+  - Tools: bash, file editing, browser, database, task tracking
   - Features: anti-hallucination system, memory manager, planner, safety validator
   - Advanced tools: ultimate_editor, atomic_refactor, llm_based_edit
   
@@ -611,9 +614,6 @@ This section provides a comprehensive breakdown of each major folder in the back
 - **`loc_agent/`** (9 files) - Lines of Code analysis agent
   - Code structure exploration
   - Graph-based code analysis
-  
-- **`visualbrowsing_agent/`** (3 files) - Visual web browsing
-  - Screenshot-based web interaction
   
 - **`dummy_agent/`** (2 files) - Testing/mock agent
 
@@ -759,8 +759,6 @@ This section provides a comprehensive breakdown of each major folder in the back
   - `auth.py` - Authentication
   - `monitoring.py` - System monitoring
   - `mcp.py` - Model Context Protocol server
-  - `metasop.py` - Multi-agent orchestration
-  - `prompt_optimization.py` - Prompt optimization API
   - `memory.py` - Memory management
   - `knowledge_base.py` - Knowledge base API
   - `security.py` - Security features
@@ -768,7 +766,7 @@ This section provides a comprehensive breakdown of each major folder in the back
   - `slack.py` - Slack integration
   - `analytics.py` - Usage analytics
   - `trajectory.py` - Agent trajectory tracking
-  - And 14 more route modules...
+  - And 12 more route modules...
   
 - **`middleware/`** (14 files) - Middleware components
   - `auth.py` - JWT authentication
@@ -850,16 +848,23 @@ This section provides a comprehensive breakdown of each major folder in the back
   - `action_execution/action_execution_client.py` - Action client
   
 - **`plugins/`** - Runtime plugins
-  - `jupyter/` - Jupyter notebook support
   - `agent_skills/` - Agent skill plugins
     - `file_editor/` - File editing tools
+      - **Ultimate Editor:** Structure-aware editing for agents (Tree-sitter, symbol-based)
+      - **FileEditor:** Low-level runtime I/O operations (atomic writes, transactions)
+      - See [File Editing System Architecture](./architecture/file-editing-system.md) for details
     - `file_ops/` - File operations
     - `file_reader/` - File reading
     - `repo_ops/` - Repository operations
     - `database/` - Database tools
-  - `vscode/` - VS Code integration
+  - `vscode/` - Embedded VS Code support
   
 - **Core Runtime Files:**
+  - `runtime/utils/file_editor.py` - **FileEditor:** Production-grade file I/O with transaction support
+  - `runtime/utils/diff.py` - Unified diff generation with binary file detection
+  - `runtime/utils/edit.py` - File editing utilities
+  - `linter/impl.py` - Production-grade linter with caching (ruff, pylint)
+  - `runtime/plugins/agent_skills/repo_ops/indexing.py` - Code indexing with incremental updates
   - `base.py` - Runtime interface
   - `action_execution_server.py` - Action execution server
   - `process_manager.py` - Process management
@@ -887,7 +892,7 @@ This section provides a comprehensive breakdown of each major folder in the back
 - `tool_names.py`, `tool_types.py` - Tool definitions
 
 **Key Features:**
-- 200+ models supported via LiteLLM
+- Support for major providers (OpenAI, Anthropic, Google, xAI) via direct SDKs
 - 30+ provider configurations
 - Secure API key management
 - Feature detection (function calling, prompt caching, vision)
@@ -897,7 +902,7 @@ This section provides a comprehensive breakdown of each major folder in the back
 
 ### `forge/integrations/` - External Integrations
 
-**Purpose:** Third-party service integrations (GitHub, GitLab, Bitbucket, Slack).
+**Purpose:** Third-party service integrations (GitHub, Slack).
 
 **Structure:**
 - **`github/`** (9 files) - GitHub integration
@@ -908,15 +913,7 @@ This section provides a comprehensive breakdown of each major folder in the back
     - `prs.py` - Pull request operations
     - `features.py` - Feature detection
     - `resolver.py` - Issue resolver
-  
-- **`gitlab/`** (8 files) - GitLab integration
-  - `gitlab_service.py` - Main GitLab service
-  - `service/` - GitLab API clients
-  
-- **`bitbucket/`** (7 files) - Bitbucket integration
-  - `bitbucket_service.py` - Main Bitbucket service
-  - `service/` - Bitbucket API clients
-  
+
 - **`vscode/`** (14 files) - VS Code extension support
   - TypeScript/JavaScript files
   - Extension configuration
@@ -955,84 +952,11 @@ This section provides a comprehensive breakdown of each major folder in the back
 - Vector storage for semantic search
 - Context window management
 
-### `forge/metasop/` - Multi-Agent Orchestration
-
-**Purpose:** MetaGPT-inspired orchestration layer for multi-agent workflows.
-
-**Structure:**
-- **`ace/`** - ACE Framework (Adaptive Context Engineering)
-  - `ace_framework.py` - Main framework
-  - `context_playbook.py` - Context playbooks
-  - `curator.py` - Context curation
-  - `generator.py` - Context generation
-  - `reflector.py` - Reflection logic
-  - `models.py` - Data models
-  - `prompts.py` - Prompt templates
-  
-- **`core/`** - Core orchestration
-  - `execution.py` - Step execution
-  - `engines.py` - Execution engines
-  - `context.py` - Context management
-  - `artifacts.py` - Artifact handling
-  - `profile.py` - Agent profiles
-  - `reporting.py` - Reporting
-  
-- **`profiles/`** - Agent role profiles
-  - `architect.yaml` - Architect role
-  - `engineer.yaml` - Engineer role
-  - `product_manager.yaml` - PM role
-  - `qa.yaml` - QA role
-  - `ui_designer.yaml` - UI Designer role
-  
-- **`sops/`** - Standard Operating Procedures
-  - `feature_delivery.yaml` - Feature delivery SOP
-  - `feature_delivery_with_ui.yaml` - UI feature delivery
-  
-- **Core Files:**
-  - `orchestrator.py` - Main orchestrator
-  - `router.py` - Agent routing
-  - `remediation.py` - Error remediation
-  - `retry_service.py` - Retry logic
-  - `guardrail_service.py` - Guardrails
-  - `qa_service.py` - Quality assurance
-  - `budget_monitor_service.py` - Budget monitoring
-
 **Total:** 110 files (88 Python files)
-
-### `forge/prompt_optimization/` - Prompt Optimization
-
-**Purpose:** A/B testing and evolution of prompts and tool descriptions.
-
-**Structure:**
-- `optimizer.py` - Main optimizer
-- `evolver.py` - Prompt evolution
-- `tool_optimizer.py` - Tool-specific optimization
-- `tracker.py` - Performance tracking
-- `history_store.py` - History storage
-- `performance_analytics.py` - Analytics
-- `registry.py` - Variant registry
-- `storage.py` - Storage backend
-- **`advanced/`** (6 files) - Advanced strategies
-  - `hierarchical.py` - Hierarchical optimization
-  - `multi_objective.py` - Multi-objective optimization
-  - `context_aware.py` - Context-aware optimization
-  - `strategy_manager.py` - Strategy management
-- **`realtime/`** (8 files) - Real-time optimization
-  - `live_optimizer.py` - Live optimization
-  - `hot_swapper.py` - Hot-swapping variants
-  - `streaming_engine.py` - Streaming optimization
-  - `websocket_server.py` - WebSocket server
-
-**Features:**
-- A/B testing of prompt variants
-- LLM-powered prompt evolution
-- Tool-specific optimization
-- Real-time variant swapping
-- Performance analytics
 
 ### `forge/resolver/` - Issue Resolver
 
-**Purpose:** Automated GitHub/GitLab/Bitbucket issue resolution.
+**Purpose:** Automated GitHub issue resolution.
 
 **Structure:**
 - `issue_resolver.py` - Main resolver
@@ -1041,8 +965,6 @@ This section provides a comprehensive breakdown of each major folder in the back
 - `resolver_output.py` - Output formatting
 - **`interfaces/`** - Git provider interfaces
   - `github.py` - GitHub interface
-  - `gitlab.py` - GitLab interface
-  - `bitbucket.py` - Bitbucket interface
   - `issue.py` - Issue model
 - **`patching/`** - Patch management
   - `patch.py` - Patch creation
@@ -1150,18 +1072,12 @@ This section provides a comprehensive breakdown of each major folder in the back
 
 ### `forge/cli/` - Command Line Interface
 
-**Purpose:** CLI tools and TUI interface.
+**Purpose:** GUI launcher and CLI utilities.
 
 **Structure:**
-- `main.py` - CLI entry point
-- `commands.py` - CLI commands
-- `tui.py` - Text user interface
+- `main.py` - Server entry point
 - `gui_launcher.py` - GUI launcher
 - `entry.py` - Entry point
-- `settings.py` - CLI settings
-- `shell_config.py` - Shell configuration
-- `vscode_extension.py` - VS Code extension support
-- `pt_style.py` - Prompt style
 - `utils.py` - CLI utilities
 - `suppress_warnings.py` - Warning suppression
 
@@ -1238,12 +1154,12 @@ This section provides a comprehensive breakdown of each major folder in the back
 - **32 route files** (API endpoints)
 - **14 middleware components**
 - **24 controller services**
-- **5 agent types** (CodeAct, Browsing, ReadOnly, LOC, VisualBrowsing)
+- **4 agent types** (CodeAct, Browsing, ReadOnly, LOC)
 - **30+ LLM providers** supported
 - **200+ models** available
 - **4 runtime types** (Docker, Kubernetes, Local, Remote)
 - **3 storage backends** (Local, S3, Google Cloud)
-- **3 Git integrations** (GitHub, GitLab, Bitbucket)
+- **1 Git integration** (GitHub)
 
 **Architecture Highlights:**
 - Event-driven architecture with typed event contracts
@@ -1252,6 +1168,5 @@ This section provides a comprehensive breakdown of each major folder in the back
 - Production-grade monitoring (30+ metrics, 3 Grafana dashboards)
 - Security-first design (10 security layers)
 - Extensible plugin system (runtime plugins, agent tools)
-- Multi-agent orchestration (MetaSOP framework)
 - Prompt optimization system (A/B testing, evolution)
 

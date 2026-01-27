@@ -638,7 +638,7 @@ def test_process_single_pr_update(
         resolver_output.issue,
         "pr",
         "forge",
-        "Forge@all-hands.dev",
+        "Forge@forge.dev",
     )
     mock_update_existing_pull_request.assert_called_once_with(
         issue=resolver_output.issue,
@@ -712,7 +712,7 @@ def test_process_single_issue(
         resolver_output.issue,
         "issue",
         "forge",
-        "Forge@all-hands.dev",
+        "Forge@forge.dev",
     )
     mock_send_pull_request.assert_called_once_with(
         issue=resolver_output.issue,
@@ -728,7 +728,7 @@ def test_process_single_issue(
         pr_title=None,
         base_domain="github.com",
         git_user_name="forge",
-        git_user_email="Forge@all-hands.dev",
+        git_user_email="Forge@forge.dev",
     )
 
 
@@ -837,19 +837,19 @@ def test_send_pull_request_branch_naming(
     )
 
 
+@patch("forge.resolver.send_pull_request.identify_token")
+@patch("forge.resolver.send_pull_request.load_single_resolver_output")
+@patch("forge.resolver.send_pull_request.os.path.exists")
+@patch("forge.resolver.send_pull_request.os.getenv")
 @patch("forge.resolver.send_pull_request.argparse.ArgumentParser")
 @patch("forge.resolver.send_pull_request.process_single_issue")
-@patch("forge.resolver.send_pull_request.load_single_resolver_output")
-@patch("forge.resolver.send_pull_request.identify_token")
-@patch("os.path.exists")
-@patch("os.getenv")
 def test_main(
-    mock_getenv,
-    mock_path_exists,
-    mock_identify_token,
-    mock_load_single_resolver_output,
     mock_process_single_issue,
     mock_parser,
+    mock_getenv,
+    mock_path_exists,
+    mock_load_single_resolver_output,
+    mock_identify_token,
 ):
     """Test main function with valid inputs."""
     # Setup test data
@@ -1238,3 +1238,4 @@ def test_apply_patch_rename_directory(mock_output_dir):
         with open(new_path, "r", encoding="utf-8") as f:
             content = f.read()
         assert content == f"Content of {filename}", f"Content mismatch for {filename}"
+

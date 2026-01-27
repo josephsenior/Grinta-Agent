@@ -46,11 +46,8 @@ from forge.server.middleware.security_headers import (
     CSRFProtection,
     SecurityHeadersMiddleware,
 )
-from forge.server.routes.analytics import app as analytics_router
 from forge.server.routes.conversation import app as conversation_api_router
-from forge.server.routes.database_connections import (
-    app as database_connections_router,
-)
+from forge.server.routes.features import app as features_router
 from forge.server.routes.feedback import app as feedback_api_router
 from forge.server.routes.files import app as files_api_router
 from forge.server.routes.git import router as git_api_router
@@ -64,16 +61,11 @@ from forge.server.routes.manage_conversations import (
 # Delay MCP import to avoid circular dependency issues during config loading
 # from forge.server.routes.mcp import mcp_server
 from forge.server.routes.memory import app as memory_router
-from forge.server.routes.metasop import app as metasop_router
 from forge.server.routes.monitoring import app as monitoring_router
-from forge.server.routes.prompts import app as prompts_router
-from forge.server.routes.prompt_optimization import router as prompt_optimization_router
 from forge.server.routes.public import app as public_api_router
 from forge.server.routes.secrets import router as secrets_router
-from forge.server.routes.security import app as security_api_router
 from forge.server.routes.settings import app as settings_router
 from forge.server.routes.slack import router as slack_router
-from forge.server.routes.snippets import router as snippets_router
 from forge.server.routes.templates import app as templates_router
 from forge.server.routes.trajectory import app as trajectory_router
 from forge.server.routes.dashboard import router as dashboard_router
@@ -190,7 +182,6 @@ app = FastAPI(
     description=(
         "Forge: Production-grade AI development platform\n\n"
         "Features:\n"
-        "- Multi-agent orchestration (MetaSOP)\n"
         "- Structure-aware code editing\n"
         "- Real-time collaboration\n"
         "- Enterprise security & monitoring\n\n"
@@ -210,7 +201,6 @@ app = FastAPI(
         {"name": "files", "description": "File operations and workspace management"},
         {"name": "settings", "description": "User settings and configuration"},
         {"name": "monitoring", "description": "Metrics and system health"},
-        {"name": "metasop", "description": "Multi-agent orchestration"},
     ],
 )
 
@@ -416,10 +406,28 @@ app.add_middleware(BaseHTTPMiddleware, dispatch=version_middleware)
 from forge.server.middleware import RequestMetricsMiddleware
 
 app.add_middleware(BaseHTTPMiddleware, dispatch=RequestMetricsMiddleware(enabled=True))
-from forge.server.middleware import RequestSizeLoggingMiddleware
+from forge.server.middleware import (
+    RequestSizeLoggingMiddleware,
+    RequestSizeLimiter,
+    RequestTimeoutMiddleware,
+)
 
 app.add_middleware(
     BaseHTTPMiddleware, dispatch=RequestSizeLoggingMiddleware(enabled=True)
+)
+
+# Request size limiting (prevent DoS via large request bodies)
+request_size_limit_enabled = os.getenv("REQUEST_SIZE_LIMIT_ENABLED", "true").lower() == "true"
+app.add_middleware(
+    RequestSizeLimiter,
+    enabled=request_size_limit_enabled,
+)
+
+# Request timeout protection (prevent resource exhaustion from hanging requests)
+request_timeout_enabled = os.getenv("REQUEST_TIMEOUT_ENABLED", "true").lower() == "true"
+app.add_middleware(
+    RequestTimeoutMiddleware,
+    enabled=request_timeout_enabled,
 )
 
 # 1. Compression (should be first to compress all responses)
@@ -459,7 +467,7 @@ app.add_middleware(
 )
 
 # 4. Resource Quotas (before rate limiting to check quotas first)
-resource_quota_enabled = os.getenv("RESOURCE_QUOTA_ENABLED", "true").lower() == "true"
+resource_quota_enabled = os.getenv("RESOURCE_QUOTA_ENABLED", "false").lower() == "true"
 if resource_quota_enabled:
     from forge.server.middleware.resource_quota import ResourceQuotaMiddleware
 
@@ -468,8 +476,8 @@ if resource_quota_enabled:
 
 # 4.5. Rate limiting & Cost quotas
 # Use Redis-backed rate limiter if REDIS_URL or REDIS_HOST is configured, otherwise in-memory
-rate_limiter_enabled = os.getenv("RATE_LIMITING_ENABLED", "true").lower() == "true"
-cost_quota_enabled = os.getenv("COST_QUOTA_ENABLED", "true").lower() == "true"
+rate_limiter_enabled = os.getenv("RATE_LIMITING_ENABLED", "false").lower() == "true"
+cost_quota_enabled = os.getenv("COST_QUOTA_ENABLED", "false").lower() == "true"
 
 # Auto-detect Redis URL from environment (REDIS_URL takes precedence over REDIS_HOST)
 redis_url = os.getenv("REDIS_URL")
@@ -715,22 +723,16 @@ from forge.server.routes.user_management import router as user_management_router
 app.include_router(user_management_router, tags=["v1", "user-management"])
 
 app.include_router(public_api_router, tags=["v1", "public"])
+app.include_router(features_router, tags=["v1", "features"])
 app.include_router(files_api_router, tags=["v1", "files"])
-app.include_router(security_api_router, tags=["v1", "security"])
 app.include_router(feedback_api_router, tags=["v1", "feedback"])
 app.include_router(conversation_api_router, tags=["v1", "conversations"])
 app.include_router(manage_conversation_api_router, tags=["v1", "conversations"])
 app.include_router(settings_router, tags=["v1", "settings"])
 app.include_router(secrets_router, tags=["v1", "secrets"])
-app.include_router(database_connections_router, tags=["v1", "database"])
 app.include_router(memory_router, tags=["v1", "memory"])
-app.include_router(metasop_router, tags=["v1", "metasop"])
 app.include_router(monitoring_router, tags=["v1", "monitoring"])
 app.include_router(knowledge_base_router, tags=["v1", "knowledge"])
-app.include_router(analytics_router, tags=["v1", "analytics"])
-app.include_router(prompts_router, tags=["v1", "prompts"])
-app.include_router(prompt_optimization_router, tags=["v1", "optimization"])
-app.include_router(snippets_router, tags=["v1", "snippets"])
 app.include_router(templates_router, tags=["v1", "templates"])
 app.include_router(global_export_router, tags=["v1", "export"])
 app.include_router(slack_router, prefix="/api/slack", tags=["v1", "integrations"])

@@ -1,6 +1,6 @@
 """Global search API endpoints.
 
-Provides search across conversations, files, snippets, and other resources.
+Provides search across conversations, files, and other resources.
 """
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from fastapi import APIRouter, Depends, Request, Query
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from forge.core.logger import forge_logger as logger
 from forge.server.user_auth import get_user_id
@@ -29,20 +29,34 @@ router = APIRouter(prefix="/api/search", tags=["search"])
 class SearchResult(BaseModel):
     """Search result item."""
 
-    id: str
-    type: str
-    title: str
-    description: str | None = None
-    url: str | None = None
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    id: str = Field(..., min_length=1, description="Result identifier")
+    type: str = Field(..., min_length=1, description="Result type (e.g., 'conversation', 'file')")
+    title: str = Field(..., min_length=1, description="Result title")
+    description: str | None = Field(None, description="Result description")
+    url: str | None = Field(None, description="Result URL")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+    @field_validator("id", "type", "title")
+    @classmethod
+    def validate_required_strings(cls, v: str) -> str:
+        """Validate required string fields are non-empty."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        return validate_non_empty_string(v, name="field")
 
 
 class SearchResponse(BaseModel):
     """Search response."""
 
-    query: str
-    results: dict[str, list[SearchResult]] = Field(default_factory=dict)
-    total: int = 0
+    query: str = Field(..., min_length=1, description="Search query that was executed")
+    results: dict[str, list[SearchResult]] = Field(default_factory=dict, description="Search results grouped by type")
+    total: int = Field(default=0, ge=0, description="Total number of results")
+
+    @field_validator("query")
+    @classmethod
+    def validate_query(cls, v: str) -> str:
+        """Validate query is non-empty using type-safe validation."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        return validate_non_empty_string(v, name="query")
 
 
 async def _search_conversations(
@@ -107,26 +121,6 @@ def _create_search_result(conv: ConversationMetadata) -> SearchResult:
     )
 
 
-async def _search_snippets(
-    user_id: str,
-    query: str,
-    limit: int = 10,
-) -> list[SearchResult]:
-    """Search code snippets.
-
-    Args:
-        user_id: User identifier
-        query: Search query
-        limit: Maximum results
-
-    Returns:
-        List of search results
-    """
-    # TODO: Implement snippet search when snippet storage is available
-    # For now, return empty list
-    return []
-
-
 async def _search_files(
     user_id: str,
     query: str,
@@ -151,7 +145,7 @@ async def _search_files(
 async def global_search(
     request: Request,
     q: str = Query(..., min_length=1, description="Search query"),
-    type: str = Query("all", description="Search type: conversations, snippets, files, all"),
+    type: str = Query("all", description="Search type: conversations, files, all"),
     limit: int = Query(10, ge=1, le=100, description="Maximum results per type"),
     user_id: str = Depends(get_user_id),
     conversation_store: ConversationStore | None = Depends(get_conversation_store),
@@ -161,7 +155,7 @@ async def global_search(
     Args:
         request: FastAPI request
         q: Search query
-        type: Type of resources to search (conversations, snippets, files, all)
+        type: Type of resources to search (conversations, files, all)
         limit: Maximum results per type
         user_id: User identifier (from dependency)
         conversation_store: Conversation store (from dependency)
@@ -170,15 +164,17 @@ async def global_search(
         Search results
     """
     try:
-        if not q or len(q.strip()) == 0:
+        # Validate query using type-safe validation
+        from forge.core.security.type_safety import validate_non_empty_string
+        try:
+            query = validate_non_empty_string(q.strip(), name="query")
+        except ValueError as e:
             return error(
-                message="Search query is required",
+                message=f"Search query validation failed: {e}",
                 error_code="INVALID_QUERY",
                 request=request,
                 status_code=400,
             )
-
-        query = q.strip()
         results: dict[str, list[SearchResult]] = {}
         total = 0
 
@@ -189,12 +185,6 @@ async def global_search(
             )
             results["conversations"] = conversation_results
             total += len(conversation_results)
-
-        # Search snippets
-        if type in ("snippets", "all"):
-            snippet_results = await _search_snippets(user_id, query, limit=limit)
-            results["snippets"] = snippet_results
-            total += len(snippet_results)
 
         # Search files
         if type in ("files", "all"):

@@ -54,26 +54,6 @@ def test_record_metrics_helpers_swallow_errors(monkeypatch):
     retry_mod._record_error_metrics("op", 1, 3, RuntimeError("err"))
 
 
-def test_metrics_import_fallback(monkeypatch):
-    original_module = sys.modules.pop("forge.core.utils.retry", None)
-    fake_metrics = ModuleType("forge.metasop.metrics")
-
-    def __getattr__(name):
-        raise RuntimeError("boom")
-
-    fake_metrics.__getattr__ = __getattr__  # type: ignore[attr-defined]
-    monkeypatch.setitem(sys.modules, "forge.metasop.metrics", fake_metrics)
-
-    reloaded = importlib.import_module("forge.core.utils.retry")
-    try:
-        reloaded._record_metrics_event({"status": "test"})
-    finally:
-        sys.modules.pop("forge.core.utils.retry", None)
-        if original_module is not None:
-            sys.modules["forge.core.utils.retry"] = original_module
-        importlib.reload(retry_mod)
-
-
 def test_retry_success(monkeypatch):
     calls = {"count": 0}
     monkeypatch.setattr(retry_mod, "sanitize_operation_label", lambda name: name)

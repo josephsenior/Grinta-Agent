@@ -5,17 +5,19 @@ import { createRoutesStub } from "react-router-dom";
 import { ExpandableMessage } from "#/components/features/chat/expandable-message";
 import Forge from "#/api/forge";
 
+const mockI18n = {
+  changeLanguage: () => Promise.resolve(),
+  language: "en",
+  exists: () => true,
+};
+
 vi.mock("react-i18next", async () => {
   const actual = await vi.importActual("react-i18next");
   return {
     ...actual,
     useTranslation: () => ({
       t: (key: string) => key,
-      i18n: {
-        changeLanguage: () => new Promise(() => {}),
-        language: "en",
-        exists: () => true,
-      },
+      i18n: mockI18n,
     }),
   };
 });
@@ -37,7 +39,7 @@ describe("ExpandableMessage", () => {
     expect(statusIcon).toBeUndefined();
   });
 
-  it("should render with neutral border for error messages", () => {
+  it("should render with danger border and icon for error messages", () => {
     renderWithProviders(
       <ExpandableMessage message="Error occurred" type="error" />,
     );
@@ -52,7 +54,7 @@ describe("ExpandableMessage", () => {
         el.classList.contains("fill-success") ||
         el.classList.contains("fill-danger"),
       );
-    expect(statusIcon).toBeUndefined();
+    expect(statusIcon).toBeDefined();
   });
 
   it("should render with success icon for successful action messages", () => {
@@ -144,6 +146,7 @@ describe("ExpandableMessage", () => {
     const getConfigSpy = vi.spyOn(Forge, "getConfig");
     getConfigSpy.mockResolvedValue({
       APP_MODE: "saas",
+      GITHUB_CLIENT_ID: "mock-client-id",
       FEATURE_FLAGS: {
         ENABLE_BILLING: true,
         HIDE_LLM_SETTINGS: false,

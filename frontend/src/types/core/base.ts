@@ -7,7 +7,6 @@ export type ForgeEventType =
   | "read"
   | "write"
   | "edit"
-  | "run_ipython"
   | "delegate"
   | "browse"
   | "browse_interactive"

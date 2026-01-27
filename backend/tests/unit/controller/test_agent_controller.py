@@ -4,7 +4,7 @@ from unittest.mock import ANY, AsyncMock, MagicMock, patch
 from uuid import uuid4
 import pytest
 from pydantic import SecretStr
-from litellm import (
+from forge.llm.exceptions import (
     BadRequestError,
     ContentPolicyViolationError,
     ContextWindowExceededError,
@@ -893,7 +893,7 @@ async def test_notify_on_llm_retry(
             llm_provider="",
         ),
         BadRequestError(
-            message='litellm.BadRequestError: OpenrouterException - This endpoint\'s maximum context length is 40960 tokens. However, you requested about 42988 tokens (38892 of text input, 4096 in the output). Please reduce the length of either one, or use the "middle-out" transform to compress your prompt automatically.',
+            message='ContextWindowExceededError: Maximum context length exceeded.',
             model="openrouter/qwen/qwen3-30b-a3b",
             llm_provider="openrouter",
         ),

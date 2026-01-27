@@ -63,7 +63,6 @@ export const getObservationResult = (event: ForgeObservation) => {
   switch (event.observation) {
     case "run":
       return getRunObservationStatus(event, hasContent);
-    case "run_ipython":
     case "read":
     case "edit":
     case "mcp":

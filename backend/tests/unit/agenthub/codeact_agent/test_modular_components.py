@@ -47,8 +47,7 @@ def _make_basic_config(**overrides):
         enable_think=True,
         enable_finish=True,
         enable_condensation_request=False,
-        enable_browsing=False,
-        enable_jupyter=False,
+        enable_browsing=True,
         enable_plan_mode=True,
         enable_ultimate_editor=False,
         enable_llm_editor=False,
@@ -76,8 +75,6 @@ def test_planner_build_toolset_respects_flags():
         config=config,
         llm=llm,
         safety_manager=safety,
-        prompt_optimizer=None,
-        tool_optimizer=None,
     )
 
     tools = planner.build_toolset()

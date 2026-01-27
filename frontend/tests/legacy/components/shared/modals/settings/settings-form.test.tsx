@@ -1,6 +1,6 @@
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { renderWithProviders } from "../../../../../test-utils";
+import { renderWithProviders } from "#test-utils";
 import { createRoutesStub } from "react-router-dom";
 import { screen } from "@testing-library/react";
 import Forge from "#/api/forge";
@@ -41,3 +41,4 @@ describe("SettingsForm", () => {
     saveSettingsSpy.mockRestore();
   });
 });
+

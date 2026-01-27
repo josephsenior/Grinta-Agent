@@ -50,20 +50,6 @@ function summarizeFileAction({
   return `${verb} ${extractFilename(path)}`;
 }
 
-function summarizeBrowseAction(event: ForgeAction): string | null {
-  const url = getEventArg(event, "url");
-  if (typeof url !== "string" || url.length === 0) {
-    return "Open browser";
-  }
-
-  try {
-    const domain = new URL(url).hostname.replace("www.", "");
-    return domain ? `Open ${domain}` : "Open browser";
-  } catch {
-    return "Open browser";
-  }
-}
-
 function summarizeObservation(event: ForgeObservation): string | null {
   if (isErrorObservation(event)) {
     return "Error occurred";
@@ -78,7 +64,6 @@ const ACTION_SUMMARIZERS: Record<string, ActionSummaryHandler> = {
   run: summarizeRunAction,
   write: (event) => summarizeFileAction({ event, verb: "Create" }),
   edit: (event) => summarizeFileAction({ event, verb: "Edit" }),
-  browse: summarizeBrowseAction,
   finish: () => "Complete task",
   read: (event) => summarizeFileAction({ event, verb: "Read" }),
 };

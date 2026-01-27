@@ -9,15 +9,14 @@ import copy
 
 from forge.core.logger import forge_logger as logger
 from forge.core.message import (
-    ChatCompletionMessageToolCallType,
     ImageContent,
     Message,
     TextContent,
+    ToolCall,
 )
 from forge.core.schemas import ActionType
 from forge.events.action import (
     Action,
-    AgentDelegateAction,
     AgentFinishAction,
     AgentThinkAction,
     BrowseInteractiveAction,
@@ -25,7 +24,6 @@ from forge.events.action import (
     CmdRunAction,
     FileEditAction,
     FileReadAction,
-    IPythonRunCellAction,
     MessageAction,
     TaskTrackingAction,
 )
@@ -35,14 +33,12 @@ from forge.events.event import Event, RecallType, EventSource
 from forge.events.model_response_lite import ModelResponseLite
 from forge.events.observation import (
     AgentCondensationObservation,
-    AgentDelegateObservation,
     AgentThinkObservation,
     BrowserOutputObservation,
     CmdOutputObservation,
     FileDownloadObservation,
     FileEditObservation,
     FileReadObservation,
-    IPythonRunCellObservation,
     TaskTrackingObservation,
     UserRejectObservation,
 )
@@ -340,11 +336,11 @@ class ConversationMemory:
     @staticmethod
     def _convert_tool_calls(
         raw_tool_calls: Any,
-    ) -> list[ChatCompletionMessageToolCallType] | None:
+    ) -> list[ToolCall] | None:
         """Convert SDK-specific tool call payloads into dicts accepted by Message."""
         if not raw_tool_calls:
             return None
-        normalized: list[ChatCompletionMessageToolCallType] = []
+        normalized: list[ToolCall] = []
         for idx, call in enumerate(raw_tool_calls):
             call_dict: dict[str, Any]
             if isinstance(call, dict):
@@ -363,7 +359,7 @@ class ConversationMemory:
             ConversationMemory._ensure_tool_call_function(call_dict, call, idx)
             call_dict.setdefault("id", call_dict.get("tool_call_id") or f"tool_call_{idx}")
             call_dict.setdefault("type", getattr(call, "type", "function"))
-            normalized.append(cast(ChatCompletionMessageToolCallType, call_dict))
+            normalized.append(ToolCall.model_validate(call_dict))
         return normalized
 
     @staticmethod
@@ -371,7 +367,6 @@ class ConversationMemory:
         call_dict: dict[str, Any], source: Any, idx: int
     ) -> None:
         """Ensure tool call payload includes a proper function dict."""
-
         function_payload = call_dict.get("function")
         fallback_name = (
             call_dict.get("name")
@@ -547,9 +542,7 @@ class ConversationMemory:
         else:
             src_value = src
         tool_action_classes = (
-            AgentDelegateAction,
             AgentThinkAction,
-            IPythonRunCellAction,
             FileEditAction,
             FileReadAction,
             BrowseInteractiveAction,
@@ -825,7 +818,7 @@ class ConversationMemory:
         """Converts an action into a message format that can be sent to the LLM.
 
         This method handles different types of actions and formats them appropriately:
-        1. For tool-based actions (AgentDelegate, CmdRun, IPythonRunCell, FileEdit) and agent-sourced AgentFinish:
+        1. For tool-based actions (AgentDelegate, CmdRun, FileEdit) and agent-sourced AgentFinish:
             - In function calling mode: Stores the LLM's response in pending_tool_call_action_messages
             - In non-function calling mode: Creates a message with the action string
         2. For MessageActions: Creates a message with the text content and optional image content
@@ -833,9 +826,8 @@ class ConversationMemory:
         Args:
             action: The action to convert. Can be one of:
                 - CmdRunAction: For executing bash commands
-                - IPythonRunCellAction: For running IPython code
                 - FileEditAction: For editing files
-                - FileReadAction: For reading files using Forge-aci commands
+                - FileReadAction: For reading files using file operations
                 - BrowseInteractiveAction: For browsing the web
                 - AgentFinishAction: For ending the interaction
                 - MessageAction: For sending messages
@@ -903,62 +895,6 @@ class ConversationMemory:
         text = truncate_content(obs.content, max_message_chars)
         content_items: list[TextContent | ImageContent] = [TextContent(text=text)]
         return Message(role="user", content=content_items)
-
-    def _process_ipython_observation(
-        self,
-        obs: IPythonRunCellObservation,
-        max_message_chars: int | None,
-        vision_is_active: bool,
-    ) -> Message:
-        """Process IPythonRunCellObservation into a message."""
-        text_content = self._sanitize_ipython_text(obs.content)
-        text_content = truncate_content(text_content, max_message_chars)
-        content: list[TextContent | ImageContent] = [TextContent(text=text_content)]
-        if obs.image_urls:
-            self._append_ipython_images(content, obs.image_urls, vision_is_active)
-        return Message(role="user", content=content)
-
-    def _sanitize_ipython_text(self, text: str) -> str:
-        lines = text.split("\n")
-        for idx, line in enumerate(lines):
-            if "![image](data:image/png;base64," in line:
-                lines[idx] = (
-                    "![image](data:image/png;base64, ...) already displayed to user"
-                )
-        return "\n".join(lines)
-
-    def _append_ipython_images(
-        self,
-        content: list[TextContent | ImageContent],
-        image_urls: list[str],
-        vision_is_active: bool,
-    ) -> None:
-        valid_image_urls = [url for url in image_urls if self._is_valid_image_url(url)]
-        invalid_count = len(image_urls) - len(valid_image_urls)
-
-        if valid_image_urls:
-            content.append(ImageContent(image_urls=valid_image_urls))
-            if vision_is_active and invalid_count > 0:
-                self._add_invalid_image_note(content[0], invalid_count)
-            return
-
-        logger.debug("IPython observation has image URLs but none are valid")
-        if vision_is_active:
-            self._add_all_images_invalid_note(content[0], len(image_urls))
-
-    def _add_invalid_image_note(self, first_item: TextContent | ImageContent, invalid_count: int) -> None:
-        if self._is_text_content(first_item):
-            first_item.text += (
-                f"\n\nNote: {invalid_count} invalid or empty image(s) were filtered from this output. "
-                "The agent may need to use alternative methods to access visual information."
-            )
-
-    def _add_all_images_invalid_note(self, first_item: TextContent | ImageContent, total_count: int) -> None:
-        if self._is_text_content(first_item):
-            first_item.text += (
-                f"\n\nNote: All {total_count} image(s) in this output were invalid or empty and have been filtered. "
-                "The agent should use alternative methods to access visual information."
-            )
 
     def _process_browser_output_observation(
         self,
@@ -1263,10 +1199,24 @@ class ConversationMemory:
                 for agent in filtered_agents
                 if agent.name not in self.agent_config.disabled_microagents
             ]
+
+        formatted_parts = []
         if filtered_agents:
-            formatted_text = self.prompt_manager.build_microagent_info(
-                triggered_agents=filtered_agents
+            formatted_parts.append(
+                self.prompt_manager.build_microagent_info(
+                    triggered_agents=filtered_agents
+                )
             )
+
+        # Process Knowledge Base results
+        kb_results = getattr(obs, "knowledge_base_results", [])
+        if kb_results:
+            formatted_parts.append(
+                self.prompt_manager.build_knowledge_base_info(kb_results=kb_results)
+            )
+
+        if formatted_parts:
+            formatted_text = "\n\n".join(formatted_parts)
             content_items: list[TextContent | ImageContent] = [
                 TextContent(text=formatted_text)
             ]
@@ -1303,10 +1253,8 @@ class ConversationMemory:
 
         This method handles different types of observations and formats them appropriately:
         - CmdOutputObservation: Formats command execution results with exit codes
-        - IPythonRunCellObservation: Formats IPython cell execution results, replacing base64 images
         - FileEditObservation: Formats file editing results
-        - FileReadObservation: Formats file reading results from forge-aci
-        - AgentDelegateObservation: Formats results from delegated agent tasks
+        - FileReadObservation: Formats file reading results from file operations
         - ErrorObservation: Formats error messages from failed actions
         - UserRejectObservation: Formats user rejection messages
         - FileDownloadObservation: Formats the result of a browsing action that opened/downloaded a file
@@ -1397,11 +1345,6 @@ class ConversationMemory:
             MCPObservation: lambda obs: self._process_mcp_observation(
                 obs, max_message_chars
             ),
-            IPythonRunCellObservation: lambda obs: self._process_ipython_observation(
-                obs,
-                max_message_chars,
-                vision_is_active,
-            ),
             FileEditObservation: lambda obs: self._process_simple_observation(
                 obs, max_message_chars
             ),
@@ -1412,9 +1355,6 @@ class ConversationMemory:
                 obs,
                 vision_is_active,
                 enable_som_visual_browsing,
-            ),
-            AgentDelegateObservation: lambda obs: self._process_agent_delegate_observation(
-                obs, max_message_chars
             ),
             AgentThinkObservation: lambda obs: self._process_simple_observation(
                 obs, max_message_chars
@@ -1435,18 +1375,6 @@ class ConversationMemory:
                 obs, max_message_chars
             ),
         }
-
-    def _process_agent_delegate_observation(
-        self,
-        obs: AgentDelegateObservation,
-        max_message_chars: int | None,
-    ) -> Message:
-        """Process agent delegate observation."""
-        text = truncate_content(
-            obs.outputs.get("content", obs.content), max_message_chars
-        )
-        content_items: list[TextContent | ImageContent] = [TextContent(text=text)]
-        return Message(role="user", content=content_items)
 
     def _process_error_observation(
         self, obs: ErrorObservation, max_message_chars: int | None

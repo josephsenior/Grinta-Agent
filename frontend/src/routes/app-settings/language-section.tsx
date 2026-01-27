@@ -1,7 +1,8 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { Languages } from "lucide-react";
 import { LanguageInput } from "#/components/features/settings/app-settings/language-input";
-import { SettingsPanel } from "./settings-panel";
+import { Accordion } from "#/components/features/settings/Accordion";
 
 interface LanguageSectionProps {
   language: string;
@@ -15,18 +16,18 @@ export function LanguageSection({
   const { t } = useTranslation();
 
   return (
-    <SettingsPanel
+    <Accordion
       title={t("SETTINGS$LANGUAGE_AND_REGION", "Language & Region")}
+      icon={Languages}
+      defaultOpen
     >
-      <div className="grid gap-4">
-        <div className="w-full">
-          <LanguageInput
-            name="language-input"
-            defaultKey={language}
-            onChange={onLanguageChange}
-          />
-        </div>
+      <div className="w-full">
+        <LanguageInput
+          name="language-input"
+          defaultKey={language}
+          onChange={onLanguageChange}
+        />
       </div>
-    </SettingsPanel>
+    </Accordion>
   );
 }

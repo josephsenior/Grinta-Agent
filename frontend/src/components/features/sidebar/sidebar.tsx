@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Menu } from "lucide-react";
-import { useLogout } from "#/hooks/mutation/use-logout";
-import { useGitUser } from "#/hooks/query/use-git-user";
 import { useSidebar } from "#/contexts/sidebar-context";
 import { ConversationPanel } from "../conversation-panel/conversation-panel";
 import { ConversationPanelWrapper } from "../conversation-panel/conversation-panel-wrapper";
@@ -14,9 +12,6 @@ import { DesktopSidebar } from "./components/desktop-sidebar";
 import { MobileSidebar } from "./components/mobile-sidebar";
 
 export function Sidebar() {
-  useGitUser();
-  useLogout();
-
   const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
   const { showSidebar, hasHeader } = useSidebarVisibility();
   const { conversationPanelIsOpen, setConversationPanelIsOpen } =

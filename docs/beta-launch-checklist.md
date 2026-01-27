@@ -198,7 +198,7 @@ Based on your codebase, here are the **top 5 things to do RIGHT NOW**:
 2. **Review and finalize Terms/Privacy** - Currently using placeholder text
 3. **Set up error tracking** - Sentry is mentioned in docs but verify it's active
 4. **Add catch-all route** - No 404 route defined in routes.ts
-5. **Test production build** - Run `npm run build` and test the production bundle
+5. **Test production build** - Run `pnpm run build` and test the production bundle
 
 ---
 

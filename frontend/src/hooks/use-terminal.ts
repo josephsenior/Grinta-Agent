@@ -54,6 +54,17 @@ export const useTerminal = ({
   const keyEventDisposable = React.useRef<{ dispose: () => void } | null>(null);
   const disabled = !runtimeIsReady;
 
+  const getCssVar = (name: string, fallback: string) => {
+    try {
+      const val = getComputedStyle(document.documentElement).getPropertyValue(
+        name,
+      );
+      return val ? val.trim() : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
   const createTerminal = () =>
     new Terminal({
       fontFamily: "Menlo, Monaco, 'Courier New', monospace",
@@ -61,31 +72,31 @@ export const useTerminal = ({
       cursorBlink: true,
       cursorStyle: "block",
       theme: {
-        // Onyx black background matching design system
-        background: "#0a0a0a",
-        foreground: "#e0e0e0",
-        cursor: "#4f46e5", // Brand color for cursor
-        cursorAccent: "#0a0a0a",
-        selectionBackground: "#4f46e5",
-        selectionForeground: "#ffffff",
-        // ANSI colors - vibrant but professional
-        black: "#0a0a0a",
-        red: "#ef4444",
-        green: "#10b981",
-        yellow: "#f59e0b",
-        blue: "#3b82f6",
-        magenta: "#a855f7",
-        cyan: "#06b6d4",
-        white: "#e0e0e0",
+        // Use design tokens where possible, fallback to previous hex values
+        background: getCssVar("--color-background-primary", "#0a0a0a"),
+        foreground: getCssVar("--color-foreground", "#e0e0e0"),
+        cursor: getCssVar("--color-brand-500", "#4f46e5"),
+        cursorAccent: getCssVar("--color-background-primary", "#0a0a0a"),
+        selectionBackground: getCssVar("--color-brand-500", "#4f46e5"),
+        selectionForeground: getCssVar("--color-foreground", "#ffffff"),
+        // ANSI colors - map to design tokens when available
+        black: getCssVar("--color-background-primary", "#0a0a0a"),
+        red: getCssVar("--color-danger-400", "#ef4444"),
+        green: getCssVar("--color-success-400", "#10b981"),
+        yellow: getCssVar("--color-warning-400", "#f59e0b"),
+        blue: getCssVar("--color-info-500", "#3b82f6"),
+        magenta: getCssVar("--color-brand-500", "#a855f7"),
+        cyan: getCssVar("--color-cyan-400", "#06b6d4"),
+        white: getCssVar("--color-foreground", "#e0e0e0"),
         // Bright ANSI colors
-        brightBlack: "#6b7280",
-        brightRed: "#f87171",
-        brightGreen: "#34d399",
-        brightYellow: "#fbbf24",
-        brightBlue: "#60a5fa",
-        brightMagenta: "#c084fc",
-        brightCyan: "#22d3ee",
-        brightWhite: "#ffffff",
+        brightBlack: getCssVar("--color-foreground-secondary", "#6b7280"),
+        brightRed: getCssVar("--color-danger-300", "#f87171"),
+        brightGreen: getCssVar("--color-success-300", "#34d399"),
+        brightYellow: getCssVar("--color-warning-300", "#fbbf24"),
+        brightBlue: getCssVar("--color-info-300", "#60a5fa"),
+        brightMagenta: getCssVar("--color-brand-300", "#c084fc"),
+        brightCyan: getCssVar("--color-cyan-300", "#22d3ee"),
+        brightWhite: getCssVar("--color-foreground", "#ffffff"),
       },
     });
 

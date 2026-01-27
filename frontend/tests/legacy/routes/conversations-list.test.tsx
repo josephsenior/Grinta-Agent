@@ -10,10 +10,15 @@ vi.mock("react-router-dom", () => ({
   useNavigate: () => navigateMock,
 }));
 
-vi.mock("lucide-react", () => ({
-  MessageSquare: () => <svg data-testid="message-square" />,
-  ChevronRight: () => <svg data-testid="chevron-right" />,
-}));
+vi.mock("lucide-react", async (importOriginal) => {
+  const actual = await importOriginal<any>();
+  return {
+    ...actual,
+    MessageSquare: () => <svg data-testid="message-square" />,
+    ChevronRight: () => <svg data-testid="chevron-right" />,
+    Code: () => <svg data-testid="code" />,
+  };
+});
 
 vi.mock("#/components/shared/ClientFormattedDate", () => ({
   __esModule: true,
@@ -21,32 +26,48 @@ vi.mock("#/components/shared/ClientFormattedDate", () => ({
 }));
 
 const paginatedConversationsMock = vi.fn();
-vi.mock("#/hooks/query/use-paginated-conversations", () => ({
+vi.mock("../../../src/hooks/query/use-paginated-conversations", () => ({
   usePaginatedConversations: (...args: unknown[]) => paginatedConversationsMock(...args),
+}));
+
+const createConversationMock = vi.fn();
+vi.mock("../../../src/hooks/mutation/use-create-conversation", () => ({
+  useCreateConversation: () => ({
+    mutate: createConversationMock,
+    isPending: false,
+  }),
 }));
 
 describe("conversations list route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     paginatedConversationsMock.mockReset();
+    createConversationMock.mockReset();
   });
 
   const renderScreen = () => render(<ConversationsList />);
 
-  it("shows loading state", () => {
-    paginatedConversationsMock.mockReturnValue({ isLoading: true });
+  it("shows loading state", async () => {
+    paginatedConversationsMock.mockReturnValue({
+      isLoading: true,
+      data: null,
+    });
 
     renderScreen();
 
-    expect(screen.getByText(/Loading conversations/i)).toBeInTheDocument();
+    expect(await screen.findByTestId("loading-spinner")).toBeInTheDocument();
   });
 
-  it("shows error state", () => {
-    paginatedConversationsMock.mockReturnValue({ isLoading: false, isError: true });
+  it("shows error state", async () => {
+    paginatedConversationsMock.mockReturnValue({
+      isLoading: false,
+      isError: true,
+      data: null,
+    });
 
     renderScreen();
 
-    expect(screen.getByText(/Failed to load conversations/i)).toBeInTheDocument();
+    expect(await screen.findByText(/CONVERSATIONS\$FAILED_TO_LOAD/i)).toBeInTheDocument();
   });
 
   it("renders conversations and navigates on click", async () => {
@@ -79,7 +100,7 @@ describe("conversations list route", () => {
     expect(screen.getByText("repo/name")).toBeInTheDocument();
     expect(screen.getByTestId("formatted-date")).toHaveTextContent("2025-01-01T00:00:00Z");
 
-    await userEvent.click(screen.getByRole("button", { name: /Planning Session/i }));
+    await userEvent.click(screen.getByText("Planning Session"));
     expect(navigateMock).toHaveBeenCalledWith("/conversations/abc123456789");
   });
 
@@ -108,7 +129,7 @@ describe("conversations list route", () => {
 
     renderScreen();
 
-    expect(await screen.findByText(/Conversation abcdef12/i)).toBeInTheDocument();
+    expect(await screen.findByText(/CONVERSATIONS\$DEFAULT_TITLE abcdef12/i)).toBeInTheDocument();
   });
 
   it("loads more conversations when paginating", async () => {

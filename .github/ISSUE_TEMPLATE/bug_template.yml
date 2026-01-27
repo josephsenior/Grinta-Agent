@@ -35,7 +35,7 @@ body:
         - GitHub resolver
         - Development workflow
         - CLI
-        - app.all-hands.dev
+        - app.forge.dev
         - Other
       default: 0
 
@@ -71,3 +71,4 @@ body:
         you can click the thumbs-down (👎) button above the input field and you will get a shareable link
         (you can also click thumbs up when things are going well of course!). LLM logs will be stored in the
         `logs/llm/default` folder. Please add any additional context about the problem here.
+

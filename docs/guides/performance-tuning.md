@@ -115,23 +115,23 @@ client = httpx.AsyncClient(
 **Code Splitting:**
 ```tsx
 // Lazy load routes
-const MetaSOPPanel = lazy(() => 
-  import('./components/metasop/MetaSOPPanel')
+const SettingsPanel = lazy(() => 
+  import('./components/settings/SettingsPanel')
 );
 
 // Use with Suspense
 <Suspense fallback={<LoadingSpinner />}>
-  <MetaSOPPanel />
+  <SettingsPanel />
 </Suspense>
 ```
 
 **Analyze Bundle:**
 ```bash
 # Build with analysis
-npm run build -- --analyze
+pnpm run build -- --analyze
 
 # Check bundle size
-npm run build
+pnpm run build
 ls -lh dist/assets/*.js
 ```
 
@@ -426,7 +426,7 @@ getTTFB(console.log); // Time to First Byte
 **Run Audits:**
 ```bash
 # Install Lighthouse
-npm install -g lighthouse
+pnpm add -g lighthouse
 
 # Run audit
 lighthouse http://localhost:3000 \

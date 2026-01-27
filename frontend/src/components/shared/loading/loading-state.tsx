@@ -60,7 +60,10 @@ export function LoadingState({
     >
       <LoadingSpinner size={spinnerSize} variant={spinnerVariant} />
       {loadingText && (
-        <p className="text-sm text-text-secondary animate-pulse">
+        <p
+          className="text-sm text-[var(--text-tertiary)] animate-pulse"
+          style={{ wordBreak: "normal", whiteSpace: "normal" }}
+        >
           {loadingText}
         </p>
       )}
@@ -71,7 +74,7 @@ export function LoadingState({
     return (
       <div className="relative">
         {children}
-        <div className="absolute inset-0 bg-background-glass/80 backdrop-blur-sm flex items-center justify-center z-10">
+        <div className="absolute inset-0 bg-[var(--bg-primary)]/90 flex items-center justify-center z-10">
           {loadingContent}
         </div>
       </div>
@@ -106,6 +109,7 @@ export function LoadingButton({
     <button
       // eslint-disable-next-line react/button-has-type
       type={buttonType}
+      // eslint-disable-next-line react/jsx-props-no-spreading
       {...props}
       disabled={disabled || isLoading}
       className={cn(
@@ -142,7 +146,7 @@ export function LoadingCard({
       skeletonVariant="rectangular"
       skeletonLines={skeletonLines}
       className={cn(
-        "p-4 bg-background-glass rounded-xl border border-border-glass",
+        "p-4 bg-[var(--bg-elevated)] rounded border border-[var(--border-primary)]",
         className,
       )}
     >

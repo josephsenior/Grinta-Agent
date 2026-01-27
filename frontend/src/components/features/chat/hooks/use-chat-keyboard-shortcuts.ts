@@ -1,32 +1,22 @@
 import React from "react";
 import { useConversationSearch } from "./use-conversation-search";
-import { useConversationBookmarks } from "./use-conversation-bookmarks";
 
 function isSearchShortcut(event: KeyboardEvent) {
   return (event.ctrlKey || event.metaKey) && event.key === "k";
 }
 
-function isBookmarkShortcut(event: KeyboardEvent) {
-  return (event.ctrlKey || event.metaKey) && event.key === "b";
-}
-
 function closePanels({
   event,
   isSearchOpen,
-  setIsSearchOpen,
-  bookmarksHook,
+  setIsOpen,
 }: {
   event: KeyboardEvent;
   isSearchOpen: boolean;
-  setIsSearchOpen: (open: boolean) => void;
-  bookmarksHook: ReturnType<typeof useConversationBookmarks>;
+  setIsOpen: (open: boolean) => void;
 }) {
   event.preventDefault();
   if (isSearchOpen) {
-    setIsSearchOpen(false);
-  }
-  if (bookmarksHook.isOpen) {
-    bookmarksHook.setIsOpen(false);
+    setIsOpen(false);
   }
 }
 
@@ -37,9 +27,8 @@ function closePanels({
 export function useChatKeyboardShortcuts(isInputFocused: boolean) {
   const { isOpen: isSearchOpen, setIsOpen: setIsSearchOpen } =
     useConversationSearch();
-  const bookmarksHook = useConversationBookmarks();
 
-  // Additional keyboard shortcuts for search and bookmarks
+  // Additional keyboard shortcuts for search
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isSearchShortcut(event)) {
@@ -48,18 +37,11 @@ export function useChatKeyboardShortcuts(isInputFocused: boolean) {
         return;
       }
 
-      if (isBookmarkShortcut(event)) {
-        event.preventDefault();
-        bookmarksHook.setIsOpen(true);
-        return;
-      }
-
       if (event.key === "Escape") {
         closePanels({
           event,
           isSearchOpen,
-          setIsSearchOpen,
-          bookmarksHook,
+          setIsOpen: setIsSearchOpen,
         });
       }
     };
@@ -71,11 +53,10 @@ export function useChatKeyboardShortcuts(isInputFocused: boolean) {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isInputFocused, isSearchOpen, bookmarksHook]);
+  }, [isInputFocused, isSearchOpen, setIsSearchOpen]);
 
   return {
     isSearchOpen,
     setIsSearchOpen,
-    bookmarksHook,
   };
 }

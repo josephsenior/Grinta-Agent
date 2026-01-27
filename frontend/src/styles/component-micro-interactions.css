@@ -13,6 +13,7 @@
     transform: scale(0);
     opacity: 0.6;
   }
+
   100% {
     transform: scale(4);
     opacity: 0;
@@ -27,7 +28,7 @@
 .ripple-effect {
   position: absolute;
   border-radius: 50%;
-  background: rgba(139, 92, 246, 0.4);
+  background: rgba(0, 0, 0, 0.4);
   width: 20px;
   height: 20px;
   animation: ripple 0.6s ease-out;
@@ -115,7 +116,8 @@ select {
 input:focus,
 textarea:focus,
 select:focus {
-  transform: scale(1.01); /* Subtle grow */
+  transform: scale(1.01);
+  /* Subtle grow */
 }
 
 /* Label float animation */
@@ -124,6 +126,7 @@ select:focus {
     transform: translateY(0);
     font-size: 1rem;
   }
+
   to {
     transform: translateY(-1.5rem);
     font-size: 0.75rem;
@@ -151,7 +154,7 @@ select:focus {
   bottom: -2px;
   width: 100%;
   height: 2px;
-  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+  background: rgba(0, 0, 0, 0.3);
   transform: scaleX(0);
   transform-origin: right;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -186,13 +189,16 @@ select:focus {
 
 /* Wiggle on hover */
 @keyframes wiggle {
+
   0%,
   100% {
     transform: rotate(0deg);
   }
+
   25% {
     transform: rotate(-5deg);
   }
+
   75% {
     transform: rotate(5deg);
   }
@@ -208,11 +214,13 @@ select:focus {
 
 /* Pulse animation */
 @keyframes badge-pulse {
+
   0%,
   100% {
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.1);
     opacity: 0.8;
@@ -225,6 +233,7 @@ select:focus {
 
 /* Ping effect */
 @keyframes badge-ping {
+
   75%,
   100% {
     transform: scale(2);
@@ -250,18 +259,17 @@ select:focus {
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }
 }
 
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    rgba(15, 15, 15, 0.8) 25%,
-    rgba(25, 25, 25, 0.9) 50%,
-    rgba(15, 15, 15, 0.8) 75%
-  );
+  background: linear-gradient(90deg,
+      rgba(15, 15, 15, 0.8) 25%,
+      rgba(25, 25, 25, 0.9) 50%,
+      rgba(15, 15, 15, 0.8) 75%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s ease-in-out infinite;
   border-radius: 0.5rem;
@@ -270,12 +278,10 @@ select:focus {
 .skeleton-text {
   height: 1rem;
   margin-bottom: 0.5rem;
-  background: linear-gradient(
-    90deg,
-    rgba(139, 92, 246, 0.05) 25%,
-    rgba(139, 92, 246, 0.1) 50%,
-    rgba(139, 92, 246, 0.05) 75%
-  );
+  background: linear-gradient(90deg,
+      rgba(139, 92, 246, 0.05) 25%,
+      rgba(139, 92, 246, 0.1) 50%,
+      rgba(139, 92, 246, 0.05) 75%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s ease-in-out infinite;
   border-radius: 0.375rem;
@@ -285,12 +291,10 @@ select:focus {
   width: 3rem;
   height: 3rem;
   border-radius: 50%;
-  background: linear-gradient(
-    90deg,
-    rgba(15, 15, 15, 0.8) 25%,
-    rgba(25, 25, 25, 0.9) 50%,
-    rgba(15, 15, 15, 0.8) 75%
-  );
+  background: linear-gradient(90deg,
+      rgba(15, 15, 15, 0.8) 25%,
+      rgba(25, 25, 25, 0.9) 50%,
+      rgba(15, 15, 15, 0.8) 75%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s ease-in-out infinite;
 }
@@ -298,12 +302,10 @@ select:focus {
 .skeleton-button {
   height: 2.5rem;
   width: 100%;
-  background: linear-gradient(
-    90deg,
-    rgba(139, 92, 246, 0.08) 25%,
-    rgba(139, 92, 246, 0.15) 50%,
-    rgba(139, 92, 246, 0.08) 75%
-  );
+  background: linear-gradient(90deg,
+      rgba(139, 92, 246, 0.08) 25%,
+      rgba(139, 92, 246, 0.15) 50%,
+      rgba(139, 92, 246, 0.08) 75%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s ease-in-out infinite;
   border-radius: 0.5rem;
@@ -318,6 +320,7 @@ select:focus {
     opacity: 0;
     transform: translateY(4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -341,12 +344,13 @@ select:focus {
 }
 
 .toggle-switch[data-state="checked"] {
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  background: rgba(0, 0, 0, 0.4);
   box-shadow: 0 0 16px rgba(139, 92, 246, 0.35);
 }
 
 .toggle-thumb {
-  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); /* Bounce */
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  /* Bounce */
 }
 
 /* ============================================ */
@@ -367,10 +371,12 @@ select:focus {
 
 /* Animated focus ring */
 @keyframes focus-ring-pulse {
+
   0%,
   100% {
     box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.4);
   }
+
   50% {
     box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.2);
   }
@@ -402,12 +408,10 @@ select:focus {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(139, 92, 246, 0.3),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(139, 92, 246, 0.3),
+      transparent);
   animation: shimmer-slide 2s ease-in-out infinite;
 }
 
@@ -415,6 +419,7 @@ select:focus {
   0% {
     left: -100%;
   }
+
   100% {
     left: 100%;
   }
@@ -455,6 +460,7 @@ select:focus {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -469,15 +475,19 @@ select:focus {
 .scroll-reveal:nth-child(1) {
   animation-delay: 0ms;
 }
+
 .scroll-reveal:nth-child(2) {
   animation-delay: 50ms;
 }
+
 .scroll-reveal:nth-child(3) {
   animation-delay: 100ms;
 }
+
 .scroll-reveal:nth-child(4) {
   animation-delay: 150ms;
 }
+
 .scroll-reveal:nth-child(5) {
   animation-delay: 200ms;
 }
@@ -538,6 +548,7 @@ select:focus {
 
 /* Reduce motion support */
 @media (prefers-reduced-motion: reduce) {
+
   .ripple-effect,
   .interactive-lift,
   .interactive-glow,

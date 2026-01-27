@@ -8,18 +8,8 @@ pretest:
 test-unit: pretest
 	@$(PYTHON) -m pytest -q backend/tests/unit
 
-.PHONY: test-metasop
-test-metasop: pretest
-	@$(PYTHON) -m pytest -q backend/tests/unit/metasop
-.PHONY: test-unit test-metasop
-
+.PHONY: test-unit
 # Run all unit tests (fast)
-test-unit:
-	poetry run pytest -q backend/tests/unit
-
-# Run only metasop unit tests
-test-metasop:
-	poetry run pytest -q backend/tests/unit/metasop
 SHELL=/usr/bin/env bash
 # Makefile for Forge project
 
@@ -34,7 +24,6 @@ DEFAULT_MODEL = "gpt-4o"
 CONFIG_FILE = config.toml
 PRE_COMMIT_CONFIG_PATH = "./backend/dev_config/python/.pre-commit-config.yaml"
 PYTHON_VERSION = 3.12
-KIND_CLUSTER_NAME = "local-hands"
 
 # ANSI color codes
 GREEN=$(shell tput -Txterm setaf 2)
@@ -59,9 +48,6 @@ check-dependencies:
 	@$(MAKE) -s check-python
 	@$(MAKE) -s check-npm
 	@$(MAKE) -s check-nodejs
-ifeq ($(INSTALL_DOCKER),)
-	@$(MAKE) -s check-docker
-endif
 	@$(MAKE) -s check-poetry
 	@$(MAKE) -s check-tmux
 	@echo "$(GREEN)Dependencies checked successfully.$(RESET)"
@@ -117,28 +103,6 @@ check-nodejs:
 		exit 1; \
 	fi
 
-check-docker:
-	@echo "$(YELLOW)Checking Docker installation...$(RESET)"
-	@if command -v docker > /dev/null; then \
-		echo "$(BLUE)$(shell docker --version) is already installed.$(RESET)"; \
-	else \
-		echo "$(RED)Docker is not installed. Please install Docker to continue.$(RESET)"; \
-		exit 1; \
-	fi
-
-check-tmux:
-	@echo "$(YELLOW)Checking tmux installation...$(RESET)"
-	@if command -v tmux > /dev/null; then \
-		echo "$(BLUE)$(shell tmux -V) is already installed.$(RESET)"; \
-	else \
-		echo "$(YELLOW)╔════════════════════════════════════════════════════════════════════════════╗$(RESET)"; \
-		echo "$(YELLOW)║ OPTIONAL: tmux is not installed.                                          ║$(RESET)"; \
-		echo "$(YELLOW)║ Some advanced terminal features may not work without tmux.                ║$(RESET)"; \
-		echo "$(YELLOW)║ You can install it if needed, but it's not required for development.      ║$(RESET)"; \
-		echo "$(YELLOW)╚════════════════════════════════════════════════════════════════════════════╝$(RESET)"; \
-	fi
-
-check-poetry:
 	@echo "$(YELLOW)Checking Poetry installation...$(RESET)"
 	@if command -v poetry > /dev/null; then \
 		POETRY_VERSION=$(shell poetry --version 2>&1 | sed -E 's/Poetry \(version ([0-9]+\.[0-9]+\.[0-9]+)\)/\1/'); \
@@ -156,6 +120,18 @@ check-poetry:
 		echo "$(RED) curl -sSL https://install.python-poetry.org | python$(PYTHON_VERSION) -$(RESET)"; \
 		echo "$(RED)More detail here: https://python-poetry.org/docs/#installing-with-the-official-installer$(RESET)"; \
 		exit 1; \
+	fi
+
+check-tmux:
+	@echo "$(YELLOW)Checking tmux installation...$(RESET)"
+	@if command -v tmux > /dev/null; then \
+		echo "$(BLUE)$(shell tmux -V) is already installed.$(RESET)"; \
+	else \
+		echo "$(YELLOW)╔════════════════════════════════════════════════════════════════════════════╗$(RESET)"; \
+		echo "$(YELLOW)║ OPTIONAL: tmux is not installed.                                          ║$(RESET)"; \
+		echo "$(YELLOW)║ Some advanced terminal features may not work without tmux.                ║$(RESET)"; \
+		echo "$(YELLOW)║ You can install it if needed, but it's not required for development.      ║$(RESET)"; \
+		echo "$(YELLOW)╚════════════════════════════════════════════════════════════════════════════╝$(RESET)"; \
 	fi
 
 install-python-dependencies:
@@ -222,40 +198,6 @@ lint:
 	@$(MAKE) -s lint-frontend
 	@$(MAKE) -s lint-backend
 
-kind:
-	@echo "$(YELLOW)Checking if kind is installed...$(RESET)"
-	@if ! command -v kind > /dev/null; then \
-		echo "$(RED)kind is not installed. Please install kind with `brew install kind` to continue$(RESET)"; \
-		exit 1; \
-	else \
-		echo "$(BLUE)kind $(shell kind version) is already installed.$(RESET)"; \
-	fi
-	@echo "$(YELLOW)Checking if kind cluster '$(KIND_CLUSTER_NAME)' already exists...$(RESET)"
-	@if kind get clusters | grep -q "^$(KIND_CLUSTER_NAME)$$"; then \
-		echo "$(BLUE)Kind cluster '$(KIND_CLUSTER_NAME)' already exists.$(RESET)"; \
-		kubectl config use-context kind-$(KIND_CLUSTER_NAME); \
-	else \
-		echo "$(YELLOW)Creating kind cluster '$(KIND_CLUSTER_NAME)'...$(RESET)"; \
-		kind create cluster --name $(KIND_CLUSTER_NAME) --config backend/kind/cluster.yaml; \
-	fi
-	@echo "$(YELLOW)Checking if mirrord is installed...$(RESET)"
-	@if ! command -v mirrord > /dev/null; then \
-		echo "$(RED)mirrord is not installed. Please install mirrord with `brew install metalbear-co/mirrord/mirrord` to continue$(RESET)"; \
-		exit 1; \
-	else \
-		echo "$(BLUE)mirrord $(shell mirrord --version) is already installed.$(RESET)"; \
-	fi
-	@echo "$(YELLOW)Installing k8s mirrord resources...$(RESET)"
-	@kubectl apply -f backend/kind/manifests
-	@echo "$(GREEN)Mirrord resources installed successfully.$(RESET)"
-	@echo "$(YELLOW)Waiting for Mirrord pod to be ready.$(RESET)"
-	@sleep 5
-	@kubectl wait --for=condition=Available deployment/ubuntu-dev
-	@echo "$(YELLOW)Waiting for Nginx to be ready.$(RESET)"
-	@kubectl -n ingress-nginx wait --for=condition=Available deployment/ingress-nginx-controller
-	@echo "$(YELLOW)Running make run inside of mirrord.$(RESET)"
-	@mirrord exec --target deployment/ubuntu-dev -- make run
-
 test-frontend:
 	@echo "$(YELLOW)Running tests for frontend...$(RESET)"
 	@cd frontend && npm run test
@@ -277,7 +219,7 @@ build-frontend:
 # Start backend
 start-backend:
 	@echo "$(YELLOW)Starting backend...$(RESET)"
-	@poetry run uvicorn openhands.server.listen:app --host $(BACKEND_HOST) --port $(BACKEND_PORT) --reload --reload-exclude "./workspace"
+	@poetry run uvicorn Forge.server.listen:app --host $(BACKEND_HOST) --port $(BACKEND_PORT) --reload --reload-exclude "./workspace"
 
 # Start frontend
 start-frontend:
@@ -299,7 +241,7 @@ _run_setup:
 	fi
 	@mkdir -p logs
 	@echo "$(YELLOW)Starting backend server...$(RESET)"
-	@poetry run uvicorn openhands.server.listen:app --host $(BACKEND_HOST) --port $(BACKEND_PORT) &
+	@poetry run uvicorn Forge.server.listen:app --host $(BACKEND_HOST) --port $(BACKEND_PORT) &
 	@echo "$(YELLOW)Waiting for the backend to start...$(RESET)"
 	@until nc -z localhost $(BACKEND_PORT); do sleep 0.1; done
 	@echo "$(GREEN)Backend started successfully.$(RESET)"
@@ -310,21 +252,6 @@ run:
 	@$(MAKE) -s _run_setup
 	@$(MAKE) -s start-frontend
 	@echo "$(GREEN)Application started successfully.$(RESET)"
-
-# Run the app (in docker)
-docker-run: WORKSPACE_BASE ?= $(PWD)/workspace
-docker-run:
-	@if [ -f /.dockerenv ]; then \
-		echo "Running inside a Docker container. Exiting..."; \
-		exit 0; \
-	else \
-		echo "$(YELLOW)Running the app in Docker $(OPTIONS)...$(RESET)"; \
-		export WORKSPACE_BASE=${WORKSPACE_BASE}; \
-		export SANDBOX_USER_ID=$(shell id -u); \
-		export DATE=$(shell date +%Y%m%d%H%M%S); \
-		docker compose -f backend/docker-compose.yml up $(OPTIONS); \
-	fi
-
 
 # Setup config.toml
 setup-config:
@@ -344,7 +271,7 @@ setup-config-prompts:
 	@echo "" >> $(CONFIG_FILE).tmp
 
 	@echo "[llm]" >> $(CONFIG_FILE).tmp
-	@read -p "Enter your LLM model name, used for running without UI. Set the model in the UI after you start the app. (see https://docs.litellm.ai/docs/providers for full list) [default: $(DEFAULT_MODEL)]: " llm_model; \
+	@read -p "Enter your LLM model name, used for running without UI. Set the model in the UI after you start the app. [default: $(DEFAULT_MODEL)]: " llm_model; \
 	 llm_model=$${llm_model:-$(DEFAULT_MODEL)}; \
 	 echo "model=\"$$llm_model\"" >> $(CONFIG_FILE).tmp
 
@@ -366,22 +293,12 @@ forge-cloud-run:
 	@$(MAKE) run BACKEND_HOST="0.0.0.0" BACKEND_PORT="12000" FRONTEND_HOST="0.0.0.0" FRONTEND_PORT="12001"
 
 # Legacy alias for backward compatibility
-openhands-cloud-run: forge-cloud-run
-
-# Develop in container
-docker-dev:
-	@if [ -f /.dockerenv ]; then \
-		echo "Running inside a Docker container. Exiting..."; \
-		exit 0; \
-	else \
-		echo "$(YELLOW)Build and run in Docker $(OPTIONS)...$(RESET)"; \
-		./backend/containers/dev/dev.sh $(OPTIONS); \
-	fi
+Forge-cloud-run: forge-cloud-run
 
 # Clean up all caches
 clean:
 	@echo "$(YELLOW)Cleaning up caches...$(RESET)"
-	@rm -rf openhands/.cache
+	@rm -rf Forge/.cache
 	@echo "$(GREEN)Caches cleaned up successfully.$(RESET)"
 
 # Help
@@ -395,11 +312,8 @@ help:
 	@echo "  $(GREEN)start-backend$(RESET)       - Start the backend server for the Forge project."
 	@echo "  $(GREEN)start-frontend$(RESET)      - Start the frontend server for the Forge project."
 	@echo "  $(GREEN)run$(RESET)                 - Run the Forge application, starting both backend and frontend servers."
-	@echo "                        Backend Log file will be stored in the 'logs' directory."
-	@echo "  $(GREEN)docker-dev$(RESET)          - Build and run the Forge application in Docker."
-	@echo "  $(GREEN)docker-run$(RESET)          - Run the Forge application, starting both backend and frontend servers in Docker."
 	@echo "  $(GREEN)help$(RESET)                - Display this help message, providing information on available targets."
 
 # Phony targets
-.PHONY: build check-dependencies check-system check-python check-npm check-nodejs check-docker check-poetry install-python-dependencies install-frontend-dependencies install-pre-commit-hooks lint-backend lint-frontend lint test-frontend test build-frontend start-backend start-frontend _run_setup run run-wsl setup-config setup-config-prompts setup-config-basic openhands-cloud-run docker-dev docker-run clean help
-.PHONY: kind
+.PHONY: build check-dependencies check-system check-python check-npm check-nodejs check-poetry install-python-dependencies install-frontend-dependencies install-pre-commit-hooks lint-backend lint-frontend lint test-frontend test build-frontend start-backend start-frontend _run_setup run setup-config setup-config-prompts setup-config-basic forge-cloud-run clean help
+

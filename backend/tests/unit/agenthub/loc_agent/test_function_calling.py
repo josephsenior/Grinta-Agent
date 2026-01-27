@@ -7,7 +7,7 @@ import pytest
 
 from forge.agenthub.loc_agent import function_calling
 from forge.core.exceptions import FunctionCallNotExistsError
-from forge.events.action import AgentFinishAction, IPythonRunCellAction, MessageAction
+from forge.events.action import AgentFinishAction, CmdRunAction, MessageAction
 
 
 def make_tool_call(name: str, arguments: dict, call_id: str = "call-1"):
@@ -38,8 +38,8 @@ def test_response_to_actions_processes_tool_calls(monkeypatch):
     response = make_response(assistant_msg)
 
     actions = function_calling.response_to_actions(response)
-    assert isinstance(actions[0], IPythonRunCellAction)
-    assert "search_code_snippets" in actions[0].code
+    assert isinstance(actions[0], CmdRunAction)
+    assert "search_code_snippets" in actions[0].command
     assert actions[0].response_id == "resp-1"
     assert thought_log["thought"].startswith("thinking")
 

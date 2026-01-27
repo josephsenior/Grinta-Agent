@@ -17,7 +17,7 @@ def test_initialize_repository_for_runtime(temp_dir, runtime_cls, run_as_Forge):
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     mock_repo = Repository(
         id="1232",
-        full_name="All-Hands-AI/Forge",
+        full_name="Forge/Forge",
         git_provider=ProviderType.GITHUB,
         is_public=True,
     )
@@ -26,7 +26,7 @@ def test_initialize_repository_for_runtime(temp_dir, runtime_cls, run_as_Forge):
         return_value=mock_repo,
     ):
         repository_dir = initialize_repository_for_runtime(
-            runtime, selected_repository="All-Hands-AI/Forge"
+            runtime, selected_repository="Forge/Forge"
         )
     assert repository_dir is not None
     assert repository_dir == "forge"
@@ -68,3 +68,4 @@ def test_maybe_run_setup_script_with_long_timeout(temp_dir, runtime_cls, run_as_
     read_obs = runtime.read(FileReadAction(path="README.md"))
     assert isinstance(read_obs, FileReadObservation)
     assert read_obs.content == "Hello World\n"
+

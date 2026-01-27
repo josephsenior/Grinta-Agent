@@ -28,7 +28,7 @@ aiohttp: Any | None = _aiohttp
 
 logger = logging.getLogger(__name__)
 
-# Port ranges for app servers (defined in local_runtime.py)
+# Port ranges for app servers (legacy - no longer used with in-process runtime)
 APP_PORT_RANGE_1 = (50000, 54999)
 APP_PORT_RANGE_2 = (55000, 59999)
 

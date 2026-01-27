@@ -64,40 +64,6 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def add_evaluation_arguments(parser: argparse.ArgumentParser) -> None:
-    """Add arguments specific to evaluation mode."""
-    parser.add_argument(
-        "--eval-output-dir",
-        default="evaluation/evaluation_outputs/outputs",
-        type=str,
-        help="The directory to save evaluation output",
-    )
-    parser.add_argument(
-        "--eval-n-limit",
-        default=None,
-        type=int,
-        help="The number of instances to evaluate",
-    )
-    parser.add_argument(
-        "--eval-num-workers",
-        default=4,
-        type=int,
-        help="The number of workers to use for evaluation",
-    )
-    parser.add_argument(
-        "--eval-note",
-        default=None,
-        type=str,
-        help="The note to add to the evaluation directory",
-    )
-    parser.add_argument(
-        "--eval-ids",
-        default=None,
-        type=str,
-        help="The comma-separated list (in quotes) of IDs of the instances to evaluate",
-    )
-
-
 def add_headless_specific_arguments(parser: argparse.ArgumentParser) -> None:
     """Add arguments specific to headless mode (full evaluation suite)."""
     parser.add_argument(
@@ -138,44 +104,20 @@ def add_headless_specific_arguments(parser: argparse.ArgumentParser) -> None:
 
 
 def get_cli_parser() -> argparse.ArgumentParser:
-    """Create argument parser for CLI mode with simplified argument set."""
-    description = 'Welcome to Forge: Code Less, Make More\n\nForge supports two main commands:\n  serve - Launch the Forge GUI server (web interface)\n  cli   - Run Forge in CLI mode (terminal interface)\n\nRunning "forge" without a command is the same as "Forge cli"'
+    """Create argument parser for Forge."""
+    description = 'Welcome to Forge: Code Less, Make More\n\nForge is now a GUI-only application. Use "forge serve" to launch the web interface.'
     parser = argparse.ArgumentParser(
         description=description,
         prog="forge",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="For more information about a command, run: Forge COMMAND --help",
     )
     subparsers = parser.add_subparsers(
         dest="command",
         title="commands",
-        description="Forge supports two main commands:",
         metavar="COMMAND",
     )
     serve_parser = subparsers.add_parser(
-        "serve", help="Launch the Forge GUI server using Docker (web interface)"
-    )
-    serve_parser.add_argument(
-        "--mount-cwd",
-        help="Mount the current working directory into the GUI server container",
-        action="store_true",
-        default=False,
-    )
-    serve_parser.add_argument(
-        "--gpu",
-        help="Enable GPU support by mounting all GPUs into the Docker container via nvidia-docker",
-        action="store_true",
-        default=False,
-    )
-    cli_parser = subparsers.add_parser(
-        "cli", help="Run Forge in CLI mode (terminal interface)"
-    )
-    add_common_arguments(cli_parser)
-    cli_parser.add_argument(
-        "--override-cli-mode",
-        help="Override the default settings for CLI mode",
-        type=bool,
-        default=False,
+        "serve", help="Launch the Forge GUI server (web interface)"
     )
     parser.add_argument(
         "--conversation", help="The conversation id to continue", type=str, default=None
@@ -188,13 +130,4 @@ def get_headless_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run the agent via CLI")
     add_common_arguments(parser)
     add_headless_specific_arguments(parser)
-    return parser
-
-
-def get_evaluation_parser() -> argparse.ArgumentParser:
-    """Create argument parser for evaluation mode."""
-    parser = argparse.ArgumentParser(description="Run Forge in evaluation mode")
-    add_common_arguments(parser)
-    add_headless_specific_arguments(parser)
-    add_evaluation_arguments(parser)
     return parser

@@ -20,7 +20,7 @@ export const BRAND = {
   // URLs
   urls: {
     website: "https://forge.dev", // Update with actual URL
-    github: "https://github.com/All-Hands-AI/Forge",
+    github: "https://github.com/Forge/Forge",
     docs: "https://docs.forge.dev", // Update with actual URL
     support: "mailto:support@forge.dev", // Update with actual email
   },
@@ -62,3 +62,4 @@ export const BRAND = {
 } as const;
 
 export type BrandConfig = typeof BRAND;
+

@@ -38,6 +38,7 @@ UNDERSCORE_KEYS = [
     "cause",
     "tool_call_metadata",
     "llm_metrics",
+    "reason",
 ]
 DELETE_FROM_TRAJECTORY_EXTRAS = {
     "dom_object",

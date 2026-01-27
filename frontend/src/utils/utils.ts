@@ -115,10 +115,6 @@ export const shouldUseInstallationRepos = (
   }
 
   switch (provider) {
-    case "bitbucket":
-      return true;
-    case "gitlab":
-      return false;
     case "github":
       return app_mode === "saas";
     default:
@@ -130,10 +126,6 @@ export const getGitProviderBaseUrl = (gitProvider: Provider): string => {
   switch (gitProvider) {
     case "github":
       return "https://github.com";
-    case "gitlab":
-      return "https://gitlab.com";
-    case "bitbucket":
-      return "https://bitbucket.org";
     default:
       return "";
   }
@@ -145,12 +137,6 @@ export const getGitProviderBaseUrl = (gitProvider: Provider): string => {
  * @returns The name of the git provider
  */
 export const getProviderName = (gitProvider: Provider) => {
-  if (gitProvider === "gitlab") {
-    return "GitLab";
-  }
-  if (gitProvider === "bitbucket") {
-    return "Bitbucket";
-  }
   return "GitHub";
 };
 
@@ -159,15 +145,14 @@ export const getProviderName = (gitProvider: Provider) => {
  * @param isGitLab Whether the git provider is GitLab
  * @returns The name of the PR
  */
-export const getPR = (isGitLab: boolean) =>
-  isGitLab ? "merge request" : "pull request";
+export const getPR = (isGitLab: boolean) => "pull request";
 
 /**
  * Get the short name of the PR
  * @param isGitLab Whether the git provider is GitLab
  * @returns The short name of the PR
  */
-export const getPRShort = (isGitLab: boolean) => (isGitLab ? "MR" : "PR");
+export const getPRShort = (isGitLab: boolean) => "PR";
 
 /**
  * Construct the pull request (merge request) URL for different providers
@@ -178,8 +163,6 @@ export const getPRShort = (isGitLab: boolean) => (isGitLab ? "MR" : "PR");
  *
  * @example
  * constructPullRequestUrl(123, "github", "owner/repo") // "https://github.com/owner/repo/pull/123"
- * constructPullRequestUrl(456, "gitlab", "owner/repo") // "https://gitlab.com/owner/repo/-/merge_requests/456"
- * constructPullRequestUrl(789, "bitbucket", "owner/repo") // "https://bitbucket.org/owner/repo/pull-requests/789"
  */
 export const constructPullRequestUrl = (
   prNumber: number | string,
@@ -191,10 +174,6 @@ export const constructPullRequestUrl = (
   switch (provider) {
     case "github":
       return `${baseUrl}/${repositoryName}/pull/${prNumber}`;
-    case "gitlab":
-      return `${baseUrl}/${repositoryName}/-/merge_requests/${prNumber}`;
-    case "bitbucket":
-      return `${baseUrl}/${repositoryName}/pull-requests/${prNumber}`;
     default:
       return "";
   }
@@ -210,10 +189,6 @@ export const constructPullRequestUrl = (
  * @example
  * constructMicroagentUrl("github", "owner/repo", ".Forge/microagents/tell-me-a-joke.md")
  * // "https://github.com/owner/repo/blob/main/.Forge/microagents/tell-me-a-joke.md"
- * constructMicroagentUrl("gitlab", "owner/repo", "microagents/git-helper.md")
- * // "https://gitlab.com/owner/repo/-/blob/main/microagents/git-helper.md"
- * constructMicroagentUrl("bitbucket", "owner/repo", ".Forge/microagents/docker-helper.md")
- * // "https://bitbucket.org/owner/repo/src/main/.Forge/microagents/docker-helper.md"
  */
 export const constructMicroagentUrl = (
   gitProvider: Provider,
@@ -225,10 +200,6 @@ export const constructMicroagentUrl = (
   switch (gitProvider) {
     case "github":
       return `${baseUrl}/${repositoryName}/blob/main/${microagentPath}`;
-    case "gitlab":
-      return `${baseUrl}/${repositoryName}/-/blob/main/${microagentPath}`;
-    case "bitbucket":
-      return `${baseUrl}/${repositoryName}/src/main/${microagentPath}`;
     default:
       return "";
   }
@@ -264,8 +235,8 @@ export const getRepoMdCreatePrompt = (
   query?: string,
 ): string => {
   const providerName = getProviderName(gitProvider);
-  const pr = getPR(gitProvider === "gitlab");
-  const prShort = getPRShort(gitProvider === "gitlab");
+  const pr = getPR(false);
+  const prShort = getPRShort(false);
 
   return `Please explore this repository. Create the file .Forge/microagents/repo.md with:
             ${

@@ -12,84 +12,6 @@ from typing import Any
 
 from pydantic import BaseModel
 
-if "litellm" not in sys.modules:
-    _litellm_module = types.ModuleType("litellm")
-
-    class _LiteLLMModelResponse(BaseModel):
-        model: str | None = None
-        choices: list[Any] = []
-
-    class _LiteLLMModelInfo(BaseModel):
-        model: str | None = None
-
-    class _LiteLLMPromptTokensDetails(BaseModel):
-        prompt_name: str | None = None
-
-    class _LiteLLMChatCompletionToolParam(BaseModel):
-        function: dict[str, Any] = {}
-
-    class _LiteLLMCostPerToken(BaseModel):
-        cost: float = 0.0
-
-    class _LiteLLMUsage(BaseModel):
-        total_tokens: int = 0
-
-    _litellm_module.ModelResponse = _LiteLLMModelResponse
-    _litellm_module.ModelInfo = _LiteLLMModelInfo
-    _litellm_module.PromptTokensDetails = _LiteLLMPromptTokensDetails
-    _litellm_module.ChatCompletionToolParam = _LiteLLMChatCompletionToolParam
-    _litellm_module.CostPerToken = _LiteLLMCostPerToken
-    _litellm_module.Usage = _LiteLLMUsage
-    _litellm_module.APIConnectionError = RuntimeError
-    _litellm_module.APIError = RuntimeError
-    _litellm_module.AuthenticationError = RuntimeError
-    _litellm_module.BadRequestError = RuntimeError
-    _litellm_module.ContentPolicyViolationError = RuntimeError
-    _litellm_module.ContextWindowExceededError = RuntimeError
-    _litellm_module.InternalServerError = RuntimeError
-    _litellm_module.NotFoundError = RuntimeError
-    _litellm_module.OpenAIError = RuntimeError
-    _litellm_module.RateLimitError = RuntimeError
-    _litellm_module.ServiceUnavailableError = RuntimeError
-    _litellm_module.Timeout = RuntimeError
-    _litellm_module.acompletion = lambda *args, **kwargs: None
-    _litellm_module.completion = lambda *args, **kwargs: None
-    _litellm_module.completion_cost = lambda *args, **kwargs: 0
-    _litellm_module.suppress_debug_info = True
-    _litellm_module.set_verbose = False
-    _litellm_utils = types.ModuleType("litellm.utils")
-    _litellm_utils.create_pretrained_tokenizer = lambda *args, **kwargs: None
-    _litellm_utils.get_model_info = lambda *args, **kwargs: {}
-    _litellm_exceptions = types.ModuleType("litellm.exceptions")
-    for _name, _exc in {
-        "APIConnectionError": RuntimeError,
-        "APIError": RuntimeError,
-        "AuthenticationError": RuntimeError,
-        "BadRequestError": RuntimeError,
-        "ContentPolicyViolationError": RuntimeError,
-        "ContextWindowExceededError": RuntimeError,
-        "InternalServerError": RuntimeError,
-        "NotFoundError": RuntimeError,
-        "OpenAIError": RuntimeError,
-        "RateLimitError": RuntimeError,
-        "ServiceUnavailableError": RuntimeError,
-        "Timeout": RuntimeError,
-    }.items():
-        setattr(_litellm_exceptions, _name, _exc)
-    _litellm_types_utils = types.ModuleType("litellm.types.utils")
-    _litellm_types_utils.CostPerToken = _litellm_module.CostPerToken
-    _litellm_types_utils.ModelResponse = _litellm_module.ModelResponse
-    _litellm_types_utils.Usage = _litellm_module.Usage
-    _litellm_module.utils = _litellm_utils
-    _litellm_module.exceptions = _litellm_exceptions
-    _litellm_module.create_pretrained_tokenizer = (
-        _litellm_utils.create_pretrained_tokenizer
-    )
-    _litellm_module.get_model_info = _litellm_utils.get_model_info
-    sys.modules["litellm"] = _litellm_module
-    sys.modules["litellm.utils"] = _litellm_utils
-    sys.modules["litellm.exceptions"] = _litellm_exceptions
-    sys.modules["litellm.types.utils"] = _litellm_types_utils
 if "tokenizers" not in sys.modules:
     sys.modules["tokenizers"] = types.ModuleType("tokenizers")
 
@@ -104,6 +26,12 @@ from forge.core.config.sandbox_config import SandboxConfig
 from forge.core.config.mcp_config import MCPConfig
 from forge.core.config.security_config import SecurityConfig
 from forge.core.logger import FORGE_logger
+
+
+@pytest.fixture(autouse=True)
+def setup_home(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
 
 
 class DummySubConfig(BaseModel):
@@ -241,58 +169,22 @@ def test_process_core_agent_and_llm_sections(monkeypatch: pytest.MonkeyPatch):
     assert config.get_llm_config().model == "gpt-4o"
 
 
-def test_process_mcp_kubernetes_and_sandbox_sections():
+def test_process_mcp_and_sandbox_sections():
     config = ForgeConfig()
     utils_module._process_mcp_section(
         {"mcp": {"sse_servers": [{"url": "https://example.com"}]}}, config
     )
-    utils_module._process_kubernetes_section(
-        {"kubernetes": {"namespace": "custom"}}, config
-    )
     utils_module._process_sandbox_section(
-        {"sandbox": {"volumes": "/tmp/workspace:/workspace:rw"}}, config
+        {"sandbox": {"timeout": 30}}, config
     )
-    assert config.kubernetes.namespace == "custom"
-    assert config.sandbox.volumes == "/tmp/workspace:/workspace:rw"
-    assert config.workspace_mount_path_in_sandbox == "/workspace"
+    assert config.mcp.sse_servers[0].url == "https://example.com"
+    assert config.sandbox.timeout == 30
 
 
 def test_process_condenser_section_assigns_default():
     config = ForgeConfig()
     utils_module._process_condenser_section({}, config)
     assert config.get_agent_config().condenser_config is not None
-
-
-def test_handle_sandbox_volumes_valid_and_invalid():
-    config = ForgeConfig()
-    config.sandbox = SandboxConfig(volumes="/host/work:/workspace:rw")
-    utils_module._handle_sandbox_volumes(config)
-    assert config.workspace_base.endswith("work")
-    config.sandbox = SandboxConfig(volumes="/invalid")
-    with pytest.raises(ValueError):
-        utils_module._handle_sandbox_volumes(config)
-
-
-def test_handle_deprecated_workspace_vars(caplog):
-    config = ForgeConfig()
-    config.workspace_base = "workspace"
-    config.workspace_mount_rewrite = "/workspace:/sandbox"
-    utils_module._handle_deprecated_workspace_vars(config)
-    assert config.workspace_mount_path_in_sandbox == "/sandbox"
-
-
-def test_configure_cli_runtime_agents():
-    config = ForgeConfig()
-    agent = AgentConfig(enable_jupyter=True, enable_browsing=True)
-    config.agents["Custom"] = agent
-    config.runtime = "cli"
-    utils_module._configure_cli_runtime_agents(config)
-    assert not config.agents["Custom"].enable_jupyter
-    config.runtime = "docker"
-    config.agents["Custom"].enable_jupyter = True
-    config.agents["Custom"].model_fields_set.add("enable_jupyter")
-    utils_module._configure_cli_runtime_agents(config)
-    assert config.agents["Custom"].enable_jupyter
 
 
 def test_get_or_create_jwt_secret(monkeypatch: pytest.MonkeyPatch):
@@ -437,17 +329,6 @@ def test_process_extended_section_handles_error(monkeypatch: pytest.MonkeyPatch)
     utils_module._process_extended_section({"extended": {"meta": 1}}, config)
 
 
-def test_process_metasop_section_handles_exception(monkeypatch: pytest.MonkeyPatch):
-    config = ForgeConfig()
-
-    def raise_runtime_error(_value):
-        raise RuntimeError("boom")
-
-    monkeypatch.setattr(utils_module, "ExtendedConfig", raise_runtime_error)
-
-    utils_module._process_metasop_section({"metasop": {"enabled": True}}, config)
-
-
 def test_check_unknown_sections_warns():
     utils_module._check_unknown_sections({"core": {}, "custom": {}}, "config.toml")
 
@@ -566,14 +447,12 @@ def test_apply_additional_overrides():
         agent_cls="CustomAgent",
         max_iterations=7,
         max_budget_per_task=12.5,
-        selected_repo="repo",
     )
 
     utils_module._apply_additional_overrides(config, args)
     assert config.default_agent == "CustomAgent"
     assert config.max_iterations == 7
     assert config.max_budget_per_task == 12.5
-    assert config.sandbox.selected_repo == "repo"
 
 
 def test_apply_additional_overrides_no_attrs():
@@ -639,7 +518,7 @@ def test_process_llm_section_error(monkeypatch: pytest.MonkeyPatch):
     assert config.llms == {}
 
 
-def test_process_security_sandbox_mcp_kubernetes_errors(
+def test_process_security_sandbox_mcp_errors(
     monkeypatch: pytest.MonkeyPatch,
 ):
     monkeypatch.setattr(
@@ -657,23 +536,14 @@ def test_process_security_sandbox_mcp_kubernetes_errors(
         "from_toml_section",
         classmethod(lambda cls, data: (_ for _ in ()).throw(TypeError("bad"))),
     )
-    from forge.core.config.kubernetes_config import KubernetesConfig
-
-    monkeypatch.setattr(
-        KubernetesConfig,
-        "from_toml_section",
-        classmethod(lambda cls, data: (_ for _ in ()).throw(TypeError("bad"))),
-    )
 
     config = ForgeConfig()
     utils_module._process_security_section({"security": {}}, config)
     utils_module._process_sandbox_section({"sandbox": {}}, config)
     utils_module._process_mcp_section({"mcp": {}}, config)
-    utils_module._process_kubernetes_section({"kubernetes": {}}, config)
     assert config.security is not None
     assert config.sandbox is not None
     assert config.mcp is not None
-    assert config.kubernetes is not None
 
 
 def test_load_from_toml_missing_core_section(tmp_path: Path):
@@ -719,14 +589,6 @@ def test_load_from_toml_emits_summary_for_invalid_sections(
     assert "Configuration sections skipped or partially applied" in caplog.text
     assert "[core]" in caplog.text  # missing core section
     assert "[sandbox]" in caplog.text
-
-
-def test_handle_deprecated_workspace_vars_invalid_rewrite():
-    config = ForgeConfig()
-    config.workspace_base = "workspace"
-    config.workspace_mount_rewrite = "invalid"
-    utils_module._handle_deprecated_workspace_vars(config)
-    assert config.workspace_mount_path_in_sandbox == config.workspace_mount_path
 
 
 def test_get_agent_config_arg_missing_file(tmp_path: Path):

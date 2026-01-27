@@ -308,7 +308,7 @@ TRACING_SAMPLE_RATE=0.01  # 1% sampling
 **2. Filter operations:**
 ```bash
 # Only trace specific routes
-OTEL_SAMPLE_ROUTES="/api/conversation,/api/metasop"
+OTEL_SAMPLE_ROUTES="/api/conversation"
 ```
 
 ## Performance Considerations

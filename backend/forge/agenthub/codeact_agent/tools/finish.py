@@ -1,9 +1,7 @@
 """Definition of the CodeAct finish tool for signalling task completion.
 
-Uses a compatibility builder so tests that stub `litellm` do not fail on import.
+Uses a compatibility builder to ensure consistent tool parameter formatting.
 """
-
-from litellm import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
 
 from forge.llm.tool_names import FINISH_TOOL_NAME
 from ._compat import build_tool_param
@@ -20,8 +18,6 @@ _FINISH_DESCRIPTION = (
 )
 
 FinishTool = build_tool_param(
-    ChatCompletionToolParam,
-    ChatCompletionToolParamFunctionChunk,
     name=FINISH_TOOL_NAME,
     description=_FINISH_DESCRIPTION,
     parameters={

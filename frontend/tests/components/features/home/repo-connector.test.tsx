@@ -58,7 +58,7 @@ const MOCK_RESPOSITORIES: GitRepository[] = [
   },
   {
     id: "2",
-    full_name: "All-Hands-AI/Forge",
+    full_name: "Forge/Forge",
     git_provider: "github",
     is_public: true,
     main_branch: "main",
@@ -71,7 +71,7 @@ beforeEach(() => {
     ...MOCK_DEFAULT_USER_SETTINGS,
     provider_tokens_set: {
       github: "some-token",
-      gitlab: null,
+      gitlab: "some-token",
     },
   });
 });
@@ -115,7 +115,7 @@ describe("RepoConnector", () => {
     // Wait for the options to be loaded and displayed
     await waitFor(() => {
       expect(screen.getByText("rbren/polaris")).toBeInTheDocument();
-      expect(screen.getByText("All-Hands-AI/Forge")).toBeInTheDocument();
+      expect(screen.getByText("Forge/Forge")).toBeInTheDocument();
     });
   });
 
@@ -179,6 +179,14 @@ describe("RepoConnector", () => {
     const getConfiSpy = vi.spyOn(Forge, "getConfig");
     getConfiSpy.mockResolvedValue({
       APP_MODE: "saas",
+      GITHUB_CLIENT_ID: "mock-client-id",
+      FEATURE_FLAGS: {
+        ENABLE_BILLING: true,
+        HIDE_LLM_SETTINGS: false,
+        ENABLE_JIRA: false,
+        ENABLE_JIRA_DC: false,
+        ENABLE_LINEAR: false,
+      },
     });
 
     const getSettingsSpy = vi.spyOn(Forge, "getSettings");
@@ -186,7 +194,6 @@ describe("RepoConnector", () => {
       ...MOCK_DEFAULT_USER_SETTINGS,
       provider_tokens_set: {
         github: "some-token",
-        gitlab: null,
       },
     });
 
@@ -199,6 +206,14 @@ describe("RepoConnector", () => {
     const getConfiSpy = vi.spyOn(Forge, "getConfig");
     getConfiSpy.mockResolvedValue({
       APP_MODE: "saas",
+      GITHUB_CLIENT_ID: "mock-client-id",
+      FEATURE_FLAGS: {
+        ENABLE_BILLING: true,
+        HIDE_LLM_SETTINGS: false,
+        ENABLE_JIRA: false,
+        ENABLE_JIRA_DC: false,
+        ENABLE_LINEAR: false,
+      },
     });
 
     const getSettingsSpy = vi.spyOn(Forge, "getSettings");
@@ -206,7 +221,6 @@ describe("RepoConnector", () => {
       ...MOCK_DEFAULT_USER_SETTINGS,
       provider_tokens_set: {
         gitlab: "some-token",
-        github: null,
       },
     });
 
@@ -219,6 +233,14 @@ describe("RepoConnector", () => {
     const getConfiSpy = vi.spyOn(Forge, "getConfig");
     getConfiSpy.mockResolvedValue({
       APP_MODE: "oss",
+      GITHUB_CLIENT_ID: "mock-client-id",
+      FEATURE_FLAGS: {
+        ENABLE_BILLING: false,
+        HIDE_LLM_SETTINGS: false,
+        ENABLE_JIRA: false,
+        ENABLE_JIRA_DC: false,
+        ENABLE_LINEAR: false,
+      },
     });
 
     renderRepoConnector();
@@ -314,7 +336,19 @@ describe("RepoConnector", () => {
 
   it("should change the launch button text to 'Loading...' when creating a conversation", async () => {
     const createConversationSpy = vi.spyOn(Forge, "createConversation");
-    createConversationSpy.mockImplementation(() => new Promise(() => {})); // Never resolves to keep loading state
+    createConversationSpy.mockImplementation(() => Promise.resolve({
+      conversation_id: "mock-conversation-id",
+      title: "Test Conversation",
+      selected_repository: "rbren/polaris",
+      selected_branch: "main",
+      git_provider: "github",
+      last_updated_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      status: "STARTING",
+      runtime_status: null,
+      url: null,
+      session_api_key: null,
+    }));
     const retrieveUserGitRepositoriesSpy = vi.spyOn(
       Forge,
       "retrieveUserGitRepositories",
@@ -406,3 +440,4 @@ describe("RepoConnector", () => {
     await screen.findByTestId("git-settings-screen");
   });
 });
+

@@ -100,8 +100,8 @@ jobs:
           with:
             python-version: ${{ matrix.python-version }}
             cache: 'poetry'
-        - name: Install Python dependencies including heavy extras
+        - name: Install Python dependencies
           run: |
-            poetry install --with dev,test,runtime,heavy
+            poetry install --with dev,test,runtime
         - name: Run heavy / integration tests
           run: PYTHONPATH=".:$PYTHONPATH" poetry run pytest -m "heavy or integration or benchmark" -vv

@@ -22,11 +22,11 @@ export function FooterContent({ actions, closeModal }: FooterContentProps) {
 
     switch (variant) {
       case "primary":
-        return `${baseClasses} bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-400 hover:to-primary-500 text-white border border-primary-400/30 hover:border-primary-300/50 shadow-lg hover:shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 active:scale-[0.98]`;
+        return `${baseClasses} bg-brand-500 hover:bg-brand-500/90 text-white border border-brand-500/30 hover:border-brand-500/50 active:scale-[0.98]`;
       case "danger":
-        return `${baseClasses} bg-gradient-to-r from-danger-500 to-danger-600 hover:from-danger-400 hover:to-danger-500 text-white border border-danger-400/30 hover:border-danger-300/50 shadow-lg hover:shadow-xl shadow-danger-500/25 hover:shadow-danger-500/40 active:scale-[0.98]`;
+        return `${baseClasses} bg-danger-400 hover:bg-danger-400/90 text-white border border-danger-400/30 hover:border-danger-400/50 active:scale-[0.98]`;
       default:
-        return `${baseClasses} bg-gradient-to-br from-grey-700/80 to-grey-800/90 hover:from-grey-600/90 hover:to-grey-700/95 text-foreground border border-grey-600/40 hover:border-grey-500/60 backdrop-blur-sm active:scale-[0.98]`;
+        return `${baseClasses} bg-background-tertiary hover:bg-background-secondary text-foreground-secondary border border-border hover:border-border active:scale-[0.98]`;
     }
   };
 

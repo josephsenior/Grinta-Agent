@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import builtins
 import os
 from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, SecretStr, Field
 from forge.core.logger import forge_logger as logger
 from .provider_config import provider_config_manager, ProviderConfigurationManager
+
+
+_INSTANCE_NAME = "forge_api_key_manager_instance"
 
 
 class APIKeyManager(BaseModel):
@@ -29,7 +33,7 @@ class APIKeyManager(BaseModel):
         >>> # Returns: SecretStr(OPENROUTER_API_KEY from environment)
 
         >>> manager.set_environment_variables('claude-4', key)
-        >>> # Sets: ANTHROPIC_API_KEY in environment for LiteLLM
+        >>> # Sets: ANTHROPIC_API_KEY in environment
 
     Attributes:
         provider_api_keys: Mapping of provider names to their API keys
@@ -38,6 +42,9 @@ class APIKeyManager(BaseModel):
 
     # Provider-specific API key mappings
     provider_api_keys: Dict[str, SecretStr] = Field(default_factory=dict)
+
+    # Flag to temporarily suppress environment variable export (useful during config loading)
+    suppress_env_export: bool = Field(default=False)
 
     def get_api_key_for_model(
         self, model: str, provided_key: Optional[SecretStr] = None
@@ -131,13 +138,19 @@ class APIKeyManager(BaseModel):
     def set_environment_variables(
         self, model: str, api_key: Optional[SecretStr] = None
     ) -> None:
-        """Set appropriate environment variables for LiteLLM based on model provider.
+        """Set provider-specific environment variables for the given model.
 
         Args:
-            model: The LLM model identifier
-            api_key: API key to use, or get from storage/environment if None
+            model: The LLM model identifier.
+            api_key: The API key to set. If None, retrieves from manager.
 
         """
+        if self.suppress_env_export:
+            logger.debug(
+                f"Skipping environment variable export for {model} (suppressed)"
+            )
+            return
+
         provider = self._extract_provider(model)
         logger.debug(
             f"Setting environment variables for model: {model}, provider: {provider}"
@@ -195,7 +208,7 @@ class APIKeyManager(BaseModel):
             os.environ[env_var] = api_key_value
             logger.debug(f"Set {env_var} environment variable for {provider}")
 
-            # CRITICAL: For Google/Gemini, also set GOOGLE_API_KEY as LiteLLM expects this too
+            # CRITICAL: For Google/Gemini, also set GOOGLE_API_KEY as some SDKs expect this too
             if provider == "google":
                 os.environ["GOOGLE_API_KEY"] = api_key_value
                 logger.debug(
@@ -204,7 +217,7 @@ class APIKeyManager(BaseModel):
         else:
             logger.debug(f"No environment variable specified for provider: {provider}")
 
-        # Also set generic fallback - CRITICAL for LiteLLM
+        # Also set generic fallback
         os.environ["LLM_API_KEY"] = api_key_value
         logger.debug(f"Set LLM_API_KEY fallback environment variable")
 
@@ -221,26 +234,15 @@ class APIKeyManager(BaseModel):
         """
         # Define prefix and pattern mappings for each provider
         prefix_patterns = {
-            "openhands": ["Openhands/", "openhands/", "Forge/"],
-            "forge": ["Forge/"],  # Legacy alias
-            "openrouter": ["openrouter/"],
             "openai": ["openai/", "gpt-"],
             "anthropic": ["anthropic/", "claude-"],
-            "google": ["google/"],
-            "mistral": ["mistral/"],
-            "groq": ["groq/"],
-            "together": ["together/"],
-            "deepinfra": ["deepinfra/"],
-            "replicate": ["replicate/"],
-            "fireworks": ["fireworks/"],
-            "perplexity": ["perplexity/"],
-            "cohere": ["cohere/"],
-            "ollama": ["ollama/"],
+            "google": ["google/", "gemini/"],
+            "xai": ["xai/", "grok-"],
         }
 
         for provider, prefixes in prefix_patterns.items():
             if any(model.startswith(prefix) for prefix in prefixes):
-                return "openhands" if provider == "forge" else provider
+                return provider
 
         return None
 
@@ -255,17 +257,8 @@ class APIKeyManager(BaseModel):
 
         """
         keyword_patterns = {
-            "openhands": ["openhands", "forge"],
             "google": ["gemini"],
-            "mistral": ["mistral"],
-            "groq": ["groq"],
-            "together": ["together"],
-            "deepinfra": ["deepinfra"],
-            "replicate": ["replicate"],
-            "fireworks": ["fireworks"],
-            "perplexity": ["perplexity"],
-            "cohere": ["cohere"],
-            "ollama": ["ollama"],
+            "xai": ["grok"],
         }
 
         for provider, keywords in keyword_patterns.items():
@@ -285,9 +278,10 @@ class APIKeyManager(BaseModel):
 
         """
         fallback_patterns = {
-            "openai": ["gpt", "davinci", "curie", "babbage"],
-            "anthropic": ["claude", "anthropic"],
-            "google": ["gemini", "palm"],
+            "openai": ["gpt"],
+            "anthropic": ["claude"],
+            "google": ["gemini"],
+            "xai": ["grok"],
         }
 
         for provider, patterns in fallback_patterns.items():
@@ -334,14 +328,10 @@ class APIKeyManager(BaseModel):
 
             # Basic format validation based on provider conventions
             provider_patterns = {
-                "openrouter": lambda k: k.startswith("sk-or-"),
-                "openai": lambda k: k.startswith("sk-") and not k.startswith("sk-or-"),
+                "openai": lambda k: k.startswith("sk-"),
                 "anthropic": lambda k: k.startswith("sk-ant-"),
                 "google": lambda k: k.startswith("AIza"),
-                "mistral": lambda k: len(k) > 20 and not k.startswith("sk-"),
-                "groq": lambda k: k.startswith("gsk_"),
-                "cohere": lambda k: k.startswith("co-"),
-                "openhands": lambda k: k.startswith("sk-"),
+                "xai": lambda k: k.startswith("xai-"),
             }
 
             pattern_check = provider_patterns.get(expected_provider)
@@ -367,7 +357,7 @@ class APIKeyManager(BaseModel):
     def validate_and_clean_completion_params(
         self, model: str, params: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Validate and clean parameters for LiteLLM completion calls.
+        """Validate and clean parameters for completion calls.
 
         Args:
             model: The LLM model identifier
@@ -391,5 +381,7 @@ class APIKeyManager(BaseModel):
         return cleaned_params
 
 
-# Global instance
-api_key_manager = APIKeyManager()
+# Global instance - persistent across reloads
+if not hasattr(builtins, _INSTANCE_NAME):
+    setattr(builtins, _INSTANCE_NAME, APIKeyManager())
+api_key_manager: APIKeyManager = getattr(builtins, _INSTANCE_NAME)

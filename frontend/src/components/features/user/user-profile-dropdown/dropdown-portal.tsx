@@ -19,7 +19,6 @@ interface DropdownPortalProps {
     onClick: () => void;
     href?: string;
   }>;
-  onLogout: () => void;
 }
 
 export function DropdownPortal({
@@ -32,7 +31,6 @@ export function DropdownPortal({
   isSaas,
   balance,
   menuItems,
-  onLogout,
 }: DropdownPortalProps) {
   if (!isOpen || !dropdownPosition || typeof document === "undefined") {
     return null;
@@ -58,17 +56,6 @@ export function DropdownPortal({
       />
 
       <MenuItemsList items={menuItems} />
-
-      <div className="border-t border-white/10 px-4 py-2">
-        <button
-          type="button"
-          onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-danger-400 hover:text-danger-300 hover:bg-danger-500/10 rounded-lg transition-colors"
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Sign Out</span>
-        </button>
-      </div>
     </div>,
     document.body,
   );

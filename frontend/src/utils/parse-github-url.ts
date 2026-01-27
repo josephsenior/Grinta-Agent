@@ -4,10 +4,11 @@
  * @returns An array containing the owner and repository names
  *
  * @example
- * const parsed = parseGithubUrl("https://github.com/All-Hands-AI/Forge");
- * console.log(parsed) // ["All-Hands-AI", "Forge"]
+ * const parsed = parseGithubUrl("https://github.com/Forge/Forge");
+ * console.log(parsed) // ["Forge", "Forge"]
  */
 export const parseGithubUrl = (url: string) => {
   const parts = url.replace("https://github.com/", "").split("/");
   return parts.length === 2 ? parts : [];
 };
+

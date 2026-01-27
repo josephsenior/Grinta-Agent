@@ -58,7 +58,7 @@ def test_add_cache_headers_static(path, expected):
 
 def test_add_cache_headers_cacheable_api():
     middleware = CompressionMiddleware()
-    request = _make_request("/api/prompts/list")
+    request = _make_request("/api/memories/list")
     response = Response(content="{}", media_type="application/json")
     middleware._add_cache_headers(request, response)
     assert response.headers["Cache-Control"].startswith("public, max-age")

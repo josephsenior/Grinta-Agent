@@ -19,7 +19,6 @@ class IterationService:
         self, ctx: "ToolInvocationContext"
     ) -> None:
         """Adjust max iterations dynamically based on inferred complexity."""
-
         agent = self._context.agent
         config = self._context.agent_config
         state = self._context.state

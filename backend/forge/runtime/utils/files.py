@@ -11,94 +11,48 @@ from forge.events.observation import (
 )
 
 
-def _normalize_posix_path(p: PurePosixPath) -> PurePosixPath:
-    """Normalize a POSIX path by removing redundant components and resolving parent directory references.
-
-    Args:
-        p: The POSIX path to normalize.
-
-    Returns:
-        PurePosixPath: The normalized path.
-
-    """
-    parts: list[str] = []
-    for part in p.parts:
-        if part in ("", "."):
-            continue
-        if part == "..":
-            if parts and parts[-1] != "..":
-                parts.pop()
-            else:
-                parts.append("..")
-        else:
-            parts.append(part)
-
-    if p.is_absolute():
-        return PurePosixPath("/" + "/".join(parts))
-    return PurePosixPath("/".join(parts) or ".")
-
-
-def _validate_path_access(
-    abs_path_in_sandbox: PurePosixPath, sandbox_root: PurePosixPath, file_path: str
-) -> None:
-    """Validate that the resolved path is within the allowed sandbox directory.
-
-    Args:
-        abs_path_in_sandbox: The absolute path within the sandbox.
-        sandbox_root: The root directory of the sandbox.
-        file_path: The original file path for error reporting.
-
-    Raises:
-        PermissionError: If the path is outside the allowed sandbox directory.
-
-    """
-    try:
-        if not abs_path_in_sandbox.is_relative_to(sandbox_root):
-            msg = f"File access not permitted: {file_path}"
-            raise PermissionError(msg)
-    except Exception as e:
-        # Fallback check for older Python versions that don't support is_relative_to
-        if not str(abs_path_in_sandbox).startswith(str(sandbox_root)):
-            msg = f"File access not permitted: {file_path}"
-            raise PermissionError(msg) from e
-
-
 def resolve_path(
     file_path: str,
     working_directory: str,
-    workspace_base: str,
-    workspace_mount_path_in_sandbox: str,
+    workspace_root: str,
 ) -> Path:
     """Resolve a file path to a path on the host filesystem.
+
+    For local execution, this ensures the path is within the workspace_root.
 
     Args:
         file_path: The path to resolve.
         working_directory: The working directory of the agent.
-        workspace_base: The base path of the workspace on the host filesystem.
-        workspace_mount_path_in_sandbox: The path to the workspace inside the sandbox.
+        workspace_root: The root directory of the workspace.
 
     Returns:
         Path: The resolved path on the host filesystem.
 
     Raises:
-        PermissionError: If the resolved path is outside the allowed sandbox directory.
+        PermissionError: If the resolved path is outside the allowed workspace directory.
 
     """
-    # Convert to POSIX path and make absolute if needed
-    posix_path = PurePosixPath(file_path)
-    if not posix_path.is_absolute():
-        posix_path = PurePosixPath(working_directory) / posix_path
+    # Convert to path and make absolute if needed
+    p = Path(file_path)
+    if not p.is_absolute():
+        p = Path(working_directory) / p
 
     # Normalize the path
-    abs_path_in_sandbox = _normalize_posix_path(posix_path)
-    sandbox_root = PurePosixPath(workspace_mount_path_in_sandbox)
+    abs_path = p.resolve()
+    root_path = Path(workspace_root).resolve()
 
     # Validate path access
-    _validate_path_access(abs_path_in_sandbox, sandbox_root, file_path)
+    try:
+        if not abs_path.is_relative_to(root_path):
+            msg = f"File access not permitted: {file_path}"
+            raise PermissionError(msg)
+    except (ValueError, AttributeError):
+        # Fallback check for older Python versions or when paths are on different drives
+        if not str(abs_path).startswith(str(root_path)):
+            msg = f"File access not permitted: {file_path}"
+            raise PermissionError(msg)
 
-    # Convert to host filesystem path
-    path_in_workspace = abs_path_in_sandbox.relative_to(sandbox_root)
-    return Path(workspace_base) / Path(*path_in_workspace.parts)
+    return abs_path
 
 
 def read_lines(all_lines: list[str], start: int = 0, end: int = -1) -> list[str]:
@@ -114,22 +68,17 @@ def read_lines(all_lines: list[str], start: int = 0, end: int = -1) -> list[str]
 
     """
     start = max(start, 0)
-    start = min(start, len(all_lines))
-    end = -1 if end == -1 else max(end, 0)
-    end = min(end, len(all_lines))
     if end == -1:
-        return all_lines if start == 0 else all_lines[start:]
-    num_lines = len(all_lines)
-    begin = max(0, min(start, num_lines - 2))
-    end = -1 if end > num_lines else max(begin + 1, end)
-    return all_lines[begin:end]
+        return all_lines[start:]
+    
+    end = max(start, end)
+    return all_lines[start:end]
 
 
 async def read_file(
     path: str,
     workdir: str,
-    workspace_base: str,
-    workspace_mount_path_in_sandbox: str,
+    workspace_root: str,
     start: int = 0,
     end: int = -1,
 ) -> Observation:
@@ -140,8 +89,7 @@ async def read_file(
     Args:
         path: File path to read
         workdir: Current working directory
-        workspace_base: Workspace base path
-        workspace_mount_path_in_sandbox: Workspace mount path in sandbox
+        workspace_root: Workspace root path
         start: Starting line number (0-indexed)
         end: Ending line number (-1 for end of file)
 
@@ -150,9 +98,7 @@ async def read_file(
 
     """
     try:
-        whole_path = resolve_path(
-            path, workdir, workspace_base, workspace_mount_path_in_sandbox
-        )
+        whole_path = resolve_path(path, workdir, workspace_root)
     except PermissionError:
         return ErrorObservation(
             f"You're not allowed to access this path: {path}. You can only access paths inside the workspace.",
@@ -183,8 +129,7 @@ def insert_lines(
 async def write_file(
     path: str,
     workdir: str,
-    workspace_base: str,
-    workspace_mount_path_in_sandbox: str,
+    workspace_root: str,
     content: str,
     start: int = 0,
     end: int = -1,
@@ -196,8 +141,7 @@ async def write_file(
     Args:
         path: File path to write
         workdir: Current working directory
-        workspace_base: Workspace base path
-        workspace_mount_path_in_sandbox: Workspace mount path in sandbox
+        workspace_root: Workspace root path
         content: Content to write
         start: Starting line number for insertion (0-indexed)
         end: Ending line number for insertion (-1 for append)
@@ -208,9 +152,7 @@ async def write_file(
     """
     insert = content.split("\n")
     try:
-        whole_path = resolve_path(
-            path, workdir, workspace_base, workspace_mount_path_in_sandbox
-        )
+        whole_path = resolve_path(path, workdir, workspace_root)
         if not os.path.exists(os.path.dirname(whole_path)):
             os.makedirs(os.path.dirname(whole_path))
         mode = "r+" if os.path.exists(whole_path) else "w"

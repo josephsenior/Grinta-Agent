@@ -6,7 +6,6 @@ import { CustomDropdown } from "#/components/shared/inputs/custom-dropdown";
 import {
   VERIFIED_MODELS,
   VERIFIED_PROVIDERS,
-  VERIFIED_OPENHANDS_MODELS,
 } from "#/utils/verified-models";
 import { extractModelAndProvider } from "#/utils/extract-model-and-provider";
 
@@ -23,7 +22,7 @@ export function ModelSelector({
   currentModel,
   onChange,
 }: ModelSelectorProps) {
-  const [, setLitellmId] = React.useState<string | undefined>(undefined);
+  const [, setLlmId] = React.useState<string | undefined>(undefined);
   const [selectedProvider, setSelectedProvider] = React.useState<
     string | undefined
   >(undefined);
@@ -33,18 +32,11 @@ export function ModelSelector({
 
   const normalizeProvider = (provider?: string | null) => {
     if (!provider) return undefined;
-    const lower = provider.toLowerCase();
-    if (lower === "forge" || lower === "openhands") {
-      return "openhands";
-    }
-    return provider;
+    return provider.toLowerCase();
   };
 
   // Get the appropriate verified models array based on the selected provider
   const getVerifiedModels = () => {
-    if (selectedProvider === "openhands" || selectedProvider === "Forge") {
-      return VERIFIED_OPENHANDS_MODELS;
-    }
     return VERIFIED_MODELS;
   };
 
@@ -53,7 +45,7 @@ export function ModelSelector({
       // runs when resetting to defaults
       const { provider, model } = extractModelAndProvider(currentModel);
 
-      setLitellmId(currentModel);
+      setLlmId(currentModel);
       setSelectedProvider(normalizeProvider(provider));
       setSelectedModel(model || undefined);
     }
@@ -65,7 +57,7 @@ export function ModelSelector({
 
     const normalized = normalizeProvider(provider);
     const separator = models[normalized || provider]?.separator || "";
-    setLitellmId((normalized || provider) + separator);
+    setLlmId((normalized || provider) + separator);
   };
 
   const handleChangeModel = (model: string) => {
@@ -73,17 +65,17 @@ export function ModelSelector({
     const separator = models[providerKey]?.separator || "";
     let fullModel = providerKey + separator + model;
     if (selectedProvider === "openai") {
-      // LiteLLM lists OpenAI models without the openai/ prefix
+      // Direct SDK integration lists OpenAI models without the openai/ prefix
       fullModel = model;
     }
-    setLitellmId(fullModel);
+    setLlmId(fullModel);
     setSelectedModel(model);
     onChange?.(fullModel);
   };
 
   const clear = () => {
     setSelectedProvider(undefined);
-    setLitellmId(undefined);
+    setLlmId(undefined);
   };
 
   const { t } = useTranslation();
@@ -117,10 +109,7 @@ export function ModelSelector({
           items={[
             {
               title: t(I18nKey.MODEL_SELECTOR$VERIFIED),
-              items: VERIFIED_PROVIDERS.filter((provider) => {
-                const normalized = normalizeProvider(provider);
-                return models[normalized || provider];
-              }).map((provider) => {
+              items: Object.keys(models).map((provider) => {
                 const normalized = normalizeProvider(provider);
                 return {
                   key: normalized || provider,
@@ -128,29 +117,6 @@ export function ModelSelector({
                 };
               }),
             },
-            ...(Object.keys(models).some(
-              (provider) => !VERIFIED_PROVIDERS.includes(provider),
-            )
-              ? [
-                  {
-                    title: t(I18nKey.MODEL_SELECTOR$OTHERS),
-                    items: Object.keys(models)
-                      .filter(
-                        (provider) =>
-                          !VERIFIED_PROVIDERS.includes(provider) &&
-                          !VERIFIED_PROVIDERS.includes(
-                            normalizeProvider(provider) || "",
-                          ),
-                      )
-                      .map((provider) => ({
-                        key: normalizeProvider(provider) || provider,
-                        label: mapProvider(
-                          normalizeProvider(provider) || provider,
-                        ),
-                      })),
-                  },
-                ]
-              : []),
           ]}
         />
       </fieldset>
@@ -173,33 +139,13 @@ export function ModelSelector({
           items={[
             {
               title: t(I18nKey.MODEL_SELECTOR$VERIFIED),
-              items: getVerifiedModels()
-                .filter((model) =>
-                  models[
-                    normalizeProvider(selectedProvider) || ""
-                  ]?.models?.includes(model),
-                )
-                .map((model) => ({
-                  key: model,
-                  label: model,
-                })),
+              items: (
+                models[normalizeProvider(selectedProvider) || ""]?.models || []
+              ).map((model) => ({
+                key: model,
+                label: model,
+              })),
             },
-            ...(models[selectedProvider || ""]?.models?.some(
-              (model) => !getVerifiedModels().includes(model),
-            )
-              ? [
-                  {
-                    title: t(I18nKey.MODEL_SELECTOR$OTHERS),
-                    items:
-                      models[selectedProvider || ""]?.models
-                        .filter((model) => !getVerifiedModels().includes(model))
-                        .map((model) => ({
-                          key: model,
-                          label: model,
-                        })) || [],
-                  },
-                ]
-              : []),
           ]}
         />
       </fieldset>

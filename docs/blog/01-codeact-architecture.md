@@ -207,5 +207,5 @@ Try it yourself and let us know what you build!
 
 **Next in series:**
 - Part 2: Supporting 200+ LLM Models - Our Provider System
-- Part 3: Self-Improving Agents - The ACE Framework (post-beta)
+- Part 3: Self-Improving Agents
 

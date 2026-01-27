@@ -88,7 +88,7 @@ def get_config() -> dict:
         "APP_SLUG": "Forge-pro",
         "GITHUB_CLIENT_ID": "mock_github_client_id",
         "POSTHOG_CLIENT_KEY": "mock_posthog_key",
-        "PROVIDERS_CONFIGURED": ["openai", "anthropic", "forge"],
+        "PROVIDERS_CONFIGURED": ["openai", "anthropic"],
         "AUTH_URL": "https://auth.Forge.pro",
         "FEATURE_FLAGS": {
             "ENABLE_BILLING": True,

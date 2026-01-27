@@ -20,7 +20,6 @@ For the beta launch, we've strategically **disabled several advanced UI features
 
 ### Core Functionality (100% Active)
 - ✅ AI-powered code generation and editing
-- ✅ Multi-agent orchestration (MetaSOP)
 - ✅ CodeAct agent execution
 - ✅ Terminal integration
 - ✅ Browser automation
@@ -35,7 +34,6 @@ For the beta launch, we've strategically **disabled several advanced UI features
 - ✅ Error recovery mechanisms
 - ✅ Causal reasoning engine
 - ✅ Tree-sitter integration
-- ✅ ACE framework
 
 ---
 
@@ -58,12 +56,6 @@ The following features are **disabled in the UI only** - all backend logic and c
 - **Why disabled**: Advanced feature not needed for initial beta feedback
 - **Status**: Component preserved, imports/rendering commented out
 
-### 4. MetaSOP Orchestration Diagram Panel
-- **Purpose**: Visualizes multi-agent workflows in real-time
-- **Why disabled**: Advanced visualization that could overwhelm new users
-- **Status**: Panel rendering disabled, orchestration still works perfectly
-- **Note**: Backend orchestration remains 100% functional
-
 ---
 
 ## 📁 Preserved Components
@@ -75,9 +67,6 @@ frontend/src/components/features/chat/
 ├── keyboard-shortcuts-panel.tsx ✅ Preserved
 ├── conversation-bookmarks.tsx ✅ Preserved
 └── chat-interface.tsx ⚙️ Modified (imports/rendering commented)
-
-frontend/src/components/features/orchestration/
-└── orchestration-diagram-panel.tsx ✅ Preserved
 ```
 
 ---
@@ -111,8 +100,7 @@ frontend/src/components/features/orchestration/
 3. **Reliability**: Do agents execute correctly without errors?
 4. **Performance**: Are response times acceptable?
 
-### What We're NOT Testing (Yet)
-- Advanced orchestration visualization
+### What we're NOT testing (Yet)
 - Keyboard shortcuts discoverability
 - Bookmark/organization features
 - Technical details preference management
@@ -184,7 +172,7 @@ Documentation has been updated to reflect the beta launch status:
 ### Rollback Plan
 If beta feedback indicates disabled features are needed:
 1. Uncomment code blocks in `chat-interface.tsx`
-2. Rebuild frontend (`npm run build`)
+2. Rebuild frontend (`pnpm run build`)
 3. Restart containers (`docker-compose up -d --force-recreate forge`)
 4. **Time**: ~5 minutes
 

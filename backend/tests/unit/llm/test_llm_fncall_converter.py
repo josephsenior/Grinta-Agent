@@ -3,7 +3,7 @@
 import copy
 import json
 import pytest
-from litellm import ChatCompletionToolParam
+from typing import Any
 from forge.llm.fn_call_converter import (
     IN_CONTEXT_LEARNING_EXAMPLE_PREFIX,
     IN_CONTEXT_LEARNING_EXAMPLE_SUFFIX,
@@ -18,7 +18,7 @@ from forge.llm.fn_call_converter import (
     refine_prompt,
 )
 
-FNCALL_TOOLS: list[ChatCompletionToolParam] = [
+FNCALL_TOOLS: list[dict[str, Any]] = [
     {
         "type": "function",
         "function": {

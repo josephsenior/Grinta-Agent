@@ -50,7 +50,7 @@ export function isActionEvent(event: unknown): event is ForgeAction {
     typeof event === "object" &&
     event !== null &&
     "action" in event &&
-    "args" in (event as any)
+    "args" in (event as Record<string, unknown>)
   );
 }
 
@@ -62,25 +62,39 @@ export function isObservationEvent(event: unknown): event is ForgeObservation {
     typeof event === "object" &&
     event !== null &&
     "observation" in event &&
-    "content" in (event as any)
+    "content" in (event as Record<string, unknown>)
   );
 }
 
 // Axios-oriented helpers used by error utilities
 export const isAxiosErrorWithErrorField = (
   error: unknown,
-): error is { response: { data: { error: string } } } =>
-  typeof error === "object" &&
-  error !== null &&
-  (error as any).response &&
-  (error as any).response.data &&
-  typeof (error as any).response.data.error === "string";
+): error is { response: { data: { error: string } } } => {
+  if (typeof error !== "object" || error === null) return false;
+  const err = error as Record<string, unknown>;
+  return (
+    typeof err.response === "object" &&
+    err.response !== null &&
+    typeof (err.response as Record<string, unknown>).data === "object" &&
+    (err.response as Record<string, unknown>).data !== null &&
+    typeof (
+      (err.response as Record<string, unknown>).data as Record<string, unknown>
+    ).error === "string"
+  );
+};
 
 export const isAxiosErrorWithMessageField = (
   error: unknown,
-): error is { response: { data: { message: string } } } =>
-  typeof error === "object" &&
-  error !== null &&
-  (error as any).response &&
-  (error as any).response.data &&
-  typeof (error as any).response.data.message === "string";
+): error is { response: { data: { message: string } } } => {
+  if (typeof error !== "object" || error === null) return false;
+  const err = error as Record<string, unknown>;
+  return (
+    typeof err.response === "object" &&
+    err.response !== null &&
+    typeof (err.response as Record<string, unknown>).data === "object" &&
+    (err.response as Record<string, unknown>).data !== null &&
+    typeof (
+      (err.response as Record<string, unknown>).data as Record<string, unknown>
+    ).message === "string"
+  );
+};

@@ -16,7 +16,6 @@ from pydantic import SecretStr
 
 from forge.core.config.llm_config import LLMConfig
 from forge.events.event_store import EventStore
-from forge.experiments.experiment_manager import ExperimentConfig
 from forge.integrations.provider import ProviderToken
 from forge.integrations.service_types import (
     CreateMicroagent,
@@ -77,6 +76,11 @@ def _async_wrap(fn):
         return fn(*args, **kwargs)
 
     return inner
+
+
+@pytest.fixture
+def fake_request():
+    return SimpleNamespace(state=SimpleNamespace(request_id="test-id"))
 
 
 def test_filter_conversations_by_age_filters_old_entries():
@@ -196,25 +200,30 @@ def test_handle_conversation_errors_maps_known_exceptions():
         mc._handle_conversation_errors(RuntimeError("fail"))
 
 
-def test_apply_conversation_overrides_prefers_overrides():
-    suggested_task = SuggestedTask(
-        git_provider=ProviderType.BITBUCKET,
-        task_type=TaskType.OPEN_PR,
-        repo="override",
-        issue_number=1,
-        title="title",
-    )
-    repo, provider, message = mc._apply_conversation_overrides(
-        None,
-        None,
-        "override",
-        ProviderType.BITBUCKET,
+@pytest.mark.asyncio
+async def test_apply_conversation_overrides_prefers_overrides(monkeypatch):
+    class MockSuggestedTask:
+        def __init__(self):
+            self.git_provider = ProviderType.GITHUB
+            self.task_type = TaskType.OPEN_ISSUE
+            self.repo = "suggested/repo"
+            self.issue_number = 1
+            self.title = "title"
+        def get_prompt_for_task(self):
+            return "suggested message"
+
+    suggested_task = MockSuggestedTask()
+
+    repo, provider, msg = mc._apply_conversation_overrides(
+        "orig/repo",
+        ProviderType.GITHUB,
+        "override/repo",
+        ProviderType.GITHUB,
         suggested_task,
-        None,
+        "orig message",
     )
-    assert repo == "override"
-    assert provider == ProviderType.BITBUCKET
-    assert message == "prompt"
+    assert repo == "override/repo"
+    assert msg == "suggested message"
 
 
 def test_normalize_provider_tokens_handles_strings():
@@ -540,24 +549,6 @@ async def test_update_conversation_error(monkeypatch):
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
-def test_add_experiment_config_for_conversation(monkeypatch):
-    calls: list[tuple[str, str]] = []
-
-    class DummyFileStore:
-        def read(self, path):
-            raise FileNotFoundError
-
-        def write(self, path, content):
-            calls.append((path, content))
-
-    monkeypatch.setattr(mc, "file_store", DummyFileStore())
-    monkeypatch.setattr(mc, "model_dump_json", lambda exp_config: "json")
-    monkeypatch.setattr(mc, "get_experiment_config_filename", lambda cid: f"{cid}.json")
-    result = mc.add_experiment_config_for_conversation(ExperimentConfig(), "cid")
-    assert result is False
-    assert calls[0][0] == "cid.json"
-
-
 @pytest.mark.asyncio
 async def test_get_microagent_management_conversations_filters(monkeypatch):
     now = datetime.now(timezone.utc)
@@ -624,73 +615,6 @@ async def test_get_microagent_management_conversations_filters(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_handle_metasop_conversation_success(
-    monkeypatch, patch_conversation_manager
-):
-    now = datetime.now(timezone.utc)
-    metadata = ConversationMetadata(
-        conversation_id="cid",
-        title="title",
-        selected_repository="repo",
-        user_id="user",
-        created_at=now,
-        last_updated_at=now,
-        trigger=ConversationTrigger.GUI,
-    )
-    monkeypatch.setattr(
-        mc, "initialize_conversation", _async_wrap(lambda *args, **kwargs: metadata)
-    )
-
-    emitted: dict[str, Any] = {}
-
-    async def emit(event, payload, to=None):
-        emitted["payload"] = payload
-
-    patch_conversation_manager.sio = SimpleNamespace(emit=emit)
-    monkeypatch.setattr(
-        mc, "run_metasop_for_conversation", _async_wrap(lambda *args, **kwargs: None)
-    )
-
-    created: dict[str, Any] = {}
-
-    def fake_create_task(coro):
-        created["task"] = coro
-        return None
-
-    monkeypatch.setattr(mc.asyncio, "create_task", fake_create_task)
-
-    response = await mc._handle_metasop_conversation(
-        user_id="user",
-        conversation_id="cid",
-        repository="repo",
-        selected_branch="main",
-        conversation_trigger=ConversationTrigger.GUI,
-        git_provider=ProviderType.GITHUB,
-        initial_user_msg="hello",
-    )
-    assert response.conversation_status == ConversationStatus.STARTING
-    assert "Starting MetaSOP" in emitted["payload"]["message"]
-    assert created["task"] is not None
-
-
-@pytest.mark.asyncio
-async def test_handle_metasop_conversation_failure(monkeypatch):
-    monkeypatch.setattr(
-        mc, "initialize_conversation", _async_wrap(lambda *args, **kwargs: None)
-    )
-    with pytest.raises(RuntimeError):
-        await mc._handle_metasop_conversation(
-            user_id="user",
-            conversation_id="cid",
-            repository=None,
-            selected_branch=None,
-            conversation_trigger=ConversationTrigger.GUI,
-            git_provider=None,
-            initial_user_msg=None,
-        )
-
-
-@pytest.mark.asyncio
 async def test_handle_regular_conversation_returns_status(monkeypatch):
     agent_loop_info = SimpleNamespace(status=ConversationStatus.RUNNING)
     monkeypatch.setattr(
@@ -715,16 +639,16 @@ async def test_handle_regular_conversation_returns_status(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_new_conversation_remote_missing_message():
+async def test_new_conversation_remote_missing_message(fake_request):
     response = await mc.new_conversation(
-        mc.InitSessionRequest(), auth_type=mc.AuthType.BEARER
+        fake_request, mc.InitSessionRequest(), auth_type=mc.AuthType.BEARER
     )
     assert isinstance(response, JSONResponse)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
 @pytest.mark.asyncio
-async def test_new_conversation_success(monkeypatch):
+async def test_new_conversation_success(monkeypatch, fake_request):
     monkeypatch.setattr(
         mc,
         "_extract_request_data",
@@ -782,13 +706,26 @@ async def test_new_conversation_success(monkeypatch):
     )
     monkeypatch.setattr(mc.uuid, "uuid4", lambda: SimpleNamespace(hex="cid"))
 
-    result = await mc.new_conversation(mc.InitSessionRequest(), user_id="user")
+    # Need to mock get_user_settings to return something
+    class DummySettings:
+        @classmethod
+        def from_config(cls):
+            return cls()
+        def merge_with_config_settings(self):
+            return self
+        @property
+        def llm(self):
+            return SimpleNamespace(provider="openai")
+    monkeypatch.setattr(mc, "get_user_settings", _async_wrap(lambda req: DummySettings()))
+    monkeypatch.setattr(mc, "Settings", DummySettings)
+
+    result = await mc.new_conversation(fake_request, mc.InitSessionRequest(), user_id="user")
     assert result is expected_response
     assert verify_called["repository"] == "owner/repo"
 
 
 @pytest.mark.asyncio
-async def test_new_conversation_handles_known_error(monkeypatch):
+async def test_new_conversation_handles_known_error(monkeypatch, fake_request):
     monkeypatch.setattr(
         mc,
         "_extract_request_data",
@@ -815,7 +752,7 @@ async def test_new_conversation_handles_known_error(monkeypatch):
         ),
     )
 
-    response = await mc.new_conversation(mc.InitSessionRequest(), user_id="user")
+    response = await mc.new_conversation(fake_request, mc.InitSessionRequest(), user_id="user")
     assert isinstance(response, JSONResponse)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -941,39 +878,6 @@ async def test_stop_conversation_error(monkeypatch, patch_conversation_manager):
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
-def test_add_experiment_config_existing_file(monkeypatch):
-    class DummyFileStore:
-        def __init__(self):
-            self.read_calls = 0
-
-        def read(self, path):
-            self.read_calls += 1
-            return "already"
-
-        def write(self, path, content):
-            raise AssertionError("should not write")
-
-    dummy_store = DummyFileStore()
-    monkeypatch.setattr(mc, "file_store", dummy_store)
-    monkeypatch.setattr(mc, "get_experiment_config_filename", lambda cid: f"{cid}.json")
-    assert mc.add_experiment_config_for_conversation(ExperimentConfig(), "cid") is False
-    assert dummy_store.read_calls == 1
-
-
-def test_add_experiment_config_write_failure(monkeypatch):
-    class DummyFileStore:
-        def read(self, path):
-            raise FileNotFoundError
-
-        def write(self, path, content):
-            raise RuntimeError("fail")
-
-    monkeypatch.setattr(mc, "file_store", DummyFileStore())
-    monkeypatch.setattr(mc, "model_dump_json", lambda exp_config: "json")
-    monkeypatch.setattr(mc, "get_experiment_config_filename", lambda cid: f"{cid}.json")
-    assert mc.add_experiment_config_for_conversation(ExperimentConfig(), "cid") is True
-
-
 def test_normalize_provider_tokens_converts(monkeypatch):
     class DummyProviderToken:
         @staticmethod
@@ -1005,8 +909,8 @@ async def test_simple_conversations_endpoint():
 
 
 @pytest.mark.asyncio
-async def test_search_conversations_route_invokes_impl(monkeypatch):
-    request = cast(Request, SimpleNamespace())
+async def test_search_conversations_route_invokes_impl(monkeypatch, fake_request):
+    request = cast(Request, fake_request)
     monkeypatch.setattr(mc, "get_user_id", _async_wrap(lambda req: "user"))
     monkeypatch.setattr(mc, "get_conversation_store", _async_wrap(lambda req: "store"))
 
@@ -1021,8 +925,8 @@ async def test_search_conversations_route_invokes_impl(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_get_conversation_route(monkeypatch):
-    request = cast(Request, SimpleNamespace())
+async def test_get_conversation_route(monkeypatch, fake_request):
+    request = cast(Request, fake_request)
     monkeypatch.setattr(mc, "get_user_id", _async_wrap(lambda req: "user"))
     monkeypatch.setattr(mc, "get_conversation_store", _async_wrap(lambda req: "store"))
     monkeypatch.setattr(
@@ -1035,8 +939,8 @@ async def test_get_conversation_route(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_delete_conversation_route(monkeypatch):
-    request = cast(Request, SimpleNamespace())
+async def test_delete_conversation_route(monkeypatch, fake_request):
+    request = cast(Request, fake_request)
     monkeypatch.setattr(mc, "get_user_id", _async_wrap(lambda req: "user"))
     monkeypatch.setattr(mc, "get_conversation_store", _async_wrap(lambda req: "store"))
     monkeypatch.setattr(

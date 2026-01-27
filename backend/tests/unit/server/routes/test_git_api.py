@@ -56,40 +56,6 @@ async def test_get_user_installations_github(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_get_user_installations_bitbucket(monkeypatch):
-    async def get_workspaces(self):
-        return ["team"]
-
-    handler = _dummy_handler(get_bitbucket_workspaces=get_workspaces)
-    monkeypatch.setattr(git_routes, "ProviderHandler", handler)
-
-    tokens = MappingProxyType({ProviderType.BITBUCKET: ProviderToken(token=None)})
-    result = await git_routes.get_user_installations(
-        ProviderType.BITBUCKET,
-        provider_tokens=tokens,
-        access_token=None,
-        user_id="user",
-    )
-    assert result == ["team"]
-
-
-@pytest.mark.asyncio
-async def test_get_user_installations_unsupported(monkeypatch):
-    handler = _dummy_handler()
-    monkeypatch.setattr(git_routes, "ProviderHandler", handler)
-
-    tokens = MappingProxyType({ProviderType.GITLAB: ProviderToken(token=None)})
-    response = await git_routes.get_user_installations(
-        ProviderType.GITLAB,
-        provider_tokens=tokens,
-        access_token=None,
-        user_id="user",
-    )
-    assert isinstance(response, JSONResponse)
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-
-@pytest.mark.asyncio
 async def test_get_user_installations_missing_tokens():
     with pytest.raises(AuthenticationError):
         await git_routes.get_user_installations(

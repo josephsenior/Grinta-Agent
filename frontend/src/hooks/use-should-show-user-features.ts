@@ -1,11 +1,10 @@
-import React from "react";
-import { useConfig } from "./query/use-config";
-import { useIsAuthed } from "./query/use-is-authed";
+import { useConfig } from "#/hooks/query/use-config";
+import { useIsAuthed } from "#/hooks/query/use-is-authed";
 import { useUserProviders } from "./use-user-providers";
 
 /**
- * Hook to determine if user-related features should be shown or enabled
- * based on authentication status and provider configuration.
+ * Hook to determine if user-related features should be shown or enabled.
+ * Returns true if the user is authenticated and the application mode allows it.
  *
  * @returns boolean indicating if user features should be shown
  */
@@ -14,17 +13,12 @@ export const useShouldShowUserFeatures = (): boolean => {
   const { data: isAuthed } = useIsAuthed();
   const { providers } = useUserProviders();
 
-  return React.useMemo(() => {
-    if (!config?.APP_MODE || !isAuthed) {
-      return false;
-    }
+  if (!config) return false;
+  if (!isAuthed) return false;
 
-    // In OSS mode, only show user features if Git providers are configured
-    if (config.APP_MODE === "oss") {
-      return providers.length > 0;
-    }
+  if (config.APP_MODE === "oss") {
+    return providers.length > 0;
+  }
 
-    // In non-OSS modes (saas), always show user features when authenticated
-    return true;
-  }, [config?.APP_MODE, isAuthed, providers.length]);
+  return true;
 };

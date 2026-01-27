@@ -632,7 +632,7 @@ function ConfigureModalDescription({
 }) {
   const link = (
     <a
-      href="https://docs.all-hands.dev/usage/cloud/Forge-cloud"
+      href="https://docs.forge.dev/usage/cloud/Forge-cloud"
       target="_blank"
       rel="noopener noreferrer"
       className="text-violet-500 hover:text-brand-400 hover:underline transition-colors duration-200"
@@ -760,3 +760,4 @@ export function ConfigureModal({
     </ModalBackdrop>
   );
 }
+

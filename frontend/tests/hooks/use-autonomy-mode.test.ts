@@ -16,8 +16,15 @@ vi.mock("#/hooks/mutation/use-save-settings", () => ({
   useSaveSettings: () => ({ mutate: mutateMock }),
 }));
 
+const mockI18n = {
+  changeLanguage: vi.fn(() => Promise.resolve()),
+};
+
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: mockI18n,
+  }),
 }));
 
 describe("useAutonomyMode", () => {

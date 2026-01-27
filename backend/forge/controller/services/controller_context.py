@@ -27,26 +27,22 @@ class ControllerContext:
     @property
     def agent(self):
         """Return the controller's agent instance, if available."""
-
         return getattr(self._controller, "agent", None)
 
     @property
     def agent_config(self):
         """Return the agent configuration when present."""
-
         agent = self.agent
         return getattr(agent, "config", None) if agent else None
 
     @property
     def id(self) -> str | None:
         """Return controller identifier if available."""
-
         return getattr(self._controller, "id", None)
 
     @property
     def state(self):
         """Expose the controller state for read/write operations."""
-
         return getattr(self._controller, "state", None)
 
     @property
@@ -60,13 +56,11 @@ class ControllerContext:
     @property
     def event_stream(self):
         """Expose the controller's event stream."""
-
         return getattr(self._controller, "event_stream", None)
 
     @property
     def pending_action(self):
         """Return currently pending action."""
-
         pending_service = getattr(self._controller, "pending_action_service", None)
         if pending_service:
             return pending_service.get()
@@ -89,7 +83,6 @@ class ControllerContext:
 
         Resets bookkeeping caches to avoid stale context leakage.
         """
-
         from forge.controller.tool_pipeline import ToolInvocationPipeline
 
         pipeline = ToolInvocationPipeline(self._controller, list(middlewares))
@@ -105,17 +98,14 @@ class ControllerContext:
         action: "Action | None" = None,
     ) -> None:
         """Proxy to the controller's context cleanup utility."""
-
         self._controller._cleanup_action_context(ctx, action=action)
 
     def emit_event(self, event: "Event", source: "EventSource") -> None:
         """Publish an event through the controller's event stream."""
-
         self._controller.event_stream.add_event(event, source)
 
     def clear_pending_action(self) -> None:
         """Reset the controller's pending action state."""
-
         self.set_pending_action(None)
 
     def pop_action_context(self, event_id: int):
@@ -126,12 +116,10 @@ class ControllerContext:
 
     async def set_agent_state(self, agent_state: "AgentState") -> None:
         """Proxy to `AgentController.set_agent_state_to`."""
-
         await self._controller.set_agent_state_to(agent_state)
 
     def trigger_step(self) -> None:
         """Proxy to `AgentController.step`."""
-
         self._controller.step()
 
     @property
@@ -148,11 +136,6 @@ class ControllerContext:
 
     def get_controller(self) -> "AgentController":
         """Expose the underlying controller for legacy integrations."""
-
         return self._controller
-
-    @property
-    def delegate_runtime_provider(self):
-        return getattr(self._controller, "delegate_runtime_provider", None)
 
 

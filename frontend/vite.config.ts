@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
   const PURE_SPA = true;
 
   const {
-    VITE_BACKEND_HOST = "localhost:3000",
+    VITE_BACKEND_HOST = "127.0.0.1:3000",
     VITE_USE_TLS = "false",
     VITE_FRONTEND_PORT = "3001",
     VITE_INSECURE_SKIP_VERIFY = "false",
@@ -90,9 +90,9 @@ export default defineConfig(({ mode }) => {
               //   return "graph-libs";
               // }
               
-              // Math/Jupyter (lazy load)
-              if (id.includes("katex") || id.includes("jupyter")) {
-                return "jupyter";
+              // Math (lazy load)
+              if (id.includes("katex")) {
+                return "math";
               }
               
               // State management
@@ -273,6 +273,24 @@ export default defineConfig(({ mode }) => {
       globals: true,
       environment: "jsdom",
       setupFiles: "./vitest.setup.ts",
+      include: [
+        "tests/components/**/*.test.{ts,tsx}",
+        "tests/context/**/*.test.{ts,tsx}",
+        "tests/hooks/**/*.test.{ts,tsx}",
+        "tests/legacy/**/*.test.{ts,tsx}",
+        "tests/routes/**/*.test.{ts,tsx}",
+        "tests/services/**/*.test.{ts,tsx}",
+        "tests/store/**/*.test.{ts,tsx}",
+        "tests/utils/**/*.test.{ts,tsx}",
+      ],
+      exclude: [
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/build/**",
+        "**/cypress/**",
+        "**/.{idea,git,cache,output,temp}/**",
+        "**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,playwright}.config.*",
+      ],
       coverage: {
         provider: "v8",
         reporter: ["text", "json", "html"],

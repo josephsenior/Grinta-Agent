@@ -3,7 +3,6 @@ import pytest
 from forge.core.schemas import ActionType
 from forge.events.action.action import ActionConfirmationStatus, ActionSecurityRisk
 from forge.events.action.agent import (
-    AgentDelegateAction,
     AgentFinishAction,
     AgentRejectAction,
     AgentThinkAction,
@@ -14,7 +13,7 @@ from forge.events.action.agent import (
     TaskTrackingAction,
 )
 from forge.events.action.browse import BrowseInteractiveAction, BrowseURLAction
-from forge.events.action.commands import CmdRunAction, IPythonRunCellAction
+from forge.events.action.commands import CmdRunAction
 from forge.events.action.empty import NullAction
 from forge.events.action.files import FileEditAction, FileReadAction, FileWriteAction
 from forge.events.action.mcp import MCPAction
@@ -40,9 +39,6 @@ def test_basic_agent_actions_generate_expected_messages_and_strings():
 
     reject_action = AgentRejectAction(outputs={"reason": "Insufficient data"})
     assert "Insufficient data" in reject_action.message
-
-    delegate_action = AgentDelegateAction(agent="assistant", inputs={"task": "plan"})
-    assert delegate_action.message == "I'm asking assistant for help with this task."
 
     recall_action = RecallAction(
         recall_type=RecallType.KNOWLEDGE, query="How to tests" * 5
@@ -118,11 +114,6 @@ def test_command_actions_format_messages_and_strings():
     assert "CmdRunAction" in str(cmd_action)
     assert cmd_action.timeout == 10
 
-    ipy_action = IPythonRunCellAction(code="print('hi')", thought="Quick check")
-    assert ipy_action.message.startswith("Running Python code interactively")
-    assert "IPythonRunCellAction" in str(ipy_action)
-    assert ipy_action.confirmation_state is ActionConfirmationStatus.CONFIRMED
-
 
 def test_null_file_actions_and_messages():
     null_action = NullAction()
@@ -154,7 +145,7 @@ def test_file_edit_action_repr_switches_on_impl_source():
         command="str_replace",
         old_str="foo",
         new_str="bar",
-        impl_source=FileEditSource.OH_ACI,
+        impl_source=FileEditSource.FILE_EDITOR,
     )
     aci_repr = repr(aci_edit)
     assert "Old String" in aci_repr
@@ -167,7 +158,7 @@ def test_file_edit_action_repr_covers_all_command_variants():
             path="created.py",
             command="create",
             file_text="print('new')",
-            impl_source=FileEditSource.OH_ACI,
+            impl_source=FileEditSource.FILE_EDITOR,
         )
     )
     assert "Created File with Text" in create_repr
@@ -178,7 +169,7 @@ def test_file_edit_action_repr_covers_all_command_variants():
             command="insert",
             new_str="line",
             insert_line=3,
-            impl_source=FileEditSource.OH_ACI,
+            impl_source=FileEditSource.FILE_EDITOR,
         )
     )
     assert "Insert Line" in insert_repr
@@ -187,7 +178,7 @@ def test_file_edit_action_repr_covers_all_command_variants():
         FileEditAction(
             path="undo.py",
             command="undo_edit",
-            impl_source=FileEditSource.OH_ACI,
+            impl_source=FileEditSource.FILE_EDITOR,
         )
     )
     assert "Undo Edit" in undo_repr

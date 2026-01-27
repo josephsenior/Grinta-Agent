@@ -8,16 +8,14 @@ Production-grade monitoring for Forge using Prometheus + Grafana.
 
 ### **1. Prometheus** (Port 9090)
 - Metrics collection from Forge backend
-- MetaSOP metrics (latency, tokens, retries)
 - 30-day retention
 - Self-monitoring
 
 ### **2. Grafana** (Port 3030)
-- 8 pre-built dashboards:
+- 7 pre-built dashboards:
   - **System Metrics** - Events, cache, retries
   - **LLM Performance** - Latency (p50, p95, p99), tokens
   - **Error & Reliability** - Failures, retries, timeouts
-  - **MetaSOP gRPC Services** - RPC latency, error rate, throughput
   - **Logs Explorer** - Centralized log aggregation and search
 - Auto-provisioned datasources (Prometheus + Loki)
 - Admin user: `admin` / `forge_admin_2025`
@@ -71,29 +69,16 @@ docker-compose ps
 
 ### **3. Configure Forge to Send Metrics**
 
-**MetaSOP Core Metrics**
+**Forge Core Metrics**
 ```toml
 # config.toml
-[metasop.settings]
+[forge.settings]
 metrics_prometheus_port = 9091
 ```
 
 ```bash
-export METASOP_PROMETHEUS_PORT=9091
+export FORGE_PROMETHEUS_PORT=9091
 ```
-
-**gRPC Adapter Metrics**
-
-The EventService/RuntimeService adapters emit Prometheus metrics when the gRPC feature flag is enabled:
-
-- `metasop_eventservice_rpc_total`
-- `metasop_eventservice_rpc_failures_total`
-- `metasop_eventservice_rpc_duration_seconds_bucket`
-- `metasop_runtime_rpc_total`
-- `metasop_runtime_rpc_failures_total`
-- `metasop_runtime_rpc_duration_seconds_bucket`
-
-No extra config is required—the metrics are exposed via the same Prometheus endpoint.
 
 ### **4. Start Forge Backend**
 ```bash
@@ -149,9 +134,7 @@ poetry run python -m Forge.server.listen
 - Retry attempts by operation
 - Suppressed errors
 
-### **5. MetaSOP gRPC Services** (metasop-grpc)
-
-### **6. Distributed Tracing (Jaeger)**
+### **5. Distributed Tracing (Jaeger)**
 - Access via Jaeger UI: http://localhost:16686
 - View request traces end-to-end
 - Analyze latency and bottlenecks
@@ -171,25 +154,11 @@ Edit `prometheus/prometheus.yml`:
 
 ```yaml
 scrape_configs:
-  # MetaSOP metrics
-  - job_name: 'forge-metasop'
-    static_configs:
-      - targets: ['host.docker.internal:9091']
-        
   # REST API metrics
   - job_name: 'forge-api'
     metrics_path: '/api/monitoring/metrics'
     static_configs:
       - targets: ['host.docker.internal:3000']
-
-  # gRPC adapters (if running out-of-process)
-  - job_name: 'forge-eventservice-grpc'
-    static_configs:
-      - targets: ['event-service:50051']
-
-  - job_name: 'forge-runtime-grpc'
-    static_configs:
-      - targets: ['runtime-service:50052']
 ```
 
 **Note:** Use `host.docker.internal` on macOS/Windows, or `172.17.0.1` on Linux.
@@ -223,9 +192,9 @@ docker-compose restart grafana
 ```bash
 # Prometheus UI: http://localhost:9090/graph
 # Try queries:
-metasop_total_events
-metasop_step_duration_ms_p95
-metasop_cache_hits / (metasop_cache_hits + metasop_cache_stores)
+forge_total_events
+forge_step_duration_ms_p95
+forge_cache_hits / (forge_cache_hits + forge_cache_stores)
 ```
 
 ### **3. Verify Grafana Connection**
@@ -240,27 +209,27 @@ metasop_cache_hits / (metasop_cache_hits + metasop_cache_stores)
 
 ### **Error Rate (%)**
 ```promql
-(metasop_steps_failed / (metasop_steps_executed + metasop_steps_failed)) * 100
+(forge_steps_failed / (forge_steps_executed + forge_steps_failed)) * 100
 ```
 
 ### **Cache Hit Rate (%)**
 ```promql
-(metasop_cache_hits / (metasop_cache_hits + metasop_cache_stores)) * 100
+(forge_cache_hits / (forge_cache_hits + forge_cache_stores)) * 100
 ```
 
 ### **Retry Success Rate (%)**
 ```promql
-(metasop_retry_successes / metasop_retry_attempts) * 100
+(forge_retry_successes / forge_retry_attempts) * 100
 ```
 
 ### **Event Rate (events/sec)**
 ```promql
-rate(metasop_total_events[5m])
+rate(forge_total_events[5m])
 ```
 
 ### **Token Rate by Model (tokens/sec)**
 ```promql
-rate(metasop_model_total_tokens[5m])
+rate(forge_model_total_tokens[5m])
 ```
 
 ---
@@ -283,12 +252,12 @@ docker-compose down -v
 
 **1. Check if Forge is sending metrics:**
 ```bash
-# Verify MetaSOP Prometheus server is running
+# Verify Forge Prometheus server is running
 curl http://localhost:9091/metrics
 
 # Should see metrics like:
-# metasop_total_events 123
-# metasop_step_duration_ms_p95 1234.0
+# forge_total_events 123
+# forge_step_duration_ms_p95 1234.0
 ```
 
 **2. Check Prometheus targets:**
@@ -318,7 +287,7 @@ curl http://localhost:9091/metrics
 ```bash
 # Query directly in Prometheus:
 # http://localhost:9090/graph
-# Query: metasop_total_events
+# Query: forge_total_events
 # Should return data
 ```
 
@@ -383,28 +352,28 @@ COST_QUOTA_ENABLED=true
 ## 📊 **Metrics Reference**
 
 ### **Counters** (Always increase)
-- `metasop_total_events` - Total events processed
-- `metasop_steps_executed` - Successful steps
-- `metasop_steps_failed` - Failed steps
-- `metasop_total_tokens` - Total tokens used
-- `metasop_cache_hits` - Cache hits
-- `metasop_retry_attempts` - Retry attempts
+- `forge_total_events` - Total events processed
+- `forge_steps_executed` - Successful steps
+- `forge_steps_failed` - Failed steps
+- `forge_total_tokens` - Total tokens used
+- `forge_cache_hits` - Cache hits
+- `forge_retry_attempts` - Retry attempts
 
 ### **Gauges** (Can go up/down)
-- `metasop_cache_entries` - Current cache size
-- `metasop_avg_tokens_per_executed_step` - Average tokens
+- `forge_cache_entries` - Current cache size
+- `forge_avg_tokens_per_executed_step` - Average tokens
 
 ### **Histograms** (Latency tracking)
-- `metasop_step_duration_ms` - Step duration (ms)
-- `metasop_step_duration_ms_p50` - Median latency
-- `metasop_step_duration_ms_p95` - 95th percentile
-- `metasop_step_duration_ms_p99` - 99th percentile
+- `forge_step_duration_ms` - Step duration (ms)
+- `forge_step_duration_ms_p50` - Median latency
+- `forge_step_duration_ms_p95` - 95th percentile
+- `forge_step_duration_ms_p99` - 99th percentile
 
-### **gRPC Adapter Metrics**
-- `metasop_eventservice_rpc_total`, `metasop_eventservice_rpc_failures_total`
-- `metasop_runtime_rpc_total`, `metasop_runtime_rpc_failures_total`
-- `metasop_eventservice_rpc_duration_seconds_bucket` (histogram)
-- `metasop_runtime_rpc_duration_seconds_bucket` (histogram)
+### **RPC Metrics**
+- `forge_eventservice_rpc_total`, `forge_eventservice_rpc_failures_total`
+- `forge_runtime_rpc_total`, `forge_runtime_rpc_failures_total`
+- `forge_eventservice_rpc_duration_seconds_bucket` (histogram)
+- `forge_runtime_rpc_duration_seconds_bucket` (histogram)
 - Recording rules: `forge_eventservice_rpc_rate_5m`, `forge_runtime_rpc_rate_5m`,
   `forge_eventservice_error_rate_5m`, `forge_runtime_error_rate_5m`
 

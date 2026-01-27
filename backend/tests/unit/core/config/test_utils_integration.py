@@ -22,86 +22,6 @@ from forge.core.config.security_config import SecurityConfig
 
 
 # Minimal stubs so importing forge modules does not require native deps during tests
-if "litellm" not in sys.modules:
-
-    class _LiteLLMModelResponse(BaseModel):
-        model: str | None = None
-        choices: list[Any] = []
-
-    class _LiteLLMModelInfo(BaseModel):
-        model: str | None = None
-
-    class _LiteLLMPromptTokensDetails(BaseModel):
-        prompt_name: str | None = None
-
-    class _LiteLLMChatCompletionToolParam(BaseModel):
-        function: dict[str, Any] = {}
-
-    class _LiteLLMCostPerToken(BaseModel):
-        cost: float = 0.0
-
-    class _LiteLLMUsage(BaseModel):
-        total_tokens: int = 0
-
-    _litellm_module = types.ModuleType("litellm")
-    _litellm_module.ModelResponse = _LiteLLMModelResponse
-    _litellm_module.ModelInfo = _LiteLLMModelInfo
-    _litellm_module.PromptTokensDetails = _LiteLLMPromptTokensDetails
-    _litellm_module.ChatCompletionToolParam = _LiteLLMChatCompletionToolParam
-    _litellm_module.CostPerToken = _LiteLLMCostPerToken
-    _litellm_module.Usage = _LiteLLMUsage
-    _litellm_module.APIConnectionError = RuntimeError
-    _litellm_module.APIError = RuntimeError
-    _litellm_module.AuthenticationError = RuntimeError
-    _litellm_module.BadRequestError = RuntimeError
-    _litellm_module.ContentPolicyViolationError = RuntimeError
-    _litellm_module.ContextWindowExceededError = RuntimeError
-    _litellm_module.InternalServerError = RuntimeError
-    _litellm_module.NotFoundError = RuntimeError
-    _litellm_module.OpenAIError = RuntimeError
-    _litellm_module.RateLimitError = RuntimeError
-    _litellm_module.ServiceUnavailableError = RuntimeError
-    _litellm_module.Timeout = RuntimeError
-    _litellm_module.acompletion = staticmethod(lambda *args, **kwargs: None)
-    _litellm_module.completion = staticmethod(lambda *args, **kwargs: None)
-    _litellm_module.completion_cost = staticmethod(lambda *args, **kwargs: 0)
-    _litellm_module.suppress_debug_info = True
-    _litellm_module.set_verbose = False
-    _litellm_utils = types.ModuleType("litellm.utils")
-    _litellm_utils.create_pretrained_tokenizer = staticmethod(
-        lambda *args, **kwargs: None
-    )
-    _litellm_utils.get_model_info = staticmethod(lambda *args, **kwargs: {})
-    _litellm_exceptions = types.ModuleType("litellm.exceptions")
-    for _name in [
-        "APIConnectionError",
-        "APIError",
-        "AuthenticationError",
-        "BadRequestError",
-        "ContentPolicyViolationError",
-        "ContextWindowExceededError",
-        "InternalServerError",
-        "NotFoundError",
-        "OpenAIError",
-        "RateLimitError",
-        "ServiceUnavailableError",
-        "Timeout",
-    ]:
-        setattr(_litellm_exceptions, _name, RuntimeError)
-    _litellm_types_utils = types.ModuleType("litellm.types.utils")
-    _litellm_types_utils.CostPerToken = _LiteLLMCostPerToken
-    _litellm_types_utils.ModelResponse = _LiteLLMModelResponse
-    _litellm_types_utils.Usage = _LiteLLMUsage
-    _litellm_module.utils = _litellm_utils
-    _litellm_module.exceptions = _litellm_exceptions
-    _litellm_module.create_pretrained_tokenizer = (
-        _litellm_utils.create_pretrained_tokenizer
-    )
-    _litellm_module.get_model_info = _litellm_utils.get_model_info
-    sys.modules["litellm"] = _litellm_module
-    sys.modules["litellm.utils"] = _litellm_utils
-    sys.modules["litellm.exceptions"] = _litellm_exceptions
-    sys.modules["litellm.types.utils"] = _litellm_types_utils
 if "tokenizers" not in sys.modules:
     sys.modules["tokenizers"] = types.ModuleType("tokenizers")
 
@@ -197,7 +117,6 @@ def test_load_from_env_applies_nested_values(
         "CACHE_DIR": str(cache_dir),
         "LLM_MODEL": "env-model",
         "LLM_API_KEY": "sk-env",
-        "AGENT_ENABLE_JUPYTER": "false",
         "AGENT_ENABLE_BROWSING": "false",
     }
 
@@ -208,7 +127,7 @@ def test_load_from_env_applies_nested_values(
     assert config.get_llm_config().model == "env-model"
     assert isinstance(config.get_llm_config().api_key, SecretStr)
     assert config.get_llm_config().api_key.get_secret_value() == "sk-env"
-    assert config.get_agent_config().enable_jupyter is False
+    assert config.get_agent_config().enable_browsing is False
     assert (
         "set",
         config.get_llm_config().model,
@@ -271,9 +190,6 @@ def test_load_forge_config_full_flow(
 
             [extended]
             feature_flag = "on"
-
-            [metasop]
-            custom = "value"
             """
         ).strip(),
         encoding="utf-8",
@@ -283,7 +199,6 @@ def test_load_forge_config_full_flow(
     monkeypatch.setenv("WORKSPACE_BASE", workspace_path)
     monkeypatch.setenv("SANDBOX_VOLUMES", "/tmp/host:/workspace:rw")
     monkeypatch.setenv("LLM_API_KEY", "sk-load-token-0000000000000")
-    monkeypatch.setenv("AGENT_ENABLE_JUPYTER", "false")
 
     api_manager = RecordingAPIKeyManager()
     monkeypatch.setattr(

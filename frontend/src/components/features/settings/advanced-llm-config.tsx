@@ -153,7 +153,7 @@ export function AdvancedLLMConfig({
           onConfigChange?.({ LLM_CUSTOM_LLM_PROVIDER: v || null })
         }
         helpText={t(I18nKey.LLM_SETTINGS$CUSTOM_PROVIDER_HELP)}
-        placeholder="e.g., anthropic, openai, azure"
+        placeholder="e.g., anthropic, openai, gemini, xai"
       />
 
       <div className="border-t border-border pt-6">

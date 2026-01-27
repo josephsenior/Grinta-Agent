@@ -95,12 +95,12 @@ def _lint_file(file_path: str) -> tuple[str | None, int | None]:
 
     """
     linter = DefaultLinter()
-    lint_error: list[LintResult] = linter.lint(file_path)
-    if not lint_error:
+    lint_result: LintResult = linter.lint(file_path)
+    if not lint_result.errors:
         return (None, None)
-    first_error_line = lint_error[0].line if lint_error else None
+    first_error_line = lint_result.errors[0].line if lint_result.errors else None
     error_text = "ERRORS:\n" + "\n".join(
-        [f"{file_path}:{err.line}:{err.column}: {err.message}" for err in lint_error]
+        [f"{file_path}:{err.line}:{err.column}: {err.message}" for err in lint_result.errors]
     )
     return (error_text, first_error_line)
 

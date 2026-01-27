@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import ClassVar
 from difflib import SequenceMatcher
 
 from forge.core.schemas import ObservationType
@@ -15,8 +16,8 @@ class FileReadObservation(Observation):
     """This data class represents the content of a file."""
 
     path: str
-    observation: str = ObservationType.READ
     impl_source: FileReadSource = FileReadSource.DEFAULT
+    observation: ClassVar[str] = ObservationType.READ
 
     @property
     def message(self) -> str:
@@ -35,7 +36,7 @@ class FileWriteObservation(Observation):
     """This data class represents a file write operation."""
 
     path: str
-    observation: str = ObservationType.WRITE
+    observation: ClassVar[str] = ObservationType.WRITE
 
     @property
     def message(self) -> str:
@@ -59,17 +60,17 @@ class FileEditObservation(Observation):
 
     The .content property can either be:
       - Git diff in LLM-based editing mode
-      - the rendered message sent to the LLM in OH_ACI mode (e.g., "The file /path/to/file.txt is created with the provided content.")
+      - the rendered message sent to the LLM in FILE_EDITOR mode (e.g., "The file /path/to/file.txt is created with the provided content.")
     """
 
     path: str = ""
     prev_exist: bool = False
     old_content: str | None = None
     new_content: str | None = None
-    observation: str = ObservationType.EDIT
     impl_source: FileEditSource = FileEditSource.LLM_BASED_EDIT
     diff: str | None = None
     _diff_cache: str | None = None
+    observation: ClassVar[str] = ObservationType.EDIT
 
     @property
     def message(self) -> str:
@@ -216,7 +217,7 @@ class FileEditObservation(Observation):
 
     def __str__(self) -> str:
         """Get a string representation of the file edit observation."""
-        if self.impl_source == FileEditSource.OH_ACI:
+        if self.impl_source == FileEditSource.FILE_EDITOR:
             return self.content
         if not self.prev_exist:
             assert self.old_content == "", (

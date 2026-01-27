@@ -57,7 +57,7 @@ export default defineConfig(({ mode }) => {
               if (id.includes('mermaid') || id.includes('cytoscape') || id.includes('dagre')) {
                 return 'diagrams';
               }
-              if (id.includes('jupyter') || id.includes('katex')) {
+              if (id.includes('katex')) {
                 return 'heavy-math';
               }
               if (id.includes('socket.io')) {

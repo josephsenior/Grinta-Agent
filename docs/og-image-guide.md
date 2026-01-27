@@ -15,7 +15,7 @@ Some social media platforms prefer PNG images. To convert the SVG to PNG:
 
 ```bash
 # Install sharp (if not already installed)
-npm install --save-dev sharp
+pnpm add -D sharp
 
 # Create a conversion script
 node scripts/convert-og-image.js

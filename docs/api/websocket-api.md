@@ -20,8 +20,6 @@ The WebSocket API provides real-time, bidirectional communication between the ba
 
 - Live agent status updates
 - Streaming agent responses
-- MetaSOP orchestration events
-- Optimization notifications
 - Real-time monitoring data
 
 **Protocol**: Socket.IO (compatible with WebSocket)  
@@ -153,161 +151,6 @@ interface AgentMessage {
 
 ---
 
-### **MetaSOP Events**
-
-#### **`metasop_orchestration_start`**
-MetaSOP orchestration has begun.
-
-**Payload:**
-```typescript
-interface MetaSOPOrchestrationStart {
-  event_type: 'metasop_orchestration_start';
-  timestamp: string;
-  template_name: string;
-  user_request: string;
-}
-```
-
-#### **`metasop_step_start`**
-A MetaSOP step has started.
-
-**Payload:**
-```typescript
-interface MetaSOPStepStart {
-  event_type: 'metasop_step_start';
-  step_id: string;
-  role: 'Product Manager' | 'Architect' | 'Engineer' | 'QA' | 'UI Designer';
-  timestamp: string;
-}
-```
-
-#### **`metasop_step_complete`**
-A MetaSOP step has completed with artifact.
-
-**Payload:**
-```typescript
-interface MetaSOPStepComplete {
-  event_type: 'metasop_step_complete';
-  step_id: string;
-  role: string;
-  artifact: {
-    // PM: user_stories, scope, assumptions
-    // Architect: design, api_endpoints, decisions
-    // Engineer: file_structure, implementation_plan
-    // QA: test_results, coverage, security_findings
-    // UI Designer: pages, components, accessibility
-  };
-  duration_seconds: number;
-  timestamp: string;
-}
-```
-
-**Example:**
-```typescript
-socket.on('message', (event: any) => {
-  if (event.event_type === 'metasop_step_complete') {
-    console.log(`${event.role} completed:`, event.artifact);
-  }
-});
-```
-
-#### **`metasop_step_failed`**
-A MetaSOP step has failed.
-
-**Payload:**
-```typescript
-interface MetaSOPStepFailed {
-  event_type: 'metasop_step_failed';
-  step_id: string;
-  role: string;
-  error: string;
-  retry_count: number;
-  timestamp: string;
-}
-```
-
-#### **`metasop_orchestration_complete`**
-MetaSOP orchestration has finished.
-
-**Payload:**
-```typescript
-interface MetaSOPOrchestrationComplete {
-  event_type: 'metasop_orchestration_complete';
-  success: boolean;
-  completed_steps: string[];
-  failed_steps: string[];
-  total_duration_seconds: number;
-  timestamp: string;
-}
-```
-
----
-
-### **Optimization Events**
-
-#### **`optimization_triggered`**
-Prompt optimization has been triggered.
-
-**Payload:**
-```typescript
-interface OptimizationTriggered {
-  event_type: 'optimization_triggered';
-  prompt_id: string;
-  strategy: string;
-  timestamp: string;
-}
-```
-
-#### **`variant_performance`**
-Performance update for a prompt variant.
-
-**Payload:**
-```typescript
-interface VariantPerformance {
-  event_type: 'variant_performance';
-  variant_id: string;
-  metrics: {
-    success_rate: number;
-    avg_execution_time: number;
-    avg_token_usage: number;
-    avg_cost: number;
-  };
-  sample_size: number;
-  timestamp: string;
-}
-```
-
-#### **`best_variant_changed`**
-The best performing variant has changed.
-
-**Payload:**
-```typescript
-interface BestVariantChanged {
-  event_type: 'best_variant_changed';
-  old_variant_id: string;
-  new_variant_id: string;
-  improvement_percent: number;
-  timestamp: string;
-}
-```
-
----
-
-### **Status Events**
-
-#### **`status_update`**
-General status update (legacy format).
-
-**Payload:**
-```typescript
-interface StatusUpdate {
-  status_update: true;
-  type: 'info' | 'warning' | 'error';
-  message: string;
-  id: string;
-}
-```
-
 ---
 
 ## 💻 **Client Examples**
@@ -376,8 +219,8 @@ def on_disconnect():
 def on_message(data):
     print('Received:', data)
     
-    if data.get('event_type') == 'metasop_step_complete':
-        print(f"Step {data['step_id']} completed")
+    if data.get('event_type') == 'agent_state_changed':
+        print(f"Agent state: {data['extras']['agent_state']}")
 
 # Connect
 sio.connect(
@@ -441,15 +284,14 @@ socket.on('reconnect', () => {
 ### **Event Validation**
 
 ```typescript
-function isMetaSOPEvent(event: any): event is MetaSOPEvent {
-  return event && typeof event.event_type === 'string' 
-    && event.event_type.startsWith('metasop_');
+function isValidEvent(event: any) {
+  return event && typeof event.event_type === 'string';
 }
 
 socket.on('message', (event) => {
-  if (isMetaSOPEvent(event)) {
-    // Safe to use MetaSOP-specific properties
-    handleMetaSOPEvent(event);
+  if (isValidEvent(event)) {
+    // Process event
+    handleEvent(event);
   }
 });
 ```
@@ -467,14 +309,8 @@ Frontend                          Backend
    |-- Send User Message ----------->|
    |                                 |
    |<-- agent_state_changed ---------|  (loading)
-   |<-- metasop_orchestration_start -|
-   |<-- metasop_step_start ----------|  (PM)
-   |<-- metasop_step_complete -------|  (PM artifact)
-   |<-- metasop_step_start ----------|  (Architect)
-   |<-- metasop_step_complete -------|  (Architect artifact)
-   |<-- metasop_step_start ----------|  (Engineer)
-   |<-- metasop_step_complete -------|  (Engineer artifact)
-   |<-- metasop_orchestration_complete|
+   |<-- agent_message ---------------|  (thinking)
+   |<-- agent_message ---------------|  (executing)
    |<-- agent_state_changed ---------|  (awaiting_user_input)
 ```
 
@@ -528,7 +364,6 @@ useEffect(() => {
 
 - [REST API](rest-api.md)
 - [Streaming Processing](../features/streaming-processing.md)
-- [MetaSOP Overview](../features/metasop.md)
 - [Live Monitoring](../features/live-monitoring.md)
 
 ---

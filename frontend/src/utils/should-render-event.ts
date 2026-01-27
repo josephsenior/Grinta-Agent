@@ -7,7 +7,6 @@ import {
   isFinishAction,
   isRejectObservation,
   isMcpObservation,
-  isTaskTrackingObservation,
   isFileWriteAction,
   isFileEditAction,
   isStreamingChunkAction,
@@ -71,7 +70,7 @@ const ALWAYS_RENDER_PREDICATES: RenderPredicate[] = [
   eventContainsAgentThought,
   (event) => isFinishAction(event),
   (event) => isRejectObservation(event),
-  (event) => isMcpObservation(event) || isTaskTrackingObservation(event),
+  (event) => isMcpObservation(event),
 ];
 
 export function shouldRenderEvent(

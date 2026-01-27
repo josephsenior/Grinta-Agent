@@ -1,15 +1,10 @@
-export const ProviderOptions = {
-  github: "github",
-  gitlab: "gitlab",
-  bitbucket: "bitbucket",
-  enterprise_sso: "enterprise_sso",
-} as const;
-
-export type Provider = keyof typeof ProviderOptions;
+export type Provider = "github" | "enterprise_sso" | "bitbucket" | "gitlab";
 
 export type ProviderToken = {
-  token: string;
-  host: string | null;
+  token: string | null;
+  host?: string | null;
+  user_id?: string | null;
+  installation_id?: string | null;
 };
 
 export type MCPSSEServer = {
@@ -30,9 +25,9 @@ export type MCPSHTTPServer = {
 };
 
 export type MCPConfig = {
-  sse_servers: (string | MCPSSEServer)[];
+  sse_servers: MCPSSEServer[];
   stdio_servers: MCPStdioServer[];
-  shttp_servers: (string | MCPSHTTPServer)[];
+  shttp_servers: MCPSHTTPServer[];
 };
 
 export type Settings = {
@@ -43,22 +38,20 @@ export type Settings = {
   LLM_API_KEY_SET: boolean;
   CONFIRMATION_MODE: boolean;
   SECURITY_ANALYZER: string | null;
-  REMOTE_RUNTIME_RESOURCE_FACTOR: number | null;
-  PROVIDER_TOKENS_SET: Partial<Record<Provider, string | null>>;
   ENABLE_DEFAULT_CONDENSER: boolean;
   // Maximum number of events before the condenser runs
   CONDENSER_MAX_SIZE: number | null;
   ENABLE_SOUND_NOTIFICATIONS: boolean;
+  USER_CONSENTS_TO_ANALYTICS: boolean;
   ENABLE_PROACTIVE_CONVERSATION_STARTERS: boolean;
   ENABLE_SOLVABILITY_ANALYSIS: boolean;
-  USER_CONSENTS_TO_ANALYTICS: boolean | null;
-  IS_NEW_USER?: boolean;
-  MCP_CONFIG?: MCPConfig;
   MAX_BUDGET_PER_TASK: number | null;
-  EMAIL?: string;
-  EMAIL_VERIFIED?: boolean;
+  IS_NEW_USER?: boolean;
   GIT_USER_NAME?: string;
   GIT_USER_EMAIL?: string;
+  EMAIL?: string;
+  PROVIDER_TOKENS_SET?: Record<string, string | null>;
+  REMOTE_RUNTIME_RESOURCE_FACTOR?: number;
   // Advanced LLM Configuration
   LLM_TEMPERATURE?: number | null;
   LLM_TOP_P?: number | null;
@@ -72,6 +65,7 @@ export type Settings = {
   autonomy_level?: string;
   ENABLE_PERMISSIONS?: boolean;
   ENABLE_CHECKPOINTS?: boolean;
+  MCP_CONFIG?: MCPConfig;
 };
 
 export type ApiSettings = {
@@ -83,25 +77,18 @@ export type ApiSettings = {
   llm_api_key_set: boolean;
   confirmation_mode: boolean;
   security_analyzer: string | null;
-  remote_runtime_resource_factor: number | null;
   enable_default_condenser: boolean;
   // Max size for condenser in backend settings
   condenser_max_size: number | null;
   enable_sound_notifications: boolean;
+  user_consents_to_analytics: boolean;
   enable_proactive_conversation_starters: boolean;
   enable_solvability_analysis: boolean;
-  user_consents_to_analytics: boolean | null;
-  provider_tokens_set: Partial<Record<Provider, string | null>>;
   max_budget_per_task: number | null;
-  mcp_config?: {
-    sse_servers: (string | MCPSSEServer)[];
-    stdio_servers: MCPStdioServer[];
-    shttp_servers: (string | MCPSHTTPServer)[];
-  };
-  email?: string;
-  email_verified?: boolean;
   git_user_name?: string;
   git_user_email?: string;
+  email?: string;
+  remote_runtime_resource_factor?: number;
   // Advanced LLM Configuration
   llm_temperature?: number | null;
   llm_top_p?: number | null;
@@ -115,15 +102,12 @@ export type ApiSettings = {
   autonomy_level?: string;
   enable_permissions?: boolean;
   enable_checkpoints?: boolean;
+  provider_tokens_set?: Record<string, string | null>;
+  mcp_config?: MCPConfig;
 };
 
 export type PostSettings = Settings & {
-  user_consents_to_analytics: boolean | null;
   llm_api_key?: string | null;
-  mcp_config?: MCPConfig;
 };
 
-export type PostApiSettings = ApiSettings & {
-  user_consents_to_analytics: boolean | null;
-  mcp_config?: MCPConfig;
-};
+export type PostApiSettings = ApiSettings;

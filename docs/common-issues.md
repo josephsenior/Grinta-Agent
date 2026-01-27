@@ -13,14 +13,14 @@ pip install --upgrade pip
 pip install -e .
 ```
 
-### ❌ "Node.js/npm installation fails"
+### ❌ "Node.js/pnpm installation fails"
 
 **Fix:**
 ```bash
 cd frontend
-rm -rf node_modules package-lock.json
-npm cache clean --force
-npm install
+rm -rf node_modules pnpm-lock.yaml
+pnpm store prune
+pnpm install
 ```
 
 ### ❌ "ModuleNotFoundError: No module named 'Forge'"

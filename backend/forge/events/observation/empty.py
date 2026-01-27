@@ -1,6 +1,7 @@
 """Placeholder observation used when no data is produced."""
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 from forge.core.schemas import ObservationType
 from forge.events.observation.observation import Observation
@@ -13,7 +14,7 @@ class NullObservation(Observation):
     This is used when the produced action is NOT executable.
     """
 
-    observation: str = ObservationType.NULL
+    observation: ClassVar[str] = ObservationType.NULL
 
     @property
     def message(self) -> str:

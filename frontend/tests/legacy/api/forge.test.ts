@@ -256,7 +256,11 @@ describe("ForgeClient", () => {
       {
         call: () => ForgeClient.getConfig(),
         expectedUrl: "/api/options/config",
-        response: { APP_MODE: "oss" },
+        response: {
+          APP_MODE: "oss",
+          GITHUB_CLIENT_ID: "test-id",
+          FEATURE_FLAGS: { HIDE_LLM_SETTINGS: false },
+        },
       },
       {
         call: () => ForgeClient.getSettings(),
@@ -287,12 +291,10 @@ describe("ForgeClient", () => {
     forgeGetMock
       .mockResolvedValueOnce({ data: { blob: true } }) // getWorkspaceZip
       .mockResolvedValueOnce({ data: { hosts: { a: {}, b: {} } } })
-      .mockResolvedValueOnce({ data: { url: "vs" } })
       .mockResolvedValueOnce({ data: { runtime_id: "r1" } });
 
     await expect(ForgeClient.getWorkspaceZip("conv-123")).resolves.toEqual({ blob: true });
     await expect(ForgeClient.getWebHosts("conv-123")).resolves.toEqual(["a", "b"]);
-    await expect(ForgeClient.getVSCodeUrl("conv-123")).resolves.toEqual({ url: "vs" });
     await expect(ForgeClient.getRuntimeId("conv-123")).resolves.toEqual({ runtime_id: "r1" });
   });
 
@@ -317,9 +319,7 @@ describe("ForgeClient", () => {
     forgePostMock
       .mockResolvedValueOnce({ data: { id: "created" } })
       .mockResolvedValueOnce({ data: { started: true } })
-      .mockResolvedValueOnce({ data: { stopped: true } })
-      .mockResolvedValueOnce({ data: { started: true } }) // triggerMetaSopDebug
-      .mockResolvedValueOnce({ data: { success: true } }); // sendRawEvent
+      .mockResolvedValueOnce({ data: { stopped: true } });
     forgePatchMock.mockResolvedValueOnce({ data: true });
 
     await ForgeClient.deleteUserConversation("conv");
@@ -327,19 +327,13 @@ describe("ForgeClient", () => {
 
     await expect(ForgeClient.createConversation("repo"))
       .resolves.toEqual({ id: "created" });
-    await expect(ForgeClient.startConversation("conv", ["aws" as any]))
+    await expect(ForgeClient.startConversation("conv"))
       .resolves.toEqual({ started: true });
     await expect(ForgeClient.stopConversation("conv"))
       .resolves.toEqual({ stopped: true });
-    await expect(ForgeClient.triggerMetaSopDebug("conv"))
-      .resolves.toEqual({ started: true });
-    await expect(ForgeClient.sendRawEvent("conv", "hello", true))
-      .resolves.toEqual({ success: true });
     await expect(ForgeClient.updateConversation("conv", { title: "Hi" }))
       .resolves.toBe(true);
 
-    expect(forgePostMock).toHaveBeenNthCalledWith(4, "/api/conversations/conv/metasop-debug", { message: "sop: validation run" }, expect.anything());
-    expect(forgePostMock).toHaveBeenNthCalledWith(5, "/api/conversations/conv/events/raw?create=true", "hello", expect.anything());
     expect(forgePatchMock).toHaveBeenCalledWith(
       "/api/conversations/conv",
       { title: "Hi" },
@@ -347,18 +341,10 @@ describe("ForgeClient", () => {
   });
 
   it("handles billing and settings POST endpoints", async () => {
-    forgePostMock
-      .mockResolvedValueOnce({ status: 200 })
-      .mockResolvedValueOnce({ data: { redirect_url: "checkout" } })
-      .mockResolvedValueOnce({ data: { redirect_url: "setup" } });
-    forgeGetMock
-      .mockResolvedValueOnce({ data: { credits: "42" } })
-      .mockResolvedValueOnce({ data: { APP_MODE: "saas" } });
+    forgePostMock.mockResolvedValueOnce({ status: 200 });
+    forgeGetMock.mockResolvedValueOnce({ data: { APP_MODE: "saas" } });
 
     await expect(ForgeClient.saveSettings({})).resolves.toBe(true);
-    await expect(ForgeClient.createCheckoutSession(100)).resolves.toBe("checkout");
-    await expect(ForgeClient.createBillingSessionResponse()).resolves.toBe("setup");
-    await expect(ForgeClient.getBalance()).resolves.toBe("42");
     await expect(ForgeClient.getConfig()).resolves.toEqual({ APP_MODE: "saas" });
   });
 
@@ -429,7 +415,6 @@ describe("ForgeClient", () => {
       .mockResolvedValueOnce({ data: { changes: [] } })
       .mockResolvedValueOnce({ data: { branches: [] } })
       .mockResolvedValueOnce({ data: [{ name: "branch" }] })
-      .mockResolvedValueOnce({ data: { prompt: "Hi" } })
       .mockResolvedValueOnce({ data: { results: [{ id: 1 }] } })
       .mockResolvedValueOnce({ data: { runtime_id: "r2" } });
 
@@ -439,7 +424,6 @@ describe("ForgeClient", () => {
     await expect(ForgeClient.getRepositoryBranches("repo", 2, 10)).resolves.toEqual({ branches: [] });
     await expect(ForgeClient.searchRepositoryBranches("repo", "main", 5))
       .resolves.toEqual([{ name: "branch" }]);
-    await expect(ForgeClient.getMicroagentPrompt("conv-123", 1)).resolves.toBe("Hi");
     await expect(ForgeClient.getMicroagentManagementConversations("repo"))
       .resolves.toEqual([{ id: 1 }]);
   });

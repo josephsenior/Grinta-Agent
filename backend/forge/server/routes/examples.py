@@ -34,7 +34,6 @@ SETTINGS_EXAMPLES = {
             "agent": {
                 "name": "CodeActAgent",
                 "max_iterations": 100,
-                "enable_ace": True,
                 "enable_enhanced_context": True,
             },
             "security": {"confirmation_mode": True, "security_analyzer": "default"},
@@ -58,14 +57,6 @@ CONVERSATION_EXAMPLES = {
             "github_repo": "owner/repo",
             "github_token": "ghp_...",
             "initial_query": "Add unit tests to the main.py file",
-        },
-    },
-    "metasop_orchestration": {
-        "summary": "Multi-agent task",
-        "description": "Complex task requiring multiple agents",
-        "value": {
-            "initial_query": "sop: Build a complete e-commerce platform with React frontend, Node backend, and PostgreSQL database",
-            "conversation_instructions": "Use MetaSOP for complex planning",
         },
     },
 }

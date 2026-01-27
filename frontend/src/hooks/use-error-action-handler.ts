@@ -17,11 +17,10 @@ type BuiltInHandlerContext = {
 };
 
 const NAVIGATION_ROUTES: Record<string, string> = {
-  new_conversation: "/",
-  new_session: "/",
-  login: "/login",
+  new_conversation: "/conversations",
+  new_session: "/conversations",
+  login: "/auth/login",
   upgrade: "/billing",
-  pricing: "/pricing",
 };
 
 const EXTERNAL_LINK_DEFAULTS: Record<string, string> = {

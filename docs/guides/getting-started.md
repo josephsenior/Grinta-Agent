@@ -28,14 +28,14 @@ cd Forge
 
 # 2. Install dependencies
 pip install -e .
-cd frontend && npm install
+cd frontend && pnpm install
 
 # 3. Start the system
 # Terminal 1: Backend
 python -m Forge.server
 
 # Terminal 2: Frontend
-cd frontend && npm run dev
+cd frontend && pnpm run dev
 
 # 4. Access the platform
 # Frontend: http://localhost:3000
@@ -90,10 +90,10 @@ poetry install
 #### **Step 3: Install Frontend Dependencies**
 ```bash
 cd frontend
-npm install
-
-# Or using pnpm (if available)
 pnpm install
+
+# Or using npm (if required)
+npm install
 ```
 
 #### **Step 4: Verify Installation**
@@ -102,7 +102,7 @@ pnpm install
 python -c "import forge; print('Forge installed successfully')"
 
 # Check Node.js installation
-cd frontend && npm run build
+cd frontend && pnpm run build
 ```
 
 ### **Method 2: Docker Installation**
@@ -157,7 +157,7 @@ pip install -e ".[dev]"
 
 # Install frontend dependencies
 cd frontend
-npm install
+pnpm install
 ```
 
 #### **Step 4: Run Development Server**
@@ -167,7 +167,7 @@ python -m Forge.server --reload
 
 # Terminal 2: Frontend
 cd frontend
-npm run dev
+pnpm run dev
 ```
 
 ---
@@ -256,17 +256,9 @@ log_level = "WARNING"
 #### **Feature-Specific Configuration**
 ```toml
 # Enable specific features
-[metasop]
-enable_metasop = true
-max_concurrent_agents = 5
-
 [codeact]
 enable_codeact = true
 max_iterations = 10
-
-[ace]
-enable_ace = true
-max_bullets = 1000
 
 [real_time_optimization]
 enable = true
@@ -292,11 +284,11 @@ python -m Forge.server --config config.toml
 ```bash
 # Start frontend development server
 cd frontend
-npm run dev
+pnpm run dev
 
 # Or build and serve
-npm run build
-npm run preview
+pnpm run build
+pnpm run preview
 ```
 
 ### **Step 2: Access the Platform**
@@ -350,25 +342,6 @@ curl -X GET http://localhost:3000/api/prompt-optimization/status
 3. **Memory Browser**: View conversation history
 4. **Optimization Panel**: Monitor prompt optimization
 5. **Settings**: Configure system parameters
-6. **🎨 MetaSOP Visualization**: Real-time agent collaboration diagrams
-
-#### **Testing MetaSOP Visualization** (NEW!)
-```bash
-# 1. Open the chat interface at http://localhost:3000
-
-# 2. Type a MetaSOP command:
-sop: Create a todo application with React
-
-# 3. Watch the magic happen:
-# - Orchestration panel slides in from the right
-# - Product Manager agent creates user stories (purple cards)
-# - Architect agent designs system (blue diagrams + API endpoints)
-# - Engineer agent generates file structure (green tree view)
-# - QA agent shows test results (orange metrics dashboard)
-# - All updates happen in real-time via WebSocket!
-
-# 4. No code visible - only beautiful, user-friendly visualizations!
-```
 
 #### **API Features**
 1. **Agent Endpoints**: Run agents programmatically
@@ -384,8 +357,7 @@ sop: Create a todo application with React
 
 #### **1. Understanding Agents**
 - **CodeAct Agent**: For code generation and execution
-- **MetaSOP Orchestrator**: For multi-agent coordination
-- **ACE Framework**: For context engineering
+- **Plan Agent**: For high-level planning and execution
 
 #### **2. Memory Management**
 - **Conversation Memory**: Store and retrieve conversations
@@ -449,9 +421,9 @@ pip install -e .
 **Problem**: Node.js dependencies not installing
 ```bash
 # Solution: Clear cache and try again
-npm cache clean --force
-rm -rf node_modules package-lock.json
-npm install
+pnpm store prune
+rm -rf node_modules pnpm-lock.yaml
+pnpm install
 ```
 
 **Problem**: Permission errors
@@ -497,7 +469,7 @@ tail -f logs/Forge.log
 curl http://localhost:8000/api/monitoring/health
 
 # Check frontend build
-cd frontend && npm run build
+cd frontend && pnpm run build
 ```
 
 **Problem**: Memory issues
@@ -641,7 +613,7 @@ You've successfully set up Forge! Here's what you can do next:
 1. **Explore the Web Interface**: Try the dashboard and agent console
 2. **Test the API**: Use the API documentation to make requests
 3. **Configure Your Environment**: Set up your preferred settings
-4. **Try Different Agents**: Test CodeAct and MetaSOP agents
+4. **Try Different Agents**: Test CodeAct and Plan agents
 
 ### **Learning Resources**
 1. **Documentation**: Read the comprehensive documentation

@@ -1,4 +1,5 @@
 import React from "react";
+import { cn } from "#/utils/utils";
 import { SuccessIndicator } from "./success-indicator";
 import { ObservationResultStatus } from "./event-content-helpers/get-observation-result";
 
@@ -17,20 +18,53 @@ export function GenericEventMessage({
 }: GenericEventMessageProps) {
   const [isExpanded, setIsExpanded] = React.useState(initiallyExpanded);
 
+  let successColor = "text-[var(--text-tertiary)]";
+  if (success === "success") {
+    successColor = "text-[var(--text-success)]";
+  } else if (success === "error") {
+    successColor = "text-[var(--text-danger)]";
+  }
+
+  let borderColor = "border-[var(--border-primary)]";
+  if (success === "success") {
+    borderColor = "border-[var(--text-success)]/30";
+  } else if (success === "error") {
+    borderColor = "border-[var(--text-danger)]/30";
+  }
+
+  let hoverBg = "hover:bg-[var(--bg-tertiary)]";
+  if (success === "success") {
+    hoverBg = "hover:bg-[var(--text-success)]/5";
+  } else if (success === "error") {
+    hoverBg = "hover:bg-[var(--text-danger)]/5";
+  }
+
   return (
-    <div className="my-2 w-full bg-gradient-to-r from-success-500/10 to-success-600/5 border border-success-500/20 rounded-xl backdrop-blur-sm overflow-hidden">
+    <div
+      className={cn(
+        "my-2 w-full bg-[var(--bg-elevated)] border rounded-lg overflow-hidden",
+        borderColor,
+      )}
+    >
       {/* Header - clickable to expand/collapse */}
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center justify-between gap-3 px-4 py-3 text-sm w-full hover:bg-success-500/5 transition-colors"
+        className={cn(
+          "flex items-center justify-between gap-3 px-4 py-2.5 text-sm w-full transition-colors",
+          hoverBg,
+        )}
       >
         <div className="flex items-center gap-3">
           {success && <SuccessIndicator status={success} />}
-          <div className="text-success-400 font-medium">{title}</div>
+          <div className={cn("font-medium", successColor)}>{title}</div>
         </div>
         <svg
-          className={`w-5 h-5 text-success-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+          className={cn(
+            "w-4 h-4 transition-transform",
+            successColor,
+            isExpanded && "rotate-180",
+          )}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -46,9 +80,11 @@ export function GenericEventMessage({
 
       {/* Details content - shown when expanded */}
       {isExpanded && (
-        <div className="px-4 pb-4 border-t border-success-500/10">
+        <div className={cn("px-4 pb-3 border-t", borderColor)}>
           {typeof details === "string" ? (
-            <div className="text-sm text-foreground-secondary">{details}</div>
+            <div className="text-sm text-[var(--text-primary)] mt-2">
+              {details}
+            </div>
           ) : (
             details
           )}

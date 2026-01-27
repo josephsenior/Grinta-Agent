@@ -19,6 +19,9 @@ vi.mock("#/api/forge", () => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
+    i18n: {
+      changeLanguage: () => Promise.resolve(),
+    },
   }),
 }));
 
@@ -37,14 +40,12 @@ describe("FileExplorer", () => {
   it("renders without crashing", async () => {
     renderExplorer();
 
-    expect(await screen.findByText("Files")).toBeInTheDocument();
+    expect(await screen.findByText("fileExplorer.files")).toBeInTheDocument();
   });
 
-  it("shows loading state initially", async () => {
+  it("shows loading state initially", () => {
     renderExplorer();
 
-    expect(
-      await screen.findByTestId("file-explorer-loading"),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("file-explorer-loading")).toBeInTheDocument();
   });
 });

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, ClassVar
 
 from forge.core.schemas import ObservationType
 from forge.events.observation.observation import Observation
@@ -19,7 +19,6 @@ class BrowserOutputObservation(Observation):
     screenshot_path: str | None = field(default=None)
     set_of_marks: str = field(default="", repr=False)
     error: bool = False
-    observation: str = ObservationType.BROWSE
     goal_image_urls: list[str] = field(default_factory=list)
     open_pages_urls: list[str] = field(default_factory=list)
     active_page_index: int = -1
@@ -30,6 +29,7 @@ class BrowserOutputObservation(Observation):
     last_browser_action_error: str = ""
     focused_element_bid: str = ""
     filter_visible_only: bool = False
+    observation: ClassVar[str] = ObservationType.BROWSE
 
     @property
     def message(self) -> str:

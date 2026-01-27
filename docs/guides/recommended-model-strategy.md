@@ -26,7 +26,7 @@ For the **beta launch**, we recommend using **Claude 4.5 Haiku** as the primary 
 - ✅ **Quality**: Near-frontier performance on coding tasks
 - ✅ **Scalability**: Handle more users with limited budget
 
-This strategy focuses on **single-agent optimization** with **Ultimate CodeAct + ACE Framework** rather than multi-agent orchestration (MetaSOP), which is reserved for complex enterprise tasks post-launch.
+This strategy focuses on **single-agent optimization** with **Ultimate CodeAct**, which is the core functionality of Forge.
 
 ---
 
@@ -94,14 +94,9 @@ timeout = 180
 max_output_tokens = 8192
 caching_prompt = true
 
-# Disable MetaSOP for beta (cost/speed optimization)
-[metasop]
-enabled = false
-
 # Enable single-agent enhancements
 [codeact]
 enable_ultimate_prompt = true
-enable_ace_framework = true
 enable_causal_reasoning = true
 enable_parallel_execution = true
 enable_predictive_planning = true
@@ -124,17 +119,9 @@ export FORGE_LLM_MAX_TOKENS=4096
 
 ## 💡 **Strategy Rationale**
 
-### **Why Disable MetaSOP for Beta?**
-
-MetaSOP (multi-agent orchestration) is powerful but:
-- 🔥 **Token-intensive**: 5-10x more tokens per task
-- ⏱️ **Time-consuming**: 3-5x slower due to agent coordination
-- 💰 **Cost-prohibitive**: Not sustainable for beta with limited budget
-
 **For Beta Launch:**
 - Focus on **single-agent optimization**
-- Leverage **Ultimate CodeAct prompt** (combines ReAct, Constitutional AI, ACE, Cursor patterns)
-- Use **ACE Framework** for self-improving context
+- Leverage **Ultimate CodeAct prompt** (combines ReAct, Constitutional AI, Cursor patterns)
 - Enable **Causal Reasoning** for conflict prevention
 - Enable **Parallel Execution** for speed
 - Enable **Predictive Planning** for efficiency
@@ -161,12 +148,11 @@ With **Claude 4.5 Haiku** + enhanced single-agent system:
 | Component | Contribution |
 |-----------|-------------|
 | **Base Model (Claude 4.5 Haiku)** | 72-75% baseline |
-| **+ Ultimate CodeAct Prompt** | +5-8% |
-| **+ ACE Framework** | +5-8% |
-| **+ Causal Reasoning** | +3-5% |
-| **+ Parallel Execution** | +3-5% |
-| **+ Predictive Planning** | +2-4% |
-| **= Total Estimated** | **90-105%** |
+| **+ Ultimate CodeAct Prompt** | +8-12% |
+| **+ Causal Reasoning** | +5-7% |
+| **+ Parallel Execution** | +5-7% |
+| **+ Predictive Planning** | +3-5% |
+| **= Total Estimated** | **93-106%** |
 
 **Realistic Target**: **92-98% pass rate** on SWE-bench Lite (capped at 100%)
 
@@ -308,7 +294,6 @@ Successful tasks: 60-112
 Cost efficiency:
 - vs Claude 3.5 Sonnet: ~4x more tasks
 - vs GPT-4o: ~3x more tasks
-- vs MetaSOP (5 agents): ~25x more tasks
 ```
 
 ### **Production Scaling**
@@ -318,12 +303,6 @@ For 1,000 users/month:
 - Average 50 tasks per user
 - 50,000 total tasks
 - Cost: $6,000 - $10,000/month
-
-With MetaSOP enabled:
-- Same workload
-- Cost: $150,000 - $250,000/month
-
-Savings: ~95% 💰
 ```
 
 ### **When to Scale Up**
@@ -342,7 +321,6 @@ Consider switching to more expensive models when:
 ### **Phase 1: Beta Launch (Now)**
 ```toml
 Primary: Claude 4.5 Haiku (all tasks)
-MetaSOP: Disabled
 Focus: Speed + Cost efficiency
 Target: 80-90% quality at minimal cost
 ```
@@ -351,7 +329,6 @@ Target: 80-90% quality at minimal cost
 ```toml
 Primary: Claude 4.5 Haiku (90% of tasks)
 Expert: Claude 3.5 Sonnet (10% complex tasks)
-MetaSOP: Disabled
 Focus: Balanced performance
 Target: 85-92% quality, controlled costs
 ```
@@ -361,7 +338,6 @@ Target: 85-92% quality, controlled costs
 Primary: Claude 3.5 Sonnet (60% of tasks)
 Fast: Claude 4.5 Haiku (30% simple tasks)
 Expert: GPT-4o or Claude Opus (10% hardest tasks)
-MetaSOP: Enabled for enterprise tier
 Focus: Maximum quality
 Target: 95%+ quality, premium pricing
 ```
@@ -371,10 +347,8 @@ Target: 95%+ quality, premium pricing
 ## 📝 **Implementation Checklist**
 
 - [ ] Update `config.toml` with Claude 4.5 Haiku settings
-- [ ] Set `metasop.enabled = false`
 - [ ] Configure Forge provider API key
 - [ ] Enable Ultimate CodeAct prompt
-- [ ] Enable ACE Framework
 - [ ] Enable Causal Reasoning
 - [ ] Enable Parallel Execution
 - [ ] Test with sample tasks
@@ -410,7 +384,6 @@ tail -f logs/Forge.log
 
 - [Claude 4.5 Haiku Documentation](https://www.anthropic.com/news/claude-haiku-4-5)
 - [Ultimate CodeAct Prompt Guide](./ultimate-prompt-engineering.md)
-- [ACE Framework Documentation](../features/ace-framework.md)
 - [Performance Tuning Guide](./performance-tuning.md)
 - [Cost Optimization Strategies](./cost-optimization.md)
 

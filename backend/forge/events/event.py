@@ -20,10 +20,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, cast
+from typing import Any, cast, TYPE_CHECKING
 
 from forge.events.tool import ToolCallMetadata
-from forge.llm.metrics import Metrics
+
+if TYPE_CHECKING:
+    from forge.llm.metrics import Metrics
 
 
 class EventSource(str, Enum):
@@ -39,14 +41,14 @@ class FileEditSource(str, Enum):
     """Enumerates subsystems that can perform file edit operations."""
 
     LLM_BASED_EDIT = "llm_based_edit"
-    OH_ACI = "oh_aci"
+    FILE_EDITOR = "file_editor"
     __test__ = False
 
 
 class FileReadSource(str, Enum):
     """Enumerates subsystems that can read files during execution."""
 
-    OH_ACI = "oh_aci"
+    FILE_EDITOR = "file_editor"
     DEFAULT = "default"
     __test__ = False
 
@@ -175,15 +177,28 @@ class Event:
     @property
     def llm_metrics(self) -> Metrics | None:
         """Get LLM metrics attached to this event."""
-        if hasattr(self, "_llm_metrics"):
-            metrics = self._llm_metrics
-            return metrics if isinstance(metrics, Metrics) else None
-        return None
+        try:
+            from forge.llm.metrics import Metrics
+
+            if hasattr(self, "_llm_metrics"):
+                metrics = self._llm_metrics
+                return metrics if isinstance(metrics, Metrics) else None
+            return None
+        except Exception:
+            return None
 
     @llm_metrics.setter
     def llm_metrics(self, value: Metrics) -> None:
         """Set LLM metrics for this event."""
-        self._llm_metrics = value
+        # Import locally to avoid import-time cycles when metrics module
+        # is not yet importable in some test environments.
+        try:
+            from forge.llm.metrics import Metrics  # noqa: F401
+
+            self._llm_metrics = value
+        except Exception:
+            # Silently ignore if Metrics class not available during import
+            self._llm_metrics = value
 
     @property
     def tool_call_metadata(self) -> ToolCallMetadata | None:

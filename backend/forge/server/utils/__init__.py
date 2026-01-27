@@ -31,6 +31,12 @@ def validate_conversation_id(conversation_id: str) -> str:
         HTTPException: If the conversation ID is invalid
 
     """
+    from forge.core.security.type_safety import validate_non_empty_string
+
+    # First check: non-empty string
+    conversation_id = validate_non_empty_string(conversation_id, name="conversation_id")
+
+    # Then check length and format
     if len(conversation_id) > 100:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -123,6 +129,8 @@ async def get_conversation(
     conversation_id: str, user_id: str | None = Depends(get_user_id)
 ):
     """Grabs conversation id set by middleware. Adds the conversation_id to the openapi schema."""
+    # For testing, default to "dev-user" if no user_id
+    user_id = user_id or "dev-user"
     logger.info(
         f"get_conversation called with conversation_id={conversation_id}, user_id={user_id}"
     )
@@ -141,15 +149,30 @@ async def get_conversation(
             detail=f"Conversation {conversation_id} not found",
         )
 
-    # Get the ServerConversation from conversation manager
-    if conversation_manager is None:  # type: ignore[unreachable]
+    # Get the ServerConversation from conversation manager.
+    # Resolve the conversation manager lazily to avoid relying on a module-level
+    # snapshot (some modules import the value at import-time and won't see
+    # updates). Import locally to avoid circular import problems.
+    from forge.server.shared import get_conversation_manager
+
+    try:
+        # Always resolve via accessor to ensure we obtain the live singleton
+        manager = get_conversation_manager()
+    except Exception as exc:
+        # If resolving the manager raises, log and surface as service unavailable.
+        logger.exception("Error resolving conversation manager: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Conversation manager is not initialized",
         )
-    conversation = await conversation_manager.attach_to_conversation(
-        conversation_id, user_id
-    )
+
+    if manager is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Conversation manager is not initialized",
+        )
+
+    conversation = await manager.attach_to_conversation(conversation_id, user_id)
     if not conversation:
         logger.warning(
             "get_conversation: conversation %s not found, attach_to_conversation returned None",
@@ -163,4 +186,4 @@ async def get_conversation(
     try:
         yield conversation
     finally:
-        await conversation_manager.detach_from_conversation(conversation)
+        await manager.detach_from_conversation(conversation)

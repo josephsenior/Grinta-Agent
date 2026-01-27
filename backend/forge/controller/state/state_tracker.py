@@ -10,11 +10,10 @@ from forge.controller.state.control_flags import (
 )
 from forge.controller.state.state import State
 from forge.core.logger import forge_logger as logger
-from forge.events.action.agent import AgentDelegateAction, ChangeAgentStateAction
+from forge.events.action.agent import ChangeAgentStateAction
 from forge.events.action.empty import NullAction
 from forge.events.event_filter import EventFilter
 from forge.events.observation.agent import AgentStateChangedObservation
-from forge.events.observation.delegate import AgentDelegateObservation
 from forge.events.observation.empty import NullObservation
 from forge.events.serialization.event import event_to_trajectory
 
@@ -120,23 +119,13 @@ class StateTracker:
         The history is a list of events that:
         - Excludes events of types listed in self.filter_out
         - Excludes events with hidden=True attribute
-        - For delegate events (between AgentDelegateAction and AgentDelegateObservation):
-            - Excludes all events between the action and observation
-            - Includes the delegate action and observation themselves
         """
         start_id, end_id = self._get_history_range(event_stream)
 
         if not self._validate_history_range(start_id, end_id):
             return
 
-        events = self._fetch_events_from_stream(event_stream, start_id, end_id)
-        if delegate_ranges := self._find_delegate_ranges(events):
-            self.state.history = self._filter_events_with_delegates(
-                events, delegate_ranges
-            )
-        else:
-            self.state.history = events
-
+        self.state.history = self._fetch_events_from_stream(event_stream, start_id, end_id)
         self.state.start_id = start_id
 
     def _get_history_range(self, event_stream: EventStream) -> tuple[int, int]:
@@ -174,52 +163,8 @@ class StateTracker:
             ),
         )
 
-    def _find_delegate_ranges(self, events: list[Event]) -> list[tuple[int, int]]:
-        """Find delegate action-observation ranges in events."""
-        delegate_ranges: list[tuple[int, int]] = []
-        delegate_action_ids: list[int] = []
-
-        for event in events:
-            if isinstance(event, AgentDelegateAction):
-                delegate_action_ids.append(event.id)
-            elif isinstance(event, AgentDelegateObservation):
-                if not delegate_action_ids:
-                    logger.warning(
-                        "Found AgentDelegateObservation without matching action at id=%s",
-                        event.id,
-                    )
-                    continue
-                action_id = delegate_action_ids.pop()
-                delegate_ranges.append((action_id, event.id))
-
-        return delegate_ranges
-
-    def _filter_events_with_delegates(
-        self, events: list[Event], delegate_ranges: list[tuple[int, int]]
-    ) -> list[Event]:
-        """Filter events to exclude those within delegate ranges."""
-        filtered_events: list[Event] = []
-        current_idx = 0
-
-        for start_id, end_id in sorted(delegate_ranges):
-            # Add events before the delegate range
-            filtered_events.extend(
-                event for event in events[current_idx:] if event.id < start_id
-            )
-
-            # Add only the delegate action and observation
-            filtered_events.extend(
-                event for event in events if event.id in (start_id, end_id)
-            )
-
-            # Update current index to after this delegate range
-            current_idx = next(
-                (i for i, e in enumerate(events) if e.id > end_id), len(events)
-            )
-
-        # Add remaining events after the last delegate range
-        filtered_events.extend(events[current_idx:])
-        return filtered_events
+    def set_conversation_stats(self, conversation_stats: ConversationStats) -> None:
+        self.state.conversation_stats = conversation_stats
 
     def close(self, event_stream: EventStream) -> None:
         """Finalize state history when agent controller closes.

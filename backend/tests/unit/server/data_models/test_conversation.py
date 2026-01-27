@@ -939,7 +939,7 @@ async def test_new_conversation_with_create_microagent_repository_override(
             )
             create_microagent = CreateMicroagent(
                 repo="microagent/repo",
-                git_provider=ProviderType.GITLAB,
+                git_provider=ProviderType.GITHUB,
                 title="Create a new microagent",
             )
             test_request = InitSessionRequest(
@@ -963,7 +963,7 @@ async def test_new_conversation_with_create_microagent_repository_override(
                 call_args["conversation_trigger"]
                 == ConversationTrigger.MICROAGENT_MANAGEMENT
             )
-            assert call_args["git_provider"] == ProviderType.GITLAB
+            assert call_args["git_provider"] == ProviderType.GITHUB
 
 
 @pytest.mark.asyncio

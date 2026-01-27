@@ -12,7 +12,6 @@ from forge.events.action import (
     CmdRunAction,
     FileEditAction,
     FileReadAction,
-    IPythonRunCellAction,
 )
 
 if TYPE_CHECKING:
@@ -24,7 +23,6 @@ class SafetyService:
 
     _CONFIRMATION_TYPES = (
         CmdRunAction,
-        IPythonRunCellAction,
         BrowseInteractiveAction,
         FileEditAction,
         FileReadAction,
@@ -35,12 +33,10 @@ class SafetyService:
 
     def action_requires_confirmation(self, action: Action) -> bool:
         """Return True when action type is subject to confirmation flow."""
-
         return isinstance(action, self._CONFIRMATION_TYPES)
 
     def evaluate_security_risk(self, action: Action) -> tuple[bool, bool]:
         """Return (is_high_risk, ask_for_every_action) tuple."""
-
         security_risk = getattr(action, "security_risk", ActionSecurityRisk.UNKNOWN)
         analyzer = self._context.security_analyzer
         is_high_security_risk = security_risk == ActionSecurityRisk.HIGH
@@ -51,7 +47,6 @@ class SafetyService:
 
     async def analyze_security(self, action: Action) -> None:
         """Invoke configured security analyzer, falling back to UNKNOWN risk."""
-
         analyzer = self._context.security_analyzer
         if not analyzer:
             if hasattr(action, "security_risk"):
@@ -84,7 +79,6 @@ class SafetyService:
         is_ask_for_every_action: bool,
     ) -> None:
         """Decide whether to mark the action as awaiting confirmation."""
-
         autonomy = self._context.autonomy_controller
         controller = self._context.get_controller()
 
@@ -108,7 +102,6 @@ class SafetyService:
 
     def finalize_pending_action(self, confirmed: bool) -> None:
         """Emit the pending action after confirmation or rejection."""
-
         pending_action = self._context.pending_action
         if pending_action is None:
             return

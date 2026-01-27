@@ -13,17 +13,19 @@ interface InlineLLMSetupProps {
 
 const POPULAR_MODELS = [
   {
-    id: "anthropic/claude-sonnet-4",
-    name: "Claude Sonnet 4",
+    id: "anthropic/claude-3-7-sonnet-20250219",
+    name: "Claude 3.7 Sonnet",
     provider: "Anthropic",
   },
   {
-    id: "anthropic/claude-haiku-4-5-20251001",
-    name: "Claude Haiku 4.5",
+    id: "anthropic/claude-3-5-sonnet-20241022",
+    name: "Claude 3.5 Sonnet",
     provider: "Anthropic",
   },
   { id: "openai/gpt-4o", name: "GPT-4o", provider: "OpenAI" },
   { id: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "OpenAI" },
+  { id: "gemini/gemini-1.5-pro", name: "Gemini 1.5 Pro", provider: "Gemini" },
+  { id: "xai/grok-beta", name: "Grok Beta", provider: "Grok" },
 ];
 
 export function InlineLLMSetup({ onComplete }: InlineLLMSetupProps) {
@@ -52,7 +54,8 @@ export function InlineLLMSetup({ onComplete }: InlineLLMSetupProps) {
   const getProviderFromModel = (modelId: string) => {
     if (modelId.includes("anthropic")) return "Anthropic";
     if (modelId.includes("openai")) return "OpenAI";
-    if (modelId.includes("google")) return "Google";
+    if (modelId.includes("google") || modelId.includes("gemini")) return "Gemini";
+    if (modelId.includes("xai") || modelId.includes("grok")) return "Grok";
     return "Custom";
   };
 

@@ -16,12 +16,10 @@ class RuntimeServerInfo:
 
     process: subprocess.Popen | None
     execution_server_port: int | None = None
-    vscode_port: int | None = None
     app_ports: List[int] = field(default_factory=list)
     log_thread: threading.Thread | None = None
     log_thread_exit_event: threading.Event | None = None
     temp_workspace: Optional[str] = None
-    workspace_mount_path: Optional[str] = None
 
 
 @dataclass(slots=True)

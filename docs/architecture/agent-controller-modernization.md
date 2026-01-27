@@ -83,8 +83,6 @@
 | `PendingActionService` | Track pending actions, emit timeout information for guards/telemetry | Event stream, controller state | Provides pending info to guard services |
 | `ConfirmationService` | Replay/live action sourcing, confirmation policy, pending-action transitions | Replay manager, autonomy settings | Logs action telemetry, transitions agent state |
 | `ObservationService` | Log observations, run pipeline observe stage, prepare action metrics | Observations, tool pipeline, controller metrics | Ensures contexts cleaned up, metrics attached |
-| `DelegateService` | Delegate spawn/teardown, task priming, completion observations | `AgentDelegateAction`, `DelegateRunContext` | Emits `AgentDelegateObservation`, restores parent iteration metrics |
-| `DelegateRuntimeProvider` | Acquire/release delegate runtimes via orchestrator, mirror events back to parent stream | Runtime pool/orchestrator, repo/env context | Provides `DelegateRuntimeHandle` to `DelegateService` |
 | `RecoveryService` | Exception classification, retry orchestration, status callbacks, rate-limit handling | Exceptions, Retry/CircuitBreaker services | Schedules retries, emits `controller_recovery` events |
 | `TelemetryService` | Tool middleware stack construction, blocked-action telemetry | Controller config | Emits pipeline- and action-level metrics |
 | `SafetyService` | Security analyzer invocation, confirmation gating, pending-action resolution | Actions, analyzer, autonomy controller | Mutates action confirmation state, logs risk decisions |

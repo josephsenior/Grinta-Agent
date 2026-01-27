@@ -27,15 +27,13 @@ CodeAct Agent is a revolutionary minimalist agent that consolidates all LLM acti
 - **Unified Code Actions**: All actions consolidated into code execution
 - **Linus Torvalds Philosophy**: Engineering excellence and clean code
 - **Think Tool**: Step-by-step reasoning capabilities
-- **Dynamic Prompt Optimization**: Real-time prompt adaptation
-- **Tool-Specific Optimization**: Optimized tool descriptions
 - **Advanced Memory Management**: Intelligent context handling
 
 ### **Revolutionary Capabilities**
 - **Code-First Approach**: Everything is code, nothing is abstract
 - **Self-Improving**: Learns from execution feedback
 - **Context-Aware**: Intelligent context understanding
-- **Performance Optimized**: Real-time optimization and adaptation
+- **Performance Optimized**: Real-time performance monitoring
 - **Enterprise-Ready**: Production-grade reliability and monitoring
 
 ---
@@ -51,8 +49,8 @@ CodeAct Agent is a revolutionary minimalist agent that consolidates all LLM acti
 │  │    Tool     │  │  Execution  │  │  Management │        │
 │  └─────────────┘  └─────────────┘  └─────────────┘        │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
-│  │  Prompt     │  │    Tool     │  │   Context   │        │
-│  │Optimization │  │Optimization │  │  Injection  │        │
+│  │             │  │             │  │   Context   │        │
+│  │             │  │             │  │  Injection  │        │
 │  └─────────────┘  └─────────────┘  └─────────────┘        │
 ├─────────────────────────────────────────────────────────────┤
 │  LLM Integration │ Function Calling │ Performance Tracking │
@@ -64,8 +62,7 @@ CodeAct Agent is a revolutionary minimalist agent that consolidates all LLM acti
 1. **Code-First**: Everything is code, nothing is abstract
 2. **Engineering Excellence**: Clean, efficient, maintainable code
 3. **Unified Actions**: All actions consolidated into code execution
-4. **Self-Improvement**: Continuous learning and adaptation
-5. **Performance Focus**: Optimized for speed and efficiency
+4. **Performance Focus**: Optimized for speed and efficiency
 
 ---
 
@@ -165,73 +162,6 @@ await agent.update_memory(
 )
 ```
 
-### **4. Prompt Optimization**
-Real-time prompt optimization and adaptation.
-
-**Features:**
-- Dynamic prompt variants
-- A/B testing
-- Performance-based adaptation
-- Real-time switching
-- Cost optimization
-
-**Optimization Setup:**
-```python
-# Initialize prompt optimization
-agent.enable_prompt_optimization(
-    ab_split=0.1,
-    min_samples=10,
-    confidence_threshold=0.8
-)
-
-# Track performance
-await agent.track_performance(
-    prompt_id="system_prompt",
-    success=True,
-    execution_time=2.5,
-    token_cost=0.01
-)
-
-# Get optimization status
-status = agent.get_optimization_status()
-print(f"Active variants: {status['active_variants']}")
-print(f"Performance improvement: {status['performance_improvement']:.3f}")
-```
-
-### **5. Tool Optimization**
-Dynamic tool description and parameter optimization.
-
-**Features:**
-- Tool-specific prompts
-- Parameter optimization
-- Usage tracking
-- Performance analysis
-- Dynamic adaptation
-
-**Tool Optimization:**
-```python
-# Optimize tool descriptions
-optimized_tools = await agent.optimize_tools([
-    "think",
-    "bash",
-    "python",
-    "git"
-])
-
-# Track tool usage
-await agent.track_tool_usage(
-    tool_name="think",
-    success=True,
-    execution_time=1.2,
-    parameters={"steps": 5}
-)
-
-# Get tool performance
-tool_metrics = agent.get_tool_metrics("think")
-print(f"Success rate: {tool_metrics['success_rate']:.3f}")
-print(f"Average time: {tool_metrics['avg_execution_time']:.3f}s")
-```
-
 ---
 
 ## ⚙️ **Configuration**
@@ -257,32 +187,9 @@ memory_retention_days = 30
 max_memory_size = 1000
 memory_compression = true
 
-# Prompt optimization
-enable_prompt_optimization = true
-prompt_opt_ab_split = 0.1
-prompt_opt_min_samples = 10
-prompt_opt_confidence_threshold = 0.8
-prompt_opt_success_weight = 0.4
-prompt_opt_time_weight = 0.3
-prompt_opt_error_weight = 0.2
-prompt_opt_cost_weight = 0.1
-
-# Tool optimization
-enable_tool_optimization = true
-tool_opt_ab_split = 0.1
-tool_opt_min_samples = 5
-tool_opt_confidence_threshold = 0.7
-```
-
 ### **Advanced Configuration**
 ```toml
 [agent.advanced]
-# ACE framework integration
-enable_ace = true
-ace_max_bullets = 1000
-ace_similarity_threshold = 0.7
-ace_max_refinement_rounds = 3
-
 # Performance optimization
 enable_performance_tracking = true
 track_token_usage = true
@@ -337,8 +244,6 @@ from forge.core.config.agent_config import AgentConfig
 config = AgentConfig(
     name="CodeActAgent",
     description="Minimalist agent for code generation",
-    enable_prompt_optimization=True,
-    enable_tool_optimization=True,
     enable_memory=True
 )
 
@@ -442,20 +347,6 @@ print(f"Total conversations: {memory_stats['total_conversations']}")
 print(f"Memory size: {memory_stats['memory_size']:.2f} MB")
 print(f"Compression ratio: {memory_stats['compression_ratio']:.3f}")
 print(f"Retrieval accuracy: {memory_stats['retrieval_accuracy']:.3f}")
-```
-
-### **Optimization Status**
-```python
-# Get prompt optimization status
-prompt_status = agent.get_prompt_optimization_status()
-print(f"Active variants: {prompt_status['active_variants']}")
-print(f"Performance improvement: {prompt_status['performance_improvement']:.3f}")
-print(f"Cost savings: {prompt_status['cost_savings']:.3f}")
-
-# Get tool optimization status
-tool_status = agent.get_tool_optimization_status()
-print(f"Optimized tools: {tool_status['optimized_tools']}")
-print(f"Tool performance improvement: {tool_status['performance_improvement']:.3f}")
 ```
 
 ---
@@ -653,9 +544,7 @@ from forge.core.config.agent_config import AgentConfig
 async def basic_code_generation():
     # Initialize agent
     config = AgentConfig(
-        name="CodeActAgent",
-        enable_prompt_optimization=True,
-        enable_tool_optimization=True
+        name="CodeActAgent"
     )
     
     agent = CodeActAgent(config=config)
@@ -685,8 +574,6 @@ async def advanced_problem_solving():
     # Initialize with advanced configuration
     config = AgentConfig(
         name="AdvancedCodeActAgent",
-        enable_prompt_optimization=True,
-        enable_tool_optimization=True,
         enable_memory=True,
         max_iterations=20
     )

@@ -1,63 +1,34 @@
-/**
- * Production-grade automatic navigation to browser when servers start.
- *
- * This hook implements the Hybrid Approach for 100% reliable server detection:
- * 1. Backend detects server start via command output patterns
- * 2. Backend verifies port is actually listening
- * 3. Backend performs HTTP health check
- * 4. Backend emits ServerReadyObservation
- * 5. Frontend receives event and automatically navigates
- *
- * No pattern matching, no timeouts, no race conditions - purely event-driven.
- */
-
-import { useEffect } from "react";
+import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useConversationId } from "#/hooks/use-conversation-id";
-import { logger } from "#/utils/logger";
+import { useConversationId } from "./use-conversation-id";
 
-interface ServerReadyEvent {
-  port: number;
+export interface ServerReadyDetail {
   url: string;
-  protocol: string;
-  health_status: string; // Backend sends this, we'll map it
+  health_status: "healthy" | "unhealthy" | string;
 }
 
 /**
- * Listen for server-ready events from the backend and automatically
- * navigate the browser tab to the detected server.
+ * Hook to automatically navigate to the browser tab when a server is ready.
+ * This is triggered when the agent starts a web server (e.g., React dev server).
  */
 export function useAutoNavigateToApp() {
   const navigate = useNavigate();
   const location = useLocation();
   const { conversationId } = useConversationId();
 
-  useEffect(() => {
-    const handleServerReady = (event: CustomEvent<ServerReadyEvent>) => {
-      const { url, health_status: healthStatus } = event.detail;
+  React.useEffect(() => {
+    const handleServerReady = (event: Event) => {
+      const customEvent = event as CustomEvent<ServerReadyDetail>;
+      const { url, health_status: healthStatus } = customEvent.detail;
 
-      logger.debug(
-        `[Auto-Navigate] 🔍 RECEIVED SERVER-READY EVENT:`,
-        event.detail,
-      );
+      if (healthStatus === "healthy") {
+        // Only navigate if we're not already on the browser page
+        if (!location.pathname.endsWith("/browser") && conversationId) {
+          navigate(`/conversations/${conversationId}/browser`);
+        }
 
-      // Only navigate if health check passed or is unknown (some servers take time to initialize)
-      if (healthStatus === "unhealthy") {
-        logger.warn(
-          `[Auto-Navigate] Server at ${url} failed health check, skipping navigation`,
-        );
-        return;
-      }
-
-      logger.debug(
-        `[Auto-Navigate] Server ready at ${url}, navigating to browser tab`,
-      );
-
-      // Navigate to browser tab if not already there
-      if (!location.pathname.endsWith("/browser")) {
-        navigate(`/conversations/${conversationId}/browser`);
-
-        // Wait for browser tab to load, then navigate to the URL
+        // Always dispatch the load event to update the browser URL
+        // Give a small delay to ensure the browser component is mounted if we just navigated
         setTimeout(() => {
           window.dispatchEvent(
             new CustomEvent("Forge:load-server-url", {
@@ -65,27 +36,12 @@ export function useAutoNavigateToApp() {
             }),
           );
         }, 100);
-      } else {
-        // Already on browser tab, just load the URL
-        window.dispatchEvent(
-          new CustomEvent("Forge:load-server-url", {
-            detail: { url },
-          }),
-        );
       }
     };
 
-    // Listen for server-ready events from the backend
-    window.addEventListener(
-      "Forge:server-ready",
-      handleServerReady as EventListener,
-    );
-
+    window.addEventListener("Forge:server-ready", handleServerReady);
     return () => {
-      window.removeEventListener(
-        "Forge:server-ready",
-        handleServerReady as EventListener,
-      );
+      window.removeEventListener("Forge:server-ready", handleServerReady);
     };
-  }, [navigate, conversationId, location.pathname]);
+  }, [navigate, location.pathname, conversationId]);
 }

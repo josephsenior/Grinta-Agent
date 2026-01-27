@@ -3,7 +3,6 @@
 ## Introduction
 
 The Forge Runtime folder contains the core components responsible for executing actions and managing the runtime environment for the Forge project. This README provides an overview of the main components and their interactions.
-You can learn more about how the runtime works in the [Docker Runtime](https://docs.all-hands.dev/usage/architecture/runtime) documentation.
 
 ## Main Components
 
@@ -11,57 +10,28 @@ You can learn more about how the runtime works in the [Docker Runtime](https://d
 
 The `base.py` file defines the `Runtime` class, which serves as the primary [interface](./base.py) for agent interactions with the external environment. It handles various operations including:
 
-- Bash sandbox execution
+- Bash execution
 - Browser interactions
 - Filesystem operations
 - Environment variable management
 - Plugin management
 
-Key features of the `Runtime` class:
+### 2. impl/local/local_runtime_inprocess.py
 
-- Initialization with configuration and event stream
-- Asynchronous initialization (`ainit`) for setting up environment variables
-- Action execution methods for different types of actions (run, read, write, browse, etc.)
-- Abstract methods for file operations (to be implemented by subclasses)
+The `local_runtime_inprocess.py` file contains the `LocalRuntime` class (aliased as `LocalRuntimeInProcess`), which implements the Runtime interface. 
 
-### 2. impl/action_execution/action_execution_client.py
-
-The `action_execution_client.py` file contains the `ActionExecutionClient` class, which implements the Runtime interface. It is an abstract implementation, meaning
-it still needs to be extended by a concrete implementation to be used.
-
-This client interacts with an action_execution_server (defined below) via HTTP
-calls to actually perform runtime actions.
+This implementation runs the `ActionExecutor` directly in the same process as the Forge backend, eliminating the overhead of subprocesses or HTTP communication. It is designed for desktop applications and local development.
 
 ### 3. action_execution_server.py
 
-The `action_executor_server.py` file contains the `ActionExecutor` class, which is responsible for executing actions received via the `/execute_action` HTTP endpoint. It returns observations in the HTTP response.
+The `action_execution_server.py` file contains the `ActionExecutor` class, which is responsible for executing actions directly. 
 
 Key features of the `ActionExecutor` class:
 
 - Initialization of user environment and bash shell
 - Plugin management and initialization
-- Execution of various action types (bash commands, IPython cells, file operations, browsing)
-- Integration with BrowserEnv for web interactions
-
-### 4. Other Implementations
-
-The `./impl/` directory contains a few different Runtime implementations, all of
-which extend the `ActionExecutionClient` class. These implementations
-handle the lifecycle of a Docker container or other environment running the
-ActionExecutor server.
-
-There are currently four implementations:
-
-- Docker (runs locally in a Docker container)
-- Remote (runs via a custom HTTP API for creating, pausing, resuming, and stopping runtimes in a remote environment)
-- Modal (uses the Modal API)
-- Runloop (uses the Runloop API)
-
-You may also add your own `Runtime` subclass to the classpath and configure it like this:
-
-```toml
-runtime = "app.my.CustomRuntime"
-```
+- Execution of various action types (bash commands, file operations, browsing)
+- Integration with Playwright for web interactions
 
 ## Workflow Description
 
@@ -77,7 +47,6 @@ runtime = "app.my.CustomRuntime"
 3. **Action Execution**:
    - Different types of actions are executed:
      - Bash commands using `run` method
-     - IPython cells using `run_ipython` method
      - File operations (read/write) using `read` and `write` methods
      - Web browsing using `browse` and `browse_interactive` methods
 
@@ -86,84 +55,24 @@ runtime = "app.my.CustomRuntime"
    - Observations are added to the event stream.
 
 5. **Plugin Integration**:
-   - Plugins like Jupyter and AgentSkills are initialized and integrated into the runtime.
+   - Plugins like AgentSkills are initialized and integrated into the runtime.
 
-6. **Sandbox Environment**:
-   - The `ActionExecutor` sets up a sandboxed environment inside a Docker container.
-   - User environment and bash shell are initialized.
-   - Actions received from the Forge backend are executed in this sandboxed environment.
+## Runtime Type
 
-7. **Browser Interactions**:
-   - Web browsing actions are handled using the `BrowserEnv` class.
+### Local Runtime (In-Process)
 
-## Important Notes
+The Local Runtime is the primary and only supported runtime in this architecture:
 
-- The runtime uses asynchronous programming (asyncio) for efficient execution.
-- Environment variables can be added dynamically to both IPython and Bash environments.
-- File operations and command executions are abstracted, allowing for different implementations in subclasses.
-- The system uses a plugin architecture for extensibility.
-- All interactions with the external environment are managed through the Runtime, ensuring a controlled and secure execution environment.
-
-## Runtime Types
-
-### Docker Runtime
-
-The Docker Runtime is designed for local execution using Docker containers:
-
-- Creates and manages a Docker container for each session
-- Executes actions within the container
-- Supports direct file system access and local resource management
-- Ideal for development, testing, and scenarios requiring full control over the execution environment
-
-Key features:
-
-- Real-time logging and debugging capabilities
-- Direct access to the local file system
-- Faster execution due to local resources
-- Container isolation for security
-
-This is the default runtime used within Forge.
-
-### Local Runtime
-
-The Local Runtime is designed for direct execution on the local machine. Currently only supports running as the local user:
-
-- Runs the action_execution_server directly on the host
-- No Docker container overhead
+- Runs ActionExecutor directly in-process
+- No container or subprocess overhead
 - Direct access to local system resources
-- Ideal for development and testing when Docker is not available or desired
-
-Key features:
-
-- Minimal setup required
-- Direct access to local resources
-- No container overhead
 - Fastest execution speed
+- Simplified architecture
 
-**Important: This runtime provides no isolation as it runs directly on the host machine. All actions are executed with the same permissions as the user running Forge. For secure execution with proper isolation, use the Docker Runtime instead.**
-
-### Remote Runtime
-
-The Remote Runtime is designed for execution in a remote environment:
-
-- Connects to a remote server running the ActionExecutor
-- Executes actions by sending requests to the remote client
-- Supports distributed execution and cloud-based deployments
-- Ideal for production environments, scalability, and scenarios where local resource constraints are a concern
-
-Key features:
-
-- Scalability and resource flexibility
-- Reduced local resource usage
-- Support for cloud-based deployments
-- Potential for improved security through isolation
-
-At the time of this writing, this is mostly used in parallel evaluation, such as this example for [SWE-Bench](https://github.com/All-Hands-AI/Forge/tree/main/evaluation/benchmarks/swe_bench#run-inference-on-remoteruntime-experimental).
+**Important: This runtime provides no isolation as it runs directly on the host machine. All actions are executed with the same permissions as the user running Forge.**
 
 ## Related Components
 
-- The runtime interacts closely with the event system defined in the `Forge.events` module.
-- It relies on configuration classes from `Forge.core.config`.
-- Logging is handled through `Forge.core.logger`.
-
-This section provides an overview of the Forge Runtime folder. For more detailed information on specific components or usage, please refer to the individual files and their docstrings.
+- The runtime interacts closely with the event system defined in the `forge.events` module.
+- It relies on configuration classes from `forge.core.config`.
+- Logging is handled through `forge.core.logger`.

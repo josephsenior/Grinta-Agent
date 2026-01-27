@@ -12,10 +12,8 @@ from forge.llm.model_features import (
     [
         ("  OPENAI/gpt-4o  ", "gpt-4o"),
         ("anthropic/claude-3-7-sonnet", "claude-3-7-sonnet"),
-        ("litellm_proxy/gemini-2.5-pro", "gemini-2.5-pro"),
-        ("qwen3-coder-480b-a35b-instruct", "qwen3-coder-480b-a35b-instruct"),
+        ("gemini-2.5-pro", "gemini-2.5-pro"),
         ("gpt-5", "gpt-5"),
-        ("deepseek/DeepSeek-R1-0528:671b-Q4_K_XL", "deepseek-r1-0528"),
         ("openai/GLM-4.5-GGUF", "glm-4.5"),
         ("openrouter/gpt-4o-mini", "gpt-4o-mini"),
         (
@@ -35,28 +33,12 @@ def test_normalize_model_name(raw, expected):
     [
         ("gpt-4o", "gpt-4o*", True),
         ("openai/gpt-4o", "gpt-4o*", True),
-        ("litellm_proxy/gpt-4o-mini", "gpt-4o*", True),
         ("claude-3-7-sonnet-20250219", "claude-3-7-sonnet*", True),
         ("o1-2024-12-17", "o1*", True),
-        ("grok-4-0709", "grok-4-0709", True),
-        ("grok-4-0801", "grok-4-0709", False),
+        ("grok-4-0709", "grok-*", True),
     ],
 )
 def test_model_matches(name, pattern, expected):
-    assert model_matches(name, [pattern]) is expected
-
-
-@pytest.mark.parametrize(
-    "name,pattern,expected",
-    [
-        ("openai/gpt-4o", "openai/gpt-4o*", True),
-        ("openrouter/gpt-4o", "openai/gpt-4o*", False),
-        ("litellm_proxy/gpt-4o-mini", "litellm_proxy/gpt-4o*", True),
-        ("gpt-4o", "openai/gpt-4o*", False),
-        ("unknown-model", "gpt-5*", False),
-    ],
-)
-def test_model_matches_provider_qualified(name, pattern, expected):
     assert model_matches(name, [pattern]) is expected
 
 
@@ -66,91 +48,49 @@ def test_model_matches_provider_qualified(name, pattern, expected):
         (
             "gpt-4o",
             ModelFeatures(
+                max_input_tokens=128000,
+                max_output_tokens=4096,
                 supports_function_calling=True,
                 supports_reasoning_effort=False,
                 supports_prompt_cache=False,
                 supports_stop_words=True,
-            ),
-        ),
-        (
-            "gpt-5",
-            ModelFeatures(
-                supports_function_calling=True,
-                supports_reasoning_effort=True,
-                supports_prompt_cache=False,
-                supports_stop_words=True,
-            ),
-        ),
-        (
-            "gpt-5-mini-2025-08-07",
-            ModelFeatures(
-                supports_function_calling=True,
-                supports_reasoning_effort=True,
-                supports_prompt_cache=False,
-                supports_stop_words=True,
-            ),
-        ),
-        (
-            "o3-mini",
-            ModelFeatures(
-                supports_function_calling=True,
-                supports_reasoning_effort=True,
-                supports_prompt_cache=False,
-                supports_stop_words=True,
+                supports_response_schema=True,
             ),
         ),
         (
             "o1-2024-12-17",
             ModelFeatures(
+                max_input_tokens=200000,
+                max_output_tokens=100000,
                 supports_function_calling=True,
                 supports_reasoning_effort=True,
                 supports_prompt_cache=False,
                 supports_stop_words=False,
-            ),
-        ),
-        (
-            "xai/grok-4-0709",
-            ModelFeatures(
-                supports_function_calling=False,
-                supports_reasoning_effort=False,
-                supports_prompt_cache=False,
-                supports_stop_words=False,
+                supports_response_schema=True,
             ),
         ),
         (
             "anthropic/claude-3-7-sonnet",
             ModelFeatures(
+                max_input_tokens=200000,
+                max_output_tokens=8192,
                 supports_function_calling=True,
                 supports_reasoning_effort=False,
                 supports_prompt_cache=True,
                 supports_stop_words=True,
+                supports_response_schema=True,
             ),
         ),
         (
-            "litellm_proxy/claude-3.7-sonnet",
+            "grok-beta",
             ModelFeatures(
-                supports_function_calling=True,
-                supports_reasoning_effort=False,
-                supports_prompt_cache=True,
-                supports_stop_words=True,
-            ),
-        ),
-        (
-            "gemini-2.5-pro",
-            ModelFeatures(
-                supports_function_calling=True,
-                supports_reasoning_effort=True,
-                supports_prompt_cache=False,
-                supports_stop_words=True,
-            ),
-        ),
-        (
-            "openai/gpt-4o",
-            ModelFeatures(
+                max_input_tokens=128000,
+                max_output_tokens=4096,
                 supports_function_calling=True,
                 supports_reasoning_effort=False,
                 supports_prompt_cache=False,
                 supports_stop_words=True,
+                supports_response_schema=False,
             ),
         ),
     ],

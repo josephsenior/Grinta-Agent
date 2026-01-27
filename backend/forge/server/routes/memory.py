@@ -10,8 +10,8 @@ from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException, Path
+from pydantic import BaseModel, Field, field_validator
 
 from forge.core.logger import forge_logger as logger
 from forge.server.user_auth import get_user_settings_store
@@ -50,29 +50,43 @@ class MemoryImportance(str, Enum):
 class MemoryModel(BaseModel):
     """Memory data model."""
 
-    id: str = Field(default_factory=lambda: uuid4().hex)
-    title: str = Field(..., min_length=1, max_length=200)
-    content: str = Field(..., min_length=1, max_length=5000)
-    category: MemoryCategory
-    tags: list[str] = Field(default_factory=list)
-    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
-    updated_at: str = Field(default_factory=lambda: datetime.now().isoformat())
-    usage_count: int = Field(default=0)
-    last_used: str | None = None
-    source: MemorySource = Field(default=MemorySource.MANUAL)
-    conversation_id: str | None = None
-    importance: MemoryImportance = Field(default=MemoryImportance.MEDIUM)
+    id: str = Field(default_factory=lambda: uuid4().hex, description="Unique memory identifier")
+    title: str = Field(..., min_length=1, max_length=200, description="Memory title")
+    content: str = Field(..., min_length=1, max_length=5000, description="Memory content")
+    category: MemoryCategory = Field(..., description="Memory category")
+    tags: list[str] = Field(default_factory=list, description="Memory tags")
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat(), description="Creation timestamp")
+    updated_at: str = Field(default_factory=lambda: datetime.now().isoformat(), description="Last update timestamp")
+    usage_count: int = Field(default=0, ge=0, description="Number of times memory was used")
+    last_used: str | None = Field(None, description="Last usage timestamp")
+    source: MemorySource = Field(default=MemorySource.MANUAL, description="Memory source")
+    conversation_id: str | None = Field(None, description="Associated conversation ID")
+    importance: MemoryImportance = Field(default=MemoryImportance.MEDIUM, description="Memory importance level")
+
+    @field_validator("title", "content")
+    @classmethod
+    def validate_strings(cls, v: str) -> str:
+        """Validate title and content are non-empty using type-safe validation."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        return validate_non_empty_string(v, name="field")
 
 
 class CreateMemoryRequest(BaseModel):
     """Request to create a new memory."""
 
-    title: str
-    content: str
-    category: MemoryCategory
-    tags: list[str] = Field(default_factory=list)
-    importance: MemoryImportance = Field(default=MemoryImportance.MEDIUM)
-    conversation_id: str | None = None
+    title: str = Field(..., min_length=1, max_length=200, description="Memory title")
+    content: str = Field(..., min_length=1, max_length=5000, description="Memory content")
+    category: MemoryCategory = Field(..., description="Memory category")
+    tags: list[str] = Field(default_factory=list, description="Memory tags")
+    importance: MemoryImportance = Field(default=MemoryImportance.MEDIUM, description="Memory importance level")
+    conversation_id: str | None = Field(None, description="Associated conversation ID")
+
+    @field_validator("title", "content")
+    @classmethod
+    def validate_strings(cls, v: str) -> str:
+        """Validate title and content are non-empty using type-safe validation."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        return validate_non_empty_string(v, name="field")
 
 
 class UpdateMemoryRequest(BaseModel):
@@ -88,11 +102,18 @@ class UpdateMemoryRequest(BaseModel):
 class SearchMemoriesRequest(BaseModel):
     """Request to search memories."""
 
-    query: str
-    category: MemoryCategory | None = None
-    tags: list[str] | None = None
-    min_usage_count: int | None = None
-    importance: MemoryImportance | None = None
+    query: str = Field(..., min_length=1, description="Search query string")
+    category: MemoryCategory | None = Field(None, description="Filter by category")
+    tags: list[str] | None = Field(None, description="Filter by tags")
+    min_usage_count: int | None = Field(None, ge=0, description="Minimum usage count filter")
+    importance: MemoryImportance | None = Field(None, description="Filter by importance level")
+
+    @field_validator("query")
+    @classmethod
+    def validate_query(cls, v: str) -> str:
+        """Validate query is non-empty using type-safe validation."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        return validate_non_empty_string(v, name="query")
 
 
 class MemoryStats(BaseModel):
@@ -136,6 +157,7 @@ async def create_memory(
         content=memory.content,
         category=memory.category,
         tags=memory.tags,
+        last_used=None,
         importance=memory.importance,
         conversation_id=memory.conversation_id,
     )
@@ -452,7 +474,7 @@ async def import_memories(
 
 @app.get("/{memory_id}")
 async def get_memory(
-    memory_id: str,
+    memory_id: Annotated[str, Path(..., min_length=1, description="Memory ID")],
     settings_store: Annotated[Any, Depends(get_user_settings_store)],
 ) -> dict:
     """Get a single memory by ID."""
@@ -471,7 +493,7 @@ async def get_memory(
 
 @app.patch("/{memory_id}")
 async def update_memory(
-    memory_id: str,
+    memory_id: Annotated[str, Path(..., min_length=1, description="Memory ID")],
     updates: UpdateMemoryRequest,
     settings_store: Annotated[Any, Depends(get_user_settings_store)],
 ) -> dict:
@@ -546,7 +568,7 @@ def _apply_memory_updates(memory: dict, updates: UpdateMemoryRequest) -> None:
 
 @app.delete("/{memory_id}")
 async def delete_memory(
-    memory_id: str,
+    memory_id: Annotated[str, Path(..., min_length=1, description="Memory ID")],
     settings_store: Annotated[Any, Depends(get_user_settings_store)],
 ) -> dict:
     """Delete a memory."""

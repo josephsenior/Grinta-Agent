@@ -8,9 +8,6 @@ const setUrlMock = vi.hoisted(() => vi.fn(() => ({ type: "browser/setUrl" })));
 const appendOutputMock = vi.hoisted(() =>
   vi.fn(() => ({ type: "terminal/append" })),
 );
-const appendJupyterOutputMock = vi.hoisted(() =>
-  vi.fn(() => ({ type: "jupyter/append" })),
-);
 const setCurrentAgentStateMock = vi.hoisted(() =>
   vi.fn(() => ({ type: "agent/setState" })),
 );
@@ -30,10 +27,6 @@ vi.mock("#/state/browser-slice", () => ({
 
 vi.mock("#/state/command-slice", () => ({
   appendOutput: appendOutputMock,
-}));
-
-vi.mock("#/state/jupyter-slice", () => ({
-  appendJupyterOutput: appendJupyterOutputMock,
 }));
 
 vi.mock("#/state/agent-slice", () => ({
@@ -79,7 +72,6 @@ describe("handleObservationMessage", () => {
     dispatchMock.mockClear();
     setUrlMock.mockClear();
     appendOutputMock.mockClear();
-    appendJupyterOutputMock.mockClear();
     setCurrentAgentStateMock.mockClear();
     startStreamMock.mockClear();
     appendStreamChunkMock.mockClear();
@@ -117,37 +109,6 @@ describe("handleObservationMessage", () => {
 
     expect(startStreamMock).not.toHaveBeenCalled();
     expect(appendOutputMock).not.toHaveBeenCalled();
-  });
-
-  it("appends jupyter output including image urls", () => {
-    const message = makeMessage({
-      observation: ObservationType.RUN_IPYTHON,
-      content: "plot",
-      extras: { metadata: {}, error_id: "", image_urls: ["img.png"] },
-    });
-
-    handleObservationMessage(message);
-
-    expect(appendJupyterOutputMock).toHaveBeenCalledWith({
-      content: "plot",
-      imageUrls: ["img.png"],
-    });
-  });
-
-  it("omits image urls when extras value is not an array", () => {
-    appendJupyterOutputMock.mockClear();
-    const message = makeMessage({
-      observation: ObservationType.RUN_IPYTHON,
-      content: "plot",
-      extras: { metadata: {}, error_id: "", image_urls: "not-array" },
-    });
-
-    handleObservationMessage(message);
-
-    expect(appendJupyterOutputMock).toHaveBeenCalledWith({
-      content: "plot",
-      imageUrls: undefined,
-    });
   });
 
   it("dispatches agent state changes", () => {
@@ -189,7 +150,6 @@ describe("handleObservationMessage", () => {
   it("ignores observations without special handlers", () => {
     dispatchMock.mockClear();
     const noopTypes: ObservationType[] = [
-      ObservationType.DELEGATE,
       ObservationType.READ,
       ObservationType.EDIT,
       ObservationType.THINK,

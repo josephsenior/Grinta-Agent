@@ -15,26 +15,17 @@ class TestUserSecrets:
         github_token = ProviderToken(
             token=SecretStr("github-token-123"), user_id="user1"
         )
-        gitlab_token = ProviderToken(
-            token=SecretStr("gitlab-token-456"), user_id="user2"
-        )
         provider_tokens = {
             ProviderType.GITHUB: github_token,
-            ProviderType.GITLAB: gitlab_token,
         }
         store = UserSecrets(provider_tokens=provider_tokens)
         assert isinstance(store.provider_tokens, MappingProxyType)
-        assert len(store.provider_tokens) == 2
+        assert len(store.provider_tokens) == 1
         assert (
             store.provider_tokens[ProviderType.GITHUB].token.get_secret_value()
             == "github-token-123"
         )
         assert store.provider_tokens[ProviderType.GITHUB].user_id == "user1"
-        assert (
-            store.provider_tokens[ProviderType.GITLAB].token.get_secret_value()
-            == "gitlab-token-456"
-        )
-        assert store.provider_tokens[ProviderType.GITLAB].user_id == "user2"
         assert isinstance(store.custom_secrets, MappingProxyType)
         assert len(store.custom_secrets) == 0
 
@@ -83,9 +74,9 @@ class TestUserSecrets:
             store1.custom_secrets["API_KEY"].secret.get_secret_value() == "api-key-123"
         )
         provider_token = ProviderToken(
-            token=SecretStr("gitlab-token-456"), user_id="user2"
+            token=SecretStr("enterprise-token-456"), user_id="user2"
         )
-        provider_tokens_proxy = MappingProxyType({ProviderType.GITLAB: provider_token})
+        provider_tokens_proxy = MappingProxyType({ProviderType.ENTERPRISE_SSO: provider_token})
         custom_secrets_dict = {
             "API_KEY": {"secret": "api-key-123", "description": "API key"}
         }
@@ -95,8 +86,8 @@ class TestUserSecrets:
         assert isinstance(store2.provider_tokens, MappingProxyType)
         assert isinstance(store2.custom_secrets, MappingProxyType)
         assert (
-            store2.provider_tokens[ProviderType.GITLAB].token.get_secret_value()
-            == "gitlab-token-456"
+            store2.provider_tokens[ProviderType.ENTERPRISE_SSO].token.get_secret_value()
+            == "enterprise-token-456"
         )
         assert (
             store2.custom_secrets["API_KEY"].secret.get_secret_value() == "api-key-123"
@@ -116,11 +107,11 @@ class TestUserSecrets:
             provider_tokens=MappingProxyType({ProviderType.GITHUB: github_token}),
             custom_secrets=MappingProxyType(custom_secret),
         )
-        gitlab_token = ProviderToken(
-            token=SecretStr("gitlab-token-456"), user_id="user2"
+        enterprise_token = ProviderToken(
+            token=SecretStr("enterprise-token-456"), user_id="user2"
         )
         updated_provider_tokens = MappingProxyType(
-            {ProviderType.GITHUB: github_token, ProviderType.GITLAB: gitlab_token}
+            {ProviderType.GITHUB: github_token, ProviderType.ENTERPRISE_SSO: enterprise_token}
         )
         updated_store1 = initial_store.model_copy(
             update={"provider_tokens": updated_provider_tokens}
@@ -131,8 +122,8 @@ class TestUserSecrets:
             == "github-token-123"
         )
         assert (
-            updated_store1.provider_tokens[ProviderType.GITLAB].token.get_secret_value()
-            == "gitlab-token-456"
+            updated_store1.provider_tokens[ProviderType.ENTERPRISE_SSO].token.get_secret_value()
+            == "enterprise-token-456"
         )
         assert len(updated_store1.custom_secrets) == 1
         assert (
@@ -206,26 +197,17 @@ class TestUserSecrets:
         """Test initializing provider tokens with both plain strings and SecretStr objects."""
         provider_tokens_dict = {
             ProviderType.GITHUB: {"token": "github-token-123", "user_id": "user1"},
-            ProviderType.GITLAB: {"token": "gitlab-token-456", "user_id": "user2"},
         }
-        gitlab_token = ProviderToken(
-            token=SecretStr("gitlab-token-456"), user_id="user2"
-        )
         mixed_provider_tokens = {
             ProviderType.GITHUB: provider_tokens_dict[ProviderType.GITHUB],
-            ProviderType.GITLAB: gitlab_token,
         }
         store = UserSecrets(provider_tokens=mixed_provider_tokens)
         assert isinstance(store.provider_tokens, MappingProxyType)
-        assert len(store.provider_tokens) == 2
+        assert len(store.provider_tokens) == 1
         github_token = store.provider_tokens[ProviderType.GITHUB]
         assert isinstance(github_token.token, SecretStr)
         assert github_token.token.get_secret_value() == "github-token-123"
         assert github_token.user_id == "user1"
-        gitlab_token_result = store.provider_tokens[ProviderType.GITLAB]
-        assert isinstance(gitlab_token_result.token, SecretStr)
-        assert gitlab_token_result.token.get_secret_value() == "gitlab-token-456"
-        assert gitlab_token_result.user_id == "user2"
 
     def test_initializing_custom_secrets_with_mixed_value_types(self):
         """Test initializing custom secrets with both plain strings and SecretStr objects."""

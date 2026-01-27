@@ -84,7 +84,7 @@ export class ErrorBoundary extends Component<
 
   // eslint-disable-next-line class-methods-use-this
   handleGoHome = (): void => {
-    window.location.href = "/";
+    window.location.href = "/conversations";
   };
 
   render() {
@@ -322,7 +322,7 @@ export class ErrorBoundary extends Component<
                   }}
                 >
                   <Home style={{ width: "1rem", height: "1rem" }} />
-                  {i18n.t("common.goHome", "Go Home")}
+                  {i18n.t("common.goToConversations", "Go to Conversations")}
                 </button>
               </div>
 
@@ -364,7 +364,9 @@ export function withErrorBoundary<P extends object>(
 ) {
   function WrappedComponent(props: P) {
     return (
+      // eslint-disable-next-line react/jsx-props-no-spreading
       <ErrorBoundary {...errorBoundaryProps}>
+        {/* eslint-disable-next-line react/jsx-props-no-spreading */}
         <Wrapped {...props} />
       </ErrorBoundary>
     );

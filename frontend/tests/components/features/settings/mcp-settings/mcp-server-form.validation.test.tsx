@@ -3,9 +3,14 @@ import { describe, it, expect, vi } from "vitest";
 import { MCPServerForm } from "#/components/features/settings/mcp-settings/mcp-server-form";
 
 // i18n mock
+const mockI18n = {
+  changeLanguage: vi.fn(() => Promise.resolve()),
+};
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
+    i18n: mockI18n,
   }),
 }));
 

@@ -29,7 +29,11 @@ export function useFileOperations({
         if (typeof response === "string") return response;
         // Some backends return an object with `code` or `content`
         if (response && typeof response === "object") {
-          return (response as any).code ?? (response as any).content ?? null;
+          return (
+            (response as { code?: string }).code ??
+            (response as { content?: string }).content ??
+            null
+          );
         }
         return null;
       } catch (error) {

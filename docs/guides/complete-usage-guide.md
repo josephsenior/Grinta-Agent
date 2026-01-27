@@ -8,8 +8,6 @@
 
 - [🚀 Getting Started](#-getting-started)
 - [⚙️ Configuration](#️-configuration)
-- [🤖 Multi-Agent System](#-multi-agent-system)
-- [🚀 Dynamic Prompt Optimization](#-dynamic-prompt-optimization)
 - [💻 Terminal Usage](#-terminal-usage)
 - [📊 Analytics & Monitoring](#-analytics--monitoring)
 - [🎨 UI/UX Features](#-uiux-features)
@@ -34,12 +32,12 @@ pip install -e .
 
 # Frontend setup
 cd frontend
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 
 # Start system
 python -m Forge.server  # Backend
-npm run dev                 # Frontend
+pnpm run dev                 # Frontend
 ```
 
 2. **Environment Configuration**
@@ -48,7 +46,6 @@ npm run dev                 # Frontend
 FORGE_BACKEND_URL=http://localhost:3000
 FORGE_LLM_PROVIDER=openai
 FORGE_LLM_MODEL=gpt-4
-FORGE_ENABLE_PROMPT_OPTIMIZATION=true
 VITE_BACKEND_BASE_URL=http://localhost:3000
 VITE_WEBSOCKET_URL=http://localhost:3000/socket.io
 ```
@@ -61,9 +58,7 @@ VITE_WEBSOCKET_URL=http://localhost:3000/socket.io
    - Select project type (Full-stack, API, ML, etc.)
 
 2. **Configure Agents**
-   - Enable MetaSOP multi-agent system
    - Configure CodeAct agent settings
-   - Set up prompt optimization preferences
 
 ---
 
@@ -94,243 +89,13 @@ min_samples = 50
 ### **Agent Configuration**
 
 ```python
-# MetaSOP Configuration
-orchestrator = MetaSOPOrchestrator(
-    llm=llm,
-    memory=memory,
-    settings=MetaSOPSettings(
-        enable_prompt_optimization=True,
-        prompt_opt_ab_split=0.2,
-        prompt_opt_min_samples=30,
-        prompt_opt_history_path="./metasop_optimization/history.json",
-        prompt_opt_history_auto_flush=False,
-        role_optimization={
-            "engineer": {"weight": 0.5, "focus": "execution"},
-            "architect": {"weight": 0.4, "focus": "technical_depth"},
-            "product_manager": {"weight": 0.3, "focus": "clarity"}
-        }
-    )
-)
-
 # CodeAct Configuration
 agent = CodeActAgent(
     llm=llm,
     config=AgentConfig(
-        enable_prompt_optimization=True,
-        prompt_opt_storage_path="./codeact_optimization",
-        prompt_opt_history_path="./codeact_optimization/history.json",
-        prompt_opt_history_auto_flush=False,
-        prompt_opt_success_weight=0.4,
-        prompt_opt_time_weight=0.3,
-        prompt_opt_cost_weight=0.2
+        enable_memory=True
     )
 )
-```
-
----
-
-## 🤖 **Multi-Agent System**
-
-### **MetaSOP Orchestration**
-
-The MetaSOP system coordinates multiple specialized agents with **real-time visualizations**:
-
-```python
-# Initialize orchestrator
-orchestrator = MetaSOPOrchestrator(
-    llm=llm,
-    memory=memory,
-    ace_framework=ace
-)
-
-# Create task
-task = Task(
-    description="Build a REST API with authentication",
-    priority="high",
-    context={"framework": "FastAPI", "database": "PostgreSQL"}
-)
-
-# Execute with agents
-result = await orchestrator.execute_task(task)
-# Automatically uses: Product Manager → Architect → Engineer → QA → UI Designer
-# Frontend displays real-time visualizations for each agent's output!
-```
-
-### **🎨 MetaSOP Visualization System** (NEW!)
-
-#### **Overview**
-The MetaSOP visualization system provides beautiful, real-time diagrams for each agent's work:
-
-```bash
-# Chat Interface Usage
-1. Open chat at http://localhost:3000
-2. Type: sop: Build a REST API with user authentication
-3. Watch the orchestration panel appear with live diagrams
-```
-
-#### **Visualization Components**
-
-**Product Manager View** (Purple Theme)
-- User story cards with priority badges (High/Medium/Low)
-- Acceptance criteria checklists
-- Clean, glassmorphic design
-- No raw JSON or code visible
-
-**Architect View** (Blue Theme)
-- Animated SVG architecture diagrams
-- API endpoint cards with method badges (GET, POST, PUT, DELETE)
-- Architectural decision cards with rationale
-- Professional, technical aesthetic
-
-**Engineer View** (Green Theme)
-- Interactive file structure tree
-- Expandable folders with file/folder icons
-- Implementation plan step-by-step
-- Development-focused UI
-
-**QA View** (Orange Theme)
-- Test results dashboard with pass/fail metrics
-- Individual test cards with checkmark/X icons
-- Lint status indicators
-- Quality assurance metrics
-
-#### **Real-Time Updates**
-```typescript
-// Frontend automatically receives updates via WebSocket
-socket.on('metasop_step_update', (data) => {
-  // Parse artifact data
-  const artifact = parseArtifact(data.artifact, data.role);
-  
-  // Render visualization
-  <CleanVisualAdapter 
-    role={data.role}
-    artifact={artifact}
-    animated={true}
-  />
-});
-```
-
-#### **Type-Safe Architecture**
-```typescript
-// All artifacts have strict TypeScript interfaces
-interface PMSpecArtifact {
-  user_stories: UserStory[];
-  acceptance_criteria: AcceptanceCriteria[];
-  priority?: string;
-}
-
-interface ArchitectArtifact {
-  architecture_diagram?: string;
-  api_endpoints: APIEndpoint[];
-  architectural_decisions: ArchitecturalDecision[];
-}
-
-// Parser validates and normalizes all data
-const artifact = parseArtifact(rawData, 'product_manager');
-```
-
-### **Agent Roles**
-
-1. **Product Manager**: Requirements analysis and user story creation
-2. **Architect**: System design and technology decisions  
-3. **Engineer**: Code implementation and technical execution
-4. **QA**: Testing strategy and quality assurance
-5. **UI Designer**: User interface and experience design
-
-### **Live Monitoring**
-
-```python
-# Monitor agent activity in real-time
-@orchestrator.on_agent_status_change
-async def on_status_change(agent_id: str, status: AgentStatus):
-    print(f"Agent {agent_id}: {status}")
-
-# View live agent diagrams
-dashboard.connect_ws()  # WebSocket connection for live updates
-```
-
----
-
-## 🚀 **Dynamic Prompt Optimization**
-
-### **Basic Optimization Setup**
-
-```python
-from forge.prompt_optimization import PromptOptimizer
-
-# Initialize optimizer
-optimizer = PromptOptimizer(
-    category="system_prompt",
-    ab_split=0.2,  # 20% traffic to variants
-    min_samples=50,
-    confidence_threshold=0.95
-)
-
-# Register variants
-base_variant = optimizer.register_variant(
-    prompt_id="codeact_system",
-    content="You are CodeAct...",
-    description="Base system prompt"
-)
-
-enhanced_variant = optimizer.register_variant(
-    prompt_id="codeact_system", 
-    content="You are CodeAct with enhanced reasoning...",
-    description="Improved reasoning capabilities"
-)
-```
-
-### **Performance Tracking**
-
-```python
-# Track performance after each execution
-optimizer.track_performance(
-    prompt_id="codeact_system",
-    variant_id=variant.variant_id,
-    success=True,
-    execution_time=1.2,
-    token_count=150,
-    cost=0.003,
-    user_satisfaction=4.8
-)
-
-# Get analysis
-analysis = optimizer.get_performance_analysis("codeact_system")
-print(f"Best variant: {analysis.best_variant}")
-print(f"Improvement: {analysis.improvement:.2%}")
-```
-
-### **Real-Time Optimization**
-
-```python
-from forge.prompt_optimization import LiveOptimizer
-
-# Enable real-time optimization
-live_optimizer = LiveOptimizer(
-    optimization_threshold=0.05,  # 5% improvement threshold
-    confidence_threshold=0.8
-)
-
-await live_optimizer.start()
-# System automatically optimizes prompts in real-time
-```
-
-### **Advanced Strategies**
-
-```python
-from forge.prompt_optimization.advanced import MultiObjectiveOptimizer
-
-# Multi-objective optimization
-multi_optimizer = MultiObjectiveOptimizer(
-    objectives={
-        "success_rate": {"weight": 0.4, "minimize": False},
-        "execution_time": {"weight": 0.3, "minimize": True},
-        "cost": {"weight": 0.2, "minimize": True},
-        "user_satisfaction": {"weight": 0.1, "minimize": False}
-    }
-)
-
-result = multi_optimizer.optimize(variants, historical_data)
 ```
 
 ---
@@ -395,8 +160,8 @@ dashboard = AnalyticsDashboard()
 
 # Get live metrics
 metrics = dashboard.get_live_metrics()
-print(f"Active optimizations: {metrics.active_optimizations}")
-print(f"Average improvement: {metrics.avg_improvement:.2%}")
+print(f"Total runs: {metrics.total_runs}")
+print(f"Success rate: {metrics.success_rate:.2%}")
 
 # Detailed analytics
 analytics = dashboard.get_detailed_analytics(
@@ -408,16 +173,8 @@ analytics = dashboard.get_detailed_analytics(
 ### **REST API Monitoring**
 
 ```bash
-# Check optimization status
-curl -X GET "http://localhost:3000/api/prompt-optimization/status"
-
-# Get prompt performance
-curl -X GET "http://localhost:3000/api/prompt-optimization/prompts/codeact_system/metrics"
-
-# Trigger manual optimization (evolve)
-curl -X POST "http://localhost:3000/api/prompt-optimization/prompts/codeact_system/evolve" \
-  -H "Content-Type: application/json" \
-  -d '{"priority": 10, "context": {"force": true, "strategy": "multi_objective"}}'
+# Get system status
+curl -X GET "http://localhost:3000/api/status"
 ```
 
 ### **WebSocket Live Updates**
@@ -494,26 +251,6 @@ if (theme === 'oled') {
 
 ## 🔧 **Advanced Features**
 
-### **Agentic Context Engineering (ACE)**
-
-```python
-from forge.metasop.ace import ACEFramework
-
-ace = ACEFramework(
-    llm=llm,
-    memory=memory
-)
-
-# Generate context improvements
-improvements = await ace.generate_improvements(
-    current_context=context,
-    performance_feedback=feedback
-)
-
-# Apply incremental updates
-await ace.apply_delta_updates(improvements)
-```
-
 ### **Memory System Integration**
 
 ```python
@@ -560,16 +297,10 @@ for tool_id in tools:
 
 ### **Common Issues**
 
-1. **Optimization Not Working**
+1. **Agent Not Responding**
    ```bash
-   # Check configuration
-   grep -r "enable_prompt_optimization" config/
-   
-   # Verify storage path
-   ls -la ./prompt_data/
-   
    # Check logs
-   tail -f logs/optimization.log
+   tail -f logs/forge.log
    ```
 
 2. **Terminal Display Issues**
@@ -607,30 +338,10 @@ for tool_id in tools:
 
 ## 📈 **Performance Tuning**
 
-### **Optimization Settings**
-
-```toml
-[prompt_optimization]
-# Reduce for faster results, increase for accuracy
-min_samples = 30
-confidence_threshold = 0.8
-ab_split = 0.15
-
-[optimization.performance]
-# Enable caching
-enable_cache = true
-cache_size = 1000
-
-# Reduce latency
-streaming_enabled = true
-batch_size = 10
-```
-
 ### **System Optimization**
 
 ```bash
 # Environment variables for performance
-export FORGE_OPTIMIZATION_THREADS=4
 export FORGE_CACHE_SIZE=2000
 export FORGE_ENABLE_COMPRESSION=true
 
@@ -643,51 +354,32 @@ export VITE_ENABLE_HARDWARE_ACCELERATION=true
 
 ```python
 # Performance monitoring
-from forge.prompt_optimization.monitoring import PerformanceMonitor
+from forge.monitoring import PerformanceMonitor
 
 monitor = PerformanceMonitor()
 metrics = monitor.get_system_metrics()
 
-print(f"Optimization latency: {metrics.avg_latency}ms")
+print(f"Average latency: {metrics.avg_latency}ms")
 print(f"Memory usage: {metrics.memory_usage}MB")
-print(f"Cache hit rate: {metrics.cache_hit_rate:.2%}")
 ```
 
 ---
 
 ## 🎯 **Best Practices**
 
-### **Optimization Strategy**
-
-1. **Start Conservative**
-   - Begin with 10-15% traffic to variants
-   - Use higher confidence thresholds initially
-   - Monitor closely for first week
-
-2. **Gradual Rollout**
-   - Increase traffic after validation
-   - A/B test one variable at a time
-   - Maintain fallback strategies
-
-3. **Regular Monitoring**
-   - Weekly performance reviews
-   - Monthly optimization audits
-   - Quarterly strategy updates
-
 ### **Development Workflow**
 
 1. **Version Control**
-   - Tag optimization milestones
+   - Tag milestones
    - Document configuration changes
-   - Maintain rollback procedures
 
 2. **Testing**
-   - Test optimization changes in staging
+   - Test changes in staging
    - Validate performance improvements
    - Ensure system stability
 
 3. **Documentation**
-   - Document optimization decisions
+   - Document decisions
    - Track performance baselines
    - Maintain change logs
 

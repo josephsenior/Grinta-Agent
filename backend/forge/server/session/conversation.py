@@ -89,7 +89,32 @@ class ServerConversation:
         Skipped if attaching to existing runtime.
         """
         if not self._attach_to_existing:
-            await self.runtime.connect()
+            try:
+                await self.runtime.connect()
+                # Ensure runtime is initialized after connection
+                # For in-process local runtime, initialization happens synchronously in connect()
+                if hasattr(self.runtime, 'runtime_initialized') and not self.runtime.runtime_initialized:
+                    # Wait for runtime to be initialized (should be immediate for in-process runtime)
+                    import asyncio
+                    max_wait = 5  # Reduced wait time since in-process runtime initializes quickly
+                    wait_interval = 0.1
+                    waited = 0.0
+                    while waited < max_wait:
+                        if self.runtime.runtime_initialized:
+                            break
+                        await asyncio.sleep(wait_interval)
+                        waited += wait_interval
+                    if not self.runtime.runtime_initialized:
+                        logger.warning(
+                            f"Runtime for conversation {self.sid} did not initialize within {max_wait} seconds"
+                        )
+            except Exception as e:
+                logger.error(
+                    f"Failed to connect runtime for conversation {self.sid}: {e}",
+                    exc_info=True
+                )
+                # Don't raise - allow the conversation to exist even if runtime connection fails
+                # The runtime might still work for file operations
 
     async def disconnect(self) -> None:
         """Disconnect from runtime and clean up resources.

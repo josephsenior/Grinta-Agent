@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from forge._canonical import CanonicalModelMetaclass
 
 
-class SecurityConfig(BaseModel):
+class SecurityConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for security related functionalities.
 
     Attributes:

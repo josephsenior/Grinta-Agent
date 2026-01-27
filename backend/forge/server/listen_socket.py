@@ -35,8 +35,8 @@ def debug_show_events() -> None:
     for event_name in [
         "connect",
         "disconnect",
-        "oh_user_action",
-        "oh_action",
+        "forge_user_action",
+        "forge_action",
         "test_event",
     ]:
         if (
@@ -106,7 +106,7 @@ async def _replay_events(
 
     async for event in async_store:
         event_count += 1
-        logger.debug("oh_event: %s", event.__class__.__name__)
+        logger.debug("forge_event: %s", event.__class__.__name__)
 
         if isinstance(event, (NullAction, NullObservation, RecallAction)):
             continue
@@ -117,7 +117,7 @@ async def _replay_events(
             )
             agent_state_changed = event
         else:
-            await sio.emit("oh_event", event_to_dict(event), to=connection_id)
+            await sio.emit("forge_event", event_to_dict(event), to=connection_id)
 
     logger.info(f"DEBUG: Replayed {event_count} events")
     return agent_state_changed
@@ -157,7 +157,7 @@ async def _send_agent_state(
         # Update connection activity
         conn_manager = get_connection_manager()
         conn_manager.update_activity(connection_id)
-        await sio.emit("oh_event", event_to_dict(agent_state_changed), to=connection_id)
+        await sio.emit("forge_event", event_to_dict(agent_state_changed), to=connection_id)
         return True
 
     manager = _get_conversation_manager_instance()
@@ -182,7 +182,7 @@ async def _send_agent_state(
                 conn_manager = get_connection_manager()
                 conn_manager.update_activity(connection_id)
                 await sio.emit(
-                    "oh_event", event_to_dict(current_state_event), to=connection_id
+                    "forge_event", event_to_dict(current_state_event), to=connection_id
                 )
                 return True
             else:
@@ -232,7 +232,7 @@ async def _replay_event_stream(
             conn_manager = get_connection_manager()
             conn_manager.update_activity(connection_id)
             await sio.emit(
-                "oh_event", event_to_dict(default_state_event), to=connection_id
+                "forge_event", event_to_dict(default_state_event), to=connection_id
             )
             logger.info(
                 f"DEBUG: Sent default agent state to connection {connection_id}"
@@ -337,9 +337,22 @@ async def connect(connection_id: str, environ: dict, *args) -> None:
         )
 
         # Join conversation
-        conversation_init_data = await setup_init_conversation_settings(
-            user_id, conversation_id, providers_set
-        )
+        try:
+            conversation_init_data = await setup_init_conversation_settings(
+                user_id, conversation_id, providers_set
+            )
+        except Exception as e:
+            logger.error(
+                "Failed to setup conversation settings for conversation %s (user_id: %s): %s",
+                conversation_id,
+                user_id,
+                e,
+                exc_info=True,
+            )
+            raise ConnectionRefusedError(
+                f"Failed to setup conversation settings: {e}"
+            ) from e
+        
         agent_loop_info = await manager.join_conversation(
             conversation_id,
             connection_id,
@@ -369,11 +382,8 @@ async def connect(connection_id: str, environ: dict, *args) -> None:
 
 
 @sio.event
-async def oh_user_action(connection_id: str, data: dict[str, Any]) -> None:
+async def forge_user_action(connection_id: str, data: dict[str, Any]) -> None:
     """Handle user action from Socket.IO client.
-
-    Detects MetaSOP messages (starting with 'sop:') and routes to MetaSOP orchestration,
-    otherwise sends to regular agent event stream.
 
     Args:
         connection_id: Client connection identifier
@@ -381,73 +391,15 @@ async def oh_user_action(connection_id: str, data: dict[str, Any]) -> None:
 
     """
     # Debug logging
-    logger.info("oh_user_action received: action=%s, data=%s", data.get("action"), data)
+    logger.info("forge_user_action received: action=%s, data=%s", data.get("action"), data)
 
-    # CRITICAL: This print should ALWAYS appear if handler is called
-
-    # Additional debug for MetaSOP detection
-    content = data.get("args", {}).get("content", "")
-
-    # Check for MetaSOP messages in existing conversations
-    # Messages from frontend don't have a "source" field, so we check for action="message"
-    content = data.get("args", {}).get("content", "")
-    logger.info("Checking MetaSOP: action=%s, content=%s", data.get("action"), content)
-
-    if data.get("action") == "message" and content.strip().lower().startswith("sop:"):
-        logger.info("MetaSOP message detected! content=%s", content)
-
-        # Get conversation ID from connection
-        manager = _get_conversation_manager_instance()
-        if manager is None:
-            logger.warning("Conversation manager not initialized, falling back to regular agent")
-        else:
-            sid = getattr(manager, "_local_connection_id_to_session_id", {}).get(connection_id)
-            logger.info(
-                "MetaSOP message detected in conversation %s, connection_id=%s",
-                sid,
-                connection_id,
-            )
-
-            if sid:
-                # Get the session to access LLM registry
-                session = getattr(manager, "_local_agent_loops_by_sid", {}).get(sid)
-                logger.info(
-                    "Session found: %s, has_llm_registry: %s",
-                    session is not None,
-                    hasattr(session, "llm_registry") if session else False,
-                )
-
-                if session and hasattr(session, "llm_registry"):
-                    # Import here to avoid circular imports
-                    from forge.metasop.router import run_metasop_for_conversation
-
-                    logger.info("Triggering MetaSOP orchestration for conversation %s", sid)
-                    # Trigger MetaSOP orchestration with the session's LLM registry
-                    asyncio.create_task(
-                        run_metasop_for_conversation(
-                            conversation_id=sid,
-                            user_id=session.user_id,
-                            raw_message=data["args"]["content"],
-                            repo_root=None,
-                            llm_registry=session.llm_registry,
-                        ),
-                    )
-                    return  # Don't send to regular agent
-                logger.warning(
-                    "No active session found for conversation %s, falling back to regular agent",
-                    sid,
-                )
-            else:
-                logger.warning("No conversation ID found for connection %s", connection_id)
-
-    # Only send to regular agent if MetaSOP didn't handle it
     manager = _get_conversation_manager_instance()
     if manager is not None:
         await manager.send_to_event_stream(connection_id, data)
 
 
 @sio.event
-async def oh_action(connection_id: str, data: dict[str, Any]) -> None:
+async def forge_action(connection_id: str, data: dict[str, Any]) -> None:
     """Handle agent action from Socket.IO client.
 
     Args:

@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import {
   SuggestedTask,
   SuggestedTaskGroup,
-} from "#/components/features/home/tasks/task.types";
+} from "#/api/forge.types";
 import { groupSuggestedTasks } from "#/utils/group-suggested-tasks";
 
 const rawTasks: SuggestedTask[] = [

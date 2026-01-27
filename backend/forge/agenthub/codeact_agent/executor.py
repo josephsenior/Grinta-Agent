@@ -9,7 +9,7 @@ import forge.agenthub.codeact_agent.function_calling as _function_calling_module
 from forge.core.logger import forge_logger as logger
 
 if TYPE_CHECKING:
-    from litellm.types.utils import ModelResponse
+    ModelResponse = Any
 
     from forge.events.action import Action
     from forge.events.event import EventSource
@@ -163,14 +163,14 @@ class CodeActExecutor:
         return accumulated_content, accumulated_chunks
 
     def _build_final_response(self, accumulated_chunks: list, accumulated_content: str):
-        from litellm.types.utils import Message as LiteLLMMessage
+        from types import SimpleNamespace
 
         if not accumulated_chunks:
             return None
 
         final_response = accumulated_chunks[-1]
         final_response.choices[0].delta.content = accumulated_content
-        final_response.choices[0].message = LiteLLMMessage(
+        final_response.choices[0].message = SimpleNamespace(
             content=accumulated_content,
             role="assistant",
         )
@@ -216,9 +216,6 @@ class CodeActExecutor:
             response,
             mcp_tool_names=list(self._mcp_tool_name_provider()),
         )
-
-        if actions:
-            self._planner.track_tool_usage(actions)
 
         response_text = self._extract_response_text(response)
         proceed, validated_actions = self._safety.apply(response_text, actions)

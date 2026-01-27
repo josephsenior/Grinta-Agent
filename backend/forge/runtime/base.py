@@ -47,7 +47,6 @@ from forge.events.action import (
     FileEditAction,
     FileReadAction,
     FileWriteAction,
-    IPythonRunCellAction,
     TaskTrackingAction,
 )
 from forge.events.action.mcp import MCPAction
@@ -66,18 +65,8 @@ from forge.events.observation import (
 from forge.events.serialization.action import ACTION_TYPE_TO_CLASS
 from pydantic import SecretStr
 
-from forge.integrations.provider import (
-    PROVIDER_TOKEN_TYPE,
-    ProviderHandler,
-    ProviderToken,
-    ProviderType,
-)
-from forge.integrations.service_types import AuthenticationError
-from forge.microagent import BaseMicroagent, load_microagents_from_dir
 from forge.runtime.plugins import (
-    JupyterRequirement,
     PluginRequirement,
-    VSCodeRequirement,
 )
 from forge.runtime.runtime_status import RuntimeStatus
 from forge.runtime.utils.edit import FileEditRuntimeMixin
@@ -94,6 +83,12 @@ if TYPE_CHECKING:
     from forge.core.config import ForgeConfig, SandboxConfig
     from forge.core.config.mcp_config import MCPConfig, MCPStdioServerConfig
     from forge.events.event import Event
+    from forge.integrations.provider import (
+        PROVIDER_TOKEN_TYPE,
+        ProviderToken,
+        ProviderType,
+    )
+    from forge.microagent import BaseMicroagent
     from forge.llm.llm_registry import LLMRegistry
 
 
@@ -150,11 +145,7 @@ class Runtime(FileEditRuntimeMixin):
     The class is instantiated via get_impl() in get_runtime_cls().
 
     Built-in implementations include:
-    - DockerRuntime: Containerized environment using Docker
-    - RemoteRuntime: Remote execution environment
-    - LocalRuntime: Local execution for development
-    - KubernetesRuntime: Kubernetes-based execution environment
-    - CLIRuntime: Command-line interface runtime
+    - LocalRuntime: Local execution on the host machine (default)
 
     Args:
         sid: Session ID that uniquely identifies the current user session
@@ -169,6 +160,7 @@ class Runtime(FileEditRuntimeMixin):
     runtime_status: RuntimeStatus | None
     _runtime_initialized: bool = False
     security_analyzer: SecurityAnalyzer | None = None
+    workspace_base: str | None = None
 
     def __init__(
         self,
@@ -183,6 +175,7 @@ class Runtime(FileEditRuntimeMixin):
         headless_mode: bool = False,
         user_id: str | None = None,
         git_provider_tokens: PROVIDER_TOKEN_TYPE | None = None,
+        workspace_base: str | None = None,
     ) -> None:
         """Initialize runtime state, subscriptions, plugins, and provider credentials."""
         self.git_handler = GitHandler(
@@ -191,6 +184,7 @@ class Runtime(FileEditRuntimeMixin):
         )
         self.sid = sid
         self.event_stream = event_stream
+        self.workspace_base = workspace_base
         if event_stream:
             # Unsubscribe first if already exists (handles reconnection cases)
             try:
@@ -203,8 +197,6 @@ class Runtime(FileEditRuntimeMixin):
         self.plugins = (
             copy.deepcopy(plugins) if plugins is not None and len(plugins) > 0 else []
         )
-        if not headless_mode:
-            self.plugins.append(VSCodeRequirement())
         self.status_callback = status_callback
         self.attach_to_existing = attach_to_existing
         self.config = copy.deepcopy(config)
@@ -229,9 +221,6 @@ class Runtime(FileEditRuntimeMixin):
             ),
         )
         self.initial_env_vars.update(raw_env_vars)
-        self._vscode_enabled = any(
-            isinstance(plugin, VSCodeRequirement) for plugin in self.plugins
-        )
         FileEditRuntimeMixin.__init__(
             self,
             enable_llm_editor=config.get_agent_config().enable_llm_editor,
@@ -383,15 +372,6 @@ class Runtime(FileEditRuntimeMixin):
         """Determine if runtime shell commands should use PowerShell syntax."""
         return False
 
-    def _add_env_vars_to_jupyter(self, env_vars: dict[str, str]) -> None:
-        """Add environment variables to Jupyter/IPython session."""
-        code = "import os\n"
-        for key, value in env_vars.items():
-            code += f'os.environ["{key}"] = {json.dumps(value)}\n'
-        code += "\n"
-        self.run_ipython(IPythonRunCellAction(code))
-        logger.debug("Added env vars to IPython")
-
     def _build_powershell_env_cmd(self, env_vars: dict[str, str]) -> str:
         """Build PowerShell command to set environment variables."""
         cmd = "".join(
@@ -453,7 +433,7 @@ class Runtime(FileEditRuntimeMixin):
     def add_env_vars(self, env_vars: dict[str, str]) -> None:
         """Add environment variables to runtime.
 
-        Sets variables in Jupyter and bash environments.
+        Sets variables in the shell environment.
 
         Args:
             env_vars: Dictionary of environment variables to add
@@ -461,10 +441,6 @@ class Runtime(FileEditRuntimeMixin):
         """
         env_vars = {key.upper(): value for key, value in env_vars.items()}
         os.environ.update(env_vars)
-
-        # Add to Jupyter if available
-        if any(isinstance(plugin, JupyterRequirement) for plugin in self.plugins):
-            self._add_env_vars_to_jupyter(env_vars)
 
         # Add to shell environment
         try:
@@ -789,7 +765,8 @@ class Runtime(FileEditRuntimeMixin):
     @property
     def workspace_root(self) -> Path:
         """Return the workspace root path."""
-        return Path(self.config.workspace_mount_path_in_sandbox)
+        # Subclasses should override this
+        return Path(".")
 
     def _setup_git_hooks_directory(self) -> bool:
         """Create git hooks directory if needed."""
@@ -935,25 +912,6 @@ class Runtime(FileEditRuntimeMixin):
             shutil.rmtree(microagent_folder)
         return loaded_microagents
 
-    def _is_gitlab_repository(self, repo_name: str) -> bool:
-        """Check if a repository is hosted on GitLab.
-
-        Args:
-            repo_name: Repository name (e.g., "gitlab.com/org/repo" or "org/repo")
-
-        Returns:
-            True if the repository is hosted on GitLab, False otherwise
-
-        """
-        try:
-            provider_handler = ProviderHandler(self.git_provider_tokens)
-            repository = call_async_from_sync(
-                provider_handler.verify_repo_provider, GENERAL_TIMEOUT, repo_name
-            )
-            return repository.git_provider == ProviderType.GITLAB
-        except Exception:
-            return False
-
     def get_microagents_from_org_or_user(
         self, selected_repository: str
     ) -> list[BaseMicroagent]:
@@ -962,10 +920,6 @@ class Runtime(FileEditRuntimeMixin):
         For example, if the repository is github.com/acme-co/api, this will check if
         github.com/acme-co/.Forge exists. If it does, it will clone it and load
         the microagents from the ./microagents/ folder.
-
-        For GitLab repositories, it will use Forge-config instead of .Forge
-        since GitLab doesn't support repository names starting with non-alphanumeric
-        characters.
 
         Args:
             selected_repository: The repository path (e.g., "github.com/acme-co/api")
@@ -1021,11 +975,6 @@ class Runtime(FileEditRuntimeMixin):
             Config repository path
 
         """
-        is_gitlab = self._is_gitlab_repository(selected_repository)
-        self.log("debug", f"Repository type detection - is_gitlab: {is_gitlab}")
-
-        if is_gitlab:
-            return f"{org_name}/Forge-config"
         return f"{org_name}/.Forge"
 
     def _clone_and_load_org_microagents(
@@ -1153,10 +1102,6 @@ class Runtime(FileEditRuntimeMixin):
         This method also checks for user/org level microagents stored in a repository.
         For example, if the repository is github.com/acme-co/api, it will also check for
         github.com/acme-co/.Forge and load microagents from there if it exists.
-
-        For GitLab repositories, it will use Forge-config instead of .Forge
-        since GitLab doesn't support repository names starting with non-alphanumeric
-        characters.
         """
         microagents_dir = self.workspace_root / ".Forge" / "microagents"
         repo_root = None
@@ -1483,12 +1428,6 @@ Please retry the file creation."""
         """
         git_user_name = self.config.git_user_name
         git_user_email = self.config.git_user_email
-        is_cli_runtime = self.config.runtime == "cli"
-        if is_cli_runtime:
-            logger.debug(
-                "Skipping git configuration for CLI runtime - using user's local git config"
-            )
-            return
         cmd = f'git config --global user.name "{git_user_name}" && git config --global user.email "{git_user_email}"'
         try:
             action = CmdRunAction(command=cmd)
@@ -1532,19 +1471,6 @@ Please retry the file creation."""
 
         Returns:
             Observation with command output and exit code
-
-        """
-        pass
-
-    @abstractmethod
-    def run_ipython(self, action: IPythonRunCellAction) -> Observation:
-        """Execute Python code in IPython/Jupyter environment.
-
-        Args:
-            action: IPython action containing code to execute
-
-        Returns:
-            Observation with execution output
 
         """
         pass

@@ -6,6 +6,9 @@ import { MCPServerList } from "#/components/features/settings/mcp-settings/mcp-s
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
+    i18n: {
+      changeLanguage: () => Promise.resolve(),
+    },
   }),
 }));
 

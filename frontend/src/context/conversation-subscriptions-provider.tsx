@@ -32,7 +32,7 @@ interface ConversationSubscriptionsContextType {
   subscribeToConversation: (options: {
     conversationId: string;
     sessionApiKey: string | null;
-    providersSet: ("github" | "gitlab" | "bitbucket" | "enterprise_sso")[];
+    providersSet: ("github" | "enterprise_sso")[];
     baseUrl: string;
     socketPath?: string;
     onEvent?: (event: unknown, conversationId: string) => void;
@@ -116,7 +116,7 @@ export function ConversationSubscriptionsProvider({
 
         if (socket) {
           if (handler) {
-            socket.off("oh_event", handler);
+            socket.off("forge_event", handler);
           }
           socket.removeAllListeners();
           socket.disconnect();
@@ -144,7 +144,7 @@ export function ConversationSubscriptionsProvider({
     (options: {
       conversationId: string;
       sessionApiKey: string | null;
-      providersSet: ("github" | "gitlab" | "bitbucket" | "enterprise_sso")[];
+      providersSet: ("github" | "enterprise_sso")[];
       baseUrl: string;
       socketPath?: string;
       onEvent?: (event: unknown, conversationId: string) => void;

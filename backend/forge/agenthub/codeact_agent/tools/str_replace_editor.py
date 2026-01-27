@@ -1,6 +1,6 @@
 """Configuration for the string-replace editor tool used by CodeAct."""
 
-from litellm import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk  # noqa: F401
+from typing import Any
 from forge.agenthub.codeact_agent.tools._compat import build_tool_param
 
 from forge.agenthub.codeact_agent.tools.security_utils import (
@@ -15,14 +15,14 @@ _SHORT_STR_REPLACE_EDITOR_DESCRIPTION = "Custom editing tool for viewing, creati
 
 def create_str_replace_editor_tool(
     use_short_description: bool = False,
-) -> ChatCompletionToolParam:
+) -> Any:
     """Create a string replacement editor tool for the agent.
 
     Args:
         use_short_description: Whether to use short or detailed description.
 
     Returns:
-        ChatCompletionToolParam: The configured string replacement editor tool.
+        Any: The configured string replacement editor tool.
 
     """
     description = (

@@ -1,6 +1,4 @@
-/**
- * Knowledge Base types matching backend API models
- */
+import type { Provider } from "./settings";
 
 export interface KnowledgeBaseCollection {
   id: string;
@@ -8,7 +6,6 @@ export interface KnowledgeBaseCollection {
   description: string | null;
   document_count: number;
   total_size_bytes: number;
-  total_size_mb: number;
   created_at: string;
   updated_at: string;
 }
@@ -18,7 +15,6 @@ export interface KnowledgeBaseDocument {
   collection_id: string;
   filename: string;
   file_size_bytes: number;
-  file_size_kb: number;
   mime_type: string;
   content_preview: string | null;
   chunk_count: number;
@@ -31,6 +27,7 @@ export interface KnowledgeBaseSearchResult {
   filename: string;
   chunk_content: string;
   relevance_score: number;
+  metadata?: Record<string, string | number | boolean>;
 }
 
 export interface CreateCollectionRequest {
@@ -53,7 +50,5 @@ export interface SearchRequest {
 export interface KnowledgeBaseStats {
   total_collections: number;
   total_documents: number;
-  total_chunks: number;
   total_size_bytes: number;
-  total_size_mb: number;
 }

@@ -19,7 +19,7 @@
 ### **npm**
 
 ```bash
-npm install @Forge/sdk
+pnpm add @Forge/sdk
 ```
 
 ### **yarn**
@@ -132,51 +132,6 @@ function Chat() {
 
 ---
 
-### **`useMetaSOP`**
-
-MetaSOP orchestration hook.
-
-```typescript
-import { useMetaSOP } from '@Forge/sdk/react';
-
-function MetaSOPPanel() {
-  const {
-    orchestration,
-    artifacts,
-    steps,
-    startOrchestration,
-    loading,
-  } = useMetaSOP({
-    conversationId: 'conv-123',
-  });
-
-  const handleStart = async () => {
-    await startOrchestration({
-      userRequest: 'Build a blog platform',
-      template: 'full_stack_dev',
-    });
-  };
-
-  return (
-    <div>
-      <button onClick={handleStart} disabled={loading}>
-        Start MetaSOP
-      </button>
-      
-      {steps.map((step) => (
-        <StepCard key={step.id} step={step} />
-      ))}
-      
-      {artifacts && (
-        <ArtifactViewer artifacts={artifacts} />
-      )}
-    </div>
-  );
-}
-```
-
----
-
 ### **`useWebSocket`**
 
 WebSocket connection hook.
@@ -218,8 +173,6 @@ class ForgeClient {
   
   // API namespaces
   conversations: ConversationsAPI;
-  metasop: MetaSOPAPI;
-  optimization: OptimizationAPI;
   
   // WebSocket
   connectWebSocket(conversationId: string): WebSocketConnection;
@@ -289,81 +242,7 @@ interface Message {
 interface SendMessageParams {
   conversationId: string;
   message: string;
-  enableMetaSOP?: boolean;
   metadata?: Record<string, any>;
-}
-```
-
----
-
-### **`MetaSOPAPI`**
-
-MetaSOP orchestration.
-
-```typescript
-class MetaSOPAPI {
-  // Start orchestration
-  startOrchestration(
-    params: StartOrchestrationParams
-  ): Promise<Orchestration>;
-  
-  // Get orchestration status
-  getOrchestration(orchestrationId: string): Promise<Orchestration>;
-  
-  // Get artifacts
-  getArtifacts(orchestrationId: string): Promise<Artifacts>;
-  
-  // Stream orchestration events
-  streamOrchestration(
-    orchestrationId: string
-  ): AsyncIterableIterator<OrchestrationEvent>;
-}
-```
-
-**Types:**
-
-```typescript
-interface Orchestration {
-  id: string;
-  conversationId: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  template: string;
-  userRequest: string;
-  startedAt: Date;
-  completedAt?: Date;
-}
-
-interface Artifacts {
-  pm_spec?: PMSpecArtifact;
-  architect?: ArchitectArtifact;
-  engineer?: EngineerArtifact;
-  qa?: QAArtifact;
-  ui_designer?: UIDesignerArtifact;
-}
-
-interface StartOrchestrationParams {
-  conversationId: string;
-  userRequest: string;
-  template?: string;
-}
-```
-
----
-
-### **`OptimizationAPI`**
-
-Prompt optimization.
-
-```typescript
-class OptimizationAPI {
-  // Get metrics
-  getMetrics(): Promise<OptimizationMetrics>;
-  
-  // Get variants
-  getVariants(promptId: string): Promise<Variant[]>;
-  
-  // Get best variant
-  getBestVariant(promptId: string): Promise<Variant>;
 }
 ```
 
@@ -423,46 +302,7 @@ async function streamingChat() {
 
 ---
 
-### **Example 3: MetaSOP Orchestration**
-
-```typescript
-import { ForgeClient } from '@Forge/sdk';
-
-async function runMetaSOP() {
-  const client = new ForgeClient({
-    baseUrl: 'http://localhost:3000',
-  });
-
-  const conv = await client.conversations.create();
-
-  // Start orchestration
-  const orch = await client.metasop.startOrchestration({
-    conversationId: conv.id,
-    userRequest: 'Build a todo app with auth',
-    template: 'full_stack_dev',
-  });
-
-  console.log('Orchestration started:', orch.id);
-
-  // Stream events
-  const eventStream = client.metasop.streamOrchestration(orch.id);
-
-  for await (const event of eventStream) {
-    if (event.type === 'metasop_step_complete') {
-      console.log(`${event.role} completed:`, event.artifact);
-    }
-  }
-
-  // Get final artifacts
-  const artifacts = await client.metasop.getArtifacts(orch.id);
-  console.log('PM Spec:', artifacts.pm_spec);
-  console.log('Architecture:', artifacts.architect);
-}
-```
-
----
-
-### **Example 4: React Component**
+### **Example 3: React Component**
 
 ```tsx
 import { useForge } from '@Forge/sdk/react';
@@ -524,7 +364,7 @@ export function ChatInterface() {
 
 ---
 
-### **Example 5: Error Handling**
+### **Example 4: Error Handling**
 
 ```typescript
 import { ForgeClient, ForgeError } from '@Forge/sdk';
@@ -576,26 +416,6 @@ interface UseForgeReturn {
   conversation: Conversation | null;
   messages: Message[];
   sendMessage: (message: string) => Promise<void>;
-  loading: boolean;
-  error: Error | null;
-}
-```
-
-### **`useMetaSOP`**
-
-```typescript
-function useMetaSOP(config: UseMetaSOPConfig): UseMetaSOPReturn;
-
-interface UseMetaSOPConfig {
-  conversationId: string;
-  autoStart?: boolean;
-}
-
-interface UseMetaSOPReturn {
-  orchestration: Orchestration | null;
-  artifacts: Artifacts | null;
-  steps: OrchestrationStep[];
-  startOrchestration: (params: StartParams) => Promise<void>;
   loading: boolean;
   error: Error | null;
 }

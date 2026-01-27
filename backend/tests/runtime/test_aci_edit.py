@@ -1,4 +1,4 @@
-"""Editor-related tests for the DockerRuntime."""
+"""Editor-related tests for LocalRuntime (in-process implementation)."""
 
 import os
 from unittest.mock import MagicMock
@@ -6,7 +6,6 @@ from conftest import _close_test_runtime, _load_runtime
 from forge.core.logger import forge_logger as logger
 from forge.events.action import FileEditAction, FileWriteAction
 from forge.runtime.action_execution_server import _execute_file_editor
-from forge.runtime.impl.cli.cli_runtime import CLIRuntime
 
 
 def test_view_file(temp_dir, runtime_cls, run_as_Forge):
@@ -280,16 +279,10 @@ def test_str_replace_with_empty_old_str(temp_dir, runtime_cls, run_as_Forge):
         )
         obs = runtime.run_action(action)
         logger.info(obs, extra={"msg_type": "OBSERVATION"})
-        if isinstance(runtime, CLIRuntime):
-            assert (
-                "No replacement was performed. Multiple occurrences of old_str `` in lines [1, 2, 3]. Please ensure it is unique."
-                in obs.content
-            )
-        else:
-            assert (
-                "No replacement was performed. Multiple occurrences of old_str `` in lines [1, 2, 3, 4]. Please ensure it is unique."
-                in obs.content
-            )
+        assert (
+            "No replacement was performed. Multiple occurrences of old_str `` in lines [1, 2, 3, 4]. Please ensure it is unique."
+            in obs.content
+        )
     finally:
         _close_test_runtime(runtime)
 

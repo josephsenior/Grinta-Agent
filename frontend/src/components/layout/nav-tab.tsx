@@ -29,7 +29,7 @@ export function NavTab({
         "relative px-4 py-2 flex-1 group transition-all duration-300",
         "first-of-type:rounded-tl-2xl last-of-type:rounded-tr-2xl",
         "flex items-center gap-3 h-full min-h-[42px]",
-        "hover:bg-violet-500/5",
+        "hover:bg-black/30",
         "border-r border-violet-500/10 last-of-type:border-r-0",
       )}
     >

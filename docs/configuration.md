@@ -36,7 +36,6 @@ base_url = ""
 # Enable/disable tools
 enable_browsing = true
 enable_editor = true
-enable_jupyter = true
 enable_cmd = true
 enable_think = true
 
@@ -59,11 +58,6 @@ base_container_image = "nikolaik/python-nodejs:python3.12-nodejs22"
 
 # Timeout in seconds
 timeout = 120
-
-# MetaSOP orchestration (experimental)
-[metasop]
-enabled = false
-default_sop = "feature_delivery"
 ```
 
 ## Environment Variables
@@ -103,11 +97,6 @@ enable_browser = true
 enable_browsing = true
 ```
 
-### Jupyter Support
-
-```toml
-[agent]
-enable_jupyter = true
 ```
 
 ### Security

@@ -5,7 +5,6 @@ import { useSaveSettings } from "#/hooks/mutation/use-save-settings";
 import { useSettings } from "#/hooks/query/use-settings";
 import { AvailableLanguages } from "#/i18n";
 import { DEFAULT_SETTINGS } from "#/services/settings";
-import { BrandButton } from "#/components/features/settings/brand-button";
 import { I18nKey } from "#/i18n/declaration";
 import { handleCaptureConsent } from "#/utils/handle-capture-consent";
 import {
@@ -13,13 +12,19 @@ import {
   displaySuccessToast,
 } from "#/utils/custom-toast-handlers";
 import { retrieveAxiosErrorMessage } from "#/utils/retrieve-axios-error-message";
-import { AppSettingsInputsSkeleton } from "#/components/features/settings/app-settings/app-settings-inputs-skeleton";
 import { useConfig } from "#/hooks/query/use-config";
 import { parseMaxBudgetPerTask } from "#/utils/settings-utils";
 import { LanguageSection } from "./app-settings/language-section";
 import { PreferencesSection } from "./app-settings/preferences-section";
 import { BudgetSection } from "./app-settings/budget-section";
 import { GitSection } from "./app-settings/git-section";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "#/components/ui/card";
 
 type DirtyFlagKey =
   | "language"
@@ -83,6 +88,7 @@ function useAppSettingsController(t: TFunction): AppSettingsController {
 
   const formAction = React.useCallback(
     (formData: FormData) => {
+      console.log("[formAction] formData entries:", Array.from(formData.entries()));
       const languageLabel = formData.get("language-input")?.toString();
       const languageValue = AvailableLanguages.find(
         ({ label }) => label === languageLabel,
@@ -118,7 +124,7 @@ function useAppSettingsController(t: TFunction): AppSettingsController {
       saveSettings(
         {
           LANGUAGE: language,
-          user_consents_to_analytics: enableAnalytics,
+          USER_CONSENTS_TO_ANALYTICS: enableAnalytics,
           ENABLE_SOUND_NOTIFICATIONS: enableSoundNotifications,
           ENABLE_PROACTIVE_CONVERSATION_STARTERS: enableProactiveConversations,
           ENABLE_SOLVABILITY_ANALYSIS: enableSolvabilityAnalysis,
@@ -218,69 +224,104 @@ function AppSettingsScreen() {
   const controller = useAppSettingsController(t);
   const { settings, config, viewSettings } = controller;
 
+  if (controller.shouldBeLoading) {
+    return (
+      <Card className="bg-transparent border-0 shadow-none">
+        <CardHeader className="space-y-4 px-0 pb-8">
+          <div className="animate-pulse h-8 w-64 bg-black/50 rounded-xl mx-auto" />
+        </CardHeader>
+      </Card>
+    );
+  }
+
   return (
-    <form
-      data-testid="app-settings-screen"
-      action={controller.formAction}
-      className="flex flex-col"
-    >
-      {controller.shouldBeLoading && <AppSettingsInputsSkeleton />}
-      {!controller.shouldBeLoading && settings && (
-        <div className="flex-1 p-6 sm:p-8 lg:p-10">
-          <div className="mx-auto max-w-6xl w-full space-y-6 lg:space-y-8">
-            <LanguageSection
-              language={viewSettings.LANGUAGE}
-              onLanguageChange={controller.handlers.onLanguageChange}
-            />
+    <div className="p-6 sm:p-8 lg:p-10 flex flex-col gap-6 lg:gap-8">
+      <div className="mx-auto max-w-6xl w-full">
+        <form
+          data-testid="app-settings-screen"
+          action={controller.formAction}
+          className="w-full space-y-6"
+        >
+          {settings && (
+            <>
+              <Card className="bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded-2xl p-6">
+                <CardHeader className="space-y-4 px-0 pb-8">
+                  <CardTitle className="text-3xl md:text-4xl font-bold text-center text-[var(--text-primary)] leading-tight">
+                    {t("SETTINGS$APP_SETTINGS", "App Settings")}
+                  </CardTitle>
+                  <CardDescription className="text-center text-[var(--text-tertiary)] text-sm leading-relaxed">
+                    Configure your application preferences and settings
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="px-0 pt-0">
+                  <div className="space-y-4">
+                    <LanguageSection
+                      language={viewSettings.LANGUAGE}
+                      onLanguageChange={controller.handlers.onLanguageChange}
+                    />
 
-            <PreferencesSection
-              enableAnalytics={!!viewSettings.USER_CONSENTS_TO_ANALYTICS}
-              enableSound={!!viewSettings.ENABLE_SOUND_NOTIFICATIONS}
-              enableProactive={
-                !!viewSettings.ENABLE_PROACTIVE_CONVERSATION_STARTERS
-              }
-              enableSolvability={!!viewSettings.ENABLE_SOLVABILITY_ANALYSIS}
-              isSaas={config?.APP_MODE === "saas"}
-              onAnalyticsToggle={controller.handlers.onAnalyticsToggle}
-              onSoundToggle={controller.handlers.onSoundToggle}
-              onProactiveToggle={controller.handlers.onProactiveToggle}
-              onSolvabilityToggle={controller.handlers.onSolvabilityToggle}
-            />
+                    <PreferencesSection
+                      enableAnalytics={
+                        !!viewSettings.USER_CONSENTS_TO_ANALYTICS
+                      }
+                      enableSound={!!viewSettings.ENABLE_SOUND_NOTIFICATIONS}
+                      enableProactive={
+                        !!viewSettings.ENABLE_PROACTIVE_CONVERSATION_STARTERS
+                      }
+                      enableSolvability={
+                        !!viewSettings.ENABLE_SOLVABILITY_ANALYSIS
+                      }
+                      isSaas={config?.APP_MODE === "saas"}
+                      onAnalyticsToggle={controller.handlers.onAnalyticsToggle}
+                      onSoundToggle={controller.handlers.onSoundToggle}
+                      onProactiveToggle={controller.handlers.onProactiveToggle}
+                      onSolvabilityToggle={
+                        controller.handlers.onSolvabilityToggle
+                      }
+                    />
 
-            <BudgetSection
-              maxBudget={viewSettings.MAX_BUDGET_PER_TASK?.toString() || ""}
-              onBudgetChange={controller.handlers.onBudgetChange}
-            />
+                    <BudgetSection
+                      maxBudget={
+                        viewSettings.MAX_BUDGET_PER_TASK?.toString() || ""
+                      }
+                      onBudgetChange={controller.handlers.onBudgetChange}
+                    />
 
-            <GitSection
-              gitUserName={viewSettings.GIT_USER_NAME || ""}
-              gitUserEmail={viewSettings.GIT_USER_EMAIL || ""}
-              onGitUserNameChange={controller.handlers.onGitUserNameChange}
-              onGitUserEmailChange={controller.handlers.onGitUserEmailChange}
-            />
-          </div>
-        </div>
-      )}
+                    <GitSection
+                      gitUserName={viewSettings.GIT_USER_NAME || ""}
+                      gitUserEmail={viewSettings.GIT_USER_EMAIL || ""}
+                      onGitUserNameChange={
+                        controller.handlers.onGitUserNameChange
+                      }
+                      onGitUserEmailChange={
+                        controller.handlers.onGitUserEmailChange
+                      }
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
-      {/* Fixed footer */}
-      <div className="flex-shrink-0 border-t border-white/10 bg-black/80 backdrop-blur-xl">
-        <div className="mx-auto max-w-5xl px-10 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
-          <span className="text-sm text-foreground-secondary w-full">
-            Unsaved changes apply instantly to your workspace.
-          </span>
-          <BrandButton
-            testId="submit-button"
-            variant="primary"
-            type="submit"
-            isDisabled={controller.isPending || controller.formIsClean}
-            className="px-6 py-2.5 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 transition-all rounded-xl font-semibold text-white shadow-lg shadow-brand-500/30 hover:shadow-xl hover:shadow-brand-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {!controller.isPending && t("SETTINGS$SAVE_CHANGES")}
-            {controller.isPending && t("SETTINGS$SAVING")}
-          </BrandButton>
-        </div>
+              {/* Save Button */}
+              <div className="space-y-2">
+                <p className="text-sm text-[var(--text-tertiary)] text-center">
+                  {t(I18nKey.SETTINGS$UNSAVED_CHANGES_NOTE)}
+                </p>
+                <button
+                  type="submit"
+                  data-testid="submit-button"
+                  disabled={controller.isPending || controller.formIsClean}
+                  className="w-full h-12 rounded-lg bg-[rgba(0,0,0,0.6)] border border-[#8b5cf6] text-white font-medium text-sm transition-all duration-150 hover:bg-[rgba(0,0,0,0.8)] active:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {controller.isPending
+                    ? t("SETTINGS$SAVING")
+                    : t("SETTINGS$SAVE_CHANGES")}
+                </button>
+              </div>
+            </>
+          )}
+        </form>
       </div>
-    </form>
+    </div>
   );
 }
 

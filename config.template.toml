@@ -12,9 +12,6 @@
 [core]
 # API keys and configuration for core services
 
-# Base path for the workspace
-#workspace_base = "./workspace"
-
 # Cache directory path
 #cache_dir = "/tmp/cache"
 
@@ -55,20 +52,11 @@
 # Maximum number of iterations
 #max_iterations = 500
 
-# Path to mount the workspace in the sandbox
-#workspace_mount_path_in_sandbox = "/workspace"
-
-# Path to mount the workspace
-#workspace_mount_path = ""
-
-# Path to rewrite the workspace mount path to
-#workspace_mount_rewrite = ""
-
 # Run as Forge
 #run_as_Forge = true
 
 # Runtime environment
-#runtime = "docker"
+#runtime = "local"
 
 # Name of the default agent
 #default_agent = "CodeActAgent"
@@ -160,8 +148,8 @@ model = "gpt-4o"
 # Drop any unmapped (unsupported) params without causing an exception
 #drop_params = false
 
-# Modify params for litellm to do transformations like adding a default message, when a message is empty.
-# Note: this setting is global, unlike drop_params, it cannot be overridden in each call to litellm.
+# Modify params to do transformations like adding a default message, when a message is empty.
+# Note: this setting is global, unlike drop_params, it cannot be overridden in each call.
 #modify_params = true
 
 # Using the prompt caching feature if provided by the LLM and supported
@@ -183,13 +171,12 @@ model = "gpt-4o"
 #disable_vision = true
 
 # Custom tokenizer to use for token counting
-# https://docs.litellm.ai/docs/completion/token_usage
 #custom_tokenizer = ""
 
 # Whether to use native tool calling if supported by the model. Can be true, false, or None by default, which chooses the model's default behavior based on the evaluation.
 # ATTENTION: Based on evaluation, enabling native function calling may lead to worse results
 # in some scenarios. Use with caution and consider testing with your specific use case.
-# https://github.com/All-Hands-AI/Forge/pull/4711
+# https://github.com/Forge/Forge/pull/4711
 #native_tool_calling = None
 
 
@@ -239,8 +226,6 @@ enable_llm_editor = false
 # Only has an effect if enable_llm_editor is False
 enable_editor = true
 
-# Whether the IPython tool is enabled
-enable_jupyter = true
 
 # Whether the command tool is enabled
 enable_cmd = true
@@ -281,87 +266,18 @@ classpath = "my_package.my_module.MyCustomAgent"
 # Configuration for the sandbox
 ##############################################################################
 [sandbox]
-# ------------------------------ MetaSOP ------------------------------
-[metasop]
-# Enable MetaSOP orchestration (experimental). Defaults to false.
-enabled = false
-# Default SOP to use when enabled; set to "feature_delivery" for the MVP.
-default_sop = "feature_delivery"
- # Enable failure taxonomy classification & corrective hints (experimental)
- enable_failure_taxonomy = true
 
 # Sandbox timeout in seconds
 #timeout = 120
 
-# Sandbox user ID
-#user_id = 1000
-
-# Container image to use for the sandbox
-#base_container_image = "nikolaik/python-nodejs:python3.12-nodejs22"
-
-# Use host network
-#use_host_network = false
-
-# Runtime extra build args
-#runtime_extra_build_args = ["--network=host", "--add-host=host.docker.internal:host-gateway"]
-
 # Enable auto linting after editing
 #enable_auto_lint = false
-
-# Whether to initialize plugins
-#initialize_plugins = true
-
-# Extra dependencies to install in the runtime image
-#runtime_extra_deps = ""
 
 # Environment variables to set at the launch of the runtime
 #runtime_startup_env_vars = {}
 
 # BrowserGym environment to use for evaluation
 #browsergym_eval_env = ""
-
-# Platform to use for building the runtime image (e.g., "linux/amd64")
-#platform = ""
-
-# Force rebuild of runtime image even if it exists
-#force_rebuild_runtime = false
-
-# Runtime container image to use (if not provided, will be built from base_container_image)
-#runtime_container_image = ""
-
-# Keep runtime alive after session ends
-#keep_runtime_alive = false
-
-# Pause closed runtimes instead of stopping them
-#pause_closed_runtimes = false
-
-# Delay in seconds before closing idle runtimes
-#close_delay = 300
-
-# Remove all containers when stopping the runtime
-#rm_all_containers = false
-
-# Enable GPU support in the runtime
-#enable_gpu = false
-
-# When there are multiple cards, you can specify the GPU by ID
-#cuda_visible_devices = ''
-
-# Additional Docker runtime kwargs
-#docker_runtime_kwargs = {}
-
-# Specific port to use for VSCode. If not set, a random port will be chosen.
-# Useful when deploying Forge in a remote machine where you need to expose a specific port.
-#vscode_port = 41234
-
-# Volume mounts in the format 'host_path:container_path[:mode]'
-# e.g. '/my/host/dir:/workspace:rw'
-# Multiple mounts can be specified using commas
-# e.g. '/path1:/workspace/path1,/path2:/workspace/path2:ro'
-
-# Configure volumes under the [sandbox] section:
-# [sandbox]
-# volumes = "/my/host/dir:/workspace:rw,/path2:/workspace/path2:ro"
 
 #################################### Security ###################################
 # Configuration for security features
@@ -446,46 +362,3 @@ type = "noop"
 # plugin for the available options
 ##############################################################################
 
-
-########################### Kubernetes #######################################
-# Kubernetes configuration when using the Kubernetes runtime
-##############################################################################
-[kubernetes]
-# The Kubernetes namespace to use for Forge resources
-#namespace = "default"
-
-# Domain for ingress resources
-#ingress_domain = "localhost"
-
-# Size of the persistent volume claim
-#pvc_storage_size = "2Gi"
-
-# Storage class for persistent volume claims
-#pvc_storage_class = "standard"
-
-# CPU request for runtime pods
-#resource_cpu_request = "1"
-
-# Memory request for runtime pods
-#resource_memory_request = "1Gi"
-
-# Memory limit for runtime pods
-#resource_memory_limit = "2Gi"
-
-# Optional name of image pull secret for private registries
-#image_pull_secret = ""
-
-# Optional name of TLS secret for ingress
-#ingress_tls_secret = ""
-
-# Optional node selector key for pod scheduling
-#node_selector_key = ""
-
-# Optional node selector value for pod scheduling
-#node_selector_val = ""
-
-# Optional YAML string defining pod tolerations
-#tolerations_yaml = ""
-
-# Run the runtime sandbox container in privileged mode for use with docker-in-docker
-#privileged = false

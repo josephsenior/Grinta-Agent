@@ -72,7 +72,7 @@ export function GlobalSearch({ variant = "button" }: GlobalSearchProps) {
           type: "settings",
           title: t("search.settings", "Settings"),
           description: t("search.manageSettings", "Manage your settings"),
-          path: "/settings",
+          path: "/settings/app",
           icon: Settings,
         },
         {
@@ -103,8 +103,8 @@ export function GlobalSearch({ variant = "button" }: GlobalSearchProps) {
           type: "conversation",
           title: conv.title || "Untitled Conversation",
           description: `Conversation from ${
-            conv.updated_at
-              ? new Date(conv.updated_at).toLocaleDateString()
+            conv.last_updated_at
+              ? new Date(conv.last_updated_at).toLocaleDateString()
               : "recent"
           }`,
           path: `/conversations/${conv.conversation_id}`,
@@ -114,7 +114,7 @@ export function GlobalSearch({ variant = "button" }: GlobalSearchProps) {
 
     // Search settings pages
     const settingsPages = [
-      { id: "settings", title: "Settings", path: "/settings" },
+      { id: "settings", title: "Settings", path: "/settings/app" },
       { id: "user-settings", title: "User Settings", path: "/settings/user" },
       { id: "app-settings", title: "App Settings", path: "/settings/app" },
       { id: "billing", title: "Billing", path: "/settings/billing" },

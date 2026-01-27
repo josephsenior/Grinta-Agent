@@ -1,19 +1,20 @@
 import os
 import subprocess
 import tempfile
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import SecretStr
-from typing import cast
+
 from forge.core.config import LLMConfig
 from forge.events.action import CmdRunAction, MessageAction
+from forge.events.event import Event
 from forge.events.observation import (
     CmdOutputMetadata,
     CmdOutputObservation,
     NullObservation,
 )
-from forge.events.event import Event
 from forge.integrations.service_types import ProviderType
 from forge.llm.llm import LLM
 from forge.resolver.interfaces.github import GithubIssueHandler, GithubPRHandler
@@ -22,7 +23,6 @@ from forge.resolver.interfaces.issue_definitions import (
     ServiceContextIssue,
     ServiceContextPR,
 )
-from forge.resolver.issue_resolver import IssueResolver
 from forge.resolver.resolver_output import ResolverOutput
 
 
@@ -53,16 +53,34 @@ def default_mock_args():
     return mock_args
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def mock_github_token():
     """Fixture that patches the identify_token function to return GitHub provider type.
 
     This eliminates the need for repeated patching in each test function.
     """
     with patch(
-        "forge.resolver.issue_resolver.identify_token", return_value=ProviderType.GITHUB
-    ) as patched:
-        yield patched
+        "forge.resolver.issue_resolver.IssueResolver._identify_platform",
+        return_value=ProviderType.GITHUB,
+    ), patch(
+        "forge.resolver.issue_resolver.identify_token",
+        new_callable=AsyncMock,
+        return_value=ProviderType.GITHUB,
+    ), patch(
+        "forge.resolver.utils.identify_token",
+        new_callable=AsyncMock,
+        return_value=ProviderType.GITHUB,
+    ), patch(
+        "forge.resolver.utils.validate_provider_token",
+        AsyncMock(return_value=ProviderType.GITHUB),
+    ), patch(
+        "forge.integrations.utils.validate_provider_token",
+        AsyncMock(return_value=ProviderType.GITHUB),
+    ), patch(
+        "forge.resolver.issue_resolver.call_async_from_sync",
+        return_value=ProviderType.GITHUB,
+    ):
+        yield
 
 
 @pytest.fixture
@@ -124,6 +142,15 @@ def create_cmd_output(exit_code: int, content: str, command: str):
 
 
 def test_initialize_runtime(default_mock_args, mock_github_token):
+    import sys
+    print(f"\nDEBUG: sys.path: {sys.path}")
+    from forge.resolver.issue_resolver import IssueResolver
+    import sys
+    print(f"DEBUG: IssueResolver module: {IssueResolver.__module__}")
+    print(f"DEBUG: IssueResolver file: {sys.modules[IssueResolver.__module__].__file__}")
+    from forge.events.observation.commands import CmdOutputObservation
+    print(f"DEBUG: CmdOutputObservation module: {CmdOutputObservation.__module__}")
+    print(f"DEBUG: CmdOutputObservation file: {sys.modules[CmdOutputObservation.__module__].__file__}")
     mock_runtime = MagicMock()
     mock_runtime.run_action.side_effect = [
         create_cmd_output(exit_code=0, content="", command="cd /workspace"),
@@ -143,6 +170,7 @@ def test_initialize_runtime(default_mock_args, mock_github_token):
 @pytest.mark.asyncio
 async def test_resolve_issue_no_issues_found(default_mock_args, mock_github_token):
     """Test the resolve_issue method when no issues are found."""
+    from forge.resolver.issue_resolver import IssueResolver
     mock_handler = MagicMock()
     mock_handler.get_converted_issues.return_value = []
     default_mock_args.issue_number = 5432
@@ -317,6 +345,7 @@ def test_download_pr_from_github():
 @pytest.mark.asyncio
 async def test_complete_runtime(default_mock_args, mock_github_token):
     """Test the complete_runtime method."""
+    from forge.resolver.issue_resolver import IssueResolver
     mock_runtime = MagicMock()
     mock_runtime.run_action.side_effect = [
         create_cmd_output(exit_code=0, content="", command="cd /workspace"),
@@ -405,6 +434,7 @@ async def test_process_issue(
     test_case,
 ):
     """Test the process_issue method with different scenarios."""
+    from forge.resolver.issue_resolver import IssueResolver
     issue = Issue(
         owner="test_owner",
         repo="test_repo",
@@ -552,10 +582,16 @@ def test_file_instruction():
         title="Test Issue",
         body="This is a test issue ![image](https://sampleimage.com/sample.png)",
     )
-    with open("Forge/resolver/prompts/resolve/basic.jinja", "r", encoding="utf-8") as f:
+    # Get paths relative to this test file
+    current_dir = os.path.dirname(__file__)
+    resolver_dir = os.path.join(current_dir, "..", "..", "..", "..", "resolver")
+    basic_jinja_path = os.path.join(resolver_dir, "prompts", "resolve", "basic.jinja")
+    conv_instr_path = os.path.join(resolver_dir, "prompts", "resolve", "basic-conversation-instructions.jinja")
+
+    with open(basic_jinja_path, "r", encoding="utf-8") as f:
         prompt = f.read()
     with open(
-        "Forge/resolver/prompts/resolve/basic-conversation-instructions.jinja",
+        conv_instr_path,
         "r",
         encoding="utf-8",
     ) as f:
@@ -589,16 +625,23 @@ def test_file_instruction_with_repo_instruction():
         title="Test Issue",
         body="This is a test issue",
     )
-    with open("Forge/resolver/prompts/resolve/basic.jinja", "r", encoding="utf-8") as f:
+    # Get paths relative to this test file
+    current_dir = os.path.dirname(__file__)
+    resolver_dir = os.path.join(current_dir, "..", "..", "..", "..", "resolver")
+    basic_jinja_path = os.path.join(resolver_dir, "prompts", "resolve", "basic.jinja")
+    conv_instr_path = os.path.join(resolver_dir, "prompts", "resolve", "basic-conversation-instructions.jinja")
+    repo_instr_path = os.path.join(resolver_dir, "prompts", "repo_instructions", "Forge___Forge-resolver.txt")
+
+    with open(basic_jinja_path, "r", encoding="utf-8") as f:
         prompt = f.read()
     with open(
-        "Forge/resolver/prompts/resolve/basic-conversation-instructions.jinja",
+        conv_instr_path,
         "r",
         encoding="utf-8",
     ) as f:
         conversation_instructions_prompt = f.read()
     with open(
-        "Forge/resolver/prompts/repo_instructions/all-hands-ai___Forge-resolver.txt",
+        repo_instr_path,
         "r",
         encoding="utf-8",
     ) as f:
@@ -717,10 +760,16 @@ def test_instruction_with_thread_comments():
             "latest feedback:\nPlease add tests",
         ],
     )
-    with open("Forge/resolver/prompts/resolve/basic.jinja", "r", encoding="utf-8") as f:
+    # Get paths relative to this test file
+    current_dir = os.path.dirname(__file__)
+    resolver_dir = os.path.join(current_dir, "..", "..", "..", "..", "resolver")
+    basic_jinja_path = os.path.join(resolver_dir, "prompts", "resolve", "basic.jinja")
+    conv_instr_path = os.path.join(resolver_dir, "prompts", "resolve", "basic-conversation-instructions.jinja")
+
+    with open(basic_jinja_path, "r", encoding="utf-8") as f:
         prompt = f.read()
     with open(
-        "Forge/resolver/prompts/resolve/basic-conversation-instructions.jinja",
+        conv_instr_path,
         "r",
         encoding="utf-8",
     ) as f:
@@ -953,3 +1002,4 @@ def test_download_issue_with_specific_comment():
 
 if __name__ == "__main__":
     pytest.main()
+

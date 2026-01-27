@@ -115,16 +115,12 @@ async def test_import_all_data_success(monkeypatch):
     payload = export_routes.GlobalExportData(
         version="1.0.0",
         memories=[{"id": "m"}],
-        prompts=[{"id": "p"}],
-        snippets=[{"id": "s"}],
         templates=[{"id": "t"}],
     )
 
     result = await export_routes.import_all_data(payload)
     assert call_log == {
         "memories": 1,
-        "prompts": 1,
-        "snippets": 1,
         "templates": 1,
     }
     assert result["memories"] == {"imported": 1, "updated": 2}

@@ -29,7 +29,7 @@ from forge.mcp_client.cache import get_cached, set_cache
 from forge.mcp_client.client import MCPClient
 from forge.mcp_client.error_collector import mcp_error_collector
 from forge.mcp_client.wrappers import WRAPPER_TOOL_REGISTRY, wrapper_tool_params
-from forge.runtime.impl.cli.cli_runtime import CLIRuntime
+from forge.runtime import LocalRuntime
 
 
 def _is_windows_mcp_disabled() -> bool:
@@ -413,7 +413,7 @@ async def add_mcp_tools_to_agent(
 
     mcp_tools = await compat_fetch_mcp_tools_from_config(
         updated_mcp_config,
-        use_stdio=isinstance(runtime, CLIRuntime),
+        use_stdio=isinstance(runtime, LocalRuntime),
     )
     tool_names = [tool["function"]["name"] for tool in mcp_tools]
     logger.info("Loaded %s MCP tools: %s", len(mcp_tools), tool_names)

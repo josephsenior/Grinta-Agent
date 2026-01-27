@@ -10,6 +10,8 @@ interface SettingsSwitchProps {
   defaultIsToggled?: boolean;
   isToggled?: boolean;
   isBeta?: boolean;
+  isDisabled?: boolean;
+  tooltip?: string;
 }
 
 export function SettingsSwitch({
@@ -20,6 +22,8 @@ export function SettingsSwitch({
   defaultIsToggled,
   isToggled: controlledIsToggled,
   isBeta,
+  isDisabled,
+  tooltip,
 }: React.PropsWithChildren<SettingsSwitchProps>) {
   const { t } = useTranslation();
   const [isToggled, setIsToggled] = React.useState(defaultIsToggled ?? false);
@@ -30,7 +34,10 @@ export function SettingsSwitch({
   };
 
   return (
-    <label className="flex items-center gap-2 w-fit cursor-pointer">
+    <label
+      className={`flex items-center gap-2 w-fit ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+      title={tooltip}
+    >
       <input
         hidden
         data-testid={testId}
@@ -38,9 +45,14 @@ export function SettingsSwitch({
         type="checkbox"
         onChange={(e) => handleToggle(e.target.checked)}
         checked={controlledIsToggled ?? isToggled}
+        disabled={isDisabled}
+        aria-disabled={isDisabled}
       />
 
-      <StyledSwitchComponent isToggled={controlledIsToggled ?? isToggled} />
+      <StyledSwitchComponent
+        isToggled={controlledIsToggled ?? isToggled}
+        isDisabled={isDisabled}
+      />
 
       <div className="flex items-center gap-1">
         <span className="text-sm text-foreground">{children}</span>

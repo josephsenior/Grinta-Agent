@@ -305,6 +305,28 @@ The Ultimate Editor is exposed as a tool in the CodeAct agent:
 
 ## 🏗️ Architecture
 
+### Two-Layer Design
+
+The Ultimate Editor operates at the **agent level** and uses the **FileEditor** (runtime-level) for actual file I/O operations:
+
+```
+┌─────────────────────────────────────────┐
+│  Ultimate Editor (Agent-Level)          │
+│  • Structure-aware editing              │
+│  • Symbol-based operations              │
+│  • Syntax validation                    │
+└──────────────┬──────────────────────────┘
+               │
+               │ Uses for I/O
+               │
+┌──────────────▼──────────────────────────┐
+│  FileEditor (Runtime-Level)             │
+│  • Atomic file operations               │
+│  • Transaction support                  │
+│  • Error handling                       │
+└─────────────────────────────────────────┘
+```
+
 ### Components
 
 ```
@@ -314,7 +336,14 @@ ultimate_editor.py              # High-level unified interface
 ├── atomic_refactor.py          # Multi-file transactions with rollback
 ├── smart_errors.py             # Fuzzy matching & helpful suggestions
 └── ultimate_editor_tool.py     # CodeAct agent tool definition
+
+file_editor.py                  # Low-level runtime I/O (used by Ultimate Editor)
+├── Atomic file writes          # Temp file + rename pattern
+├── Transaction support         # Multi-file atomic operations
+└── Error handling              # Production-grade reliability
 ```
+
+**See:** [File Editing System Architecture](../architecture/file-editing-system.md) for detailed architecture documentation.
 
 ### Key Design Decisions
 

@@ -76,7 +76,7 @@ class ChromaDBBackend(VectorBackend):
         collection_name: str = "FORGE_memory",
         persist_directory: Path | None = None,
     ) -> None:
-        """Initialize ChromaDB local vector store with sentence embeddings.
+        r"""Initialize ChromaDB local vector store with sentence embeddings.
 
         Sets up ChromaDB persistent client with SentenceTransformer embeddings for local development.
         Auto-creates or loads existing collection from disk.
@@ -193,6 +193,9 @@ class ChromaDBBackend(VectorBackend):
             include=["documents", "metadatas", "distances"],
         )
 
+        if not results["ids"] or not results["documents"] or not results["metadatas"] or not results["distances"]:
+            return []
+
         return [
             {
                 "step_id": results["ids"][0][i],
@@ -229,11 +232,10 @@ class ChromaDBBackend(VectorBackend):
     def delete_by_metadata(self, filter_metadata: dict[str, Any]) -> int:
         """Delete documents matching metadata filters."""
         try:
-            # ChromaDB supports where filters for deletion
-            result = self.collection.delete(where=filter_metadata)
-            deleted_count = len(result.get("ids", [])) if isinstance(result, dict) else 0
-            logger.info(f"Deleted {deleted_count} documents from ChromaDB matching {filter_metadata}")
-            return deleted_count
+            # ChromaDB delete() doesn't return a value
+            self.collection.delete(where=filter_metadata)
+            logger.info(f"Deleted documents from ChromaDB matching {filter_metadata}")
+            return 1  # ChromaDB doesn't report count
         except Exception as e:
             logger.error(f"Failed to delete from ChromaDB: {e}")
             return 0
@@ -241,10 +243,10 @@ class ChromaDBBackend(VectorBackend):
     def delete_by_ids(self, ids: list[str]) -> int:
         """Delete documents by their IDs."""
         try:
-            result = self.collection.delete(ids=ids)
-            deleted_count = len(result.get("ids", [])) if isinstance(result, dict) else len(ids)
-            logger.info(f"Deleted {deleted_count} documents from ChromaDB")
-            return deleted_count
+            # ChromaDB delete() doesn't return a value
+            self.collection.delete(ids=ids)
+            logger.info(f"Deleted {len(ids)} documents from ChromaDB")
+            return len(ids)
         except Exception as e:
             logger.error(f"Failed to delete from ChromaDB: {e}")
             return 0
@@ -773,42 +775,8 @@ class AdaptiveVectorStore:
         return self.backend.stats()
 
 
-# Backward compatibility wrapper for existing MetaSOP code
-class VectorMemoryStore:
-    """Backward compatible wrapper that uses adaptive cloud-ready backend."""
-
-    def __init__(self, dim: int = 256, max_records: int | None = 500) -> None:
-        """Initialize the legacy facade while delegating storage to the adaptive backend."""
-        logger.info(
-            "Initializing cloud-ready vector store (ignoring legacy params: dim=%d, max_records=%s)",
-            dim,
-            max_records,
-        )
-        self._store = AdaptiveVectorStore()
-
-    def add(
-        self,
-        step_id: str,
-        role: str,
-        artifact_hash: str | None,
-        rationale: str | None,
-        content_text: str,
-    ) -> None:
-        """Add a record (backward compatible interface)."""
-        self._store.add(step_id, role, artifact_hash, rationale, content_text)
-
-    def search(self, query: str, k: int = 3) -> list[dict[str, Any]]:
-        """Search for similar records (backward compatible interface)."""
-        return self._store.search(query, k)
-
-    def stats(self) -> dict[str, Any]:
-        """Get statistics (backward compatible interface)."""
-        return self._store.stats()
-
-
 __all__ = [
     "AdaptiveVectorStore",
     "ChromaDBBackend",
     "QdrantCloudBackend",
-    "VectorMemoryStore",
 ]

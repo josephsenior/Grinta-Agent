@@ -1,81 +1,72 @@
 /**
- * API client for analytics and usage statistics
+ * API client for analytics endpoints
  */
 
 import { Forge } from "./forge-axios";
 import type {
   AnalyticsDashboard,
   AnalyticsPeriod,
+  AnalyticsSummary,
   ModelUsageStats,
   CostBreakdown,
-  AnalyticsSummary,
 } from "#/types/analytics";
 
 /**
- * Get comprehensive analytics dashboard
+ * Get the full analytics dashboard data
  */
 export async function getAnalyticsDashboard(
   period: AnalyticsPeriod = "week",
 ): Promise<AnalyticsDashboard> {
-  const response = await Forge.get(`/api/analytics/dashboard`, {
+  const response = await Forge.get<AnalyticsDashboard>("/api/analytics/dashboard", {
     params: { period },
   });
   return response.data;
 }
 
 /**
- * Get quick analytics summary
+ * Get analytics summary data
  */
 export async function getAnalyticsSummary(
   period: AnalyticsPeriod = "week",
 ): Promise<AnalyticsSummary> {
-  const response = await Forge.get(`/api/analytics/summary`, {
+  const response = await Forge.get<AnalyticsSummary>("/api/analytics/summary", {
     params: { period },
   });
   return response.data;
 }
 
 /**
- * Get usage statistics by model
+ * Get model usage statistics
  */
 export async function getModelUsageStats(
   period: AnalyticsPeriod = "week",
 ): Promise<ModelUsageStats[]> {
-  const response = await Forge.get(`/api/analytics/models`, {
+  const response = await Forge.get<ModelUsageStats[]>("/api/analytics/models", {
     params: { period },
   });
   return response.data;
 }
 
 /**
- * Get detailed cost breakdown
+ * Get cost breakdown
  */
 export async function getCostBreakdown(
   period: AnalyticsPeriod = "week",
 ): Promise<CostBreakdown> {
-  const response = await Forge.get(`/api/analytics/costs/breakdown`, {
+  const response = await Forge.get<CostBreakdown>("/api/analytics/costs/breakdown", {
     params: { period },
   });
   return response.data;
 }
 
 /**
- * Analytics export data structure
- */
-export interface AnalyticsExportData {
-  format: string;
-  exported_at: string;
-  data: AnalyticsDashboard | string; // string for CSV format, AnalyticsDashboard for JSON
-}
-
-/**
- * Export analytics data
+ * Export analytics data in the specified format
  */
 export async function exportAnalytics(
-  period: AnalyticsPeriod = "week",
-  format: "json" | "csv" = "json",
-): Promise<AnalyticsExportData> {
-  const response = await Forge.get(`/api/analytics/export`, {
+  period: AnalyticsPeriod,
+  format: "json" | "csv" | "pdf",
+): Promise<any> {
+  const response = await Forge.get("/api/analytics/export", {
     params: { period, format },
   });
   return response.data;

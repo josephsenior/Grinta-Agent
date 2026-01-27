@@ -1,42 +1,19 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
-import { useTranslation } from "react-i18next";
-import { Forge } from "#/api/forge-axios";
-import { I18nKey } from "#/i18n/declaration";
-import { displayErrorToast } from "#/utils/custom-toast-handlers";
-import { retrieveAxiosErrorMessage } from "#/utils/retrieve-axios-error-message";
+import IntegrationsClient from "#/api/integrations";
 
-export function useValidateIntegration(
-  platform: "jira" | "jira-dc" | "linear",
-  {
-    onSuccess,
-    onError,
-  }: {
-    onSuccess: (data: { data: { status: string } }) => void;
-    onError: (error: unknown) => void;
-  },
-) {
-  const { t } = useTranslation();
+interface UseValidateIntegrationOptions {
+  onSuccess?: (data: any) => void;
+  onError?: (error: any) => void;
+}
 
+export function useValidateIntegration(platform: string, options?: UseValidateIntegrationOptions) {
   return useMutation({
-    mutationFn: (workspace?: string) => {
-      const workspaceParam = workspace ? `/${workspace}` : "";
-      return Forge.get(
-        `/integration/${platform}/workspaces/validate${workspaceParam}`,
-      );
+    mutationFn: (workspace: string) => IntegrationsClient.validateIntegration(platform, workspace),
+    onSuccess: (data) => {
+      options?.onSuccess?.(data);
     },
-    onSuccess,
     onError: (error) => {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        onError(error);
-      } else {
-        const errorMessage = retrieveAxiosErrorMessage(error);
-        displayErrorToast(
-          errorMessage ||
-            t(I18nKey.PROJECT_MANAGEMENT$VALIDATE_INTEGRATION_ERROR),
-        );
-      }
+      options?.onError?.(error);
     },
   });
 }

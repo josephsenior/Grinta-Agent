@@ -6,10 +6,8 @@ from forge.controller.agent_controller import AgentController
 from forge.controller.state.state import State
 from forge.controller.stuck import StuckDetector
 from forge.events.action import CmdRunAction, FileReadAction, MessageAction
-from forge.events.action.commands import IPythonRunCellAction
 from forge.events.observation import CmdOutputObservation, FileReadObservation
 from forge.events.observation.agent import AgentCondensationObservation
-from forge.events.observation.commands import IPythonRunCellObservation
 from forge.events.observation.empty import NullObservation
 from forge.events.observation.error import ErrorObservation
 from forge.events.stream import EventSource, EventStream
@@ -21,8 +19,6 @@ def collect_events(stream):
 
 
 logging.basicConfig(level=logging.DEBUG)
-jupyter_line_1 = "\n[Jupyter current working directory:"
-jupyter_line_2 = "\n[Jupyter Python interpreter:"
 code_snippet = '\nedit_file_by_replace(\n    \'book_store.py\',\n    to_replace="""def total(basket):\n    if not basket:\n        return 0\n'
 
 
@@ -51,32 +47,30 @@ class TestStuckDetector:
         self, state: State, error_message: str, random_line: bool, incidents: int = 4
     ):
         for i in range(incidents):
-            ipython_action = IPythonRunCellAction(code=code_snippet)
-            state.history.append(ipython_action)
+            cmd_action = CmdRunAction(command="python script.py")
+            state.history.append(cmd_action)
             extra_number = (i + 1) * 10 if random_line else "42"
             extra_line = "\n" * (i + 1) if random_line else ""
-            ipython_observation = IPythonRunCellObservation(
-                content=f'  Cell In[1], line {extra_number}\nto_replace="""def largest(min_factor, max_factor):\n            ^\n{error_message}{extra_line}'
-                + jupyter_line_1
-                + jupyter_line_2,
-                code=code_snippet,
+            cmd_observation = CmdOutputObservation(
+                content=f'  File "script.py", line {extra_number}\n    to_replace="""def largest(min_factor, max_factor):\n            ^\n{error_message}{extra_line}',
+                command="python script.py",
+                exit_code=1
             )
-            state.history.append(ipython_observation)
+            state.history.append(cmd_observation)
 
     def _impl_unterminated_string_error_events(
         self, state: State, random_line: bool, incidents: int = 4
     ):
         for i in range(incidents):
-            ipython_action = IPythonRunCellAction(code=code_snippet)
-            state.history.append(ipython_action)
+            cmd_action = CmdRunAction(command="python script.py")
+            state.history.append(cmd_action)
             line_number = (i + 1) * 10 if random_line else "1"
-            ipython_observation = IPythonRunCellObservation(
-                content=f'print("  Cell In[1], line {line_number}\nhello\n       ^\nSyntaxError: unterminated string literal (detected at line {line_number})'
-                + jupyter_line_1
-                + jupyter_line_2,
-                code=code_snippet,
+            cmd_observation = CmdOutputObservation(
+                content=f'  File "script.py", line {line_number}\n    print("hello\n               ^\nSyntaxError: unterminated string literal (detected at line {line_number})',
+                command="python script.py",
+                exit_code=1
             )
-            state.history.append(ipython_observation)
+            state.history.append(cmd_observation)
 
     def test_history_too_short(self, stuck_detector: StuckDetector):
         state = stuck_detector.state
@@ -262,68 +256,6 @@ class TestStuckDetector:
         )
         with patch("logging.Logger.warning"):
             assert stuck_detector.is_stuck(headless_mode=True) is False
-
-    def test_is_not_stuck_ipython_unterminated_string_error_random_lines(
-        self, stuck_detector: StuckDetector
-    ):
-        state = stuck_detector.state
-        self._impl_unterminated_string_error_events(state, random_line=True)
-        with patch("logging.Logger.warning"):
-            assert stuck_detector.is_stuck(headless_mode=True) is False
-
-    def test_is_not_stuck_ipython_unterminated_string_error_only_two_incidents(
-        self, stuck_detector: StuckDetector
-    ):
-        state = stuck_detector.state
-        self._impl_unterminated_string_error_events(
-            state, random_line=False, incidents=2
-        )
-        with patch("logging.Logger.warning"):
-            assert stuck_detector.is_stuck(headless_mode=True) is False
-
-    def test_is_stuck_ipython_unterminated_string_error(
-        self, stuck_detector: StuckDetector
-    ):
-        state = stuck_detector.state
-        self._impl_unterminated_string_error_events(state, random_line=False)
-        with patch("logging.Logger.warning"):
-            assert stuck_detector.is_stuck(headless_mode=True) is True
-
-    def test_is_not_stuck_ipython_syntax_error_not_at_end(
-        self, stuck_detector: StuckDetector
-    ):
-        state = stuck_detector.state
-        ipython_action_1 = IPythonRunCellAction(code='print("hello')
-        state.history.append(ipython_action_1)
-        ipython_observation_1 = IPythonRunCellObservation(
-            content='print("hello\n       ^\nSyntaxError: unterminated string literal (detected at line 1)\nThis is some additional output',
-            code='print("hello',
-        )
-        state.history.append(ipython_observation_1)
-        ipython_action_2 = IPythonRunCellAction(code='print("hello')
-        state.history.append(ipython_action_2)
-        ipython_observation_2 = IPythonRunCellObservation(
-            content='print("hello\n       ^\nSyntaxError: unterminated string literal (detected at line 1)\nToo much output here on and on',
-            code='print("hello',
-        )
-        state.history.append(ipython_observation_2)
-        ipython_action_3 = IPythonRunCellAction(code='print("hello')
-        state.history.append(ipython_action_3)
-        ipython_observation_3 = IPythonRunCellObservation(
-            content='print("hello\n       ^\nSyntaxError: unterminated string literal (detected at line 3)\nEnough',
-            code='print("hello',
-        )
-        state.history.append(ipython_observation_3)
-        ipython_action_4 = IPythonRunCellAction(code='print("hello')
-        state.history.append(ipython_action_4)
-        ipython_observation_4 = IPythonRunCellObservation(
-            content='print("hello\n       ^\nSyntaxError: unterminated string literal (detected at line 2)\nLast line of output',
-            code='print("hello',
-        )
-        state.history.append(ipython_observation_4)
-        with patch("logging.Logger.warning") as mock_warning:
-            assert stuck_detector.is_stuck(headless_mode=True) is False
-            mock_warning.assert_not_called()
 
     def test_is_stuck_repeating_action_observation_pattern(
         self, stuck_detector: StuckDetector

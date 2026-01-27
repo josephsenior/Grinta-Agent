@@ -35,7 +35,7 @@ from forge.runtime.plugins import PluginRequirement
 from forge.utils.prompt import PromptManager
 
 if TYPE_CHECKING:
-    from litellm.types.utils import ModelResponse
+    ModelResponse = Any
 
 
 class BrowsingContext(TypedDict):
@@ -75,7 +75,6 @@ CONCISE_INSTRUCTION = (
 
 def get_error_prefix(last_browser_action: str) -> str:
     """Generate error prefix message for incorrect browser actions."""
-
     return (
         "IMPORTANT! Last action is incorrect:\n"
         f"{last_browser_action}\n"
@@ -85,7 +84,6 @@ def get_error_prefix(last_browser_action: str) -> str:
 
 def get_system_message(goal: str, action_space: str) -> str:
     """Generate the legacy system message detailing goal and action space."""
-
     return (
         "# Instructions\n"
         "Review the current state of the page and all other information to find the best\n"
@@ -102,7 +100,6 @@ def get_prompt(
     error_prefix: str, cur_url: str, cur_axtree_txt: str, prev_action_str: str
 ) -> str:
     """Legacy helper used by tests to render the browsing prompt."""
-
     prompt = (
         f"{error_prefix}\n\n# Current Page URL:\n{cur_url}\n\n"
         f"# Current Accessibility Tree:\n{cur_axtree_txt}\n\n"
@@ -130,6 +127,7 @@ class UltimateBrowsingAgent(Agent):
     """
 
     VERSION = "2.0"
+    _prompt_manager: PromptManager | None = None
     "\n    The Ultimate BrowsingAgent - State-of-the-art web automation.\n    \n    Features:\n    - ReAct reasoning loop\n    - State tracking and memory\n    - Smart error recovery\n    - Vision-enhanced navigation\n    - Tool_choice enforcement\n    "
     sandbox_plugins: list[PluginRequirement] = []
     response_parser = BrowsingResponseParser()

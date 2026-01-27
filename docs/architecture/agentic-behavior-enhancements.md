@@ -3,7 +3,7 @@
 ## Current State Assessment
 
 ### ✅ **Strengths**
-- Tooling breadth (tree-sitter editing, bash, IPython, browser)
+- Tooling breadth (tree-sitter editing, bash, browser)
 - Modular architecture (Planner, Executor, MemoryManager, SafetyManager)
 - Middleware pipeline (plan → verify → execute → observe)
 - Anti-hallucination system (always enabled)
@@ -13,9 +13,8 @@
 1. **No High-Level Planning**: Agent loop is still classic ReAct with no task decomposition
 2. **No Self-Reflection**: No verification/assertion phase before executing edits
 3. **Static Iteration Limits**: Default 100 iterations, no dynamic pacing based on task complexity
-4. **ACE Disabled by Default**: `enable_ace = False` means no self-improvement by default
-5. **Task Tracker Opt-In**: `enable_plan_mode = False` means no automatic task decomposition
-6. **"Think Forever or Bail Early"**: No dynamic iteration management based on progress
+4. **Task Tracker Opt-In**: `enable_plan_mode = False` means no automatic task decomposition
+5. **"Think Forever or Bail Early"**: No dynamic iteration management based on progress
 
 ---
 
@@ -151,41 +150,7 @@ complexity_iteration_multiplier: float = Field(
 
 ---
 
-### **Phase 4: Enable ACE by Default** 🚀
-
-**Goal**: Make ACE framework accessible without manual configuration.
-
-**Implementation**:
-
-1. **Smart ACE Enablement**
-   - Enable ACE automatically for complex tasks
-   - Disable for simple tasks (performance)
-   - Use complexity score to decide
-
-2. **Lazy Initialization**
-   - Only initialize ACE when needed
-   - Fast path for simple tasks
-   - Full ACE for complex tasks
-
-**Files to Modify**:
-- `forge/agenthub/codeact_agent/memory_manager.py` - Smart ACE enablement
-- `forge/metasop/settings.py` - Change default to `True` or add auto-enable
-
-**Configuration**:
-```python
-enable_ace: bool = Field(
-    default=True,  # ← Enable by default!
-    description="Enable ACE framework for self-improving agents"
-)
-ace_auto_enable_threshold: float = Field(
-    default=5.0,
-    description="Auto-enable ACE for tasks with complexity >= threshold"
-)
-```
-
----
-
-### **Phase 5: Enable Task Tracker by Default** 📋
+### **Phase 4: Enable Task Tracker by Default** 📋
 
 **Goal**: Make task tracker available without manual configuration.
 
@@ -217,12 +182,11 @@ ace_auto_enable_threshold: float = Field(
 
 ### **High Priority** (Immediate Impact)
 1. ✅ **Enable Task Tracker by Default** - Easy win, big impact
-2. ✅ **Enable ACE by Default** - Self-improvement for all users
-3. ✅ **Dynamic Iteration Management** - Fix "think forever or bail early"
+2. ✅ **Dynamic Iteration Management** - Fix "think forever or bail early"
 
 ### **Medium Priority** (Next Sprint)
-4. ✅ **High-Level Planning Stage** - Task decomposition
-5. ✅ **Self-Reflection/Verification** - Action verification
+3. ✅ **High-Level Planning Stage** - Task decomposition
+4. ✅ **Self-Reflection/Verification** - Action verification
 
 ---
 
@@ -232,7 +196,6 @@ ace_auto_enable_threshold: float = Field(
 - ❌ Classic ReAct loop
 - ❌ No task decomposition
 - ❌ Static 100 iterations
-- ❌ ACE disabled
 - ❌ Task tracker opt-in
 - ❌ "Think forever or bail early" problem
 
@@ -240,11 +203,9 @@ ace_auto_enable_threshold: float = Field(
 - ✅ High-level planning stage
 - ✅ Automatic task decomposition
 - ✅ Dynamic iteration management (20-500)
-- ✅ ACE enabled by default
 - ✅ Task tracker always available
 - ✅ Self-reflection before execution
 - ✅ Progress-aware iteration limits
-- ✅ Self-improving agent behavior
 
 ---
 
@@ -255,13 +216,11 @@ ace_auto_enable_threshold: float = Field(
 - Planning middleware
 - Reflection middleware
 - Dynamic iteration calculation
-- ACE auto-enablement logic
 
 ### **Integration Tests**
 - End-to-end planning → execution → reflection
 - Dynamic iteration adjustment
 - Task tracker integration
-- ACE framework integration
 
 ### **Performance Tests**
 - Planning overhead (should be < 1s)
@@ -274,7 +233,6 @@ ace_auto_enable_threshold: float = Field(
 
 ### **Phase 1: Enable by Default** (Week 1)
 - Enable task tracker by default
-- Enable ACE by default
 - Increase max_iterations to 500
 
 ### **Phase 2: Add Planning** (Week 2)
@@ -299,7 +257,6 @@ ace_auto_enable_threshold: float = Field(
 ### **Old Configuration**
 ```python
 enable_plan_mode = False  # Task tracker opt-in
-enable_ace = False  # ACE disabled
 max_iterations = 100  # Static limit
 ```
 
@@ -308,7 +265,6 @@ max_iterations = 100  # Static limit
 enable_auto_planning = True  # Auto-decompose complex tasks
 enable_reflection = True  # Self-reflection before execution
 enable_dynamic_iterations = True  # Dynamic iteration management
-enable_ace = True  # ACE enabled by default
 min_iterations = 20  # Minimum for simple tasks
 max_iterations = 500  # Maximum for complex tasks
 ```
@@ -325,7 +281,6 @@ max_iterations = 500  # Maximum for complex tasks
 - Task completion rate: +15%
 - Average iterations per task: -20% (better planning)
 - Self-correction rate: +10% (reflection)
-- ACE adaptation rate: +25% (enabled by default)
 - User satisfaction: +20%
 
 ---
@@ -343,6 +298,5 @@ max_iterations = 500  # Maximum for complex tasks
 ## References
 
 - [CodeAct Agent Architecture](../features/codeact-agent.md)
-- [ACE Framework](../features/ace-framework.md)
 - [Task Tracker Tool](../features/tool-integration.md)
 - [Middleware Pipeline](../architecture.md#middleware-pipeline)

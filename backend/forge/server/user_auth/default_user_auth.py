@@ -27,14 +27,22 @@ class DefaultUserAuth(UserAuth):
     _settings_store: SettingsStore | None = None
     _secrets_store: SecretsStore | None = None
     _user_secrets: UserSecrets | None = None
+    user_id: str | None = None
 
     async def get_user_id(self) -> str | None:
-        """The default implementation does not support multi tenancy, so user_id is always None."""
-        return None
+        """Return user ID captured from request state if available."""
+        return self.user_id
 
     async def get_user_email(self) -> str | None:
-        """The default implementation does not support multi tenancy, so email is always None."""
-        return None
+        """Return email for the current user when available."""
+        if not self.user_id:
+            return None
+
+        from forge.storage.user import get_user_store
+
+        user_store = get_user_store()
+        user = await user_store.get_user_by_id(self.user_id)
+        return user.email if user else None
 
     async def get_access_token(self) -> SecretStr | None:
         """The default implementation does not support multi tenancy, so access_token is always None."""
@@ -101,6 +109,9 @@ class DefaultUserAuth(UserAuth):
         )
 
     @classmethod
-    async def get_instance(cls, request: Request) -> UserAuth:
-        """Factory entrypoint to satisfy UserAuth interface."""
-        return DefaultUserAuth()
+    async def get_instance(cls, request: "Request") -> UserAuth:
+        """Capture user context from request state when available."""
+        user_id = getattr(request.state, "user_id", None)
+        instance = DefaultUserAuth()
+        instance.user_id = user_id
+        return instance

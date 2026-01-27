@@ -1,7 +1,6 @@
 import React from "react";
 import { Clock3 } from "lucide-react";
 import { useSelector } from "react-redux";
-import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
 import ClientTimeDelta from "#/components/shared/ClientTimeDelta";
 import ClientNumber from "#/components/shared/ClientNumber";
@@ -10,14 +9,11 @@ import { ConversationStateIndicator } from "./conversation-state-indicator";
 import { EllipsisButton } from "./ellipsis-button";
 import { ConversationCardContextMenu } from "./conversation-card-context-menu";
 import { SystemMessageModal } from "./system-message-modal";
-import { MicroagentsModal } from "./microagents-modal";
 import { BudgetDisplay } from "./budget-display";
 import { cn } from "#/utils/utils";
 import { BaseModal } from "../../shared/modals/base-modal/base-modal";
 import { RootState } from "#/store";
 import { I18nKey } from "#/i18n/declaration";
-import { transformVSCodeUrl } from "#/utils/vscode-url-helper";
-import Forge from "#/api/forge";
 import { useWsClient } from "#/context/ws-client-provider";
 import { isSystemMessage } from "#/types/core/guards";
 import { ConversationStatus } from "#/types/conversation-status";
@@ -122,39 +118,6 @@ function createEditHandler(
   };
 }
 
-function createDownloadHandler({
-  conversationId,
-  onToggle,
-}: {
-  conversationId?: string;
-  onToggle?: (open: boolean) => void;
-}) {
-  return async (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    posthog.capture("download_via_vscode_button_clicked");
-
-    if (!conversationId) {
-      onToggle?.(false);
-      return;
-    }
-
-    try {
-      const data = await Forge.getVSCodeUrl(conversationId);
-      if (data.vscode_url) {
-        const transformedUrl = transformVSCodeUrl(data.vscode_url);
-        if (transformedUrl) {
-          window.open(transformedUrl, "_blank");
-        }
-      }
-    } catch (error) {
-      // Ignore download failures.
-    } finally {
-      onToggle?.(false);
-    }
-  };
-}
-
 function createDisplayCostHandler(
   setMetricsModalVisible: React.Dispatch<React.SetStateAction<boolean>>,
 ) {
@@ -173,20 +136,10 @@ function createShowAgentToolsHandler(
   };
 }
 
-function createShowMicroagentsHandler(
-  setMicroagentsModalVisible: React.Dispatch<React.SetStateAction<boolean>>,
-) {
-  return (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
-    setMicroagentsModalVisible(true);
-  };
-}
-
 function hasContextMenuOptions({
   onDelete,
   onStop,
   onChangeTitle,
-  conversationId,
   showOptions,
   conversationStatus,
   systemMessage,
@@ -194,7 +147,6 @@ function hasContextMenuOptions({
   onDelete?: () => void;
   onStop?: () => void;
   onChangeTitle?: (title: string) => void;
-  conversationId?: string;
   showOptions?: boolean;
   conversationStatus: ConversationStatus;
   systemMessage:
@@ -205,10 +157,8 @@ function hasContextMenuOptions({
     Boolean(onDelete) ||
     (conversationStatus !== "STOPPED" && Boolean(onStop)) ||
     Boolean(onChangeTitle) ||
-    Boolean(conversationId && showOptions) ||
     Boolean(showOptions) ||
-    Boolean(showOptions && systemMessage) ||
-    Boolean(showOptions && conversationId)
+    Boolean(showOptions && systemMessage)
   );
 }
 
@@ -229,7 +179,6 @@ function buildMenuActions({
   onDelete,
   onStop,
   onChangeTitle,
-  conversationId,
   showOptions,
   conversationStatus,
   systemMessage,
@@ -237,7 +186,6 @@ function buildMenuActions({
   onDelete?: () => void;
   onStop?: () => void;
   onChangeTitle?: (title: string) => void;
-  conversationId?: string;
   showOptions?: boolean;
   conversationStatus: ConversationStatus;
   systemMessage:
@@ -248,42 +196,34 @@ function buildMenuActions({
     canDelete: Boolean(onDelete),
     canStop: conversationStatus !== "STOPPED" && Boolean(onStop),
     canEdit: Boolean(onChangeTitle),
-    canDownload: Boolean(conversationId && showOptions),
     canDisplayCost: Boolean(showOptions),
-    canShowAgentTools: Boolean(showOptions && systemMessage),
-    canShowMicroagents: Boolean(showOptions && conversationId),
-  };
-}
+      canShowAgentTools: Boolean(showOptions && systemMessage),
+    };
+  }
 
 function buildMenuHandlers({
   onContextMenuToggle,
   onDelete,
   onStop,
   onChangeTitle,
-  conversationId,
   showOptions,
   handleDelete,
   handleStop,
   handleEdit,
-  handleDownloadViaVSCode,
   handleDisplayCost,
   handleShowAgentTools,
-  handleShowMicroagents,
   systemMessage,
 }: {
   onContextMenuToggle?: (isOpen: boolean) => void;
   onDelete?: () => void;
   onStop?: () => void;
   onChangeTitle?: (title: string) => void;
-  conversationId?: string;
   showOptions?: boolean;
   handleDelete: ReturnType<typeof createDeleteHandler>;
   handleStop: ReturnType<typeof createStopHandler>;
   handleEdit: ReturnType<typeof createEditHandler>;
-  handleDownloadViaVSCode: ReturnType<typeof createDownloadHandler>;
   handleDisplayCost: ReturnType<typeof createDisplayCostHandler>;
   handleShowAgentTools: ReturnType<typeof createShowAgentToolsHandler>;
-  handleShowMicroagents: ReturnType<typeof createShowMicroagentsHandler>;
   systemMessage:
     | ReturnType<typeof useWsClient>["parsedEvents"][number]
     | undefined;
@@ -297,11 +237,6 @@ function buildMenuHandlers({
     { condition: Boolean(onStop), key: "stop", handler: handleStop },
     { condition: Boolean(onChangeTitle), key: "edit", handler: handleEdit },
     {
-      condition: Boolean(conversationId && showOptions),
-      key: "download",
-      handler: handleDownloadViaVSCode,
-    },
-    {
       condition: Boolean(showOptions),
       key: "displayCost",
       handler: handleDisplayCost,
@@ -310,11 +245,6 @@ function buildMenuHandlers({
       condition: Boolean(showOptions && systemMessage),
       key: "showAgentTools",
       handler: handleShowAgentTools,
-    },
-    {
-      condition: Boolean(showOptions && conversationId),
-      key: "showMicroagents",
-      handler: handleShowMicroagents,
     },
   ];
 
@@ -360,8 +290,6 @@ interface ConversationCardController {
   setMetricsModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
   systemModalVisible: boolean;
   setSystemModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
-  microagentsModalVisible: boolean;
-  setMicroagentsModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
   systemMessage:
     | ReturnType<typeof useWsClient>["parsedEvents"][number]
     | undefined;
@@ -393,8 +321,6 @@ function useConversationCardController({
   const [titleMode, setTitleMode] = React.useState<TitleMode>("view");
   const [metricsModalVisible, setMetricsModalVisible] = React.useState(false);
   const [systemModalVisible, setSystemModalVisible] = React.useState(false);
-  const [microagentsModalVisible, setMicroagentsModalVisible] =
-    React.useState(false);
 
   const handleBlur = React.useMemo(
     () =>
@@ -429,12 +355,6 @@ function useConversationCardController({
     [onContextMenuToggle],
   );
 
-  const handleDownloadViaVSCode = React.useMemo(
-    () =>
-      createDownloadHandler({ conversationId, onToggle: onContextMenuToggle }),
-    [conversationId, onContextMenuToggle],
-  );
-
   const handleDisplayCost = React.useMemo(
     () => createDisplayCostHandler(setMetricsModalVisible),
     [],
@@ -442,11 +362,6 @@ function useConversationCardController({
 
   const handleShowAgentTools = React.useMemo(
     () => createShowAgentToolsHandler(setSystemModalVisible),
-    [],
-  );
-
-  const handleShowMicroagents = React.useMemo(
-    () => createShowMicroagentsHandler(setMicroagentsModalVisible),
     [],
   );
 
@@ -460,12 +375,20 @@ function useConversationCardController({
     () =>
       hasContextMenuOptions({
         onDelete,
+        onStop,
         onChangeTitle,
         showOptions,
         conversationStatus,
         systemMessage,
       }),
-    [onDelete, onChangeTitle, showOptions, conversationStatus, systemMessage],
+    [
+      onDelete,
+      onStop,
+      onChangeTitle,
+      showOptions,
+      conversationStatus,
+      systemMessage,
+    ],
   );
 
   const showUpdateTime = React.useMemo(
@@ -479,7 +402,6 @@ function useConversationCardController({
         onDelete,
         onStop,
         onChangeTitle,
-        conversationId,
         showOptions,
         conversationStatus,
         systemMessage,
@@ -488,7 +410,6 @@ function useConversationCardController({
       onDelete,
       onStop,
       onChangeTitle,
-      conversationId,
       showOptions,
       conversationStatus,
       systemMessage,
@@ -502,15 +423,12 @@ function useConversationCardController({
         onDelete,
         onStop,
         onChangeTitle,
-        conversationId,
         showOptions,
         handleDelete,
         handleStop,
         handleEdit,
-        handleDownloadViaVSCode,
         handleDisplayCost,
         handleShowAgentTools,
-        handleShowMicroagents,
         systemMessage,
       }),
     [
@@ -518,15 +436,12 @@ function useConversationCardController({
       onDelete,
       onStop,
       onChangeTitle,
-      conversationId,
       showOptions,
       handleDelete,
       handleStop,
       handleEdit,
-      handleDownloadViaVSCode,
       handleDisplayCost,
       handleShowAgentTools,
-      handleShowMicroagents,
       systemMessage,
     ],
   );
@@ -554,8 +469,6 @@ function useConversationCardController({
     setMetricsModalVisible,
     systemModalVisible,
     setSystemModalVisible,
-    microagentsModalVisible,
-    setMicroagentsModalVisible,
     systemMessage,
     metrics,
   };
@@ -565,10 +478,8 @@ type ConversationCardMenuActions = {
   canDelete: boolean;
   canStop: boolean;
   canEdit: boolean;
-  canDownload: boolean;
   canDisplayCost: boolean;
   canShowAgentTools: boolean;
-  canShowMicroagents: boolean;
 };
 
 type ConversationCardMenuHandlers = {
@@ -576,12 +487,8 @@ type ConversationCardMenuHandlers = {
   delete?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   stop?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   edit?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  download?: (
-    event: React.MouseEvent<HTMLButtonElement>,
-  ) => Promise<void> | void;
   displayCost?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   showAgentTools?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  showMicroagents?: (event: React.MouseEvent<HTMLButtonElement>) => void;
 };
 
 type ConversationCardMenuConfig = {
@@ -667,10 +574,8 @@ function ConversationCardMenuContent({
       delete: handleDelete,
       stop: handleStop,
       edit: handleEdit,
-      download: handleDownload,
       displayCost,
       showAgentTools,
-      showMicroagents,
     },
   } = config;
 
@@ -681,16 +586,12 @@ function ConversationCardMenuContent({
         onDelete={actions.canDelete ? handleDelete : undefined}
         onStop={actions.canStop ? handleStop : undefined}
         onEdit={actions.canEdit ? handleEdit : undefined}
-        onDownloadViaVSCode={actions.canDownload ? handleDownload : undefined}
         onDisplayCost={actions.canDisplayCost ? displayCost : undefined}
         onShowAgentTools={
-          actions.canShowAgentTools ? showAgentTools : undefined
-        }
-        onShowMicroagents={
-          actions.canShowMicroagents ? showMicroagents : undefined
-        }
-        position={position}
-      />
+        actions.canShowAgentTools ? showAgentTools : undefined
+      }
+      position={position}
+    />
     </div>
   );
 }
@@ -1019,8 +920,6 @@ interface ConversationCardModalsProps {
   setMetricsModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
   systemModalVisible: boolean;
   setSystemModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
-  microagentsModalVisible: boolean;
-  setMicroagentsModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
   systemMessage?: unknown;
   metrics: RootState["metrics"];
   t: ReturnType<typeof useTranslation>["t"];
@@ -1031,8 +930,6 @@ function ConversationCardModals({
   setMetricsModalVisible,
   systemModalVisible,
   setSystemModalVisible,
-  microagentsModalVisible,
-  setMicroagentsModalVisible,
   systemMessage,
   metrics,
   t,
@@ -1055,10 +952,6 @@ function ConversationCardModals({
             : null
         }
       />
-
-      {microagentsModalVisible && (
-        <MicroagentsModal onClose={() => setMicroagentsModalVisible(false)} />
-      )}
     </>
   );
 }
@@ -1097,7 +990,7 @@ function ConversationCardShell({
         "group relative h-auto w-full px-4 py-4 cursor-pointer transition-all duration-300",
         "before:absolute before:inset-y-0 before:left-0 before:w-1 before:rounded-r before:transition-all before:duration-300",
         isActive
-          ? "before:bg-gradient-to-b before:from-brand-500 before:to-accent-500 bg-brand-500/5 hover:bg-violet-500/10"
+          ? "before:bg-gradient-to-b before:from-brand-500 before:to-accent-500 bg-black/20 hover:bg-black/40"
           : "before:bg-brand-500/0 group-hover:before:bg-brand-500/70",
         "hover:bg-background-tertiary hover:shadow-lg",
         variant === "compact" &&
@@ -1180,8 +1073,6 @@ export function ConversationCard({
         setMetricsModalVisible={controller.setMetricsModalVisible}
         systemModalVisible={controller.systemModalVisible}
         setSystemModalVisible={controller.setSystemModalVisible}
-        microagentsModalVisible={controller.microagentsModalVisible}
-        setMicroagentsModalVisible={controller.setMicroagentsModalVisible}
         systemMessage={controller.systemMessage}
         metrics={controller.metrics}
         t={t}

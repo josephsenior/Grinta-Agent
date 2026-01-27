@@ -307,7 +307,7 @@ Verified in `conversations-list.tsx`:
 ### 4.4 Conversation Workspace (`/conversations/:id`) ✅ **IMPLEMENTED**
 
 Verified in `conversation.tsx`:
-- ✅ Tab navigation (Workspace, Browser, Jupyter, etc.) - Implemented via ConversationTabs
+- ✅ Tab navigation (Workspace, Browser, App, etc.) - Implemented via ConversationTabs
 - ✅ Chat panel with streaming - Implemented in ChatInterface
 - ✅ File explorer - Implemented
 - ✅ Code editor - Implemented

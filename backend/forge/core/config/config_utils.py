@@ -6,9 +6,8 @@ from typing import Any, get_args, get_origin
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
-OH_DEFAULT_AGENT = "CodeActAgent"
-OH_MAX_ITERATIONS = 500  # Increased from 100 for complex tasks with dynamic iteration management
-DEFAULT_WORKSPACE_MOUNT_PATH_IN_SANDBOX = "/workspace"
+FORGE_DEFAULT_AGENT = "CodeActAgent"
+FORGE_MAX_ITERATIONS = 500  # Increased from 100 for complex tasks with dynamic iteration management
 
 
 def get_field_info(field: FieldInfo) -> dict[str, Any]:

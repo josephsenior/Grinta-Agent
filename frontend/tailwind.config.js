@@ -52,13 +52,13 @@ export default {
 
         // Pure Black OLED Background System
         background: {
-          DEFAULT: "#000000", // Pure black for OLED
-          surface: "#000000", // Pure black surface
-          elevated: "#000000", // Pure black - no elevation difference
-          glass: "rgba(0, 0, 0, 0.98)", // Pure black glass
-          primary: "#000000",
-          secondary: "#000000",
-          tertiary: "#000000",
+          DEFAULT: "var(--color-background-primary)",
+          surface: "var(--color-background-secondary)",
+          elevated: "var(--color-background-secondary)",
+          glass: "rgba(7, 16, 40, 0.95)",
+          primary: "var(--color-background-primary)",
+          secondary: "var(--color-background-secondary)",
+          tertiary: "var(--color-background-tertiary)",
         },
 
         // Violet Brand Colors
@@ -347,9 +347,11 @@ export default {
             {},
         },
         ".btn-primary": {
-          background: "var(--color-luxury-gradient)",
-          color: "#ffffff",
-          "@apply shadow-glow hover:brightness-110 active:brightness-95": {},
+          /* Use transparent background and violet text instead of heavy background or borders */
+          background: "transparent",
+          color: "var(--color-brand-violet-mid)",
+          border: "none",
+          "@apply shadow-glow hover:brightness-95": {},
         },
         ".btn-icon": {
           "@apply btn h-10 w-10 p-0 rounded-full bg-background/60 hover:bg-accent-gold/10 text-content hover:text-accent-gold":

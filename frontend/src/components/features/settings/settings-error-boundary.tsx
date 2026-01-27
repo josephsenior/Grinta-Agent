@@ -1,10 +1,12 @@
 import React from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import i18n from "#/i18n";
 import { Button } from "#/components/ui/button";
 import { logger } from "#/utils/logger";
 
 interface SettingsErrorBoundaryProps {
   children: React.ReactNode;
+  // eslint-disable-next-line react/no-unused-prop-types
   fallbackMessage?: string;
 }
 
@@ -89,22 +91,26 @@ export class SettingsErrorBoundary extends React.Component<
 
             {/* Title */}
             <div className="text-center">
-              {/* eslint-disable-next-line i18next/no-literal-string */}
               <h2 className="text-lg font-semibold text-text-primary mb-2">
-                Settings Error
+                {i18n.t("error.settingsError", "Settings Error")}
               </h2>
               <p className="text-sm text-text-secondary">
                 {fallbackMessage ||
-                  "An error occurred while loading or saving your settings. This might be due to corrupted data or a connection issue."}
+                  i18n.t(
+                    "error.settingsErrorDescription",
+                    "An error occurred while loading or saving your settings. This might be due to corrupted data or a connection issue.",
+                  )}
               </p>
             </div>
 
             {/* Error Details (Development Only) */}
             {process.env.NODE_ENV === "development" && error && (
               <details className="mt-4 p-3 bg-background-tertiary rounded-lg">
-                {/* eslint-disable-next-line i18next/no-literal-string */}
                 <summary className="text-xs font-medium text-text-secondary cursor-pointer hover:text-text-primary">
-                  Error Details (Dev Only)
+                  {i18n.t(
+                    "error.errorDetailsDevOnly",
+                    "Error Details (Dev Only)",
+                  )}
                 </summary>
                 <div className="mt-2 space-y-2">
                   <p className="text-xs text-danger-500 font-mono break-all">
@@ -121,17 +127,15 @@ export class SettingsErrorBoundary extends React.Component<
 
             {/* Actions */}
             <div className="flex flex-col gap-2 pt-2">
-              {/* eslint-disable-next-line i18next/no-literal-string */}
               <Button
                 type="button"
                 onClick={this.handleReset}
                 className="w-full bg-brand-500 hover:bg-brand-600 text-white"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
-                Reload Page
+                {i18n.t("common.reloadPage", "Reload Page")}
               </Button>
 
-              {/* eslint-disable-next-line i18next/no-literal-string */}
               <Button
                 type="button"
                 onClick={() => {
@@ -141,13 +145,17 @@ export class SettingsErrorBoundary extends React.Component<
                 className="w-full border-danger-500/20 hover:bg-danger-500/10 text-danger-500"
               >
                 <AlertTriangle className="w-4 h-4 mr-2" />
-                Reset Settings & Reload
+                {i18n.t(
+                  "error.resetSettingsAndReload",
+                  "Reset Settings & Reload",
+                )}
               </Button>
 
-              {/* eslint-disable-next-line i18next/no-literal-string */}
               <p className="text-xs text-text-tertiary text-center mt-2">
-                If the problem persists, try clearing your browser cache or
-                contact support.
+                {i18n.t(
+                  "error.settingsErrorHelp",
+                  "If the problem persists, try clearing your browser cache or contact support.",
+                )}
               </p>
             </div>
           </div>

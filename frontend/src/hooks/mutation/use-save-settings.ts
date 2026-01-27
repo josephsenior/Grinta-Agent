@@ -14,18 +14,15 @@ const saveSettingsMutationFn = async (settings: Partial<PostSettings>) => {
     language: settings.LANGUAGE || DEFAULT_SETTINGS.LANGUAGE,
     confirmation_mode: settings.CONFIRMATION_MODE,
     security_analyzer: settings.SECURITY_ANALYZER,
+    user_consents_to_analytics: settings.USER_CONSENTS_TO_ANALYTICS,
     llm_api_key:
       settings.llm_api_key === ""
         ? ""
         : settings.llm_api_key?.trim() || undefined,
-    remote_runtime_resource_factor: settings.REMOTE_RUNTIME_RESOURCE_FACTOR,
     enable_default_condenser: settings.ENABLE_DEFAULT_CONDENSER,
     condenser_max_size:
       settings.CONDENSER_MAX_SIZE ?? DEFAULT_SETTINGS.CONDENSER_MAX_SIZE,
     enable_sound_notifications: settings.ENABLE_SOUND_NOTIFICATIONS,
-    user_consents_to_analytics: settings.user_consents_to_analytics,
-    provider_tokens_set: settings.PROVIDER_TOKENS_SET,
-    mcp_config: settings.MCP_CONFIG,
     enable_proactive_conversation_starters:
       settings.ENABLE_PROACTIVE_CONVERSATION_STARTERS,
     enable_solvability_analysis: settings.ENABLE_SOLVABILITY_ANALYSIS,
@@ -102,24 +99,6 @@ export const useSaveSettings = () => {
     mutationFn: async (settings: Partial<PostSettings>) => {
       const newSettings = { ...currentSettings, ...settings };
 
-      // Track MCP configuration changes
-      if (
-        settings.MCP_CONFIG &&
-        currentSettings?.MCP_CONFIG !== settings.MCP_CONFIG
-      ) {
-        const hasMcpConfig = !!settings.MCP_CONFIG;
-        const sseServersCount = settings.MCP_CONFIG?.sse_servers?.length || 0;
-        const stdioServersCount =
-          settings.MCP_CONFIG?.stdio_servers?.length || 0;
-
-        // Track MCP configuration usage
-        posthog.capture("mcp_config_updated", {
-          has_mcp_config: hasMcpConfig,
-          sse_servers_count: sseServersCount,
-          stdio_servers_count: stdioServersCount,
-        });
-      }
-
       await saveSettingsWithRetry(newSettings);
       return newSettings;
     },
@@ -131,11 +110,14 @@ export const useSaveSettings = () => {
       const previousSettings = queryClient.getQueryData(["settings"]);
 
       // Optimistically update to the new value
-      queryClient.setQueryData(["settings"], (old: any) => {
-        const updated = { ...old, ...settings };
-        logger.debug("[useSaveSettings] Optimistic update:", settings);
-        return updated;
-      });
+      queryClient.setQueryData(
+        ["settings"],
+        (old: Record<string, unknown> | undefined) => {
+          const updated = { ...old, ...settings };
+          logger.debug("[useSaveSettings] Optimistic update:", settings);
+          return updated;
+        },
+      );
 
       // Return a context object with the snapshotted value
       return { previousSettings };

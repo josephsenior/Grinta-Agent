@@ -276,7 +276,7 @@ export function ApiKeysManager() {
             components={{
               a: (
                 <a
-                  href="https://docs.all-hands.dev/usage/cloud/cloud-api"
+                  href="https://docs.forge.dev/usage/cloud/cloud-api"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-violet-500 hover:text-brand-400 hover:underline transition-colors duration-200"
@@ -318,3 +318,4 @@ export function ApiKeysManager() {
     </>
   );
 }
+

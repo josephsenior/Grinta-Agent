@@ -1,25 +1,29 @@
 import React from "react";
-import {
-  ExternalLink,
-  FileText,
-  Github,
-  Heart,
-  Info,
-  Mail,
-  Shield,
-} from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { ExternalLink, Github, Heart, Mail } from "lucide-react";
 import { BRAND } from "#/config/brand";
+import { I18nKey } from "#/i18n/declaration";
 // Use public logo instead of bundled asset
 const logo = "/forge-logo.png";
 
-const FOOTER_LINKS = [
+type FooterLink = {
+  labelKey: I18nKey;
+  href: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  external?: boolean;
+};
+
+type FooterSection = {
+  titleKey: I18nKey;
+  links: FooterLink[];
+};
+
+const FOOTER_LINKS: FooterSection[] = [
   {
-    title: "Product",
+    titleKey: I18nKey.FOOTER$SECTION_PRODUCT,
     links: [
-      { label: "About", href: "/about", icon: Info },
-      { label: "Pricing", href: "/pricing", icon: FileText },
       {
-        label: "Docs",
+        labelKey: I18nKey.FOOTER$LINK_DOCS,
         href: BRAND.urls.docs,
         icon: ExternalLink,
         external: true,
@@ -27,25 +31,27 @@ const FOOTER_LINKS = [
     ],
   },
   {
-    title: "Company",
+    titleKey: I18nKey.FOOTER$SECTION_COMPANY,
     links: [
-      { label: "Contact", href: "/contact", icon: Mail },
-      { label: "Privacy", href: "/privacy", icon: Shield },
-      { label: "Terms", href: "/terms", icon: FileText },
+      {
+        labelKey: I18nKey.FOOTER$LINK_SUPPORT,
+        href: BRAND.urls.support,
+        icon: Mail,
+        external: true,
+      },
     ],
   },
   {
-    title: "Resources",
+    titleKey: I18nKey.FOOTER$SECTION_RESOURCES,
     links: [
-      { label: "Security", href: "/privacy", icon: Shield },
       {
-        label: "Support",
+        labelKey: I18nKey.FOOTER$LINK_SUPPORT,
         href: BRAND.urls.support,
         icon: Mail,
         external: true,
       },
       {
-        label: "MIT License",
+        labelKey: I18nKey.FOOTER$LINK_LICENSE,
         href: "https://opensource.org/licenses/MIT",
         icon: ExternalLink,
         external: true,
@@ -55,6 +61,7 @@ const FOOTER_LINKS = [
 ];
 
 export function Footer() {
+  const { t } = useTranslation();
   const currentYear = new Date().getFullYear();
 
   return (
@@ -89,7 +96,8 @@ export function Footer() {
                   {BRAND.description}
                 </p>
                 <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[11px] uppercase tracking-[0.4em] text-white/60">
-                  Built with <Heart className="h-3.5 w-3.5 text-accent-500" />{" "}
+                  {t(I18nKey.FOOTER$BUILT_WITH)}{" "}
+                  <Heart className="h-3.5 w-3.5 text-accent-500" />{" "}
                   {BRAND.attribution.framework}
                 </div>
                 <a
@@ -99,19 +107,19 @@ export function Footer() {
                   className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
                 >
                   <Github className="h-4 w-4" />
-                  Star the repo
+                  {t(I18nKey.FOOTER$STAR_REPO)}
                 </a>
               </div>
 
               <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-                {FOOTER_LINKS.map(({ title, links }) => (
-                  <div key={title}>
+                {FOOTER_LINKS.map(({ titleKey, links }) => (
+                  <div key={titleKey}>
                     <p className="text-xs uppercase tracking-[0.35em] text-white/60">
-                      {title}
+                      {t(titleKey)}
                     </p>
                     <ul className="mt-4 space-y-3">
-                      {links.map(({ label, href, icon: Icon, external }) => (
-                        <li key={label}>
+                      {links.map(({ labelKey, href, icon: Icon, external }) => (
+                        <li key={labelKey}>
                           <a
                             href={href}
                             target={external ? "_blank" : undefined}
@@ -119,7 +127,7 @@ export function Footer() {
                             className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-white/70 transition hover:bg-white/5 hover:text-white"
                           >
                             {Icon && <Icon className="h-4 w-4 text-white/50" />}
-                            {label}
+                            {t(labelKey)}
                           </a>
                         </li>
                       ))}
@@ -132,28 +140,17 @@ export function Footer() {
             {/* Bottom Bar */}
             <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-white/10 bg-black/50 px-6 py-4 text-xs text-white/60 sm:flex-row">
               <span>
-                © {currentYear} {BRAND.name}. All rights reserved.
+                {t(I18nKey.FOOTER$COPYRIGHT, {
+                  year: currentYear,
+                  brand: BRAND.name,
+                })}
               </span>
               <div className="flex items-center gap-4">
-                <a
-                  href="/privacy"
-                  className="rounded-lg px-3 py-1.5 transition hover:bg-white/5 hover:text-white"
-                >
-                  Privacy
-                </a>
-                <span className="h-3 w-px bg-white/20" aria-hidden />
-                <a
-                  href="/terms"
-                  className="rounded-lg px-3 py-1.5 transition hover:bg-white/5 hover:text-white"
-                >
-                  Terms
-                </a>
-                <span className="h-3 w-px bg-white/20" aria-hidden />
                 <a
                   href={BRAND.urls.support}
                   className="rounded-lg px-3 py-1.5 transition hover:bg-white/5 hover:text-white"
                 >
-                  Support
+                  {t(I18nKey.FOOTER$LINK_SUPPORT)}
                 </a>
               </div>
             </div>

@@ -5,7 +5,7 @@ import { cn } from "#/utils/utils";
 type RadixElementRef<T> =
   T extends React.ForwardRefExoticComponent<React.RefAttributes<infer R>>
     ? R
-    : T extends React.ComponentType<any>
+    : T extends React.ComponentType<Record<string, unknown>>
       ? unknown
       : unknown;
 

@@ -30,7 +30,12 @@ mockUseCreateConversation.mockReturnValue({
 
 mockUseIsCreatingConversation.mockReturnValue(false);
 
-mockUseTranslation.mockReturnValue({ t: (key: string) => key });
+mockUseTranslation.mockReturnValue({
+  t: (key: string) => key,
+  i18n: {
+    changeLanguage: () => Promise.resolve(),
+  },
+});
 
 // Default mock for useGitRepositories
 mockUseGitRepositories.mockReturnValue({

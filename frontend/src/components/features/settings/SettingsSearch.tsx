@@ -4,122 +4,21 @@ import { useTranslation } from "react-i18next";
 import { Search, ArrowRight } from "lucide-react";
 import { cn } from "#/utils/utils";
 import { useSearchKeyboardShortcuts } from "#/hooks/use-search-keyboard-shortcuts";
+import { useConfig } from "#/hooks/query/use-config";
+import { useSubscriptionAccess } from "#/hooks/query/use-subscription-access";
+import {
+  getSettingsCategories,
+  type SettingsNavContext,
+  type SettingsNavMode,
+} from "#/config/settings-nav";
+import { I18nKey } from "#/i18n/declaration";
 
 interface SettingsSearchItem {
   path: string;
-  label: string;
+  labelKey: I18nKey;
   category: string;
   description?: string;
-  saasOnly?: boolean;
 }
-
-// All settings paths with their metadata
-const ALL_SETTINGS_ITEMS: SettingsSearchItem[] = [
-  // AI & Models
-  {
-    path: "/settings/llm",
-    label: "LLM Settings",
-    category: "AI & Models",
-    description: "Configure AI models and providers",
-  },
-  {
-    path: "/settings/mcp",
-    label: "MCP",
-    category: "AI & Models",
-    description: "Model Context Protocol servers",
-  },
-  {
-    path: "/settings/prompts",
-    label: "Prompts",
-    category: "AI & Models",
-    description: "Manage prompt templates",
-  },
-  {
-    path: "/settings/memory",
-    label: "Memory",
-    category: "AI & Models",
-    description: "Configure memory settings",
-  },
-  // Account
-  {
-    path: "/settings/user",
-    label: "User Settings",
-    category: "Account",
-    description: "Manage your profile",
-    saasOnly: true,
-  },
-  {
-    path: "/settings/billing",
-    label: "Billing",
-    category: "Account",
-    description: "Manage billing and credits",
-    saasOnly: true,
-  },
-  {
-    path: "/settings/app",
-    label: "Application",
-    category: "Account",
-    description: "Application settings",
-  },
-  {
-    path: "/settings/api-keys",
-    label: "API Keys",
-    category: "Account",
-    description: "Manage API keys",
-  },
-  // Integrations
-  {
-    path: "/settings/integrations",
-    label: "Git Integration",
-    category: "Integrations",
-    description: "Connect Git repositories",
-  },
-  {
-    path: "/settings/slack",
-    label: "Slack",
-    category: "Integrations",
-    description: "Slack integration",
-  },
-  // Data & Storage
-  {
-    path: "/settings/databases",
-    label: "Databases",
-    category: "Data & Storage",
-    description: "Manage databases",
-  },
-  {
-    path: "/settings/knowledge-base",
-    label: "Knowledge Base",
-    category: "Data & Storage",
-    description: "Knowledge base settings",
-  },
-  {
-    path: "/settings/backup",
-    label: "Backup & Restore",
-    category: "Data & Storage",
-    description: "Backup and restore data",
-  },
-  // Development
-  {
-    path: "/settings/snippets",
-    label: "Code Snippets",
-    category: "Development",
-    description: "Manage code snippets",
-  },
-  {
-    path: "/settings/secrets",
-    label: "Secrets",
-    category: "Development",
-    description: "Manage secrets",
-  },
-  // Analytics
-  {
-    path: "/settings/analytics",
-    label: "Analytics",
-    category: "Analytics",
-    description: "Usage statistics and metrics",
-  },
-];
 
 interface SettingsSearchProps {
   variant?: "inline" | "button";
@@ -133,29 +32,57 @@ export function SettingsSearch({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const { data: config } = useConfig();
+  const { data: subscriptionAccess } = useSubscriptionAccess();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const mode: SettingsNavMode = config?.APP_MODE === "saas" ? "saas" : "oss";
+  const hasPro = subscriptionAccess?.status === "ACTIVE";
+  const navContext = useMemo<SettingsNavContext>(
+    () => ({
+      mode,
+      hasPro,
+    }),
+    [mode, hasPro],
+  );
+
+  const allSettingsItems = useMemo<SettingsSearchItem[]>(() => {
+    const categories = getSettingsCategories(navContext);
+    const items: SettingsSearchItem[] = [];
+    categories.forEach((category) => {
+      category.items.forEach((item) => {
+        items.push({
+          path: item.path,
+          labelKey: item.labelKey,
+          category: category.title,
+          description: item.description,
+        });
+      });
+    });
+    return items;
+  }, [navContext]);
+
   // Filter settings based on query
   const filteredItems = useMemo(() => {
     if (!query.trim()) {
-      return ALL_SETTINGS_ITEMS.slice(0, 8); // Show top 8 when no query
+      return allSettingsItems.slice(0, 8); // Show top 8 when no query
     }
 
     const lowerQuery = query.toLowerCase();
     // Use t for translation context (even if not directly used in filter)
     const translatedQuery = t("search.query", query).toLowerCase();
-    return ALL_SETTINGS_ITEMS.filter(
+    return allSettingsItems.filter(
       (item) =>
-        item.label.toLowerCase().includes(lowerQuery) ||
+        t(item.labelKey).toLowerCase().includes(lowerQuery) ||
         item.category.toLowerCase().includes(lowerQuery) ||
         item.description?.toLowerCase().includes(lowerQuery) ||
         translatedQuery.includes(lowerQuery),
     );
-  }, [query, t]);
+  }, [allSettingsItems, query, t]);
 
   const handleSelectItem = React.useCallback(
     (item: SettingsSearchItem) => {
@@ -192,7 +119,10 @@ export function SettingsSearch({
     results: filteredItems,
     onSelect: handleSelectByIndex,
     onClose: handleClose,
-    shouldOpen: () => location.pathname === "/settings",
+    shouldOpen: () =>
+      variant === "inline"
+        ? location.pathname === "/settings/app"
+        : location.pathname.startsWith("/settings"),
     variant,
   });
 
@@ -258,7 +188,7 @@ export function SettingsSearch({
                     >
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-white">
-                          {item.label}
+                          {t(item.labelKey)}
                         </div>
                         <div className="text-xs text-white/50 mt-0.5">
                           {item.category}
@@ -314,7 +244,7 @@ export function SettingsSearch({
             >
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white">
-                  {item.label}
+                  {t(item.labelKey)}
                 </div>
                 <div className="text-xs text-white/50 mt-0.5">
                   {item.category}

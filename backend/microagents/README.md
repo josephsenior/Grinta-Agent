@@ -54,8 +54,6 @@ See [add_agent.md](./add_agent.md) for template and examples.
 ## Available Microagents
 
 - `github.md` - GitHub operations
-- `gitlab.md` - GitLab operations
-- `bitbucket.md` - Bitbucket operations
 - `code-review.md` - PR reviews
 - `kubernetes.md` - K8s with KIND
 - `database.md` - Database setup

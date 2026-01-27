@@ -95,7 +95,7 @@ export function MCPConfigViewer({ mcpConfig }: MCPConfigViewerProps) {
           {t(I18nKey.SETTINGS$MCP_CONFIGURATION)}
         </h3>
         <a
-          href="https://docs.all-hands.dev/usage/mcp"
+          href="https://docs.forge.dev/usage/mcp"
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs text-primary-500 hover:text-primary-400 hover:underline transition-colors duration-200"
@@ -139,3 +139,4 @@ export function MCPConfigViewer({ mcpConfig }: MCPConfigViewerProps) {
     </div>
   );
 }
+

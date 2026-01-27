@@ -11,7 +11,6 @@ import {
 } from "#/types/message";
 import { handleObservationMessage } from "./observations";
 import { appendInput } from "#/state/command-slice";
-import { appendJupyterInput } from "#/state/jupyter-slice";
 import { queryClient } from "#/query-client-config";
 
 export function handleActionMessage(message: ActionMessage) {
@@ -33,10 +32,6 @@ export function handleActionMessage(message: ActionMessage) {
     store.dispatch(appendInput(message.args.command));
   }
 
-  if (message.action === ActionType.RUN_IPYTHON) {
-    store.dispatch(appendJupyterInput(message.args.code));
-  }
-
   if ("args" in message && "security_risk" in message.args) {
     store.dispatch(appendSecurityAnalyzerInput(message));
   }
@@ -51,18 +46,24 @@ export function handleStatusMessage(message: StatusMessage) {
     queryClient.invalidateQueries({
       queryKey: ["user", "conversation", conversationId],
     });
-  } else if (message.type === "info") {
+  } else if (message.type === "info" || message.type === "error") {
     store.dispatch(
       setCurStatusMessage({
         ...message,
       }),
     );
-  } else if (message.type === "error") {
-    trackError({
-      message: message.message,
-      source: "chat",
-      metadata: { msgId: message.id },
-    });
+    if (message.type === "error") {
+      import("#/state/agent-slice").then(({ setCurrentAgentState }) => {
+        import("#/types/agent-state").then(({ AgentState }) => {
+          store.dispatch(setCurrentAgentState(AgentState.ERROR));
+        });
+      });
+      trackError({
+        message: message.message,
+        source: "chat",
+        metadata: { msgId: message.id },
+      });
+    }
   }
 }
 

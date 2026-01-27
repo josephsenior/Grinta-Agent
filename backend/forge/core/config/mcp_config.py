@@ -16,6 +16,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from forge._canonical import CanonicalModelMetaclass
 
 if TYPE_CHECKING:
     from forge.core.config.forge_config import ForgeConfig
@@ -24,10 +25,14 @@ from forge.utils.import_utils import get_impl
 
 
 def _validate_mcp_url(url: str) -> str:
-    """Shared URL validation logic for MCP servers."""
-    if not url.strip():
-        msg = "URL cannot be empty"
-        raise ValueError(msg)
+    """Shared URL validation logic for MCP servers with type-safe validation."""
+    from forge.core.security.type_safety import validate_non_empty_string
+
+    # Use type-safe validation
+    try:
+        validate_non_empty_string(url, name="url")
+    except ValueError as e:
+        raise ValueError(f"URL cannot be empty: {e}") from e
     url = url.strip()
     try:
         parsed = urlparse(url)
@@ -48,7 +53,7 @@ def _validate_mcp_url(url: str) -> str:
         raise ValueError(msg) from e
 
 
-class MCPSSEServerConfig(BaseModel):
+class MCPSSEServerConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for a single MCP server.
 
     Attributes:
@@ -67,7 +72,7 @@ class MCPSSEServerConfig(BaseModel):
         return _validate_mcp_url(v)
 
 
-class MCPStdioServerConfig(BaseModel):
+class MCPStdioServerConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for a MCP server that uses stdio.
 
     Attributes:
@@ -86,10 +91,15 @@ class MCPStdioServerConfig(BaseModel):
     @field_validator("name", mode="before")
     @classmethod
     def validate_server_name(cls, v: str) -> str:
-        """Validate server name for stdio MCP servers."""
-        if not v.strip():
-            msg = "Server name cannot be empty"
-            raise ValueError(msg)
+        """Validate server name for stdio MCP servers with type-safe validation."""
+        from forge.core.security.type_safety import validate_non_empty_string
+
+        # Use type-safe validation
+        try:
+            validate_non_empty_string(v, name="server_name")
+        except ValueError as e:
+            raise ValueError(f"Server name cannot be empty: {e}") from e
+
         v = v.strip()
         if not re.match("^[a-zA-Z0-9_-]+$", v):
             msg = "Server name can only contain letters, numbers, hyphens, and underscores"
@@ -99,10 +109,15 @@ class MCPStdioServerConfig(BaseModel):
     @field_validator("command", mode="before")
     @classmethod
     def validate_command(cls, v: str) -> str:
-        """Validate command for stdio MCP servers."""
-        if not v.strip():
-            msg = "Command cannot be empty"
-            raise ValueError(msg)
+        """Validate command for stdio MCP servers with type-safe validation."""
+        from forge.core.security.type_safety import validate_non_empty_string
+
+        # Use type-safe validation
+        try:
+            validate_non_empty_string(v, name="command")
+        except ValueError as e:
+            raise ValueError(f"Command cannot be empty: {e}") from e
+
         v = v.strip()
         if " " in v:
             msg = "Command should be a single executable without spaces (use arguments field for parameters)"
@@ -185,7 +200,7 @@ class MCPStdioServerConfig(BaseModel):
         )
 
 
-class MCPSHTTPServerConfig(BaseModel):
+class MCPSHTTPServerConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for HTTP-based MCP servers.
 
     Attributes:
@@ -204,7 +219,7 @@ class MCPSHTTPServerConfig(BaseModel):
         return _validate_mcp_url(v)
 
 
-class MCPConfig(BaseModel):
+class MCPConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for MCP (Message Control Protocol) settings.
 
     Attributes:

@@ -31,7 +31,6 @@ class ConfirmationService:
 
     def get_next_action(self) -> "Action":
         """Fetch the next action from replay logs or the agent directly."""
-
         controller = self._context.get_controller()
         if controller._replay_manager.should_replay():
             action = controller._replay_manager.step()
@@ -88,7 +87,6 @@ class ConfirmationService:
 
     async def evaluate_action(self, action: "Action") -> None:
         """Run confirmation policy checks for a runnable action."""
-
         controller = self._context.get_controller()
         if not controller.state.confirmation_mode:
             return
@@ -108,7 +106,6 @@ class ConfirmationService:
 
     async def handle_pending_confirmation(self, action: "Action") -> bool:
         """Transition controller to awaiting state when confirmation is required."""
-
         if not hasattr(action, "confirmation_state"):
             return False
 
@@ -122,7 +119,6 @@ class ConfirmationService:
         self, observation: "Observation", ctx: "ToolInvocationContext | None"
     ) -> None:
         """Handle state transitions when an observation arrives for a pending action."""
-
         controller = self._context.get_controller()
 
         # Handle confirmation state transitions

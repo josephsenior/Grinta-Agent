@@ -1,10 +1,10 @@
 import { screen, within } from "@testing-library/react";
 import * as RouterDom from "react-router-dom";
-import type { GetConfigResponse } from "#/api/open-hands.types";
-import { describe, expect, it, vi } from "vitest";
+import type { GetConfigResponse } from "#/api/forge.types";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsScreen, { clientLoader } from "#/routes/settings";
 import Forge from "#/api/forge";
-import { renderWithProviders } from "../../test-utils";
+import { renderWithProviders } from "#test-utils";
 
 // Mock the i18next hook
 vi.mock("react-i18next", async () => {
@@ -28,7 +28,7 @@ vi.mock("react-i18next", async () => {
         return translations[key] || key;
       },
       i18n: {
-        changeLanguage: vi.fn(),
+        changeLanguage: vi.fn(() => Promise.resolve()),
       },
     }),
   };
@@ -126,6 +126,10 @@ describe("Settings Screen", () => {
     const getConfigSpy = vi.spyOn(Forge, "getConfig");
     getConfigSpy.mockResolvedValue({
       APP_MODE: "oss",
+      GITHUB_CLIENT_ID: "test-client-id",
+      FEATURE_FLAGS: {
+        HIDE_LLM_SETTINGS: false,
+      },
     });
 
     // Clear any existing query data
@@ -269,23 +273,15 @@ describe("clientLoader", () => {
     await expect(clientLoader(undefined as any)).resolves.toBeNull();
   });
 
-  it("should redirect /settings to /settings/user in saas mode", async () => {
-    const saasConfig: GetConfigResponse = {
-      ...baseConfig,
-      APP_MODE: "saas",
-      FEATURE_FLAGS: {
-        ...baseConfig.FEATURE_FLAGS,
-        ENABLE_BILLING: true,
-      },
-    };
+  it("should redirect /settings to /settings/app", async () => {
     const getConfigSpy = vi.spyOn(Forge, "getConfig");
-    getConfigSpy.mockResolvedValue(saasConfig);
+    getConfigSpy.mockResolvedValue(baseConfig);
 
     const request = new Request("https://example.com/settings");
     const response = await clientLoader({ request } as any);
 
     expect(response?.status).toBe(302);
-    expect(response?.headers.get("Location")).toBe("/settings/user");
+    expect(response?.headers.get("Location")).toBe("/settings/app");
 
     getConfigSpy.mockRestore();
   });
@@ -307,9 +303,10 @@ describe("clientLoader", () => {
     const getConfigSpy = vi.spyOn(Forge, "getConfig");
     getConfigSpy.mockResolvedValue(baseConfig);
 
-    const request = new Request("https://example.com/settings/snippets");
+    const request = new Request("https://example.com/settings/app");
     await expect(clientLoader({ request } as any)).resolves.toBeNull();
 
     getConfigSpy.mockRestore();
   });
 });
+

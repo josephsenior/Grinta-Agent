@@ -6,7 +6,6 @@ import {
   SystemMessageAction,
   CommandAction,
   FinishAction,
-  TaskTrackingAction,
   FileWriteAction,
   FileEditAction,
   StreamingChunkAction,
@@ -17,7 +16,6 @@ import {
   ErrorObservation,
   MCPObservation,
   ForgeObservation,
-  TaskTrackingObservation,
 } from "./observations";
 import { StatusUpdate } from "./variances";
 
@@ -33,13 +31,13 @@ export const isForgeAction = (event: unknown): event is ForgeAction =>
   typeof event === "object" &&
   event !== null &&
   "action" in event &&
-  typeof (event as any).action === "string";
+  typeof (event as { action?: unknown }).action === "string";
 
 export const isForgeObservation = (event: unknown): event is ForgeObservation =>
   typeof event === "object" &&
   event !== null &&
   "observation" in event &&
-  typeof (event as any).observation === "string";
+  typeof (event as { observation?: unknown }).observation === "string";
 
 export const isUserMessage = (event: unknown): event is UserMessageAction =>
   isForgeAction(event) && event.source === "user" && event.action === "message";
@@ -81,16 +79,6 @@ export const isRejectObservation = (
 export const isMcpObservation = (event: unknown): event is MCPObservation =>
   isForgeObservation(event) && event.observation === "mcp";
 
-export const isTaskTrackingAction = (
-  event: unknown,
-): event is TaskTrackingAction =>
-  isForgeAction(event) && event.action === "task_tracking";
-
-export const isTaskTrackingObservation = (
-  event: unknown,
-): event is TaskTrackingObservation =>
-  isForgeObservation(event) && event.observation === "task_tracking";
-
 export const isFileWriteAction = (event: unknown): event is FileWriteAction =>
   isForgeAction(event) && event.action === "write";
 
@@ -114,25 +102,31 @@ export const hasArgs = (
   event: unknown,
 ): event is ForgeAction & { args: Record<string, unknown> } =>
   isForgeAction(event) &&
-  typeof (event as any).args === "object" &&
-  (event as any).args !== null;
+  typeof (event as { args?: unknown }).args === "object" &&
+  (event as { args?: unknown }).args !== null;
 
 export const hasExtras = (
   event: unknown,
 ): event is ForgeObservation & { extras: Record<string, unknown> } =>
   isForgeObservation(event) &&
-  typeof (event as any).extras === "object" &&
-  (event as any).extras !== null;
+  typeof (event as { extras?: unknown }).extras === "object" &&
+  (event as { extras?: unknown }).extras !== null;
+
+export const hasThoughtProperty = (
+  args: Record<string, unknown>,
+): args is Record<string, unknown> & { thought: string } =>
+  "thought" in args && typeof args.thought === "string";
 
 // Dynamic name checks (useful for safe runtime branching)
 export const isActionNamed = (
   event: unknown,
   name: string,
 ): event is ForgeAction =>
-  isForgeAction(event) && (event as any).action === name;
+  isForgeAction(event) && (event as { action?: unknown }).action === name;
 
 export const isObservationNamed = (
   event: unknown,
   name: string,
 ): event is ForgeObservation =>
-  isForgeObservation(event) && (event as any).observation === name;
+  isForgeObservation(event) &&
+  (event as { observation?: unknown }).observation === name;

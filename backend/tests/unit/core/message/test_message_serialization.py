@@ -4,29 +4,7 @@ from types import SimpleNamespace
 from typing import ClassVar
 
 import pytest
-from litellm import ChatCompletionMessageToolCall
-
-from forge.core import message as message_module
-from forge.core.message import Content, ImageContent, Message, TextContent
-
-
-def test_import_without_litellm(monkeypatch):
-    original_import = __import__
-
-    def fake_import(name, *args, **kwargs):
-        if name == "litellm":
-            raise ImportError("litellm unavailable")
-        return original_import(name, *args, **kwargs)
-
-    monkeypatch.setattr("builtins.__import__", fake_import)
-    monkeypatch.delitem(sys.modules, "forge.core.message", raising=False)
-
-    reloaded = importlib.import_module("forge.core.message")
-    assert reloaded.ChatCompletionMessageToolCall is message_module.Any
-
-    monkeypatch.setattr("builtins.__import__", original_import)
-    monkeypatch.delitem(sys.modules, "forge.core.message", raising=False)
-    importlib.import_module("forge.core.message")
+from forge.core.message import Content, ImageContent, Message, TextContent, ToolCall
 
 
 def test_content_serialize_not_implemented():
@@ -52,7 +30,7 @@ def test_image_content_cache_prompt_marks_last_image():
 
 
 def test_tool_message_cache_handling_with_text_and_image(monkeypatch):
-    tool_call = ChatCompletionMessageToolCall(
+    tool_call = ToolCall(
         id="call", type="function", function={"name": "fn", "arguments": "{}"}
     )
     message = Message(

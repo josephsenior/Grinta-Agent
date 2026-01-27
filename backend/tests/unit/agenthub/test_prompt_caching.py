@@ -1,7 +1,7 @@
 from typing import List, cast
 
 import pytest
-from litellm import ModelResponse
+from forge.llm.direct_clients import LLMResponse
 from pydantic import SecretStr
 
 from forge.agenthub.codeact_agent.codeact_agent import CodeActAgent
@@ -34,29 +34,20 @@ def codeact_agent(llm_registry):
 
 
 def response_mock(content: str, tool_call_id: str):
-    class MockModelResponse:
-        def __init__(self, content, tool_call_id):
-            self.choices = [
-                {
-                    "message": {
-                        "content": content,
-                        "tool_calls": [
-                            {
-                                "function": {
-                                    "id": tool_call_id,
-                                    "name": "execute_bash",
-                                    "arguments": "{}",
-                                }
-                            }
-                        ],
-                    }
+    return LLMResponse(
+        content=content,
+        model="claude-3-5-sonnet-20241022",
+        usage={"prompt_tokens": 100, "completion_tokens": 50},
+        tool_calls=[
+            {
+                "function": {
+                    "id": tool_call_id,
+                    "name": "execute_bash",
+                    "arguments": "{}",
                 }
-            ]
-
-        def model_dump(self):
-            return {"choices": self.choices}
-
-    return ModelResponse(**MockModelResponse(content, tool_call_id).model_dump())
+            }
+        ],
+    )
 
 
 def test_get_messages(codeact_agent: CodeActAgent):

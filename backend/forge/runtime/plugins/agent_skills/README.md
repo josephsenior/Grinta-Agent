@@ -5,7 +5,7 @@ This folder implements a skill/tool set `agentskills` for Forge.
 It is intended to be used by the agent **inside sandbox**.
 The skill set will be exposed as a `pip` package that can be installed as a plugin inside the sandbox.
 
-The skill set can contain a bunch of wrapped tools for agent ([many examples here](https://github.com/All-Hands-AI/Forge/pull/1914)), for example:
+The skill set can contain a bunch of wrapped tools for agent ([many examples here](https://github.com/Forge/Forge/pull/1914)), for example:
 
 - Audio/Video to text (these are a temporary solution, and we should switch to multimodal models when they are sufficiently cheap
 - PDF to text
@@ -23,37 +23,17 @@ We ONLY want to add a new skill, when:
 
 # Intended functionality
 
-- Tool/skill usage (through `IPythonRunAction`)
+- Tool/skill usage (through bash commands)
 
 ```python
-# In[1]
 from agentskills import open_file, edit_file
 open_file("/workspace/a.txt")
-# Out[1]
-[SWE-agent open output]
-
-# In[2]
-edit_file(
-    "/workspace/a.txt",
-    start=1, end=3,
-    content=(
-        ("REPLACE TEXT")
-))
-# Out[1]
-[SWE-agent edit output]
 ```
 
-- Tool/skill retrieval (through `IPythonRunAction`)
+- Tool/skill retrieval (through bash commands)
 
 ```python
-# In[1]
 from agentskills import help_me
-
 help_me("I want to solve a task that involves reading a bunch of PDFs and reason about them")
-
-# Out[1]
-"Here are the top skills that may be helpful to you:
-- `pdf_to_text`: [documentation about the tools]
-...
-"
 ```
+

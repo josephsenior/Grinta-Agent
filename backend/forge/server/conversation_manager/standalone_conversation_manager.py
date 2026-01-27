@@ -133,25 +133,134 @@ class StandaloneConversationManager(ConversationManager):
             if session := self._local_agent_loops_by_sid.get(sid):
                 event_stream = session.agent_session.event_stream
                 runtime = session.agent_session.runtime
+                # If runtime is None, the agent session is still initializing
+                # Wait for it to be created (it's created in agent_session.start())
+                # Check if agent session is starting to know if we should wait
+                if runtime is None and hasattr(session.agent_session, '_starting') and session.agent_session._starting:
+                    import asyncio
+                    max_wait = 30  # Wait up to 30 seconds for runtime initialization
+                    wait_interval = 0.2
+                    waited = 0.0
+                    logger.debug(
+                        f"Agent session for {sid} is starting, waiting for runtime to be created..."
+                    )
+                    while waited < max_wait and runtime is None:
+                        await asyncio.sleep(wait_interval)
+                        waited += wait_interval
+                        runtime = session.agent_session.runtime
+                        # Check if initialization failed
+                        if getattr(session.agent_session, "_startup_failed", False):
+                            logger.warning(f"Agent session for {sid} failed initialization")
+                            break
+                        if hasattr(session.agent_session, "_closed") and session.agent_session._closed:
+                            logger.warning(f"Agent session for {sid} was closed during initialization")
+                            break
+                    if runtime is None:
+                        logger.warning(
+                            f"Runtime not created for session {sid} after {max_wait}s of waiting. "
+                            "This may indicate an initialization failure."
+                        )
+                elif runtime is None:
+                    # Session exists but not starting - might be in an error state
+                    logger.debug(
+                        f"Session {sid} exists but runtime is None and not starting. "
+                        "This may indicate the session failed to initialize."
+                    )
+            # Create ServerConversation
+            # If runtime is None, ServerConversation will create its own runtime for file access
+            # This allows file access even before agent initialization completes
             c = ServerConversation(
                 sid,
                 file_store=self.file_store,
                 config=self.config,
                 user_id=user_id,
-                event_stream=event_stream,
-                runtime=runtime,
+                event_stream=event_stream,  # type: ignore[arg-type]
+                runtime=runtime,  # May be None - ServerConversation will create one
             )
+            
+            # CRITICAL: Ensure runtime exists (it should be created in __init__ if runtime=None)
+            if not c.runtime:
+                logger.error(
+                    f"ServerConversation for {sid} was created without a runtime! "
+                    "This should never happen - runtime should be created in __init__."
+                )
+                await c.disconnect()
+                return None
+            
+            logger.debug(
+                f"ServerConversation for {sid} created with runtime: {type(c.runtime).__name__}, "
+                f"attach_to_existing={c._attach_to_existing}"
+            )
+            
+            # Connect and initialize the runtime
             try:
                 await c.connect()
+                logger.debug(f"ServerConversation for {sid} connected successfully")
+                # Verify runtime is actually ready after connection
+                # For in-process local runtime, initialization happens in connect()
+                if hasattr(c.runtime, 'runtime_initialized'):
+                    if not c.runtime.runtime_initialized:
+                        logger.debug(
+                            f"Runtime for conversation {sid} connected but not initialized yet, "
+                            "waiting for initialization..."
+                        )
+                        # Wait for initialization to complete
+                        import asyncio
+                        max_wait = 5  # Reduced wait time since in-process runtime initializes quickly
+                        wait_interval = 0.1
+                        waited = 0.0
+                        while waited < max_wait and not c.runtime.runtime_initialized:
+                            await asyncio.sleep(wait_interval)
+                            waited += wait_interval
+                            # Also check if agent session runtime is now ready (prefer that one)
+                            if session and session.agent_session.runtime:
+                                logger.debug(
+                                    f"Agent session runtime for {sid} is now ready, "
+                                    "updating ServerConversation to use it"
+                                )
+                                # Update to use agent session's runtime if it's ready
+                                # This avoids having two runtimes for the same conversation
+                                c.runtime = session.agent_session.runtime
+                                c._attach_to_existing = True
+                                break
+                        if not c.runtime.runtime_initialized:
+                            logger.warning(
+                                f"Runtime for conversation {sid} still not initialized after {max_wait}s. "
+                                "File operations may fail."
+                            )
+                # Final check: ensure runtime is ready before returning
+                if not c.runtime:
+                    logger.error(f"Runtime for conversation {sid} is None after connect()!")
+                    await c.disconnect()
+                    return None
+                    
+                logger.debug(
+                    f"ServerConversation for {sid} ready with runtime: "
+                    f"{type(c.runtime).__name__}, initialized={getattr(c.runtime, 'runtime_initialized', 'N/A')}"
+                )
             except AgentRuntimeUnavailableError as e:
                 logger.error(
                     "Error connecting to conversation %s: %s",
                     c.sid,
                     e,
                     extra={"session_id": sid},
+                    exc_info=True,  # Include full traceback
                 )
-                await c.disconnect()
-                return None
+                # Don't disconnect - keep the conversation and runtime for retry
+                # The runtime might still work for file operations even if connect() failed
+                logger.warning(
+                    f"Conversation {sid} created but runtime connection failed: {e}. "
+                    "File operations will not work until the runtime is ready. "
+                    "Check logs above for details about why the local runtime failed to initialize."
+                )
+            except Exception as e:
+                logger.error(
+                    f"Unexpected error connecting runtime for conversation {sid}: {e}",
+                    exc_info=True,
+                    extra={"session_id": sid},
+                )
+                # Don't fail completely - allow the conversation to exist
+                # The runtime might still work
             end_time = time.time()
             logger.info(
                 "ServerConversation %s connected in %s seconds",
@@ -389,7 +498,7 @@ class StandaloneConversationManager(ConversationManager):
                 if self._loop is not None:
                     await run_in_loop(
                         self.sio.emit(
-                            "oh_event",
+                            "forge_event",
                             status_update_dict,
                             to=ROOM_KEY.format(sid=oldest_conversation_id),
                         ),
@@ -397,7 +506,7 @@ class StandaloneConversationManager(ConversationManager):
                     )
                 else:
                     await self.sio.emit(
-                        "oh_event",
+                        "forge_event",
                         status_update_dict,
                         to=ROOM_KEY.format(sid=oldest_conversation_id),
                     )
@@ -424,7 +533,7 @@ class StandaloneConversationManager(ConversationManager):
             session.initialize_agent(settings, initial_user_msg, replay_json)
         )
         with contextlib.suppress(ValueError):
-            session.agent_session.event_stream.subscribe(
+            session.agent_session.event_stream.subscribe(  # type: ignore[attr-defined]
                 EventStreamSubscriber.SERVER,
                 self._create_conversation_update_callback(
                     user_id, sid, settings, session.llm_registry
@@ -713,7 +822,7 @@ class StandaloneConversationManager(ConversationManager):
             if self._loop is not None:
                 await run_in_loop(
                     self.sio.emit(
-                        "oh_event",
+                        "forge_event",
                         status_update_dict,
                         to=ROOM_KEY.format(sid=conversation_id),
                     ),
@@ -721,7 +830,7 @@ class StandaloneConversationManager(ConversationManager):
                 )
             else:
                 await self.sio.emit(
-                    "oh_event",
+                    "forge_event",
                     status_update_dict,
                     to=ROOM_KEY.format(sid=conversation_id),
                 )
@@ -881,7 +990,7 @@ class StandaloneConversationManager(ConversationManager):
             conversation_id=session.sid,
             url=self._get_conversation_url(session.sid),
             session_api_key=None,
-            event_store=session.agent_session.event_stream,
+            event_store=session.agent_session.event_stream,  # type: ignore[arg-type]
             status=_get_status_from_session(session),
             runtime_status=getattr(
                 session.agent_session.runtime, "runtime_status", None
@@ -897,6 +1006,8 @@ def _get_status_from_session(session: "Session") -> ConversationStatus:
     agent_session = session.agent_session
     if agent_session.runtime and agent_session.runtime.runtime_initialized:
         return ConversationStatus.RUNNING
+    if getattr(agent_session, "_startup_failed", False):
+        return ConversationStatus.ERROR
     return ConversationStatus.STARTING
 
 

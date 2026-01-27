@@ -55,3 +55,46 @@ def test_format_json_ensure_ascii(capsys):
     print_json_stdout(obj, pretty=False, ensure_ascii=True)
     captured = capsys.readouterr()
     assert captured.out.strip() == escaped
+
+
+def test_print_json_stdout_exception_handling(monkeypatch):
+    """Test print_json_stdout handles stdout write exceptions."""
+    import sys
+    original_write = sys.stdout.write
+    original_flush = sys.stdout.flush
+    call_count = {"write": 0, "flush": 0}
+    
+    def mock_write(*args, **kwargs):
+        call_count["write"] += 1
+        if call_count["write"] == 1:
+            raise OSError("Write failed")
+        return original_write(*args, **kwargs)
+    
+    monkeypatch.setattr(sys.stdout, "write", mock_write)
+    
+    # This should not raise, but log the exception
+    print_json_stdout({"test": "data"})
+    
+    # Restore
+    monkeypatch.setattr(sys.stdout, "write", original_write)
+    monkeypatch.setattr(sys.stdout, "flush", original_flush)
+
+
+def test_format_json_exception_handling(monkeypatch):
+    """Test format_json handles serialization exceptions."""
+    import json as json_module
+    original_dumps = json_module.dumps
+    
+    def mock_dumps(*args, **kwargs):
+        raise TypeError("Cannot serialize")
+    
+    monkeypatch.setattr(json_module, "dumps", mock_dumps)
+    
+    obj = {"test": "data"}
+    result = format_json(obj)
+    assert result == repr(obj)
+    
+    # Restore
+    monkeypatch.setattr(json_module, "dumps", original_dumps)
+
+

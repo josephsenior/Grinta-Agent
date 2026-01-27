@@ -25,11 +25,6 @@ def suppress_cli_warnings() -> None:
         "ignore", message=".*Expected .* fields but got .*", category=UserWarning
     )
     warnings.filterwarnings("ignore", category=SyntaxWarning, module="pydub\\.utils")
-    warnings.filterwarnings(
-        "ignore",
-        message="coroutine 'close_litellm_async_clients' was never awaited",
-        category=RuntimeWarning,
-    )
 
 
 suppress_cli_warnings()

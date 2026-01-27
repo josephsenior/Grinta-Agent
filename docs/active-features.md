@@ -77,11 +77,6 @@ Current production configuration for Forge.
 **Config:** `enable_llm_editor = false`  
 **Why:** Ultimate Editor is better (structure-aware vs LLM-based)
 
-### ❌ Jupyter
-**Status:** DISABLED  
-**Config:** `enable_jupyter = false`  
-**Why:** Not needed for current use cases
-
 ### ❌ Condensation Request
 **Status:** DISABLED  
 **Config:** `enable_condensation_request = false`  
@@ -98,8 +93,7 @@ Current production configuration for Forge.
 
 ### Current Mode: Simple
 **Config:** `agent_mode = "simple"`  
-**What it means:** Fast autonomous execution (bolt.new style)  
-**Alternative:** `"enterprise"` for MetaSOP multi-role orchestration
+**What it means:** Fast autonomous execution (bolt.new style)
 
 ### System Prompt
 **Active:** `system_prompt_forge.j2` (166 lines, optimized)  
@@ -185,7 +179,6 @@ Current production configuration for Forge.
 | Self-Remediation | ✅ ACTIVE | ✅ Yes | ⭐⭐⭐ |
 | MCP Servers | ✅ ACTIVE | ✅ Yes | ⭐⭐⭐⭐ |
 | LLM Editor | ❌ DISABLED | ⚠️ Experimental | - |
-| Jupyter | ❌ DISABLED | ✅ Yes | ⭐⭐ |
 | Micro-Iterations | ❌ DISABLED | ❌ Experimental | - |
 
 ---
@@ -193,17 +186,6 @@ Current production configuration for Forge.
 ## Experimental/Unused Features
 
 **These exist in code but are not active in production:**
-
-### Prompt Optimization System
-**Location:** `Forge/prompt_optimization/`  
-**Status:** Unclear if used  
-**Purpose:** Real-time prompt evolution and tool optimization  
-**Files:** 29 Python files with advanced optimization
-
-**Questions:**
-- Is this being used in production?
-- Is it experimental?
-- Should it be documented or removed?
 
 ### Multiple Memory Implementations
 **Location:** `Forge/memory/`  
@@ -217,14 +199,6 @@ Current production configuration for Forge.
 **Questions:**
 - Which one is actually used?
 - Are others experimental or alternatives?
-
-### ACE Framework
-**Location:** `Forge/agenthub/codeact_agent/codeact_agent.py`  
-**Status:** Initialized if enabled  
-**Config:** Not in config.toml (unclear if active)  
-**Purpose:** Self-improving playbook system
-
-**Question:** Is this production-active or experimental?
 
 ---
 
@@ -240,9 +214,7 @@ Current production configuration for Forge.
 - ✅ All MCP servers
 
 ### Investigate (Unclear Status):
-- ❓ Prompt optimization system
 - ❓ Multiple memory implementations
-- ❓ ACE framework
 - ❓ Various agent modes
 
 ### Document or Remove:

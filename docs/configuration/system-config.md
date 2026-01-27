@@ -137,7 +137,6 @@ rate_limit_requests = 100
 rate_limit_window = 60
 
 # Feature flags
-enable_metasop = true
 enable_codeact = true
 enable_memory = true
 enable_optimization = true
@@ -204,58 +203,6 @@ backup_before_migrate = true
 
 ## 🤖 **Agent Configuration**
 
-### **MetaSOP Configuration**
-```toml
-[metasop]
-# Enable MetaSOP
-enable_metasop = true
-
-# Agent settings
-max_concurrent_agents = 5
-agent_timeout = 300
-retry_attempts = 3
-retry_delay = 1.0
-
-# Memory settings
-enable_memory = true
-memory_retention_days = 30
-max_memory_size = 1000
-memory_compression = true
-
-# Monitoring
-enable_monitoring = true
-log_level = "INFO"
-metrics_retention_days = 7
-
-# ACE framework
-enable_ace = true
-ace_max_bullets = 1000
-ace_similarity_threshold = 0.7
-ace_max_refinement_rounds = 3
-ace_multi_epoch = true
-ace_num_epochs = 5
-
-# Prompt optimization
-enable_prompt_optimization = true
-prompt_opt_ab_split = 0.1
-prompt_opt_min_samples = 10
-prompt_opt_confidence_threshold = 0.8
-prompt_opt_success_weight = 0.4
-prompt_opt_time_weight = 0.3
-prompt_opt_error_weight = 0.2
-prompt_opt_cost_weight = 0.1
-prompt_opt_enable_evolution = true
-prompt_opt_evolution_threshold = 0.05
-prompt_opt_max_variants_per_prompt = 5
-prompt_opt_storage_path = "data/prompt_optimization"
-prompt_opt_sync_interval = 60
-prompt_opt_auto_save = true
-prompt_opt_history_path = "data/prompt_optimization/history.json"
-prompt_opt_history_auto_flush = false
-prompt_opt_history_path = "data/prompt_optimization/history.json"
-prompt_opt_history_auto_flush = false
-```
-
 ### **CodeAct Agent Configuration**
 ```toml
 [codeact]
@@ -280,150 +227,6 @@ enable_memory = true
 memory_retention_days = 30
 max_memory_size = 1000
 memory_compression = true
-
-# Prompt optimization
-enable_prompt_optimization = true
-prompt_opt_storage_path = "data/prompt_optimization"
-prompt_opt_ab_split = 0.1
-prompt_opt_min_samples = 10
-prompt_opt_confidence_threshold = 0.8
-prompt_opt_success_weight = 0.4
-prompt_opt_time_weight = 0.3
-prompt_opt_error_weight = 0.2
-prompt_opt_cost_weight = 0.1
-prompt_opt_enable_evolution = true
-prompt_opt_evolution_threshold = 0.05
-prompt_opt_max_variants_per_prompt = 5
-prompt_opt_sync_interval = 60
-prompt_opt_auto_save = true
-
-# Tool optimization
-enable_tool_optimization = true
-tool_opt_ab_split = 0.1
-tool_opt_min_samples = 5
-tool_opt_confidence_threshold = 0.7
-tool_opt_success_weight = 0.4
-tool_opt_time_weight = 0.3
-tool_opt_error_weight = 0.2
-tool_opt_cost_weight = 0.1
-```
-
----
-
-## ⚡ **Optimization Settings**
-
-### **Prompt Optimization Configuration**
-```toml
-[prompt_optimization]
-# Enable prompt optimization
-enable = true
-
-# Basic settings
-ab_split = 0.1
-min_samples = 10
-confidence_threshold = 0.8
-success_weight = 0.4
-time_weight = 0.3
-error_weight = 0.2
-cost_weight = 0.1
-
-# Evolution settings
-enable_evolution = true
-evolution_threshold = 0.05
-max_variants_per_prompt = 5
-evolution_frequency = 100
-
-# Storage settings
-storage_path = "data/prompt_optimization"
-sync_interval = 60
-auto_save = true
-prompt_history_path = "data/prompt_optimization/history.json"
-prompt_history_auto_flush = false
-backup_enabled = true
-backup_frequency = 24
-
-# Advanced settings
-enable_advanced_strategies = true
-enable_multi_objective = true
-enable_context_aware = true
-enable_hierarchical = true
-enable_real_time = true
-```
-
-### **Real-Time Optimization Configuration**
-```toml
-[real_time_optimization]
-# Enable real-time optimization
-enable = true
-
-# Live optimizer settings
-max_concurrent_optimizations = 5
-optimization_threshold = 0.05
-confidence_threshold = 0.8
-retry_attempts = 3
-retry_delay = 1.0
-
-# Hot swapper settings
-max_concurrent_swaps = 3
-default_strategy = "atomic"
-health_check_timeout = 5.0
-rollback_timeout = 10.0
-
-# Performance predictor settings
-model_type = "ensemble"
-retrain_frequency = 100
-confidence_threshold = 0.7
-prediction_cache_size = 1000
-
-# Streaming engine settings
-max_queue_size = 10000
-processing_batch_size = 100
-processing_interval = 0.1
-anomaly_threshold = 2.0
-pattern_window_size = 100
-
-# Real-time monitor settings
-update_interval = 1.0
-max_history_size = 10000
-trend_window_size = 100
-alert_retention_days = 7
-
-# WebSocket server settings
-host = "localhost"
-port = 8765
-heartbeat_interval = 30.0
-max_clients = 100
-```
-
-### **Advanced Optimization Strategies**
-```toml
-[advanced_optimization]
-# Multi-objective optimization
-enable_multi_objective = true
-strategy_type = "balanced"  # balanced, performance_focused, cost_focused
-pareto_frontier_size = 10
-exploration_rate = 0.1
-exploitation_rate = 0.9
-
-# Context-aware optimization
-enable_context_aware = true
-context_analysis_depth = "deep"
-similarity_threshold = 0.8
-context_window_size = 1000
-pattern_recognition = true
-
-# Hierarchical optimization
-enable_hierarchical = true
-optimization_levels = ["system", "role", "tool"]
-conflict_resolution = "priority_based"
-synergy_detection = true
-global_coordination = true
-
-# Ensemble methods
-enable_ensemble = true
-ensemble_models = ["random_forest", "gradient_boosting", "linear_regression"]
-ensemble_weights = [0.4, 0.4, 0.2]
-confidence_threshold = 0.7
 ```
 
 ---
@@ -478,49 +281,6 @@ track_compression_efficiency = true
 track_evolution_effectiveness = true
 ```
 
-### **ACE Framework Configuration**
-```toml
-[ace]
-# Enable ACE framework
-enable_ace = true
-
-# Context playbook settings
-max_bullets = 1000
-max_bullet_length = 500
-similarity_threshold = 0.7
-
-# Generator settings
-max_trajectory_length = 2000
-feedback_collection_enabled = true
-multi_epoch_enabled = true
-num_epochs = 5
-
-# Reflector settings
-max_refinement_rounds = 3
-insight_quality_threshold = 0.6
-pattern_detection_enabled = true
-
-# Curator settings
-deduplication_enabled = true
-merge_similar_bullets = true
-section_organization = true
-tag_management = true
-
-# Advanced settings
-enable_multi_epoch = true
-epoch_learning_rate = 0.1
-epoch_memory_decay = 0.9
-enable_context_evolution = true
-evolution_threshold = 0.05
-evolution_frequency = 100
-enable_performance_tracking = true
-track_insight_quality = true
-track_context_effectiveness = true
-context_retention_days = 30
-max_context_size = 10000
-compression_enabled = true
-```
-
 ---
 
 ## 🔧 **Tool Settings**
@@ -530,16 +290,6 @@ compression_enabled = true
 [tool_integration]
 # Enable tool integration
 enable_tool_integration = true
-
-# Tool optimizer settings
-enable_tool_optimization = true
-tool_opt_ab_split = 0.1
-tool_opt_min_samples = 5
-tool_opt_confidence_threshold = 0.7
-tool_opt_success_weight = 0.4
-tool_opt_time_weight = 0.3
-tool_opt_error_weight = 0.2
-tool_opt_cost_weight = 0.1
 
 # Function calling settings
 enable_function_calling = true
@@ -829,20 +579,10 @@ FORGE_MONITORING_METRICS_ENABLED=true
 
 ### **Feature-Specific Environment Variables**
 ```bash
-# MetaSOP
-FORGE_METASOP_ENABLED=true
-FORGE_METASOP_MAX_CONCURRENT_AGENTS=5
-FORGE_METASOP_AGENT_TIMEOUT=300
-
 # CodeAct
 FORGE_CODEACT_ENABLED=true
 FORGE_CODEACT_MAX_ITERATIONS=10
 FORGE_CODEACT_TIMEOUT=300
-
-# ACE Framework
-FORGE_ACE_ENABLED=true
-FORGE_ACE_MAX_BULLETS=1000
-FORGE_ACE_SIMILARITY_THRESHOLD=0.7
 
 # Tool Integration
 FORGE_TOOL_INTEGRATION_ENABLED=true
@@ -853,17 +593,7 @@ FORGE_TOOL_OPTIMIZATION_AB_SPLIT=0.1
 FORGE_WEBSOCKET_ENABLED=true
 FORGE_WEBSOCKET_PORT=8001
 FORGE_WEBSOCKET_MAX_CONNECTIONS=500
-
-# MetaSOP Services
-FORGE_EVENT_SERVICE_GRPC=false
-FORGE_RUNTIME_SERVICE_GRPC=false
-FORGE_EVENT_SERVICE_ENDPOINT=
-FORGE_RUNTIME_SERVICE_ENDPOINT=
 ```
-
-Enable the gRPC adapters by setting `FORGE_EVENT_SERVICE_GRPC` and `FORGE_RUNTIME_SERVICE_GRPC` to `true` and
-provide the corresponding `FORGE_EVENT_SERVICE_ENDPOINT` / `FORGE_RUNTIME_SERVICE_ENDPOINT` values (e.g.,
-`event-service:50051`). Leave the flags `false` to continue using the in-process adapters.
 
 ---
 

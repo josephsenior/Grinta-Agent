@@ -28,11 +28,6 @@ interface InteractiveChatBoxProps {
   placeholder?: string;
   onFocus?: () => void;
   onBlur?: () => void;
-  // Optional MetaSOP toggle support
-  // eslint-disable-next-line react/no-unused-prop-types
-  sopEnabled?: boolean;
-  // eslint-disable-next-line react/no-unused-prop-types
-  onToggleSop?: (enabled: boolean) => void;
   // Quick edit last message (↑ key)
   onEditLastMessage?: () => string | null;
 }
@@ -48,11 +43,6 @@ export function InteractiveChatBox({
   onFocus,
   onBlur,
   onEditLastMessage,
-  // sopEnabled and onToggleSop are intentionally unused for now but kept for future MetaSOP integration
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  sopEnabled,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onToggleSop,
 }: InteractiveChatBoxProps) {
   const { t } = useTranslation();
   // useAutonomyMode is called but values not currently used
@@ -237,13 +227,13 @@ export function InteractiveChatBox({
       />
       {/* Drag-and-drop overlay (bolt.diy style) */}
       {isDraggingOverContainer && (
-        <div className="absolute inset-0 z-50 bg-violet-500/10 backdrop-blur-sm border-2 border-dashed border-violet-500 rounded-xl flex items-center justify-center animate-fade-in">
+        <div className="absolute inset-0 z-50 bg-[#007acc]/10 border-2 border-dashed border-[#007acc] rounded flex items-center justify-center animate-fade-in">
           <div className="text-center space-y-2">
-            <Upload className="h-12 w-12 text-violet-500 mx-auto animate-bounce" />
-            <p className="text-lg font-semibold text-text-primary">
+            <Upload className="h-12 w-12 text-[#007acc] mx-auto animate-bounce" />
+            <p className="text-lg font-semibold text-[#cccccc]">
               {t("chat.dropFilesHere", "Drop files here")}
             </p>
-            <p className="text-sm text-text-secondary">
+            <p className="text-sm text-[#858585]">
               {t(
                 "chat.releaseToUpload",
                 "Release to upload images and documents",
@@ -255,7 +245,7 @@ export function InteractiveChatBox({
 
       {/* File Upload Area - Collapsible */}
       {showFileUpload && (
-        <Card className="animate-slide-down bg-black border border-violet-500/20 shadow-lg shadow-violet-500/10">
+        <Card className="animate-slide-down bg-[var(--bg-input)] border border-[var(--border-primary)]">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-medium text-text-primary">
@@ -350,9 +340,9 @@ export function InteractiveChatBox({
         </Card>
       )}
 
-      {/* Enhanced Input Container - Mobile Optimized */}
-      <Card className="group bg-black border-0 shadow-lg shadow-violet-500/10 transition-all duration-300 [&]:focus-visible:outline-none [&]:focus-within:outline-none [&_*]:focus-visible:outline-none">
-        <CardContent className={cn("flex items-end gap-2 sm:gap-3 p-0")}>
+      {/* Enhanced Input Container - Auth Form Style */}
+      <div className="group relative rounded-lg border border-[var(--border-primary)] bg-[var(--bg-input)] transition-all duration-200 focus-within:border-[var(--border-accent)] focus-within:ring-2 focus-within:ring-[rgba(139,92,246,0.2)]">
+        <div className="flex items-end gap-2 p-2">
           {/* Upload Button - Inside Input */}
           <Button
             type="button"
@@ -360,9 +350,9 @@ export function InteractiveChatBox({
             size="icon"
             onClick={handleUploadButtonClick}
             className={cn(
-              "flex-shrink-0 h-10 w-10 rounded-full transition-all duration-200",
-              "text-violet-400 hover:text-violet-300 hover:bg-violet-500/10",
-              hasFiles && "text-violet-500 bg-violet-500/10",
+              "flex-shrink-0 h-8 w-8 rounded transition-all duration-200",
+              "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]",
+              hasFiles && "text-[#8b5cf6] bg-[var(--bg-tertiary)]",
             )}
             title={hasFiles ? "Manage Files" : "Add Files"}
           >
@@ -370,15 +360,15 @@ export function InteractiveChatBox({
             {hasFiles && (
               <Badge
                 variant="outline"
-                className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs bg-violet-500 text-white border-none"
+                className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white border-none"
               >
                 {images.length + files.length}
               </Badge>
             )}
           </Button>
 
-          {/* Enhanced Chat Input - Mobile Optimized */}
-          <div className="flex-1 min-w-0">
+          {/* Enhanced Chat Input - Auth Form Style */}
+          <div className="flex-1 min-w-0 flex items-end gap-2">
             <ChatInput
               disabled={isDisabled}
               button={mode}
@@ -392,12 +382,12 @@ export function InteractiveChatBox({
               onEditLastMessage={onEditLastMessage}
               onFocus={onFocus}
               onBlur={onBlur}
-              className="py-1.5 sm:py-2 px-2 sm:px-3 text-foreground placeholder:text-foreground-secondary/50 font-medium leading-relaxed text-sm sm:text-base min-h-[40px] sm:min-h-[44px]"
-              buttonClassName="py-1.5 sm:py-2 transition-all duration-200 hover:scale-105 min-h-[40px] sm:min-h-[44px]"
+              className="flex-1 min-w-0 text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] font-normal leading-relaxed text-sm bg-transparent border-0 shadow-none focus:ring-0 focus:border-0 resize-none"
+              buttonClassName="flex-shrink-0"
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* File Preview Modal */}
       <FilePreviewModal

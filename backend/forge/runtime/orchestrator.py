@@ -67,7 +67,6 @@ class RuntimeOrchestrator:
     ) -> RuntimeAcquireResult:
         from forge.core.setup import create_runtime  # lazy import to avoid cycles
 
-        self._apply_pool_config(config)
         key = config.runtime
         pooled = self._pool.acquire(key)
         if pooled:
@@ -113,51 +112,6 @@ class RuntimeOrchestrator:
 
     def pool_stats(self) -> dict[str, int]:
         return self._pool.stats()
-
-    def delegate_stats(self) -> dict[str, int]:
-        delegate_stats = getattr(self._pool, "delegate_stats", None)
-        if callable(delegate_stats):
-            return delegate_stats()
-        return {}
-
-    def _apply_pool_config(self, config: "ForgeConfig") -> None:
-        pool_config = getattr(config, "runtime_pool", None)
-        if pool_config is None:
-            return
-        fingerprint: str | None = None
-        try:
-            fingerprint = json.dumps(pool_config.model_dump(mode="json"), sort_keys=True)
-        except AttributeError:
-            return
-        if fingerprint == self._pool_policy_fingerprint:
-            return
-        configure = getattr(self._pool, "configure_policies", None)
-        if not callable(configure):
-            return
-        self._pool_policy_fingerprint = fingerprint
-        enabled = getattr(pool_config, "enabled", True)
-        default_policy = pool_config.default
-        overrides = pool_config.overrides if enabled else {}
-        default = WarmPoolPolicy(
-            max_size=default_policy.max_size if enabled else 0,
-            ttl_seconds=default_policy.ttl_seconds,
-        )
-        converted_overrides = (
-            {
-                key: WarmPoolPolicy(max_size=policy.max_size, ttl_seconds=policy.ttl_seconds)
-                for key, policy in overrides.items()
-            }
-            if enabled
-            else {}
-        )
-        configure(default, converted_overrides)
-        self._pool_policy_snapshot = (default, converted_overrides)
-
-    def _policy_for_key(self, key: str) -> WarmPoolPolicy | None:
-        if not self._pool_policy_snapshot:
-            return None
-        default, overrides = self._pool_policy_snapshot
-        return overrides.get(key, default)
 
     def _maybe_emit_scaling_signals(self) -> None:
         pool_stats, idle_reclaims, evictions, watched_counts = self._collect_scaling_inputs()

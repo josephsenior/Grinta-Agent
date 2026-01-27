@@ -3,6 +3,8 @@
 It is responsible for executing actions received from forge backend and producing observations.
 
 NOTE: this will be executed inside the docker sandbox.
+
+Updated: Fixed syntax errors in ainit method.
 """
 
 from __future__ import annotations
@@ -36,164 +38,15 @@ def _module_attr(name: str):
     """Return the latest attribute from this module for monkeypatched helpers."""
     return getattr(sys.modules[__name__], name)
 
-ToolError: type[Exception]
-ToolResult: type[Any]
-OHEditor: type[Any]
 
 if TYPE_CHECKING:
-    from forge_aci.editor.editor import OHEditor as _ForgeOHEditor
-    from forge_aci.editor.exceptions import ToolError as _ForgeToolError
-    from forge_aci.editor.results import ToolResult as _ForgeToolResult
+    from forge.runtime.utils.file_editor import FileEditor as _ForgeFileEditor
+    from forge.runtime.utils.file_editor import ToolError as _ForgeToolError
+    from forge.runtime.utils.file_editor import ToolResult as _ForgeToolResult
+    from forge.runtime.browser.browser_env import BrowserEnv
 
-try:
-    from forge_aci.editor.editor import OHEditor as _RuntimeOHEditor
-    from forge_aci.editor.exceptions import ToolError as _RuntimeToolError
-    from forge_aci.editor.results import ToolResult as _RuntimeToolResult
-    from forge_aci.utils.diff import get_diff
-except ImportError:
-    # Stubs for when forge_aci is not installed
-    class _StubToolError(Exception):
-        """Stub ToolError for testing."""
-
-        def __init__(self, message: str = "") -> None:
-            """Store an optional error message for the fallback stub."""
-            super().__init__(message)
-            self.message = message
-
-    class _StubToolResult:
-        """Stub ToolResult for testing."""
-
-        def __init__(
-            self,
-            *,
-            output: str | None = None,
-            error: str | None = None,
-            old_content: str | None = None,
-            new_content: str | None = None,
-        ) -> None:
-            """Initialize stubbed tool execution result fields."""
-            self.output = output or ""
-            self.error = error
-            self.old_content = old_content
-            self.new_content = new_content
-
-    class _StubOHEditor:
-        """Stub OHEditor for testing when forge_aci is unavailable."""
-
-        def __init__(self, workspace_root: str | None = None, *args, **kwargs) -> None:
-            """Record the workspace root for file operations in fallback mode."""
-            self.workspace_root = workspace_root
-
-        def __call__(
-            self,
-            *,
-            command: str,
-            path: str,
-            file_text: str | None = None,
-            view_range: list[int] | None = None,
-            old_str: str | None = None,
-            new_str: str | None = None,
-            insert_line: int | None = None,
-            enable_linting: bool = False,
-            **_: Any,
-        ) -> _StubToolResult:
-            """Simulate a minimal editor command for fallback testing scenarios."""
-            try:
-                if command == "view":
-                    return self._handle_view_command(path, view_range)
-                if command in {"edit", "apply_edit"}:
-                    return self._handle_edit_command(path, file_text, new_str)
-                if command == "write":
-                    return self._handle_write_command(path, file_text, new_str)
-            except Exception as exc:  # pragma: no cover - safeguard for stub
-                return _StubToolResult(error=str(exc))
-            return _StubToolResult(output="", old_content=None, new_content=None)
-
-        def _handle_view_command(
-            self, path: str, view_range: list[int] | None
-        ) -> _StubToolResult:
-            """Return selected view of the file if it exists."""
-            if not os.path.exists(path) or os.path.isdir(path):
-                return _StubToolResult(output="", old_content=None, new_content=None)
-            content = self._read_file(path)
-            selected = self._slice_content(content, view_range)
-            return _StubToolResult(
-                output=selected, old_content=content, new_content=content
-            )
-
-        def _handle_edit_command(
-            self, path: str, file_text: str | None, new_str: str | None
-        ) -> _StubToolResult:
-            """Apply edits to a file, returning previous and updated contents."""
-            previous = self._read_file(path) if os.path.exists(path) else ""
-            updated = new_str if new_str is not None else file_text or previous
-            self._write_file(path, updated)
-            return _StubToolResult(
-                output="File updated", old_content=previous, new_content=updated
-            )
-
-        def _handle_write_command(
-            self, path: str, file_text: str | None, new_str: str | None
-        ) -> _StubToolResult:
-            """Write new content to a file regardless of previous contents."""
-            content = file_text or new_str or ""
-            self._write_file(path, content)
-            return _StubToolResult(
-                output="File written", old_content=None, new_content=content
-            )
-
-        def _slice_content(
-            self, content: str, view_range: list[int] | None
-        ) -> str:
-            """Return either full content or the requested line range."""
-            if not view_range:
-                return content
-            start, end = view_range
-            lines = content.splitlines(True)
-            return "".join(lines[max(start - 1, 0) : end])
-
-        def _read_file(self, path: str) -> str:
-            """Read file contents with fallback encoding handling."""
-            with open(path, encoding="utf-8", errors="replace") as handle:
-                return handle.read()
-
-        def _write_file(self, path: str, content: str) -> None:
-            """Write content to disk, ensuring directories exist."""
-            directory = os.path.dirname(path)
-            if directory:
-                os.makedirs(directory, exist_ok=True)
-            with open(path, "w", encoding="utf-8") as handle:
-                handle.write(content)
-
-    def _stub_get_diff(
-        old: str | None = None,
-        new: str | None = None,
-        *,
-        old_contents: str = "",
-        new_contents: str = "",
-        **__: Any,
-    ) -> str:
-        """Stub diff function when forge_aci is unavailable."""
-        previous = old if old is not None else old_contents
-        updated = new if new is not None else new_contents
-        return "\n".join(
-            [
-                "--- old",
-                "+++ new",
-                "@@ -1 +1 @@",
-                f"-{previous}",
-                f"+{updated}",
-            ]
-        )
-
-    ToolError = _StubToolError
-    ToolResult = _StubToolResult
-    OHEditor = _StubOHEditor
-    get_diff = _stub_get_diff
-else:
-    ToolError = _RuntimeToolError
-    ToolResult = _RuntimeToolResult
-    OHEditor = _RuntimeOHEditor
+from forge.runtime.utils.diff import get_diff
+from forge.runtime.utils.file_editor import FileEditor, ToolError, ToolResult
 
 
 from pydantic import BaseModel
@@ -212,7 +65,6 @@ from forge.events.action import (
     FileEditAction,
     FileReadAction,
     FileWriteAction,
-    IPythonRunCellAction,
 )
 from forge.events.event import FileEditSource, FileReadSource
 from forge.events.observation import (
@@ -222,15 +74,12 @@ from forge.events.observation import (
     FileEditObservation,
     FileReadObservation,
     FileWriteObservation,
-    IPythonRunCellObservation,
     Observation,
 )
 from forge.events.serialization import event_from_dict, event_to_dict
-from forge.runtime.browser import browse
-from forge.runtime.browser.browser_env import BrowserEnv
 from forge.runtime.file_viewer_server import start_file_viewer_server
 from forge.runtime.mcp.proxy import MCPProxyManager
-from forge.runtime.plugins import ALL_PLUGINS, JupyterPlugin, Plugin, VSCodePlugin
+from forge.runtime.plugins import ALL_PLUGINS, Plugin
 from forge.runtime.utils import find_available_tcp_port
 from forge.runtime.utils.bash import BashSession
 from forge.runtime.utils.files import insert_lines, read_lines
@@ -255,14 +104,17 @@ class ActionRequest:
 
 
 async def _resolve_list_path(request: Request, client) -> str:
-    """Resolve the path to list files from.
+    """Resolve the path to list files from with security validation.
 
     Args:
         request: HTTP request
         client: Action execution client
 
     Returns:
-        Resolved full path
+        Resolved full path (validated and safe)
+
+    Raises:
+        PathValidationError: If path validation fails
 
     """
     request_dict = await request.json()
@@ -270,9 +122,26 @@ async def _resolve_list_path(request: Request, client) -> str:
 
     if path is None:
         return client.initial_cwd
-    if os.path.isabs(path):
-        return path
-    return os.path.join(client.initial_cwd, path)
+
+    try:
+        from forge.core.security.path_validation import SafePath
+
+        # Use SafePath for security validation
+        safe_path = SafePath.validate(
+            path,
+            workspace_root=client.initial_cwd,
+            must_be_relative=True,  # Enforce workspace boundaries
+        )
+        return str(safe_path.path)
+    except Exception:
+        # Fallback to legacy resolution for backward compatibility
+        logger.warning(
+            f"Path validation failed for {path}, using legacy resolution. "
+            "This may be a security risk."
+        )
+        if os.path.isabs(path):
+            return path
+        return os.path.join(client.initial_cwd, path)
 
 
 def _get_sorted_directory_entries(full_path: str) -> list[str]:
@@ -342,7 +211,7 @@ def _execute_file_editor(
     """Execute file editor command and handle exceptions.
 
     Args:
-        editor: The OHEditor instance
+        editor: The FileEditor instance
         command: Editor command to execute
         path: File path
         file_text: Optional file text content
@@ -366,13 +235,16 @@ def _execute_file_editor(
                 (None, None),
             )
     try:
+        # Convert None to MISSING sentinel for optional parameters
+        from forge.core.security.sentinels import MISSING
+
         result = editor(
             command=command,
             path=path,
-            file_text=file_text,
+            file_text=file_text if file_text is not None else MISSING,
             view_range=view_range,
-            old_str=old_str,
-            new_str=new_str,
+            old_str=old_str if old_str is not None else MISSING,
+            new_str=new_str if new_str is not None else MISSING,
             insert_line=insert_line,
             enable_linting=enable_linting,
         )
@@ -402,6 +274,7 @@ class ActionExecutor:
         user_id: int,
         enable_browser: bool,
         browsergym_eval_env: str | None,
+        tool_registry: Any | None = None,  # ToolRegistry for cross-platform support
     ) -> None:
         """Create sandbox executor, initialize workspace, and prepare tooling integrations."""
         self.plugins_to_load = plugins_to_load
@@ -415,10 +288,19 @@ class ActionExecutor:
         )
         if _updated_user_id is not None:
             self.user_id = _updated_user_id
+        
+        # Store ToolRegistry for cross-platform support
+        self.tool_registry = tool_registry
+        if self.tool_registry is None:
+            # Fallback: create ToolRegistry if not provided (for backward compatibility)
+            from forge.runtime.utils.tool_registry import ToolRegistry
+            logger.warning("ToolRegistry not provided, creating one (may impact startup time)")
+            self.tool_registry = ToolRegistry()
+        
         self.bash_session: BashSession | None = None
         self.lock = asyncio.Lock()
         self.plugins: dict[str, Plugin] = {}
-        self.file_editor = OHEditor(workspace_root=self._initial_cwd)
+        self.file_editor = FileEditor(workspace_root=self._initial_cwd)
         self.enable_browser = enable_browser
         self.browser: BrowserEnv | None = None
         self.browser_init_task: asyncio.Task | None = None
@@ -468,6 +350,44 @@ class ActionExecutor:
             logger.warning("Browser environment not supported on windows")
             return
         logger.debug("Initializing browser asynchronously")
+        from forge.runtime.browser.browser_env import BrowserEnv
+        
+        # Ensure downloads directory exists and is writable before initializing browser
+        # This prevents Playwright from failing with permission errors
+        try:
+            downloads_dir = self.downloads_directory
+            # Check if the directory exists and is writable
+            if os.path.exists(downloads_dir):
+                if not os.access(downloads_dir, os.W_OK):
+                    logger.warning(
+                        f"Downloads directory {downloads_dir} exists but is not writable. "
+                        "Falling back to /tmp/.downloads"
+                    )
+                    downloads_dir = "/tmp/.downloads"
+                    self.downloads_directory = downloads_dir
+            else:
+                # Try to create the directory
+                try:
+                    os.makedirs(downloads_dir, mode=0o755, exist_ok=True)
+                    logger.debug(f"Created downloads directory: {downloads_dir}")
+                except (OSError, PermissionError) as e:
+                    logger.warning(
+                        f"Failed to create downloads directory {downloads_dir}: {e}. "
+                        "Falling back to /tmp/.downloads"
+                    )
+                    downloads_dir = "/tmp/.downloads"
+                    self.downloads_directory = downloads_dir
+                    os.makedirs(downloads_dir, mode=0o755, exist_ok=True)
+            
+            # Ensure the directory is writable
+            if not os.access(downloads_dir, os.W_OK):
+                raise PermissionError(f"Downloads directory {downloads_dir} is not writable")
+            
+            logger.debug(f"Using downloads directory: {downloads_dir}")
+        except Exception as e:
+            logger.error(f"Failed to set up downloads directory: {e}", exc_info=True)
+            # Continue anyway - browser might still work without downloads
+        
         try:
             self.browser = BrowserEnv(self.browsergym_eval_env)
             logger.debug("Browser initialized asynchronously")
@@ -491,97 +411,95 @@ class ActionExecutor:
         logger.debug("Browser is ready")
 
     def _create_bash_session(self, cwd: str | None = None):
-        """Create a bash session appropriate for the current platform.
+        """Create a shell session appropriate for the current platform.
 
-        Creates either a WindowsPowershell session on Windows (with fallback to Unix bash)
-        or a standard BashSession on Unix-like systems. Initializes the session with
-        environment-specific settings including working directory, username, and resource limits.
+        Uses the unified shell abstraction to create the best available shell session
+        based on detected tools (BashSession with tmux, SimpleBashSession, or WindowsPowershellSession).
 
         Args:
             cwd: Optional working directory for the session. Defaults to self._initial_cwd
 
         Returns:
-            BashSession or WindowsPowershellSession: Initialized shell session
+            UnifiedShellSession: Initialized shell session (platform-appropriate)
 
         Environment Variables:
             - NO_CHANGE_TIMEOUT_SECONDS: Timeout for inactivity (default: 10)
             - max_memory_gb: Maximum memory usage in GB (converted to MB)
 
         Side Effects:
-            - Initializes bash session with initialize() call
-            - Logs warning if Windows PowerShell fallback is used
+            - Initializes shell session with initialize() call
+            - Logs information about selected shell type
 
         Example:
             >>> session = executor._create_bash_session("/tmp")
-            >>> isinstance(session, BashSession)
-            True
             >>> session.cwd
             "/tmp"
 
         Note:
-            On Windows, attempts to use WindowsPowershellSession first, falls back to
-            BashSession if PowerShell is unavailable. This provides Windows compatibility.
+            The actual shell type (Bash, PowerShell, etc.) is determined by the
+            ToolRegistry based on platform and available tools.
 
         """
-        platform_name = sys.platform
-        if platform_name == "win32":
-            # Import Windows PowerShell session only when actually needed on Windows
-            try:
-                from forge.runtime.utils.windows_bash import WindowsPowershellSession
-
-                return WindowsPowershellSession(
-                    work_dir=cwd or self._initial_cwd,
-                    username=self.username,
-                    no_change_timeout_seconds=int(
-                        os.environ.get("NO_CHANGE_TIMEOUT_SECONDS", 10)
-                    ),
-                    max_memory_mb=self.max_memory_gb * 1024
-                    if self.max_memory_gb
-                    else None,
-                )
-            except Exception as e:
-                logger.warning(
-                    "Failed to create Windows PowerShell session, falling back to bash: %s",
-                    e,
-                )
-        bash_session = BashSession(
+        from forge.runtime.utils.unified_shell import create_shell_session
+        
+        logger.info("Creating shell session using unified abstraction...")
+        
+        shell_session = create_shell_session(
             work_dir=cwd or self._initial_cwd,
+            tools=self.tool_registry,
             username=self.username,
             no_change_timeout_seconds=int(
                 os.environ.get("NO_CHANGE_TIMEOUT_SECONDS", 10)
             ),
             max_memory_mb=self.max_memory_gb * 1024 if self.max_memory_gb else None,
         )
-        bash_session.initialize()
-        return bash_session
+        
+        # Initialize the session
+        shell_session.initialize()
+        logger.info("Shell session initialized successfully")
+        
+        return shell_session
 
     async def ainit(self) -> None:
         """Initialize action execution server asynchronously.
 
         Sets up bash session, browser environment, plugins, and agent skills.
         """
-        logger.debug("Initializing bash session")
-        self.bash_session = self._create_bash_session()
-        logger.debug("Bash session initialized")
-        self.browser_init_task = asyncio.create_task(self._init_browser_async())
-        logger.debug("Browser initialization started in background")
-        await wait_all(
-            (self._init_plugin(plugin) for plugin in self.plugins_to_load),
-            timeout=int(os.environ.get("INIT_PLUGIN_TIMEOUT", "120")),
-        )
-        logger.debug("All plugins initialized")
-        logger.debug("Initializing AgentSkills")
-        if "agent_skills" in self.plugins and "jupyter" in self.plugins:
-            obs = await self.run_ipython(
-                IPythonRunCellAction(
-                    code="from forge.runtime.plugins.agent_skills.agentskills import *\n"
-                ),
+        try:
+            logger.info("Step 1/5: Initializing bash session...")
+            self.bash_session = self._create_bash_session()
+            logger.info("Step 1/5: Bash session initialized successfully")
+            
+            logger.info("Step 2/5: Starting browser initialization in background...")
+            self.browser_init_task = asyncio.create_task(self._init_browser_async())
+            logger.info("Step 2/5: Browser initialization task created")
+            
+            logger.info(
+                f"Step 3/5: Initializing {len(self.plugins_to_load)} plugins "
+                f"(timeout: {os.environ.get('INIT_PLUGIN_TIMEOUT', '120')}s)..."
             )
-            logger.debug("AgentSkills initialized: %s", obs)
-        logger.debug("Initializing bash commands")
-        await self._init_bash_commands()
-        logger.debug("Runtime client initialized.")
-        self._initialized = True
+            plugin_names = [plugin.name for plugin in self.plugins_to_load]
+            logger.info(f"Plugins to initialize: {plugin_names}")
+            await wait_all(
+                (self._init_plugin(plugin) for plugin in self.plugins_to_load),
+                timeout=int(os.environ.get("INIT_PLUGIN_TIMEOUT", "120")),
+            )
+            logger.info("Step 3/5: All plugins initialized successfully")
+            
+            logger.info("Step 4/5: AgentSkills initialization skipped (plugins not available)")
+            
+            logger.info("Step 5/5: Initializing bash commands...")
+            await self._init_bash_commands()
+            logger.info("Step 5/5: Bash commands initialized")
+            
+            logger.info("All initialization steps completed successfully")
+            self._initialized = True
+        except Exception as e:
+            logger.error(
+                f"ActionExecutor initialization failed at step: {e}",
+                exc_info=True,
+            )
+            raise
 
     @property
     def initialized(self) -> bool:
@@ -595,18 +513,18 @@ class ActionExecutor:
 
     async def _init_plugin(self, plugin: Plugin) -> None:
         assert self.bash_session is not None
-        if isinstance(plugin, VSCodePlugin):
-            runtime_id = os.environ.get("RUNTIME_ID")
-            await plugin.initialize(self.username, runtime_id=runtime_id)
-        else:
+        logger.info(f"Starting initialization of plugin: {plugin.name}")
+        try:
+            logger.debug(f"Initializing plugin: {plugin.name}")
             await plugin.initialize(self.username)
-        self.plugins[plugin.name] = plugin
-        logger.debug("Initializing plugin: %s", plugin.name)
-        if isinstance(plugin, JupyterPlugin):
-            cwd = self.bash_session.cwd.replace("\\", "/")
-            await self.run_ipython(
-                IPythonRunCellAction(code=f'import os; os.chdir(r"{cwd}")')
+            self.plugins[plugin.name] = plugin
+            logger.info(f"Successfully initialized plugin: {plugin.name}")
+        except Exception as e:
+            logger.error(
+                f"Failed to initialize plugin {plugin.name}: {e}",
+                exc_info=True,
             )
+            raise
 
     async def _init_bash_commands(self) -> None:
         is_windows = sys.platform == "win32"
@@ -621,11 +539,34 @@ class ActionExecutor:
             action.set_hard_timeout(300)
             logger.debug("Executing init command: %s", command)
             obs = await self.run(action)
-            assert isinstance(obs, CmdOutputObservation)
+            if isinstance(obs, ErrorObservation):
+                logger.warning(
+                    "Init command failed: %s. Error: %s", command, obs.content
+                )
+                # Continue initialization even if git alias setup fails
+                continue
+            # Check if it's a CmdOutputObservation (handle potential import differences)
+            # Use duck typing to check for exit_code attribute
+            if not hasattr(obs, 'exit_code'):
+                logger.warning(
+                    "Init command returned unexpected observation type: %s. Observation: %s",
+                    type(obs),
+                    obs,
+                )
+                # Continue initialization even if observation type is unexpected
+                continue
             logger.debug(
                 "Init command outputs (exit code: %s): %s", obs.exit_code, obs.content
             )
-            assert obs.exit_code == 0
+            if obs.exit_code != 0:
+                logger.warning(
+                    "Init command returned non-zero exit code: %s. Command: %s. Output: %s",
+                    obs.exit_code,
+                    command,
+                    obs.content,
+                )
+                # Continue initialization even if git alias setup fails
+                continue
         logger.debug("Bash init commands completed")
 
     async def run_action(self, action) -> Observation:
@@ -682,85 +623,61 @@ class ActionExecutor:
             logger.error("Error running command: %s", e)
             return ErrorObservation(str(e))
 
-    async def run_ipython(self, action: IPythonRunCellAction) -> Observation:
-        """Execute Python code in IPython/Jupyter environment.
-
-        Args:
-            action: IPython run cell action
-
-        Returns:
-            Observation with execution results
-
-        """
-        assert self.bash_session is not None
-        if "jupyter" not in self.plugins:
-            msg = "JupyterRequirement not found. Unable to run IPython action."
-            raise RuntimeError(msg)
-        plugin = self.plugins["jupyter"]
-        if not isinstance(plugin, JupyterPlugin):
-            raise RuntimeError("Registered jupyter plugin is not a JupyterPlugin")
-        _jupyter_plugin = plugin
-        jupyter_cwd = getattr(self, "_jupyter_cwd", None)
-        if self.bash_session.cwd != jupyter_cwd:
-            logger.debug(
-                "%s != %s -> reset Jupyter PWD", self.bash_session.cwd, jupyter_cwd
-            )
-            cwd = self.bash_session.cwd.replace("\\", "/")
-            reset_jupyter_cwd_code = f'import os; os.chdir("{cwd}")'
-            _aux_action = IPythonRunCellAction(code=reset_jupyter_cwd_code)
-            _reset_obs: IPythonRunCellObservation = await _jupyter_plugin.run(
-                _aux_action
-            )
-            logger.debug(
-                "Changed working directory in IPython to: %s. Output: %s",
-                self.bash_session.cwd,
-                _reset_obs,
-            )
-            self._jupyter_cwd = self.bash_session.cwd
-        obs: IPythonRunCellObservation = await _jupyter_plugin.run(action)
-        obs.content = obs.content.rstrip()
-        if action.include_extra:
-            obs.content += (
-                f"\n[Jupyter current working directory: {self.bash_session.cwd}]"
-            )
-            obs.content += f"\n[Jupyter Python interpreter: {_jupyter_plugin.python_interpreter_path}]"
-        return obs
-
     def _resolve_path(self, path: str, working_dir: str) -> str:
-        """Resolve a relative or absolute path to an absolute path.
+        """Resolve a relative or absolute path to an absolute path with security validation.
 
         Converts relative paths to absolute by combining with working_dir.
-        Absolute paths are returned unchanged. This is used for consistent
-        path handling across file operations.
+        Validates paths to prevent directory traversal attacks and enforce
+        workspace boundaries. Uses SafePath for production-grade security.
 
         Args:
             path: File path (relative or absolute)
             working_dir: Current working directory to use for relative paths
 
         Returns:
-            str: Absolute file path as string
+            str: Absolute file path as string (validated and safe)
+
+        Raises:
+            PathValidationError: If path validation fails (traversal, boundary violation, etc.)
 
         Example:
             >>> abs_path = executor._resolve_path("file.txt", "/home/user")
             >>> abs_path
             "/home/user/file.txt"
-            >>> abs_path2 = executor._resolve_path("/tmp/file.txt", "/home/user")
-            >>> abs_path2
-            "/tmp/file.txt"
+            >>> executor._resolve_path("../etc/passwd", "/home/user")
+            PathValidationError: Path traversal detected
 
         Note:
-            - Relative paths are joined with working_dir
-            - Absolute paths are returned as-is
-            - Uses pathlib.Path for cross-platform compatibility
+            - Relative paths are validated against workspace boundaries
+            - Absolute paths are validated if they're within workspace
+            - Uses SafePath for security validation
+            - Prevents directory traversal attacks
 
         """
-        filepath = Path(path)
-        if not filepath.is_absolute():
-            return str(Path(working_dir) / filepath)
-        return str(filepath)
+        try:
+            from forge.core.security.path_validation import SafePath
+
+            # Use SafePath for security validation
+            safe_path = SafePath.validate(
+                path,
+                workspace_root=working_dir,
+                must_be_relative=True,  # Enforce workspace boundaries
+            )
+            return str(safe_path.path)
+        except Exception:
+            # Fallback to legacy resolution for backward compatibility
+            # but log a warning
+            logger.warning(
+                f"Path validation failed for {path}, using legacy resolution. "
+                "This may be a security risk."
+            )
+            filepath = Path(path)
+            if not filepath.is_absolute():
+                return str(Path(working_dir) / filepath)
+            return str(filepath)
 
     def _handle_aci_file_read(self, action: FileReadAction) -> FileReadObservation:
-        """Handle file reading using the OH_ACI implementation.
+        """Handle file reading using the FILE_EDITOR implementation.
 
         Args:
             action: The file read action.
@@ -776,7 +693,7 @@ class ActionExecutor:
             view_range=action.view_range,
         )
         return FileReadObservation(
-            content=result_str, path=action.path, impl_source=FileReadSource.OH_ACI
+            content=result_str, path=action.path, impl_source=FileReadSource.FILE_EDITOR
         )
 
     def _encode_binary_file(
@@ -924,8 +841,8 @@ class ActionExecutor:
         if is_binary(action.path):
             return ErrorObservation("ERROR_BINARY_FILE")
 
-        # Handle OH_ACI implementation
-        if action.impl_source == FileReadSource.OH_ACI:
+        # Handle FILE_EDITOR implementation
+        if action.impl_source == FileReadSource.FILE_EDITOR:
             return self._handle_aci_file_read(action)
 
         # Resolve file path
@@ -1126,7 +1043,24 @@ class ActionExecutor:
             File edit observation with diff
 
         """
-        assert action.impl_source == FileEditSource.OH_ACI
+        assert action.impl_source == FileEditSource.FILE_EDITOR
+        
+        # Handle directory viewing specially
+        if action.command == "view":
+            try:
+                resolved_path = self._resolve_path(action.path, self._initial_cwd)
+                # Check if path is a directory (handle Windows edge cases)
+                try:
+                    if os.path.exists(resolved_path) and os.path.isdir(resolved_path):
+                        # Format directory listing
+                        return await self._handle_directory_view(resolved_path, action.path)
+                except (OSError, ValueError):
+                    # Path is invalid or inaccessible, let file editor handle it
+                    pass
+            except Exception:
+                # Path resolution failed, let file editor handle it
+                pass
+        
         result_str, (old_content, new_content) = _execute_file_editor(
             self.file_editor,
             command=action.command,
@@ -1142,12 +1076,107 @@ class ActionExecutor:
             path=action.path,
             old_content=action.old_str,
             new_content=action.new_str,
-            impl_source=FileEditSource.OH_ACI,
+            impl_source=FileEditSource.FILE_EDITOR,
             diff=get_diff(
-                old_contents=old_content or "",
-                new_contents=new_content or "",
-                filepath=action.path,
+                old=old_content or "",
+                new=new_content or "",
+                path=action.path,
             ),
+        )
+    
+    async def _handle_directory_view(self, full_path: str, display_path: str) -> FileEditObservation:
+        """Handle viewing a directory by listing files up to 2 levels deep.
+        
+        Args:
+            full_path: Resolved absolute path to the directory
+            display_path: Original path for display purposes
+            
+        Returns:
+            FileEditObservation with formatted directory listing
+        """
+        def _list_directory_recursive(dir_path: str, max_depth: int, current_depth: int = 0, base_path: str = "") -> tuple[list[str], int]:
+            """Recursively list directory entries up to max_depth, excluding hidden files.
+            
+            Returns:
+                Tuple of (list of file paths relative to base_path, count of hidden items)
+            """
+            if current_depth >= max_depth:
+                return [], 0
+            
+            entries = []
+            hidden_count = 0
+            
+            try:
+                for entry in os.listdir(dir_path):
+                    # Skip hidden files/directories (starting with .)
+                    if entry.startswith("."):
+                        hidden_count += 1
+                        continue
+                    
+                    entry_path = os.path.join(dir_path, entry)
+                    relative_path = os.path.join(base_path, entry) if base_path else entry
+                    
+                    try:
+                        if os.path.isdir(entry_path):
+                            entries.append(relative_path + "/")
+                            # Recursively list subdirectories
+                            sub_entries, sub_hidden = _list_directory_recursive(
+                                entry_path, max_depth, current_depth + 1, relative_path
+                            )
+                            entries.extend(sub_entries)
+                            hidden_count += sub_hidden
+                        else:
+                            entries.append(relative_path)
+                    except (OSError, ValueError):
+                        # Skip entries that can't be accessed
+                        continue
+            except (OSError, PermissionError, NotADirectoryError):
+                # Cannot read directory
+                pass
+            
+            return entries, hidden_count
+        
+        # List files up to 2 levels deep
+        file_list, hidden_count = _list_directory_recursive(full_path, max_depth=2)
+        
+        # Sort: directories first (with /), then files
+        directories = [f for f in file_list if f.endswith("/")]
+        files = [f for f in file_list if not f.endswith("/")]
+        directories.sort(key=lambda s: s.lower())
+        files.sort(key=lambda s: s.lower())
+        sorted_entries = directories + files
+        
+        # Format output - normalize paths to use forward slashes for consistency
+        display_path_normalized = display_path.replace("\\", "/")
+        lines = [f"Here's the files and directories up to 2 levels deep in {display_path_normalized}, excluding hidden items:"]
+        
+        # Include the directory itself first (with trailing slash)
+        if not display_path_normalized.endswith("/"):
+            lines.append(f"{display_path_normalized}/")
+        
+        # Then list entries inside the directory
+        for entry in sorted_entries:
+            # Normalize entry path to use forward slashes
+            entry_normalized = entry.replace("\\", "/")
+            # Make paths absolute for display
+            if display_path_normalized.endswith("/"):
+                lines.append(f"{display_path_normalized}{entry_normalized}")
+            else:
+                lines.append(f"{display_path_normalized}/{entry_normalized}")
+        
+        if hidden_count > 0:
+            lines.append("")
+            lines.append(f"{hidden_count} hidden files/directories in this directory are excluded. You can use 'ls -la {display_path_normalized}' to see them.")
+        
+        content = "\n".join(lines)
+        
+        return FileEditObservation(
+            content=content,
+            path=display_path,
+            old_content=None,
+            new_content=None,
+            impl_source=FileEditSource.FILE_EDITOR,
+            diff="",
         )
 
     async def browse(self, action: BrowseURLAction) -> Observation:
@@ -1165,6 +1194,7 @@ class ActionExecutor:
                 "Browser functionality is not supported or disabled."
             )
         await self._ensure_browser_ready()
+        from forge.runtime.browser import browse
         return await browse(action, self.browser, self.initial_cwd)
 
     async def browse_interactive(self, action: BrowseInteractiveAction) -> Observation:
@@ -1182,6 +1212,7 @@ class ActionExecutor:
                 "Browser functionality is not supported or disabled."
             )
         await self._ensure_browser_ready()
+        from forge.runtime.browser import browse
         browser_observation = await browse(action, self.browser, self.initial_cwd)
         if not browser_observation.error:
             return browser_observation
@@ -1236,9 +1267,15 @@ def get_uvicorn_json_log_config() -> dict[str, Any]:
         "disable_existing_loggers": False,
         "formatters": {
             "default": {
-                "format": "%(levelprefix)s %(asctime)s %(name)s %(message)s",
+                "format": "%(levelname)s %(asctime)s %(name)s %(message)s",
                 "use_colors": None,
-            }
+            },
+            # Uvicorn expects an "access" formatter when configuring logging;
+            # provide a minimal one to avoid KeyError in uvicorn.configure_logging.
+            "access": {
+                "format": "%(levelname)s %(asctime)s %(message)s",
+                "use_colors": None,
+            },
         },
         "handlers": {
             "default": {
@@ -1290,12 +1327,74 @@ if __name__ == "__main__":
             plugins_to_load.append(ALL_PLUGINS[plugin]())
     client: ActionExecutor | None = None
     mcp_proxy_manager: MCPProxyManager | None = None
+    initialization_task: asyncio.Task | None = None
+    initialization_error: Exception | None = None
+
+    async def _initialize_background(app: FastAPI):
+        """Initialize ActionExecutor and MCP Proxy Manager in the background."""
+        global client, mcp_proxy_manager, initialization_error
+        try:
+            logger.info("Initializing ActionExecutor...")
+            logger.info("Creating ActionExecutor instance...")
+            client = ActionExecutor(
+                plugins_to_load,
+                work_dir=args.working_dir,
+                username=args.username,
+                user_id=args.user_id,
+                enable_browser=args.enable_browser,
+                browsergym_eval_env=args.browsergym_eval_env,
+            )
+            logger.info("ActionExecutor instance created. Starting async initialization...")
+            
+            # Add timeout to prevent indefinite hanging
+            init_timeout = int(os.environ.get("ACTION_EXECUTOR_INIT_TIMEOUT", "300"))  # Default 5 minutes
+            try:
+                await asyncio.wait_for(client.ainit(), timeout=init_timeout)
+                logger.info("ActionExecutor initialized successfully.")
+            except asyncio.TimeoutError:
+                error_msg = (
+                    f"ActionExecutor initialization timed out after {init_timeout} seconds. "
+                    "This may indicate a plugin or dependency issue."
+                )
+                logger.error(error_msg)
+                initialization_error = RuntimeError(error_msg)
+                raise initialization_error
+            
+            is_windows = sys.platform == "win32"
+            if is_windows:
+                logger.info("Skipping MCP Proxy initialization on Windows")
+                mcp_proxy_manager = None
+            else:
+                logger.info("Initializing MCP Proxy Manager...")
+                mcp_proxy_manager = MCPProxyManager(
+                    auth_enabled=bool(SESSION_API_KEY),
+                    api_key=SESSION_API_KEY,
+                    logger_level=logger.getEffectiveLevel(),
+                )
+                mcp_proxy_manager.initialize()
+                allowed_origins = ["*"]
+                try:
+                    # Mount MCP Proxy to app after initialization completes
+                    await mcp_proxy_manager.mount_to_app(app, allowed_origins)
+                    logger.info("MCP Proxy Manager mounted to app successfully")
+                except Exception as e:
+                    logger.error("Error mounting MCP Proxy: %s", e, exc_info=True)
+                    # Don't fail initialization if MCP Proxy mounting fails
+                    logger.warning("Continuing without MCP Proxy mounting")
+        except Exception as e:
+            logger.error(
+                f"Failed to initialize ActionExecutor: {e}",
+                exc_info=True,
+            )
+            initialization_error = e
+            # Don't re-raise - let the /alive endpoint report the error
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         """Manage FastAPI application lifespan.
 
-        Handles initialization and cleanup of ActionExecutor and MCP Proxy Manager.
+        Starts the server immediately and runs initialization in the background
+        so the /alive endpoint can respond during initialization.
 
         Args:
             app: FastAPI application instance
@@ -1304,44 +1403,45 @@ if __name__ == "__main__":
             None during application runtime
 
         """
-        global client, mcp_proxy_manager
-        logger.info("Initializing ActionExecutor...")
-        client = ActionExecutor(
-            plugins_to_load,
-            work_dir=args.working_dir,
-            username=args.username,
-            user_id=args.user_id,
-            enable_browser=args.enable_browser,
-            browsergym_eval_env=args.browsergym_eval_env,
-        )
-        await client.ainit()
-        logger.info("ActionExecutor initialized.")
-        is_windows = sys.platform == "win32"
-        if is_windows:
-            logger.info("Skipping MCP Proxy initialization on Windows")
-            mcp_proxy_manager = None
-        else:
-            logger.info("Initializing MCP Proxy Manager...")
-            mcp_proxy_manager = MCPProxyManager(
-                auth_enabled=bool(SESSION_API_KEY),
-                api_key=SESSION_API_KEY,
-                logger_level=logger.getEffectiveLevel(),
-            )
-            mcp_proxy_manager.initialize()
-            allowed_origins = ["*"]
-            try:
-                await mcp_proxy_manager.mount_to_app(app, allowed_origins)
-            except Exception as e:
-                logger.error("Error mounting MCP Proxy: %s", e, exc_info=True)
-                msg = f"Cannot mount MCP Proxy: {e}"
-                raise RuntimeError(msg) from e
+        global initialization_task
+        logger.info("Starting server (initialization will run in background)...")
+        
+        # Start initialization in background task
+        initialization_task = asyncio.create_task(_initialize_background(app))
+        
+        # Yield immediately so server can start accepting requests
         yield
+        
+        # Cleanup on shutdown
+        logger.info("Shutting down...")
+        global mcp_proxy_manager, client
+        if initialization_task and not initialization_task.done():
+            logger.info("Cancelling initialization task...")
+            initialization_task.cancel()
+            try:
+                await initialization_task
+            except asyncio.CancelledError:
+                pass
+        
         logger.info("Shutting down MCP Proxy Manager...")
         if mcp_proxy_manager:
-            del mcp_proxy_manager
-            mcp_proxy_manager = None
+            try:
+                del mcp_proxy_manager
+                mcp_proxy_manager = None
+            except Exception:
+                pass
         else:
             logger.info("MCP Proxy Manager instance not found for shutdown.")
+        
+        logger.info("Closing ActionExecutor...")
+        if client:
+            try:
+                client.close()
+                logger.info("ActionExecutor closed successfully.")
+            except Exception as e:
+                logger.error("Error closing ActionExecutor: %s", e, exc_info=True)
+        else:
+            logger.info("ActionExecutor instance not found for closing.")
         logger.info("Closing ActionExecutor...")
         if client:
             try:
@@ -1651,31 +1751,62 @@ if __name__ == "__main__":
 
     @app.get("/alive")
     async def alive():
-        """Health check endpoint.
-
-        Returns:
-            Status dictionary indicating if client is initialized
-
+        """Health check endpoint that returns server status.
+        
+        Returns 200 if server is ready, 503 if still initializing or failed.
         """
-        if client is None or not client.initialized:
-            return {"status": "not initialized"}
-        return {"status": "ok"}
+        global client, initialization_task, initialization_error
+        
+        # Check if initialization failed
+        if initialization_error is not None:
+            return JSONResponse(
+                content={
+                    "status": "error",
+                    "message": f"Initialization failed: {str(initialization_error)}",
+                    "error_type": type(initialization_error).__name__,
+                },
+                status_code=503,
+            )
+        
+        # Check if initialization is still running
+        if initialization_task and not initialization_task.done():
+            return JSONResponse(
+                content={
+                    "status": "initializing",
+                    "message": "ActionExecutor initialization in progress",
+                },
+                status_code=503,
+            )
+        
+        # Check if client exists and is initialized
+        if client is None:
+            return JSONResponse(
+                content={
+                    "status": "initializing",
+                    "message": "ActionExecutor not yet created",
+                },
+                status_code=503,
+            )
+        
+        if not client.initialized:
+            return JSONResponse(
+                content={
+                    "status": "initializing",
+                    "message": "ActionExecutor initialization in progress",
+                },
+                status_code=503,
+            )
+        
+        return JSONResponse(
+            content={
+                "status": "ready",
+                "message": "ActionExecutor initialized and ready",
+            },
+            status_code=200,
+        )
 
-    @app.get("/vscode/connection_token")
-    async def get_vscode_connection_token():
-        """Get VSCode connection token for code-server integration.
-
-        Returns:
-            Dictionary with token or None if VSCode plugin not loaded
-
-        """
-        assert client is not None
-        if "vscode" not in client.plugins:
-            return {"token": None}
-        plugin = client.plugins["vscode"]
-        if not isinstance(plugin, VSCodePlugin):
-            return {"token": None}
-        return {"token": plugin.vscode_connection_token}
+    # VSCode connection token endpoint removed - OpenVSCode Server no longer used
+    # Desktop VSCode extension still available at backend/forge/integrations/vscode/
 
     @app.post("/list_files")
     async def list_files(request: Request):

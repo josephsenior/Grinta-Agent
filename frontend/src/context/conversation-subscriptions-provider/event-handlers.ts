@@ -7,10 +7,9 @@ import {
 } from "#/types/core/guards";
 import { AgentState } from "#/types/agent-state";
 import {
-  renderConversationErroredToast,
-  renderConversationCreatedToast,
-  renderConversationFinishedToast,
-} from "#/components/features/chat/microagent/microagent-status-toast";
+  displayErrorToast,
+  displaySuccessToast,
+} from "#/utils/custom-toast-handlers";
 import { shouldAddEvent } from "./event-deduplication";
 
 const isErrorEvent = (
@@ -45,8 +44,7 @@ export function handleErrorEvents(
   conversationId: string,
 ): void {
   if (isErrorEvent(event) || isAgentStatusError(event)) {
-    renderConversationErroredToast(
-      conversationId,
+    displayErrorToast(
       isErrorEvent(event) ? event.message : "MICROAGENT$UNKNOWN_ERROR",
     );
   }
@@ -58,7 +56,7 @@ export function handleStatusEvents(
 ): void {
   if (isStatusUpdate(event)) {
     if (event.type === "info" && event.id === "STATUS$STARTING_RUNTIME") {
-      renderConversationCreatedToast(conversationId);
+      displaySuccessToast("MICROAGENT$CREATED");
     }
   }
 }
@@ -72,7 +70,7 @@ export function handleAgentStateEvents(
     isAgentStateChangeObservation(event) &&
     event.extras.agent_state === AgentState.FINISHED
   ) {
-    renderConversationFinishedToast(conversationId);
+    displaySuccessToast("MICROAGENT$FINISHED");
     onUnsubscribe(conversationId);
   }
 }

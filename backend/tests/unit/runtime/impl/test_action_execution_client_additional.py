@@ -111,9 +111,6 @@ class RuntimeBase:
     def run(self, action: Any) -> Any:
         return None
 
-    def run_ipython(self, action: Any) -> Any:
-        return None
-
     def read(self, action: Any) -> Any:
         return None
 
@@ -331,33 +328,29 @@ class FileEditAction(BaseAction):
         self.old_str = None
         self.new_str = None
         self.insert_line = None
-        self.impl_source = "OH_ACI"
-
-
-class IPythonRunCellAction(BaseAction):
-    pass
+        self.impl_source = "file_editor"
 
 
 setattr(actions_module, "CmdRunAction", CmdRunAction)
-setattr(actions_module, "BrowseURLAction", BrowseURLAction)
-setattr(actions_module, "BrowseInteractiveAction", BrowseInteractiveAction)
 setattr(actions_module, "FileReadAction", FileReadAction)
 setattr(actions_module, "FileWriteAction", FileWriteAction)
-setattr(actions_module, "AgentThinkAction", AgentThinkAction)
 setattr(actions_module, "FileEditAction", FileEditAction)
-setattr(actions_module, "IPythonRunCellAction", IPythonRunCellAction)
-setattr(
-    actions_module,
-    "ActionConfirmationStatus",
-    types.SimpleNamespace(AWAITING_CONFIRMATION="await", REJECTED="rejected"),
-)
+setattr(actions_module, "BrowseURLAction", BrowseURLAction)
+setattr(actions_module, "BrowseInteractiveAction", BrowseInteractiveAction)
+setattr(actions_module, "AgentFinishAction", AgentFinishAction)
+setattr(actions_module, "MessageAction", MessageAction)
+setattr(actions_module, "AgentThinkAction", AgentThinkAction)
+setattr(actions_module, "NullAction", NullAction)
+setattr(actions_module, "ChangeAgentStateAction", ChangeAgentStateAction)
+setattr(actions_module, "ActionConfirmationStatus", type("ActionConfirmationStatus", (), {"CONFIRMED": "confirmed"}))
 _set_module("forge.events.action", actions_module)
+setattr(events_pkg, "action", actions_module)
 
 files_module = types.ModuleType("forge.events.action.files")
 setattr(
     files_module,
     "FileEditSource",
-    types.SimpleNamespace(LLM_BASED_EDIT="llm", OH_ACI="OH_ACI"),
+    types.SimpleNamespace(LLM_BASED_EDIT="llm", FILE_EDITOR="file_editor"),
 )
 _set_module("forge.events.action.files", files_module)
 setattr(actions_module, "files", files_module)

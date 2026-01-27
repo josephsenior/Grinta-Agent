@@ -36,7 +36,6 @@ Forge provides 32 route modules covering all platform features:
 - **Secrets** (`/api/secrets`) - Encrypted secrets storage
 - **Memory** (`/api/memory`) - Conversation memory and context management
 - **Knowledge Base** (`/api/knowledge`) - Vector search and document management
-- **MetaSOP** (`/api/metasop`) - Multi-agent orchestration
 - **Monitoring** (`/api/monitoring`) - Health checks, metrics, and system status
 - **Analytics** (`/api/analytics`) - Usage statistics and reporting
 - **Billing** (`/api/billing`) - Payment processing and subscriptions
@@ -45,9 +44,7 @@ Forge provides 32 route modules covering all platform features:
 - **Search** (`/api/search`) - Global search across resources
 - **Activity** (`/api/activity`) - Activity feed and timeline
 - **Notifications** (`/api/notifications`) - User notifications
-- **Prompts** (`/api/prompts`) - Prompt management
 - **Prompt Optimization** (`/api/prompt-optimization`) - AI-powered prompt optimization
-- **Snippets** (`/api/snippets`) - Code snippet management
 - **Templates** (`/api/templates`) - Template management
 - **Trajectory** (`/api/trajectory`) - Agent trajectory tracking
 - **Security** (`/api/security`) - Security features and audit logs
@@ -599,42 +596,6 @@ POST /api/knowledge/collections
 GET /api/knowledge/search?collection_id=col_123&query=search term
 ```
 
-### MetaSOP
-
-#### Create MetaSOP Session
-
-```http
-POST /api/metasop/sessions
-```
-
-#### Get MetaSOP Status
-
-```http
-GET /api/metasop/sessions/{session_id}/status
-```
-
-### Prompt Optimization
-
-#### Optimize Prompt
-
-```http
-POST /api/prompt-optimization/optimize
-```
-
-### Snippets
-
-#### Create Snippet
-
-```http
-POST /api/snippets
-```
-
-#### List Snippets
-
-```http
-GET /api/snippets
-```
-
 ### Templates
 
 #### List Templates
@@ -813,7 +774,7 @@ GET /api/options/agents
 ### Installation
 
 ```bash
-npm install @Forge/sdk
+pnpm add @Forge/sdk
 ```
 
 ### Usage

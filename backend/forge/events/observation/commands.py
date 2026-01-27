@@ -1,4 +1,4 @@
-"""Observations produced by command execution and IPython interactions."""
+"""Observations produced by command execution."""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ import json
 import re
 import traceback
 from dataclasses import dataclass, field
-from typing import Any, Self
+from typing import Any, Self, ClassVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 from forge.core.logger import forge_logger as logger
 from forge.core.schemas import ObservationType
@@ -26,14 +26,48 @@ MAX_CMD_OUTPUT_SIZE: int = 30000
 class CmdOutputMetadata(BaseModel):
     """Additional metadata captured from PS1."""
 
-    exit_code: int = -1
-    pid: int = -1
-    username: str | None = None
-    hostname: str | None = None
-    working_dir: str | None = None
-    py_interpreter_path: str | None = None
-    prefix: str = ""
-    suffix: str = ""
+    exit_code: int = Field(
+        default=-1,
+        description="Command exit code (-1 if unknown)"
+    )
+    pid: int = Field(
+        default=-1,
+        ge=-1,
+        description="Process ID (-1 if unknown)"
+    )
+    username: str | None = Field(
+        default=None,
+        description="Username who executed the command"
+    )
+    hostname: str | None = Field(
+        default=None,
+        description="Hostname where the command was executed"
+    )
+    working_dir: str | None = Field(
+        default=None,
+        description="Working directory where the command was executed"
+    )
+    py_interpreter_path: str | None = Field(
+        default=None,
+        description="Path to the Python interpreter (if available)"
+    )
+    prefix: str = Field(
+        default="",
+        description="Prefix text to prepend to command output"
+    )
+    suffix: str = Field(
+        default="",
+        description="Suffix text to append to command output"
+    )
+
+    @field_validator("username", "hostname", "working_dir", "py_interpreter_path")
+    @classmethod
+    def validate_optional_strings(cls, v: str | None) -> str | None:
+        """Validate optional string fields are non-empty if provided."""
+        if v is not None:
+            from forge.core.security.type_safety import validate_non_empty_string
+            return validate_non_empty_string(v, name="field")
+        return v
 
     @classmethod
     def to_ps1_prompt(cls) -> str:
@@ -104,9 +138,9 @@ class CmdOutputObservation(Observation):
     """This data class represents the output of a command."""
 
     command: str
-    observation: str = ObservationType.RUN
     metadata: CmdOutputMetadata = field(default_factory=CmdOutputMetadata)
     hidden: bool = False
+    observation: ClassVar[str] = ObservationType.RUN
 
     def __init__(
         self,
@@ -228,36 +262,3 @@ class CmdOutputObservation(Observation):
         if self.metadata.exit_code != -1:
             ret += f"\n[Command finished with exit code {self.metadata.exit_code}]"
         return ret
-
-
-@dataclass
-class IPythonRunCellObservation(Observation):
-    """This data class represents the output of a IPythonRunCellAction."""
-
-    code: str
-    observation: str = ObservationType.RUN_IPYTHON
-    image_urls: list[str] | None = None
-
-    @property
-    def error(self) -> bool:
-        """Check if IPython execution had error (always False)."""
-        return False
-
-    @property
-    def message(self) -> str:
-        """Get IPython execution completion message."""
-        return "Code executed in IPython cell."
-
-    @property
-    def success(self) -> bool:
-        """Check if IPython execution succeeded (always True)."""
-        return True
-
-    def __str__(self) -> str:
-        """Return a readable summary including output content and images."""
-        result = f"**IPythonRunCellObservation**\n{self.content}"
-        if self.image_urls:
-            result += f"\nImages: {len(self.image_urls)}"
-        return result
-
-    __test__ = False

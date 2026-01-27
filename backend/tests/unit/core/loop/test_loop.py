@@ -132,18 +132,27 @@ def test_status_callback_uses_logging(monkeypatch):
     assert captured["info"] == "fine"
 
 
-def test_validate_status_callbacks_detects_preexisting_callbacks():
+def test_validate_status_callbacks_detects_preexisting_callbacks(caplog):
+    """Test _validate_status_callbacks warns when callbacks are already set."""
+    from unittest.mock import patch
+
     runtime = DummyRuntime()
     controller = DummyController()
 
     runtime.status_callback = lambda *_args: None
-    with pytest.raises(ValueError):
+    with patch.object(loop_module.logger, "warning") as mock_warning:
         loop_module._validate_status_callbacks(cast(Any, runtime), cast(Any, controller))
+        # Should warn but not raise
+        mock_warning.assert_called()
+        assert any("Runtime status_callback already set" in str(call) for call in mock_warning.call_args_list)
 
     runtime.status_callback = None
     controller.status_callback = lambda *_args: None
-    with pytest.raises(ValueError):
+    with patch.object(loop_module.logger, "warning") as mock_warning:
         loop_module._validate_status_callbacks(cast(Any, runtime), cast(Any, controller))
+        # Should warn but not raise
+        mock_warning.assert_called()
+        assert any("Controller status_callback already set" in str(call) for call in mock_warning.call_args_list)
 
 
 def test_set_status_callbacks_assigns_all():

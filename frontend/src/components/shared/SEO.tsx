@@ -288,9 +288,47 @@ export function SEO({
  * ```
  */
 export function useSEO(props: SEOProps) {
-  useEffect(() => {
-    // The SEO component handles everything via useEffect
-    // This hook just provides a cleaner API
-    <SEO {...props} />;
-  }, [props]);
+  const location = useLocation();
+  const {
+    title,
+    description,
+    keywords,
+    ogTitle,
+    ogDescription,
+    ogImage,
+    ogType,
+    ogUrl,
+    twitterCard,
+    twitterTitle,
+    twitterDescription,
+    twitterImage,
+    canonicalUrl,
+    noindex,
+    nofollow,
+  } = props;
+
+  useDocumentTitle(title);
+  useBasicMetaTags(description, keywords, noindex, nofollow);
+  useOpenGraphTags(
+    ogTitle,
+    ogDescription,
+    ogImage,
+    ogType,
+    ogUrl,
+    title,
+    description,
+    location.pathname,
+  );
+  useTwitterTags(
+    twitterCard,
+    twitterTitle,
+    twitterDescription,
+    twitterImage,
+    ogTitle,
+    ogDescription,
+    ogImage,
+    title,
+    description,
+  );
+  useCanonicalUrl(canonicalUrl, location.pathname);
 }

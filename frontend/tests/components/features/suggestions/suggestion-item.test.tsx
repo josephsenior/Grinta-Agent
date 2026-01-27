@@ -4,6 +4,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SuggestionItem } from "#/components/features/suggestions/suggestion-item";
 import { I18nKey } from "#/i18n/declaration";
 
+const mockI18n = {
+  changeLanguage: vi.fn(() => Promise.resolve()),
+};
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => {
@@ -15,6 +19,7 @@ vi.mock("react-i18next", () => ({
       };
       return translations[key] || key;
     },
+    i18n: mockI18n,
   }),
 }));
 

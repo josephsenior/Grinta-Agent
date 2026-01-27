@@ -1,6 +1,7 @@
 """Tests for the command helper functions in function_calling.py."""
 
 import os
+import sys
 import pytest
 from conftest import _close_test_runtime, _load_runtime
 from forge.agenthub.readonly_agent.function_calling import (
@@ -11,10 +12,16 @@ from forge.core.logger import forge_logger as logger
 from forge.events.action import CmdRunAction
 from forge.events.observation import CmdOutputObservation, ErrorObservation
 
-pytestmark = pytest.mark.skipif(
-    os.environ.get("TEST_RUNTIME") == "cli",
-    reason="CLIRuntime: ReadOnlyAgent's GrepTool/GlobTool tests require `rg` (ripgrep), which may not be installed.",
-)
+pytestmark = [
+    pytest.mark.skipif(
+        os.environ.get("TEST_RUNTIME") == "cli",
+        reason="CLIRuntime: ReadOnlyAgent's GrepTool/GlobTool tests require `rg` (ripgrep), which may not be installed.",
+    ),
+    pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="Windows: These tests require `rg` (ripgrep) and bash-style commands which are not available on Windows.",
+    ),
+]
 
 
 def _run_cmd_action(runtime, custom_command: str):

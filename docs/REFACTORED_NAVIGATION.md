@@ -5,6 +5,15 @@ This document outlines the refactored navigation structure that consolidates set
 
 ---
 
+## Shared Navigation Config
+
+- All settings categories, items, icons, SaaS/OSS flags, and sub-navigation metadata now live in `frontend/src/config/settings-nav.ts`.
+- `SettingsSidebar`, `SettingsHub`, `SettingsSearch`, and breadcrumbs consume this single source of truth, guaranteeing consistent ordering and localization keys across the app.
+- MCP sub-navigation (My Servers vs Marketplace) is described in the config so the sidebar can surface contextual tabs and deep links (`/settings/mcp?tab=marketplace`).
+- Status badges (e.g., “Managed”, “Synced nightly”) reuse the same identifiers in both the hub cards and sidebar rows.
+
+---
+
 ## Main Sidebar Navigation (Simplified)
 
 ### Structure
@@ -46,7 +55,7 @@ This document outlines the refactored navigation structure that consolidates set
 ┌─────────────────────────────────────────────────────────────┐
 │  Settings                                                    │
 │  ┌───────────────────────────────────────────────────────┐  │
-│  │  [Search Settings...]                                 │  │
+│  │  [Filter categories…]  [⌘K Quick Switch]               │  │
 │  └───────────────────────────────────────────────────────┘  │
 │                                                              │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
@@ -55,16 +64,16 @@ This document outlines the refactored navigation structure that consolidates set
 │  │              │  │              │  │               │     │
 │  │ • LLM        │  │ • Profile    │  │ • Git         │     │
 │  │ • MCP        │  │ • Billing    │  │ • Slack       │     │
-│  │ • Prompts    │  │ • API Keys   │  │               │     │
-│  │ • Memory     │  │ • App        │  │               │     │
+│  │ • Memory     │  │ • API Keys   │  │               │     │
+│  │              │  │ • App        │  │               │     │
 │  └──────────────┘  └──────────────┘  └──────────────┘     │
 │                                                              │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
 │  │ 💾 Data &    │  │ 💻 Development│  │ 📊 Analytics │     │
 │  │    Storage   │  │               │  │              │     │
 │  │              │  │               │  │              │     │
-│  │ • Databases  │  │ • Snippets   │  │ • Analytics  │     │
-│  │ • Knowledge  │  │ • Secrets    │  │              │     │
+│  │ • Databases  │  │ • Secrets    │  │ • Analytics  │     │
+│  │ • Knowledge  │  │ • API Keys   │  │              │     │
 │  │   Base       │  │              │  │              │     │
 │  │ • Backup     │  │              │  │              │     │
 │  └──────────────┘  └──────────────┘  └──────────────┘     │
@@ -76,7 +85,6 @@ This document outlines the refactored navigation structure that consolidates set
 #### 1. AI & Models
 - **LLM Settings** (`/settings/llm`) - Model selection, API keys, temperature
 - **MCP** (`/settings/mcp`) - MCP server management
-- **Prompts** (`/settings/prompts`) - Custom prompts library
 - **Memory** (`/settings/memory`) - Memory settings and condensation
 
 #### 2. Account (SaaS only)
@@ -86,7 +94,7 @@ This document outlines the refactored navigation structure that consolidates set
 - **Application** (`/settings/app`) - App preferences, language
 
 #### 3. Integrations
-- **Git Integration** (`/settings/integrations`) - GitHub, GitLab, Bitbucket
+- **Git Integration** (`/settings/integrations`) - GitHub
 - **Slack** (`/settings/slack`) - Slack workspace connection
 
 #### 4. Data & Storage
@@ -95,12 +103,21 @@ This document outlines the refactored navigation structure that consolidates set
 - **Backup & Restore** (`/settings/backup`) - Backup settings
 
 #### 5. Development
-- **Code Snippets** (`/settings/snippets`) - Snippet library
 - **Secrets** (`/settings/secrets`) - Encrypted secrets management
 - **API Keys** (`/settings/api-keys`) - For OSS mode
 
 #### 6. Analytics
 - **Analytics** (`/settings/analytics`) - Usage stats, costs, metrics
+
+### Search & Quick Switch
+
+- **Category filter input:** Lightweight text filter scoped to the hub grid for scanning sections.
+- **Settings command palette:** `SettingsSearch` powers the ⌘K quick-switch button (desktop and mobile) and is now available on every `/settings/*` route. The same modal is used for keyboard shortcuts, ensuring a consistent experience.
+
+### Mobile Experience
+
+- **Category cards → list:** On narrow screens the hub renders a condensed list of categories and items that mirrors the desktop sidebar, keeping jump targets visible without horizontal scrolling.
+- **Sidebar drawer:** The mobile drawer (used on detail routes) now exposes a “Back to Settings Hub” action and shares the same grouped data as the desktop sidebar.
 
 ---
 
@@ -138,11 +155,10 @@ const settingsCategories = [
     id: "ai-models",
     title: "AI & Models",
     icon: Bot,
-    description: "Configure AI models, MCP servers, prompts, and memory",
+    description: "Configure AI models, MCP servers, and memory",
     items: [
       { to: "/settings/llm", label: "LLM Settings", icon: Bot, requiresPro: false },
       { to: "/settings/mcp", label: "MCP", icon: Workflow },
-      { to: "/settings/prompts", label: "Prompts", icon: FileText },
       { to: "/settings/memory", label: "Memory", icon: Brain },
     ],
   },
@@ -183,9 +199,8 @@ const settingsCategories = [
     id: "development",
     title: "Development",
     icon: Code,
-    description: "Code snippets, secrets, and development tools",
+    description: "Secrets and development tools",
     items: [
-      { to: "/settings/snippets", label: "Code Snippets", icon: Code },
       { to: "/settings/secrets", label: "Secrets", icon: Lock },
       { to: "/settings/api-keys", label: "API Keys", icon: Key, ossOnly: true },
     ],
@@ -201,6 +216,19 @@ const settingsCategories = [
   },
 ];
 ```
+
+### Status Metadata
+
+- `buildSettingsStatusMap` (see `frontend/src/utils/settings-status.ts`) centralizes the logic for workspace mode, subscription tier, and configuration-aware badges. 
+- The hub cards consume this map for their status text, and the sidebar shows lightweight captions for key data & storage rows (Databases, Knowledge Base, Backup) so the state of critical systems is glanceable everywhere.
+
+---
+
+## Sidebar Enhancements
+
+1. **Always-on desktop sidebar:** Even on the `/settings` hub, the left rail stays visible so users can jump directly without cognitive context-switching.
+2. **Contextual sub-links:** MCP now exposes “My Servers” and “Marketplace” deep links that sync with the underlying tab UI via query parameters.
+3. **Mobile drawer parity:** The drawer inherits the same grouped data, adds a reusable close action, and now includes a “Back to Settings Hub” shortcut so users never feel trapped on a detail page.
 
 ---
 
@@ -226,7 +254,7 @@ const settingsCategories = [
 ### Phase 4: Update Routes
 1. Ensure all settings routes still work
 2. Update redirects if needed
-3. Update breadcrumbs
+3. Update breadcrumbs (now derived from `settings-nav.ts` so category context is shown automatically)
 
 ---
 

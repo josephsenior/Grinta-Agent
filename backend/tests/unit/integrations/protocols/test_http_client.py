@@ -131,7 +131,7 @@ class TestHTTPClient:
     def test_handle_http_status_error_404(self):
         """Test handling of 404 HTTP status error."""
         client = DummyHTTPClient()
-        client.provider = "gitlab"
+        client.provider = "github"
         mock_response = Mock()
         mock_response.status_code = 404
         error = httpx.HTTPStatusError(
@@ -139,12 +139,12 @@ class TestHTTPClient:
         )
         result = client.handle_http_status_error(error)
         assert isinstance(result, ResourceNotFoundError)
-        assert "Resource not found on gitlab API" in str(result)
+        assert "Resource not found on github API" in str(result)
 
     def test_handle_http_status_error_429(self):
         """Test handling of 429 HTTP status error."""
         client = DummyHTTPClient()
-        client.provider = "bitbucket"
+        client.provider = "github"
         mock_response = Mock()
         mock_response.status_code = 429
         error = httpx.HTTPStatusError(
@@ -152,7 +152,7 @@ class TestHTTPClient:
         )
         result = client.handle_http_status_error(error)
         assert isinstance(result, RateLimitError)
-        assert "bitbucket API rate limit exceeded" in str(result)
+        assert "github API rate limit exceeded" in str(result)
 
     def test_handle_http_status_error_other(self):
         """Test handling of other HTTP status errors."""
@@ -242,7 +242,7 @@ class TestHTTPClient:
 
     def test_provider_specific_error_messages(self):
         """Test that error messages are provider-specific."""
-        providers = ["github", "gitlab", "bitbucket"]
+        providers = ["github"]
         for provider in providers:
             client = DummyHTTPClient()
             client.provider = provider

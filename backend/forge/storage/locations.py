@@ -120,17 +120,3 @@ def get_conversation_stats_filename(sid: str, user_id: str | None = None) -> str
 
     """
     return f"{get_conversation_dir(sid, user_id)}conversation_stats.pkl"
-
-
-def get_experiment_config_filename(sid: str, user_id: str | None = None) -> str:
-    """Get the experiment configuration filename.
-
-    Args:
-        sid: The session/conversation ID.
-        user_id: Optional user ID for user-specific paths.
-
-    Returns:
-        str: The experiment config filename.
-
-    """
-    return f"{get_conversation_dir(sid, user_id)}exp_config.json"

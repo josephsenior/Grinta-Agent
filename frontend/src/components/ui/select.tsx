@@ -10,11 +10,13 @@ const Select = React.forwardRef<
     <select
       ref={ref}
       className={cn(
-        "flex h-auto w-full appearance-none rounded-[8px] border border-[#1a1a1a] bg-[#000000] px-4 py-3 pr-10 text-sm transition-all duration-200 ring-offset-black",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(139,92,246,0.2)] focus-visible:ring-offset-2 focus-visible:border-[#8b5cf6]",
-        "hover:border-[#1a1a1a]",
-        "disabled:cursor-not-allowed disabled:opacity-50",
+        "flex h-auto w-full appearance-none rounded-[8px] bg-background-primary px-4 py-3 pr-10 text-sm transition-all duration-200",
+        "border border-border",
         "text-foreground",
+        "placeholder:text-foreground-secondary",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:ring-offset-2",
+        "hover:border-border",
+        "disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
       {...props}
@@ -24,7 +26,7 @@ const Select = React.forwardRef<
     {/* Violet dropdown arrow */}
     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
       <svg
-        className="h-4 w-4 text-[#8b5cf6]"
+        className="h-4 w-4 text-brand-500"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"

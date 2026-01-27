@@ -27,13 +27,11 @@ class CircuitBreakerService:
     # ------------------------------------------------------------------ #
     def reset(self) -> None:
         """Disable circuit breaker handling."""
-
         self._circuit_breaker = None
         setattr(self.controller, "circuit_breaker", None)
 
     def configure(self, agent_config: "AgentConfig") -> None:
         """Configure the circuit breaker based on agent configuration."""
-
         from forge.controller.circuit_breaker import (
             CircuitBreaker,
             CircuitBreakerConfig,
@@ -61,37 +59,31 @@ class CircuitBreakerService:
     @property
     def circuit_breaker(self) -> "CircuitBreaker | None":
         """Return the configured circuit breaker instance, if any."""
-
         return self._circuit_breaker
 
     def check(self) -> "CircuitBreakerResult | None":
         """Run circuit breaker check for current controller state."""
-
         if not self._circuit_breaker:
             return None
         return self._circuit_breaker.check(self.controller.state)
 
     def record_error(self, error: Exception) -> None:
         """Record an error with the circuit breaker."""
-
         if self._circuit_breaker:
             self._circuit_breaker.record_error(error)
 
     def record_success(self) -> None:
         """Record successful execution."""
-
         if self._circuit_breaker:
             self._circuit_breaker.record_success()
 
     def record_high_risk_action(self, security_risk) -> None:
         """Record a high-risk action."""
-
         if self._circuit_breaker and security_risk is not None:
             self._circuit_breaker.record_high_risk_action(security_risk)
 
     def record_stuck_detection(self) -> None:
         """Record a stuck detection event."""
-
         if self._circuit_breaker:
             self._circuit_breaker.record_stuck_detection()
 

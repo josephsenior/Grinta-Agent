@@ -10,7 +10,6 @@ import React, { startTransition, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { Provider } from "react-redux";
-import posthog from "posthog-js";
 import "./i18n";
 // Import CSS files
 import "./tailwind.css";
@@ -20,14 +19,11 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "./context/theme-context";
 import store from "./store";
 // ...existing imports
-import Forge from "./api/forge";
-import { displayErrorToast } from "./utils/custom-toast-handlers";
 import { queryClient } from "./query-client-config";
 import { performanceMonitor } from "./utils/performanceMonitor";
-import { initSentry } from "./utils/sentry";
 
 if (typeof performance === "undefined") {
-  (globalThis as any).performance = {
+  (globalThis as { performance?: { now: () => number } }).performance = {
     now: () => Date.now(),
   };
 }
@@ -47,51 +43,6 @@ type WindowWithE2E = Window & {
 
 const getWin = (): WindowWithE2E | undefined =>
   typeof window !== "undefined" ? (window as WindowWithE2E) : undefined;
-
-// Synchronous dev-safety guard: when not running in production, replace
-// common posthog methods with no-ops immediately at module load. This
-// prevents any early or module-level posthog calls from generating
-// network traffic or noisy logs before React effects have a chance to run.
-if (process.env.NODE_ENV !== "production") {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const noop = (..._args: unknown[]) => undefined;
-    /* posthog runtime augmentation for dev-only safety. We intentionally
-     assign no-op implementations to methods that may not be in the
-     type definitions at compile-time. Silence any TS complaints at the
-     assignment site via eslint for clarity. */
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    posthog.capture = noop;
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    posthog.identify = noop;
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    posthog.opt_in_capturing = noop;
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    posthog.opt_out_capturing = noop;
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    posthog.has_opted_in_capturing = () => false;
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    posthog.has_opted_out_capturing = () => true;
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    posthog.captureException = noop;
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    posthog.reset = noop;
-  } catch (e) {
-    // Best-effort dev-only guard: log at debug level so issues are visible
-    // during development without failing startup. Use String(e) because
-    // safeMessage is defined later in this file.
-    // eslint-disable-next-line no-console
-    console.debug("Posthog dev-guard failed:", String(e));
-  }
-}
 
 const safeMessage = (e: unknown): string => {
   try {
@@ -113,82 +64,6 @@ const safeMessage = (e: unknown): string => {
     return "";
   }
 };
-
-function PosthogInit() {
-  const [posthogClientKey, setPosthogClientKey] = React.useState<string | null>(
-    null,
-  );
-
-  React.useEffect(() => {
-    (async () => {
-      try {
-        const config = await Forge.getConfig();
-        setPosthogClientKey(config.POSTHOG_CLIENT_KEY);
-      } catch (error) {
-        displayErrorToast("Error fetching PostHog client key");
-      }
-    })();
-  }, []);
-
-  React.useEffect(() => {
-    // Only initialize PostHog in production builds when a client key is provided.
-    // This prevents noisy PostHog debug logs during local development.
-    const shouldInitPosthog =
-      process.env.NODE_ENV === "production" && Boolean(posthogClientKey);
-
-    if (shouldInitPosthog && posthogClientKey) {
-      try {
-        posthog.init(posthogClientKey, {
-          api_host: "https://us.i.posthog.com",
-          person_profiles: "identified_only",
-        });
-      } catch (e) {
-        // swallow initialization errors in client init path to prevent
-        // spamming the console in dev-like environments where PostHog may
-        // be misconfigured.
-        // eslint-disable-next-line no-console
-        console.warn("PostHog init failed:", e);
-      }
-    } else {
-      // In non-production environments, replace commonly-used PostHog methods
-      // with no-ops so that capture/identify calls across the app are silent
-      // and do not produce network traffic or verbose logs. This intentionally
-      // mirrors the guarded-init behavior without requiring edits at each
-      // call-site.
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const noop = (..._args: unknown[]) => undefined;
-        // Common methods used in the codebase/tests
-        // Silence type mismatches for test/dev runtime augmentation.
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        posthog.capture = noop;
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        posthog.identify = noop;
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        posthog.opt_in_capturing = noop;
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        posthog.opt_out_capturing = noop;
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        posthog.has_opted_in_capturing = () => false;
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        posthog.has_opted_out_capturing = () => true;
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        posthog.captureException = noop;
-      } catch (e) {
-        // Best-effort: if patching fails, do not crash the app in dev.
-      }
-    }
-  }, [posthogClientKey]);
-
-  return null;
-}
 
 async function prepareApp() {
   if (
@@ -250,6 +125,7 @@ function LoadingFallback() {
             />
             Loading Forge...
           </div>
+          {/* eslint-disable-next-line react/no-danger */}
           <style
             dangerouslySetInnerHTML={{
               __html: `
@@ -269,9 +145,6 @@ function LoadingFallback() {
 }
 
 prepareApp().then(async () => {
-  // Initialize error tracking (Sentry)
-  await initSentry();
-
   // Initialize performance monitoring
   performanceMonitor.init();
 
@@ -349,71 +222,7 @@ prepareApp().then(async () => {
               {
                 index: true,
                 lazy: () =>
-                  import("./routes/home").then((m) => ({
-                    Component: m.default,
-                  })),
-              },
-              // Auth routes
-              {
-                path: "auth/login",
-                lazy: () =>
-                  import("./routes/auth/login").then((m) => ({
-                    Component: m.default,
-                  })),
-              },
-              {
-                path: "auth/register",
-                lazy: () =>
-                  import("./routes/auth/register").then((m) => ({
-                    Component: m.default,
-                  })),
-              },
-              {
-                path: "auth/forgot-password",
-                lazy: () =>
-                  import("./routes/auth/forgot-password").then((m) => ({
-                    Component: m.default,
-                  })),
-              },
-              {
-                path: "auth/reset-password",
-                lazy: () =>
-                  import("./routes/auth/reset-password").then((m) => ({
-                    Component: m.default,
-                  })),
-              },
-              {
-                path: "accept-tos",
-                lazy: () =>
-                  import("./routes/accept-tos").then((m) => ({
-                    Component: m.default,
-                  })),
-              },
-              {
-                path: "about",
-                lazy: () =>
-                  import("./routes/about").then((m) => ({
-                    Component: m.default,
-                  })),
-              },
-              {
-                path: "contact",
-                lazy: () =>
-                  import("./routes/contact").then((m) => ({
-                    Component: m.default,
-                  })),
-              },
-              {
-                path: "terms",
-                lazy: () =>
-                  import("./routes/terms").then((m) => ({
-                    Component: m.default,
-                  })),
-              },
-              {
-                path: "privacy",
-                lazy: () =>
-                  import("./routes/privacy").then((m) => ({
+                  import("./routes/index-redirect").then((m) => ({
                     Component: m.default,
                   })),
               },
@@ -425,86 +234,9 @@ prepareApp().then(async () => {
                   })),
                 children: [
                   {
-                    index: true,
+                    path: "llm",
                     lazy: () =>
                       import("./routes/llm-settings").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
-                  {
-                    path: "mcp",
-                    lazy: () =>
-                      import("./routes/mcp-settings").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
-                  {
-                    path: "user",
-                    lazy: () =>
-                      import("./routes/user-settings").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
-                  {
-                    path: "integrations",
-                    lazy: () =>
-                      import("./routes/git-settings").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
-                  {
-                    path: "databases",
-                    lazy: () =>
-                      import("./routes/database-settings").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
-                  {
-                    path: "knowledge-base",
-                    lazy: () =>
-                      import("./routes/knowledge-base-settings").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
-                  {
-                    path: "memory",
-                    lazy: () =>
-                      import("./routes/memory-settings").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
-                  {
-                    path: "analytics",
-                    lazy: () =>
-                      import("./routes/analytics-settings").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
-                  {
-                    path: "prompts",
-                    lazy: () =>
-                      import("./routes/prompts-settings").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
-                  {
-                    path: "snippets",
-                    lazy: () =>
-                      import("./routes/snippets-settings").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
-                  {
-                    path: "slack",
-                    lazy: () =>
-                      import("./routes/slack-settings").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
-                  {
-                    path: "backup",
-                    lazy: () =>
-                      import("./routes/backup-settings").then((m) => ({
                         Component: m.default,
                       })),
                   },
@@ -515,35 +247,7 @@ prepareApp().then(async () => {
                         Component: m.default,
                       })),
                   },
-                  {
-                    path: "billing",
-                    lazy: () =>
-                      import("./routes/billing").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
-                  {
-                    path: "secrets",
-                    lazy: () =>
-                      import("./routes/secrets-settings").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
-                  {
-                    path: "api-keys",
-                    lazy: () =>
-                      import("./routes/api-keys").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
                 ],
-              },
-              {
-                path: "database-browser",
-                lazy: () =>
-                  import("./routes/database-browser").then((m) => ({
-                    Component: m.default,
-                  })),
               },
               {
                 path: "conversation",
@@ -555,7 +259,7 @@ prepareApp().then(async () => {
               {
                 path: "conversations",
                 lazy: () =>
-                  import("./routes/conversations-list").then((m) => ({
+                  import("./routes/index-redirect").then((m) => ({
                     Component: m.default,
                   })),
               },
@@ -574,97 +278,13 @@ prepareApp().then(async () => {
                       })),
                   },
                   {
-                    path: "browser",
-                    lazy: () =>
-                      import("./routes/browser-tab").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
-                  {
-                    path: "jupyter",
-                    lazy: () =>
-                      import("./routes/jupyter-tab").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
-                  {
-                    path: "served",
-                    lazy: () =>
-                      import("./routes/served-tab").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
-                  {
                     path: "terminal",
                     lazy: () =>
                       import("./routes/terminal-tab").then((m) => ({
                         Component: m.default,
                       })),
                   },
-                  {
-                    path: "vscode",
-                    lazy: () =>
-                      import("./routes/vscode-tab").then((m) => ({
-                        Component: m.default,
-                      })),
-                  },
                 ],
-              },
-              {
-                path: "dashboard",
-                lazy: () =>
-                  import("./routes/dashboard").then((m) => ({
-                    Component: m.default,
-                  })),
-              },
-              {
-                path: "profile",
-                lazy: () =>
-                  import("./routes/profile").then((m) => ({
-                    Component: m.default,
-                  })),
-              },
-              {
-                path: "help",
-                lazy: () =>
-                  import("./routes/help").then((m) => ({
-                    Component: m.default,
-                  })),
-              },
-              {
-                path: "notifications",
-                lazy: () =>
-                  import("./routes/notifications").then((m) => ({
-                    Component: m.default,
-                  })),
-              },
-              {
-                path: "search",
-                lazy: () =>
-                  import("./routes/search").then((m) => ({
-                    Component: m.default,
-                  })),
-              },
-              {
-                path: "pricing",
-                lazy: () =>
-                  import("./routes/pricing").then((m) => ({
-                    Component: m.default,
-                  })),
-              },
-              {
-                path: "admin/users",
-                lazy: () =>
-                  import("./routes/admin/users").then((m) => ({
-                    Component: m.default,
-                  })),
-              },
-              {
-                path: "admin/users/:userId",
-                lazy: () =>
-                  import("./routes/admin/users/[userId]").then((m) => ({
-                    Component: m.default,
-                  })),
               },
               {
                 path: "*",
@@ -688,23 +308,17 @@ prepareApp().then(async () => {
         },
       );
 
-      // Dynamically import AuthProvider to avoid circular dependencies
-      import("./context/auth-context").then(({ AuthProvider }) => {
-        createRoot(rootEl).render(
-          <ThemeProvider defaultTheme="dark">
-            <Provider store={store}>
-              <QueryClientProvider client={queryClient}>
-                <AuthProvider>
-                  <RouterProvider router={router} />
-                  <ToasterClient />
-                  <PosthogInit />
-                  <EnsurePortalRoot />
-                </AuthProvider>
-              </QueryClientProvider>
-            </Provider>
-          </ThemeProvider>,
-        );
-      });
+      createRoot(rootEl).render(
+        <ThemeProvider defaultTheme="dark">
+          <Provider store={store}>
+            <QueryClientProvider client={queryClient}>
+              <RouterProvider router={router} />
+              <ToasterClient />
+              <EnsurePortalRoot />
+            </QueryClientProvider>
+          </Provider>
+        </ThemeProvider>,
+      );
     });
   });
 });

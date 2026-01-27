@@ -1,6 +1,6 @@
 """E2E: Web browsing catchphrase test (Issue #10378).
 
-Goal: In a new conversation, instruct the agent to browse to all-hands.dev and
+Goal: In a new conversation, instruct the agent to browse to forge.dev and
 return the page's main catchphrase. We assert that a browsing action/observation
 is emitted and that the agent returns the expected catchphrase.
 
@@ -214,8 +214,9 @@ def test_browsing_catchphrase(page: Page):
     _screenshot(page, "home_ready")
     _launch_conversation(page)
     _screenshot(page, "conversation_loaded")
-    prompt = "Use the web-browsing tool to navigate to https://www.all-hands.dev and tell me the main catchphrase displayed on the page. Do not answer from memory; perform the browsing action and respond with only the exact catchphrase."
+    prompt = "Use the web-browsing tool to navigate to https://forge.dev and tell me the main catchphrase displayed on the page. Do not answer from memory; perform the browsing action and respond with only the exact catchphrase."
     _send_prompt(page, prompt)
     _wait_for_browsing_event(page)
     _wait_for_catchphrase(page)
     _screenshot(page, "final_state")
+

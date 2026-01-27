@@ -63,25 +63,24 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({
   children,
-  defaultTheme = "dark",
+  defaultTheme: _defaultTheme = "dark", // eslint-disable-line @typescript-eslint/no-unused-vars
 }: ThemeProviderProps) {
-  // Initialize theme from localStorage or default
   const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === "undefined") return defaultTheme;
+    if (typeof window === "undefined") return "dark";
 
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(STORAGE_KEY) as Theme;
       if (
         stored &&
         (stored === "light" || stored === "dark" || stored === "system")
       ) {
-        return stored as Theme;
+        return stored;
       }
     } catch (error) {
-      logger.error("Failed to read theme from localStorage:", error);
+      logger.error("Failed to load theme from localStorage:", error);
     }
 
-    return defaultTheme;
+    return "dark";
   });
 
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() => {

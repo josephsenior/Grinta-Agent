@@ -1,0 +1,157 @@
+/*
+  Theme Tweak - Global overrides for a polished, accessible look
+  - Softer dark background (not pure black)
+  - Clearer elevated surfaces, borders, and button defaults
+  - Accessible contrast and focus ring
+  - Light/dark toggle-friendly variables
+*/
+
+:root {
+  /* Slightly off-black to avoid crushed blacks on non-OLED screens */
+  --tt-bg-primary: #09090b;
+  /* dark-900 */
+  --tt-bg-surface: #0f1113;
+  /* cards, panels */
+  --tt-bg-elevated: #131418;
+  /* raised items */
+
+  /* Brand */
+  --tt-brand-500: #7c3aed;
+  /* primary violet */
+  --tt-brand-600: #6d28d9;
+  --tt-accent: #8b5cf6;
+
+  /* Foreground */
+  --tt-text-primary: #E6EEF8;
+  /* soft white for readability */
+  --tt-text-secondary: #BFCFE0;
+  --tt-text-muted: #8f9aa8;
+
+  /* Borders and dividers */
+  --tt-border: rgba(139, 92, 246, 0.12);
+  --tt-border-strong: rgba(139, 92, 246, 0.22);
+
+  /* Focus / accessibility */
+  --tt-focus-ring: rgba(124, 58, 237, 0.28);
+
+  /* Buttons */
+  --tt-btn-bg: linear-gradient(135deg, var(--tt-brand-500), var(--tt-brand-600));
+  --tt-btn-text: #ffffff;
+
+  /* Elevation */
+  --tt-shadow-1: 0 6px 18px rgba(2, 6, 23, 0.55);
+  --tt-shadow-2: 0 10px 30px rgba(2, 6, 23, 0.6);
+}
+
+/* Apply to app backgrounds */
+.app-bg,
+body,
+#root,
+#__next {
+  background-color: var(--tt-bg-primary) !important;
+  color: var(--tt-text-primary) !important;
+}
+
+/* Surface cards */
+.surface {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.02));
+  background-color: var(--tt-bg-surface) !important;
+  border: 1px solid var(--tt-border) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--tt-shadow-1) !important;
+}
+
+/* Elevated surfaces */
+.surface-elevated {
+  background-color: var(--tt-bg-elevated) !important;
+  border: 1px solid var(--tt-border-strong) !important;
+  box-shadow: var(--tt-shadow-2) !important;
+}
+
+/* Buttons: clearer default affordance */
+.btn,
+button {
+  background: var(--tt-btn-bg) !important;
+  color: var(--tt-btn-text) !important;
+  border: none !important;
+  padding: 0.6rem 0.9rem !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.12) !important;
+}
+
+.btn-outline {
+  background: transparent !important;
+  border: 1px solid var(--tt-border) !important;
+  color: var(--tt-text-primary) !important;
+}
+
+.btn:focus-visible,
+button:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 5px var(--tt-focus-ring) !important;
+  border-radius: 10px !important;
+}
+
+/* Inputs: improved contrast and padding */
+input,
+textarea,
+select {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid var(--tt-border) !important;
+  color: var(--tt-text-primary) !important;
+  padding: 0.6rem 0.75rem !important;
+  border-radius: 8px !important;
+}
+
+/* Links */
+a {
+  color: var(--tt-accent) !important;
+  text-decoration: none !important;
+}
+
+a:hover {
+  text-decoration: underline !important;
+}
+
+/* Code blocks: slightly softer chrome */
+pre,
+code {
+  background: linear-gradient(180deg, rgba(8, 8, 10, 0.85), rgba(12, 12, 14, 0.85)) !important;
+  border: 1px solid rgba(139, 92, 246, 0.14) !important;
+  color: var(--tt-text-primary) !important;
+}
+
+/* Header / navigation */
+.app-header,
+.header {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.01), rgba(0, 0, 0, 0.02));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+/* Subtle nav active underline */
+.nav-link::after {
+  background: linear-gradient(90deg, var(--tt-accent), rgba(124, 58, 237, 0.7));
+}
+
+/* Reduced-glare scrollbar */
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Light theme overrides (when applied) */
+[data-theme="light"] {
+  --tt-bg-primary: #FFFFFF;
+  --tt-bg-surface: #FBFDFF;
+  --tt-bg-elevated: #F4F6F8;
+  --tt-text-primary: #0f1724;
+  --tt-text-secondary: #334155;
+  --tt-border: rgba(124, 58, 237, 0.09);
+  --tt-btn-bg: linear-gradient(135deg, #7c3aed, #5b21b6);
+  --tt-focus-ring: rgba(124, 58, 237, 0.18);
+}
+
+/* Utility: smoother global transition for theme changes */
+.theme-transition {
+  transition: background-color 220ms ease, color 220ms ease, border-color 180ms ease;
+}

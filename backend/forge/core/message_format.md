@@ -1,8 +1,8 @@
-# Forge Message Format and litellm Integration
+# Forge Message Format and LLM Provider Integration
 
 ## Overview
 
-Forge uses its own `Message` class (`Forge/core/message.py`) which provides rich content support while maintaining compatibility with litellm's message handling system.
+Forge uses its own `Message` class (`Forge/core/message.py`) which provides rich content support while maintaining compatibility with major LLM provider SDKs (OpenAI, Anthropic, Google Gemini, and xAI Grok).
 
 ## Class Structure
 
@@ -16,28 +16,17 @@ class Message(BaseModel):
     vision_enabled: bool = False
     condensable: bool = True
     function_calling_enabled: bool = False
-    tool_calls: list[ChatCompletionMessageToolCall] | None = None
+    tool_calls: list[ToolCall] | None = None
     tool_call_id: str | None = None
     name: str | None = None
     event_id: int = -1
-```
-
-litellm's `Message` class (`litellm/types/utils.py`):
-
-```python
-class Message(OpenAIObject):
-    content: str | None
-    role: Literal["assistant", "user", "system", "tool", "function"]
-    tool_calls: List[ChatCompletionMessageToolCall] | None
-    function_call: FunctionCall | None
-    audio: ChatCompletionAudioResponse | None = None
 ```
 
 ## How It Works
 
 1. **Message Creation**: Our `Message` class is a Pydantic model that supports rich content (text and images) through its `content` field.
 
-2. **Serialization**: The class uses Pydantic's `@model_serializer` to convert messages into dictionaries that litellm can understand. We have two serialization methods:
+2. **Serialization**: The class uses Pydantic's `@model_serializer` to convert messages into dictionaries that LLM providers can understand. We have two serialization methods:
 
    ```python
    def _string_serializer(self) -> dict:
@@ -67,28 +56,13 @@ class Message(OpenAIObject):
        return self._string_serializer()
    ```
 
-3. **Tool Call Handling**: Tool calls require special attention in serialization because:
-   - They need to work with litellm's API calls (which accept both dicts and objects)
-   - They need to be properly serialized for token counting
-   - They need to maintain compatibility with different LLM providers' formats
+3. **Tool Call Handling**: Tool calls are serialized to maintain compatibility with different LLM providers' formats (primarily following the OpenAI tool call structure).
 
-4. **litellm Integration**: When we pass our messages to `litellm.completion()`, litellm doesn't care about the message class type - it works with the dictionary representation. This works because:
-   - litellm's transformation code (e.g., `litellm/llms/anthropic/chat/transformation.py`) processes messages based on their structure, not their type
-   - our serialization produces dictionaries that match litellm's expected format
-   - litellm handles rich content by looking at the message structure, supporting both simple string content and lists of content items
-
-5. **Provider-Specific Handling**: litellm then transforms these messages into provider-specific formats (e.g., Anthropic, OpenAI) through its transformation layers, which know how to handle both simple and rich content structures.
-
-### Token Counting
-
-To use litellm's token counter, we need to make sure that all message components (including tool calls) are properly serialized to dictionaries. This is because:
-
-- litellm's token counter expects dictionary structures
-- Tool calls need to be included in the token count
-- Different providers may count tokens differently for structured content
+4. **SDK Integration**: When we pass our messages to provider SDKs (like `openai.ChatCompletion`), the SDKs work with the dictionary representation. This works because:
+   - Our serialization produces dictionaries that match the expected format for each provider.
+   - We handle provider-specific transformations in our direct SDK client implementations.
 
 ## Note
 
-- We don't need to inherit from litellm's `Message` class because litellm works with dictionary representations, not class types
-- Our rich content model is more sophisticated than litellm's basic string content, but litellm handles it correctly through its transformation layers
-- The compatibility is maintained through proper serialization rather than inheritance
+- Compatibility is maintained through proper serialization rather than inheritance.
+- Our rich content model is designed to be easily transformable into any provider-specific format.

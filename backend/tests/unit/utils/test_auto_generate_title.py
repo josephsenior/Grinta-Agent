@@ -160,7 +160,7 @@ async def test_update_conversation_with_title():
         assert mock_metadata.title == "Generated Title"
         sio.emit.assert_called_once()
         call_args = sio.emit.call_args[0]
-        assert call_args[0] == "oh_event"
+        assert call_args[0] == "forge_event"
         assert call_args[1]["status_update"] is True
         assert call_args[1]["type"] == "info"
         assert call_args[1]["message"] == conversation_id

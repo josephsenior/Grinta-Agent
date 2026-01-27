@@ -11,7 +11,8 @@ import { MemoryRouter } from "react-router-dom";
 import { AxiosError } from "axios";
 import { AppStore, RootState, rootReducer } from "./src/store";
 import { ToastProvider } from "#/components/shared/notifications/toast";
-import { TaskProvider } from "#/context/task-context";
+import { SidebarProvider } from "#/contexts/sidebar-context";
+
 // `vi` is a Vitest global used by unit tests. We use the ambient `vi`
 // declaration and guard it at runtime with `typeof vi !== 'undefined'` so
 // Playwright/dev servers don't attempt to use Vitest internals.
@@ -46,13 +47,13 @@ export const mockSettings404 = (): boolean => {
     const mod = require("./src/mocks/node");
     const server = mod?.server;
     if (server && typeof server.use === "function") {
-      // msw's rest handlers can be used to respond with a 404 for the
+      // msw's http handlers can be used to respond with a 404 for the
       // GET /api/settings endpoint. Use a one-off handler for this test.
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { rest } = require("msw");
+      const { http, HttpResponse } = require("msw");
       server.use(
-        rest.get("/api/settings", (_req: any, res: any, ctx: any) =>
-          res(ctx.status(404)),
+        http.get("/api/settings", () =>
+          new HttpResponse(null, { status: 404 }),
         ),
       );
       return true;
@@ -210,9 +211,9 @@ export function renderWithProviders(
         <QueryClientProvider client={queryClient}>
           <I18nextProvider i18n={i18n}>
             <ToastProvider>
-              <TaskProvider>
+              <SidebarProvider>
                 {content}
-              </TaskProvider>
+              </SidebarProvider>
             </ToastProvider>
           </I18nextProvider>
         </QueryClientProvider>

@@ -89,8 +89,21 @@ async def wait_all(
     tasks = [asyncio.create_task(c) for c in iterable]
     if not tasks:
         return []
-    _, pending = await asyncio.wait(tasks, timeout=timeout)
+    done, pending = await asyncio.wait(tasks, timeout=timeout)
     if pending:
+        # Log which tasks are still pending (this helps identify which plugin is hanging)
+        import logging
+        logger = logging.getLogger(__name__)
+        pending_info = []
+        for task in pending:
+            # Try to get the coroutine name if possible
+            coro_name = getattr(task.get_coro(), '__name__', 'unknown')
+            pending_info.append(f"  - {coro_name}")
+        logger.error(
+            f"Timeout waiting for {len(pending)} task(s) to complete. "
+            f"Completed: {len(done)}, Pending: {len(pending)}\n"
+            f"Pending tasks: {chr(10).join(pending_info) if pending_info else 'Unable to get task names'}"
+        )
         for task in pending:
             task.cancel()
         raise asyncio.TimeoutError

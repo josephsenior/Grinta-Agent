@@ -91,6 +91,7 @@ export function HydrateFallback() {
           Loading Forge Pro...
         </div>
       </div>
+      {/* eslint-disable-next-line react/no-danger */}
       <style
         dangerouslySetInnerHTML={{
           __html: `

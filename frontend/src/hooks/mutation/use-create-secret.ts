@@ -1,8 +1,10 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { SecretsService } from "#/api/secrets-service";
 
-export const useCreateSecret = () =>
-  useMutation({
+export function useCreateSecret() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
     mutationFn: ({
       name,
       value,
@@ -12,4 +14,8 @@ export const useCreateSecret = () =>
       value: string;
       description?: string;
     }) => SecretsService.createSecret(name, value, description),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["secrets"] });
+    },
   });
+}

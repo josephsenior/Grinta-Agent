@@ -1,6 +1,7 @@
 """Observation emitted when the user rejects an agent action."""
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 from forge.core.schemas import ObservationType
 from forge.events.observation.observation import Observation
@@ -10,7 +11,7 @@ from forge.events.observation.observation import Observation
 class UserRejectObservation(Observation):
     """This data class represents the result of a rejected action."""
 
-    observation: str = ObservationType.USER_REJECTED
+    observation: ClassVar[str] = ObservationType.USER_REJECTED
 
     @property
     def message(self) -> str:

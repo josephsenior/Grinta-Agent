@@ -11,146 +11,6 @@ import bashlex
 import pytest
 from pydantic import BaseModel
 
-if "litellm" not in sys.modules:
-    from typing import Any as _Any, Callable as _Callable
-
-    class _ModelResponse(BaseModel):
-        model: str | None = None
-        choices: list[_Any] = []
-
-    class _ModelInfo(BaseModel):
-        model_name: str | None = None
-
-    class _PromptTokensDetails(BaseModel):
-        cached_tokens: int | None = None
-
-    class _ChatCompletionToolParam(BaseModel):
-        name: str | None = None
-        description: str | None = None
-        parameters: dict[str, _Any] = {}
-
-    async def _acompletion(*args, **kwargs) -> dict[str, _Any]:
-        return {}
-
-    def _completion(*args, **kwargs) -> dict[str, _Any]:
-        return {}
-
-    class _APIConnectionError(Exception):
-        pass
-
-    class _ContentPolicyViolationError(Exception):
-        pass
-
-    class _RateLimitError(Exception):
-        pass
-
-    class _ServiceUnavailableError(Exception):
-        pass
-
-    class _Timeout(Exception):
-        pass
-
-    class _InternalServerError(Exception):
-        pass
-
-    class _CostPerToken(BaseModel):
-        input_cost_per_token: float | None = None
-        output_cost_per_token: float | None = None
-
-    class _Usage(BaseModel):
-        prompt_tokens: int | None = None
-        completion_tokens: int | None = None
-        total_tokens: int | None = None
-
-    class _LiteLLMUtilsModule(types.ModuleType):
-        create_pretrained_tokenizer: _Callable[..., _Any]
-        get_model_info: _Callable[..., _Any]
-
-    class _LiteLLMExceptionsModule(types.ModuleType):
-        APIConnectionError: type[Exception]
-        ContentPolicyViolationError: type[Exception]
-        RateLimitError: type[Exception]
-        ServiceUnavailableError: type[Exception]
-        Timeout: type[Exception]
-        InternalServerError: type[Exception]
-
-    class _LiteLLMTypesUtilsModule(types.ModuleType):
-        CostPerToken: type[_CostPerToken]
-        ModelResponse: type[_ModelResponse]
-        Usage: type[_Usage]
-
-    class _LiteLLMModule(types.ModuleType):
-        ModelResponse: type[_ModelResponse]
-        ModelInfo: type[_ModelInfo]
-        PromptTokensDetails: type[_PromptTokensDetails]
-        ChatCompletionToolParam: type[_ChatCompletionToolParam]
-        acompletion: _Callable[..., _Any]
-        completion: _Callable[..., _Any]
-        completion_cost: _Callable[..., _Any]
-        APIConnectionError: type[Exception]
-        ContentPolicyViolationError: type[Exception]
-        RateLimitError: type[Exception]
-        ServiceUnavailableError: type[Exception]
-        Timeout: type[Exception]
-        InternalServerError: type[Exception]
-        CostPerToken: type[_CostPerToken]
-        Usage: type[_Usage]
-        suppress_debug_info: bool
-        set_verbose: bool
-        utils: _LiteLLMUtilsModule
-        exceptions: _LiteLLMExceptionsModule
-        create_pretrained_tokenizer: _Callable[..., _Any]
-        get_model_info: _Callable[..., _Any]
-
-    litellm_stub = _LiteLLMModule("litellm")
-    litellm_stub.ModelResponse = _ModelResponse
-    litellm_stub.ModelInfo = _ModelInfo
-    litellm_stub.PromptTokensDetails = _PromptTokensDetails
-    litellm_stub.ChatCompletionToolParam = _ChatCompletionToolParam
-    litellm_stub.acompletion = _acompletion
-    litellm_stub.completion = _completion
-    litellm_stub.completion_cost = lambda *args, **kwargs: 0
-    litellm_stub.APIConnectionError = _APIConnectionError
-    litellm_stub.ContentPolicyViolationError = _ContentPolicyViolationError
-    litellm_stub.RateLimitError = _RateLimitError
-    litellm_stub.ServiceUnavailableError = _ServiceUnavailableError
-    litellm_stub.Timeout = _Timeout
-    litellm_stub.InternalServerError = _InternalServerError
-    litellm_stub.CostPerToken = _CostPerToken
-    litellm_stub.Usage = _Usage
-    litellm_stub.suppress_debug_info = True
-    litellm_stub.set_verbose = False
-
-    utils_module = _LiteLLMUtilsModule("litellm.utils")
-    utils_module.create_pretrained_tokenizer = lambda *args, **kwargs: None
-    utils_module.get_model_info = lambda *args, **kwargs: {}
-
-    exceptions_module = _LiteLLMExceptionsModule("litellm.exceptions")
-    exceptions_module.APIConnectionError = _APIConnectionError
-    exceptions_module.ContentPolicyViolationError = _ContentPolicyViolationError
-    exceptions_module.RateLimitError = _RateLimitError
-    exceptions_module.ServiceUnavailableError = _ServiceUnavailableError
-    exceptions_module.Timeout = _Timeout
-    exceptions_module.InternalServerError = _InternalServerError
-
-    types_utils_module = _LiteLLMTypesUtilsModule("litellm.types.utils")
-    types_utils_module.CostPerToken = _CostPerToken
-    types_utils_module.ModelResponse = _ModelResponse
-    types_utils_module.Usage = _Usage
-
-    litellm_stub.utils = utils_module
-    litellm_stub.exceptions = exceptions_module
-    litellm_stub.create_pretrained_tokenizer = utils_module.create_pretrained_tokenizer
-    litellm_stub.get_model_info = utils_module.get_model_info
-
-    sys.modules["litellm"] = litellm_stub
-    sys.modules["litellm.utils"] = utils_module
-    sys.modules["litellm.exceptions"] = exceptions_module
-    sys.modules["litellm.types.utils"] = types_utils_module
-if "tokenizers" not in sys.modules:
-    tokenizers_stub = types.ModuleType("tokenizers")
-    sys.modules["tokenizers"] = tokenizers_stub
-
 from forge.core.logger import forge_logger as logger
 from forge.events.action import CmdRunAction
 from forge.events.observation import ErrorObservation, Observation
@@ -168,6 +28,13 @@ from forge.runtime.utils.bash import (
 )
 from forge.runtime.utils.bash_constants import TIMEOUT_MESSAGE_TEMPLATE
 from forge.runtime.utils.server_detector import DetectedServer
+
+# Skip all bash session tests on Windows since they require tmux (Unix only)
+pytestmark = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="BashSession tests require tmux which is not available on Windows"
+)
+
 
 
 def get_no_change_timeout_suffix(timeout_seconds):

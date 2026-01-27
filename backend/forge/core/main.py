@@ -37,7 +37,6 @@ from forge.core.config import (
 )
 from forge.core.config.mcp_config import ForgeMCPConfigImpl, forgeMCPConfigImpl
 from forge.core.logger import forge_logger as logger
-from forge.core.diagnostics import verify_observability_dependencies
 from forge.core.loop import run_agent_until_done
 from forge.core.schemas import AgentState
 from forge.core.setup import (
@@ -585,7 +584,6 @@ def load_replay_log(trajectory_path: str) -> tuple[list[Event] | None, Action]:
 if __name__ == "__main__":
     args = parse_arguments()
     config_main: ForgeConfig = setup_config_from_args(args)
-    verify_observability_dependencies(config_main)
     task_str = read_task(args, config_main.cli_multiline_input)
     initial_action_main: Action = NullAction()
     if config_main.replay_trajectory_path:

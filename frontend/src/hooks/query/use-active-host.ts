@@ -18,6 +18,21 @@ export const useActiveHost = () => {
     },
     enabled: runtimeIsReady && !!conversationId,
     initialData: { hosts: [] },
+    retry: (failureCount, error: unknown) => {
+      // Don't retry on 404 - endpoint might not be available
+      if (
+        error &&
+        typeof error === "object" &&
+        "response" in error &&
+        error.response &&
+        typeof error.response === "object" &&
+        "status" in error.response &&
+        error.response.status === 404
+      ) {
+        return false;
+      }
+      return failureCount < 2;
+    },
     meta: {
       disableToast: true,
     },
@@ -54,7 +69,9 @@ export const useActiveHost = () => {
           },
         }));
 
-  const apps = useQueries({ queries: probeQueries });
+  const apps = useQueries({
+    queries: probeQueries,
+  }) as { data: string | undefined }[];
 
   const appsData = apps.map((app) => app.data);
 

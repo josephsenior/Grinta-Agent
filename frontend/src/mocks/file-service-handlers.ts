@@ -9,8 +9,6 @@ export const FILE_VARIANTS_2 = [
 
 const createListFilesHandler = (path: string) =>
   http.get(path, async ({ params }) => {
-    await delay(0);
-
     const cid = params.conversationId?.toString();
     if (!cid) {
       return HttpResponse.json(null, { status: 400 });
@@ -23,8 +21,6 @@ const createListFilesHandler = (path: string) =>
 
 const createSelectFileHandler = (path: string) =>
   http.get(path, async ({ request }) => {
-    await delay(0);
-
     const url = new URL(request.url);
     const file = url.searchParams.get("file")?.toString();
     if (file) {

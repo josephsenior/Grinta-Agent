@@ -1,6 +1,7 @@
 """Observation emitted when files finish downloading."""
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 from forge.core.schemas import ObservationType
 from forge.events.observation.observation import Observation
@@ -16,7 +17,7 @@ class FileDownloadObservation(Observation):
     """
 
     file_path: str
-    observation: str = ObservationType.DOWNLOAD
+    observation: ClassVar[str] = ObservationType.DOWNLOAD
 
     @property
     def message(self) -> str:

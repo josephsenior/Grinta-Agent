@@ -74,22 +74,99 @@ class RecoveryService:
         return f"{type(exc).__name__}: {exc!s}"
 
     def _format_llm_error(self, exc: Exception) -> str | None:
-        from litellm.exceptions import (
+        from forge.llm.exceptions import (
             APIConnectionError,
             AuthenticationError,
             RateLimitError,
         )
 
         if isinstance(exc, APIConnectionError):
-            return f"API Connection Error: Unable to connect to the AI service. {exc}"
+            return (
+                f"⚠️ API Connection Error\n\n"
+                f"Unable to connect to the AI service. This usually means:\n\n"
+                f"• The AI service is temporarily unavailable\n"
+                f"• There's a network connectivity issue\n"
+                f"• The service is experiencing high load\n\n"
+                f"**What you can do:**\n"
+                f"• Wait a moment and try again\n"
+                f"• Check your internet connection\n"
+                f"• Try using a different AI model\n\n"
+                f"**Technical details:** {exc}"
+            )
         if isinstance(exc, AuthenticationError):
-            return f"Authentication Error: There's an issue with your API key configuration. {exc}"
+            return (
+                f"🔒 Authentication Error\n\n"
+                f"There's an issue with your API key configuration.\n\n"
+                f"**What you can do:**\n"
+                f"• Check that your API key is correct in settings\n"
+                f"• Verify the API key has the necessary permissions\n"
+                f"• Ensure the API key hasn't expired or been revoked\n"
+                f"• Try regenerating your API key\n\n"
+                f"**Technical details:** {exc}"
+            )
         if isinstance(exc, RateLimitError):
-            return f"Rate Limit Error: You've exceeded the API rate limit. {exc}"
+            # Extract retry delay from error message if available
+            error_str = str(exc)
+            retry_delay = None
+            time_until_reset = "a few moments"
+            
+            # Try to extract retry delay from various formats
+            import re
+            patterns = [
+                r"retry\s+(?:in|after)\s+(\d+(?:\.\d+)?)\s*s",  # "retry in 38.6s"
+                r"retry\s+(?:in|after)\s+(\d+)\s*second",  # "retry after 30 seconds"
+                r"retry\s+(?:in|after)\s+(\d+)\s*minute",  # "retry in 5 minutes"
+                r"(\d+(?:\.\d+)?)\s*second",  # "38.613643389s"
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, error_str, re.IGNORECASE)
+                if match:
+                    try:
+                        retry_delay = int(float(match.group(1)))
+                        if "minute" in pattern:
+                            time_until_reset = f"{retry_delay} minute{'s' if retry_delay != 1 else ''}"
+                        else:
+                            minutes = max(1, retry_delay // 60)
+                            if minutes > 0:
+                                time_until_reset = f"{minutes} minute{'s' if minutes != 1 else ''}"
+                            else:
+                                time_until_reset = f"{retry_delay} second{'s' if retry_delay != 1 else ''}"
+                        break
+                    except (ValueError, AttributeError):
+                        continue
+            
+            # Detect if it's a quota vs rate limit issue
+            is_quota = "quota" in error_str.lower() or "free_tier" in error_str.lower()
+            
+            if is_quota:
+                return (
+                    f"💰 API Quota Exceeded\n\n"
+                    f"You've reached your API quota limit for this AI model.\n\n"
+                    f"**Your quota resets in:** {time_until_reset}\n\n"
+                    f"**What you can do:**\n"
+                    f"• Wait {time_until_reset} for the quota to reset\n"
+                    f"• Use a different AI model (if available)\n"
+                    f"• Upgrade your API plan for higher limits\n"
+                    f"• Check your API provider's usage dashboard\n\n"
+                    f"**Note:** This is an API provider limit, not a Forge limit."
+                )
+            else:
+                return (
+                    f"⏰ Rate Limit Exceeded\n\n"
+                    f"You're sending requests too quickly. The AI service has rate limits to ensure fair usage.\n\n"
+                    f"**Retry in:** {time_until_reset}\n\n"
+                    f"**What you can do:**\n"
+                    f"• Wait {time_until_reset} before trying again\n"
+                    f"• Slow down your request rate\n"
+                    f"• Use a different AI model (if available)\n"
+                    f"• Upgrade your API plan for higher rate limits\n\n"
+                    f"**Note:** This is an API provider rate limit, not a Forge limit."
+                )
         return None
 
     async def _try_error_recovery(self, exc: Exception, error_type: ErrorType) -> bool:
-        from litellm.exceptions import AuthenticationError
+        from forge.llm.exceptions import AuthenticationError
 
         controller = self._context.get_controller()
 
@@ -184,6 +261,8 @@ class RecoveryService:
                 )
 
     async def _handle_non_recoverable_error(self, exc: Exception) -> None:
+        from forge.events.observation import ErrorObservation
+        
         controller = self._context.get_controller()
         logger.error(
             "Non-recoverable error encountered: %s. Transitioning to ERROR state.", exc
@@ -195,6 +274,12 @@ class RecoveryService:
         if controller.status_callback is not None:
             runtime_status = self._determine_runtime_status(exc)
             if runtime_status == RuntimeStatus.ERROR_LLM_OUT_OF_CREDITS:
+                await self._handle_rate_limit_error(exc)
+                return
+            
+            # Check if it's a RateLimitError that should be handled
+            from forge.llm.exceptions import RateLimitError
+            if isinstance(exc, RateLimitError):
                 await self._handle_rate_limit_error(exc)
                 return
             controller.status_callback("error", runtime_status, controller.state.last_error)
@@ -215,11 +300,19 @@ class RecoveryService:
             )
             return
 
+        # Send user-friendly error message to frontend before setting ERROR state
+        error_message = controller.state.last_error or f"An error occurred: {type(exc).__name__}"
+        error_obs = ErrorObservation(
+            content=error_message,
+            error_id=error_type.value.upper() if error_type else "UNKNOWN_ERROR",
+        )
+        controller.event_stream.add_event(error_obs, EventSource.AGENT)
+        
         await controller.set_agent_state_to(AgentState.ERROR)
         self._emit_recovery_event("halted", next_state=AgentState.ERROR.value)
 
     def _determine_runtime_status(self, exc: Exception) -> RuntimeStatus:
-        from litellm.exceptions import (
+        from forge.llm.exceptions import (
             APIConnectionError,
             APIError,
             AuthenticationError,
@@ -247,12 +340,22 @@ class RecoveryService:
         return RuntimeStatus.ERROR
 
     async def _handle_rate_limit_error(self, exc: Exception) -> None:
+        from forge.events.observation import ErrorObservation
+        
         controller = self._context.get_controller()
         if (
             hasattr(exc, "retry_attempt")
             and hasattr(exc, "max_retries")
             and (exc.retry_attempt >= exc.max_retries)
         ):
+            # Retries exhausted - send user-friendly error message
+            error_message = self._format_llm_error(exc) or str(exc)
+            error_obs = ErrorObservation(
+                content=error_message,
+                error_id="RATE_LIMIT_EXCEEDED",
+            )
+            controller.event_stream.add_event(error_obs, EventSource.AGENT)
+            
             controller.state.last_error = RuntimeStatus.AGENT_RATE_LIMITED_STOPPED_MESSAGE.value
             await controller.set_agent_state_to(AgentState.ERROR)
             self._emit_recovery_event("halted", next_state=AgentState.ERROR.value)
@@ -264,7 +367,6 @@ class RecoveryService:
 
     def _emit_recovery_event(self, stage: str, **payload: Any) -> None:
         """Emit structured telemetry for recovery flow."""
-
         parts = [
             f"stage={stage}",
             f"retry={self._retry_service.retry_count}",

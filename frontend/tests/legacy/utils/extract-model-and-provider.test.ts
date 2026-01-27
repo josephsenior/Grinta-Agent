@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractModelAndProvider } from "../../src/utils/extract-model-and-provider";
+import { extractModelAndProvider } from "#/utils/extract-model-and-provider";
 
 describe("extractModelAndProvider", () => {
   it("should work", () => {
@@ -90,3 +90,4 @@ describe("extractModelAndProvider", () => {
     });
   });
 });
+

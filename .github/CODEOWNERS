@@ -1,4 +1,4 @@
-# CODEOWNERS file for OpenHands repository
+# CODEOWNERS file for Forge repository
 # See https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 # Frontend code owners
@@ -10,3 +10,4 @@
 
 # Documentation code owners
 /docs/ @mamoodi
+

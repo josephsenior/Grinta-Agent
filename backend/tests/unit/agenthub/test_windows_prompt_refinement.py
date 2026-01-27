@@ -31,9 +31,9 @@ def agent_config():
 
 def test_codeact_agent_system_prompt_no_bash_on_windows(mock_llm, agent_config):
     """Test that CodeActAgent's system prompt doesn't contain 'bash' on Windows."""
-    oh_config = ForgeConfig()
-    oh_config.set_llm_config(LLMConfig())
-    llm_registry = LLMRegistry(config=oh_config)
+    forge_config = ForgeConfig()
+    forge_config.set_llm_config(LLMConfig())
+    llm_registry = LLMRegistry(config=forge_config)
     agent = CodeActAgent(config=agent_config, llm_registry=llm_registry)
     agent.llm = mock_llm
     system_prompt = agent.prompt_manager.get_system_message()
@@ -47,9 +47,9 @@ def test_codeact_agent_system_prompt_no_bash_on_windows(mock_llm, agent_config):
 
 def test_codeact_agent_tool_descriptions_no_bash_on_windows(mock_llm, agent_config):
     """Test that CodeActAgent's tool descriptions don't contain 'bash' on Windows."""
-    oh_config = ForgeConfig()
-    oh_config.set_llm_config(LLMConfig())
-    llm_registry = LLMRegistry(config=oh_config)
+    forge_config = ForgeConfig()
+    forge_config.set_llm_config(LLMConfig())
+    llm_registry = LLMRegistry(config=forge_config)
     agent = CodeActAgent(config=agent_config, llm_registry=llm_registry)
     agent.llm = mock_llm
     tools = agent.tools

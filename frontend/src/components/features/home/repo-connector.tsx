@@ -13,7 +13,7 @@ interface RepoConnectorProps {
 }
 
 export function RepoConnector({ onRepoSelection }: RepoConnectorProps) {
-  const { providers } = useUserProviders();
+  const { providers, isLoading } = useUserProviders();
   const { data: config } = useConfig();
   const { t } = useTranslation();
 
@@ -39,7 +39,7 @@ export function RepoConnector({ onRepoSelection }: RepoConnectorProps) {
         </TooltipButton>
       </div>
 
-      {!providersAreSet && <ConnectToProviderMessage />}
+      {!isLoading && !providersAreSet && <ConnectToProviderMessage />}
       {providersAreSet && (
         <RepositorySelectionForm onRepoSelection={onRepoSelection} />
       )}

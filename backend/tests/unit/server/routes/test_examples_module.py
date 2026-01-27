@@ -18,7 +18,7 @@ def test_settings_examples_structure():
 
 def test_conversation_examples_variants():
     examples = cast(Mapping[str, Any], examples_module.CONVERSATION_EXAMPLES)
-    assert {"simple_conversation", "with_repository", "metasop_orchestration"} <= set(
+    assert {"simple_conversation", "with_repository"} <= set(
         examples
     )
     assert "github_repo" in examples["with_repository"]["value"]

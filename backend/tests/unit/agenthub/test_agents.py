@@ -2,7 +2,6 @@ from typing import Any, Union, cast
 from unittest.mock import Mock
 
 import pytest
-from litellm import ChatCompletionMessageToolCall
 from pydantic import SecretStr
 
 from forge.agenthub.codeact_agent.codeact_agent import CodeActAgent
@@ -11,7 +10,6 @@ from forge.agenthub.codeact_agent.function_calling import (
 )
 from forge.agenthub.codeact_agent.tools import (
     BrowserTool,
-    IPythonTool,
     LLMBasedFileEditTool,
     ThinkTool,
     create_cmd_run_tool,
@@ -80,7 +78,6 @@ def test_agent_with_default_config_has_default_tools(create_llm_registry):
     default_tool_names = [tool["function"]["name"] for tool in codeact_agent.tools]
     required_tools = {
         "execute_bash",
-        "execute_ipython_cell",
         "finish",
         "str_replace_editor",
         "think",
@@ -133,17 +130,6 @@ def test_cmd_run_tool():
     assert "security_risk" in CmdRunTool["function"]["parameters"]["properties"]
     assert CmdRunTool["function"]["parameters"]["required"] == [
         "command",
-        "security_risk",
-    ]
-
-
-def test_ipython_tool():
-    assert IPythonTool["type"] == "function"
-    assert IPythonTool["function"]["name"] == "execute_ipython_cell"
-    assert "code" in IPythonTool["function"]["parameters"]["properties"]
-    assert "security_risk" in IPythonTool["function"]["parameters"]["properties"]
-    assert IPythonTool["function"]["parameters"]["required"] == [
-        "code",
         "security_risk",
     ]
 
@@ -276,7 +262,7 @@ def test_step_with_no_pending_actions(mock_state: State, create_llm_registry):
     config = AgentConfig()
     config.enable_prompt_extensions = False
     agent = CodeActAgent(config=config, llm_registry=create_llm_registry(llm_config))
-    agent.llm = llm
+    agent.set_llm(llm)
     initial_user_message = MessageAction(content="Initial user message")
     initial_user_message._source = EventSource.USER
     mock_state.history = [initial_user_message]
@@ -329,7 +315,7 @@ def test_mismatched_tool_call_events_and_auto_add_system_message(
                         role="assistant",
                         content="",
                         tool_calls=[
-                            Mock(spec=ChatCompletionMessageToolCall, id="tool_call_0")
+                            Mock(id="tool_call_0")
                         ],
                     )
                 )

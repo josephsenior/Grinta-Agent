@@ -1,7 +1,6 @@
 import React, { useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Sparkles,
   Code,
   Bug,
   FileCode,
@@ -13,7 +12,6 @@ import {
   Wand2,
 } from "lucide-react";
 import { gsap } from "gsap";
-import { Button } from "#/components/ui/button";
 import { cn } from "#/utils/utils";
 import { useGSAPFadeIn } from "#/hooks/use-gsap-animations";
 
@@ -174,46 +172,19 @@ export function EmptyState({ onSelectExample, className }: EmptyStateProps) {
     <div
       ref={containerRef}
       className={cn(
-        "w-full max-w-2xl mx-auto space-y-6 transition-all duration-500",
+        "w-full max-w-[440px] mx-auto space-y-6 transition-all duration-500",
         className,
       )}
     >
-      {/* Animated Hero Icon */}
-      <div className="flex justify-center">
-        <div className="relative">
-          {/* Pulsing background glow */}
-          <div className="absolute inset-0 bg-gradient-to-r from-brand-500/20 to-brand-600/20 rounded-full blur-2xl animate-pulse-glow" />
-
-          {/* Main icon container */}
-          <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-500/10 to-brand-600/5 border border-brand-500/20 flex items-center justify-center shadow-lg shadow-brand-500/10">
-            <Sparkles className="h-10 w-10 text-brand-500 animate-pulse" />
-          </div>
-
-          {/* Floating particles */}
-          <div
-            className="absolute -top-2 -right-2 w-3 h-3 rounded-full bg-brand-400 animate-bounce opacity-70"
-            style={{ animationDelay: "0ms", animationDuration: "2s" }}
-          />
-          <div
-            className="absolute -bottom-1 -left-2 w-2 h-2 rounded-full bg-brand-500 animate-bounce opacity-60"
-            style={{ animationDelay: "300ms", animationDuration: "2.5s" }}
-          />
-          <div
-            className="absolute top-3 -right-3 w-2 h-2 rounded-full bg-brand-300 animate-bounce opacity-50"
-            style={{ animationDelay: "600ms", animationDuration: "3s" }}
-          />
-        </div>
-      </div>
-
-      {/* Compact Header */}
-      <div className="text-center space-y-2">
-        <h2 className="text-xl font-semibold text-text-primary bg-gradient-to-r from-text-primary to-brand-500 bg-clip-text">
+      {/* Simple Header */}
+      <div className="text-center space-y-4">
+        <h2 className="text-3xl md:text-4xl font-bold text-[var(--text-primary)] leading-tight">
           {t(
             "emptyState.whatWouldYouLikeToBuild",
             "What would you like to build?",
           )}
         </h2>
-        <p className="text-text-secondary text-sm max-w-lg mx-auto">
+        <p className="text-[var(--text-tertiary)] text-sm leading-relaxed">
           {t(
             "emptyState.chooseSuggestionOrType",
             "Choose a suggestion below or type your own message to get started",
@@ -221,89 +192,44 @@ export function EmptyState({ onSelectExample, className }: EmptyStateProps) {
         </p>
       </div>
 
-      {/* Simplified Category Filter - Just show popular */}
-      <div className="flex items-center justify-center gap-2 py-2">
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20">
-          <Sparkles className="h-3.5 w-3.5 text-brand-500" />
-          <span className="text-xs font-medium text-brand-500">
-            {t("emptyState.popularTasks", "Popular Tasks")}
-          </span>
-        </div>
-      </div>
-
-      {/* Enhanced Examples - Only show 3 popular ones */}
+      {/* Examples - Desktop style */}
       <div ref={examplesRef} className="grid grid-cols-1 gap-3">
         {filteredExamples.slice(0, 3).map((example) => (
-          <Button
+          <button
             key={example.id}
-            variant="ghost"
+            type="button"
             onClick={() => onSelectExample(example.prompt)}
             className={cn(
-              "w-full justify-start h-auto py-3 px-4 text-left group relative overflow-hidden",
-              "bg-gradient-to-br from-black to-brand-500/5 border border-brand-500/20",
-              "hover:border-brand-500/40 hover:from-brand-500/5 hover:to-brand-500/10",
-              "transition-all duration-300 hover:shadow-lg hover:shadow-brand-500/10",
-              "hover:scale-[1.01] active:scale-[0.99]",
+              "w-full text-left px-4 py-3 rounded-lg border transition-all duration-200",
+              "bg-[var(--bg-input)] border-[var(--border-primary)] text-[var(--text-primary)]",
+              "hover:bg-[var(--bg-elevated)] hover:border-[var(--border-accent)]",
             )}
           >
-            {/* Subtle gradient overlay on hover */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-brand-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-            <div className="flex items-center gap-3 w-full relative z-10">
-              {/* Icon with glow effect */}
-              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-500 group-hover:bg-brand-500/20 group-hover:border-brand-500/30 transition-all duration-300 group-hover:shadow-md group-hover:shadow-brand-500/20">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-primary)] flex items-center justify-center text-[var(--border-accent)]">
                 {example.icon}
               </div>
-
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-text-primary group-hover:text-brand-400 transition-colors duration-300 mb-0.5">
+                <div className="text-sm font-medium text-[var(--text-primary)] mb-0.5">
                   {example.title}
                 </div>
-                <div className="text-xs text-text-secondary group-hover:text-text-primary/80 transition-colors duration-300 line-clamp-1">
+                <div className="text-xs text-[var(--text-tertiary)] line-clamp-1">
                   {example.description}
                 </div>
               </div>
-
-              {/* Arrow indicator */}
-              <div className="flex-shrink-0 text-brand-500/0 group-hover:text-brand-500/100 transition-all duration-300 group-hover:translate-x-1">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </div>
             </div>
-          </Button>
+          </button>
         ))}
       </div>
 
-      {/* Enhanced Footer Hint */}
-      <div className="text-center pt-3 space-y-2">
-        <p className="text-sm text-text-secondary font-medium">
+      {/* Footer Hint */}
+      <div className="text-center pt-2">
+        <p className="text-xs text-[var(--text-tertiary)]">
           {t(
             "emptyState.iCanHelpYou",
             "I can help you code, debug, refactor, and learn",
           )}
         </p>
-        <div className="flex items-center justify-center gap-2 text-xs text-text-tertiary">
-          <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
-            <span>{t("emptyState.alwaysAvailable", "Always available")}</span>
-          </div>
-          <span>•</span>
-          <div className="flex items-center gap-1">
-            <Zap className="h-3 w-3 text-brand-500" />
-            <span>{t("emptyState.instantResponses", "Instant responses")}</span>
-          </div>
-        </div>
       </div>
     </div>
   );

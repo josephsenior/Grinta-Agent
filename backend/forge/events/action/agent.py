@@ -96,23 +96,6 @@ class AgentRejectAction(Action):
 
 
 @dataclass
-class AgentDelegateAction(Action):
-    """An action where the agent delegates task to another agent."""
-
-    agent: str = ""
-    inputs: dict = field(default_factory=dict)
-    thought: str = ""
-    action: ClassVar[str] = ActionType.DELEGATE
-
-    @property
-    def message(self) -> str:
-        """Get delegation message."""
-        return f"I'm asking {self.agent} for help with this task."
-
-    __test__ = False
-
-
-@dataclass
 class RecallAction(Action):
     """This action is used for retrieving content, e.g., from the global directory or user workspace."""
 
@@ -251,7 +234,6 @@ canonicalize("ChangeAgentStateAction", ChangeAgentStateAction)
 canonicalize("AgentFinishAction", AgentFinishAction)
 canonicalize("AgentThinkAction", AgentThinkAction)
 canonicalize("AgentRejectAction", AgentRejectAction)
-canonicalize("AgentDelegateAction", AgentDelegateAction)
 canonicalize("RecallAction", RecallAction)
 canonicalize("CondensationAction", CondensationAction)
 canonicalize("CondensationRequestAction", CondensationRequestAction)

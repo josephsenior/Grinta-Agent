@@ -186,35 +186,4 @@ class TaskComplexityAnalyzer:
 
         return estimated
 
-    def should_enable_ace(self, complexity: float) -> bool:
-        """Determine if ACE framework should be enabled.
 
-        Args:
-            complexity: Task complexity score (1.0-10.0)
-
-        Returns:
-            True if ACE should be enabled, False otherwise
-        """
-        # Check if ACE is enabled in config
-        enable_ace = getattr(self._config, "enable_ace", True)
-        if not enable_ace:
-            return False
-
-        # Check threshold (0 = always enable, None/negative = disable)
-        threshold = getattr(self._config, "ace_auto_enable_threshold", 5.0)
-        if threshold is None or threshold < 0:
-            return False
-        if threshold == 0:
-            return True  # Always enable
-
-        should_enable = complexity >= threshold
-        if should_enable:
-            logger.info(
-                f"🚀 ACE enabled for complex task (complexity: {complexity:.1f} >= {threshold})"
-            )
-        else:
-            logger.debug(
-                f"ACE disabled for simple task (complexity: {complexity:.1f} < {threshold})"
-            )
-
-        return should_enable

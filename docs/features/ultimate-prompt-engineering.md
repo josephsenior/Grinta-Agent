@@ -1,6 +1,6 @@
 # 📝 **Ultimate Prompt Engineering**
 
-> **Research-backed CodeAct prompt combining best practices from Anthropic, OpenAI, ReAct, ACE, Cursor, and Linus Torvalds**
+> **Research-backed CodeAct prompt combining best practices from Anthropic, OpenAI, ReAct, Cursor, and Linus Torvalds**
 
 ---
 
@@ -15,7 +15,6 @@ The Ultimate CodeAct prompt is a carefully optimized system prompt that combines
 - **Token Optimized**: 29% reduction while IMPROVING quality
 - **Error Recovery**: Systematic fallback patterns
 - **Task Management**: Built-in complex work organization
-- **ACE Compatible**: Self-improving playbook integration
 
 ---
 
@@ -41,18 +40,12 @@ The Ultimate CodeAct prompt is a carefully optimized system prompt that combines
 - Constraint-driven boundaries
 - Few-shot examples over explanations
 
-#### **4. ACE Framework (Agentic Context Engineering)**
-- Playbook-driven context management
-- Incremental delta updates
-- Self-improving from execution feedback
-- **Paper:** "Agentic Context Engineering: Evolving Contexts for Self-Improving Language Models"
-
-#### **5. Cursor Composer Patterns**
+#### **4. Cursor Composer Patterns**
 - Ultra-concise format (no bloat)
 - Priority rules at top (recency bias)
 - Show don't tell (examples > explanations)
 
-#### **6. Linus Torvalds Engineering Philosophy**
+#### **5. Linus Torvalds Engineering Philosophy**
 - Data structures over code
 - No special cases (good taste)
 - Simplicity is paramount
@@ -87,17 +80,15 @@ The Ultimate CodeAct prompt is a carefully optimized system prompt that combines
 20. PROCESS_MANAGEMENT                 - 8 lines
 21. MCP_TOOLS                          - 3 lines
 22. UI_WORKFLOW                        - 6 lines
-23. MULTI_CANDIDATES (MetaSOP)         - 16 lines
-24. ACE_PLAYBOOK (hook)                - 13 lines
-25. PERMISSIONS (dynamic)              - 16 lines
-26. EXTERNAL_SERVICES                  - 4 lines
-27. TROUBLESHOOTING                    - 8 lines
-28. DOCUMENTATION                      - 5 lines
-29. ANTI_PATTERNS                      - 11 lines
-30. GOOD_PATTERNS                      - 11 lines
-31. EXAMPLES (3 condensed)             - 36 lines
-32. THINKING_TOOL                      - 6 lines
-33. INTERACTION                        - 3 lines
+23. PERMISSIONS (dynamic)              - 16 lines
+24. EXTERNAL_SERVICES                  - 4 lines
+25. TROUBLESHOOTING                    - 8 lines
+26. DOCUMENTATION                      - 5 lines
+27. ANTI_PATTERNS                      - 11 lines
+28. GOOD_PATTERNS                      - 11 lines
+29. EXAMPLES (3 condensed)             - 36 lines
+30. THINKING_TOOL                      - 6 lines
+31. INTERACTION                        - 3 lines
 ──────────────────────────────────────────────
 Total: 429 lines (~880 tokens)
 ```
@@ -271,44 +262,12 @@ Using task_tracker to organize:
 
 ### **For Developers:**
 1. **Don't Override**: The prompt is research-optimized
-2. **Use ACE**: Enable ACE framework for self-improving playbooks
-3. **Monitor Performance**: Watch for ReAct pattern in logs
-4. **A/B Test**: If experimenting, use prompt optimization system
-
----
-
-## 🚀 **Advanced: ACE Integration**
-
-The ultimate prompt includes hooks for ACE (Agentic Context Engineering) playbooks:
-
-```jinja
-{% if ace_playbook_content %}
-<ACE_PLAYBOOK>
-{{ ace_playbook_content }}
-</ACE_PLAYBOOK>
-{% endif %}
-```
-
-**When ACE is enabled:**
-- Relevant strategies retrieved from playbook
-- Injected into prompt dynamically
-- Agent learns from execution
-- Playbook grows over time
-- Self-improving behavior!
-
-**Enable ACE:**
-```toml
-[metasop]
-enable_ace = true
-ace_playbook_persistence_path = "~/.Forge/ace_playbooks/"
-```
+2. **Monitor Performance**: Watch for ReAct pattern in logs
 
 ---
 
 ## 📚 **Related Documentation**
 
-- [ACE Framework](ace-framework.md) - Self-improving system
-- [Causal Reasoning](causal-reasoning.md) - Conflict prediction
 - [CodeAct Agent](codeact-agent.md) - Agent architecture
 - [Prompt Optimization](prompt-optimization.md) - Dynamic optimization
 - [Best Practices](../guides/best-practices.md) - Usage guidelines

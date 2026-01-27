@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from litellm import supports_response_schema
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
@@ -48,7 +47,7 @@ class LLMAttentionCondenser(RollingCondenser):
                        or if the LLM model doesn't support response_schema capability.
 
         Side Effects:
-            - Validates LLM capabilities via litellm.supports_response_schema()
+            - Validates LLM capabilities via LLM model features
             - Initializes parent RollingCondenser to set up event management infrastructure
 
         Notes:
@@ -77,10 +76,7 @@ class LLMAttentionCondenser(RollingCondenser):
         self.max_size = max_size
         self.keep_first = keep_first
         self.llm = llm
-        if not supports_response_schema(
-            model=self.llm.config.model,
-            custom_llm_provider=self.llm.config.custom_llm_provider,
-        ):
+        if not self.llm.features.supports_response_schema:
             msg = "The LLM model must support the 'response_schema' parameter to use the LLMAttentionCondenser."
             raise ValueError(
                 msg,

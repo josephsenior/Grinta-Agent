@@ -1,6 +1,6 @@
 """Ultimate Editor tool providing structure-aware editing for the CodeAct agent."""
 
-from litellm import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from typing import Any
 from ._compat import build_tool_param
 
 from forge.agenthub.codeact_agent.tools.security_utils import (
@@ -69,14 +69,14 @@ Commands: edit_function, rename_symbol, find_symbol, replace_range, normalize_in
 
 def create_ultimate_editor_tool(
     use_short_description: bool = False,
-) -> ChatCompletionToolParam:
+) -> Any:
     """Create the Ultimate Editor tool for the CodeAct agent.
 
     Args:
         use_short_description: Whether to use short or detailed description
 
     Returns:
-        ChatCompletionToolParam with the Ultimate Editor configuration
+        Any with the Ultimate Editor configuration
 
     """
     description = (
@@ -86,8 +86,6 @@ def create_ultimate_editor_tool(
     )
 
     return build_tool_param(
-        ChatCompletionToolParam,
-        ChatCompletionToolParamFunctionChunk,
         name="ultimate_editor",
         description=description,
         parameters={

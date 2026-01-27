@@ -11,143 +11,151 @@ description = "Forge: Your AI-Powered Development Platform"
 authors = [ "Forge Team" ]
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/All-Hands-AI/Forge"
+repository = "https://github.com/Forge/Forge"
 packages = [
-  { include = "backend/forge/**/*" },
+  { include = "forge", from = "backend" },
+  { include = "agenthub", from = "backend", to = "forge" },
+  { include = "integrations", from = "backend", to = "forge" },
+  { include = "microagent", from = "backend", to = "forge" },
+  { include = "knowledge_base", from = "backend", to = "forge" },
+  { include = "resolver", from = "backend", to = "forge" },
   { include = "pyproject.toml", to = "forge" },
   { include = "poetry.lock", to = "forge" },
 ]
 include = [
-  "backend/forge/integrations/vscode/forge-vscode-0.0.1.vsix",
   "backend/microagents/**/*",
 ]
-build = "build_vscode.py" # Build VSCode extension during Poetry build
+# VSCode extension build removed - desktop extension auto-installation is disabled
+# build = "build_vscode.py"
 
 [tool.poetry.dependencies]
 python = "^3.12,<3.14"
-litellm = "^1.79.1, !=1.64.4, !=1.67.*"            # avoid 1.64.4 (known bug) & 1.67.* (known bug #10272)
-openai = "1.99.9"                                  # Pin due to litellm incompatibility with >=1.100.0 (BerriAI/litellm#13711)
-aiohttp = ">=3.9.0,!=3.11.13"                      # Pin to avoid yanked version 3.11.13
-google-generativeai = "*"                          # To use litellm with Gemini Pro API
-google-api-python-client = "^2.164.0"              # For Google Sheets API
-google-auth-httplib2 = "*"                         # For Google Sheets authentication
-google-auth-oauthlib = "*"                         # For Google Sheets OAuth
-termcolor = "*"
-docker = "*"
+
+# ============================================================================
+# Core Framework & Web Server
+# ============================================================================
 fastapi = "*"
-toml = "*"
-types-toml = "*"
 uvicorn = "*"
-numpy = "*"
-json-repair = "*"
-browsergym-core = "0.13.3"                         # integrate browsergym-core as the browsing interface
-html2text = "*"
-deprecated = "*"
-pexpect = "*"
-jinja2 = "^3.1.3"
-python-multipart = "*"
-tenacity = ">=8.5,<10.0"
-zope-interface = "7.2"
-pathspec = "^0.12.1"
-pyjwt = "^2.9.0"
-bcrypt = "^4.0.0"  # Password hashing for authentication
-stripe = "^10.0.0"  # Stripe payment processing
-dirhash = "*"
-tornado = "*"
-python-dotenv = "*"
-rapidfuzz = "^3.9.0"
-whatthepatch = "^1.0.6"
-protobuf = "^5.0.0,<6.0.0"                         # Updated to support newer opentelemetry
-opentelemetry-api = "^1.33.1"
-opentelemetry-exporter-otlp-proto-grpc = "^1.33.1"
-
-libtmux = ">=0.37,<0.40"
-pygithub = "^2.5.0"
-joblib = "*"
-openhands-aci = { version = ">=0.3.2", python = "^3.12,<3.14" }
-python-socketio = "^5.14.0"  # Security fix: CVE-2025-61765 (Deserialization vulnerability)
+starlette = "^0.49.1"  # Security fix: CVE-2025-54121, CVE-2025-62727
 sse-starlette = "^2.1.3"
-psutil = "*"
-python-json-logger = "^3.2.1"
-prompt-toolkit = "^3.0.50"
-# removed poetry runtime dependency to avoid Poetry self-management on Windows
+python-multipart = "*"
 anyio = "4.9.0"
-pythonnet = "*"
-fastmcp = "^2.12.0"  # Partial security fix - full fix (2.13.0) blocked by Forge-aci cachetools <6.0 constraint
-python-frontmatter = "^1.1.0"
-shellingham = "^1.5.4"
-# TODO: Should these go into the runtime group?
-ipywidgets = "^8.1.5"
-qtconsole = "^5.6.1"
-# SECURITY: PyPDF2 is deprecated and has vulnerabilities. Use pypdf instead (pinned below with security fixes)
-python-pptx = "*"
-pylatexenc = "*"
-python-docx = "*"
-bashlex = "^0.18"
+# httpx-aiohttp removed - not used in core Forge
 
-# TODO: These are integrations that should probably be optional
+# LLM & AI Providers
+# ============================================================================
+openai = "*"
+anthropic = "*"
+google-generativeai = "*"
+
+# ============================================================================
+# Code Editing & Parsing (Ultimate Editor - Competitive Moat)
+# ============================================================================
+tree_sitter = "*"
+tree-sitter-language-pack = "*"  # REQUIRED for Ultimate Editor (structure-aware editing)
+diff-match-patch = "^20241021"
+whatthepatch = "^1.0.6"
+
+# ============================================================================
+# Database Drivers
+# ============================================================================
+asyncpg = "^0.30.0"  # PostgreSQL
 redis = ">=5.2,<7.0"
 
-google-cloud-aiplatform = "*"
-anthropic = { extras = [ "vertex" ], version = "*" }
-boto3 = "*"
-kubernetes = "^33.1.0"
-pyyaml = "^6.0.2"
-memory-profiler = "^0.61.0"
-jupyter_kernel_gateway = "*"
+# ============================================================================
+# Data Processing
+# ============================================================================
+numpy = "*"
+pyarrow = { version = "21.0.0", optional = true }
+# pandas removed from main dependencies - only used in test group (line 205)
 
-# Third-party runtime dependencies (optional)
+# ============================================================================
+# Cloud & Infrastructure
+# ============================================================================
+docker = "*"
+kubernetes = "^33.1.0"
+boto3 = "*"
+Forge-aci = { version = ">=0.3.2", python = "^3.12,<3.14" }
+
+# ============================================================================
+# Third-Party Runtime Providers (Optional)
+# ============================================================================
 e2b = { version = ">=1.0.5,<1.8.0", optional = true }
 modal = { version = ">=0.66.26,<1.2.0", optional = true }
 runloop-api-client = { version = "0.50.0", optional = true }
 daytona = { version = "0.24.2", optional = true }
-httpx-aiohttp = "^0.1.8"
 
-# CRITICAL: Tree-sitter is REQUIRED for Ultimate Editor (structure-aware editing)
-# This is Forge's competitive moat - must always be available in production!
-tree_sitter = "*"
-tree-sitter-language-pack = "*"
+# Utilities & Helpers
+# ============================================================================
+aiohttp = ">=3.9.0,!=3.11.13"  # Pin to avoid yanked version 3.11.13
+requests = "^2.32.4"  # Security fix: CVE-2024-47081
+urllib3 = "^2.5.0"  # Security fix: CVE-2025-50182, CVE-2025-50181
+termcolor = "*"
+toml = "*"
+types-toml = "*"
+json-repair = "*"
+html2text = "*"
+deprecated = "*"
+pexpect = "*"
+jinja2 = "^3.1.3"
+python-dotenv = "*"
+rapidfuzz = "^3.9.0"
+dirhash = "*"
+tornado = "*"
+pathspec = "^0.12.1"
+shellingham = "^1.5.4"
+python-frontmatter = "^1.1.0"
+bashlex = "^0.18"
+# joblib removed - not used in core Forge
+memory-profiler = "^0.61.0"
+psutil = "*"
+python-json-logger = "^3.2.1"
+prompt-toolkit = "^3.0.50"
+pythonnet = "*"
 
-# Heavy / optional ML and benchmark dependencies (opt-in via extras 'heavy')
-# Security: Pinned to latest versions with security fixes
-torch = { version = "^2.8.0", optional = true }  # Security fixes for multiple CVEs
-torchvision = { version = "*", optional = true }
-torchaudio = { version = "*", optional = true }
-datasets = { version = "*", optional = true }
-transformers = { version = "^4.53.0", optional = true }  # Security fix: Multiple ReDoS vulnerabilities
-sentencepiece = { version = "*", optional = true }
-fasttext = { version = "*", optional = true }
-pyarrow = { version = "21.0.0", optional = true }
-diff-match-patch = "^20241021"
-asyncpg = "^0.30.0"
-motor = "^3.7.1"
-aiomysql = "^0.3.0"  # Security fix: CVE-2025-62611 (External Control of File Name or Path)
+# ============================================================================
+# Authentication & Security
+# ============================================================================
+pyjwt = "^2.9.0"
+bcrypt = "^4.0.0"  # Password hashing
+authlib = "^1.6.5"  # Security fix: CVE-2025-59420, CVE-2025-61920, CVE-2025-62706
 
-# Security fixes for transitive dependencies
-authlib = "^1.6.5"  # Security fix: CVE-2025-59420, CVE-2025-61920, CVE-2025-62706 (Authorization, Resource exhaustion)
+# ============================================================================
+# Document Processing
+# ============================================================================
+# document processing libraries (pptx, docx, pypdf) moved to non-core plugins
+pillow = "^11.3.0"  # Security fix: CVE-2025-48379
+
+# ============================================================================
+# System Integration
+# ============================================================================
+libtmux = ">=0.37,<0.40"
+zope-interface = "7.2"
+tenacity = ">=8.5,<10.0"
+protobuf = "^5.0.0,<6.0.0"  # Updated to support newer opentelemetry
+opentelemetry-api = "^1.33.1"
+opentelemetry-exporter-otlp-proto-grpc = "^1.33.1"
+python-socketio = "^5.14.0"  # Security fix: CVE-2025-61765
+pygithub = "^2.5.0"
+fastmcp = "^2.12.0"  # Partial security fix - full fix (2.13.0) blocked by Forge-aci cachetools <6.0 constraint
+
+# ============================================================================
+# Security Fixes for Transitive Dependencies
+# ============================================================================
 h2 = "^4.3.0"  # Security fix: CVE-2025-57804 (CRLF Injection)
-mammoth = "^1.11.0"  # Security fix: CVE-2025-11849 (Directory Traversal)
 mcp = "^1.10.0"  # Security fix: CVE-2025-53365, CVE-2025-53366 (Uncaught Exceptions)
-pillow = "^11.3.0"  # Security fix: CVE-2025-48379 (Heap-based Buffer Overflow)
-pypdf = "^6.1.3"  # Security fix: CVE-2025-55197, CVE-2025-62707, CVE-2025-62708 (Resource exhaustion, infinite loop)
-requests = "^2.32.4"  # Security fix: CVE-2024-47081 (Sensitive data exposure)
-starlette = "^0.49.1"  # Security fix: CVE-2025-54121, CVE-2025-62727 (Resource exhaustion, ReDoS)
-urllib3 = "^2.5.0"  # Security fix: CVE-2025-50182, CVE-2025-50181 (Open Redirect)
+
+# ============================================================================
+# Removed Dependencies (for reference)
+# ============================================================================
+# ML dependencies removed: torch, torchvision, torchaudio, transformers, sentencepiece, fasttext
+# Evaluation dependencies removed: datasets, swegym, swebench, streamlit, etc.
+# Docker-in-Docker removed from runtime image
+# Evaluation directory deleted
 
 [tool.poetry.extras]
 third_party_runtimes = [ "e2b", "modal", "runloop-api-client", "daytona" ]
-heavy = [
-  "torch",
-  "torchvision",
-  "torchaudio",
-  "datasets",
-  "transformers",
-  "sentencepiece",
-  "fasttext",
-  "pyarrow",
-]
 dev = [ "ruff", "mypy", "pre-commit", "pytest", "pytest-cov", "pytest-asyncio", "pytest-xdist" ]
-evaluation = [ "streamlit", "datasets", "pyarrow", "swegym", "swebench" ]
 
 [tool.poetry.group.dev]
 optional = true
@@ -181,47 +189,14 @@ gevent = ">=24.2.1,<26.0.0"
 optional = true
 
 [tool.poetry.group.runtime.dependencies]
-jupyterlab = "*"
-notebook = "*"
+# Runtime dependencies
 flake8 = "*"
-
-[tool.poetry.group.evaluation]
-optional = true
-
-[tool.poetry.group.evaluation.dependencies]
-streamlit = "*"
-whatthepatch = "*"
-retry = "*"
-evaluate = "*"
-visualswebench = { git = "https://github.com/luolin101/Visual-SWE-bench.git" }
-swegym = { git = "https://github.com/SWE-Gym/SWE-Bench-Package.git" }
-commit0 = "*"
-func_timeout = "*"
-sympy = "*"
-gdown = "*"
-matplotlib = "*"
-seaborn = "*"
-tabulate = "*"
-browsergym = "0.13.3"
-browsergym-webarena = "0.13.3"
-browsergym-miniwob = "0.13.3"
-browsergym-visualwebarena = "0.13.3"
 boto3-stubs = { extras = [ "s3" ], version = "^1.37.19" }
-# transitive dependency, pinned here to avoid conflicts
-pyarrow = "21.0.0"
-datasets = "*"
-joblib = "*"
-swebench = { git = "https://github.com/ryanhoangt/SWE-bench.git", rev = "fix-modal-patch-eval" }
+pyarrow = "21.0.0"  # Transitive dependency, pinned here to avoid conflicts
 
 [tool.poetry.scripts]
 forge = "forge.cli.entry:main"
 Forge = "forge.cli.entry:main"  # Kept for backward compatibility
-
-[tool.poetry.group.testgeneval.dependencies]
-fuzzywuzzy = "^0.18.0"
-rouge = "^1.0.1"
-python-levenshtein = ">=0.26.1,<0.28.0"
-tree-sitter-python = "^0.23.6"
 
 [tool.poetry-dynamic-versioning]
 enable = true
@@ -243,19 +218,28 @@ lint.pydocstyle.convention = "google"
 
 [tool.coverage.run]
 source = [
-  "forge.metasop.ace",
-  "forge.metasop.context_hash",
-  "forge.metasop.diff_utils",
-  "forge.resolver",
+  "forge",
+]
+omit = [
+  "*/tests/*",
+  "*/test_*.py",
+  "*/__pycache__/*",
+  "*/third_party/*",
+  "*/evaluation/*",
 ]
 
 [tool.coverage.report]
-include = [
-  "forge/metasop/ace/*",
-  "forge/metasop/context_hash.py",
-  "forge/metasop/diff_utils.py",
+exclude_lines = [
+  "pragma: no cover",
+  "def __repr__",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+  "@abstractmethod",
 ]
-omit = [
-  "forge/metasop/ace/examples/*",
-  "forge/metasop/ace/prompts.py",
-]
+precision = 2
+show_missing = true
+skip_covered = false
+fail_under = 95
+

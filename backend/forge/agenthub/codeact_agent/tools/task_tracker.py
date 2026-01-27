@@ -1,6 +1,6 @@
 """Structured task tracking tool definition for CodeAct runs."""
 
-from litellm import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from typing import Any
 from ._compat import build_tool_param
 
 from forge.llm.tool_names import TASK_TRACKER_TOOL_NAME
@@ -11,14 +11,14 @@ _SHORT_TASK_TRACKER_DESCRIPTION = "Provides structured task management for devel
 
 def create_task_tracker_tool(
     use_short_description: bool = False,
-) -> ChatCompletionToolParam:
+) -> Any:
     """Create a task tracker tool for the agent.
 
     Args:
         use_short_description: Whether to use short or detailed description.
 
     Returns:
-        ChatCompletionToolParam: The configured task tracker tool.
+        Any: The configured task tracker tool.
 
     """
     description = (
@@ -27,8 +27,6 @@ def create_task_tracker_tool(
         else _DETAILED_TASK_TRACKER_DESCRIPTION
     )
     return build_tool_param(
-        ChatCompletionToolParam,
-        ChatCompletionToolParamFunctionChunk,
         name=TASK_TRACKER_TOOL_NAME,
         description=description,
         parameters={

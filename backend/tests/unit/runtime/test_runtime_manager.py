@@ -12,7 +12,6 @@ def _make_server_info(port: int = 9000) -> RuntimeServerInfo:
     return RuntimeServerInfo(
         process=None,
         execution_server_port=port,
-        vscode_port=port + 1,
         app_ports=[port + 2, port + 3],
         log_thread=dummy_thread,
         log_thread_exit_event=exit_event,

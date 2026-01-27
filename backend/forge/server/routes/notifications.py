@@ -8,13 +8,15 @@ from __future__ import annotations
 import json
 import os
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path as PathLib
 from typing import TYPE_CHECKING, Any, Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Request, Query
+from fastapi import Path
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+from typing import Annotated
 
 from forge.core.logger import forge_logger as logger
 from forge.server.user_auth import get_user_id
@@ -31,15 +33,22 @@ router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 class Notification(BaseModel):
     """Notification model."""
 
-    id: str
-    user_id: str
-    type: str
-    title: str
-    message: str
-    read: bool = False
-    created_at: str
-    action_url: Optional[str] = None
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    id: str = Field(..., min_length=1, description="Notification identifier")
+    user_id: str = Field(..., min_length=1, description="User identifier")
+    type: str = Field(..., min_length=1, description="Notification type")
+    title: str = Field(..., min_length=1, description="Notification title")
+    message: str = Field(..., min_length=1, description="Notification message")
+    read: bool = Field(default=False, description="Whether notification has been read")
+    created_at: str = Field(..., min_length=1, description="ISO timestamp of creation")
+    action_url: Optional[str] = Field(None, description="Optional action URL")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+    @field_validator("id", "user_id", "type", "title", "message", "created_at")
+    @classmethod
+    def validate_required_strings(cls, v: str) -> str:
+        """Validate required string fields are non-empty."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        return validate_non_empty_string(v, name="field")
 
 
 class NotificationStore:
@@ -56,12 +65,12 @@ class NotificationStore:
         """
         if storage_path is None:
             storage_path = os.path.join(os.getcwd(), ".forge", "notifications")
-        self.storage_path = Path(storage_path)
+        self.storage_path = PathLib(storage_path)
         self.storage_path.mkdir(parents=True, exist_ok=True)
         self._notifications_cache: dict[str, list[Notification]] = {}
         self._load_notifications()
 
-    def _get_user_file(self, user_id: str) -> Path:
+    def _get_user_file(self, user_id: str) -> PathLib:
         """Get notification file path for user.
 
         Args:
@@ -483,7 +492,7 @@ async def mark_all_as_read(
 @router.delete("/{notification_id}")
 async def delete_notification(
     request: Request,
-    notification_id: str,
+    notification_id: Annotated[str, Path(..., min_length=1, description="Notification ID")],
     user_id: str = Depends(get_user_id),
 ) -> JSONResponse:
     """Delete a notification.

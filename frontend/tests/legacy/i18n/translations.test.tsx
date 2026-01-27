@@ -1,8 +1,8 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import i18n from "../../src/i18n";
-import { AccountSettingsContextMenu } from "../../src/components/features/context-menu/account-settings-context-menu";
-import { renderWithProviders } from "../../test-utils";
+import i18n from "#/i18n";
+import { AccountSettingsContextMenu } from "#/components/features/context-menu/account-settings-context-menu";
+import { renderWithProviders } from "#test-utils";
 
 describe("Translations", () => {
   it("should render translated text", () => {
@@ -73,3 +73,4 @@ describe("Translations", () => {
     expect(supportedLngs).toContain("ko-KR");
   });
 });
+

@@ -12,12 +12,10 @@ from forge.controller.state.control_flags import BudgetControlFlag
 from forge.controller.state.state import State
 from forge.controller.state.state_tracker import StateTracker
 from forge.core.schemas import AgentState
-from forge.events.action.agent import AgentDelegateAction
 from forge.events.action.empty import NullAction
 from forge.events.event import Event, EventSource
 from forge.events.event_stream import EventStream
 from forge.events.observation.agent import AgentStateChangedObservation
-from forge.events.observation.delegate import AgentDelegateObservation
 from forge.events.observation.empty import NullObservation
 from forge.events.observation.error import ErrorObservation
 from forge.events.serialization import event as event_serialization_module
@@ -115,36 +113,6 @@ def test_validate_history_range_sets_empty_history(conversation_stats):
     )
     assert not tracker._validate_history_range(5, 2)
     assert tracker.state.history == []
-
-
-def test_init_history_filters_delegate_ranges(conversation_stats):
-    tracker = StateTracker(sid="sid", file_store=None, user_id=None)
-    tracker.set_initial_state(
-        "sid", None, conversation_stats, max_iterations=3, max_budget_per_task=None
-    )
-
-    delegate_action = AgentDelegateAction(agent="helper", inputs={})
-    _assign_meta(delegate_action, 2, EventSource.AGENT)
-    delegate_obs = AgentDelegateObservation(content="done", outputs={})
-    _assign_meta(delegate_obs, 5, EventSource.ENVIRONMENT)
-    normal_event = ErrorObservation(content="err", error_id="E")
-    _assign_meta(normal_event, 6, EventSource.ENVIRONMENT)
-
-    events = [
-        delegate_action,
-        NullAction(),
-        NullObservation(""),
-        delegate_obs,
-        normal_event,
-    ]
-    for idx, event in enumerate(events):
-        _assign_meta(event, idx + 1, EventSource.ENVIRONMENT)
-
-    stream = DummyEventStream(events)
-    tracker._init_history(cast(EventStream, stream))
-    assert tracker.state.history[0].id == 1  # delegate action
-    assert tracker.state.history[1].id == 4  # delegate observation
-    assert tracker.state.history[-1].id == 5
 
 
 def test_add_history_respects_filter(conversation_stats):

@@ -13,119 +13,6 @@ import httpx
 import pytest
 from pydantic import BaseModel
 
-if "litellm" not in sys.modules:
-    litellm_stub = types.ModuleType("litellm")
-
-    class LiteLLMModelResponse(BaseModel):
-        model: str | None = None
-        choices: list[Any] = []
-        created: int | None = None
-
-    class LiteLLMModelInfo(BaseModel):
-        model_name: str | None = None
-
-    class LiteLLMPromptTokensDetails(BaseModel):
-        cached_tokens: int | None = None
-
-    class LiteLLMCostPerToken(BaseModel):
-        input_cost_per_token: float | None = None
-        output_cost_per_token: float | None = None
-
-    class LiteLLMUsage(BaseModel):
-        prompt_tokens: int | None = None
-        completion_tokens: int | None = None
-        total_tokens: int | None = None
-
-    class LiteLLMChatCompletionToolParam(BaseModel):
-        name: str | None = None
-        description: str | None = None
-        parameters: dict[str, Any] = {}
-
-    async def acompletion(*args, **kwargs) -> dict[str, Any]:
-        return {}
-
-    def completion(*args, **kwargs) -> dict[str, Any]:
-        return {}
-
-    exceptions_module = types.ModuleType("litellm.exceptions")
-
-    class LiteLLMAPIConnectionError(Exception):
-        pass
-
-    class LiteLLMContentPolicyViolationError(Exception):
-        pass
-
-    class LiteLLMRateLimitError(Exception):
-        pass
-
-    class LiteLLMServiceUnavailableError(Exception):
-        pass
-
-    class LiteLLMTimeout(Exception):
-        pass
-
-    class LiteLLMInternalServerError(Exception):
-        pass
-
-    setattr(exceptions_module, "APIConnectionError", LiteLLMAPIConnectionError)
-    setattr(
-        exceptions_module,
-        "ContentPolicyViolationError",
-        LiteLLMContentPolicyViolationError,
-    )
-    setattr(exceptions_module, "RateLimitError", LiteLLMRateLimitError)
-    setattr(
-        exceptions_module, "ServiceUnavailableError", LiteLLMServiceUnavailableError
-    )
-    setattr(exceptions_module, "Timeout", LiteLLMTimeout)
-    setattr(exceptions_module, "InternalServerError", LiteLLMInternalServerError)
-
-    utils_module = types.ModuleType("litellm.utils")
-
-    def create_pretrained_tokenizer(*args, **kwargs) -> None:
-        return None
-
-    setattr(utils_module, "create_pretrained_tokenizer", create_pretrained_tokenizer)
-    setattr(utils_module, "get_model_info", lambda *args, **kwargs: {})
-
-    types_utils_module = types.ModuleType("litellm.types.utils")
-    setattr(types_utils_module, "CostPerToken", LiteLLMCostPerToken)
-    setattr(types_utils_module, "ModelResponse", LiteLLMModelResponse)
-    setattr(types_utils_module, "Usage", LiteLLMUsage)
-
-    sys.modules["litellm.exceptions"] = exceptions_module
-    sys.modules["litellm.types.utils"] = types_utils_module
-    sys.modules["litellm.utils"] = utils_module
-
-    setattr(litellm_stub, "exceptions", exceptions_module)
-    setattr(litellm_stub, "utils", utils_module)
-    setattr(litellm_stub, "acompletion", acompletion)
-    setattr(litellm_stub, "completion", completion)
-    setattr(litellm_stub, "completion_cost", lambda *args, **kwargs: 0)
-    setattr(litellm_stub, "ModelResponse", LiteLLMModelResponse)
-    setattr(litellm_stub, "ModelInfo", LiteLLMModelInfo)
-    setattr(litellm_stub, "PromptTokensDetails", LiteLLMPromptTokensDetails)
-    setattr(litellm_stub, "ChatCompletionToolParam", LiteLLMChatCompletionToolParam)
-    setattr(litellm_stub, "CostPerToken", LiteLLMCostPerToken)
-    setattr(litellm_stub, "Usage", LiteLLMUsage)
-    setattr(litellm_stub, "Timeout", LiteLLMTimeout)
-    setattr(litellm_stub, "InternalServerError", LiteLLMInternalServerError)
-    setattr(litellm_stub, "APIConnectionError", LiteLLMAPIConnectionError)
-    setattr(litellm_stub, "RateLimitError", LiteLLMRateLimitError)
-    setattr(litellm_stub, "ServiceUnavailableError", LiteLLMServiceUnavailableError)
-    setattr(
-        litellm_stub, "ContentPolicyViolationError", LiteLLMContentPolicyViolationError
-    )
-    setattr(litellm_stub, "suppress_debug_info", True)
-    setattr(litellm_stub, "set_verbose", False)
-    ModelResponse = LiteLLMModelResponse
-    ModelInfo = LiteLLMModelInfo
-    PromptTokensDetails = LiteLLMPromptTokensDetails
-    CostPerToken = LiteLLMCostPerToken
-    Usage = LiteLLMUsage
-    ChatCompletionToolParam = LiteLLMChatCompletionToolParam
-    sys.modules["litellm"] = litellm_stub
-
 if "tokenizers" not in sys.modules:
     tokenizers_stub = types.ModuleType("tokenizers")
 
@@ -147,7 +34,6 @@ from forge.events.action import (
     FileEditAction,
     FileReadAction,
     FileWriteAction,
-    IPythonRunCellAction,
     MCPAction,
     MessageAction,
     TaskTrackingAction,
@@ -164,9 +50,7 @@ from forge.events.observation import (
     UserRejectObservation,
 )
 from forge.runtime.base import (
-    JupyterRequirement,
     Runtime,
-    VSCodeRequirement,
     _default_env_vars,
 )
 from forge.integrations.service_types import AuthenticationError
@@ -184,13 +68,10 @@ class DummyRuntime(Runtime):
         llm_registry: Any,
         *,
         run_responses: List[CmdOutputObservation] | None = None,
-        ipython_response: NullObservation | None = None,
         **kwargs: Any,
     ) -> None:
         self._run_responses: list[CmdOutputObservation] = run_responses or []
-        self._ipython_response = ipython_response
         self.run_calls: list[str] = []
-        self.run_ipython_calls: list[str] = []
         super().__init__(config, event_stream, llm_registry, **kwargs)
 
     async def connect(self) -> None:  # pragma: no cover - not used in tests
@@ -207,10 +88,6 @@ class DummyRuntime(Runtime):
                 response.command = action.command
             return response
         return CmdOutputObservation(content="", command=action.command, exit_code=0)
-
-    def run_ipython(self, action: IPythonRunCellAction) -> NullObservation:
-        self.run_ipython_calls.append(action.code)
-        return self._ipython_response or NullObservation("")
 
     def read(self, action: FileReadAction) -> NullObservation:
         return NullObservation("")
@@ -363,19 +240,6 @@ def test_set_runtime_status_invokes_callback(runtime_factory):
     status_callback.assert_called_once_with("warning", RuntimeStatus.READY, "all good")
 
 
-def test_add_env_vars_to_jupyter_invokes_ipython(runtime_factory):
-    runtime = runtime_factory()
-    with patch.object(
-        runtime, "run_ipython", return_value=NullObservation("")
-    ) as run_ipython:
-        runtime._add_env_vars_to_jupyter({"FOO": "bar"})
-    ipy_call = run_ipython.call_args
-    assert ipy_call is not None
-    action = ipy_call.args[0]
-    assert isinstance(action, IPythonRunCellAction)
-    assert 'os.environ["FOO"] = "bar"' in action.code
-
-
 def test_build_powershell_env_cmd(runtime_factory):
     runtime = runtime_factory()
     cmd = runtime._build_powershell_env_cmd({"FOO": "bar", "BAZ": "qux"})
@@ -432,16 +296,13 @@ def test_add_env_vars_to_bash_failure(runtime_factory):
 
 def test_add_env_vars_routes_to_powershell_on_windows(runtime_factory):
     runtime = runtime_factory()
-    runtime.plugins.append(JupyterRequirement())
     with (
-        patch.object(runtime, "_add_env_vars_to_jupyter") as mock_jupyter,
         patch.object(runtime, "_add_env_vars_to_powershell") as mock_power,
         patch.object(runtime, "_add_env_vars_to_bash") as mock_bash,
         patch("os.name", "nt"),
         patch("sys.platform", "win32"),
     ):
         runtime.add_env_vars({"foo": "bar"})
-    mock_jupyter.assert_called_once()
     mock_power.assert_called_once()
     mock_bash.assert_not_called()
     power_call = mock_power.call_args
@@ -451,16 +312,13 @@ def test_add_env_vars_routes_to_powershell_on_windows(runtime_factory):
 
 def test_add_env_vars_routes_to_bash_on_posix(runtime_factory):
     runtime = runtime_factory()
-    runtime.plugins.append(JupyterRequirement())
     with (
-        patch.object(runtime, "_add_env_vars_to_jupyter") as mock_jupyter,
         patch.object(runtime, "_add_env_vars_to_powershell") as mock_power,
         patch.object(runtime, "_add_env_vars_to_bash") as mock_bash,
         patch("os.name", "posix"),
         patch("sys.platform", "linux"),
     ):
         runtime.add_env_vars({"foo": "bar"})
-    mock_jupyter.assert_called_once()
     mock_power.assert_not_called()
     mock_bash.assert_called_once()
 
@@ -597,16 +455,6 @@ def test_install_pre_commit_hook_logs_on_write_error(runtime_factory):
         mock_log.assert_called_once_with(
             "error", "Failed to write pre-commit hook: cannot write"
         )
-
-
-def test_setup_git_config_skips_cli(runtime_factory):
-    config = ForgeConfig()
-    config.runtime = "cli"
-    runtime = runtime_factory(config=config)
-    with patch.object(runtime, "run") as mock_run:
-        runtime._setup_git_config()
-    mock_run.assert_not_called()
-
 
 def test_setup_git_config_warns_on_nonzero(runtime_factory):
     runtime = runtime_factory()
@@ -1305,15 +1153,6 @@ def test_setup_git_config_success(runtime_factory):
     run_mock.assert_called_once()
     logger_mock.info.assert_called()
 
-
-def test_setup_git_config_cli_skips(runtime_factory):
-    runtime = runtime_factory()
-    runtime.config.runtime = "cli"
-    with patch.object(runtime, "run") as run_mock:
-        runtime._setup_git_config()
-    run_mock.assert_not_called()
-
-
 def test_setup_git_config_warns_on_failure(runtime_factory):
     runtime = runtime_factory()
     failure_obs = CmdOutputObservation(content="err", command="", exit_code=1)
@@ -1881,7 +1720,6 @@ async def test_runtime_super_async_noops(runtime_factory):
 def test_runtime_super_sync_noops(runtime_factory):
     runtime = runtime_factory()
     cmd_action = CmdRunAction(command="echo")
-    ipy_action = IPythonRunCellAction(code="print('hi')")
     read_action = FileReadAction(path="file.txt")
     write_action = FileWriteAction(path="file.txt", content="data")
     edit_action = FileEditAction(path="file.txt")
@@ -1889,7 +1727,6 @@ def test_runtime_super_sync_noops(runtime_factory):
     browse_interactive_action = BrowseInteractiveAction(browser_actions="")
 
     assert super(DummyRuntime, runtime).run(cmd_action) is None
-    assert super(DummyRuntime, runtime).run_ipython(ipy_action) is None
     assert super(DummyRuntime, runtime).read(read_action) is None
     assert super(DummyRuntime, runtime).write(write_action) is None
     assert super(DummyRuntime, runtime).edit(edit_action) is None

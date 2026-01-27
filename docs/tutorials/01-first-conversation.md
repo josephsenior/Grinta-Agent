@@ -18,7 +18,7 @@ poetry run python -m forge.server
 2. **Start the frontend (in a new terminal):**
 ```bash
 cd frontend
-npm run dev
+pnpm run dev
 ```
 
 3. **Open your browser:**
@@ -134,7 +134,6 @@ Always review the agent's changes before accepting them. The agent is powerful b
 ## Next Steps
 
 - [Using the Ultimate Editor](04-ultimate-editor.md) - Learn advanced editing features
-- [MetaSOP Orchestration](05-metasop-orchestration.md) - Coordinate multiple agents
 - [Best Practices](../guides/best-practices.md) - Development guidelines
 
 ## Troubleshooting

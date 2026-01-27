@@ -11,7 +11,7 @@ from enum import Enum
 from typing import ClassVar
 
 from forge.events.event import Event
-from forge.events.action._canonical import canonicalize
+from forge._canonical import canonicalize
 
 
 class ActionConfirmationStatus(str, Enum):
@@ -39,6 +39,9 @@ class _ActionCanonicalMeta(type):
             return True
         inst_type = type(instance)
         if getattr(inst_type, "__name__", None) != getattr(cls, "__name__", None):
+            # If checking against base Action class, allow subclasses from other reloads
+            if cls.__name__ == "Action":
+                return any(b.__name__ == "Action" for b in inst_type.__mro__)
             return False
         cls_action = getattr(cls, "action", None)
         inst_action = getattr(instance, "action", None)
@@ -55,13 +58,8 @@ class Action(Event, metaclass=_ActionCanonicalMeta):
 
     action: ClassVar[str] = ""
     runnable: ClassVar[bool] = False
-    __test__ = False
+    __test__: ClassVar[bool] = False
 
     def __post_init__(self) -> None:
         if not hasattr(self, "confirmation_state"):
             self.confirmation_state = ActionConfirmationStatus.CONFIRMED
-
-
-canonicalize("ActionConfirmationStatus", ActionConfirmationStatus)
-canonicalize("ActionSecurityRisk", ActionSecurityRisk)
-canonicalize("Action", Action)

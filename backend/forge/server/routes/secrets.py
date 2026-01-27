@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Annotated, Any, Mapping
 
-from fastapi import APIRouter, Depends, status, FastAPI
+from fastapi import APIRouter, Depends, status, FastAPI, Path
 from fastapi.responses import JSONResponse
+from typing import Annotated
 
 from forge.core.logger import forge_logger as logger
 from forge.integrations.provider import PROVIDER_TOKEN_TYPE, CustomSecret, ProviderToken
@@ -258,7 +259,7 @@ async def store_provider_tokens(
 ) -> JSONResponse:
     """Store or update git provider authentication tokens.
 
-    Validates and stores provider tokens (GitHub, GitLab, Bitbucket, etc.).
+    Validates and stores provider tokens (GitHub).
 
     Args:
         provider_info: Provider information and tokens to store
@@ -420,7 +421,7 @@ async def create_custom_secret(
 
 @router.put("/secrets/{secret_id}", response_model=None)
 async def update_custom_secret(
-    secret_id: str,
+    secret_id: Annotated[str, Path(..., min_length=1, description="Secret ID")],
     incoming_secret: CustomSecretWithoutValueModel,
     secrets_store: Annotated[Any, Depends(get_secrets_store)],
 ) -> JSONResponse:
@@ -477,7 +478,7 @@ async def update_custom_secret(
 
 @router.delete("/secrets/{secret_id}")
 async def delete_custom_secret(
-    secret_id: str,
+    secret_id: Annotated[str, Path(..., min_length=1, description="Secret ID")],
     secrets_store: Annotated[Any, Depends(get_secrets_store)],
 ) -> JSONResponse:
     """Delete a custom secret by ID.

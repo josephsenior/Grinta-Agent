@@ -16,25 +16,24 @@ app = APIRouter(prefix="/api/options", dependencies=get_dependencies())
 
 
 @app.get("/models")
-async def get_litellm_models() -> list[str]:
-    """Get all language models supported by LiteLLM and Bedrock.
+async def get_models() -> list[str]:
+    """Get all language models supported by the system.
 
-    Retrieves a comprehensive list of available LLM models supported by
-    LiteLLM integration and AWS Bedrock, excluding error-prone Bedrock
-    models. Results are deduplicated and sorted alphabetically.
+    Retrieves a comprehensive list of available LLM models from supported
+    providers (OpenAI, Anthropic, Gemini, Grok). Results are deduplicated
+    and sorted alphabetically.
 
     Returns:
         list[str]: A sorted list of unique model identifiers (e.g.,
-            ["gpt-4", "gpt-3.5-turbo", "claude-2", "llama-2-70b"]).
+            ["gpt-4o", "claude-3-5-sonnet", "gemini-1.5-pro"]).
 
     Examples:
         >>> curl http://localhost:3000/api/options/models
-        ["claude-2", "claude-instant-1", "gpt-3.5-turbo", "gpt-4", ...]
+        ["claude-3-5-sonnet", "gemini-1.5-pro", "gpt-4o", ...]
 
     Notes:
         - Results are cached and deduplicated
-        - Bedrock models known to cause issues are filtered out
-        - Requires LiteLLM and Bedrock configuration
+        - Focuses on famous, well-supported models
 
     """
     return get_supported_llm_models(config)

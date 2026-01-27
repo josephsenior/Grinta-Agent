@@ -1,24 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { useConfig } from "./use-config";
-import { useIsAuthed } from "./use-is-authed";
-import Forge from "#/api/forge";
-import { useUserProviders } from "../use-user-providers";
-import { Provider } from "#/types/settings";
-import { shouldUseInstallationRepos } from "#/utils/utils";
+import Forge from "../../api/forge";
+import { Provider } from "../../types/settings";
 
-export const useAppInstallations = (selectedProvider: Provider | null) => {
-  const { data: config } = useConfig();
-  const { data: userIsAuthenticated } = useIsAuthed();
-  const { providers } = useUserProviders();
-
+export function useAppInstallations(provider: Provider | null) {
   return useQuery({
-    queryKey: ["installations", providers || [], selectedProvider],
-    queryFn: () => Forge.getUserInstallationIds(selectedProvider!),
-    enabled:
-      userIsAuthenticated &&
-      !!selectedProvider &&
-      shouldUseInstallationRepos(selectedProvider, config?.APP_MODE),
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 15, // 15 minutes
+    queryKey: ["installations", provider],
+    queryFn: () => Forge.getUserInstallationIds(provider!),
+    enabled: !!provider,
   });
-};
+}

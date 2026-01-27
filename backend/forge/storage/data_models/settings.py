@@ -19,6 +19,7 @@ from pydantic.json import pydantic_encoder
 from forge.core.config.mcp_config import MCPConfig
 from forge.core.config.utils import load_FORGE_config
 from forge.storage.data_models.user_secrets import UserSecrets
+from forge.storage.data_models.knowledge_base import KnowledgeBaseSettings
 
 try:
     from unittest.mock import Mock
@@ -88,6 +89,18 @@ class Settings(BaseModel):
     git_user_name: str | None = None
     git_user_email: str | None = None
     model_config = ConfigDict(validate_assignment=True)
+
+    @property
+    def knowledge_base(self) -> KnowledgeBaseSettings:
+        """Returns the knowledge base settings as a KnowledgeBaseSettings object."""
+        return KnowledgeBaseSettings(
+            enabled=self.kb_enabled,
+            active_collection_ids=self.kb_active_collection_ids,
+            search_top_k=self.kb_search_top_k,
+            relevance_threshold=self.kb_relevance_threshold,
+            auto_search=self.kb_auto_search,
+            search_strategy=self.kb_search_strategy,
+        )
 
     @field_serializer("llm_api_key")
     def api_key_serializer(self, api_key: SecretStr | None, info: SerializationInfo):

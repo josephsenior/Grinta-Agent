@@ -5,10 +5,19 @@ import AppSettingsScreen from "#/routes/app-settings";
 import Forge from "#/api/forge";
 import { MOCK_DEFAULT_USER_SETTINGS } from "#/mocks/handlers";
 import { AvailableLanguages } from "#/i18n";
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (str: string) => str,
+    i18n: {
+      changeLanguage: vi.fn((_lang: string) => Promise.resolve()),
+    },
+  }),
+}));
 import * as CaptureConsent from "#/utils/handle-capture-consent";
 import * as ToastHandlers from "#/utils/custom-toast-handlers";
 import { DEFAULT_SETTINGS } from "#/services/settings";
-import { renderWithProviders } from "../../test-utils";
+import { renderWithProviders } from "#test-utils";
 
 const renderAppSettingsScreen = () =>
   renderWithProviders(<AppSettingsScreen />);
@@ -47,7 +56,7 @@ describe("Content", () => {
     const language = await screen.findByTestId("language-input");
     await userEvent.click(language);
 
-    AvailableLanguages.forEach((lang) => {
+    AvailableLanguages.forEach((lang: any) => {
       const option = screen.getByText(lang.label);
       expect(option).toBeInTheDocument();
     });
@@ -62,7 +71,11 @@ describe("Form submission", () => {
   it("should submit the form with the correct values", async () => {
     const saveSettingsSpy = vi.spyOn(Forge, "saveSettings");
     const getSettingsSpy = vi.spyOn(Forge, "getSettings");
-    getSettingsSpy.mockResolvedValue(MOCK_DEFAULT_USER_SETTINGS);
+    getSettingsSpy.mockResolvedValue({
+      ...MOCK_DEFAULT_USER_SETTINGS,
+      user_consents_to_analytics: false,
+      enable_sound_notifications: false,
+    });
 
     renderAppSettingsScreen();
 
@@ -83,14 +96,17 @@ describe("Form submission", () => {
     expect(language).toHaveValue("Norsk");
 
     // toggle options
+    console.log("Toggling options...");
     await userEvent.click(analytics);
     expect(analytics).toBeChecked();
     await userEvent.click(sound);
     expect(sound).toBeChecked();
 
     // submit the form
+    console.log("Submitting form...");
     const submit = await screen.findByTestId("submit-button");
     await userEvent.click(submit);
+    console.log("Form submitted, checking spy...");
     expect(saveSettingsSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         language: "no",
@@ -242,8 +258,12 @@ describe("Form submission", () => {
     const getConfigSpy = vi.spyOn(Forge, "getConfig");
     getConfigSpy.mockResolvedValue({
       APP_MODE: "saas",
-      FEATURE_FLAGS: {},
-    });
+      GITHUB_CLIENT_ID: "",
+      POSTHOG_CLIENT_KEY: "",
+      FEATURE_FLAGS: {
+        HIDE_LLM_SETTINGS: false,
+      },
+    } as any);
 
     renderAppSettingsScreen();
 
@@ -357,3 +377,4 @@ describe("Status toasts", () => {
     expect(displayErrorToastSpy).toHaveBeenCalled();
   });
 });
+

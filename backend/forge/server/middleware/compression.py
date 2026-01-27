@@ -34,7 +34,6 @@ class CompressionMiddleware:
     # API paths that can be cached for short periods
     CACHEABLE_API_PATHS = {
         "/api/mcp-marketplace": CACHE_SHORT,
-        "/api/prompts": CACHE_SHORT,
         "/api/memories": CACHE_SHORT,
         "/api/microagents": CACHE_SHORT,
         # ⚡ PERFORMANCE: Cache high-frequency endpoints

@@ -10,18 +10,6 @@ from typing import Any, cast
 
 import pytest
 
-if "tokenizers" not in sys.modules:
-    tokenizers_stub = types.ModuleType("tokenizers")
-
-    class _Tokenizer:  # pragma: no cover - stub to satisfy litellm dependency
-        def __init__(self, *_, **__):
-            raise RuntimeError("Stub tokenizer should not be instantiated")
-
-    tokenizers_stub.Tokenizer = _Tokenizer
-    sys.modules["tokenizers"] = tokenizers_stub
-
-from litellm import ChatCompletionMessageToolCall, ModelResponse
-
 from forge.agenthub.codeact_agent import function_calling as fc
 from forge.core.exceptions import (
     FunctionCallNotExistsError,
@@ -29,14 +17,12 @@ from forge.core.exceptions import (
 )
 from forge.events.action import (
     ActionSecurityRisk,
-    AgentDelegateAction,
     AgentFinishAction,
     AgentThinkAction,
     BrowseInteractiveAction,
     CmdRunAction,
     FileEditAction,
     FileReadAction,
-    IPythonRunCellAction,
     MessageAction,
     TaskTrackingAction,
 )
@@ -95,20 +81,6 @@ def test_handle_cmd_run_tool_invalid_timeout_raises() -> None:
         fc._handle_cmd_run_tool({"command": "ls", "timeout": "not-a-number"})
 
 
-def test_handle_ipython_tool_requires_code() -> None:
-    action = fc._handle_ipython_tool({"code": "print('hello')"})
-    assert isinstance(action, IPythonRunCellAction)
-
-    with pytest.raises(FunctionCallValidationError):
-        fc._handle_ipython_tool({})
-
-
-def test_handle_delegate_to_browsing_agent() -> None:
-    action = fc._handle_delegate_to_browsing_agent({"url": "https://example.com"})
-    assert isinstance(action, AgentDelegateAction)
-    assert action.agent == "BrowsingAgent"
-
-
 def test_handle_finish_tool() -> None:
     action = fc._handle_finish_tool({"message": "done"})
     assert isinstance(action, AgentFinishAction)
@@ -143,7 +115,7 @@ def test_handle_str_replace_editor_tool_view_command() -> None:
         {"command": "view", "path": "file.py", "view_range": [1, 10]}
     )
     assert isinstance(action, FileReadAction)
-    assert action.impl_source == FileReadSource.OH_ACI
+    assert action.impl_source == FileReadSource.FILE_EDITOR
     assert action.view_range == [1, 10]
 
 
@@ -299,7 +271,7 @@ def test_handle_ultimate_editor_tool_dispatch(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(
         fc,
         "FileReadSource",
-        SimpleNamespace(AGENT="agent", OH_ACI="oh_aci", DEFAULT="default"),
+        SimpleNamespace(AGENT="agent", FILE_EDITOR="file_editor", DEFAULT="default"),
         raising=False,
     )
 
@@ -488,10 +460,7 @@ def test_process_single_tool_call_json_error() -> None:
 
 def test_response_to_actions_with_message() -> None:
     message = SimpleNamespace(content="Hello world", tool_calls=[])
-    response = cast(
-        ModelResponse,
-        SimpleNamespace(id="resp1", choices=[SimpleNamespace(message=message)]),
-    )
+    response = SimpleNamespace(id="resp1", choices=[SimpleNamespace(message=message)])
     actions = fc.response_to_actions(response)
     assert isinstance(actions[0], MessageAction)
     assert actions[0].wait_for_response is True
@@ -522,10 +491,7 @@ def test_response_to_actions_with_tool_calls(monkeypatch: pytest.MonkeyPatch) ->
         ),
     )
     message = SimpleNamespace(content="Thought", tool_calls=[tool_call])
-    response = cast(
-        ModelResponse,
-        SimpleNamespace(id="resp1", choices=[SimpleNamespace(message=message)]),
-    )
+    response = SimpleNamespace(id="resp1", choices=[SimpleNamespace(message=message)])
 
     actions = fc.response_to_actions(response)
     assert isinstance(actions[0], MessageAction)
@@ -543,6 +509,6 @@ def test_create_message_action_from_content_handles_none() -> None:
 
 def test_set_response_id_for_actions_assigns_all() -> None:
     actions = [MessageAction("hi"), CmdRunAction(command="ls")]
-    response = cast(ModelResponse, SimpleNamespace(id="resp123"))
+    response = SimpleNamespace(id="resp123")
     fc._set_response_id_for_actions(actions, response)
     assert all(action.response_id == "resp123" for action in actions)

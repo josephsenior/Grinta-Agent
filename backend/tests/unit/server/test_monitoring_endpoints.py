@@ -23,7 +23,7 @@ def test_metrics_endpoint_basic_shape():
     assert r.status_code == 200
     body = r.json()
     # Top-level keys
-    assert set(body.keys()) == {"system", "agents", "ace", "metasop"}
+    assert set(body.keys()) == {"system", "agents"}
     system = body["system"]
     # Required system fields
     for key in [

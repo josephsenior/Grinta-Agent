@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 interface UseStreamingOptions {
   speed?: number; // Characters per interval
@@ -31,16 +31,22 @@ export function useStreaming(
   } = options;
 
   const [displayedText, setDisplayedText] = useState("");
+  const displayedTextLengthRef = useRef(0);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const isStreamingRef = useRef(false);
+  const isCompleteRef = useRef(false);
+
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const delayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const startStreaming = useCallback(() => {
-    if (isStreaming || isComplete) return;
+    if (isStreamingRef.current || isCompleteRef.current) return;
 
     setIsStreaming(true);
+    isStreamingRef.current = true;
     setIsComplete(false);
+    isCompleteRef.current = false;
 
     // Clear any existing intervals/timeouts
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -49,24 +55,27 @@ export function useStreaming(
     // Start streaming after delay
     delayTimeoutRef.current = setTimeout(() => {
       intervalRef.current = setInterval(() => {
-        setDisplayedText((prev) => {
-          const nextLength = Math.min(prev.length + speed, text.length);
-          const nextText = text.slice(0, nextLength);
+        const currentLength = displayedTextLengthRef.current;
+        const nextLength = Math.min(currentLength + speed, text.length);
+        const nextText = text.slice(0, nextLength);
+        
+        displayedTextLengthRef.current = nextLength;
+        setDisplayedText(nextText);
 
-          if (nextLength >= text.length) {
-            setIsComplete(true);
-            setIsStreaming(false);
-            if (intervalRef.current) {
-              clearInterval(intervalRef.current);
-            }
-            onComplete?.();
+        if (nextLength >= text.length) {
+          setIsComplete(true);
+          isCompleteRef.current = true;
+          setIsStreaming(false);
+          isStreamingRef.current = false;
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
           }
-
-          return nextText;
-        });
+          onComplete?.();
+        }
       }, interval);
     }, delay);
-  }, [text, speed, interval, delay, onComplete, isStreaming, isComplete]);
+  }, [text, speed, interval, delay, onComplete]);
 
   const stopStreaming = useCallback(() => {
     if (intervalRef.current) {
@@ -78,21 +87,28 @@ export function useStreaming(
       delayTimeoutRef.current = null;
     }
     setIsStreaming(false);
+    isStreamingRef.current = false;
   }, []);
 
   const resetStreaming = useCallback(() => {
     stopStreaming();
     setDisplayedText("");
+    displayedTextLengthRef.current = 0;
     setIsComplete(false);
+    isCompleteRef.current = false;
     setIsStreaming(false);
+    isStreamingRef.current = false;
   }, [stopStreaming]);
 
-  // Auto-start streaming when text changes
+  // Reset and auto-start streaming when text changes
   useEffect(() => {
-    if (autoStart && text && !isStreaming && !isComplete) {
-      startStreaming();
+    if (text) {
+      resetStreaming();
+      if (autoStart) {
+        startStreaming();
+      }
     }
-  }, [text, autoStart, isStreaming, isComplete, startStreaming]);
+  }, [text, autoStart, resetStreaming, startStreaming]);
 
   // Cleanup on unmount
   useEffect(
@@ -107,15 +123,26 @@ export function useStreaming(
   const progress =
     text.length > 0 ? (displayedText.length / text.length) * 100 : 0;
 
-  return {
-    displayedText,
-    isStreaming,
-    isComplete,
-    startStreaming,
-    stopStreaming,
-    resetStreaming,
-    progress,
-  };
+  return useMemo(
+    () => ({
+      displayedText,
+      isStreaming,
+      isComplete,
+      startStreaming,
+      stopStreaming,
+      resetStreaming,
+      progress,
+    }),
+    [
+      displayedText,
+      isStreaming,
+      isComplete,
+      startStreaming,
+      stopStreaming,
+      resetStreaming,
+      progress,
+    ],
+  );
 }
 
 // Hook for streaming multiple items sequentially
@@ -132,22 +159,25 @@ export function useSequentialStreaming(options: UseSequentialStreamingOptions) {
   const itemTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentItem = items[currentIndex] || "";
+
+  const handleComplete = useCallback(() => {
+    // Move to next item after a delay
+    if (currentIndex < items.length - 1) {
+      itemTimeoutRef.current = setTimeout(() => {
+        setAllStreamedItems((prev) => [...prev, currentItem]);
+        setCurrentIndex((prev) => prev + 1);
+      }, itemDelay);
+    } else {
+      // All items complete
+      setAllStreamedItems((prev) => [...prev, currentItem]);
+      setIsComplete(true);
+    }
+  }, [currentIndex, currentItem, itemDelay, items.length]);
+
   const currentStreaming = useStreaming(currentItem, {
     ...streamingOptions,
     autoStart: false,
-    onComplete: () => {
-      // Move to next item after a delay
-      if (currentIndex < items.length - 1) {
-        itemTimeoutRef.current = setTimeout(() => {
-          setAllStreamedItems((prev) => [...prev, currentItem]);
-          setCurrentIndex((prev) => prev + 1);
-        }, itemDelay);
-      } else {
-        // All items complete
-        setAllStreamedItems((prev) => [...prev, currentItem]);
-        setIsComplete(true);
-      }
-    },
+    onComplete: handleComplete,
   });
 
   // Start streaming the first item
@@ -155,7 +185,8 @@ export function useSequentialStreaming(options: UseSequentialStreamingOptions) {
     if (items.length > 0 && currentIndex === 0) {
       currentStreaming.startStreaming();
     }
-  }, [items.length, currentIndex, currentStreaming]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length, currentIndex]);
 
   // Start streaming new items
   useEffect(() => {
@@ -163,7 +194,8 @@ export function useSequentialStreaming(options: UseSequentialStreamingOptions) {
       currentStreaming.resetStreaming();
       currentStreaming.startStreaming();
     }
-  }, [currentIndex, currentStreaming]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex]);
 
   // Cleanup
   useEffect(
@@ -173,22 +205,33 @@ export function useSequentialStreaming(options: UseSequentialStreamingOptions) {
     [],
   );
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setCurrentIndex(0);
     setAllStreamedItems([]);
     setIsComplete(false);
     currentStreaming.resetStreaming();
-  };
+  }, [currentStreaming]);
 
-  return {
-    currentItem: currentStreaming.displayedText,
-    allStreamedItems,
-    currentIndex,
-    isComplete,
-    progress:
-      ((currentIndex + currentStreaming.progress / 100) / items.length) * 100,
-    reset,
-  };
+  return useMemo(
+    () => ({
+      currentItem: currentStreaming.displayedText,
+      allStreamedItems,
+      currentIndex,
+      isComplete,
+      progress:
+        ((currentIndex + currentStreaming.progress / 100) / items.length) * 100,
+      reset,
+    }),
+    [
+      currentStreaming.displayedText,
+      currentStreaming.progress,
+      allStreamedItems,
+      currentIndex,
+      isComplete,
+      items.length,
+      reset,
+    ],
+  );
 }
 
 // Hook for streaming with typing simulation

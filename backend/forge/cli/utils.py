@@ -9,7 +9,6 @@ import toml
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
-    from forge.cli.tui import UsageMetrics
     from forge.events.event import Event
 
 _LOCAL_CONFIG_FILE_PATH = Path.home() / ".Forge" / "config.toml"
@@ -80,22 +79,6 @@ def add_local_config_trusted_dir(folder_path: str) -> None:
     _save_local_config(config)
 
 
-def update_usage_metrics(event: Event, usage_metrics: UsageMetrics) -> None:
-    """Update usage metrics from an event.
-
-    Args:
-        event: The event to extract metrics from.
-        usage_metrics: The usage metrics object to update.
-
-    """
-    if not hasattr(event, "llm_metrics"):
-        return
-    if llm_metrics := event.llm_metrics:
-        usage_metrics.metrics = llm_metrics
-    else:
-        return
-
-
 class ModelInfo(BaseModel):
     """Information about a model and its provider."""
 
@@ -139,14 +122,9 @@ def extract_model_and_provider(model: str) -> ModelInfo:
             return ModelInfo(provider="anthropic", model=split[0], separator="/")
         if split[0] in VERIFIED_MISTRAL_MODELS:
             return ModelInfo(provider="mistral", model=split[0], separator="/")
-        if split[0] in VERIFIED_OPENHANDS_MODELS:
-            return ModelInfo(provider="openhands", model=split[0], separator="/")
         return ModelInfo(provider="", model=model, separator="")
     provider = split[0]
     model_id = separator.join(split[1:])
-    provider_lower = provider.lower()
-    if provider_lower in {"forge", "openhands"}:
-        provider = "openhands"
     return ModelInfo(provider=provider, model=model_id, separator=separator)
 
 
@@ -207,7 +185,7 @@ def organize_models_and_providers(models: list[str]) -> dict[str, ProviderInfo]:
     return result_dict
 
 
-VERIFIED_PROVIDERS = ["openhands", "anthropic", "openai", "mistral"]
+VERIFIED_PROVIDERS = ["anthropic", "openai", "mistral"]
 VERIFIED_OPENAI_MODELS = [
     "gpt-5-2025-08-07",
     "gpt-5-mini-2025-08-07",
@@ -240,20 +218,6 @@ VERIFIED_MISTRAL_MODELS = [
     "devstral-small-2507",
     "devstral-medium-2507",
 ]
-VERIFIED_OPENHANDS_MODELS = [
-    "claude-sonnet-4-20250514",
-    "gpt-5-2025-08-07",
-    "gpt-5-mini-2025-08-07",
-    "claude-opus-4-20250514",
-    "claude-opus-4-1-20250805",
-    "devstral-small-2507",
-    "devstral-medium-2507",
-    "o3",
-    "o4-mini",
-    "gemini-2.5-pro",
-    "kimi-k2-0711-preview",
-    "qwen3-coder-480b",
-]
 
 
 class ProviderInfo(BaseModel):
@@ -281,17 +245,17 @@ class ProviderInfo(BaseModel):
             return default
 
 
-def is_number(char: str) -> bool:
+def is_number(s: str) -> bool:
     """Check if a character is a digit.
 
     Args:
-        char: The character to check.
+        s: The character to check.
 
     Returns:
         bool: True if the character is a digit, False otherwise.
 
     """
-    return char.isdigit()
+    return s.isdigit()
 
 
 def split_is_actually_version(split: list[str]) -> bool:
@@ -336,3 +300,4 @@ def write_to_file(file_path: str | Path, content: str) -> None:
     """
     with open(file_path, "w") as f:
         f.write(content)
+

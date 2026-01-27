@@ -1,7 +1,7 @@
 import {
   SuggestedTask,
   SuggestedTaskGroup,
-} from "#/components/features/home/tasks/task.types";
+} from "#/api/forge.types";
 
 /**
  * Groups suggested tasks by their repository.

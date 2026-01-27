@@ -20,7 +20,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-[rgba(0,0,0,0.8)] backdrop-blur-[8px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 transition-all duration-300",
+      "fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 transition-all duration-300",
       className,
     )}
     {...props}
@@ -31,7 +31,7 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 function DialogCloseButton() {
   const { t } = useTranslation();
   return (
-    <DialogPrimitive.Close className="absolute right-4 top-4 rounded-lg p-2 opacity-70 transition-all duration-200 hover:opacity-100 hover:bg-brand-500/10 hover:text-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none active:scale-95">
+    <DialogPrimitive.Close className="absolute right-4 top-4 rounded-lg p-2 opacity-70 transition-all duration-200 hover:opacity-100 hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[rgba(139,92,246,0.2)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] disabled:pointer-events-none active:scale-95">
       <X className="h-4 w-4" />
       <span className="sr-only">{t("UI$CLOSE", "Close")}</span>
     </DialogPrimitive.Close>
@@ -48,7 +48,7 @@ const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         "fixed left-[50%] top-[50%] z-50 grid w-full max-w-[600px] translate-x-[-50%] translate-y-[-50%] gap-4",
-        "border border-[#1a1a1a] bg-[#000000] p-8 shadow-luxury-xl rounded-2xl duration-300",
+        "border border-[var(--border-primary)] bg-[var(--bg-elevated)] p-8 shadow-lg rounded-lg duration-300",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-96 data-[state=open]:zoom-in-100 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
         className,

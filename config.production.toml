@@ -183,7 +183,6 @@ enable_browsing = true
 enable_llm_editor = false                  # Deprecated - use ultimate_editor
 enable_ultimate_editor = true              # ⚡ Tree-sitter editor (40+ languages)
 enable_editor = true                       # Fallback str_replace_editor
-enable_jupyter = false                     # Disable in production unless needed
 enable_cmd = true
 enable_think = true
 enable_finish = true
@@ -221,75 +220,8 @@ close_delay = 600  # 10 minutes before closing idle runtimes
 # conversation_max_age_seconds = 86400  # 24 hours
 
 # ============================================================================
-# METASOP CONFIGURATION (PRODUCTION-OPTIMIZED)
-# ============================================================================
-[metasop]
-enabled = true
-default_sop = "feature_delivery_with_ui"
-
-# PRODUCTION: Increased token budgets for complex tasks
-token_budget_soft = 50000
-token_budget_hard = 100000
-
-# Monitoring and metrics
-metrics_prometheus_port = 9154
-
-# PRODUCTION: All advanced features enabled
-enable_vector_memory = true
-enable_hybrid_retrieval = true
-enforce_capability_matrix = true
-enable_self_remediation = true
-enable_failure_taxonomy = true  # New feature for error classification
-
-# Micro-iterations: Enable for UI/frontend tasks
-enable_micro_iterations = true
-micro_iteration_max_loops = 8
-micro_iteration_no_change_limit = 3
-
-# Vector memory configuration
-vector_embedding_dim = 384
-memory_max_records = 10000
-
-# ============================================================================
-# ACE FRAMEWORK (Agentic Context Engineering) - PRODUCTION
-# ============================================================================
-# Self-improving AI that learns from its own performance through evolving
-# context playbooks. Prevents context collapse and accumulates domain knowledge.
-
-enable_ace = true
-ace_max_bullets = 2000  # Larger playbook for production
-ace_playbook_persistence_path = "./ace_playbooks/metasop/"
-
-# Multi-epoch training for continuous improvement
-ace_multi_epoch = true
-ace_num_epochs = 5
-ace_reflector_max_iterations = 5
-
-# Online adaptation: Real-time learning during task execution
-ace_enable_online_adaptation = true
-ace_min_helpfulness_threshold = 0.0
-
-# Context management
-ace_max_playbook_content_length = 100  # More context in production
-
-# Grow-and-refine: Automatic playbook maintenance
-ace_enable_grow_and_refine = true
-ace_cleanup_interval_days = 30
-ace_redundancy_threshold = 0.8
-
-# Automatic playbook persistence
-ace_auto_save_playbook = true
-ace_playbook_save_interval = 10  # Save every 10 updates
-
-# ============================================================================
 # ADVANCED PERFORMANCE FEATURES (EXPERIMENTAL - HIGH IMPACT)
 # ============================================================================
-
-# 🚀 Prompt Optimization - Self-improving prompts via A/B testing
-enable_prompt_optimization = true
-prompt_optimization_ab_split = 0.1          # 10% traffic for A/B testing
-prompt_optimization_min_samples = 10        # Minimum samples before optimization
-prompt_optimization_confidence_threshold = 0.8
 
 # ⚡ Parallel Execution - Run independent steps concurrently
 enable_parallel_execution = true
@@ -372,20 +304,6 @@ scaling_cooldown = 300                       # Wait 5min between scaling actions
 # current_load = active_tasks / max_workers
 # if current_load > scale_up_threshold: add workers
 # if current_load < scale_down_threshold: remove workers
-
-# ============================================================================
-# OPTIMIZATION CONFIGURATION (PRODUCTION)
-# ============================================================================
-[optimization]
-enable_optimization = true
-enable_real_time_optimization = true
-ab_split = 0.1
-min_samples = 10
-confidence_threshold = 0.8
-
-# Real-time optimization thresholds
-optimization_threshold = 0.05
-real_time_confidence_threshold = 0.8
 
 # ============================================================================
 # MONITORING & LOGGING (PRODUCTION)

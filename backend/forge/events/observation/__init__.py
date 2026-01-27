@@ -11,9 +11,7 @@ from forge.events.observation.browse import BrowserOutputObservation
 from forge.events.observation.commands import (
     CmdOutputMetadata,
     CmdOutputObservation,
-    IPythonRunCellObservation,
 )
-from forge.events.observation.delegate import AgentDelegateObservation
 from forge.events.observation.empty import NullObservation
 from forge.events.observation.error import ErrorObservation
 from forge.events.observation.file_download import FileDownloadObservation
@@ -30,7 +28,6 @@ from forge.events.observation.task_tracking import TaskTrackingObservation
 
 __all__ = [
     "AgentCondensationObservation",
-    "AgentDelegateObservation",
     "AgentStateChangedObservation",
     "AgentThinkObservation",
     "BrowserOutputObservation",
@@ -41,7 +38,6 @@ __all__ = [
     "FileEditObservation",
     "FileReadObservation",
     "FileWriteObservation",
-    "IPythonRunCellObservation",
     "MCPObservation",
     "NullObservation",
     "Observation",

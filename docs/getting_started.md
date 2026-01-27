@@ -29,7 +29,7 @@ poetry install
 3. **Install frontend dependencies:**
 ```bash
 cd frontend
-npm install
+pnpm install
 cd ..
 ```
 
@@ -85,7 +85,7 @@ Backend will start on `http://localhost:3000` (default port, configurable via `p
 2. **Start frontend (in new terminal):**
 ```bash
 cd frontend
-npm run dev
+pnpm run dev
 ```
 
 Frontend will start on `http://localhost:5173`

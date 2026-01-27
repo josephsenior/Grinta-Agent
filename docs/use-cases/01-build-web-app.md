@@ -29,7 +29,7 @@ I want to build a task management application with the following features:
 
 ### Break Down into Steps
 
-Use MetaSOP to break this down:
+Break this project into development steps:
 
 ```
 Break this project into development steps:

@@ -1,4 +1,4 @@
-import { SuggestedTask } from "#/components/features/home/tasks/task.types";
+import { SuggestedTask } from "#/api/forge.types";
 import { Forge } from "../forge-axios";
 
 export class SuggestionsService {

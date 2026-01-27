@@ -1,5 +1,7 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "#/utils/utils";
+import { I18nKey } from "#/i18n/declaration";
 
 /**
  * Skip link component for keyboard navigation accessibility
@@ -7,6 +9,8 @@ import { cn } from "#/utils/utils";
  * WCAG 2.1 AA compliant - visible when focused
  */
 export function SkipLink() {
+  const { t } = useTranslation();
+
   return (
     <a
       href="#main-content"
@@ -27,8 +31,9 @@ export function SkipLink() {
           mainContent.scrollIntoView({ behavior: "smooth", block: "start" });
         }
       }}
+      aria-label={t(I18nKey.ACCESSIBILITY$SKIP_TO_MAIN_CONTENT)}
     >
-      Skip to main content
+      {t(I18nKey.ACCESSIBILITY$SKIP_TO_MAIN_CONTENT)}
     </a>
   );
 }

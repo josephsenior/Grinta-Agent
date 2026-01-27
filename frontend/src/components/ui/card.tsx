@@ -3,12 +3,15 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "#/utils/utils";
 
-const cardVariants = cva("block text-foreground transition-colors", {
+const cardVariants = cva("block text-foreground transition-all duration-300", {
   variants: {
     variant: {
-      standard: "border rounded-[12px] shadow-luxury",
-      elevated: "border rounded-[12px] shadow-luxury-lg",
-      glass: "backdrop-blur-[12px] border rounded-[12px]",
+      standard:
+        "border rounded-[12px] shadow-luxury hover:shadow-luxury-lg hover:-translate-y-1",
+      elevated:
+        "border rounded-[12px] shadow-luxury-lg bg-[var(--bg-elevated)]",
+      glass:
+        "glass hover:shadow-[0_8px_32px_rgba(0,0,0,0.12)] hover:border-[var(--border-accent)] transition-all duration-300",
     },
   },
   defaultVariants: {
@@ -31,8 +34,8 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
           };
         case "glass":
           return {
-            backgroundColor: "var(--glass-bg)",
-            borderColor: "var(--glass-border)",
+            backgroundColor: "var(--bg-elevated)",
+            borderColor: "var(--border-primary)",
           };
         default:
           return {

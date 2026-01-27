@@ -3,10 +3,9 @@ import shutil
 from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock
 import pytest
-from litellm import ChatCompletionMessageToolCall
 from forge.controller.state.state import State
 from forge.core.config.agent_config import AgentConfig
-from forge.core.message import ImageContent, Message, TextContent
+from forge.core.message import ImageContent, Message, TextContent, ToolCall
 from forge.events.action import (
     AgentFinishAction,
     AgentThinkAction,
@@ -26,9 +25,7 @@ from forge.events.observation.agent import MicroagentKnowledge, RecallObservatio
 from forge.events.observation.browse import BrowserOutputObservation
 from forge.events.observation.commands import (
     CmdOutputMetadata,
-    IPythonRunCellObservation,
 )
-from forge.events.observation.delegate import AgentDelegateObservation
 from forge.events.observation.error import ErrorObservation
 from forge.events.observation.files import FileEditObservation, FileReadObservation
 from forge.events.observation.reject import UserRejectObservation
@@ -347,52 +344,6 @@ def test_process_events_with_cmd_output_observation(conversation_memory):
     assert "[Command finished with exit code 0]" in result.content[0].text
     assert "[THIS IS PREFIX]" in result.content[0].text
     assert "[THIS IS SUFFIX]" in result.content[0].text
-
-
-def test_process_events_with_ipython_run_cell_observation(conversation_memory):
-    obs = IPythonRunCellObservation(
-        code="plt.plot()",
-        content="IPython output\n![image](data:image/png;base64,ABC123)",
-    )
-    initial_user_message = MessageAction(content="Initial user message")
-    initial_user_message._source = EventSource.USER
-    messages = conversation_memory.process_events(
-        condensed_history=[obs],
-        initial_user_action=initial_user_message,
-        max_message_chars=None,
-        vision_is_active=False,
-    )
-    assert len(messages) == 3
-    result = messages[2]
-    assert result.role == "user"
-    assert len(result.content) == 1
-    assert isinstance(result.content[0], TextContent)
-    assert "IPython output" in result.content[0].text
-    assert (
-        "![image](data:image/png;base64, ...) already displayed to user"
-        in result.content[0].text
-    )
-    assert "ABC123" not in result.content[0].text
-
-
-def test_process_events_with_agent_delegate_observation(conversation_memory):
-    obs = AgentDelegateObservation(
-        content="Content", outputs={"content": "Delegated agent output"}
-    )
-    initial_user_message = MessageAction(content="Initial user message")
-    initial_user_message._source = EventSource.USER
-    messages = conversation_memory.process_events(
-        condensed_history=[obs],
-        initial_user_action=initial_user_message,
-        max_message_chars=None,
-        vision_is_active=False,
-    )
-    assert len(messages) == 3
-    result = messages[2]
-    assert result.role == "user"
-    assert len(result.content) == 1
-    assert isinstance(result.content[0], TextContent)
-    assert "Delegated agent output" in result.content[0].text
 
 
 def test_process_events_with_error_observation(conversation_memory):
@@ -1068,17 +1019,17 @@ def test_should_include_message_helpers():
         role="assistant",
         content=[TextContent(text="Assistant")],
         tool_calls=[
-            ChatCompletionMessageToolCall(
-                id="call_1", type="function", function={"name": "fn", "arguments": ""}
-            )
+            ToolCall(
+                    id="call_1", type="function", function={"name": "fn", "arguments": ""}
+                )
         ],
     )
     assert ConversationMemory._should_include_message(tool_message, {"call_1"}, set())
     assert ConversationMemory._should_include_message(
         assistant_message, set(), {"call_1"}
     )
-    assistant_message.tool_calls[0] = ChatCompletionMessageToolCall(
-        id="missing", type="function", function={"name": "fn", "arguments": ""}
+    assistant_message.tool_calls[0] = ToolCall(
+        id="call_1", type="function", function={"name": "fn", "arguments": "{}"}
     )
     assert (
         ConversationMemory._should_include_message(assistant_message, set(), {"call_1"})
@@ -1091,7 +1042,7 @@ def test_all_tool_calls_match():
         role="assistant",
         content=[TextContent(text="Assistant")],
         tool_calls=[
-            ChatCompletionMessageToolCall(
+            ToolCall(
                 id="call_1", type="function", function={"name": "fn", "arguments": ""}
             )
         ],
@@ -1155,7 +1106,7 @@ class TestFilterUnmatchedToolCalls:
                 role="assistant",
                 content=[],
                 tool_calls=[
-                    ChatCompletionMessageToolCall(
+                    ToolCall(
                         id="call_1",
                         type="function",
                         function={"name": "get_weather", "arguments": ""},
@@ -1197,7 +1148,7 @@ class TestFilterUnmatchedToolCalls:
                 role="assistant",
                 content=[],
                 tool_calls=[
-                    ChatCompletionMessageToolCall(
+                    ToolCall(
                         id="unmatched_call",
                         type="function",
                         function={"name": "some_function", "arguments": ""},
@@ -1221,12 +1172,12 @@ class TestFilterUnmatchedToolCalls:
                 role="assistant",
                 content=[],
                 tool_calls=[
-                    ChatCompletionMessageToolCall(
+                    ToolCall(
                         id="matched_call",
                         type="function",
                         function={"name": "function1", "arguments": ""},
                     ),
-                    ChatCompletionMessageToolCall(
+                    ToolCall(
                         id="unmatched_call",
                         type="function",
                         function={"name": "function2", "arguments": ""},
@@ -1246,7 +1197,7 @@ class TestFilterUnmatchedToolCalls:
                 role="assistant",
                 content=[],
                 tool_calls=[
-                    ChatCompletionMessageToolCall(
+                    ToolCall(
                         id="matched_call",
                         type="function",
                         function={"name": "function1", "arguments": ""},
@@ -1439,30 +1390,6 @@ def test_process_events_partial_history(conversation_memory):
     _assert_partial_obs_only_messages(messages_partial_obs_only)
 
 
-def test_process_ipython_observation_with_vision_enabled(
-    agent_config, mock_prompt_manager
-):
-    """Test that _process_observation correctly handles IPythonRunCellObservation with image_urls when vision is enabled."""
-    memory = ConversationMemory(agent_config, mock_prompt_manager)
-    obs = IPythonRunCellObservation(
-        content="Test output",
-        code="print('test')",
-        image_urls=["data:image/png;base64,abc123"],
-    )
-    messages = memory._process_observation(
-        obs=obs,
-        tool_call_id_to_message={},
-        max_message_chars=None,
-        vision_is_active=True,
-    )
-    assert len(messages) == 1
-    message = messages[0]
-    assert len(message.content) == 2
-    assert isinstance(message.content[0], TextContent)
-    assert isinstance(message.content[1], ImageContent)
-    assert message.content[1].image_urls == ["data:image/png;base64,abc123"]
-
-
 def test_handle_tool_based_action_user_without_metadata(conversation_memory):
     class DummyAction:
         def __init__(self):
@@ -1571,30 +1498,6 @@ def test_handle_message_action_user_images_with_vision(conversation_memory):
     assert len(messages[0].content) == 3
     assert isinstance(messages[0].content[1], TextContent)
     assert isinstance(messages[0].content[2], ImageContent)
-
-
-def test_process_ipython_observation_with_vision_disabled(
-    agent_config, mock_prompt_manager
-):
-    """Test that _process_observation correctly handles IPythonRunCellObservation with image_urls when vision is disabled."""
-    memory = ConversationMemory(agent_config, mock_prompt_manager)
-    obs = IPythonRunCellObservation(
-        content="Test output",
-        code="print('test')",
-        image_urls=["data:image/png;base64,abc123"],
-    )
-    messages = memory._process_observation(
-        obs=obs,
-        tool_call_id_to_message={},
-        max_message_chars=None,
-        vision_is_active=False,
-    )
-    assert len(messages) == 1
-    message = messages[0]
-    assert len(message.content) == 2
-    assert isinstance(message.content[0], TextContent)
-    assert isinstance(message.content[1], ImageContent)
-    assert "invalid or empty image(s) were filtered" not in message.content[0].text
 
 
 def test_process_action_returns_empty(conversation_memory):

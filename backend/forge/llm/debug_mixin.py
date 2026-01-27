@@ -9,7 +9,7 @@ from forge.core.logger import llm_prompt_logger, llm_response_logger
 from forge.core.logger import forge_logger as logger
 
 if TYPE_CHECKING:
-    from litellm.types.utils import ModelResponse
+    pass
 
 MESSAGE_SEPARATOR = "\n\n----------\n\n"
 
@@ -37,27 +37,42 @@ class DebugMixin:
         if debug_message := MESSAGE_SEPARATOR.join(
             self._format_message_content(msg)
             for msg in messages
-            if msg["content"] is not None
+            if msg.get("content") is not None
         ):
             llm_prompt_logger.debug(debug_message)
         else:
             logger.debug("No completion messages!")
 
-    def log_response(self, resp: ModelResponse) -> None:
+    def log_response(self, resp: dict[str, Any] | str) -> None:
         """Log LLM response for debugging.
 
         Args:
-            resp: Model response to log
+            resp: Model response dict or content string to log
 
         """
         if not logger.isEnabledFor(DEBUG):
             return
-        message_back: str = resp["choices"][0]["message"]["content"] or ""
-        if tool_calls := resp["choices"][0]["message"].get("tool_calls", []):
-            for tool_call in tool_calls:
-                fn_name = tool_call.function.name
-                fn_args = tool_call.function.arguments
-                message_back += f"\nFunction call: {fn_name}({fn_args})"
+            
+        if isinstance(resp, str):
+            if resp:
+                llm_response_logger.debug(resp)
+            return
+            
+        message_back: str = ""
+        if resp.get("choices") and resp["choices"][0].get("message"):
+            msg = resp["choices"][0]["message"]
+            message_back = msg.get("content") or ""
+            if tool_calls := msg.get("tool_calls", []):
+                for tool_call in tool_calls:
+                    # Support both object and dict styles
+                    if hasattr(tool_call, "function"):
+                        fn_name = tool_call.function.name
+                        fn_args = tool_call.function.arguments
+                    else:
+                        fn_name = tool_call.get("function", {}).get("name")
+                        fn_args = tool_call.get("function", {}).get("arguments")
+                    message_back += f"\nFunction call: {fn_name}({fn_args})"
+        
         if message_back:
             llm_response_logger.debug(message_back)
 

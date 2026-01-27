@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Optional
 
 from fastapi import APIRouter, Depends, Request, Query
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from forge.core.logger import forge_logger as logger
 from forge.server.middleware.auth import get_current_user_id
@@ -44,11 +44,18 @@ class UserStatistics(BaseModel):
 class ActivityTimelineItem(BaseModel):
     """Activity timeline item."""
 
-    id: str
-    type: str
-    description: str
-    timestamp: str
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    id: str = Field(..., min_length=1, description="Activity identifier")
+    type: str = Field(..., min_length=1, description="Activity type")
+    description: str = Field(..., min_length=1, description="Activity description")
+    timestamp: str = Field(..., min_length=1, description="ISO timestamp")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+    @field_validator("id", "type", "description", "timestamp")
+    @classmethod
+    def validate_required_strings(cls, v: str) -> str:
+        """Validate required string fields are non-empty."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        return validate_non_empty_string(v, name="field")
 
 
 class ProfileResponse(BaseModel):
@@ -62,8 +69,17 @@ class ProfileResponse(BaseModel):
 class UpdateProfileRequest(BaseModel):
     """Update profile request."""
 
-    username: Optional[str] = None
-    email: Optional[EmailStr] = None
+    username: Optional[str] = Field(None, min_length=1, max_length=100, description="Username")
+    email: Optional[EmailStr] = Field(None, description="Email address")
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v: str | None) -> str | None:
+        """Validate username if provided."""
+        if v is not None:
+            from forge.core.security.type_safety import validate_non_empty_string
+            return validate_non_empty_string(v, name="username")
+        return v
 
 
 def _load_conversation_stats(conversation_id: str) -> Optional[dict]:

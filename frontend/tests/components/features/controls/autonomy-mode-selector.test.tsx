@@ -35,7 +35,7 @@ describe("AutonomyModeSelector", () => {
     const button = screen.getByRole("button");
     fireEvent.click(button);
 
-    expect(screen.getByText("Autonomy Mode")).toBeInTheDocument();
+    expect(screen.getByText("controls.autonomyMode")).toBeInTheDocument();
     expect(screen.getByText("Supervised")).toBeInTheDocument();
     expect(screen.getByText("Full Autonomous")).toBeInTheDocument();
   });
@@ -72,7 +72,7 @@ describe("AutonomyModeSelector", () => {
     fireEvent.click(button);
 
     // Should show dropdown content
-    expect(screen.getByText("Autonomy Mode")).toBeInTheDocument();
+    expect(screen.getByText("controls.autonomyMode")).toBeInTheDocument();
 
     // Click backdrop
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -81,7 +81,7 @@ describe("AutonomyModeSelector", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     await waitFor(() => {
-      expect(screen.queryByText("Autonomy Mode")).not.toBeInTheDocument();
+      expect(screen.queryByText("controls.autonomyMode")).not.toBeInTheDocument();
     });
   });
 

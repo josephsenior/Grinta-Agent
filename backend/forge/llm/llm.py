@@ -5,10 +5,6 @@ Classes:
 
 Functions:
     retry_decorator
-    completion
-    init_model_info
-    vision_is_active
-    is_caching_prompt_active
 """
 
 from __future__ import annotations
@@ -17,11 +13,8 @@ import copy
 import os
 import time
 import warnings
-import random
-from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Optional, cast
+from typing import TYPE_CHECKING, Any, Callable, Optional, cast, AsyncIterator, List, Dict
 
-import httpx
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -31,37 +24,14 @@ from tenacity import (
 
 from forge.llm.metrics import Metrics
 from forge.llm.model_features import get_features
+from forge.llm.llm_utils import get_token_count, create_pretrained_tokenizer
 from forge.utils.tenacity_stop import stop_if_should_exit
-
-import contextlib
-import importlib
-try:
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        litellm = importlib.import_module("litellm")  # type: ignore
-except Exception:
-    litellm = None  # type: ignore
-_LITELLM_COMPLETION = getattr(litellm, "completion", None) if litellm else None
-litellm_completion = _LITELLM_COMPLETION  # Backwards compatibility for tests
-_LITELLM_COMPLETION_COST = getattr(litellm, "completion_cost", None) if litellm else None
-try:
-    _exc_mod = importlib.import_module("litellm.exceptions")  # type: ignore
-    APIConnectionError = getattr(_exc_mod, "APIConnectionError", Exception)
-    ContentPolicyViolationError = getattr(_exc_mod, "ContentPolicyViolationError", Exception)
-    RateLimitError = getattr(_exc_mod, "RateLimitError", Exception)
-    ServiceUnavailableError = getattr(_exc_mod, "ServiceUnavailableError", Exception)
-except Exception:
-    APIConnectionError = ContentPolicyViolationError = RateLimitError = ServiceUnavailableError = Exception  # type: ignore
+from forge.llm.direct_clients import get_direct_client, LLMResponse
 
 from forge.core.exceptions import LLMNoResponseError
-from forge.core.logger import forge_logger as logger, get_trace_context
+from forge.core.logger import forge_logger as logger
 from forge.core.message import Message
 from forge.llm.debug_mixin import DebugMixin
-from forge.llm.fn_call_converter import (
-    STOP_WORDS,
-    convert_fncall_messages_to_non_fncall_messages,
-    convert_non_fncall_messages_to_fncall_messages,
-)
 from forge.llm.retry_mixin import RetryMixin
 
 if TYPE_CHECKING:
@@ -72,7 +42,7 @@ if TYPE_CHECKING:
 def retry_decorator(**kwargs: Any) -> Callable:
     """Create a retry decorator for LLM completion calls."""
     num_retries = kwargs.get("num_retries", 3)
-    retry_exceptions = kwargs.get("retry_exceptions", ())
+    retry_exceptions = kwargs.get("retry_exceptions", (Exception,))
     retry_min_wait = kwargs.get("retry_min_wait", 1.0)
     retry_max_wait = kwargs.get("retry_max_wait", 60.0)
     retry_multiplier = kwargs.get("retry_multiplier", 2.0)
@@ -87,389 +57,31 @@ def retry_decorator(**kwargs: Any) -> Callable:
     )
 
 
-__all__ = ["LLM", "RateLimitError", "ContentPolicyViolationError"]
-# Resolve optional LiteLLM exception classes across versions
-_TimeoutExc = getattr(litellm, "Timeout", Exception)
-_InternalServerErrorExc = getattr(litellm, "InternalServerError", Exception)
+from forge.llm.exceptions import (
+    APIConnectionError,
+    ContentPolicyViolationError,
+    RateLimitError,
+    ServiceUnavailableError,
+)
+
+__all__ = ["LLM"]
 
 LLM_RETRY_EXCEPTIONS: tuple[type[Exception], ...] = (
     APIConnectionError,
     RateLimitError,
     ServiceUnavailableError,
-    _TimeoutExc,  # type: ignore[arg-type]
-    _InternalServerErrorExc,  # type: ignore[arg-type]
     LLMNoResponseError,
 )
 
 
 class LLM(RetryMixin, DebugMixin):
-    """Language Model abstraction layer with multi-provider support via LiteLLM.
+    """Language Model abstraction layer with direct SDK client support.
 
-    Provides a unified interface to 200+ LLM models from 30+ providers including
-    OpenAI, Anthropic, Google, OpenRouter, xAI, and more. Handles retries, cost
-    tracking, streaming, function calling, and provider-specific quirks.
-
-    Features:
-        - Multi-provider support via LiteLLM (OpenAI, Claude, Gemini, Grok, etc.)
-        - Automatic retry with exponential backoff
-        - Real-time cost tracking per request
-        - Streaming token generation
-        - Function calling (when model supports it)
-        - Prompt caching (Claude models)
-        - Vision support (GPT-4V, Claude 3.5+, Gemini)
-        - Metrics collection (tokens, latency, costs)
-
-    Example:
-        >>> config = LLMConfig(
-        ...     model='claude-sonnet-4-20250514',
-        ...     api_key='sk-ant-...',
-        ...     temperature=0.0
-        ... )
-        >>> llm = LLM(config=config, service_id='main')
-        >>> response = llm.completion(
-        ...     messages=[{'role': 'user', 'content': 'Hello!'}]
-        ... )
-        >>> print(response.choices[0].message.content)
-        >>> print(f'Cost: ${llm.metrics.accumulated_cost:.2f}')
-
-    Attributes:
-        config: LLMConfig object with model, API key, and parameters
-        service_id: Identifier for this LLM instance (for logging/metrics)
-        metrics: Metrics object tracking costs, tokens, and latency
-        model_info: ModelInfo from LiteLLM with capability details
-        cost_metric_supported: Whether cost calculation is available for this model
-
+    Provides a unified interface to LLM models from providers including OpenAI,
+    Anthropic, Google (Gemini), and xAI (Grok). Handles retries, cost tracking,
+    streaming, and provider-specific quirks while using official SDKs for
+    better stability and performance.
     """
-
-    def _setup_basic_attributes(
-        self,
-        config: LLMConfig,
-        service_id: str,
-        metrics: Metrics | None,
-        retry_listener: Callable[[int, int], None] | None,
-    ) -> None:
-        """Setup basic instance attributes."""
-        self._tried_model_info = False
-        self.cost_metric_supported: bool = True
-        self.config: LLMConfig = copy.deepcopy(config)
-        self.service_id = service_id
-        self.metrics: Metrics = (
-            metrics if metrics is not None else Metrics(model_name=config.model)
-        )
-        self.model_info: dict[str, Any] | None = None
-        self._function_calling_active: bool = False
-        self.retry_listener = retry_listener
-
-    def _setup_logging(self) -> None:
-        """Setup logging configuration."""
-        if self.config.log_completions:
-            folder = self.config.log_completions_folder
-            if not folder:
-                msg = (
-                    "log_completions_folder is required when log_completions is enabled"
-                )
-                raise RuntimeError(msg)
-            os.makedirs(folder, exist_ok=True)
-
-    def _build_basic_kwargs(self) -> dict[str, Any]:
-        """Build basic completion kwargs."""
-        kwargs: dict[str, Any] = {
-            "temperature": self.config.temperature,
-            "max_completion_tokens": self.config.max_output_tokens,
-        }
-
-        if self.config.top_k is not None:
-            kwargs["top_k"] = self.config.top_k
-
-        if self.config.top_p is not None:
-            kwargs["top_p"] = self.config.top_p
-
-        return kwargs
-
-    def _handle_openhands_model(self) -> None:  # pragma: no cover
-        """Handle Openhands model configuration (including legacy Forge aliases)."""
-        for prefix in ("Openhands/", "openhands/", "Forge/"):
-            if self.config.model.startswith(prefix):
-                model_name = self.config.model.removeprefix(prefix)
-                self.config.model = f"litellm_proxy/{model_name}"
-                self.config.base_url = "https://llm-proxy.app.all-hands.dev/"
-                logger.debug(
-                    "Rewrote %s%s to %s with base URL %s",
-                    prefix,
-                    model_name,
-                    self.config.model,
-                    self.config.base_url,
-                )
-                break
-
-    def _initialize_model_info(self) -> None:  # pragma: no cover
-        """Initialize model information.
-
-        Tries to call init_model_info if available, suppressing warnings.
-        """
-        try:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                if hasattr(self, "init_model_info"):
-                    self.init_model_info()
-        except Exception as e:
-            logger.debug(f"Could not initialize model info: {e}")
-
-    def _check_vision_capability(self) -> None:  # pragma: no cover
-        """Check if model has vision capability enabled."""
-        try:
-            if hasattr(self, "vision_is_active") and self.vision_is_active():
-                logger.debug("LLM: model has vision enabled")
-        except Exception:
-            pass
-
-    def _check_caching_capability(self) -> None:  # pragma: no cover
-        """Check if caching prompt is enabled."""
-        try:
-            if (
-                hasattr(self, "is_caching_prompt_active")
-                and self.is_caching_prompt_active()
-            ):
-                logger.debug("LLM: caching prompt enabled")
-        except Exception:
-            pass
-
-    def _check_function_calling_capability(self) -> None:  # pragma: no cover
-        """Check if model supports function calling."""
-        try:
-            if (
-                hasattr(self, "is_function_calling_active")
-                and self.is_function_calling_active()
-            ):
-                logger.debug("LLM: model supports function calling")
-        except Exception:
-            pass
-
-    def _setup_model_info_and_capabilities(self) -> None:  # pragma: no cover
-        """Setup model info and check capabilities."""
-        self._initialize_model_info()
-        self._check_vision_capability()
-        self._check_caching_capability()
-        self._check_function_calling_capability()
-
-    def _setup_tokenizer(self) -> None:  # pragma: no cover
-        """Setup tokenizer if needed."""
-        if self.config.custom_tokenizer is not None:
-            try:
-                utils_mod = importlib.import_module("litellm.utils")  # type: ignore
-                create_tok = getattr(utils_mod, "create_pretrained_tokenizer", None)
-                self.tokenizer = (
-                    create_tok(self.config.custom_tokenizer) if create_tok else None
-                )
-            except Exception:
-                self.tokenizer = None
-        else:
-            self.tokenizer = None
-
-    def _configure_reasoning_effort(self, kwargs: dict[str, Any]) -> None:
-        """Configure reasoning effort for supported models."""
-        features = get_features(self.config.model)
-        if features.supports_reasoning_effort:
-            if "gemini-2.5-pro" in self.config.model:
-                logger.debug(
-                    "Gemini model %s with reasoning_effort %s",
-                    self.config.model,
-                    self.config.reasoning_effort,
-                )
-                if self.config.reasoning_effort in {None, "low", "none"}:
-                    kwargs["thinking"] = {"budget_tokens": 128}
-                    kwargs["allowed_openai_params"] = ["thinking"]
-                    kwargs.pop("reasoning_effort", None)
-                else:
-                    kwargs["reasoning_effort"] = self.config.reasoning_effort
-                logger.debug(
-                    "Gemini model %s with reasoning_effort %s mapped to thinking %s",
-                    self.config.model,
-                    self.config.reasoning_effort,
-                    kwargs.get("thinking"),
-                )
-                kwargs.pop("temperature", None)
-                kwargs.pop("top_p", None)
-            else:
-                kwargs["reasoning_effort"] = self.config.reasoning_effort
-
-    def _configure_model_specific_settings(self, kwargs: dict[str, Any]) -> None:
-        """Configure model-specific settings."""
-        self._configure_azure_settings(kwargs)
-        self._configure_safety_settings(kwargs)
-        self._configure_aws_settings(kwargs)
-        self._configure_claude_settings(kwargs)
-
-    def _configure_azure_settings(self, kwargs: dict[str, Any]) -> None:
-        """Configure Azure-specific settings.
-
-        Args:
-            kwargs: Completion kwargs to modify
-
-        """
-        if self.config.model.startswith("azure"):
-            kwargs["max_tokens"] = self.config.max_output_tokens
-            kwargs.pop("max_completion_tokens", None)
-
-    def _configure_safety_settings(self, kwargs: dict[str, Any]) -> None:
-        """Configure safety settings for supported models.
-
-        Args:
-            kwargs: Completion kwargs to modify
-
-        """
-        if not self.config.safety_settings:
-            return
-
-        model_lower = self.config.model.lower()
-        if "mistral" in model_lower or "gemini" in model_lower:
-            kwargs["safety_settings"] = self.config.safety_settings
-
-    def _configure_aws_settings(self, kwargs: dict[str, Any]) -> None:
-        """Configure AWS credentials.
-
-        Args:
-            kwargs: Completion kwargs to modify
-
-        """
-        kwargs["aws_region_name"] = self.config.aws_region_name
-
-        if self.config.aws_access_key_id:
-            kwargs["aws_access_key_id"] = (
-                self.config.aws_access_key_id.get_secret_value()
-            )
-
-        if self.config.aws_secret_access_key:
-            kwargs["aws_secret_access_key"] = (
-                self.config.aws_secret_access_key.get_secret_value()
-            )
-
-    def _configure_claude_settings(self, kwargs: dict[str, Any]) -> None:
-        """Configure Claude-specific settings.
-
-        Args:
-            kwargs: Completion kwargs to modify
-
-        """
-        model_lower = self.config.model.lower()
-
-        if "claude-opus-4-1" in model_lower:
-            kwargs["thinking"] = {"type": "disabled"}
-
-            # Remove top_p when both temperature and top_p are set
-            if "temperature" in kwargs and "top_p" in kwargs:
-                kwargs.pop("top_p", None)
-
-        if "claude-sonnet-4" in model_lower:
-            if self.config.max_output_tokens is None:
-                self.config.max_output_tokens = 64000
-            if (
-                self.config.max_input_tokens is None
-                or self.config.max_input_tokens > 200000
-            ):
-                self.config.max_input_tokens = 200000
-
-    def _setup_environment_variables(self) -> None:
-        """Setup environment variables for API key manager.
-
-        Forces environment variable setup before completion function.
-        """
-        from forge.core.config.api_key_manager import api_key_manager
-
-        if self.config.model:
-            api_key_manager.set_environment_variables(
-                self.config.model, self.config.api_key
-            )
-            logger.debug(f"Set environment variables for model: {self.config.model}")
-
-    def _extract_api_key(self) -> str | None:
-        """Extract API key from config or environment.
-
-        Tries multiple sources with fallbacks.
-
-        Returns:
-            API key value or None
-
-        """
-        from forge.core.config.api_key_manager import api_key_manager
-
-        api_key_value: str | None = None
-
-        # Try config API key first
-        if (
-            self.config.api_key
-            and self.config.api_key.get_secret_value()
-            and self.config.api_key.get_secret_value().strip()
-        ):
-            api_key_value = self.config.api_key.get_secret_value()
-            logger.debug(
-                f"Using config API key for completion: {api_key_value[:10]}..."
-            )
-            return api_key_value
-
-        # Try environment variables
-        provider = api_key_manager._extract_provider(self.config.model)
-        env_key = api_key_manager._get_provider_key_from_env(provider)
-        if env_key and env_key.strip():
-            logger.debug(f"Using environment API key for completion: {env_key[:10]}...")
-            return env_key
-
-        # Try API key manager as final fallback
-        correct_api_key = api_key_manager.get_api_key_for_model(
-            self.config.model, self.config.api_key
-        )
-        if (
-            correct_api_key
-            and correct_api_key.get_secret_value()
-            and correct_api_key.get_secret_value().strip()
-        ):
-            api_key_value = correct_api_key.get_secret_value()
-            logger.debug(
-                f"Using API key manager result for completion: {api_key_value[:10]}..."
-            )
-        else:
-            logger.error(
-                f"CRITICAL: No API key available anywhere for model: {self.config.model}"
-            )
-
-        return api_key_value
-
-    def _setup_completion_function(self, kwargs: dict[str, Any]) -> None:
-        """Prepare the partial completion function with validated parameters."""
-        api_key_value = self._extract_api_key()
-
-        base_completion_kwargs = {
-            "model": self.config.model,
-            "api_key": api_key_value,
-            "timeout": self.config.timeout,
-            "drop_params": self.config.drop_params,
-            "seed": self.config.seed,
-        }
-
-        if self.config.base_url is not None:
-            base_completion_kwargs["base_url"] = self.config.base_url
-        if self.config.api_version is not None:
-            base_completion_kwargs["api_version"] = self.config.api_version
-        if self.config.custom_llm_provider is not None:
-            base_completion_kwargs["custom_llm_provider"] = (
-                self.config.custom_llm_provider
-            )
-
-        all_params = {**base_completion_kwargs, **kwargs}
-
-        # Resolve completion function lazily to handle environments where litellm doesn't export it at import time
-        completion_fn = litellm_completion or getattr(litellm, "completion", None)
-        if completion_fn is None:
-            def _missing_completion(*args, **kwargs):
-                raise RuntimeError("litellm.completion is unavailable in this environment")
-            completion_fn = _missing_completion
-        self._base_completion = partial(completion_fn, **all_params)
-        self._completion_unwrapped = self._base_completion
-        logger.debug(
-            "Completed function setup for model: %s with %d validated parameters",
-            self.config.model,
-            len(all_params),
-        )
 
     def __init__(
         self,
@@ -478,931 +90,371 @@ class LLM(RetryMixin, DebugMixin):
         metrics: Metrics | None = None,
         retry_listener: Callable[[int, int], None] | None = None,
     ) -> None:
-        """Initializes the LLM. If LLMConfig is passed, its values will be the fallback.
+        self.config: LLMConfig = copy.deepcopy(config)
+        self.service_id = service_id
+        self.metrics: Metrics = (
+            metrics if metrics is not None else Metrics(model_name=config.model)
+        )
+        self.retry_listener = retry_listener
+        self._function_calling_active: bool = False
+        
+        # Initialize client
+        api_key_value = self._extract_api_key()
+        if not api_key_value:
+            logger.error(f"No API key available for model: {self.config.model}")
+            
+        self.client = get_direct_client(
+            model=self.config.model,
+            api_key=api_key_value or "",
+            base_url=self.config.base_url
+        )
+        
+        # Configure capabilities
+        try:
+            features = get_features(self.config.model)
+            self._function_calling_active = self.config.native_tool_calling if self.config.native_tool_calling is not None else features.supports_function_calling
+        except Exception:
+            logger.debug(f"Could not get features for model: {self.config.model}")
+            self._function_calling_active = self.config.native_tool_calling or False
 
-        Passing simple parameters always overrides config.
+        # Initialize model info (limits, etc)
+        self.init_model_info()
 
-        Args:
-            config: The LLM configuration.
-            service_id: The service identifier.
-            metrics: The metrics to use.
-            retry_listener: Optional callback for retry events.
+        # Handle custom tokenizer
+        if self.config.custom_tokenizer:
+            self.config.custom_tokenizer = create_pretrained_tokenizer(self.config.custom_tokenizer)
 
+    def init_model_info(self) -> None:
+        """Initialize model limits and capabilities.
+        
+        Maintained for backwards compatibility. Uses native model_features.
         """
-        # Setup basic attributes
-        self._setup_basic_attributes(config, service_id, metrics, retry_listener)
+        try:
+            features = get_features(self.config.model)
+            if self.config.max_input_tokens is None:
+                self.config.max_input_tokens = features.max_input_tokens
+            if self.config.max_output_tokens is None:
+                self.config.max_output_tokens = features.max_output_tokens
+        except Exception as e:
+            logger.debug(f"Could not initialize model info for {self.config.model}: {e}")
 
-        # Setup logging
-        self._setup_logging()
+    def _extract_api_key(self) -> str | None:
+        """Extract API key from config or environment."""
+        from forge.core.config.api_key_manager import api_key_manager
+        
+        if (
+            self.config.api_key
+            and self.config.api_key.get_secret_value()
+            and self.config.api_key.get_secret_value().strip()
+        ):
+            return self.config.api_key.get_secret_value()
 
-        # Setup model info and capabilities
-        self._setup_model_info_and_capabilities()
+        key_obj = api_key_manager.get_api_key_for_model(
+            self.config.model, self.config.api_key
+        )
+        return key_obj.get_secret_value() if key_obj else None
 
-        # Setup tokenizer
-        self._setup_tokenizer()
+    def _get_call_kwargs(self, **kwargs) -> dict:
+        """Merge default config with call-specific kwargs and handle model-specific parameters."""
+        is_stream = kwargs.pop("is_stream", False)
+        
+        # Filter out legacy parameters that are no longer needed for direct SDKs
+        legacy_params = ["drop_params", "force_timeout", "metadata", "api_base", "caching"]
+        for param in legacy_params:
+            kwargs.pop(param, None)
 
-        # Build completion kwargs
-        kwargs = self._build_basic_kwargs()
+        call_kwargs = {
+            "model": self.config.model,
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_output_tokens,
+            **kwargs
+        }
+        if self.config.top_p is not None:
+            call_kwargs["top_p"] = self.config.top_p
+        if self.config.top_k is not None:
+            call_kwargs["top_k"] = self.config.top_k
+            
+        # Handle model-specific tweaks and optimizations
+        model_lower = self.config.model.lower()
+        provider_lower = (self.config.custom_llm_provider or "").lower()
+        is_gemini = "gemini" in model_lower or "gemini" in provider_lower
+        
+        if is_gemini:
+            # Gemini specific reasoning mapping
+            if self.config.reasoning_effort in [None, "low"]:
+                # In streaming, we don't support thinking budget yet for Gemini
+                if not is_stream:
+                    call_kwargs["thinking"] = {"budget_tokens": 128}
+                call_kwargs.pop("reasoning_effort", None)
+                # Gemini often doesn't want temperature/top_p when thinking is enabled
+                if not is_stream:
+                    call_kwargs.pop("temperature", None)
+                    call_kwargs.pop("top_p", None)
+            elif self.config.reasoning_effort == "medium":
+                call_kwargs["reasoning_effort"] = "medium"
+                call_kwargs.pop("thinking", None)
+            elif self.config.reasoning_effort == "high":
+                call_kwargs["reasoning_effort"] = "high"
+                call_kwargs.pop("thinking", None)
+        elif "opus-4-1" in model_lower:
+            # Anthropic Opus 4.1 specific tweaks
+            call_kwargs["thinking"] = {"type": "disabled"}
+            call_kwargs.pop("top_p", None)
+        elif "claude" in model_lower:
+            # Claude models don't support reasoning_effort param
+            call_kwargs.pop("reasoning_effort", None)
+            if "claude-3-7" in model_lower or "claude-3.7" in model_lower:
+                # Claude 3.7 supports thinking
+                if self.config.reasoning_effort == "low":
+                    call_kwargs["thinking"] = {"type": "enabled", "budget_tokens": 1024}
+                elif self.config.reasoning_effort in ["medium", "high"]:
+                    call_kwargs["thinking"] = {"type": "enabled", "budget_tokens": 4096}
+        else:
+            if self.config.reasoning_effort is not None:
+                call_kwargs["reasoning_effort"] = self.config.reasoning_effort
+                
+        if self.config.seed is not None:
+            call_kwargs["seed"] = self.config.seed
+            
+        return call_kwargs
 
-        # Handle Openhands model configuration (includes legacy Forge aliases)
-        self._handle_openhands_model()
-
-        # Configure reasoning effort
-        self._configure_reasoning_effort(kwargs)
-
-        # Configure model-specific settings
-        self._configure_model_specific_settings(kwargs)
-
-        # Setup completion function
-        self._setup_completion_function(kwargs)
-
-        # Wrap completion with retry logic
-        self._completion = self.retry_decorator(
+    def completion(self, *args, **kwargs) -> Any:
+        """Synchronous completion call."""
+        messages = self._extract_messages(args, kwargs)
+        
+        # Merge default kwargs
+        call_kwargs = self._get_call_kwargs(is_stream=False, **kwargs)
+        
+        @self.retry_decorator(
             num_retries=self.config.num_retries,
             retry_exceptions=LLM_RETRY_EXCEPTIONS,
             retry_min_wait=self.config.retry_min_wait,
             retry_max_wait=self.config.retry_max_wait,
             retry_multiplier=self.config.retry_multiplier,
             retry_listener=self.retry_listener,
-        )(self._completion_wrapper)
-
-    def _prepare_messages(
-        self,
-        args: tuple[Any, ...],
-        kwargs: dict[str, Any],
-    ) -> tuple[list[dict], bool, list[dict] | None, bool]:
-        """Prepare messages for completion, handling conversion and tools."""
-        mock_function_calling = not self.is_function_calling_active()
-
-        # Extract and normalize messages
-        messages = self._extract_messages(args, kwargs)
-        kwargs["messages"] = messages
-
-        # Handle function calling conversion if needed
-        mock_fncall_tools = self._handle_function_calling_conversion(
-            mock_function_calling,
-            messages,
-            kwargs,
         )
-
-        return (messages, mock_function_calling, mock_fncall_tools, len(args) > 0)
-
-    def _extract_messages(
-        self, args: tuple[Any, ...], kwargs: dict[str, Any]
-    ) -> list[dict]:
-        """Extract and normalize messages from args and kwargs."""
-        # Extract messages from args or kwargs
-        if len(args) > 1:
-            messages_kwarg = args[1] if len(args) > 1 else args[0]
-            kwargs["messages"] = messages_kwarg
-            # Remove processed args (this would need to be handled by caller)
-        elif "messages" in kwargs:
-            messages_kwarg = kwargs["messages"]
-        else:
-            messages_kwarg = args[0] if args else []
-
-        # Normalize to list
-        messages_list = (
-            messages_kwarg if isinstance(messages_kwarg, list) else [messages_kwarg]
-        )
-
-        # Convert Message objects to dicts if needed
-        if messages_list and isinstance(messages_list[0], Message):
-            from forge.core.pydantic_compat import model_dump_with_options
-
-            messages = [
-                model_dump_with_options(m) for m in cast("list[Message]", messages_list)
-            ]
-        else:
-            messages = cast("list[dict[str, Any]]", messages_list)
-
-        # Create deep copy to avoid mutation
-        copy.deepcopy(messages)
-        return messages
-
-    def _handle_function_calling_conversion(
-        self,
-        mock_function_calling: bool,
-        messages: list[dict],
-        kwargs: dict[str, Any],
-    ) -> list[dict] | None:
-        """Handle function calling conversion when mocking is enabled."""
-        if not mock_function_calling or "tools" not in kwargs:
-            return None
-
-        # Convert function calling messages to non-function calling format
-        add_in_context_learning_example = (
-            "Forge-lm" not in self.config.model and "devstral" not in self.config.model
-        )
-
-        converted_messages = convert_fncall_messages_to_non_fncall_messages(
-            messages,
-            kwargs["tools"],
-            add_in_context_learning_example=add_in_context_learning_example,
-        )
-        kwargs["messages"] = converted_messages
-
-        # Add stop words if supported
-        if get_features(self.config.model).supports_stop_words and (
-            not self.config.disable_stop_word
-        ):
-            kwargs["stop"] = STOP_WORDS
-
-        # Handle tool choice based on model
-        mock_fncall_tools = kwargs.pop("tools")
-        if "Forge-lm" in self.config.model:
-            kwargs["tool_choice"] = "none"
-        else:
-            kwargs.pop("tool_choice", None)
-
-        return mock_fncall_tools
-
-    @retry_decorator(
-        num_retries=3,
-        retry_exceptions=LLM_RETRY_EXCEPTIONS,
-        retry_min_wait=1.0,
-        retry_max_wait=60.0,
-        retry_multiplier=2.0,
-    )
-    def _log_completion_input(
-        self, messages, mock_function_calling, mock_fncall_tools, kwargs
-    ) -> None:
-        """Log completion input if logging is enabled."""
-        if not self.config.log_completions:
-            return
-
-        from forge.io import json
-
-        input_data = {
-            "model": self.config.model,
-            "messages": messages,
-            "kwargs": {
-                k: v for k, v in kwargs.items() if k not in ["messages", "tools"]
-            },
-            "mock_function_calling": mock_function_calling,
-        }
-        if mock_fncall_tools:
-            input_data["mock_fncall_tools"] = mock_fncall_tools
-
-        with open(
-            os.path.join(
-                self.config.log_completions_folder, f"input_{int(time.time())}.json"
-            ),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            f.write(json.dumps(input_data, indent=2))
-
-    def _log_completion_error(self, messages, error: Exception, kwargs) -> None:
-        """Log completion error if logging is enabled."""
-        if not self.config.log_completions:
-            return
-
-        from forge.io import json
-
-        error_data = {
-            "model": self.config.model,
-            "messages": messages,
-            "error": str(error),
-            "kwargs": {
-                k: v for k, v in kwargs.items() if k not in ["messages", "tools"]
-            },
-        }
-        with open(
-            os.path.join(
-                self.config.log_completions_folder, f"error_{int(time.time())}.json"
-            ),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            f.write(json.dumps(error_data, indent=2))
-
-    def _log_completion_output(self, response, messages, kwargs) -> None:
-        """Log completion output if logging is enabled."""
-        if not self.config.log_completions:
-            return
-
-        from forge.io import json
-
-        output_data = {
-            "model": self.config.model,
-            "response": response.model_dump()
-            if hasattr(response, "model_dump")
-            else response,
-            "messages": messages,
-            "kwargs": {
-                k: v for k, v in kwargs.items() if k not in ["messages", "tools"]
-            },
-        }
-        with open(
-            os.path.join(
-                self.config.log_completions_folder, f"output_{int(time.time())}.json"
-            ),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            f.write(json.dumps(output_data, indent=2))
-
-    def _apply_mock_function_calling(self, response, mock_fncall_tools) -> None:
-        """Apply mock function calling to response if needed."""
-        response.choices[0].message.tool_calls = []
-        response.choices[
-            0
-        ].message.content = convert_non_fncall_messages_to_fncall_messages(
-            [{"role": "assistant", "content": response.choices[0].message.content}],
-            mock_fncall_tools,
-        )[0]["content"]
-
-    def _should_enable_otel(self) -> bool:
-        enabled = os.getenv(
-            "OTEL_INSTRUMENT_LLM", os.getenv("OTEL_ENABLED", "false")
-        ).lower() in ("true", "1", "yes")
-        if not enabled:
-            return False
-        try:
-            sample_rate = float(
-                os.getenv("OTEL_SAMPLE_LLM", os.getenv("OTEL_SAMPLE_DEFAULT", "1.0"))
-            )
-        except Exception:
-            sample_rate = 1.0
-        if sample_rate >= 1.0:
-            return True
-        sample_rate = max(0.0, min(1.0, sample_rate))
-        return random.random() < sample_rate
-
-    def _start_span_context(self):
-        if not self._should_enable_otel():
-            return contextlib.nullcontext()
-        try:  # Lazy import so OTEL remains optional
-            from opentelemetry import trace as _otel_trace  # type: ignore
-            from opentelemetry.trace import SpanKind as _SpanKind  # type: ignore
-
-            tracer = _otel_trace.get_tracer("forge.llm")
-            return tracer.start_as_current_span(name="llm.call", kind=_SpanKind.CLIENT)
-        except Exception:
-            return contextlib.nullcontext()
-
-    def _set_span_request_attributes(
-        self, span: Any | None, is_streaming: bool
-    ) -> None:
-        if span is None:
-            return
-        try:
-            model = self.config.model
-            provider = (
-                self.config.custom_llm_provider
-                if getattr(self.config, "custom_llm_provider", None)
-                else (model.split("/", 1)[0] if "/" in model else "unknown")
-            )
-            span.set_attribute("llm.provider", provider)
-            span.set_attribute("llm.model", model)
-            if self.config.temperature is not None:
-                span.set_attribute("llm.temperature", float(self.config.temperature))
-            if self.config.top_p is not None:
-                span.set_attribute("llm.top_p", float(self.config.top_p))
-            if self.config.max_output_tokens is not None:
-                span.set_attribute("llm.max_tokens", int(self.config.max_output_tokens))
-            span.set_attribute("llm.streaming", bool(is_streaming))
-            ctx = get_trace_context()
-            if isinstance(ctx, dict) and ctx.get("trace_id"):
-                span.set_attribute("forge.trace_id", str(ctx["trace_id"]))
-        except Exception:
-            pass
-
-    def _record_span_exception(self, span: Any | None, error: Exception) -> None:
-        if span is None:
-            return
-        try:
-            span.record_exception(error)
-            span.set_attribute("error", True)
-        except Exception:
-            pass
-
-    def _wrap_stream_response(
-        self, iterator: Any, span: Any | None, start_time: float
-    ):
-        if span is None:
-            return iterator
-
-        def _stream():
+        def _completion_with_retry(**kwargs):
+            start_time = time.time()
             try:
-                for chunk in iterator:
-                    yield chunk
-            except Exception as exc:
-                self._record_span_exception(span, exc)
-                raise
-            finally:
-                try:
-                    span.set_attribute(
-                        "llm.latency_ms", int((time.time() - start_time) * 1000)
-                    )
-                except Exception:
-                    pass
-
-        return _stream()
-
-    def _finalize_span_with_response(
-        self, span: Any | None, latency: float, response: dict, cur_cost: float
-    ) -> None:
-        span_to_update = self._resolve_span_to_update(span)
-        if span_to_update is None:
-            return
-        try:
-            self._annotate_span_with_usage(span_to_update, response.get("usage"))
-            span_to_update.set_attribute("llm.latency_ms", int(latency * 1000))
-            span_to_update.set_attribute("llm.cost.usd", float(cur_cost))
-        except Exception:
-            pass
-
-    def _resolve_span_to_update(self, span: Any | None) -> Any | None:
-        if span is None:
-            return None
-        try:
-            from opentelemetry import trace as _otel_trace  # type: ignore
-        except Exception:
-            return None
-        try:
-            current_span = _otel_trace.get_current_span()
-        except Exception:
-            current_span = span
-
-        span_to_update = current_span if current_span is not None else span
-        try:
-            if not getattr(span_to_update, "is_recording", lambda: False)():
-                return None
-            return span_to_update
-        except Exception:
-            return span
-
-    def _annotate_span_with_usage(
-        self, span_to_update: Any, usage: dict[str, Any] | None
-    ) -> None:
-        if not usage:
-            return
-        prompt_tokens = usage.get("prompt_tokens", 0)
-        completion_tokens = usage.get("completion_tokens", 0)
-        total_tokens = int(prompt_tokens) + int(completion_tokens)
-        span_to_update.set_attribute("llm.input_tokens", int(prompt_tokens))
-        span_to_update.set_attribute("llm.output_tokens", int(completion_tokens))
-        span_to_update.set_attribute("llm.total_tokens", int(total_tokens))
-        cache_hit_tokens, cache_write_tokens = self._extract_cache_tokens(usage)
-        if cache_hit_tokens:
-            span_to_update.set_attribute("llm.cache_hit_tokens", int(cache_hit_tokens))
-        if cache_write_tokens:
-            span_to_update.set_attribute(
-                "llm.cache_write_tokens", int(cache_write_tokens)
-            )
-
-    def _completion_wrapper(self, *args: Any, **kwargs: Any) -> Any:
-        """Wrapper for the litellm completion function. Logs the input and output of the completion function."""
-        messages, mock_function_calling, mock_fncall_tools, _has_extra_args = (
-            self._prepare_messages(args, kwargs)
-        )
-
-        # Check if streaming is requested
-        is_streaming = kwargs.get("stream", False)
-
-        # Execute completion with optional OpenTelemetry span
-        start_time = time.time()
-
-        span_cm = self._start_span_context()
-        span_holder: dict[str, Optional[Any]] = {"span": None}
-
-        try:
-            with span_cm as span:
-                span_holder["span"] = span
-                self._set_span_request_attributes(span, is_streaming)
-                response = self._base_completion(*args, **kwargs)
+                self.log_prompt(messages)
+                response = self.client.completion(messages=messages, **kwargs)
                 latency = time.time() - start_time
+                
+                # Update metrics
+                self.metrics.add_response_latency(latency, response.id)
+                if response.usage:
+                    # Add cost to metrics
+                    cost = self.client.get_completion_cost(
+                        prompt_tokens=response.usage.get("prompt_tokens", 0),
+                        completion_tokens=response.usage.get("completion_tokens", 0),
+                        config=self.config
+                    )
+                    self.metrics.add_cost(cost)
 
-                # If streaming, return iterator/generator; close span when exhausted if possible
-                if is_streaming:
-                    return self._wrap_stream_response(response, span, start_time)
+                    # Extract cache tokens
+                    cache_read = response.usage.get("cache_read_tokens", 0)
+                    cache_write = response.usage.get("cache_write_tokens", 0)
+                    
+                    # Handle nested usage details (like from OpenAI/Anthropic mocks in tests)
+                    if not cache_read and "prompt_tokens_details" in response.usage:
+                        details = response.usage["prompt_tokens_details"]
+                        if hasattr(details, "cached_tokens"):
+                            cache_read = details.cached_tokens
+                        elif isinstance(details, dict):
+                            cache_read = details.get("cached_tokens", 0)
+                            
+                    if not cache_write and "model_extra" in response.usage:
+                        extra = response.usage["model_extra"]
+                        if isinstance(extra, dict):
+                            cache_write = extra.get("cache_creation_input_tokens", 0)
 
+                    self.metrics.add_token_usage(
+                        prompt_tokens=response.usage.get("prompt_tokens", 0),
+                        completion_tokens=response.usage.get("completion_tokens", 0),
+                        cache_read_tokens=cache_read,
+                        cache_write_tokens=cache_write,
+                        context_window=0, # Not easily available from direct clients yet
+                        response_id=response.id
+                    )
+                
+                self.log_response(response.to_dict())
+                return response
+            except Exception as e:
+                # Map SDK exceptions to our custom exceptions if needed
+                # For now, we assume the client or the retry decorator handles it
+                raise
+
+        return _completion_with_retry(**call_kwargs)
+
+    async def acompletion(self, *args, **kwargs) -> Any:
+        """Asynchronous completion call with cancellation support."""
+        messages = self._extract_messages(args, kwargs)
+        
+        # Merge default kwargs
+        call_kwargs = self._get_call_kwargs(is_stream=False, **kwargs)
+        
+        @self.retry_decorator(
+            num_retries=self.config.num_retries,
+            retry_exceptions=LLM_RETRY_EXCEPTIONS,
+            retry_min_wait=self.config.retry_min_wait,
+            retry_max_wait=self.config.retry_max_wait,
+            retry_multiplier=self.config.retry_multiplier,
+            retry_listener=self.retry_listener,
+        )
+        async def _acompletion_with_retry(**kwargs):
+            start_time = time.time()
+            # Check for cancellation before start
+            if await self._check_cancelled():
+                raise LLMNoResponseError("Request cancelled before start")
+
+            self.log_prompt(messages)
+            response = await self.client.acompletion(messages=messages, **kwargs)
+            latency = time.time() - start_time
+            
+            # Update metrics
+            self.metrics.add_response_latency(latency, response.id)
+            if response.usage:
+                # Add cost to metrics
+                cost = self.client.get_completion_cost(
+                    prompt_tokens=response.usage.get("prompt_tokens", 0),
+                    completion_tokens=response.usage.get("completion_tokens", 0),
+                    config=self.config
+                )
+                self.metrics.add_cost(cost)
+
+                # Extract cache tokens
+                cache_read = response.usage.get("cache_read_tokens", 0)
+                cache_write = response.usage.get("cache_write_tokens", 0)
+                
+                # Handle nested usage details
+                if not cache_read and "prompt_tokens_details" in response.usage:
+                    details = response.usage["prompt_tokens_details"]
+                    if hasattr(details, "cached_tokens"):
+                        cache_read = details.cached_tokens
+                    elif isinstance(details, dict):
+                        cache_read = details.get("cached_tokens", 0)
+                        
+                if not cache_write and "model_extra" in response.usage:
+                    extra = response.usage["model_extra"]
+                    if isinstance(extra, dict):
+                        cache_write = extra.get("cache_creation_input_tokens", 0)
+
+                self.metrics.add_token_usage(
+                    prompt_tokens=response.usage.get("prompt_tokens", 0),
+                    completion_tokens=response.usage.get("completion_tokens", 0),
+                    cache_read_tokens=cache_read,
+                    cache_write_tokens=cache_write,
+                    context_window=0, # Not easily available from direct clients yet
+                    response_id=response.id
+                )
+            
+            self.log_response(response.to_dict())
+            return response
+
+        return await _acompletion_with_retry(**call_kwargs)
+
+    async def astream(self, *args, **kwargs) -> AsyncIterator[Dict[str, Any]]:
+        """Asynchronous streaming call with cancellation support."""
+        messages = self._extract_messages(args, kwargs)
+        
+        # Merge default kwargs
+        call_kwargs = self._get_call_kwargs(is_stream=True, **kwargs)
+        
+        # Log prompt
+        self.log_prompt(messages)
+        
+        try:
+            async for chunk in self.client.astream(messages=messages, **call_kwargs):
+                # Check for cancellation during stream
+                if await self._check_cancelled():
+                    logger.debug("LLM stream cancelled by user.")
+                    break
+                
+                # Log chunk content if available
+                if chunk.get("choices") and chunk["choices"][0].get("delta"):
+                    content = chunk["choices"][0]["delta"].get("content", "")
+                    if content:
+                        self.log_response(content)
+                        
+                yield chunk
         except Exception as e:
-            self._log_completion_error(messages, e, kwargs)
-            self._record_span_exception(span_holder.get("span"), e)
+            logger.error(f"LLM astream error: {e}")
             raise
 
-        # Log output (only for non-streaming)
-        self._log_completion_output(response, messages, kwargs)
-
-        self.metrics.add_response_latency(latency, response.get("id", "unknown"))
-
-        # Apply mock function calling if needed
-        if mock_function_calling and mock_fncall_tools:
-            self._apply_mock_function_calling(response, mock_fncall_tools)
-
-        # Post completion: updates metrics and returns cost
-        cur_cost = self._post_completion(response)
-
-        self._finalize_span_with_response(span_holder.get("span"), latency, response, cur_cost)
-
-        return response
+    async def _check_cancelled(self) -> bool:
+        """Check if the request has been cancelled."""
+        if (
+            hasattr(self.config, "on_cancel_requested_fn")
+            and self.config.on_cancel_requested_fn is not None
+        ):
+            return await self.config.on_cancel_requested_fn()
+        return False
 
     @property
-    def completion(self) -> Callable:
-        """Decorator for the litellm completion function.
+    def async_completion(self) -> Callable:
+        """Alias for acompletion for backwards compatibility."""
+        return self.acompletion
 
-        Check the complete documentation at https://litellm.vercel.app/docs/completion
-        """
-        return self._completion
+    @property
+    def async_streaming_completion(self) -> Callable:
+        """Alias for astream for backwards compatibility."""
+        return self.astream
 
-    def _get_openrouter_model_info(self) -> None:  # pragma: no cover
-        """Get model info for OpenRouter models."""
-        try:
-            if self.config.model.startswith("openrouter"):
-                self.model_info = litellm.get_model_info(self.config.model)
-        except Exception as e:
-            logger.debug("Error getting model info: %s", e)
-
-    def _get_litellm_proxy_model_info(self) -> None:  # pragma: no cover
-        """Get model info from LiteLLM proxy."""
-        base_url = self.config.base_url.strip() if self.config.base_url else ""
-        if not base_url.startswith(("http://", "https://")):
-            base_url = f"http://{base_url}"
-        from forge.core.utils.retry import RetryError, retry
-
-        def _do_get():
-            return httpx.get(
-                f"{base_url}/v1/model/info",
-                headers={
-                    "Authorization": f"Bearer {
-                        (
-                            self.config.api_key.get_secret_value()
-                            if self.config.api_key
-                            else None
-                        )
-                    }",
-                },
-            )
-
-        try:
-            response = retry(
-                _do_get,
-                max_attempts=3,
-                base_delay=0.5,
-                max_delay=3.0,
-                operation="litellm_proxy_model_info",
-                logger=logger,
-            )
-        except RetryError as e:
-            logger.info(
-                "Failed to fetch model info from LiteLLM proxy after retries: %s", e
-            )
-            response = None
-        try:
-            resp_json = response.json()
-            if "data" not in resp_json:
-                logger.info(
-                    "No data field in model info response from LiteLLM proxy: %s",
-                    resp_json,
-                )
-            all_model_info = resp_json.get("data", [])
-        except Exception as e:
-            logger.info("Error parsing JSON response from LiteLLM proxy: %s", e)
-            all_model_info = []
-        current_model_info = next(
-            (
-                info
-                for info in all_model_info
-                if info["model_name"]
-                == self.config.model.removeprefix("litellm_proxy/")
-            ),
-            None,
-        )
-        if current_model_info:
-            self.model_info = current_model_info["model_info"]
-            logger.debug("Got model info from litellm proxy: %s", self.model_info)
-
-    def _try_get_model_info_from_litellm(self) -> None:  # pragma: no cover
-        """Try to get model info from litellm with different model name variations."""
-        if not self.model_info:
-            with contextlib.suppress(Exception):
-                self.model_info = litellm.get_model_info(
-                    self.config.model.split(":")[0]
-                )
-
-        if not self.model_info:
-            with contextlib.suppress(Exception):
-                self.model_info = litellm.get_model_info(
-                    self.config.model.split("/")[-1]
-                )
-
-    def _log_model_info(self) -> None:  # pragma: no cover
-        """Log model information for debugging."""
-        from forge.io import json
-
-        logger.debug(
-            "Model info: %s",
-            json.dumps(
-                {"model": self.config.model, "base_url": self.config.base_url}, indent=2
-            ),
-        )
-
-    def _configure_huggingface_model(self) -> None:
-        """Configure Hugging Face model specific settings."""
-        if self.config.model.startswith("huggingface"):
-            logger.debug(
-                "Setting top_p to 0.9 for Hugging Face model: %s", self.config.model
-            )
-            self.config.top_p = 0.9 if self.config.top_p == 1 else self.config.top_p
-
-    def _configure_input_tokens(self) -> None:
-        """Configure max input tokens from model info."""
-        if (
-            self.config.max_input_tokens is None
-            and self.model_info is not None
-            and "max_input_tokens" in self.model_info
-            and isinstance(self.model_info["max_input_tokens"], int)
-        ):
-            self.config.max_input_tokens = self.model_info["max_input_tokens"]
-
-    def _configure_output_tokens(self) -> None:
-        """Configure max output tokens from model info or defaults."""
-        if self.config.max_output_tokens is None:
-            if any(
-                model in self.config.model
-                for model in ["claude-3-7-sonnet", "claude-3.7-sonnet"]
-            ):
-                self.config.max_output_tokens = 64000
-            elif self.model_info is not None:
-                if "max_output_tokens" in self.model_info and isinstance(
-                    self.model_info["max_output_tokens"], int
-                ):
-                    self.config.max_output_tokens = self.model_info["max_output_tokens"]
-                elif "max_tokens" in self.model_info and isinstance(
-                    self.model_info["max_tokens"], int
-                ):
-                    self.config.max_output_tokens = self.model_info["max_tokens"]
-
-    def _configure_function_calling(self) -> None:
-        """Configure function calling capability."""
-        features = get_features(self.config.model)
-        if self.config.native_tool_calling is None:
-            self._function_calling_active = features.supports_function_calling
+    def _extract_messages(self, args: tuple[Any, ...], kwargs: dict[str, Any]) -> list[dict]:
+        """Extract and normalize messages from args and kwargs."""
+        if len(args) > 0:
+            messages_kwarg = args[0]
+        elif "messages" in kwargs:
+            messages_kwarg = kwargs.pop("messages")
         else:
-            self._function_calling_active = self.config.native_tool_calling
+            messages_kwarg = []
 
-    def init_model_info(self) -> None:
-        """Initialize model information for the LLM."""
-        if self._tried_model_info:
-            return
+        if isinstance(messages_kwarg, list):
+            messages_list = messages_kwarg
+        else:
+            messages_list = [messages_kwarg]
 
-        self._tried_model_info = True
-
-        # Get model info from various sources
-        self._get_openrouter_model_info()
-        if self.config.model.startswith("litellm_proxy/"):
-            self._get_litellm_proxy_model_info()
-
-        # Try to get model info from litellm
-        self._try_get_model_info_from_litellm()
-
-        # Log model info
-        self._log_model_info()
-
-        # Configure model-specific settings
-        self._configure_huggingface_model()
-        self._configure_input_tokens()
-        self._configure_output_tokens()
-        self._configure_function_calling()
+        normalized_messages = []
+        for m in messages_list:
+            if isinstance(m, Message):
+                from forge.core.pydantic_compat import model_dump_with_options
+                normalized_messages.append(model_dump_with_options(m))
+            else:
+                normalized_messages.append(m)
+        
+        return normalized_messages
 
     def vision_is_active(self) -> bool:
-        """Check if vision/image capabilities are active for this LLM.
-
-        Returns:
-            True if vision is enabled and model supports it
-
-        """
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            return not self.config.disable_vision and self._supports_vision()
-
-    def _supports_vision(self) -> bool:
-        """Acquire from litellm if model is vision capable.
-
-        Returns:
-            bool: True if model is vision capable. Return False if model not supported by litellm.
-
-        """
-        if os.getenv("FORGE_FORCE_VISION", "").lower() in ("1", "true", "yes", "on"):
-            return True
-        return (
-            litellm.supports_vision(self.config.model)
-            or litellm.supports_vision(self.config.model.split("/")[-1])
-            or (
-                self.model_info is not None
-                and self.model_info.get("supports_vision", False)
-            )
-        )
+        return not self.config.disable_vision
 
     def is_caching_prompt_active(self) -> bool:
-        """Check if prompt caching is supported and enabled for current model.
-
-        Returns:
-            boolean: True if prompt caching is supported and enabled for the given model.
-
-        """
-        if not self.config.caching_prompt:
-            return False
-        return get_features(self.config.model).supports_prompt_cache
+        return self.config.caching_prompt
 
     def is_function_calling_active(self) -> bool:
-        """Returns whether function calling is supported and enabled for this LLM instance.
-
-        The result is cached during initialization for performance.
-        """
         return self._function_calling_active
 
-    def _build_cost_stats(self, cur_cost: float) -> str:
-        """Build cost statistics string."""
-        if not self.cost_metric_supported:
-            return ""
-        return f"Cost: {cur_cost:.2f} USD | Accumulated Cost: {self.metrics.accumulated_cost:.2f} USD\n"
-
-    def _build_latency_stats(self) -> str:
-        """Build latency statistics string."""
-        if not self.metrics.response_latencies:
-            return ""
-        latest_latency = self.metrics.response_latencies[-1]
-        return f"Response Latency: {latest_latency.latency:.3f} seconds\n"
-
-    def _extract_cache_tokens(self, usage: dict[str, Any]) -> tuple[int, int]:
-        """Extract cache hit and write tokens from usage safely across types."""
-        ptd = usage.get("prompt_tokens_details")
-        cache_hit_tokens = 0
-        try:
-            if isinstance(ptd, dict):
-                cache_hit_tokens = int(ptd.get("cached_tokens") or 0)
-            else:
-                cache_hit_tokens = int(getattr(ptd, "cached_tokens", 0) or 0)
-        except Exception:
-            cache_hit_tokens = 0
-        model_extra = usage.get("model_extra", {})
-        cache_write_tokens = 0
-        try:
-            cache_write_tokens = int(model_extra.get("cache_creation_input_tokens", 0))
-        except Exception:
-            cache_write_tokens = 0
-        return cache_hit_tokens, cache_write_tokens
-
-    def _build_token_stats(self, usage: dict[str, Any]) -> str:
-        """Build token usage statistics string."""
-        prompt_tokens = usage.get("prompt_tokens", 0)
-        completion_tokens = usage.get("completion_tokens", 0)
-        stats = ""
-
-        if prompt_tokens:
-            stats += f"Input tokens: {prompt_tokens!s}"
-        if completion_tokens:
-            stats += (
-                (" | " if prompt_tokens else "")
-                + "Output tokens: "
-                + str(completion_tokens)
-                + "\n"
-            )
-
-        cache_hit_tokens, cache_write_tokens = self._extract_cache_tokens(usage)
-        if cache_hit_tokens:
-            stats += f"Input tokens (cache hit): {cache_hit_tokens!s}" + "\n"
-        if cache_write_tokens:
-            stats += f"Input tokens (cache write): {cache_write_tokens!s}" + "\n"
-
-        return stats
-
-    def _update_metrics_from_usage(self, usage: dict[str, Any], response_id: str) -> None:
-        """Update metrics from usage information."""
-        prompt_tokens = usage.get("prompt_tokens", 0)
-        completion_tokens = usage.get("completion_tokens", 0)
-        cache_hit_tokens, cache_write_tokens = self._extract_cache_tokens(usage)
-
-        context_window = 0
-        if self.model_info and "max_input_tokens" in self.model_info:
-            context_window = self.model_info["max_input_tokens"]
-            logger.debug("Using context window: %s", context_window)
-
-        self.metrics.add_token_usage(
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-            cache_read_tokens=cache_hit_tokens,
-            cache_write_tokens=cache_write_tokens,
-            context_window=context_window,
-            response_id=response_id,
-        )
-
-    def _post_completion(self, response: dict[str, Any] | Any) -> float:
-        """Post-process the completion response.
-
-        Logs the cost and usage stats of the completion call.
-        """
-        try:
-            cur_cost = self._completion_cost(response)
-        except Exception:
-            cur_cost = 0
-
-        # Build statistics
-        stats = self._build_cost_stats(cur_cost)
-        stats += self._build_latency_stats()
-
-        # Process usage information
-        usage: dict[str, Any] | None = response.get("usage")
-        response_id = response.get("id", "unknown")
-        if usage:
-            stats += self._build_token_stats(usage)
-            self._update_metrics_from_usage(usage, response_id)
-
-        if stats:
-            logger.debug(stats)
-
-        return cur_cost
-
     def get_token_count(self, messages: list[dict] | list[Message]) -> int:
-        """Get the number of tokens in a list of messages. Use dicts for better token counting.
-
-        Args:
-            messages (list): A list of messages, either as a list of dicts or as a list of Message objects.
-
-        Returns:
-            int: The number of tokens.
-
-        """
-        token_messages: list[Any]
-        if (
-            isinstance(messages, list)
-            and len(messages) > 0
-            and isinstance(messages[0], Message)
-        ):
-            logger.info(
-                "Message objects now include serialized tool calls in token counting"
-            )
-            assert isinstance(messages, list) and all(
-                isinstance(m, Message) for m in messages
-            ), "Expected list of Message objects"
-            messages_typed: list[Message] = cast(list[Message], messages)
-            token_messages = self.format_messages_for_llm(messages_typed)
-        else:
-            token_messages = cast(list[Any], messages)
+        """Estimate token count."""
         try:
-            return int(
-                litellm.token_counter(
-                    model=self.config.model,
-                    messages=token_messages,
-                    custom_tokenizer=self.tokenizer,
-                ),
+            return get_token_count(
+                messages,
+                model=self.config.model,
+                custom_tokenizer=self.config.custom_tokenizer,
             )
         except Exception as e:
             logger.error(
                 f"Error getting token count for\n model {self.config.model}\n{e}"
-                + (
-                    f"\ncustom_tokenizer: {self.config.custom_tokenizer}"
-                    if self.config.custom_tokenizer is not None
-                    else ""
-                ),
             )
             return 0
 
-    def _is_local(self) -> bool:
-        """Determines if the system is using a locally running LLM.
-
-        Returns:
-            boolean: True if executing a local model.
-
-        """
-        if self.config.base_url is not None:
-            for substring in ["localhost", "127.0.0.1", "0.0.0.0"]:  # nosec B104 - Safe: checking for local addresses
-                if substring in self.config.base_url:
-                    return True
-        elif self.config.model is not None:
-            if self.config.model.startswith("ollama"):
-                return True
-        return False
-
-    def _completion_cost(self, response: Any) -> float:
-        """Calculate completion cost and update metrics with running total.
-
-        Calculate the cost of a completion response based on the model. Local models are treated as free.
-        Add the current cost into total cost in metrics.
-
-        Args:
-            response: A response from a model invocation.
-
-        Returns:
-            number: The cost of the response.
-
-        """
-        if not self.cost_metric_supported:
-            return 0.0
-
-        extra_kwargs = self._build_custom_cost_kwargs()
-        cost = self._extract_cost_from_response(response)
-
-        try:
-            if cost is None:
-                cost = self._compute_cost_via_litellm(response, extra_kwargs)
-            if cost is None:
-                cost = self._compute_cost_with_fallback_model(response, extra_kwargs)
-            if cost is None:
-                raise ValueError("Unable to compute completion cost")
-            numeric_cost = float(cost)
-            self.metrics.add_cost(numeric_cost)
-            return numeric_cost
-        except Exception:
-            self.cost_metric_supported = False
-            logger.debug("Cost calculation not supported for this model.")
-        return 0.0
-
-    def _build_custom_cost_kwargs(self) -> dict[str, Any]:
-        if (
-            self.config.input_cost_per_token is None
-            or self.config.output_cost_per_token is None
-        ):
-            return {}
-        try:
-            types_mod = importlib.import_module("litellm.types.utils")  # type: ignore
-            CPT = getattr(types_mod, "CostPerToken", None)
-        except Exception:
-            CPT = None
-        if CPT is None:
-            return {}
-        cost_per_token = CPT(
-            input_cost_per_token=self.config.input_cost_per_token,
-            output_cost_per_token=self.config.output_cost_per_token,
-        )
-        logger.debug("Using custom cost per token")
-        return {"custom_cost_per_token": cost_per_token}
-
-    def _extract_cost_from_response(self, response: Any) -> float | None:
-        _hidden_params = getattr(response, "_hidden_params", {})
-        cost = _hidden_params.get("additional_headers", {}).get(
-            "llm_provider-x-litellm-response-cost", None
-        )
-        if cost is not None:
-            value = float(cost)
-            logger.debug("Got response_cost from response")
-            return value
-        return None
-
-    def _compute_cost_via_litellm(
-        self, response: Any, extra_kwargs: dict[str, Any]
-    ) -> float | None:
-        cost_fn = _LITELLM_COMPLETION_COST or getattr(litellm, "completion_cost", None)
-        if cost_fn is None:
-            return None
-        try:
-            return cost_fn(completion_response=response, **extra_kwargs)
-        except Exception as exc:
-            logger.debug("Error getting cost from litellm: %s", exc)
-            return None
-
-    def _compute_cost_with_fallback_model(
-        self, response: Any, extra_kwargs: dict[str, Any]
-    ) -> float | None:
-        cost_fn = _LITELLM_COMPLETION_COST or getattr(litellm, "completion_cost", None)
-        if cost_fn is None:
-            return None
-        model_name_parts = self.config.model.split("/")
-        model_name = "/".join(model_name_parts[1:]) if len(model_name_parts) > 1 else self.config.model
-        cost = cost_fn(completion_response=response, model=model_name, **extra_kwargs)
-        logger.debug("Using fallback model name %s to get cost: %s", model_name, cost)
-        return cost
+    def format_messages_for_llm(self, messages: Message | list[Message]) -> list[dict]:
+        if isinstance(messages, Message):
+            messages = [messages]
+        from forge.core.pydantic_compat import model_dump_with_options
+        return [model_dump_with_options(m) for m in messages]
 
     def __str__(self) -> str:
-        """Return a concise description identifying the configured model and endpoint."""
-        if self.config.api_version:
-            return f"LLM(model={self.config.model}, api_version={
-                self.config.api_version
-            }, base_url={self.config.base_url})"
-        if self.config.base_url:
-            return f"LLM(model={self.config.model}, base_url={self.config.base_url})"
         return f"LLM(model={self.config.model})"
 
     def __repr__(self) -> str:
-        """Return the developer-friendly representation used in logs and debugging."""
         return str(self)
-
-    def format_messages_for_llm(self, messages: Message | list[Message]) -> list[dict]:
-        """Format messages for LLM API with caching and vision flags.
-
-        Args:
-            messages: Single message or list of messages to format
-
-        Returns:
-            List of message dictionaries ready for LLM API
-
-        """
-        if isinstance(messages, Message):
-            messages = [messages]
-        for message in messages:
-            message.cache_enabled = self.is_caching_prompt_active()
-            message.vision_enabled = self.vision_is_active()
-            message.function_calling_enabled = self.is_function_calling_active()
-            if "deepseek" in self.config.model:
-                message.force_string_serializer = True
-            if "kimi-k2-instruct" in self.config.model and "groq" in self.config.model:
-                message.force_string_serializer = True
-            if "openrouter/anthropic/claude-sonnet-4" in self.config.model:
-                message.force_string_serializer = True
-        from forge.core.pydantic_compat import model_dump_with_options
-
-        return [model_dump_with_options(message) for message in messages]

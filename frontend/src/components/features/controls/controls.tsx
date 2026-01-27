@@ -3,6 +3,7 @@ import { AgentControlBar } from "./agent-control-bar";
 import { AgentStatusBar } from "./agent-status-bar";
 import { SecurityLock } from "./security-lock";
 import { useActiveConversation } from "#/hooks/query/use-active-conversation";
+import { useConversationId } from "#/hooks/use-conversation-id";
 import { ConversationCard } from "../conversation-panel/conversation-card";
 import { Provider } from "#/types/settings";
 
@@ -12,6 +13,7 @@ interface ControlsProps {
 
 export function Controls({ showSecurityLock }: ControlsProps) {
   const { data: conversation } = useActiveConversation();
+  const { conversationId } = useConversationId();
   const [contextMenuOpen, setContextMenuOpen] = React.useState(false);
 
   return (
@@ -34,7 +36,7 @@ export function Controls({ showSecurityLock }: ControlsProps) {
           git_provider: (conversation?.git_provider as Provider) ?? null,
         }}
         conversationStatus={conversation?.status}
-        conversationId={conversation?.conversation_id}
+        conversationId={conversationId}
         contextMenuOpen={contextMenuOpen}
         onContextMenuToggle={setContextMenuOpen}
       />

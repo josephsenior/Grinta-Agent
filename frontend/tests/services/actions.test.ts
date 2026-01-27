@@ -12,9 +12,6 @@ const setMetricsMock = vi.hoisted(() => vi.fn(() => ({ type: "metrics/set" })));
 const appendInputMock = vi.hoisted(() =>
   vi.fn(() => ({ type: "terminal/input" })),
 );
-const appendJupyterInputMock = vi.hoisted(() =>
-  vi.fn(() => ({ type: "jupyter/input" })),
-);
 const dispatchMock = vi.hoisted(() => vi.fn());
 const invalidateQueriesMock = vi.hoisted(() => vi.fn());
 const handleObservationMessageMock = vi.hoisted(() => vi.fn());
@@ -37,10 +34,6 @@ vi.mock("#/state/metrics-slice", () => ({
 
 vi.mock("#/state/command-slice", () => ({
   appendInput: appendInputMock,
-}));
-
-vi.mock("#/state/jupyter-slice", () => ({
-  appendJupyterInput: appendJupyterInputMock,
 }));
 
 vi.mock("#/query-client-config", () => ({
@@ -70,7 +63,6 @@ describe("services/actions", () => {
     setCurStatusMessageMock.mockClear();
     setMetricsMock.mockClear();
     appendInputMock.mockClear();
-    appendJupyterInputMock.mockClear();
     invalidateQueriesMock.mockClear();
     handleObservationMessageMock.mockClear();
 
@@ -123,7 +115,7 @@ describe("services/actions", () => {
       expect(dispatchMock).toHaveBeenCalledWith({ type: "metrics/set" });
     });
 
-    it("forwards run commands to terminal and jupyter inputs", () => {
+    it("forwards run commands to terminal inputs", () => {
       actionsModule.handleActionMessage({
         action: ActionType.RUN,
         args: { command: "ls" },
@@ -131,17 +123,6 @@ describe("services/actions", () => {
 
       expect(appendInputMock).toHaveBeenCalledWith("ls");
       expect(dispatchMock).toHaveBeenCalledWith({ type: "terminal/input" });
-
-      dispatchMock.mockClear();
-      appendInputMock.mockClear();
-
-      actionsModule.handleActionMessage({
-        action: ActionType.RUN_IPYTHON,
-        args: { code: "print(1)" },
-      } as any);
-
-      expect(appendJupyterInputMock).toHaveBeenCalledWith("print(1)");
-      expect(dispatchMock).toHaveBeenCalledWith({ type: "jupyter/input" });
     });
 
     it("appends security analyzer input when security risk is present", () => {

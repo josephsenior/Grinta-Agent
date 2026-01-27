@@ -6,7 +6,6 @@ import { SettingsDropdownInput } from "#/components/features/settings/settings-d
 import { HelpLink } from "#/components/features/settings/help-link";
 import { KeyStatusIcon } from "#/components/features/settings/key-status-icon";
 import { AdvancedLLMConfig } from "#/components/features/settings/advanced-llm-config";
-import { DEFAULT_OPENHANDS_MODEL } from "#/utils/verified-models";
 import { DEFAULT_SETTINGS } from "#/services/settings";
 import { I18nKey } from "#/i18n/declaration";
 import type { Settings } from "#/types/settings";
@@ -48,12 +47,6 @@ export function AdvancedSettingsSection({
   onEnableDefaultCondenserToggle,
   t,
 }: AdvancedSettingsSectionProps) {
-  const isOpenhandsModel = (model?: string | null) =>
-    !!model && (model.startsWith("Openhands/") || model.startsWith("Forge/"));
-  const showOpenhandsHelpLink =
-    isOpenhandsModel(settings.LLM_MODEL) ||
-    isOpenhandsModel(currentSelectedModel);
-
   return (
     <div
       data-testid="llm-settings-form-advanced"
@@ -63,21 +56,12 @@ export function AdvancedSettingsSection({
         testId="llm-custom-model-input"
         name="llm-custom-model-input"
         label={t(I18nKey.SETTINGS$CUSTOM_MODEL)}
-        defaultValue={settings.LLM_MODEL || DEFAULT_OPENHANDS_MODEL}
-        placeholder={DEFAULT_OPENHANDS_MODEL}
+        defaultValue={settings.LLM_MODEL || "anthropic/claude-3-5-sonnet-20241022"}
+        placeholder="anthropic/claude-3-5-sonnet-20241022"
         type="text"
         className="w-full sm:max-w-xs md:max-w-sm lg:max-w-[680px]"
         onChange={onCustomModelChange}
       />
-      {showOpenhandsHelpLink && (
-        <HelpLink
-          testId="Openhands-api-key-help-2"
-          text={t(I18nKey.SETTINGS$Forge_API_KEY_HELP_TEXT)}
-          linkText={t(I18nKey.SETTINGS$NAV_API_KEYS)}
-          href="https://app.all-hands.dev/settings/api-keys"
-          suffix={t(I18nKey.SETTINGS$Forge_API_KEY_HELP_SUFFIX)}
-        />
-      )}
 
       <SettingsInput
         testId="base-url-input"
@@ -108,13 +92,13 @@ export function AdvancedSettingsSection({
         testId="llm-api-key-help-anchor-advanced"
         text={t(I18nKey.SETTINGS$DONT_KNOW_API_KEY)}
         linkText={t(I18nKey.SETTINGS$CLICK_FOR_INSTRUCTIONS)}
-        href="https://docs.all-hands.dev/usage/local-setup#getting-an-api-key"
+        href="https://docs.forge.dev/usage/local-setup#getting-an-api-key"
       />
 
       <SettingsInput
         testId="agent-input"
         name="agent-input-display"
-        label={t(I18nKey.SETTINGS$AGENT as any, { defaultValue: "Agent" })}
+        label={t(I18nKey.SETTINGS$AGENT, { defaultValue: "Agent" })}
         type="text"
         value={agentValue}
         className="w-full sm:max-w-xs md:max-w-sm lg:max-w-[680px]"
@@ -137,7 +121,7 @@ export function AdvancedSettingsSection({
 
       <div className="border-t border-white/10 pt-6 mt-2">
         <h3 className="text-lg font-semibold mb-4 text-foreground">
-          Advanced LLM Configuration
+          {t(I18nKey.SETTINGS$ADVANCED_LLM_CONFIGURATION)}
         </h3>
         <AdvancedLLMConfig
           settings={advancedSettings}
@@ -152,7 +136,7 @@ export function AdvancedSettingsSection({
           label={
             <>
               {t(I18nKey.SETTINGS$RUNTIME_SETTINGS)}
-              <a href="mailto:contact@all-hands.dev">
+              <a href="mailto:contact@forge.dev">
                 {t(I18nKey.SETTINGS$GET_IN_TOUCH)}
               </a>
             </>
@@ -194,3 +178,4 @@ export function AdvancedSettingsSection({
     </div>
   );
 }
+

@@ -354,7 +354,6 @@ Each layer catches hallucinations at a different stage:
 
 ### **Related Documentation**
 - [CodeAct Agent Guide](codeact-agent.md)
-- [MetaSOP Integration](metasop.md)
 - [Competitive Analysis](../competitive-analysis.md)
 
 ### **Research Papers**

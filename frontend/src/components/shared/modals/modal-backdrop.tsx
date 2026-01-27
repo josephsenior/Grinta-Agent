@@ -132,7 +132,10 @@ export function ModalBackdrop({
       onMouseDown={handleMouseDown}
       aria-hidden={false}
     >
-      <div aria-hidden="true" className="fixed inset-0 bg-black opacity-60" />
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+      />
 
       <div
         ref={contentRef}

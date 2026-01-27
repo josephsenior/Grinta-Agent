@@ -1,7 +1,7 @@
 """Observation emitted after updating the task tracking list."""
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, ClassVar
 
 from forge.core.schemas import ObservationType
 from forge.events.observation.observation import Observation
@@ -11,9 +11,9 @@ from forge.events.observation.observation import Observation
 class TaskTrackingObservation(Observation):
     """This data class represents the result of a task tracking operation."""
 
-    observation: str = ObservationType.TASK_TRACKING
     command: str = ""
     task_list: list[dict[str, Any]] = field(default_factory=list)
+    observation: ClassVar[str] = ObservationType.TASK_TRACKING
 
     @property
     def message(self) -> str:

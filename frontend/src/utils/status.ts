@@ -60,6 +60,7 @@ function isStoppedIndicatorState({
   return (
     webSocketStatus === "DISCONNECTED" ||
     conversationStatus === "STOPPED" ||
+    conversationStatus === "ERROR" ||
     runtimeStatus === "STATUS$STOPPED" ||
     agentState === AgentState.STOPPED ||
     agentState === AgentState.ERROR
@@ -144,6 +145,10 @@ const STATUS_RESOLVERS: StatusResolver[] = [
     conversationStatus === "STOPPED" || runtimeStatus === "STATUS$STOPPED"
       ? I18nKey.CHAT_INTERFACE$STOPPED
       : null,
+  ({ conversationStatus, statusMessage }) =>
+    conversationStatus === "ERROR" && !statusMessage?.message
+      ? I18nKey.CHAT_INTERFACE$AGENT_ERROR_MESSAGE
+      : null,
   ({ runtimeStatus }) => resolveRuntimeStatus(runtimeStatus),
   ({ webSocketStatus }) =>
     webSocketStatus === "DISCONNECTED"
@@ -151,6 +156,11 @@ const STATUS_RESOLVERS: StatusResolver[] = [
       : null,
   ({ webSocketStatus }) =>
     webSocketStatus === "CONNECTING" ? I18nKey.CHAT_INTERFACE$CONNECTING : null,
+  ({ agentState, statusMessage }) =>
+    (agentState === AgentState.LOADING || agentState === AgentState.ERROR) &&
+    statusMessage?.message
+      ? statusMessage.message
+      : null,
   ({ agentState, statusMessage }) =>
     agentState === AgentState.LOADING &&
     statusMessage?.id &&

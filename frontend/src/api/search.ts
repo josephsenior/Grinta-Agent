@@ -15,7 +15,6 @@ export interface SearchResult {
 
 export interface SearchResults {
   conversations: SearchResult[];
-  snippets: SearchResult[];
   files: SearchResult[];
 }
 
@@ -29,11 +28,11 @@ export interface GlobalSearchResponse {
 }
 
 /**
- * Perform global search across conversations, snippets, and files
+ * Perform global search across conversations and files
  */
 export async function globalSearch(
   query: string,
-  type?: "conversations" | "snippets" | "files" | "all",
+  type?: "conversations" | "files" | "all",
   limit?: number,
 ): Promise<GlobalSearchResponse["data"]> {
   const params: Record<string, string | number> = {

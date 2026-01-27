@@ -21,17 +21,9 @@ import { EventMessage } from "./event-message";
 import { ChatMessage } from "./chat-message";
 import { ActionSummary } from "./action-summary";
 import { useOptimisticUserMessage } from "#/hooks/use-optimistic-user-message";
-import { LaunchMicroagentModal } from "./microagent/launch-microagent-modal";
 import { useUserConversation } from "#/hooks/query/use-user-conversation";
 import { useConversationId } from "#/hooks/use-conversation-id";
-import { useCreateConversationAndSubscribeMultiple } from "#/hooks/use-create-conversation-and-subscribe-multiple";
-import {
-  MicroagentStatus,
-  EventMicroagentStatus,
-} from "#/types/microagent-status";
 import { AgentState } from "#/types/agent-state";
-import { getFirstPRUrl } from "#/utils/parse-pr-url";
-import MemoryIcon from "#/icons/memory_icon.svg?react";
 import { cn } from "#/utils/utils";
 import { logger } from "#/utils/logger";
 
@@ -134,251 +126,6 @@ const buildTurns = (messages: Array<ForgeAction | ForgeObservation>) => {
   return grouped;
 };
 
-// Type definitions for microagent processors
-type MicroagentProcessorContext = {
-  socketEvent: unknown;
-  conversationId: string;
-};
-
-type ConversationStatusUpdater = (
-  conversationId: string,
-  updater: (entry: EventMicroagentStatus) => EventMicroagentStatus,
-) => void;
-
-type MicroagentProcessorFactoryParams = {
-  updateStatus: ConversationStatusUpdater;
-  unsubscribe: (conversationId: string) => void;
-};
-
-type MicroagentProcessor = (context: MicroagentProcessorContext) => boolean;
-
-// Helper functions for microagent processors
-function canProcessAgentStateChange(
-  socketEvent: unknown,
-): socketEvent is ForgeObservation {
-  if (typeof socketEvent !== "object" || socketEvent === null) {
-    return false;
-  }
-  return (
-    isForgeEvent(socketEvent) &&
-    isAgentStateChangeObservation(socketEvent) &&
-    hasExtras(socketEvent)
-  );
-}
-
-function extractAgentState(event: ForgeObservation): AgentState | undefined {
-  try {
-    const record = asRecord(event);
-    const extras = asRecord(record?.extras);
-    const state = extras?.agent_state;
-    return typeof state === "number"
-      ? (state as unknown as AgentState)
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function isTerminalAgentState(state: AgentState | undefined) {
-  return (
-    state === AgentState.FINISHED || state === AgentState.AWAITING_USER_INPUT
-  );
-}
-
-function createMicroagentErrorProcessor(
-  updateStatus: ConversationStatusUpdater,
-): MicroagentProcessor {
-  return ({ socketEvent, conversationId }) => {
-    if (!isErrorEvent(socketEvent) && !isAgentStatusError(socketEvent)) {
-      return false;
-    }
-
-    updateStatus(conversationId, (entry) => ({
-      ...entry,
-      status: MicroagentStatus.ERROR,
-    }));
-    return true;
-  };
-}
-
-function createMicroagentStateChangeProcessor(
-  updateStatus: ConversationStatusUpdater,
-  unsubscribe: (conversationId: string) => void,
-): MicroagentProcessor {
-  return ({ socketEvent, conversationId }) => {
-    if (!canProcessAgentStateChange(socketEvent)) {
-      return false;
-    }
-
-    const agentState = extractAgentState(socketEvent);
-    if (!isTerminalAgentState(agentState)) {
-      return false;
-    }
-
-    updateStatus(conversationId, (entry) => ({
-      ...entry,
-      status: MicroagentStatus.COMPLETED,
-    }));
-    unsubscribe(conversationId);
-    return true;
-  };
-}
-
-function createMicroagentFinishProcessor(
-  updateStatus: ConversationStatusUpdater,
-  unsubscribe: (conversationId: string) => void,
-): MicroagentProcessor {
-  return ({ socketEvent, conversationId }) => {
-    if (!isForgeEvent(socketEvent) || !isFinishAction(socketEvent)) {
-      return false;
-    }
-
-    let prUrl: string | undefined;
-
-    if (hasArgs(socketEvent)) {
-      try {
-        const record = asRecord(socketEvent);
-        const args = asRecord(record?.args);
-        const finalThought = args?.final_thought;
-        prUrl =
-          getFirstPRUrl(
-            typeof finalThought === "string"
-              ? finalThought
-              : String(finalThought ?? ""),
-          ) || undefined;
-      } catch {
-        prUrl = undefined;
-      }
-    }
-
-    updateStatus(conversationId, (entry) => ({
-      ...entry,
-      status: MicroagentStatus.COMPLETED,
-      prUrl: prUrl ?? entry.prUrl,
-    }));
-
-    unsubscribe(conversationId);
-    return true;
-  };
-}
-
-function createMicroagentProcessors({
-  updateStatus,
-  unsubscribe,
-}: MicroagentProcessorFactoryParams): MicroagentProcessor[] {
-  return [
-    createMicroagentErrorProcessor(updateStatus),
-    createMicroagentStateChangeProcessor(updateStatus, unsubscribe),
-    createMicroagentFinishProcessor(updateStatus, unsubscribe),
-  ];
-}
-
-function useMicroagentStatusManager(
-  unsubscribeFromConversation: (conversationId: string) => void,
-) {
-  const [microagentStatuses, setMicroagentStatuses] = React.useState<
-    EventMicroagentStatus[]
-  >([]);
-
-  const updateConversationStatus = React.useCallback<ConversationStatusUpdater>(
-    (conversationId, updater) => {
-      setMicroagentStatuses((previous) =>
-        previous.map((statusEntry) =>
-          statusEntry.conversationId === conversationId
-            ? updater(statusEntry)
-            : statusEntry,
-        ),
-      );
-    },
-    [],
-  );
-
-  const getMicroagentStatusForEvent = React.useCallback(
-    (eventId: number): MicroagentStatus | null => {
-      const statusEntry = microagentStatuses.find(
-        (entry) => entry.eventId === eventId,
-      );
-      return statusEntry?.status ?? null;
-    },
-    [microagentStatuses],
-  );
-
-  const getMicroagentConversationIdForEvent = React.useCallback(
-    (eventId: number): string | undefined => {
-      const statusEntry = microagentStatuses.find(
-        (entry) => entry.eventId === eventId,
-      );
-      return statusEntry?.conversationId;
-    },
-    [microagentStatuses],
-  );
-
-  const getMicroagentPRUrlForEvent = React.useCallback(
-    (eventId: number): string | undefined => {
-      const statusEntry = microagentStatuses.find(
-        (entry) => entry.eventId === eventId,
-      );
-      return statusEntry?.prUrl;
-    },
-    [microagentStatuses],
-  );
-
-  const promoteWaitingToCreating = React.useCallback(
-    (conversationId: string) => {
-      updateConversationStatus(conversationId, (entry) =>
-        entry.status === MicroagentStatus.WAITING
-          ? { ...entry, status: MicroagentStatus.CREATING }
-          : entry,
-      );
-    },
-    [updateConversationStatus],
-  );
-
-  const microagentProcessors = React.useMemo(
-    () =>
-      createMicroagentProcessors({
-        updateStatus: updateConversationStatus,
-        unsubscribe: unsubscribeFromConversation,
-      }),
-    [updateConversationStatus, unsubscribeFromConversation],
-  );
-
-  const handleMicroagentEvent = React.useCallback(
-    (socketEvent: unknown, conversationId: string) => {
-      const context = { socketEvent, conversationId };
-      for (const processor of microagentProcessors) {
-        if (processor(context)) {
-          return;
-        }
-      }
-      promoteWaitingToCreating(conversationId);
-    },
-    [microagentProcessors, promoteWaitingToCreating],
-  );
-
-  const registerMicroagentConversation = React.useCallback(
-    (eventId: number, conversationId: string) => {
-      setMicroagentStatuses((previous) => [
-        ...previous.filter((status) => status.eventId !== eventId),
-        {
-          eventId,
-          conversationId,
-          status: MicroagentStatus.WAITING,
-        },
-      ]);
-    },
-    [],
-  );
-
-  return {
-    getMicroagentStatusForEvent,
-    getMicroagentConversationIdForEvent,
-    getMicroagentPRUrlForEvent,
-    handleMicroagentEvent,
-    registerMicroagentConversation,
-  };
-}
-
 interface MessagesProps {
   messages: (ForgeAction | ForgeObservation)[];
   isAwaitingUserConfirmation: boolean;
@@ -399,12 +146,7 @@ interface TurnRenderContext {
   onAskAboutCode?: (code: string) => void;
   onRunCode?: (code: string, language: string) => void;
   actionHasObservationPair: (event: unknown) => boolean;
-  getMicroagentStatusForEvent: (eventId: number) => MicroagentStatus | null;
-  getMicroagentConversationIdForEvent: (eventId: number) => string | undefined;
-  getMicroagentPRUrlForEvent: (eventId: number) => string | undefined;
   conversation: ReturnType<typeof useUserConversation>["data"];
-  setSelectedEventId: React.Dispatch<React.SetStateAction<number | null>>;
-  setShowLaunchMicroagentModal: React.Dispatch<React.SetStateAction<boolean>>;
   t: TFunction;
 }
 
@@ -464,22 +206,7 @@ function buildEventActions({
 }):
   | Array<{ icon: React.ReactNode; onClick: () => void; tooltip?: string }>
   | undefined {
-  if (!context.conversation?.selected_repository) {
-    return undefined;
-  }
-
-  return [
-    {
-      icon: <MemoryIcon className="w-[14px] h-[14px] text-white" />,
-      onClick: () => {
-        if (hasId(event)) {
-          context.setSelectedEventId(Number(event.id));
-          context.setShowLaunchMicroagentModal(true);
-        }
-      },
-      tooltip: context.t("MICROAGENT$ADD_TO_MEMORY"),
-    },
-  ];
+  return undefined;
 }
 
 function renderCombinedMessageGroup({
@@ -564,17 +291,6 @@ function renderAgentEvent({
           eventIndex === group.events.length - 1
         }
         showTechnicalDetails={context.showTechnicalDetails}
-        microagentStatus={
-          eventId ? context.getMicroagentStatusForEvent(eventId) : undefined
-        }
-        microagentConversationId={
-          eventId
-            ? context.getMicroagentConversationIdForEvent(eventId)
-            : undefined
-        }
-        microagentPRUrl={
-          eventId ? context.getMicroagentPRUrlForEvent(eventId) : undefined
-        }
         actions={buildEventActions({ event, context })}
         isInLast10Actions={isLastTurn}
         onAskAboutCode={context.onAskAboutCode}
@@ -751,30 +467,11 @@ export const Messages: React.FC<MessagesProps> = React.memo(
     onAskAboutCode,
     onRunCode,
   }) => {
-    const {
-      createConversationAndSubscribe,
-      isPending,
-      unsubscribeFromConversation,
-    } = useCreateConversationAndSubscribeMultiple();
     const { getOptimisticUserMessage } = useOptimisticUserMessage();
     const { conversationId } = useConversationId();
     const { data: conversation } = useUserConversation(conversationId);
 
     const optimisticUserMessage = getOptimisticUserMessage();
-
-    const [selectedEventId, setSelectedEventId] = React.useState<number | null>(
-      null,
-    );
-    const [showLaunchMicroagentModal, setShowLaunchMicroagentModal] =
-      React.useState(false);
-
-    const {
-      getMicroagentStatusForEvent,
-      getMicroagentConversationIdForEvent,
-      getMicroagentPRUrlForEvent,
-      handleMicroagentEvent,
-      registerMicroagentConversation,
-    } = useMicroagentStatusManager(unsubscribeFromConversation);
 
     const { t } = useTranslation();
 
@@ -796,42 +493,6 @@ export const Messages: React.FC<MessagesProps> = React.memo(
       [messages],
     );
 
-    const handleLaunchMicroagent = (
-      query: string,
-      target: string,
-      triggers: string[],
-    ) => {
-      const conversationInstructions = `Target file: ${target}\n\nDescription: ${query}\n\nTriggers: ${triggers.join(", ")}`;
-      if (
-        !conversation ||
-        !conversation.selected_repository ||
-        !conversation.selected_branch ||
-        !conversation.git_provider ||
-        !selectedEventId
-      ) {
-        return;
-      }
-
-      createConversationAndSubscribe({
-        query,
-        conversationInstructions,
-        repository: {
-          name: conversation.selected_repository,
-          branch: conversation.selected_branch,
-          gitProvider: conversation.git_provider,
-        },
-        onSuccessCallback: (newConversationId: string) => {
-          setShowLaunchMicroagentModal(false);
-          if (selectedEventId !== null) {
-            registerMicroagentConversation(selectedEventId, newConversationId);
-          }
-        },
-        onEventCallback: (socketEvent: unknown, newConversationId: string) => {
-          handleMicroagentEvent(socketEvent, newConversationId);
-        },
-      });
-    };
-
     // Group messages into turns (bolt.new style)
     type Turn = {
       type: string;
@@ -852,12 +513,7 @@ export const Messages: React.FC<MessagesProps> = React.memo(
       onAskAboutCode,
       onRunCode,
       actionHasObservationPair,
-      getMicroagentStatusForEvent,
-      getMicroagentConversationIdForEvent,
-      getMicroagentPRUrlForEvent,
       conversation,
-      setSelectedEventId,
-      setShowLaunchMicroagentModal,
       t,
     };
 
@@ -879,21 +535,6 @@ export const Messages: React.FC<MessagesProps> = React.memo(
             onRunCode={onRunCode}
           />
         )}
-        {conversation?.selected_repository &&
-          showLaunchMicroagentModal &&
-          selectedEventId &&
-          createPortal(
-            <LaunchMicroagentModal
-              onClose={() => setShowLaunchMicroagentModal(false)}
-              onLaunch={handleLaunchMicroagent}
-              selectedRepo={
-                conversation.selected_repository.split("/").pop() || ""
-              }
-              eventId={selectedEventId}
-              isLoading={isPending}
-            />,
-            document.getElementById("modal-portal-exit") || document.body,
-          )}
       </>
     );
   },

@@ -80,8 +80,6 @@ def test_custom_secret_from_value_invalid_type() -> None:
     ("provider", "token_env_var", "request_type_short", "request_verb"),
     [
         (ProviderType.GITHUB, "GITHUB_TOKEN", "PR", "pull request"),
-        (ProviderType.GITLAB, "GITLAB_TOKEN", "MR", "merge request"),
-        (ProviderType.BITBUCKET, "BITBUCKET_TOKEN", "PR", "pull request"),
     ],
 )
 def test_suggested_task_get_provider_terms(

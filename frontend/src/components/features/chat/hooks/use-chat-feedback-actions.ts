@@ -38,7 +38,7 @@ export function useChatFeedbackActions() {
       const data = await getTrajectory(params.conversationId);
       await downloadTrajectory(
         params.conversationId ?? t(I18nKey.CONVERSATION$UNKNOWN),
-        data,
+        data ? [data as unknown] : null,
       );
     } catch (error) {
       logger.error("Failed to export trajectory:", error);

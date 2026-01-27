@@ -6,37 +6,30 @@ import {
   getUserActivity,
   type UpdateProfileRequest,
 } from "#/api/profile";
-import { useIsAuthed } from "./use-is-authed";
 
 export const useUserProfile = () => {
-  const { data: userIsAuthenticated } = useIsAuthed();
-
   return useQuery({
     queryKey: ["user", "profile"],
     queryFn: getUserProfile,
-    enabled: !!userIsAuthenticated,
+    enabled: true,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 };
 
 export const useUserStatistics = () => {
-  const { data: userIsAuthenticated } = useIsAuthed();
-
   return useQuery({
     queryKey: ["user", "statistics"],
     queryFn: getUserStatistics,
-    enabled: !!userIsAuthenticated,
+    enabled: true,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
 export const useUserActivity = (limit?: number, offset?: number) => {
-  const { data: userIsAuthenticated } = useIsAuthed();
-
   return useQuery({
     queryKey: ["user", "activity", limit, offset],
     queryFn: () => getUserActivity(limit, offset),
-    enabled: !!userIsAuthenticated,
+    enabled: true,
     staleTime: 1 * 60 * 1000, // 1 minute
   });
 };

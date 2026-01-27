@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import posthog from "posthog-js";
 import Forge from "#/api/forge";
-import { SuggestedTask } from "#/components/features/home/tasks/task.types";
+import { SuggestedTask } from "#/api/forge.types";
 import { Provider } from "#/types/settings";
 import { CreateMicroagent } from "#/api/forge.types";
 

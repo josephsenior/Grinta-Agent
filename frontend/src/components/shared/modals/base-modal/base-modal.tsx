@@ -44,13 +44,13 @@ export function BaseModal({
       backdrop="blur"
       hideCloseButton
       size="sm"
-      className="bg-[#000000] border border-[#1a1a1a] rounded-2xl shadow-luxury-xl"
+      className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl shadow-xl overflow-hidden"
       classNames={{
-        backdrop: "bg-[rgba(0,0,0,0.8)] backdrop-blur-[8px]",
-        base: "border border-[#1a1a1a] max-w-[600px]",
+        backdrop: "bg-[var(--bg-primary)]/40 backdrop-blur-md",
+        base: "border border-[var(--border-primary)] max-w-[600px] bg-[var(--bg-secondary)]",
       }}
     >
-      <ModalContent className={cn("p-8", contentClassName)}>
+      <ModalContent className={cn("p-6 sm:p-8", contentClassName)}>
         {(closeModal) => (
           <>
             {title && (

@@ -5,13 +5,13 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import Annotated, Any, cast
 
-from fastapi import APIRouter, Depends, Query, status, FastAPI, Request
+from fastapi import APIRouter, Depends, Query, status, FastAPI, Request, Path
 from fastapi.responses import JSONResponse
+from typing import Annotated
 
 from forge.core.logger import forge_logger as logger
 from forge.integrations.provider import (
     PROVIDER_TOKEN_TYPE,
-    ProviderHandler,
     ProviderToken,
 )
 from forge.integrations.service_types import (
@@ -61,7 +61,7 @@ async def get_user_installations(
     """Get user's installations/workspaces for the specified provider.
 
     Args:
-        provider: Git provider type (GitHub, Bitbucket, etc.)
+        provider: Git provider type (GitHub)
         provider_tokens: Provider authentication tokens
         access_token: External auth token
         user_id: User identifier
@@ -74,6 +74,8 @@ async def get_user_installations(
 
     """
     if provider_tokens:
+        from forge.integrations.provider import ProviderHandler
+
         client = ProviderHandler(
             provider_tokens=_normalize_provider_tokens(provider_tokens),
             external_auth_token=access_token,
@@ -81,8 +83,6 @@ async def get_user_installations(
         )
         if provider == ProviderType.GITHUB:
             return await client.get_github_installations()
-        if provider == ProviderType.BITBUCKET:
-            return await client.get_bitbucket_workspaces()
         return JSONResponse(
             content=f"Provider {provider} doesn't support installations",
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -122,6 +122,8 @@ async def get_user_repositories(
 
     """
     if provider_tokens:
+        from forge.integrations.provider import ProviderHandler
+
         client = ProviderHandler(
             provider_tokens=_normalize_provider_tokens(provider_tokens),
             external_auth_token=access_token,
@@ -170,9 +172,12 @@ async def get_user(
 
     """
     if provider_tokens:
+        from forge.integrations.provider import ProviderHandler
+
         client = ProviderHandler(
             provider_tokens=_normalize_provider_tokens(provider_tokens),
             external_auth_token=access_token,
+            external_auth_id=user_id,
         )
         try:
             user: User = await client.get_user()
@@ -190,7 +195,7 @@ async def get_user(
 
 @app.get("/search/repositories", response_model=list[Repository])
 async def search_repositories(
-    query: str,
+    query: str = Query(..., min_length=1, description="Search query"),
     per_page: int = 5,
     sort: str = "stars",
     order: str = "desc",
@@ -199,7 +204,7 @@ async def search_repositories(
     access_token: SecretStr | None = Depends(get_access_token),
     user_id: str | None = Depends(get_user_id),
 ) -> list[Repository] | JSONResponse:
-    """Search repositories across git providers.
+    """Search repositories from GitHub.
 
     Args:
         query: Search query string
@@ -219,6 +224,8 @@ async def search_repositories(
 
     """
     if provider_tokens:
+        from forge.integrations.provider import ProviderHandler
+
         client = ProviderHandler(
             provider_tokens=_normalize_provider_tokens(provider_tokens),
             external_auth_token=access_token,
@@ -245,8 +252,8 @@ async def search_repositories(
 
 @app.get("/search/branches", response_model=list[Branch])
 async def search_branches(
-    repository: str,
-    query: str,
+    repository: str = Query(..., min_length=1, description="Repository name (owner/repo)"),
+    query: str = Query(..., min_length=1, description="Branch search query"),
     per_page: int = 30,
     selected_provider: ProviderType | None = None,
     provider_tokens: PROVIDER_TOKEN_TYPE | None = Depends(get_provider_tokens),
@@ -272,6 +279,8 @@ async def search_branches(
 
     """
     if provider_tokens:
+        from forge.integrations.provider import ProviderHandler
+
         client = ProviderHandler(
             provider_tokens=_normalize_provider_tokens(provider_tokens),
             external_auth_token=access_token,
@@ -310,7 +319,7 @@ async def get_suggested_tasks(
     access_token: Annotated[SecretStr | None, Depends(get_access_token)],
     user_id: Annotated[str | None, Depends(get_user_id)],
 ) -> list[SuggestedTask] | JSONResponse:
-    """Get suggested tasks for the authenticated user across their most recently pushed repositories.
+    """Get suggested tasks for the authenticated user from their GitHub repositories.
 
     Returns:
     - PRs owned by the user
@@ -318,6 +327,8 @@ async def get_suggested_tasks(
 
     """
     if provider_tokens:
+        from forge.integrations.provider import ProviderHandler
+
         client = ProviderHandler(
             provider_tokens=_normalize_provider_tokens(provider_tokens),
             external_auth_token=access_token,
@@ -337,7 +348,7 @@ async def get_suggested_tasks(
 
 @app.get("/repository/branches", response_model=PaginatedBranchesResponse)
 async def get_repository_branches(
-    repository: str,
+    repository: str = Query(..., min_length=1, description="Repository name (owner/repo)"),
     page: int = 1,
     per_page: int = 30,
     provider_tokens: PROVIDER_TOKEN_TYPE | None = Depends(get_provider_tokens),
@@ -359,6 +370,8 @@ async def get_repository_branches(
 
     """
     if provider_tokens:
+        from forge.integrations.provider import ProviderHandler
+
         client = ProviderHandler(
             provider_tokens=_normalize_provider_tokens(provider_tokens),
             external_auth_token=access_token,
@@ -399,7 +412,7 @@ def _extract_repo_name(repository_name: str) -> str:
     response_model=list[MicroagentResponse],
 )
 async def get_repository_microagents(
-    repository_name: str,
+    repository_name: Annotated[str, Path(..., min_length=1, description="Repository name (owner/repo)")],
     provider_tokens: Annotated[
         PROVIDER_TOKEN_TYPE | None, Depends(get_provider_tokens)
     ] = None,
@@ -408,9 +421,8 @@ async def get_repository_microagents(
 ) -> list[MicroagentResponse] | JSONResponse:
     """Scan the microagents directory of a repository and return the list of microagents.
 
-    The microagents directory location depends on the git provider and actual repository name:
-    - If git provider is not GitLab and actual repository name is ".Forge": scans "microagents" folder
-    - If git provider is GitLab and actual repository name is "Forge-config": scans "microagents" folder
+    The microagents directory location depends on the actual repository name:
+    - If actual repository name is ".Forge": scans "microagents" folder
     - Otherwise: scans ".Forge/microagents" folder
 
     Note: This API returns microagent metadata without content for performance.
@@ -427,6 +439,8 @@ async def get_repository_microagents(
 
     """
     try:
+        from forge.integrations.provider import ProviderHandler
+
         provider_handler = ProviderHandler(
             provider_tokens=_normalize_provider_tokens(provider_tokens),
             external_auth_token=access_token,
@@ -460,9 +474,9 @@ async def get_repository_microagents(
     response_model=MicroagentContentResponse,
 )
 async def get_repository_microagent_content(
-    repository_name: str,
+    repository_name: Annotated[str, Path(..., min_length=1, description="Repository name (owner/repo)")],
     file_path: Annotated[
-        str, Query(description="Path to the microagent file within the repository")
+        str, Query(..., min_length=1, description="Path to the microagent file within the repository")
     ],
     provider_tokens: Annotated[
         PROVIDER_TOKEN_TYPE | None, Depends(get_provider_tokens)
@@ -487,6 +501,8 @@ async def get_repository_microagent_content(
 
     """
     try:
+        from forge.integrations.provider import ProviderHandler
+
         provider_handler = ProviderHandler(
             provider_tokens=_normalize_provider_tokens(provider_tokens),
             external_auth_token=access_token,

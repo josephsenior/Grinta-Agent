@@ -21,18 +21,13 @@ from pydantic import SecretStr
 from forge.controller import AgentController
 from forge.controller.agent import Agent
 from forge.controller.state.state import State
-from forge.core.config.config_utils import DEFAULT_WORKSPACE_MOUNT_PATH_IN_SANDBOX
 from forge.core.exceptions import AgentNotRegisteredError
 from forge.core.logger import forge_logger as logger
 from forge.events import EventStream
-from forge.integrations.provider import (
-    PROVIDER_TOKEN_TYPE,
-    ProviderToken,
-    ProviderType,
-)
 from forge.llm.llm_registry import LLMRegistry
 from forge.memory.memory import Memory
 from forge.runtime import RuntimeOrchestrator, RuntimeAcquireResult, get_runtime_cls
+from forge.runtime.plugins import PluginRequirement
 from forge.storage import get_file_store
 from forge.storage.data_models.user_secrets import UserSecrets
 from forge.utils.async_utils import GENERAL_TIMEOUT, call_async_from_sync
@@ -40,9 +35,34 @@ from forge.utils.async_utils import GENERAL_TIMEOUT, call_async_from_sync
 if TYPE_CHECKING:
     from forge.core.config import ForgeConfig
     from forge.events.event import Event
+    from forge.integrations.provider import (
+        PROVIDER_TOKEN_TYPE,
+        ProviderToken,
+        ProviderType,
+    )
     from forge.microagent.microagent import BaseMicroagent
     from forge.runtime.base import Runtime
     from forge.server.services.conversation_stats import ConversationStats
+
+
+def filter_plugins_by_config(
+    plugins: list[PluginRequirement],
+    agent: Agent | None = None,
+    config: ForgeConfig | None = None,
+    agent_cls_name: str | None = None,
+) -> list[PluginRequirement]:
+    """Filter plugins based on agent configuration.
+    
+    Args:
+        plugins: List of plugin requirements to filter
+        agent: Optional agent instance to get config from
+        config: Optional ForgeConfig to get agent config from
+        agent_cls_name: Optional agent class name to look up config
+        
+    Returns:
+        Filtered list of plugin requirements
+    """
+    return plugins
 
 
 def create_runtime(
@@ -56,6 +76,7 @@ def create_runtime(
     event_stream: EventStream | None = None,
     env_vars: dict[str, str] | None = None,
     user_id: str | None = None,
+    workspace_base: str | None = None,
 ) -> Runtime:
     """Create a runtime for the agent to run on.
 
@@ -63,11 +84,14 @@ def create_runtime(
         config: The app config.
         llm_registry: Optional LLM registry to use.
         sid: (optional) The session id. IMPORTANT: please don't set this unless you know what you're doing.
-            Set it to incompatible value will cause unexpected behavior on RemoteRuntime.
         headless_mode: Whether the agent is run in headless mode. `create_runtime` is typically called within evaluation scripts,
-            where we don't want to have the VSCode UI open, so it defaults to True.
+            so it defaults to True.
         agent: (optional) The agent instance to use for configuring the runtime.
         git_provider_tokens: Optional git provider tokens for authentication.
+        event_stream: Optional event stream for real-time monitoring.
+        env_vars: Optional environment variables for the runtime.
+        user_id: Optional user ID for ownership and quotas.
+        workspace_base: Optional workspace base directory.
 
     Returns:
         The created Runtime instance (not yet connected or initialized).
@@ -80,18 +104,28 @@ def create_runtime(
     else:
         session_id = sid or event_stream.sid
     agent_cls = type(agent) if agent else Agent.get_cls(config.default_agent)
+    
+    # Filter plugins based on config
+    plugins = filter_plugins_by_config(
+        plugins=list(agent_cls.sandbox_plugins),
+        agent=agent,
+        config=config,
+        agent_cls_name=agent_cls.__name__,
+    )
+    
     runtime_cls = get_runtime_cls(config.runtime)
     logger.debug("Initializing runtime: %s", runtime_cls.__name__)
     runtime: Runtime = runtime_cls(
         config=config,
         event_stream=event_stream,
         sid=session_id,
-        plugins=agent_cls.sandbox_plugins,
+        plugins=plugins,
         headless_mode=headless_mode,
         llm_registry=llm_registry or LLMRegistry(config),
         git_provider_tokens=git_provider_tokens,
         env_vars=env_vars,
         user_id=user_id,
+        workspace_base=workspace_base,
     )
     logger.debug(
         "Runtime created with plugins: %s", [plugin.name for plugin in runtime.plugins]
@@ -102,22 +136,10 @@ def create_runtime(
 def _add_github_token(provider_tokens: dict) -> None:
     """Add GitHub token if present in environment."""
     if "GITHUB_TOKEN" in os.environ:
+        from forge.integrations.provider import ProviderToken, ProviderType
+
         github_token = SecretStr(os.environ["GITHUB_TOKEN"])
         provider_tokens[ProviderType.GITHUB] = ProviderToken(token=github_token)
-
-
-def _add_gitlab_token(provider_tokens: dict) -> None:
-    """Add GitLab token if present in environment."""
-    if "GITLAB_TOKEN" in os.environ:
-        gitlab_token = SecretStr(os.environ["GITLAB_TOKEN"])
-        provider_tokens[ProviderType.GITLAB] = ProviderToken(token=gitlab_token)
-
-
-def _add_bitbucket_token(provider_tokens: dict) -> None:
-    """Add Bitbucket token if present in environment."""
-    if "BITBUCKET_TOKEN" in os.environ:
-        bitbucket_token = SecretStr(os.environ["BITBUCKET_TOKEN"])
-        provider_tokens[ProviderType.BITBUCKET] = ProviderToken(token=bitbucket_token)
 
 
 def _create_secret_store(provider_tokens: dict) -> UserSecrets | None:
@@ -132,10 +154,10 @@ def get_provider_tokens() -> PROVIDER_TOKEN_TYPE | None:
         A dictionary mapping ProviderType to ProviderToken if tokens are found, otherwise None.
 
     """
+    from forge.integrations.provider import ProviderToken, ProviderType
+
     provider_tokens: dict[ProviderType, ProviderToken] = {}
     _add_github_token(provider_tokens)
-    _add_gitlab_token(provider_tokens)
-    _add_bitbucket_token(provider_tokens)
 
     secret_store = _create_secret_store(provider_tokens)
     return secret_store.provider_tokens if secret_store else None
@@ -182,7 +204,7 @@ def create_memory(
     repo_directory: str | None = None,
     status_callback: Callable | None = None,
     conversation_instructions: str | None = None,
-    working_dir: str = DEFAULT_WORKSPACE_MOUNT_PATH_IN_SANDBOX,
+    working_dir: str | None = None,
 ) -> Memory:
     """Create a memory for the agent to use.
 
@@ -194,13 +216,16 @@ def create_memory(
         repo_directory: The repository directory, if any.
         status_callback: Optional callback function to handle status updates.
         conversation_instructions: Optional instructions that are passed to the agent
-        working_dir: The working directory for the memory.
+        working_dir: The working directory for the memory. If not provided, uses runtime.workspace_root.
 
     """
     memory = Memory(event_stream=event_stream, sid=sid, status_callback=status_callback)
     memory.set_conversation_instructions(conversation_instructions)
     if runtime:
+        if working_dir is None:
+            working_dir = str(runtime.workspace_root)
         memory.set_runtime_info(runtime, {}, working_dir)
+        from forge.microagent.microagent import BaseMicroagent
         microagents: list[BaseMicroagent] = runtime.get_microagents_from_selected_repo(
             selected_repository
         )
@@ -231,7 +256,7 @@ def create_agent(config: ForgeConfig, llm_registry: LLMRegistry) -> Agent:
     """Create agent instance from configuration.
 
     Args:
-        config: Forge configuration
+        config: Configuration for composite score weights
         llm_registry: LLM registry for model access
 
     Returns:
@@ -303,15 +328,13 @@ def create_controller(
 
 
 def generate_sid(config: ForgeConfig, session_name: str | None = None) -> str:
-    """Generate a session id based on the session name and the jwt secret.
-
-    The session ID is kept short to ensure Kubernetes resource names don't exceed
-    the 63-character limit when prefixed with 'Forge-runtime-' (18 chars).
-    Total length is limited to 32 characters to allow for suffixes like '-svc', '-pvc'.
+    """Generate a unique session id.
+    
+    The session ID is kept short to ensure it's easy to manage.
     """
     session_name = session_name or str(uuid.uuid4())
-    jwt_secret = config.jwt_secret
-    hash_str = hashlib.sha256(f"{session_name}{jwt_secret}".encode()).hexdigest()
+    # Use a simple hash of the session name
+    hash_str = hashlib.sha256(session_name.encode()).hexdigest()
     if len(session_name) > 16:
         session_id = f"{session_name[:16]}-{hash_str[:15]}"
     else:

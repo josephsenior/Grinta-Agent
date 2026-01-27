@@ -1,6 +1,7 @@
 """Observation representing successful completion of an action."""
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 from forge.core.schemas import ObservationType
 from forge.events.observation.observation import Observation
@@ -10,7 +11,7 @@ from forge.events.observation.observation import Observation
 class SuccessObservation(Observation):
     """This data class represents the result of a successful action."""
 
-    observation: str = ObservationType.SUCCESS
+    observation: ClassVar[str] = ObservationType.SUCCESS
 
     @property
     def message(self) -> str:

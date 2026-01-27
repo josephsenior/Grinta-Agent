@@ -117,9 +117,9 @@ function useInteractiveBrowserController(): InteractiveBrowserController {
 function ReadOnlyUrlDisplay({ url }: { url: string }) {
   return (
     <div className="flex items-center gap-2 flex-1 min-w-0">
-      <Globe className="w-4 h-4 text-foreground-secondary flex-shrink-0" />
+      <Globe className="w-4 h-4 text-[var(--text-tertiary)] flex-shrink-0" />
       <span
-        className="text-sm text-foreground truncate"
+        className="text-sm text-[var(--text-primary)] truncate"
         title={url || "Agent will navigate here"}
       >
         {url || "Waiting for agent to build app..."}
@@ -131,27 +131,41 @@ function ReadOnlyUrlDisplay({ url }: { url: string }) {
 function WaitingForAgent() {
   const { t } = useTranslation();
   return (
-    <div className="h-full flex flex-col items-center justify-center text-foreground-secondary p-8">
-      <Globe className="w-16 h-16 mb-4 text-foreground-secondary/50" />
-      <h3 className="text-lg font-medium text-foreground mb-2">
-        {t("browser.appPreview", "App Preview")}
-      </h3>
-      <p className="text-sm text-center max-w-md text-foreground-secondary">
-        {t(
-          "browser.waitingForAgent",
-          "The agent will navigate here when building your app. You&apos;ll be able to interact with it in real-time!",
-        )}
-      </p>
+    <div className="h-full w-full flex flex-col items-center justify-center bg-[var(--bg-primary)] p-8">
+      <div className="flex flex-col items-center gap-6 max-w-lg">
+        <div className="relative">
+          <div className="absolute inset-0 bg-[var(--text-accent)]/10 blur-2xl rounded-full" />
+          <div className="p-5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-primary)] shadow-sm relative z-10 text-[var(--text-accent)]">
+            <Globe className="w-10 h-10" />
+          </div>
+        </div>
+        <div className="text-center space-y-2">
+          <h3 className="text-xl font-bold text-[var(--text-primary)] tracking-tight">
+            {t("browser.appPreview", "App Preview")}
+          </h3>
+          <p className="text-sm text-[var(--text-secondary)] leading-relaxed max-w-sm mx-auto">
+            {t(
+              "browser.waitingForAgent",
+              "The agent will navigate here when building your app. You'll be able to interact with it in real-time!",
+            )}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-bold opacity-40 pt-4">
+          <div className="w-8 h-[1px] bg-current" />
+          Live Instance
+          <div className="w-8 h-[1px] bg-current" />
+        </div>
+      </div>
     </div>
   );
 }
 
 function LoadingOverlay() {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-background-primary/80 backdrop-blur-sm z-10">
+    <div className="absolute inset-0 flex items-center justify-center bg-[var(--bg-primary)]/80 backdrop-blur-sm z-10">
       <div className="flex flex-col items-center gap-3">
-        <RefreshCw className="w-8 h-8 text-violet-500 animate-spin" />
-        <p className="text-sm text-foreground-secondary">Loading page...</p>
+        <RefreshCw className="w-8 h-8 text-[var(--border-accent)] animate-spin" />
+        <p className="text-sm text-[var(--text-tertiary)]">Loading page...</p>
       </div>
     </div>
   );
@@ -206,8 +220,8 @@ function HeaderActionButtons({
         className={cn(
           "p-2 rounded-lg transition-all duration-150",
           currentUrl
-            ? "text-foreground-secondary hover:text-violet-500 hover:bg-background-tertiary/60"
-            : "text-foreground-secondary/50 cursor-not-allowed",
+            ? "text-[var(--text-tertiary)] hover:text-[var(--border-accent)] hover:bg-[var(--bg-tertiary)]/60"
+            : "text-[var(--text-tertiary)]/50 cursor-not-allowed",
         )}
         title="Refresh preview"
         aria-label="Refresh"
@@ -223,8 +237,8 @@ function HeaderActionButtons({
         className={cn(
           "p-2 rounded-lg transition-all duration-150",
           currentUrl
-            ? "text-foreground-secondary hover:text-accent-emerald hover:bg-background-tertiary/60"
-            : "text-foreground-secondary/50 cursor-not-allowed",
+            ? "text-[var(--text-tertiary)] hover:text-[var(--text-success)] hover:bg-[var(--bg-tertiary)]/60"
+            : "text-[var(--text-tertiary)]/50 cursor-not-allowed",
         )}
         title="Open in new tab"
         aria-label="Open in new tab"
@@ -236,7 +250,7 @@ function HeaderActionButtons({
       <button
         type="button"
         onClick={toggleFullscreen}
-        className="p-2 rounded-lg text-foreground-secondary hover:text-accent-sapphire hover:bg-background-tertiary/60 transition-all duration-150"
+        className="p-2 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-info)] hover:bg-[var(--bg-tertiary)]/60 transition-all duration-150"
         title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
         aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
       >
@@ -312,7 +326,7 @@ function BrowserHeader({
   controller: InteractiveBrowserController;
 }) {
   return (
-    <div className="flex-none bg-background-secondary/95 backdrop-blur-sm border-b border-border/60">
+    <div className="flex-none bg-[var(--bg-secondary)]/50 backdrop-blur-md border-b border-[var(--border-primary)]">
       <HeaderControls controller={controller} />
       <HeaderNotice controller={controller} />
     </div>
@@ -329,8 +343,10 @@ function BrowserContent({
   }
 
   return (
-    <div className="flex-1 min-h-0 relative bg-background-primary">
-      <BrowserIframe controller={controller} />
+    <div className="flex-1 min-h-0 relative bg-[var(--bg-primary)] p-2">
+      <div className="w-full h-full bg-white rounded-xl overflow-hidden border border-[var(--border-primary)] shadow-sm relative">
+        <BrowserIframe controller={controller} />
+      </div>
     </div>
   );
 }
@@ -341,7 +357,7 @@ export function InteractiveBrowser() {
   return (
     <div
       className={cn(
-        "h-full w-full flex flex-col bg-background-primary",
+        "h-full w-full flex flex-col bg-[var(--bg-primary)]",
         controller.isFullscreen && "fixed inset-0 z-50",
       )}
     >

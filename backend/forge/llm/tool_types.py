@@ -2,11 +2,6 @@ from __future__ import annotations
 
 from typing import Any, TypedDict, NotRequired
 
-try:  # Prefer real LiteLLM types if available
-    import litellm as _litellm
-except Exception:  # pragma: no cover - optional dependency
-    _litellm = None  # type: ignore
-
 
 class FunctionChunkArgs(TypedDict):
     name: str
@@ -16,22 +11,17 @@ class FunctionChunkArgs(TypedDict):
 
 
 def make_function_chunk(**chunk_kwargs: Any) -> Any:
-    """Create a ChatCompletionToolParamFunctionChunk or a dict fallback.
+    """Create a function chunk dict fallback.
 
-    The result supports both dict-style and attribute-style access when using the
-    fallback, matching tests and production code expectations.
+    The result supports both dict-style and attribute-style access, 
+    matching tests and production code expectations.
     """
-    if _litellm is not None:
-        try:
-            cls = getattr(_litellm, "ChatCompletionToolParamFunctionChunk")
-        except Exception:  # missing on some versions
-            cls = None
-        if cls is not None:
-            return cls(**chunk_kwargs)
-
     class _Chunk(dict):  # attribute-friendly dict
         def __getattr__(self, key):
-            return self[key]
+            try:
+                return self[key]
+            except KeyError:
+                raise AttributeError(key)
 
         def __setattr__(self, key, value):
             self[key] = value
@@ -40,21 +30,16 @@ def make_function_chunk(**chunk_kwargs: Any) -> Any:
 
 
 def make_tool_param(function: Any, type: str = "function", **extras: Any) -> Any:
-    """Create a ChatCompletionToolParam or a dict fallback.
+    """Create a tool param dict fallback.
 
-    Keeps interface consistent across LiteLLM versions and during tests.
+    Keeps interface consistent during tests.
     """
-    if _litellm is not None:
-        try:
-            cls = getattr(_litellm, "ChatCompletionToolParam")
-        except Exception:
-            cls = None
-        if cls is not None:
-            return cls(function=function, type=type, **extras)
-
     class _Tool(dict):  # attribute-friendly dict
         def __getattr__(self, key):
-            return self[key]
+            try:
+                return self[key]
+            except KeyError:
+                raise AttributeError(key)
 
         def __setattr__(self, key, value):
             self[key] = value
@@ -64,4 +49,9 @@ def make_tool_param(function: Any, type: str = "function", **extras: Any) -> Any
     return _Tool(payload)
 
 
-__all__ = ["FunctionChunkArgs", "make_function_chunk", "make_tool_param"]
+class PromptTokensDetails:
+    def __init__(self, cached_tokens: int | None = None, **kwargs: Any):
+        self.cached_tokens = cached_tokens
+
+
+__all__ = ["FunctionChunkArgs", "make_function_chunk", "make_tool_param", "PromptTokensDetails"]

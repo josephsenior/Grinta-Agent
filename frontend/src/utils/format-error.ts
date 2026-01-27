@@ -54,6 +54,46 @@ export function extractUserFriendlyError(
 }
 
 /**
+ * Extract quota error details from message
+ */
+function extractQuotaError(
+  message: string | undefined,
+): UserFriendlyErrorData | null {
+  if (!message) return null;
+
+  const lowerMessage = message.toLowerCase();
+  if (
+    !lowerMessage.includes("quota") &&
+    !lowerMessage.includes("limit") &&
+    !lowerMessage.includes("usage limit")
+  ) {
+    return null;
+  }
+
+  return {
+    title: "Usage limit reached",
+    message:
+      message.includes("quota") || message.includes("limit")
+        ? message
+        : "You've reached your usage limit. Please upgrade your plan or wait for the reset period.",
+    severity: "warning",
+    category: "rate_limit",
+    icon: "💰",
+    suggestion: "Upgrade your plan or wait for the reset",
+    actions: [
+      {
+        label: "Upgrade Plan",
+        type: "upgrade",
+        url: "/billing",
+        highlight: true,
+      },
+    ],
+    can_retry: true,
+    retry_delay: 3600, // 1 hour default
+  };
+}
+
+/**
  * Format JavaScript Error objects
  */
 function formatJavaScriptError(error: Error): UserFriendlyErrorData {
@@ -74,6 +114,36 @@ function formatJavaScriptError(error: Error): UserFriendlyErrorData {
       can_retry: true,
       retry_delay: 5,
     };
+  }
+
+  // Quota errors
+  if (
+    message.includes("quota") ||
+    message.includes("usage limit") ||
+    message.includes("limit reached")
+  ) {
+    return (
+      extractQuotaError(message) || {
+        title: "Usage limit reached",
+        message:
+          "You've reached your usage limit. Please upgrade your plan or wait for the reset period.",
+        severity: "warning",
+        category: "rate_limit",
+        icon: "💰",
+        suggestion: "Upgrade your plan or wait for the reset",
+        actions: [
+          {
+            label: "Upgrade Plan",
+            type: "upgrade",
+            url: "/billing",
+            highlight: true,
+          },
+        ],
+        technical_details: error.stack,
+        can_retry: true,
+        retry_delay: 3600,
+      }
+    );
   }
 
   // Runtime container errors
@@ -139,7 +209,7 @@ function extractAxiosMessage(response: Record<string, unknown>) {
 
 function extractAxiosDetails(
   error: unknown,
-): { status?: number; message?: string } | null {
+): { status?: number; message?: string; data?: unknown } | null {
   const response = extractAxiosResponse(error);
   if (!response) {
     return null;
@@ -149,10 +219,12 @@ function extractAxiosDetails(
     typeof response.status === "number" ? response.status : undefined;
   const message =
     extractAxiosMessage(response) ?? (error as Record<string, unknown>).message;
+  const { data } = response;
 
   return {
     status,
     message: typeof message === "string" ? message : undefined,
+    data,
   };
 }
 
@@ -218,7 +290,12 @@ function mapHttpStatusToError(
         can_retry: false,
       };
 
-    case 429:
+    case 429: {
+      // Check if it's a quota error with detailed info
+      const quotaError = extractQuotaError(message);
+      if (quotaError) {
+        return quotaError;
+      }
       return {
         title: "Too many requests",
         message:
@@ -234,6 +311,7 @@ function mapHttpStatusToError(
         can_retry: true,
         retry_delay: 60,
       };
+    }
 
     case 500:
     case 502:
@@ -274,6 +352,14 @@ export function formatClientError(error: unknown): UserFriendlyErrorData {
 
   const axiosDetails = extractAxiosDetails(error);
   if (axiosDetails) {
+    // Check if response data contains user-friendly error format
+    if (axiosDetails.data && typeof axiosDetails.data === "object") {
+      const data = axiosDetails.data as Record<string, unknown>;
+      if (isUserFriendlyError(data)) {
+        return data;
+      }
+    }
+
     const mapped = mapHttpStatusToError(
       axiosDetails.status,
       axiosDetails.message,

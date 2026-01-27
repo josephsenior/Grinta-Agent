@@ -46,7 +46,6 @@ export function ChatInput({
   const { t } = useTranslation();
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const [isDraggingOver, setIsDraggingOver] = React.useState(false);
-  const [isFocused, setIsFocused] = React.useState(false); // Track focus state for enhanced shadow
 
   const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
     // Only handle paste if we have an image paste handler and there are files
@@ -132,20 +131,15 @@ export function ChatInput({
   };
 
   const handleFocus = () => {
-    setIsFocused(true);
     onFocus?.();
   };
 
   const handleBlur = () => {
-    setIsFocused(false);
     onBlur?.();
   };
 
   return (
-    <div
-      data-testid="chat-input"
-      className="flex items-end justify-end grow gap-1 min-h-6 w-full"
-    >
+    <div data-testid="chat-input" className="flex items-end gap-2 w-full">
       <TextareaAutosize
         ref={textareaRef}
         name={name}
@@ -163,21 +157,14 @@ export function ChatInput({
         maxRows={maxRows}
         data-dragging-over={isDraggingOver}
         className={cn(
-          "grow text-base self-center resize-none outline-none ring-0 bg-transparent",
-          "text-text-primary placeholder:text-text-foreground-secondary font-medium leading-relaxed",
-          // Smooth height transitions (bolt.diy style)
-          "transition-all duration-300 ease-in-out",
-          "focus:text-text-primary focus:placeholder:text-text-secondary",
-          // Enhanced focus shadow for depth (premium feel)
-          isFocused &&
-            !isDraggingOver && [
-              "shadow-[0_2px_12px_rgba(189,147,249,0.15)]",
-              "transform scale-[1.001]", // Subtle scale on focus
-            ],
+          "flex-1 min-w-0 text-sm resize-none outline-none ring-0",
+          "px-2 py-2",
+          "bg-transparent",
+          "text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]",
+          "transition-all duration-200",
+          "focus:outline-none",
           isDraggingOver && [
             "bg-gradient-to-br from-primary-500/20 to-primary-600/10",
-            "border border-primary-500/40 rounded-xl px-4 py-3",
-            "shadow-[0_0_20px_rgba(189,147,249,0.3)]",
           ],
           className,
         )}

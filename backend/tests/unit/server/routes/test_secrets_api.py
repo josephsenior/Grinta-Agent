@@ -608,10 +608,6 @@ async def test_add_multiple_git_providers_with_hosts(test_client, file_secrets_s
             token=SecretStr("github-token"),
             host="github.enterprise.com",
         ),
-        "gitlab": ProviderToken(
-            token=SecretStr("gitlab-token"),
-            host="gitlab.enterprise.com",
-        ),
     }
     with patch(
         "forge.server.routes.secrets.check_provider_tokens",
@@ -620,7 +616,6 @@ async def test_add_multiple_git_providers_with_hosts(test_client, file_secrets_s
         add_providers_data = {
             "provider_tokens": {
                 "github": {"token": "github-token", "host": "github.enterprise.com"},
-                "gitlab": {"token": "gitlab-token", "host": "gitlab.enterprise.com"},
             }
         }
         response = test_client.post("/api/add-git-providers", json=add_providers_data)
@@ -634,15 +629,6 @@ async def test_add_multiple_git_providers_with_hosts(test_client, file_secrets_s
         assert (
             stored_secrets.provider_tokens[ProviderType.GITHUB].host
             == "github.enterprise.com"
-        )
-        assert ProviderType.GITLAB in stored_secrets.provider_tokens
-        assert (
-            stored_secrets.provider_tokens[ProviderType.GITLAB].token.get_secret_value()
-            == "gitlab-token"
-        )
-        assert (
-            stored_secrets.provider_tokens[ProviderType.GITLAB].host
-            == "gitlab.enterprise.com"
         )
 
 

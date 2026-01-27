@@ -7,14 +7,14 @@ Improvements:
 """
 
 import os
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, Optional, cast, Any
 
 from forge.llm.llm_registry import LLMRegistry
 
 if TYPE_CHECKING:
     from forge.events.action import Action
-    from litellm.types.utils import ModelResponse
-    from litellm import ChatCompletionToolParam
+    ModelResponse = Any
+    ChatCompletionToolParam = Any
 
 import forge.agenthub.loc_agent.function_calling as locagent_function_calling
 from forge.agenthub.codeact_agent import CodeActAgent
@@ -22,6 +22,15 @@ from forge.agenthub.loc_agent.graph_cache import GraphCache
 from forge.core.config import AgentConfig
 from forge.core.logger import forge_logger as logger
 from forge.utils.prompt import PromptManager
+
+
+# Sentinel object for uninitialized prompt manager (better than None for type safety)
+class _UninitializedPromptManager:
+    """Sentinel object indicating prompt manager hasn't been initialized yet."""
+    pass
+
+
+_UNINITIALIZED = _UninitializedPromptManager()
 
 
 class UltimateLocAgent(CodeActAgent):
@@ -38,6 +47,9 @@ class UltimateLocAgent(CodeActAgent):
     """
 
     VERSION = "2.0"
+    # Override base class attribute - initialized lazily via property
+    # Use sentinel object instead of None for better type safety
+    _prompt_manager: PromptManager | _UninitializedPromptManager  # type: ignore[assignment]
     "\n    The Ultimate LocAgent - State-of-the-art code localization through graph-based reasoning.\n\n    Features:\n    - Graph-based code representation (entities + dependencies)\n    - Multi-hop reasoning for code localization\n    - Specialized prompt for graph traversal\n    - Graph caching for instant access (10x faster)\n    - Tree-sitter integration for real-time updates\n\n    Perfect for:\n    1. Understanding code architecture and dependencies\n    2. Impact analysis (what breaks if X changes?)\n    3. Finding code through relationship traversal\n    4. Mapping inheritance hierarchies and call chains\n    "
 
     def __init__(self, config: AgentConfig, llm_registry: LLMRegistry) -> None:
@@ -49,6 +61,13 @@ class UltimateLocAgent(CodeActAgent):
 
         """
         super().__init__(config, llm_registry)
+        # Override base class initialization - use lazy initialization via property
+        # The base class creates _prompt_manager immediately in __init__, but we want
+        # lazy initialization. We use a sentinel object for runtime type safety.
+        # Type ignore is needed here because we're intentionally narrowing the base class
+        # type (PromptManager) to allow lazy initialization. The property getter ensures
+        # type safety at runtime by always returning a PromptManager.
+        self._prompt_manager = _UNINITIALIZED  # type: ignore[assignment]
 
         # Override tools with LocAgent-specific tools
         self.tools: list["ChatCompletionToolParam"] = (
@@ -84,7 +103,7 @@ class UltimateLocAgent(CodeActAgent):
     @property
     def prompt_manager(self) -> PromptManager:
         """Get prompt manager with graph-reasoning templates."""
-        if self._prompt_manager is None:
+        if isinstance(self._prompt_manager, _UninitializedPromptManager):
             self._prompt_manager = PromptManager(
                 prompt_dir=os.path.join(os.path.dirname(__file__), "prompts")
             )

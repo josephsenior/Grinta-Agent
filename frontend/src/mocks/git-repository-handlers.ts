@@ -1,8 +1,7 @@
 import { delay, http, HttpResponse } from "msw";
 import { GitRepository, Branch, PaginatedBranchesResponse } from "#/types/git";
 import { Provider } from "#/types/settings";
-import { RepositoryMicroagent } from "#/types/microagent-management";
-import { MicroagentContentResponse } from "#/api/forge.types";
+import { MicroagentContentResponse, RepositoryMicroagent } from "#/api/forge.types";
 
 // Generate a list of mock repositories with realistic data
 const generateMockRepositories = (
@@ -54,8 +53,6 @@ const generateMockMicroagents = (count: number): RepositoryMicroagent[] =>
 // Mock repositories for each provider
 const MOCK_REPOSITORIES = {
   github: generateMockRepositories(120, "github"),
-  gitlab: generateMockRepositories(120, "gitlab"),
-  bitbucket: generateMockRepositories(120, "bitbucket"),
 };
 
 // Mock branches (same for all repos for simplicity)
@@ -172,8 +169,6 @@ function attachLinkHeader(repositories: GitRepository[], linkHeader: string) {
 
 export const GIT_REPOSITORY_HANDLERS = [
   http.get("/api/user/repositories", async ({ request }) => {
-    await delay(500); // Simulate network delay
-
     const params = new URL(request.url).searchParams;
     const queryParams = extractRepositoryQueryParams(params);
 
@@ -207,8 +202,6 @@ export const GIT_REPOSITORY_HANDLERS = [
   }),
 
   http.get("/api/user/search/repositories", async ({ request }) => {
-    await delay(300); // Simulate network delay
-
     const url = new URL(request.url);
     const query = url.searchParams.get("query") || "";
     const selectedProvider = url.searchParams.get("selected_provider");
@@ -251,8 +244,6 @@ export const GIT_REPOSITORY_HANDLERS = [
 
   // Repository branches endpoint
   http.get("/api/user/repository/branches", async ({ request }) => {
-    await delay(300);
-
     const url = new URL(request.url);
     const repository = url.searchParams.get("repository");
     const page = parseInt(url.searchParams.get("page") || "1", 10);
@@ -283,8 +274,6 @@ export const GIT_REPOSITORY_HANDLERS = [
 
   // Search repository branches endpoint
   http.get("/api/user/search/branches", async ({ request }) => {
-    await delay(200);
-
     const url = new URL(request.url);
     const repository = url.searchParams.get("repository");
     const query = url.searchParams.get("query") || "";
@@ -311,8 +300,6 @@ export const GIT_REPOSITORY_HANDLERS = [
   http.get(
     "/api/user/repository/:owner/:repo/microagents",
     async ({ params }) => {
-      await delay(400);
-
       const { owner, repo } = params;
 
       if (!owner || !repo) {
@@ -329,8 +316,6 @@ export const GIT_REPOSITORY_HANDLERS = [
   http.get(
     "/api/user/repository/:owner/:repo/microagents/content",
     async ({ request, params }) => {
-      await delay(300);
-
       const { owner, repo } = params;
       const url = new URL(request.url);
       const filePath = url.searchParams.get("file_path");

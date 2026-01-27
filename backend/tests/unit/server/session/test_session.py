@@ -27,8 +27,6 @@ from forge.llm.llm_registry import LLMRegistry
 from forge.runtime.runtime_status import RuntimeStatus
 from forge.server.constants import ROOM_KEY
 import forge.core.config.condenser_config as condenser_config_module
-import forge.experiments.experiment_manager as experiment_manager_module
-import forge.metasop.router as metasop_router_module
 from forge.server.session import session as session_module
 from forge.server.session.conversation_init_data import ConversationInitData
 from forge.server.session.session import Session
@@ -170,6 +168,7 @@ class DummyConfig:
             retry_min_wait=1,
             retry_max_wait=30,
             retry_multiplier=2,
+            native_tool_calling=None,
         )
 
     def get_llm_config_from_agent_config(self, agent_config):
@@ -201,6 +200,7 @@ class DummyConfig:
             retry_min_wait=1,
             retry_max_wait=30,
             retry_multiplier=2,
+            native_tool_calling=None,
         )
 
     def get_agent_to_llm_config_map(self):
@@ -280,15 +280,6 @@ class DummySecretsStore(SecretsStore):
 def patch_dependencies(monkeypatch):
     monkeypatch.setattr(session_module, "AgentSession", DummyAgentSession)
 
-    class DummyExperimentManager:
-        @staticmethod
-        def run_config_variant_test(user_id, sid, config):
-            return config
-
-    monkeypatch.setattr(
-        experiment_manager_module, "ExperimentManagerImpl", DummyExperimentManager
-    )
-
     monkeypatch.setattr(
         session_module.ForgeMCPConfigImpl,
         "create_default_mcp_server_config",
@@ -326,7 +317,7 @@ async def make_session(config=None, sio=None):
 async def test_close_emits_and_cancels():
     session, sio, *_ = await make_session()
     await session.close()
-    assert any(entry[0] == "oh_event" for entry in sio.emitted)
+    assert any(entry[0] == "forge_event" for entry in sio.emitted)
     assert session.agent_session.closed is True
     await asyncio.sleep(0)
     assert (
@@ -655,13 +646,9 @@ async def test_dispatch_flow(monkeypatch):
     session, *_ = await make_session()
     captured = []
 
-    async def no_metasop(event):
-        return False
-
     async def no_image(event):
         return False
 
-    session._handle_metasop_dispatch = no_metasop
     session._handle_image_validation = no_image
     session.agent_session.event_stream.add_event = (
         lambda event, source: captured.append((event, source))
@@ -672,98 +659,17 @@ async def test_dispatch_flow(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_dispatch_metasop_short_circuit():
-    session, *_ = await make_session()
-
-    async def handled(event):
-        return True
-
-    session._handle_metasop_dispatch = handled
-    await session.dispatch(event_to_dict(MessageAction(content="SOP: run")))
-    assert not session.agent_session.event_stream.events
-    await session.close()
-
-
-@pytest.mark.asyncio
 async def test_dispatch_image_validation():
     session, *_ = await make_session()
-
-    async def no_meta(event):
-        return False
 
     async def image_block(event):
         return True
 
-    session._handle_metasop_dispatch = no_meta
     session._handle_image_validation = image_block
     await session.dispatch(
         event_to_dict(MessageAction(content="hi", image_urls=["url"]))
     )
     assert not session.agent_session.event_stream.events
-    await session.close()
-
-
-@pytest.mark.asyncio
-async def test_handle_metasop_dispatch_success(monkeypatch):
-    session, *_ = await make_session()
-    statuses = []
-
-    async def record_status(msg_type, status, message):
-        statuses.append((msg_type, status, message))
-
-    session._send_status_message = record_status
-    created_tasks = []
-    monkeypatch.setattr(asyncio, "create_task", lambda coro: created_tasks.append(coro))
-    event = MessageAction(content="SOP: run plan")
-    handled = await session._handle_metasop_dispatch(event)
-    assert handled is True
-    assert statuses[0][1] == RuntimeStatus.READY
-    assert created_tasks
-    await session.close()
-
-
-@pytest.mark.asyncio
-async def test_handle_metasop_dispatch_error():
-    session, *_ = await make_session()
-
-    async def failing_send(*args, **kwargs):
-        raise RuntimeError("fail")
-
-    session._send_status_message = failing_send
-    await session._handle_metasop_dispatch(MessageAction(content="SOP:"))
-    await session.close()
-
-
-@pytest.mark.asyncio
-async def test_run_metasop_orchestration(monkeypatch):
-    session, *_ = await make_session()
-    called = []
-
-    async def recording_runner(**kwargs):
-        called.append(kwargs)
-
-    monkeypatch.setattr(
-        metasop_router_module, "run_metasop_for_conversation", recording_runner
-    )
-    await session._run_metasop_orchestration("SOP: run")
-    assert called
-    await session.close()
-
-
-@pytest.mark.asyncio
-async def test_run_metasop_orchestration_error(monkeypatch):
-    session, *_ = await make_session()
-    errors = []
-    session._handle_metasop_runner_error = lambda error: errors.append(str(error))
-
-    async def failing_runner(**kwargs):
-        raise RuntimeError("boom")
-
-    monkeypatch.setattr(
-        metasop_router_module, "run_metasop_for_conversation", failing_runner
-    )
-    await session._run_metasop_orchestration("SOP")
-    assert errors[0] == "boom"
     await session.close()
 
 
@@ -844,7 +750,9 @@ async def test_send_error():
 
     session.send = record_send
     await session.send_error("oops")
-    assert captured[0]["error"] is True
+    assert captured[0]["status_update"] is True
+    assert captured[0]["type"] == "error"
+    assert captured[0]["message"] == "oops"
     await session.close()
 
 
@@ -912,7 +820,7 @@ async def test_should_drop_event():
 async def test_emit_to_client():
     session, sio, *_ = await make_session()
     await session._emit_to_client({"id": 1})
-    assert sio.emitted[-1][0] == "oh_event"
+    assert sio.emitted[-1][0] == "forge_event"
     await session.close()
 
 
@@ -929,32 +837,6 @@ async def test_on_event_wrapper_invokes_loop(monkeypatch):
     monkeypatch.setattr(asyncio, "get_event_loop", lambda: DummyLoop())
     session.on_event(MessageAction(content="wrapper"))
     assert captured
-    await session.close()
-
-
-@pytest.mark.asyncio
-async def test_handle_metasop_dispatch_non_message():
-    session, *_ = await make_session()
-    result = await session._handle_metasop_dispatch(NullAction())
-    assert result is False
-    await session.close()
-
-
-@pytest.mark.asyncio
-async def test_handle_metasop_dispatch_non_sop():
-    session, *_ = await make_session()
-    result = await session._handle_metasop_dispatch(MessageAction(content="hello"))
-    assert result is False
-    await session.close()
-
-
-@pytest.mark.asyncio
-async def test_handle_metasop_runner_error_logs(monkeypatch):
-    session, *_ = await make_session()
-    logged = []
-    session.logger.exception = lambda message: logged.append(message)
-    session._handle_metasop_runner_error(RuntimeError("boom"))
-    assert logged
     await session.close()
 
 

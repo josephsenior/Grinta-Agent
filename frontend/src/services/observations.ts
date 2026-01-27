@@ -3,8 +3,9 @@ import { setUrl } from "#/state/browser-slice";
 import store from "#/store";
 import { ObservationMessage } from "#/types/message";
 import { appendOutput } from "#/state/command-slice";
-import { appendJupyterOutput } from "#/state/jupyter-slice";
 import ObservationType from "#/types/observation-type";
+import { AgentState } from "#/types/agent-state";
+import { setCurStatusMessage } from "#/state/status-slice";
 import {
   startStream,
   appendStreamChunk,
@@ -53,38 +54,48 @@ function handleCommandOutput(message: ObservationMessage) {
   store.dispatch(appendOutput(content));
 }
 
-// Helper function to handle Jupyter output
-function handleJupyterOutput(message: ObservationMessage) {
-  store.dispatch(
-    appendJupyterOutput({
-      content: message.content,
-      imageUrls: Array.isArray(message.extras?.image_urls)
-        ? message.extras.image_urls
-        : undefined,
-    }),
-  );
-}
-
 // Helper function to handle agent state changes
 function handleAgentStateChange(message: ObservationMessage) {
-  store.dispatch(setCurrentAgentState(message.extras.agent_state));
+  const state = message.extras.agent_state as AgentState;
+  store.dispatch(setCurrentAgentState(state));
+
+  // If entering error state, also update the status message
+  if (state === AgentState.ERROR) {
+    store.dispatch(
+      setCurStatusMessage({
+        type: "error",
+        message: String(message.content || message.message || message.extras.reason || "An error occurred"),
+        status_update: true,
+      }),
+    );
+  }
+}
+
+// Helper function to handle error observations
+function handleErrorObservation(message: ObservationMessage) {
+  store.dispatch(setCurrentAgentState(AgentState.ERROR));
+  store.dispatch(
+    setCurStatusMessage({
+      type: "error",
+      message: message.content || message.message || "An error occurred",
+      status_update: true,
+    }),
+  );
 }
 
 // Main observation handler using a strategy pattern
 const observationHandlers = {
   [ObservationType.RUN]: handleCommandOutput,
-  [ObservationType.RUN_IPYTHON]: handleJupyterOutput,
   [ObservationType.BROWSE]: handleBrowserObservation,
   [ObservationType.BROWSE_INTERACTIVE]: handleBrowserObservation,
   [ObservationType.AGENT_STATE_CHANGED]: handleAgentStateChange,
   // These observation types don't need special handling
-  [ObservationType.DELEGATE]: () => {},
   [ObservationType.READ]: () => {},
   [ObservationType.EDIT]: () => {},
   [ObservationType.THINK]: () => {},
   [ObservationType.NULL]: () => {},
   [ObservationType.RECALL]: () => {},
-  [ObservationType.ERROR]: () => {},
+  [ObservationType.ERROR]: handleErrorObservation,
   [ObservationType.MCP]: () => {},
   [ObservationType.TASK_TRACKING]: () => {},
 };

@@ -1,7 +1,14 @@
 """Forge automation framework package."""
 
 import os
+import sys
 from pathlib import Path
+
+# Unify packaging logically by extending __path__ to include top-level directories from backend/
+# This allows imports like 'forge.integrations' to find 'backend/integrations/'
+_backend_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _backend_root not in __path__:
+    __path__.append(_backend_root)
 
 __package_name__ = "FORGE_ai"
 

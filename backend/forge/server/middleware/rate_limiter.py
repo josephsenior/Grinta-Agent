@@ -231,7 +231,6 @@ class EndpointRateLimiter:
         # Define limits per endpoint pattern
         self.LIMITS = {
             "/api/conversations": default_limits,  # Use env-configured limits
-            "/api/prompts": default_limits,
             "/api/database": default_limits,
             "/api/memory": default_limits,
             "/api/slack/events": default_limits,

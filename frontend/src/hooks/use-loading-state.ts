@@ -168,7 +168,7 @@ export function useMultipleLoadingStates(keys: string[]) {
 }
 
 // Hook for managing async operations with error handling
-export function useAsyncOperation<T = any>() {
+export function useAsyncOperation<T = unknown>() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [data, setData] = useState<T | null>(null);

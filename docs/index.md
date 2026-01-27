@@ -15,11 +15,10 @@ Forge is an AI-powered development platform that helps developers build software
 ## Features
 
 ### Core Agents
-- [MetaSOP Orchestration](features/metasop.md) - Multi-agent planning and execution
 - [CodeAct Agent](features/codeact_agent.md) - Code editing and command execution
 
 ### Advanced Features
-- [Advanced Features](advanced_features.md) - Error handling, causal reasoning, ACE framework, and Tree-sitter integration
+- [Advanced Features](advanced_features.md) - Error handling, causal reasoning, and Tree-sitter integration
 
 ### APIs and Integrations
 - [API Reference](api-reference.md) - Complete REST API documentation (32 route modules)

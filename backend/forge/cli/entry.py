@@ -3,7 +3,6 @@
 import sys
 
 from forge.cli.gui_launcher import launch_gui_server
-from forge.cli.main import run_cli_command
 from forge.core.config import get_cli_parser
 from forge.core.config.arg_utils import get_subparser
 
@@ -19,7 +18,7 @@ def _normalize_arguments() -> None:
     if len(sys.argv) == 1 or (
         len(sys.argv) > 1 and sys.argv[1] not in ["cli", "serve"]
     ):
-        sys.argv.insert(1, "cli")
+        sys.argv.insert(1, "serve")
 
 
 def _handle_version_request(args) -> None:
@@ -32,8 +31,10 @@ def _execute_command(args, parser) -> None:
     """Execute the appropriate command based on parsed arguments."""
     if args.command == "serve":
         launch_gui_server(mount_cwd=args.mount_cwd, gpu=args.gpu)
-    elif args.command == "cli" or args.command is None:
-        run_cli_command(args)
+    elif args.command == "cli":
+        print("The 'cli' command is deprecated and the TUI has been removed.")
+        print("Launching the GUI server instead...")
+        launch_gui_server(mount_cwd=args.mount_cwd, gpu=args.gpu)
     else:
         parser.print_help()
         sys.exit(1)

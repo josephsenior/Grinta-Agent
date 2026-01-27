@@ -106,7 +106,7 @@ This document defines the span hierarchy, naming, and attributes for Forge traci
 
 ## Sampling Strategy (initial)
 - Head sampling default: 5% for generic requests.
-- Always sample errors and 100% for conversation orchestration (`/api/conversation*`, metasop flows).
+- Always sample errors and 100% for conversation orchestration (`/api/conversation*`).
 - Allow per-route overrides via env (e.g., `OTEL_SAMPLE_ROUTES=/api/conversation:1.0;/api/files:0.1`).
 
 ## Privacy and Redaction
@@ -128,7 +128,7 @@ HTTP GET /api/conversations/{id}
 
 ## Minimum Viable Implementation Order
 1) Add log correlation (trace_id/span_id) to logs from current span.
-2) Instrument LLM calls (litellm wrappers) with tokens/cost.
+2) Instrument LLM calls (llm.py wrappers) with tokens/cost.
 3) Instrument Redis (rate limit, quota, cache) operations.
 4) Instrument MCP/tool exec and external HTTP calls.
 5) Instrument conversation.run and agent.step around orchestrator.

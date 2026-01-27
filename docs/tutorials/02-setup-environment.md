@@ -54,7 +54,9 @@ pip install -r requirements.txt
 
 ```bash
 cd frontend
-npm install
+pnpm install
+# Or, if necessary:
+# npm install
 cd ..
 ```
 
@@ -118,8 +120,8 @@ pytest tests/unit/ -v
 
 ```bash
 cd frontend
-npm run type-check
-npm test
+pnpm run type-check
+pnpm test
 cd ..
 ```
 
@@ -141,7 +143,7 @@ The backend should start on `http://localhost:3000`
 
 ```bash
 cd frontend
-npm run dev
+pnpm run dev
 ```
 
 The frontend should start on `http://localhost:5173`
@@ -208,15 +210,15 @@ PORT=3001
 
 ### Frontend Build Issues
 
-**Problem:** "npm install fails"
+**Problem:** "pnpm install fails"
 
 **Solution:**
 ```bash
 # Clear cache and reinstall
 cd frontend
-rm -rf node_modules package-lock.json
-npm cache clean --force
-npm install
+rm -rf node_modules pnpm-lock.yaml
+pnpm store prune
+pnpm install
 ```
 
 ## Development Tools
@@ -230,7 +232,7 @@ poetry run ruff format forge/
 
 # Format frontend code
 cd frontend
-npm run format
+pnpm run format
 ```
 
 ### Linting
@@ -242,7 +244,7 @@ poetry run mypy forge/
 
 # Lint frontend code
 cd frontend
-npm run lint
+pnpm run lint
 ```
 
 ### Type Checking
@@ -253,7 +255,7 @@ poetry run mypy forge/
 
 # Frontend type checking
 cd frontend
-npm run type-check
+pnpm run type-check
 ```
 
 ## Next Steps

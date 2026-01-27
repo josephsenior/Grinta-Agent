@@ -14,17 +14,11 @@ enum ObservationType {
   // The output of a command
   RUN = "run",
 
-  // The output of an IPython command
-  RUN_IPYTHON = "run_ipython",
-
   // A message from the user
   CHAT = "chat",
 
   // Agent state has changed
   AGENT_STATE_CHANGED = "agent_state_changed",
-
-  // Delegate result
-  DELEGATE = "delegate",
 
   // A response to the agent's thought (usually a static message)
   THINK = "think",

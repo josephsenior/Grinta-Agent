@@ -21,13 +21,32 @@ from pydantic import BaseModel, Field, model_serializer
 
 from forge.core.pydantic_compat import model_dump_with_options
 
-if TYPE_CHECKING:
-    from litellm import ChatCompletionMessageToolCall as ChatCompletionMessageToolCallType
-else:
-    try:
-        from litellm import ChatCompletionMessageToolCall as ChatCompletionMessageToolCallType
-    except ImportError:
-        ChatCompletionMessageToolCallType = Any
+class ToolCallFunction(BaseModel):
+    """Function call details within a tool call.
+
+    Attributes:
+        name: Name of the function to call
+        arguments: JSON-formatted arguments for the function
+
+    """
+
+    name: str
+    arguments: str
+
+
+class ToolCall(BaseModel):
+    """Tool call from an assistant message.
+
+    Attributes:
+        id: Unique identifier for the tool call
+        type: Type of tool call (usually "function")
+        function: Function call details
+
+    """
+
+    id: str
+    type: str = "function"
+    function: ToolCallFunction
 
 
 class ContentType(Enum):
@@ -122,7 +141,7 @@ class Message(BaseModel):
     cache_enabled: bool = False
     vision_enabled: bool = False
     function_calling_enabled: bool = False
-    tool_calls: list[ChatCompletionMessageToolCallType] | None = None
+    tool_calls: list[ToolCall] | None = None
     tool_call_id: str | None = None
 
     name: str | None = None
@@ -239,5 +258,5 @@ class Message(BaseModel):
         return message_dict
 
 
-# Rebuild the Message model to ensure ChatCompletionMessageToolCall is properly resolved
+# Rebuild the Message model to ensure ToolCall is properly resolved
 Message.model_rebuild()

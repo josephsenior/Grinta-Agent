@@ -65,7 +65,7 @@ def test_load_microagents_with_selected_repo(temp_dir, runtime_cls, run_as_Forge
     _create_test_microagents(str(repo_dir))
     runtime, config = _load_runtime(temp_dir, runtime_cls, run_as_Forge)
     try:
-        loaded_agents = runtime.get_microagents_from_selected_repo("All-Hands-AI/Forge")
+        loaded_agents = runtime.get_microagents_from_selected_repo("Forge/Forge")
         knowledge_agents = [
             a for a in loaded_agents if isinstance(a, KnowledgeMicroagent)
         ]
@@ -243,3 +243,4 @@ async def test_add_mcp_tools_from_microagents():
         assert len(args[0]) == 1
         assert args[0][0].name == "test-tool"
         mock_agent.set_mcp_tools.assert_called_once_with([mock_tool])
+

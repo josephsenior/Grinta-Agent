@@ -173,7 +173,7 @@ async def test_endpoint_rate_limiter_disabled():
     async def call_next(request):
         return Response(content="ok")
 
-    response = await limiter(_make_request(path="/api/prompts"), call_next)
+    response = await limiter(_make_request(path="/api/conversations"), call_next)
     assert "X-RateLimit-Limit" not in response.headers
 
 

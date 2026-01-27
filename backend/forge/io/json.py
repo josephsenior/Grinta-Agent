@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import Any
 
 from json_repair import repair_json
-from litellm.types.utils import ModelResponse
 
 from forge.core.exceptions import LLMResponseError
 from forge.core.pydantic_compat import model_dump_with_options
@@ -14,7 +13,6 @@ from forge.events.observation import CmdOutputMetadata
 from forge.events.serialization import event_to_dict
 from forge.llm.metrics import Metrics
 from pydantic import BaseModel
-
 
 class ForgeJSONEncoder(json.JSONEncoder):
     """Custom JSON encoder that handles datetime and event objects."""
@@ -27,10 +25,11 @@ class ForgeJSONEncoder(json.JSONEncoder):
             return event_to_dict(obj)
         if isinstance(obj, Metrics):
             return obj.get()
-        if isinstance(obj, ModelResponse):
+        if isinstance(obj, (BaseModel, CmdOutputMetadata)):
             return model_dump_with_options(obj)
-        if isinstance(obj, CmdOutputMetadata):
-            return model_dump_with_options(obj)
+        # Handle dict-like objects that might have been ModelResponse or similar
+        if hasattr(obj, "model_dump"):
+            return obj.model_dump()
         return super().default(obj)
 
 

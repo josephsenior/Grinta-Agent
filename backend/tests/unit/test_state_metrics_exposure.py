@@ -68,7 +68,7 @@ class FakeConversationStats:
 def test_state_tracker_save_state_consolidates_metrics(tmp_path):
     """Ensure StateTracker.save_state persists ConversationStats and does not touch State.metrics.
 
-    Eval scripts should read from state.conversation_stats via evaluation.utils.shared.get_metrics.
+    StateTracker.save_state persists ConversationStats and does not touch State.metrics.
     """
     from forge.controller.state.state_tracker import StateTracker
     from forge.server.services.conversation_stats import ConversationStats

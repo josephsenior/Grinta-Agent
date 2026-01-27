@@ -3,61 +3,34 @@ import axios, {
   AxiosResponse,
   InternalAxiosRequestConfig,
 } from "axios";
-import { tokenStorage } from "../utils/auth/token-storage";
 import { logger } from "../utils/logger";
 
+// Resolve backend base URL robustly for dev/prod:
+function resolveBackendBase(): string {
+  const envBase = import.meta.env.VITE_BACKEND_BASE_URL as string | undefined;
+  const envHost = import.meta.env.VITE_BACKEND_HOST as string | undefined;
+
+  if (envBase && envBase.includes("://")) {
+    return envBase;
+  }
+  if (envBase) {
+    return `${window.location.protocol}//${envBase}`;
+  }
+  if (envHost && envHost.includes("://")) {
+    return envHost;
+  }
+  if (envHost) {
+    return `${window.location.protocol}//${envHost}`;
+  }
+  if (typeof window !== "undefined" && window.location) {
+    return window.location.origin;
+  }
+  return "http://localhost:3000";
+}
+
 export const Forge = axios.create({
-  baseURL: `${window.location.protocol}//${import.meta.env.VITE_BACKEND_BASE_URL || window?.location.host}`,
+  baseURL: resolveBackendBase(),
 });
-
-// Request interceptor to add auth token
-Forge.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = tokenStorage.getToken();
-    if (token && config.headers) {
-      // eslint-disable-next-line no-param-reassign
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error: AxiosError) => Promise.reject(error),
-);
-
-// Helper function to check if a response contains an email verification error
-const checkForEmailVerificationError = (data: unknown): boolean => {
-  const EMAIL_NOT_VERIFIED = "EmailNotVerifiedError";
-
-  if (typeof data === "string") {
-    return data.includes(EMAIL_NOT_VERIFIED);
-  }
-
-  if (typeof data === "object" && data !== null) {
-    const obj = data as Record<string, unknown>;
-    if (Object.hasOwn(obj, "message")) {
-      const { message } = obj;
-      if (typeof message === "string") {
-        return message.includes(EMAIL_NOT_VERIFIED);
-      }
-      if (Array.isArray(message)) {
-        return message.some(
-          (msg) => typeof msg === "string" && msg.includes(EMAIL_NOT_VERIFIED),
-        );
-      }
-    }
-
-    // Search any values in object in case message key is different
-    return Object.values(obj).some(
-      (value) =>
-        (typeof value === "string" && value.includes(EMAIL_NOT_VERIFIED)) ||
-        (Array.isArray(value) &&
-          value.some(
-            (v) => typeof v === "string" && v.includes(EMAIL_NOT_VERIFIED),
-          )),
-    );
-  }
-
-  return false;
-};
 
 // Set up the global interceptor
 Forge.interceptors.response.use(
@@ -73,36 +46,20 @@ Forge.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Check if it's a 403 error with the email verification message
-    if (
-      error.response?.status === 403 &&
-      checkForEmailVerificationError(error.response?.data) &&
-      window.location.pathname !== "/settings/user"
-    ) {
-      window.location.reload();
-    }
+    // Check if it's a 503 error (runtime unavailable)
+    // Only mark as ERROR if it's NOT a RUNTIME_NOT_READY error (which is expected during startup)
+    const errorData = error.response?.data as
+      | { error_code?: string }
+      | undefined;
+    const errorCode = errorData?.error_code;
 
-    // Check if it's a 401 error (unauthorized - token expired or invalid)
-    if (error.response?.status === 401) {
-      // Don't redirect if already on auth pages
-      const isAuthPage = window.location.pathname.startsWith("/auth/");
-      if (!isAuthPage) {
-        tokenStorage.clear();
-        // Only redirect if not already on login page
-        if (window.location.pathname !== "/auth/login") {
-          window.location.href = "/auth/login";
-        }
-      }
-    }
-
-    // Check if it's a 503 error (runtime container crashed/unavailable)
-    if (error.response?.status === 503) {
+    if (error.response?.status === 503 && errorCode !== "RUNTIME_NOT_READY") {
       // Dynamically import to avoid circular dependencies
       import("#/state/agent-slice").then(({ setCurrentAgentState }) => {
         import("#/store").then(({ default: store }) => {
           import("#/types/agent-state").then(({ AgentState }) => {
             logger.error(
-              "🔴 Runtime container permanently unavailable, setting agent to ERROR state",
+              "🔴 Runtime unavailable (503), setting agent to ERROR state",
             );
             store.dispatch(setCurrentAgentState(AgentState.ERROR));
           });

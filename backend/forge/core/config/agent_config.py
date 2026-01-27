@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 from typing import TYPE_CHECKING, Any
+
+from forge._canonical import CanonicalModelMetaclass
 
 # Import CondenserConfig directly - needed for Pydantic validation
 from forge.core.config.condenser_config import (
@@ -22,7 +24,7 @@ else:
     LLMConfig = Any  # For runtime when TYPE_CHECKING is False
 
 
-class AgentConfig(BaseModel):
+class AgentConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for an agent.
 
     Attributes:
@@ -32,7 +34,6 @@ class AgentConfig(BaseModel):
         memory_enabled: Whether to enable conversation memory
         condenser_config: Configuration for conversation memory condenser
         enable_prompt_extensions: Whether to allow agent-specific prompt extensions (agent suffix)
-        enable_jupyter: Whether to enable Jupyter kernel
         enable_browsing: Whether to enable browser environment
         enable_auto_lint: Whether to enable automatic linting after edits
         confirm_actions: Whether to require user confirmation before executing actions
@@ -42,15 +43,28 @@ class AgentConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    name: str = Field(default="CodeActAgent")
-    llm_config: LLMConfig | None = Field(default=None)
-    memory_max_threads: int = Field(default=10)
-    memory_enabled: bool = Field(default=True)
+    name: str = Field(
+        default="CodeActAgent",
+        min_length=1,
+        description="Name of the agent to use"
+    )
+    llm_config: LLMConfig | None = Field(
+        default=None,
+        description="LLM configuration for the agent"
+    )
+    memory_max_threads: int = Field(
+        default=10,
+        ge=1,
+        description="Maximum number of history items to include in context window"
+    )
+    memory_enabled: bool = Field(
+        default=True,
+        description="Whether to enable conversation memory"
+    )
     condenser_config: CondenserConfig = Field(
         default_factory=ConversationWindowCondenserConfig
     )
     enable_prompt_extensions: bool = Field(default=True)
-    enable_jupyter: bool = Field(default=True)
     enable_browsing: bool = Field(default=True)
     enable_vector_memory: bool = Field(
         default=False, description="Enable persistent vector memory store"
@@ -72,6 +86,7 @@ class AgentConfig(BaseModel):
     )
     autonomy_level: str = Field(
         default="balanced",
+        min_length=1,
         description="Autonomy mode: supervised, balanced, or full",
     )
 
@@ -150,11 +165,28 @@ class AgentConfig(BaseModel):
     )
 
     # Memory features
-    enable_som_visual_browsing: bool = Field(default=False)
+    enable_som_visual_browsing: bool = Field(
+        default=False,
+        description="Enable SOM (Self-Organizing Map) visual browsing"
+    )
 
     # Prompt management
-    system_prompt_filename: str = Field(default="system_prompt.j2")
-    cli_mode: bool = Field(default=False)
+    system_prompt_filename: str = Field(
+        default="system_prompt.j2",
+        min_length=1,
+        description="Filename for the system prompt template"
+    )
+    cli_mode: bool = Field(
+        default=False,
+        description="Whether the agent is running in CLI mode"
+    )
+
+    @field_validator("name", "autonomy_level", "system_prompt_filename")
+    @classmethod
+    def validate_required_strings(cls, v: str) -> str:
+        """Validate required string fields are non-empty."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        return validate_non_empty_string(v, name="field")
 
     @property
     def condenser(self) -> CondenserConfig:
@@ -284,13 +316,29 @@ class AgentConfig(BaseModel):
         valid_fields = set(cls.model_fields.keys())
         invalid_fields = {k for k in base_data.keys() if k not in valid_fields}
         if invalid_fields:
-            raise ValueError(
-                f"Unknown agent config field(s): {sorted(invalid_fields)}"
+            logger.warning(
+                "Ignoring unknown agent config field(s) in base config: %s",
+                sorted(invalid_fields),
             )
+            base_data = {k: v for k, v in base_data.items() if k in valid_fields}
+
         try:
             return cls(**base_data)
         except ValidationError as exc:
-            raise ValueError("Invalid base agent configuration") from exc
+            # For base config, we try to recover by filtering out invalid values
+            logger.warning("Invalid base agent configuration values: %s. Using defaults for those fields.", exc)
+            
+            # Create a dict with only valid types by trying to validate each field
+            safe_data = {}
+            for field_name, value in base_data.items():
+                try:
+                    # Validate a dummy object with just this field
+                    cls.model_validate({field_name: value})
+                    safe_data[field_name] = value
+                except ValidationError:
+                    logger.warning("Value '%s' for field '%s' is invalid, using default.", value, field_name)
+            
+            return cls(**safe_data)
 
     @classmethod
     def _create_custom_config(
@@ -315,24 +363,33 @@ class AgentConfig(BaseModel):
         invalid_fields = {k for k in overrides.keys() if k not in valid_fields}
 
         if invalid_fields:
-            raise ValueError(
-                f"Unknown field(s) for agent '{name}': {sorted(invalid_fields)}"
+            logger.warning(
+                "Ignoring unknown field(s) for agent '%s': %s",
+                name,
+                sorted(invalid_fields),
             )
+            overrides = {k: v for k, v in overrides.items() if k in valid_fields}
 
-        # Start with base config values
-        merged = base_config.model_dump()
-
-        # Apply overrides
-        for key, value in overrides.items():
-            merged[key] = value
+        # Filter out invalid override values
+        safe_overrides = {}
+        for field_name, value in overrides.items():
+            try:
+                # Validate a dummy object with just this field
+                cls.model_validate({field_name: value})
+                safe_overrides[field_name] = value
+            except ValidationError:
+                logger.warning("Value '%s' for field '%s' in agent '%s' is invalid, using default.", value, field_name, name)
 
         # Set the custom name
-        merged["name"] = name
+        safe_overrides["name"] = name
 
         try:
-            return cls(**merged)
-        except ValidationError as exc:
-            raise ValueError(f"Invalid configuration for agent '{name}'") from exc
+            # Create a new config by copying base and applying safe overrides
+            new_config = base_config.model_copy(update=safe_overrides)
+            return new_config
+        except Exception as e:
+            logger.warning("Failed to create custom config for agent '%s': %s", name, e)
+            return base_config.model_copy(update={"name": name})
 
 
 # Rebuild the model after all dependencies are loaded to resolve forward references

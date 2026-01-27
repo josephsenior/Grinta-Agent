@@ -11,12 +11,10 @@ Behavior:
 - Preserves existing "servers" from docs/openapi.json if present; otherwise
   writes sensible defaults.
 - Sets info.version to forge.__version__.
-- Sanitizes endpoint descriptions to remove code blocks and internal-only sections.
-- Excludes operational/UI-only convenience endpoints:
-  - /server_info
-  - /api/conversations/{conversation_id}/vscode-url
-  - /api/conversations/{conversation_id}/web-hosts
-- Creates a backup docs/openapi.json.backup before overwriting.
+# - Excludes operational/UI-only convenience endpoints:
+#   - /server_info
+#   - /api/conversations/{conversation_id}/web-hosts
+# - Creates a backup docs/openapi.json.backup before overwriting.
 
 Output:
 - Prints OpenAPI and API versions, endpoint count, servers count, and sample endpoints.
@@ -52,7 +50,7 @@ def _sanitize_description(text: str) -> str:
     - Strip fenced code blocks
     - Remove Args/Returns/Raises/Example/Examples/Notes sections
     - Remove inline curl examples
-    - Avoid provider-implementation specifics like LiteLLM/Bedrock
+    - Avoid provider-implementation specifics like Bedrock
     """
     import re
 
@@ -62,8 +60,6 @@ def _sanitize_description(text: str) -> str:
     for header in ["Args?:", "Returns?:", "Raises?:", "Example[s]?:", "Notes?:"]:
         text = re.sub(f"(?ms)^\\s*{header}.*?(?:\\n\\s*\\n|\\Z)", "", text)
     text = re.sub("(?im)^.*\\bcurl\\b.*$", "", text)
-    text = re.sub("\\bLiteLLM\\b", "configured model providers", text)
-    text = re.sub("\\blitellm\\b", "configured providers", text)
     text = re.sub("\\bBedrock\\b", "", text)
     text = re.sub("\\n{3,}", "\n\n", text).strip()
     return text
@@ -134,7 +130,7 @@ def update_openapi_spec(spec_path, backup=True):
         new_spec["servers"] = current_spec["servers"]
     else:
         new_spec["servers"] = [
-            {"url": "https://app.all-hands.dev", "description": "Production server"},
+            {"url": "https://api.forge.dev", "description": "Production server"},
             {"url": "http://localhost:3000", "description": "Local server"},
         ]
     new_spec["info"]["version"] = __version__

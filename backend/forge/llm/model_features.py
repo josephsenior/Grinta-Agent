@@ -13,7 +13,7 @@ def normalize_model_name(model: str) -> str:
     - Trim whitespace
     - Lowercase
     - If there is a '/', keep only the basename after the last '/'
-      (handles prefixes like openrouter/, litellm_proxy/, anthropic/, etc.)
+      (handles prefixes like openai/, anthropic/, etc.)
       and treat ':' inside that basename as an Ollama-style variant tag to be removed
     - There is no provider:model form; providers, when present, use 'provider/model'
     - Drop a trailing "-gguf" suffix if present
@@ -50,78 +50,98 @@ def model_matches(model: str, patterns: list[str]) -> bool:
 class ModelFeatures:
     """Capabilities and limits reported for a particular LLM provider/model pair."""
 
-    max_tokens: int | None = None
+    max_input_tokens: int | None = None
+    max_output_tokens: int | None = None
     supports_function_calling: bool = False
     supports_reasoning_effort: bool = False
     supports_prompt_cache: bool = False
     supports_stop_words: bool = True
+    supports_response_schema: bool = False
 
 
 FUNCTION_CALLING_PATTERNS: list[str] = [
     "claude-3-7-sonnet*",
     "claude-3.7-sonnet*",
-    "claude-sonnet-3-7-latest",
     "claude-3-5-sonnet*",
     "claude-3.5-haiku*",
-    "claude-3-5-haiku*",
     "claude-sonnet-4*",
-    "claude-opus-4*",
-    "claude-4.5-*",  # Claude 4.5 series (all variants)
-    "claude-4-5-*",  # Claude 4.5 series (hyphen format)
-    "claude-sonnet-4.5*",  # Claude Sonnet 4.5
-    "claude-haiku-4.5*",  # Claude Haiku 4.5
-    "claude-sonnet-4-5-*",  # Claude Sonnet 4.5 (dated format)
-    "claude-haiku-4-5-*",  # Claude Haiku 4.5 (dated format)
+    "claude-opus-4-1*",
     "gpt-4o*",
-    "gpt-4.1",
+    "gpt-4.1*",
     "gpt-5*",
-    "o1-2024-12-17",
-    "o3*",
-    "o4-mini*",
-    "gemini/gemini-1.5-*",  # All Gemini 1.5 models (flash, pro, etc)
-    "gemini/gemini-2.0-*",  # All Gemini 2.0 models (flash-exp, pro, etc)
-    "gemini/gemini-2.5-*",  # All Gemini 2.5 models (flash, pro, etc)
-    "gemini-2.5-pro*",
-    "gemini-2.5-flash*",
-    "kimi-k2-0711-preview",
-    "kimi-k2-instruct",
-    "qwen3-coder*",
-    "qwen3-coder-480b-a35b-instruct",
-    "deepseek-chat",
+    "o1-*",
+    "o3-*",
+    "o4-*",
+    "gemini/gemini-1.5-*",
+    "gemini/gemini-2.0-*",
+    "gemini-2.5-*",
+    "grok-*",
+    "kimi-k2*",
+    "qwen3*",
 ]
 REASONING_EFFORT_PATTERNS: list[str] = [
-    "o1-2024-12-17",
-    "o1",
-    "o3",
-    "o3-2025-04-16",
-    "o3-mini-2025-01-31",
-    "o3-mini",
-    "o4-mini",
-    "o4-mini-2025-04-16",
-    "gemini-2.5-flash",
-    "gemini-2.5-pro",
+    "o1-*",
+    "o3-*",
+    "o4-*",
+    "gemini-2.0-flash-thinking*",
+    "gemini-2.5-*",
     "gpt-5*",
-    "deepseek-r1-0528*",
+    "deepseek*",
 ]
 PROMPT_CACHE_PATTERNS: list[str] = [
     "claude-3-7-sonnet*",
-    "claude-3.7-sonnet*",
-    "claude-sonnet-3-7-latest",
-    "claude-3-5-sonnet*",
-    "claude-3-5-haiku*",
+    "claude-3.5-sonnet*",
     "claude-3.5-haiku*",
-    "claude-3-haiku-20240307",
-    "claude-3-opus-20240229",
+    "claude-3-haiku*",
+    "claude-3-opus*",
     "claude-sonnet-4*",
-    "claude-opus-4*",
 ]
 SUPPORTS_STOP_WORDS_FALSE_PATTERNS: list[str] = [
     "o1*",
-    "grok-4-0709",
-    "grok-4*",
-    "grok-code-fast-1*",
-    "deepseek-r1-0528*",
+    "xai/grok-4*",
+    "deepseek*",
 ]
+
+
+RESPONSE_SCHEMA_PATTERNS: list[str] = [
+    "gpt-4o*",
+    "gpt-4-turbo*",
+    "o1-*",
+    "o3-*",
+    "gemini/gemini-1.5-*",
+    "gemini/gemini-2.0-*",
+    "claude-3-7-sonnet*",
+    "claude-3.5-sonnet*",
+    "claude-3.5-haiku*",
+]
+
+
+def get_model_token_limits(model: str) -> tuple[int | None, int | None]:
+    """Get max input and output token limits for common models."""
+    name = normalize_model_name(model)
+    
+    if "gpt-4o" in name:
+        return 128000, 4096
+    if "gpt-4" in name:
+        return 8192, 4096
+    if "o1" in name or "o3" in name:
+        return 200000, 100000
+    if "claude-3-7" in name or "claude-3.7" in name:
+        return 200000, 64000
+    if "claude-3-5" in name:
+        return 200000, 8192
+    if "claude-sonnet-4" in name:
+        return 200000, 64000
+    if "gemini-1.5" in name:
+        return 1000000, 8192
+    if "gemini-2.0" in name:
+        return 1000000, 8192
+    if "deepseek" in name:
+        return 128000, 32768
+    if "grok" in name:
+        return 128000, 4096
+        
+    return None, None
 
 
 def get_features(model: str) -> ModelFeatures:
@@ -134,11 +154,13 @@ def get_features(model: str) -> ModelFeatures:
         ModelFeatures object with capability flags
 
     """
+    max_input, max_output = get_model_token_limits(model)
     return ModelFeatures(
+        max_input_tokens=max_input,
+        max_output_tokens=max_output,
         supports_function_calling=model_matches(model, FUNCTION_CALLING_PATTERNS),
         supports_reasoning_effort=model_matches(model, REASONING_EFFORT_PATTERNS),
         supports_prompt_cache=model_matches(model, PROMPT_CACHE_PATTERNS),
-        supports_stop_words=not model_matches(
-            model, SUPPORTS_STOP_WORDS_FALSE_PATTERNS
-        ),
+        supports_stop_words=not model_matches(model, SUPPORTS_STOP_WORDS_FALSE_PATTERNS),
+        supports_response_schema=model_matches(model, RESPONSE_SCHEMA_PATTERNS),
     )

@@ -87,54 +87,8 @@ class ProviderConfigurationManager:
         self._unknown_provider_config = self._create_unknown_provider_config()
 
     def _load_provider_configurations(self) -> Dict[str, ProviderConfig]:
-        """Load provider-specific configurations based on LiteLLM requirements."""
+        """Load provider-specific configurations for Forge agents."""
         configs: Dict[str, ProviderConfig] = {}
-
-        # Openhands (formerly Forge) - handles routing internally to multiple providers
-        configs["openhands"] = ProviderConfig(
-            name="openhands",
-            env_var="LLM_API_KEY",
-            requires_protocol=False,
-            supports_streaming=True,
-            required_params={"api_key", "model"},
-            optional_params={
-                "timeout",
-                "temperature",
-                "max_tokens",
-                "top_p",
-                "seed",
-                "drop_params",
-            },
-            forbidden_params={"base_url", "custom_llm_provider", "api_version"},
-            api_key_prefixes=["sk-"],  # Openhands uses sk- prefix
-            api_key_min_length=15,
-            handles_own_routing=True,
-            requires_custom_llm_provider=False,
-        )
-        # Legacy alias for backwards compatibility
-        configs["forge"] = configs["openhands"]
-
-        # OpenRouter - handles routing internally, very sensitive to extra params
-        configs["openrouter"] = ProviderConfig(
-            name="openrouter",
-            env_var="OPENROUTER_API_KEY",
-            requires_protocol=False,
-            supports_streaming=True,
-            required_params={"api_key", "model"},
-            optional_params={
-                "timeout",
-                "temperature",
-                "max_tokens",
-                "top_p",
-                "seed",
-                "drop_params",
-            },
-            forbidden_params={"base_url", "custom_llm_provider", "api_version"},
-            api_key_prefixes=["sk-or-"],
-            api_key_min_length=15,
-            handles_own_routing=True,
-            requires_custom_llm_provider=False,
-        )
 
         # OpenAI - supports custom base_url, standard parameters
         configs["openai"] = ProviderConfig(
@@ -199,17 +153,19 @@ class ProviderConfigurationManager:
             forbidden_params={
                 "custom_llm_provider",
                 "base_url",
-            },  # Let LiteLLM handle routing
+            },  # Let the SDK handle routing
             api_key_prefixes=["AIza"],
             api_key_min_length=20,
             handles_own_routing=True,
             requires_custom_llm_provider=False,
         )
+        # Alias for gemini
+        configs["gemini"] = configs["google"]
 
-        # Mistral - standard setup
-        configs["mistral"] = ProviderConfig(
-            name="mistral",
-            env_var="MISTRAL_API_KEY",
+        # xAI/Grok - standard setup
+        configs["xai"] = ProviderConfig(
+            name="xai",
+            env_var="XAI_API_KEY",
             requires_protocol=True,
             supports_streaming=True,
             required_params={"api_key", "model"},
@@ -222,187 +178,10 @@ class ProviderConfigurationManager:
                 "drop_params",
             },
             forbidden_params={"custom_llm_provider"},
-            api_key_prefixes=["mistral-"],
+            api_key_prefixes=["xai-"],
             api_key_min_length=20,
             handles_own_routing=False,
             requires_custom_llm_provider=False,
-        )
-
-        # Groq - standard setup
-        configs["groq"] = ProviderConfig(
-            name="groq",
-            env_var="GROQ_API_KEY",
-            requires_protocol=True,
-            supports_streaming=True,
-            required_params={"api_key", "model"},
-            optional_params={
-                "base_url",
-                "timeout",
-                "temperature",
-                "max_tokens",
-                "seed",
-                "drop_params",
-            },
-            forbidden_params={"custom_llm_provider"},
-            api_key_prefixes=["gsk_"],
-            api_key_min_length=20,
-            handles_own_routing=False,
-            requires_custom_llm_provider=False,
-        )
-
-        # Together AI
-        configs["together"] = ProviderConfig(
-            name="together",
-            env_var="TOGETHER_API_KEY",
-            requires_protocol=True,
-            supports_streaming=True,
-            required_params={"api_key", "model"},
-            optional_params={
-                "base_url",
-                "timeout",
-                "temperature",
-                "max_tokens",
-                "seed",
-                "drop_params",
-            },
-            forbidden_params={"custom_llm_provider"},
-            api_key_prefixes=["sk-"],
-            api_key_min_length=20,
-            handles_own_routing=False,
-            requires_custom_llm_provider=False,
-        )
-
-        # DeepInfra
-        configs["deepinfra"] = ProviderConfig(
-            name="deepinfra",
-            env_var="DEEPINFRA_API_KEY",
-            requires_protocol=True,
-            supports_streaming=True,
-            required_params={"api_key", "model"},
-            optional_params={
-                "base_url",
-                "timeout",
-                "temperature",
-                "max_tokens",
-                "seed",
-                "drop_params",
-            },
-            forbidden_params={"custom_llm_provider"},
-            api_key_prefixes=["r8_"],
-            api_key_min_length=20,
-            handles_own_routing=False,
-            requires_custom_llm_provider=False,
-        )
-
-        # Replicate
-        configs["replicate"] = ProviderConfig(
-            name="replicate",
-            env_var="REPLICATE_API_KEY",
-            requires_protocol=True,
-            supports_streaming=False,  # Replicate doesn't support streaming typically
-            required_params={"api_key", "model"},
-            optional_params={
-                "timeout",
-                "temperature",
-                "max_tokens",
-                "seed",
-                "drop_params",
-            },
-            forbidden_params={"base_url", "custom_llm_provider", "stream"},
-            api_key_prefixes=["r8_"],
-            api_key_min_length=20,
-            handles_own_routing=True,
-            requires_custom_llm_provider=False,
-        )
-
-        # Fireworks AI
-        configs["fireworks"] = ProviderConfig(
-            name="fireworks",
-            env_var="FIREWORKS_API_KEY",
-            requires_protocol=True,
-            supports_streaming=True,
-            required_params={"api_key", "model"},
-            optional_params={
-                "base_url",
-                "timeout",
-                "temperature",
-                "max_tokens",
-                "seed",
-                "drop_params",
-            },
-            forbidden_params={"custom_llm_provider"},
-            api_key_prefixes=["fk-"],
-            api_key_min_length=20,
-            handles_own_routing=False,
-            requires_custom_llm_provider=False,
-        )
-
-        # Perplexity
-        configs["perplexity"] = ProviderConfig(
-            name="perplexity",
-            env_var="PERPLEXITY_API_KEY",
-            requires_protocol=True,
-            supports_streaming=True,
-            required_params={"api_key", "model"},
-            optional_params={
-                "base_url",
-                "timeout",
-                "temperature",
-                "max_tokens",
-                "seed",
-                "drop_params",
-            },
-            forbidden_params={"custom_llm_provider"},
-            api_key_prefixes=["pplx-"],
-            api_key_min_length=20,
-            handles_own_routing=False,
-            requires_custom_llm_provider=False,
-        )
-
-        # Cohere
-        configs["cohere"] = ProviderConfig(
-            name="cohere",
-            env_var="COHERE_API_KEY",
-            requires_protocol=True,
-            supports_streaming=True,
-            required_params={"api_key", "model"},
-            optional_params={
-                "base_url",
-                "timeout",
-                "temperature",
-                "max_tokens",
-                "seed",
-                "drop_params",
-            },
-            forbidden_params={"custom_llm_provider"},
-            api_key_prefixes=["co-"],
-            api_key_min_length=20,
-            handles_own_routing=False,
-            requires_custom_llm_provider=False,
-        )
-
-        # Ollama - special case, often no API key needed
-        configs["ollama"] = ProviderConfig(
-            name="ollama",
-            env_var=None,
-            requires_protocol=True,
-            supports_streaming=True,
-            required_params={"base_url", "model"},  # base_url is critical for Ollama
-            optional_params={
-                "timeout",
-                "temperature",
-                "max_tokens",
-                "seed",
-                "drop_params",
-            },
-            forbidden_params={
-                "api_key",
-                "custom_llm_provider",
-            },  # API key usually not needed
-            api_key_prefixes=[],
-            api_key_min_length=0,
-            handles_own_routing=False,
-            requires_custom_llm_provider=True,  # Ollama often needs explicit provider
         )
 
         return configs

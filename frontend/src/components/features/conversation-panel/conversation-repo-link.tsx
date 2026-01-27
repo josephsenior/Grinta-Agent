@@ -1,4 +1,4 @@
-import { FaBitbucket, FaGithub, FaGitlab } from "react-icons/fa6";
+import { FaGithub } from "react-icons/fa6";
 import { RepositorySelection } from "#/api/forge.types";
 
 interface ConversationRepoLinkProps {
@@ -25,12 +25,6 @@ export function ConversationRepoLink({
     <div className="flex items-center gap-1">
       {selectedRepository.git_provider === "github" && (
         <FaGithub size={14} className="text-foreground-secondary" />
-      )}
-      {selectedRepository.git_provider === "gitlab" && (
-        <FaGitlab className="text-foreground-secondary" />
-      )}
-      {selectedRepository.git_provider === "bitbucket" && (
-        <FaBitbucket className="text-foreground-secondary" />
       )}
 
       <span

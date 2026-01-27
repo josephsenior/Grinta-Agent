@@ -1,5 +1,8 @@
 [core]
-workspace_base = "."
+# Runtime configuration: "local" (in-process, no subprocess/HTTP overhead)
+# For desktop app, use "local" for fastest startup and simplest architecture
+runtime = "local"  # In-process runtime - runs ActionExecutor directly without subprocess/HTTP
+# workspace_base = "."  # Removed to use Docker volumes instead of bind mounts
 # Persist trajectories for replay/analysis
 save_trajectory_path = "./trajectories"
 
@@ -96,11 +99,29 @@ max_output_tokens = 8192
 # ============================================================================
 # BETA LAUNCH: Simple CodeAct Agent Only
 # ============================================================================
-# Agent execution mode: "simple" for CodeAct only, "enterprise" for MetaSOP (disabled for beta)
+# Agent execution mode: "simple" for CodeAct only
 agent_mode = "simple"  # ✅ BETA: Focus on ONE reliable agent
 
 [agent]
 llm_config = 'llm'
+# CORE CODEACT TOOLS (Beta-Ready)
+enable_browsing = true                # ✅ Web browsing
+enable_llm_editor = false             # Use ultimate_editor instead
+enable_ultimate_editor = true         # ✅ YOUR MOAT: 45+ languages, structure-aware
+enable_editor = true                  # ✅ Basic str_replace_editor
+enable_cmd = true                     # ✅ execute_bash
+enable_think = true                   # ✅ Reasoning steps
+enable_finish = true                  # ✅ Task completion
+enable_history_truncation = true      # ✅ Memory management
+enable_condensation_request = false   # Keep full context for beta
+enable_prompt_extensions = true       # ✅ Microagents (react, testing, api)
+enable_mcp = true                     # ✅ MCP tools (shadcn, fetch, search)
+schema_version = "2025-11-14"
+# Autonomy settings for simple mode
+autonomy_level = "balanced"  # "supervised" | "balanced" | "full"
+auto_retry_on_error = true
+max_autonomous_iterations = 50
+enable_internal_task_tracker = true   # ✅ Internal progress tracking
 
 [runtime_pool]
 enabled = true
@@ -121,44 +142,15 @@ system_prompt_filename = "system_prompt_forge.j2"
 
 # Schema
 # ============================================================================
-schema_version = "2025-11-14"
-
-# Tools
-# ============================================================================
-# CORE CODEACT TOOLS (Beta-Ready)
-# ============================================================================
-enable_browsing = true                # ✅ Web browsing
-enable_llm_editor = false             # Use ultimate_editor instead
-enable_ultimate_editor = true         # ✅ YOUR MOAT: 45+ languages, structure-aware
-enable_editor = true                  # ✅ Basic str_replace_editor
-enable_jupyter = false                # ⚠️ BETA: Disabled (not core to coding tasks)
-enable_cmd = true                     # ✅ execute_bash
-enable_think = true                   # ✅ Reasoning steps
-enable_finish = true                  # ✅ Task completion
-enable_history_truncation = true      # ✅ Memory management
-enable_condensation_request = false   # Keep full context for beta
-enable_prompt_extensions = true       # ✅ Microagents (react, testing, api)
-enable_mcp = true                     # ✅ MCP tools (shadcn, fetch, search)
-
-# Autonomy settings for simple mode
-autonomy_level = "balanced"  # "supervised" | "balanced" | "full"
-auto_retry_on_error = true
-max_autonomous_iterations = 50
-enable_internal_task_tracker = true   # ✅ Internal progress tracking
 
 # ============================================================================
 # ADVANCED FEATURES (DISABLED for Beta - Enable Post-Launch)
 # ============================================================================
 # These are powerful but complex - wait for user feedback before enabling
-# enable_self_remediation = false       # ⚠️ BETA: Can cause loops, disable for now (moved to metasop settings)
-# enable_micro_iterations = false       # ⚠️ BETA: Complex iteration logic, disable (moved to metasop settings)
-# enable_parallel_execution = false   # ⚠️ BETA: Multi-agent coordination, post-beta
-# enable_metasop = false              # ⚠️ BETA: Advanced orchestration, post-beta
-# enable_causal_reasoning = false     # ⚠️ BETA: Predictive execution, post-beta
 stuck_detection_enabled = true
 stuck_threshold_iterations = 5
 
-# Memory System (must match [metasop] settings)
+# Memory System
 enable_vector_memory = true            # ✅ 92% accuracy semantic search
 enable_hybrid_retrieval = true         # ✅ Vector + BM25 + re-ranking
 
@@ -173,21 +165,8 @@ enable_hybrid_retrieval = true         # ✅ Vector + BM25 + re-ranking
 enable_auto_lint = true
 keep_runtime_alive = false
 use_host_network = false  # Windows Docker Desktop: use bridge network
-runtime_container_image = "forge-runtime:latest"
-
-[metasop]
-enabled = false
-default_sop = "feature_delivery_with_ui"
-token_budget_soft = 20000
-token_budget_hard = 50000
-metrics_prometheus_port = 9154
-enable_vector_memory = true
-enable_hybrid_retrieval = true
-enforce_capability_matrix = true
-enable_self_remediation = true
-enable_micro_iterations = false
-micro_iteration_max_loops = 5
-micro_iteration_no_change_limit = 2
+# runtime_container_image = "forge-runtime:latest"  # Commented out to allow auto-build from base image
+force_rebuild_runtime = true  # Force rebuild to include latest code changes
 
 # ============================================================================
 # RUNTIME PERFORMANCE OPTIMIZATION

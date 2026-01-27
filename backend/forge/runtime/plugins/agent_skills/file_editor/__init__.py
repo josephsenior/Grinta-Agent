@@ -1,22 +1,20 @@
-"""This file imports a global singleton of the `EditTool` class as well as raw functions that expose.
+"""File editor module - Production implementation.
 
-its __call__.
-
-The implementation of the `EditTool` class can be found at: https://github.com/All-Hands-AI/Forge-aci/.
+Provides file editing capabilities using the production-grade FileEditor.
 """
 
-try:
-    from forge_aci.editor import file_editor  # type: ignore[import-not-found]
+from forge.runtime.utils.file_editor import FileEditor
 
-    __all__ = ["file_editor"]
-except ImportError:
-    # forge_aci not installed - provide stub for testing
-    class FileEditorStub:
-        """Stub file editor for when forge_aci is not installed."""
+# Create a singleton instance for backward compatibility
+_file_editor_instance = FileEditor()
 
-        def __call__(self, *args, **kwargs):
-            """Simulate edit invocation and report that forge_aci is unavailable."""
-            return {"success": False, "error": "forge_aci not installed"}
 
-    file_editor = FileEditorStub()
-    __all__ = ["file_editor"]
+def file_editor(*args, **kwargs):
+    """File editor function interface (backward compatibility).
+
+    This function provides a callable interface to the FileEditor singleton.
+    """
+    return _file_editor_instance(*args, **kwargs)
+
+
+__all__ = ["file_editor", "FileEditor"]

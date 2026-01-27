@@ -1,24 +1,22 @@
 import { AxiosHeaders, AxiosError } from "axios";
 import {
-  Feedback,
-  FeedbackResponse,
-  GitHubAccessTokenResponse,
   GetConfigResponse,
-  GetVSCodeUrlResponse,
-  AuthenticateResponse,
   Conversation,
   ResultSet,
   GetTrajectoryResponse,
   GitChangeDiff,
   GitChange,
-  GetMicroagentsResponse,
-  GetMicroagentPromptResponse,
-  CreateMicroagent,
-  MicroagentContentResponse,
   FileUploadSuccessResponse,
   GetFilesResponse,
   GetFileResponse,
+  SuggestedTask,
+  CreateMicroagent,
+  GetMicroagentsResponse,
+  RepositoryMicroagent,
+  MicroagentContentResponse,
 } from "#/api/forge.types";
+import { ConversationStatus } from "#/types/conversation-status";
+import { RuntimeStatus } from "#/types/runtime-status";
 import { Forge } from "./forge-axios";
 import { ApiSettings, PostApiSettings, Provider } from "#/types/settings";
 import {
@@ -27,11 +25,7 @@ import {
   PaginatedBranchesResponse,
   Branch,
 } from "#/types/git";
-import { SuggestedTask } from "#/components/features/home/tasks/task.types";
 import { extractNextPageFromLink } from "#/utils/extract-next-page-from-link";
-import { RepositoryMicroagent } from "#/types/microagent-management";
-import { BatchFeedbackData } from "#/hooks/query/use-batch-feedback";
-import { SubscriptionAccess } from "#/types/billing";
 import { getAPIBase, CURRENT_API_VERSION } from "#/config/api-config";
 import { logger } from "#/utils/logger";
 
@@ -51,6 +45,26 @@ function safeErrorMessage(err: unknown): string {
     if (typeof msg === "string") return msg;
   }
   return "";
+}
+
+function normalizeConversation(conversation: Conversation): Conversation {
+  const statusRaw = conversation.status;
+  const status = (
+    typeof statusRaw === "string" ? statusRaw.toUpperCase() : statusRaw
+  ) as ConversationStatus;
+
+  const runtimeStatusRaw = conversation.runtime_status;
+  const runtimeStatus = (
+    typeof runtimeStatusRaw === "string"
+      ? runtimeStatusRaw.toUpperCase()
+      : runtimeStatusRaw
+  ) as RuntimeStatus | null;
+
+  return {
+    ...conversation,
+    status,
+    runtime_status: runtimeStatus,
+  };
 }
 
 class ForgeClient {
@@ -145,117 +159,12 @@ class ForgeClient {
   }
 
   /**
-   * Send feedback to the server
-   * @param data Feedback data
-   * @returns The stored feedback data
+   * Authenticate the user based on app mode
+   * @param appMode Current application mode
    */
-  static async submitFeedback(
-    conversationId: string,
-    feedback: Feedback,
-  ): Promise<FeedbackResponse> {
-    const url = `/api/conversations/${conversationId}/submit-feedback`;
-    const { data } = await Forge.post<FeedbackResponse>(url, feedback);
-    return data;
-  }
-
-  /**
-   * Submit conversation feedback with rating
-   * @param conversationId The conversation ID
-   * @param rating The rating (1-5)
-   * @param eventId Optional event ID this feedback corresponds to
-   * @param reason Optional reason for the rating
-   * @returns Response from the feedback endpoint
-   */
-  static async submitConversationFeedback(
-    conversationId: string,
-    rating: number,
-    eventId?: number,
-    reason?: string,
-  ): Promise<{ status: string; message: string }> {
-    const url = `/feedback/conversation`;
-    const payload = {
-      conversation_id: conversationId,
-      event_id: eventId,
-      rating,
-      reason,
-      metadata: { source: "likert-scale" },
-    };
-    const { data } = await Forge.post<{ status: string; message: string }>(
-      url,
-      payload,
-    );
-    return data;
-  }
-
-  /**
-   * Check if feedback exists for a specific conversation and event
-   * @param conversationId The conversation ID
-   * @param eventId The event ID to check
-   * @returns Feedback data including existence, rating, and reason
-   */
-  static async checkFeedbackExists(
-    conversationId: string,
-    eventId: number,
-  ): Promise<{ exists: boolean; rating?: number; reason?: string }> {
-    try {
-      const url = `/feedback/conversation/${conversationId}/${eventId}`;
-      const { data } = await Forge.get<{
-        exists: boolean;
-        rating?: number;
-        reason?: string;
-      }>(url);
-      return data;
-    } catch (error) {
-      // Error checking if feedback exists
-      return { exists: false };
-    }
-  }
-
-  /**
-   * Get feedback for multiple events in a conversation
-   * @param conversationId The conversation ID
-   * @returns Map of event IDs to feedback data including existence, rating, reason and metadata
-   */
-  static async getBatchFeedback(conversationId: string): Promise<
-    Record<
-      string,
-      {
-        exists: boolean;
-        rating?: number;
-        reason?: string;
-        metadata?: Record<string, BatchFeedbackData>;
-      }
-    >
-  > {
-    const url = `/feedback/conversation/${conversationId}/batch`;
-    const { data } = await Forge.get<
-      Record<
-        string,
-        {
-          exists: boolean;
-          rating?: number;
-          reason?: string;
-          metadata?: Record<string, BatchFeedbackData>;
-        }
-      >
-    >(url);
-
-    return data;
-  }
-
-  /**
-   * Authenticate with GitHub token
-   * @returns Response with authentication status and user info if successful
-   */
-  static async authenticate(
-    appMode: GetConfigResponse["APP_MODE"],
-  ): Promise<boolean> {
-    if (appMode === "oss") {
-      return true;
-    }
-
-    // Just make the request, if it succeeds (no exception thrown), return true
-    await Forge.post<AuthenticateResponse>(`${this.getBase()}/authenticate`);
+  static async authenticate(appMode: "oss" | "saas"): Promise<boolean> {
+    if (appMode === "oss") return true;
+    await Forge.post("/api/authenticate");
     return true;
   }
 
@@ -270,49 +179,6 @@ class ForgeClient {
       headers: this.getConversationHeaders(),
     });
     return response.data;
-  }
-
-  /**
-   * Get the web hosts
-   * @returns Array of web hosts
-   */
-  static async getWebHosts(conversationId: string): Promise<string[]> {
-    const url = `${this.getConversationUrl(conversationId)}/web-hosts`;
-    const response = await Forge.get(url, {
-      headers: this.getConversationHeaders(),
-    });
-    return Object.keys(response.data.hosts);
-  }
-
-  /**
-   * @param code Code provided by GitHub
-   * @returns GitHub access token
-   */
-  static async getGitHubAccessToken(
-    code: string,
-  ): Promise<GitHubAccessTokenResponse> {
-    const { data } = await Forge.post<GitHubAccessTokenResponse>(
-      `${this.getBase()}/keycloak/callback`,
-      {
-        code,
-      },
-    );
-    return data;
-  }
-
-  /**
-   * Get the VSCode URL
-   * @returns VSCode URL
-   */
-  static async getVSCodeUrl(
-    conversationId: string,
-  ): Promise<GetVSCodeUrlResponse> {
-    const baseUrl = this.getConversationUrl(conversationId);
-    const url = `${baseUrl}/vscode-url`;
-    const { data } = await Forge.get<GetVSCodeUrlResponse>(url, {
-      headers: this.getConversationHeaders(),
-    });
-    return data;
   }
 
   static async getRuntimeId(
@@ -339,7 +205,12 @@ class ForgeClient {
     const { data } = await Forge.get<ResultSet<Conversation>>(
       `/api/conversations?${params.toString()}`,
     );
-    return data;
+    return {
+      ...data,
+      results: Array.isArray(data.results)
+        ? data.results.map(normalizeConversation)
+        : data.results,
+    };
   }
 
   static async searchConversations(
@@ -361,7 +232,16 @@ class ForgeClient {
     const { data } = await Forge.get<ResultSet<Conversation>>(
       `/api/conversations?${params.toString()}`,
     );
-    return data.results;
+    return Array.isArray(data.results)
+      ? data.results.map(normalizeConversation)
+      : data.results;
+  }
+
+  static async getWebHosts(conversationId: string): Promise<string[]> {
+    const { data } = await Forge.get<{ hosts: string[] }>(
+      `/api/conversations/${conversationId}/web-hosts`,
+    );
+    return data.hosts;
   }
 
   static async deleteUserConversation(conversationId: string): Promise<void> {
@@ -375,7 +255,7 @@ class ForgeClient {
     suggested_task?: SuggestedTask,
     selected_branch?: string,
     conversationInstructions?: string,
-    createMicroagent?: CreateMicroagent,
+    create_microagent?: CreateMicroagent,
   ): Promise<Conversation> {
     // Build body, only including defined values to avoid sending undefined/null
     const body: Record<string, unknown> = {};
@@ -398,8 +278,8 @@ class ForgeClient {
     if (conversationInstructions !== undefined) {
       body.conversation_instructions = conversationInstructions;
     }
-    if (createMicroagent !== undefined) {
-      body.create_microagent = createMicroagent;
+    if (create_microagent !== undefined) {
+      body.create_microagent = create_microagent;
     }
 
     const { data } = await Forge.post<Conversation>(
@@ -407,7 +287,7 @@ class ForgeClient {
       body,
     );
 
-    return data;
+    return normalizeConversation(data);
   }
 
   static async getConversation(
@@ -417,19 +297,18 @@ class ForgeClient {
       `/api/conversations/${conversationId}`,
     );
 
-    return data;
+    return data ? normalizeConversation(data) : data;
   }
 
   static async startConversation(
     conversationId: string,
-    providers?: Provider[],
   ): Promise<Conversation | null> {
     const { data } = await Forge.post<Conversation | null>(
       `/api/conversations/${conversationId}/start`,
-      providers ? { providers_set: providers } : {},
+      {},
     );
 
-    return data;
+    return data ? normalizeConversation(data) : data;
   }
 
   static async stopConversation(
@@ -439,55 +318,16 @@ class ForgeClient {
       `/api/conversations/${conversationId}/stop`,
     );
 
-    return data;
+    return data ? normalizeConversation(data) : data;
   }
 
   /**
-   * Trigger a MetaSOP debug run for a conversation.
-   * Useful for validating that MetaSOP orchestration can be scheduled.
-   */
-  static async triggerMetaSopDebug(
-    conversationId: string,
-    message: string = "sop: validation run",
-  ): Promise<{ started: boolean; message?: string }> {
-    const url = `${this.getConversationUrl(conversationId)}/metasop-debug`;
-    const { data } = await Forge.post<{
-      started: boolean;
-      message?: string;
-    }>(url, { message }, { headers: this.getConversationHeaders() });
-    return data;
-  }
-
-  /**
-   * Send a raw text event to the conversation (POST /events/raw).
-   * Useful as a fallback when the dedicated metasop-debug helper fails.
-   */
-  static async sendRawEvent(
-    conversationId: string,
-    text: string,
-    create: boolean = false,
-  ): Promise<{ success: boolean; note?: string }> {
-    const url = `${this.getConversationUrl(conversationId)}/events/raw${create ? "?create=true" : ""}`;
-    // axios will set content-type for plain text when provided in headers
-    const { data } = await Forge.post<{ success: boolean; note?: string }>(
-      url,
-      text,
-      {
-        headers: {
-          "Content-Type": "text/plain",
-          ...this.getConversationHeaders(),
-        },
-      },
-    );
-    return data;
-  }
-
-  /**
-   * Get the settings from the server or use the default settings if not found
+   * Get the settings for the user
+   * @returns ApiSettings
    */
   static async getSettings(): Promise<ApiSettings> {
-    const { data } = await Forge.get<ApiSettings>(`${this.getBase()}/settings`);
-    return data;
+    const response = await Forge.get<ApiSettings>(`${this.getBase()}/settings`);
+    return response.data;
   }
 
   /**
@@ -499,37 +339,6 @@ class ForgeClient {
   ): Promise<boolean> {
     const data = await Forge.post(`${this.getBase()}/settings`, settings);
     return data.status === 200;
-  }
-
-  static async createCheckoutSession(amount: number): Promise<string> {
-    const { data } = await Forge.post(
-      `${this.getBase()}/billing/create-checkout-session`,
-      {
-        amount,
-      },
-    );
-    return data.redirect_url;
-  }
-
-  static async createBillingSessionResponse(): Promise<string> {
-    const { data } = await Forge.post(
-      `${this.getBase()}/billing/create-customer-setup-session`,
-    );
-    return data.redirect_url;
-  }
-
-  static async getBalance(): Promise<string> {
-    const { data } = await Forge.get<{ credits: string }>(
-      `${this.getBase()}/billing/credits`,
-    );
-    return data.credits;
-  }
-
-  static async getSubscriptionAccess(): Promise<SubscriptionAccess | null> {
-    const { data } = await Forge.get<SubscriptionAccess | null>(
-      `${this.getBase()}/billing/subscription-access`,
-    );
-    return data;
   }
 
   static async getGitUser(): Promise<GitUser> {
@@ -552,7 +361,7 @@ class ForgeClient {
   static async searchGitRepositories(
     query: string,
     per_page = 5,
-    selected_provider?: Provider,
+    selected_provider: Provider = "github",
   ): Promise<GitRepository[]> {
     const response = await Forge.get<GitRepository[]>(
       `${this.getBase()}/user/search/repositories`,
@@ -578,12 +387,43 @@ class ForgeClient {
     return data;
   }
 
-  static async logout(appMode: GetConfigResponse["APP_MODE"]): Promise<void> {
-    const endpoint =
-      appMode === "saas"
-        ? `${this.getBase()}/logout`
-        : `${this.getBase()}/unset-provider-tokens`;
-    await Forge.post(endpoint);
+  static async getMicroagents(
+    conversationId: string,
+  ): Promise<GetMicroagentsResponse> {
+    const url = `${this.getConversationUrl(conversationId)}/microagents`;
+    const { data } = await Forge.get<GetMicroagentsResponse>(url, {
+      headers: this.getConversationHeaders(),
+    });
+    return data;
+  }
+
+  static async getRepositoryMicroagents(
+    owner: string,
+    repo: string,
+  ): Promise<RepositoryMicroagent[]> {
+    const url = `${this.getBase()}/repository/${owner}/${repo}/microagents`;
+    const { data } = await Forge.get<RepositoryMicroagent[]>(url);
+    return data;
+  }
+
+  static async getRepositoryMicroagentContent(
+    owner: string,
+    repo: string,
+    filePath: string,
+  ): Promise<MicroagentContentResponse> {
+    const url = `${this.getBase()}/repository/${owner}/${repo}/microagents/content`;
+    const { data } = await Forge.get<MicroagentContentResponse>(url, {
+      params: { file_path: filePath },
+    });
+    return data;
+  }
+
+  static async logout(appMode: "saas" | "oss" = "oss"): Promise<void> {
+    if (appMode === "saas") {
+      await Forge.post(`${this.getBase()}/logout`);
+    } else {
+      await Forge.post(`${this.getBase()}/unset-provider-tokens`);
+    }
   }
 
   static async getGitChanges(conversationId: string): Promise<GitChange[]> {
@@ -610,7 +450,7 @@ class ForgeClient {
    * @returns A list of repositories
    */
   static async retrieveUserGitRepositories(
-    selected_provider: Provider,
+    provider: Provider,
     page = 1,
     per_page = 30,
   ) {
@@ -618,7 +458,7 @@ class ForgeClient {
       `${this.getBase()}/user/repositories`,
       {
         params: {
-          selected_provider,
+          selected_provider: provider,
           sort: "pushed",
           page,
           per_page,
@@ -634,7 +474,7 @@ class ForgeClient {
   }
 
   static async retrieveInstallationRepositories(
-    selected_provider: Provider,
+    provider: Provider,
     installationIndex: number,
     installations: string[],
     page = 1,
@@ -645,7 +485,7 @@ class ForgeClient {
       `${this.getBase()}/user/repositories`,
       {
         params: {
-          selected_provider,
+          selected_provider: provider,
           sort: "pushed",
           page,
           per_page,
@@ -689,83 +529,19 @@ class ForgeClient {
     repository: string,
     query: string,
     perPage: number = 30,
-    selectedProvider?: Provider,
+    selected_provider: Provider = "github",
   ): Promise<Branch[]> {
     const { data } = await Forge.get<Branch[]>(`/api/user/search/branches`, {
       params: {
         repository,
         query,
         per_page: perPage,
-        selected_provider: selectedProvider,
+        selected_provider,
       },
     });
     return data;
   }
 
-  /**
-   * Get the available microagents associated with a conversation
-   * @param conversationId The ID of the conversation
-   * @returns The available microagents associated with the conversation
-   */
-  static async getMicroagents(
-    conversationId: string,
-  ): Promise<GetMicroagentsResponse> {
-    const url = `${this.getConversationUrl(conversationId)}/microagents`;
-    const { data } = await Forge.get<GetMicroagentsResponse>(url, {
-      headers: this.getConversationHeaders(),
-    });
-    return data;
-  }
-
-  /**
-   * Get the available microagents for a repository
-   * @param owner The repository owner
-   * @param repo The repository name
-   * @returns The available microagents for the repository
-   */
-  static async getRepositoryMicroagents(
-    owner: string,
-    repo: string,
-  ): Promise<RepositoryMicroagent[]> {
-    const { data } = await Forge.get<RepositoryMicroagent[]>(
-      `/api/user/repository/${owner}/${repo}/microagents`,
-    );
-    return data;
-  }
-
-  /**
-   * Get the content of a specific microagent from a repository
-   * @param owner The repository owner
-   * @param repo The repository name
-   * @param filePath The path to the microagent file within the repository
-   * @returns The microagent content and metadata
-   */
-  static async getRepositoryMicroagentContent(
-    owner: string,
-    repo: string,
-    filePath: string,
-  ): Promise<MicroagentContentResponse> {
-    const { data } = await Forge.get<MicroagentContentResponse>(
-      `/api/user/repository/${owner}/${repo}/microagents/content`,
-      {
-        params: { file_path: filePath },
-      },
-    );
-    return data;
-  }
-
-  static async getMicroagentPrompt(
-    conversationId: string,
-    eventId: number,
-  ): Promise<string> {
-    const url = `${this.getConversationUrl(conversationId)}/remember-prompt`;
-    const { data } = await Forge.get<GetMicroagentPromptResponse>(url, {
-      params: { event_id: eventId },
-      headers: this.getConversationHeaders(),
-    });
-
-    return data.prompt;
-  }
 
   static async updateConversation(
     conversationId: string,
@@ -806,14 +582,39 @@ class ForgeClient {
         return data;
       } catch (err: unknown) {
         const errorMsg = safeErrorMessage(err);
-
-        // 503 = Runtime container is permanently dead/crashed - don't retry
         const axiosError = err as AxiosError;
-        if (axiosError?.response?.status === 503) {
-          logger.error(
-            "❌ Runtime container permanently unavailable:",
-            errorMsg,
-          );
+        const errorData = axiosError?.response?.data as
+          | { error_code?: string }
+          | undefined;
+        const errorCode = errorData?.error_code;
+
+        // 503 with RUNTIME_NOT_READY = Runtime is still starting up - retry
+        if (
+          axiosError?.response?.status === 503 &&
+          errorCode === "RUNTIME_NOT_READY"
+        ) {
+          if (attempt < maxRetries) {
+            logger.debug(
+              `Runtime not ready yet, retrying file list (${attempt}/${maxRetries})...`,
+            );
+            const currentAttempt = attempt;
+            // eslint-disable-next-line no-await-in-loop
+            await new Promise<void>((resolve) => {
+              setTimeout(() => {
+                resolve();
+              }, retryDelayMs * currentAttempt);
+            });
+            attempt += 1;
+          } else {
+            // After all retries, return empty array instead of throwing
+            logger.warn(
+              "Runtime not ready after retries, returning empty file list",
+            );
+            return [];
+          }
+        } else if (axiosError?.response?.status === 503) {
+          // 503 = Runtime is permanently unavailable (crashed, not starting)
+          logger.error("❌ Runtime unavailable (503):", errorMsg);
           // Mark agent as errored so UI can recover
           // eslint-disable-next-line no-await-in-loop
           const { setCurrentAgentState } = await import("#/state/agent-slice");
@@ -823,32 +624,32 @@ class ForgeClient {
           const { AgentState } = await import("#/types/agent-state");
           store.dispatch(setCurrentAgentState(AgentState.ERROR));
           throw new Error(
-            "Runtime container unavailable. Please start a new conversation.",
+            "Runtime unavailable. The runtime may be starting up or has encountered an error. Please try again or start a new conversation.",
           );
-        }
-
-        // Retryable errors (500) - retry with exponential backoff
-        const isRuntimeUnavailable =
-          errorMsg.includes("Runtime unavailable") ||
-          errorMsg.includes("Connection refused") ||
-          axiosError?.response?.status === 500;
-
-        if (isRuntimeUnavailable && attempt < maxRetries) {
-          logger.warn(
-            `Runtime temporarily unavailable, retrying file list (${attempt}/${maxRetries})...`,
-          );
-          // Capture attempt value to avoid unsafe loop reference
-          const currentAttempt = attempt;
-          // eslint-disable-next-line no-await-in-loop
-          await new Promise<void>((resolve) => {
-            setTimeout(() => {
-              resolve();
-            }, retryDelayMs * currentAttempt);
-          }); // Exponential backoff
-          attempt += 1;
         } else {
-          // Final attempt failed
-          throw err;
+          // Retryable errors (500) - retry with exponential backoff
+          const isRuntimeUnavailable =
+            errorMsg.includes("Runtime unavailable") ||
+            errorMsg.includes("Connection refused") ||
+            axiosError?.response?.status === 500;
+
+          if (isRuntimeUnavailable && attempt < maxRetries) {
+            logger.warn(
+              `Runtime temporarily unavailable, retrying file list (${attempt}/${maxRetries})...`,
+            );
+            // Capture attempt value to avoid unsafe loop reference
+            const currentAttempt = attempt;
+            // eslint-disable-next-line no-await-in-loop
+            await new Promise<void>((resolve) => {
+              setTimeout(() => {
+                resolve();
+              }, retryDelayMs * currentAttempt);
+            }); // Exponential backoff
+            attempt += 1;
+          } else {
+            // Final attempt failed
+            throw err;
+          }
         }
       }
     }
@@ -999,7 +800,71 @@ class ForgeClient {
       `${this.getBase()}/microagent-management/conversations`,
       { params },
     );
-    return data.results;
+    return Array.isArray(data.results)
+      ? data.results.map(normalizeConversation)
+      : data.results;
+  }
+
+  /**
+   * Check if feedback exists for a specific message
+   * @param conversationId ID of the conversation
+   * @param index Index of the message
+   * @returns Whether feedback exists
+   */
+  static async checkFeedbackExists(
+    conversationId: string,
+    index: number,
+  ): Promise<{ exists: boolean }> {
+    try {
+      const response = await Forge.get<{ exists: boolean }>(
+        `${this.getConversationUrl(conversationId)}/feedback/exists`,
+        { params: { index } },
+      );
+      return response.data;
+    } catch (err) {
+      return { exists: false };
+    }
+  }
+
+  /**
+   * Submit feedback for a specific message
+   * @param conversationId ID of the conversation
+   * @param feedback Feedback data
+   */
+  static async submitFeedback(
+    conversationId: string,
+    feedback: any,
+  ): Promise<any> {
+    const response = await Forge.post(
+      `${this.getConversationUrl(conversationId)}/submit-feedback`,
+      feedback,
+    );
+    return response.data;
+  }
+
+  /**
+   * Submit feedback for the entire conversation
+   * @param conversationId ID of the conversation
+   * @param rating Rating value
+   */
+  static async submitConversationFeedback(
+    conversationId: string,
+    rating: number,
+  ): Promise<any> {
+    const response = await Forge.post("/feedback/conversation", {
+      rating,
+      metadata: { source: "likert-scale" },
+      conversation_id: conversationId,
+    });
+    return response.data;
+  }
+
+  /**
+   * Get subscription access details
+   */
+  static async getSubscriptionAccess(): Promise<any> {
+    const { data } = await Forge.get("/api/billing/subscription-access");
+    return data;
   }
 }
 

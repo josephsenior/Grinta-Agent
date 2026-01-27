@@ -26,7 +26,7 @@ export function TerminalSnippet({
   if (variant === "inline") {
     return (
       <div className="inline-flex items-center gap-3">
-        <div className="rounded-md bg-[#0b0b0c] border border-border px-3 py-2">
+        <div className="rounded-md bg-background-primary border border-border px-3 py-2">
           <code className="font-mono text-sm text-foreground">{text}</code>
         </div>
         <button
@@ -44,8 +44,8 @@ export function TerminalSnippet({
   }
 
   return (
-    <div className="mt-2 w-full max-w-[60vw] bg-[#0b0b0c] border border-border rounded-md shadow-lg">
-      <div className="px-3 py-2 border-b border-border text-xs text-stone-400 flex items-center justify-between">
+    <div className="mt-2 w-full max-w-[60vw] bg-background-primary border border-border rounded-md shadow-lg">
+      <div className="px-3 py-2 border-b border-border text-xs text-foreground-secondary flex items-center justify-between">
         <span className="font-mono">
           {t("COMMON$COMMAND", { defaultValue: "Command" })}
         </span>
@@ -73,7 +73,7 @@ export function TerminalSnippet({
 
       <div className="px-2 py-2">
         <div className="mb-2 last:mb-0 flex items-center gap-3">
-          <div className="w-1 bg-[#2b2b2b] rounded-full h-full" />
+          <div className="w-1 bg-border rounded-full h-full" />
           <div className="flex-1">
             <div className="relative bg-transparent">
               <pre className="whitespace-pre-wrap font-mono text-sm text-foreground bg-transparent m-0 p-3 rounded-md overflow-x-auto">
@@ -81,7 +81,9 @@ export function TerminalSnippet({
               </pre>
               <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
                 <span
-                  className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs ${status === "success" ? "bg-green-600" : "bg-rose-600"}`}
+                  className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs ${
+                    status === "success" ? "bg-success-400" : "bg-danger-400"
+                  }`}
                 >
                   {status === "success" ? "✓" : "!"}
                 </span>

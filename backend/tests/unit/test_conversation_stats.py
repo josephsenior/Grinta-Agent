@@ -147,7 +147,7 @@ def test_register_llm_with_new_service(conversation_stats):
         retry_min_wait=1,
         retry_max_wait=2,
     )
-    with patch("forge.llm.llm.litellm_completion"):
+    with patch("forge.llm.llm.get_direct_client"):
         llm = LLM(service_id="new-service", config=llm_config)
         service_id = "new-service"
         event = RegistryEvent(llm=llm, service_id=service_id)
@@ -169,7 +169,7 @@ def test_register_llm_with_restored_metrics(conversation_stats):
         retry_min_wait=1,
         retry_max_wait=2,
     )
-    with patch("forge.llm.llm.litellm_completion"):
+    with patch("forge.llm.llm.get_direct_client"):
         llm = LLM(service_id=service_id, config=llm_config)
         event = RegistryEvent(llm=llm, service_id=service_id)
         conversation_stats.register_llm(event)
@@ -298,7 +298,7 @@ def test_register_llm_with_multiple_restored_services_bug(conversation_stats):
         retry_min_wait=1,
         retry_max_wait=2,
     )
-    with patch("forge.llm.llm.litellm_completion"):
+    with patch("forge.llm.llm.get_direct_client"):
         llm_1 = LLM(service_id=service_id_1, config=llm_config_1)
         event_1 = RegistryEvent(llm=llm_1, service_id=service_id_1)
         conversation_stats.register_llm(event_1)
@@ -352,7 +352,7 @@ def test_save_and_restore_workflow(mock_file_store):
         retry_min_wait=1,
         retry_max_wait=2,
     )
-    with patch("forge.llm.llm.litellm_completion"):
+    with patch("forge.llm.llm.get_direct_client"):
         llm = LLM(service_id=service_id, config=llm_config)
         event = RegistryEvent(llm=llm, service_id=service_id)
         stats2.register_llm(event)
@@ -484,7 +484,7 @@ def _register_llm_service(stats, service_a):
         retry_min_wait=1,
         retry_max_wait=2,
     )
-    with patch("forge.llm.llm.litellm_completion"):
+    with patch("forge.llm.llm.get_direct_client"):
         llm_a = LLM(service_id=service_a, config=llm_config)
         event_a = RegistryEvent(llm=llm_a, service_id=service_a)
         stats.register_llm(event_a)

@@ -31,7 +31,7 @@ from forge.core.config.agent_config import AgentConfig
 
 # Condenser configs imported lazily to avoid circular dependencies
 from forge.core.config.extended_config import ExtendedConfig
-from forge.core.config.kubernetes_config import KubernetesConfig
+# from forge.core.config.kubernetes_config import KubernetesConfig
 from forge.core.config.mcp_config import MCPConfig
 from forge.core.config.forge_config import ForgeConfig
 from forge.core.config.sandbox_config import SandboxConfig
@@ -298,11 +298,17 @@ def load_from_env(
     _set_attr_from_env(default_llm_config, env_dict, "LLM_")
 
     if "LLM_API_KEY" in env_dict:
-        from forge.core.config.llm_config import LLMConfig
+        from forge.core.config.llm_config import LLMConfig, suppress_llm_env_export
 
         updated_data = default_llm_config.model_dump()
+        # Ensure we don't use masked secret values from model_dump
+        if isinstance(default_llm_config.api_key, SecretStr):
+            updated_data["api_key"] = default_llm_config.api_key.get_secret_value()
+
         updated_data["api_key"] = env_dict["LLM_API_KEY"]
-        cfg.set_llm_config(LLMConfig.model_validate(updated_data))
+        with suppress_llm_env_export():
+            new_config = LLMConfig.model_validate(updated_data)
+        cfg.set_llm_config(new_config)
     else:
         cfg.set_llm_config(default_llm_config)
     _set_attr_from_env(cfg.get_agent_config(), env_dict, "AGENT_")
@@ -473,26 +479,6 @@ def _process_mcp_section(
             raise ValueError(msg) from err
 
 
-def _process_kubernetes_section(
-    toml_config: dict, cfg: ForgeConfig, summary: ConfigLoadSummary | None = None
-) -> None:
-    """Process the [kubernetes] section of the TOML config."""
-    if "kubernetes" in toml_config:
-        try:
-            kubernetes_mapping = KubernetesConfig.from_toml_section(
-                toml_config["kubernetes"]
-            )
-            if "kubernetes" in kubernetes_mapping:
-                cfg.kubernetes = kubernetes_mapping["kubernetes"]
-        except (TypeError, KeyError, ValidationError) as e:
-            logger.FORGE_logger.warning(
-                "Cannot parse [kubernetes] config from toml, values have not been applied.\nError: %s",
-                e,
-            )
-            if summary:
-                summary.record("kubernetes", "invalid", str(e))
-
-
 def _process_condenser_section(
     toml_config: dict, cfg: ForgeConfig, summary: ConfigLoadSummary | None = None
 ) -> None:
@@ -548,43 +534,17 @@ def _process_extended_section(
                 summary.record("extended", "invalid", str(e))
 
 
-def _process_metasop_section(
-    toml_config: dict, cfg: ForgeConfig, summary: ConfigLoadSummary | None = None
-) -> None:
-    """Process the [metasop] section of the TOML config."""
-    if "metasop" in toml_config:
-        try:
-            from forge.core.pydantic_compat import model_dump_with_options
-
-            current_ext = (
-                model_dump_with_options(cfg.extended)
-                if isinstance(cfg.extended, ExtendedConfig)
-                else {}
-            )
-            current_ext["metasop"] = toml_config["metasop"]
-            cfg.extended = ExtendedConfig(current_ext)
-        except Exception as e:
-            logger.FORGE_logger.warning(
-                "Cannot parse [metasop] config from toml into extended settings.\nError: %s",
-                e,
-            )
-            if summary:
-                summary.record("metasop", "invalid", str(e))
-
-
 def _check_unknown_sections(toml_config: dict, toml_file: str) -> None:
     """Check for unknown sections in the TOML config."""
     known_sections = {
         "core",
         "extended",
-        "metasop",
         "agent",
         "llm",
         "security",
         "sandbox",
         "condenser",
         "mcp",
-        "kubernetes",
     }
     for key in toml_config:
         if key.lower() not in known_sections:
@@ -630,10 +590,8 @@ def load_from_toml(cfg: ForgeConfig, toml_file: str = "config.toml") -> None:
         _process_security_section(toml_config, cfg, summary)
         _process_sandbox_section(toml_config, cfg, summary)
         _process_mcp_section(toml_config, cfg, summary)
-        _process_kubernetes_section(toml_config, cfg, summary)
         _process_condenser_section(toml_config, cfg, summary)
         _process_extended_section(toml_config, cfg, summary)
-        _process_metasop_section(toml_config, cfg, summary)
         _check_unknown_sections(toml_config, toml_file)
     finally:
         summary.emit()
@@ -657,127 +615,17 @@ def get_or_create_jwt_secret(file_store: FileStore) -> str:
         return new_secret
 
 
-def _handle_sandbox_volumes(cfg) -> None:
-    """Handle sandbox volume configuration and workspace paths.
-
-    Args:
-        cfg: ForgeConfig object to update with workspace mount paths.
-
-    """
-    if not cfg.sandbox.volumes:
-        logger.FORGE_logger.debug(
-            "No sandbox volumes configured. Preserving existing workspace mount settings."
-        )
-        return
-    mounts = cfg.sandbox.volumes.split(",")
-    workspace_mount_found = False
-    for mount in mounts:
-        parts = mount.split(":")
-        if len(parts) >= 2 and parts[1] == "/workspace":
-            workspace_mount_found = True
-            host_path_raw = parts[0]
-            host_path_abs = os.path.abspath(host_path_raw)
-            if host_path_raw.startswith("/"):
-                logical_host = _to_posix_workspace_path(host_path_raw)
-            else:
-                logical_host = _to_posix_workspace_path(host_path_abs)
-            cfg.workspace_mount_path = logical_host
-            cfg.workspace_mount_path_in_sandbox = "/workspace"
-            cfg.workspace_base = logical_host
-            break
-    if not workspace_mount_found:
-        logger.FORGE_logger.debug(
-            "No explicit /workspace mount found in SANDBOX_VOLUMES. Using default workspace path in sandbox.",
-        )
-        cfg.workspace_mount_path = None
-        cfg.workspace_base = None
-    for mount in mounts:
-        parts = mount.split(":")
-        if len(parts) < 2 or len(parts) > 3:
-            msg = f"Invalid mount format in sandbox.volumes: {mount}. Expected format: 'host_path:container_path[:mode]', e.g. '/my/host/dir:/workspace:rw'"
-            raise ValueError(
-                msg,
-            )
-
-
 def finalize_config(cfg: ForgeConfig) -> None:
     """More tweaks to the config after it's been loaded."""
-    _handle_deprecated_workspace_vars(cfg)
-    _handle_sandbox_volumes(cfg)
     _configure_llm_logging(cfg)
-    _handle_macos_host_network_warning(cfg)
     _ensure_cache_directory(cfg)
     _configure_jwt_secret(cfg)
-    _configure_cli_runtime_agents(cfg)
-
-
-def _handle_deprecated_workspace_vars(cfg: ForgeConfig) -> None:
-    """Handle deprecated workspace environment variables."""
-
-    _maybe_warn_deprecated_env(cfg)
-    if cfg.workspace_base:
-        _normalize_workspace_base(cfg)
-    elif cfg.workspace_mount_path:
-        cfg.workspace_mount_path = _to_posix_workspace_path(cfg.workspace_mount_path)
-
-
-def _maybe_warn_deprecated_env(cfg: ForgeConfig) -> None:
-    workspace_env_set = bool(
-        os.getenv("WORKSPACE_BASE") or os.getenv("WORKSPACE_MOUNT_PATH")
-    )
-    if workspace_env_set and (
-        cfg.workspace_base is not None or cfg.workspace_mount_path is not None
-    ):
-        logger.FORGE_logger.warning(
-            "DEPRECATED: The WORKSPACE_BASE and WORKSPACE_MOUNT_PATH environment variables are deprecated. "
-            "Please use SANDBOX_VOLUMES instead, e.g. 'SANDBOX_VOLUMES=/my/host/dir:/workspace:rw'"
-        )
-
-
-def _normalize_workspace_base(cfg: ForgeConfig) -> None:
-    base_path = cfg.workspace_base
-    if base_path is None:
-        return
-    base_path_abs = os.path.abspath(base_path)
-    cfg.workspace_base = base_path_abs
-    rewrite = cfg.workspace_mount_rewrite
-    if rewrite:
-        container_path = _rewrite_workspace_mount(rewrite, base_path_abs)
-        cfg.workspace_mount_path = _to_posix_workspace_path(container_path)
-        cfg.workspace_mount_path_in_sandbox = cfg.workspace_mount_path
-        return
-    cfg.workspace_mount_path = base_path_abs
-
-
-def _rewrite_workspace_mount(rewrite: str, base_path_abs: str) -> str:
-    try:
-        host_prefix, container_prefix = rewrite.split(":", 1)
-    except ValueError:
-        logger.FORGE_logger.warning(
-            "Invalid workspace_mount_rewrite value '%s'. Expected format '<host_prefix>:<container_prefix>'.",
-            rewrite,
-        )
-        return base_path_abs
-
-    normalized_host_prefix = os.path.abspath(host_prefix) if host_prefix else ""
-    if normalized_host_prefix and base_path_abs.startswith(normalized_host_prefix):
-        relative_tail = base_path_abs[len(normalized_host_prefix) :].lstrip("\\/")
-        return os.path.join(container_prefix or "", relative_tail)
-    return container_prefix or base_path_abs
 
 
 def _configure_llm_logging(cfg: ForgeConfig) -> None:
     """Configure LLM logging paths."""
     for llm in cfg.llms.values():
         llm.log_completions_folder = os.path.abspath(llm.log_completions_folder)
-
-
-def _handle_macos_host_network_warning(cfg: ForgeConfig) -> None:
-    """Handle macOS host network warning."""
-    if cfg.sandbox.use_host_network and platform.system() == "Darwin":
-        logger.FORGE_logger.warning(
-            "Please upgrade to Docker Desktop 4.29.0 or later to use host network mode on macOS. See https://github.com/docker/roadmap/issues/238#issuecomment-2044688144 for more information.",
-        )
 
 
 def _ensure_cache_directory(cfg: ForgeConfig) -> None:
@@ -793,31 +641,6 @@ def _configure_jwt_secret(cfg: ForgeConfig) -> None:
             get_or_create_jwt_secret(
                 get_file_store(cfg.file_store, cfg.file_store_path)
             )
-        )
-
-
-def _configure_cli_runtime_agents(cfg: ForgeConfig) -> None:
-    """Configure agents for CLI runtime."""
-    runtime = (cfg.runtime or "").lower()
-    if runtime == "cli":
-        for agent_config in cfg.agents.values():
-            if agent_config.enable_jupyter:
-                agent_config.enable_jupyter = False
-            if agent_config.enable_browsing:
-                agent_config.enable_browsing = False
-        logger.FORGE_logger.debug(
-            "Automatically disabled Jupyter plugin and browsing for all agents because CLIRuntime is selected and does not support IPython execution.",
-        )
-    else:
-        for agent_config in cfg.agents.values():
-            # Default to disabled unless explicitly enabled in configuration.
-            if "enable_jupyter" not in agent_config.model_fields_set:
-                agent_config.enable_jupyter = False
-            if "enable_browsing" not in agent_config.model_fields_set:
-                agent_config.enable_browsing = False
-        logger.FORGE_logger.debug(
-            "Configured agent Jupyter/browsing defaults for runtime=%s (explicit overrides preserved).",
-            cfg.runtime,
         )
 
 
@@ -1141,7 +964,6 @@ def load_FORGE_config(
     """
     # Rebuild models to resolve forward references before instantiation
     # Rebuild in dependency order: base configs first, then dependent configs
-    from forge.core.config.cli_config import CLIConfig
     from forge.core.config.permissions_config import PermissionsConfig
     from forge.security.safety_config import SafetyConfig
 
@@ -1150,8 +972,7 @@ def load_FORGE_config(
     SandboxConfig.model_rebuild()
     SecurityConfig.model_rebuild()
     ExtendedConfig.model_rebuild()
-    KubernetesConfig.model_rebuild()
-    CLIConfig.model_rebuild()
+    # KubernetesConfig.model_rebuild()
     MCPConfig.model_rebuild()
     PermissionsConfig.model_rebuild()
     SafetyConfig.model_rebuild()
@@ -1283,8 +1104,6 @@ def _apply_additional_overrides(config: ForgeConfig, args: argparse.Namespace) -
         config.max_iterations = args.max_iterations
     if hasattr(args, "max_budget_per_task") and args.max_budget_per_task is not None:
         config.max_budget_per_task = args.max_budget_per_task
-    if hasattr(args, "selected_repo") and args.selected_repo is not None:
-        config.sandbox.selected_repo = args.selected_repo
 
 
 def setup_config_from_args(args: argparse.Namespace) -> ForgeConfig:

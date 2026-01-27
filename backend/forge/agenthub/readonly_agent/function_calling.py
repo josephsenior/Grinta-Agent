@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 import shlex
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from forge.agenthub.codeact_agent.function_calling import combine_thought
 from forge.agenthub.codeact_agent.tools import FinishTool, ThinkTool
@@ -30,7 +30,8 @@ from forge.events.event import FileReadSource
 from forge.events.tool import ToolCallMetadata, build_tool_call_metadata
 
 if TYPE_CHECKING:
-    from litellm import ChatCompletionToolParam, ModelResponse
+    ChatCompletionToolParam = Any
+    ModelResponse = Any
 
 
 def grep_to_cmdrun(
@@ -112,7 +113,7 @@ def _create_view_action(arguments: dict) -> Action:
         )
     return FileReadAction(
         path=arguments["path"],
-        impl_source=FileReadSource.OH_ACI,
+        impl_source=FileReadSource.FILE_EDITOR,
         view_range=arguments.get("view_range"),
     )
 

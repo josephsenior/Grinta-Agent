@@ -1,16 +1,15 @@
 """Database tools for CodeAct agent.
 
-Constructed via compatibility helper so import-time remains resilient when
-`litellm` is stubbed in tests.
+Constructed via compatibility helper to ensure consistent tool parameter formatting.
 """
 
-from litellm import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from typing import Any
 from ._compat import build_tool_param
+
+ChatCompletionToolParam = Any
 
 # Tool for connecting to databases using environment variables
 DatabaseConnectTool = build_tool_param(
-    ChatCompletionToolParam,
-    ChatCompletionToolParamFunctionChunk,
     name="database_connect",
     description="""Connect to a database using credentials from environment variables.
 
@@ -46,8 +45,6 @@ The connection is established in the sandbox environment, so credentials never l
 
 # Tool for fetching database schema
 DatabaseSchemaTool = build_tool_param(
-    ChatCompletionToolParam,
-    ChatCompletionToolParamFunctionChunk,
     name="database_schema",
     description="""Fetch the schema of a database connection.
 
@@ -75,8 +72,6 @@ This helps understand the database structure before writing queries.""",
 
 # Tool for executing database queries
 DatabaseQueryTool = build_tool_param(
-    ChatCompletionToolParam,
-    ChatCompletionToolParamFunctionChunk,
     name="database_query",
     description="""Execute a query against a database connection.
 

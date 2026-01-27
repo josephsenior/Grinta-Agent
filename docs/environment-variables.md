@@ -61,6 +61,11 @@ USER_STORAGE_TYPE=database  # or "file" for development
 | `JWT_ALGORITHM` | No | `HS256` | JWT algorithm |
 | `JWT_EXPIRATION_HOURS` | No | `24` | JWT token expiration (hours) |
 
+> **Local Docker note:** `docker-compose.yml` enables authentication by default
+> (`AUTH_ENABLED=true`) and seeds a development secret (`JWT_SECRET=dev-secret`)
+> so routes like `/api/profile` can read the logged-in user. Override these
+> values via environment variables if you need different credentials.
+
 ### Rate Limiting & Quotas
 
 | Variable | Required | Default | Description |

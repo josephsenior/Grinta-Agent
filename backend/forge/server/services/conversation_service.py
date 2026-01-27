@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, Sequence
 from forge.core.config.api_key_manager import api_key_manager
 from forge.core.logger import forge_logger as logger
 from forge.events.action.message import MessageAction
-from forge.experiments.experiment_manager import ExperimentManagerImpl
 from forge.integrations.provider import (
     CUSTOM_SECRETS_TYPE_WITH_JSON_SCHEMA,
     PROVIDER_TOKEN_TYPE,
@@ -90,55 +89,6 @@ async def initialize_conversation(
     except Exception:
         pass
     return None
-
-
-def _validate_api_key_for_model(settings: Any, model_name: str) -> None:
-    """Validate API key requirements for the given model.
-
-    Args:
-        settings: User settings containing API key
-        model_name: Name of the LLM model
-
-    Raises:
-        LLMAuthenticationError: If API key validation fails
-
-    """
-    is_bedrock_model = model_name.startswith("bedrock/")
-    is_lemonade_model = model_name.startswith("lemonade/")
-
-    # DEBUG: Log the actual state of the API key
-    logger.info(f"[AUTH CHECK] Model: {model_name}")
-    logger.info(
-        f"[AUTH CHECK] Bedrock model: {is_bedrock_model}, Lemonade model: {is_lemonade_model}"
-    )
-    logger.info(f"[AUTH CHECK] API key exists: {settings.llm_api_key is not None}")
-
-    if settings.llm_api_key:
-        key_value = settings.llm_api_key.get_secret_value()
-        logger.info(f"[AUTH CHECK] API key value exists: {key_value is not None}")
-        logger.info(
-            f"[AUTH CHECK] API key length: {len(key_value) if key_value else 0}"
-        )
-        logger.info(
-            f"[AUTH CHECK] API key is whitespace: {key_value.isspace() if key_value else 'N/A'}"
-        )
-        logger.info(
-            f"[AUTH CHECK] API key prefix: {key_value[:10] if key_value else 'EMPTY'}..."
-        )
-
-    # Models that don't require API keys
-    if is_bedrock_model or is_lemonade_model:
-        logger.info(f"Model {model_name} does not require API key")
-        return
-
-    # Validate API key presence and non-emptiness
-    if not settings.llm_api_key or settings.llm_api_key.get_secret_value().isspace():
-        logger.warning(f"Missing api key for model {model_name}")
-        raise LLMAuthenticationError(
-            "Error authenticating with the LLM provider. Please check your API key"
-        )
-
-    logger.info(f"[AUTH CHECK] ✅ API key validation PASSED for model: {model_name}")
 
 
 def _process_git_provider_tokens(
@@ -355,10 +305,6 @@ async def start_conversation(
         logger.warning("Settings not present, not starting conversation")
         raise MissingSettingsError("Settings not found")
 
-    # Validate API key for the selected model
-    model_name = settings.llm_model or ""
-    _validate_api_key_for_model(settings, model_name)
-
     # Build session initialization arguments
     session_init_args = _build_session_init_args(
         settings,
@@ -369,13 +315,8 @@ async def start_conversation(
         mcp_config,
     )
 
-    # Create conversation init data and run experiments
+    # Create conversation init data
     conversation_init_data = ConversationInitData(**session_init_args)
-    conversation_init_data = ExperimentManagerImpl.run_conversation_variant_test(
-        user_id,
-        conversation_id,
-        conversation_init_data,
-    )
 
     # Start agent loop
     logger.info(
@@ -509,8 +450,24 @@ async def setup_init_conversation_settings(
 
     settings_store = await SettingsStoreImpl.get_instance(config, user_id)
     settings = await settings_store.load()
+    
+    # If no user settings exist, try to load from config.toml
     if settings is None:
-        raise MissingSettingsError("Settings not found")
+        from forge.storage.data_models.settings import Settings
+        try:
+            settings = Settings.from_config()
+            if settings:
+                settings = settings.merge_with_config_settings()
+                logger.info("Loaded default settings from config.toml for WebSocket connection (user_id: %s)", user_id)
+        except Exception as e:
+            logger.error("Failed to load settings from config: %s", e)
+    
+    if settings is None:
+        raise MissingSettingsError("Settings not found (neither user settings nor config.toml)")
+
+    # Validate API key for the selected model
+    model_name = settings.llm_model or ""
+    _validate_api_key_for_model(settings, model_name)
 
     normalized_tokens = _get_normalized_provider_tokens(
         provider_tokens, settings.secrets_store.provider_tokens

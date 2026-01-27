@@ -86,8 +86,8 @@ mcp_github_pull_request_review_write(
 ### Step 1: Install GitHub MCP Server
 
 ```bash
-# Install via npm (globally)
-npm install -g @modelcontextprotocol/server-github
+# Install via pnpm (globally)
+pnpm add -g @modelcontextprotocol/server-github
 
 # Or use npx (no installation)
 npx @modelcontextprotocol/server-github --help

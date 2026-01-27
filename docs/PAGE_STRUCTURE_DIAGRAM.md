@@ -55,19 +55,13 @@
 ├── /browser
 │   └── Interactive Browser View
 │
-├── /jupyter
-│   └── Jupyter Notebook
-│
 ├── /served
 │   └── Served Application View
 │
 ├── /terminal
 │   └── Terminal View
 │
-└── /vscode
-    └── VS Code Integration
-
-/profile
+└── /profile
 ├── User Info Card
 ├── Statistics
 └── Activity Timeline

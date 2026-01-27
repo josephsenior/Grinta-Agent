@@ -1,10 +1,11 @@
 from unittest.mock import MagicMock, patch
 import httpx
 import pytest
-from litellm.exceptions import RateLimitError
+from forge.llm.exceptions import RateLimitError
 from pydantic import SecretStr
 from forge.core.config import LLMConfig
 from forge.events.action.message import MessageAction
+from forge.llm.direct_clients import LLMResponse
 from forge.llm.llm import LLM
 from forge.resolver.interfaces.github import GithubIssueHandler, GithubPRHandler
 from forge.resolver.interfaces.issue import Issue
@@ -129,55 +130,27 @@ class MockLLMResponse:
 
 class DotDict(dict):
     """A dictionary that supports dot notation access."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for key, value in self.items():
-            if isinstance(value, dict):
-                self[key] = DotDict(value)
-            elif isinstance(value, list):
-                self[key] = [
-                    DotDict(item) if isinstance(item, dict) else item for item in value
-                ]
-
-    def __getattr__(self, key):
-        if key in self:
-            return self[key]
-        else:
-            raise AttributeError(
-                f"'{self.__class__.__name__}' object has no attribute '{key}'"
-            )
-
-    def __setattr__(self, key, value):
-        self[key] = value
-
-    def __delattr__(self, key):
-        if key in self:
-            del self[key]
-        else:
-            raise AttributeError(
-                f"'{self.__class__.__name__}' object has no attribute '{key}'"
-            )
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
 
 
-@patch("forge.llm.llm.litellm_completion")
-def test_guess_success_rate_limit_wait_time(mock_litellm_completion, default_config):
-    """Test that the retry mechanism in guess_success respects wait time between retries."""
+@patch("forge.llm.llm.get_direct_client")
+def test_guess_success_rate_limit_wait_time(mock_get_direct_client, default_config):
+    """Test the retry mechanism in guess_success with rate limit wait time."""
     with patch("time.sleep") as mock_sleep:
-        mock_litellm_completion.side_effect = [
+        mock_client = MagicMock()
+        mock_get_direct_client.return_value = mock_client
+        
+        # Ensure LLMResponse is used correctly
+        mock_client.completion.side_effect = [
             RateLimitError(
                 "Rate limit exceeded", llm_provider="test_provider", model="test_model"
             ),
-            DotDict(
-                {
-                    "choices": [
-                        {
-                            "message": {
-                                "content": "--- success\ntrue\n--- explanation\nRetry successful"
-                            }
-                        }
-                    ]
-                }
+            LLMResponse(
+                content="--- success\ntrue\n--- explanation\nRetry successful",
+                model="gpt-4o",
+                usage={"prompt_tokens": 10, "completion_tokens": 5}
             ),
         ]
         llm = LLM(config=default_config, service_id="test-service")
@@ -194,10 +167,14 @@ def test_guess_success_rate_limit_wait_time(mock_litellm_completion, default_con
             thread_comments=["Please improve error handling"],
         )
         history = [MessageAction(content="Fixed error handling.")]
+        
+        # We need to make sure LLM.completion uses our mock_client
+        # LLM.__init__ calls get_direct_client, so llm.client should be mock_client
+        
         success, _, explanation = handler.guess_success(issue, history)
         assert success is True
         assert explanation == "Retry successful"
-        assert mock_litellm_completion.call_count == 2
+        assert mock_client.completion.call_count == 2
         mock_sleep.assert_called_once()
         wait_time = mock_sleep.call_args[0][0]
         assert (
@@ -207,10 +184,13 @@ def test_guess_success_rate_limit_wait_time(mock_litellm_completion, default_con
         } seconds, but got {wait_time}"
 
 
-@patch("forge.llm.llm.litellm_completion")
-def test_guess_success_exhausts_retries(mock_completion, default_config):
+@patch("forge.llm.llm.get_direct_client")
+def test_guess_success_exhausts_retries(mock_get_direct_client, default_config):
     """Test the retry mechanism in guess_success exhausts retries and raises an error."""
-    mock_completion.side_effect = RateLimitError(
+    mock_client = MagicMock()
+    mock_get_direct_client.return_value = mock_client
+    
+    mock_client.completion.side_effect = RateLimitError(
         "Rate limit exceeded", llm_provider="test_provider", model="test_model"
     )
     llm = LLM(config=default_config, service_id="test-service")
@@ -229,4 +209,4 @@ def test_guess_success_exhausts_retries(mock_completion, default_config):
     history = [MessageAction(content="Fixed error handling.")]
     with pytest.raises(RateLimitError):
         handler.guess_success(issue, history)
-    assert mock_completion.call_count == default_config.num_retries
+    assert mock_client.completion.call_count == default_config.num_retries

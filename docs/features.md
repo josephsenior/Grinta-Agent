@@ -12,17 +12,9 @@ This page documents features that are implemented and available in Forge.
 
 ### Additional Agents
 - **BrowsingAgent**: Web browsing and scraping capabilities
-- **VisualBrowsingAgent**: Enhanced visual web interaction
 - **LocAgent**: Location-aware operations
 - **ReadOnlyAgent**: Read-only file operations
 - **DummyAgent**: Testing and development agent
-
-### MetaSOP Orchestration (Experimental)
-- Multi-agent planning and execution framework
-- Disabled by default (set `metasop.enabled = true` to activate)
-- Role-based agents: Product Manager, Architect, Engineer, QA
-- Structured task decomposition and coordination
-- ACE (Agentic Context Engineering) framework integration
 
 ## APIs
 
@@ -41,8 +33,6 @@ Forge provides a comprehensive REST API with 32 route modules:
 ### Advanced Features
 - **Knowledge Base API** (`/api/knowledge`) - Vector search, document management, collections
 - **Memory API** (`/api/memory`) - Conversation memory and context management
-- **MetaSOP API** (`/api/metasop`) - Multi-agent orchestration and coordination
-- **Prompt Optimization API** (`/api/prompt-optimization`) - AI-powered prompt optimization
 
 ### Analytics & Monitoring
 - **Analytics API** (`/api/analytics`) - Usage statistics, cost tracking, model usage
@@ -57,9 +47,7 @@ Forge provides a comprehensive REST API with 32 route modules:
 - **Billing API** (`/api/billing`) - Payment processing, subscriptions, balance management
 
 ### Content Management
-- **Snippets API** (`/api/snippets`) - Code snippet management
 - **Templates API** (`/api/templates`) - Template management
-- **Prompts API** (`/api/prompts`) - Prompt management
 - **Trajectory API** (`/api/trajectory`) - Agent trajectory tracking and replay
 
 ### Integrations
@@ -115,7 +103,7 @@ Forge provides a comprehensive REST API with 32 route modules:
 ### Core Tools
 - **File Editor**: Create, read, update, delete files with search/replace
 - **Terminal Commands**: Execute shell commands with output capture
-- **Jupyter Support**: Execute Python code in notebook environments
+- **Ultimate Editor**: Structure-aware file editing
 - **Think Tool**: Advanced reasoning and problem-solving
 
 ### MCP (Model Context Protocol) Integrations
@@ -126,8 +114,6 @@ Forge provides a comprehensive REST API with 32 route modules:
 
 ### Version Control Integrations
 - **GitHub**: Repository operations, PR management, issue tracking
-- **GitLab**: GitLab repository and CI/CD integration
-- **Bitbucket**: Bitbucket repository operations
 
 ### Communication Integrations
 - **Slack**: Real-time messaging and notifications
@@ -139,7 +125,7 @@ Specialized agents for domain-specific tasks:
 - Code review and testing
 - Database operations
 - Docker container management
-- Git operations (GitHub, GitLab, Bitbucket)
+- Git operations (GitHub)
 - Kubernetes deployment
 - NPM package management
 - PDF generation
@@ -169,7 +155,6 @@ Specialized agents for domain-specific tasks:
 - OpenAI GPT models (GPT-4, GPT-3.5, etc.)
 - Anthropic Claude
 - Google Gemini
-- Other providers via LiteLLM
 - Model-specific configurations and API key management
 
 ### Environment-Specific Configs
@@ -182,7 +167,6 @@ Specialized agents for domain-specific tasks:
 ### Causal Reasoning
 - Conflict prediction in multi-agent scenarios
 - Best-effort reasoning hooks
-- Experimental implementation in MetaSOP
 
 ### Tree-sitter Analysis (Optional)
 - Structural code analysis
@@ -205,10 +189,10 @@ Specialized agents for domain-specific tasks:
   - `forge_runtime_pool_idle_reclaim_total`
   - `forge_runtime_pool_eviction_total`
   - `forge_runtime_scaling_signals_*` (overprovision, capacity_exhausted, saturation)
-- MetaSOP guardrail metrics:
-  - `metasop_guardrail_concurrency_total`
-  - `metasop_guardrail_concurrency_peak`
-  - `metasop_guardrail_runtime_avg_ms`
+- Guardrail metrics:
+  - `guardrail_concurrency_total`
+  - `guardrail_concurrency_peak`
+  - `guardrail_runtime_avg_ms`
 
 ### Plugin System
 - Extensible architecture for custom tools and agents

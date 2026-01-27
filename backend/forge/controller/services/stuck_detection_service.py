@@ -18,12 +18,10 @@ class StuckDetectionService:
 
     def initialize(self, state: "State") -> None:
         """Initialize detector for the given state."""
-
         self._detector = StuckDetector(state)
 
     def is_stuck(self) -> bool:
         """Return True if the controller (or any delegate) appears stuck."""
-
         delegate = getattr(self._controller, "delegate", None)
         if delegate and hasattr(delegate, "stuck_service"):
             if delegate.stuck_service.is_stuck():

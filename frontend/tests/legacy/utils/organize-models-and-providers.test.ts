@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { organizeModelsAndProviders } from "../../src/utils/organize-models-and-providers";
+import { organizeModelsAndProviders } from "#/utils/organize-models-and-providers";
 
 test("organizeModelsAndProviders", () => {
   const models = [
@@ -63,3 +63,4 @@ test("organizeModelsAndProviders", () => {
     },
   });
 });
+

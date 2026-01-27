@@ -3,8 +3,9 @@
 import os
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Path
 from fastapi.responses import JSONResponse
+from typing import Annotated
 
 from forge.core.logger import forge_logger as logger
 from forge.events.async_event_store_wrapper import AsyncEventStoreWrapper
@@ -21,7 +22,9 @@ app = APIRouter(
 
 
 @app.get("/")
-async def get_trajectory(conversation_id: str) -> JSONResponse:
+async def get_trajectory(
+    conversation_id: Annotated[str, Path(..., min_length=1, description="Conversation ID")],
+) -> JSONResponse:
     """Get trajectory history for a conversation.
 
     Retrieves the complete event trajectory for the specified conversation,

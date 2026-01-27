@@ -8,17 +8,7 @@ import tempfile
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Protocol
 
-try:
-    from forge_aci.utils.diff import get_diff
-except ImportError:
-    # Stub for when forge_aci is not installed
-    def get_diff(old: str, new: str, path: str | None = None) -> str:
-        """Stub diff function."""
-        # When forge_aci is not available we compute a basic unified diff so downstream
-        # callers like tests can still exercise visualization code paths. The optional
-        # ``path`` argument keeps the signature compatible with the real implementation.
-        _header = f"--- {path or 'old'}\n+++ {path or 'new'}\n"
-        return _header + f"@@ -1 +1 @@\n-{old}\n+{new}"
+from forge.runtime.utils.diff import get_diff
 
 
 from forge.core.logger import forge_logger as logger
@@ -26,7 +16,6 @@ from forge.events.action import (
     FileEditAction,
     FileReadAction,
     FileWriteAction,
-    IPythonRunCellAction,
 )
 from forge.events.observation import (
     ErrorObservation,
@@ -109,10 +98,6 @@ class FileEditRuntimeInterface(Protocol):
 
     async def write(self, action: FileWriteAction) -> Observation:
         """Write file (must be implemented by subclass)."""
-        pass
-
-    async def run_ipython(self, action: IPythonRunCellAction) -> Observation:
-        """Run IPython cell (must be implemented by subclass)."""
         pass
 
 

@@ -19,9 +19,7 @@ from fastmcp.exceptions import ToolError
 from fastmcp.server.dependencies import get_http_request
 
 from forge.core.logger import forge_logger as logger, get_trace_context
-from forge.integrations.bitbucket.bitbucket_service import BitBucketServiceImpl
 from forge.integrations.github.github_service import GithubServiceImpl
-from forge.integrations.gitlab.gitlab_service import GitLabServiceImpl
 from forge.integrations.provider import ProviderToken
 from forge.integrations.service_types import GitService, ProviderType
 from forge.server.dependencies import get_dependencies
@@ -84,7 +82,7 @@ try:
 except Exception:  # pragma: no cover - optional dependency
     _mcp_tracer = None
     _SPAN_KIND = None
-HOST = f"https://{os.getenv('WEB_HOST', 'app.all-hands.dev').strip()}"
+HOST = f"https://{os.getenv('WEB_HOST', 'app.forge.dev').strip()}"
 CONVERSATION_URL = HOST + "/conversations/{}"
 
 ServiceT = TypeVar("ServiceT", bound=GitService)
@@ -243,18 +241,18 @@ async def get_conversation_link(
     conversation_id: str | None,
     body: str,
 ) -> str:
-    """Append a Forge conversation link to PR/MR body in SaaS mode.
+    """Append a Forge conversation link to PR body in SaaS mode.
 
-    Adds a followup link to the original Forge conversation URL in the PR/MR
+    Adds a followup link to the original Forge conversation URL in the PR
     body, enabling reviewers to click through to continue refining the request.
     This only operates in SaaS app mode; other modes return the body unchanged.
 
     Args:
-        service: The Git service instance (GitHub, GitLab, or Bitbucket)
+        service: The Git service instance (GitHub)
             with authentication configured for retrieving user information.
         conversation_id: Unique identifier of the conversation that opened
-            the pull/merge request.
-        body: The current PR/MR body text to augment with the conversation link.
+            the pull request.
+        body: The current PR body text to augment with the conversation link.
 
     Returns:
         str: The body text with appended conversation link (if in SaaS mode),
@@ -279,17 +277,17 @@ async def get_conversation_link(
 async def save_pr_metadata(
     user_id: str | None, conversation_id: str, tool_result: str
 ) -> None:
-    """Extract PR/MR number from tool output and update conversation metadata.
+    """Extract PR number from tool output and update conversation metadata.
 
-    Parses GitHub pull request or GitLab merge request numbers from tool
-    result URLs using regex patterns, then persists the extracted PR number
-    to the conversation's metadata store for tracking.
+    Parses GitHub pull request numbers from tool result URLs using regex patterns,
+    then persists the extracted PR number to the conversation's metadata store
+    for tracking.
 
     Args:
         user_id: User identifier for accessing conversation store.
             Can be None for anonymous conversations.
         conversation_id: Unique conversation identifier to retrieve and update.
-        tool_result: Tool output string expected to contain PR/MR URL
+        tool_result: Tool output string expected to contain PR URL
             (e.g., "https://github.com/owner/repo/pull/123").
 
     Returns:
@@ -406,162 +404,8 @@ async def create_pr(
     )
 
 
-@mcp_server.tool()
-async def create_mr(
-    id: Annotated[
-        int | str,
-        Field(description="GitLab repository (ID or URL-encoded path of the project)"),
-    ],
-    source_branch: Annotated[str, Field(description="Source branch on repo")],
-    target_branch: Annotated[str, Field(description="Target branch on repo")],
-    title: Annotated[
-        str,
-        Field(
-            description="MR Title. Start title with `DRAFT:` or `WIP:` if applicable."
-        ),
-    ],
-    description: Annotated[str | None, Field(description="MR description")],
-    labels: Annotated[
-        list[str] | None, Field(description="Labels to apply to the MR")
-    ] = None,
-) -> str:
-    """Create a merge request in GitLab repository.
-
-    Opens a new merge request on GitLab. Automatically appends a Forge
-    conversation link to the description and saves MR metadata to the
-    conversation record.
-
-    Args:
-        id: GitLab project ID or URL-encoded project path.
-            Can be numeric ID or path like "namespace/project".
-        source_branch: Source branch name containing the changes.
-        target_branch: Target branch name for merge (e.g., "main").
-        title: Merge request title. Should include "DRAFT:" or "WIP:" prefix
-            if the MR is not ready for review.
-        description: Merge request description/body text.
-        labels: List of label names to apply to the MR.
-
-    Returns:
-        str: The created merge request URL.
-
-    Raises:
-        ToolError: If GitLab API call fails or authentication is invalid.
-            Includes GitLab API error message in the error detail.
-
-    Examples:
-        >>> await create_mr(
-        ...     id="group/project-name",
-        ...     source_branch="feature/caching",
-        ...     target_branch="main",
-        ...     title="DRAFT: Implement caching layer",
-        ...     description="Adds Redis-based caching for performance",
-        ...     labels=["performance"]
-        ... )
-
-    """
-    logger.info("Calling Forge MCP create_mr")
-    context = await _request_context()
-    gitlab_token = _provider_token(context, ProviderType.GITLAB)
-    gitlab_service = _build_service(
-        GitLabServiceImpl, gitlab_token, context.user_id, context.access_token
-    )
-    description = await _append_conversation_link(
-        gitlab_service, context.conversation_id, description
-    )
-
-    async def _perform_request() -> str:
-        response = await gitlab_service.create_mr(
-            id=id,
-            source_branch=source_branch,
-            target_branch=target_branch,
-            title=title,
-            description=description,
-            labels=labels,
-        )
-        await _maybe_save_metadata(context.user_id, context.conversation_id, response)
-        return response
-
-    return await _execute_with_tracing(
-        tool_name="create_mr",
-        resource="gitlab/mr",
-        conversation_id=context.conversation_id,
-        action=_perform_request,
-        error_prefix="Error creating merge request",
-    )
 
 
-@mcp_server.tool()
-async def create_bitbucket_pr(
-    repo_name: Annotated[
-        str, Field(description="Bitbucket repository (workspace/repo_slug)")
-    ],
-    source_branch: Annotated[str, Field(description="Source branch on repo")],
-    target_branch: Annotated[str, Field(description="Target branch on repo")],
-    title: Annotated[
-        str,
-        Field(
-            description="PR Title. Start title with `DRAFT:` or `WIP:` if applicable."
-        ),
-    ],
-    description: Annotated[str | None, Field(description="PR description")],
-) -> str:
-    """Create a pull request in Bitbucket Cloud repository.
 
-    Opens a new pull request on Bitbucket. Automatically appends a Forge
-    conversation link to the description and saves PR metadata to the
-    conversation record.
 
-    Args:
-        repo_name: Bitbucket repository in format "workspace/repo_slug"
-            (e.g., "myworkspace/my-repo").
-        source_branch: Source branch name containing the changes.
-        target_branch: Target branch name for merge (e.g., "main").
-        title: Pull request title. Should include "DRAFT:" or "WIP:" prefix
-            if not ready for review.
-        description: Pull request description/body text.
 
-    Returns:
-        str: The created pull request URL.
-
-    Raises:
-        ToolError: If Bitbucket API call fails or authentication is invalid.
-            Includes Bitbucket API error message in the error detail.
-
-    Examples:
-        >>> await create_bitbucket_pr(
-        ...     repo_name="myworkspace/my-repo",
-        ...     source_branch="feature/auth",
-        ...     target_branch="main",
-        ...     title="Add OAuth2 support",
-        ...     description="Implements OAuth2 authentication flow"
-        ... )
-
-    """
-    logger.info("Calling Forge MCP create_bitbucket_pr")
-    context = await _request_context()
-    bitbucket_token = _provider_token(context, ProviderType.BITBUCKET)
-    bitbucket_service = _build_service(
-        BitBucketServiceImpl, bitbucket_token, context.user_id, context.access_token
-    )
-    description = await _append_conversation_link(
-        bitbucket_service, context.conversation_id, description
-    )
-
-    async def _perform_request() -> str:
-        response = await bitbucket_service.create_pr(
-            repo_name=repo_name,
-            source_branch=source_branch,
-            target_branch=target_branch,
-            title=title,
-            body=description,
-        )
-        await _maybe_save_metadata(context.user_id, context.conversation_id, response)
-        return response
-
-    return await _execute_with_tracing(
-        tool_name="create_bitbucket_pr",
-        resource="bitbucket/pr",
-        conversation_id=context.conversation_id,
-        action=_perform_request,
-        error_prefix="Error creating pull request",
-    )

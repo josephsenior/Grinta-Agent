@@ -75,7 +75,7 @@ execute_bash(
 ### **Background Process**
 ```python
 execute_bash(
-    command="npm run dev &",
+    command="pnpm run dev &",
     timeout=120
 )
 ```
@@ -263,9 +263,9 @@ Protocol Buffers, Markdown, LaTeX, Julia
 ### Build React App (3-4 calls)
 ```python
 1. execute_bash("npm create vite@latest app -- --template react")
-2. execute_bash("cd app && npm install")
+2. execute_bash("cd app && pnpm install")
 3. str_replace_editor(command="create", path="/workspace/app/src/App.jsx", ...)
-4. execute_bash("cd app && npm run dev &")
+4. execute_bash("cd app && pnpm run dev &")
 ✅ Done! Dev server auto-navigates
 ```
 

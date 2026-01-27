@@ -88,8 +88,14 @@
         // Tests frequently contain literal strings (labels/assertions). Allow them.
         "i18next/no-literal-string": "off"
       }
-    }
-  ,
+    },
+    {
+      "files": ["**/components/ui/**/*.tsx", "**/components/ui/**/*.ts"],
+      "rules": {
+        // UI component wrappers (Radix UI, etc.) require prop spreading to pass through props
+        "react/jsx-props-no-spreading": "off"
+      }
+    },
     {
       "files": ["**/*.d.ts"],
       "parserOptions": {

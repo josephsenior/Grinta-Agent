@@ -35,7 +35,7 @@ walk(root, (file)=>{
     if (!rel.startsWith('')) {
       return;
     } // keep
-    if(!file.includes(path.join('OpenHands','frontend')) && !file.includes(path.join('frontend'))) {
+    if(!file.includes(path.join('Forge','frontend')) && !file.includes(path.join('frontend'))) {
       // skip files outside frontend
     }
     // skip binaries
@@ -90,3 +90,4 @@ if(flagged.length > 0){
   console.log('\nNo colors flagged. Contrast check passed.');
   process.exit(0);
 }
+

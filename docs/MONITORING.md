@@ -95,10 +95,10 @@ sum(count_over_time({job="forge"}[1m])) by (level)
 
 **Key Metrics:**
 ```
-metasop_step_duration_ms_p95    # 95th percentile latency
-metasop_total_tokens            # Total token consumption
-metasop_model_total_tokens{model="claude-4"}  # Per-model tokens
-metasop_cache_hits / (metasop_cache_hits + metasop_cache_stores)  # Cache rate
+forge_step_duration_ms_p95    # 95th percentile latency
+forge_total_tokens            # Total token consumption
+forge_model_total_tokens{model="claude-4"}  # Per-model tokens
+forge_cache_hits / (forge_cache_hits + forge_cache_stores)  # Cache rate
 ```
 
 **What to Watch:**
@@ -106,38 +106,26 @@ metasop_cache_hits / (metasop_cache_hits + metasop_cache_stores)  # Cache rate
 - Cache hit rate < 30% → Poor caching
 - Token spikes → Cost issues
 
-### 3. System Metrics Dashboard
-
-**File:** `monitoring/grafana/dashboards/system-metrics.json`
-
-**Panels:**
-- **Active Conversations** - Current active sessions
-- **CPU Usage** - System resource utilization
-- **Memory Usage** - RAM consumption
-- **Request Rate** - Requests per second
-- **Success Rate** - Successful vs failed requests
-
-**What to Watch:**
-- CPU > 80% → Need more resources
-- Memory growing → Potential leak
-- Success rate < 90% → System issues
-
-### 4. Error Tracking Dashboard
-
-**File:** `monitoring/grafana/dashboards/error-tracking.json`
-
-**Panels:**
-- **Error Rate** - Percentage of failed requests
-- **Error Types** - Distribution of error types
-- **Failed Actions** - Which actions are failing
-- **Retry Attempts** - Retry patterns
-
-**What to Watch:**
-- Error rate > 5% → System degradation
-- Specific action failing repeatedly → Bug
-- High retry rate → Unstable dependencies
-
 ## Prometheus Metrics Reference
+
+### Core Metrics
+
+| Metric | Type | Description |
+| :--- | :--- | :--- |
+| `forge_request_count_total` | Counter | Total API requests |
+| `forge_request_exceptions_total` | Counter | Total exceptions |
+| `forge_request_duration_ms_bucket` | Histogram | Latency distribution |
+| `forge_agent_steps_total` | Counter | Total agent steps |
+| `forge_llm_calls_total` | Counter | Total LLM calls |
+| `forge_token_usage_total` | Counter | Total tokens used |
+
+### Guardrail Metrics
+
+| Metric | Type | Description |
+| :--- | :--- | :--- |
+| `forge_guardrail_checks_total` | Counter | Total guardrail checks |
+| `forge_guardrail_violations_total` | Counter | Total violations |
+| `forge_guardrail_duration_ms` | Histogram | Check latency |
 
 ### Request/HTTP Metrics
 
@@ -263,79 +251,6 @@ max_over_time(forge_runtime_running_sessions{kind="remote"}[10m])
 
 The runtime manager updates the snapshot whenever Local, Docker, or Remote runtimes acquire warm sandboxes or attach live sessions, giving immediate visibility into pool pressure and potential leaks.
 
-### Steps & Execution
-
-```
-metasop_steps_executed       # Total steps executed successfully
-metasop_steps_failed         # Failed step count
-metasop_steps_timed_out      # Steps that timed out
-metasop_suppressed_errors    # Errors handled gracefully
-```
-
-### Latency & Performance
-
-```
-metasop_step_duration_ms_bucket{le="50"}    # Histogram buckets
-metasop_step_duration_ms_sum                # Total duration
-metasop_step_duration_ms_count              # Step count
-metasop_step_duration_ms_p50                # Median latency
-metasop_step_duration_ms_p90                # 90th percentile
-metasop_step_duration_ms_p95                # 95th percentile  
-metasop_step_duration_ms_p99                # 99th percentile
-```
-
-**Per-Role Latency:**
-```
-metasop_step_duration_ms_role_p95{role="Engineer"}    # Engineer latency
-metasop_step_duration_ms_role_p95{role="Architect"}  # Architect latency
-```
-
-### Token Usage & Costs
-
-```
-metasop_total_tokens                        # All tokens consumed
-metasop_model_total_tokens{model="..."}     # Per-model tokens
-metasop_avg_tokens_per_executed_step        # Average tokens per step
-```
-
-**Calculate costs:**
-```promql
-# Total cost (example for Claude Sonnet @ $3 input, $15 output)
-(metasop_total_tokens * 0.009)  # Assuming 50/50 input/output
-```
-
-### Caching
-
-```
-metasop_cache_hits        # Cache hits
-metasop_cache_stores      # Cache stores
-metasop_cache_entries     # Current cache size
-metasop_cache_evictions   # Cache evictions
-```
-
-**Cache hit rate:**
-```promql
-metasop_cache_hits / (metasop_cache_hits + metasop_cache_stores) * 100
-```
-
-### Retry & Reliability
-
-```
-metasop_retry_attempts                      # Total retry attempts
-metasop_retry_successes                     # Successful retries
-metasop_retry_failures                      # Failed retries
-metasop_retry_attempts_by_operation{op="..."} # Per-operation retries
-```
-
-### Context Management
-
-```
-metasop_context_unique       # Unique contexts (cache misses)
-metasop_context_reuse_total  # Reused contexts (cache hits)
-metasop_diff_unique          # Unique diffs
-metasop_diff_reuse_total     # Reused diffs
-```
-
 ## Alerting Rules
 
 **File:** `monitoring/grafana/provisioning/alerting/rules.yml`
@@ -346,10 +261,10 @@ metasop_diff_reuse_total     # Reused diffs
 
 **Formula:**
 ```promql
-(metasop_steps_failed / (metasop_steps_executed + metasop_steps_failed)) * 100 > 5
+(rate(forge_request_exceptions_total[5m]) / rate(forge_request_count_total[5m])) * 100 > 5
 ```
 
-**Action:** Investigate failing steps immediately
+**Action:** Investigate failing requests immediately
 
 ### 2. Slow Response Time (Warning)
 
@@ -357,7 +272,7 @@ metasop_diff_reuse_total     # Reused diffs
 
 **Formula:**
 ```promql
-metasop_step_duration_ms_p95 > 2000
+forge_step_duration_ms_p95 > 2000
 ```
 
 **Action:** Check LLM provider status, optimize prompts
@@ -368,7 +283,7 @@ metasop_step_duration_ms_p95 > 2000
 
 **Formula:**
 ```promql
-(metasop_cache_hits / (metasop_cache_hits + metasop_cache_stores)) * 100 < 30
+(forge_cache_hits / (forge_cache_hits + forge_cache_stores)) * 100 < 30
 ```
 
 **Action:** Review caching strategy, check cache eviction rate
@@ -379,7 +294,7 @@ metasop_step_duration_ms_p95 > 2000
 
 **Formula:**
 ```promql
-up{job="forge-metasop"} < 1
+up{job="forge"} < 1
 ```
 
 **Action:** Restart service, check logs for crash
@@ -390,7 +305,7 @@ up{job="forge-metasop"} < 1
 
 **Formula:**
 ```promql
-(metasop_retry_attempts / metasop_steps_executed) * 100 > 20
+(rate(forge_llm_calls_total{status="retry"}[10m]) / rate(forge_llm_calls_total[10m])) * 100 > 20
 ```
 
 **Action:** Investigate unstable operations, check external dependencies
@@ -401,7 +316,7 @@ up{job="forge-metasop"} < 1
 
 **Formula:**
 ```promql
-rate(metasop_total_tokens[1h]) > 1000
+rate(forge_token_usage_total[1h]) > 1000
 ```
 
 **Action:** Review token consumption, check for runaway agents
@@ -770,7 +685,7 @@ open http://localhost:9090/targets
 **Check metrics server:**
 ```bash
 # Metrics exposed on port 9090
-curl http://localhost:9090/metrics | grep metasop
+curl http://localhost:9090/metrics | grep forge
 
 # Should see 30+ metrics
 ```
@@ -795,16 +710,15 @@ curl http://localhost:9090/metrics | grep metasop
 **Add your own metrics:**
 
 ```python
-# In Forge/metasop/metrics.py
-from forge.metasop.metrics import get_metrics_registry
+# In Forge/utils/metrics.py
+from forge.utils.metrics import get_metrics_registry
 
 metrics = get_metrics_registry()
 metrics.record_event({
     'status': 'executed',
     'duration_ms': 1500,
     'total_tokens': 2000,
-    'model': 'claude-4',
-    'role': 'Engineer'
+    'model': 'claude-4'
 })
 ```
 
@@ -822,13 +736,13 @@ metrics.record_event({
 **Example query:**
 ```promql
 # Average latency by model
-avg(metasop_step_duration_ms_p95) by (model)
+avg(forge_step_duration_ms_p95) by (model)
 
 # Token consumption rate
-rate(metasop_total_tokens[5m])
+rate(forge_total_tokens[5m])
 
 # Error rate
-(metasop_steps_failed / (metasop_steps_executed + metasop_steps_failed)) * 100
+(forge_steps_failed / (forge_steps_executed + forge_steps_failed)) * 100
 ```
 
 ### Export Metrics

@@ -1,0 +1,13 @@
+packages:
+  - frontend
+  - frontend/repro-react-router-plugin
+  - backend/forge/integrations/vscode
+  - backend/forge/runtime/utils/vscode-extensions/*
+
+onlyBuiltDependencies:
+  - '@heroui/shared-utils'
+  - '@vscode/vsce-sign'
+  - core-js
+  - esbuild
+  - keytar
+  - msw

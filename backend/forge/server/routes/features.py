@@ -1,0 +1,39 @@
+"""Feature flags API endpoint for frontend."""
+
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
+
+from forge.core.features import get_feature_flags
+from forge.server.shared import config
+
+app = APIRouter(prefix="/api/v1")
+
+
+@app.get("/features")
+async def get_features() -> JSONResponse:
+    """Get feature flags status for frontend.
+
+    Returns:
+        JSONResponse with feature flags information including enabled status
+        and "coming_soon" indicators for UI display
+
+    Example response:
+        {
+            "security_risk_assessment": {
+                "enabled": false,
+                "coming_soon": true,
+                "tier": "pro",
+                "description": "Security risk assessment for agent actions"
+            },
+            "custom_runtime_images": {
+                "enabled": false,
+                "coming_soon": true,
+                "tier": "pro",
+                "description": "Custom Docker images for agent runtime"
+            }
+        }
+    """
+    feature_flags = get_feature_flags(config)
+    flags_for_ui = feature_flags.get_flags_for_ui()
+    return JSONResponse(flags_for_ui)
+

@@ -13,10 +13,6 @@ from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 from typing import TYPE_CHECKING, Any, Literal, TextIO
 
-try:
-    import litellm  # type: ignore
-except Exception:  # pragma: no cover - optional dependency
-    litellm = None  # type: ignore
 from pythonjsonlogger.json import JsonFormatter
 from termcolor import colored
 
@@ -49,34 +45,10 @@ OTEL_LOG_CORRELATION = os.getenv(
 # If DEBUG_LLM is set, optionally allow an interactive confirmation when explicitly
 # requested. We default to enabling verbose LLM logs without blocking stdin so
 # that headless services and CI runs cannot hang on an unexpected prompt.
-if DEBUG_LLM and litellm is not None:
+if DEBUG_LLM:
     logging.warning(
         "DEBUG_LLM enabled via environment; verbose LLM logs may include sensitive content. Do NOT use in production.",
     )
-    enable_verbose = True
-    interactive_prompt_requested = DEBUG_LLM_PROMPT and (
-        "pytest" in sys.modules or (hasattr(sys, "stdin") and sys.stdin.isatty())
-    )
-    if interactive_prompt_requested:
-        try:
-            ans = input(
-                "DEBUG_LLM is enabled by environment. Enable verbose LLM logs? [y/N]: "
-            )
-            enable_verbose = str(ans).strip().lower().startswith("y")
-        except Exception:
-            enable_verbose = True
-
-    if enable_verbose:
-        if litellm is not None:
-            litellm.suppress_debug_info = False
-            litellm.set_verbose = True
-    else:
-        if litellm is not None:
-            litellm.suppress_debug_info = True
-            litellm.set_verbose = False
-elif litellm is not None:
-    litellm.suppress_debug_info = True
-    litellm.set_verbose = False
 if DEBUG:
     LOG_LEVEL = "DEBUG"
 LOG_TO_FILE = os.getenv("LOG_TO_FILE", str(LOG_LEVEL == "DEBUG")).lower() in [
@@ -694,9 +666,6 @@ if LOG_TO_FILE:
     FORGE_logger.addHandler(get_file_handler(LOG_DIR, current_log_level))
     ACCESS_logger.addHandler(get_file_handler(LOG_DIR, current_log_level))
     FORGE_logger.debug(f"Logging to file in: {LOG_DIR}")
-logging.getLogger("LiteLLM").disabled = True
-logging.getLogger("LiteLLM Router").disabled = True
-logging.getLogger("LiteLLM Proxy").disabled = True
 LOQUACIOUS_LOGGERS = [
     "engineio",
     "engineio.server",

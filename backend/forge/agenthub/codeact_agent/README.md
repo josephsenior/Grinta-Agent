@@ -7,7 +7,7 @@ CodeAct is Forge' flagship autonomous coding agent, optimized for the beta launc
 ## Key Features
 
 - ✅ **Structure-Aware Editing** - Parses code via Tree-sitter (45+ languages)
-- ✅ **Tool Execution** - Edit files, run commands, browse web, execute Python
+- ✅ **Tool Execution** - Edit files, run commands, browse web
 - ✅ **Self-Correction** - Learns from errors and retries
 - ✅ **Circuit Breaker** - Auto-pauses on repeated failures (safety)
 - ✅ **Cost Tracking** - Monitors LLM usage and costs
@@ -86,13 +86,6 @@ FileEditAction(
 CmdRunAction(
     command="pytest tests/",
     thought="Running tests to verify changes"
-)
-```
-
-**IPythonRunCellAction** - Execute Python code:
-```python
-IPythonRunCellAction(
-    code="import pandas as pd\ndf = pd.read_csv('data.csv')\nprint(df.head())"
 )
 ```
 

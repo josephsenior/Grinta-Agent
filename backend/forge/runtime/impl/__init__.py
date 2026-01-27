@@ -1,50 +1,25 @@
-"""Runtime implementations for forge.
+"""Runtime implementations for Forge.
 
 This package exposes implementation classes lazily to avoid importing heavy
 dependencies (like Docker) unless they are actually used.
+
+Non-local runtime implementations (Docker/Remote/Kubernetes) were removed
+from this branch; the package now lazily exposes `LocalRuntime` only.
 """
 
 from __future__ import annotations
 
-import importlib
-from typing import TYPE_CHECKING, Any
-
-from forge.runtime.impl.action_execution.action_execution_client import (
-    ActionExecutionClient,
-)
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # Only for static typing
-    from forge.runtime.impl.cli.cli_runtime import CLIRuntime as CLIRuntime
-    from forge.runtime.impl.docker.docker_runtime import (
-        DockerRuntime as DockerRuntime,
-    )
-    from forge.runtime.impl.local.local_runtime import LocalRuntime as LocalRuntime
-    from forge.runtime.impl.remote.remote_runtime import (
-        RemoteRuntime as RemoteRuntime,
-    )
+    from forge.runtime.impl.local.local_runtime_inprocess import LocalRuntime as LocalRuntime
 
 
-def _lazy_import(module_path: str, attr: str) -> Any:
-    module = importlib.import_module(module_path)
-    return getattr(module, attr)
+__all__ = ["LocalRuntime"]
 
-
-__all__ = [
-    "ActionExecutionClient",
-    "CLIRuntime",
-    "DockerRuntime",
-    "LocalRuntime",
-    "RemoteRuntime",
-]
-
-
-def __getattr__(name: str) -> Any:
-    if name == "CLIRuntime":
-        return _lazy_import("forge.runtime.impl.cli.cli_runtime", "CLIRuntime")
-    if name == "DockerRuntime":
-        return _lazy_import("forge.runtime.impl.docker.docker_runtime", "DockerRuntime")
+def __getattr__(name: str):
     if name == "LocalRuntime":
-        return _lazy_import("forge.runtime.impl.local.local_runtime", "LocalRuntime")
-    if name == "RemoteRuntime":
-        return _lazy_import("forge.runtime.impl.remote.remote_runtime", "RemoteRuntime")
+        from importlib import import_module
+
+        return getattr(import_module("forge.runtime.impl.local.local_runtime_inprocess"), "LocalRuntime")
     raise AttributeError(name)

@@ -14,7 +14,7 @@ This guide covers setting up Forge for development and contributing to the proje
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/All-Hands-AI/Forge.git
+   git clone https://github.com/Forge/Forge.git
    cd Forge
    ```
 
@@ -26,8 +26,8 @@ This guide covers setting up Forge for development and contributing to the proje
 3. **Install frontend dependencies:**
    ```bash
    cd frontend
-   npm install
-   npm run build
+   pnpm install
+   pnpm run build
    cd ..
    ```
 
@@ -49,7 +49,7 @@ This guide covers setting up Forge for development and contributing to the proje
 2. **Start the frontend (in another terminal, for development):**
    ```bash
    cd frontend
-   npm run dev
+   pnpm run dev
    ```
    
    This will start the frontend dev server on `http://localhost:5173` (Vite default).
@@ -150,7 +150,6 @@ Use conventional commit format:
 
 ### Agents
 - CodeAct: Code execution and editing
-- MetaSOP: Multi-agent orchestration
 - Custom agents via plugin system
 
 ### Runtime
@@ -173,7 +172,7 @@ python -m forge.server
 ### Frontend Debugging
 ```bash
 cd frontend
-npm run dev
+pnpm run dev
 # Open browser dev tools
 ```
 
@@ -196,9 +195,10 @@ poetry build
 ### Frontend
 ```bash
 cd frontend
-npm run build
+pnpm run build
 ```
 
 ### Docker
 ```bash
 docker build -t Forge .
+

@@ -4,7 +4,6 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Copy, Check } from "lucide-react";
 import { cn } from "#/utils/utils";
-import { MermaidDiagramViewer } from "#/components/features/orchestration/mermaid-diagram-viewer";
 import { logger } from "#/utils/logger";
 
 // See https://github.com/remarkjs/react-markdown?tab=readme-ov-file#use-custom-components-syntax-highlight
@@ -65,14 +64,9 @@ export function code({
   if (language === "mermaid") {
     return (
       <div className="my-4">
-        <MermaidDiagramViewer
-          diagram={codeString}
-          className="rounded-lg border border-border"
-          showExportButtons
-          exportFilename="diagram"
-          enableFullscreen
-          enableZoom
-        />
+        <pre className="p-4 bg-background-secondary rounded-lg border border-border overflow-auto font-mono text-sm">
+          {codeString}
+        </pre>
       </div>
     );
   }

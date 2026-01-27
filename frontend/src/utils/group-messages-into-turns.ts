@@ -56,12 +56,6 @@ const summarizeWriteOrEditAction = (
   return `${verb} ${filename}`;
 };
 
-const summarizeBrowseAction = (event: ForgeAction): string | null => {
-  const args = toRecord(event.args);
-  const url = typeof args?.url === "string" ? args.url : "";
-  return url ? `Opened ${url}` : "Browsed page";
-};
-
 const summarizeRunObservation = (event: ForgeObservation): string | null => {
   const extras = toRecord(event.extras);
   const eventRecord = toRecord(event);
@@ -100,14 +94,12 @@ const ACTION_SUMMARIZERS: Record<string, ActionSummaryHandler> = {
   run: summarizeRunAction,
   write: (event) => summarizeWriteOrEditAction("Created", event),
   edit: (event) => summarizeWriteOrEditAction("Edited", event),
-  browse: summarizeBrowseAction,
   finish: () => "Task completed",
 };
 
 const OBSERVATION_SUMMARIZERS: Record<string, ObservationSummaryHandler> = {
   run: summarizeRunObservation,
   read: summarizeReadObservation,
-  browse: () => "Page loaded",
 };
 
 const summarizeActionEvent = (event: ForgeAction): string | null => {

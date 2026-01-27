@@ -17,17 +17,11 @@ enum ActionType {
   // Runs a command.
   RUN = "run",
 
-  // Runs a IPython command.
-  RUN_IPYTHON = "run_ipython",
-
   // Opens a web page.
   BROWSE = "browse",
 
   // Interact with the browser instance.
   BROWSE_INTERACTIVE = "browse_interactive",
-
-  // Delegate a (sub)task to another agent.
-  DELEGATE = "delegate",
 
   // Logs a thought.
   THINK = "think",

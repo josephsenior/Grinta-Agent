@@ -20,16 +20,19 @@ response = openai.ChatCompletion.create(
 - Can't leverage new models (Grok, Gemini, etc.)
 - Users forced to use one provider
 
-## Our Solution: LiteLLM + Custom Provider Layer
+## Our Solution: Direct SDK Integration + Custom Provider Layer
 
-We support **200+ models** from **30+ providers** through a unified interface.
+We support **200+ models** from **30+ providers** through a unified interface using direct SDK clients (OpenAI, Anthropic, Google Gemini, xAI Grok).
 
 ```python
 # Forge approach (works with ANY provider)
-import litellm
+from forge.llm.llm import LLM
+from forge.core.config import LLMConfig
 
-response = litellm.completion(
-    model=user_choice,  # ANY model!
+config = LLMConfig(model=user_choice)
+llm = LLM(config=config, service_id="my-app")
+
+response = llm.completion(
     messages=[...]
 )
 ```
@@ -134,7 +137,7 @@ We pre-configured 30 providers:
 
 **Self-Hosted:**
 - Ollama (local models)
-- LiteLLM Proxy (custom routing)
+- OpenAI-compatible Proxy (custom routing)
 
 Each has:
 - Correct environment variable
@@ -297,5 +300,5 @@ The full provider system is open source:
 
 Building a provider-agnostic LLM system isn't easy, but it's worth it. 30 provider configurations and 200+ models later, our users have the freedom to choose what works best for them.
 
-Next time: How we built self-improving agents with the ACE Framework (post-beta).
+Next time: How we built self-improving agents.
 

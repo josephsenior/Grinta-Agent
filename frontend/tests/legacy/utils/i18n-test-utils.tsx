@@ -21,7 +21,7 @@ const mockI18n = {
     return translations[key] || key;
   },
   exists: () => true,
-  changeLanguage: () => new Promise(() => {}),
+  changeLanguage: () => Promise.resolve(),
   use: () => mockI18n,
 } as unknown as I18nInstance;
 

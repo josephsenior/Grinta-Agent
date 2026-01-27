@@ -7,59 +7,21 @@ import importlib
 
 
 def _sanitize_sys_path():
-    repo_root = os.path.abspath(os.path.dirname(__file__))
-    sys.path[:] = _filtered_sys_path(repo_root)
-    _insert_site_packages()
-    _prioritize_repo_root(repo_root)
+    backend_root = os.path.abspath(os.path.dirname(__file__))
+    # Put backend_root at the front so 'forge' is imported from there
+    if backend_root in sys.path:
+        sys.path.remove(backend_root)
+    sys.path.insert(0, backend_root)
+    
+    # Also ensure the parent directory is available if needed, but after backend_root
+    project_root = os.path.dirname(backend_root)
+    if project_root not in sys.path:
+        sys.path.append(project_root)
+    
     _preload_pydantic_root_model()
     _prefer_installed_mcp()
 
 
-def _filtered_sys_path(repo_root: str) -> list[str]:
-    tests_root = os.path.normcase(os.path.join(repo_root, "tests"))
-    filtered: list[str] = []
-    for path in sys.path:
-        if not path:
-            filtered.append(path)
-            continue
-        normalized = os.path.normcase(os.path.abspath(path))
-        if _should_skip_test_path(normalized, tests_root):
-            continue
-        filtered.append(path)
-    return filtered
-
-
-def _should_skip_test_path(path: str, tests_root: str) -> bool:
-    if not path.startswith(tests_root):
-        return False
-    return os.path.isdir(os.path.join(path, "mcp"))
-
-
-def _insert_site_packages() -> None:
-    for directory in reversed(_site_package_dirs()):
-        if directory and directory not in sys.path:
-            sys.path.insert(0, directory)
-
-
-def _site_package_dirs() -> list[str]:
-    dirs: list[str] = []
-    try:
-        dirs.extend(site.getsitepackages())
-    except Exception:
-        pass
-    try:
-        user_dir = site.getusersitepackages()
-        if user_dir:
-            dirs.append(user_dir)
-    except Exception:
-        pass
-    return dirs
-
-
-def _prioritize_repo_root(repo_root: str) -> None:
-    if repo_root in sys.path:
-        sys.path.remove(repo_root)
-    sys.path.insert(0, repo_root)
 
 
 def _preload_pydantic_root_model() -> None:
@@ -105,199 +67,7 @@ try:
 except Exception:
     pass
 
-"""Early Docker SDK shim for collection safety.
 
-This provides a robust stub when `docker` is missing or lacks expected
-attributes (e.g., `docker.models`, `docker.errors`). The goal is to avoid
-import-time AttributeErrors during test collection on hosts without Docker
-installed. Actual runtime tests are skipped later when Docker isn't available.
-"""
-try:
-    import types as _types
-    import importlib as _importlib
-
-    def _ensure_docker_shim():
-        try:
-            _docker_mod = _importlib.import_module("docker")  # type: ignore
-        except Exception:
-            _docker_mod = None
-
-        # Build a stub module if missing or incomplete
-        if _docker_mod is None or not hasattr(_docker_mod, "models") or not hasattr(_docker_mod, "errors"):
-            docker = _types.ModuleType("docker")
-
-            # errors submodule with common exceptions used in code/tests
-            errors = _types.ModuleType("docker.errors")
-            class DockerException(Exception):
-                pass
-            class APIError(DockerException):
-                pass
-            class NotFound(DockerException):
-                pass
-            class ImageNotFound(NotFound):
-                pass
-            errors.DockerException = DockerException
-            errors.APIError = APIError
-            errors.NotFound = NotFound
-            errors.ImageNotFound = ImageNotFound
-
-            # models submodule with containers and images
-            models = _types.ModuleType("docker.models")
-            containers_mod = _types.ModuleType("docker.models.containers")
-            images_mod = _types.ModuleType("docker.models.images")
-
-            class Container:
-                def logs(self, *args, **kwargs):
-                    return iter(())
-            containers_mod.Container = Container
-
-            class Image:
-                pass
-            images_mod.Image = Image
-
-            # minimal client returned by from_env
-            class _ContainersClient:
-                def list(self, *args, **kwargs):
-                    return []
-                def get(self, *args, **kwargs):
-                    raise NotFound("container not found")
-
-            class _ImagesClient:
-                def get(self, *args, **kwargs):
-                    raise ImageNotFound("image not found")
-
-            class _DockerClient:
-                def __init__(self):
-                    self.containers = _ContainersClient()
-                    self.images = _ImagesClient()
-                def close(self):
-                    return None
-
-            def from_env(*args, **kwargs):
-                # Return a minimal client; tests often monkeypatch this anyway
-                return _DockerClient()
-
-            # Wire up the module tree
-            docker.errors = errors
-            docker.models = models
-            models.containers = containers_mod
-            models.images = images_mod
-            docker.from_env = from_env
-
-            # Register in sys.modules for both package and submodules
-            sys.modules.setdefault("docker", docker)
-            sys.modules.setdefault("docker.errors", errors)
-            sys.modules.setdefault("docker.models", models)
-            sys.modules.setdefault("docker.models.containers", containers_mod)
-            sys.modules.setdefault("docker.models.images", images_mod)
-            return
-
-        # If a real docker module exists but lacks some attributes, patch them in
-        if not hasattr(_docker_mod, "errors"):
-            errors = _types.ModuleType("docker.errors")
-            class DockerException(Exception):
-                pass
-            class APIError(DockerException):
-                pass
-            class NotFound(DockerException):
-                pass
-            class ImageNotFound(NotFound):
-                pass
-            errors.DockerException = DockerException
-            errors.APIError = APIError
-            errors.NotFound = NotFound
-            errors.ImageNotFound = ImageNotFound
-            setattr(_docker_mod, "errors", errors)
-            sys.modules.setdefault("docker.errors", errors)
-
-        if not hasattr(_docker_mod, "models"):
-            models = _types.ModuleType("docker.models")
-            setattr(_docker_mod, "models", models)
-            sys.modules.setdefault("docker.models", models)
-
-        # Ensure nested models submodules exist
-        models_mod = getattr(_docker_mod, "models")
-        if not hasattr(models_mod, "containers"):
-            containers_mod = _types.ModuleType("docker.models.containers")
-            class Container:
-                def logs(self, *args, **kwargs):
-                    return iter(())
-            containers_mod.Container = Container
-            setattr(models_mod, "containers", containers_mod)
-            sys.modules.setdefault("docker.models.containers", containers_mod)
-        if not hasattr(models_mod, "images"):
-            images_mod = _types.ModuleType("docker.models.images")
-            class Image:
-                pass
-            images_mod.Image = Image
-            setattr(models_mod, "images", images_mod)
-            sys.modules.setdefault("docker.models.images", images_mod)
-
-        if not hasattr(_docker_mod, "from_env"):
-            class _DockerClient:
-                def __init__(self):
-                    self.containers = _types.SimpleNamespace(list=lambda *a, **k: [], get=lambda *a, **k: (_ for _ in ()).throw(getattr(_docker_mod.errors, "NotFound")("container not found")))
-                    self.images = _types.SimpleNamespace(get=lambda *a, **k: (_ for _ in ()).throw(getattr(_docker_mod.errors, "ImageNotFound")("image not found")))
-                def close(self):
-                    return None
-            setattr(_docker_mod, "from_env", lambda *a, **k: _DockerClient())
-
-    _ensure_docker_shim()
-except Exception:
-    pass
-
-# Provide minimal LiteLLM type shims early in import lifecycle.
-# Some environments/litellm versions may not export these names.
-try:
-    import litellm as _litellm_mod  # type: ignore
-
-    if not hasattr(_litellm_mod, "ChatCompletionToolParamFunctionChunk"):
-        class _ChatCompletionToolParamFunctionChunk(dict):
-            def __init__(self, name: str, description: str | None = None, parameters: dict | None = None, strict: bool | None = None, **kwargs):
-                data = {"name": name}
-                if description is not None:
-                    data["description"] = description
-                if parameters is not None:
-                    data["parameters"] = parameters
-                if strict is not None:
-                    data["strict"] = strict
-                data.update(kwargs)
-                super().__init__(data)
-            def __getattr__(self, key):
-                return self[key]
-            def __setattr__(self, key, value):
-                self[key] = value
-
-        setattr(_litellm_mod, "ChatCompletionToolParamFunctionChunk", _ChatCompletionToolParamFunctionChunk)
-
-    if not hasattr(_litellm_mod, "ChatCompletionToolParam"):
-        class _ChatCompletionToolParam(dict):
-            def __init__(self, function=None, type: str | None = None, **kwargs):
-                data = {"type": type, "function": function}
-                data.update(kwargs)
-                super().__init__(data)
-            def __getattr__(self, key):
-                return self[key]
-            def __setattr__(self, key, value):
-                self[key] = value
-
-        setattr(_litellm_mod, "ChatCompletionToolParam", _ChatCompletionToolParam)
-
-    if not hasattr(_litellm_mod, "ModelInfo"):
-        class _ModelInfo(dict):
-            pass
-        setattr(_litellm_mod, "ModelInfo", _ModelInfo)
-
-    if not hasattr(_litellm_mod, "PromptTokensDetails"):
-        class _PromptTokensDetails:
-            def __init__(self, cached_tokens: int | None = None, **kwargs):
-                self.cached_tokens = cached_tokens
-        setattr(_litellm_mod, "PromptTokensDetails", _PromptTokensDetails)
-except Exception:
-    # If litellm truly isn't importable, tests that need it will skip or stub.
-    pass
-
-# Note: A more complete Docker shim is already established above; remove older minimal shim.
 import asyncio
 import inspect
 import pathlib
@@ -354,42 +124,32 @@ def _has_pkg(name: str) -> bool:
         return False
 
 
-def _docker_available() -> bool:
-    if shutil.which("docker") is None:
-        return False
-    try:
-        import subprocess
-
-        res = subprocess.run(
-            ["docker", "info"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
-        return res.returncode == 0
-    except Exception:
-        return False
-
-
 def pytest_configure(config):
-    markers = ["docker", "windows", "optional", "heavy", "integration", "benchmark"]
+    markers = ["windows", "optional", "heavy", "integration", "benchmark"]
     for m in markers:
         config.addinivalue_line("markers", f"{m}: mark test as {m}")
 
 
 def _clear_forge_modules() -> None:
-    """Aggressively clear any cached 'forge' modules before collecting a test.
+    """Aggressively clear any cached 'forge' and related modules before collecting a test.
 
     Some tests in this repository manipulate sys.modules at import time to stub
     out submodules (e.g., forge.events.observation). To prevent cross-module
-    contamination during collection, clear any previously imported forge modules
+    contamination during collection, clear any previously imported modules
     so each test module starts from a clean import state.
     """
     # Avoid clearing modules that register global side effects (e.g., Prometheus metrics)
     # which cannot be re-registered safely across repeated imports during collection.
-    EXCLUDE_PREFIXES = (
-        "forge.services.event_service",
+    EXCLUDE_PREFIXES = ()
+    TARGET_PACKAGES = (
+        "forge",
+        "resolver",
+        "integrations",
+        "agenthub",
     )
     try:
         for name in list(sys.modules.keys()):
-            if name == "forge" or name.startswith("forge."):
+            if any(name == pkg or name.startswith(pkg + ".") for pkg in TARGET_PACKAGES):
                 if any(name == p or name.startswith(p + ".") for p in EXCLUDE_PREFIXES):
                     continue
                 sys.modules.pop(name, None)
@@ -449,7 +209,6 @@ def pytest_collection_modifyitems(config, items):
     """Modify test items by adding markers and applying skips."""
     _apply_path_markers(items)
     context = _CollectionContext(
-        docker_available=_docker_available(),
         is_windows=sys.platform.startswith("win"),
         run_tty_tests=os.environ.get("FORGE_RUN_TTY_TESTS", "0") == "1",
     )
@@ -463,8 +222,7 @@ def _apply_path_markers(items):
 
 
 class _CollectionContext:
-    def __init__(self, docker_available: bool, is_windows: bool, run_tty_tests: bool):
-        self.docker_available = docker_available
+    def __init__(self, is_windows: bool, run_tty_tests: bool):
         self.is_windows = is_windows
         self.run_tty_tests = run_tty_tests
 
@@ -476,14 +234,15 @@ def _apply_skip_markers(items, context: "_CollectionContext") -> None:
 
 
 def _skip_reasons(item, context: "_CollectionContext") -> Iterator[str]:
-    if "docker" in item.keywords and not context.docker_available:
-        yield "docker not available"
     if "windows" in item.keywords and not context.is_windows:
         yield "windows-specific test (not running on non-windows host)"
     if "tty" in item.keywords and not context.run_tty_tests:
         yield "tty tests disabled; set FORGE_RUN_TTY_TESTS=1 to enable"
-    if not context.docker_available and _is_runtime_test(item):
-        yield "runtime tests skipped: docker not available"
+    # LocalRuntime doesn't require Docker.
+    if _is_runtime_test(item):
+        test_runtime = os.environ.get("TEST_RUNTIME", "local").lower()
+        if test_runtime == "docker":
+            yield "runtime tests skipped: docker runtime is disabled in local-only architecture"
 
 
 def _is_runtime_test(item) -> bool:
@@ -507,245 +266,13 @@ def use_repo_root_cwd(tmp_path, monkeypatch):
         pass
 
 
-@pytest.fixture(autouse=True)
-def stub_win32_output_on_windows(monkeypatch):
-    """On Windows CI or non-console test environments, prompt_toolkit's.
-
-    Win32 output classes try to access the real console and raise
-    NoConsoleScreenBufferError. Provide a minimal stub to avoid requiring a
-    real console during unit tests.
-
-    This fixture is conservative: it only patches the specific Win32 class if
-    prompt_toolkit is importable and the Win32 output class exists.
-    """
-    try:
-        import sys
-
-        if not sys.platform.startswith("win"):
-            yield
-            return
-        try:
-            from prompt_toolkit.output.base import Output
-        except Exception:
-            yield
-            return
-
-        class _DummyWin32Output(Output):
-            """A minimal Win32Output-like stub. Tests only need a few methods.
-
-            such as get_size(), write(), flush, and basic cursor/screen
-            manipulation. All methods are no-ops for tests.
-            """
-
-            def __init__(self, *args, **kwargs):
-                self._size = (80, 24)
-
-            def get_size(self):
-                return self._size
-
-            def write(self, data):
-                return None
-
-            def flush(self):
-                return None
-
-            def restore(self):
-                return None
-
-            def erase_screen(self):
-                return None
-
-            def clear(self):
-                return None
-
-            def hide_cursor(self):
-                return None
-
-            def show_cursor(self):
-                return None
-
-            def enable_mouse_support(self):
-                return None
-
-            def disable_mouse_support(self):
-                return None
-
-            def set_title(self, title: str):
-                return None
-
-            def cursor_goto(self, x: int, y: int):
-                return None
-
-            def enable_alternate_screen_buffer(self):
-                return None
-
-            def disable_alternate_screen_buffer(self):
-                return None
-
-            def write_raw(self, data: bytes):
-                return None
-
-        monkeypatch.setattr(
-            "prompt_toolkit.output.win32.Win32Output", _DummyWin32Output, raising=False
-        )
-        try:
-            from prompt_toolkit.output.defaults import DummyOutput
-
-            monkeypatch.setattr(
-                "prompt_toolkit.output.defaults.create_output",
-                lambda stdout=None, always_prefer_tty=False: DummyOutput(),
-                raising=False,
-            )
-        except Exception:
-            pass
-    except Exception:
-        pass
-    yield
-
-
-@pytest.fixture(autouse=True, scope="session")
-def mock_litellm() -> Iterator[None]:
-    """Provide deterministic LiteLLM completions during tests to avoid real API calls."""
-
-    try:
-        import litellm
-        from litellm.types.utils import ModelResponse
-        from forge.llm import llm as forge_llm_module
-    except Exception:
-        # If LiteLLM or the Forge LLM module is unavailable, skip mocking.
-        yield
-        return
-
-    def _extract_messages(args, kwargs):
-        messages = kwargs.get("messages")
-        if messages is None and args:
-            messages = args[0]
-        return messages
-
-    def _build_response(messages=None, model=None):
-        content = "Mock response"
-        if isinstance(messages, list):
-            for message in reversed(messages):
-                if isinstance(message, dict):
-                    payload = message.get("content")
-                    if isinstance(payload, str) and payload.strip():
-                        content = f"Mock response: {payload.strip()}"
-                        break
-        data = {
-            "id": "mock-response-id",
-            "object": "chat.completion",
-            "created": int(time.time()),
-            "model": model or "mock-model",
-            "system_fingerprint": "mock-fingerprint",
-            "choices": [
-                {
-                    "index": 0,
-                    "message": {"role": "assistant", "content": content},
-                    "finish_reason": "stop",
-                }
-            ],
-            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
-        }
-        return ModelResponse.model_validate(data)
-
-    def _stream_generator(messages, model):
-        response = _build_response(messages=messages, model=model)
-        content = response.choices[0]["message"]["content"]
-        yield {
-            "choices": [
-                {
-                    "index": 0,
-                    "delta": {"content": content},
-                    "finish_reason": None,
-                }
-            ],
-            "model": response.model,
-        }
-        yield {
-            "choices": [
-                {
-                    "index": 0,
-                    "delta": {},
-                    "finish_reason": "stop",
-                }
-            ],
-            "model": response.model,
-        }
-
-    def _completion_stub(*args, **kwargs):
-        messages = _extract_messages(args, kwargs)
-        model = kwargs.get("model")
-        if kwargs.get("stream"):
-            return _stream_generator(messages, model)
-        return _build_response(messages=messages, model=model)
-
-    async def _acompletion_stub(*args, **kwargs):
-        messages = _extract_messages(args, kwargs)
-        model = kwargs.get("model")
-        if kwargs.get("stream"):
-
-            async def _async_gen():
-                for chunk in _stream_generator(messages, model):
-                    yield chunk
-
-            return _async_gen()
-        return _build_response(messages=messages, model=model)
-
-    def _streaming_stub(*args, **kwargs):
-        messages = _extract_messages(args, kwargs)
-        model = kwargs.get("model")
-        return _stream_generator(messages, model)
-
-    monkeypatcher = pytest.MonkeyPatch()
-    monkeypatcher.setattr(litellm, "completion", _completion_stub)
-    monkeypatcher.setattr(litellm, "acompletion", _acompletion_stub)
-    monkeypatcher.setattr(litellm, "stream", _streaming_stub, raising=False)
-    monkeypatcher.setattr(litellm, "streaming", _streaming_stub, raising=False)
-    monkeypatcher.setattr(
-        forge_llm_module, "litellm_completion", _completion_stub, raising=False
-    )
-    try:
-        yield
-    finally:
-        monkeypatcher.undo()
-
-
-@pytest.fixture(autouse=True, scope="session")
-def set_dummy_llm_env() -> Iterator[None]:
-    """Ensure LLM-related environment variables exist so config validation passes."""
-
-    env_defaults = {
-        "LLM_API_KEY": "test_key",
-        "OPENAI_API_KEY": "test_key",
-        "LITELLM_API_KEY": "test_key",
-        "ANTHROPIC_API_KEY": "test_key",
-    }
-    monkeypatcher = pytest.MonkeyPatch()
-    for key, value in env_defaults.items():
-        if not os.environ.get(key):
-            monkeypatcher.setenv(key, value)
-    try:
-        yield
-    finally:
-        monkeypatcher.undo()
+# Removed LLM mocking and dummy environment fixtures.
 
 
 # ---------------------------------------------------------------------------
 # Runtime test helpers
 # ---------------------------------------------------------------------------
-try:
-    from tests.runtime.conftest import _close_test_runtime as _runtime_close  # type: ignore
-    from tests.runtime.conftest import _load_runtime as _runtime_load  # type: ignore
-except Exception:  # pragma: no cover - optional dependency for runtime tests
-
-    def _load_runtime(*args, **kwargs):  # type: ignore[override]
-        pytest.skip("runtime test helpers are unavailable in this environment")
-
-    def _close_test_runtime(*args, **kwargs):  # type: ignore[override]
-        return None
-else:
-    globals().setdefault("_load_runtime", _runtime_load)
-    globals().setdefault("_close_test_runtime", _runtime_close)
+# Removed runtime test helpers that relied on stale Docker/container logic.
 
 __all__ = [
     "event_loop",
@@ -753,9 +280,5 @@ __all__ = [
     "require_pkg",
     "use_repo_root_cwd",
     "stub_win32_output_on_windows",
-    "mock_litellm",
     "set_dummy_llm_env",
 ]
-
-if "_load_runtime" in globals():
-    __all__.extend(["_load_runtime", "_close_test_runtime"])

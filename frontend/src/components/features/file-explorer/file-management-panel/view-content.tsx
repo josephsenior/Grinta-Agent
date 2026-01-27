@@ -25,10 +25,20 @@ function EmptyState({
 }) {
   return (
     <div className="flex items-center justify-center h-full p-8">
-      <div className="text-center text-text-secondary">
+      <div className="text-center text-[var(--text-tertiary)] min-w-[320px] max-w-2xl px-4">
         <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p className="text-sm">{message}</p>
-        <p className="text-xs mt-1">{subMessage}</p>
+        <p
+          className="text-sm"
+          style={{ wordBreak: "normal", whiteSpace: "normal" }}
+        >
+          {message}
+        </p>
+        <p
+          className="text-xs mt-1"
+          style={{ wordBreak: "normal", whiteSpace: "normal" }}
+        >
+          {subMessage}
+        </p>
       </div>
     </div>
   );

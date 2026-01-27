@@ -3,6 +3,7 @@
 import json
 import os
 import socket
+import sys
 import time
 import docker
 import pytest
@@ -14,10 +15,16 @@ from forge.core.logger import forge_logger as logger
 from forge.events.action import CmdRunAction, MCPAction
 from forge.events.observation import CmdOutputObservation, MCPObservation
 
-pytestmark = pytest.mark.skipif(
-    os.environ.get("TEST_RUNTIME") == "cli",
-    reason="CLIRuntime does not support MCP actions",
-)
+pytestmark = [
+    pytest.mark.skipif(
+        os.environ.get("TEST_RUNTIME") == "cli",
+        reason="CLIRuntime does not support MCP actions",
+    ),
+    pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="Windows: MCP tests use bash-style commands (sleep, cat) and background job handling that differs on Windows PowerShell.",
+    ),
+]
 
 
 @pytest.fixture
@@ -147,6 +154,7 @@ async def test_fetch_mcp_via_stdio(temp_dir, runtime_cls, run_as_Forge):
     runtime.close()
 
 
+@pytest.mark.skip(reason="Docker-based tests are disabled in local-only architecture")
 @pytest.mark.asyncio
 async def test_filesystem_mcp_via_sse(
     temp_dir, runtime_cls, run_as_Forge, sse_mcp_docker_server
@@ -172,6 +180,7 @@ async def test_filesystem_mcp_via_sse(
             runtime.close()
 
 
+@pytest.mark.skip(reason="Docker-based tests are disabled in local-only architecture")
 @pytest.mark.asyncio
 async def test_both_stdio_and_sse_mcp(
     temp_dir, runtime_cls, run_as_Forge, sse_mcp_docker_server
@@ -236,6 +245,7 @@ async def test_both_stdio_and_sse_mcp(
             runtime.close()
 
 
+@pytest.mark.skip(reason="Tests checking for .dockerenv are disabled in local-only architecture")
 @pytest.mark.asyncio
 async def test_microagent_and_one_stdio_mcp_in_config(
     temp_dir, runtime_cls, run_as_Forge

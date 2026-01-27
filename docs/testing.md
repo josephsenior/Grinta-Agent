@@ -54,9 +54,6 @@ poetry run pytest -m benchmark
 ```bash
 # Fast unit tests only (skip heavy/integration)
 make test-unit
-
-# MetaSOP specific tests
-make test-metasop
 ```
 
 ## Test Configuration

@@ -224,13 +224,13 @@ const confirmFileUpload = async (
     );
 
     const toggleButton = await screen.findByRole("button", { name: /add files/i });
-    expect(screen.queryByText("Upload Files")).not.toBeInTheDocument();
+    expect(screen.queryByText("chat.uploadFiles")).not.toBeInTheDocument();
 
     await user.click(toggleButton);
-    expect(screen.getByText("Upload Files")).toBeInTheDocument();
+    expect(screen.getByText("chat.uploadFiles")).toBeInTheDocument();
 
     await user.click(toggleButton);
-    expect(screen.queryByText("Upload Files")).not.toBeInTheDocument();
+    expect(screen.queryByText("chat.uploadFiles")).not.toBeInTheDocument();
   });
 
   it("should show drag overlay and handle dropped files", async () => {
@@ -251,12 +251,12 @@ const confirmFileUpload = async (
     };
 
     fireEvent.dragOver(chatBox, { dataTransfer });
-    expect(screen.getByText(/drop files here/i)).toBeInTheDocument();
+    expect(screen.getByText("chat.dropFilesHere")).toBeInTheDocument();
 
     fireEvent.drop(chatBox, { dataTransfer });
     await confirmFileUpload(user, { optional: true });
 
-    expect(screen.queryByText(/drop files here/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("chat.dropFilesHere")).not.toBeInTheDocument();
     expect(screen.queryAllByTestId("image-preview")).toHaveLength(1);
   });
 

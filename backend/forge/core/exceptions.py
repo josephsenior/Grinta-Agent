@@ -229,6 +229,47 @@ class AgentRuntimeError(Exception):
     """Base class for all agent runtime exceptions."""
 
 
+class ResourceLimitExceededError(Exception):
+    """Raised when a resource limit is exceeded (memory, CPU, disk, etc.).
+
+    This exception is raised when:
+    - Memory usage exceeds configured limit
+    - Disk usage exceeds configured limit
+    - File count exceeds configured limit
+    - Other resource limits are violated
+
+    Args:
+        message: Error message describing which limit was exceeded
+
+    """
+
+    def __init__(self, message: str) -> None:
+        """Initialize resource limit error with message."""
+        super().__init__(message)
+
+
+class PathValidationError(Exception):
+    """Raised when path validation fails due to security concerns.
+
+    This exception is raised when:
+    - Directory traversal attempts are detected
+    - Paths violate workspace boundaries
+    - Invalid characters are found in paths
+    - Path length or depth limits are exceeded
+
+    Args:
+        message: Error message describing the validation failure
+        path: The invalid path (if available)
+
+    """
+
+    def __init__(self, message: str, path: str | None = None) -> None:
+        """Initialize path validation error with message and optional path."""
+        super().__init__(message)
+        self.message = message
+        self.path = path
+
+
 class AgentRuntimeBuildError(AgentRuntimeError):
     """Exception raised when an agent runtime build operation fails."""
 

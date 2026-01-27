@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING
 
 from forge.core.logger import forge_logger as logger
 from forge.events.action.action import Action
-from forge.events.action.commands import CmdRunAction, IPythonRunCellAction
+from forge.events.action.commands import CmdRunAction
 from forge.events.action.empty import NullAction
 from forge.events.action.message import MessageAction
 from forge.events.event import Event, EventSource
-from forge.events.observation import CmdOutputObservation, IPythonRunCellObservation
+from forge.events.observation import CmdOutputObservation
 from forge.events.observation.agent import AgentCondensationObservation
 from forge.events.observation.empty import NullObservation
 from forge.events.observation.error import ErrorObservation
@@ -203,11 +203,7 @@ class StuckDetector:
     def _check_error_observation_patterns(self, last_observations: list[Event]) -> bool:
         """Check for various error observation patterns."""
         # Check for simple error observations
-        if self._check_simple_error_observations(last_observations):
-            return True
-
-        # Check for IPython run cell observations
-        return bool(self._check_ipython_error_observations(last_observations))
+        return self._check_simple_error_observations(last_observations)
 
     def _check_simple_error_observations(self, last_observations: list[Event]) -> bool:
         """Check for simple error observation patterns."""
@@ -215,116 +211,6 @@ class StuckDetector:
             logger.warning("Action, ErrorObservation loop detected")
             return True
         return False
-
-    def _check_ipython_error_observations(self, last_observations: list[Event]) -> bool:
-        """Check for IPython run cell error observation patterns."""
-        if not all(
-            isinstance(obs, IPythonRunCellObservation) for obs in last_observations[:3]
-        ):
-            return False
-
-        warning = "Action, IPythonRunCellObservation loop detected"
-        ipython_observations = [
-            obs
-            for obs in last_observations[:3]
-            if isinstance(obs, IPythonRunCellObservation)
-        ]
-
-        for error_message in self.SYNTAX_ERROR_MESSAGES:
-            if self._check_specific_error_pattern(ipython_observations, error_message):
-                logger.warning(warning)
-                return True
-
-        return False
-
-    def _check_specific_error_pattern(
-        self,
-        ipython_observations: list[IPythonRunCellObservation],
-        error_message: str,
-    ) -> bool:
-        """Check for specific error patterns in IPython observations."""
-        if error_message.startswith(
-            "SyntaxError: unterminated string literal (detected at line"
-        ):
-            return self._check_for_consistent_line_error(
-                ipython_observations, error_message
-            )
-        if error_message in {
-            "SyntaxError: invalid syntax. Perhaps you forgot a comma?",
-            "SyntaxError: incomplete input",
-        }:
-            return self._check_for_consistent_invalid_syntax(
-                ipython_observations, error_message
-            )
-        return False
-
-    def _check_for_consistent_invalid_syntax(
-        self,
-        observations: list[IPythonRunCellObservation],
-        error_message: str,
-    ) -> bool:
-        first_lines = []
-        valid_observations = []
-        for obs in observations:
-            content = obs.content
-            lines = content.strip().split("\n")
-            if len(lines) < 6:
-                return False
-            line1 = lines[0].strip()
-            if not line1.startswith("Cell In[1], line"):
-                return False
-            first_lines.append(line1)
-            if (
-                lines[-1].startswith("[Jupyter Python interpreter:")
-                and lines[-2].startswith("[Jupyter current working directory:")
-                and (error_message in lines[-3])
-            ):
-                valid_observations.append(obs)
-        return (
-            len(set(first_lines)) == 1
-            and len(valid_observations) == 3
-            and (
-                len(
-                    {
-                        obs.content.strip().split("\n")[:-2][-1]
-                        for obs in valid_observations
-                    }
-                )
-                == 1
-            )
-        )
-
-    def _extract_error_line_from_observation(
-        self, obs: IPythonRunCellObservation, error_message: str
-    ) -> str | None:
-        """Extract error line from observation if it matches the error message."""
-        content = obs.content
-        lines = content.strip().split("\n")
-        if len(lines) < 3:
-            return None
-
-        last_lines = lines[-3:]
-        if not (
-            last_lines[-2].startswith("[Jupyter current working directory:")
-            and last_lines[-1].startswith("[Jupyter Python interpreter:")
-        ):
-            return None
-
-        return last_lines[-3] if error_message in last_lines[-3] else None
-
-    def _check_for_consistent_line_error(
-        self,
-        observations: list[IPythonRunCellObservation],
-        error_message: str,
-    ) -> bool:
-        error_lines = []
-        for obs in observations:
-            error_line = self._extract_error_line_from_observation(obs, error_message)
-            if error_line is None:
-                return False
-            error_lines.append(error_line)
-
-        return len(error_lines) == 3 and len(set(error_lines)) == 1
 
     def _is_stuck_monologue(self, filtered_history: list[Event]) -> bool:
         agent_message_actions = [
@@ -590,8 +476,6 @@ class StuckDetector:
         """
         if isinstance(action, CmdRunAction):
             return self._categorize_cmd_action(action.command.lower())
-        if isinstance(action, IPythonRunCellAction):
-            return self._categorize_python_action(action.code.lower())
         return "other_action"
 
     def _categorize_cmd_action(self, command: str) -> str:
@@ -621,24 +505,6 @@ class StuckDetector:
 
         return "other_command"
 
-    def _categorize_python_action(self, code: str) -> str:
-        """Categorize Python action by type.
-
-        Args:
-            code: Lowercased Python code
-
-        Returns:
-            Category string
-
-        """
-        if "edit_file" in code or "write_file" in code:
-            return "edit_file"
-        if "read_file" in code or "open(" in code:
-            return "read_file"
-        if "import" in code:
-            return "import_module"
-        return "execute_python"
-
     def _extract_observation_outcome(self, observation: Observation) -> str | None:
         """Extract the outcome/result of an observation.
 
@@ -653,8 +519,6 @@ class StuckDetector:
             return "error"
         if isinstance(observation, CmdOutputObservation):
             return self._categorize_cmd_output(observation)
-        if isinstance(observation, IPythonRunCellObservation):
-            return self._categorize_python_output(observation)
         return "unknown"
 
     def _categorize_cmd_output(self, observation: CmdOutputObservation) -> str:
@@ -680,37 +544,9 @@ class StuckDetector:
             return "no_output"
         return "success"
 
-    def _categorize_python_output(self, observation: IPythonRunCellObservation) -> str:
-        """Categorize Python cell output observation.
-
-        Args:
-            observation: Python cell observation
-
-        Returns:
-            Outcome category string
-
-        """
-        content_lower = observation.content.lower()
-
-        if "error" in content_lower or "exception" in content_lower:
-            return "error"
-        if "none" in content_lower or len(observation.content.strip()) < 10:
-            return "no_change"
-        return "success"
-
     def _eq_no_pid(self, obj1: Event, obj2: Event) -> bool:
-        if isinstance(obj1, IPythonRunCellAction) and isinstance(
-            obj2, IPythonRunCellAction
-        ):
-            if (
-                "edit_file_by_replace(" in obj1.code
-                and "edit_file_by_replace(" in obj2.code
-            ):
-                return (
-                    len(obj1.code.split("\n")) > 2
-                    and obj1.code.split("\n")[:3] == obj2.code.split("\n")[:3]
-                )
-            return obj1 == obj2
+        if isinstance(obj1, CmdRunAction) and isinstance(obj2, CmdRunAction):
+            return obj1.command == obj2.command
         if isinstance(obj1, CmdOutputObservation) and isinstance(
             obj2, CmdOutputObservation
         ):

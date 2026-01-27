@@ -1,7 +1,6 @@
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, mock_open, patch
 import toml
-from forge.cli.tui import UsageMetrics
 from forge.cli.utils import (
     add_local_config_trusted_dir,
     extract_model_and_provider,
@@ -10,7 +9,6 @@ from forge.cli.utils import (
     organize_models_and_providers,
     read_file,
     split_is_actually_version,
-    update_usage_metrics,
     write_to_file,
 )
 from forge.events.event import Event
@@ -209,64 +207,6 @@ class TestAddLocalConfigTrustedDir:
         mock_toml_load.assert_called_once()
         expected_config = {"sandbox": {"other_key": [], "trusted_dirs": ["/new/path"]}}
         mock_toml_dump.assert_called_once_with(expected_config, mock_open_file())
-
-
-class TestUpdateUsageMetrics:
-    def test_update_usage_metrics_no_llm_metrics(self):
-        event = Event()
-        usage_metrics = UsageMetrics()
-        original_metrics = usage_metrics.metrics
-        update_usage_metrics(event, usage_metrics)
-        assert usage_metrics.metrics is original_metrics
-        assert usage_metrics.metrics.accumulated_cost == 0.0
-
-    def test_update_usage_metrics_with_cost(self):
-        event = Event()
-        metrics = MagicMock(spec=Metrics)
-        type(metrics).accumulated_cost = PropertyMock(return_value=1.25)
-        event.llm_metrics = metrics
-        usage_metrics = UsageMetrics()
-        update_usage_metrics(event, usage_metrics)
-        assert usage_metrics.metrics is metrics
-        assert usage_metrics.metrics.accumulated_cost == 1.25
-
-    def test_update_usage_metrics_with_tokens(self):
-        event = Event()
-        token_usage = MagicMock(spec=TokenUsage)
-        token_usage.prompt_tokens = 100
-        token_usage.completion_tokens = 50
-        token_usage.cache_read_tokens = 20
-        token_usage.cache_write_tokens = 30
-        metrics = MagicMock(spec=Metrics)
-        type(metrics).accumulated_cost = PropertyMock(return_value=1.5)
-        type(metrics).accumulated_token_usage = PropertyMock(return_value=token_usage)
-        event.llm_metrics = metrics
-        usage_metrics = UsageMetrics()
-        update_usage_metrics(event, usage_metrics)
-        assert usage_metrics.metrics is metrics
-        assert usage_metrics.metrics.accumulated_cost == 1.5
-        assert usage_metrics.metrics.accumulated_token_usage is token_usage
-        assert usage_metrics.metrics.accumulated_token_usage.prompt_tokens == 100
-        assert usage_metrics.metrics.accumulated_token_usage.completion_tokens == 50
-        assert usage_metrics.metrics.accumulated_token_usage.cache_read_tokens == 20
-        assert usage_metrics.metrics.accumulated_token_usage.cache_write_tokens == 30
-
-    def test_update_usage_metrics_with_invalid_types(self):
-        event = Event()
-        token_usage = MagicMock(spec=TokenUsage)
-        token_usage.prompt_tokens = "not an int"
-        token_usage.completion_tokens = "not an int"
-        token_usage.cache_read_tokens = "not an int"
-        token_usage.cache_write_tokens = "not an int"
-        metrics = MagicMock(spec=Metrics)
-        type(metrics).accumulated_cost = PropertyMock(return_value="not a float")
-        type(metrics).accumulated_token_usage = PropertyMock(return_value=token_usage)
-        event.llm_metrics = metrics
-        usage_metrics = UsageMetrics()
-        update_usage_metrics(event, usage_metrics)
-        assert usage_metrics.metrics is metrics
-        assert usage_metrics.metrics.accumulated_cost == "not a float"
-        assert usage_metrics.metrics.accumulated_token_usage is token_usage
 
 
 class TestModelAndProviderFunctions:

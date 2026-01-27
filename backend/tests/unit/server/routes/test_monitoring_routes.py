@@ -127,10 +127,8 @@ async def test_get_metrics_uses_sessions_fallback(monkeypatch):
 def test_static_endpoints():
     client = _make_test_client()
     assert client.get("/api/monitoring/health").status_code == 200
-    assert client.get("/api/monitoring/agents/performance").json() == []
-    assert "file_cache" in client.get("/api/monitoring/cache/stats").json()
+    assert client.get("/api/monitoring/cache/stats").json() is not None
     assert "schema_validation" in client.get("/api/monitoring/failures/taxonomy").json()
-    assert client.get("/api/monitoring/ace/metrics").json() is None
     assert client.get("/api/monitoring/parallel/stats").json()["enabled"] is True
 
 

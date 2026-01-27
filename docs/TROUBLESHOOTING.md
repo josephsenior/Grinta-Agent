@@ -296,10 +296,10 @@ chmod 644 main.py
 cd frontend
 
 # Install dependencies
-npm install
+pnpm install
 
 # Start dev server
-npm run dev
+pnpm run dev
 
 # Check for errors in terminal
 ```

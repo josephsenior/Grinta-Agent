@@ -5,6 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ApiKeysManager } from "#/components/features/settings/api-keys-manager";
 
 // Mock the react-i18next
+const mockI18n = {
+  changeLanguage: vi.fn(() => Promise.resolve()),
+};
+
 vi.mock("react-i18next", async () => {
   const actual =
     await vi.importActual<typeof import("react-i18next")>("react-i18next");
@@ -12,6 +16,7 @@ vi.mock("react-i18next", async () => {
     ...actual,
     useTranslation: () => ({
       t: (key: string) => key,
+      i18n: mockI18n,
     }),
     Trans: ({
       i18nKey,
@@ -63,9 +68,10 @@ describe("ApiKeysManager", () => {
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute(
       "href",
-      "https://docs.all-hands.dev/usage/cloud/cloud-api",
+      "https://docs.forge.dev/usage/cloud/cloud-api",
     );
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
 });
+

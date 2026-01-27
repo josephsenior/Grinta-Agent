@@ -27,7 +27,8 @@ export function CustomModelInput({
         defaultValue={defaultValue}
         aria-label={t(I18nKey.MODEL$CUSTOM_MODEL)}
         classNames={{
-          inputWrapper: "bg-[#27272A] rounded-md text-sm px-3 py-[10px]",
+          inputWrapper:
+            "bg-background-tertiary rounded-md text-sm px-3 py-[10px]",
         }}
       />
     </fieldset>

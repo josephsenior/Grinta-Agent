@@ -71,14 +71,17 @@ export class GlobalErrorBoundary extends React.Component<
 
       // Default error UI
       return (
-        <div className="min-h-screen bg-background-primary flex items-center justify-center p-8">
-          <div className="text-center max-w-lg">
+        <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center p-8">
+          <div className="text-center min-w-[320px] max-w-2xl px-4">
             <div className="mb-8">
               <AlertTriangle className="w-20 h-20 text-destructive mx-auto mb-6" />
-              <h1 className="text-2xl font-bold text-text-primary mb-3">
+              <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-3">
                 {i18n.t("error.somethingWentWrong", "Something went wrong")}
               </h1>
-              <p className="text-text-secondary mb-6">
+              <p
+                className="text-[var(--text-secondary)] mb-6"
+                style={{ wordBreak: "normal", whiteSpace: "normal" }}
+              >
                 {i18n.t(
                   "error.unexpectedErrorLogged",
                   "We encountered an unexpected error. This has been logged and we'll look into it.",
@@ -88,27 +91,27 @@ export class GlobalErrorBoundary extends React.Component<
 
             {process.env.NODE_ENV === "development" && error && (
               <details className="mb-8 text-left">
-                <summary className="cursor-pointer text-sm font-medium text-text-secondary mb-3">
+                <summary className="cursor-pointer text-sm font-medium text-[var(--text-secondary)] mb-3">
                   {i18n.t(
                     "error.errorDetailsDevelopment",
                     "Error Details (Development)",
                   )}
                 </summary>
-                <div className="bg-background-secondary p-4 rounded border">
+                <div className="bg-[var(--bg-elevated)] p-4 rounded border border-[var(--border-primary)]">
                   <div className="mb-3">
-                    <strong className="text-text-primary">
+                    <strong className="text-[var(--text-primary)]">
                       {i18n.t("error.error", "Error")}:
                     </strong>
-                    <pre className="text-xs text-text-tertiary mt-1 overflow-auto max-h-32">
+                    <pre className="text-xs text-[var(--text-tertiary)] mt-1 overflow-auto max-h-32">
                       {error.message}
                     </pre>
                   </div>
                   {error.stack && (
                     <div>
-                      <strong className="text-text-primary">
+                      <strong className="text-[var(--text-primary)]">
                         {i18n.t("error.stackTrace", "Stack Trace")}:
                       </strong>
-                      <pre className="text-xs text-text-tertiary mt-1 overflow-auto max-h-48">
+                      <pre className="text-xs text-[var(--text-tertiary)] mt-1 overflow-auto max-h-48">
                         {error.stack}
                       </pre>
                     </div>
@@ -137,7 +140,10 @@ export class GlobalErrorBoundary extends React.Component<
               </Button>
             </div>
 
-            <div className="mt-8 text-xs text-text-tertiary">
+            <div
+              className="mt-8 text-xs text-[var(--text-tertiary)]"
+              style={{ wordBreak: "normal", whiteSpace: "normal" }}
+            >
               {i18n.t(
                 "error.contactSupportIfPersists",
                 "If this problem persists, please contact support with the error details above.",

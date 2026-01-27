@@ -1,8 +1,9 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { GitBranch } from "lucide-react";
 import { SettingsInput } from "#/components/features/settings/settings-input";
 import { I18nKey } from "#/i18n/declaration";
-import { SettingsPanel } from "./settings-panel";
+import { Accordion } from "#/components/features/settings/Accordion";
 
 interface GitSectionProps {
   gitUserName: string;
@@ -20,11 +21,15 @@ export function GitSection({
   const { t } = useTranslation();
 
   return (
-    <SettingsPanel title={t(I18nKey.SETTINGS$GIT_SETTINGS)}>
-      <p className="text-sm text-foreground-secondary mb-4 w-full">
+    <Accordion
+      title={t(I18nKey.SETTINGS$GIT_SETTINGS)}
+      icon={GitBranch}
+      defaultOpen
+    >
+      <p className="text-sm text-[var(--text-tertiary)] mb-4">
         {t(I18nKey.SETTINGS$GIT_SETTINGS_DESCRIPTION)}
       </p>
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4">
         <SettingsInput
           testId="git-user-name-input"
           name="git-user-name-input"
@@ -46,6 +51,6 @@ export function GitSection({
           className="w-full"
         />
       </div>
-    </SettingsPanel>
+    </Accordion>
   );
 }

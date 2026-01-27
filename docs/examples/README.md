@@ -111,26 +111,6 @@ agent.edit_file(
 )
 ```
 
-### MetaSOP Orchestration
-
-```python
-from forge.metasop import MetaSOPOrchestrator
-
-orchestrator = MetaSOPOrchestrator()
-
-# Complex multi-agent project
-result = orchestrator.execute(
-    goal="Build a REST API for a todo app with authentication",
-    steps=[
-        "Design the API structure",
-        "Implement the database schema",
-        "Create the API endpoints",
-        "Add authentication",
-        "Write tests"
-    ]
-)
-```
-
 ## Integration Examples
 
 ### GitHub Integration

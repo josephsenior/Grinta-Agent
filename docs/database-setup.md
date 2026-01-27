@@ -4,6 +4,19 @@ This guide explains how to set up PostgreSQL for user storage in Forge.
 
 ## Quick Start
 
+### Docker Compose (local development)
+
+If you prefer not to install PostgreSQL manually, the root `docker-compose.yml` now provisions a `postgres` service out of the box:
+
+1. Ensure `USER_STORAGE_TYPE=database` (this is the default inside the Docker Compose stack).
+2. Start the stack:
+   ```bash
+   docker compose up --build
+   ```
+3. The Forge container waits for the PostgreSQL health check and automatically runs the user storage migrations before launching the API.
+
+This provides a ready-to-use database running on the internal Docker network (`DB_HOST=postgres`) without any additional setup.
+
 ### 1. Install PostgreSQL
 
 **Windows:**

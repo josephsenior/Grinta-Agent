@@ -81,6 +81,8 @@ class DatabaseKnowledgeBaseStore:
             user_id=user_id,
             name=name,
             description=description,
+            document_count=0,
+            total_size_bytes=0,
         )
         
         async with pool.acquire() as conn:

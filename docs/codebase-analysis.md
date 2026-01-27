@@ -31,7 +31,7 @@ Forge/
 ├── llm/             # LLM providers & utilities
 ├── events/          # Event system (actions, observations)
 ├── core/            # Core utilities & config
-└── integrations/    # GitHub, GitLab, Bitbucket, VSCode
+└── integrations/    # GitHub, VSCode
 ```
 
 **Why it's good:**
@@ -133,7 +133,6 @@ system_prompt_tech_philosophy.j2    # Experimental?
 system_prompt_backup_original.j2    # Another backup?
 system_prompt_interactive.j2        # Mode variant?
 system_prompt_long_horizon.j2       # Mode variant?
-ace_system_prompt.j2                # ACE framework
 ```
 
 **Impact:**
@@ -144,7 +143,6 @@ ace_system_prompt.j2                # ACE framework
 
 **Should be:**
 - Keep: `system_prompt_forge.j2` (current, 166 lines)
-- Keep: `ace_system_prompt.j2` (ACE mode)
 - Keep: `system_prompt_interactive.j2`, `system_prompt_long_horizon.j2` (if used)
 - Delete: All backup/optimized/ultimate variants (use git history!)
 
@@ -187,18 +185,6 @@ Forge/memory/
 
 **Is this necessary?** Maybe - but could be simplified.
 
-**Prompt Optimization:**
-```
-Forge/prompt_optimization/
-├── optimizer.py
-├── evolver.py
-├── tool_optimizer.py
-├── advanced/ (6 files)
-└── realtime/ (8 files)
-```
-
-**Is this used?** Unclear - might be over-engineering.
-
 ---
 
 ### 5. Test Coverage (Unknown)
@@ -233,7 +219,6 @@ tests/
 - Separation of concerns
 - Well-defined boundaries (runtime, controller, server)
 - Event-driven architecture
-- Microservices-ready (MetaSOP)
 
 **Minor issues:**
 - Some overlap in memory implementations
@@ -351,7 +336,6 @@ echo "*.bak" >> .gitignore
 
 # 3. Keep only active prompts:
 #    - system_prompt_forge.j2 (current)
-#    - ace_system_prompt.j2 (ACE mode)
 #    - Delete others
 ```
 

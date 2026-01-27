@@ -11,7 +11,6 @@ from forge.events.action import (
     FileEditAction,
     FileReadAction,
     FileWriteAction,
-    IPythonRunCellAction,
     MessageAction,
     RecallAction,
 )
@@ -75,7 +74,12 @@ def test_message_action_serialization_deserialization():
 def test_agent_finish_action_serialization_deserialization():
     original_action_dict = {
         "action": "finish",
-        "args": {"outputs": {}, "thought": "", "final_thought": ""},
+        "args": {
+            "outputs": {},
+            "thought": "",
+            "final_thought": "",
+            "force_finish": False,
+        },
     }
     serialization_deserialization(original_action_dict, AgentFinishAction)
 
@@ -195,7 +199,7 @@ def test_file_edit_action_aci_serialization_deserialization():
             "start": 1,
             "end": -1,
             "thought": "Replacing text",
-            "impl_source": "oh_aci",
+            "impl_source": "file_editor",
             "security_risk": -1,
         },
     }
@@ -262,8 +266,7 @@ def _create_llm_based_edit_action_dict():
             "start": 1,
             "end": -1,
             "thought": "Replacing text",
-            "impl_source": "oh_aci",
-            "translated_ipython_code": None,
+            "impl_source": "file_editor",
         },
     }
 
@@ -274,8 +277,7 @@ def _validate_llm_based_edit_action_event(event):
     assert isinstance(event, FileEditAction)
     assert event.path == "/path/to/file.txt"
     assert event.thought == "Replacing text"
-    assert event.impl_source == FileEditSource.OH_ACI
-    assert not hasattr(event, "translated_ipython_code")
+    assert event.impl_source == FileEditSource.FILE_EDITOR
     assert event.command == ""
     assert event.file_text is None
     assert event.old_str is None
@@ -288,9 +290,8 @@ def _validate_llm_based_edit_action_event(event):
 
 def _validate_llm_based_edit_action_serialization(event_dict):
     """Validate LLM-based edit action serialization."""
-    assert "translated_ipython_code" not in event_dict["args"]
     assert event_dict["args"]["path"] == "/path/to/file.txt"
-    assert event_dict["args"]["impl_source"] == "oh_aci"
+    assert event_dict["args"]["impl_source"] == "file_editor"
     assert event_dict["args"]["thought"] == "Replacing text"
     assert event_dict["args"]["command"] == ""
     assert event_dict["args"]["file_text"] is None
@@ -316,8 +317,8 @@ def test_file_llm_based_edit_action_legacy_serialization():
     _validate_llm_based_edit_action_serialization(event_dict)
 
 
-def _create_ohaci_edit_action_dict():
-    """Create test data for OHAci edit action."""
+def _create_file_editor_edit_action_dict():
+    """Create test data for FILE_EDITOR edit action."""
     return {
         "action": "edit",
         "args": {
@@ -326,14 +327,15 @@ def _create_ohaci_edit_action_dict():
             "start": 1,
             "end": -1,
             "thought": "I'll help you create a simple 2048 game in Python. I'll use the str_replace_editor to create the file.",
-            "impl_source": "oh_aci",
-            "translated_ipython_code": "print(file_editor(**{'command': 'create', 'path': '/workspace/game_2048.py', 'file_text': 'New file content'}))",
+            "impl_source": "file_editor",
+            "command": "create",
+            "file_text": "New file content",
         },
     }
 
 
-def _validate_ohaci_edit_action_event(event):
-    """Validate OHAci edit action event properties."""
+def _validate_file_editor_edit_action_event(event):
+    """Validate FILE_EDITOR edit action event properties."""
     assert isinstance(event, Action)
     assert isinstance(event, FileEditAction)
     assert event.path == "/workspace/game_2048.py"
@@ -341,8 +343,7 @@ def _validate_ohaci_edit_action_event(event):
         event.thought
         == "I'll help you create a simple 2048 game in Python. I'll use the str_replace_editor to create the file."
     )
-    assert event.impl_source == FileEditSource.OH_ACI
-    assert not hasattr(event, "translated_ipython_code")
+    assert event.impl_source == FileEditSource.FILE_EDITOR
     assert event.command == "create"
     assert event.file_text == "New file content"
     assert event.old_str is None
@@ -353,11 +354,10 @@ def _validate_ohaci_edit_action_event(event):
     assert event.end == -1
 
 
-def _validate_ohaci_edit_action_serialization(event_dict):
-    """Validate OHAci edit action serialization."""
-    assert "translated_ipython_code" not in event_dict["args"]
+def _validate_file_editor_edit_action_serialization(event_dict):
+    """Validate FILE_EDITOR edit action serialization."""
     assert event_dict["args"]["path"] == "/workspace/game_2048.py"
-    assert event_dict["args"]["impl_source"] == "oh_aci"
+    assert event_dict["args"]["impl_source"] == "file_editor"
     assert (
         event_dict["args"]["thought"]
         == "I'll help you create a simple 2048 game in Python. I'll use the str_replace_editor to create the file."
@@ -372,18 +372,18 @@ def _validate_ohaci_edit_action_serialization(event_dict):
     assert event_dict["args"]["end"] == -1
 
 
-def test_file_ohaci_edit_action_legacy_serialization():
-    """Test OHAci edit action legacy serialization."""
+def test_file_editor_edit_action_serialization():
+    """Test FILE_EDITOR edit action serialization."""
     # Create test data
-    original_action_dict = _create_ohaci_edit_action_dict()
+    original_action_dict = _create_file_editor_edit_action_dict()
 
     # Test deserialization
     event = event_from_dict(original_action_dict)
-    _validate_ohaci_edit_action_event(event)
+    _validate_file_editor_edit_action_event(event)
 
     # Test serialization
     event_dict = event_to_dict(event)
-    _validate_ohaci_edit_action_serialization(event_dict)
+    _validate_file_editor_edit_action_serialization(event_dict)
 
 
 def test_agent_microagent_action_serialization_deserialization():
@@ -396,54 +396,6 @@ def test_agent_microagent_action_serialization_deserialization():
         },
     }
     serialization_deserialization(original_action_dict, RecallAction)
-
-
-def test_file_read_action_legacy_serialization():
-    original_action_dict = {
-        "action": "read",
-        "args": {
-            "path": "/workspace/test.txt",
-            "start": 0,
-            "end": -1,
-            "thought": "Reading the file contents",
-            "impl_source": "oh_aci",
-            "translated_ipython_code": "print(file_editor(**{'command': 'view', 'path': '/workspace/test.txt'}))",
-        },
-    }
-    event = event_from_dict(original_action_dict)
-    assert isinstance(event, Action)
-    assert isinstance(event, FileReadAction)
-    assert event.path == "/workspace/test.txt"
-    assert event.thought == "Reading the file contents"
-    assert event.impl_source == FileReadSource.OH_ACI
-    assert not hasattr(event, "translated_ipython_code")
-    assert not hasattr(event, "command")
-    assert event.start == 0
-    assert event.end == -1
-    event_dict = event_to_dict(event)
-    assert "translated_ipython_code" not in event_dict["args"]
-    assert "command" not in event_dict["args"]
-    assert event_dict["args"]["path"] == "/workspace/test.txt"
-    assert event_dict["args"]["impl_source"] == "oh_aci"
-    assert event_dict["args"]["thought"] == "Reading the file contents"
-    assert event_dict["args"]["start"] == 0
-    assert event_dict["args"]["end"] == -1
-
-
-def test_handle_action_deprecated_args_translates_ipython() -> None:
-    args = {
-        "keep_prompt": True,
-        "task_completed": False,
-        "translated_ipython_code": 'print(file_editor(**{"command": "view", "path": "notebook.ipynb"}))',
-        "images_urls": ["https://legacy/img.png"],
-    }
-
-    cleaned = handle_action_deprecated_args(args.copy())
-
-    assert "keep_prompt" not in cleaned
-    assert "task_completed" not in cleaned
-    assert cleaned["path"] == "notebook.ipynb"
-    assert "command" not in cleaned  # removed when command=view
 
 
 def test_action_from_dict_normalizes_images_and_timestamp() -> None:
@@ -524,9 +476,3 @@ def test_cmd_run_action_string_representation() -> None:
     assert "THOUGHT: Listing files" in description
     assert "COMMAND:\nls -la" in description
     assert action.message == "Running command: ls -la"
-
-
-def test_ipython_run_cell_action_message() -> None:
-    action = IPythonRunCellAction(code="print('hello')", thought="Quick check")
-    assert "Running Python code interactively" in action.message
-    assert "CODE:\nprint('hello')" in str(action)

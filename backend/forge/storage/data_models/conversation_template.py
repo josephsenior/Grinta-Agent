@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class TemplateCategory(str, Enum):
@@ -27,28 +27,42 @@ class TemplateCategory(str, Enum):
 class ConversationTemplate(BaseModel):
     """Represents a conversation template."""
 
-    id: str = Field(..., description="Unique identifier")
-    title: str = Field(..., description="Template title")
-    description: str | None = Field(None, description="Template description")
-    category: TemplateCategory = Field(TemplateCategory.CUSTOM)
-    prompt: str = Field(..., description="The initial prompt/message")
+    id: str = Field(..., min_length=1, description="Unique identifier")
+    title: str = Field(..., min_length=1, max_length=200, description="Template title")
+    description: str | None = Field(None, max_length=1000, description="Template description")
+    category: TemplateCategory = Field(default=TemplateCategory.CUSTOM, description="Template category")
+    prompt: str = Field(..., min_length=1, description="The initial prompt/message")
     icon: str | None = Field(None, description="Icon identifier")
-    is_favorite: bool = Field(False)
-    usage_count: int = Field(0)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    is_favorite: bool = Field(default=False, description="Whether template is favorited")
+    usage_count: int = Field(default=0, ge=0, description="Number of times template was used")
+    created_at: datetime = Field(default_factory=datetime.now, description="Creation timestamp")
+    updated_at: datetime = Field(default_factory=datetime.now, description="Last update timestamp")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+    @field_validator("id", "title", "prompt")
+    @classmethod
+    def validate_required_strings(cls, v: str) -> str:
+        """Validate required string fields are non-empty."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        return validate_non_empty_string(v, name="field")
 
 
 class CreateTemplateRequest(BaseModel):
     """Request to create a template."""
 
-    title: str
-    description: str | None = None
-    category: TemplateCategory = TemplateCategory.CUSTOM
-    prompt: str
-    icon: str | None = None
-    is_favorite: bool = False
+    title: str = Field(..., min_length=1, max_length=200, description="Template title")
+    description: str | None = Field(None, max_length=1000, description="Template description")
+    category: TemplateCategory = Field(default=TemplateCategory.CUSTOM, description="Template category")
+    prompt: str = Field(..., min_length=1, description="The initial prompt/message")
+    icon: str | None = Field(None, description="Icon identifier")
+    is_favorite: bool = Field(default=False, description="Whether to mark as favorite")
+
+    @field_validator("title", "prompt")
+    @classmethod
+    def validate_required_strings(cls, v: str) -> str:
+        """Validate required string fields are non-empty."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        return validate_non_empty_string(v, name="field")
 
 
 class UpdateTemplateRequest(BaseModel):

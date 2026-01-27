@@ -2,7 +2,7 @@ import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import ConversationRedirect from "#/routes/conversation-redirect";
-import { renderWithProviders } from "../../test-utils";
+import { renderWithProviders } from "#test-utils";
 
 const mockNavigate = vi.fn();
 
@@ -27,3 +27,4 @@ describe("ConversationRedirect route", () => {
     expect(screen.getByText("Redirecting to conversations...")).toBeInTheDocument();
   });
 });
+

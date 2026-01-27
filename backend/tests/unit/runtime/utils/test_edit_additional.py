@@ -40,14 +40,9 @@ if "forge.events.action" not in sys.modules:
         def __init__(self, path: str) -> None:
             self.path = path
 
-    class IPythonRunCellAction:
-        def __init__(self, code: str) -> None:
-            self.code = code
-
     setattr(action_stub, "FileEditAction", FileEditAction)
     setattr(action_stub, "FileWriteAction", FileWriteAction)
     setattr(action_stub, "FileReadAction", FileReadAction)
-    setattr(action_stub, "IPythonRunCellAction", IPythonRunCellAction)
     sys.modules["forge.events.action"] = action_stub
 
 
@@ -300,9 +295,6 @@ class DummyRuntime(FileEditRuntimeMixinType):
     def write(self, action):
         self._writes.append(action)
         return FileWriteObservationType()
-
-    def run_ipython(self, action):
-        return ObservationType()
 
 
 def test_validate_range_errors():

@@ -4,7 +4,6 @@ import { fireEvent, screen } from "@testing-library/react";
 import { renderWithProviders } from "test-utils";
 import { EventMessage, looksLikeShell } from "#/components/features/chat/event-message";
 import { AgentState } from "#/types/agent-state";
-import { MicroagentStatus } from "#/types/microagent-status";
 import { ActionSecurityRisk } from "#/state/security-analyzer-slice";
 
 vi.mock("#/hooks/query/use-config", () => ({
@@ -428,7 +427,7 @@ describe("EventMessage", () => {
     expect(screen.getByText("Deployment Status")).toBeInTheDocument();
   });
 
-  it("should render attachments and microagent status indicator for assistant message", () => {
+  it("should render attachments for assistant message", () => {
     const assistantMessageEvent = {
       id: 903,
       source: "agent" as const,
@@ -451,10 +450,6 @@ describe("EventMessage", () => {
         isAwaitingUserConfirmation={false}
         isLastMessage
         isInLast10Actions
-        microagentStatus={MicroagentStatus.COMPLETED}
-        microagentConversationId="conversation-123"
-        microagentPRUrl="https://example.com/pr"
-        actions={[]}
       />,
       {
         preloadedState: {
@@ -466,9 +461,6 @@ describe("EventMessage", () => {
 
     expect(screen.getAllByTestId("image-preview")).toHaveLength(1);
     expect(screen.getByTestId("file-item")).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "MICROAGENT$VIEW_YOUR_PR" }),
-    ).toHaveAttribute("href", "https://example.com/pr");
   });
 
   it("should render streaming code artifact when agent is running", () => {
@@ -573,7 +565,7 @@ describe("EventMessage", () => {
     expect(screen.getByText("Summarize the latest changes")).toBeInTheDocument();
   });
 
-  it("should render microagent indicator for paired actions without thoughts", () => {
+  it("should render paired actions with thoughts", () => {
     const pairedIndicatorEvent = {
       id: 907,
       source: "agent" as const,
@@ -594,8 +586,6 @@ describe("EventMessage", () => {
         isAwaitingUserConfirmation={false}
         isLastMessage
         isInLast10Actions
-        microagentStatus={MicroagentStatus.WAITING}
-        actions={[]}
       />,
       {
         preloadedState: {
@@ -605,7 +595,8 @@ describe("EventMessage", () => {
       },
     );
 
-    expect(screen.getByText("MICROAGENT$STATUS_WAITING")).toBeInTheDocument();
+    // Should not crash and render the event
+    expect(screen.getByText("src/file.ts")).toBeInTheDocument();
   });
 
   it("should render reject observations with their message content", () => {

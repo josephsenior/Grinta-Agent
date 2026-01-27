@@ -7,7 +7,7 @@ from typing import Any
 import asyncio
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 from forge.knowledge_base import KnowledgeBaseManager
 from forge.server.utils.responses import success, error
@@ -28,8 +28,15 @@ router = APIRouter(prefix="/api/knowledge-base", tags=["knowledge-base"])
 class CreateCollectionRequest(BaseModel):
     """Request to create a new collection."""
 
-    name: str
-    description: str | None = None
+    name: str = Field(..., min_length=1, max_length=200, description="Collection name")
+    description: str | None = Field(None, max_length=1000, description="Collection description")
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        """Validate name is non-empty using type-safe validation."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        return validate_non_empty_string(v, name="name")
 
 
 class UpdateCollectionRequest(BaseModel):
@@ -42,10 +49,17 @@ class UpdateCollectionRequest(BaseModel):
 class SearchRequest(BaseModel):
     """Request to search the knowledge base."""
 
-    query: str
-    collection_ids: list[str] | None = None
-    top_k: int = 5
-    relevance_threshold: float = 0.7
+    query: str = Field(..., min_length=1, description="Search query string")
+    collection_ids: list[str] | None = Field(None, description="Collection IDs to search in (None = all)")
+    top_k: int = Field(default=5, ge=1, le=100, description="Number of top results to return")
+    relevance_threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="Minimum relevance score (0.0-1.0)")
+
+    @field_validator("query")
+    @classmethod
+    def validate_query(cls, v: str) -> str:
+        """Validate query is non-empty using type-safe validation."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        return validate_non_empty_string(v, name="query")
 
 
 class CollectionResponse(BaseModel):
@@ -95,9 +109,16 @@ class BulkUploadRequest(BaseModel):
 class BulkDocumentInput(BaseModel):
     """Individual document in a bulk upload."""
 
-    filename: str
-    content: str
-    mime_type: str = "text/plain"
+    filename: str = Field(..., min_length=1, description="Document filename")
+    content: str = Field(..., min_length=1, description="Document content")
+    mime_type: str = Field(default="text/plain", description="MIME type of the document")
+
+    @field_validator("filename", "content")
+    @classmethod
+    def validate_required_strings(cls, v: str) -> str:
+        """Validate required string fields are non-empty."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        return validate_non_empty_string(v, name="field")
 
 
 class BulkUploadResultItem(BaseModel):

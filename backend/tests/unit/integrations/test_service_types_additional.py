@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from pydantic import SecretStr
 
-from forge.integrations.gitlab.gitlab_service import GitLabService
+from forge.integrations.github.github_service import GitHubService
 from forge.integrations.service_types import (
     BaseGitService,
     MicroagentParseError,
@@ -57,8 +57,8 @@ def test_base_git_service_provider_not_implemented() -> None:
         _ = BrokenService().provider
 
 
-def _make_service() -> GitLabService:
-    return GitLabService(token=SecretStr("token"))
+def _make_service() -> GitHubService:
+    return GitHubService(token=SecretStr("token"))
 
 
 def test_determine_microagents_path_and_response_creation() -> None:
@@ -84,7 +84,7 @@ def test_parse_microagent_content_success_and_failure(
         result = service._parse_microagent_content("text", "path.md")
         assert result.content == "body"
         assert result.triggers == ["on_push"]
-        assert result.git_provider == ProviderType.GITLAB.value
+        assert result.git_provider == ProviderType.GITHUB.value
     with patch(
         "forge.integrations.service_types.BaseMicroagent.load",
         side_effect=RuntimeError("boom"),
@@ -134,7 +134,7 @@ async def test_process_microagents_directory_variants(
     )
 
     values_response = (
-        {"values": [{"type": "blob", "name": "agent.md", "path": "dir/agent.md"}]},
+        {"values": [{"type": "file", "name": "agent.md", "path": "dir/agent.md"}]},
         {},
     )
     monkeypatch.setattr(
@@ -146,7 +146,7 @@ async def test_process_microagents_directory_variants(
     assert len(microagents) == 1
 
     nodes_response = (
-        {"nodes": [{"type": "blob", "name": "agent2.md", "path": "dir/agent2.md"}]},
+        {"nodes": [{"type": "file", "name": "agent2.md", "path": "dir/agent2.md"}]},
         {},
     )
     monkeypatch.setattr(

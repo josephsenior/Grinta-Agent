@@ -1,18 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
-import { useConfig } from "./use-config";
-import Forge from "#/api/forge";
-import { useIsOnTosPage } from "#/hooks/use-is-on-tos-page";
 
-export const useSubscriptionAccess = () => {
-  const { data: config } = useConfig();
-  const isOnTosPage = useIsOnTosPage();
+export interface SubscriptionAccess {
+  status: "ACTIVE" | "INACTIVE" | "FREE";
+  tier: "FREE" | "PRO" | "ENTERPRISE";
+}
 
-  return useQuery({
-    queryKey: ["user", "subscription_access"],
-    queryFn: Forge.getSubscriptionAccess,
-    enabled:
-      !isOnTosPage &&
-      config?.APP_MODE === "saas" &&
-      config?.FEATURE_FLAGS?.ENABLE_BILLING,
+export function useSubscriptionAccess() {
+  return useQuery<SubscriptionAccess>({
+    queryKey: ["subscription-access"],
+    queryFn: async () => {
+      // Mock implementation - in a real app this would call an API
+      return {
+        status: "FREE",
+        tier: "FREE",
+      };
+    },
   });
-};
+}

@@ -7,13 +7,13 @@ Improvements:
 """
 
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from forge.llm.llm_registry import LLMRegistry
 
 if TYPE_CHECKING:
-    from litellm import ChatCompletionToolParam
-    from litellm.types.utils import ModelResponse
+    ChatCompletionToolParam = Any
+    ModelResponse = Any
     from forge.events.action import Action
 
 from forge.agenthub.codeact_agent.codeact_agent import CodeActAgent
@@ -22,6 +22,15 @@ from forge.agenthub.readonly_agent.tools.file_cache import FileCache
 from forge.core.config import AgentConfig
 from forge.core.logger import forge_logger as logger
 from forge.utils.prompt import PromptManager
+
+
+# Sentinel object for uninitialized prompt manager (better than None for type safety)
+class _UninitializedPromptManager:
+    """Sentinel object indicating prompt manager hasn't been initialized yet."""
+    pass
+
+
+_UNINITIALIZED = _UninitializedPromptManager()
 
 
 class UltimateReadOnlyAgent(CodeActAgent):
@@ -36,6 +45,9 @@ class UltimateReadOnlyAgent(CodeActAgent):
     """
 
     VERSION = "2.0"
+    # Override base class attribute - initialized lazily via property
+    # Use sentinel object instead of None for better type safety
+    _prompt_manager: PromptManager | _UninitializedPromptManager  # type: ignore[assignment]
     "\n    The Ultimate ReadOnlyAgent - State-of-the-art code exploration.\n\n    Features:\n    - Structure-aware exploration (Tree-sitter for 40+ languages)\n    - Semantic search (find code by meaning)\n    - File caching (instant repeated access)\n    - All read-only tools from CodeActAgent\n\n    Perfect for:\n    1. Understanding large codebases quickly\n    2. Finding code by concept (not just text)\n    3. Analyzing architecture and dependencies\n    4. Research and exploration without modifications\n    "
 
     def __init__(self, config: AgentConfig, llm_registry: LLMRegistry) -> None:
@@ -47,6 +59,13 @@ class UltimateReadOnlyAgent(CodeActAgent):
 
         """
         super().__init__(config, llm_registry)
+        # Override base class initialization - use lazy initialization via property
+        # The base class creates _prompt_manager immediately in __init__, but we want
+        # lazy initialization. We use a sentinel object for runtime type safety.
+        # Type ignore is needed here because we're intentionally narrowing the base class
+        # type (PromptManager) to allow lazy initialization. The property getter ensures
+        # type safety at runtime by always returning a PromptManager.
+        self._prompt_manager = _UNINITIALIZED  # type: ignore[assignment]
 
         # Initialize file cache (NEW!)
         self.file_cache = FileCache(
@@ -67,7 +86,7 @@ class UltimateReadOnlyAgent(CodeActAgent):
     @property
     def prompt_manager(self) -> PromptManager:
         """Lazily initialize and return the enhanced prompt manager for ultimate read-only agent."""
-        if self._prompt_manager is None:
+        if isinstance(self._prompt_manager, _UninitializedPromptManager):
             self._prompt_manager = PromptManager(
                 prompt_dir=os.path.join(os.path.dirname(__file__), "prompts"),
                 system_prompt_filename="system_prompt_ultimate.j2",  # Use enhanced prompt!

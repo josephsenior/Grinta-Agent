@@ -41,17 +41,6 @@ export interface AssistantMessageAction extends ForgeActionEvent<"message"> {
   };
 }
 
-export interface IPythonAction extends ForgeActionEvent<"run_ipython"> {
-  source: "agent";
-  args: {
-    code: string;
-    security_risk: ActionSecurityRisk;
-    confirmation_state: "confirmed" | "rejected" | "awaiting_confirmation";
-    kernel_init_code: string;
-    thought: string;
-  };
-}
-
 export interface ThinkAction extends ForgeActionEvent<"think"> {
   source: "agent";
   args: {
@@ -74,16 +63,6 @@ export interface FinishAction extends ForgeActionEvent<"finish"> {
   args: {
     final_thought: string;
     outputs: Record<string, unknown>;
-    thought: string;
-  };
-}
-
-export interface DelegateAction extends ForgeActionEvent<"delegate"> {
-  source: "agent";
-  timeout: number;
-  args: {
-    agent: "BrowsingAgent";
-    inputs: Record<string, string>;
     thought: string;
   };
 }
@@ -171,30 +150,14 @@ export interface MCPAction extends ForgeActionEvent<"call_tool_mcp"> {
   };
 }
 
-export interface TaskTrackingAction extends ForgeActionEvent<"task_tracking"> {
-  source: "agent";
-  args: {
-    command: string;
-    task_list: Array<{
-      id: string;
-      title: string;
-      status: "todo" | "in_progress" | "done";
-      notes?: string;
-    }>;
-    thought: string;
-  };
-}
-
 export type ForgeAction =
   | UserMessageAction
   | AssistantMessageAction
   | SystemMessageAction
   | CommandAction
-  | IPythonAction
   | ThinkAction
   | StreamingChunkAction
   | FinishAction
-  | DelegateAction
   | BrowseAction
   | BrowseInteractiveAction
   | FileReadAction
@@ -202,5 +165,4 @@ export type ForgeAction =
   | FileWriteAction
   | RejectAction
   | RecallAction
-  | MCPAction
-  | TaskTrackingAction;
+  | MCPAction;

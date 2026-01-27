@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 import pytest
-from litellm import ModelResponse
+from forge.llm.direct_clients import LLMResponse
 
 from forge.events.event import (
     Event,
@@ -56,7 +56,12 @@ def test_event_property_accessors_roundtrip():
     metadata = ToolCallMetadata(
         function_name="compute",
         tool_call_id="call-1",
-        model_response=ModelResponse(id="1", choices=[], model="fake-model"),
+        model_response=LLMResponse(
+            content="",
+            model="fake-model",
+            usage={"prompt_tokens": 0, "completion_tokens": 0},
+            id="1"
+        ),
         total_calls_in_response=1,
     )
     event.tool_call_metadata = metadata

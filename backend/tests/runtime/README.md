@@ -10,10 +10,9 @@ Runtime tests focus on testing:
 - Environment setup and configuration
 - Resource management and cleanup
 - Browser-based operations and file viewing capabilities
-- IPython/Jupyter integration
 - Environment variables and configuration handling
 
-The tests can be run against different runtime environments (Docker, Local, Remote, Runloop, or Daytona) by setting the TEST_RUNTIME environment variable. By default, tests run using the Docker runtime.
+The tests run using the Local runtime.
 
 ### How are they different from Unit Tests?
 
@@ -56,8 +55,6 @@ poetry run pytest -v ./tests/runtime/test_bash.py
 The runtime tests can be configured using environment variables:
 
 - `TEST_IN_CI`: Set to 'True' when running in CI environment
-- `TEST_RUNTIME`: Specify the runtime to test ('docker', 'local', 'remote', 'runloop', 'daytona')
 - `RUN_AS_Forge`: Set to 'True' to run tests as Forge user (default), 'False' for root
-- `SANDBOX_BASE_CONTAINER_IMAGE`: Specify a custom base container image for Docker runtime
 
 For more details on pytest usage, see the [pytest documentation](https://docs.pytest.org/en/latest/contents.html).

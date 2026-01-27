@@ -117,6 +117,8 @@ class KnowledgeBaseStore:
                 user_id=user_id,
                 name=name,
                 description=description,
+                document_count=0,
+                total_size_bytes=0,
             )
             self._collections[collection.id] = collection
             self._collection_documents[collection.id] = []

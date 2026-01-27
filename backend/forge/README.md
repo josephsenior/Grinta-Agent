@@ -9,7 +9,7 @@ This diagram provides an overview of the roles of each component and how they co
 
 The key classes in Forge are:
 
-- LLM: brokers all interactions with large language models. Works with any underlying completion model, thanks to LiteLLM.
+- LLM: brokers all interactions with large language models. Works with any underlying completion model using direct SDK clients.
 - Agent: responsible for looking at the current State, and producing an Action that moves one step closer toward the end-goal.
 - AgentController: initializes the Agent, manages State, and drive the main loop that pushes the Agent forward, step by step
 - State: represents the current state of the Agent's task. Includes things like the current step, a history of recent events, the Agent's long-term plan, etc
@@ -52,4 +52,5 @@ flowchart LR
 
 ## Runtime
 
-Please refer to the [documentation](https://docs.all-hands.dev/usage/architecture/runtime) to learn more about `Runtime`.
+Please refer to the [documentation](https://docs.forge.dev/usage/architecture/runtime) to learn more about `Runtime`.
+

@@ -10,7 +10,6 @@ from forge.events.action.action import (
     ActionSecurityRisk,
 )
 from forge.events.action.agent import (
-    AgentDelegateAction,
     AgentFinishAction,
     AgentRejectAction,
     AgentThinkAction,
@@ -19,7 +18,7 @@ from forge.events.action.agent import (
     TaskTrackingAction,
 )
 from forge.events.action.browse import BrowseInteractiveAction, BrowseURLAction
-from forge.events.action.commands import CmdRunAction, IPythonRunCellAction
+from forge.events.action.commands import CmdRunAction
 from forge.events.action.empty import NullAction
 from forge.events.action.files import (
     FileEditAction,
@@ -36,7 +35,6 @@ from forge.events.action.message import (
 canonicalize("Action", Action)
 canonicalize("ActionConfirmationStatus", ActionConfirmationStatus)
 canonicalize("ActionSecurityRisk", ActionSecurityRisk)
-canonicalize("AgentDelegateAction", AgentDelegateAction)
 canonicalize("AgentFinishAction", AgentFinishAction)
 canonicalize("AgentRejectAction", AgentRejectAction)
 canonicalize("AgentThinkAction", AgentThinkAction)
@@ -47,7 +45,6 @@ canonicalize("CmdRunAction", CmdRunAction)
 canonicalize("FileEditAction", FileEditAction)
 canonicalize("FileReadAction", FileReadAction)
 canonicalize("FileWriteAction", FileWriteAction)
-canonicalize("IPythonRunCellAction", IPythonRunCellAction)
 canonicalize("MCPAction", MCPAction)
 canonicalize("MessageAction", MessageAction)
 canonicalize("NullAction", NullAction)
@@ -60,7 +57,6 @@ __all__ = [
     "Action",
     "ActionConfirmationStatus",
     "ActionSecurityRisk",
-    "AgentDelegateAction",
     "AgentFinishAction",
     "AgentRejectAction",
     "AgentThinkAction",
@@ -71,7 +67,6 @@ __all__ = [
     "FileEditAction",
     "FileReadAction",
     "FileWriteAction",
-    "IPythonRunCellAction",
     "MCPAction",
     "MessageAction",
     "NullAction",

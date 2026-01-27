@@ -119,13 +119,10 @@ class AuditLogger:
         from forge.events.action import (
             CmdRunAction,
             FileEditAction,
-            IPythonRunCellAction,
         )
 
         if isinstance(action, CmdRunAction):
             content = action.command
-        elif isinstance(action, IPythonRunCellAction):
-            content = action.code
         elif isinstance(action, FileEditAction):
             content = f"Edit {action.path}"
         else:

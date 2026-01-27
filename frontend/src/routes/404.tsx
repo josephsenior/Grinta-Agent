@@ -46,9 +46,9 @@ export default function NotFound() {
                 asChild
                 className="bg-white text-black hover:bg-white/90 font-semibold rounded-xl px-6 py-3"
               >
-                <Link to="/">
+                <Link to="/conversations">
                   <Home className="mr-2 h-4 w-4" />
-                  {t("common.goHome", "Go Home")}
+                  {t("common.goToConversations", "Go to Conversations")}
                 </Link>
               </Button>
               <Button
@@ -68,31 +68,24 @@ export default function NotFound() {
               </p>
               <div className="flex flex-wrap items-center justify-center gap-4">
                 <Link
-                  to="/"
+                  to="/conversations"
                   className="text-sm text-white/80 hover:text-white transition-colors"
                 >
-                  {t("common.home", "Home")}
+                  {t("common.conversations", "Conversations")}
                 </Link>
                 <span className="text-white/20">•</span>
                 <Link
-                  to="/about"
-                  className="text-sm text-white/80 hover:text-white transition-colors"
-                >
-                  {t("common.about", "About")}
-                </Link>
-                <span className="text-white/20">•</span>
-                <Link
-                  to="/pricing"
-                  className="text-sm text-white/80 hover:text-white transition-colors"
-                >
-                  {t("common.pricing", "Pricing")}
-                </Link>
-                <span className="text-white/20">•</span>
-                <Link
-                  to="/settings"
+                  to="/settings/app"
                   className="text-sm text-white/80 hover:text-white transition-colors"
                 >
                   {t("common.settings", "Settings")}
+                </Link>
+                <span className="text-white/20">•</span>
+                <Link
+                  to="/help"
+                  className="text-sm text-white/80 hover:text-white transition-colors"
+                >
+                  {t("common.help", "Help")}
                 </Link>
               </div>
             </div>

@@ -1,15 +1,21 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { SecretsService } from "#/api/secrets-service";
 
-export const useUpdateSecret = () =>
-  useMutation({
+export function useUpdateSecret() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
     mutationFn: ({
-      secretToEdit,
+      id,
       name,
       description,
     }: {
-      secretToEdit: string;
+      id: string;
       name: string;
       description?: string;
-    }) => SecretsService.updateSecret(secretToEdit, name, description),
+    }) => SecretsService.updateSecret(id, name, description),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["secrets"] });
+    },
   });
+}

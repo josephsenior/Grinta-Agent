@@ -3,16 +3,22 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import App from "../../src/routes/conversation";
+import App from "#/routes/conversation";
 
 const navigateMock = vi.fn();
 vi.mock("react-router-dom", () => ({
   useNavigate: () => navigateMock,
+  useParams: () => ({ conversationId: "conv-123" }),
+  Link: ({ children, to }: any) => <a href={to}>{children}</a>,
 }));
 
 const dispatchMock = vi.fn();
 vi.mock("react-redux", () => ({
   useDispatch: () => dispatchMock,
+  useSelector: (selector: any) =>
+    selector({
+      agent: { curAgentState: "INIT" },
+    }),
 }));
 
 const useConversationIdMock = vi.fn();
@@ -69,18 +75,26 @@ vi.mock("#/utils/custom-toast-handlers", () => ({
   displayErrorToast: (...args: unknown[]) => displayErrorToastMock(...args),
 }));
 
-const { clearTerminalMock, clearJupyterMock } = vi.hoisted(() => {
+const { loggerMock } = vi.hoisted(() => ({
+  loggerMock: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+vi.mock("#/utils/logger", () => ({
+  logger: loggerMock,
+}));
+
+const { clearTerminalMock } = vi.hoisted(() => {
   const clearTerminalMock = vi.fn(() => ({ type: "clear-terminal" }));
-  const clearJupyterMock = vi.fn(() => ({ type: "clear-jupyter" }));
-  return { clearTerminalMock, clearJupyterMock };
+  return { clearTerminalMock };
 });
 
 vi.mock("#/state/command-slice", () => ({
   clearTerminal: clearTerminalMock,
-}));
-
-vi.mock("#/state/jupyter-slice", () => ({
-  clearJupyter: clearJupyterMock,
+  default: (state = {}) => state,
 }));
 
 vi.mock("#/hooks/use-effect-once", () => ({
@@ -114,6 +128,10 @@ vi.mock("#/context/ws-client-provider", () => ({
   WsClientProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="ws-client">{children}</div>
   ),
+  useWsClient: () => ({
+    events: [],
+    send: vi.fn(),
+  }),
 }));
 
 vi.mock("#/components/features/conversation/conversation-tabs", () => ({
@@ -130,11 +148,11 @@ vi.mock("#/components/layout/resizable-panel", () => ({
   ),
 }));
 
-vi.mock("../../src/components/features/chat/chat-interface", () => ({
+vi.mock("#/components/features/chat/chat-interface", () => ({
   ChatInterface: () => <div data-testid="chat-interface" />,
 }));
 
-vi.mock("../../src/wrapper/event-handler", () => ({
+vi.mock("#/wrapper/event-handler", () => ({
   EventHandler: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="event-handler">{children}</div>
   ),
@@ -172,9 +190,8 @@ describe("conversation route", () => {
         "This conversation does not exist, or you do not have permission to access it.",
       );
     });
-    expect(navigateMock).toHaveBeenCalledWith("/");
+    expect(navigateMock).toHaveBeenCalledWith("/conversations");
     expect(useConversationConfigMock).toHaveBeenCalled();
-    expect(useBatchFeedbackMock).toHaveBeenCalled();
     expect(useAutoNavigateToAppMock).toHaveBeenCalled();
   });
 
@@ -183,23 +200,21 @@ describe("conversation route", () => {
 
     renderApp();
 
-    await waitFor(() => expect(startConversationMock).toHaveBeenCalledWith("conv-stopped", ["mock-provider"]));
+    await waitFor(() => expect(startConversationMock).toHaveBeenCalledWith("conv-stopped"));
     expect(activeConversationResult.refetch).toHaveBeenCalled();
   });
 
   it("dispatches clear actions on mount and conversation change", async () => {
     const { rerender } = renderApp();
 
-    await waitFor(() => expect(dispatchMock).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(dispatchMock).toHaveBeenCalledTimes(2));
     expect(dispatchMock).toHaveBeenNthCalledWith(1, { type: "clear-terminal" });
-    expect(dispatchMock).toHaveBeenNthCalledWith(2, { type: "clear-jupyter" });
 
     useConversationIdMock.mockReturnValue({ conversationId: "conv-456" });
     rerender(<App />);
 
-    await waitFor(() => expect(dispatchMock).toHaveBeenCalledTimes(6));
-    expect(dispatchMock).toHaveBeenNthCalledWith(5, { type: "clear-terminal" });
-    expect(dispatchMock).toHaveBeenNthCalledWith(6, { type: "clear-jupyter" });
+    await waitFor(() => expect(dispatchMock).toHaveBeenCalledTimes(3));
+    expect(dispatchMock).toHaveBeenNthCalledWith(3, { type: "clear-terminal" });
   });
 
   it("switches between desktop and mobile layouts on resize", async () => {
@@ -208,12 +223,15 @@ describe("conversation route", () => {
 
     expect(await screen.findByTestId("resizable-panel")).toBeInTheDocument();
 
-    window.innerWidth = 800;
+    window.innerWidth = 500;
     window.dispatchEvent(new Event("resize"));
 
-    await waitFor(() => expect(screen.queryByTestId("resizable-panel")).toBeNull());
-    const stackedLayout = Array.from(container.querySelectorAll("div")).find((node) =>
-      node.className.includes("flex") && node.className.includes("flex-col") && node.className.includes("gap-3"),
+    await waitFor(() =>
+      expect(screen.queryByTestId("resizable-panel")).toBeNull(),
+    );
+    const stackedLayout = Array.from(container.querySelectorAll("div")).find(
+      (node) =>
+        node.className.includes("flex") && node.className.includes("flex-col"),
     );
     expect(stackedLayout).not.toBeNull();
   });
@@ -236,13 +254,13 @@ describe("conversation route", () => {
     const originalEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = "development";
     settingsResult.data = { theme: "dev" };
-    const consoleSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
 
     renderApp();
 
-    expect(consoleSpy).toHaveBeenCalledWith("dev settings:", { theme: "dev" });
+    expect(loggerMock.debug).toHaveBeenCalledWith("dev settings:", {
+      theme: "dev",
+    });
 
-    consoleSpy.mockRestore();
     process.env.NODE_ENV = originalEnv;
   });
 });

@@ -1,52 +1,61 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, Home } from "lucide-react";
+import { I18nKey } from "#/i18n/declaration";
+import {
+  SETTINGS_PATH_LABEL_MAP,
+  getSettingsCategories,
+  type SettingsNavContext,
+} from "#/config/settings-nav";
+import { useConfig } from "#/hooks/query/use-config";
+import { useSubscriptionAccess } from "#/hooks/query/use-subscription-access";
 
-// Map of settings paths to their display labels
-const SETTINGS_PATH_MAP: Record<string, string> = {
-  "/settings": "Settings",
-  "/settings/user": "SETTINGS$NAV_USER",
-  "/settings/billing": "SETTINGS$NAV_CREDITS",
-  "/settings/app": "SETTINGS$NAV_APPLICATION",
-  "/settings/llm": "SETTINGS$NAV_LLM",
-  "/settings/mcp": "SETTINGS$NAV_MCP",
-  "/settings/prompts": "SETTINGS$NAV_PROMPTS",
-  "/settings/memory": "SETTINGS$NAV_MEMORY",
-  "/settings/integrations": "SETTINGS$NAV_INTEGRATIONS",
-  "/settings/slack": "SETTINGS$NAV_SLACK",
-  "/settings/databases": "SETTINGS$NAV_DATABASES",
-  "/settings/knowledge-base": "Knowledge Base",
-  "/settings/backup": "SETTINGS$NAV_BACKUP",
-  "/settings/snippets": "SETTINGS$NAV_SNIPPETS",
-  "/settings/secrets": "SETTINGS$NAV_SECRETS",
-  "/settings/api-keys": "SETTINGS$NAV_API_KEYS",
-  "/settings/analytics": "SETTINGS$NAV_ANALYTICS",
+const SETTINGS_PATH_MAP: Record<string, I18nKey> = {
+  "/settings/app": I18nKey.SETTINGS$TITLE,
+  ...SETTINGS_PATH_LABEL_MAP,
 };
 
 export function SettingsBreadcrumbs() {
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { data: config } = useConfig();
+  const { data: subscriptionAccess } = useSubscriptionAccess();
+
+  const navContext = useMemo<SettingsNavContext>(
+    () => ({
+      mode: config?.APP_MODE === "saas" ? "saas" : "oss",
+      hasPro: subscriptionAccess?.status === "ACTIVE",
+    }),
+    [config?.APP_MODE, subscriptionAccess?.status],
+  );
+
+  const categoryByPath = useMemo(() => {
+    const map = new Map<string, string>();
+    getSettingsCategories(navContext).forEach((category) => {
+      category.items.forEach((item) => map.set(item.path, category.title));
+    });
+    return map;
+  }, [navContext]);
 
   const handleBreadcrumbClick = (path: string) => {
     navigate(path);
   };
 
-  // Get the current page label
-  const currentPageLabel = React.useMemo(() => {
-    const currentPath = location.pathname;
-    const label =
-      SETTINGS_PATH_MAP[currentPath] ||
-      currentPath.split("/").pop() ||
-      "Settings";
-    return label && label.startsWith("SETTINGS$") ? t(label) : label;
-  }, [location.pathname, t]);
+  const currentPath = location.pathname;
+  const categoryLabel = categoryByPath.get(currentPath);
 
-  // Don't show breadcrumbs on the hub page
-  if (location.pathname === "/settings") {
-    return null;
-  }
+  // Get the current page label
+  const currentPageLabel = useMemo(() => {
+    const labelKey = SETTINGS_PATH_MAP[currentPath];
+    if (labelKey) {
+      return t(labelKey);
+    }
+
+    const fallbackLabel = currentPath.split("/").pop();
+    return fallbackLabel || t(I18nKey.SETTINGS$TITLE);
+  }, [currentPath, t]);
 
   return (
     <nav
@@ -54,17 +63,25 @@ export function SettingsBreadcrumbs() {
       aria-label="Breadcrumb"
     >
       <ol className="flex items-center gap-2 flex-wrap">
-        {/* Settings (Home) */}
+        {/* Home */}
         <li className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => handleBreadcrumbClick("/settings")}
+            onClick={() => handleBreadcrumbClick("/")}
             className="flex items-center gap-1.5 transition-colors hover:text-white text-white/70"
           >
             <Home className="w-4 h-4" />
-            <span>Settings</span>
+            <span>{t("common.home", "Home")}</span>
           </button>
         </li>
+
+        {/* Category Crumb */}
+        {categoryLabel && (
+          <li className="flex items-center gap-2">
+            <ChevronRight className="w-4 h-4 text-white/30 flex-shrink-0" />
+            <span className="text-white/70">{categoryLabel}</span>
+          </li>
+        )}
 
         {/* Current Page */}
         <li className="flex items-center gap-2">

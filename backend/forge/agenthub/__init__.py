@@ -1,18 +1,13 @@
-"""Collection of built-in Forge agent implementations and utilities."""
+"""Collection of core agent implementations for Forge."""
 
-from dotenv import load_dotenv
-
-from forge.agenthub import (
-    browsing_agent,
-    codeact_agent,
-    dummy_agent,
-    loc_agent,
-    readonly_agent,
-    visualbrowsing_agent,
-)
+# Import submodules using relative imports to avoid circular dependencies
+from . import browsing_agent  # noqa: F401
+from . import codeact_agent  # noqa: F401
+from . import dummy_agent  # noqa: F401
+from . import loc_agent  # noqa: F401
+from . import readonly_agent  # noqa: F401
 from forge.controller.agent import Agent
 
-load_dotenv()
 __all__ = [
     "Agent",
     "browsing_agent",
@@ -20,5 +15,4 @@ __all__ = [
     "dummy_agent",
     "loc_agent",
     "readonly_agent",
-    "visualbrowsing_agent",
 ]

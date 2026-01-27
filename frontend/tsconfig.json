@@ -18,7 +18,7 @@
     "allowImportingTsExtensions": true,
     "rootDirs": [".", "./.react-router/types"],
     "baseUrl": ".",
-    "types": ["@react-router/node", "vite/client", "@testing-library/jest-dom", "vitest/globals", "jest"],
+    "types": ["@react-router/node", "vite/client", "@testing-library/jest-dom", "vitest/globals"],
     "paths": {
       "test-utils": ["./test-utils.ts", "./test-utils.tsx", "./test-utils"],
       "#test-utils": ["./test-utils.ts", "./test-utils.tsx", "./test-utils"],
@@ -30,6 +30,7 @@
     },
     "noEmit": true
   },
+  "exclude": ["node_modules", "dist"],
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
@@ -44,6 +45,5 @@
     "**/.client/**/*.ts",
     "**/.client/**/*.tsx",
     ".react-router/types/**/*"
-  ],
-  "exclude": ["tests/legacy/**"]
+  ]
 }

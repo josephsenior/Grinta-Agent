@@ -217,7 +217,7 @@ function ChatMessageActionButton({
   const commonProps = {
     onClick: action.onClick,
     className:
-      "p-2 cursor-pointer rounded-lg bg-transparent hover:bg-brand-500/15 text-text-tertiary hover:text-brand-500 transition-all duration-200 active:scale-95",
+      "p-2 cursor-pointer rounded bg-transparent hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-all duration-150 active:scale-95",
     "aria-label": `Action ${index + 1}`,
   };
 
@@ -276,8 +276,8 @@ function ChatMessageActions({
           ? "opacity-0 pointer-events-none scale-95"
           : "opacity-100 scale-100 flex",
         "items-center gap-1.5",
-        "bg-background-elevated/95 backdrop-blur-md",
-        "border border-border-primary/50",
+        "bg-[var(--bg-elevated)]",
+        "border border-[var(--border-primary)]",
         "rounded-xl px-1.5 py-1.5",
         "shadow-lg shadow-black/20",
       )}
@@ -364,7 +364,7 @@ function ChatMessageComponent({
       className={cn(
         "w-full flex items-start gap-3",
         type === "user" ? "justify-end" : "justify-start",
-        compactMode ? "mt-2" : "mt-4",
+        compactMode ? "mt-1.5" : "mt-3",
         "animate-message-enter",
       )}
     >
@@ -381,16 +381,16 @@ function ChatMessageComponent({
           "chat-bubble",
           "group relative w-fit max-w-[85%]",
           "flex flex-col gap-1",
-          compactMode ? "px-2 py-1" : "px-3 py-2",
+          compactMode ? "px-3 py-1.5" : "px-4 py-2.5",
           type === "user" && [
             "chat-bubble-user",
-            "text-foreground",
-            "rounded-lg",
+            "bg-[var(--bg-elevated)] text-[var(--text-primary)]",
+            "rounded-lg border border-[var(--border-accent)]/30",
           ],
           type === "agent" && [
             "chat-bubble-agent",
-            "text-foreground",
-            "rounded-lg",
+            "bg-[var(--bg-elevated)] text-[var(--text-primary)]",
+            "rounded-lg border border-[var(--border-primary)]",
           ],
         )}
       >

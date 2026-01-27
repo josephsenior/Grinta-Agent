@@ -1,22 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
-import { Forge } from "#/api/forge-axios";
+import IntegrationsClient from "#/api/integrations";
 
-export function useIntegrationStatus(platform: "jira" | "jira-dc" | "linear") {
+export function useIntegrationStatus(platform: string) {
   return useQuery({
     queryKey: ["integration-status", platform],
-    queryFn: async () => {
-      try {
-        const response = await Forge.get(
-          `/integration/${platform}/workspaces/link`,
-        );
-        return response.data;
-      } catch (error) {
-        if (axios.isAxiosError(error) && error.response?.status === 404) {
-          return null;
-        }
-        throw error;
-      }
-    },
+    queryFn: () => IntegrationsClient.getIntegrationStatus(platform),
   });
 }

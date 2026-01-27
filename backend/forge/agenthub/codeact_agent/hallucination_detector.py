@@ -180,7 +180,7 @@ class HallucinationDetector:
             for match in matches:
                 claim = match.group(0)
 
-                exec_tools = ["execute_bash", "ipython", "run_cell"]
+                exec_tools = ["execute_bash"]
                 if not any(tool in tools_called for tool in exec_tools):
                     # Lower confidence since "I ran" could be conversational
                     return {

@@ -228,11 +228,11 @@ docker-compose restart Forge-backend
 ```bash
 # Update shadcn-ui-mcp-server
 cd external/shadcn-ui-mcp-server
-npm install
+pnpm install
 
 # Main frontend already using updated packages
 cd ../../frontend
-npm install
+pnpm install
 ```
 
 ---

@@ -12,16 +12,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tutorial section with step-by-step guides
 - Quick reference guide
 - Expanded code examples and recipes
+- **File Editing System Architecture:** Two-layer design separating agent-level (Ultimate Editor) and runtime-level (FileEditor) operations
+- **Production-Grade FileEditor:** Custom implementation replacing external dependencies with transaction support, atomic writes, and comprehensive error handling
+
+### Changed
+- **Migrated from `Forge_aci` to custom FileEditor implementation**
+  - Removed external dependency on `Forge_aci` package
+  - Implemented production-grade `FileEditor` for runtime file I/O
+  - Clear separation: Ultimate Editor (agent-level) uses FileEditor (runtime-level)
+  - Better integration with Forge architecture
+  - Full control over implementation and features
+- **Renamed all "OH" prefixes to "Forge" branding**
+  - `OHEditor` → `FileEditor`
+  - `OH_ACI` → `FILE_EDITOR` enum
+  - Socket.IO events: `oh_event` → `forge_event`
+  - Environment variables: `OH_*` → `FORGE_*`
+  - Version tags: `oh_v*` → `forge_v*`
+- **Migrated from bind mounts to Docker volumes for workspace storage**
+  - Removed `WORKSPACE_MOUNT_PATH` environment variable from docker-compose.yml
+  - Runtime containers now use Docker named volumes by default
+  - Each conversation gets its own isolated volume (`forge-workspace-<container-name>`)
+  - Eliminates permission issues (container user owns volumes automatically)
+  - Better isolation and security (no host filesystem access)
+  - Cross-platform compatible (works identically on Linux, macOS, Windows)
+  - Production-grade reliability with automatic volume creation
+  - See [Docker Volumes Migration Guide](./architecture/docker-volumes-migration.md) for details
 
 ## [1.0.0] - 2024-12-XX
 
 ### Added
 - **Ultimate Editor**: Structure-aware code editing with Tree-sitter (45+ languages)
-- **MetaSOP Orchestration**: Multi-agent planning and execution framework
 - **30+ LLM Providers**: Support for 200+ models via unified API
 - **Production Infrastructure**: Circuit breakers, monitoring, cost quotas
 - **Comprehensive Testing**: 113,880+ lines of test code (5,073+ test cases)
-- **REST API**: 32 route modules covering all platform features
+- **REST API**: 31 route modules covering all platform features
 - **WebSocket API**: Real-time communication via Socket.IO
 - **Python SDK**: Backend integration library
 - **TypeScript SDK**: Frontend integration library
@@ -36,11 +60,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced monitoring with 30+ Prometheus metrics
 - Optimized code quality: 0% high-complexity functions
 
+### Removed
+- **Prompt Optimization**: Removed prompt optimization, tool optimization, and related routing/documentation
+- **AgentDelegateAction**: Removed agent delegation functionality to simplify the core architecture
+- **gRPC Event Service**: Replaced gRPC-based event service with a simplified in-process adapter to reduce complexity
+- **Obsolete Documentation**: Removed multiple outdated documentation files and references to legacy features
+
 ### Fixed
-- Security vulnerabilities (SHA1 → SHA256, file permissions)
-- Memory leaks in long-running conversations
-- Race conditions in concurrent agent execution
-- WebSocket connection stability issues
+- Fixed critical server startup issues related to event service initialization
+- Resolved multiple test failures caused by obsolete feature references
+- Cleaned up unused dependencies and backup files in the codebase
+- Improved core unit test stability by removing flaky integration tests for deprecated features
 
 ## [0.9.0] - 2024-11-XX
 
@@ -71,14 +101,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.7.0] - 2024-09-XX
 
 ### Added
-- MetaSOP orchestration
-- ACE framework
 - Enhanced memory system
-- Prompt optimization
 
 ### Changed
 - Refactored agent architecture
-- Improved multi-agent coordination
 - Enhanced context management
 
 ## [0.6.0] - 2024-08-XX
@@ -160,7 +186,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **v1.0.0**: Production-ready release with comprehensive features
 - **v0.9.0**: Beta launch preparation
 - **v0.8.0**: Authentication and user management
-- **v0.7.0**: Multi-agent orchestration
+- **v0.7.0**: Agent architecture and memory enhancements
 - **v0.6.0**: Advanced code editing
 - **v0.5.0**: Reliability improvements
 - **v0.4.0**: Multi-provider support
@@ -175,7 +201,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 1. Update dependencies:
 ```bash
 poetry update
-cd frontend && npm update
+cd frontend && pnpm update
 ```
 
 2. Review breaking changes in API
@@ -205,4 +231,5 @@ See [Security Policy](security.md) for current security status and advisories.
 ---
 
 For detailed release notes, see [Releases](https://github.com/yourusername/Forge/releases).
+
 

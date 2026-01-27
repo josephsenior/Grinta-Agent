@@ -13,7 +13,6 @@ import {
   Lightbulb,
   Eye,
   Play,
-  Globe,
   Edit,
   TestTube,
 } from "lucide-react";
@@ -249,13 +248,6 @@ const getContextAwareSuggestions = (lastEvent?: ForgeEvent): Suggestion[] => {
   if (action === "browse" || action === "browse_interactive") {
     return [
       {
-        id: "open-browser",
-        icon: <Globe className="h-4 w-4" />,
-        label: "Open browser",
-        prompt: "Open the app in the browser tab",
-        category: "general",
-      },
-      {
         id: "ui-changes",
         icon: <Edit className="h-4 w-4" />,
         label: "Make UI changes",
@@ -383,7 +375,7 @@ export function SmartSuggestions({
             }}
             className={cn(
               "h-auto py-1.5 px-2.5 text-left",
-              "bg-black hover:bg-violet-500/10",
+              "bg-black hover:bg-black/40",
               "border border-violet-500/20 hover:border-violet-500/40",
               "text-text-secondary hover:text-violet-400",
               "transition-all duration-200",

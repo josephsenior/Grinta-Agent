@@ -70,8 +70,7 @@
       "start": 0,
       "end": -1,
       "thought": "I'll help you rename the file. First, let me check if the file exists and its location.",
-      "impl_source": "oh_aci",
-      "translated_ipython_code": "print(file_editor(**{'command': 'view', 'path': '/workspace'}))"
+      "impl_source": "file_editor"
     },
     "timeout": 120
   },
@@ -132,7 +131,7 @@
     "content": "Here's the files and directories up to 2 levels deep in /workspace, excluding hidden items:\n/workspace/\n/workspace/game_2048.py",
     "extras": {
       "path": "/workspace",
-      "impl_source": "oh_aci"
+      "impl_source": "file_editor"
     }
   },
   {
@@ -327,8 +326,7 @@
       "start": 0,
       "end": -1,
       "thought": "Let me verify that the file was renamed successfully:",
-      "impl_source": "oh_aci",
-      "translated_ipython_code": "print(file_editor(**{'command': 'view', 'path': '/workspace'}))"
+      "impl_source": "file_editor"
     },
     "timeout": 120
   },
@@ -389,7 +387,7 @@
     "content": "Here's the files and directories up to 2 levels deep in /workspace, excluding hidden items:\n/workspace/\n/workspace/2048.py",
     "extras": {
       "path": "/workspace",
-      "impl_source": "oh_aci"
+      "impl_source": "file_editor"
     }
   },
   {

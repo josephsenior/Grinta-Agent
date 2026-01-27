@@ -93,28 +93,28 @@
     "ws": "^8.18.2"
   },
   "scripts": {
-    "dev": "npm run dev:local",
-    "dev:mock": "npm run make-i18n && cross-env VITE_MOCK_API=true VITE_MOCK_SAAS=false react-router dev",
-    "dev:mock:saas": "npm run make-i18n && cross-env VITE_MOCK_API=true VITE_MOCK_SAAS=true react-router dev",
-    "dev:local": "npm run make-i18n && cross-env VITE_MOCK_API=false vite",
-    "dev:local:mock": "npm run make-i18n && cross-env VITE_MOCK_API=true VITE_MOCK_SAAS=false vite",
-    "dev:local:mock:saas": "npm run make-i18n && cross-env VITE_MOCK_API=true VITE_MOCK_SAAS=true vite",
-    "build": "npm run make-i18n && vite build --outDir build",
+    "dev": "pnpm run dev:local",
+    "dev:mock": "pnpm run make-i18n && cross-env VITE_MOCK_API=true VITE_MOCK_SAAS=false react-router dev",
+    "dev:mock:saas": "pnpm run make-i18n && cross-env VITE_MOCK_API=true VITE_MOCK_SAAS=true react-router dev",
+    "dev:local": "pnpm run make-i18n && cross-env VITE_MOCK_API=false vite",
+    "dev:local:mock": "pnpm run make-i18n && cross-env VITE_MOCK_API=true VITE_MOCK_SAAS=false vite",
+    "dev:local:mock:saas": "pnpm run make-i18n && cross-env VITE_MOCK_API=true VITE_MOCK_SAAS=true vite",
+    "build": "pnpm run make-i18n && vite build --outDir build",
     "start": "npx sirv-cli build/ --single",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:coverage": "npm run make-i18n && vitest run --coverage",
+    "test:coverage": "pnpm run make-i18n && vitest run --coverage",
     "check:contrast": "node ./scripts/contrast-scan.cjs",
     "dev_wsl": "VITE_WATCH_USE_POLLING=true vite",
     "preview": "vite preview",
     "make-i18n": "node scripts/make-i18n-translations.cjs",
-    "prelint": "npm run make-i18n",
-    "lint": "npm run typecheck && eslint src --ext .ts,.tsx,.js && prettier --check src/**/*.{ts,tsx}",
+    "prelint": "pnpm run make-i18n",
+    "lint": "pnpm run typecheck && eslint src --ext .ts,.tsx,.js && prettier --check src/**/*.{ts,tsx}",
     "lint:fix": "eslint src --ext .ts,.tsx,.js --fix && prettier --write src/**/*.{ts,tsx}",
     "prepare": "cd .. && husky frontend/.husky",
     "typecheck": "react-router typegen && tsc",
     "clear-routes": "node scripts/clear-react-router-cache.mjs",
-    "rebuild-routes": "npm run clear-routes && react-router typegen",
+    "rebuild-routes": "pnpm run clear-routes && react-router typegen",
     "check-translation-completeness": "node scripts/check-translation-completeness.cjs"
   },
   "lint-staged": {
@@ -172,7 +172,7 @@
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.0.2"
   },
-  "packageManager": "npm@10.5.0",
+  "packageManager": "pnpm@10.23.0",
   "volta": {
     "node": "18.20.1"
   },

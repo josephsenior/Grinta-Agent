@@ -2,60 +2,114 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from datetime import datetime
+
+from pydantic import BaseModel, Field, field_validator
 
 from forge.events.action import ActionSecurityRisk
 
 
-@dataclass
-class AuditEntry:
+class AuditEntry(BaseModel):
     """Immutable audit log entry for an agent action."""
 
-    id: str
-    """Unique identifier for this audit entry."""
+    id: str = Field(
+        ...,
+        min_length=1,
+        description="Unique identifier for this audit entry"
+    )
 
-    timestamp: datetime
-    """When the action occurred."""
+    timestamp: datetime = Field(
+        ...,
+        description="When the action occurred"
+    )
 
-    session_id: str
-    """Session ID of the agent."""
+    session_id: str = Field(
+        ...,
+        min_length=1,
+        description="Session ID of the agent"
+    )
 
-    iteration: int
-    """Iteration number when action occurred."""
+    iteration: int = Field(
+        ...,
+        ge=0,
+        description="Iteration number when action occurred"
+    )
 
-    action_type: str
-    """Type of action (CmdRunAction, FileEditAction, etc.)."""
+    action_type: str = Field(
+        ...,
+        min_length=1,
+        description="Type of action (CmdRunAction, FileEditAction, etc.)"
+    )
 
-    action_content: str
-    """Content/details of the action."""
+    action_content: str = Field(
+        ...,
+        description="Content/details of the action"
+    )
 
-    risk_level: ActionSecurityRisk
-    """Assessed risk level of the action."""
+    risk_level: ActionSecurityRisk = Field(
+        ...,
+        description="Assessed risk level of the action"
+    )
 
-    validation_result: str
-    """Result of validation: 'allowed', 'blocked', 'requires_review'."""
+    validation_result: str = Field(
+        ...,
+        min_length=1,
+        description="Result of validation: 'allowed', 'blocked', 'requires_review'"
+    )
 
-    execution_result: str | None = None
-    """Result of action execution if it was allowed."""
+    execution_result: str | None = Field(
+        default=None,
+        description="Result of action execution if it was allowed"
+    )
 
-    blocked_reason: str | None = None
-    """Reason for blocking if action was blocked."""
+    blocked_reason: str | None = Field(
+        default=None,
+        description="Reason for blocking if action was blocked"
+    )
 
-    filesystem_snapshot_id: str | None = None
-    """ID of filesystem snapshot if taken before high-risk action."""
+    filesystem_snapshot_id: str | None = Field(
+        default=None,
+        description="ID of filesystem snapshot if taken before high-risk action"
+    )
 
-    rollback_available: bool = False
-    """Whether rollback is available for this action."""
+    rollback_available: bool = Field(
+        default=False,
+        description="Whether rollback is available for this action"
+    )
 
-    matched_risk_patterns: list[str] = field(default_factory=list)
-    """Risk patterns that matched this action."""
+    matched_risk_patterns: list[str] = Field(
+        default_factory=list,
+        description="Risk patterns that matched this action"
+    )
 
-    environment: str = "development"
-    """Environment where action occurred."""
+    environment: str = Field(
+        default="development",
+        min_length=1,
+        description="Environment where action occurred"
+    )
 
-    agent_state: str = "unknown"
-    """State of agent when action occurred."""
+    agent_state: str = Field(
+        default="unknown",
+        min_length=1,
+        description="State of agent when action occurred"
+    )
+
+    @field_validator("id", "session_id", "action_type", "validation_result", "environment", "agent_state")
+    @classmethod
+    def validate_required_strings(cls, v: str) -> str:
+        """Validate required string fields are non-empty."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        return validate_non_empty_string(v, name="field")
+
+    @field_validator("validation_result")
+    @classmethod
+    def validate_validation_result(cls, v: str) -> str:
+        """Validate validation_result is one of the allowed values."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        validated = validate_non_empty_string(v, name="validation_result")
+        if validated not in ["allowed", "blocked", "requires_review"]:
+            raise ValueError("validation_result must be one of: allowed, blocked, requires_review")
+        return validated
 
     def to_dict(self) -> dict:
         """Convert audit entry to dictionary for JSON serialization."""

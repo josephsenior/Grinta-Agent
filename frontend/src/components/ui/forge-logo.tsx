@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "#/utils/utils";
 
 interface ForgeLogoProps {
@@ -19,10 +20,15 @@ export function ForgeLogo({
   size = "md",
   variant = "icon",
 }: ForgeLogoProps) {
+  const { t } = useTranslation();
   const heightClass = heightClasses[size];
 
   if (variant === "text") {
-    return <span className="font-light text-white tracking-tight">Forge</span>;
+    return (
+      <span className="font-light text-white tracking-tight">
+        {t("brand.name", "Forge")}
+      </span>
+    );
   }
 
   // Both "icon" and "full" now use the actual logo image

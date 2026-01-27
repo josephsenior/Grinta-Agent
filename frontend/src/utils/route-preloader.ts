@@ -29,22 +29,6 @@ const ROUTE_PRELOAD_CONFIG: PreloadConfig[] = [
       true,
     delay: 5000, // Wait 5 seconds after page load
   },
-  {
-    route: "/about",
-    priority: "low",
-    condition: () =>
-      // Preload about if user seems to be exploring
-      true,
-    delay: 10000, // Wait 10 seconds after page load
-  },
-  {
-    route: "/contact",
-    priority: "low",
-    condition: () =>
-      // Preload contact if user seems to be exploring
-      true,
-    delay: 12000, // Wait 12 seconds after page load
-  },
 ];
 
 // Function to get route hash (simplified)
@@ -96,8 +80,6 @@ export function preloadRouteResources(route: string): void {
       { href: "/assets/editor-vendor.js", as: "script" },
     ],
     "/settings": [{ href: "/assets/settings.js", as: "script" }],
-    "/about": [{ href: "/assets/about.js", as: "script" }],
-    "/contact": [{ href: "/assets/contact.js", as: "script" }],
   };
 
   const resources = resourceMap[route] || [];

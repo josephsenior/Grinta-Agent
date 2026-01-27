@@ -26,16 +26,38 @@ class FileUserStore(UserStore):
     """File-based implementation of UserStore."""
 
     def __init__(self, storage_path: str | None = None):
-        """Initialize file-based user store.
+        """Initialize file-based user store with path validation.
 
         Args:
             storage_path: Path to user storage directory (default: .forge/users)
+
+        Raises:
+            ValueError: If storage_path is invalid or contains security risks
         """
         if storage_path is None:
             storage_path = os.path.join(
                 os.getcwd(), ".forge", "users"
             )
-        self.storage_path = Path(storage_path)
+        
+        # Validate storage path for security
+        try:
+            from forge.core.security.path_validation import SafePath
+            
+            # Validate the storage path (allow absolute paths for storage)
+            safe_path = SafePath.validate(
+                storage_path,
+                workspace_root=os.getcwd(),
+                must_be_relative=False,  # Storage paths can be absolute
+            )
+            self.storage_path = safe_path.path
+        except Exception:
+            # Fallback to basic path creation for backward compatibility
+            logger.warning(
+                f"Path validation failed for storage_path {storage_path}, using legacy path. "
+                "This may be a security risk."
+            )
+            self.storage_path = Path(storage_path)
+        
         self.storage_path.mkdir(parents=True, exist_ok=True)
         self._users_cache: dict[str, User] = {}
         self._load_users()

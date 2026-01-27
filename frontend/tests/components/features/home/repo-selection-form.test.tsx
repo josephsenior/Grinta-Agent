@@ -70,11 +70,18 @@ vi.mock("#/components/features/home/git-branch-dropdown", () => {
 });
 vi.mock("#/hooks/mutation/use-create-conversation");
 vi.mock("#/hooks/use-is-creating-conversation");
+const mockI18n = {
+  changeLanguage: vi.fn(() => Promise.resolve()),
+};
+
 vi.mock("react-i18next", async (importActual) => {
   const actual = await importActual<typeof import("react-i18next")>();
   return {
     ...(actual as Record<string, unknown>),
-    useTranslation: () => ({ t: (key: string) => key }),
+    useTranslation: () => ({
+      t: (key: string) => key,
+      i18n: mockI18n,
+    }),
   };
 });
 

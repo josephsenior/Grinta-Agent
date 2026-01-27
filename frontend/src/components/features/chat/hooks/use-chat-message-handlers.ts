@@ -98,8 +98,6 @@ export function useChatMessageHandlers(
   events: unknown[],
   selectedRepository: RootState["initialQuery"]["selectedRepository"],
   replayJson: RootState["initialQuery"]["replayJson"],
-  useSop: boolean,
-  triggerOptimisticSop: () => void,
 ) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -147,7 +145,7 @@ export function useChatMessageHandlers(
         const prompt = buildPromptWithFiles({
           content: messageContent,
           uploadedFiles: uploadResult.uploadedFiles,
-          isSopMessage: useSop,
+          isSopMessage: false,
           t,
         });
 
@@ -165,15 +163,6 @@ export function useChatMessageHandlers(
         send(messagePayload);
         setOptimisticUserMessage(messageContent);
         setMessageToSend(null);
-
-        if (useSop) {
-          try {
-            displayErrorToast("Starting SOP...");
-          } catch {
-            /* ignore toast errors */
-          }
-          triggerOptimisticSop();
-        }
       } catch (error) {
         logger.error("Failed to send message:", error);
         displayErrorToast(String(t("Failed to send message")));
@@ -189,9 +178,7 @@ export function useChatMessageHandlers(
       setMessageToSend,
       setLastUserMessage,
       t,
-      triggerOptimisticSop,
       uploadFiles,
-      useSop,
     ],
   );
 
@@ -217,7 +204,7 @@ export function useChatMessageHandlers(
   );
 
   const handleGoBack = React.useCallback(() => {
-    navigate("/");
+    navigate("/conversations");
   }, [navigate]);
 
   return {

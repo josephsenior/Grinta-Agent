@@ -80,15 +80,18 @@ function EmptyState({ isVisible, title, subtitle }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center h-full p-6">
       <div className="card-modern">
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-4 min-w-[320px] max-w-2xl px-4">
           <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-accent-500" />
           </div>
-          <div className="text-center">
-            <h3 className="text-lg font-semibold text-foreground mb-2">
+          <div className="text-center w-full">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               {title}
             </h3>
-            <p className="text-foreground-secondary text-sm font-medium">
+            <p
+              className="text-[var(--text-tertiary)] text-sm font-medium"
+              style={{ wordBreak: "normal", whiteSpace: "normal" }}
+            >
               {subtitle}
             </p>
           </div>
@@ -268,7 +271,7 @@ function useConversationPanelController({
       {
         onSuccess: () => {
           if (selectedConversationId === currentConversationId) {
-            navigate("/");
+            navigate("/conversations");
           }
         },
       },
@@ -323,9 +326,11 @@ function useConversationPanelController({
     (conversationId: string) => {
       if (conversationId === currentConversationId) {
         setConfirmExitConversationModalVisible(true);
+      } else {
+        onClose();
       }
     },
-    [currentConversationId],
+    [currentConversationId, onClose],
   );
 
   return {
@@ -432,9 +437,6 @@ export function ConversationPanel({ onClose }: ConversationPanelProps) {
                           conversation.conversation_id,
                         )
                       }
-                      onClick={() =>
-                        controller.handleCardClick(conversation.conversation_id)
-                      }
                       onDelete={() =>
                         controller.handleDeleteProject(
                           conversation.conversation_id,
@@ -445,13 +447,12 @@ export function ConversationPanel({ onClose }: ConversationPanelProps) {
                           conversation.conversation_id,
                         )
                       }
-                      onChangeTitle={(title) =>
+                      onChangeTitle={(newTitle) =>
                         controller.handleConversationTitleChange(
                           conversation.conversation_id,
-                          title,
+                          newTitle,
                         )
                       }
-                      variant="default"
                     />
                   </NavLink>
                 ))}

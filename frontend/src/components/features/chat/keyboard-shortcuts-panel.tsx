@@ -205,7 +205,9 @@ function ShortcutRow({ shortcut }: { shortcut: KeyboardShortcut }) {
     <div className="flex items-center justify-between py-2 group hover:bg-white/5 px-2 rounded-lg transition-colors">
       <div className="flex items-center gap-3 flex-1">
         {shortcut.icon && (
-          <div className="flex-shrink-0 text-[#8b5cf6]">{shortcut.icon}</div>
+          <div className="flex-shrink-0 text-[var(--border-accent)]">
+            {shortcut.icon}
+          </div>
         )}
         <span className="text-sm text-[var(--text-primary)]">
           {shortcut.description}

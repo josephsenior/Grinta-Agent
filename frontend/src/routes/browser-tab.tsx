@@ -1,7 +1,9 @@
 import { InteractiveBrowser } from "#/components/features/browser/interactive-browser";
 
-function Browser() {
-  return <InteractiveBrowser />;
+export default function BrowserTab() {
+  return (
+    <div className="h-full w-full bg-[var(--bg-primary)]">
+      <InteractiveBrowser />
+    </div>
+  );
 }
-
-export default Browser;

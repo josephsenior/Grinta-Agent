@@ -137,13 +137,3 @@ def test_tenacity_metrics(monkeypatch: pytest.MonkeyPatch) -> None:
     events.clear()
     retry_state = SimpleNamespace(outcome=OutcomeError(), attempt_number=0, stop=None)
     after(retry_state)
-
-
-def test_record_metrics_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
-    class DummyModule:
-        @staticmethod
-        def record_event(ev):
-            raise RuntimeError("fail")
-
-    monkeypatch.setitem(sys.modules, "forge.metasop.metrics", DummyModule)
-    tenacity_metrics._record_metrics_event_runtime({"status": "attempt"})

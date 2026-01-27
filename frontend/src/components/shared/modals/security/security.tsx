@@ -1,6 +1,5 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import SecurityInvariant from "./invariant/invariant";
 import { I18nKey } from "#/i18n/declaration";
 import { BaseModal } from "../base-modal/base-modal";
 
@@ -10,22 +9,14 @@ interface SecurityProps {
   securityAnalyzer: string;
 }
 
-enum SecurityAnalyzerOption {
-  INVARIANT = "invariant",
-}
-
-const SecurityAnalyzers: Record<SecurityAnalyzerOption, React.ElementType> = {
-  [SecurityAnalyzerOption.INVARIANT]: SecurityInvariant,
-};
-
 function Security({ isOpen, onOpenChange, securityAnalyzer }: SecurityProps) {
   const { t } = useTranslation();
 
-  const AnalyzerComponent =
-    securityAnalyzer &&
-    SecurityAnalyzers[securityAnalyzer as SecurityAnalyzerOption]
-      ? SecurityAnalyzers[securityAnalyzer as SecurityAnalyzerOption]
-      : () => <div>{t(I18nKey.SECURITY$UNKNOWN_ANALYZER_LABEL)}</div>;
+  const AnalyzerComponent = () => (
+    <div className="flex items-center justify-center h-full text-foreground-secondary">
+      {t(I18nKey.SECURITY$UNKNOWN_ANALYZER_LABEL)}
+    </div>
+  );
 
   return (
     <BaseModal

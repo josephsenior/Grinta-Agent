@@ -18,16 +18,14 @@ export const MOCK_DEFAULT_USER_SETTINGS: ApiSettings | PostApiSettings = {
   language: DEFAULT_SETTINGS.LANGUAGE,
   confirmation_mode: DEFAULT_SETTINGS.CONFIRMATION_MODE,
   security_analyzer: DEFAULT_SETTINGS.SECURITY_ANALYZER,
-  remote_runtime_resource_factor:
-    DEFAULT_SETTINGS.REMOTE_RUNTIME_RESOURCE_FACTOR,
   provider_tokens_set: {},
   enable_default_condenser: DEFAULT_SETTINGS.ENABLE_DEFAULT_CONDENSER,
   condenser_max_size: DEFAULT_SETTINGS.CONDENSER_MAX_SIZE,
   enable_sound_notifications: DEFAULT_SETTINGS.ENABLE_SOUND_NOTIFICATIONS,
+  user_consents_to_analytics: DEFAULT_SETTINGS.USER_CONSENTS_TO_ANALYTICS,
   enable_proactive_conversation_starters:
     DEFAULT_SETTINGS.ENABLE_PROACTIVE_CONVERSATION_STARTERS,
   enable_solvability_analysis: DEFAULT_SETTINGS.ENABLE_SOLVABILITY_ANALYSIS,
-  user_consents_to_analytics: DEFAULT_SETTINGS.USER_CONSENTS_TO_ANALYTICS,
   max_budget_per_task: DEFAULT_SETTINGS.MAX_BUDGET_PER_TASK,
 };
 
@@ -108,13 +106,11 @@ const CONVERSATIONS = new Map<string, Conversation>(
 const ForgeHandlers = [
   http.get("/api/options/models", async () =>
     HttpResponse.json([
-      "gpt-3.5-turbo",
-      "gpt-4o",
-      "gpt-4o-mini",
-      "anthropic/claude-3.5",
-      "anthropic/claude-sonnet-4-20250514",
-      "Openhands/claude-sonnet-4-20250514",
-      "sambanova/Meta-Llama-3.1-8B-Instruct",
+      "openai/gpt-4o",
+      "openai/gpt-4o-mini",
+      "anthropic/claude-3-5-sonnet-latest",
+      "anthropic/claude-3-5-haiku-latest",
+      "google/gemini-1.5-pro-latest",
     ]),
   ),
 
@@ -127,8 +123,6 @@ const ForgeHandlers = [
   ),
 
   http.post("http://localhost:3001/api/submit-feedback", async () => {
-    await delay(1200);
-
     return HttpResponse.json({
       statusCode: 200,
       body: { message: "Success", link: "fake-url.com", password: "abc123" },
@@ -155,9 +149,6 @@ export const handlers = [
 
     return HttpResponse.json(user);
   }),
-  http.post("http://localhost:3001/api/submit-feedback", async () =>
-    HttpResponse.json({ statusCode: 200 }, { status: 200 }),
-  ),
   http.post("https://us.i.posthog.com/e", async () =>
     HttpResponse.json(null, { status: 200 }),
   ),
@@ -184,8 +175,6 @@ export const handlers = [
     return HttpResponse.json(config);
   }),
   http.get("/api/settings", async () => {
-    await delay();
-
     const { settings } = MOCK_USER_PREFERENCES;
 
     if (!settings) {
@@ -195,7 +184,6 @@ export const handlers = [
     return HttpResponse.json(settings);
   }),
   http.post("/api/settings", async ({ request }) => {
-    await delay();
     const body = await request.json();
 
     if (body) {
@@ -263,8 +251,6 @@ export const handlers = [
   ),
 
   http.post("/api/conversations", async () => {
-    await delay();
-
     const conversation: Conversation = {
       conversation_id: (Math.random() * 100).toString(),
       title: "New Conversation",
@@ -324,16 +310,6 @@ export const handlers = [
     HttpResponse.json({ hosts: [] }, { status: 200 }),
   ),
 
-  http.get(
-    "/api/conversations/:conversationId/vscode-url",
-    async ({ params }) =>
-      // Some UI flows request a vscode url; provide a harmless placeholder.
-      HttpResponse.json(
-        { url: `vscode://open?folder=${params.conversationId}` },
-        { status: 200 },
-      ),
-  ),
-
   // Also handle requests that are made to the absolute backend host
   // (http://localhost:3000). Some code paths call the backend with an
   // absolute URL which bypasses the same-origin handlers above; provide
@@ -363,19 +339,9 @@ export const handlers = [
     async () => HttpResponse.json({ hosts: [] }, { status: 200 }),
   ),
 
-  http.get(
-    "http://localhost:3000/api/conversations/:conversationId/vscode-url",
-    async ({ params }) =>
-      HttpResponse.json(
-        { url: `vscode://open?folder=${params.conversationId}` },
-        { status: 200 },
-      ),
-  ),
-
   http.post("/api/logout", () => HttpResponse.json(null, { status: 200 })),
 
   http.post("/api/reset-settings", async () => {
-    await delay();
     MOCK_USER_PREFERENCES.settings = { ...MOCK_DEFAULT_USER_SETTINGS };
     return HttpResponse.json(null, { status: 200 });
   }),
@@ -412,7 +378,6 @@ export const handlers = [
   http.post(
     "/api/conversations/:conversationId/submit-feedback",
     async ({ params, request }) => {
-      await delay(50);
       // Accept any payload and return a simple acknowledgement
       const { conversationId } = params;
       const body = await request.json().catch(() => null);
@@ -425,7 +390,6 @@ export const handlers = [
 
   // Feedback endpoints used by likert-scale and batch checks
   http.post("/feedback/conversation", async ({ request }) => {
-    await delay(20);
     const body = await request.json().catch(() => null);
     return HttpResponse.json(
       { status: "ok", ...((body && { received: true }) || {}) },
@@ -458,3 +422,4 @@ export const handlers = [
     return HttpResponse.json([], { status: 200 });
   }),
 ];
+

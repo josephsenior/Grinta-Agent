@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 
-from litellm import ModelResponse
+from forge.llm.direct_clients import LLMResponse
 import pytest
 
 from forge.events.action.action import ActionSecurityRisk
@@ -38,8 +38,11 @@ def test_event_to_dict_includes_timeout_and_security_risk() -> None:
     action.tool_call_metadata = ToolCallMetadata(
         function_name="fn",
         tool_call_id="call-1",
-        model_response=ModelResponse(
-            id="1", choices=[], created=0, model="gpt-4", object="chat.completion"
+        model_response=LLMResponse(
+            content="",
+            model="gpt-4",
+            usage={"prompt_tokens": 0, "completion_tokens": 0},
+            id="1"
         ),
         total_calls_in_response=1,
     )

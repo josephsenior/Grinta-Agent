@@ -20,8 +20,12 @@ class SoundEffects {
 
   private getContext(): AudioContext {
     if (!this.audioContext && typeof window !== "undefined") {
-      this.audioContext = new (window.AudioContext ||
-        (window as any).webkitAudioContext)();
+      // Handle webkit-prefixed AudioContext for older browsers
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext;
+      this.audioContext = new AudioContextClass();
     }
     return this.audioContext!;
   }

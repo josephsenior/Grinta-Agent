@@ -5,6 +5,10 @@ import userEvent from "@testing-library/user-event";
 import { ModelSelector } from "#/components/shared/modals/settings/model-selector";
 
 // Mock react-i18next
+const mockI18n = {
+  changeLanguage: vi.fn(() => Promise.resolve()),
+};
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => {
@@ -16,6 +20,7 @@ vi.mock("react-i18next", () => ({
       };
       return translations[key] || key;
     },
+    i18n: mockI18n,
   }),
 }));
 

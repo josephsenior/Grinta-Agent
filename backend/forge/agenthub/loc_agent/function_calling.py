@@ -6,7 +6,7 @@ This is similar to the functionality of `CodeActResponseParser`.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from forge.agenthub.codeact_agent.function_calling import combine_thought
 from forge.agenthub.codeact_agent.tools import FinishTool
@@ -20,13 +20,14 @@ from forge.core.logger import forge_logger as logger
 from forge.events.action import (
     Action,
     AgentFinishAction,
-    IPythonRunCellAction,
+    CmdRunAction,
     MessageAction,
 )
 from forge.events.tool import ToolCallMetadata, build_tool_call_metadata
 
 if TYPE_CHECKING:
-    from litellm import ChatCompletionToolParam, ModelResponse
+    ChatCompletionToolParam = Any
+    ModelResponse = Any
 
 
 def _extract_thought_from_message(assistant_msg) -> str:
@@ -60,9 +61,16 @@ def _create_action_from_tool_call(tool_call, arguments: dict) -> Action:
 
     if tool_call.function.name in ALL_FUNCTIONS:
         func_name = tool_call.function.name
-        code = f"print({func_name}(**{arguments}))"
-        logger.debug("TOOL CALL: %s with code: %s", func_name, code)
-        return IPythonRunCellAction(code=code)
+        # Convert arguments to JSON string for the python command
+        args_json = json.dumps(arguments)
+        code = (
+            f"import json; "
+            f"from forge.runtime.plugins.agent_skills.repo_ops.repo_ops import {func_name}; "
+            f"print(json.dumps({func_name}(**json.loads('{args_json}'))))"
+        )
+        command = f"python3 -c \"{code}\""
+        logger.debug("TOOL CALL: %s with command: %s", func_name, command)
+        return CmdRunAction(command=command)
     if tool_call.function.name == FinishTool["function"]["name"]:
         return AgentFinishAction(final_thought=arguments.get("message", ""))
     msg = f"Tool {tool_call.function.name} is not registered. (arguments: {

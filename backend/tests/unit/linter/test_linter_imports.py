@@ -2,70 +2,44 @@
 
 from __future__ import annotations
 
-import importlib
-import sys
-import types
-
 import pytest
 
-
-def reload_module() -> types.ModuleType:
-    """Helper to reload the forge.linter module and return it."""
-    return importlib.reload(
-        sys.modules.get("forge.linter", importlib.import_module("forge.linter"))
-    )
+from forge.linter import DefaultLinter, LintError, LintResult
 
 
-@pytest.fixture(autouse=True)
-def reset_modules():
-    """Ensure forge.linter is reloaded fresh for each test."""
+def test_module_exports() -> None:
+    """Test that the module exports the expected classes."""
     import forge.linter as linter_module
 
-    yield
-
-    sys.modules.pop("forge_aci", None)
-    sys.modules.pop("forge_aci.linter", None)
-    importlib.reload(linter_module)
-
-
-def test_import_uses_real_module_when_available(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """When forge_aci.linter exists we should expose its classes."""
-    fake_package = types.ModuleType("forge_aci")
-    fake_module = types.ModuleType("forge_aci.linter")
-
-    class RealLintResult:
-        pass
-
-    class RealDefaultLinter:
-        pass
-
-    fake_module.LintResult = RealLintResult  # type: ignore[attr-defined]
-    fake_module.DefaultLinter = RealDefaultLinter  # type: ignore[attr-defined]
-
-    monkeypatch.setitem(sys.modules, "forge_aci", fake_package)
-    monkeypatch.setitem(sys.modules, "forge_aci.linter", fake_module)
-
-    module = reload_module()
-
-    assert module.LintResult is RealLintResult
-    assert module.DefaultLinter is RealDefaultLinter
-    assert set(module.__all__) == {"DefaultLinter", "LintResult"}
+    assert hasattr(linter_module, "DefaultLinter")
+    assert hasattr(linter_module, "LintResult")
+    assert hasattr(linter_module, "LintError")
+    assert set(linter_module.__all__) == {"DefaultLinter", "LintResult", "LintError"}
 
 
-def test_import_falls_back_to_stub_when_missing(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """If forge_aci is missing we should expose lightweight stub implementations."""
-    monkeypatch.delitem(sys.modules, "forge_aci", raising=False)
-    monkeypatch.delitem(sys.modules, "forge_aci.linter", raising=False)
+def test_lint_error_creation() -> None:
+    """Test that LintError can be created with proper attributes."""
+    error = LintError(
+        line=10,
+        column=5,
+        message="Test error",
+        code="E001",
+        severity="error",
+    )
+    assert error.line == 10
+    assert error.column == 5
+    assert error.message == "Test error"
+    assert error.code == "E001"
+    assert error.severity == "error"
 
-    module = reload_module()
 
-    stub_linter = module.DefaultLinter()
-    result = stub_linter.lint()
+def test_lint_result_separation() -> None:
+    """Test that LintResult properly separates errors and warnings."""
+    error = LintError(line=1, column=1, message="Error", severity="error")
+    warning = LintError(line=2, column=1, message="Warning", severity="warning")
 
-    assert hasattr(result, "errors") and result.errors == []
-    assert hasattr(result, "warnings") and result.warnings == []
-    assert set(module.__all__) == {"DefaultLinter", "LintResult"}
+    result = LintResult(errors=[error], warnings=[warning])
+    assert len(result.errors) == 1
+    assert len(result.warnings) == 1
+    assert result.errors[0].severity == "error"
+    assert result.warnings[0].severity == "warning"

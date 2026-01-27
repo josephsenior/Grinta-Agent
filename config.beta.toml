@@ -1,5 +1,5 @@
 # Forge Beta Configuration
-# SIMPLIFIED: Focus on CodeAct agent, disable complex multi-agent features
+# SIMPLIFIED: Focus on CodeAct agent
 
 [core]
 workspace_base = "."
@@ -7,9 +7,9 @@ sandbox_volumes = [".:/workspace:rw"]
 save_trajectory_path = "./trajectories"
 
 # ============================================================================
-# BETA LAUNCH: CodeAct Agent Only (No MetaSOP, No Parallel Agents)
+# BETA LAUNCH: CodeAct Agent Only
 # ============================================================================
-agent_mode = "simple"  # NOT "enterprise" - keep it simple for beta!
+agent_mode = "simple"  # keep it simple for beta!
 
 [agent]
 schema_version = "2025-11-14"
@@ -55,19 +55,11 @@ enable_history_truncation = true
 enable_condensation_request = false   # Keep full context for beta
 
 # ============================================================================
-# DISABLED: Complex Multi-Agent Features (Post-Beta)
+# DISABLED: Complex Features (Post-Beta)
 # ============================================================================
 enable_llm_editor = false             # Use ultimate_editor instead
-enable_jupyter = false                # Not needed for beta
 enable_self_remediation = false       # ⚠️ Experimental, disable for beta
 enable_micro_iterations = false       # ⚠️ Complex iteration logic
-
-# MetaSOP Features (DISABLED for beta - too complex!)
-# These are amazing but need more testing/validation
-# enable_metasop = false              # Multi-agent orchestration
-# enable_parallel_execution = false   # Parallel agent execution  
-# enable_causal_reasoning = false     # Predictive conflict detection
-# enable_ace_self_improvement = false # Advanced ACE features
 
 [llm]
 model = "gpt-4o-mini"                 # Fast & cost-effective for beta
@@ -145,8 +137,6 @@ enable_command_confirmation = false   # Trust the agent for beta (not manual con
 [beta]
 # Features to show/hide in UI
 show_advanced_settings = false        # Hide complex settings for beta
-show_metasop_ui = false               # Hide MetaSOP UI
-show_parallel_execution = false       # Hide parallel execution UI
 show_enterprise_features = false      # Hide enterprise SSO, etc.
 
 # User limits for beta (generous but safe)
@@ -182,16 +172,8 @@ default_plan = "free"                 # $1/day, $20/month
 # WHAT'S DISABLED (Post-Beta Features)
 # ============================================================================
 
-# MetaSOP Multi-Agent Orchestration (Requires more testing)
-# [metasop]
-# enabled = false
-# max_parallel_agents = 3
-# enable_causal_reasoning = false
-# enable_predictive_execution = false
-
 # Advanced Features (Complex, needs validation)
 # [advanced]
-# enable_parallel_execution = false
 # enable_self_remediation = false
 # enable_micro_iterations = false
 # enable_multi_candidate = false
@@ -208,7 +190,6 @@ default_plan = "free"                 # $1/day, $20/month
 # ENABLED (Beta-Ready):
 #   ✅ CodeAct agent (9.5/10 reliable)
 #   ✅ Ultimate Editor (competitive moat)
-#   ✅ ACE Framework (self-improvement)
 #   ✅ Cost quotas ($1/day free tier)
 #   ✅ Rate limiting (1000 req/hour)
 #   ✅ Circuit breaker (safety)
@@ -218,8 +199,6 @@ default_plan = "free"                 # $1/day, $20/month
 #   ✅ MCP tools (shadcn, fetch, search)
 #
 # DISABLED (Post-Beta):
-#   ⚠️ MetaSOP orchestration
-#   ⚠️ Parallel multi-agent
 #   ⚠️ Self-remediation
 #   ⚠️ Micro-iterations
 #   ⚠️ Enterprise SSO

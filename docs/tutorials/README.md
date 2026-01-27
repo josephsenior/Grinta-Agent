@@ -11,7 +11,6 @@ Step-by-step guides to help you get the most out of Forge.
 ## Feature Tutorials
 
 - [**Using the Ultimate Editor**](04-ultimate-editor.md) - Master structure-aware code editing
-- [**MetaSOP Orchestration**](05-metasop-orchestration.md) - Build complex projects with multi-agent coordination
 - [**Cost Tracking and Quotas**](06-cost-tracking.md) - Monitor and control your AI spending
 - [**Memory and Context Management**](07-memory-management.md) - Leverage persistent memory across sessions
 

@@ -18,9 +18,7 @@ from forge.events.observation.commands import (
     CMD_OUTPUT_PS1_END,
     CmdOutputMetadata,
     CmdOutputObservation,
-    IPythonRunCellObservation,
 )
-from forge.events.observation.delegate import AgentDelegateObservation
 from forge.events.observation.empty import NullObservation
 from forge.events.observation.error import ErrorObservation
 from forge.events.observation.file_download import FileDownloadObservation
@@ -153,16 +151,6 @@ def test_cmd_output_observation_truncation_behavior():
     assert hidden.content == long_text
 
 
-def test_ipython_observation_reporting():
-    obs = IPythonRunCellObservation(
-        content="result", code="print(1)", image_urls=["img1"]
-    )
-    assert obs.success is True
-    assert obs.error is False
-    assert obs.message == "Code executed in IPython cell."
-    assert "Images: 1" in str(obs)
-
-
 def test_browser_output_observation_str_includes_context(tmp_path):
     screenshot_path = tmp_path / "shot.png"
     screenshot_path.write_text("png")
@@ -225,7 +213,7 @@ def test_file_edit_observation_diff_generation_and_caching():
     aci_obs = FileEditObservation(
         content="Generated content",
         path="code.py",
-        impl_source=FileEditSource.OH_ACI,
+        impl_source=FileEditSource.FILE_EDITOR,
     )
     assert aci_obs.__str__() == aci_obs.content
 
@@ -243,9 +231,6 @@ def test_observation_simple_messages_and_defaults():
 
     reject_obs = UserRejectObservation(content="No thanks")
     assert reject_obs.message == "No thanks"
-
-    delegate_obs = AgentDelegateObservation(content="delegated", outputs={"result": 1})
-    assert delegate_obs.message == ""
 
     state_obs = AgentStateChangedObservation(content="state", agent_state="new")
     assert state_obs.message == ""

@@ -31,7 +31,6 @@ class RetryService:
     # ------------------------------------------------------------------ #
     def initialize(self) -> None:
         """Start background retry worker if retry queue is enabled."""
-
         self._retry_queue = get_retry_queue()
         if not self._retry_queue:
             return
@@ -62,13 +61,11 @@ class RetryService:
 
     def reset_retry_metrics(self) -> None:
         """Reset retry tracking state after successful execution or initialization."""
-
         self._retry_count = 0
         self._retry_pending = False
 
     def increment_retry_count(self) -> int:
         """Increment retry counter, returning the updated value."""
-
         self._retry_count += 1
         return self._retry_count
 
@@ -82,8 +79,7 @@ class RetryService:
 
     async def schedule_retry_after_failure(self, exc: Exception) -> bool:
         """Schedule an automatic retry for transient failures."""
-
-        from litellm.exceptions import (
+        from forge.llm.exceptions import (
             APIConnectionError,
             APIError,
             InternalServerError,
@@ -165,7 +161,6 @@ class RetryService:
 
     async def shutdown(self) -> None:
         """Ensure retry worker stops gracefully."""
-
         task = self._retry_worker_task
         if not task:
             return
@@ -206,7 +201,6 @@ class RetryService:
     # ------------------------------------------------------------------ #
     async def _retry_worker(self) -> None:
         """Background worker that processes retry queue tasks."""
-
         if not self._retry_queue:
             return
         poll_interval = max(0.5, float(self._retry_queue.poll_interval))
@@ -296,7 +290,6 @@ class RetryService:
 
     async def _process_retry_task(self, task: RetryTask) -> None:
         """Process an individual retry queue task."""
-
         controller = self.controller
         if controller._closed:
             logger.debug("Controller %s closed; ignoring retry task %s", controller.id, task.id)
@@ -342,7 +335,6 @@ class RetryService:
 
     async def _resume_agent_after_retry(self, task: RetryTask) -> None:
         """Resume the agent after a retry task completes."""
-
         from forge.events import EventSource
         from forge.events.observation import AgentThinkObservation
         from forge.controller.state.state import AgentState

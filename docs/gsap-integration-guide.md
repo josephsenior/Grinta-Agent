@@ -32,7 +32,7 @@ GSAP (GreenSock Animation Platform) is the industry standard for professional we
 
 ```bash
 cd frontend
-npm install gsap
+pnpm add gsap
 ```
 
 **Note:** GSAP is free for most use cases. Premium plugins (ScrollTrigger, etc.) are free for most commercial use.
@@ -712,7 +712,7 @@ GSAP will add **professional polish** to Forge without sacrificing performance. 
 ---
 
 **Next Steps:**
-1. Install GSAP: `npm install gsap`
+1. Install GSAP: `pnpm add gsap`
 2. Create `use-gsap-scroll-reveal.ts` hook
 3. Enhance hero section first
 4. Add feature card animations

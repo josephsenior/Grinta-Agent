@@ -8,7 +8,6 @@ from forge.core.exceptions import LLMMalformedActionError
 from forge.core.schemas import ActionType
 from forge.events.action.action import Action, ActionSecurityRisk
 from forge.events.action.agent import (
-    AgentDelegateAction,
     AgentFinishAction,
     AgentRejectAction,
     AgentThinkAction,
@@ -19,7 +18,7 @@ from forge.events.action.agent import (
     TaskTrackingAction,
 )
 from forge.events.action.browse import BrowseInteractiveAction, BrowseURLAction
-from forge.events.action.commands import CmdRunAction, IPythonRunCellAction
+from forge.events.action.commands import CmdRunAction
 from forge.events.action.empty import NullAction
 from forge.events.action.files import (
     FileEditAction,
@@ -36,7 +35,6 @@ from forge.events.action.message import (
 actions = (
     NullAction,
     CmdRunAction,
-    IPythonRunCellAction,
     BrowseURLAction,
     BrowseInteractiveAction,
     FileReadAction,
@@ -45,7 +43,6 @@ actions = (
     AgentThinkAction,
     AgentFinishAction,
     AgentRejectAction,
-    AgentDelegateAction,
     RecallAction,
     ChangeAgentStateAction,
     MessageAction,
@@ -62,8 +59,7 @@ ACTION_TYPE_TO_CLASS = {action_class.action: action_class for action_class in ac
 def handle_action_deprecated_args(args: dict[str, Any]) -> dict[str, Any]:
     """Handle deprecated arguments in action serialization.
 
-    This function removes deprecated arguments from action args and handles
-    special cases like translating deprecated ipython code format.
+    This function removes deprecated arguments from action args.
 
     Args:
         args: Dictionary of action arguments that may contain deprecated keys.
@@ -76,24 +72,6 @@ def handle_action_deprecated_args(args: dict[str, Any]) -> dict[str, Any]:
         args.pop("keep_prompt")
     if "task_completed" in args:
         args.pop("task_completed")
-    if "translated_ipython_code" in args:
-        code = args.pop("translated_ipython_code")
-        file_editor_prefix = "print(file_editor(**"
-        if (
-            code is not None
-            and code.startswith(file_editor_prefix)
-            and code.endswith("))")
-        ):
-            try:
-                import ast
-
-                dict_str = code[len(file_editor_prefix) : -2]
-                file_args = ast.literal_eval(dict_str)
-                args |= file_args
-            except (ValueError, SyntaxError):
-                pass
-        if args.get("command") == "view":
-            args.pop("command")
     return args
 
 
@@ -174,10 +152,4 @@ def action_from_dict(action: dict) -> Action:
     action_class = _get_action_class(action["action"])
     args = action.get("args", {})
     args, timestamp = _process_action_args(args)
-    action_name = action.get("action")
-    if action_name == ActionType.RUN_IPYTHON:
-        ipython_args = action.get("args")
-        if isinstance(ipython_args, dict) and "result" in ipython_args:
-            msg = "ipython action result should not be provided before the action run"
-            raise ValueError(msg)
     return _create_action_instance(action_class, args, action, timestamp)

@@ -18,21 +18,7 @@
 
 ## 🤖 **Agent Usage**
 
-### **1. MetaSOP Orchestration**
-
-**✅ DO:**
-- Use MetaSOP for complex, multi-phase projects
-- Provide clear, detailed requirements
-- Review artifacts at each step before proceeding
-- Enable visualization for better understanding
-
-**❌ DON'T:**
-- Use MetaSOP for simple, single-file tasks
-- Skip artifact review between steps
-- Ignore warnings or validation errors
-- Disable critical agents (PM, Architect)
-
-### **2. Agent Selection**
+### **1. Agent Selection**
 
 **When to use CodeAct:**
 - Single-file modifications
@@ -40,11 +26,11 @@
 - Code refactoring
 - Direct code execution
 
-**When to use MetaSOP:**
-- Full application development
-- Complex system design
-- Multi-agent collaboration needed
-- Comprehensive documentation required
+**When to use Plan Agent:**
+- Multi-step tasks
+- High-level planning
+- Complex refactoring across files
+- System design and implementation
 
 ---
 

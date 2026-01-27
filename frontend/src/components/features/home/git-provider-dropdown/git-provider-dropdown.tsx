@@ -40,10 +40,6 @@ export function GitProviderDropdown({
     switch (provider) {
       case "github":
         return "GitHub";
-      case "gitlab":
-        return "GitLab";
-      case "bitbucket":
-        return "Bitbucket";
       case "enterprise_sso":
         return "Enterprise SSO";
       default:

@@ -1,19 +1,20 @@
 // These are provider names, not user-facing text
 export const MAP_PROVIDER = {
   openai: "OpenAI",
+  gemini: "Gemini",
+  anthropic: "Anthropic",
+  xai: "Grok",
   azure: "Azure",
   azure_ai: "Azure AI Studio",
   vertex_ai: "VertexAI",
   palm: "PaLM",
-  gemini: "Gemini",
-  anthropic: "Anthropic",
   sagemaker: "AWS SageMaker",
   bedrock: "AWS Bedrock",
   mistral: "Mistral AI",
   anyscale: "Anyscale",
   databricks: "Databricks",
   ollama: "Ollama",
-  perlexity: "Perplexity AI",
+  perplexity: "Perplexity AI",
   friendliai: "FriendliAI",
   groq: "Groq",
   fireworks_ai: "Fireworks AI",
@@ -23,9 +24,6 @@ export const MAP_PROVIDER = {
   replicate: "Replicate",
   voyage: "Voyage AI",
   openrouter: "OpenRouter",
-  openhands: "Openhands",
-  forge: "Openhands", // Legacy alias
-  Forge: "Openhands", // Legacy alias
 };
 
 export const mapProvider = (provider: string) =>

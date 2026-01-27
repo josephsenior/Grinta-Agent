@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { test, expect, describe, vi } from "vitest";
 import { InteractiveChatBox } from "#/components/features/chat/interactive-chat-box";
 import { ChatInput } from "#/components/features/chat/chat-input";
-import { renderWithProviders } from "../../test-utils";
+import { renderWithProviders } from "#test-utils";
 
 vi.mock("react-i18next", async () => {
   const actual = await vi.importActual<typeof import("react-i18next")>(
@@ -12,6 +12,9 @@ vi.mock("react-i18next", async () => {
     ...actual,
     useTranslation: () => ({
       t: (key: string) => key,
+      i18n: {
+        changeLanguage: () => Promise.resolve(),
+      },
     }),
   };
 });
@@ -43,3 +46,4 @@ describe("Check for hardcoded English strings", () => {
     screen.getByPlaceholderText("SUGGESTIONS$WHAT_TO_BUILD");
   });
 });
+

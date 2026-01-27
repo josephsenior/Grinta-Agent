@@ -234,30 +234,6 @@ class TestComprehensiveSafetyScenarios:
         assert blocked_count == len(dangerous_commands)
         print(f"✅ All {blocked_count} dangerous commands blocked")
 
-    def test_python_code_safety(self):
-        """Test Python code safety analysis."""
-        from forge.events.action import IPythonRunCellAction
-
-        analyzer = CommandAnalyzer()
-
-        # Dangerous Python code
-        dangerous_python = [
-            "import os; os.system('rm -rf /')",
-            "exec(malicious_code)",
-            "eval(user_input)",
-            "subprocess.run('rm -rf /', shell=True)",
-        ]
-
-        for code in dangerous_python:
-            action = IPythonRunCellAction(code=code)
-            assessment = analyzer.analyze_action(action)
-
-            assert assessment.risk_level == ActionSecurityRisk.MEDIUM, (
-                f"Python code should be flagged: {code}"
-            )
-
-        print("✅ Python code safety analysis works")
-
 
 def test_performance_overhead():
     """Test that safety validation has minimal overhead."""

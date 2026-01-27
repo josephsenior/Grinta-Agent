@@ -361,7 +361,6 @@ class EventStream(EventStore):
         self, current_write_page: list[dict] | None
     ) -> tuple[str, str] | None:
         """Return cache filename + contents when a page is ready."""
-
         if not current_write_page or len(current_write_page) < self.cache_size:
             return None
         start = current_write_page[0]["id"]

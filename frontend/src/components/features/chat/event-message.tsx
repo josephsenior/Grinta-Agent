@@ -12,27 +12,23 @@ import {
   isFinishAction,
   isRejectObservation,
   isMcpObservation,
-  isTaskTrackingObservation,
   isFileWriteAction,
   isFileEditAction,
   isStreamingChunkAction,
   hasArgs,
   hasExtras,
+  hasThoughtProperty,
 } from "#/types/core/guards";
 import { ForgeObservation } from "#/types/core/observations";
 import { ImageCarousel } from "../images/image-carousel";
 import { ChatMessage } from "./chat-message";
 import { ErrorMessage } from "./error-message";
 import { MCPObservationContent } from "./mcp-observation-content";
-import { TaskTrackingObservationContent } from "./task-tracking-observation-content";
 import { getObservationResult } from "./event-content-helpers/get-observation-result";
 import { getEventContent } from "./event-content-helpers/get-event-content";
 import { GenericEventMessage } from "./generic-event-message";
-import { MicroagentStatus } from "#/types/microagent-status";
-import { MicroagentStatusIndicator } from "./microagent/microagent-status-indicator";
 import { FileList } from "../files/file-list";
 import { parseMessageFromEvent } from "./event-content-helpers/parse-message-from-event";
-import { LikertScale } from "../feedback/likert-scale";
 import { useWsClient } from "#/context/ws-client-provider";
 import { StreamingTerminal } from "../terminal/streaming-terminal";
 import { StreamingThought } from "./streaming-thought";
@@ -40,7 +36,6 @@ import { CodeArtifact } from "./code-artifact";
 import { StreamingCodeArtifact } from "./streaming-code-artifact";
 
 import { useConfig } from "#/hooks/query/use-config";
-import { useFeedbackExists } from "#/hooks/query/use-feedback-exists";
 import { RootState } from "#/store";
 import { AgentState } from "#/types/agent-state";
 
@@ -65,10 +60,6 @@ const isImportantCommand = (cmd?: string | null): boolean => {
   return importantPatterns.some((pattern) => pattern.test(command));
 };
 
-const hasThoughtProperty = (
-  obj: Record<string, unknown>,
-): obj is { thought: string } => "thought" in obj && !!obj.thought;
-
 function resolvePairedDecision(
   event: ForgeAction | ForgeObservation,
   hasObservationPair: boolean,
@@ -82,7 +73,7 @@ function resolvePairedDecision(
     return { type: "paired-thought" };
   }
 
-  return { type: "paired-indicator" };
+  return null;
 }
 
 function resolveObservationSpecificDecision(
@@ -96,10 +87,6 @@ function resolveObservationSpecificDecision(
 
   if (isMcpObservation(observation)) {
     return { type: "mcp" };
-  }
-
-  if (isTaskTrackingObservation(observation)) {
-    return { type: "task-tracking" };
   }
 
   if (
@@ -314,8 +301,7 @@ const HIDDEN_RENDER_PREDICATES: HiddenRenderPredicate[] = [
   ({ event }) =>
     isFinishAction(event) ||
     isRejectObservation(event) ||
-    isMcpObservation(event) ||
-    isTaskTrackingObservation(event),
+    isMcpObservation(event),
 ];
 
 const shouldRenderWhenTechnicalDetailsHidden = (
@@ -330,7 +316,6 @@ const shouldRenderWhenTechnicalDetailsHidden = (
 type RenderDecisionType =
   | "error"
   | "paired-thought"
-  | "paired-indicator"
   | "file-write"
   | "file-edit"
   | "streaming-chunk"
@@ -338,7 +323,6 @@ type RenderDecisionType =
   | "chat-message"
   | "reject"
   | "mcp"
-  | "task-tracking"
   | "run"
   | "generic";
 
@@ -400,30 +384,6 @@ const renderStreamingThoughtNode = (eventId: string, thought?: string) => {
   return <StreamingThought eventId={eventId} thought={thought} />;
 };
 
-const renderMicroagentStatus = ({
-  status,
-  actions,
-  conversationId,
-  prUrl,
-}: {
-  status?: MicroagentStatus | null;
-  actions?: EventMessageProps["actions"];
-  conversationId?: string;
-  prUrl?: string;
-}) => {
-  if (!status || !actions) {
-    return null;
-  }
-
-  return (
-    <MicroagentStatusIndicator
-      status={status}
-      conversationId={conversationId}
-      prUrl={prUrl}
-    />
-  );
-};
-
 interface RenderContext {
   event: ForgeAction | ForgeObservation;
   extras: Record<string, unknown>;
@@ -434,8 +394,6 @@ interface RenderContext {
   onRunCode?: EventMessageProps["onRunCode"];
   hideAvatar: boolean;
   compactMode: boolean;
-  microagentIndicator: React.ReactNode;
-  renderLikertScale: () => React.ReactNode;
   shouldShowConfirmationButtons: boolean;
   renderCodeArtifactBlock: (
     action: "create" | "edit",
@@ -454,20 +412,30 @@ type DecisionHandler = (context: RenderContext) => React.ReactNode;
 const renderErrorDecision: DecisionHandler = ({
   event,
   extras,
-  microagentIndicator,
-  renderLikertScale,
-}) => (
-  <div>
-    <ErrorMessage
-      errorId={
-        typeof extras.error_id === "string" ? extras.error_id : undefined
-      }
-      defaultMessage={event.message}
-    />
-    {microagentIndicator}
-    {renderLikertScale()}
-  </div>
-);
+}) => {
+  // Extract error details for user-friendly formatting
+  const errorMessage =
+    event.message ||
+    (isForgeObservation(event) && typeof event.content === "string"
+      ? event.content
+      : "");
+  const errorObject =
+    isForgeObservation(event) && typeof event.content === "object"
+      ? event.content
+      : { message: errorMessage, ...extras };
+
+  return (
+    <div>
+      <ErrorMessage
+        errorId={
+          typeof extras.error_id === "string" ? extras.error_id : undefined
+        }
+        defaultMessage={errorMessage}
+        error={errorObject}
+      />
+    </div>
+  );
+};
 
 const renderPairedThoughtDecision: DecisionHandler = ({
   args,
@@ -476,7 +444,6 @@ const renderPairedThoughtDecision: DecisionHandler = ({
   onRunCode,
   hideAvatar,
   compactMode,
-  microagentIndicator,
 }) => (
   <div>
     <ChatMessage
@@ -488,13 +455,8 @@ const renderPairedThoughtDecision: DecisionHandler = ({
       hideAvatar={hideAvatar}
       compactMode={compactMode}
     />
-    {microagentIndicator}
   </div>
 );
-
-const renderPairedIndicatorDecision: DecisionHandler = ({
-  microagentIndicator,
-}) => microagentIndicator ?? null;
 
 const renderFileWriteDecision: DecisionHandler = ({
   args,
@@ -541,8 +503,6 @@ const renderFinishDecision: DecisionHandler = ({
   onRunCode,
   hideAvatar,
   compactMode,
-  microagentIndicator,
-  renderLikertScale,
 }) => (
   <>
     <ChatMessage
@@ -554,8 +514,6 @@ const renderFinishDecision: DecisionHandler = ({
       hideAvatar={hideAvatar}
       compactMode={compactMode}
     />
-    {microagentIndicator}
-    {renderLikertScale()}
   </>
 );
 
@@ -583,8 +541,6 @@ const renderChatMessageDecision: DecisionHandler = (context) => {
       >
         {renderChatMessageChildren(context)}
       </ChatMessage>
-      {context.microagentIndicator}
-      {shouldRenderLikertAfterChat(context) && context.renderLikertScale()}
     </>
   );
 };
@@ -637,15 +593,10 @@ const renderMcpDecision: DecisionHandler = ({
   );
 };
 
-const renderTaskTrackingDecision: DecisionHandler = ({ event }) =>
-  isTaskTrackingObservation(event) ? (
-    <TaskTrackingObservationContent event={event} />
-  ) : null;
 
 const renderRunDecision: DecisionHandler = ({
   event,
   extras,
-  renderLikertScale,
   shouldShowConfirmationButtons,
 }) =>
   isForgeObservation(event) ? (
@@ -661,7 +612,6 @@ const renderRunDecision: DecisionHandler = ({
         }
       />
       {shouldShowConfirmationButtons && <ConfirmationButtons />}
-      {renderLikertScale()}
     </div>
   ) : null;
 
@@ -700,7 +650,6 @@ const renderGenericDecision: DecisionHandler = (context) => {
 const decisionHandlers: Record<RenderDecisionType, DecisionHandler> = {
   error: renderErrorDecision,
   "paired-thought": renderPairedThoughtDecision,
-  "paired-indicator": renderPairedIndicatorDecision,
   "file-write": renderFileWriteDecision,
   "file-edit": renderFileEditDecision,
   "streaming-chunk": renderStreamingChunkDecision,
@@ -708,7 +657,6 @@ const decisionHandlers: Record<RenderDecisionType, DecisionHandler> = {
   "chat-message": renderChatMessageDecision,
   reject: renderRejectDecision,
   mcp: renderMcpDecision,
-  "task-tracking": renderTaskTrackingDecision,
   run: renderRunDecision,
   generic: renderGenericDecision,
 };
@@ -719,9 +667,6 @@ interface EventMessageProps {
   isAwaitingUserConfirmation: boolean;
   isLastMessage: boolean;
   showTechnicalDetails?: boolean;
-  microagentStatus?: MicroagentStatus | null;
-  microagentConversationId?: string;
-  microagentPRUrl?: string;
   actions?: Array<{
     icon: React.ReactNode;
     onClick: () => void;
@@ -741,9 +686,6 @@ function EventMessageComponent({
   isAwaitingUserConfirmation,
   isLastMessage,
   showTechnicalDetails,
-  microagentStatus,
-  microagentConversationId,
-  microagentPRUrl,
   actions,
   isInLast10Actions,
   onAskAboutCode,
@@ -757,9 +699,6 @@ function EventMessageComponent({
     isAwaitingUserConfirmation,
     isLastMessage,
     showTechnicalDetails,
-    microagentStatus,
-    microagentConversationId,
-    microagentPRUrl,
     actions,
     isInLast10Actions,
     onAskAboutCode,
@@ -783,9 +722,6 @@ function useEventMessageController({
   isAwaitingUserConfirmation,
   isLastMessage,
   showTechnicalDetails = false,
-  microagentStatus,
-  microagentConversationId,
-  microagentPRUrl,
   actions,
   isInLast10Actions,
   onAskAboutCode,
@@ -794,12 +730,7 @@ function useEventMessageController({
   compactMode = false,
 }: EventMessageProps) {
   const { curAgentState } = useSelector((state: RootState) => state.agent);
-  const { data: config } = useConfig();
   const { hydratedEventIds } = useWsClient();
-  const {
-    data: feedbackData = { exists: false },
-    isLoading: isCheckingFeedback,
-  } = useFeedbackExists(event.id);
 
   const shouldShowConfirmationButtons = useMemo(
     () =>
@@ -823,47 +754,6 @@ function useEventMessageController({
     }
     return shouldRenderWhenTechnicalDetailsHidden(event, extras, args);
   }, [args, event, extras, showTechnicalDetails]);
-
-  const microagentIndicator = useMemo(
-    () =>
-      renderMicroagentStatus({
-        status: microagentStatus,
-        actions,
-        conversationId: microagentConversationId,
-        prUrl: microagentPRUrl,
-      }),
-    [actions, microagentConversationId, microagentPRUrl, microagentStatus],
-  );
-
-  const renderLikertScale = useCallback(() => {
-    if (config?.APP_MODE !== "saas" || isCheckingFeedback) {
-      return null;
-    }
-
-    const shouldShow = isErrorObservation(event)
-      ? isInLast10Actions
-      : isLastMessage;
-
-    if (!shouldShow) {
-      return null;
-    }
-
-    return (
-      <LikertScale
-        eventId={event.id}
-        initiallySubmitted={feedbackData.exists}
-        initialRating={feedbackData.rating}
-        initialReason={feedbackData.reason}
-      />
-    );
-  }, [
-    config?.APP_MODE,
-    event,
-    feedbackData,
-    isCheckingFeedback,
-    isInLast10Actions,
-    isLastMessage,
-  ]);
 
   const shouldStreamCodeArtifact =
     curAgentState === AgentState.RUNNING && isLastMessage;
@@ -902,13 +792,11 @@ function useEventMessageController({
               onCopy={() => {}}
             />
           )}
-          {microagentIndicator}
         </div>
       );
     },
     [
       event.id,
-      microagentIndicator,
       renderStreamingThought,
       shouldStreamCodeArtifact,
     ],
@@ -947,8 +835,6 @@ function useEventMessageController({
       onRunCode,
       hideAvatar,
       compactMode,
-      microagentIndicator,
-      renderLikertScale,
       shouldShowConfirmationButtons,
       renderCodeArtifactBlock,
       hydratedEventIds,
@@ -967,11 +853,9 @@ function useEventMessageController({
       hideAvatar,
       hydratedEventIds,
       isLastMessage,
-      microagentIndicator,
       onAskAboutCode,
       onRunCode,
       renderCodeArtifactBlock,
-      renderLikertScale,
       renderStreamingThought,
       shouldShowConfirmationButtons,
     ],

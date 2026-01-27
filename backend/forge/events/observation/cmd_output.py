@@ -14,7 +14,6 @@ from .commands import (  # noqa: F401
     CMD_OUTPUT_PS1_END,
     CmdOutputMetadata,
     CmdOutputObservation,
-    IPythonRunCellObservation,
 )
 
 __all__ = [
@@ -23,5 +22,4 @@ __all__ = [
     "CMD_OUTPUT_PS1_END",
     "CmdOutputMetadata",
     "CmdOutputObservation",
-    "IPythonRunCellObservation",
 ]

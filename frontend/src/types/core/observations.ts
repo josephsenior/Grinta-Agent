@@ -19,22 +19,6 @@ export interface CommandObservation extends ForgeObservationEvent<"run"> {
   };
 }
 
-export interface IPythonObservation
-  extends ForgeObservationEvent<"run_ipython"> {
-  source: "agent";
-  extras: {
-    code: string;
-    image_urls?: string[];
-  };
-}
-
-export interface DelegateObservation extends ForgeObservationEvent<"delegate"> {
-  source: "agent";
-  extras: {
-    outputs: Record<string, unknown>;
-  };
-}
-
 export interface BrowseObservation extends ForgeObservationEvent<"browse"> {
   source: "agent";
   extras: {
@@ -145,26 +129,10 @@ export interface UserRejectedObservation
   extras: Record<string, unknown>;
 }
 
-export interface TaskTrackingObservation
-  extends ForgeObservationEvent<"task_tracking"> {
-  source: "agent";
-  extras: {
-    command: string;
-    task_list: Array<{
-      id: string;
-      title: string;
-      status: "todo" | "in_progress" | "done";
-      notes?: string;
-    }>;
-  };
-}
-
 export type ForgeObservation =
   | AgentStateChangeObservation
   | AgentThinkObservation
   | CommandObservation
-  | IPythonObservation
-  | DelegateObservation
   | BrowseObservation
   | BrowseInteractiveObservation
   | WriteObservation
@@ -173,5 +141,4 @@ export type ForgeObservation =
   | ErrorObservation
   | RecallObservation
   | MCPObservation
-  | UserRejectedObservation
-  | TaskTrackingObservation;
+  | UserRejectedObservation;

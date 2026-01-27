@@ -242,7 +242,6 @@ class ToolTelemetry:
     @staticmethod
     def _action_schema_map() -> Dict[str, type[ActionSchemaUnion]]:
         from forge.core.schemas.actions import (
-            AgentDelegateActionSchema,
             AgentFinishActionSchema,
             AgentRejectActionSchema,
             BrowseInteractiveActionSchema,
@@ -251,7 +250,6 @@ class ToolTelemetry:
             FileEditActionSchema,
             FileReadActionSchema,
             FileWriteActionSchema,
-            IPythonRunCellActionSchema,
             MessageActionSchema,
             NullActionSchema,
             SystemMessageActionSchema,
@@ -262,13 +260,11 @@ class ToolTelemetry:
             "write": FileWriteActionSchema,
             "edit": FileEditActionSchema,
             "run": CmdRunActionSchema,
-            "run_ipython": IPythonRunCellActionSchema,
             "message": MessageActionSchema,
             "system": SystemMessageActionSchema,
             "browse_interactive": BrowseInteractiveActionSchema,
             "finish": AgentFinishActionSchema,
             "reject": AgentRejectActionSchema,
-            "delegate": AgentDelegateActionSchema,
             "change_agent_state": ChangeAgentStateActionSchema,
             "null": NullActionSchema,
         }
@@ -341,12 +337,10 @@ class ToolTelemetry:
             ErrorObservationSchema,
             FileEditObservationSchema,
             FileReadObservationSchema,
-            IPythonRunCellObservationSchema,
         )
 
         return {
             "run": CmdOutputObservationSchema,
-            "run_ipython": IPythonRunCellObservationSchema,
             "read": FileReadObservationSchema,
             "edit": FileEditObservationSchema,
             "error": ErrorObservationSchema,
@@ -422,7 +416,6 @@ class ToolTelemetry:
             "cwd",
             "hidden",
             "include_extra",
-            "kernel_init_code",
         ]
         for field in optional_fields:
             if not hasattr(action, field):

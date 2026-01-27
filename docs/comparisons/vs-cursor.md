@@ -15,15 +15,11 @@ Both are AI coding assistants, but with different philosophies:
 | **Autonomous Agent** | ✅ Yes (CodeAct) | ⚠️ Limited (Composer) | Forge |
 | **Code Execution** | ✅ Yes (Docker sandbox) | ❌ No | Forge |
 | **Browser Automation** | ✅ Yes (Playwright) | ❌ No | Forge |
-| **Multi-Agent** | ✅ Yes (MetaSOP)* | ❌ No | Forge |
-| **Self-Improving** | ✅ Yes (ACE)* | ❌ No | Forge |
 | **Model Choice** | ✅ 200+ models | ⚠️ 3-5 models | Forge |
 | **Open Source** | ✅ Yes (MIT) | ❌ No | Forge |
 | **Cost Tracking** | ✅ Real-time | ⚠️ Limited | Forge |
 | **IDE Integration** | ❌ No | ✅ Yes (VSCode fork) | Cursor |
 | **Pricing** | ✅ $15-25/mo | ⚠️ $20/mo | Forge |
-
-*MetaSOP and ACE disabled for beta, will be enabled post-beta
 
 ## Use Cases
 
@@ -146,9 +142,7 @@ Both are AI coding assistants, but with different philosophies:
 **Forge:**
 - 73-77% on SWE-bench (coding benchmark)
 - Full test execution capability
-- Self-improving via ACE framework*
-
-*Post-beta
+- Real-time performance monitoring
 
 **Winner:** Tie (different strengths)
 

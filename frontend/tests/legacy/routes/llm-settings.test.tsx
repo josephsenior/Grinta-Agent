@@ -10,8 +10,8 @@ import {
 import * as AdvancedSettingsUtlls from "#/utils/has-advanced-settings-set";
 import * as ToastHandlers from "#/utils/custom-toast-handlers";
 import * as AiConfigOptions from "#/hooks/query/use-ai-config-options";
-import { renderWithProviders } from "../../test-utils";
-import { DEFAULT_OPENHANDS_MODEL } from "#/utils/verified-models";
+import { renderWithProviders } from "#test-utils";
+import { DEFAULT_Forge_MODEL } from "#/utils/verified-models";
 import * as LlmSettingsHelpers from "#/routes/llm-settings/llm-settings-helpers";
 
 const renderLlmSettingsScreen = () =>
@@ -20,9 +20,21 @@ const renderLlmSettingsScreen = () =>
 beforeEach(() => {
   vi.resetAllMocks();
   resetTestHandlersMockSettings();
-  vi.spyOn(Forge, "getSettings").mockResolvedValue({
-    ...MOCK_DEFAULT_USER_SETTINGS,
-  });
+  vi.spyOn(Forge, "getConfig").mockResolvedValue({
+      APP_MODE: "oss",
+      GITHUB_CLIENT_ID: "test-id",
+      FEATURE_FLAGS: { HIDE_LLM_SETTINGS: false },
+    } as any);
+    vi.spyOn(Forge, "getSettings").mockResolvedValue({
+      ...MOCK_DEFAULT_USER_SETTINGS,
+    });
+    vi.spyOn(AiConfigOptions, "useAIConfigOptions").mockReturnValue({
+      data: {
+        models: ["gpt-4o", "claude-3-5-sonnet-20241022"],
+        providers: ["openai", "anthropic", "Forge"],
+        securityAnalyzers: ["llm"],
+      },
+    } as any);
 });
 
 describe("Content", () => {
@@ -47,8 +59,8 @@ describe("Content", () => {
       const apiKey = screen.getByTestId("llm-api-key-input");
 
       await waitFor(() => {
-        expect(provider).toHaveValue("Openhands");
-        expect(model).toHaveValue("claude-sonnet-4-20250514");
+        expect(provider).toHaveValue("Forge");
+        expect(model).toHaveValue(DEFAULT_Forge_MODEL);
 
         expect(apiKey).toHaveValue("");
         expect(apiKey).toHaveProperty("placeholder", "");
@@ -162,7 +174,7 @@ describe("Content", () => {
       const agent = screen.getByTestId("agent-input");
       const condensor = screen.getByTestId("enable-memory-condenser-switch");
 
-      expect(model).toHaveValue("Openhands/claude-sonnet-4-20250514");
+      expect(model).toHaveValue("Forge/claude-sonnet-4-20250514");
       expect(baseUrl).toHaveValue("");
       expect(apiKey).toHaveValue("");
       expect(apiKey).toHaveProperty("placeholder", "");
@@ -770,12 +782,12 @@ describe("Form submission", () => {
 
     // select provider
     await userEvent.click(provider);
-    const providerOption = screen.getByText("Openhands");
+    const providerOption = screen.getByText("Forge");
     await userEvent.click(providerOption);
 
     // select model
     await userEvent.click(model);
-    const modelOption = screen.getByText("claude-sonnet-4-20250514");
+    const modelOption = screen.getByText(DEFAULT_Forge_MODEL);
     await userEvent.click(modelOption);
 
     const submitButton = screen.getByTestId("submit-button");
@@ -783,7 +795,7 @@ describe("Form submission", () => {
 
     expect(saveSettingsSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        llm_model: DEFAULT_OPENHANDS_MODEL.toLowerCase(),
+        llm_model: DEFAULT_Forge_MODEL,
         llm_base_url: "",
         confirmation_mode: true, // Confirmation mode is now a basic setting, should be preserved
       }),
@@ -894,6 +906,8 @@ describe("SaaS mode", () => {
     const getConfigSpy = vi.spyOn(Forge, "getConfig");
     getConfigSpy.mockResolvedValue({
       APP_MODE: "oss",
+      GITHUB_CLIENT_ID: "test-id",
+      FEATURE_FLAGS: { HIDE_LLM_SETTINGS: false },
     });
 
     renderLlmSettingsScreen();
@@ -911,6 +925,10 @@ describe("SaaS mode", () => {
     const getConfigSpy = vi.spyOn(Forge, "getConfig");
     getConfigSpy.mockResolvedValue({
       APP_MODE: "saas",
+      GITHUB_CLIENT_ID: "test-client-id",
+      FEATURE_FLAGS: {
+        HIDE_LLM_SETTINGS: false,
+      },
     });
 
     renderLlmSettingsScreen();
@@ -928,6 +946,10 @@ describe("SaaS mode", () => {
     const getConfigSpy = vi.spyOn(Forge, "getConfig");
     getConfigSpy.mockResolvedValue({
       APP_MODE: "saas",
+      GITHUB_CLIENT_ID: "test-client-id",
+      FEATURE_FLAGS: {
+        HIDE_LLM_SETTINGS: false,
+      },
     });
 
     renderLlmSettingsScreen();
@@ -942,3 +964,5 @@ describe("SaaS mode", () => {
     expect(runtimeSettingsInput).toBeDisabled();
   });
 });
+
+

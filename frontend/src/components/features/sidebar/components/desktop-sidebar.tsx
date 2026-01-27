@@ -1,5 +1,4 @@
-import { ChevronLeft, Home } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { ChevronLeft } from "lucide-react";
 import { AppNavigation } from "#/components/layout/AppNavigation";
 
 interface DesktopSidebarProps {
@@ -13,14 +12,12 @@ export function DesktopSidebar({
   hasHeader,
   onToggle,
 }: DesktopSidebarProps) {
-  const navigate = useNavigate();
-
   return (
     <aside
       id="main-sidebar"
-      className="fixed left-0 bottom-0 border-r-2 border-white/20 overflow-hidden shadow-2xl transition-all duration-300 ease-in-out"
+      className="fixed left-0 bottom-0 border-r border-[var(--border-primary)] overflow-hidden shadow-2xl transition-all duration-300 ease-in-out"
       style={{
-        backgroundColor: "#000000",
+        backgroundColor: "var(--bg-elevated)",
         top: hasHeader ? "88px" : "0px",
         minHeight: hasHeader ? "calc(100vh - 88px)" : "100vh",
         maxHeight: hasHeader ? "calc(100vh - 88px)" : "100vh",
@@ -40,20 +37,11 @@ export function DesktopSidebar({
       `}</style>
       <div className="h-full flex flex-col">
         {!sidebarCollapsed && (
-          <div className="flex items-center justify-between px-4 pt-0 pb-2.5 border-b border-white/10 flex-shrink-0">
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all text-sm font-medium"
-              aria-label="Go to homepage"
-            >
-              <Home className="w-4 h-4" />
-              <span>Home</span>
-            </button>
+          <div className="flex items-center justify-end px-4 pt-4 pb-2.5 border-b border-[var(--border-primary)] flex-shrink-0">
             <button
               type="button"
               onClick={onToggle}
-              className="p-2 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all"
+              className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-all"
               aria-label="Collapse sidebar"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -62,7 +50,7 @@ export function DesktopSidebar({
         )}
 
         {!sidebarCollapsed && (
-          <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
+          <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4 custom-scrollbar">
             <AppNavigation />
           </div>
         )}

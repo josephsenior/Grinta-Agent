@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from pydantic import ConfigDict, PrivateAttr
 
 from .model_response_lite import ModelResponseLite
@@ -56,11 +56,33 @@ class ToolCallMetadata(BaseModel):
     # Keep raw SDK response out of the public schema
     _raw_response: Any = PrivateAttr(default=None)
 
-    function_name: str
-    tool_call_id: str
+    function_name: str = Field(
+        ...,
+        min_length=1,
+        description="Name of the function called"
+    )
+    tool_call_id: str = Field(
+        ...,
+        min_length=1,
+        description="Unique ID for this tool call"
+    )
     # Stable, serializable subset of the response
-    model_response: dict[str, Any] | ModelResponseLite | None = None
-    total_calls_in_response: int
+    model_response: dict[str, Any] | ModelResponseLite | None = Field(
+        default=None,
+        description="Complete LLM response containing the tool call (lightweight representation)"
+    )
+    total_calls_in_response: int = Field(
+        ...,
+        ge=1,
+        description="Number of tool calls in the response"
+    )
+
+    @field_validator("function_name", "tool_call_id")
+    @classmethod
+    def validate_required_strings(cls, v: str) -> str:
+        """Validate required string fields are non-empty."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        return validate_non_empty_string(v, name="field")
 
     @classmethod
     def from_sdk(

@@ -11,10 +11,10 @@ Quick reference for common Forge commands, configurations, and patterns.
 poetry run python -m forge.server
 
 # Start frontend (development)
-cd frontend && npm run dev
+cd frontend && pnpm run dev
 
 # Start frontend (production build)
-cd frontend && npm run build && npm run preview
+cd frontend && pnpm run build && pnpm run preview
 ```
 
 ### Running Tests
@@ -41,7 +41,7 @@ poetry run pytest tests/e2e/
 ```bash
 # Install dependencies
 poetry install
-cd frontend && npm install
+cd frontend && pnpm install
 
 # Format code
 poetry run black forge/
@@ -52,7 +52,7 @@ poetry run ruff check forge/
 poetry run mypy forge/
 
 # Type check frontend
-cd frontend && npm run type-check
+cd frontend && pnpm run type-check
 ```
 
 ## Environment Variables
@@ -246,17 +246,6 @@ Examples:
 - "Can you write tests for the API endpoints?"
 ```
 
-### MetaSOP Orchestration
-
-```
-I want to build [project description]. 
-Can you break this down into steps and execute them?
-
-Examples:
-- "I want to build a REST API for a todo app"
-- "I want to create a React component library"
-```
-
 ## File Paths
 
 ### Backend
@@ -346,8 +335,8 @@ netstat -ano | findstr :3000  # Windows
 node --version  # Should be 18+
 
 # Clear cache
-rm -rf node_modules package-lock.json
-npm install
+rm -rf node_modules pnpm-lock.yaml
+pnpm install
 
 # Check port availability
 lsof -i :5173  # Linux/Mac

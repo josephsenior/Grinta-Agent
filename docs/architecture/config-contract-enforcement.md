@@ -31,13 +31,13 @@ Recent infrastructure passes focused on making agent configuration failures nois
 
 ### LLM Debug Prompt Gating
 
-- `forge/core/logger.py` introduces `DEBUG_LLM_PROMPT`. Setting `DEBUG_LLM=1` still forces verbose LiteLLM logging, but the interactive `input()` gate only appears when both `DEBUG_LLM_PROMPT=1` **and** the process is interactive (TTY or pytest monkeypatch).  
+- `forge/core/logger.py` introduces `DEBUG_LLM_PROMPT`. Setting `DEBUG_LLM=1` still forces verbose LLM logging, but the interactive `input()` gate only appears when both `DEBUG_LLM_PROMPT=1` **and** the process is interactive (TTY or pytest monkeypatch).  
 - Headless services, CI, and other non-interactive contexts automatically skip the prompt, preventing hangs while preserving opt-in confirmation for local debugging.
 
 ### Operational Checklist
 
 - When adding new `[agent.*]` fields, update `AgentConfig` instead of relying on `extra` to swallow them.  
 - If a loader helper swallows an exception, ensure it calls `summary.record(...)` so telemetry stays accurate.  
-- Emit telemetry counters for any future config sections (e.g., `[runtime]`, `[metasop]`) before wiring them into dashboards.
+- Emit telemetry counters for any future config sections (e.g., `[runtime]`) before wiring them into dashboards.
 
 

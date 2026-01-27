@@ -5,7 +5,6 @@ import { ActionMessage } from "#/types/message";
 // Mock the store and actions
 const mockDispatch = vi.fn();
 const mockAppendInput = vi.fn();
-const mockAppendJupyterInput = vi.fn();
 
 vi.mock("#/store", () => ({
   default: {
@@ -15,10 +14,6 @@ vi.mock("#/store", () => ({
 
 vi.mock("#/state/command-slice", () => ({
   appendInput: mockAppendInput,
-}));
-
-vi.mock("#/state/jupyter-slice", () => ({
-  appendJupyterInput: mockAppendJupyterInput,
 }));
 
 describe("handleActionMessage", () => {
@@ -46,32 +41,6 @@ describe("handleActionMessage", () => {
 
     // Check that appendInput was called with the command
     expect(mockDispatch).toHaveBeenCalledWith(mockAppendInput("ls -la"));
-    expect(mockAppendJupyterInput).not.toHaveBeenCalled();
-  });
-
-  it("should handle RUN_IPYTHON actions by adding input to Jupyter", async () => {
-    const { handleActionMessage } = await import("#/services/actions");
-
-    const ipythonAction: ActionMessage = {
-      id: 2,
-      source: "agent",
-      action: ActionType.RUN_IPYTHON,
-      args: {
-        code: "print('Hello from Jupyter!')",
-      },
-      message:
-        "Running Python code interactively: print('Hello from Jupyter!')",
-      timestamp: "2023-01-01T00:00:00Z",
-    };
-
-    // Handle the action
-    handleActionMessage(ipythonAction);
-
-    // Check that appendJupyterInput was called with the code
-    expect(mockDispatch).toHaveBeenCalledWith(
-      mockAppendJupyterInput("print('Hello from Jupyter!')"),
-    );
-    expect(mockAppendInput).not.toHaveBeenCalled();
   });
 
   it("should not process hidden actions", async () => {

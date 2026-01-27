@@ -180,3 +180,59 @@ def test_classify_error_unknown_triggers_debug(monkeypatch: pytest.MonkeyPatch) 
     )
     assert error_type == ErrorType.UNKNOWN_ERROR
     assert "could not be classified" in captured["message"]
+
+
+def test_authentication_error_keyword_init() -> None:
+    """Test AuthenticationError with keyword arguments."""
+    error = AuthenticationError(
+        message="auth failed",
+        llm_provider="openai",
+        model="gpt-4",
+        original=Exception("original")
+    )
+    assert error.llm_provider == "openai"
+    assert error.model == "gpt-4"
+    assert error.original is not None
+
+
+def test_authentication_error_positional_init() -> None:
+    """Test AuthenticationError with positional argument."""
+    error = AuthenticationError("simple message")
+    assert str(error) == "simple message"
+
+
+def test_classify_error_tool_call_error() -> None:
+    """Test classify_error returns TOOL_CALL_ERROR for tool call patterns."""
+    error = RuntimeError("invalid json format")
+    error_type = ErrorRecoveryStrategy.classify_error(error)
+    assert error_type == ErrorType.TOOL_CALL_ERROR
+
+
+def test_classify_error_timeout_error() -> None:
+    """Test classify_error returns TIMEOUT_ERROR for timeout patterns."""
+    error = RuntimeError("operation timed out")
+    error_type = ErrorRecoveryStrategy.classify_error(error)
+    assert error_type == ErrorType.TIMEOUT_ERROR
+
+
+def test_classify_error_filesystem_error_general() -> None:
+    """Test classify_error returns FILESYSTEM_ERROR for general filesystem patterns."""
+    # Use a filesystem error that matches FILESYSTEM_ERROR_PATTERNS but not "no space" or "permission"
+    error = RuntimeError("read-only file system")
+    error_type = ErrorRecoveryStrategy.classify_error(error)
+    # This should match FILESYSTEM_ERROR_PATTERNS and then return FILESYSTEM_ERROR (not DISK_FULL or PERMISSION)
+    assert error_type == ErrorType.FILESYSTEM_ERROR
+
+
+def test_tool_call_authentication_error_logs_info(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test tool call authentication error logs info message."""
+    captured: list[str] = []
+
+    def fake_info(message: str) -> None:
+        captured.append(message)
+
+    monkeypatch.setattr("forge.controller.error_recovery.logger.info", fake_info)
+    error = RuntimeError("authentication failed: invalid api key")
+    actions = ErrorRecoveryStrategy.get_recovery_actions(ErrorType.TOOL_CALL_ERROR, error)
+    assert actions == []
+    assert any("authentication-related" in msg.lower() or "skipping recovery" in msg.lower() for msg in captured)

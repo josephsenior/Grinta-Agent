@@ -17,7 +17,6 @@ from forge.events.observation.commands import CmdOutputObservation
 from forge.llm.llm_registry import LLMRegistry
 from forge.runtime.plugins import (
     AgentSkillsRequirement,
-    JupyterRequirement,
     PluginRequirement,
 )
 from forge.utils.prompt import PromptManager
@@ -26,13 +25,12 @@ from .executor import CodeActExecutor
 from .memory_manager import CodeActMemoryManager
 from .planner import CodeActPlanner
 from .safety import CodeActSafetyManager
-from .types import PromptOptimizerBundle
+from .types import AgentSkillsRequirement
 import forge.agenthub.codeact_agent.function_calling as codeact_function_calling
 
 if TYPE_CHECKING:
     from forge.events.action import Action
     from forge.events.stream import EventStream
-    from forge.prompt_optimization.tool_optimizer import ToolOptimizer
 
 
 class CodeActAgent(Agent):
@@ -41,7 +39,6 @@ class CodeActAgent(Agent):
     VERSION = "2.2"
     sandbox_plugins: list[PluginRequirement] = [
         AgentSkillsRequirement(),
-        JupyterRequirement(),
     ]
 
     def __init__(
@@ -72,24 +69,17 @@ class CodeActAgent(Agent):
         )
 
         # Prompt manager + memory subsystems
-        self._prompt_manager = self._create_prompt_manager()
+        self._prompt_manager: PromptManager = self._create_prompt_manager()
         self.memory_manager = CodeActMemoryManager(config, llm_registry)
         self.memory_manager.initialize(self.prompt_manager)
         # Expose conversation_memory for legacy tests and utilities
         self.conversation_memory = self.memory_manager.conversation_memory
 
-        # Prompt/tool optimization
-        self.prompt_optimizer: PromptOptimizerBundle | None = None
-        self.tool_optimizer: "ToolOptimizer | None" = None
-        self._initialize_prompt_optimization()
-        
         # Planner/executor wiring
         self.planner = CodeActPlanner(
             config=self.config,
             llm=self.llm,
             safety_manager=self.safety_manager,
-            prompt_optimizer=self.prompt_optimizer,
-            tool_optimizer=self.tool_optimizer,
         )
         self.tools = self.planner.build_toolset()
         self.executor = CodeActExecutor(
@@ -132,93 +122,9 @@ class CodeActAgent(Agent):
 
         setattr(prompt_manager, "get_system_message", get_system_message_with_defaults)
         return prompt_manager
-    
-    def _initialize_prompt_optimization(self) -> None:
-        if not getattr(self.config, "enable_prompt_optimization", False):
-            self.prompt_optimizer = None
-            self.tool_optimizer = None
-            return
-        
-        try:
-            from forge.prompt_optimization.models import OptimizationConfig
-            from forge.prompt_optimization.optimizer import PromptOptimizer
-            from forge.prompt_optimization.registry import PromptRegistry
-            from forge.prompt_optimization.storage import PromptStorage
-            from forge.prompt_optimization.tool_optimizer import ToolOptimizer
-            from forge.prompt_optimization.tracker import PerformanceTracker
 
-            opt_config = OptimizationConfig(
-                ab_split_ratio=getattr(self.config, "prompt_opt_ab_split", 0.8),
-                min_samples_for_switch=getattr(
-                    self.config, "prompt_opt_min_samples", 5
-                ),
-                confidence_threshold=getattr(
-                    self.config, "prompt_opt_confidence_threshold", 0.95
-                ),
-                success_weight=getattr(self.config, "prompt_opt_success_weight", 0.4),
-                time_weight=getattr(self.config, "prompt_opt_time_weight", 0.2),
-                error_weight=getattr(self.config, "prompt_opt_error_weight", 0.2),
-                cost_weight=getattr(self.config, "prompt_opt_cost_weight", 0.2),
-                enable_evolution=getattr(
-                    self.config, "prompt_opt_enable_evolution", True
-                ),
-                evolution_threshold=getattr(
-                    self.config, "prompt_opt_evolution_threshold", 0.7
-                ),
-                max_variants_per_prompt=getattr(
-                    self.config, "prompt_opt_max_variants_per_prompt", 10
-                ),
-                storage_path=getattr(
-                    self.config,
-                    "prompt_opt_storage_path",
-                    "~/.Forge/prompt_optimization/codeact/",
-                ),
-                sync_interval=getattr(self.config, "prompt_opt_sync_interval", 100),
-                auto_save=getattr(self.config, "prompt_opt_auto_save", True),
-                prompt_history_path=getattr(
-                    self.config,
-                    "prompt_opt_history_path",
-                    None,
-                ),
-                prompt_history_auto_flush=getattr(
-                    self.config,
-                    "prompt_opt_history_auto_flush",
-                    False,
-                ),
-            )
 
-            registry = PromptRegistry()
-            tracker = PerformanceTracker(
-                {
-                    "success_weight": opt_config.success_weight,
-                    "time_weight": opt_config.time_weight,
-                    "error_weight": opt_config.error_weight,
-                    "cost_weight": opt_config.cost_weight,
-                },
-                history_path=opt_config.prompt_history_path,
-                history_auto_flush=opt_config.prompt_history_auto_flush,
-            )
-            optimizer = PromptOptimizer(registry, tracker, opt_config)
-            storage = PromptStorage(opt_config, registry, tracker)
-            
-            self.prompt_optimizer = {
-                "registry": registry,
-                "tracker": tracker,
-                "optimizer": optimizer,
-                "storage": storage,
-                "config": opt_config,
-            }
-            self.tool_optimizer = ToolOptimizer(registry, tracker, optimizer)
-            storage.load_all()
-            logger.info("Prompt optimization system initialized successfully")
-        except ImportError as exc:
-            logger.error("Failed to import prompt optimization: %s", exc)
-            self.prompt_optimizer = None
-            self.tool_optimizer = None
-        except Exception as exc:
-            logger.error("Failed to initialize prompt optimization: %s", exc)
-            self.prompt_optimizer = None
-            self.tool_optimizer = None
+
 
     def _run_production_health_check(self) -> None:
         try:
@@ -241,9 +147,6 @@ class CodeActAgent(Agent):
     def reset(self, state: State | None = None) -> None:
         super().reset()
         self.pending_actions.clear()
-        self.memory_manager.save_context_state()
-        if state is not None:
-            self.memory_manager.update_context(state)
 
     def step(self, state: State) -> "Action":
         exit_action = self._check_exit_command(state)
@@ -266,20 +169,11 @@ class CodeActAgent(Agent):
             initial_user_message=initial_user_message,
             llm_config=self.llm.config,
         )
-        ace_context = self.memory_manager.get_ace_playbook_context(state)
         serialized_messages = self._serialize_messages(messages)
-        params = self.planner.build_llm_params(
-            serialized_messages, state, self.tools, ace_context
-        )
+        params = self.planner.build_llm_params(serialized_messages, state, self.tools)
         self._sync_executor_llm()
 
         result = self.executor.execute(params, self.event_stream)
-        self.planner.record_prompt_execution(
-            state=state,
-            success=result.error is None,
-            execution_time=result.execution_time,
-            error_message=result.error,
-        )
 
         actions = result.actions or []
         if not actions:
@@ -398,7 +292,6 @@ class CodeActAgent(Agent):
     # ------------------------------------------------------------------ #
     def _get_messages(self, history, initial_user_message):  # pragma: no cover
         """Legacy wrapper preserved for backward-compatible tests."""
-
         messages = self.memory_manager.build_messages(
             condensed_history=history,
             initial_user_message=initial_user_message,

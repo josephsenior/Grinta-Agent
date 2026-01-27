@@ -458,7 +458,7 @@ def test_override_provider_tokens_with_custom_secret():
     tokens = MappingProxyType(
         {
             ProviderType.GITHUB: ProviderToken(token=SecretStr("token")),
-            ProviderType.GITLAB: ProviderToken(token=SecretStr("token2")),
+            ProviderType.ENTERPRISE_SSO: ProviderToken(token=SecretStr("token2")),
         }
     )
     secrets = MappingProxyType(
@@ -467,7 +467,7 @@ def test_override_provider_tokens_with_custom_secret():
     filtered = session.override_provider_tokens_with_custom_secret(tokens, secrets)
     assert filtered is not None
     assert ProviderType.GITHUB not in filtered
-    assert ProviderType.GITLAB in filtered
+    assert ProviderType.ENTERPRISE_SSO in filtered
 
     assert session.override_provider_tokens_with_custom_secret(None, None) is None
 

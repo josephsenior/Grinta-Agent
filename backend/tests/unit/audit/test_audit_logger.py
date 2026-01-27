@@ -8,7 +8,7 @@ import pytest
 
 from forge.audit.audit_logger import AuditLogger
 from forge.audit.models import AuditEntry
-from forge.events.action import ActionSecurityRisk, CmdRunAction, IPythonRunCellAction
+from forge.events.action import ActionSecurityRisk, CmdRunAction
 from forge.events.action.files import FileEditAction
 from forge.events.event import FileEditSource
 
@@ -150,11 +150,6 @@ def test_extract_action_content_variants(tmp_path):
 
     cmd_content = logger._extract_action_content(CmdRunAction(command="npm test"))
     assert cmd_content == "npm test"
-
-    ipy_content = logger._extract_action_content(
-        IPythonRunCellAction(code="print('x')")
-    )
-    assert ipy_content == "print('x')"
 
     file_action = FileEditAction(
         path="README.md",

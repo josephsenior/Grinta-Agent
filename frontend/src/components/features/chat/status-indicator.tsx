@@ -33,57 +33,57 @@ const STATUS_MAP = {
   think: {
     icon: <Brain className="w-3.5 h-3.5" />,
     text: "Thinking",
-    color: "text-accent-purple",
+    color: "text-[var(--text-success)]",
   },
   thinking: {
     icon: <Brain className="w-3.5 h-3.5" />,
     text: "Thinking",
-    color: "text-accent-purple",
+    color: "text-[var(--text-success)]",
   },
   message: {
     icon: <Brain className="w-3.5 h-3.5" />,
     text: "Responding",
-    color: "text-accent-purple",
+    color: "text-[var(--text-success)]",
   },
   plan: {
     icon: <ListTodo className="w-3.5 h-3.5" />,
     text: "Agent updated the plan",
-    color: "text-violet-500",
+    color: "text-[var(--border-accent)]",
   },
   run: {
     icon: <Terminal className="w-3.5 h-3.5" />,
     text: "Running command",
-    color: "text-success-500",
+    color: "text-[var(--text-success)]",
   },
   write: {
     icon: <FileEdit className="w-3.5 h-3.5" />,
     text: "Writing file",
-    color: "text-violet-500",
+    color: "text-[var(--border-accent)]",
   },
   edit: {
     icon: <Code className="w-3.5 h-3.5" />,
     text: "Editing file",
-    color: "text-violet-500",
+    color: "text-[var(--border-accent)]",
   },
   browse: {
     icon: <Search className="w-3.5 h-3.5" />,
     text: "Browsing",
-    color: "text-primary-500",
+    color: "text-[var(--text-success)]",
   },
   read: {
     icon: <Search className="w-3.5 h-3.5" />,
     text: "Reading file",
-    color: "text-primary-500",
+    color: "text-[var(--text-success)]",
   },
   sop: {
     icon: <Workflow className="w-3.5 h-3.5" />,
     text: "Starting SOP orchestration",
-    color: "text-violet-500",
+    color: "text-[var(--border-accent)]",
   },
   orchestrating: {
     icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />,
     text: "Orchestrating",
-    color: "text-violet-500",
+    color: "text-[var(--border-accent)]",
   },
 };
 
@@ -105,12 +105,12 @@ export function StatusIndicator({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-background-secondary/50 backdrop-blur-sm border border-border-subtle",
+        "inline-flex items-center gap-2 px-3 py-1.5 rounded bg-[var(--bg-elevated)] border border-[var(--border-primary)]",
         className,
       )}
     >
       <div className={cn("flex-shrink-0", status.color)}>{status.icon}</div>
-      <span className="text-sm text-text-primary font-medium whitespace-nowrap">
+      <span className="text-sm text-[var(--text-primary)] font-medium whitespace-nowrap">
         {displayText}
       </span>
     </div>

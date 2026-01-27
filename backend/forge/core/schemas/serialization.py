@@ -95,7 +95,6 @@ def _deserialize_action(data: dict[str, Any]) -> ActionSchemaUnion:
         ValueError: If action type is unknown or validation fails
     """
     from forge.core.schemas.actions import (
-        AgentDelegateActionSchema,
         AgentFinishActionSchema,
         AgentRejectActionSchema,
         BrowseInteractiveActionSchema,
@@ -104,7 +103,6 @@ def _deserialize_action(data: dict[str, Any]) -> ActionSchemaUnion:
         FileEditActionSchema,
         FileReadActionSchema,
         FileWriteActionSchema,
-        IPythonRunCellActionSchema,
         MessageActionSchema,
         NullActionSchema,
         SystemMessageActionSchema,
@@ -119,13 +117,11 @@ def _deserialize_action(data: dict[str, Any]) -> ActionSchemaUnion:
         "write": FileWriteActionSchema,
         "edit": FileEditActionSchema,
         "run": CmdRunActionSchema,
-        "run_ipython": IPythonRunCellActionSchema,
         "message": MessageActionSchema,
         "system": SystemMessageActionSchema,
         "browse_interactive": BrowseInteractiveActionSchema,
         "finish": AgentFinishActionSchema,
         "reject": AgentRejectActionSchema,
-        "delegate": AgentDelegateActionSchema,
         "change_agent_state": ChangeAgentStateActionSchema,
         "null": NullActionSchema,
     }
@@ -154,7 +150,6 @@ def _deserialize_observation(data: dict[str, Any]) -> ObservationSchemaUnion:
         ErrorObservationSchema,
         FileEditObservationSchema,
         FileReadObservationSchema,
-        IPythonRunCellObservationSchema,
         MessageObservationSchema,
     )
 
@@ -164,7 +159,6 @@ def _deserialize_observation(data: dict[str, Any]) -> ObservationSchemaUnion:
 
     observation_schemas: dict[str, Type[BaseEventSchema]] = {
         "run": CmdOutputObservationSchema,
-        "run_ipython": IPythonRunCellObservationSchema,
         "read": FileReadObservationSchema,
         "edit": FileEditObservationSchema,
         "error": ErrorObservationSchema,

@@ -15,8 +15,6 @@ def make_config(**overrides):
         min_iterations=20,
         max_iterations_override=200,
         complexity_iteration_multiplier=10.0,
-        enable_ace=True,
-        ace_auto_enable_threshold=5.0,
     )
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
@@ -63,17 +61,6 @@ def test_estimate_iterations_dynamic_and_static():
     analyzer = TaskComplexityAnalyzer(make_config(enable_dynamic_iterations=False))
     iterations = analyzer.estimate_iterations(5.0, make_state())
     assert iterations == analyzer._config.max_iterations_override
-
-
-def test_should_enable_ace_thresholds():
-    analyzer = TaskComplexityAnalyzer(make_config(ace_auto_enable_threshold=0))
-    assert analyzer.should_enable_ace(1.0) is True
-
-    analyzer = TaskComplexityAnalyzer(make_config(ace_auto_enable_threshold=6))
-    assert analyzer.should_enable_ace(5.0) is False
-
-    analyzer = TaskComplexityAnalyzer(make_config(enable_ace=False))
-    assert analyzer.should_enable_ace(10.0) is False
 from types import SimpleNamespace
 
 import pytest
@@ -89,8 +76,6 @@ def _make_config(**overrides):
         min_iterations=20,
         max_iterations_override=None,
         complexity_iteration_multiplier=50.0,
-        enable_ace=True,
-        ace_auto_enable_threshold=5.0,
     )
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
@@ -147,20 +132,4 @@ def test_estimate_iterations_respects_bounds(complexity, expected):
     iterations = analyzer.estimate_iterations(complexity, state=None)
 
     assert iterations == expected
-
-
-@pytest.mark.parametrize(
-    "complexity,threshold,enabled",
-    [
-        (6.0, 5.0, True),
-        (4.0, 5.0, False),
-        (3.0, 0.0, True),  # always enable
-        (4.0, None, False),  # disabled via threshold
-    ],
-)
-def test_should_enable_ace(complexity, threshold, enabled):
-    config = _make_config(ace_auto_enable_threshold=threshold)
-    analyzer = TaskComplexityAnalyzer(config)
-
-    assert analyzer.should_enable_ace(complexity) is enabled
 

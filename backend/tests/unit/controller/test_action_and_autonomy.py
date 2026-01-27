@@ -9,7 +9,7 @@ from forge.controller.action_parser import (
 )
 from forge.controller.agent import Agent
 from forge.controller.autonomy import AutonomyController, AutonomyLevel
-from forge.events.action import Action, CmdRunAction
+from forge.events.action import Action, CmdRunAction, FileEditAction, FileWriteAction
 
 
 @pytest.fixture(autouse=True)
@@ -164,3 +164,42 @@ def test_autonomy_retry_only_for_import_errors(monkeypatch):
     assert controller.should_retry_on_error(ModuleNotFoundError("foo"), 0)
     assert not controller.should_retry_on_error(ModuleNotFoundError("foo"), 1)
     assert not controller.should_retry_on_error(ValueError("no retry"), 0)
+
+
+def test_autonomy_retry_disabled():
+    config = _AutonomyConfig(auto_retry_on_error=False)
+    controller = AutonomyController(config)
+    assert not controller.should_retry_on_error(ImportError("foo"), 0)
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "reboot",
+        "sudo reboot",
+        "shutdown -h now",
+        "init 0",
+        "systemctl stop service",
+    ],
+)
+def test_autonomy_system_modification_commands(command):
+    config = _AutonomyConfig(autonomy_level=AutonomyLevel.BALANCED.value)
+    controller = AutonomyController(config)
+    action = _StubAction(command)
+    assert controller.should_request_confirmation(action) is True
+
+
+def test_autonomy_file_write_action():
+    config = _AutonomyConfig(autonomy_level=AutonomyLevel.BALANCED.value)
+    controller = AutonomyController(config)
+    action = FileWriteAction(path="test.txt", content="test")
+    # File operations are not high-risk, so should not require confirmation in balanced mode
+    assert controller.should_request_confirmation(action) is False
+
+
+def test_autonomy_file_edit_action():
+    config = _AutonomyConfig(autonomy_level=AutonomyLevel.BALANCED.value)
+    controller = AutonomyController(config)
+    action = FileEditAction(path="test.txt")
+    # File operations are not high-risk, so should not require confirmation in balanced mode
+    assert controller.should_request_confirmation(action) is False

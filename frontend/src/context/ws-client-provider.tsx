@@ -16,6 +16,7 @@ import {
   isForgeAction,
   isForgeEvent,
   isForgeObservation,
+  isAgentStateChangeObservation,
   isUserMessage,
 } from "#/types/core/guards";
 import {
@@ -33,6 +34,8 @@ import { useOptimisticUserMessage } from "#/hooks/use-optimistic-user-message";
 import { useWSErrorMessage } from "#/hooks/use-ws-error-message";
 import Forge from "#/api/forge";
 import { logger } from "#/utils/logger";
+import { displayErrorToast } from "#/utils/custom-toast-handlers";
+import { AgentState } from "#/types/agent-state";
 
 export type WebSocketStatus = "CONNECTING" | "CONNECTED" | "DISCONNECTED";
 
@@ -97,11 +100,32 @@ function shouldEstablishConnection(
     return false;
   }
 
-  if (conversation.status === "RUNNING" || conversation.status === "STARTING") {
+  const status = conversation.status?.toUpperCase();
+
+  // Allow connection for active conversations (handle both uppercase and lowercase)
+  if (status === "RUNNING" || status === "STARTING") {
     return true;
   }
 
-  return Boolean(conversation.runtime_status);
+  // Allow connection if runtime_status exists (runtime is available)
+  if (conversation.runtime_status) {
+    return true;
+  }
+
+  // Allow connection for stopped conversations - WebSocket connection is needed
+  // to initialize/restart the runtime, so we should attempt connection even if stopped
+  if (status === "STOPPED") {
+    return true;
+  }
+
+  // For ERROR status, still allow connection - the WebSocket might help recover
+  if (status === "ERROR") {
+    return true;
+  }
+
+  // For other statuses or undefined, be more permissive - allow connection attempts
+  // The backend will reject if it's truly not allowed
+  return true;
 }
 
 function disconnectExistingSocket(ref: React.MutableRefObject<Socket | null>) {
@@ -140,18 +164,42 @@ function resolveSocketTarget(
   conversation: { url?: string | null } | undefined,
 ): { baseUrl: string; socketPath: string } {
   if (conversation?.url && !conversation.url.startsWith("/")) {
-    const url = new URL(conversation.url);
-    const prefix = url.pathname.split("/api/conversations")[0] || "/";
-    const sanitized = prefix.replace(/\/$/, "");
-    return {
-      baseUrl: url.host,
-      socketPath: `${sanitized}/socket.io`,
-    };
+    try {
+      const url = new URL(conversation.url);
+      const prefix = url.pathname.split("/api/conversations")[0] || "/";
+      const sanitized = prefix.replace(/\/$/, "");
+      return {
+        baseUrl: url.origin,
+        socketPath: `${sanitized}/socket.io`,
+      };
+    } catch {
+      // Fall through to env/proxy-based resolution
+    }
   }
 
-  const baseUrl =
+  // Prefer explicit backend URL from env, otherwise use current origin so that
+  // dev proxy and production hosts behave correctly. This avoids hardcoding
+  // `localhost:3000` which breaks when backend runs on a different port.
+  const envBase =
     (import.meta.env.VITE_BACKEND_BASE_URL as string | undefined) ||
-    "localhost:3000";
+    (import.meta.env.VITE_BACKEND_HOST as string | undefined);
+
+  let baseUrl: string;
+  if (envBase && envBase.includes("://")) {
+    baseUrl = envBase;
+  } else if (envBase) {
+    // allow host:port form in env (no protocol)
+    if (typeof window !== "undefined" && window.location) {
+      baseUrl = `${window.location.protocol}//${envBase}`;
+    } else {
+      baseUrl = `http://${envBase}`;
+    }
+  } else if (typeof window !== "undefined" && window.location) {
+    baseUrl = window.location.origin;
+  } else {
+    // Default to backend port used by the local Python server
+    baseUrl = "http://localhost:3000";
+  }
 
   return { baseUrl, socketPath: "/socket.io" };
 }
@@ -379,7 +427,7 @@ function registerSocketHandlers({
 
   socket.on("reconnect", reconnectHandler);
   socket.on("connect", handleConnect);
-  socket.on("oh_event", handleMessage);
+  socket.on("forge_event", handleMessage);
   socket.on("connect_error", handleError);
   socket.on("connect_failed", handleError);
   socket.on("disconnect", handleDisconnect);
@@ -387,7 +435,7 @@ function registerSocketHandlers({
   return () => {
     socket.off("reconnect", reconnectHandler);
     socket.off("connect", handleConnect);
-    socket.off("oh_event", handleMessage);
+    socket.off("forge_event", handleMessage);
     socket.off("connect_error", handleError);
     socket.off("connect_failed", handleError);
     socket.off("disconnect", handleDisconnect);
@@ -512,7 +560,7 @@ export function WsClientProvider({
       EventLogger.error("WebSocket is not connected.");
       return;
     }
-    sioRef.current.emit("oh_user_action", event);
+    sioRef.current.emit("forge_user_action", event);
   }
 
   function handleConnect() {
@@ -524,14 +572,12 @@ export function WsClientProvider({
     import("#/state/agent-slice").then(
       ({ getCurrentAgentState, setCurrentAgentState }) => {
         import("#/store").then(({ default: store }) => {
-          import("#/types/agent-state").then(({ AgentState }) => {
-            const currentState = getCurrentAgentState(store.getState());
-            // Only recover if currently in ERROR state
-            if (currentState === AgentState.ERROR) {
-              // Recover from ERROR state when WebSocket reconnects
-              store.dispatch(setCurrentAgentState(AgentState.LOADING));
-            }
-          });
+          const currentState = getCurrentAgentState(store.getState());
+          // Only recover if currently in ERROR state
+          if (currentState === AgentState.ERROR) {
+            // Recover from ERROR state when WebSocket reconnects
+            store.dispatch(setCurrentAgentState(AgentState.LOADING));
+          }
         });
       },
     );
@@ -562,10 +608,19 @@ export function WsClientProvider({
         return false;
       }
 
+      // Show error prominently in chat with user-friendly formatting
+      showChatError({
+        message: statusErrorMessage,
+        source: "chat",
+        metadata: { msgId: event.id, event },
+        rawError: event,
+      });
+
       trackError({
         message: statusErrorMessage,
         source: "chat",
         metadata: { msgId: event.id },
+        rawError: event,
       });
       setErrorMessage(statusErrorMessage);
       return true;
@@ -584,14 +639,18 @@ export function WsClientProvider({
       flushSync(() => {
         setParsedEvents((prevEvents) => {
           const existingIds = new Set(
-            prevEvents.map((existing) => getEventId(existing as any) ?? ""),
+            prevEvents.map(
+              (existing) =>
+                getEventId(existing as unknown as Record<string, unknown>) ??
+                "",
+            ),
           );
 
           if (existingIds.has(eventId)) {
             return prevEvents;
           }
 
-          return [...prevEvents, event as any];
+          return [...prevEvents, event as ForgeAction | ForgeObservation];
         });
       });
     },
@@ -620,6 +679,9 @@ export function WsClientProvider({
           source: "chat",
           metadata: { msgId: event.id },
         });
+        displayErrorToast(event.message);
+      } else if (isAgentStateChangeObservation(event)) {
+        // Handled by handleObservationMessage in handleAssistantMessage
       } else {
         removeErrorMessage();
       }
@@ -684,15 +746,26 @@ export function WsClientProvider({
   }
 
   function handleError(data: unknown) {
-    // set status
     setWebSocketStatus("DISCONNECTED");
     updateStatusWhenErrorMessagePresent(data);
 
-    setErrorMessage(
-      hasValidMessageProperty(data)
-        ? data.message
-        : "An unknown error occurred on the WebSocket connection.",
-    );
+    // Extract user-friendly error if available
+    const errorMessage = hasValidMessageProperty(data)
+      ? data.message
+      : "An unknown error occurred on the WebSocket connection.";
+
+    // Show error prominently in chat
+    showChatError({
+      message: errorMessage,
+      source: "websocket",
+      metadata:
+        typeof data === "object" && data !== null
+          ? (data as Record<string, unknown>)
+          : {},
+      rawError: data,
+    });
+
+    setErrorMessage(errorMessage);
 
     // check if something went wrong with the conversation.
     refetchConversation();
@@ -725,7 +798,14 @@ export function WsClientProvider({
     }
 
     const isPlaywright = detectPlaywrightRun();
-    if (!shouldEstablishConnection(conversation as any, isPlaywright)) {
+    if (
+      !shouldEstablishConnection(
+        conversation as
+          | { status?: string; runtime_status?: unknown }
+          | undefined,
+        isPlaywright,
+      )
+    ) {
       return () => undefined;
     }
 
@@ -734,7 +814,9 @@ export function WsClientProvider({
 
     const query = buildSocketQuery({
       conversationId,
-      conversation: conversation as any,
+      conversation: conversation as
+        | { session_api_key?: string | null }
+        | undefined,
       providers,
       lastEvent: lastEventRef.current,
     });
@@ -748,7 +830,9 @@ export function WsClientProvider({
         setWebSocketStatus,
       });
     } else {
-      const { baseUrl, socketPath } = resolveSocketTarget(conversation as any);
+      const { baseUrl, socketPath } = resolveSocketTarget(
+        conversation as { url?: string | null } | undefined,
+      );
       const socket = createSocketConnection({ baseUrl, socketPath, query });
       sioRef.current = socket;
       teardown = registerSocketHandlers({

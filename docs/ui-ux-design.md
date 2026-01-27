@@ -309,7 +309,6 @@ glow-lg: 0 0 40px rgba(245, 158, 11, 0.4)
 ├── /conversations/:id
 │   ├── / (Workspace Tab)
 │   ├── /browser
-│   ├── /jupyter
 │   ├── /served
 │   ├── /terminal
 │   └── /vscode
@@ -495,7 +494,7 @@ glow-lg: 0 0 40px rgba(245, 158, 11, 0.4)
 ```
 
 **Components:**
-- `ConversationTabs` - Tab navigation (Workspace, Browser, Jupyter, etc.)
+- `ConversationTabs` - Tab navigation (Workspace, Browser, App, etc.)
 - `ChatPanel` - Message history with streaming
 - `FileExplorer` - File tree sidebar
 - `CodeEditor` - Monaco editor with syntax highlighting
@@ -551,7 +550,7 @@ glow-lg: 0 0 40px rgba(245, 158, 11, 0.4)
    - Theme settings
 
 4. **Integrations** (`/settings/integrations`)
-   - GitHub/GitLab/Bitbucket
+   - GitHub
    - Slack
    - API connections
 
@@ -781,7 +780,7 @@ Save Settings
 ```
 Settings → Integrations
     ↓
-Select Provider (GitHub/GitLab/Bitbucket)
+Select Provider (GitHub)
     ↓
 OAuth Flow
     ↓

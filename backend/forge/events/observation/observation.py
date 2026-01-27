@@ -5,12 +5,31 @@ Classes:
 """
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 from forge.events.event import Event
+from forge._canonical import canonicalize
+
+
+class _ObservationCanonicalMeta(type):
+    """Metaclass guarding against duplicate class definitions across reloads."""
+
+    def __instancecheck__(cls, instance: object) -> bool:  # pragma: no cover - plumbing
+        if super().__instancecheck__(instance):
+            return True
+        inst_type = type(instance)
+        if getattr(inst_type, "__name__", None) != getattr(cls, "__name__", None):
+            # If checking against base Observation class, allow subclasses from other reloads
+            if cls.__name__ == "Observation":
+                return any(b.__name__ == "Observation" for b in inst_type.__mro__)
+            return False
+        cls_observation = getattr(cls, "observation", None)
+        inst_observation = getattr(instance, "observation", None)
+        return cls_observation is not None and cls_observation == inst_observation
 
 
 @dataclass
-class Observation(Event):
+class Observation(Event, metaclass=_ObservationCanonicalMeta):
     """Base class for observations from the environment.
 
     Attributes:
@@ -20,7 +39,8 @@ class Observation(Event):
     """
 
     content: str
-    __test__ = False
+    observation: ClassVar[str] = ""
+    __test__: ClassVar[bool] = False
 
     @property
     def exit_code(self) -> int | None:

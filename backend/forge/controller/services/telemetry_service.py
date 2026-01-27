@@ -18,7 +18,6 @@ class TelemetryService:
 
     def initialize_tool_pipeline(self) -> None:
         """Create the default tool invocation pipeline for the controller."""
-
         from forge.controller.tool_pipeline import (
             CircuitBreakerMiddleware,
             CostQuotaMiddleware,
@@ -53,7 +52,6 @@ class TelemetryService:
         ctx: "ToolInvocationContext",
     ) -> None:
         """Emit telemetry + user-facing events when middleware blocks an action."""
-
         from forge.controller.tool_telemetry import ToolTelemetry
         from forge.events import EventSource
         from forge.events.observation import ErrorObservation

@@ -15,11 +15,11 @@ triggers:
 
 # Database Setup
 
-**Core principle:** Simple first. Don't default to Docker unless requested.
+**Core principle:** Simple first.
 
 ## Quick Decision
 
-User mentions database without "docker"? **Ask first:**
+User mentions database? **Ask first:**
 
 ```
 I can set up [DATABASE] in a few ways:
@@ -29,9 +29,6 @@ I can set up [DATABASE] in a few ways:
    
 2. Local [DATABASE]
    - You install locally, I create connection code
-   
-3. Docker Compose
-   - Requires Docker installed
 
 Which do you prefer?
 ```
@@ -70,27 +67,11 @@ const pool = new Pool({
 });
 ```
 
-### Docker (If Requested)
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: myapp
-      POSTGRES_PASSWORD: password
-    ports:
-      - "5432:5432"
-```
-
 ## Rules
 
 **DON'T:**
-- Create Docker setup without asking
-- Assume Docker is installed
+- Assume a specific database is installed.
 
 **DO:**
-- Present options first
-- Recommend simplest (SQLite for dev)
-- Verify Docker if chosen
+- Present options first.
+- Recommend simplest (SQLite for dev).

@@ -160,7 +160,6 @@ class ActionVerifier:
 
         # Future: add more action types to verify
         # - CmdRunAction for critical commands
-        # - IPythonRunCellAction for code execution
 
         return False
 

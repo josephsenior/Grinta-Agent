@@ -14,6 +14,7 @@ from forge.core.message import Message, TextContent
 if TYPE_CHECKING:
     from forge.controller.state.state import State
     from forge.events.observation.agent import MicroagentKnowledge
+    from forge.storage.data_models.knowledge_base import KnowledgeBaseSearchResult
 
 
 @dataclass
@@ -78,6 +79,9 @@ class PromptManager:
         )
         self.microagent_info_template: Template = self._load_template(
             "microagent_info.j2"
+        )
+        self.knowledge_base_info_template: Template = self._load_template(
+            "knowledge_base_info.j2"
         )
 
     def _load_template(self, template_name: str) -> Template:
@@ -146,6 +150,17 @@ class PromptManager:
         return self.microagent_info_template.render(
             triggered_agents=triggered_agents
         ).strip()
+
+    def build_knowledge_base_info(
+        self, kb_results: list[KnowledgeBaseSearchResult]
+    ) -> str:
+        """Renders the knowledge base info template with the search results.
+
+        Args:
+            kb_results: A list of KnowledgeBaseSearchResult objects.
+
+        """
+        return self.knowledge_base_info_template.render(kb_results=kb_results).strip()
 
     def add_turns_left_reminder(self, messages: list[Message], state: State) -> None:
         """Append reminder about remaining turns to the most recent user message."""

@@ -6,12 +6,10 @@ import {
   Plus,
   Menu,
   Info,
-  DollarSign,
   Bell,
   PanelLeft,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { ThemeToggle } from "#/components/ui/theme-toggle";
 import { cn } from "#/utils/utils";
 import { UserProfileDropdown } from "#/components/features/user/user-profile-dropdown";
 import { NotificationsCenter } from "#/components/features/notifications/notifications-center";
@@ -71,11 +69,6 @@ export function HeaderContent({
         label: t("COMMON$HELP", { defaultValue: "Help" }),
         icon: Info,
       },
-      {
-        to: "/pricing",
-        label: t("PRICING", { defaultValue: "Pricing" }),
-        icon: DollarSign,
-      },
     ],
     [t],
   );
@@ -106,7 +99,7 @@ export function HeaderContent({
         {/* Logo (left) */}
         <div
           className="flex items-center space-x-3 select-none group cursor-pointer flex-shrink-0"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/conversations")}
         >
           <img
             src={logo}
@@ -156,7 +149,7 @@ export function HeaderContent({
 
           <NotificationsCenter />
 
-          <ThemeToggle />
+          {/* <ThemeToggle /> */}
 
           <button
             type="button"

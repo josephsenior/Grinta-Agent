@@ -4,7 +4,7 @@ import json
 import sys
 import types
 from types import SimpleNamespace
-from typing import cast
+from typing import cast, Any
 from unittest.mock import patch
 
 import pytest
@@ -19,7 +19,20 @@ if "tokenizers" not in sys.modules:
     tokenizers_stub.Tokenizer = _Tokenizer
     sys.modules["tokenizers"] = tokenizers_stub
 
-from litellm import ModelResponse
+class DummyModelResponse(SimpleNamespace):
+    """Minimal stand-in for a model response."""
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if 'choices' in kwargs:
+            self.choices = [SimpleNamespace(**choice) for choice in kwargs['choices']]
+            for choice in self.choices:
+                if 'message' in choice:
+                    choice.message = SimpleNamespace(**choice.message)
+                    if hasattr(choice.message, 'tool_calls'):
+                        choice.message.tool_calls = [SimpleNamespace(**tc) for tc in choice.message.tool_calls]
+                        for tc in choice.message.tool_calls:
+                            if hasattr(tc, 'function'):
+                                tc.function = SimpleNamespace(**tc.function)
 from forge.agenthub.codeact_agent.function_calling import response_to_actions
 from forge.core.exceptions import FunctionCallValidationError
 from forge.events.action import (
@@ -27,14 +40,13 @@ from forge.events.action import (
     CmdRunAction,
     FileEditAction,
     FileReadAction,
-    IPythonRunCellAction,
 )
 from forge.events.event import FileEditSource, FileReadSource
 
 
-def create_mock_response(function_name: str, arguments: dict) -> ModelResponse:
+def create_mock_response(function_name: str, arguments: dict) -> DummyModelResponse:
     """Helper function to create a mock response with a tool call."""
-    return ModelResponse(
+    return DummyModelResponse(
         id="mock-id",
         choices=[
             {
@@ -97,23 +109,15 @@ def test_execute_bash_missing_command():
     assert 'Missing required argument "command"' in str(exc_info.value)
 
 
-def test_execute_ipython_cell_valid():
-    """Test execute_ipython_cell with valid arguments."""
+def test_read_file_valid():
+    """Test read_file with valid arguments."""
     response = create_mock_response(
-        "execute_ipython_cell", {"code": "print('hello')", "security_risk": "LOW"}
+        "read_file", {"path": "/path/to/file", "security_risk": "LOW"}
     )
     actions = response_to_actions(response)
     assert len(actions) == 1
-    assert isinstance(actions[0], IPythonRunCellAction)
-    assert actions[0].code == "print('hello')"
-
-
-def test_execute_ipython_cell_missing_code():
-    """Test execute_ipython_cell with missing code argument."""
-    response = create_mock_response("execute_ipython_cell", {"security_risk": "LOW"})
-    with pytest.raises(FunctionCallValidationError) as exc_info:
-        response_to_actions(response)
-    assert 'Missing required argument "code"' in str(exc_info.value)
+    assert isinstance(actions[0], FileReadAction)
+    assert actions[0].path == "/path/to/file"
 
 
 def test_edit_file_valid():
@@ -163,7 +167,7 @@ def test_str_replace_editor_valid():
     assert len(actions) == 1
     assert isinstance(actions[0], FileReadAction)
     assert actions[0].path == "/path/to/file"
-    assert actions[0].impl_source == FileReadSource.OH_ACI
+    assert actions[0].impl_source == FileReadSource.FILE_EDITOR
     response = create_mock_response(
         "str_replace_editor",
         {
@@ -178,7 +182,7 @@ def test_str_replace_editor_valid():
     assert len(actions) == 1
     assert isinstance(actions[0], FileEditAction)
     assert actions[0].path == "/path/to/file"
-    assert actions[0].impl_source == FileEditSource.OH_ACI
+    assert actions[0].impl_source == FileEditSource.FILE_EDITOR
 
 
 def test_str_replace_editor_missing_required():

@@ -61,9 +61,11 @@ export function CodeArtifact({
   };
 
   const actionColors = {
-    create: "bg-success-500/10 text-success-500 border-success-500/30",
-    edit: "bg-warning-500/10 text-warning-500 border-warning-500/30",
-    delete: "bg-error-500/10 text-error-500 border-error-500/30",
+    create:
+      "bg-[var(--text-success)]/10 text-[var(--text-success)] border-[var(--text-success)]/30",
+    edit: "bg-[var(--border-accent)]/10 text-[var(--border-accent)] border-[var(--border-accent)]/30",
+    delete:
+      "bg-[var(--text-danger)]/10 text-[var(--text-danger)] border-[var(--text-danger)]/30",
   };
 
   const actionLabels = {
@@ -79,26 +81,26 @@ export function CodeArtifact({
     <Card
       className={cn(
         "code-artifact my-4 overflow-hidden",
-        "bg-gradient-to-br from-background-elevated to-background-surface",
-        "border border-border-secondary shadow-xl shadow-primary-500/5",
-        "transition-all duration-300 hover:shadow-2xl hover:shadow-primary-500/10",
+        "bg-[var(--bg-elevated)]",
+        "border border-[var(--border-primary)]",
+        "transition-all duration-200",
         className,
       )}
     >
       {/* Header */}
-      <CardHeader className="px-4 py-3 bg-background-tertiary border-b border-border-secondary">
+      <CardHeader className="px-4 py-2.5 bg-[var(--bg-tertiary)] border-b border-[var(--border-primary)]">
         <div className="flex items-center justify-between gap-3">
           {/* File Info */}
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <FileCode className="w-4 h-4 text-primary-500 flex-shrink-0" />
+            <FileCode className="w-4 h-4 text-[var(--text-success)] flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <p
-                className="text-sm font-mono text-foreground truncate"
+                className="text-sm font-mono text-[var(--text-primary)] truncate"
                 title={filePath}
               >
                 {filePath}
               </p>
-              <p className="text-xs text-foreground-secondary mt-0.5">
+              <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
                 {lineCount} {lineCount === 1 ? "line" : "lines"} · {language}
               </p>
             </div>
@@ -150,8 +152,8 @@ export function CodeArtifact({
             >
               {isCopied ? (
                 <>
-                  <Check className="w-3.5 h-3.5 mr-1.5 text-success-500" />
-                  <span className="text-success-500">
+                  <Check className="w-3.5 h-3.5 mr-1.5 text-[var(--text-success)]" />
+                  <span className="text-[var(--text-success)]">
                     {t("chat.codeArtifact.copied", "Copied!")}
                   </span>
                 </>
@@ -170,7 +172,7 @@ export function CodeArtifact({
                 variant="default"
                 size="sm"
                 onClick={onApply}
-                className="h-8 px-3 text-xs bg-primary-500 hover:bg-primary-600"
+                className="h-8 px-3 text-xs bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] hover:brightness-110 text-white"
               >
                 <Code2 className="w-3.5 h-3.5 mr-1.5" />
                 {t("chat.codeArtifact.apply", "Apply")}

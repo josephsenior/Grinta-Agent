@@ -22,40 +22,7 @@ from forge.core.exceptions import (
     FunctionCallNotExistsError,
 )
 
-# Define a flexible AuthenticationError we can reliably detect
-try:
-    from litellm import exceptions as litellm_exceptions  # type: ignore
-except (ImportError, AttributeError):  # pragma: no cover - optional dependency
-    litellm_exceptions = None  # type: ignore
-
-
-class AuthenticationError(Exception):
-    """Flexible authentication error.
-
-    Supports both a simple string message and the litellm-style signature
-    (llm_provider, model, original_exception).
-    """
-
-    def __init__(self, *args, **kwargs):
-        if len(args) == 1 and not kwargs:
-            super().__init__(args[0])
-            self.llm_provider = None
-            self.model = None
-            self.original = None
-            return
-        if len(args) >= 3:
-            provider, model, original = args[0], args[1], args[2]
-            super().__init__(str(original) if original is not None else "Authentication error")
-            self.llm_provider = provider
-            self.model = model
-            self.original = original
-            return
-        # Fallback to keyword-based initialization
-        msg = args[0] if args else kwargs.get("message", "Authentication error")
-        super().__init__(msg)
-        self.llm_provider = kwargs.get("llm_provider")
-        self.model = kwargs.get("model")
-        self.original = kwargs.get("original")
+from forge.llm.exceptions import AuthenticationError
 from forge.events.action import (
     Action,
     AgentThinkAction,

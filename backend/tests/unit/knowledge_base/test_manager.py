@@ -372,3 +372,231 @@ def test_search_skips_collections_without_access(
     results = kb.search("query", collection_ids=[owned.id, foreign.id])
     assert len(results) == 1
     assert results[0].collection_id == owned.id
+
+
+def test_add_chunk_to_vector_store_exception(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test _add_chunk_to_vector_store handles exceptions."""
+    from forge.storage.data_models.knowledge_base import DocumentChunk
+    
+    kb, store, vector_stores = create_manager(monkeypatch)
+    collection = kb.create_collection("Test")
+    vector_store = kb._get_vector_store(collection.id)
+    
+    # Make vector_store.add raise an exception
+    def failing_add(**kwargs):
+        raise RuntimeError("Vector store error")
+    
+    vector_store.add = failing_add
+    
+    document = KnowledgeBaseDocument(
+        collection_id=collection.id,
+        filename="test.txt",
+        content_hash="hash",
+        file_size_bytes=10,
+        mime_type="text/plain",
+    )
+    chunk = DocumentChunk(
+        document_id=document.id,
+        chunk_index=0,
+        content="test content",
+    )
+    
+    # Should return False when exception occurs (lines 72-74)
+    result = kb._add_chunk_to_vector_store(vector_store, chunk, document, collection.id, "test.txt")
+    assert result is False
+
+
+def test_add_chunks_partial_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test _add_chunks_to_vector_store with partial failures."""
+    from forge.storage.data_models.knowledge_base import DocumentChunk
+    
+    kb, store, vector_stores = create_manager(monkeypatch)
+    collection = kb.create_collection("Test")
+    vector_store = kb._get_vector_store(collection.id)
+    
+    document = KnowledgeBaseDocument(
+        collection_id=collection.id,
+        filename="test.txt",
+        content_hash="hash",
+        file_size_bytes=10,
+        mime_type="text/plain",
+    )
+    
+    chunks = [
+        DocumentChunk(document_id=document.id, chunk_index=0, content="chunk1"),
+        DocumentChunk(document_id=document.id, chunk_index=1, content="chunk2"),
+        DocumentChunk(document_id=document.id, chunk_index=2, content="chunk3"),
+    ]
+    
+    # Make first chunk fail, others succeed
+    call_count = [0]
+    def conditional_add(**kwargs):
+        call_count[0] += 1
+        if call_count[0] == 1:
+            raise RuntimeError("First chunk fails")
+        # Other chunks succeed
+    
+    vector_store.add = conditional_add
+    
+    # Should track failed chunks (line 94) and log warning (line 97)
+    chunks_added = kb._add_chunks_to_vector_store(collection.id, chunks, document, "test.txt")
+    assert chunks_added == 2  # 2 out of 3 succeeded
+
+
+def test_add_chunks_all_fail(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test _add_chunks_to_vector_store when all chunks fail."""
+    from forge.storage.data_models.knowledge_base import DocumentChunk
+    
+    kb, store, vector_stores = create_manager(monkeypatch)
+    collection = kb.create_collection("Test")
+    vector_store = kb._get_vector_store(collection.id)
+    
+    document = KnowledgeBaseDocument(
+        collection_id=collection.id,
+        filename="test.txt",
+        content_hash="hash",
+        file_size_bytes=10,
+        mime_type="text/plain",
+    )
+    
+    chunks = [
+        DocumentChunk(document_id=document.id, chunk_index=0, content="chunk1"),
+    ]
+    
+    # Make all chunks fail
+    def failing_add(**kwargs):
+        raise RuntimeError("All chunks fail")
+    
+    vector_store.add = failing_add
+    
+    # Should log error when chunks_added == 0 (line 103)
+    chunks_added = kb._add_chunks_to_vector_store(collection.id, chunks, document, "test.txt")
+    assert chunks_added == 0
+
+
+def test_add_chunks_exception(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test _add_chunks_to_vector_store handles exceptions in loop."""
+    from forge.storage.data_models.knowledge_base import DocumentChunk
+    from unittest.mock import patch
+    
+    kb, store, vector_stores = create_manager(monkeypatch)
+    collection = kb.create_collection("Test")
+    vector_store = kb._get_vector_store(collection.id)
+    
+    document = KnowledgeBaseDocument(
+        collection_id=collection.id,
+        filename="test.txt",
+        content_hash="hash",
+        file_size_bytes=10,
+        mime_type="text/plain",
+    )
+    
+    chunks = [
+        DocumentChunk(document_id=document.id, chunk_index=0, content="chunk1"),
+    ]
+    
+    # Make logger.error raise an exception inside the try block to trigger outer exception handler (lines 112-113)
+    with patch.object(kb_manager_module.logger, "error", side_effect=RuntimeError("Logger error")):
+        # This will cause an exception when logging the error for failed chunks
+        # But wait, that's inside _add_chunk_to_vector_store, not the outer try
+        # Let's make logger.info raise an exception instead (line 108)
+        pass
+    
+    # Make logger.info raise an exception inside the try block to trigger outer exception handler (lines 112-113)
+    with patch.object(kb_manager_module.logger, "info", side_effect=RuntimeError("Logger info error")):
+        # Make one chunk succeed so we hit the logger.info at line 108
+        vector_store.add = lambda **kwargs: None  # Success
+        # This should trigger logger.info which will raise, caught by outer try-except (lines 112-113)
+        chunks_added = kb._add_chunks_to_vector_store(collection.id, chunks, document, "test.txt")
+        # chunks_added is still 1 because the chunk was added before the exception
+        assert chunks_added == 1  # Chunk was added, then exception in logger caught
+
+
+def test_delete_collection_logs_vector_deletion(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test delete_collection logs vector deletion info."""
+    kb, store, vector_stores = create_manager(monkeypatch)
+    collection = kb.create_collection("Test")
+    
+    # Add a document to create vector chunks
+    kb.add_document(collection.id, filename="doc.txt", content="test content")
+    
+    vector_store = vector_stores[collection.id]
+    vector_store.delete_by_metadata = lambda **kwargs: 5  # Return deleted count
+    
+    # Should log info about deleted chunks (line 169)
+    result = kb.delete_collection(collection.id)
+    assert result is True
+
+
+def test_add_document_incomplete_chunks_warning(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test add_document warns when chunks are incomplete."""
+    kb, store, vector_stores = create_manager(monkeypatch)
+    collection = kb.create_collection("Test")
+    vector_store = kb._get_vector_store(collection.id)
+    
+    # Make only some chunks succeed
+    call_count = [0]
+    def conditional_add(**kwargs):
+        call_count[0] += 1
+        if call_count[0] > 1:  # Fail after first chunk
+            raise RuntimeError("Chunk fails")
+    
+    vector_store.add = conditional_add
+    
+    # Content that creates multiple chunks
+    content = "A" * 1200  # Creates 2 chunks
+    document = kb.add_document(collection.id, filename="doc.txt", content=content)
+    
+    # Should warn about incomplete chunks (line 245)
+    assert document is not None
+    assert document.chunk_count < 2  # Some chunks failed
+
+
+@pytest.mark.asyncio
+async def test_async_add_document(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test async_add_document wrapper."""
+    kb, store, vector_stores = create_manager(monkeypatch)
+    collection = kb.create_collection("Test")
+    
+    # Should use asyncio.to_thread (line 264)
+    document = await kb.async_add_document(
+        collection.id, filename="async.txt", content="async content"
+    )
+    assert document is not None
+    assert document.filename == "async.txt"
+
+
+def test_delete_document_logs_vector_deletion(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test delete_document logs vector deletion info."""
+    kb, store, vector_stores = create_manager(monkeypatch)
+    collection = kb.create_collection("Test")
+    
+    document = kb.add_document(collection.id, filename="doc.txt", content="test")
+    assert document is not None
+    
+    vector_store = vector_stores[collection.id]
+    vector_store.delete_by_metadata = lambda **kwargs: 3  # Return deleted count
+    
+    # Should log info about deleted chunks (line 343)
+    result = kb.delete_document(document.id)
+    assert result is True
+
+
+@pytest.mark.asyncio
+async def test_async_search(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test async_search wrapper."""
+    kb, store, vector_stores = create_manager(monkeypatch)
+    collection = kb.create_collection("Test")
+    
+    kb._get_vector_store(collection.id)
+    vector_stores[collection.id].set_search_results([
+        {
+            "score": 0.9,
+            "metadata": {"document_id": "doc", "filename": "file"},
+            "content": "chunk",
+        }
+    ])
+    
+    # Should use asyncio.to_thread (line 429)
+    results = await kb.async_search("query", collection_ids=[collection.id])
+    assert len(results) == 1

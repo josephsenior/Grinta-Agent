@@ -13,7 +13,7 @@ class TestGitConfig:
         """Test that default git configuration is set correctly."""
         config = ForgeConfig()
         assert config.git_user_name == "forge"
-        assert config.git_user_email == "Forge@all-hands.dev"
+        assert config.git_user_email == "Forge@forge.dev"
 
     def test_git_config_from_env_vars(self):
         """Test that git configuration can be set via environment variables."""
@@ -72,4 +72,5 @@ class TestGitConfig:
             config = ForgeConfig()
             load_from_env(config, os.environ)
             assert config.git_user_name == "forge"
-            assert config.git_user_email == "Forge@all-hands.dev"
+            assert config.git_user_email == "Forge@forge.dev"
+

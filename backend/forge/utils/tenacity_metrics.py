@@ -3,7 +3,7 @@
 Provides a small factory to create a `before_sleep` callable suitable for
 passing into tenacity.retry(..., before_sleep=...). The callable records an
 `attempt` metric and, on final success/failure, emits `retry_success` or
-`retry_failure` events via the MetaSOP metrics facade.
+`retry_failure` events via the metrics facade.
 """
 
 from __future__ import annotations
@@ -39,17 +39,8 @@ def call_tenacity_hooks(
 
 
 def _record_metrics_event_runtime(ev: dict) -> None:
-    """Record a metrics event using the project's metrics facade.
-
-    Imported at call time to avoid import-order/circular-imports causing the
-    module-level binding to silently become a no-op during test/import time.
-    """
-    try:
-        from forge.metasop.metrics import record_event as _rec
-
-        _rec(ev)
-    except Exception:
-        return
+    """Record a metrics event. (Currently a no-op)"""
+    return
 
 
 def tenacity_before_sleep_factory(operation: str) -> Callable[[RetryCallState], None]:

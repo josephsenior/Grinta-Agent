@@ -152,54 +152,12 @@ async def test_get_repositories_selected_provider_success() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_repositories_multiple_providers() -> None:
-    overrides = {
-        ProviderType.GITLAB: ProviderToken(
-            token=SecretStr("gl-token"), user_id="2", host=None
-        ),
-    }
-    handler = make_handler(overrides)
-    repo1 = make_repo(ProviderType.GITHUB, "acme/repo1", "1")
-    repo2 = make_repo(ProviderType.GITLAB, "acme/repo2", "2")
-    services = {
-        ProviderType.GITHUB: make_service(
-            get_all_repositories=AsyncMock(return_value=[repo1])
-        ),
-        ProviderType.GITLAB: make_service(
-            get_all_repositories=AsyncMock(return_value=[repo2])
-        ),
-    }
-    with patch.object(
-        handler, "_get_service", side_effect=lambda provider: services[provider]
-    ):
-        result = await handler.get_repositories(
-            sort="updated",
-            app_mode=object(),
-            selected_provider=None,
-            page=None,
-            per_page=None,
-            installation_id=None,
-        )
-    assert result == [repo1, repo2]
-    services[ProviderType.GITHUB].get_all_repositories.assert_awaited_once()
-    services[ProviderType.GITLAB].get_all_repositories.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_get_repositories_skips_provider_on_error() -> None:
-    overrides = {
-        ProviderType.GITLAB: ProviderToken(
-            token=SecretStr("gl-token"), user_id="2", host=None
-        ),
-    }
-    handler = make_handler(overrides)
+async def test_get_repositories_success() -> None:
+    handler = make_handler()
     repo = make_repo(ProviderType.GITHUB, "acme/repo1", "1")
     services = {
         ProviderType.GITHUB: make_service(
             get_all_repositories=AsyncMock(return_value=[repo])
-        ),
-        ProviderType.GITLAB: make_service(
-            get_all_repositories=AsyncMock(side_effect=Exception("boom"))
         ),
     }
     with patch.object(
@@ -215,7 +173,29 @@ async def test_get_repositories_skips_provider_on_error() -> None:
         )
     assert result == [repo]
     services[ProviderType.GITHUB].get_all_repositories.assert_awaited_once()
-    services[ProviderType.GITLAB].get_all_repositories.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_get_repositories_error_returns_empty() -> None:
+    handler = make_handler()
+    services = {
+        ProviderType.GITHUB: make_service(
+            get_all_repositories=AsyncMock(side_effect=Exception("boom"))
+        ),
+    }
+    with patch.object(
+        handler, "_get_service", side_effect=lambda provider: services[provider]
+    ):
+        result = await handler.get_repositories(
+            sort="updated",
+            app_mode=object(),
+            selected_provider=None,
+            page=None,
+            per_page=None,
+            installation_id=None,
+        )
+    assert result == []
+    services[ProviderType.GITHUB].get_all_repositories.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -250,14 +230,9 @@ async def test_search_branches_selected_provider_failure_returns_empty() -> None
 
 @pytest.mark.asyncio
 async def test_search_branches_resolves_provider_when_not_specified() -> None:
-    overrides = {
-        ProviderType.GITLAB: ProviderToken(
-            token=SecretStr("gl-token"), user_id="2", host=None
-        ),
-    }
-    handler = make_handler(overrides)
+    handler = make_handler()
     branch = make_branch()
-    repo = make_repo(ProviderType.GITLAB)
+    repo = make_repo(ProviderType.GITHUB)
     service = make_service(search_branches=AsyncMock(return_value=[branch]))
     with (
         patch.object(
@@ -345,14 +320,9 @@ async def test_get_env_vars_can_expose_strings() -> None:
 
 @pytest.mark.asyncio
 async def test_get_env_vars_filters_requested_providers() -> None:
-    overrides = {
-        ProviderType.GITLAB: ProviderToken(
-            token=SecretStr("gl-token"), user_id="2", host=None
-        ),
-    }
-    handler = make_handler(overrides)
-    env = await handler.get_env_vars(providers=[ProviderType.GITLAB])
-    assert list(env.keys()) == [ProviderType.GITLAB]
+    handler = make_handler()
+    env = await handler.get_env_vars(providers=[ProviderType.GITHUB])
+    assert list(env.keys()) == [ProviderType.GITHUB]
 
 
 @pytest.mark.asyncio
@@ -408,10 +378,9 @@ async def test_set_event_stream_secrets_fetches_when_env_vars_not_provided() -> 
 
 
 def test_check_cmd_action_for_provider_token_ref_detects_tokens() -> None:
-    action = CmdRunAction(command="echo $GITHUB_TOKEN && echo $gitlab_token")
+    action = CmdRunAction(command="echo $GITHUB_TOKEN")
     providers = ProviderHandler.check_cmd_action_for_provider_token_ref(action)
     assert ProviderType.GITHUB in providers
-    assert ProviderType.GITLAB in providers
 
 
 def test_check_cmd_action_for_provider_token_ref_ignores_other_actions() -> None:
@@ -424,8 +393,8 @@ def test_check_cmd_action_for_provider_token_ref_ignores_other_actions() -> None
 
 def test_get_provider_env_key_formats_value() -> None:
     assert (
-        ProviderHandler.get_provider_env_key(ProviderType.BITBUCKET)
-        == "bitbucket_token"
+        ProviderHandler.get_provider_env_key(ProviderType.GITHUB)
+        == "github_token"
     )
 
 
@@ -456,30 +425,18 @@ async def test_verify_repo_provider_uses_specified_provider() -> None:
 
 
 @pytest.mark.asyncio
-async def test_verify_repo_provider_falls_back_across_providers() -> None:
-    overrides = {
-        ProviderType.GITLAB: ProviderToken(
-            token=SecretStr("gl-token"), user_id="2", host=None
-        ),
-    }
-    handler = make_handler(overrides)
-    services = {
-        ProviderType.GITHUB: make_service(
-            get_repository_details_from_repo_name=AsyncMock(
-                side_effect=Exception("boom")
-            )
-        ),
-        ProviderType.GITLAB: make_service(
-            get_repository_details_from_repo_name=AsyncMock(
-                return_value=make_repo(ProviderType.GITLAB)
-            )
-        ),
-    }
+async def test_verify_repo_provider_fails() -> None:
+    handler = make_handler()
+    service = make_service(
+        get_repository_details_from_repo_name=AsyncMock(
+            side_effect=Exception("boom")
+        )
+    )
     with patch.object(
-        handler, "_get_service", side_effect=lambda provider: services[provider]
+        handler, "_get_service", return_value=service
     ):
-        result = await handler.verify_repo_provider("acme/repo")
-    assert result.git_provider == ProviderType.GITLAB
+        with pytest.raises(AuthenticationError):
+            await handler.verify_repo_provider("acme/repo")
 
 
 @pytest.mark.asyncio
@@ -525,28 +482,16 @@ async def test_get_branches_returns_default_when_all_fail() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_branches_falls_back_to_next_provider() -> None:
-    overrides = {
-        ProviderType.GITLAB: ProviderToken(
-            token=SecretStr("gl-token"), user_id="2", host=None
-        ),
-    }
-    handler = make_handler(overrides)
-    services = {
-        ProviderType.GITHUB: make_service(
-            get_paginated_branches=AsyncMock(side_effect=Exception("boom"))
-        ),
-        ProviderType.GITLAB: make_service(
-            get_paginated_branches=AsyncMock(
-                return_value=make_paginated([make_branch("dev")])
-            )
-        ),
-    }
+async def test_get_branches_error_returns_empty() -> None:
+    handler = make_handler()
+    service = make_service(
+        get_paginated_branches=AsyncMock(side_effect=Exception("boom"))
+    )
     with patch.object(
-        handler, "_get_service", side_effect=lambda provider: services[provider]
+        handler, "_get_service", return_value=service
     ):
         result = await handler.get_branches("acme/repo")
-    assert result.branches[0].name == "dev"
+    assert result.branches == []
 
 
 @pytest.mark.asyncio
@@ -562,18 +507,10 @@ async def test_get_microagents_returns_first_successful_result() -> None:
 
 @pytest.mark.asyncio
 async def test_get_microagents_aggregates_errors() -> None:
-    overrides = {
-        ProviderType.GITLAB: ProviderToken(
-            token=SecretStr("gl-token"), user_id="2", host=None
-        ),
-    }
-    handler = make_handler(overrides)
+    handler = make_handler()
     services = {
         ProviderType.GITHUB: make_service(
             get_microagents=AsyncMock(side_effect=Exception("boom"))
-        ),
-        ProviderType.GITLAB: make_service(
-            get_microagents=AsyncMock(side_effect=Exception("still boom"))
         ),
     }
     with patch.object(
@@ -599,32 +536,20 @@ async def test_get_microagent_content_returns_result() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_microagent_content_tries_other_providers_on_not_found() -> None:
-    overrides = {
-        ProviderType.GITLAB: ProviderToken(
-            token=SecretStr("gl-token"), user_id="2", host=None
-        ),
-    }
-    handler = make_handler(overrides)
-    services = {
-        ProviderType.GITHUB: make_service(
-            get_microagent_content=AsyncMock(
-                side_effect=ResourceNotFoundError("missing")
-            )
-        ),
-        ProviderType.GITLAB: make_service(
-            get_microagent_content=AsyncMock(
-                return_value=make_microagent_content(provider="gitlab")
-            )
-        ),
-    }
-    with patch.object(
-        handler, "_get_service", side_effect=lambda provider: services[provider]
-    ):
-        result = await handler.get_microagent_content(
-            "acme/repo", "microagents/file.md"
+async def test_get_microagent_content_not_found_raises_resource_not_found() -> None:
+    handler = make_handler()
+    service = make_service(
+        get_microagent_content=AsyncMock(
+            side_effect=ResourceNotFoundError("missing")
         )
-    assert result.git_provider == "gitlab"
+    )
+    with patch.object(
+        handler, "_get_service", return_value=service
+    ):
+        with pytest.raises(ResourceNotFoundError):
+            await handler.get_microagent_content(
+                "acme/repo", "microagents/file.md"
+            )
 
 
 @pytest.mark.asyncio
@@ -643,18 +568,18 @@ async def test_get_microagent_content_raises_authentication_error() -> None:
 @pytest.mark.asyncio
 async def test_get_authenticated_git_url_includes_token() -> None:
     overrides = {
-        ProviderType.GITLAB: ProviderToken(
-            token=SecretStr("gl-token"), user_id="2", host="gitlab.example.com"
+        ProviderType.GITHUB: ProviderToken(
+            token=SecretStr("gh-token"), user_id="1", host="github.example.com"
         ),
     }
     handler = make_handler(overrides)
     with patch.object(
         handler,
         "_verify_repository",
-        AsyncMock(return_value=(ProviderType.GITLAB, "acme/repo")),
+        AsyncMock(return_value=(ProviderType.GITHUB, "acme/repo")),
     ):
         url = await handler.get_authenticated_git_url("acme/repo")
-    assert url == "https://oauth2:gl-token@gitlab.example.com/acme/repo.git"
+    assert url == "https://gh-token@github.example.com/acme/repo.git"
 
 
 @pytest.mark.asyncio
@@ -663,52 +588,28 @@ async def test_get_authenticated_git_url_without_token_returns_basic_url() -> No
     with patch.object(
         handler,
         "_verify_repository",
-        AsyncMock(return_value=(ProviderType.GITLAB, "acme/repo")),
+        AsyncMock(return_value=(ProviderType.GITHUB, "acme/repo")),
     ):
         url = await handler.get_authenticated_git_url("acme/repo")
-    assert url == "https://gitlab.com/acme/repo.git"
+    assert url == "https://github.com/acme/repo.git"
 
 
 def test_get_authenticated_domain_prefers_custom_host() -> None:
     overrides = {
-        ProviderType.GITLAB: ProviderToken(
-            token=SecretStr("gl-token"), user_id="2", host="gitlab.example.com"
+        ProviderType.GITHUB: ProviderToken(
+            token=SecretStr("gh-token"), user_id="1", host="github.example.com"
         ),
     }
     handler = make_handler(overrides)
     assert (
-        handler._get_authenticated_domain(ProviderType.GITLAB) == "gitlab.example.com"
+        handler._get_authenticated_domain(ProviderType.GITHUB) == "github.example.com"
     )
-    assert handler._get_authenticated_domain(ProviderType.BITBUCKET) == "bitbucket.org"
 
 
 def test_get_remote_url_variants() -> None:
-    overrides = {
-        ProviderType.GITLAB: ProviderToken(
-            token=SecretStr("gl-token"), user_id="2", host=None
-        ),
-        ProviderType.BITBUCKET: ProviderToken(
-            token=SecretStr("bbtoken"), user_id="3", host=None
-        ),
-    }
-    handler = make_handler(overrides)
-    gitlab_url = handler._get_remote_url(ProviderType.GITLAB, "gitlab.com", "acme/repo")
-    bitbucket_url = handler._get_remote_url(
-        ProviderType.BITBUCKET, "bitbucket.org", "acme/repo"
-    )
-    colon_token_handler = make_handler(
-        {
-            ProviderType.BITBUCKET: ProviderToken(
-                token=SecretStr("user:pass"), user_id="3", host=None
-            ),
-        },
-    )
-    bitbucket_colon_url = colon_token_handler._get_remote_url(
-        ProviderType.BITBUCKET, "bitbucket.org", "acme/repo"
-    )
-    assert gitlab_url == "https://oauth2:gl-token@gitlab.com/acme/repo.git"
-    assert bitbucket_url == "https://x-token-auth:bbtoken@bitbucket.org/acme/repo.git"
-    assert bitbucket_colon_url == "https://user:pass@bitbucket.org/acme/repo.git"
+    handler = make_handler()
+    github_url = handler._get_remote_url(ProviderType.GITHUB, "github.com", "acme/repo")
+    assert github_url == "https://github.com/acme/repo.git"
 
 
 @pytest.mark.asyncio
@@ -744,37 +645,9 @@ async def test_get_github_installations_on_error_returns_empty() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_bitbucket_workspaces() -> None:
-    overrides = {
-        ProviderType.BITBUCKET: ProviderToken(
-            token=SecretStr("bb-token"), user_id="3", host=None
-        ),
-    }
-    handler = make_handler(overrides)
-    service = make_service(get_installations=AsyncMock(return_value=["acme"]))
-    with patch.object(handler, "_get_service", return_value=service):
-        result = await handler.get_bitbucket_workspaces()
-    assert result == ["acme"]
-
-
-@pytest.mark.asyncio
-async def test_get_bitbucket_workspaces_on_error_returns_empty() -> None:
-    overrides = {
-        ProviderType.BITBUCKET: ProviderToken(
-            token=SecretStr("bb-token"), user_id="3", host=None
-        ),
-    }
-    handler = make_handler(overrides)
-    service = make_service(get_installations=AsyncMock(side_effect=Exception("boom")))
-    with patch.object(handler, "_get_service", return_value=service):
-        result = await handler.get_bitbucket_workspaces()
-    assert result == []
-
-
-@pytest.mark.asyncio
 async def test_get_suggested_tasks_aggregates() -> None:
     overrides = {
-        ProviderType.GITLAB: ProviderToken(
+        ProviderType.ENTERPRISE_SSO: ProviderToken(
             token=SecretStr("gl-token"), user_id="2", host=None
         ),
     }
@@ -785,7 +658,7 @@ async def test_get_suggested_tasks_aggregates() -> None:
         ProviderType.GITHUB: make_service(
             get_suggested_tasks=AsyncMock(return_value=tasks1)
         ),
-        ProviderType.GITLAB: make_service(
+        ProviderType.ENTERPRISE_SSO: make_service(
             get_suggested_tasks=AsyncMock(return_value=tasks2)
         ),
     }
@@ -817,20 +690,11 @@ async def test_search_repositories_selected_provider_deduplicates() -> None:
 
 @pytest.mark.asyncio
 async def test_search_repositories_across_providers() -> None:
-    overrides = {
-        ProviderType.GITLAB: ProviderToken(
-            token=SecretStr("gl-token"), user_id="2", host=None
-        ),
-    }
-    handler = make_handler(overrides)
+    handler = make_handler()
     repo1 = make_repo()
-    repo2 = make_repo(ProviderType.GITLAB, "acme/repo2", "2")
     services = {
         ProviderType.GITHUB: make_service(
             search_repositories=AsyncMock(return_value=[repo1])
-        ),
-        ProviderType.GITLAB: make_service(
-            search_repositories=AsyncMock(return_value=[repo2])
         ),
     }
     with patch.object(
@@ -843,7 +707,7 @@ async def test_search_repositories_across_providers() -> None:
             sort="updated",
             order="desc",
         )
-    assert repo1 in result and repo2 in result
+    assert repo1 in result
 
 
 @pytest.mark.asyncio

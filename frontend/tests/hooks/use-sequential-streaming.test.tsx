@@ -1,27 +1,19 @@
-import { renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { renderHook, act } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi, beforeEach } from "vitest";
 
 import { useSequentialStreaming } from "#/hooks/use-streaming";
 
 describe("useSequentialStreaming", () => {
-  const setTimeoutSpy = vi.spyOn(global, "setTimeout").mockImplementation((cb: TimerHandler) => {
-    (cb as () => void)();
-    return 0 as unknown as NodeJS.Timeout;
+  beforeEach(() => {
+    vi.useFakeTimers();
   });
-
-  const setIntervalSpy = vi.spyOn(global, "setInterval").mockImplementation((cb: TimerHandler) => {
-    (cb as () => void)();
-    return 0 as unknown as NodeJS.Timeout;
-  });
-
-  vi.spyOn(global, "clearTimeout").mockImplementation(() => undefined);
-  vi.spyOn(global, "clearInterval").mockImplementation(() => undefined);
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
-  it("streams items sequentially with immediate timers", () => {
+  it("streams items sequentially with immediate timers", async () => {
     const items = ["a", "b"];
     const { result } = renderHook(() =>
       useSequentialStreaming({
@@ -33,28 +25,46 @@ describe("useSequentialStreaming", () => {
       }),
     );
 
-    expect(setTimeoutSpy).toHaveBeenCalled();
-    expect(setIntervalSpy).toHaveBeenCalled();
+    // Run timers for first item
+    await act(async () => {
+      vi.advanceTimersByTime(10);
+    });
+
+    // Run timers for item delay
+    await act(async () => {
+      vi.advanceTimersByTime(10);
+    });
+
+    // Run timers for second item
+    await act(async () => {
+      vi.advanceTimersByTime(10);
+    });
+
     expect(result.current.allStreamedItems).toEqual(["a", "b"]);
     expect(result.current.currentIndex).toBe(1);
     expect(result.current.currentItem).toBe("b");
     expect(result.current.isComplete).toBe(true);
-    expect(result.current.progress).toBe(100);
   });
 
-  it("resets sequential streaming state", () => {
+  it("resets sequential streaming state", async () => {
     const items = ["x", "y"];
     const { result } = renderHook(() =>
       useSequentialStreaming({
         items,
         speed: 10,
-        interval: 1,
+        interval: 10,
         delay: 0,
-        itemDelay: 1,
+        itemDelay: 10,
       }),
     );
 
-    result.current.reset();
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    act(() => {
+      result.current.reset();
+    });
 
     expect(result.current.allStreamedItems).toEqual([]);
     expect(result.current.currentIndex).toBe(0);

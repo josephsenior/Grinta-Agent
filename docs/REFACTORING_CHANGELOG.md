@@ -52,8 +52,8 @@ Average Complexity: 3.13 ⬇️ (improved by 8.5%) → **Current: 3.06** (furthe
    - **Impact:** Improved readability and testability of conversation initialization
 
 2. **`SchemaValidator.validate_with_suggestions`** (D-27 → A-5)
-   - **File:** `forge/metasop/schema_validator.py`
-   - **Strategy:** Separated error-based suggestions, role-specific suggestions, and database schema validation
+   - **File:** `forge/core/schema_validator.py`
+   - **Strategy:** Separated error-based suggestions and database schema validation
    - **Impact:** Enhanced validation logic clarity and extensibility
 
 3. **`CodeActAgent.response_to_actions`** (D-24 → A-4)
@@ -71,29 +71,14 @@ Average Complexity: 3.13 ⬇️ (improved by 8.5%) → **Current: 3.06** (furthe
    - **Strategy:** Separated scoring logic for Action, Observation, and MessageAction events
    - **Impact:** Clearer importance calculation and easier tuning
 
-6. **`MetaSOPOrchestrator._format_artifacts_for_codeact`** (D-23 → A-5)
-   - **File:** `forge/server/routes/metasop.py`
-   - **Strategy:** Extracted formatting logic for each artifact type (PM, Architect, Engineer, UI)
-   - **Impact:** Improved artifact formatting clarity and maintainability
-
-7. **`DockerRuntime.get_action_execution_server_startup_command`** (C-19 → A-4)
+6. **`DockerRuntime.get_action_execution_server_startup_command`** (C-19 → A-4)
    - **File:** `forge/runtime/utils/command.py`
    - **Strategy:** Extracted plugin args building, environment validation, and BrowserGym args
    - **Impact:** Simplified command construction logic
 
 #### Phase 2: C-Rated Functions (Complexity 11-20)
 
-**52 functions refactored** across multiple modules:
-
-##### MetaSOP & Orchestration (8 functions)
-- `ParallelExecutionEngine.execute_parallel_groups_async` (C-20 → A-5)
-- `ParallelExecutionEngine.execute_parallel_groups` (C-18 → A-4)
-- `ParallelExecutionEngine.identify_parallel_groups` (C-13 → A-4)
-- `CausalReasoningEngine.analyze_step_safety` (C-17 → A-5)
-- `CausalReasoningEngine.learn_from_execution` (C-17 → A-4)
-- `MetaSOPOrchestrator._check_causal_safety` (C-11 → A-4)
-- `MetaSOPOrchestrator._collect_execution_feedback` (C-11 → A-4)
-- `EnhancedMetaSOPEventEmitter.emit_step_complete` (C-11 → A-3)
+**44 functions refactored** across multiple modules:
 
 ##### LLM & Configuration (3 functions)
 - `LLM.get_supported_llm_models` (C-20 → A-4)
@@ -115,28 +100,6 @@ Average Complexity: 3.13 ⬇️ (improved by 8.5%) → **Current: 3.06** (furthe
 - `WhitespaceHandler.normalize_indent` (C-12 → A-4)
 - `WhitespaceHandler.preserve_relative_indent` (C-11 → A-4)
 
-##### Prompt Optimization (12 functions)
-- `PromptEvolver._analyze_error_patterns` (C-14 → A-4)
-- `PromptEvolver._parse_evolution_response` (C-14 → A-4)
-- `PromptEvolver.get_evolution_statistics` (C-11 → A-4)
-- `PerformanceTracker.get_performance_trend` (C-14 → A-4)
-- `PerformanceTracker._update_variant_metrics` (C-13 → A-4)
-- `PerformanceTracker.get_overall_statistics` (C-11 → A-3)
-- `PerformanceTracker.get_category_statistics` (C-13 → A-4)
-- `PerformanceTracker._finalize_category_stats` (C-11 → A-4)
-- `AdvancedOptimizationConfig.validate` (C-14 → A-4)
-- `AdvancedStrategyManager._analyze_context` (C-14 → A-5)
-- `AdvancedStrategyManager._calculate_context_fit` (C-14 → A-4)
-- `AdvancedStrategyManager._calculate_objectives_alignment` (C-13 → A-4)
-- `AdvancedStrategyManager._satisfies_constraints` (C-11 → A-4)
-
-##### Real-time Optimization (5 functions)
-- `StreamingOptimizationEngine._process_single_event` (C-12 → A-4)
-- `StreamingOptimizationEngine._check_common_patterns` (C-11 → A-4)
-- `LiveOptimizer._perform_live_optimization` (C-12 → A-4)
-- `HotSwapper.hot_swap` (C-11 → A-4)
-- `PerformancePredictor.train` (C-11 → A-4)
-
 ##### Caching & Transactions (4 functions)
 - `FileCache.get_content` (C-12 → A-4)
 - `GraphCache.get_graph` (C-11 → A-4)
@@ -145,21 +108,9 @@ Average Complexity: 3.13 ⬇️ (improved by 8.5%) → **Current: 3.06** (furthe
 ##### Security & Middleware (1 function)
 - `CSRFProtection.__call__` (C-12 → A-4)
 
-##### ACE Framework (2 functions)
-- `ACEFramework.process_task` (C-11 → A-4)
-- `ACECurator.curate` (C-11 → A-4)
-
-##### Server Routes & Analytics (4 functions)
+##### Server Routes & Analytics (3 functions)
 - `new_conversation` (C-12 → A-4)
-- `get_prompt_optimization_analytics` (C-11 → A-3)
 - `_replay_event_stream` (C-11 → A-3)
-- `analyze_bullet_quality` (C-13 → A-4)
-
-##### Collaborative Streaming (1 function)
-- `ContextAwareStreamingEngine._validate_semantic_consistency` (C-11 → A-4)
-
-##### Test Functions (1 function)
-- `TestContextPlaybook.test_export_import_playbook` (C-11 → A-4)
 
 #### Phase 3: E-Rated Function (Complexity 34)
 
@@ -302,11 +253,9 @@ def do_everything(data):
 
 #### Core Modules
 - `forge/server/services/conversation_service.py`
-- `forge/metasop/schema_validator.py`
 - `forge/agenthub/codeact_agent/codeact_agent.py`
 - `forge/agenthub/codeact_agent/function_calling.py`
 - `forge/memory/condenser/impl/semantic_condenser.py`
-- `forge/server/routes/metasop.py`
 
 #### Runtime & Command Execution
 - `forge/runtime/utils/command.py`
@@ -326,23 +275,6 @@ def do_everything(data):
 - `forge/agenthub/codeact_agent/tools/whitespace_handler.py`
 - `forge/server/utils/error_formatter.py`
 
-#### MetaSOP Components
-- `forge/metasop/parallel_execution.py`
-- `forge/metasop/causal_reasoning.py`
-- `forge/metasop/collaborative_streaming.py`
-- `forge/metasop/event_emitter.py`
-- `forge/metasop/orchestrator.py`
-
-#### Prompt Optimization
-- `forge/prompt_optimization/evolver.py`
-- `forge/prompt_optimization/tracker.py`
-- `forge/prompt_optimization/advanced/config.py`
-- `forge/prompt_optimization/advanced/strategy_manager.py`
-- `forge/prompt_optimization/realtime/streaming_engine.py`
-- `forge/prompt_optimization/realtime/live_optimizer.py`
-- `forge/prompt_optimization/realtime/hot_swapper.py`
-- `forge/prompt_optimization/realtime/performance_predictor.py`
-
 #### Caching & Transactions
 - `forge/agenthub/readonly_agent/tools/file_cache.py`
 - `forge/agenthub/loc_agent/graph_cache.py`
@@ -355,12 +287,6 @@ def do_everything(data):
 - `forge/server/routes/manage_conversations.py`
 - `forge/server/routes/analytics.py`
 - `forge/server/listen_socket.py`
-
-#### ACE Framework & Examples
-- `forge/metasop/ace/ace_framework.py`
-- `forge/metasop/ace/curator.py`
-- `forge/metasop/ace/examples/playbook_inspection.py`
-- `forge/metasop/ace/tests/test_context_playbook.py`
 
 ### 🎓 Lessons Learned
 

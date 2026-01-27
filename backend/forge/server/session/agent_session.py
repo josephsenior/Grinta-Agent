@@ -9,20 +9,17 @@ from types import MappingProxyType, SimpleNamespace
 from typing import TYPE_CHECKING, Callable, Mapping, cast
 
 from forge.controller import AgentController
-from forge.controller.services.delegate_runtime_provider import (
-    DelegateRuntimeProvider,
-)
 from forge.controller.replay import ReplayManager
 from forge.controller.state.state import State
 from forge.core.exceptions import AgentRuntimeUnavailableError
 from forge.core.logger import forgeLoggerAdapter
 from forge.core.schemas import AgentState
 from forge.events.action import ChangeAgentStateAction, MessageAction
+from forge.events.observation import ErrorObservation
 from forge.events.event import Event, EventSource
 from forge.integrations.provider import (
     CUSTOM_SECRETS_TYPE,
     PROVIDER_TOKEN_TYPE,
-    ProviderHandler,
     CustomSecret,
     ProviderToken,
     ProviderType,
@@ -31,8 +28,8 @@ from forge.server.shared import get_event_service_adapter
 from forge.mcp_client import add_mcp_tools_to_agent
 from forge.memory.memory import Memory
 from forge.runtime import RuntimeAcquireResult, get_runtime_cls, runtime_orchestrator
-from forge.runtime.impl.remote.remote_runtime import RemoteRuntime
 from forge.runtime.runtime_status import RuntimeStatus
+from forge.server.types import LLMAuthenticationError
 from forge.storage.data_models.user_secrets import UserSecrets
 from forge.utils.async_utils import EXECUTOR, call_sync_from_async
 from forge.utils.shutdown_listener import should_continue
@@ -47,21 +44,27 @@ if TYPE_CHECKING:
     from forge.controller.agent import Agent
     from forge.events.stream import EventStream
     from forge.llm.llm_registry import LLMRegistry
+    from forge.integrations.provider import ProviderHandler
     from forge.microagent.microagent import BaseMicroagent
     from forge.runtime.base import Runtime
     from forge.server.services.conversation_stats import ConversationStats
     from forge.storage.files import FileStore
+    from forge.storage.data_models.settings import Settings
+else:
+    # Runtime imports - these are only used at runtime, not for type checking
+    EventStream = object  # type: ignore[assignment,misc]
+    LLMRegistry = object  # type: ignore[assignment,misc]
+    FileStore = object  # type: ignore[assignment,misc]
 
 from forge.core.config import AgentConfig, LLMConfig, ForgeConfig
 from forge.core.main import _setup_runtime_and_repo
 from forge.core.setup import initialize_repository_for_runtime
 
-
 # Backward compatibility: expose EventStream at runtime (tests monkeypatch this symbol).
 try:
-    from forge.events.stream import EventStream as EventStream  # type: ignore
+    from forge.events.stream import EventStream as _EventStream  # type: ignore
 except Exception:  # pragma: no cover - defensive fallback
-    EventStream = object  # type: ignore
+    pass  # Already set to object in else block above
 
 
 class AgentSession:
@@ -74,13 +77,14 @@ class AgentSession:
 
     sid: str
     user_id: str | None
-    event_stream: EventStream
-    llm_registry: LLMRegistry
-    file_store: FileStore
+    event_stream: "EventStream"
+    llm_registry: "LLMRegistry"
+    file_store: "FileStore"
     controller: AgentController | None = None
     runtime: Runtime | None = None
     memory: Memory | None = None
     _starting: bool = False
+    _startup_failed: bool = False
     _started_at: float = 0
     _closed: bool = False
     loop: asyncio.AbstractEventLoop | None = None
@@ -117,9 +121,6 @@ class AgentSession:
         self.conversation_stats = conversation_stats
         self._runtime_acquire_result: RuntimeAcquireResult | None = None
         self._repo_directory: str | None = None
-        self._delegate_env_vars: dict[str, str] | None = None
-        self._delegate_git_tokens: PROVIDER_TOKEN_TYPE | None = None
-        self._delegate_runtime_provider: DelegateRuntimeProvider | None = None
         self._selected_repository: str | None = None
         self._selected_branch: str | None = None
 
@@ -139,6 +140,7 @@ class AgentSession:
         initial_message: MessageAction | None = None,
         conversation_instructions: str | None = None,
         replay_json: str | None = None,
+        user_settings: Settings | None = None,
     ) -> None:
         """Starts the Agent session.
 
@@ -150,6 +152,7 @@ class AgentSession:
         - max_budget_per_task: Per-task budget for the agent.
         - agent_to_llm_config: Mapping of agent to LLM configurations.
         - agent_configs: Additional agent configuration mapping.
+        - user_settings: User settings for this session.
         """
         # Validate session state
         if not self._validate_session_state():
@@ -163,7 +166,13 @@ class AgentSession:
         self._selected_branch = selected_branch
 
         self.config = config
+        error_msg = None
         try:
+            # Validate API keys before starting anything slow
+            if agent_to_llm_config:
+                for llm_config in agent_to_llm_config.values():
+                    self._validate_api_key_for_model(llm_config)
+
             # Setup runtime and providers
             runtime_connected = await self._setup_runtime_and_providers(
                 runtime_name,
@@ -183,6 +192,7 @@ class AgentSession:
                 custom_secrets,
                 config,
                 agent,
+                user_settings=user_settings,
             )
 
             # Setup controller and handle replay
@@ -207,8 +217,11 @@ class AgentSession:
 
             startup_state["finished"] = True
 
+        except Exception as e:
+            error_msg = str(e)
+            raise
         finally:
-            self._finalize_session_startup(startup_state, runtime_connected)
+            self._finalize_session_startup(startup_state, runtime_connected, error_msg)
 
     def _validate_session_state(self) -> bool:
         """Validate that the session can be started."""
@@ -219,6 +232,22 @@ class AgentSession:
             self.logger.warning("Session closed before starting")
             return False
         return True
+
+    def _validate_api_key_for_model(self, llm_config: LLMConfig) -> None:
+        """Validate API key requirements for the given model.
+
+        Args:
+            llm_config: LLM configuration containing API key and model name
+
+        Raises:
+            LLMAuthenticationError: If API key validation fails
+
+        """
+        # Validate API key presence and non-emptiness
+        if not llm_config.api_key or llm_config.api_key.get_secret_value().isspace():
+            raise LLMAuthenticationError(
+                "Error authenticating with the LLM provider. Please check your API key"
+            )
 
     def _initialize_session_startup(self):
         """Initialize session startup state."""
@@ -264,12 +293,14 @@ class AgentSession:
     ) -> None:
         """Setup provider handlers for git and custom secrets."""
         if git_provider_tokens:
+            from forge.integrations.provider import ProviderHandler
+
             provider_handler = ProviderHandler(provider_tokens=git_provider_tokens)
-            await provider_handler.set_event_stream_secrets(self.event_stream)
+            await provider_handler.set_event_stream_secrets(self.event_stream)  # type: ignore[arg-type]
 
         if custom_secrets:
             custom_secrets_handler = UserSecrets(custom_secrets=custom_secrets)
-            custom_secrets_handler.set_event_stream_secrets(self.event_stream)
+            custom_secrets_handler.set_event_stream_secrets(self.event_stream)  # type: ignore[arg-type]
 
     async def _setup_memory_and_mcp_tools(
         self,
@@ -279,6 +310,7 @@ class AgentSession:
         custom_secrets,
         config,
         agent,
+        user_settings: Settings | None = None,
     ) -> None:
         """Setup memory and MCP tools."""
         # Create memory
@@ -289,13 +321,21 @@ class AgentSession:
         repo_directory = self._repo_directory
         if repo_directory is None and selected_repository:
             repo_directory = selected_repository.split("/")[-1]
+        
+        # Determine working directory for memory
+        working_dir = "."
+        if self.runtime:
+            working_dir = str(self.runtime.workspace_root)
+
         self.memory = await self._create_memory(
             selected_repository=selected_repository,
             repo_directory=repo_directory,
             selected_branch=selected_branch,
             conversation_instructions=conversation_instructions,
             custom_secrets_descriptions=custom_secrets_handler.get_custom_secrets_descriptions(),
-            working_dir=config.workspace_mount_path_in_sandbox,
+            working_dir=working_dir,
+            user_id=self.user_id,
+            user_settings=user_settings,
         )
 
         # Add MCP tools if enabled
@@ -344,12 +384,12 @@ class AgentSession:
                     "Adding initial user message and switching agent state to RUNNING",
                     extra={"signal": "agent_start"},
                 )
-                self.event_stream.add_event(initial_message, EventSource.USER)
+                self.event_stream.add_event(initial_message, EventSource.USER)  # type: ignore[attr-defined]
                 self.logger.debug(
                     "Enqueuing ChangeAgentStateAction(RUNNING)",
                     extra={"signal": "agent_start"},
                 )
-                self.event_stream.add_event(
+                self.event_stream.add_event(  # type: ignore[attr-defined]
                     ChangeAgentStateAction(AgentState.RUNNING), EventSource.ENVIRONMENT
                 )
             else:
@@ -361,15 +401,18 @@ class AgentSession:
                     "Enqueuing ChangeAgentStateAction(AWAITING_USER_INPUT)",
                     extra={"signal": "agent_start"},
                 )
-                self.event_stream.add_event(
+                self.event_stream.add_event(  # type: ignore[attr-defined]
                     ChangeAgentStateAction(AgentState.AWAITING_USER_INPUT),
                     EventSource.ENVIRONMENT,
                 )
 
-    def _finalize_session_startup(self, startup_state, runtime_connected) -> None:
+    def _finalize_session_startup(
+        self, startup_state, runtime_connected, error_msg=None
+    ) -> None:
         """Finalize session startup and log results."""
         self._starting = False
         success = startup_state["finished"] and runtime_connected
+        self._startup_failed = not success
         duration = time.time() - startup_state["started_at"]
 
         log_metadata = {
@@ -387,6 +430,25 @@ class AgentSession:
             self.logger.error(
                 f"Agent session start failed in {duration}s", extra=log_metadata
             )
+            # Add error observation to the event stream so the UI can show it
+            if self.event_stream:
+                self.event_stream.add_event(
+                    ErrorObservation(
+                        content=error_msg or "Agent session failed to initialize",
+                    ),
+                    EventSource.ENVIRONMENT,
+                )
+                # Also send an agent state change to ERROR so the UI stops "Initializing..."
+                from forge.events.observation import AgentStateChangedObservation
+
+                self.event_stream.add_event(
+                    AgentStateChangedObservation(
+                        content=error_msg or "Agent session failed to initialize",
+                        agent_state=AgentState.ERROR,
+                        reason=error_msg or "Agent session failed to initialize",
+                    ),
+                    EventSource.ENVIRONMENT,
+                )
 
     async def close(self) -> None:
         """Closes the Agent session."""
@@ -405,7 +467,7 @@ class AgentSession:
                 )
                 break
         if self.event_stream is not None:
-            self.event_stream.close()
+            self.event_stream.close()  # type: ignore[attr-defined]
         if self.controller is not None:
             self.controller.save_state()
             await self.controller.close()
@@ -463,6 +525,8 @@ class AgentSession:
 
         """
         if git_provider_tokens and custom_secrets:
+            from forge.integrations.provider import ProviderHandler
+
             tokens = {
                 provider: token
                 for provider, token in git_provider_tokens.items()
@@ -503,9 +567,7 @@ class AgentSession:
             runtime_cls, git_provider_tokens, custom_secrets
         )
 
-        self.logger.debug(f"Initializing runtime `{runtime_name}` now...")
-        self._delegate_env_vars = dict(env_vars)
-        self._delegate_git_tokens = repo_tokens
+        self.logger.debug(f"Initializing runtime `{runtime_name}` now...", extra={"signal": "runtime_init_start"})
 
         if not self._can_use_shared_runtime_helper(config):
             return await self._create_runtime_direct(
@@ -539,12 +601,28 @@ class AgentSession:
         selected_repository: str | None,
         selected_branch: str | None,
     ) -> bool:
+        # Filter plugins based on config
+        from forge.core.setup import filter_plugins_by_config
+
+        plugins = filter_plugins_by_config(
+            plugins=list(agent.sandbox_plugins),
+            agent=agent,
+            config=config if isinstance(config, ForgeConfig) else None,
+            agent_cls_name=type(agent).__name__,
+        )
+
+        # Log detailed runtime creation start
+        self.logger.debug(
+            f"Creating runtime instance directly: {runtime_cls.__name__}",
+            extra={"signal": "runtime_direct_create", "runtime": runtime_cls.__name__},
+        )
+
         self.runtime = runtime_cls(
             config=config,
             event_stream=self.event_stream,
             llm_registry=self.llm_registry,
             sid=self.sid,
-            plugins=agent.sandbox_plugins,
+            plugins=plugins,
             status_callback=self._status_callback,
             headless_mode=False,
             attach_to_existing=False,
@@ -552,7 +630,14 @@ class AgentSession:
             git_provider_tokens=git_provider_tokens,
         )
         try:
+            connect_start = time.time()
+            self.logger.debug("Connecting to runtime...", extra={"signal": "runtime_connect_start"})
             await self.runtime.connect()
+            connect_duration = time.time() - connect_start
+            self.logger.info(
+                f"Runtime.connect() succeeded in {connect_duration:.2f}s",
+                extra={"signal": "runtime_connect_success", "duration_s": connect_duration},
+            )
         except AgentRuntimeUnavailableError as e:
             self.logger.exception(f"Runtime initialization failed: {e}")
             if self._status_callback:
@@ -592,6 +677,8 @@ class AgentSession:
             if isinstance(git_provider_tokens, MappingProxyType)
             else MappingProxyType(dict(git_provider_tokens or {}))
         )
+        from forge.integrations.provider import ProviderHandler
+
         provider_handler = ProviderHandler(provider_tokens=provider_tokens)
         provider_env_raw = await provider_handler.get_env_vars(expose_secrets=True)
         provider_env = cast(Mapping[str, str], provider_env_raw)
@@ -604,13 +691,10 @@ class AgentSession:
         git_provider_tokens: PROVIDER_TOKEN_TYPE | None,
         custom_secrets: CUSTOM_SECRETS_TYPE | None,
     ) -> MappingProxyType[ProviderType, ProviderToken] | None:
-        if runtime_cls != RemoteRuntime:
-            if isinstance(git_provider_tokens, MappingProxyType):
-                return git_provider_tokens
-            return MappingProxyType(dict(git_provider_tokens or {}))
-        return self.override_provider_tokens_with_custom_secret(
-            git_provider_tokens, custom_secrets
-        )
+        # Remote runtimes have been removed; always return provided tokens
+        if isinstance(git_provider_tokens, MappingProxyType):
+            return git_provider_tokens
+        return MappingProxyType(dict(git_provider_tokens or {}))
 
     def _can_use_shared_runtime_helper(self, config: ForgeConfig) -> bool:
         return all(hasattr(config, attr) for attr in ("runtime", "sandbox", "file_store"))
@@ -643,6 +727,11 @@ class AgentSession:
         repo_initializer: Callable[[Runtime], str | None] | None,
     ) -> bool:
         try:
+            self.logger.debug(
+                "Setting up runtime with shared helper",
+                extra={"signal": "runtime_helper_start", "sid": self.sid},
+            )
+            helper_start = time.time()
             acquire_result = _setup_runtime_and_repo(
                 config,
                 self.sid,
@@ -651,9 +740,14 @@ class AgentSession:
                 headless_mode=False,
                 git_provider_tokens=repo_tokens,
                 repo_initializer=repo_initializer,
-                event_stream=self.event_stream,
+                event_stream=self.event_stream,  # type: ignore[arg-type]
                 env_vars=env_vars,
                 user_id=self.user_id,
+            )
+            helper_duration = time.time() - helper_start
+            self.logger.info(
+                f"_setup_runtime_and_repo completed in {helper_duration:.2f}s",
+                extra={"signal": "runtime_helper_success", "duration_s": helper_duration},
             )
         except AgentRuntimeUnavailableError as e:
             self._handle_runtime_initialization_error(e)
@@ -678,24 +772,6 @@ class AgentSession:
             self._status_callback(
                 "error", RuntimeStatus.ERROR_RUNTIME_DISCONNECTED, str(exc)
             )
-
-    def _get_delegate_runtime_provider(self) -> DelegateRuntimeProvider | None:
-        if self._delegate_env_vars is None or self._delegate_git_tokens is None:
-            return None
-        if self._delegate_runtime_provider is None:
-            self._delegate_runtime_provider = DelegateRuntimeProvider(
-                config=self.config,
-                llm_registry=self.llm_registry,
-                file_store=self.file_store,
-                parent_event_stream=self.event_stream,
-                git_provider_tokens=self._delegate_git_tokens,
-                env_vars=self._delegate_env_vars,
-                user_id=self.user_id,
-                selected_repository=self._selected_repository,
-                selected_branch=self._selected_branch,
-                base_session_id=self.sid,
-            )
-        return self._delegate_runtime_provider
 
     def _create_controller(
         self,
@@ -758,11 +834,6 @@ class AgentSession:
             replay_events=replay_events,
             security_analyzer=self.runtime.security_analyzer if self.runtime else None,
         )
-        setattr(
-            controller,
-            "delegate_runtime_provider",
-            self._get_delegate_runtime_provider(),
-        )
         return (controller, initial_state is not None)
 
     async def _create_memory(
@@ -773,12 +844,24 @@ class AgentSession:
         conversation_instructions: str | None,
         custom_secrets_descriptions: dict[str, str],
         working_dir: str,
+        user_id: str | None = None,
+        user_settings: Settings | None = None,
     ) -> Memory:
         memory = Memory(
             event_stream=self.event_stream,
             sid=self.sid,
             status_callback=self._status_callback,
+            user_id=user_id,
         )
+        # Apply Knowledge Base settings if available
+        if user_settings and user_settings.knowledge_base:
+            kb_settings = user_settings.knowledge_base
+            # If we need to pass more settings to Memory, we can do it here
+            # For now, KnowledgeBaseManager in Memory uses default settings 
+            # or we can add a method to Memory to update KB settings
+            if hasattr(memory, "set_knowledge_base_settings"):
+                memory.set_knowledge_base_settings(kb_settings)
+
         if self.runtime:
             memory.set_runtime_info(
                 self.runtime, custom_secrets_descriptions, working_dir
@@ -817,7 +900,7 @@ class AgentSession:
             )
             self.logger.debug(f"Restored state from session, sid: {self.sid}")
         except Exception as e:
-            if self.event_stream.get_latest_event_id() > 0:
+            if self.event_stream.get_latest_event_id() > 0:  # type: ignore[attr-defined]
                 self.logger.warning(f"State could not be restored: {e}")
             else:
                 self.logger.debug("No events found, no state to restore")

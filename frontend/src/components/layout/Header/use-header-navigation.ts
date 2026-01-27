@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageCircle, User, Info, DollarSign, Bell } from "lucide-react";
+import { MessageCircle, User, Info, Bell } from "lucide-react";
 
 export function useHeaderNavigation() {
   const { t } = useTranslation();
@@ -26,11 +26,6 @@ export function useHeaderNavigation() {
         to: "/help",
         label: t("COMMON$HELP", { defaultValue: "Help" }),
         icon: Info,
-      },
-      {
-        to: "/pricing",
-        label: t("PRICING", { defaultValue: "Pricing" }),
-        icon: DollarSign,
       },
     ],
     [t],

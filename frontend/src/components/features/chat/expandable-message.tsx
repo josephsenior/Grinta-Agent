@@ -134,16 +134,22 @@ function buildBillingNotice({
   config: ReturnType<typeof useConfig>["data"];
   id?: string;
 }) {
-  if (!config?.APP_MODE || config.APP_MODE === "saas") {
+  if (!config?.APP_MODE || config.APP_MODE !== "saas") {
     return null;
   }
 
-  if (id !== "OBSERVATION$BILLING_NOTICE") {
+  if (
+    id !== "OBSERVATION$BILLING_NOTICE" &&
+    id !== "STATUS$ERROR_LLM_OUT_OF_CREDITS"
+  ) {
     return null;
   }
 
   return (
-    <div className="my-2 p-3 bg-warning-500/10 border border-warning-500/20 rounded-lg">
+    <div
+      data-testid="out-of-credits"
+      className="my-2 p-3 bg-warning-500/10 border border-warning-500/20 rounded-lg"
+    >
       <p className="text-sm text-warning-600 dark:text-warning-400">
         <Trans
           i18nKey="OBSERVATION$BILLING_NOTICE"
@@ -206,10 +212,13 @@ function getStatusIcon({
   classes: string;
 }) {
   if (type === "error") {
-    return <XCircle className={classes} />;
+    return <XCircle className={cn(classes, "fill-danger")} />;
   }
   if (success) {
-    return <CheckCircle className={classes} />;
+    return <CheckCircle className={cn(classes, "fill-success")} />;
+  }
+  if (success === false) {
+    return <XCircle className={cn(classes, "fill-danger")} />;
   }
   return null;
 }

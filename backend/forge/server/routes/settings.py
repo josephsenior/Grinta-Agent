@@ -49,7 +49,6 @@ _SETTINGS_CACHE_TTL = 60  # seconds (OPTIMIZED)
 
 SECRET_PLACEHOLDER = "**********"
 _PROVIDER_TOKEN_MAPPING: dict[str, str] = {
-    "forge": "FORGE_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
@@ -551,6 +550,7 @@ async def store_llm_settings(
     Args:
         settings: New settings to merge
         settings_store: Settings storage
+        existing_settings: Optional existing settings to merge with
 
     Returns:
         Merged settings with existing values preserved
@@ -756,7 +756,7 @@ def _build_default_settings_response() -> GETSettingsModel:
     """
     # Create default settings similar to frontend DEFAULT_SETTINGS
     default_settings = Settings(
-        llm_model="Openhands/claude-sonnet-4-20250514",
+        llm_model="anthropic/claude-3-5-sonnet-latest",
         llm_base_url="",
         agent="CodeActAgent",
         language="en",
@@ -774,7 +774,7 @@ def _build_default_settings_response() -> GETSettingsModel:
         email_verified=True,
         mcp_config=None,
         git_user_name="forge",
-        git_user_email="Forge@all-hands.dev",
+        git_user_email="Forge@forge.dev",
         # Autonomy Configuration
         autonomy_level="balanced",
         enable_permissions=True,
@@ -803,3 +803,4 @@ def _build_default_settings_response() -> GETSettingsModel:
             "sandbox_api_key": None,
         },
     )
+

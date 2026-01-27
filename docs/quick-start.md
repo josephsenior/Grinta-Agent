@@ -12,7 +12,7 @@ Get Forge running in 5 minutes.
 
 ```bash
 # 1. Clone
-git clone https://github.com/All-Hands-AI/Forge.git
+git clone https://github.com/Forge/Forge.git
 cd Forge
 
 # 2. Install Python deps
@@ -20,7 +20,7 @@ poetry install
 # OR: pip install -e .
 
 # 3. Install frontend deps
-cd frontend && npm install && cd ..
+cd frontend && pnpm install && cd ..
 
 # 4. Set API key
 export FORGE_API_KEY="your-api-key"
@@ -34,7 +34,7 @@ export FORGE_API_KEY="your-api-key"
 forge start
 
 # Terminal 2: Frontend
-cd frontend && npm run dev
+cd frontend && pnpm run dev
 ```
 
 ## Verify
@@ -64,7 +64,7 @@ pip install -e .
 ```bash
 cd frontend
 rm -rf node_modules
-npm install
+pnpm install
 ```
 
 **No API key?**
@@ -72,4 +72,5 @@ npm install
 - Set in environment or `config.toml`
 
 See [Common Issues](./common-issues.md) for more help.
+
 

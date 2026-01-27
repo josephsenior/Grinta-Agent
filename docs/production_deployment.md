@@ -13,7 +13,7 @@ This guide covers deploying Forge in production environments.
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/All-Hands-AI/Forge.git
+   git clone https://github.com/Forge/Forge.git
    cd Forge
    ```
 
@@ -134,3 +134,4 @@ save_trajectory_path = "/logs/trajectories"
 - **Memory issues:** Adjust resource limits
 - **API errors:** Verify API keys and network connectivity
 - **Container crashes:** Check logs and resource usage
+

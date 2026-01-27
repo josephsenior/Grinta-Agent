@@ -17,35 +17,18 @@ from forge.core.exceptions import (
     FunctionCallNotExistsError,
 )
 
-try:
-    import litellm
-except ImportError:  # pragma: no cover - litellm should be installed in most envs
-    litellm = None  # type: ignore[assignment]
-
-
-def _litellm_exc(name: str) -> Type[Exception]:
-    """Return litellm exception class when available, fallback to Exception."""
-
-    if litellm and hasattr(litellm, name):
-        return getattr(litellm, name)
-
-    class _FallbackLitellmException(Exception):
-        ...
-
-    _FallbackLitellmException.__name__ = f"MissingLitellm{name}"
-    return _FallbackLitellmException
-
-
-APIConnectionError = _litellm_exc("APIConnectionError")
-AuthenticationError = _litellm_exc("AuthenticationError")
-RateLimitError = _litellm_exc("RateLimitError")
-ServiceUnavailableError = _litellm_exc("ServiceUnavailableError")
-APIError = _litellm_exc("APIError")
-InternalServerError = _litellm_exc("InternalServerError")
-Timeout = _litellm_exc("Timeout")
-BadRequestError = _litellm_exc("BadRequestError")
-OpenAIError = _litellm_exc("OpenAIError")
-ContextWindowExceededError = _litellm_exc("ContextWindowExceededError")
+from forge.llm.exceptions import (
+    APIConnectionError,
+    APIError,
+    AuthenticationError,
+    BadRequestError,
+    ContextWindowExceededError,
+    InternalServerError,
+    OpenAIError,
+    RateLimitError,
+    ServiceUnavailableError,
+    Timeout,
+)
 
 if TYPE_CHECKING:
     from forge.controller.services.controller_context import ControllerContext

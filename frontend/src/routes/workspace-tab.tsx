@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   Folder,
   FolderOpen,
@@ -104,7 +105,7 @@ const getFileIcon = (filename: string) => {
       "rb",
     ].includes(ext || "")
   ) {
-    return <FileCode className="w-4 h-4 text-violet-400" />;
+    return <FileCode className="w-4 h-4 text-[#4ec9b0]" />;
   }
 
   // Images
@@ -117,7 +118,7 @@ const getFileIcon = (filename: string) => {
     return <FileText className="w-4 h-4 text-blue-400" />;
   }
 
-  return <File className="w-4 h-4 text-gray-400" />;
+  return <File className="w-4 h-4 text-[#858585]" />;
 };
 
 // Get language from file extension
@@ -151,6 +152,7 @@ const getLanguageFromPath = (path: string): string => {
 };
 
 function WorkspaceFilesTab() {
+  const { t } = useTranslation();
   const { conversationId } = useConversationId();
 
   // State
@@ -182,13 +184,14 @@ function WorkspaceFilesTab() {
       try {
         const content = await Forge.getFile(conversationId, filePath);
         setFileContent(content || "");
-      } catch (err: any) {
+      } catch (err: unknown) {
         logger.error("Failed to load file:", err);
 
         // Check if it's a "is a directory" error
+        const error = err as { message?: string; response?: { data?: string } };
         if (
-          err?.message?.includes("Is a directory") ||
-          err?.response?.data?.includes("Is a directory")
+          error?.message?.includes("Is a directory") ||
+          error?.response?.data?.includes("Is a directory")
         ) {
           toast.error("is-directory", "This is a folder, not a file");
         } else {
@@ -210,8 +213,9 @@ function WorkspaceFilesTab() {
     setLoading(true);
     try {
       const response = await Forge.getFiles(conversationId);
-      const normalized: string[] = (response || []).map((entry: any) =>
-        typeof entry === "string" ? entry : (entry?.path ?? ""),
+      const normalized: string[] = (response || []).map(
+        (entry: string | { path?: string }) =>
+          typeof entry === "string" ? entry : (entry?.path ?? ""),
       );
       setFiles(normalized);
       setFileTree(buildFileTree(normalized));
@@ -227,8 +231,19 @@ function WorkspaceFilesTab() {
         }
       }
     } catch (err) {
-      logger.error("Failed to load workspace files:", err);
-      toast.error("load-files-error", "Failed to load workspace files");
+      const error = err as {
+        message?: string;
+        response?: { data?: { error_code?: string } };
+      };
+      const errorCode = error?.response?.data?.error_code;
+
+      // Don't show error toast for RUNTIME_NOT_READY - it's expected during startup
+      if (errorCode !== "RUNTIME_NOT_READY") {
+        logger.error("Failed to load workspace files:", err);
+        toast.error("load-files-error", "Failed to load workspace files");
+      } else {
+        logger.debug("Runtime not ready yet, will retry automatically");
+      }
     } finally {
       setLoading(false);
     }
@@ -368,8 +383,9 @@ function WorkspaceFilesTab() {
           type="button"
           className={cn(
             "flex items-center gap-2 w-full px-2 py-1.5 rounded transition-all duration-150",
-            "hover:bg-white/5",
-            isSelected && "bg-violet-500/10 border-l-2 border-violet-500",
+            "hover:bg-[var(--bg-tertiary)]",
+            isSelected &&
+              "bg-[var(--border-accent)]/20 border-l-2 border-[var(--border-accent)] shadow-sm",
           )}
           style={{ paddingLeft: `${8 + depth * 12}px` }}
           onClick={() => {
@@ -384,9 +400,9 @@ function WorkspaceFilesTab() {
           {node.type === "folder" && (
             <div className="w-4 h-4 flex items-center justify-center">
               {isExpanded ? (
-                <ChevronDown className="w-3 h-3 text-gray-400" />
+                <ChevronDown className="w-3 h-3 text-[var(--text-tertiary)]" />
               ) : (
-                <ChevronRight className="w-3 h-3 text-gray-400" />
+                <ChevronRight className="w-3 h-3 text-[var(--text-tertiary)]" />
               )}
             </div>
           )}
@@ -396,9 +412,9 @@ function WorkspaceFilesTab() {
             {(() => {
               if (node.type === "folder") {
                 return isExpanded ? (
-                  <FolderOpen className="w-4 h-4 text-violet-400" />
+                  <FolderOpen className="w-4 h-4 text-[var(--text-accent)]" />
                 ) : (
-                  <Folder className="w-4 h-4 text-violet-500" />
+                  <Folder className="w-4 h-4 text-[var(--text-accent)]" />
                 );
               }
               return getFileIcon(node.name);
@@ -409,7 +425,9 @@ function WorkspaceFilesTab() {
           <span
             className={cn(
               "flex-1 truncate text-left text-sm",
-              isSelected ? "text-violet-400 font-medium" : "text-gray-300",
+              isSelected
+                ? "text-[var(--text-primary)] font-medium"
+                : "text-[var(--text-secondary)]",
             )}
           >
             {node.name}
@@ -433,70 +451,70 @@ function WorkspaceFilesTab() {
     : "plaintext";
 
   return (
-    <main className="h-full overflow-hidden flex flex-col bg-black">
-      {/* Header - bolt.new style */}
-      <div className="flex-none border-b border-violet-500/20 bg-black">
-        <div className="flex items-center justify-between px-4 py-2.5">
+    <main className="h-full overflow-hidden flex flex-col bg-transparent">
+      {/* Header - Modern Slate style - more compact */}
+      <div className="flex-none border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40">
+        <div className="flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-2.5">
-            <Folder className="w-4 h-4 text-violet-500" />
-            <h2 className="text-xs font-semibold text-white">Workspace</h2>
+            <div className="p-1.5 rounded-lg bg-[var(--border-accent)]/10">
+              <Folder className="w-3.5 h-3.5 text-[var(--text-accent)]" />
+            </div>
+            <h2 className="text-xs font-semibold text-[var(--text-primary)] uppercase tracking-tight">
+              {t("workspace.title", "Workspace")}
+            </h2>
             <Badge
               variant="secondary"
-              className="text-[10px] bg-violet-500/20 text-violet-400 border-violet-500/30"
+              className="text-[10px] bg-[var(--border-accent)]/10 text-[var(--text-accent)] border-[var(--border-accent)]/20 px-1.5 h-4"
             >
-              {files.length} files
+              {files.length}
             </Badge>
           </div>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={loadFiles}
-            disabled={loading}
-            className="h-7 px-2"
-          >
-            <RefreshCw
-              className={cn("w-3.5 h-3.5", loading && "animate-spin")}
-            />
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={loadFiles}
+              disabled={loading}
+              className="h-7 w-7 p-0 hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]"
+            >
+              <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
+            </Button>
+          </div>
         </div>
 
-        {/* Search */}
-        <div className="px-4 pb-2.5">
+        {/* Search - Integrated into header area */}
+        <div className="px-4 pb-2">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[var(--text-tertiary)]" />
             <input
-              type="text"
               placeholder="Search files..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-white/5 border border-violet-500/20 rounded text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-violet-500 focus:border-violet-500"
+              className="w-full pl-8 pr-3 py-1 text-[11px] bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--border-accent)] focus:ring-1 focus:ring-[var(--border-accent)]/40"
             />
           </div>
         </div>
       </div>
-
       {/* Main Content */}
       <div className="flex-1 flex gap-0 min-h-0 overflow-hidden">
-        {/* File Tree Sidebar */}
-        <aside className="w-80 max-w-[40%] min-w-[280px] border-r border-violet-500/20 bg-black overflow-hidden flex flex-col">
+        {/* File Tree Sidebar - Slightly transparent */}
+        <aside className="w-72 max-w-[40%] min-w-[240px] border-r border-[var(--border-subtle)] bg-[var(--bg-secondary)] overflow-hidden flex flex-col">
           <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 custom-scrollbar">
             {(() => {
               if (loading) {
                 return (
                   <div className="flex items-center justify-center h-32">
-                    <RefreshCw className="w-5 h-5 animate-spin text-gray-400" />
+                    <RefreshCw className="w-4 h-4 animate-spin text-[var(--text-tertiary)]" />
                   </div>
                 );
               }
               if (filteredTree.length === 0) {
                 return (
-                  <div className="flex flex-col items-center justify-center h-32 text-gray-500">
-                    <Folder className="w-8 h-8 mb-2 opacity-50" />
-                    <p className="text-xs">
-                      {searchQuery
-                        ? "No files match your search"
-                        : "No files in workspace"}
+                  <div className="flex flex-col items-center justify-center h-32 text-[var(--text-tertiary)] opacity-60">
+                    <Folder className="w-6 h-6 mb-2" />
+                    <p className="text-[10px] uppercase tracking-widest font-semibold">
+                      {searchQuery ? "No matches" : "Empty Workspace"}
                     </p>
                   </div>
                 );
@@ -511,29 +529,30 @@ function WorkspaceFilesTab() {
         </aside>
 
         {/* File Viewer */}
-        <section className="flex-1 overflow-hidden bg-black flex flex-col">
+        <section className="flex-1 overflow-hidden bg-transparent flex flex-col">
           {selectedFile ? (
             <>
-              {/* File Header */}
-              <div className="flex items-center justify-between px-4 py-2 border-b border-violet-500/20 bg-black">
-                <div className="flex items-center gap-2">
-                  <Eye className="w-3.5 h-3.5 text-violet-500" />
-                  <span className="text-xs font-medium text-white">
+              <div className="flex items-center justify-between px-4 py-1.5 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="p-1 rounded bg-[var(--bg-tertiary)] flex-shrink-0">
+                    <Eye className="w-3 h-3 text-[var(--text-accent)]" />
+                  </div>
+                  <span className="text-[11px] font-medium text-[var(--text-primary)] truncate">
                     {fileName}
                   </span>
                   <Badge
                     variant="outline"
-                    className="text-[10px] border-violet-500/30"
+                    className="text-[9px] px-1 h-3.5 border-[var(--border-subtle)] text-[var(--text-tertiary)] uppercase"
                   >
                     {language}
                   </Badge>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleCopy}
-                    className="h-7 px-2"
+                    className="h-6 px-1.5 hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
                   >
                     <Copy className="w-3 h-3 mr-1" />
                     <span className="text-[10px]">Copy</span>
@@ -542,7 +561,7 @@ function WorkspaceFilesTab() {
                     variant="ghost"
                     size="sm"
                     onClick={handleDownload}
-                    className="h-7 px-2"
+                    className="h-6 px-1.5 hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
                   >
                     <Download className="w-3 h-3 mr-1" />
                     <span className="text-[10px]">Download</span>
@@ -550,11 +569,10 @@ function WorkspaceFilesTab() {
                 </div>
               </div>
 
-              {/* File Content */}
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-hidden bg-[var(--bg-primary)]">
                 {loadingContent ? (
                   <div className="flex items-center justify-center h-full">
-                    <RefreshCw className="w-5 h-5 animate-spin text-gray-400" />
+                    <RefreshCw className="w-5 h-5 animate-spin text-[var(--text-tertiary)]" />
                   </div>
                 ) : (
                   <LazyMonaco
@@ -562,7 +580,7 @@ function WorkspaceFilesTab() {
                     onChange={() => {}}
                     language={language}
                     height="100%"
-                    theme="vs-dark"
+                    theme="modern-slate-editor"
                     options={{
                       readOnly: true,
                       minimap: { enabled: false },
@@ -581,63 +599,83 @@ function WorkspaceFilesTab() {
                       },
                       padding: { top: 12, bottom: 12 },
                     }}
-                    beforeMount={(monaco: any) => {
-                      monaco.editor.defineTheme("pure-black", {
+                    beforeMount={(monaco: unknown) => {
+                      const monacoEditor = monaco as {
+                        editor: {
+                          defineTheme: (
+                            name: string,
+                            theme: Record<string, unknown>,
+                          ) => void;
+                        };
+                      };
+                      monacoEditor.editor.defineTheme("modern-slate-editor", {
                         base: "vs-dark",
                         inherit: true,
                         rules: [],
                         colors: {
-                          "editor.background": "#000000",
-                          "editor.lineHighlightBackground": "#000000",
-                          "editorGutter.background": "#000000",
-                          "editorWidget.background": "#000000",
-                          "editorGroupHeader.tabsBackground": "#000000",
-                          "editorLineNumber.foreground": "#666666",
-                          "editorLineNumber.activeForeground": "#999999",
+                          "editor.background": "#0b0d11",
+                          "editor.lineHighlightBackground": "#12151a",
+                          "editorGutter.background": "#0b0d11",
+                          "editorWidget.background": "#1a1e24",
+                          "editorGroupHeader.tabsBackground": "#12151a",
+                          "editorLineNumber.foreground": "#475569",
+                          "editorLineNumber.activeForeground": "#8b5cf6",
                         },
                       });
-                      monaco.editor.setTheme("pure-black");
                     }}
                   />
                 )}
               </div>
             </>
           ) : (
-            <div className="h-full w-full flex flex-col items-center justify-center text-gray-500 gap-4">
-              <Folder className="w-12 h-12 opacity-50" />
-              <p className="text-sm">Select a file to view its content</p>
+            <div className="h-full w-full flex flex-col items-center justify-center text-[var(--text-tertiary)] gap-6 p-8">
+              <div className="relative">
+                <div className="absolute inset-0 bg-violet-500/10 blur-2xl rounded-full" />
+                <Folder className="w-16 h-16 opacity-20 relative z-10" />
+              </div>
+              <div className="text-center space-y-1.5">
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  {t(
+                    "workspace.selectFile",
+                    "Select a file to view its content",
+                  )}
+                </p>
+                <p className="text-xs text-[var(--text-tertiary)] max-w-[280px]">
+                  Explore your project structure and view source code directly
+                  in the workspace.
+                </p>
+              </div>
 
-              {/* Violet button */}
               <Button
                 onClick={handleImportWorkspace}
                 className={cn(
-                  "px-6 py-2.5 h-auto",
+                  "px-8 py-2.5 h-auto",
                   "bg-gradient-to-r from-violet-600 to-purple-600",
                   "hover:from-violet-500 hover:to-purple-500",
-                  "text-white font-medium text-sm",
-                  "rounded-lg shadow-lg shadow-violet-500/20",
-                  "transition-all duration-200",
+                  "text-white font-semibold text-sm",
+                  "rounded-xl shadow-lg shadow-violet-500/20",
+                  "transition-all duration-300",
                   "hover:shadow-xl hover:shadow-violet-500/30",
-                  "hover:scale-105",
+                  "hover:scale-[1.02] active:scale-[0.98]",
                 )}
               >
                 <FolderPlus className="w-4 h-4 mr-2" />
-                Import Workspace
+                {t("workspace.importWorkspace", "Import Workspace")}
               </Button>
 
-              {/* Hidden file input */}
               <input
                 ref={fileInputRef}
                 type="file"
                 multiple
                 onChange={handleFileUpload}
                 className="hidden"
-                aria-label="Upload files"
               />
 
-              <p className="text-xs text-gray-600">
-                Synced with VSCode workspace
-              </p>
+              <div className="flex items-center gap-2 text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-bold opacity-50 pt-4">
+                <div className="w-8 h-[1px] bg-current" />
+                {t("workspace.syncedWithVSCode", "Synced with VSCode")}
+                <div className="w-8 h-[1px] bg-current" />
+              </div>
             </div>
           )}
         </section>

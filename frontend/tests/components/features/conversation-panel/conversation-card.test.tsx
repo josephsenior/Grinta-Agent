@@ -17,6 +17,10 @@ import { clickOnEditButton } from "./utils";
 
 // We'll use the actual i18next implementation but override the translation function
 
+const mockI18n = {
+  changeLanguage: () => Promise.resolve(),
+};
+
 // Mock the t function to return our custom translations
 vi.mock("react-i18next", async () => {
   const actual = await vi.importActual("react-i18next");
@@ -31,9 +35,7 @@ vi.mock("react-i18next", async () => {
         };
         return translations[key] || key;
       },
-      i18n: {
-        changeLanguage: () => new Promise(() => {}),
-      },
+      i18n: mockI18n,
     }),
   };
 });

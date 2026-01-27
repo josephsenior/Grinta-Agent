@@ -12,19 +12,16 @@ import {
   markAllNotificationsAsRead,
   deleteNotification,
 } from "#/api/notifications";
-import { useIsAuthed } from "./use-is-authed";
 
 export const useNotifications = (
   page: number = 1,
   limit: number = 20,
   read?: boolean,
 ) => {
-  const { data: userIsAuthenticated } = useIsAuthed();
-
   return useQuery({
     queryKey: ["notifications", page, limit, read],
     queryFn: () => listNotifications(page, limit, read),
-    enabled: !!userIsAuthenticated,
+    enabled: true,
     staleTime: 30 * 1000, // 30 seconds
   });
 };
@@ -33,12 +30,10 @@ export const useInfiniteNotifications = (
   limit: number = 20,
   read?: boolean,
 ) => {
-  const { data: userIsAuthenticated } = useIsAuthed();
-
   return useInfiniteQuery({
     queryKey: ["notifications", "infinite", limit, read],
     queryFn: ({ pageParam = 1 }) => listNotifications(pageParam, limit, read),
-    enabled: !!userIsAuthenticated,
+    enabled: true,
     getNextPageParam: (lastPage) => {
       if (lastPage.pagination.has_more) {
         return lastPage.pagination.page + 1;
@@ -51,22 +46,18 @@ export const useInfiniteNotifications = (
 };
 
 export const useNotification = (notificationId: string) => {
-  const { data: userIsAuthenticated } = useIsAuthed();
-
   return useQuery({
     queryKey: ["notifications", notificationId],
     queryFn: () => getNotification(notificationId),
-    enabled: !!userIsAuthenticated && !!notificationId,
+    enabled: !!notificationId,
   });
 };
 
 export const useUnreadCount = () => {
-  const { data: userIsAuthenticated } = useIsAuthed();
-
   return useQuery({
     queryKey: ["notifications", "unread-count"],
     queryFn: getUnreadCount,
-    enabled: !!userIsAuthenticated,
+    enabled: true,
     refetchInterval: 30 * 1000, // Refetch every 30 seconds
     staleTime: 10 * 1000, // 10 seconds
   });

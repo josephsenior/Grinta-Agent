@@ -6,6 +6,9 @@ import { CopyToClipboardButton } from "#/components/shared/buttons/copy-to-clipb
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
+    i18n: {
+      changeLanguage: () => Promise.resolve(),
+    },
   }),
 }));
 

@@ -6,115 +6,242 @@ import os
 from contextlib import contextmanager
 from typing import Any, Iterator
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError, field_validator, model_validator
 
+from forge._canonical import CanonicalModelMetaclass
 from forge.core.logger import LOG_DIR
 from forge.core.logger import forge_logger as logger
 from forge.core.config.api_key_manager import api_key_manager
 from forge.core.config.provider_config import provider_config_manager
 
 
-_SUPPRESS_ENV_EXPORT: bool = False
-
-
 @contextmanager
 def suppress_llm_env_export() -> Iterator[None]:
     """Context manager to temporarily disable environment export during config loading."""
-    global _SUPPRESS_ENV_EXPORT
-    previous = _SUPPRESS_ENV_EXPORT
-    _SUPPRESS_ENV_EXPORT = True
+    previous = api_key_manager.suppress_env_export
+    api_key_manager.suppress_env_export = True
     try:
         yield
     finally:
-        _SUPPRESS_ENV_EXPORT = previous
+        api_key_manager.suppress_env_export = previous
 
 
-class LLMConfig(BaseModel):
+class LLMConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for the LLM model.
 
     Attributes:
-        model: The model to use.
+        model: The model to use (e.g., openai/gpt-4o, anthropic/claude-3-5-sonnet).
         api_key: The API key to use.
-        base_url: The base URL for the API. This is necessary for local LLMs.
+        base_url: The base URL for the API.
         api_version: The version of the API.
-        aws_access_key_id: The AWS access key ID.
-        aws_secret_access_key: The AWS secret access key.
-        aws_region_name: The AWS region name.
         num_retries: The number of retries to attempt.
         retry_multiplier: The multiplier for the exponential backoff.
-        retry_min_wait: The minimum time to wait between retries, in seconds. This is exponential backoff minimum. For models with very low limits, this can be set to 15-20.
-        retry_max_wait: The maximum time to wait between retries, in seconds. This is exponential backoff maximum.
+        retry_min_wait: The minimum time to wait between retries, in seconds.
+        retry_max_wait: The maximum time to wait between retries, in seconds.
         timeout: The timeout for the API.
-        max_message_chars: The approximate max number of characters in the content of an event included in the prompt to the LLM. Larger observations are truncated.
+        max_message_chars: The approximate max number of characters in the content of an event included in the prompt.
         temperature: The temperature for the API.
         top_p: The top p for the API.
         top_k: The top k for the API.
-        custom_llm_provider: The custom LLM provider to use. This is undocumented in Forge, and normally not used. It is documented on the litellm side.
-        max_input_tokens: The maximum number of input tokens. Note that this is currently unused, and the value at runtime is actually the total tokens in OpenAI (e.g. 128,000 tokens for GPT-4).
-        max_output_tokens: The maximum number of output tokens. This is sent to the LLM.
-        input_cost_per_token: The cost per input token. This will available in logs for the user to check.
-        output_cost_per_token: The cost per output token. This will available in logs for the user to check.
-        ollama_base_url: The base URL for the OLLAMA API.
+        custom_llm_provider: The custom LLM provider to use (openai, anthropic, gemini, xai).
+        max_input_tokens: The maximum number of input tokens.
+        max_output_tokens: The maximum number of output tokens.
+        input_cost_per_token: The cost per input token.
+        output_cost_per_token: The cost per output token.
         drop_params: Drop any unmapped (unsupported) params without causing an exception.
-        modify_params: Modify params allows litellm to do transformations like adding a default message, when a message is empty.
-        disable_vision: If model is vision capable, this option allows to disable image processing (useful for cost reduction).
+        modify_params: Modify params allows the SDK to do transformations like adding a default message.
+        disable_vision: If model is vision capable, this option allows to disable image processing.
         caching_prompt: Use the prompt caching feature if provided by the LLM and supported by the provider.
         log_completions: Whether to log LLM completions to the state.
-        log_completions_folder: The folder to log LLM completions to. Required if log_completions is True.
+        log_completions_folder: The folder to log LLM completions to.
         custom_tokenizer: A custom tokenizer to use for token counting.
-        native_tool_calling: Whether to use native tool calling if supported by the model. Can be True, False, or not set.
-        reasoning_effort: The effort to put into reasoning. This is a string that can be one of 'low', 'medium', 'high', or 'none'. Can apply to all reasoning models.
+        native_tool_calling: Whether to use native tool calling if supported by the model.
+        reasoning_effort: The effort to put into reasoning ('low', 'medium', 'high', 'none').
         seed: The seed to use for the LLM.
-        safety_settings: Safety settings for models that support them (like Mistral AI and Gemini).
+        safety_settings: Safety settings for models that support them (like Gemini).
         correct_num: The number of times the draft editor LLM tries to fix an error when editing.
 
     """
 
-    model: str = Field(default="claude-sonnet-4-20250514")
-    api_key: SecretStr | None = Field(default=None)
-    base_url: str | None = Field(default=None)
-    api_version: str | None = Field(default=None)
-    aws_access_key_id: SecretStr | None = Field(default=None)
-    aws_secret_access_key: SecretStr | None = Field(default=None)
-    aws_region_name: str | None = Field(default=None)
-    openrouter_site_url: str = Field(default="https://docs.all-hands.dev/")
-    openrouter_app_name: str = Field(default="forge")
-    num_retries: int = Field(default=5)
-    retry_multiplier: float = Field(default=8)
-    retry_min_wait: int = Field(default=8)
-    retry_max_wait: int = Field(default=64)
-    timeout: int | None = Field(default=None)
-    max_message_chars: int = Field(default=30000)
-    temperature: float = Field(default=0.0)
-    top_p: float = Field(default=1.0)
-    top_k: float | None = Field(default=None)
-    custom_llm_provider: str | None = Field(default=None)
-    max_input_tokens: int | None = Field(default=None)
-    max_output_tokens: int | None = Field(default=None)
-    input_cost_per_token: float | None = Field(default=None)
-    output_cost_per_token: float | None = Field(default=None)
-    ollama_base_url: str | None = Field(default=None)
-    drop_params: bool = Field(default=True)
-    modify_params: bool = Field(default=True)
-    disable_vision: bool | None = Field(default=None)
-    disable_stop_word: bool | None = Field(default=False)
-    caching_prompt: bool = Field(default=True)
-    log_completions: bool = Field(default=False)
-    log_completions_folder: str = Field(default=os.path.join(LOG_DIR, "completions"))
-    custom_tokenizer: str | None = Field(default=None)
-    native_tool_calling: bool | None = Field(default=None)
-    reasoning_effort: str | None = Field(default=None)
-    seed: int | None = Field(default=None)
+    model: str = Field(
+        default="claude-sonnet-4-20250514",
+        min_length=1,
+        description="The LLM model identifier to use"
+    )
+    api_key: SecretStr | None = Field(
+        default=None,
+        description="The API key to use for authentication"
+    )
+    base_url: str | None = Field(
+        default=None,
+        description="The base URL for the API"
+    )
+    api_version: str | None = Field(
+        default=None,
+        description="The version of the API"
+    )
+    num_retries: int = Field(
+        default=5,
+        ge=0,
+        description="The number of retries to attempt on API failures"
+    )
+    retry_multiplier: float = Field(
+        default=8,
+        ge=1.0,
+        description="The multiplier for exponential backoff retry delays"
+    )
+    retry_min_wait: int = Field(
+        default=8,
+        ge=0,
+        description="The minimum time to wait between retries, in seconds"
+    )
+    retry_max_wait: int = Field(
+        default=64,
+        ge=0,
+        description="The maximum time to wait between retries, in seconds"
+    )
+    timeout: int | None = Field(
+        default=None,
+        ge=1,
+        description="The timeout in seconds for the API requests"
+    )
+    max_message_chars: int = Field(
+        default=30000,
+        ge=1,
+        description="The approximate max number of characters in the content of an event included in the prompt"
+    )
+    temperature: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=2.0,
+        description="The temperature for the API (0.0 to 2.0)"
+    )
+    top_p: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="The top_p (nucleus sampling) parameter for the API (0.0 to 1.0)"
+    )
+    top_k: float | None = Field(
+        default=None,
+        ge=1.0,
+        description="The top_k parameter for the API"
+    )
+    custom_llm_provider: str | None = Field(
+        default=None,
+        description="The custom LLM provider to use (openai, anthropic, gemini, xai)"
+    )
+    max_input_tokens: int | None = Field(
+        default=None,
+        ge=1,
+        description="The maximum number of input tokens"
+    )
+    max_output_tokens: int | None = Field(
+        default=None,
+        ge=1,
+        description="The maximum number of output tokens"
+    )
+    input_cost_per_token: float | None = Field(
+        default=None,
+        ge=0.0,
+        description="The cost per input token"
+    )
+    output_cost_per_token: float | None = Field(
+        default=None,
+        ge=0.0,
+        description="The cost per output token"
+    )
+    drop_params: bool = Field(
+        default=True,
+        description="Drop any unmapped (unsupported) params without causing an exception"
+    )
+    modify_params: bool = Field(
+        default=True,
+        description="Modify params allows the SDK to do transformations"
+    )
+    disable_vision: bool | None = Field(
+        default=None,
+        description="If model is vision capable, this option allows to disable image processing"
+    )
+    disable_stop_word: bool | None = Field(
+        default=False,
+        description="Whether to disable stop word handling"
+    )
+    caching_prompt: bool = Field(
+        default=True,
+        description="Use the prompt caching feature if provided by the LLM"
+    )
+    log_completions: bool = Field(
+        default=False,
+        description="Whether to log LLM completions to the state"
+    )
+    log_completions_folder: str = Field(
+        default=os.path.join(LOG_DIR, "completions"),
+        min_length=1,
+        description="The folder to log LLM completions to"
+    )
+    custom_tokenizer: str | None = Field(
+        default=None,
+        description="A custom tokenizer to use for token counting"
+    )
+    native_tool_calling: bool | None = Field(
+        default=None,
+        description="Whether to use native tool calling if supported by the model"
+    )
+    reasoning_effort: str | None = Field(
+        default=None,
+        description="The effort to put into reasoning ('low', 'medium', 'high', 'none')"
+    )
+    seed: int | None = Field(
+        default=None,
+        description="The seed to use for the LLM"
+    )
+
+    @model_validator(mode="after")
+    def set_defaults(self) -> LLMConfig:
+        """Set default values for reasoning_effort and base_url."""
+        # Set reasoning_effort default if not provided
+        if self.reasoning_effort is None:
+            # Gemini models keep None for optimization
+            if not ("gemini" in self.model.lower() or (self.custom_llm_provider and "gemini" in self.custom_llm_provider.lower())):
+                self.reasoning_effort = "high"
+
+        return self
     safety_settings: list[dict[str, str]] | None = Field(
         default=None,
-        description="Safety settings for models that support them (like Mistral AI and Gemini)",
+        description="Safety settings for models that support them (like Gemini)",
     )
     correct_num: int = Field(
         default=5,
-        description="The number of times the draft editor LLM tries to fix an error when editing",
+        description="The number of times the draft editor LLM tries to fix an error",
     )
-    for_routing: bool = Field(default=False)
+    for_routing: bool = Field(
+        default=False,
+        description="Whether this LLM config is used for routing decisions"
+    )
     model_config = ConfigDict(extra="forbid")
+
+    @field_validator("model", "log_completions_folder")
+    @classmethod
+    def validate_required_strings(cls, v: str) -> str:
+        """Validate required string fields are non-empty."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        return validate_non_empty_string(v, name="field")
+
+    @field_validator("base_url")
+    @classmethod
+    def validate_urls(cls, v: str | None) -> str | None:
+        """Validate URL fields if provided."""
+        if v is not None:
+            v = v.strip()
+            from forge.core.security.type_safety import validate_non_empty_string
+            validate_non_empty_string(v, name="url")
+            # Basic URL format check - auto-patch if protocol is missing
+            if v and "://" not in v:
+                v = f"http://{v}"
+            if not v.startswith(("http://", "https://")):
+                raise ValueError("URL must start with http:// or https://")
+        return v
 
     @classmethod
     def from_toml_section(cls, data: dict) -> dict[str, LLMConfig]:
@@ -154,9 +281,10 @@ class LLMConfig(BaseModel):
         try:
             base_config = cls.model_validate(base_data)
             llm_mapping["llm"] = base_config
-        except ValidationError:
-            logger.debug(
-                "Cannot parse [llm] config from toml. Continuing with defaults."
+        except ValidationError as e:
+            logger.warning(
+                "Cannot parse [llm] config from toml. Continuing with defaults.\nError: %s",
+                e,
             )
             # If base config fails, create a default one
             base_config = cls()
@@ -187,38 +315,44 @@ class LLMConfig(BaseModel):
         """
         super().model_post_init(__context)
 
-        # SECURE API KEY HANDLING - Use the new API key manager
-        has_explicit_key = (
-            self.api_key is not None
-            and self.api_key.get_secret_value()
-            and self.api_key.get_secret_value().strip()
-        )
-        object.__setattr__(self, "_has_explicit_api_key", bool(has_explicit_key))
+        if not api_key_manager.suppress_env_export:
+            # SECURE API KEY HANDLING - Use the new API key manager
+            key_val = ""
+            if self.api_key is not None:
+                try:
+                    key_val = self.api_key.get_secret_value()
+                except AttributeError:
+                    key_val = str(self.api_key)
 
-        if not _SUPPRESS_ENV_EXPORT and not has_explicit_key:
-            try:
-                # Get the correct API key for this model/provider
-                correct_api_key = api_key_manager.get_api_key_for_model(
-                    self.model, self.api_key
-                )
+            has_explicit_key = bool(key_val and key_val.strip())
+            object.__setattr__(self, "_has_explicit_api_key", has_explicit_key)
 
-                if correct_api_key:
-                    self.api_key = correct_api_key
-                    logger.debug(f"Set correct API key for model: {self.model}")
-                else:
-                    # Try to set from environment as fallback
-                    provider = api_key_manager._extract_provider(self.model)
-                    env_key = api_key_manager._get_provider_key_from_env(provider)
-                    if env_key:
-                        self.api_key = SecretStr(env_key)
-                        logger.debug(f"Loaded API key from environment for {provider}")
+            if not has_explicit_key:
+                try:
+                    # Get the correct API key for this model/provider
+                    correct_api_key = api_key_manager.get_api_key_for_model(
+                        self.model, self.api_key
+                    )
+
+                    if correct_api_key:
+                        self.api_key = correct_api_key
+                        logger.debug(f"Set correct API key for model: {self.model}")
                     else:
-                        logger.warning(f"No API key available for model: {self.model}")
-            except Exception as e:
-                logger.error(f"Error in API key handling: {e}")
+                        # Try to set from environment as fallback
+                        provider = api_key_manager._extract_provider(self.model)
+                        env_key = api_key_manager._get_provider_key_from_env(provider)
+                        if env_key:
+                            self.api_key = SecretStr(env_key)
+                            logger.debug(f"Loaded API key from environment for {provider}")
+                        else:
+                            logger.warning(f"No API key available for model: {self.model}")
+                except Exception as e:
+                    logger.error(f"Error in API key handling: {e}")
 
-            # Set environment variables for LiteLLM using the secure manager unless suppressed
-            api_key_manager.set_environment_variables(self.model, self.api_key)
+            # ALWAYS sync with api_key_manager if we have a key (explicit or loaded)
+            if self.api_key:
+                api_key_manager.set_api_key(self.model, self.api_key)
+                api_key_manager.set_environment_variables(self.model, self.api_key)
 
         # CRITICAL: Clean base_url to prevent protocol errors
         self._clean_base_url()
@@ -231,21 +365,7 @@ class LLMConfig(BaseModel):
 
     def _set_provider_environment_variables(self) -> None:
         """Set provider-specific environment variables."""
-        # OpenRouter-specific variables
-        if self.openrouter_site_url:
-            os.environ["OR_SITE_URL"] = self.openrouter_site_url
-        if self.openrouter_app_name:
-            os.environ["OR_APP_NAME"] = self.openrouter_app_name
-
-        # AWS credentials for Bedrock
-        if self.aws_access_key_id:
-            os.environ["AWS_ACCESS_KEY_ID"] = self.aws_access_key_id.get_secret_value()
-        if self.aws_secret_access_key:
-            os.environ["AWS_SECRET_ACCESS_KEY"] = (
-                self.aws_secret_access_key.get_secret_value()
-            )
-        if self.aws_region_name:
-            os.environ["AWS_REGION_NAME"] = self.aws_region_name
+        pass
 
     def _clean_base_url(self) -> None:
         """Clean base_url and other parameters using provider-aware validation."""
@@ -277,7 +397,3 @@ class LLMConfig(BaseModel):
         # Set reasoning_effort to 'high' by default for non-Gemini models
         if self.reasoning_effort is None and "gemini-2.5-pro" not in self.model:
             self.reasoning_effort = "high"
-
-        # Set API version for Azure models
-        if self.model.startswith("azure") and self.api_version is None:
-            self.api_version = "2024-12-01-preview"

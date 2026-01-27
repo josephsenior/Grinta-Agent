@@ -23,7 +23,7 @@ async def test_github_service_token_handling():
     assert headers["Authorization"] == "Bearer test-token"
     assert headers["Accept"] == "application/vnd.github.v3+json"
     service = GitHubService(user_id="test-user")
-    assert service.token == SecretStr("")
+    assert service.token is None
 
 
 @pytest.mark.asyncio
@@ -212,12 +212,12 @@ async def test_github_search_repositories_with_organizations():
             {
                 "id": 1,
                 "name": "forge",
-                "full_name": "All-Hands-AI/Forge",
+                "full_name": "Forge/Forge",
                 "private": False,
-                "html_url": "https://github.com/All-Hands-AI/Forge",
-                "clone_url": "https://github.com/All-Hands-AI/forge.git",
+                "html_url": "https://github.com/Forge/Forge",
+                "clone_url": "https://github.com/Forge/forge.git",
                 "pushed_at": "2023-01-01T00:00:00Z",
-                "owner": {"login": "All-Hands-AI", "type": "Organization"},
+                "owner": {"login": "Forge", "type": "Organization"},
             }
         ]
     }
@@ -226,7 +226,7 @@ async def test_github_search_repositories_with_organizations():
         patch.object(
             service,
             "get_user_organizations",
-            return_value=["All-Hands-AI", "example-org"],
+            return_value=["Forge", "example-org"],
         ),
         patch.object(
             service, "_make_request", return_value=(mock_search_response, {})
@@ -242,12 +242,12 @@ async def test_github_search_repositories_with_organizations():
         assert user_params["q"] == "Forge user:testuser"
         org1_call = calls[1]
         org1_params = org1_call[0][1]
-        assert org1_params["q"] == "Forge org:All-Hands-AI"
+        assert org1_params["q"] == "Forge org:Forge"
         org2_call = calls[2]
         org2_params = org2_call[0][1]
         assert org2_params["q"] == "Forge org:example-org"
         assert len(repositories) == 3
-        assert all((repo.full_name == "All-Hands-AI/Forge" for repo in repositories))
+        assert all((repo.full_name == "Forge/Forge" for repo in repositories))
 
 
 @pytest.mark.asyncio
@@ -255,12 +255,12 @@ async def test_github_get_user_organizations():
     """Test that get_user_organizations fetches user's organizations."""
     service = GitHubService(user_id="test-user", token=SecretStr("test-token"))
     mock_orgs_response = [
-        {"login": "All-Hands-AI", "id": 1},
+        {"login": "Forge", "id": 1},
         {"login": "example-org", "id": 2},
     ]
     with patch.object(service, "_make_request", return_value=(mock_orgs_response, {})):
         orgs = await service.get_user_organizations()
-        assert orgs == ["All-Hands-AI", "example-org"]
+        assert orgs == ["Forge", "example-org"]
 
 
 @pytest.mark.asyncio
@@ -333,3 +333,4 @@ async def test_github_service_graphql_url_github_com():
         call_args = mock_client.post.call_args
         actual_url = call_args[0][0]
         assert actual_url == "https://api.github.com/graphql"
+

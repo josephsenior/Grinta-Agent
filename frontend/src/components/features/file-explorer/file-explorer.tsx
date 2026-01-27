@@ -60,13 +60,13 @@ interface FileExplorerProps {
 const getStatusColor = (status?: string) => {
   switch (status) {
     case "new":
-      return "bg-green-500/10 text-green-500 border-green-500/30";
+      return "bg-[var(--text-success)]/10 text-[var(--text-success)] border-[var(--text-success)]/30";
     case "modified":
-      return "bg-yellow-500/10 text-yellow-500 border-yellow-500/30";
+      return "bg-[var(--border-accent)]/10 text-[var(--border-accent)] border-[var(--border-accent)]/30";
     case "deleted":
-      return "bg-red-500/10 text-red-500 border-red-500/30";
+      return "bg-[var(--text-danger)]/10 text-[var(--text-danger)] border-[var(--text-danger)]/30";
     default:
-      return "bg-gray-500/10 text-gray-500 border-gray-500/30";
+      return "bg-[var(--text-tertiary)]/10 text-[var(--text-tertiary)] border-[var(--text-tertiary)]/30";
   }
 };
 
@@ -160,9 +160,9 @@ function NodeIndicator({
   return (
     <div className="w-4 h-4 flex items-center justify-center">
       {isExpanded ? (
-        <ChevronDown className="w-3 h-3 text-text-secondary" />
+        <ChevronDown className="w-3 h-3 text-[var(--text-tertiary)]" />
       ) : (
-        <ChevronRight className="w-3 h-3 text-text-secondary" />
+        <ChevronRight className="w-3 h-3 text-[var(--text-tertiary)]" />
       )}
     </div>
   );
@@ -179,9 +179,9 @@ function NodeIcon({
     return (
       <div className="flex-shrink-0">
         {isExpanded ? (
-          <FolderOpen className="w-4 h-4 text-violet-500" />
+          <FolderOpen className="w-4 h-4 text-[var(--text-success)]" />
         ) : (
-          <Folder className="w-4 h-4 text-brand-400" />
+          <Folder className="w-4 h-4 text-[var(--text-success)]" />
         )}
       </div>
     );
@@ -209,7 +209,9 @@ function NodeLabel({
     <span
       className={cn(
         "flex-1 truncate",
-        isSelected ? "text-violet-500 font-medium" : "text-text-primary",
+        isSelected
+          ? "text-[var(--text-primary)] font-medium"
+          : "text-[var(--text-primary)]",
       )}
     >
       {node.name}
@@ -341,10 +343,10 @@ function renderFileNode({
     <div key={node.path}>
       <div
         className={cn(
-          "flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer group transition-all duration-200",
-          "hover:bg-brand-500/5 hover:border-l-2 hover:border-brand-500/30",
+          "flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group transition-all duration-150",
+          "hover:bg-[var(--bg-tertiary)]",
           isSelected &&
-            "bg-brand-500/10 border-l-2 border-brand-500 shadow-sm shadow-brand-500/10",
+            "bg-[var(--bg-elevated)] border-l-2 border-[var(--border-accent)]",
           "text-sm",
         )}
         style={{ paddingLeft: `${8 + depth * 16}px` }}
@@ -507,7 +509,7 @@ export function FileExplorer({
     return (
       <div
         className={cn(
-          "flex flex-col h-full bg-background-primary border border-border rounded-lg",
+          "flex flex-col h-full bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl overflow-hidden",
           className,
         )}
       >
@@ -515,7 +517,7 @@ export function FileExplorer({
           className="flex items-center justify-center h-32"
           data-testid="file-explorer-loading"
         >
-          <div className="text-text-secondary">Loading...</div>
+          <div className="text-[var(--text-tertiary)] italic">Loading...</div>
         </div>
       </div>
     );
@@ -524,24 +526,21 @@ export function FileExplorer({
   return (
     <div
       className={cn(
-        "flex flex-col h-full bg-black/95 backdrop-blur-xl border border-brand-500/10 rounded-lg shadow-lg",
+        "flex flex-col h-full bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded-xl overflow-hidden shadow-sm",
         className,
       )}
     >
-      {/* Header - Violet themed */}
-      <div className="flex items-center justify-between p-3 border-b border-brand-500/10 bg-brand-500/5">
+      {/* Header - Modern Slate themed */}
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)]">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-foreground">
+          <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
             {t("fileExplorer.files", "Files")}
           </h3>
           <Badge
             variant="secondary"
-            className="text-xs bg-brand-500/20 text-brand-400 border-brand-500/30"
+            className="text-[10px] bg-[var(--border-accent)]/10 text-[var(--text-accent)] border-[var(--border-accent)]/20 px-1.5 h-4"
           >
-            {files.length}{" "}
-            {files.length === 1
-              ? t("fileExplorer.file", "file")
-              : t("fileExplorer.files", "files")}
+            {files.length}
           </Badge>
         </div>
 
@@ -551,23 +550,23 @@ export function FileExplorer({
             size="sm"
             onClick={loadFiles}
             disabled={loading}
-            className="h-7 w-7 p-0"
+            className="h-7 w-7 p-0 hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
           >
             <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
           </Button>
         </div>
       </div>
 
-      {/* Search - Violet themed */}
+      {/* Search - Modern Slate themed */}
       {showSearch && (
-        <div className="p-3 border-b border-brand-500/10">
+        <div className="px-3 py-2 border-b border-[var(--border-primary)] bg-[var(--bg-primary)]">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-violet-500/60" />
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-tertiary)]" />
             <Input
               placeholder="Search files..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 h-8 text-sm bg-brand-500/5 border-brand-500/20 focus:border-brand-500/40 focus:ring-brand-500/20"
+              className="pl-8 h-8 text-xs bg-[var(--bg-input)] border-[var(--border-primary)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:border-[var(--border-accent)] focus:ring-1 focus:ring-[var(--border-accent)]/20 rounded-lg"
             />
           </div>
         </div>
@@ -580,11 +579,11 @@ export function FileExplorer({
             className="flex items-center justify-center h-32"
             data-testid="file-explorer-loading"
           >
-            <RefreshCw className="w-5 h-5 animate-spin text-text-secondary" />
+            <RefreshCw className="w-5 h-5 animate-spin text-[var(--text-tertiary)]" />
           </div>
         )}
         {!loading && filteredTree.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-32 text-text-secondary">
+          <div className="flex flex-col items-center justify-center h-32 text-[var(--text-tertiary)]">
             <File className="w-8 h-8 mb-2 opacity-50" />
             <p className="text-sm">
               {t("fileExplorer.noFilesFound", "No files found")}

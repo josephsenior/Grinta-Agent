@@ -20,6 +20,24 @@ export const useConversationConfig = () => {
     enabled: runtimeIsReady && !!conversationId,
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 15, // 15 minutes
+    retry: (failureCount, error: unknown) => {
+      // Don't retry on 404 - endpoint might not be available
+      if (
+        error &&
+        typeof error === "object" &&
+        "response" in error &&
+        error.response &&
+        typeof error.response === "object" &&
+        "status" in error.response &&
+        error.response.status === 404
+      ) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    meta: {
+      disableToast: true, // Don't show toast for optional endpoints
+    },
   });
 
   React.useEffect(() => {

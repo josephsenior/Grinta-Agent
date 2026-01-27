@@ -23,24 +23,24 @@ export function SettingsModal({ onClose, settings }: SettingsModalProps) {
     <ModalBackdrop>
       <Card
         data-testid="ai-config-modal"
-        className="bg-base-secondary min-w-[320px] sm:min-w-[384px] m-2 sm:m-4 rounded-xl border border-border shadow-none backdrop-blur-0 lavender-gradient-border lavender-gradient-border-hover max-w-[95vw] sm:max-w-none"
+        className="bg-background-secondary min-w-[320px] sm:min-w-[384px] m-2 sm:m-4 rounded-lg border border-border shadow-lg max-w-[95vw] sm:max-w-none"
       >
         <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3">
-          <span className="section-heading text-sm sm:text-base">
+          <span className="text-sm sm:text-base font-semibold text-foreground-secondary">
             {t(I18nKey.AI_SETTINGS$TITLE)}
           </span>
-          <p className="text-xs text-basic leading-relaxed">
+          <p className="text-xs text-foreground-secondary leading-relaxed">
             {t(I18nKey.SETTINGS$DESCRIPTION)}{" "}
             {t(I18nKey.SETTINGS$FOR_OTHER_OPTIONS)}
             <Link
               data-testid="advanced-settings-link"
               to="/settings"
-              className="underline underline-offset-2 text-white"
+              className="underline underline-offset-2 text-[var(--color-icon)] hover:text-brand-500"
             >
               {t(I18nKey.SETTINGS$SEE_ADVANCED_SETTINGS)}
             </Link>
           </p>
-          <Separator className="mt-3 opacity-50" />
+          <Separator className="mt-3 opacity-50 border-border" />
         </CardHeader>
         <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
           {aiConfigOptions.error && (

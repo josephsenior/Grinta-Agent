@@ -17,7 +17,7 @@ from forge.llm.metrics import Metrics
 
 @dataclass
 class DummyModelResponse:
-    """Minimal stand-in for LiteLLM's ModelResponse."""
+    """Minimal stand-in for a ModelResponse."""
 
     payload: dict[str, str]
 
@@ -27,8 +27,6 @@ class DummyModelResponse:
 
 def test_dumps_handles_custom_objects(monkeypatch: pytest.MonkeyPatch) -> None:
     """ForgeJSONEncoder should serialize Forge-specific types without error."""
-    monkeypatch.setattr(forge_json, "ModelResponse", DummyModelResponse)
-
     event = CmdOutputObservation(content="output", command="ls")
     event.timestamp = dt.datetime(2024, 1, 1, 12, 0, 0)
     metrics = Metrics(model_name="demo")

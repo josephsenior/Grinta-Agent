@@ -16,10 +16,13 @@ function Terminal() {
   });
 
   return (
-    <div className="h-full p-3 min-h-0 flex-grow bg-background-primary">
+    <div className="h-full p-4 min-h-0 flex-grow bg-[var(--bg-primary)]">
       {isRuntimeInactive && (
-        <div className="w-full h-full flex items-center text-center justify-center text-2xl text-foreground-secondary">
-          {t("DIFF_VIEWER$WAITING_FOR_RUNTIME")}
+        <div className="w-full h-full flex flex-col items-center text-center justify-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--text-accent)]" />
+          <div className="text-sm font-medium text-[var(--text-tertiary)] uppercase tracking-widest">
+            {t("DIFF_VIEWER$WAITING_FOR_RUNTIME")}
+          </div>
         </div>
       )}
       <div
@@ -27,7 +30,7 @@ function Terminal() {
         className={
           isRuntimeInactive
             ? "w-0 h-0 opacity-0 overflow-hidden"
-            : "h-full w-full rounded-lg border border-border/30 overflow-hidden"
+            : "h-full w-full rounded-xl border border-[var(--border-primary)] overflow-hidden shadow-inner bg-[var(--bg-input)]"
         }
       />
     </div>

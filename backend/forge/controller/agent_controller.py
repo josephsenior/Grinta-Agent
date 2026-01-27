@@ -21,37 +21,20 @@ if TYPE_CHECKING:
     from forge.security.analyzer import SecurityAnalyzer
     from forge.server.services.conversation_stats import ConversationStats
     from forge.storage.files import FileStore
-_litellm_exceptions: ModuleType | None
-try:  # pragma: no cover - optional dependency
-    from litellm import exceptions as _litellm_exceptions  # type: ignore
-except Exception:  # pragma: no cover - litellm not available
-    _litellm_exceptions = None
-
-
-def _get_litellm_exception(
-    name: str, base: type[Exception] = Exception
-) -> type[Exception]:
-    """Return litellm exception type when available, else create a stub."""
-    if _litellm_exceptions is not None and hasattr(_litellm_exceptions, name):
-        exc = getattr(_litellm_exceptions, name)
-        if isinstance(exc, type):
-            return exc
-    return type(name, (base,), {})
-
-
-# Tolerant LiteLLM exception imports across versions/environments
-APIConnectionError = _get_litellm_exception("APIConnectionError")
-APIError = _get_litellm_exception("APIError")
-AuthenticationError = _get_litellm_exception("AuthenticationError")
-BadRequestError = _get_litellm_exception("BadRequestError")
-ContentPolicyViolationError = _get_litellm_exception("ContentPolicyViolationError")
-ContextWindowExceededError = _get_litellm_exception("ContextWindowExceededError")
-InternalServerError = _get_litellm_exception("InternalServerError")
-NotFoundError = _get_litellm_exception("NotFoundError")
-OpenAIError = _get_litellm_exception("OpenAIError")
-RateLimitError = _get_litellm_exception("RateLimitError")
-ServiceUnavailableError = _get_litellm_exception("ServiceUnavailableError")
-Timeout = _get_litellm_exception("Timeout")
+from forge.llm.exceptions import (
+    APIConnectionError,
+    APIError,
+    AuthenticationError,
+    BadRequestError,
+    ContentPolicyViolationError,
+    ContextWindowExceededError,
+    InternalServerError,
+    NotFoundError,
+    OpenAIError,
+    RateLimitError,
+    ServiceUnavailableError,
+    Timeout,
+)
 
 from forge.controller.agent import Agent
 from forge.controller.services import (
@@ -62,7 +45,6 @@ from forge.controller.services import (
     ConfirmationService,
     CircuitBreakerService,
     ControllerContext,
-    DelegateService,
     IterationGuardService,
     IterationService,
     LifecycleService,
@@ -97,7 +79,6 @@ from forge.events.action import (
     Action,
     ActionConfirmationStatus,
     ActionSecurityRisk,
-    AgentDelegateAction,
     AgentFinishAction,
     AgentRejectAction,
     BrowseInteractiveAction,
@@ -105,7 +86,6 @@ from forge.events.action import (
     CmdRunAction,
     FileEditAction,
     FileReadAction,
-    IPythonRunCellAction,
     MessageAction,
     NullAction,
     SystemMessageAction,
@@ -146,14 +126,11 @@ class AgentController:
     confirmation_mode: bool
     agent_to_llm_config: dict[str, LLMConfig]
     agent_configs: dict[str, AgentConfig]
-    parent: AgentController | None = None
-    delegate: AgentController | None = None
     _closed: bool = False
     _cached_first_user_message: MessageAction | None = None
     user_id: str | None
     file_store: "FileStore | None"
     headless_mode: bool
-    is_delegate: bool
     security_analyzer: "SecurityAnalyzer | None"
     status_callback: Callable | None
     state_tracker: "StateTracker"
@@ -183,7 +160,6 @@ class AgentController:
         user_id: str | None = None,
         confirmation_mode: bool = False,
         initial_state: State | None = None,
-        is_delegate: bool = False,
         headless_mode: bool = True,
         status_callback: Callable | None = None,
         replay_events: list[Event] | None = None,
@@ -204,7 +180,6 @@ class AgentController:
             user_id: The user ID associated with the agent
             confirmation_mode: Whether to enable confirmation mode for agent actions
             initial_state: The initial state of the controller
-            is_delegate: Whether this controller is a delegate
             headless_mode: Whether the agent is run in headless mode
             status_callback: Optional callback function to handle status updates
             replay_events: A list of logs to replay
@@ -235,7 +210,6 @@ class AgentController:
         )
         self.observation_service.set_action_service(self.action_service)
         self.action_execution = ActionExecutionService(self._controller_context)
-        self.delegate_service = DelegateService(self._controller_context)
         self.state_service = StateTransitionService(self._controller_context)
         self.telemetry_service = TelemetryService(self._controller_context)
         self.retry_service = RetryService(self._controller_context)
@@ -250,7 +224,6 @@ class AgentController:
             user_id,
             file_store,
             headless_mode,
-            is_delegate,
             conversation_stats,
             status_callback,
             security_analyzer,
@@ -357,10 +330,9 @@ class AgentController:
         if set_stop_state:
             await self.set_agent_state_to(AgentState.STOPPED)
         self.state_tracker.close(self.event_stream)
-        if not self.is_delegate:
-            self.event_stream.unsubscribe(
-                EventStreamSubscriber.AGENT_CONTROLLER, self.id
-            )
+        self.event_stream.unsubscribe(
+            EventStreamSubscriber.AGENT_CONTROLLER, self.id
+        )
         await self.retry_service.shutdown()
 
     def log(self, level: str, message: str, extra: dict | None = None) -> None:
@@ -509,8 +481,6 @@ class AgentController:
         """Determine if agent should step for action events."""
         if isinstance(event, MessageAction):
             return self._should_step_for_message_action(event)
-        if isinstance(event, AgentDelegateAction):
-            return True
         if isinstance(event, CondensationAction):
             return True
         return isinstance(event, CondensationRequestAction)
@@ -535,9 +505,6 @@ class AgentController:
         In general, the agent should take a step if it receives a message from the user,
         or observes something in the environment (after acting).
         """
-        if self.delegate is not None:
-            return False
-
         if isinstance(event, Action):
             return self._should_step_for_action(event)
         if isinstance(event, Observation):
@@ -552,17 +519,6 @@ class AgentController:
             event (Event): The incoming event to process.
 
         """
-        if self.delegate is not None:
-            delegate_state = self.delegate.get_agent_state()
-            if delegate_state not in (
-                AgentState.FINISHED,
-                AgentState.ERROR,
-                AgentState.REJECTED,
-            ):
-                self._schedule_coroutine(self.delegate._on_event(event))
-            else:
-                self.delegate_service.end_delegate()
-            return
         self._run_or_schedule(self._on_event(event))
 
     @staticmethod
@@ -618,26 +574,6 @@ class AgentController:
             await self._handle_action(event)
         elif isinstance(event, Observation):
             await self._handle_observation(event)
-        # Stepping decisions rely solely on should_step + pending action preconditions
-        if self.should_step(event):
-            self.log(
-                "warning",
-                f"🚀 STEPPING agent after event: {type(event).__name__} (id={getattr(event, 'id', 'NO_ID')})",
-                extra={"msg_type": "STEPPING_AGENT"},
-            )
-            await self._step_with_exception_handling()
-        elif isinstance(event, MessageAction) and event.source == EventSource.USER:
-            self.log(
-                "warning",
-                f"Not stepping agent after user message. Current state: {
-                    self.get_agent_state()
-                }",
-                extra={"msg_type": "NOT_STEPPING_AFTER_USER_MESSAGE"},
-            )
-
-    async def _handle_delegate_action(self, action: AgentDelegateAction) -> None:
-        """Handle agent delegation action."""
-        await self.delegate_service.handle_delegate_action(action)
 
     async def _handle_finish_action(self, action: AgentFinishAction) -> None:
         """Handle agent finish action with completion validation.
@@ -748,7 +684,7 @@ class AgentController:
         await self.set_agent_state_to(AgentState.REJECTED)
 
     async def _handle_action(self, action: Action) -> None:
-        """Handles an Action from the agent or delegate."""
+        """Handles an Action from the agent."""
         if isinstance(action, ChangeAgentStateAction):
             try:
                 target_state = AgentState(action.agent_state)
@@ -761,9 +697,6 @@ class AgentController:
                 await self.set_agent_state_to(target_state)
         elif isinstance(action, MessageAction):
             await self._handle_message_action(action)
-        elif isinstance(action, AgentDelegateAction):
-            await self.delegate_service.handle_delegate_action(action)
-            return
         elif isinstance(action, AgentFinishAction):
             await self._handle_finish_action(action)
         elif isinstance(action, AgentRejectAction):
@@ -835,7 +768,6 @@ class AgentController:
 
     async def set_agent_state_to(self, new_state: AgentState) -> None:
         """Delegate to the state transition service for consistency."""
-
         await self.state_service.set_agent_state(new_state)
 
     def get_agent_state(self) -> AgentState:
@@ -851,7 +783,7 @@ class AgentController:
         """Log step information for debugging."""
         self.log(
             "debug",
-            f"LEVEL {self.state.delegate_level} LOCAL STEP {
+            f"LOCAL STEP {
                 self.state.get_local_step()
             } GLOBAL STEP {self.state.iteration_flag.current_value}",
             extra={"msg_type": "STEP"},
@@ -874,7 +806,7 @@ class AgentController:
         )
 
     async def _step(self) -> None:
-        """Executes a single step of the parent or delegate agent. Detects stuck agents and limits on the number of iterations and the task budget."""
+        """Executes a single step of the agent. Detects stuck agents and limits on the number of iterations and the task budget."""
         if not self.step_prerequisites.can_step():
             return
 
@@ -984,20 +916,12 @@ class AgentController:
         return self.state_tracker.get_trajectory(include_screenshots)
 
     def _is_stuck(self) -> bool:
-        """Checks if the agent or its delegate is stuck in a loop.
+        """Checks if the agent is stuck in a loop.
 
         Returns:
             bool: True if the agent is stuck, False otherwise.
 
         """
-        # Prefer delegate's stuck status if a delegate exists
-        delegate = getattr(self, "delegate", None)
-        if delegate is not None and hasattr(delegate, "_is_stuck"):
-            try:
-                return bool(delegate._is_stuck())
-            except Exception:  # pragma: no cover - defensive
-                pass
-        # Fallback to this controller's stuck service
         return self.stuck_service.is_stuck()
 
     def __repr__(self) -> str:
@@ -1023,7 +947,7 @@ class AgentController:
             getattr(self, 'agent', '<uninitialized>')!r
         }, event_stream={getattr(self, 'event_stream', '<uninitialized>')!r}, state={
             getattr(self, 'state', '<uninitialized>')!r
-        }, delegate={getattr(self, 'delegate', '<uninitialized>')!r}, _pending_action={
+        }, _pending_action={
             pending_action_info
         })"
 
@@ -1050,9 +974,6 @@ class AgentController:
         self, events: list[Event] | None = None
     ) -> MessageAction | None:
         """Get the first user message for this agent.
-
-        For regular agents, this is the first user message from the beginning (start_id=0).
-        For delegate agents, this is the first user message after the delegate's start_id.
 
         Args:
             events: Optional list of events to search through. If None, uses the event stream.

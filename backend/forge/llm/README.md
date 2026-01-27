@@ -2,31 +2,30 @@
 
 ## Overview
 
-Forge' LLM system provides a robust, provider-agnostic abstraction layer supporting **200+ models** from **30+ providers** via LiteLLM.
+Forge's LLM system provides a robust, provider-agnostic abstraction layer using direct SDK clients for major providers (OpenAI, Anthropic, Google Gemini, and xAI Grok). This approach ensures maximum stability, performance, and access to the latest provider-specific features.
 
 ## Key Features
 
-- ✅ **200+ Models** - Support for all major LLM providers
-- ✅ **30+ Provider Configurations** - Pre-configured with validation rules
+- ✅ **Direct SDK Support** - Native clients for OpenAI, Anthropic, Gemini, and Grok
 - ✅ **Secure API Key Management** - Auto-detection, format validation
 - ✅ **Feature Detection** - Function calling, caching, vision support
 - ✅ **Cost Tracking** - Real-time cost monitoring per model
 - ✅ **Retry Logic** - Exponential backoff for reliability
 - ✅ **Streaming Support** - Real-time token streaming
-- ✅ **Prompt Caching** - Reduce costs by 35% (Claude models)
+- ✅ **Prompt Caching** - Support for provider-specific caching features
 
 ## Architecture
 
 ```
-User selects model: "openrouter/gpt-4o"
+User selects model: "gpt-4o"
    ↓
-APIKeyManager extracts provider: "openrouter"
+APIKeyManager extracts provider: "openai"
    ↓
 ProviderConfigManager validates parameters
    ↓
-Environment variables set: OPENROUTER_API_KEY
+DirectLLMClient (OpenAIClient) initialized
    ↓
-LiteLLM.completion(model="openrouter/gpt-4o", ...)
+SDK.completion(model="gpt-4o", ...)
    ↓
 Response + cost tracking + metrics
 ```
@@ -78,9 +77,9 @@ key = api_key_manager.get_api_key_for_model(
     provided_key=None  # Falls back to environment
 )
 
-# Set environment variables for LiteLLM
+# Set environment variables
 api_key_manager.set_environment_variables(
-    model="openrouter/gpt-4o",
+    model="gpt-4o",
     api_key=key
 )
 ```
@@ -169,7 +168,6 @@ if features.supports_reasoning_effort:
 | Provider | Use Case | Setup |
 |----------|----------|-------|
 | Ollama | Local, privacy | Local Ollama server |
-| LiteLLM Proxy | Custom routing | LiteLLM proxy server |
 
 ## Configuration
 
@@ -319,7 +317,7 @@ response2 = llm.completion(messages=[...])  # Cost: $0.01 (80% savings!)
 **Benefits:**
 - 35-50% cost reduction
 - Faster responses (cached tokens processed faster)
-- Automatic by LiteLLM
+- Automatic provider-specific optimizations
 
 ### Function Calling
 
@@ -612,5 +610,4 @@ See `docs/examples/02_custom_provider.py` for complete example of adding a new p
 
 - [Architecture](../../docs/ARCHITECTURE.md) - System overview
 - [API Reference](../../docs/API_REFERENCE.md) - API documentation
-- [LiteLLM Docs](https://docs.litellm.ai/) - LiteLLM documentation
 

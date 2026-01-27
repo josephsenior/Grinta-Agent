@@ -3,13 +3,11 @@ import { getDefaultEventContent } from "./shared";
 import {
   getWriteActionContent,
   getRunActionContent,
-  getIPythonActionContent,
   getBrowseActionContent,
   getBrowseInteractiveActionContent,
   getMcpActionContent,
   getThinkActionContent,
   getFinishActionContent,
-  getTaskTrackingActionContent,
   getNoContentActionContent,
 } from "./get-action-content/action-handlers";
 
@@ -20,13 +18,12 @@ const ACTION_HANDLERS: Record<string, ActionContentHandler> = {
   edit: getNoContentActionContent as ActionContentHandler,
   write: getWriteActionContent as ActionContentHandler,
   run: getRunActionContent as ActionContentHandler,
-  run_ipython: getIPythonActionContent as ActionContentHandler,
   browse: getBrowseActionContent as ActionContentHandler,
-  browse_interactive: getBrowseInteractiveActionContent as ActionContentHandler,
+  browse_interactive:
+    getBrowseInteractiveActionContent as ActionContentHandler,
   call_tool_mcp: getMcpActionContent as ActionContentHandler,
   think: getThinkActionContent as ActionContentHandler,
   finish: getFinishActionContent as ActionContentHandler,
-  task_tracking: getTaskTrackingActionContent as ActionContentHandler,
 };
 
 export const getActionContent = (event: ForgeAction): string => {

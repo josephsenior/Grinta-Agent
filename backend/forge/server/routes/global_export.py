@@ -7,7 +7,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from forge.server.shared import config
 
@@ -18,14 +18,19 @@ logger = logging.getLogger(__name__)
 class GlobalExportData(BaseModel):
     """Container for all exportable data."""
 
-    version: str = Field("1.0.0", description="Export format version")
-    exported_at: str = Field(default_factory=lambda: datetime.now().isoformat())
-    memories: list[dict] = Field(default_factory=list)
-    prompts: list[dict] = Field(default_factory=list)
-    snippets: list[dict] = Field(default_factory=list)
-    templates: list[dict] = Field(default_factory=list)
-    settings: dict = Field(default_factory=dict)
-    metadata: dict = Field(default_factory=dict)
+    version: str = Field(default="1.0.0", min_length=1, description="Export format version")
+    exported_at: str = Field(default_factory=lambda: datetime.now().isoformat(), min_length=1, description="ISO timestamp of export")
+    memories: list[dict] = Field(default_factory=list, description="Exported memories")
+    templates: list[dict] = Field(default_factory=list, description="Exported conversation templates")
+    settings: dict = Field(default_factory=dict, description="Exported settings")
+    metadata: dict = Field(default_factory=dict, description="Additional metadata")
+
+    @field_validator("version", "exported_at")
+    @classmethod
+    def validate_required_strings(cls, v: str) -> str:
+        """Validate required string fields are non-empty."""
+        from forge.core.security.type_safety import validate_non_empty_string
+        return validate_non_empty_string(v, name="field")
 
 
 def _load_json_files(directory: str) -> list[dict]:
@@ -37,7 +42,7 @@ def _load_json_files(directory: str) -> list[dict]:
 
     Args:
         directory: The relative directory path within workspace_base
-            (e.g., "memories", "prompts", "snippets", "templates").
+            (e.g., "memories", "templates").
 
     Returns:
         list[dict]: A list of parsed JSON objects. Returns an empty list if
@@ -73,7 +78,7 @@ def _save_json_files(directory: str, data: list[dict]) -> tuple[int, int]:
 
     Args:
         directory: The relative directory path within workspace_base
-            where files will be saved (e.g., "memories", "prompts").
+            where files will be saved (e.g., "memories").
         data: List of dictionaries to persist. Each item must
             contain at least an "id" key. Items without "id" are skipped.
 
@@ -119,7 +124,7 @@ def _save_json_files(directory: str, data: list[dict]) -> tuple[int, int]:
 async def export_all_data() -> JSONResponse:
     r"""Export all user data as a downloadable JSON backup file.
 
-    Aggregates all memories, prompts, snippets, templates, and settings
+    Aggregates all memories, templates, and settings
     into a single GlobalExportData structure and returns it as an HTTP
     attachment with timestamped filename for download.
 
@@ -142,13 +147,9 @@ async def export_all_data() -> JSONResponse:
         export_data = GlobalExportData(
             version="1.0.0",
             memories=_load_json_files("memories"),
-            prompts=_load_json_files("prompts"),
-            snippets=_load_json_files("snippets"),
             templates=_load_json_files("templates"),
             metadata={
                 "total_memories": len(_load_json_files("memories")),
-                "total_prompts": len(_load_json_files("prompts")),
-                "total_snippets": len(_load_json_files("snippets")),
                 "total_templates": len(_load_json_files("templates")),
             },
         )
@@ -169,22 +170,18 @@ async def import_all_data(data: GlobalExportData) -> dict[str, dict[str, int]]:
     r"""Import all user data from a backup file.
 
     Restores user data from a previously exported GlobalExportData structure.
-    Processes memories, prompts, snippets, and templates in sequence,
+    Processes memories and templates in sequence,
     creating new files or updating existing ones.
 
     Args:
         data: GlobalExportData containing collections of:
             - memories (list[dict]): Memory entries
-            - prompts (list[dict]): Prompt templates
-            - snippets (list[dict]): Code snippets
             - templates (list[dict]): Document templates
 
     Returns:
         dict[str, dict[str, int]]: Import results organized by category:
         {
             "memories": {"imported": int, "updated": int},
-            "prompts": {"imported": int, "updated": int},
-            "snippets": {"imported": int, "updated": int},
             "templates": {"imported": int, "updated": int}
         }
 
@@ -201,13 +198,6 @@ async def import_all_data(data: GlobalExportData) -> dict[str, dict[str, int]]:
         # Import memories
         mem_imported, mem_updated = _save_json_files("memories", data.memories)
         results = {"memories": {"imported": mem_imported, "updated": mem_updated}}
-        # Import prompts
-        prompt_imported, prompt_updated = _save_json_files("prompts", data.prompts)
-        results["prompts"] = {"imported": prompt_imported, "updated": prompt_updated}
-
-        # Import snippets
-        snip_imported, snip_updated = _save_json_files("snippets", data.snippets)
-        results["snippets"] = {"imported": snip_imported, "updated": snip_updated}
 
         # Import templates
         temp_imported, temp_updated = _save_json_files("templates", data.templates)

@@ -404,7 +404,7 @@ export function useGSAPPulse<T extends HTMLElement = HTMLDivElement>(
  */
 export function useGSAPTimeline<T extends HTMLElement = HTMLDivElement>(
   setup: (tl: gsap.core.Timeline, element: T) => void,
-  dependencies: any[] = [],
+  dependencies: unknown[] = [],
 ) {
   const ref = useRef<T>(null);
 
@@ -441,7 +441,13 @@ export function useGSAPScrollTrigger<T extends HTMLElement = HTMLDivElement>(
     toggleActions?: string;
     once?: boolean;
     animation: (element: T) => gsap.core.Tween;
-  } = {} as any,
+  } = {} as {
+    start?: string;
+    end?: string;
+    toggleActions?: string;
+    once?: boolean;
+    animation: (element: T) => gsap.core.Tween;
+  },
 ) {
   const ref = useRef<T>(null);
 

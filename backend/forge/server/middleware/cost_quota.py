@@ -297,16 +297,18 @@ class CostQuotaMiddleware:
         }
 
     async def _quota_exceeded_response(self, key: str, plan: QuotaPlan) -> JSONResponse:
-        """Generate quota exceeded response.
+        """Generate quota exceeded response with user-friendly formatting.
 
         Args:
             key: Quota key
             plan: User's quota plan
 
         Returns:
-            JSONResponse with 429 status
+            JSONResponse with 429 status and user-friendly error format
 
         """
+        from forge.server.utils.error_formatter import format_quota_exceeded_error
+        
         config = QUOTA_CONFIGS[plan]
         cost_data = _cost_store[key]
 
@@ -322,18 +324,17 @@ class CostQuotaMiddleware:
             spent = cost_data["monthly_cost"]
             reset_time = int(cost_data["last_reset_month"] + self.month_window)
 
-        payload = {
-            "message": (
-                f"Cost quota exceeded. You've spent ${spent:.2f} of your "
-                f"${limit} {limit_type} limit."
-            ),
-            "error_code": "COST_QUOTA_EXCEEDED",
+        # Format as user-friendly error
+        quota_info = {
             "quota_plan": plan.value,
             "limit_type": limit_type,
             "limit": limit,
             "spent": spent,
             "reset_at": reset_time,
         }
+        user_error = format_quota_exceeded_error(quota_info)
+        payload = user_error.to_dict()
+        
         resp = JSONResponse(status_code=429, content=payload)
         resp.headers["Retry-After"] = str(reset_time - int(time.time()))
         resp.headers["X-Cost-Quota-Plan"] = plan.value

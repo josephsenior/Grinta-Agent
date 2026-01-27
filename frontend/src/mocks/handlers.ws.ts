@@ -43,12 +43,12 @@ export const handlers: WebSocketHandler[] = [
 
     // Agent state change to indicate ready for user input
     io.client.emit(
-      "oh_event",
+      "forge_event",
       generateAgentStateChangeObservation(AgentState.AWAITING_USER_INPUT),
     );
 
     // Deterministic session-ready observation (test-only semantic)
-    io.client.emit("oh_event", {
+    io.client.emit("forge_event", {
       id: 99999,
       source: "system",
       message: "SESSION_READY",
@@ -58,15 +58,15 @@ export const handlers: WebSocketHandler[] = [
       extras: { conversation_id: conversationId },
     });
 
-    io.client.on("oh_user_action", async (_, data) => {
+    io.client.on("forge_user_action", async (_, data) => {
       if (isInitConfig(data)) {
         io.client.emit(
-          "oh_event",
+          "forge_event",
           generateAgentStateChangeObservation(AgentState.INIT),
         );
       } else {
         io.client.emit(
-          "oh_event",
+          "forge_event",
           generateAgentStateChangeObservation(AgentState.RUNNING),
         );
 
@@ -74,7 +74,7 @@ export const handlers: WebSocketHandler[] = [
         emitAssistantMessage(io, "Hello!");
 
         io.client.emit(
-          "oh_event",
+          "forge_event",
           generateAgentStateChangeObservation(AgentState.AWAITING_USER_INPUT),
         );
       }

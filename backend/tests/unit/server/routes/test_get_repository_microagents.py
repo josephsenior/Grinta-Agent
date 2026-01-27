@@ -31,12 +31,6 @@ def test_client():
                 ProviderType.GITHUB: ProviderToken(
                     token=SecretStr("ghp_test_token"), host="github.com"
                 ),
-                ProviderType.GITLAB: ProviderToken(
-                    token=SecretStr("glpat_test_token"), host="gitlab.com"
-                ),
-                ProviderType.BITBUCKET: ProviderToken(
-                    token=SecretStr("bb_test_token"), host="bitbucket.org"
-                ),
             }
         )
 
@@ -64,30 +58,6 @@ def mock_github_repository():
         id="123456",
         full_name="test/repo",
         git_provider=ProviderType.GITHUB,
-        is_public=True,
-        stargazers_count=100,
-    )
-
-
-@pytest.fixture
-def mock_gitlab_repository():
-    """Create a mock GitLab repository for testing."""
-    return Repository(
-        id="123456",
-        full_name="test/repo",
-        git_provider=ProviderType.GITLAB,
-        is_public=True,
-        stargazers_count=100,
-    )
-
-
-@pytest.fixture
-def mock_bitbucket_repository():
-    """Create a mock Bitbucket repository for testing."""
-    return Repository(
-        id="123456",
-        full_name="test/repo",
-        git_provider=ProviderType.BITBUCKET,
         is_public=True,
         stargazers_count=100,
     )
@@ -186,48 +156,6 @@ def _verify_excluded_fields_absent(microagent):
 
     @pytest.mark.asyncio
     @patch("forge.server.routes.git.ProviderHandler")
-    async def test_get_microagents_gitlab_success(
-        self, mock_provider_handler_cls, test_client, mock_gitlab_repository
-    ):
-        """Test successful retrieval of microagents from GitLab repository."""
-        mock_provider_handler = AsyncMock()
-        mock_provider_handler_cls.return_value = mock_provider_handler
-        mock_provider_handler.get_microagents.return_value = [
-            {
-                "name": "test_agent",
-                "path": ".Forge/microagents/test_agent.md",
-                "created_at": "2024-01-01T00:00:00",
-            }
-        ]
-        response = test_client.get("/api/user/repository/test/repo/microagents")
-        assert response.status_code == 200
-        data = response.json()
-        assert len(data) == 1
-        assert "content" not in data[0]
-
-    @pytest.mark.asyncio
-    @patch("forge.server.routes.git.ProviderHandler")
-    async def test_get_microagents_bitbucket_success(
-        self, mock_provider_handler_cls, test_client, mock_bitbucket_repository
-    ):
-        """Test successful retrieval of microagents from Bitbucket repository."""
-        mock_provider_handler = AsyncMock()
-        mock_provider_handler_cls.return_value = mock_provider_handler
-        mock_provider_handler.get_microagents.return_value = [
-            {
-                "name": "test_agent",
-                "path": ".Forge/microagents/test_agent.md",
-                "created_at": "2024-01-01T00:00:00",
-            }
-        ]
-        response = test_client.get("/api/user/repository/test/repo/microagents")
-        assert response.status_code == 200
-        data = response.json()
-        assert len(data) == 1
-        assert "content" not in data[0]
-
-    @pytest.mark.asyncio
-    @patch("forge.server.routes.git.ProviderHandler")
     async def test_get_microagents_no_directory_found(
         self, mock_provider_handler_cls, test_client, mock_github_repository
     ):
@@ -281,58 +209,6 @@ class TestGetRepositoryMicroagentContent:
         assert response.status_code == 200
         data = response.json()
         assert "content" in data
-        assert data["content"] == sample_microagent_content
-        assert data["path"] == file_path
-        assert "triggers" in data
-        assert data["triggers"] == ["test", "agent"]
-
-    @pytest.mark.asyncio
-    @patch("forge.server.routes.git.ProviderHandler")
-    async def test_get_microagent_content_gitlab_success(
-        self, mock_provider_handler_cls, test_client, sample_microagent_content
-    ):
-        """Test successful retrieval of microagent content from GitLab."""
-        mock_provider_handler = AsyncMock()
-        mock_provider_handler_cls.return_value = mock_provider_handler
-        mock_provider_handler.get_microagent_content.return_value = (
-            MicroagentContentResponse(
-                content=sample_microagent_content,
-                path=".Forge/microagents/test_agent.md",
-                triggers=["test", "agent"],
-            )
-        )
-        file_path = ".Forge/microagents/test_agent.md"
-        response = test_client.get(
-            f"/api/user/repository/test/repo/microagents/content?file_path={quote(file_path)}"
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["content"] == sample_microagent_content
-        assert data["path"] == file_path
-        assert "triggers" in data
-        assert data["triggers"] == ["test", "agent"]
-
-    @pytest.mark.asyncio
-    @patch("forge.server.routes.git.ProviderHandler")
-    async def test_get_microagent_content_bitbucket_success(
-        self, mock_provider_handler_cls, test_client, sample_microagent_content
-    ):
-        """Test successful retrieval of microagent content from Bitbucket."""
-        mock_provider_handler = AsyncMock()
-        mock_provider_handler_cls.return_value = mock_provider_handler
-        mock_provider_handler.get_microagent_content.return_value = (
-            MicroagentContentResponse(
-                content=sample_microagent_content,
-                path=".Forge/microagents/test_agent.md",
-                triggers=["test", "agent"],
-            )
-        )
-        file_path = ".Forge/microagents/test_agent.md"
-        response = test_client.get(
-            f"/api/user/repository/test/repo/microagents/content?file_path={quote(file_path)}"
-        )
-        assert response.status_code == 200
-        data = response.json()
         assert data["content"] == sample_microagent_content
         assert data["path"] == file_path
         assert "triggers" in data
@@ -420,27 +296,6 @@ class TestSpecialRepositoryStructures:
             }
         ]
         response = test_client.get("/api/user/repository/test/.Forge/microagents")
-        assert response.status_code == 200
-        data = response.json()
-        assert len(data) == 1
-        assert data[0]["path"] == "microagents/test_agent.md"
-
-    @pytest.mark.asyncio
-    @patch("forge.server.routes.git.ProviderHandler")
-    async def test_get_microagents_gitlab_FORGE_config_structure(
-        self, mock_provider_handler_cls, test_client
-    ):
-        """Test microagents from GitLab Forge-config repository structure."""
-        mock_provider_handler = AsyncMock()
-        mock_provider_handler_cls.return_value = mock_provider_handler
-        mock_provider_handler.get_microagents.return_value = [
-            {
-                "name": "test_agent",
-                "path": "microagents/test_agent.md",
-                "created_at": "2024-01-01T00:00:00",
-            }
-        ]
-        response = test_client.get("/api/user/repository/test/Forge-config/microagents")
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1

@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 
 from forge.controller.stuck import StuckDetector
 from forge.controller.state.state import State
 from forge.events.action import MessageAction
-from forge.events.action.commands import CmdRunAction, IPythonRunCellAction
+from forge.events.action.commands import CmdRunAction
 from forge.events.action.empty import NullAction
 from forge.events.event import EventSource
-from forge.events.observation import CmdOutputObservation, IPythonRunCellObservation
+from forge.events.observation import CmdOutputObservation
 from forge.events.observation.agent import AgentCondensationObservation
 from forge.events.observation.error import ErrorObservation
 from forge.events.observation.empty import NullObservation
@@ -41,22 +42,6 @@ def _cmd_observation(
     return obs
 
 
-def _ipython_observation(error_line: str, event_id: int) -> IPythonRunCellObservation:
-    content = "\n".join(
-        [
-            "Cell In[1], line 1",
-            "print('hello')",
-            "Traceback (most recent call last):",
-            error_line,
-            "[Jupyter current working directory: /workspace]",
-            "[Jupyter Python interpreter: python]",
-        ],
-    )
-    obs = IPythonRunCellObservation(content=content, code="code")
-    _assign(obs, event_id, EventSource.ENVIRONMENT)
-    return obs
-
-
 def test_is_stuck_false_for_short_history():
     detector = StuckDetector(State(history=[]))
     assert not detector.is_stuck()
@@ -78,20 +63,6 @@ def test_detects_repeating_action_error_loop():
         obs = ErrorObservation(content="boom", error_id="E")
         _assign(obs, i * 2 + 2, EventSource.ENVIRONMENT)
         history.append(obs)
-    detector = StuckDetector(cast(State, SimpleNamespace(history=history)))
-    assert detector.is_stuck()
-
-
-def test_detects_ipython_syntax_error_loop():
-    history = []
-    for i in range(3):
-        history.append(IPythonRunCellAction(code="print('test')"))
-        history.append(
-            _ipython_observation(
-                "SyntaxError: invalid syntax. Perhaps you forgot a comma?",
-                i * 2 + 2,
-            ),
-        )
     detector = StuckDetector(cast(State, SimpleNamespace(history=history)))
     assert detector.is_stuck()
 
@@ -158,16 +129,6 @@ def test_cmd_output_categorization():
     assert detector._categorize_cmd_output(success) == "success"
 
 
-def test_python_output_categorization():
-    detector = StuckDetector(SimpleNamespace(history=[]))
-    error = IPythonRunCellObservation(content="Exception occurred", code="")
-    no_change = IPythonRunCellObservation(content="None", code="")
-    success = IPythonRunCellObservation(content="Successful output", code="")
-    assert detector._categorize_python_output(error) == "error"
-    assert detector._categorize_python_output(no_change) == "no_change"
-    assert detector._categorize_python_output(success) == "success"
-
-
 def test_get_history_to_check_interactive_mode():
     state = State()
     user_msg = MessageAction(content="hello")
@@ -204,85 +165,10 @@ def test_is_stuck_semantic_loop_thresholds():
         history.append(_cmd_observation("ok", "pytest", 0, i * 2 + 2))
     # Add extra non-repeating actions to exceed len>=10 without triggering earlier patterns
     for i in range(5):
-        history.append(IPythonRunCellAction(code=f"print({i})"))
-        obs = IPythonRunCellObservation(content="Successful output", code="")
-        _assign(obs, 100 + i, EventSource.ENVIRONMENT)
-        history.append(obs)
+        history.append(_cmd_action(f"echo {i}", 100 + i * 2))
+        history.append(_cmd_observation("ok", "echo", 0, 100 + i * 2 + 1))
     detector = StuckDetector(SimpleNamespace(history=history))
     assert not detector.is_stuck()
-
-
-def test_ipython_error_observations_return_false_when_not_matching():
-    history = [
-        _cmd_action("ls", 1),
-        _cmd_observation("ok", "ls", 0, 2),
-        _cmd_action("ls", 3),
-        _cmd_observation("ok", "ls", 0, 4),
-    ]
-    detector = StuckDetector(SimpleNamespace(history=history))
-    last_actions, last_obs = detector._collect_recent_events(history)
-    assert not detector._check_ipython_error_observations(last_obs)
-
-
-def test_check_specific_error_pattern_other_message():
-    detector = StuckDetector(SimpleNamespace(history=[]))
-    obs = _ipython_observation("Some other error", 1)
-    assert not detector._check_specific_error_pattern([obs], "Different error")
-
-
-def test_check_for_consistent_invalid_syntax_formatting():
-    detector = StuckDetector(SimpleNamespace(history=[]))
-    obs = IPythonRunCellObservation(content="short", code="")
-    assert not detector._check_for_consistent_invalid_syntax([obs], "SyntaxError")
-
-    bad_header = "\n".join(
-        [
-            "Line 1",
-            "Traceback",
-            "SyntaxError: invalid syntax. Perhaps you forgot a comma?",
-            "[Jupyter current working directory: /]",
-            "[Jupyter Python interpreter: python]",
-        ],
-    )
-    obs2 = IPythonRunCellObservation(content=bad_header, code="")
-    assert not detector._check_for_consistent_invalid_syntax(
-        [obs2, obs2, obs2],
-        "SyntaxError: invalid syntax. Perhaps you forgot a comma?",
-    )
-
-
-def test_extract_error_line_from_observation_conditions():
-    detector = StuckDetector(SimpleNamespace(history=[]))
-    obs = IPythonRunCellObservation(content="a\nb", code="")
-    assert detector._extract_error_line_from_observation(obs, "error") is None
-
-    content = "\n".join(
-        [
-            "Cell In[1], line 1",
-            "Traceback",
-            "SyntaxError: invalid syntax. Perhaps you forgot a comma?",
-            "missing metadata",
-        ],
-    )
-    obs2 = IPythonRunCellObservation(content=content, code="")
-    assert (
-        detector._extract_error_line_from_observation(
-            obs2,
-            "SyntaxError: invalid syntax. Perhaps you forgot a comma?",
-        )
-        is None
-    )
-
-
-def test_check_for_consistent_line_error_requires_all_matches():
-    detector = StuckDetector(SimpleNamespace(history=[]))
-    obs1 = _ipython_observation(
-        "SyntaxError: unterminated string literal (detected at line 1)", 1
-    )
-    obs2 = IPythonRunCellObservation(content="short", code="")
-    assert not detector._check_for_consistent_line_error(
-        [obs1, obs2], "SyntaxError: unterminated string literal (detected at line"
-    )
 
 
 def test_is_stuck_action_observation_pattern_requires_enough_events():
@@ -341,16 +227,6 @@ def test_calculate_intent_diversity_and_failure_rate():
 def test_extract_action_intent_variants():
     detector = StuckDetector(SimpleNamespace(history=[]))
     assert (
-        detector._extract_action_intent(
-            IPythonRunCellAction(code="edit_file_by_replace('a')")
-        )
-        == "edit_file"
-    )
-    assert (
-        detector._extract_action_intent(IPythonRunCellAction(code="print('x')"))
-        == "execute_python"
-    )
-    assert (
         detector._extract_action_intent(_cmd_action("python script.py", 1))
         == "execute_code"
     )
@@ -366,9 +242,9 @@ def test_extract_observation_outcome_unknown():
     )
 
 
-def test_eq_no_pid_ipython_special_case():
+def test_eq_no_pid_cmd_special_case():
     detector = StuckDetector(SimpleNamespace(history=[]))
-    code = "edit_file_by_replace(\nline1\nline2\n)"
-    action1 = IPythonRunCellAction(code=code)
-    action2 = IPythonRunCellAction(code=code.replace("line2", "line2"))
+    cmd = "ls -la"
+    action1 = CmdRunAction(command=cmd)
+    action2 = CmdRunAction(command=cmd)
     assert detector._eq_no_pid(action1, action2)

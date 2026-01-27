@@ -183,55 +183,6 @@ class WarmRuntimePool(RuntimePool):
                 self._evictions[key] += 1
 
 
-class DelegateForkPool(RuntimePool):
-    """Pool that forks runtimes for delegates by reusing parent workspace context."""
-
-    def __init__(
-        self,
-        *,
-        fork_factory: Callable[[Runtime], Runtime],
-        warm_pool: WarmRuntimePool | None = None,
-    ) -> None:
-        self._fork_factory = fork_factory
-        self._warm_pool = warm_pool or WarmRuntimePool(max_size_per_key=1, ttl_seconds=300)
-        self._delegate_hits: Dict[str, int] = {}
-
-    def acquire(self, key: str) -> PooledRuntime | None:
-        if not key.startswith("delegate:"):
-            return self._warm_pool.acquire(key)
-        parent_key = key.split("delegate:", 1)[1]
-        parent_pooled = self._warm_pool.acquire(parent_key)
-        if not parent_pooled:
-            return None
-        try:
-            forked_runtime = self._fork_factory(parent_pooled.runtime)
-        finally:
-            # Return parent runtime to warm pool for future acquisitions
-            self._warm_pool.release(parent_key, parent_pooled)
-        self._delegate_hits[parent_key] = self._delegate_hits.get(parent_key, 0) + 1
-        return PooledRuntime(
-            runtime=forked_runtime, repo_directory=parent_pooled.repo_directory
-        )
-
-    def release(self, key: str, runtime: PooledRuntime) -> None:
-        if key.startswith("delegate:"):
-            call_async_disconnect(runtime.runtime)
-        else:
-            self._warm_pool.release(key, runtime)
-
-    def stats(self) -> dict[str, int]:
-        return self._warm_pool.stats()
-
-    def delegate_stats(self) -> dict[str, int]:
-        return dict(self._delegate_hits)
-
-    def idle_reclaim_stats(self) -> dict[str, int]:
-        return self._warm_pool.idle_reclaim_stats()
-
-    def eviction_stats(self) -> dict[str, int]:
-        return self._warm_pool.eviction_stats()
-
-
 def call_async_disconnect(runtime: Runtime) -> None:
     from forge.core.logger import forge_logger as logger
 

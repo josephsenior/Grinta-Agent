@@ -1,8 +1,10 @@
 import React from "react";
 import ReactJsonView from "@microlink/react-json-view";
+import { useTranslation } from "react-i18next";
 import { MCPObservation } from "#/types/core/observations";
 import { hasExtras } from "#/types/core/guards";
 import { JSON_VIEW_THEME } from "#/utils/constants";
+import { I18nKey } from "#/i18n/declaration";
 
 function parseObservationOutput(content: unknown) {
   if (typeof content !== "string") {
@@ -112,15 +114,23 @@ function OutputSection({
 }
 
 export function MCPObservationContent({ event }: { event: MCPObservation }) {
+  const { t } = useTranslation();
   const { output, argumentsObject, hasArguments, fallbackText } =
     useMcpObservationData(event);
 
   return (
     <div className="flex flex-col gap-4">
       {hasArguments && (
-        <ArgumentsSection argumentsObject={argumentsObject} label="Arguments" />
+        <ArgumentsSection
+          argumentsObject={argumentsObject}
+          label={t(I18nKey.MCP_OBSERVATION$ARGUMENTS)}
+        />
       )}
-      <OutputSection output={output} fallback={fallbackText} label="Output" />
+      <OutputSection
+        output={output}
+        fallback={fallbackText}
+        label={t(I18nKey.MCP_OBSERVATION$OUTPUT)}
+      />
     </div>
   );
 }

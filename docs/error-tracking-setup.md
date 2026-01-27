@@ -62,7 +62,7 @@ pip install sentry-sdk
 
 ```bash
 cd frontend
-npm install @sentry/react
+pnpm add @sentry/react
 ```
 
 ### 6. Verify Setup

@@ -24,7 +24,6 @@
 ### **1. CodeAct Agent (9.5/10 Reliable)**
 The core autonomous coding agent with:
 - ✅ Ultimate Editor (structure-aware, 45+ languages)
-- ✅ ACE Framework (self-improvement)
 - ✅ Reasoning steps (think before acting)
 - ✅ Tool calling (edit, bash, browse)
 - ✅ Circuit breaker (safety pauses)
@@ -71,21 +70,7 @@ Hybrid vector memory:
 
 ## ⚠️ **What's DISABLED for Beta**
 
-### **1. MetaSOP Orchestration**
-**Why disable:**
-- Multi-agent coordination is complex
-- Needs extensive testing
-- Hard to debug when it fails
-- Users might not understand multi-agent behavior
-
-**Post-beta:** Add when you have:
-- User demand for complex multi-step tasks
-- Better error messages for multi-agent failures
-- UI for visualizing agent coordination
-
----
-
-### **2. Parallel Agent Execution**
+### **1. Parallel Agent Execution**
 **Why disable:**
 - Resource-intensive (3+ agents running simultaneously)
 - Complex error scenarios (what if one fails?)
@@ -124,13 +109,8 @@ Hybrid vector memory:
 ### **1. Reduces Complexity**
 **Beta users get:**
 - Clean, predictable behavior (CodeAct agent)
-- Fast responses (no multi-agent overhead)
+- Fast responses
 - Easy to debug (one agent, clear logs)
-
-**Not:**
-- Confusing multi-agent behavior
-- "Which agent did what?" questions
-- Complex orchestration errors
 
 ---
 
@@ -140,11 +120,6 @@ Hybrid vector memory:
 - Features are easier to add (one codebase)
 - User feedback is clearer (one behavior to improve)
 
-**With everything enabled:**
-- "Is this a CodeAct bug or MetaSOP bug?"
-- "Why did the parallel execution fail?"
-- Hard to isolate issues
-
 ---
 
 ### **3. Better User Experience**
@@ -153,11 +128,6 @@ Hybrid vector memory:
 - Predictable behavior
 - Clear value proposition
 
-**Complex is confusing:**
-- "What's MetaSOP?"
-- "When should I use parallel agents?"
-- "Why are there 5 agents running?"
-
 ---
 
 ### **4. Easier Marketing**
@@ -165,7 +135,7 @@ Hybrid vector memory:
 > "Forge: AI coding agent that edits your codebase like a senior dev"
 
 **vs. Complex messaging:**
-> "Forge: Multi-agent orchestration with parallel execution, causal reasoning, and predictive conflict detection"
+> "Forge: AI coding agent with causal reasoning and predictive conflict detection"
 
 **Which sounds clearer? The first one.**
 
@@ -176,7 +146,6 @@ Hybrid vector memory:
 ### **Core Value Proposition:**
 "Forge is an AI coding agent that:
 - Edits your code with structure-aware precision (Ultimate Editor)
-- Learns from your patterns (ACE Framework)
 - Handles errors gracefully (Circuit breaker + retry)
 - Tracks costs transparently ($1/day free tier)"
 
@@ -190,12 +159,10 @@ Hybrid vector memory:
 |---------|------|-----------|-----------|
 | **CodeAct Agent** | ✅ | ✅ | Core product |
 | **Ultimate Editor** | ✅ | ✅ | Competitive moat |
-| **ACE Framework** | ✅ | ✅ | Self-improvement |
 | **Cost Quotas** | ✅ | ✅ | Production infra |
 | **Monitoring** | ✅ | ✅ | Production infra |
 | **MCP Tools (3)** | ✅ | ✅ | Essential tools |
 | **Playwright MCP** | ⚠️ | ✅ | Heavy (500MB RAM) |
-| **MetaSOP** | ❌ | ⚠️ | Needs more testing |
 | **Parallel Agents** | ❌ | ⚠️ | Complex coordination |
 | **Self-Remediation** | ❌ | ⚠️ | Can cause loops |
 | **Enterprise SSO** | ❌ | ⚠️ | Needs security audit |
@@ -237,14 +204,12 @@ Hybrid vector memory:
 **What's enabled:**
 - ✅ CodeAct agent (simple mode)
 - ✅ Ultimate Editor
-- ✅ ACE Framework
 - ✅ Cost quotas
 - ✅ Rate limiting
 - ✅ Monitoring
 - ✅ 3 MCP servers (shadcn, fetch, search)
 
 **What's disabled:**
-- ❌ MetaSOP orchestration
 - ❌ Parallel execution
 - ❌ Self-remediation
 - ❌ Micro-iterations
@@ -263,7 +228,6 @@ Hybrid vector memory:
 
 ### **Month 3-4 (Add Based on Demand):**
 If users request:
-- Complex multi-step tasks → Enable MetaSOP
 - Browser automation → Enable Playwright MCP
 - Team features → Add SSO
 - Advanced workflows → Enable parallel execution
@@ -285,7 +249,7 @@ If users request:
 **Why:**
 1. ✅ Focus on core value (CodeAct + Ultimate Editor)
 2. ✅ Ship production infra (quotas, monitoring)
-3. ✅ Defer complex features (MetaSOP, parallel)
+3. ✅ Defer complex features (parallel)
 4. ✅ Easy to iterate based on feedback
 
 **This is EXACTLY what I'd recommend.**
@@ -296,7 +260,6 @@ If users request:
 
 **Technical perspective:**
 - CodeAct is 9.5/10 reliable (tested, proven)
-- MetaSOP is powerful but complex (needs validation)
 - Starting simple = easier debugging
 
 **Business perspective:**
@@ -306,7 +269,6 @@ If users request:
 
 **Marketing perspective:**
 - Simple message: "AI coding agent that works"
-- Not confusing: "Multi-agent orchestration with..."
 
 ---
 
@@ -316,7 +278,6 @@ If users request:
 
 **1. CodeAct Agent (9.5/10)**
 - Structure-aware editing (Ultimate Editor)
-- Self-improving (ACE Framework)
 - Safe (Circuit breaker + retry)
 - Fast (2-3 tool calls for simple tasks)
 
@@ -356,25 +317,6 @@ Response
 
 **Clean. Simple. Reliable.**
 
-**NOT this (post-beta):**
-```
-User Request
-    ↓
-MetaSOP Orchestrator
-    ↓
-Multiple Agents (Architect, Engineer, QA, Designer)
-    ↓
-Parallel Execution
-    ↓
-Causal Reasoning
-    ↓
-Self-Remediation
-    ↓
-Micro-Iterations
-    ↓
-Response (which agent did what?)
-```
-
 ---
 
 ## 🚀 **Next Steps (2-3 Days)**
@@ -410,7 +352,7 @@ Response (which agent did what?)
 **Month 1:**
 - 100-500 beta users
 - Identify top 3 pain points
-- Decide: Add MetaSOP? Add Playwright? Keep simple?
+- Decide: Add Playwright? Keep simple?
 
 ---
 
@@ -418,12 +360,12 @@ Response (which agent did what?)
 
 ### **Landing Page:**
 > "Forge: Your AI coding partner that edits code like a senior developer.  
-> Structure-aware. Self-improving. Production-ready.  
+> Structure-aware. Production-ready.  
 > Free tier: $1/day. No credit card required."
 
 ### **vs. Complex Messaging (Avoid):**
-> "Forge: Multi-agent AI platform with MetaSOP orchestration, parallel execution,  
-> causal reasoning, predictive conflict detection, and 5-layer anti-hallucination.  
+> "Forge: AI coding agent with parallel execution,  
+> causal reasoning, and predictive conflict detection.  
 > Pro tier: $50/month."
 
 **Which would you click? The first one.**
@@ -433,14 +375,13 @@ Response (which agent did what?)
 ## ✅ **Your Decision: PERFECT**
 
 **What you said:**
-> "I'm only launching CodeAct agent... except MetaSOP and parallel agents... I need to focus on only 1 thing"
+> "I'm only launching CodeAct agent... I need to focus on only 1 thing"
 
 **My response:**
 > **10/10 decision. This is EXACTLY what you should do.**
 
 **Why:**
 - ✅ CodeAct is rock-solid (9.5/10)
-- ✅ MetaSOP is powerful but needs validation
 - ✅ Starting simple = easier iteration
 - ✅ Matches how Cursor/Devin launched
 
@@ -462,7 +403,6 @@ Response (which agent did what?)
 
 ### **Post-Beta (Month 2+):**
 **Add based on user demand:**
-- MetaSOP (if users need complex multi-step)
 - Parallel execution (if users need speed)
 - Playwright (if users need browser automation)
 - Enterprise features (if companies sign up)

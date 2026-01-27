@@ -169,7 +169,8 @@ async def test_get_all_thread_comments_paginates(
     }
     resolver.prime_graphql(thread_comments_page1, thread_comments_page2)
 
-    comments = await resolver._get_all_thread_comments("thread-1")
+    raw_comments = await resolver._get_all_thread_comments("thread-1")
+    comments = resolver._process_raw_comments(raw_comments)
 
     assert [comment.id for comment in comments] == ["root-comment", "reply"]
     assert comments[0].created_at.tzinfo == timezone.utc

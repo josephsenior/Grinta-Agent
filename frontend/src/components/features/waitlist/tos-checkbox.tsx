@@ -13,7 +13,7 @@ export function TOSCheckbox({ onChange }: TOSCheckboxProps) {
       <span>
         {t(I18nKey.TOS$ACCEPT)}{" "}
         <a
-          href="https://www.all-hands.dev/tos"
+          href="https://www.forge.dev/tos"
           target="_blank"
           rel="noopener noreferrer"
           className="underline underline-offset-2 text-violet-500 hover:text-blue-700"
@@ -24,3 +24,4 @@ export function TOSCheckbox({ onChange }: TOSCheckboxProps) {
     </label>
   );
 }
+

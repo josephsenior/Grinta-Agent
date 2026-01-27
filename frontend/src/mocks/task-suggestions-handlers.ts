@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { SuggestedTask } from "#/components/features/home/tasks/task.types";
+import { SuggestedTask } from "#/api/forge.types";
 
 const TASKS_1: SuggestedTask[] = [
   {

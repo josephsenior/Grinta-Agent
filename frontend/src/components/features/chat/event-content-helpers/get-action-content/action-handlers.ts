@@ -1,13 +1,11 @@
 import {
   FileWriteAction,
   CommandAction,
-  IPythonAction,
   BrowseAction,
   BrowseInteractiveAction,
   MCPAction,
   ThinkAction,
   FinishAction,
-  TaskTrackingAction,
 } from "#/types/core/actions";
 import { ActionSecurityRisk } from "#/state/security-analyzer-slice";
 import { MAX_CONTENT_LENGTH } from "../shared";
@@ -36,23 +34,7 @@ export function getWriteActionContent(event: FileWriteAction): string {
 }
 
 export function getRunActionContent(event: CommandAction): string {
-  let content = `Command:\n\`${event.args.command}\``;
-
-  if (event.args.confirmation_state === "awaiting_confirmation") {
-    content += `\n\n${getRiskText(event.args.security_risk)}`;
-  }
-
-  return content;
-}
-
-export function getIPythonActionContent(event: IPythonAction): string {
-  let content = `\`\`\`\n${event.args.code}\n\`\`\``;
-
-  if (event.args.confirmation_state === "awaiting_confirmation") {
-    content += `\n\n${getRiskText(event.args.security_risk)}`;
-  }
-
-  return content;
+  return `Running command: \`${event.args.command}\``;
 }
 
 export function getBrowseActionContent(event: BrowseAction): string {
@@ -82,39 +64,6 @@ export function getThinkActionContent(event: ThinkAction): string {
 
 export function getFinishActionContent(event: FinishAction): string {
   return event.args.final_thought.trim();
-}
-
-export function getTaskTrackingActionContent(
-  event: TaskTrackingAction,
-): string {
-  let content = `**Command:** \`${event.args.command}\``;
-
-  if (
-    event.args.command === "plan" &&
-    event.args.task_list &&
-    event.args.task_list.length > 0
-  ) {
-    content += `\n\n**Task List (${event.args.task_list.length} ${event.args.task_list.length === 1 ? "item" : "items"}):**\n`;
-
-    event.args.task_list.forEach((task, index) => {
-      const statusIcon =
-        {
-          todo: "⏳",
-          in_progress: "🔄",
-          done: "✅",
-        }[task.status] || "❓";
-
-      content += `\n${index + 1}. ${statusIcon} **[${task.status.toUpperCase().replace("_", " ")}]** ${task.title}`;
-      content += `\n   *ID: ${task.id}*`;
-      if (task.notes) {
-        content += `\n   *Notes: ${task.notes}*`;
-      }
-    });
-  } else if (event.args.command === "plan") {
-    content += "\n\n**Task List:** Empty";
-  }
-
-  return content;
 }
 
 export function getNoContentActionContent(): string {

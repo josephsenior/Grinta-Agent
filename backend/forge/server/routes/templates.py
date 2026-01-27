@@ -5,10 +5,12 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path as PathLib
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
+from fastapi import Path
+from typing import Annotated
 
 from forge.server.shared import config
 from forge.storage.data_models.conversation_template import (
@@ -22,15 +24,15 @@ app = APIRouter(prefix="/api/templates")
 logger = logging.getLogger(__name__)
 
 
-def _get_templates_dir() -> Path:
+def _get_templates_dir() -> PathLib:
     """Get templates directory."""
-    workspace_base = Path(config.workspace_base or ".")
+    workspace_base = PathLib(config.workspace_base or ".")
     templates_dir = workspace_base / "templates"
     templates_dir.mkdir(parents=True, exist_ok=True)
     return templates_dir
 
 
-def _get_template_file(template_id: str) -> Path:
+def _get_template_file(template_id: str) -> PathLib:
     """Get template file path."""
     return _get_templates_dir() / f"{template_id}.json"
 
@@ -106,7 +108,9 @@ async def create_template(request: CreateTemplateRequest) -> ConversationTemplat
 
 
 @app.get("/{template_id}")
-async def get_template(template_id: str) -> ConversationTemplate:
+async def get_template(
+    template_id: Annotated[str, Path(..., min_length=1, description="Template ID")],
+) -> ConversationTemplate:
     """Get a template."""
     template = _load_template(template_id)
     if template:
@@ -116,7 +120,7 @@ async def get_template(template_id: str) -> ConversationTemplate:
 
 @app.patch("/{template_id}")
 async def update_template(
-    template_id: str,
+    template_id: Annotated[str, Path(..., min_length=1, description="Template ID")],
     request: UpdateTemplateRequest,
 ) -> ConversationTemplate:
     """Update a template."""
@@ -143,7 +147,9 @@ async def update_template(
 
 
 @app.delete("/{template_id}", status_code=204, response_model=None)
-async def delete_template(template_id: str) -> None:
+async def delete_template(
+    template_id: Annotated[str, Path(..., min_length=1, description="Template ID")],
+) -> None:
     """Delete a template."""
     template = _load_template(template_id)
     if template:
@@ -153,7 +159,9 @@ async def delete_template(template_id: str) -> None:
 
 
 @app.post("/{template_id}/use")
-async def track_template_usage(template_id: str) -> ConversationTemplate:
+async def track_template_usage(
+    template_id: Annotated[str, Path(..., min_length=1, description="Template ID")],
+) -> ConversationTemplate:
     """Track template usage."""
     template = _load_template(template_id)
     if not template:

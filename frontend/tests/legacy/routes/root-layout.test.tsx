@@ -10,7 +10,7 @@ import MainApp, {
 } from "#/routes/root-layout";
 import { LOCAL_STORAGE_KEYS } from "#/utils/local-storage";
 import i18n from "#/i18n";
-import { renderWithProviders, setPlaywrightFlag } from "../../test-utils";
+import { renderWithProviders, setPlaywrightFlag } from "#test-utils";
 
 const {
   useConfigMock,
@@ -481,4 +481,5 @@ describe("root-layout", () => {
     }
   });
 });
+
 

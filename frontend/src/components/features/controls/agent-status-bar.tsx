@@ -57,7 +57,7 @@ export function AgentStatusBar() {
       source: "agent-status",
       metadata: { ...curStatusMessage },
     });
-  }, [curStatusMessage?.id]);
+  }, [curStatusMessage]);
 
   // Handle notify
   React.useEffect(() => {

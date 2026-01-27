@@ -7,6 +7,7 @@ import atexit
 import contextlib
 import json
 import multiprocessing
+import os
 import time
 import uuid
 from typing import Any
@@ -114,6 +115,51 @@ class BrowserEnv:
             env_name = self.browsergym_eval_env
             assert env_name is not None
             return gym.make(env_name, tags_to_mark="all", timeout=100000)
+        
+        # Ensure downloads directory exists and is writable
+        # Note: With Docker volumes (default), the workspace is always writable by the container user.
+        # The /tmp/ fallback is kept for resilience in case bind mounts are used or volume creation fails.
+        downloads_path = "/workspace/.downloads"
+        try:
+            # Check if directory exists and is writable
+            if os.path.exists(downloads_path):
+                if not os.access(downloads_path, os.W_OK):
+                    logger.warning(
+                        f"Downloads directory {downloads_path} exists but is not writable. "
+                        "Falling back to /tmp/.downloads (this should not happen with Docker volumes)"
+                    )
+                    downloads_path = "/tmp/.downloads"
+            else:
+                # Try to create the directory
+                try:
+                    os.makedirs(downloads_path, mode=0o755, exist_ok=True)
+                    logger.debug(f"Created downloads directory: {downloads_path}")
+                except (OSError, PermissionError) as e:
+                    logger.warning(
+                        f"Failed to create downloads directory {downloads_path}: {e}. "
+                        "Falling back to /tmp/.downloads (this should not happen with Docker volumes)"
+                    )
+                    downloads_path = "/tmp/.downloads"
+                    os.makedirs(downloads_path, mode=0o755, exist_ok=True)
+            
+            # Ensure the directory is writable
+            if not os.access(downloads_path, os.W_OK):
+                raise PermissionError(f"Downloads directory {downloads_path} is not writable")
+            
+            # Ensure path ends with / for Playwright
+            if not downloads_path.endswith("/"):
+                downloads_path += "/"
+            
+            logger.debug(f"Using downloads directory: {downloads_path}")
+        except Exception as e:
+            logger.error(f"Failed to set up downloads directory: {e}", exc_info=True)
+            # Fall back to /tmp/.downloads as a last resort
+            downloads_path = "/tmp/.downloads/"
+            try:
+                os.makedirs(downloads_path, mode=0o755, exist_ok=True)
+            except Exception:
+                pass  # If this fails, Playwright will handle the error
+        
         return gym.make(
             "browsergym/openended",
             task_kwargs={"start_url": "about:blank", "goal": "PLACEHOLDER_GOAL"},
@@ -123,7 +169,7 @@ class BrowserEnv:
             tags_to_mark="all",
             timeout=100000,
             pw_context_kwargs={"accept_downloads": True},
-            pw_chromium_kwargs={"downloads_path": "/workspace/.downloads/"},
+            pw_chromium_kwargs={"downloads_path": downloads_path},
         )
 
     def _initialize_eval_attributes(self) -> None:

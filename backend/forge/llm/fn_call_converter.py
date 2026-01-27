@@ -3,8 +3,6 @@
 
 This will inject prompts so that models that doesn't support function calling
 can still be used with function calling agents.
-
-We follow format from: https://docs.litellm.ai/docs/completion/function_call
 """
 
 import copy

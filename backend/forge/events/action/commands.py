@@ -1,4 +1,4 @@
-"""Action types for executing shell and IPython commands."""
+"""Action types for executing shell commands."""
 
 from __future__ import annotations
 
@@ -57,42 +57,4 @@ class CmdRunAction(Action):
     __test__ = False
 
 
-@dataclass
-class IPythonRunCellAction(Action):
-    """Action to run Python code in Jupyter kernel.
-
-    Attributes:
-        code: Python code to execute
-        thought: Agent's reasoning for this action
-        include_extra: Whether to include extra output (plots, etc.)
-        kernel_init_code: Code to run before executing main code
-
-    """
-
-    code: str = ""
-    thought: str = ""
-    include_extra: bool = True
-    action: ClassVar[str] = ActionType.RUN_IPYTHON
-    runnable: ClassVar[bool] = True
-    confirmation_state: ActionConfirmationStatus = ActionConfirmationStatus.CONFIRMED
-    security_risk: ActionSecurityRisk = ActionSecurityRisk.UNKNOWN
-    kernel_init_code: str = ""
-
-    def __str__(self) -> str:
-        """Return a readable summary including thought and code snippet."""
-        ret = "**IPythonRunCellAction**\n"
-        if self.thought:
-            ret += f"THOUGHT: {self.thought}\n"
-        ret += f"CODE:\n{self.code}"
-        return ret
-
-    @property
-    def message(self) -> str:
-        """Get IPython execution message."""
-        return f"Running Python code interactively: {self.code}"
-
-    __test__ = False
-
-
 canonicalize("CmdRunAction", CmdRunAction)
-canonicalize("IPythonRunCellAction", IPythonRunCellAction)

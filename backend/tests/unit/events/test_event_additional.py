@@ -8,7 +8,6 @@ import pytest
 from datetime import datetime, timezone
 
 from forge.events.action.agent import (
-    AgentDelegateAction,
     AgentFinishAction,
     AgentRejectAction,
     AgentThinkAction,
@@ -201,10 +200,6 @@ def test_agent_action_messages_cover_variants() -> None:
         ChangeAgentStateAction(agent_state="running").message
         == "Agent state changed to running"
     )
-    assert (
-        AgentDelegateAction(agent="helper", inputs={}).message
-        == "I'm asking helper for help with this task."
-    )
     assert RecallAction(
         recall_type=RecallType.WORKSPACE_CONTEXT, query="documentation"
     ).message.startswith("Retrieving content")
@@ -342,7 +337,7 @@ def test_file_action_helpers_render_readable_output() -> None:
         command="insert",
         new_str="print('hi')",
         insert_line=10,
-        impl_source=FileEditSource.OH_ACI,
+        impl_source=FileEditSource.FILE_EDITOR,
     )
 
     assert "Reading file: README.md" == read_action.message

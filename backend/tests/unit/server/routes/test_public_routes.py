@@ -10,13 +10,13 @@ from forge.server.routes import public as public_routes
 
 
 @pytest.mark.asyncio
-async def test_get_litellm_models(monkeypatch):
+async def test_get_models(monkeypatch):
     monkeypatch.setattr(
         public_routes,
         "get_supported_llm_models",
         lambda cfg: ["gpt-4", "gpt-3.5-turbo"],
     )
-    assert await public_routes.get_litellm_models() == ["gpt-4", "gpt-3.5-turbo"]
+    assert await public_routes.get_models() == ["gpt-4", "gpt-3.5-turbo"]
 
 
 @pytest.mark.asyncio

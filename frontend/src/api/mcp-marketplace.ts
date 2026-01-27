@@ -149,7 +149,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     homepage: "https://github.com/modelcontextprotocol/servers",
     repository:
       "https://github.com/modelcontextprotocol/servers/tree/main/src/playwright",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-playwright"],
@@ -179,7 +179,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     homepage: "https://github.com/modelcontextprotocol/servers",
     repository:
       "https://github.com/modelcontextprotocol/servers/tree/main/src/chrome-devtools",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-chrome-devtools"],
@@ -209,7 +209,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     homepage: "https://github.com/modelcontextprotocol/servers",
     repository:
       "https://github.com/modelcontextprotocol/servers/tree/main/src/postgres",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-postgres"],
@@ -242,7 +242,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     homepage: "https://github.com/modelcontextprotocol/servers",
     repository:
       "https://github.com/modelcontextprotocol/servers/tree/main/src/sqlite",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-sqlite"],
@@ -326,7 +326,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     homepage: "https://github.com/modelcontextprotocol/servers",
     repository:
       "https://github.com/modelcontextprotocol/servers/tree/main/src/github",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-github"],
@@ -358,7 +358,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     homepage: "https://github.com/modelcontextprotocol/servers",
     repository:
       "https://github.com/modelcontextprotocol/servers/tree/main/src/slack",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-slack"],
@@ -389,7 +389,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     homepage: "https://github.com/modelcontextprotocol/servers",
     repository:
       "https://github.com/modelcontextprotocol/servers/tree/main/src/gdrive",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-gdrive"],
@@ -419,7 +419,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     homepage: "https://github.com/modelcontextprotocol/servers",
     repository:
       "https://github.com/modelcontextprotocol/servers/tree/main/src/memory",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-memory"],
@@ -448,7 +448,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     homepage: "https://github.com/modelcontextprotocol/servers",
     repository:
       "https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-filesystem"],
@@ -476,7 +476,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     homepage: "https://github.com/modelcontextprotocol/servers",
     repository:
       "https://github.com/modelcontextprotocol/servers/tree/main/src/git",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-git"],
@@ -504,7 +504,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     homepage: "https://github.com/modelcontextprotocol/servers",
     repository:
       "https://github.com/modelcontextprotocol/servers/tree/main/src/puppeteer",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-puppeteer"],
@@ -533,7 +533,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     homepage: "https://github.com/modelcontextprotocol/servers",
     repository:
       "https://github.com/modelcontextprotocol/servers/tree/main/src/brave-search",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-brave-search"],
@@ -561,7 +561,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     installCount: 7000,
     rating: 4.7,
     version: "1.0.0",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-docker"],
@@ -586,7 +586,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     installCount: 6000,
     rating: 4.5,
     version: "1.0.0",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-sentry"],
@@ -616,7 +616,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.7,
     version: "1.0.0",
     repository: "https://github.com/community/mcp-docker",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@community/mcp-server-docker"],
@@ -642,7 +642,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.5,
     version: "1.0.0",
     repository: "https://github.com/community/mcp-sentry",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@community/mcp-server-sentry"],
@@ -671,7 +671,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.4,
     version: "1.0.0",
     repository: "https://github.com/community/mcp-discord",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@community/mcp-server-discord"],
@@ -700,7 +700,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.6,
     version: "1.0.0",
     repository: "https://github.com/community/mcp-redis",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@community/mcp-server-redis"],
@@ -729,7 +729,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.7,
     version: "1.0.0",
     repository: "https://github.com/community/mcp-mysql",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@community/mcp-server-mysql"],
@@ -758,7 +758,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.6,
     version: "1.0.0",
     repository: "https://github.com/community/mcp-mongodb",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@community/mcp-server-mongodb"],
@@ -848,7 +848,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.7,
     version: "1.0.0",
     repository: "https://github.com/community/mcp-jest",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@community/mcp-server-jest"],
@@ -874,7 +874,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.6,
     version: "1.0.0",
     repository: "https://github.com/community/mcp-cypress",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@community/mcp-server-cypress"],
@@ -911,36 +911,6 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
       },
     },
     tags: ["vault", "secrets", "security", "hashicorp"],
-    requirements: {
-      node: ">=18.0.0",
-    },
-  },
-  {
-    id: "kubernetes",
-    name: "Kubernetes MCP",
-    slug: "kubernetes",
-    description:
-      "Kubernetes cluster management - deploy, scale, and manage containerized applications",
-    longDescription:
-      "Connect to Kubernetes clusters, deploy applications, manage pods and services, and orchestrate containerized workloads.",
-    author: "Community",
-    icon: "⚙️",
-    category: "development",
-    type: "stdio",
-    popular: true,
-    installCount: 6500,
-    rating: 4.7,
-    version: "1.0.0",
-    repository: "https://github.com/community/mcp-kubernetes",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
-    config: {
-      command: "npx",
-      args: ["-y", "@community/mcp-server-k8s"],
-      env: {
-        KUBECONFIG: "/path/to/kubeconfig",
-      },
-    },
-    tags: ["kubernetes", "k8s", "orchestration", "containers"],
     requirements: {
       node: ">=18.0.0",
     },
@@ -987,7 +957,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.5,
     version: "1.0.0",
     repository: "https://github.com/community/mcp-elasticsearch",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@community/mcp-server-elasticsearch"],
@@ -1017,7 +987,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.7,
     version: "1.0.0",
     repository: "https://github.com/community/mcp-prometheus",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@community/mcp-server-prometheus"],
@@ -1046,7 +1016,7 @@ const CURATED_MCPS: MCPMarketplaceItem[] = [
     rating: 4.6,
     version: "1.0.0",
     repository: "https://github.com/community/mcp-grafana",
-    documentation: "https://docs.all-hands.dev/usage/mcp",
+    documentation: "https://docs.forge.dev/usage/mcp",
     config: {
       command: "npx",
       args: ["-y", "@community/mcp-server-grafana"],
@@ -1384,7 +1354,7 @@ function deriveOfficialServerMetadata(
     documentation:
       typeof server?.documentation === "string"
         ? server.documentation
-        : "https://docs.all-hands.dev/usage/mcp",
+        : "https://docs.forge.dev/usage/mcp",
   } as const;
 }
 
@@ -1861,3 +1831,4 @@ export function clearMarketplaceCache(): void {
     // Error clearing cache - silently fail
   }
 }
+

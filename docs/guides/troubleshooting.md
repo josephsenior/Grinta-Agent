@@ -9,7 +9,6 @@
 - [Installation Issues](#installation-issues)
 - [Backend Problems](#backend-problems)
 - [Frontend Issues](#frontend-issues)
-- [MetaSOP Issues](#metasop-issues)
 - [Performance Problems](#performance-problems)
 - [WebSocket Errors](#websocket-errors)
 
@@ -49,7 +48,7 @@ ERROR: Could not find a version that satisfies the requirement...
 
 ---
 
-### **Problem: Node.js/npm installation fails**
+### **Problem: Node.js/pnpm installation fails**
 
 **Symptoms:**
 ```bash
@@ -64,15 +63,15 @@ npm ERR! permission denied
    nvm use 18
    ```
 
-2. Clear npm cache:
+2. Clear pnpm store:
    ```bash
-   npm cache clean --force
+   pnpm store prune
    ```
 
 3. Delete node_modules and reinstall:
    ```bash
-   rm -rf node_modules package-lock.json
-   npm install
+   rm -rf node_modules pnpm-lock.yaml
+   pnpm install
    ```
 
 ---
@@ -179,13 +178,13 @@ Error: Cannot find module 'vite'
 
 2. Install dependencies:
    ```bash
-   npm install
+   pnpm install
    ```
 
 3. Clear cache and reinstall:
    ```bash
-   rm -rf node_modules .vite
-   npm install
+   rm -rf node_modules .vite pnpm-lock.yaml
+   pnpm install
    ```
 
 ---
@@ -243,89 +242,6 @@ Hydration failed because the server rendered HTML didn't match the client
    const nodeTypes = useMemo(() => ({
      custom: CustomNode,
    }), []);
-   ```
-
----
-
-## 🤖 **MetaSOP Issues**
-
-### **Problem: MetaSOP not starting**
-
-**Symptoms:**
-- "Enable MetaSOP" toggle doesn't work
-- No orchestration events
-
-**Solutions:**
-1. Check backend logs:
-   ```bash
-   tail -f logs/uvicorn.err
-   ```
-
-2. Verify MetaSOP configuration:
-   ```bash
-   # Check config.toml
-   grep -A 5 "\[metasop\]" config.toml
-   ```
-
-3. Test MetaSOP directly:
-   ```bash
-   python -m Forge.metasop.test
-   ```
-
----
-
-### **Problem: Incomplete artifacts**
-
-**Symptoms:**
-- PM stories are generic
-- Architect design lacks detail
-- Engineer file structure is incomplete
-
-**Solutions:**
-1. **Provide more detailed requirements:**
-   ```
-   Bad:  "Build a todo app"
-   Good: "Build a todo app with user auth, categories, 
-          priority levels, due dates, and search"
-   ```
-
-2. **Review and iterate:**
-   - Check each artifact carefully
-   - Provide specific feedback
-   - Request refinements
-
-3. **Use better LLM models:**
-   - Try GPT-4 instead of GPT-3.5
-   - Use Claude Sonnet 3.5 for complex tasks
-   - Increase temperature for creativity
-
----
-
-### **Problem: Diagrams not rendering**
-
-**Symptoms:**
-- Blank visualization panels
-- "No data" messages
-
-**Solutions:**
-1. Check browser console for errors (F12)
-
-2. Verify artifact structure:
-   ```typescript
-   // Should have proper structure
-   {
-     "user_stories": [...],
-     "api_endpoints": [...],
-     // etc.
-   }
-   ```
-
-3. Refresh the page (Ctrl+R)
-
-4. Check WebSocket connection:
-   ```javascript
-   // In browser console
-   console.log(window.socket?.connected);
    ```
 
 ---

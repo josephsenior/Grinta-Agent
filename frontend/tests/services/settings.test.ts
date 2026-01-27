@@ -14,11 +14,6 @@ describe("settings service", () => {
     const defaults = getDefaultSettings();
 
     expect(defaults).toBe(DEFAULT_SETTINGS);
-    expect(defaults.LLM_MODEL).toBe("Openhands/claude-sonnet-4-20250514");
-    expect(defaults.MCP_CONFIG).toEqual({
-      sse_servers: [],
-      stdio_servers: [],
-      shttp_servers: [],
-    });
+    expect(defaults.LLM_MODEL).toBe("anthropic/claude-3-5-sonnet-20241022");
   });
 });

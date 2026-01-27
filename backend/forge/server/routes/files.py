@@ -5,17 +5,19 @@ from __future__ import annotations
 import os
 import posixpath
 import sys
-from typing import TYPE_CHECKING, Annotated, Any, cast
-from pathlib import Path
+from typing import TYPE_CHECKING, Annotated, Any, cast, Union
+from pathlib import Path as PathLib
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi import Path
 from fastapi.responses import FileResponse, JSONResponse
 from forge.server.utils.responses import error
 from starlette.background import BackgroundTask
 
 from forge.core.exceptions import AgentRuntimeUnavailableError
 from forge.core.logger import forge_logger as logger
+from forge.core.security.sentinels import MISSING, Sentinel, is_missing
 from forge.events.action import FileReadAction
 from forge.events.action.files import FileWriteAction
 from forge.events.observation import ErrorObservation, FileReadObservation
@@ -84,39 +86,14 @@ else:
     )
 
 
-def _unlink_path(path: Path) -> None:
+def _unlink_path(path: PathLib) -> None:
     """Background helper to remove temporary archive files."""
     path.unlink(missing_ok=True)
 
 
-def _sanitize_file_path(file_path: str) -> str:
-    """Sanitize file path to prevent path traversal attacks.
-
-    Args:
-        file_path: The file path to sanitize
-
-    Returns:
-        str: Sanitized file path
-
-    Raises:
-        ValueError: If the path contains directory traversal sequences
-
-    """
-    if not file_path:
-        raise ValueError("File path cannot be empty")
-
-    # Normalize the path and check for directory traversal
-    normalized_path = posixpath.normpath(file_path)
-
-    # Check for directory traversal attempts
-    if ".." in normalized_path or normalized_path.startswith("/"):
-        raise ValueError(f"Invalid file path: {file_path}")
-
-    # Ensure path doesn't start with current or parent directory markers
-    if normalized_path.startswith("./") or normalized_path.startswith("../"):
-        raise ValueError(f"Invalid file path: {file_path}")
-
-    return normalized_path
+# Note: _sanitize_file_path() has been replaced with direct SafePath.validate() usage
+# in route handlers where we have workspace_root context. SafePath provides
+# production-grade path validation with security boundaries.
 
 
 def _get_conversation_manager_instance():
@@ -141,16 +118,17 @@ def _require_conversation_manager():
 
 @app.get(
     "/list-files",
-    response_model=list[str],
+    response_model=None,
     responses={
-        404: {"description": "Runtime not initialized", "model": dict},
-        500: {"description": "Error listing or filtering files", "model": dict},
+        200: {"description": "List of file paths"},
+        404: {"description": "Runtime not initialized"},
+        500: {"description": "Error listing or filtering files"},
     },
 )
 async def list_files(
-    path: str | None = None,
+    path: str | None = Query(None, description="Optional path to list files from"),
     conversation: ServerConversation = Depends(get_conversation),
-) -> list[str] | JSONResponse:
+) -> Any:
     """List files in the specified path.
 
     This function retrieves a list of files from the agent's runtime file store,
@@ -172,31 +150,192 @@ async def list_files(
         HTTPException: If there's an error listing the files.
 
     """
+    # If runtime is not ready, try to wait for it (it might be initializing)
     if not conversation.runtime:
-        logger.debug(
-            "list-files request received before runtime ready; returning empty list"
+        logger.warning(
+            f"list-files request for conversation {conversation.sid} received before runtime ready. "
+            "This indicates the runtime failed to initialize or is still starting."
         )
-        return []
+        # Wait a bit for runtime to be created (it might be in the process of initialization)
+        import asyncio
+        max_wait = 5  # Wait up to 5 seconds
+        wait_interval = 0.2
+        waited = 0.0
+        while waited < max_wait and not conversation.runtime:
+            await asyncio.sleep(wait_interval)
+            waited += wait_interval
+            # Runtime might have been set by now if initialization completed
+            # Re-check the conversation object
+            if hasattr(conversation, 'runtime') and conversation.runtime:
+                logger.info(f"Runtime for conversation {conversation.sid} became available after {waited}s")
+                break
+        
+        if not conversation.runtime:
+            logger.error(
+                f"list-files request: runtime for conversation {conversation.sid} still not ready after {max_wait}s. "
+                "This likely indicates the local runtime failed to initialize. Check backend logs for initialization errors."
+            )
+            return error(
+                message=(
+                    "⏳ Workspace is still starting up\n\n"
+                    "Your development environment is being initialized. This usually takes a few seconds.\n\n"
+                    "**If this persists, the local runtime may have failed to initialize.**\n\n"
+                    "**What you can do:**\n"
+                    "• Wait a moment and try again\n"
+                    "• Refresh the page\n"
+                    "• Check the backend logs for runtime initialization errors\n"
+                    "• Try starting a new conversation\n\n"
+                    "**Note:** Check the backend console for detailed error messages about why the runtime failed to initialize."
+                ),
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                error_code="RUNTIME_NOT_READY",
+            )
+    
     runtime = cast("RuntimeFileOps", conversation.runtime)
+    workspace_root = runtime.config.workspace_mount_path_in_sandbox
+
+    # Validate path using SafePath if provided
+    if path is not None:
+        try:
+            from forge.core.security.path_validation import PathValidationError, SafePath
+
+            # Validate and sanitize path using SafePath
+            # path is guaranteed to be str here (not MISSING) due to is_missing check above
+            safe_path = SafePath.validate(
+                str(path),  # Type narrowing: path is str here
+                workspace_root=workspace_root,
+                must_be_relative=True,  # Enforce workspace boundaries
+            )
+            path = safe_path.relative_to_workspace()
+        except PathValidationError as e:
+            logger.warning("Invalid path provided to list_files: %s - %s", path, e.message)
+            return error(
+                message=f"Invalid path: {e.message}",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                error_code="INVALID_PATH",
+            )
+    
+    # Check if runtime is actually connected/alive
     try:
-        file_list = await call_sync_from_async(runtime.list_files, path)
+        # Try to check if the runtime is alive before listing files
+        if hasattr(runtime, "check_if_alive"):
+            await call_sync_from_async(runtime.check_if_alive)
+    except Exception as health_check_error:
+        logger.warning(
+            "Runtime health check failed before listing files: %s",
+            health_check_error,
+        )
+        # Continue anyway - the list_files call will handle the error
+    
+    try:
+        # Use path directly (None if not provided)
+        list_path = path
+        file_list = await call_sync_from_async(runtime.list_files, list_path)
     except (httpx.ConnectError, ConnectionRefusedError) as e:
         # Runtime container is unavailable (crashed or stopped)
-        logger.error("Runtime container unavailable when listing files: %s", e)
+        logger.error(
+            "Runtime container unavailable when listing files: %s (type: %s)",
+            e,
+            type(e).__name__,
+            exc_info=True,
+        )
+        
+        # Check if container is still running (for DockerRuntime)
+        container_status = "unknown"
+        if hasattr(runtime, "container") and runtime.container is not None:
+            try:
+                runtime.container.reload()
+                container_status = runtime.container.status
+            except Exception:
+                pass
+        
+        if container_status == "running":
+            return error(
+                message=(
+                    "⚠️ Workspace connection issue\n\n"
+                    "The workspace container is running but not responding to requests.\n\n"
+                    "**What you can do:**\n"
+                    "• Wait 30 seconds and try again (the server may still be starting)\n"
+                    "• Refresh the page\n"
+                    "• Start a new conversation if the problem persists\n\n"
+                    "**Note:** This usually resolves itself as the workspace finishes initializing."
+                ),
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                error_code="RUNTIME_CONNECTION_ERROR",
+            )
+        else:
+            return error(
+                message=(
+                    "❌ Workspace unavailable\n\n"
+                    "The workspace container is not running or has stopped.\n\n"
+                    "**What you can do:**\n"
+                    "• Start a new conversation to create a fresh workspace\n"
+                    "• Check if the container crashed (check logs)\n"
+                    "• Wait a moment and refresh the page\n\n"
+                    "**Note:** Your conversation data is saved, but you'll need a new workspace."
+                ),
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                error_code="RUNTIME_UNAVAILABLE",
+            )
+    except httpx.TimeoutException as e:
+        logger.error(
+            "Timeout listing files: %s",
+            e,
+            exc_info=True,
+        )
         return error(
-            message="Runtime container is unavailable. Please start a new conversation.",
+            message=(
+                "⏱️ Request timeout\n\n"
+                "The workspace took too long to respond when listing files.\n\n"
+                "**What you can do:**\n"
+                "• Wait a moment and try again\n"
+                "• The workspace may be under heavy load\n"
+                "• Try refreshing the page\n\n"
+                "**Note:** This is usually temporary."
+            ),
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            error_code="RUNTIME_TIMEOUT",
+        )
+    except Exception as e:
+        # Catch any other exceptions that might occur
+        logger.error(
+            "Unexpected error listing files: %s (type: %s)",
+            e,
+            type(e).__name__,
+            exc_info=True,
+        )
+        if isinstance(e, AgentRuntimeUnavailableError):
+            return error(
+                message=(
+                    "❌ Workspace error\n\n"
+                    f"An error occurred while listing files: {e}\n\n"
+                    "**What you can do:**\n"
+                    "• Try again in a moment\n"
+                    "• Start a new conversation if the problem persists\n"
+                    "• Check the workspace status\n\n"
+                    "**Technical details:** Runtime unavailable"
+                ),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                error_code="LIST_FILES_ERROR",
+            )
+        # For other exceptions, return 503 as well
+        return error(
+            message=(
+                "❌ Workspace unavailable\n\n"
+                "Unable to connect to the workspace. The container may have stopped or crashed.\n\n"
+                "**What you can do:**\n"
+                "• Start a new conversation to create a fresh workspace\n"
+                "• Wait a moment and refresh the page\n"
+                "• Check if the workspace is still initializing\n\n"
+                "**Note:** Your conversation data is saved."
+            ),
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             error_code="RUNTIME_UNAVAILABLE",
         )
-    except AgentRuntimeUnavailableError as e:
-        logger.error("Error listing files: %s", e)
-        return error(
-            message=f"Error listing files: {e}",
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            error_code="LIST_FILES_ERROR",
-        )
-    if path:
-        file_list = [os.path.join(path, f) for f in file_list]
+    # Only prefix with path if it was explicitly provided
+    if path is not None:
+        # Type narrowing: path is str here
+        file_list = [os.path.join(str(path), f) for f in file_list]
     file_list = [f for f in file_list if f not in FILES_TO_IGNORE]
 
     return file_list
@@ -212,9 +351,9 @@ async def list_files(
     },
 )
 async def select_file(
-    file: str,
+    file: Annotated[str, Field(..., min_length=1, description="File path to retrieve")],
     conversation: ServerConversation = Depends(get_conversation),
-) -> FileResponse | JSONResponse:
+) -> Any:
     """Retrieve the content of a specified file.
 
     To select a file:
@@ -234,17 +373,6 @@ async def select_file(
         HTTPException: If there's an error opening the file.
 
     """
-    try:
-        # Sanitize the file path to prevent path traversal attacks
-        sanitized_file = _sanitize_file_path(file)
-    except ValueError as e:
-        logger.warning("Invalid file path provided: %s", file)
-        return error(
-            message=str(e),
-            status_code=status.HTTP_400_BAD_REQUEST,
-            error_code="INVALID_FILE_PATH",
-        )
-
     # Check if runtime is ready before accessing it
     if not conversation.runtime:
         logger.warning(
@@ -257,7 +385,26 @@ async def select_file(
         )
 
     runtime = cast("RuntimeFileOps", conversation.runtime)
-    file = os.path.join(runtime.config.workspace_mount_path_in_sandbox, sanitized_file)
+    workspace_root = runtime.config.workspace_mount_path_in_sandbox
+
+    # Use SafePath for production-grade path validation with workspace boundaries
+    try:
+        from forge.core.security.path_validation import PathValidationError, SafePath
+
+        # Validate and sanitize path using SafePath
+        safe_path = SafePath.validate(
+            file,
+            workspace_root=workspace_root,
+            must_be_relative=True,  # Enforce workspace boundaries
+        )
+        file = str(safe_path.path)
+    except PathValidationError as e:
+        logger.warning("Invalid file path provided: %s - %s", file, e.message)
+        return error(
+            message=f"Invalid file path: {e.message}",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            error_code="INVALID_FILE_PATH",
+        )
     read_action = FileReadAction(file)
     try:
         observation = await call_sync_from_async(runtime.run_action, read_action)
@@ -309,7 +456,7 @@ async def select_file(
 )
 def zip_current_workspace(
     conversation: ServerConversation = Depends(get_conversation),
-) -> FileResponse | JSONResponse:
+) -> Any:
     """Zip the current workspace and return it as a downloadable file.
 
     Args:
@@ -325,7 +472,7 @@ def zip_current_workspace(
         runtime = cast("RuntimeFileOps", conversation.runtime)
         path = runtime.config.workspace_mount_path_in_sandbox
         try:
-            zip_file_path = Path(runtime.copy_from(path))
+            zip_file_path = PathLib(runtime.copy_from(path))
         except AgentRuntimeUnavailableError as e:
             logger.error("Error zipping workspace: %s", e)
             return error(
@@ -346,15 +493,16 @@ def zip_current_workspace(
 
 @app.get(
     "/git/changes",
-    response_model=list[dict[str, str]],
+    response_model=None,
     responses={
-        404: {"description": "Not a git repository", "model": dict},
-        500: {"description": "Error getting changes", "model": dict},
+        200: {"description": "List of git changes"},
+        404: {"description": "Not a git repository"},
+        500: {"description": "Error getting changes"},
     },
 )
 async def git_changes(
     conversation_id: str,
-) -> list[dict[str, str]] | JSONResponse:
+) -> Any:
     """Get list of git-tracked file changes in the workspace.
 
     Retrieves the conversation's runtime and queries it for modified files
@@ -425,14 +573,17 @@ async def git_changes(
 
 @app.get(
     "/git/diff",
-    response_model=dict[str, Any],
-    responses={500: {"description": "Error getting diff", "model": dict}},
+    response_model=None,
+    responses={
+        200: {"description": "Git diff data"},
+        500: {"description": "Error getting diff"},
+    },
 )
 async def git_diff(
-    path: str,
+    path: Annotated[str, Field(..., min_length=1, description="Path to get git diff for")],
     conversation_store: Any = Depends(get_conversation_store),
     conversation: ServerConversation = Depends(get_conversation),
-) -> dict[str, Any] | JSONResponse:
+) -> Any:
     """Get git diff for a specific path in the workspace.
 
     Args:
@@ -445,28 +596,38 @@ async def git_diff(
         JSONResponse: An error response if git operations fail.
 
     """
-    # Validate path parameter
-    if not path or not isinstance(path, str) or not path.strip():
-        logger.warning("Invalid path parameter provided to git_diff endpoint: %s", path)
+    # Check if runtime is ready
+    if not conversation.runtime:
+        logger.warning("git_diff request received before runtime ready for path: %s", path)
         return error(
-            message="Path parameter is required and must be a non-empty string",
-            status_code=422,
-            error_code="INVALID_PATH",
+            message="Runtime not ready yet, please try again",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            error_code="RUNTIME_NOT_READY",
         )
 
+    runtime = cast("RuntimeFileOps", conversation.runtime)
+    workspace_root = runtime.config.workspace_mount_path_in_sandbox
+
+    # Use SafePath for production-grade path validation with workspace boundaries
     try:
-        # Sanitize the path to prevent path traversal attacks
-        sanitized_path = _sanitize_file_path(path.strip())
-    except ValueError as e:
-        logger.warning("Invalid file path provided to git_diff: %s", path)
+        from forge.core.security.path_validation import PathValidationError, SafePath
+
+        # Validate and sanitize path using SafePath
+        safe_path = SafePath.validate(
+            path.strip(),
+            workspace_root=workspace_root,
+            must_be_relative=True,  # Enforce workspace boundaries
+        )
+        sanitized_path = safe_path.relative_to_workspace()
+    except PathValidationError as e:
+        logger.warning("Invalid file path provided to git_diff: %s - %s", path, e.message)
         return error(
-            message=str(e),
+            message=f"Invalid file path: {e.message}",
             status_code=status.HTTP_400_BAD_REQUEST,
             error_code="INVALID_FILE_PATH",
         )
 
-    runtime = cast("RuntimeFileOps", conversation.runtime)
-    cwd = runtime.config.workspace_mount_path_in_sandbox
+    cwd = workspace_root
     try:
         return await call_sync_from_async(runtime.get_git_diff, sanitized_path, cwd)
     except AgentRuntimeUnavailableError as e:
@@ -495,13 +656,37 @@ async def upload_files(
     """
     uploaded_files = []
     skipped_files = []
+    
+    # Check if runtime is ready
+    if not conversation.runtime:
+        return error(
+            message="Runtime not ready yet, please try again",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            error_code="RUNTIME_NOT_READY",
+        )
+    
     runtime = cast("RuntimeFileOps", conversation.runtime)
+    workspace_root = runtime.config.workspace_mount_path_in_sandbox
+    
     for file in files:
         try:
-            # Sanitize the filename to prevent path traversal attacks
-            sanitized_filename = _sanitize_file_path(str(file.filename))
-        except ValueError as e:
-            skipped_files.append({"name": file.filename, "reason": str(e)})
+            # Validate filename is not empty
+            if not file.filename:
+                raise ValueError("Filename cannot be empty")
+            
+            # Use SafePath for production-grade path validation with workspace boundaries
+            from forge.core.security.path_validation import PathValidationError, SafePath
+
+            # Validate and sanitize filename using SafePath
+            safe_path = SafePath.validate(
+                str(file.filename),
+                workspace_root=workspace_root,
+                must_be_relative=True,  # Enforce workspace boundaries
+            )
+            sanitized_filename = safe_path.relative_to_workspace()
+        except (ValueError, PathValidationError) as e:
+            error_message = e.message if isinstance(e, PathValidationError) else str(e)
+            skipped_files.append({"name": file.filename or "<unknown>", "reason": error_message})
             continue
 
         file_path = os.path.join(

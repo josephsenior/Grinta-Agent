@@ -29,29 +29,25 @@ class LifecycleService:
         user_id: str | None,
         file_store: "FileStore | None",
         headless_mode: bool,
-        is_delegate: bool,
         conversation_stats: "ConversationStats",
         status_callback: Callable | None,
         security_analyzer,
     ) -> None:
         """Initialize identifiers, event subscriptions, and shared references."""
-
         controller = self._controller
         controller.id = sid or event_stream.sid
         controller.user_id = user_id
         controller.file_store = file_store
         controller.agent = agent
         controller.headless_mode = headless_mode
-        controller.is_delegate = is_delegate
         controller.conversation_stats = conversation_stats
         controller.event_stream = event_stream
         controller.status_callback = status_callback
         controller.security_analyzer = security_analyzer
 
-        if not controller.is_delegate:
-            event_stream.subscribe(
-                EventStreamSubscriber.AGENT_CONTROLLER, controller.on_event, controller.id
-            )
+        event_stream.subscribe(
+            EventStreamSubscriber.AGENT_CONTROLLER, controller.on_event, controller.id
+        )
 
         controller._closed = False
 
@@ -68,7 +64,6 @@ class LifecycleService:
         replay_events: list["Event"] | None,
     ) -> None:
         """Prepare state tracker, stuck detector, and replay manager."""
-
         controller = self._controller
         controller.state_tracker = StateTracker(sid, file_store, user_id)
         controller.set_initial_state(
@@ -90,7 +85,6 @@ class LifecycleService:
         budget_per_task_delta: float | None,
     ) -> None:
         """Record controller-level config overrides."""
-
         controller = self._controller
         controller.agent_to_llm_config = agent_to_llm_config or {}
         controller.agent_configs = agent_configs or {}

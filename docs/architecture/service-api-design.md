@@ -1,7 +1,7 @@
 ## Service API Design for Event and Runtime Services
 
 This document captures the first-class service contracts that were carved out of the
-monolithic MetaSOP orchestrator. Two independent services are introduced:
+monolithic orchestrator. Two independent services are introduced:
 
 - `forge-event-service`: owns session lifecycle and event stream pub/sub.
 - `forge-runtime-service`: manages runtime sandboxes and exposes step execution APIs.
@@ -68,7 +68,7 @@ existing event bus (Kafka/Redis Streams, depending on deployment).
 | `RunStep` | Bidirectional stream that accepts `RunStepRequest` frames and emits `StepUpdate` notifications. |
 | `CloseRuntime` | Tears down the runtime sandbox. |
 
-`RunStepRequest.step` mirrors `SopStep`. `StepUpdate` frames provide progress (`progress`),
+`RunStepRequest.step` mirrors a conversation step. `StepUpdate` frames provide progress (`progress`),
 result (`result`), or failure (`error`) notifications with lightweight metadata.
 
 ### Python Service Stubs
@@ -77,7 +77,7 @@ result (`result`), or failure (`error`) notifications with lightweight metadata.
   `EventStream`. Subscription results are surfaced via async generators, and replay utilises
   `EventStore.search_events`.
 - `forge/services/runtime_service/service.py`: Implements `RuntimeServiceServer` with
-  `MetaSOPOrchestrator` plus the recently modularised adapters (`RuntimeAdapter`,
+  `RuntimeOrchestrator` plus modularised adapters (`RuntimeAdapter`,
   `TemplateToolkit`, `ProfileManager`, etc.). Runtime state is tracked per `runtime_id`.
 
 These stubs can be wrapped with generated gRPC servants (e.g. using `grpc.aio`), ensuring
@@ -94,7 +94,7 @@ with monolith implementations:
   Provides methods like `create_runtime()`, `close_runtime()`, and `run_step()`.
 
 These adapters enable a gradual migration path:
-1. **In-process mode** (current): Direct access to `EventStream` and `MetaSOPOrchestrator`.
+1. **In-process mode** (current): Direct access to `EventStream` and `RuntimeOrchestrator`.
 2. **gRPC mode** (future): Network-based service calls with automatic serialization.
 
 ### Proto Compilation
@@ -133,7 +133,7 @@ Contract tests in `tests/unit/services/` verify:
 
 **Phase 2 — Local & Integration Validation:**
 - Add adapter integration tests that stand up ephemeral gRPC servers (loopback) to exercise client paths.
-- Extend smoke test (`scripts/smoke_metasop.py`) to run once in gRPC mode.
+- Extend smoke test (`backend/scripts/test_dispatch.py`) to run once in gRPC mode.
 - Verify load-shedding behavior: simulate server outages, ensure adapters fall back or surface clear errors.
 - Measure latency/throughput baselines with `pytest-benchmark` or k6 pointing at loopback servers.
 

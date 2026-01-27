@@ -38,13 +38,6 @@ Backend Events → Event Queue → WebSocket Server → Frontend
 
 ## 💡 **Event Types**
 
-### **MetaSOP Events:**
-- `metasop_orchestration_start`
-- `metasop_step_start`
-- `metasop_step_complete` (with artifact)
-- `metasop_step_failed`
-- `metasop_orchestration_complete`
-
 ### **Optimization Events:**
 - `optimization_triggered`
 - `variant_performance`

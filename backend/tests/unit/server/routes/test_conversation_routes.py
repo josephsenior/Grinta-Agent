@@ -26,7 +26,6 @@ from forge.server.routes.conversation import (
 )
 from forge.server.routes.conversation import (
     get_vscode_url,
-    metasop_debug,
     search_events,
     simple_test_endpoint,
 )
@@ -588,62 +587,6 @@ async def test_add_event_raw_exception(monkeypatch):
     assert json.loads(response.body)["error"] == "boom"
 
 
-@pytest.mark.asyncio
-async def test_metasop_debug_requires_conversation_id(monkeypatch):
-    request = AsyncMock()
-    request.json = AsyncMock(return_value={})
-    response = await metasop_debug(request)
-    assert response.status_code == 400
-    assert (
-        json.loads(response.body)["error"] == "conversation_id required in request body"
-    )
-
-
-@pytest.mark.asyncio
-async def test_metasop_debug_starts_task(monkeypatch):
-    payload = {"conversation_id": "conv", "message": "run"}
-    request = AsyncMock()
-    request.json = AsyncMock(return_value=payload)
-
-    tasks = []
-
-    def fake_create_task(coro):
-        tasks.append(coro)
-        return SimpleNamespace()
-
-    monkeypatch.setitem(
-        sys.modules,
-        "forge.metasop.router",
-        SimpleNamespace(run_metasop_for_conversation=AsyncMock()),
-    )
-    monkeypatch.setattr("asyncio.create_task", fake_create_task)
-
-    response = await metasop_debug(request)
-    assert response.status_code == 200
-    assert tasks
-
-
-@pytest.mark.asyncio
-async def test_metasop_debug_handles_exception(monkeypatch):
-    request = AsyncMock()
-    payload = {"conversation_id": "conv"}
-    request.json = AsyncMock(return_value=payload)
-    monkeypatch.setitem(
-        sys.modules,
-        "forge.metasop.router",
-        SimpleNamespace(run_metasop_for_conversation=AsyncMock()),
-    )
-
-    def raise_task(_):
-        raise RuntimeError("boom")
-
-    monkeypatch.setattr("asyncio.create_task", raise_task)
-
-    response = await metasop_debug(request)
-    assert response.status_code == 500
-    assert json.loads(response.body)["error"] == "boom"
-
-
 def test_extract_mcp_tools_empty():
     agent = SimpleNamespace(metadata=SimpleNamespace(mcp_tools=None))
     assert conversation_routes._extract_mcp_tools(agent) == []
@@ -717,7 +660,7 @@ async def test_update_conversation_success():
         assert saved_metadata.last_updated_at is not None
         mock_sio.emit.assert_called_once()
         emit_call = mock_sio.emit.call_args
-        assert emit_call[0][0] == "oh_event"
+        assert emit_call[0][0] == "forge_event"
         assert emit_call[0][1]["conversation_title"] == new_title
         assert emit_call[1]["to"] == f"room:{conversation_id}"
 

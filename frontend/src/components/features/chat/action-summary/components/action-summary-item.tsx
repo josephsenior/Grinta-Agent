@@ -21,8 +21,8 @@ export function ActionSummaryItem({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 py-0.5 px-2 rounded-md transition-all duration-200",
-        "hover:bg-white/5 cursor-default",
+        "flex items-center gap-2 py-1 px-2 rounded transition-all duration-150",
+        "hover:bg-[#2a2d2e] cursor-default",
         onClick && "cursor-pointer",
       )}
       onClick={onClick}
@@ -37,7 +37,7 @@ export function ActionSummaryItem({
       <span
         className={cn(
           "text-xs font-medium",
-          isError ? "text-danger" : "text-foreground-secondary",
+          isError ? "text-[#f48771]" : "text-[#cccccc]",
         )}
       >
         {summary}

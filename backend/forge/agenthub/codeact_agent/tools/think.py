@@ -1,9 +1,8 @@
 """Definition of the lightweight reasoning tool for CodeAct agents.
 
-Constructed via compatibility helper for resilience against stubbed `litellm`.
+Constructed via compatibility helper for consistent tool parameter formatting.
 """
 
-from litellm import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
 from ._compat import build_tool_param
 
 _THINK_DESCRIPTION = (
@@ -18,8 +17,6 @@ _THINK_DESCRIPTION = (
 )
 
 ThinkTool = build_tool_param(
-    ChatCompletionToolParam,
-    ChatCompletionToolParamFunctionChunk,
     name="think",
     description=_THINK_DESCRIPTION,
     parameters={

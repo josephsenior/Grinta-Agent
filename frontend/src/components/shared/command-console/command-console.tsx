@@ -71,9 +71,10 @@ function looksLikeShellCommand(value: string) {
 function generateCommandId() {
   if (
     typeof crypto !== "undefined" &&
-    typeof (crypto as any).randomUUID === "function"
+    "randomUUID" in crypto &&
+    typeof (crypto as { randomUUID: () => string }).randomUUID === "function"
   ) {
-    return (crypto as any).randomUUID();
+    return (crypto as { randomUUID: () => string }).randomUUID();
   }
   return Math.random().toString(36).slice(2, 9);
 }

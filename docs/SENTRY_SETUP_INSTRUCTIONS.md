@@ -151,7 +151,7 @@ Once configured, you can:
 ### Frontend errors not captured
 - Make sure `VITE_SENTRY_DSN` is set (not just `SENTRY_DSN`)
 - Vite requires `VITE_` prefix for env vars
-- Rebuild frontend after adding env vars: `npm run build`
+- Rebuild frontend after adding env vars: `pnpm run build`
 
 ## 📝 Notes
 

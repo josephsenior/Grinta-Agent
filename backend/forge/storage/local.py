@@ -22,17 +22,36 @@ class LocalFileStore(FileStore):
         os.makedirs(self.root, exist_ok=True)
 
     def get_full_path(self, path: str) -> str:
-        """Convert relative path to full filesystem path.
+        """Convert relative path to full filesystem path with security validation.
 
         Args:
             path: Relative path
 
         Returns:
-            Absolute path within storage root
+            Absolute path within storage root (validated and safe)
+
+        Raises:
+            ValueError: If path validation fails (traversal, boundary violation, etc.)
 
         """
-        path = path.removeprefix("/")
-        return os.path.join(self.root, path)
+        try:
+            from forge.core.security.path_validation import SafePath
+
+            # Use SafePath for security validation
+            safe_path = SafePath.validate(
+                path,
+                workspace_root=self.root,
+                must_be_relative=True,  # Enforce storage root boundaries
+            )
+            return str(safe_path.path)
+        except Exception:
+            # Fallback to legacy resolution for backward compatibility
+            logger.warning(
+                f"Path validation failed for {path}, using legacy resolution. "
+                "This may be a security risk."
+            )
+            path = path.removeprefix("/")
+            return os.path.join(self.root, path)
 
     def write(self, path: str, contents: str | bytes) -> None:
         """Write file to local filesystem.

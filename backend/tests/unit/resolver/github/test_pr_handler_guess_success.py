@@ -31,7 +31,7 @@ def mock_llm_success_response():
     )
 
 
-def test_guess_success_review_threads_litellm_call():
+def test_guess_success_review_threads_completion_call():
     """Test that the completion() call for review threads contains the expected content."""
     llm_config = LLMConfig(model="test", api_key=SecretStr("test"))
     handler = ServiceContextPR(
@@ -113,7 +113,7 @@ def test_guess_success_review_threads_litellm_call():
         assert len(json.loads(explanation)) == 2
 
 
-def test_guess_success_thread_comments_litellm_call():
+def test_guess_success_thread_comments_completion_call():
     """Test that the completion() call for thread comments contains the expected content."""
     llm_config = LLMConfig(model="test", api_key=SecretStr("test"))
     handler = ServiceContextPR(
@@ -438,7 +438,7 @@ def test_check_review_comments():
         assert explanation == "Changes look good"
 
 
-def test_guess_success_review_comments_litellm_call():
+def test_guess_success_review_comments_completion_call():
     """Test that the completion() call for review comments contains the expected content."""
     llm_config = LLMConfig(model="test", api_key=SecretStr("test"))
     handler = ServiceContextPR(

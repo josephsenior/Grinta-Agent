@@ -18,14 +18,11 @@ import time
 from typing import Any, Callable, TypeVar
 
 def _noop_record_event(ev: dict[str, Any]) -> None:
-    """Fallback metrics recorder when metasop metrics are unavailable."""
+    """No-op metrics recorder."""
     return
 
 
-try:
-    from forge.metasop.metrics import record_event as _record_metrics_event
-except Exception:  # pragma: no cover - optional dependency
-    _record_metrics_event = _noop_record_event
+_record_metrics_event = _noop_record_event
 
 
 import contextlib

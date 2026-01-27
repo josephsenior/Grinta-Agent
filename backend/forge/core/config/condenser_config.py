@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from forge._canonical import CanonicalModelMetaclass, canonicalize
 from forge.core import logger
 
 if TYPE_CHECKING:
@@ -14,14 +15,14 @@ else:
     LLMConfig = Any  # For runtime when TYPE_CHECKING is False
 
 
-class NoOpCondenserConfig(BaseModel):
+class NoOpCondenserConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for NoOpCondenser."""
 
     type: Literal["noop"] = Field(default="noop")
     model_config = ConfigDict(extra="forbid")
 
 
-class ObservationMaskingCondenserConfig(BaseModel):
+class ObservationMaskingCondenserConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for ObservationMaskingCondenser."""
 
     type: Literal["observation_masking"] = Field(default="observation_masking")
@@ -33,7 +34,7 @@ class ObservationMaskingCondenserConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class BrowserOutputCondenserConfig(BaseModel):
+class BrowserOutputCondenserConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for the BrowserOutputCondenser."""
 
     type: Literal["browser_output_masking"] = Field(default="browser_output_masking")
@@ -44,7 +45,7 @@ class BrowserOutputCondenserConfig(BaseModel):
     )
 
 
-class RecentEventsCondenserConfig(BaseModel):
+class RecentEventsCondenserConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for RecentEventsCondenser."""
 
     type: Literal["recent"] = Field(default="recent")
@@ -57,7 +58,7 @@ class RecentEventsCondenserConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class LLMSummarizingCondenserConfig(BaseModel):
+class LLMSummarizingCondenserConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for LLMCondenser."""
 
     type: Literal["llm"] = Field(default="llm")
@@ -81,7 +82,7 @@ class LLMSummarizingCondenserConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class AmortizedForgettingCondenserConfig(BaseModel):
+class AmortizedForgettingCondenserConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for AmortizedForgettingCondenser."""
 
     type: Literal["amortized"] = Field(default="amortized")
@@ -98,7 +99,7 @@ class AmortizedForgettingCondenserConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class LLMAttentionCondenserConfig(BaseModel):
+class LLMAttentionCondenserConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for LLMAttentionCondenser."""
 
     type: Literal["llm_attention"] = Field(default="llm_attention")
@@ -118,7 +119,7 @@ class LLMAttentionCondenserConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class StructuredSummaryCondenserConfig(BaseModel):
+class StructuredSummaryCondenserConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for StructuredSummaryCondenser instances."""
 
     type: Literal["structured"] = Field(default="structured")
@@ -142,7 +143,7 @@ class StructuredSummaryCondenserConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class CondenserPipelineConfig(BaseModel):
+class CondenserPipelineConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for the CondenserPipeline."""
 
     type: Literal["pipeline"] = Field(default="pipeline")
@@ -153,7 +154,7 @@ class CondenserPipelineConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class ConversationWindowCondenserConfig(BaseModel):
+class ConversationWindowCondenserConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for ConversationWindowCondenser.
 
     Not currently supported by the TOML or ENV_VAR configuration strategies.
@@ -163,7 +164,7 @@ class ConversationWindowCondenserConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class SmartCondenserConfig(BaseModel):
+class SmartCondenserConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     """Configuration for SmartCondenser with LLM-assisted importance scoring."""
 
     type: Literal["smart"] = Field(default="smart")
@@ -190,6 +191,7 @@ class SmartCondenserConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+# Define the union type for all condenser configurations
 CondenserConfig = (
     NoOpCondenserConfig
     | ObservationMaskingCondenserConfig

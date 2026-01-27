@@ -72,13 +72,16 @@ export class ChatErrorBoundary extends React.Component<
       // Default error UI
       return (
         <div className="flex items-center justify-center min-h-[60vh] p-8">
-          <div className="text-center max-w-md">
+          <div className="text-center min-w-[320px] max-w-2xl px-4">
             <div className="mb-6">
               <AlertTriangle className="w-16 h-16 text-destructive mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-text-primary mb-2">
+              <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
                 {i18n.t("error.chatError", "Chat Error")}
               </h2>
-              <p className="text-text-secondary mb-4">
+              <p
+                className="text-[var(--text-secondary)] mb-4"
+                style={{ wordBreak: "normal", whiteSpace: "normal" }}
+              >
                 {i18n.t(
                   "error.chatErrorDescription",
                   "Something went wrong with the chat interface. This might be a temporary issue.",
@@ -88,13 +91,13 @@ export class ChatErrorBoundary extends React.Component<
 
             {process.env.NODE_ENV === "development" && error && (
               <details className="mb-6 text-left">
-                <summary className="cursor-pointer text-sm font-medium text-text-secondary mb-2">
+                <summary className="cursor-pointer text-sm font-medium text-[var(--text-secondary)] mb-2">
                   {i18n.t(
                     "error.errorDetailsDevelopment",
                     "Error Details (Development)",
                   )}
                 </summary>
-                <pre className="text-xs bg-background-secondary p-3 rounded border text-text-tertiary overflow-auto max-h-32">
+                <pre className="text-xs bg-[var(--bg-elevated)] p-3 rounded border border-[var(--border-primary)] text-[var(--text-tertiary)] overflow-auto max-h-32">
                   {error.message}
                   {error.stack}
                 </pre>

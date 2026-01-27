@@ -27,6 +27,7 @@ describe("Sidebar", () => {
   });
 
   it("should fetch settings data on mount", async () => {
+    vi.mocked(Forge.getSettings).mockResolvedValue({} as any);
     renderSidebar();
     await waitFor(() => expect(getSettingsSpy).toHaveBeenCalled());
   });

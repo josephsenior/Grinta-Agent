@@ -13,12 +13,12 @@ DOCKER_RUN_COMMAND="docker run -it --rm \
   -p 3000:3000 \
   -v /var/run/docker.sock:/var/run/docker.sock \
   --add-host host.docker.internal:host-gateway \
-  -e SANDBOX_RUNTIME_CONTAINER_IMAGE=docker.all-hands.dev/all-hands-ai/runtime:${SHORT_SHA}-nikolaik \
+  -e SANDBOX_RUNTIME_CONTAINER_IMAGE=docker.forge.dev/Forge/runtime:${SHORT_SHA}-nikolaik \
   --name Forge-app-${SHORT_SHA} \
-  docker.all-hands.dev/all-hands-ai/Forge:${SHORT_SHA}"
+  docker.forge.dev/Forge/Forge:${SHORT_SHA}"
 
 # Define the uvx command
-UVX_RUN_COMMAND="uvx --python 3.12 --from git+https://github.com/All-Hands-AI/Forge@${BRANCH_NAME} Forge"
+UVX_RUN_COMMAND="uvx --python 3.12 --from git+https://github.com/Forge/Forge@${BRANCH_NAME} Forge"
 
 # Get the current PR body
 PR_BODY=$(gh pr view "$PR_NUMBER" --json body --jq .body)
@@ -69,3 +69,4 @@ fi
 # Update the PR description
 echo "Updating PR description with Docker and uvx commands"
 gh pr edit "$PR_NUMBER" --body "$NEW_PR_BODY"
+

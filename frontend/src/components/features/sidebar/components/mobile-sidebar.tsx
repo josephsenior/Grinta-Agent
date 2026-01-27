@@ -1,5 +1,4 @@
-import { Home, Menu } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Menu } from "lucide-react";
 import { AppNavigation } from "#/components/layout/AppNavigation";
 
 interface MobileSidebarProps {
@@ -11,14 +10,12 @@ export function MobileSidebar({
   mobileDrawerOpen,
   onClose,
 }: MobileSidebarProps) {
-  const navigate = useNavigate();
-
   return (
     <>
       {/* Mobile Drawer Overlay */}
       {mobileDrawerOpen && (
         <div
-          className="fixed inset-0 bg-black/50"
+          className="fixed inset-0 bg-[var(--bg-primary)]/60 backdrop-blur-sm"
           onClick={onClose}
           style={{ zIndex: 9998, display: "block" }}
           data-mobile-overlay
@@ -35,9 +32,9 @@ export function MobileSidebar({
 
       {/* Mobile Drawer Sidebar */}
       <aside
-        className="fixed left-0 top-0 bottom-0 w-64 border-r-2 border-white/20 overflow-y-auto shadow-2xl transition-transform duration-300 ease-in-out"
+        className="fixed left-0 top-0 bottom-0 w-64 border-r border-[var(--border-primary)] overflow-y-auto shadow-2xl transition-transform duration-300 ease-in-out"
         style={{
-          backgroundColor: "#000000",
+          backgroundColor: "var(--bg-secondary)",
           zIndex: 9999,
           transform: mobileDrawerOpen ? "translateX(0)" : "translateX(-100%)",
           display: "block",
@@ -62,7 +59,7 @@ export function MobileSidebar({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-white/10 text-white"
+              className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-primary)]"
               aria-label="Close drawer"
             >
               <svg
@@ -81,19 +78,6 @@ export function MobileSidebar({
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              navigate("/");
-              onClose();
-            }}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all text-sm font-medium mb-6 border border-white/10"
-            aria-label="Go to homepage"
-          >
-            <Home className="w-4 h-4" />
-            <span>Go to Homepage</span>
-          </button>
-
           <AppNavigation />
         </div>
       </aside>
@@ -102,7 +86,7 @@ export function MobileSidebar({
       <button
         type="button"
         onClick={onClose}
-        className="fixed bottom-4 left-4 p-3 rounded-full bg-white/10 border border-white/20 shadow-lg text-white hover:bg-white/20 transition-all flex items-center justify-center"
+        className="fixed bottom-4 left-4 p-3 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-primary)] shadow-lg text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-all flex items-center justify-center"
         style={{ zIndex: 10000, display: "block" }}
         data-mobile-button
         aria-label="Open navigation menu"

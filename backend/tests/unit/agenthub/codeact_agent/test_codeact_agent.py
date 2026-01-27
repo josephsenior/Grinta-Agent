@@ -78,12 +78,6 @@ def agent_factory(monkeypatch: pytest.MonkeyPatch):
         def initialize(self, prompt_manager):
             self.prompt_manager = prompt_manager
 
-        def save_context_state(self):
-            self.saved_states.append(None)
-
-        def update_context(self, state):
-            self.updated_states.append(state)
-
         def condense_history(self, state):
             return self.next_condensed
 
@@ -93,31 +87,23 @@ def agent_factory(monkeypatch: pytest.MonkeyPatch):
         def build_messages(self, condensed_history, initial_user_message, llm_config):
             return self.next_messages
 
-        def get_ace_playbook_context(self, state):
-            return self.next_ace_context
-
     class StubPlanner:
         def __init__(self, **kwargs):
             self.kwargs = kwargs
             self._llm = kwargs["llm"]
             self.params: list[Any] = []
-            self.prompt_records: list[Any] = []
 
         def build_toolset(self):
             return ["tool"]
 
-        def build_llm_params(self, messages, state, tools, ace_context):
+        def build_llm_params(self, messages, state, tools):
             data = {
                 "messages": messages,
                 "state": state,
                 "tools": tools,
-                "ace": ace_context,
             }
             self.params.append(data)
             return data
-
-        def record_prompt_execution(self, **kwargs):
-            self.prompt_records.append(kwargs)
 
     class StubExecutor:
         def __init__(self, **kwargs):
@@ -165,62 +151,6 @@ def agent_factory(monkeypatch: pytest.MonkeyPatch):
     return _factory
 
 
-def install_prompt_opt_stubs(monkeypatch: pytest.MonkeyPatch):
-    stubs: dict[str, Any] = {}
-
-    def _mod(name: str) -> ModuleType:
-        mod = ModuleType(name)
-        monkeypatch.setitem(sys.modules, name, mod)
-        return mod
-
-    pkg = ModuleType("forge.prompt_optimization")
-    pkg.__path__ = []
-    monkeypatch.setitem(sys.modules, "forge.prompt_optimization", pkg)
-    models = _mod("forge.prompt_optimization.models")
-    tracker_mod = _mod("forge.prompt_optimization.tracker")
-    registry_mod = _mod("forge.prompt_optimization.registry")
-    optimizer_mod = _mod("forge.prompt_optimization.optimizer")
-    storage_mod = _mod("forge.prompt_optimization.storage")
-    tool_opt_mod = _mod("forge.prompt_optimization.tool_optimizer")
-
-    class OptimizationConfig:
-        def __init__(self, **kwargs):
-            stubs["opt_config"] = kwargs
-            for key, value in kwargs.items():
-                setattr(self, key, value)
-
-    class PromptRegistry:
-        pass
-
-    class PerformanceTracker:
-        def __init__(self, weights, history_path=None, history_auto_flush=False):
-            stubs["tracker"] = {"weights": weights, "history_path": history_path}
-
-    class PromptOptimizer:
-        def __init__(self, registry, tracker, opt_config):
-            stubs["optimizer"] = (registry, tracker, opt_config)
-
-    class PromptStorage:
-        def __init__(self, config, registry, tracker):
-            self.load_calls = 0
-            stubs["storage"] = self
-
-        def load_all(self):
-            self.load_calls += 1
-
-    class ToolOptimizer:
-        def __init__(self, registry, tracker, optimizer):
-            stubs["tool_optimizer"] = (registry, tracker, optimizer)
-
-    models.OptimizationConfig = OptimizationConfig
-    registry_mod.PromptRegistry = PromptRegistry
-    tracker_mod.PerformanceTracker = PerformanceTracker
-    optimizer_mod.PromptOptimizer = PromptOptimizer
-    storage_mod.PromptStorage = PromptStorage
-    tool_opt_mod.ToolOptimizer = ToolOptimizer
-    return stubs
-
-
 def test_prompt_manager_fallback_adds_prefix(agent_factory, monkeypatch):
     monkeypatch.setattr(module.os.path, "exists", lambda _: False)
     agent, _, _ = agent_factory(system_prompt_filename="missing.j2")
@@ -239,43 +169,6 @@ def test_prompt_manager_adds_prefix_when_missing(monkeypatch, agent_factory):
     manager = agent._create_prompt_manager()
     result = manager.get_system_message()
     assert result == "You are Forge agent.\nHello world"
-
-
-def test_initialize_prompt_optimization_sets_components(monkeypatch, agent_factory):
-    stubs = install_prompt_opt_stubs(monkeypatch)
-    agent, _, _ = agent_factory(enable_prompt_optimization=True)
-    assert agent.prompt_optimizer is not None
-    assert stubs["storage"].load_calls == 1
-    assert agent.tool_optimizer is not None
-
-
-def test_initialize_prompt_optimization_handles_import_error(agent_factory, monkeypatch):
-    real_import = __import__
-
-    def fake_import(name, *args, **kwargs):
-        if name.startswith("forge.prompt_optimization"):
-            raise ImportError("missing")
-        return real_import(name, *args, **kwargs)
-
-    monkeypatch.setattr("builtins.__import__", fake_import)
-    agent, _, _ = agent_factory(enable_prompt_optimization=True)
-    assert agent.prompt_optimizer is None
-    assert agent.tool_optimizer is None
-
-
-def test_initialize_prompt_optimization_handles_general_exception(agent_factory, monkeypatch):
-    install_prompt_opt_stubs(monkeypatch)
-
-    class BadStorage:
-        def __init__(self, *args, **kwargs):
-            raise RuntimeError("boom")
-
-    monkeypatch.setattr(
-        sys.modules["forge.prompt_optimization.storage"], "PromptStorage", BadStorage
-    )
-    agent, _, _ = agent_factory(enable_prompt_optimization=True)
-    assert agent.prompt_optimizer is None
-    assert agent.tool_optimizer is None
 
 
 def test_run_production_health_check_executes(monkeypatch, agent_factory):
@@ -331,18 +224,10 @@ def test_run_production_health_check_raises_on_runtime_error(
         agent_factory(production_health_check=True, health_check_prompts=["ping"])
 
 
-def test_reset_saves_and_updates_context(agent_factory):
-    agent, refs, _ = agent_factory()
-    state = SimpleNamespace(history=[])
-    agent.reset(state)
-    assert refs["memory"].saved_states
-    assert refs["memory"].updated_states[-1] is state
-
-
 def test_reset_without_state(agent_factory):
     agent, refs, _ = agent_factory()
     agent.reset()
-    assert refs["memory"].updated_states == []
+    assert len(agent.pending_actions) == 0
 
 
 class DummyState:
@@ -489,11 +374,4 @@ def test_get_messages_injects_placeholders(agent_factory):
     messages = agent._get_messages([run, obs], MessageAction("user"))
     assert messages[-2].role == "assistant"
     assert messages[-1].role == "tool"
-
-
-def test_step_uses_ace_context(agent_factory):
-    agent, refs, _ = agent_factory()
-    refs["memory"].next_ace_context = "ACE"
-    agent.step(DummyState(history=[]))
-    assert refs["planner"].params[-1]["ace"] == "ACE"
 

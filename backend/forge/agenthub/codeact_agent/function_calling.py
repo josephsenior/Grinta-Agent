@@ -12,7 +12,6 @@ from forge.agenthub.codeact_agent.tools import (
     BrowserTool,
     CondensationRequestTool,
     FinishTool,
-    IPythonTool,
     LLMBasedFileEditTool,
     ThinkTool,
     create_cmd_run_tool,
@@ -28,14 +27,12 @@ from forge.core.logger import forge_logger as logger
 from forge.events.action import (
     Action,
     ActionSecurityRisk,
-    AgentDelegateAction,
     AgentFinishAction,
     AgentThinkAction,
     BrowseInteractiveAction,
     CmdRunAction,
     FileEditAction,
     FileReadAction,
-    IPythonRunCellAction,
     MessageAction,
     TaskTrackingAction,
 )
@@ -48,7 +45,7 @@ from forge.llm.tool_names import TASK_TRACKER_TOOL_NAME
 ToolHandler = Callable[[dict[str, Any]], Action]
 
 if TYPE_CHECKING:
-    from litellm import ModelResponse
+    ModelResponse = Any
 
 
 def combine_thought(action: Action, thought: str) -> Action:
@@ -106,23 +103,10 @@ def _handle_cmd_run_tool(arguments: dict) -> CmdRunAction:
     return action
 
 
-def _handle_ipython_tool(arguments: dict) -> IPythonRunCellAction:
-    """Handle IPythonTool tool call."""
-    if "code" not in arguments:
-        msg = f'Missing required argument "code" in tool call {
-            IPythonTool["function"]["name"]
-        }'
-        raise FunctionCallValidationError(
-            msg,
-        )
-    action = IPythonRunCellAction(code=arguments["code"])
-    set_security_risk(action, arguments)
-    return action
-
-
-def _handle_delegate_to_browsing_agent(arguments: dict) -> AgentDelegateAction:
+def _handle_delegate_to_browsing_agent(arguments: dict) -> Action:
     """Handle delegate_to_browsing_agent tool call."""
-    return AgentDelegateAction(agent="BrowsingAgent", inputs=arguments)
+    from forge.events.action import MessageAction
+    return MessageAction(content=f"Delegation to BrowsingAgent with inputs {arguments} is not supported anymore.")
 
 
 def _handle_finish_tool(arguments: dict) -> AgentFinishAction:
@@ -196,7 +180,7 @@ def _handle_str_replace_editor_tool(arguments: dict) -> Action:
     if command == "view":
         return FileReadAction(
             path=path,
-            impl_source=FileReadSource.OH_ACI,
+            impl_source=FileReadSource.FILE_EDITOR,
             view_range=other_kwargs.get("view_range"),
         )
 
@@ -210,7 +194,7 @@ def _handle_str_replace_editor_tool(arguments: dict) -> Action:
     action = FileEditAction(
         path=path,
         command=command,
-        impl_source=FileEditSource.OH_ACI,
+        impl_source=FileEditSource.FILE_EDITOR,
         **valid_kwargs_for_editor,
     )
     set_security_risk(action, arguments)
@@ -307,104 +291,6 @@ def _handle_mcp_tool(
         normalized_args = {}
 
     return MCPAction(name=tool_call_name, arguments=normalized_args)
-
-
-def _handle_database_connect_tool(arguments: dict) -> IPythonRunCellAction:
-    """Handle database_connect tool call by generating IPython code."""
-    connection_name = arguments.get("connection_name")
-    db_type = arguments.get("db_type")
-    env_prefix = arguments.get("env_prefix")
-
-    if not all([connection_name, db_type, env_prefix]):
-        msg = "Missing required arguments: connection_name, db_type, env_prefix"
-        raise FunctionCallValidationError(msg)
-
-    # Generate Python code to connect to database in sandbox
-    code = f"""
-import sys
-sys.path.insert(0, '/Forge/plugins/agent_skills')
-
-from database import connect_{db_type}
-
-# Connect to database using environment variables
-result = await connect_{db_type}('{env_prefix}', '{connection_name}')
-print('Database connection established:')
-print(f"  Name: {{result['connection_name']}}")
-print(f"  Type: {{result['db_type']}}")
-if 'host' in result:
-    print(f"  Host: {{result['host']}}")
-if 'database' in result:
-    print(f"  Database: {{result['database']}}")
-"""
-
-    action = IPythonRunCellAction(code=code.strip())
-    set_security_risk(action, arguments)
-    return action
-
-
-def _handle_database_schema_tool(arguments: dict) -> IPythonRunCellAction:
-    """Handle database_schema tool call by generating IPython code."""
-    connection_name = arguments.get("connection_name")
-
-    if not connection_name:
-        msg = "Missing required argument: connection_name"
-        raise FunctionCallValidationError(msg)
-
-    # Generate Python code to fetch schema
-    code = f"""
-import sys
-sys.path.insert(0, '/Forge/plugins/agent_skills')
-
-from database import get_schema
-import json
-
-# Fetch database schema
-schema = await get_schema('{connection_name}')
-print(json.dumps(schema, indent=2))
-"""
-
-    action = IPythonRunCellAction(code=code.strip())
-    set_security_risk(action, arguments)
-    return action
-
-
-def _handle_database_query_tool(arguments: dict) -> IPythonRunCellAction:
-    """Handle database_query tool call by generating IPython code."""
-    connection_name = arguments.get("connection_name")
-    query = arguments.get("query", "")
-    limit = arguments.get("limit", 100)
-
-    if not connection_name or not query:
-        msg = "Missing required arguments: connection_name, query"
-        raise FunctionCallValidationError(msg)
-
-    # Escape query string for Python
-    query.replace("'", "\\'").replace('"', '\\"')
-
-    # Generate Python code to execute query
-    code = f"""
-import sys
-sys.path.insert(0, '/Forge/plugins/agent_skills')
-
-from database import execute_query
-import json
-
-# Execute database query
-result = await execute_query('{connection_name}', '''{query}''', limit={limit})
-
-if result['success']:
-    print(f"Query executed successfully in {{result['execution_time_ms']}}ms")
-    print(f"Rows returned: {{result['row_count']}}")
-    print()
-    print("Results:")
-    print(json.dumps(result['data'], indent=2))
-else:
-    print(f"Query failed: {{result['error']}}")
-"""
-
-    action = IPythonRunCellAction(code=code.strip())
-    set_security_risk(action, arguments)
-    return action
 
 
 def _validate_ultimate_editor_args(arguments: dict, tool_name: str) -> tuple[str, str]:
@@ -575,7 +461,6 @@ def _create_tool_dispatch_map() -> dict[str, ToolHandler]:
     """Create dispatch map for tool handlers."""
     return {
         create_cmd_run_tool()["function"]["name"]: _handle_cmd_run_tool,
-        IPythonTool["function"]["name"]: _handle_ipython_tool,
         "delegate_to_browsing_agent": _handle_delegate_to_browsing_agent,
         FinishTool["function"]["name"]: _handle_finish_tool,
         LLMBasedFileEditTool["function"]["name"]: _handle_llm_based_file_edit_tool,
@@ -587,9 +472,6 @@ def _create_tool_dispatch_map() -> dict[str, ToolHandler]:
         CondensationRequestTool["function"]["name"]: _handle_condensation_request_tool,
         BrowserTool["function"]["name"]: _handle_browser_tool,
         TASK_TRACKER_TOOL_NAME: _handle_task_tracker_tool,
-        "database_connect": _handle_database_connect_tool,
-        "database_schema": _handle_database_schema_tool,
-        "database_query": _handle_database_query_tool,
     }
 
 

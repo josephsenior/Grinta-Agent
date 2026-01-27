@@ -21,7 +21,7 @@ See [Code Quality](code-quality.md) and [Production Deployment](production_deplo
 
 **Key Differentiators:**
 - **Ultimate Editor**: Structure-aware editing with Tree-sitter (45+ languages)
-- **MetaSOP Orchestration**: Multi-agent planning and execution
+- **Multi-agent Coordination**: Efficient planning and execution
 - **Production Infrastructure**: Circuit breakers, monitoring, cost quotas
 - **Comprehensive Testing**: 113k+ lines of test code
 - **30+ LLM Providers**: Support for 200+ models via unified API
@@ -77,7 +77,7 @@ poetry run python -m forge.server
 2. **Start frontend (in new terminal):**
 ```bash
 cd frontend
-npm run dev
+pnpm run dev
 ```
 
 3. **Open browser:**
@@ -101,21 +101,10 @@ The Ultimate Editor is Forge's structure-aware code editing system that uses Tre
 
 See [Ultimate Editor Guide](ultimate-editor.md) for details.
 
-### What is MetaSOP Orchestration?
-
-MetaSOP (Meta Standard Operating Procedure) is a multi-agent orchestration framework that coordinates multiple specialized agents:
-- **Product Manager**: Requirements analysis
-- **Architect**: System design
-- **Engineer**: Code implementation
-- **QA**: Testing and validation
-
-See [MetaSOP Documentation](features/metasop.md) for details.
-
 ### What agents are available?
 
 - **CodeAct Agent**: Code editing and command execution
 - **BrowsingAgent**: Web browsing and scraping
-- **VisualBrowsingAgent**: Enhanced visual web interaction
 - **LocAgent**: Location-aware operations
 - **ReadOnlyAgent**: Read-only file operations
 - **DummyAgent**: Testing and development

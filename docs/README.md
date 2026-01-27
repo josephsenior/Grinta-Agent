@@ -11,6 +11,9 @@ Welcome to the comprehensive documentation for Forge - a production-grade AI cod
 ## 📚 Core Documentation
 
 - **[Architecture](./architecture.md)** - System design and components
+  - [File Editing System](./architecture/file-editing-system.md) - Two-layer file editing architecture
+  - [Docker Volumes Migration](./architecture/docker-volumes-migration.md) - Bind mounts to Docker volumes migration
+  - [Migration Notes](./architecture/MIGRATION_NOTES.md) - Migration from external dependencies
 - **[API Reference](./api-reference.md)** - Complete API documentation
 - **[Monitoring](./monitoring.md)** - Metrics, dashboards, and alerts
 - **[Troubleshooting](./troubleshooting.md)** - Common issues and solutions
@@ -26,15 +29,12 @@ Welcome to the comprehensive documentation for Forge - a production-grade AI cod
 
 ### Memory & Learning
 - [Memory System](./features/memory-system.md) - Conversation memory
-- [Enhanced Context Management](./features/enhanced-context-management.md) - Context optimization
 
 ### Security & Reliability
 - [Security](./security.md) - Security policies and sandboxing
 - [Reliability System](./features/reliability-system.md) - Circuit breaker, retries
 
 ### Advanced Features (Post-Beta)
-- [MetaSOP](./features/metasop.md) - Multi-agent orchestration (disabled for beta)
-- [ACE Framework](./features/ace-framework.md) - Self-improving agents
 - [Parallel Execution](./features/parallel-execution.md) - Concurrent agents (disabled for beta)
 
 ## 💻 Development
@@ -94,7 +94,7 @@ Welcome to the comprehensive documentation for Forge - a production-grade AI cod
 
 **What makes Forge unique:**
 
-1. **200+ LLM Models** - Support for 30+ providers via LiteLLM
+1. **200+ LLM Models** - Direct integration for OpenAI, Anthropic, Gemini, and more
 2. **Structure-Aware Editing** - Tree-sitter parsing for 45+ languages
 3. **Production Monitoring** - Grafana dashboards, Prometheus metrics, alerts
 4. **Open Source** - Full transparency and customization

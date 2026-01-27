@@ -17,7 +17,6 @@ class AutonomyService:
 
     def initialize(self, agent: "Agent") -> None:
         """Configure autonomy controller and related validators."""
-
         from forge.controller.autonomy import AutonomyController
         from forge.core.config.agent_config import AgentConfig as _AgentConfig
 

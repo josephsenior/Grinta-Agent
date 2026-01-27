@@ -42,7 +42,7 @@
 - When a delegate finishes, `DelegateRuntimeProvider` guarantees teardown and calls `RuntimeOrchestrator.release(...)` so runtimes are returned to the appropriate pool or terminated per policy.
 - Parent state (repo selection, provider tokens, env) is inherited as inputs to provisioning; controller-internal state is captured via `DelegateRunContext` and attached to the delegate controller.
 - `DelegateRunContext` (forge/controller/services/delegate_context.py) captures the shared resources a delegate must inherit (event stream, file store, conversation stats, iteration flag). Delegate creation validates those invariants so future isolated runtimes have an explicit contract to evolve.
-- Guardrail events (`guardrail_concurrency`, `step_runtime_metrics`) are emitted by the MetaSOP `GuardrailService` and exposed via Prometheus metrics such as `metasop_guardrail_concurrency_total`, `metasop_guardrail_concurrency_peak`, and `metasop_guardrail_runtime_avg_ms`.
+- Guardrail events (`guardrail_concurrency`, `step_runtime_metrics`) are emitted by the `GuardrailService` and exposed via Prometheus metrics such as `guardrail_concurrency_total`, `guardrail_concurrency_peak`, and `guardrail_runtime_avg_ms`.
 
 ### 4. Telemetry & Alerts
 

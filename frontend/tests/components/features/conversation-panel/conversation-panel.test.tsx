@@ -109,7 +109,7 @@ describe("ConversationPanel", () => {
 
     renderConversationPanel();
 
-    const emptyState = await screen.findByText("CONVERSATION$NO_CONVERSATIONS");
+    const emptyState = await screen.findByText("No conversations yet");
     expect(emptyState).toBeInTheDocument();
   });
 
@@ -246,8 +246,7 @@ describe("ConversationPanel", () => {
     const user = userEvent.setup();
     renderConversationPanel();
     const cards = await screen.findAllByTestId("conversation-card");
-    const firstCard = cards[1];
-
+    const firstCard = cards[0];
     await user.click(firstCard);
 
     expect(onCloseMock).toHaveBeenCalledOnce();

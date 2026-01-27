@@ -78,7 +78,7 @@ class SecurityHeadersMiddleware:
                 "img-src 'self' data: https:",  # Allow images from data URLs and HTTPS
                 "font-src 'self' data:",
                 "connect-src 'self' ws: wss: https:",  # Allow WebSocket and API connections
-                "frame-src 'self'",  # Allow iframes from same origin (Jupyter, served apps)
+                "frame-src 'self'",  # Allow iframes from same origin (served apps)
                 "worker-src 'self' blob:",  # Allow web workers
                 "object-src 'none'",  # Disallow plugins
                 "base-uri 'self'",  # Restrict base tag

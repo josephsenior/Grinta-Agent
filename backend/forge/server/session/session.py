@@ -5,9 +5,10 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from forge.controller.agent import Agent
+from forge.server.types import LLMAuthenticationError, MissingSettingsError
 
 if TYPE_CHECKING:
     from forge.core.config.condenser_config import (
@@ -90,15 +91,10 @@ class Session:
             status_callback=self.queue_status_message,
             user_id=user_id,
         )
-        self.agent_session.event_stream.subscribe(
+        self.agent_session.event_stream.subscribe(  # type: ignore[attr-defined]
             EventStreamSubscriber.SERVER, self.on_event, self.sid
         )
         self.config = config
-        from forge.experiments.experiment_manager import ExperimentManagerImpl
-
-        self.config = ExperimentManagerImpl.run_config_variant_test(
-            user_id, sid, self.config
-        )
         self.loop = asyncio.get_event_loop()
         self.user_id = user_id
         self._publish_queue: asyncio.Queue = asyncio.Queue()
@@ -111,7 +107,7 @@ class Session:
         """Close session and notify clients of stopped state."""
         if self.sio:
             await self.sio.emit(
-                "oh_event",
+                "forge_event",
                 event_to_dict(
                     AgentStateChangedObservation("", AgentState.STOPPED.value)
                 ),
@@ -264,6 +260,7 @@ class Session:
         initial_message: MessageAction | None,
         conversation_instructions: str | None,
         replay_json: str | None,
+        settings: Settings | None = None,
     ) -> None:
         """Start the agent session with error handling."""
         try:
@@ -282,6 +279,7 @@ class Session:
                 initial_message=initial_message,
                 conversation_instructions=conversation_instructions,
                 replay_json=replay_json,
+                user_settings=settings,
             )
         except MicroagentValidationError as e:
             self.logger.exception(f"Error creating agent_session: {e}")
@@ -312,7 +310,7 @@ class Session:
     ) -> None:
         """Initialize the agent with the provided settings."""
         # Set loading state
-        self.agent_session.event_stream.add_event(
+        self.agent_session.event_stream.add_event(  # type: ignore[attr-defined]
             AgentStateChangedObservation("", AgentState.LOADING),
             EventSource.ENVIRONMENT,
         )
@@ -367,6 +365,7 @@ class Session:
             initial_message,
             conversation_instructions,
             replay_json,
+            settings=settings,
         )
 
     def _notify_on_llm_retry(self, retries: int, max: int) -> None:
@@ -450,16 +449,12 @@ class Session:
         event = event_from_dict(data.copy())
         self._log_parsed_event(event)
 
-        # Handle MetaSOP orchestration if applicable
-        if await self._handle_metasop_dispatch(event):
-            return
-
         # Handle image validation for message actions
         if await self._handle_image_validation(event):
             return
 
         # Add event to stream
-        self.agent_session.event_stream.add_event(event, EventSource.USER)
+        self.agent_session.event_stream.add_event(event, EventSource.USER)  # type: ignore[attr-defined]
 
     def _log_dispatch_start(self, data: dict) -> None:
         """Log the start of dispatch operation."""
@@ -475,71 +470,6 @@ class Session:
             self.logger.info(
                 f"Parsed event: {type(event).__name__} content={getattr(event, 'content', None)!r}",
                 extra={"signal": "dispatch_parsed_event"},
-            )
-
-    async def _handle_metasop_dispatch(self, event) -> bool:
-        """Handle MetaSOP orchestration dispatch. Returns True if handled."""
-        try:
-            if not isinstance(event, MessageAction):
-                return False
-
-            content = (event.content or "").strip()
-            if not content.lower().startswith("sop:"):
-                return False
-
-            await self._send_status_message(
-                "info", RuntimeStatus.READY, "Starting MetaSOP orchestration…"
-            )
-
-            # Create and start MetaSOP runner task
-            asyncio.create_task(self._run_metasop_orchestration(content))
-            return True
-
-        except Exception as e:
-            await self._handle_metasop_error(e)
-            return False
-
-    async def _run_metasop_orchestration(self, content: str) -> None:
-        """Run MetaSOP orchestration asynchronously."""
-        from forge.metasop.router import run_metasop_for_conversation
-
-        try:
-            self.logger.info(
-                f"Starting clean MetaSOP runner for conversation={self.sid}",
-                extra={"signal": "metasop_start"},
-            )
-
-            await run_metasop_for_conversation(
-                conversation_id=self.sid,
-                user_id=self.user_id,
-                raw_message=content,
-                repo_root=None,
-                llm_registry=self.llm_registry,
-            )
-
-            self.logger.info(
-                f"MetaSOP runner completed for conversation={self.sid}",
-                extra={"signal": "metasop_completed"},
-            )
-
-        except Exception as e:
-            self._handle_metasop_runner_error(e)
-
-    def _handle_metasop_runner_error(self, error: Exception) -> None:
-        """Handle errors in MetaSOP runner."""
-        with contextlib.suppress(Exception):
-            self.logger.exception(
-                f"Unhandled exception in MetaSOP runner for sid={self.sid}: {error}"
-            )
-
-    async def _handle_metasop_error(self, error: Exception) -> None:
-        """Handle errors in MetaSOP dispatch."""
-        with contextlib.suppress(Exception):
-            self.logger.exception(f"Error while handling MetaSOP dispatch: {error}")
-
-        with contextlib.suppress(Exception):
-            await self._send_status_message(
-                "debug", RuntimeStatus.ERROR, f"MetaSOP dispatch error: {error}"
             )
 
     async def _handle_image_validation(self, event) -> bool:
@@ -688,11 +618,11 @@ class Session:
         if self.sio is None:
             self.logger.warning("Socket.IO server not available; dropping event.")
             return
-        await self.sio.emit("oh_event", data, to=ROOM_KEY.format(sid=self.sid))
+        await self.sio.emit("forge_event", data, to=ROOM_KEY.format(sid=self.sid))
 
     async def send_error(self, message: str) -> None:
         """Sends an error message to the client."""
-        await self.send({"error": True, "message": message})
+        await self._send_status_message("error", RuntimeStatus.ERROR, message)
 
     async def _send_status_message(
         self, msg_type: str, runtime_status: RuntimeStatus, message: str
@@ -703,6 +633,19 @@ class Session:
             controller = self.agent_session.controller
             if controller is not None and (not agent_session.is_closed()):
                 await controller.set_agent_state_to(AgentState.ERROR)
+            else:
+                # If no controller yet, manually emit state change so UI updates
+                from forge.events.observation import AgentStateChangedObservation
+                from forge.events.serialization import event_to_dict
+                await self.send(
+                    event_to_dict(
+                        AgentStateChangedObservation(
+                            content=message,
+                            reason=message,
+                            agent_state=AgentState.ERROR
+                        )
+                    )
+                )
             self.logger.error(
                 f"Agent status error: {message}", extra={"signal": "agent_status_error"}
             )

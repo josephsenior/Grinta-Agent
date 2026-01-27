@@ -7,6 +7,7 @@ fallback behaviour.
 
 from __future__ import annotations
 
+import time
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Optional, Callable, cast
@@ -695,6 +696,74 @@ def format_generic_error(
         error_code=error_type.upper(),
         can_retry=True,
         help_url="https://docs.forge.ai/troubleshooting",
+    )
+
+
+def format_quota_exceeded_error(
+    quota_info: Optional[dict[str, Any]] = None,
+) -> UserFriendlyError:
+    """Format quota exceeded errors with user-friendly messages."""
+    if not quota_info:
+        quota_info = {}
+    
+    plan = quota_info.get("quota_plan", "free")
+    limit_type = quota_info.get("limit_type", "daily")
+    limit = quota_info.get("limit", 1.0)
+    spent = quota_info.get("spent", limit)
+    reset_at = quota_info.get("reset_at")
+    
+    # Calculate time until reset
+    time_until_reset = "soon"
+    if reset_at:
+        try:
+            reset_dt = datetime.fromtimestamp(reset_at)
+            delta = reset_dt - datetime.utcnow()
+            if delta.total_seconds() > 0:
+                hours = int(delta.total_seconds() / 3600)
+                minutes = int((delta.total_seconds() % 3600) / 60)
+                if hours > 0:
+                    time_until_reset = f"{hours} hour{'s' if hours != 1 else ''}"
+                elif minutes > 0:
+                    time_until_reset = f"{minutes} minute{'s' if minutes != 1 else ''}"
+                else:
+                    time_until_reset = "a few moments"
+        except Exception:
+            pass
+    
+    limit_display = f"${limit:.2f}" if limit != float("inf") else "unlimited"
+    spent_display = f"${spent:.2f}"
+    
+    plan_name = plan.replace("_", " ").title()
+    period_name = "today" if limit_type == "daily" else "this month"
+    
+    return UserFriendlyError(
+        title="Usage limit reached",
+        message=(
+            f"You've reached your {plan_name} plan limit for {period_name}.\n\n"
+            f"**Current usage:** {spent_display} / {limit_display}\n\n"
+            f"**Your quota resets in:** {time_until_reset}\n\n"
+            f"**What you can do:**\n"
+            f"• Wait for your quota to reset ({time_until_reset})\n"
+            f"• Upgrade to a higher plan for more capacity\n"
+            f"• Contact us for custom limits\n\n"
+            f"**Why limits exist:** We want to prevent surprise costs and ensure fair usage for everyone!"
+        ),
+        severity=ErrorSeverity.WARNING,
+        category=ErrorCategory.RATE_LIMIT,
+        icon="💰",
+        suggestion=f"Wait {time_until_reset} or upgrade your plan",
+        actions=[
+            ErrorAction("Upgrade Plan", "upgrade", url="/billing", highlight=True),
+            ErrorAction("See Pricing", "pricing", url="/pricing"),
+            ErrorAction("Contact Support", "support", url="mailto:support@forge.ai"),
+        ],
+        technical_details=f"Quota exceeded: {spent_display} > {limit_display} ({limit_type}, plan: {plan})",
+        error_code="COST_QUOTA_EXCEEDED",
+        can_retry=True,
+        retry_delay=int((reset_at - time.time()) if reset_at else 3600),
+        help_url="https://docs.forge.ai/billing/quotas",
+        reassurance="Your work is saved! Just upgrade or wait for the reset.",
+        metadata=quota_info,
     )
 
 

@@ -27,8 +27,6 @@ def _make_controller_with_analyzer(threshold: int = 3) -> AgentController:
         min_iterations=20,
         max_iterations_override=None,
         complexity_iteration_multiplier=50.0,
-        enable_ace=True,
-        ace_auto_enable_threshold=5.0,
         enable_reflection=True,
     )
     analyzer = TaskComplexityAnalyzer(config)

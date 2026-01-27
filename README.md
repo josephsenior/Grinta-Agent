@@ -36,8 +36,8 @@
 2. Install frontend dependencies and build (from `frontend/`):
    ```bash
    cd frontend
-   npm install
-   npm run build
+   pnpm install
+   pnpm run build
    ```
 
 3. Run tests (Python):
@@ -70,8 +70,6 @@ All documentation is now consolidated in the `docs/` directory:
 - **[Beta Release Notes](docs/beta-release-notes.md)** - Beta launch strategy and disabled features
 - **[Advanced Features - Beta Section](docs/advanced_features.md#beta-launch-temporarily-disabled-ui-features)** - Re-activation guide
 
-For website documentation (e.g., Mintlify/Docusaurus), see `docs_website/`.
-
 ---
 
 ## 🎯 **Production Ready: 9.5/10**
@@ -87,7 +85,7 @@ Forge is **production-ready** with enterprise-grade infrastructure:
 | **UX/UI** | 9.3/10 | Cursor-level Polish ✅ |
 | **Tests** | 8.5/10 | 3,461 test cases ✅ |
 
-**Code Quality Achievement:** 🏆 **245,527 lines of production code (144K backend + 101K frontend), 704 Python files, 983 frontend files, ZERO high-complexity functions**
+**Code Quality Achievement:** 🏆 **310,319 lines of production code (213K backend + 97K frontend), 1,007 Python files, 921 frontend files, ZERO high-complexity functions**
 
 **See:** `docs/honest-reassessment-corrected.md` for full assessment
 
@@ -156,7 +154,7 @@ DEFAULT_QUOTA_PLAN=free  # free, pro, enterprise, unlimited
 
 ## 🤝 **Contributing**
 
-See [CONTRIBUTING.md](docs/contributing.md)
+See [Contributing Guide](docs/contributing.md)
 
 ---
 

@@ -109,29 +109,26 @@ def test_record_llm_cost_from_metrics_logs_errors(
 def test_record_llm_cost_from_response_records_cost(
     quota_module, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    class StubLiteLLM:
-        @staticmethod
-        def completion_cost(*, completion_response):
-            assert completion_response == {"usage": {"prompt_tokens": 1}}
-            return 0.75
-
-    monkeypatch.setitem(sys.modules, "litellm", StubLiteLLM)
+    # Use a known model from MODEL_PRICES in cost_tracker
+    model = "gpt-4o"
+    # prompt: 1M tokens = $5.00. 1 token = $0.000005
+    # Let's use 200,000 tokens to get $1.00
+    response = {"usage": {"prompt_tokens": 200000, "completion_tokens": 0}}
+    
     cost_tracker.record_llm_cost_from_response(
-        "ip:1.2.3.4", {"usage": {"prompt_tokens": 1}}
+        "ip:1.2.3.4", response, model=model
     )
-    assert quota_module == [("ip:1.2.3.4", 0.75)]
+    assert quota_module == [("ip:1.2.3.4", 1.0)]
 
 
 def test_record_llm_cost_from_response_handles_errors(
     quota_module, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    class StubLiteLLM:
-        @staticmethod
-        def completion_cost(*, completion_response):
-            raise RuntimeError("boom")
+    def failing_get_cost(*args, **kwargs):
+        raise RuntimeError("boom")
 
     logger = StubLogger()
-    monkeypatch.setitem(sys.modules, "litellm", StubLiteLLM)
+    monkeypatch.setattr(cost_tracker, "get_completion_cost", failing_get_cost)
     monkeypatch.setitem(
         sys.modules,
         "forge.server.middleware.cost_quota",
@@ -140,30 +137,12 @@ def test_record_llm_cost_from_response_handles_errors(
     monkeypatch.setattr(cost_tracker, "logger", logger)
 
     cost_tracker.record_llm_cost_from_response(
-        "user:err", {"usage": {"prompt_tokens": 1}}
+        "user:err", {"usage": {"prompt_tokens": 1}}, model="gpt-4o"
     )
     assert any(
         "Failed to record LLM cost from response" in entry for entry in logger.records
     )
     assert quota_module == []
-
-
-def test_record_llm_cost_from_response_import_error(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    original_import = builtins.__import__
-
-    def fake_import(name, *args, **kwargs):
-        if name == "litellm":
-            raise ImportError("missing")
-        return original_import(name, *args, **kwargs)
-
-    monkeypatch.setattr(builtins, "__import__", fake_import)
-    # Ensure cost quota import also fails gracefully
-    monkeypatch.delitem(
-        sys.modules, "forge.server.middleware.cost_quota", raising=False
-    )
-    cost_tracker.record_llm_cost_from_response("user:none", {"usage": {"cost": 1}})
 
 
 class DummyDebug(debug_mixin.DebugMixin):

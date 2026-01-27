@@ -33,7 +33,6 @@ class ActionService:
         self, action: Action, ctx: "ToolInvocationContext | None"
     ) -> None:
         """Entry point used by AgentController to process an action end-to-end."""
-
         if not isinstance(action, Action):
             raise TypeError("_process_action requires an Action instance")
 
@@ -89,12 +88,10 @@ class ActionService:
 
     def set_pending_action(self, action: Action | None) -> None:
         """Track pending action with timestamp; emit logging changes."""
-
         self._pending_service.set(action)
 
     def get_pending_action(self) -> Action | None:
         """Expose the pending action, auto-clearing when it times out."""
-
         return self._pending_service.get()
 
     def get_pending_action_info(self) -> tuple[Action, float] | None:

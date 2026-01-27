@@ -1,6 +1,5 @@
 import React, { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { useLogout } from "#/hooks/auth/use-logout";
 import { cn } from "#/utils/utils";
 import { useMenuItems } from "./hooks/use-menu-items";
 import { useDropdownPosition } from "./hooks/use-dropdown-position";
@@ -15,7 +14,6 @@ export function UserProfileDropdown() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  const logoutMutation = useLogout();
   const { isSaas, hasProAccess, userEmail, username, isUserAdmin, balance } =
     useUserData();
 
@@ -26,19 +24,11 @@ export function UserProfileDropdown() {
   };
 
   const menuItems = useMenuItems({
-    isUserAdmin,
-    isSaas,
-    balance,
     onClose: handleClose,
   });
 
   const dropdownPosition = useDropdownPosition(isOpen, buttonRef);
   useDropdownCloseHandlers(isOpen, dropdownRef, handleClose);
-
-  const handleLogout = () => {
-    logoutMutation.mutate();
-    handleClose();
-  };
 
   return (
     <>
@@ -70,7 +60,6 @@ export function UserProfileDropdown() {
         isSaas={isSaas}
         balance={balance}
         menuItems={menuItems}
-        onLogout={handleLogout}
       />
     </>
   );

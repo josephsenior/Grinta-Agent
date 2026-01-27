@@ -1,4 +1,4 @@
-"""Stress tests for the DockerRuntime, which connects to the ActionExecutor running in the sandbox."""
+"""Stress tests for the LocalRuntime (adapted from DockerRuntime tests)."""
 
 import pytest
 from conftest import _close_test_runtime, _load_runtime

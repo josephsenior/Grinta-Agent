@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 // Attach a jsdom VirtualConsole filter early so jsdom-emitted socket errors
 // (ECONNREFUSED / MockHttpSocket) don't print noisy stack traces during tests.
 try {
@@ -39,6 +39,21 @@ import "@testing-library/jest-dom/vitest";
 HTMLCanvasElement.prototype.getContext = vi.fn();
 HTMLElement.prototype.scrollTo = vi.fn();
 window.scrollTo = vi.fn();
+
+// Polyfill matchMedia for JSDOM
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: vi.fn().mockImplementation((query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(), // deprecated
+    removeListener: vi.fn(), // deprecated
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
 
 if (!(globalThis as any).jest) {
   const bind = (method: keyof typeof vi) => {
@@ -82,9 +97,6 @@ if (typeof (globalThis as any).__TEST_SETTINGS_FEATURE_FLAGS === "undefined") {
 }
 
 declare global {
-  // @ts-expect-error - jest compatibility layer for vitest
-  // eslint-disable-next-line no-var
-  var jest: typeof vi;
   // eslint-disable-next-line no-var
   var __TEST_APP_MODE: string | undefined;
   // eslint-disable-next-line no-var
@@ -202,7 +214,8 @@ declare global {
   }
 })();
 
-beforeEach(() => {
+beforeEach((context: any) => {
+  console.log(`[TEST START] ${context.task?.file?.name || 'unknown'} > ${context.task?.name || 'unknown'}`);
   try {
     if (
       typeof window === "object" &&
@@ -219,6 +232,10 @@ beforeEach(() => {
   } catch (e) {
     // best effort; ignore if patching fails
   }
+});
+
+afterEach((context: any) => {
+  console.log(`[TEST END] ${context.task?.file?.name || 'unknown'} > ${context.task?.name || 'unknown'}`);
 });
 
 const ensureProgressEvent = (): typeof ProgressEvent | undefined => {
@@ -383,16 +400,29 @@ try {
 }
 
 // Mock the i18n provider
-vi.mock("react-i18next", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({
-    t: (key: string) => key,
-    i18n: {
-      language: "en",
-      exists: () => false,
+vi.mock("react-i18next", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-i18next")>();
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string, options?: any) => {
+        if (options?.id) {
+          return `${key} ${options.id}`;
+        }
+        return key;
+      },
+      i18n: {
+        language: "en",
+        exists: () => false,
+        changeLanguage: () => Promise.resolve(),
+      },
+    }),
+    initReactI18next: {
+      type: "3rdParty",
+      init: () => {},
     },
-  }),
-}));
+  };
+});
 
 vi.mock("#/hooks/query/use-is-authed", () => ({
   useIsAuthed: () => ({
@@ -416,7 +446,10 @@ vi.mock("#/hooks/use-conversation-id", () => ({
 // Provide safe fallbacks for common react-router hooks used in many components
 // so tests that render components outside a Router don't throw. We keep the
 // original module and only override specific hooks used broadly in tests.
-const __mockUseNavigate = vi.fn(() => {
+const __mockUseNavigate = vi.fn((to?: string | number | object, options?: object) => {
+  if (typeof to === "string" || typeof to === "number") {
+    console.log(`[TEST NAVIGATE] to: ${to}`, options || "");
+  }
   return () => {
     /* no-op navigation in tests */
   };
@@ -428,7 +461,7 @@ vi.mock("react-router-dom", async (importOriginal) => {
   const actual = await importOriginal<any>();
   return {
     ...actual,
-    useNavigate: __mockUseNavigate,
+    useNavigate: () => __mockUseNavigate,
     useParams: __mockUseParams,
   };
 });
@@ -437,9 +470,10 @@ vi.mock("react-router-dom", async (importOriginal) => {
 // Provide a lightweight no-op socket that supports the subset of methods used by the app
 vi.mock("socket.io-client", () => {
   const noop = () => {};
-  function createNoopSocket() {
+  function createNoopSocket(opts: any = {}) {
     const listeners: Record<string, Function[]> = {};
-    return {
+    const socket = {
+      connected: false,
       on(event: string, cb: Function) {
         listeners[event] = listeners[event] || [];
         listeners[event].push(cb);
@@ -457,19 +491,40 @@ vi.mock("socket.io-client", () => {
         return this;
       },
       emit(event: string, ...args: any[]) {
+        console.log(`[TEST SOCKET EMIT] ${event}`, ...args);
         (listeners[event] || []).forEach((f) => f(...args));
         return this;
       },
-      connect: noop,
-      disconnect: noop,
-      close: noop,
+      connect() {
+        if (!this.connected) {
+          this.connected = true;
+          setTimeout(() => {
+            (listeners["connect"] || []).forEach((f) => f());
+          }, 0);
+        }
+        return this;
+      },
+      disconnect() {
+        this.connected = false;
+        (listeners["disconnect"] || []).forEach((f) => f());
+        return this;
+      },
+      close() {
+        return this.disconnect();
+      },
       // shim any other properties
-      io: { opts: {} },
+      io: { opts: opts || {} },
     } as any;
+
+    if (opts.autoConnect !== false) {
+      socket.connect();
+    }
+
+    return socket;
   }
 
   return {
-    io: (/* url: string, opts?: any */) => createNoopSocket(),
+    io: (url: string, opts?: any) => createNoopSocket(opts),
   };
 });
 
@@ -486,7 +541,7 @@ beforeAll(async () => {
   // dynamically import the mocks to avoid static alias resolution during transform
   const mod = await import("./src/mocks/node");
   _mockServer = mod.server;
-  _mockServer.listen({ onUnhandledRequest: "bypass" });
+  _mockServer.listen({ onUnhandledRequest: "warn" });
   // Suppress noisy stderr lines produced by underlying HTTP interceptors
   // (MockHttpSocket) and jsdom XHR attempts that manifest as ECONNREFUSED
   // messages. We filter these specific patterns to keep test output clean.
@@ -616,6 +671,7 @@ beforeAll(async () => {
             return this._xhr.send(...args);
           }
           // If no underlying XHR exists, simulate an empty successful response
+          console.warn("[TEST XHR] No underlying XHR for send", args);
           this.readyState = 4;
           this.status = 200;
           this.responseText = "";
@@ -625,6 +681,7 @@ beforeAll(async () => {
         } catch (e) {
           // Swallow network-level errors (like ECONNREFUSED) to avoid noisy
           // test output. Keep tests deterministic by not throwing here.
+          console.error("[TEST XHR] Network error in send", e);
           this.readyState = 4;
           this.status = 0;
           this.responseText = "";
@@ -802,6 +859,27 @@ vi.mock("lucide-react", async (importOriginal) => {
     Info: IconStub,
     ExternalLink: IconStub,
     Brain: IconStub,
+    Code: IconStub,
+    File: IconStub,
+    Folder: IconStub,
+    Plus: IconStub,
+    Search: IconStub,
+    Settings: IconStub,
+    User: IconStub,
+    X: IconStub,
+    ChevronRight: IconStub,
+    ChevronDown: IconStub,
+    ChevronLeft: IconStub,
+    ChevronUp: IconStub,
+    MoreVertical: IconStub,
+    MoreHorizontal: IconStub,
+    Edit: IconStub,
+    Trash: IconStub,
+    LogOut: IconStub,
+    Menu: IconStub,
+    Sun: IconStub,
+    Moon: IconStub,
+    Github: IconStub,
     // add other common icons here as needed
   };
 
@@ -817,6 +895,27 @@ vi.mock("lucide-react", async (importOriginal) => {
     Info: stubs.Info,
     ExternalLink: stubs.ExternalLink,
     Brain: stubs.Brain,
+    Code: stubs.Code,
+    File: stubs.File,
+    Folder: stubs.Folder,
+    Plus: stubs.Plus,
+    Search: stubs.Search,
+    Settings: stubs.Settings,
+    User: stubs.User,
+    X: stubs.X,
+    ChevronRight: stubs.ChevronRight,
+    ChevronDown: stubs.ChevronDown,
+    ChevronLeft: stubs.ChevronLeft,
+    ChevronUp: stubs.ChevronUp,
+    MoreVertical: stubs.MoreVertical,
+    MoreHorizontal: stubs.MoreHorizontal,
+    Edit: stubs.Edit,
+    Trash: stubs.Trash,
+    LogOut: stubs.LogOut,
+    Menu: stubs.Menu,
+    Sun: stubs.Sun,
+    Moon: stubs.Moon,
+    Github: stubs.Github,
     // Additional icon exports observed in failing tests
     TagIcon: stubs.Tag,
     Star: IconStub,

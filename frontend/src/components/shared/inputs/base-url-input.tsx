@@ -22,7 +22,8 @@ export function BaseUrlInput({ isDisabled, defaultValue }: BaseUrlInputProps) {
         defaultValue={defaultValue}
         aria-label={t(I18nKey.SETTINGS_FORM$BASE_URL)}
         classNames={{
-          inputWrapper: "bg-[#27272A] rounded-md text-sm px-3 py-[10px]",
+          inputWrapper:
+            "bg-background-tertiary rounded-md text-sm px-3 py-[10px]",
         }}
       />
     </fieldset>

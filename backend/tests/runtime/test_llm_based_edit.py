@@ -1,4 +1,4 @@
-"""Edit-related tests for the DockerRuntime."""
+"""Edit-related tests for the LocalRuntime (adapted from DockerRuntime tests)."""
 
 import os
 

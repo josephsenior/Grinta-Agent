@@ -1,6 +1,7 @@
 """Observation types describing recoverable agent errors."""
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 from forge.core.schemas import ObservationType
 from forge.events.observation.observation import Observation
@@ -14,8 +15,8 @@ class ErrorObservation(Observation):
     E.g., Linter error after editing a file.
     """
 
-    observation: str = ObservationType.ERROR
     error_id: str = ""
+    observation: ClassVar[str] = ObservationType.ERROR
 
     @property
     def message(self) -> str:

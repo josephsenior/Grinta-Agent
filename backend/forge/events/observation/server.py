@@ -1,6 +1,7 @@
 """Server-related observations for automatic app rendering."""
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 from forge.core.schemas import ObservationType
 from forge.events.observation.observation import Observation
@@ -22,7 +23,7 @@ class ServerReadyObservation(Observation):
     url: str
     protocol: str = "http"
     health_status: str = "unknown"
-    observation: str = ObservationType.SERVER_READY
+    observation: ClassVar[str] = ObservationType.SERVER_READY
 
     @property
     def message(self) -> str:

@@ -1,7 +1,7 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderWithProviders } from "../../test-utils";
+import { renderWithProviders } from "#test-utils";
 import MCPSettingsScreen, {
   confirmServerDeletion,
   createTemplateInstaller,
@@ -157,6 +157,9 @@ vi.mock("react-i18next", async () => {
     ...actual,
     useTranslation: () => ({
       t: (key: string) => key,
+      i18n: {
+        changeLanguage: () => Promise.resolve(),
+      },
     }),
   };
 });

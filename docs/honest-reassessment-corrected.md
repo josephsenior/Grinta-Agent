@@ -26,42 +26,21 @@
 ### **What You Actually Have:**
 
 #### **A) Retry Logic with Exponential Backoff**
-**File:** `Forge/llm/retry_mixin.py`
+**File:** `forge/llm/llm.py`
 
 ```python
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
-
-retry_decorator: Callable = retry(
-    stop=stop_after_attempt(num_retries),  # 6 retries (configurable)
-    reraise=True,
-    retry=retry_if_exception_type(retry_exceptions),
-    wait=wait_exponential(
-        multiplier=retry_multiplier,  # 2.0
-        min=retry_min_wait,            # 5 seconds
-        max=retry_max_wait             # 60 seconds
-    ),
+LLM_RETRY_EXCEPTIONS: tuple[type[Exception], ...] = (
+    APIConnectionError,
+    RateLimitError,
+    ServiceUnavailableError,
+    LLMNoResponseError,
 )
 ```
-
-**What this means:**
-- Retry #1: Wait 5s
-- Retry #2: Wait 10s
-- Retry #3: Wait 20s
-- Retry #4: Wait 40s
-- Retry #5: Wait 60s (capped)
-- Retry #6: Wait 60s (capped)
 
 **Handled exceptions:**
 - `APIConnectionError`
 - `RateLimitError`
 - `ServiceUnavailableError`
-- `litellm.Timeout`
-- `litellm.InternalServerError`
 - `LLMNoResponseError`
 
 **Rating: 9.5/10** (Enterprise-grade!)
@@ -161,28 +140,27 @@ async def _attempt_recovery_and_retry(self, e: Exception) -> None:
 ### **What You Actually Have:**
 
 #### **A) Prometheus Metrics Endpoint**
-**File:** `Forge/metasop/metrics.py` (564 lines!)
+**File:** `forge/server/routes/monitoring.py`
 
 ```python
 # Prometheus text format at /metrics
 GET http://localhost:<port>/metrics
 
 # Metrics exposed:
-- metasop_total_events (counter)
-- metasop_status_count (counter per status)
-- metasop_total_tokens (counter)
-- metasop_model_total_tokens (counter per model)
-- metasop_step_duration_ms (histogram with buckets)
-- metasop_step_duration_ms_p50 (p50 latency)
-- metasop_step_duration_ms_p90 (p90 latency)
-- metasop_step_duration_ms_p95 (p95 latency)
-- metasop_step_duration_ms_p99 (p99 latency)
-- metasop_step_duration_ms_role (per-role histograms)
-- metasop_cache_hits (counter)
-- metasop_cache_stores (counter)
-- metasop_retry_attempts (counter)
-- metasop_retry_failures (counter)
-- metasop_retry_successes (counter)
+- total_events (counter)
+- status_count (counter per status)
+- total_tokens (counter)
+- model_total_tokens (counter per model)
+- step_duration_ms (histogram with buckets)
+- step_duration_ms_p50 (p50 latency)
+- step_duration_ms_p90 (p90 latency)
+- step_duration_ms_p95 (p95 latency)
+- step_duration_ms_p99 (p99 latency)
+- cache_hits (counter)
+- cache_stores (counter)
+- retry_attempts (counter)
+- retry_failures (counter)
+- retry_successes (counter)
 ```
 
 **This is FULL Prometheus integration!**
@@ -199,7 +177,6 @@ GET /api/monitoring/health           # Health check
 GET /api/monitoring/agents/performance  # Agent stats
 GET /api/monitoring/cache/stats      # Cache hit rates
 GET /api/monitoring/failures/taxonomy  # Failure distribution
-GET /api/monitoring/ace/metrics      # ACE learning stats
 GET /api/monitoring/parallel/stats   # Parallel execution
 ```
 
@@ -424,7 +401,6 @@ class RateLimiter:
 - ✅ `/api/monitoring/agents/performance` - Agent metrics
 - ✅ `/api/monitoring/cache/stats` - Cache metrics
 - ✅ `/api/monitoring/failures/taxonomy` - Failure distribution
-- ✅ `/api/monitoring/ace/metrics` - ACE stats
 - ✅ `/api/monitoring/parallel/stats` - Parallel execution
 
 **Metrics Tracked:**

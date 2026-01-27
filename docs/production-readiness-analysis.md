@@ -170,7 +170,7 @@ E/F-rated (>50):        0 functions (0.0%)  ✅
 ## 4. Monitoring & Observability: 8.5/10 ⭐⭐⭐⭐
 
 ### Prometheus Integration
-**Location:** `forge/server/routes/monitoring.py`, `forge/metasop/metrics.py`
+**Location:** `forge/server/routes/monitoring.py`
 
 **Metrics Exposed:**
 - ✅ Event counters (total_events, status_count)
@@ -392,7 +392,11 @@ E/F-rated (>50):        0 functions (0.0%)  ✅
 - ✅ **Health check endpoints** (`/alive`, `/readiness`, `/health`)
 - ✅ **Graceful shutdown** (implemented in lifespan)
 - ✅ **Resource limits** (configurable)
-- ✅ **Volume mounts** (workspace, config)
+- ✅ **Docker volumes** (workspace isolation per conversation, automatic creation)
+  - Migrated from bind mounts to Docker named volumes
+  - Eliminates permission issues
+  - Better security and isolation
+  - See [Docker Volumes Migration Guide](./architecture/docker-volumes-migration.md)
 
 ### Monitoring Stack
 - ✅ **Prometheus** (metrics collection)

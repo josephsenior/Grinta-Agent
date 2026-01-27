@@ -21,20 +21,17 @@
 
 ## 🌟 **Overview**
 
-The Tool Integration System is a revolutionary platform that provides advanced capabilities for integrating, optimizing, and managing tools in AI development workflows. It features dynamic tool optimization, intelligent function calling, and comprehensive tool management.
+The Tool Integration System is a revolutionary platform that provides advanced capabilities for integrating and managing tools in AI development workflows. It features intelligent function calling and comprehensive tool management.
 
 ### **Key Features**
-- **Dynamic Tool Optimization**: Real-time tool description and parameter optimization
 - **Intelligent Function Calling**: Advanced tool selection and execution
-- **Tool-Specific Prompts**: Optimized prompts for each tool
+- **Tool Registry**: Centralized tool management and discovery
 - **Performance Tracking**: Comprehensive tool usage analytics
 - **Error Recovery**: Sophisticated retry mechanisms and error handling
-- **Tool Registry**: Centralized tool management and discovery
+- **Extensible Design**: Easy integration of custom tools
 
 ### **Revolutionary Capabilities**
-- **Self-Improving Tools**: Tools that learn and optimize from usage
 - **Context-Aware Selection**: Intelligent tool selection based on context
-- **Real-Time Adaptation**: Live optimization based on performance data
 - **Enterprise-Grade**: Production-ready with monitoring and alerting
 - **Extensible Design**: Easy integration of custom tools
 
@@ -47,62 +44,55 @@ The Tool Integration System is a revolutionary platform that provides advanced c
 │                Tool Integration System                     │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
-│  │    Tool     │  │  Function   │  │   Tool      │        │
-│  │ Optimizer   │  │   Calling   │  │  Registry   │        │
+│  │  Function   │  │   Tool      │  │ Performance │        │
+│  │   Calling   │  │  Registry   │  │  Tracker    │        │
 │  └─────────────┘  └─────────────┘  └─────────────┘        │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
-│  │ Performance │  │   Error     │  │   Tool      │        │
-│  │  Tracker    │  │  Recovery   │  │ Selection   │        │
+│  │   Error     │  │   Tool      │  │             │        │
+│  │  Recovery   │  │ Selection   │  │             │        │
 │  └─────────────┘  └─────────────┘  └─────────────┘        │
 ├─────────────────────────────────────────────────────────────┤
-│  Tool Descriptions │ Parameter Optimization │ Usage Analytics │
+│  Tool Descriptions │ Usage Analytics │ Performance Metrics  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### **Core Principles**
 
 1. **Tool-First Design**: Everything is a tool, nothing is abstract
-2. **Dynamic Optimization**: Real-time adaptation and improvement
-3. **Intelligent Selection**: Context-aware tool selection
-4. **Performance Focus**: Optimized for speed and efficiency
-5. **Extensible Architecture**: Easy integration of new tools
+2. **Intelligent Selection**: Context-aware tool selection
+3. **Performance Focus**: Optimized for speed and efficiency
+4. **Extensible Architecture**: Easy integration of new tools
 
 ---
 
 ## 🔧 **Core Components**
 
-### **1. Tool Optimizer**
-Dynamic tool description and parameter optimization system.
+### **1. Tool Registry**
+Centralized tool management and discovery system.
 
 **Features:**
-- Tool-specific prompt optimization
-- Parameter optimization
+- Tool registration and discovery
 - Usage tracking and analytics
-- Performance-based adaptation
-- A/B testing of tool descriptions
+- Performance metrics
+- Version management
+- Security and access control
 
 **Usage:**
 ```python
-from forge.prompt_optimization.tool_optimizer import ToolOptimizer
+from forge.tools import ToolRegistry
 
-# Initialize tool optimizer
-tool_optimizer = ToolOptimizer(
-    ab_split=0.1,
-    min_samples=5,
-    confidence_threshold=0.7
-)
+# Initialize tool registry
+tool_registry = ToolRegistry()
 
-# Optimize tool descriptions
-optimized_tools = await tool_optimizer.optimize_tools([
-    "think",
-    "bash",
-    "python",
-    "git",
+# Register tools
+tool_registry.register_tool("bash")
+tool_registry.register_tool("python")
+```
     "file_search"
 ])
 
 # Track tool usage
-await tool_optimizer.track_tool_usage(
+await tool_registry.track_tool_usage(
     tool_name="think",
     success=True,
     execution_time=1.2,
@@ -110,7 +100,7 @@ await tool_optimizer.track_tool_usage(
 )
 
 # Get tool performance
-metrics = tool_optimizer.get_tool_metrics("think")
+metrics = tool_registry.get_tool_metrics("think")
 print(f"Success rate: {metrics['success_rate']:.3f}")
 print(f"Average time: {metrics['avg_execution_time']:.3f}s")
 ```
@@ -131,11 +121,10 @@ from forge.agenthub.codeact_agent.function_calling import FunctionCalling
 
 # Initialize function calling
 function_calling = FunctionCalling(
-    tools=["think", "bash", "python", "git"],
-    enable_optimization=True
+    tools=["think", "bash", "python", "git"]
 )
 
-# Execute tool with optimization
+# Execute tool
 result = await function_calling.execute_tool(
     tool_name="think",
     parameters={
@@ -271,16 +260,6 @@ else:
 # Enable tool integration
 enable_tool_integration = true
 
-# Tool optimizer settings
-enable_tool_optimization = true
-tool_opt_ab_split = 0.1
-tool_opt_min_samples = 5
-tool_opt_confidence_threshold = 0.7
-tool_opt_success_weight = 0.4
-tool_opt_time_weight = 0.3
-tool_opt_error_weight = 0.2
-tool_opt_cost_weight = 0.1
-
 # Function calling settings
 enable_function_calling = true
 max_concurrent_calls = 10
@@ -310,12 +289,6 @@ retry_delay = 1.0
 circuit_breaker_threshold = 5
 fallback_strategies = ["alternative_tool", "simplified_parameters"]
 
-# Tool optimization
-enable_advanced_optimization = true
-optimization_frequency = 100
-adaptive_learning = true
-context_aware_optimization = true
-
 # Monitoring and alerting
 enable_monitoring = true
 alert_thresholds = {
@@ -333,7 +306,6 @@ enabled = true
 max_steps = 10
 reasoning_depth = "deep"
 confidence_threshold = 0.7
-optimization_enabled = true
 
 [tool_integration.tools.bash]
 enabled = true
@@ -369,12 +341,11 @@ from forge.tools.models import ToolExecution, ToolResult
 
 # Initialize tool integration system
 tool_system = ToolIntegrationSystem(
-    enable_optimization=True,
     enable_performance_tracking=True,
     enable_error_recovery=True
 )
 
-# Execute tool with optimization
+# Execute tool
 execution = ToolExecution(
     tool_name="think",
     parameters={
@@ -464,18 +435,6 @@ print(f"Average steps: {tool_metrics['avg_steps']:.1f}")
 print(f"Confidence score: {tool_metrics['avg_confidence']:.3f}")
 ```
 
-### **Optimization Status**
-```python
-# Get optimization status
-optimization_status = tool_system.get_optimization_status()
-
-print("=== Tool Optimization Status ===")
-print(f"Optimization enabled: {optimization_status['enabled']}")
-print(f"Active variants: {optimization_status['active_variants']}")
-print(f"Performance improvement: {optimization_status['performance_improvement']:.3f}")
-print(f"Cost savings: {optimization_status['cost_savings']:.3f}")
-```
-
 ### **Error Analysis**
 ```python
 # Get error analysis
@@ -530,30 +489,6 @@ class CustomTool(BaseTool):
 
 # Register custom tool
 tool_system.register_tool(CustomTool())
-```
-
-### **Advanced Tool Optimization**
-```python
-# Enable advanced optimization
-tool_system.enable_advanced_optimization(
-    optimization_frequency=100,
-    adaptive_learning=True,
-    context_aware_optimization=True
-)
-
-# Create custom optimization strategy
-def custom_optimization_strategy(tool_name, usage_data, context):
-    # Custom optimization logic
-    if usage_data['success_rate'] < 0.8:
-        return "increase_parameter_validation"
-    elif usage_data['avg_execution_time'] > 10.0:
-        return "simplify_parameters"
-    else:
-        return "maintain_current"
-
-tool_system.register_optimization_strategy(
-    "custom_strategy", custom_optimization_strategy
-)
 ```
 
 ### **Tool Chaining**

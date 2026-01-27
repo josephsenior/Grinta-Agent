@@ -1,9 +1,8 @@
 import pytest
 from pydantic import SecretStr
 from forge.core.config import LLMConfig
-from forge.integrations.provider import ProviderType
+from forge.integrations.service_types import ProviderType
 from forge.resolver.interfaces.github import GithubIssueHandler, GithubPRHandler
-from forge.resolver.interfaces.gitlab import GitlabIssueHandler, GitlabPRHandler
 from forge.resolver.interfaces.issue_definitions import (
     ServiceContextIssue,
     ServiceContextPR,
@@ -31,8 +30,6 @@ def factory_params(llm_config):
 test_cases = [
     (ProviderType.GITHUB, "issue", ServiceContextIssue, GithubIssueHandler),
     (ProviderType.GITHUB, "pr", ServiceContextPR, GithubPRHandler),
-    (ProviderType.GITLAB, "issue", ServiceContextIssue, GitlabIssueHandler),
-    (ProviderType.GITLAB, "pr", ServiceContextPR, GitlabPRHandler),
 ]
 
 
@@ -58,5 +55,5 @@ def test_invalid_issue_type(factory_params):
     factory = IssueHandlerFactory(
         **factory_params, platform=ProviderType.GITHUB, issue_type="invalid"
     )
-    with pytest.raises(ValueError, match="Invalid issue type: invalid"):
+    with pytest.raises(ValueError, match="Unsupported issue type: invalid"):
         factory.create()

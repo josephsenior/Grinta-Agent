@@ -1,20 +1,29 @@
-import { useQuery } from "@tanstack/react-query";
-import ApiKeysClient from "#/api/api-keys";
-import { useConfig } from "./use-config";
-
-export const API_KEYS_QUERY_KEY = "api-keys";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import ApiKeysClient, { ApiKey, CreateApiKeyResponse } from "#/api/api-keys";
 
 export function useApiKeys() {
-  const { data: config } = useConfig();
+  return useQuery<ApiKey[]>({
+    queryKey: ["api-keys"],
+    queryFn: ApiKeysClient.getApiKeys,
+  });
+}
 
-  return useQuery({
-    queryKey: [API_KEYS_QUERY_KEY],
-    enabled: config?.APP_MODE === "saas",
-    queryFn: async () => {
-      const keys = await ApiKeysClient.getApiKeys();
-      return Array.isArray(keys) ? keys : [];
+export function useCreateApiKey() {
+  const queryClient = useQueryClient();
+  return useMutation<CreateApiKeyResponse, Error, string>({
+    mutationFn: ApiKeysClient.createApiKey,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["api-keys"] });
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 15, // 15 minutes
+  });
+}
+
+export function useDeleteApiKey() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: ApiKeysClient.deleteApiKey,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["api-keys"] });
+    },
   });
 }

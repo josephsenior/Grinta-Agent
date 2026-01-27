@@ -1,81 +1,65 @@
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
-  LayoutDashboard,
   MessageSquare,
-  User,
-  Bell,
   HelpCircle,
-  Database,
-  Search,
-  DollarSign,
   Settings,
-  Keyboard,
 } from "lucide-react";
 import { cn } from "#/utils/utils";
-import { useSubscriptionAccess } from "#/hooks/query/use-subscription-access";
-import { KeyboardShortcutsPanel } from "#/components/features/chat/keyboard-shortcuts-panel";
+import { I18nKey } from "#/i18n/declaration";
 
 interface NavItem {
   to: string;
-  label: string;
+  labelKey: I18nKey;
   icon: React.ComponentType<{ className?: string }>;
-  requiresPro?: boolean;
 }
 
 interface NavGroup {
-  title: string;
+  titleKey: I18nKey;
   items: NavItem[];
 }
 
 export function AppNavigation() {
   const location = useLocation();
-  const { data: subscriptionAccess } = useSubscriptionAccess();
-  const [showShortcutsPanel, setShowShortcutsPanel] = React.useState(false);
-
-  const hasPro = subscriptionAccess?.status === "ACTIVE";
+  const { t } = useTranslation();
 
   // Simplified navigation - all settings consolidated under single entry
   const navGroups: NavGroup[] = [
     {
-      title: "Main",
+      titleKey: I18nKey.NAVIGATION$GROUP_MAIN,
       items: [
-        { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-        { to: "/conversations", label: "Conversations", icon: MessageSquare },
-        { to: "/search", label: "Search", icon: Search },
-        { to: "/database-browser", label: "Database Browser", icon: Database },
-        { to: "/profile", label: "Profile", icon: User },
-        { to: "/notifications", label: "Notifications", icon: Bell },
-        { to: "/pricing", label: "Pricing", icon: DollarSign },
-        { to: "/help", label: "Help & Support", icon: HelpCircle },
+        {
+          to: "/conversations",
+          labelKey: I18nKey.NAVIGATION$ITEM_CONVERSATIONS,
+          icon: MessageSquare,
+        },
       ],
     },
     {
-      title: "Settings",
-      items: [{ to: "/settings", label: "Settings", icon: Settings }],
+      titleKey: I18nKey.SETTINGS$TITLE,
+      items: [
+        {
+          to: "/settings/app",
+          labelKey: I18nKey.SETTINGS$TITLE,
+          icon: Settings,
+        },
+      ],
     },
   ];
 
-  // Filter out pro-only items if user doesn't have pro
-  const filteredGroups = navGroups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => !item.requiresPro || hasPro),
-    }))
-    .filter((group) => group.items.length > 0);
-
   return (
     <div className="space-y-8">
-      {filteredGroups.map((group) => (
-        <div key={group.title} className="space-y-3">
+      {navGroups.map((group) => (
+        <div key={group.titleKey} className="space-y-3">
           <h3 className="px-3 text-xs font-semibold uppercase tracking-[0.2em] text-white/50">
-            {group.title}
+            {t(group.titleKey)}
           </h3>
           <nav className="space-y-1">
-            {group.items.map(({ to, label, icon: Icon }) => {
+            {group.items.map(({ to, labelKey, icon: Icon }) => {
               const isActive =
                 location.pathname === to ||
-                (to !== "/dashboard" && location.pathname.startsWith(to));
+                (to !== "/" && location.pathname.startsWith(to));
               return (
                 <NavLink
                   key={to}
@@ -88,36 +72,13 @@ export function AppNavigation() {
                   )}
                 >
                   <Icon className="h-4 w-4 flex-shrink-0 text-white/50" />
-                  <span>{label}</span>
+                  <span>{t(labelKey)}</span>
                 </NavLink>
               );
             })}
           </nav>
         </div>
       ))}
-
-      {/* Keyboard Shortcuts Section */}
-      <div className="space-y-3 pt-4 border-t border-white/10">
-        <h3 className="px-3 text-xs font-semibold uppercase tracking-[0.2em] text-white/50">
-          Help
-        </h3>
-        <nav className="space-y-1">
-          <button
-            type="button"
-            onClick={() => setShowShortcutsPanel(true)}
-            className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 text-white/70 hover:text-white hover:bg-white/5"
-          >
-            <Keyboard className="h-4 w-4 flex-shrink-0 text-white/50" />
-            <span>Keyboard Shortcuts</span>
-          </button>
-        </nav>
-      </div>
-
-      {/* Keyboard Shortcuts Panel */}
-      <KeyboardShortcutsPanel
-        isOpen={showShortcutsPanel}
-        onClose={() => setShowShortcutsPanel(false)}
-      />
     </div>
   );
 }

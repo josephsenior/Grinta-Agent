@@ -1,6 +1,10 @@
 """Agent-scoped observation types emitted by Forge event stream."""
 
 from dataclasses import dataclass, field
+from typing import ClassVar, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from forge.storage.data_models.knowledge_base import KnowledgeBaseSearchResult
 
 from forge.core.schemas import ObservationType
 from forge.events.event import RecallType
@@ -9,11 +13,11 @@ from forge.events.observation.observation import Observation
 
 @dataclass
 class AgentStateChangedObservation(Observation):
-    """This data class represents the result from delegating to another agent."""
+    """This data class represents an observation of an agent's state change."""
 
     agent_state: str
     reason: str = ""
-    observation: str = ObservationType.AGENT_STATE_CHANGED
+    observation: ClassVar[str] = ObservationType.AGENT_STATE_CHANGED
 
     @property
     def message(self) -> str:
@@ -27,7 +31,7 @@ class AgentStateChangedObservation(Observation):
 class AgentCondensationObservation(Observation):
     """The output of a condensation action."""
 
-    observation: str = ObservationType.CONDENSE
+    observation: ClassVar[str] = ObservationType.CONDENSE
 
     @property
     def message(self) -> str:
@@ -45,7 +49,7 @@ class AgentThinkObservation(Observation):
     acknowledging that the thought has been logged.
     """
 
-    observation: str = ObservationType.THINK
+    observation: ClassVar[str] = ObservationType.THINK
 
     @property
     def message(self) -> str:
@@ -77,7 +81,6 @@ class RecallObservation(Observation):
     """The retrieval of content from a microagent or more microagents."""
 
     recall_type: RecallType
-    observation: str = ObservationType.RECALL
     repo_name: str = ""
     repo_directory: str = ""
     repo_branch: str = ""
@@ -89,7 +92,11 @@ class RecallObservation(Observation):
     conversation_instructions: str = ""
     working_dir: str = ""
     microagent_knowledge: list[MicroagentKnowledge] = field(default_factory=list)
+    knowledge_base_results: list["KnowledgeBaseSearchResult"] = field(
+        default_factory=list
+    )
     '\n    A list of MicroagentKnowledge objects, each containing information from a triggered microagent.\n\n    Example:\n    [\n        MicroagentKnowledge(\n            name="python_best_practices",\n            trigger="python",\n            content="Always use virtual environments for Python projects."\n        ),\n        MicroagentKnowledge(\n            name="git_workflow",\n            trigger="git",\n            content="Create a new branch for each feature or bugfix."\n        )\n    ]\n    '
+    observation: ClassVar[str] = ObservationType.RECALL
 
     @property
     def message(self) -> str:
@@ -138,7 +145,7 @@ class RecallFailureObservation(Observation):
 
     recall_type: RecallType | None = None
     error_message: str = ""
-    observation: str = ObservationType.RECALL_FAILURE
+    observation: ClassVar[str] = ObservationType.RECALL_FAILURE
 
     @property
     def message(self) -> str:

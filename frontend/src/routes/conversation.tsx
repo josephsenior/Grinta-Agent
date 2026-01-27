@@ -5,11 +5,7 @@ import { useDispatch } from "react-redux";
 import { useConversationId } from "#/hooks/use-conversation-id";
 import { clearTerminal } from "#/state/command-slice";
 import { useEffectOnce } from "#/hooks/use-effect-once";
-import { clearJupyter } from "#/state/jupyter-slice";
-import { useBatchFeedback } from "#/hooks/query/use-batch-feedback";
 import { useConversationConfig } from "#/hooks/query/use-conversation-config";
-import { useAutoNavigateToApp } from "#/hooks/use-auto-navigate-to-app";
-import { TaskProvider } from "#/context/task-context";
 
 import {
   Orientation,
@@ -20,10 +16,9 @@ import { useActiveConversation } from "#/hooks/query/use-active-conversation";
 import { useSettings } from "#/hooks/query/use-settings";
 import { displayErrorToast } from "#/utils/custom-toast-handlers";
 import { useDocumentTitleFromState } from "#/hooks/use-document-title-from-state";
+import { useAutoNavigateToApp } from "#/hooks/use-auto-navigate-to-app";
 import Forge from "#/api/forge";
-import { useIsAuthed } from "#/hooks/query/use-is-authed";
 import { ConversationSubscriptionsProvider } from "#/context/conversation-subscriptions-provider";
-import { useUserProviders } from "#/hooks/use-user-providers";
 import { ConversationTabs } from "#/components/features/conversation/conversation-tabs";
 import { logger } from "#/utils/logger";
 
@@ -47,17 +42,13 @@ function AppContent() {
   const { data: settings } = useSettings();
   const { conversationId } = useConversationId();
   const { data: conversation, isFetched, refetch } = useActiveConversation();
-  const { data: isAuthed } = useIsAuthed();
-  const { providers } = useUserProviders();
-
-  // Fetch batch feedback data when conversation is loaded
-  useBatchFeedback();
-
-  // Auto-navigate to browser when servers start
-  useAutoNavigateToApp();
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  const [isMobile, setIsMobile] = React.useState(
+    typeof window !== "undefined" ? window.innerWidth < 768 : false,
+  );
 
   // Linter: keep settings referenced in dev to avoid unused-var warnings
   React.useEffect(() => {
@@ -70,38 +61,39 @@ function AppContent() {
 
   // Set the document title to the conversation title when available
   useDocumentTitleFromState();
-
-  const [width, setWidth] = React.useState(window.innerWidth);
+  useAutoNavigateToApp();
 
   React.useEffect(() => {
-    if (isFetched && !conversation && isAuthed) {
+    if (isFetched && !conversation) {
       displayErrorToast(
         "This conversation does not exist, or you do not have permission to access it.",
       );
-      navigate("/");
+      navigate("/conversations");
     } else if (conversation?.status === "STOPPED") {
       // start the conversation if the state is stopped on initial load
-      Forge.startConversation(conversation.conversation_id, providers).then(
-        () => refetch(),
-      );
+      Forge.startConversation(conversation.conversation_id)
+        .then(() => refetch())
+        .catch((err) => {
+          logger.error("Failed to start conversation:", err);
+          displayErrorToast(
+            "Failed to start conversation. Please check your LLM settings and API key.",
+          );
+        });
     }
-  }, [conversation?.conversation_id, isFetched, isAuthed, providers]);
+  }, [conversation?.conversation_id, isFetched]);
 
   React.useEffect(() => {
     dispatch(clearTerminal());
-    dispatch(clearJupyter());
   }, [conversationId]);
 
   useEffectOnce(() => {
     dispatch(clearTerminal());
-    dispatch(clearJupyter());
   });
 
-  function handleResize() {
-    setWidth(window.innerWidth);
-  }
-
   React.useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth < 768);
+    }
     window.addEventListener("resize", handleResize);
     return () => {
       window.removeEventListener("resize", handleResize);
@@ -109,37 +101,36 @@ function AppContent() {
   }, []);
 
   function renderMain() {
-    // Mobile: < 640px - Stack panels vertically
-    if (width < 640) {
+    if (isMobile) {
       return (
-        <div className="flex flex-col gap-3 w-full h-full min-h-0">
-          <div className="rounded-xl overflow-hidden border border-border w-full bg-background-primary flex-1 min-h-0">
+        <div className="flex flex-col grow overflow-hidden h-full">
+          <div className="flex-1 overflow-hidden">
             <Suspense
               fallback={
-                <div className="h-full bg-background-secondary animate-pulse rounded-lg" />
+                <div className="h-full bg-[var(--bg-elevated)] animate-pulse" />
               }
             >
               <ChatInterface />
             </Suspense>
           </div>
-          <div className="w-full flex-none min-h-0">
+          <div className="h-1/2 border-t border-[var(--border-primary)]">
             <ConversationTabs />
           </div>
         </div>
       );
     }
-    // Tablet (640px - 1024px) and Desktop (>= 1024px): 2-column layout with resizable panels
+
     return (
       <ResizablePanel
         orientation={Orientation.HORIZONTAL}
         className="grow h-full min-h-0 min-w-0"
         initialSize={450}
-        firstClassName="overflow-hidden bg-background-primary min-h-0"
-        secondClassName="flex flex-col overflow-hidden min-h-0"
+        firstClassName="overflow-hidden bg-[var(--bg-primary)] min-h-0 border-r border-[var(--border-primary)]"
+        secondClassName="flex flex-col overflow-hidden min-h-0 bg-[var(--bg-primary)]"
         firstChild={
           <Suspense
             fallback={
-              <div className="h-full bg-background-secondary animate-pulse rounded-lg" />
+              <div className="h-full bg-[var(--bg-elevated)] animate-pulse" />
             }
           >
             <ChatInterface />
@@ -156,30 +147,26 @@ function AppContent() {
         <div className="h-full bg-background-secondary animate-pulse rounded-lg" />
       }
     >
-      <TaskProvider>
-        <WsClientProvider conversationId={conversationId}>
-          <ConversationSubscriptionsProvider>
-            <Suspense
-              fallback={
-                <div className="h-full bg-background-secondary animate-pulse rounded-lg" />
-              }
-            >
-              <EventHandler>
-                <div
-                  data-testid="app-route"
-                  className="flex flex-col h-full gap-3"
-                >
-                  <div className="flex h-full overflow-hidden min-h-0 max-h-full">
-                    {renderMain()}
-                  </div>
-
-                  {/* Controls moved into ChatInterface header to preserve vertical space */}
+      <WsClientProvider conversationId={conversationId}>
+        <ConversationSubscriptionsProvider>
+          <Suspense
+            fallback={
+              <div className="h-full bg-background-secondary animate-pulse rounded-lg" />
+            }
+          >
+            <EventHandler>
+              <div
+                data-testid="app-route"
+                className="flex flex-col h-full w-full"
+              >
+                <div className="flex h-full overflow-hidden min-h-0 max-h-full">
+                  {renderMain()}
                 </div>
-              </EventHandler>
-            </Suspense>
-          </ConversationSubscriptionsProvider>
-        </WsClientProvider>
-      </TaskProvider>
+              </div>
+            </EventHandler>
+          </Suspense>
+        </ConversationSubscriptionsProvider>
+      </WsClientProvider>
     </Suspense>
   );
 }

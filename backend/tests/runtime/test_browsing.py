@@ -1,4 +1,4 @@
-"""Browsing-related tests for the DockerRuntime, which connects to the ActionExecutor running in the sandbox."""
+"""Browsing-related tests for LocalRuntime (in-process implementation)."""
 
 import os
 import re
@@ -11,11 +11,6 @@ from forge.events.observation import (
     CmdOutputObservation,
     ErrorObservation,
     FileDownloadObservation,
-)
-
-pytestmark = pytest.mark.skipif(
-    os.environ.get("TEST_RUNTIME") == "cli",
-    reason="CLIRuntime does not support browsing actions",
 )
 
 

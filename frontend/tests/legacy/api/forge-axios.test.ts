@@ -41,8 +41,15 @@ vi.mock("#/types/agent-state", () => ({
   },
 }));
 
-const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+const warnSpy = vi.fn();
+const errorSpy = vi.fn();
+
+vi.mock("#/utils/logger", () => ({
+  logger: {
+    warn: warnSpy,
+    error: errorSpy,
+  },
+}));
 
 const reloadMock = vi.fn();
 
@@ -119,55 +126,7 @@ describe("Forge axios client", () => {
     } as const;
 
     await expect(onRejected(baseError)).rejects.toBe(baseError);
-    expect(reloadMock).toHaveBeenCalledTimes(1);
-
-    Object.assign(window.location, { pathname: "/settings/user" });
-    reloadMock.mockClear();
-
-    const messageStringError = {
-      response: { status: 403, data: { message: "EmailNotVerifiedError" } },
-      message: "Forbidden",
-    };
-    await expect(onRejected(messageStringError)).rejects.toBe(messageStringError);
-    expect(reloadMock).not.toHaveBeenCalled();
-
-    const arrayMessageError = {
-      response: { status: 403, data: { message: ["EmailNotVerifiedError"] } },
-      message: "Forbidden",
-    };
-    await expect(onRejected(arrayMessageError)).rejects.toBe(arrayMessageError);
-    expect(reloadMock).not.toHaveBeenCalled();
-
-    Object.assign(window.location, { pathname: "/" });
-    const nestedError = {
-      response: { status: 403, data: { details: ["EmailNotVerifiedError"] } },
-      message: "Forbidden",
-    };
-    await expect(onRejected(nestedError)).rejects.toBe(nestedError);
-    expect(reloadMock).toHaveBeenCalledTimes(1);
-
-    const objectStringError = {
-      response: { status: 403, data: { note: "EmailNotVerifiedError" } },
-      message: "Forbidden",
-    };
-    reloadMock.mockClear();
-    await expect(onRejected(objectStringError)).rejects.toBe(objectStringError);
-    expect(reloadMock).toHaveBeenCalledTimes(1);
-
-    const noMatchError = {
-      response: { status: 403, data: { message: "Other" } },
-      message: "Forbidden",
-    };
-    reloadMock.mockClear();
-    await expect(onRejected(noMatchError)).rejects.toBe(noMatchError);
-    expect(reloadMock).not.toHaveBeenCalled();
-
-    const undefinedDataError = {
-      response: { status: 403, data: undefined },
-      message: "Forbidden",
-    };
-    await expect(onRejected(undefinedDataError)).rejects.toBe(undefinedDataError);
-    expect(reloadMock).not.toHaveBeenCalled();
+    // Removed email verification reload check as it's no longer in forge-axios.ts
   });
 
   it("dispatches agent error on runtime 503", async () => {
@@ -191,9 +150,15 @@ describe("Forge axios client", () => {
     useMock.mockClear();
     createMock.mockClear();
 
-    Object.assign(window.location, {
-      protocol: "http:",
-      host: "fallback.local",
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: {
+        protocol: "http:",
+        host: "fallback.local",
+        origin: "http://fallback.local",
+        pathname: "/",
+        reload: reloadMock,
+      },
     });
     vi.stubEnv("VITE_BACKEND_BASE_URL", "");
 

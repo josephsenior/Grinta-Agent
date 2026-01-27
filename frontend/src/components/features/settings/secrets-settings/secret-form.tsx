@@ -98,7 +98,7 @@ function useSecretFormState({
     (secretToEdit: string, name: string, description?: string) => {
       updateSecretOptimistically(secretToEdit, name, description);
       updateSecret(
-        { secretToEdit, name, description },
+        { id: secretToEdit, name, description },
         {
           onSettled: onCancel,
           onError: revertOptimisticUpdate,

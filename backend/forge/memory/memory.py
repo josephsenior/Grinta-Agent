@@ -18,19 +18,20 @@ from forge.events.observation.agent import (
     RecallObservation,
     RecallFailureObservation,
 )
+from forge.knowledge_base import KnowledgeBaseManager
 from forge.events.observation.empty import NullObservation
 from forge.events.stream import EventStream, EventStreamSubscriber
-from forge.microagent import (
-    BaseMicroagent,
-    KnowledgeMicroagent,
-    RepoMicroagent,
-    load_microagents_from_dir,
-)
 from forge.runtime.runtime_status import RuntimeStatus
 from forge.utils.prompt import ConversationInstructions, RepositoryInfo, RuntimeInfo
 
 if TYPE_CHECKING:
     from forge.core.config.mcp_config import MCPConfig
+    from forge.storage.data_models.knowledge_base import KnowledgeBaseSettings
+    from forge.microagent import (
+        BaseMicroagent,
+        KnowledgeMicroagent,
+        RepoMicroagent,
+    )
     from forge.runtime.base import Runtime
 
 GLOBAL_MICROAGENTS_DIR = os.path.join(
@@ -51,16 +52,19 @@ class Memory:
     loop: asyncio.AbstractEventLoop | None
     repo_microagents: dict[str, RepoMicroagent]
     knowledge_microagents: dict[str, KnowledgeMicroagent]
+    user_id: str | None
 
     def __init__(
         self,
         event_stream: EventStream,
         sid: str,
         status_callback: Callable | None = None,
+        user_id: str | None = None,
     ) -> None:
         """Subscribe to the event stream and load microagents for the given session ID."""
         self.event_stream = event_stream
         self.sid = sid or str(uuid.uuid4())
+        self.user_id = user_id
         self.status_callback = status_callback
         self.loop = None
         self.event_stream.subscribe(
@@ -73,6 +77,7 @@ class Memory:
         self.conversation_instructions: ConversationInstructions | None = None
         self._load_global_microagents()
         self._load_user_microagents()
+        self._kb_manager = KnowledgeBaseManager(user_id=user_id or "default")
 
     def on_event(self, event: Event) -> None:
         """Handle an event from the event stream."""
@@ -331,13 +336,48 @@ class Memory:
 
     def _on_microagent_recall(self, event: RecallAction) -> RecallObservation | None:
         """When a microagent action triggers microagents, create a RecallObservation with structured data."""
-        if microagent_knowledge := self._find_microagent_knowledge(event.query):
+        microagent_knowledge = self._find_microagent_knowledge(event.query)
+        
+        # Also search Knowledge Base
+        kb_results = []
+        try:
+            # Check if KB search is enabled and should be performed
+            kb_enabled = True
+            kb_threshold = 0.7
+            kb_top_k = 5
+            kb_collections = None
+            
+            # Use settings if available
+            if hasattr(self, "_kb_settings") and self._kb_settings:
+                kb_enabled = self._kb_settings.auto_search
+                kb_threshold = self._kb_settings.relevance_threshold
+                kb_top_k = self._kb_settings.search_top_k
+                kb_collections = self._kb_settings.active_collection_ids
+
+            if kb_enabled:
+                # We use a relatively high threshold by default for auto-search
+                kb_results = self._kb_manager.search(
+                    query=event.query,
+                    relevance_threshold=kb_threshold,
+                    top_k=kb_top_k,
+                    collection_ids=kb_collections
+                )
+        except Exception as e:
+            logger.error(f"Error searching knowledge base during recall: {e}")
+
+        if microagent_knowledge or kb_results:
             return RecallObservation(
                 recall_type=RecallType.KNOWLEDGE,
                 microagent_knowledge=microagent_knowledge,
-                content="Retrieved knowledge from microagents",
+                knowledge_base_results=kb_results,
+                content="Retrieved knowledge from microagents and knowledge base",
             )
         return None
+
+    def set_knowledge_base_settings(self, settings: KnowledgeBaseSettings) -> None:
+        """Update knowledge base settings for this memory instance."""
+        self._kb_settings = settings
+        logger.info(f"Knowledge base settings updated for session {self.sid}")
 
     def _find_microagent_knowledge(self, query: str) -> list[MicroagentKnowledge]:
         """Find microagent knowledge based on a query.
@@ -371,6 +411,7 @@ class Memory:
 
         This is typically called from agent_session or setup once the workspace is cloned.
         """
+        from forge.microagent import KnowledgeMicroagent, RepoMicroagent
         logger.info(
             "Loading user workspace microagents: %s", [m.name for m in user_microagents]
         )
@@ -382,6 +423,7 @@ class Memory:
 
     def _load_global_microagents(self) -> None:
         """Loads microagents from the global microagents_dir."""
+        from forge.microagent import load_microagents_from_dir
         repo_agents, knowledge_agents = load_microagents_from_dir(
             GLOBAL_MICROAGENTS_DIR
         )
@@ -395,6 +437,7 @@ class Memory:
 
         Creates the directory if it doesn't exist.
         """
+        from forge.microagent import load_microagents_from_dir
         try:
             os.makedirs(USER_MICROAGENTS_DIR, exist_ok=True)
             repo_agents, knowledge_agents = load_microagents_from_dir(

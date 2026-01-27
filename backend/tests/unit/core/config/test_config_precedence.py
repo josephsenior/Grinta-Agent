@@ -1,8 +1,8 @@
 from unittest.mock import MagicMock, patch
 import pytest
 from forge.core.config import (
-    OH_DEFAULT_AGENT,
-    OH_MAX_ITERATIONS,
+    FORGE_DEFAULT_AGENT,
+    FORGE_MAX_ITERATIONS,
     ForgeConfig,
     get_llm_config_arg,
     setup_config_from_args,
@@ -138,92 +138,6 @@ def test_cli_main_settings_precedence(
     assert config.get_llm_config().api_key.get_secret_value() == "current-dir-api-key"
 
 
-@patch("forge.core.config.utils.os.path.expanduser")
-@patch("forge.cli.main.FileSettingsStore.get_instance")
-@patch("forge.cli.main.FileSettingsStore.load")
-def test_cli_with_l_parameter_precedence(
-    mock_load, mock_get_instance, mock_expanduser, temp_config_files
-):
-    """Test that CLI -l parameter has highest precedence in CLI mode."""
-    from forge.cli.main import setup_config_from_args
-
-    mock_expanduser.side_effect = lambda path: path.replace(
-        "~", temp_config_files["home_dir"]
-    )
-    mock_settings = MagicMock()
-    mock_settings.llm_model = "settings-store-model"
-    mock_settings.llm_api_key = "settings-store-api-key"
-    mock_settings.llm_base_url = None
-    mock_settings.agent = "CodeActAgent"
-    mock_settings.confirmation_mode = False
-    mock_settings.enable_default_condenser = True
-    mock_load.return_value = mock_settings
-    mock_get_instance.return_value = MagicMock()
-    mock_args = MagicMock()
-    mock_args.config_file = temp_config_files["current_dir_toml"]
-    mock_args.llm_config = "current-dir-llm"
-    mock_args.agent_cls = None
-    mock_args.max_iterations = None
-    mock_args.max_budget_per_task = None
-    mock_args.selected_repo = None
-    with patch("os.path.exists", return_value=True):
-        config = setup_config_from_args(mock_args)
-    assert config.get_llm_config().model == "current-dir-specific-model"
-    assert (
-        config.get_llm_config().api_key.get_secret_value()
-        == "current-dir-specific-api-key"
-    )
-
-
-@patch("forge.core.config.utils.os.path.expanduser")
-@patch("forge.cli.main.FileSettingsStore.get_instance")
-@patch("forge.cli.main.FileSettingsStore.load")
-def test_cli_settings_json_not_override_config_toml(
-    mock_load, mock_get_instance, mock_expanduser, temp_config_files
-):
-    """Test that settings.json doesn't override config.toml in CLI mode."""
-    import importlib
-    import sys
-    from unittest.mock import patch
-
-    if "forge.cli.main" in sys.modules:
-        importlib.reload(sys.modules["forge.cli.main"])
-    from forge.cli.main import setup_config_from_args
-
-    mock_expanduser.side_effect = lambda path: path.replace(
-        "~", temp_config_files["home_dir"]
-    )
-    mock_settings = MagicMock()
-    mock_settings.llm_model = "settings-json-model"
-    mock_settings.llm_api_key = "settings-json-api-key"
-    mock_settings.llm_base_url = None
-    mock_settings.agent = "CodeActAgent"
-    mock_settings.confirmation_mode = False
-    mock_settings.enable_default_condenser = True
-    mock_load.return_value = mock_settings
-    mock_get_instance.return_value = MagicMock()
-    mock_args = MagicMock()
-    mock_args.config_file = temp_config_files["current_dir_toml"]
-    mock_args.llm_config = None
-    mock_args.agent_cls = None
-    mock_args.max_iterations = None
-    mock_args.max_budget_per_task = None
-    mock_args.selected_repo = None
-    with patch("os.path.exists", return_value=True):
-        setup_config_from_args(mock_args)
-    test_config = ForgeConfig()
-    test_llm_config = test_config.get_llm_config()
-    test_llm_config.model = "config-toml-model"
-    test_llm_config.api_key = "config-toml-api-key"
-    if mock_args.llm_config or (
-        not test_llm_config.model and (not test_llm_config.api_key)
-    ):
-        test_llm_config.model = mock_settings.llm_model
-        test_llm_config.api_key = mock_settings.llm_api_key
-    assert test_llm_config.model == "config-toml-model"
-    assert test_llm_config.api_key == "config-toml-api-key"
-
-
 def test_default_values_applied_when_none():
     """Test that default values are applied when config values are None."""
     mock_args = MagicMock()
@@ -233,8 +147,8 @@ def test_default_values_applied_when_none():
     mock_args.max_iterations = None
     with patch("forge.core.config.utils.load_FORGE_config", return_value=ForgeConfig()):
         config = setup_config_from_args(mock_args)
-    assert config.default_agent == OH_DEFAULT_AGENT
-    assert config.max_iterations == OH_MAX_ITERATIONS
+    assert config.default_agent == FORGE_DEFAULT_AGENT
+    assert config.max_iterations == FORGE_MAX_ITERATIONS
 
 
 def test_cli_args_override_defaults():
