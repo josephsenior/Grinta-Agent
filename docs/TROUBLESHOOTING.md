@@ -14,7 +14,7 @@
 ANTHROPIC_API_KEY=sk-ant-your-key-here
 
 # Restart backend
-poetry run python -m Forge.server.listen
+forge serve
 ```
 
 **Verify:**

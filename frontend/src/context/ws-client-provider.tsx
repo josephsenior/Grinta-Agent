@@ -213,18 +213,28 @@ function createSocketConnection({
   socketPath: string;
   query: Record<string, unknown>;
 }): Socket {
+  // Check if this is a local connection
+  const isLocal = 
+    baseUrl?.includes("localhost") || 
+    baseUrl?.includes("127.0.0.1") ||
+    (typeof window !== "undefined" && window.location.hostname === "localhost");
+
   return io(baseUrl ?? undefined, {
-    transports: ["websocket", "polling"],
+    // For local connections, use websocket directly (skip polling)
+    // For remote connections, allow fallback to polling
+    transports: isLocal ? ["websocket"] : ["websocket", "polling"],
     path: socketPath,
     query,
-    timeout: 20000,
+    // Local connections should be much faster - reduce timeout
+    timeout: isLocal ? 2000 : 20000, // 2 seconds for local, 20 for remote
     reconnection: true,
-    reconnectionDelay: 1000,
+    reconnectionDelay: isLocal ? 100 : 1000, // Faster reconnection for local
     reconnectionAttempts: 5,
     forceNew: true,
-    upgrade: true,
+    // Skip upgrade process for local - connect directly with websocket
+    upgrade: !isLocal, // Only upgrade for remote connections
     autoConnect: true,
-    rememberUpgrade: true,
+    rememberUpgrade: !isLocal, // Don't remember upgrade for local
   });
 }
 
@@ -530,6 +540,7 @@ export function WsClientProvider({
   >([]);
   const hydratedEventIdsRef = React.useRef<Set<string>>(new Set());
   const lastEventRef = React.useRef<Record<string, unknown> | null>(null);
+  const connectingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const { providers } = useUserProviders();
 
   const messageRateHandler = useRate({ threshold: 50 }); // Reduced from 250ms to 50ms for faster rendering
@@ -566,6 +577,11 @@ export function WsClientProvider({
   function handleConnect() {
     setWebSocketStatus("CONNECTED");
     removeErrorMessage();
+    // Clear any connecting timeout when successfully connected
+    if (connectingTimeoutRef.current) {
+      clearTimeout(connectingTimeoutRef.current);
+      connectingTimeoutRef.current = null;
+    }
 
     // 🔄 CRITICAL FIX: Auto-recover from ERROR state when WebSocket connects
     // This handles cases where runtime becomes available after being down
@@ -827,6 +843,26 @@ export function WsClientProvider({
     disconnectExistingSocket(sioRef);
     setWebSocketStatus("CONNECTING");
 
+    // Clear any existing timeout
+    if (connectingTimeoutRef.current) {
+      clearTimeout(connectingTimeoutRef.current);
+      connectingTimeoutRef.current = null;
+    }
+
+    // Add timeout for connecting state - show error if takes too long
+    connectingTimeoutRef.current = setTimeout(() => {
+      setWebSocketStatus((currentStatus) => {
+        if (currentStatus === "CONNECTING") {
+          setErrorMessage(
+            "Connection timeout. Please check your internet connection and try refreshing the page."
+          );
+          return "DISCONNECTED";
+        }
+        return currentStatus;
+      });
+      connectingTimeoutRef.current = null;
+    }, 120000); // 2 minutes timeout
+
     const query = buildSocketQuery({
       conversationId,
       conversation: conversation as
@@ -867,6 +903,16 @@ export function WsClientProvider({
       setParsedEvents,
       hydratedEventIdsRef,
     });
+
+    return () => {
+      if (connectingTimeoutRef.current) {
+        clearTimeout(connectingTimeoutRef.current);
+        connectingTimeoutRef.current = null;
+      }
+      if (teardown) {
+        teardown();
+      }
+    };
 
     return () => {
       teardown?.();

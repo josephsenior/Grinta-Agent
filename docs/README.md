@@ -4,62 +4,60 @@ Welcome to the comprehensive documentation for Forge - a production-grade AI cod
 
 ## 🚀 Quick Start
 
-- **[Getting Started](./GETTING_STARTED.md)** - 5-minute setup guide
+- **[Getting Started](./getting_started.md)** - 5-minute setup guide
 - [Tool Quick Reference](./tool-quick-reference.md) - One-page cheat sheet
 - [Beta Launch Strategy](./beta-launch-strategy.md) - Current beta configuration
-
+ 
 ## 📚 Core Documentation
-
+ 
 - **[Architecture](./architecture.md)** - System design and components
   - [File Editing System](./architecture/file-editing-system.md) - Two-layer file editing architecture
   - [Docker Volumes Migration](./architecture/docker-volumes-migration.md) - Bind mounts to Docker volumes migration
   - [Migration Notes](./architecture/MIGRATION_NOTES.md) - Migration from external dependencies
-- **[API Reference](./api-reference.md)** - Complete API documentation
+- **[API Reference](./api/reference.md)** - Complete API documentation
 - **[Monitoring](./monitoring.md)** - Metrics, dashboards, and alerts
 - **[Troubleshooting](./troubleshooting.md)** - Common issues and solutions
 - [Configuration](./configuration.md) - Configuration options
-
+ 
 ## 🎯 Features
-
+ 
 ### CodeAct Agent (Beta Focus)
 - [CodeAct Agent](./features/codeact-agent.md) - Main autonomous agent
 - [Ultimate Editor](./ultimate-editor.md) - Structure-aware editing (45+ languages)
 - [Terminal Interface](./features/terminal-interface.md) - Command execution
 - [Tool Integration](./features/tool-integration.md) - MCP servers
-
+ 
 ### Memory & Learning
 - [Memory System](./features/memory-system.md) - Conversation memory
-
+ 
 ### Security & Reliability
 - [Security](./security.md) - Security policies and sandboxing
 - [Reliability System](./features/reliability-system.md) - Circuit breaker, retries
-
+ 
 ### Advanced Features (Post-Beta)
 - [Parallel Execution](./features/parallel-execution.md) - Concurrent agents (disabled for beta)
-
+ 
 ## 💻 Development
-
+ 
 - [Development Guide](./development.md) - Local development setup
 - [Contributing](./contributing.md) - Contribution guidelines
 - [Testing](./testing.md) - Testing guide
-- [Coding Standards](./developers/coding-standards.md) - Style guide (TBD)
-
+ 
 ## 🚀 Deployment
-
+ 
 - [Production Setup](./production-setup.md) - Production deployment
 - [Production Deployment](./production_deployment.md) - Deployment guide
 - [Security](./security.md) - Security best practices
-
+ 
 ## 📖 Guides
-
+ 
 - [Best Practices](./guides/best-practices.md) - Usage recommendations
 - [Complete Usage Guide](./guides/complete-usage-guide.md) - Comprehensive guide
 - [Performance Tuning](./guides/performance-tuning.md) - Optimization tips
-- [Troubleshooting](./guides/troubleshooting.md) - Common issues
-
+ 
 ## 🔌 API Documentation
-
-- [REST API](./api/rest-api.md) - HTTP endpoints
+ 
+- [API Reference](./api/reference.md) - HTTP endpoints
 - [WebSocket API](./api/websocket-api.md) - Real-time communication
 - [Python SDK](./api/python-sdk.md) - Python client library
 - [TypeScript SDK](./api/typescript-sdk.md) - TypeScript/JavaScript client

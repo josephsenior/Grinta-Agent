@@ -23,6 +23,7 @@ import { useGSAPFadeIn, useGSAPSlideIn } from "#/hooks/use-gsap-animations";
 
 // Custom hooks
 import { useChatInterfaceState } from "./hooks/use-chat-interface-state";
+import { useWsClient } from "#/context/ws-client-provider";
 import { useChatKeyboardShortcuts } from "./hooks/use-chat-keyboard-shortcuts";
 import { useChatMessageHandlers } from "./hooks/use-chat-message-handlers";
 import { useFilteredEvents } from "./utils/use-filtered-events";
@@ -86,18 +87,18 @@ function ChatHeader({
   return (
     <div
       ref={headerRef}
-      className="flex-shrink-0 relative bg-[var(--bg-primary)] border-b border-[var(--border-primary)]"
+      className="shrink-0 relative bg-(--bg-primary) border-b border-(--border-primary)"
     >
       <div className="w-full max-w-full px-4 sm:px-6 py-3">
         <div className="flex items-center justify-between gap-2 min-w-0">
-          <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+          <div className="flex items-center gap-2 min-w-0 shrink-0">
             <Button
               type="button"
               variant="ghost"
               size="icon"
               aria-label="Go back"
               onClick={onGoBack}
-              className="h-8 w-8 p-1 hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)]"
+              className="h-8 w-8 p-1 hover:bg-(--bg-tertiary) text-(--text-secondary)"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -111,7 +112,7 @@ function ChatHeader({
                 variant="ghost"
                 size="sm"
                 onClick={onOpenSearch}
-                className="h-8 px-2 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+                className="h-8 px-2 text-xs text-(--text-secondary) hover:bg-(--bg-tertiary) hover:text-(--text-primary)"
                 title="Search (Ctrl+K)"
               >
                 <Search className="w-3.5 h-3.5 mr-1.5" />
@@ -126,7 +127,7 @@ function ChatHeader({
             </div>
           </div>
 
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {scrollDomToBottom && (
               <div
                 className={cn(
@@ -198,7 +199,7 @@ function ChatMessagesSection({
   return (
     <div
       ref={scrollRef as React.RefObject<HTMLDivElement>}
-      className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 relative bg-[var(--bg-primary)]"
+      className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 relative bg-(--bg-primary)"
       onScroll={(event) => onScroll(event.currentTarget)}
     >
       <div className="w-full max-w-full">
@@ -265,6 +266,7 @@ function ChatInputSection({
   onBlur,
   t,
 }: ChatInputSectionProps) {
+  const { webSocketStatus } = useWsClient();
   const inputRef = useGSAPSlideIn<HTMLDivElement>({
     direction: "up",
     distance: 30,
@@ -272,14 +274,20 @@ function ChatInputSection({
     delay: 0.2,
   });
 
+  // Allow input when connecting or disconnected so users can still interact
+  // Only disable when agent is actively loading or running
+  const isDisabled = 
+    (curAgentState === AgentState.LOADING && webSocketStatus === "CONNECTED") ||
+    curAgentState === AgentState.RUNNING;
+
   return (
     <div
       ref={inputRef}
-      className="flex-shrink-0 relative bg-[var(--bg-primary)] border-t border-[var(--border-primary)]"
+      className="shrink-0 relative bg-(--bg-primary) border-t border-(--border-primary)"
     >
       <div className="w-full px-4 sm:px-6 py-4">
         <InteractiveChatBox
-          isDisabled={curAgentState === AgentState.LOADING}
+          isDisabled={isDisabled}
           mode="submit"
           onSubmit={(message: string, images: File[], files: File[]) =>
             handleSendMessage(message, files ?? [], images ?? [])
@@ -407,7 +415,7 @@ export function ChatInterface() {
   if (events.length === 0) {
     return (
       <ScrollProvider value={scrollProviderValue}>
-        <div className="h-full flex relative overflow-hidden bg-[var(--bg-primary)]">
+        <div className="h-full flex relative overflow-hidden bg-(--bg-primary)">
           <div className="flex flex-col relative overflow-hidden transition-all duration-300 w-full">
             <ChatHeader
               onGoBack={handleGoBack}
@@ -442,7 +450,7 @@ export function ChatInterface() {
 
   return (
     <ScrollProvider value={scrollProviderValue}>
-      <div className="h-full flex relative overflow-hidden bg-[var(--bg-primary)]">
+      <div className="h-full flex relative overflow-hidden bg-(--bg-primary)">
         <div className="flex flex-col relative overflow-hidden transition-all duration-300 w-full">
           <ChatHeader
             onGoBack={handleGoBack}

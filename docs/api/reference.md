@@ -26,10 +26,8 @@ See [Authentication Implementation](AUTHENTICATION_IMPLEMENTATION.md) for detail
 
 ## API Routes Overview
 
-Forge provides 32 route modules covering all platform features:
+Forge provides 22 active route modules covering all platform features:
 
-- **Authentication** (`/api/auth`) - User registration, login, session management
-- **User Management** (`/api/users`) - User CRUD operations, profile management
 - **Conversations** (`/api/conversations`) - Conversation lifecycle management
 - **Files** (`/api/files`) - File operations and workspace management
 - **Settings** (`/api/settings`) - User and system configuration
@@ -37,25 +35,28 @@ Forge provides 32 route modules covering all platform features:
 - **Memory** (`/api/memory`) - Conversation memory and context management
 - **Knowledge Base** (`/api/knowledge`) - Vector search and document management
 - **Monitoring** (`/api/monitoring`) - Health checks, metrics, and system status
-- **Analytics** (`/api/analytics`) - Usage statistics and reporting
-- **Billing** (`/api/billing`) - Payment processing and subscriptions
-- **Dashboard** (`/api/dashboard`) - Dashboard data and quick stats
-- **Profile** (`/api/profile`) - User profile and statistics
-- **Search** (`/api/search`) - Global search across resources
-- **Activity** (`/api/activity`) - Activity feed and timeline
-- **Notifications** (`/api/notifications`) - User notifications
-- **Prompt Optimization** (`/api/prompt-optimization`) - AI-powered prompt optimization
 - **Templates** (`/api/templates`) - Template management
 - **Trajectory** (`/api/trajectory`) - Agent trajectory tracking
-- **Security** (`/api/security`) - Security features and audit logs
 - **Feedback** (`/api/feedback`) - User feedback collection
-- **Database Connections** (`/api/database`) - Database connection management
 - **Git** (`/api/git`) - Git operations (OSS mode only)
-- **Slack** (`/api/slack`) - Slack integration
-- **MCP** (`/mcp`) - Model Context Protocol server
 - **Public** (`/api/public`) - Public endpoints
 - **Global Export** (`/api/export`) - Data export functionality
 - **Health** (`/api/health`) - Health check endpoints
+- **Profile** (`/api/profile`) - User profile and statistics
+- **Notifications** (`/api/notifications`) - User notifications
+- **Search** (`/api/search`) - Global search across resources
+- **Features** (`/api/features`) - Platform feature flags and status
+
+### Planned / Coming Soon
+
+- **Authentication** (`/api/auth`) - User registration, login, session management (Currently handled via session-based auth)
+- **User Management** (`/api/users`) - User CRUD operations, profile management
+- **Analytics** (`/api/analytics`) - Usage statistics and reporting
+- **Billing** (`/api/billing`) - Payment processing and subscriptions
+- **Dashboard** (`/api/dashboard`) - Dashboard data and quick stats
+- **Activity** (`/api/activity`) - Activity feed and timeline
+- **Slack** (`/api/slack`) - Slack integration
+- **MCP** (`/mcp`) - Model Context Protocol server
 
 ## Core Endpoints
 

@@ -4,7 +4,7 @@
 
 ### Prerequisites
 
-- **Python:** 3.11 or higher
+- **Python:** 3.12 or higher
 - **Node.js:** 18 or higher  
 - **Docker:** For sandbox execution
 - **Git:** For version control
@@ -72,15 +72,15 @@ OPENAI_API_KEY=sk-your-key-here
 
 1. **Start backend:**
 ```bash
-poetry run python -m forge.server
+forge serve
 ```
 
-Or alternatively:
+Or if using Poetry:
 ```bash
-python -m forge.server
+poetry run forge serve
 ```
 
-Backend will start on `http://localhost:3000` (default port, configurable via `port` environment variable)
+Backend will start on `http://localhost:3000` (default port, configurable via `PORT` environment variable)
 
 2. **Start frontend (in new terminal):**
 ```bash

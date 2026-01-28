@@ -35,6 +35,30 @@ This guide covers deploying Forge in production environments.
    docker-compose up -d
    ```
 
+## Health Check & Verification
+
+Forge includes a production health check tool to validate critical dependencies like Tree-sitter (used for structure-aware editing).
+
+**Manual test:**
+```bash
+python Forge/agenthub/codeact_agent/tools/health_check.py
+```
+
+**Expected output:**
+```
+🏥 FORGE PRODUCTION HEALTH CHECK
+============================================================
+✅ Ultimate Editor: Tree-sitter is READY
+   - Structure-aware editing: ENABLED
+   - Language support: 45+ languages
+✅ Atomic Refactoring: READY
+============================================================
+✅ HEALTH CHECK PASSED
+============================================================
+```
+
+This check runs automatically on agent initialization to prevent starting with broken dependencies.
+
 ## Performance Optimization
 
 ### Warm Runtime Pool
