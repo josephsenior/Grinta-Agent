@@ -14,11 +14,11 @@ Forge is a production-grade AI coding agent system built on a 5-layer architectu
 - ✅ **OpenVSCode Removal** - Removed unused OpenVSCode server from runtime
 
 ### Code Quality
-- **144,110 lines of production backend code** (Python)
-- **101,417 lines of production frontend code** (TypeScript/TSX)
-- **245,527 total lines of production code** (excluding tests)
-- **704 Python files** in backend
-- **983 frontend files** (584 TSX, 398 TS)
+- **109,626 lines of production backend code** (Python)
+- **82,329 lines of production frontend code** (TypeScript/TSX)
+- **191,955 total lines of production code** (excluding tests)
+- **541 Python files** in backend
+- **763 frontend files** (TypeScript/TSX)
 - **Backend average complexity: 3.06** (A-rated) across 8,100 functions/methods
 - **Frontend average complexity: 2.21** (A-rated)
 - **0% high-complexity functions** (industry-leading)
@@ -210,7 +210,7 @@ FINISHED
 **CodeAct Agent Loop:**
 
 ```python
-# File: Forge/agenthub/codeact_agent/codeact_agent.py
+# File: backend/forge/agenthub/codeact_agent/codeact_agent.py
 
 def step(state: State) -> Action:
     # 1. Analyze current state
@@ -491,7 +491,7 @@ See [Configuration Guide](./configuration.md) for complete reference.
 
 For deep dives into specific components:
 - **LLM System:** See `Forge/llm/README.md`
-- **CodeAct Agent:** See `Forge/agenthub/codeact_agent/README.md`
+- **CodeAct Agent:** See `backend/forge/agenthub/codeact_agent/README.md`
 - **Security:** See `Forge/security/README.md`
 - **Frontend:** See `frontend/README.md`
 
@@ -593,31 +593,38 @@ This section provides a comprehensive breakdown of each major folder in the back
 
 ### `forge/agenthub/` - Agent Implementations
 
-**Purpose:** Contains all agent implementations that can be used by the framework.
+**Purpose:** Contains all agent implementations unified in a single location (`backend/forge/agenthub/`).
+
+**Location:** All agents are now consolidated in `backend/forge/agenthub/` (previously split between `backend/agenthub/` and `backend/forge/agenthub/`).
 
 **Structure:**
-- **`codeact_agent/`** (56 files) - Primary agent for beta launch
-  - Core agent logic with 29 classes/functions
+- **`codeact_agent/`** - Primary agent for beta launch
+  - Core agent logic with modular architecture (executor, planner, safety manager)
   - 19 Jinja2 prompt templates (system prompts, user prompts, examples)
   - Tools: bash, file editing, browser, database, task tracking
   - Features: anti-hallucination system, memory manager, planner, safety validator
   - Advanced tools: ultimate_editor, atomic_refactor, llm_based_edit
   
-- **`browsing_agent/`** (8 files) - Web browsing specialist
+- **`browsing_agent/`** - Web browsing specialist
   - Browser automation and web interaction
   - State tracking for browsing sessions
+  - Response parsing and navigation utilities
   
-- **`readonly_agent/`** (17 files) - Read-only code exploration
+- **`readonly_agent/`** - Read-only code exploration
   - File reading, searching, semantic search
   - Code exploration without modifications
+  - Tools: glob, grep, view, semantic_search, ultimate_explorer
   
-- **`loc_agent/`** (9 files) - Lines of Code analysis agent
+- **`loc_agent/`** - Lines of Code analysis agent
   - Code structure exploration
   - Graph-based code analysis
+  - Graph cache for efficient code navigation
   
-- **`dummy_agent/`** (2 files) - Testing/mock agent
+- **`dummy_agent/`** - Testing/mock agent
+  - Deterministic test agent for end-to-end validation
 
 **Key Features:**
+- Unified location for all agents (cleaner structure)
 - Multi-agent delegation support
 - Tool-based action system
 - Prompt optimization integration
@@ -1144,22 +1151,29 @@ This section provides a comprehensive breakdown of each major folder in the back
 ## Summary Statistics
 
 **Total Codebase Structure:**
-- **704 Python files** in backend (excluding tests)
-- **983 frontend files** (584 TSX, 398 TS)
-- **144,110 lines of production backend code** (Python)
-- **101,417 lines of production frontend code** (TypeScript/TSX)
-- **245,527 total lines of production code**
+- **541 Python files** in backend (excluding tests)
+- **763 frontend files** (TypeScript/TSX)
+- **109,626 lines of production backend code** (Python)
+- **82,329 lines of production frontend code** (TypeScript/TSX)
+- **191,955 total lines of production code**
 - **8,100 backend functions/methods** (average complexity: 3.06)
 - **Frontend average complexity: 2.21**
 - **32 route files** (API endpoints)
 - **14 middleware components**
 - **24 controller services**
-- **4 agent types** (CodeAct, Browsing, ReadOnly, LOC)
+- **5 agent types** (CodeAct, Browsing, ReadOnly, LOC, Dummy) - All unified in `backend/forge/agenthub/`
 - **30+ LLM providers** supported
 - **200+ models** available
 - **4 runtime types** (Docker, Kubernetes, Local, Remote)
 - **3 storage backends** (Local, S3, Google Cloud)
 - **1 Git integration** (GitHub)
+
+**Scripts Organization:**
+- **`backend/scripts/database/`** - Database operations (setup, backup, query)
+- **`backend/scripts/setup/`** - Installation and configuration
+- **`backend/scripts/dev/`** - Development utilities and test helpers
+- **`backend/scripts/verify/`** - Verification and check scripts
+- **`backend/scripts/build/`** - Build and code generation
 
 **Architecture Highlights:**
 - Event-driven architecture with typed event contracts

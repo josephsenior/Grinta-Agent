@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\runtime\plugins\jupyter\__init__.py
-# hypothesis_version: 6.147.0
-
-[120, 40000, 49999, '-m', '1', 'FORGE_REPO_PATH', 'Forge-default', 'LOCAL_RUNTIME_MODE', 'at', 'images', 'jupyter', 'kernel', 'kernelgateway', 'text', 'utf-8', 'win32']

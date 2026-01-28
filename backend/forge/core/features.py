@@ -45,6 +45,7 @@ class FeatureFlags:
     @property
     def security_risk_assessment_enabled(self) -> bool:
         """Check if security risk assessment is enabled.
+
         Always False in Forge Core.
         """
         return False
@@ -52,6 +53,7 @@ class FeatureFlags:
     @property
     def custom_runtime_images_enabled(self) -> bool:
         """Check if custom runtime images are enabled.
+
         Always False in Forge Core.
         """
         return False

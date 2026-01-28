@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\storage\data_models\user_secrets.py
-# hypothesis_version: 6.147.0
-
-['before', 'custom_secrets', 'description', 'expose_secrets', 'host', 'provider_tokens', 'secret', 'token', 'user_id']

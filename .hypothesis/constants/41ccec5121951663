@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\utils\metrics_labels.py
-# hypothesis_version: 6.147.0
-
-[100, '[^A-Za-z0-9_]', '_', '_+', 'unknown']

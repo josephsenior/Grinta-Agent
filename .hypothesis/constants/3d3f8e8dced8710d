@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\core\cache\redis_cache.py
-# hypothesis_version: 6.147.0
-
-[0.0, 100, 1024, 3600, 6379, 'REDIS_HOST', 'REDIS_PASSWORD', 'backend', 'deletes', 'enabled', 'errors', 'forge', 'hit_rate', 'hit_rate_percent', 'hits', 'keyspace_hits', 'keyspace_misses', 'local', 'maxmemory', 'memory', 'misses', 'redis', 'redis_keyspace_hits', 'redis_max_memory_mb', 'redis_total_commands', 'redis_used_memory_mb', 'sets', 'stats', 'total_requests', 'used_memory']

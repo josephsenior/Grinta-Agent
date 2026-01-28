@@ -20,7 +20,7 @@
 - ✅ Setup verification script created
 
 ### 3. **Database Backups** ✅
-- ✅ Automated backup script (`scripts/backup_database.py`)
+- ✅ Automated backup script (`backend/scripts/database/backup_database.py`)
 - ✅ Windows Task Scheduler setup scripts
 - ✅ Backup retention and cleanup
 - ✅ Restore functionality tested

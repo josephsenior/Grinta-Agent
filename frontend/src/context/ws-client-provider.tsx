@@ -679,7 +679,22 @@ export function WsClientProvider({
           source: "chat",
           metadata: { msgId: event.id },
         });
-        displayErrorToast(event.message);
+        
+        // Try to extract user-friendly error from content (may be JSON)
+        let errorToDisplay: unknown = event.message;
+        if (event.content) {
+          try {
+            const parsed = JSON.parse(event.content);
+            if (parsed && typeof parsed === "object" && "title" in parsed) {
+              errorToDisplay = parsed; // Use structured error
+            }
+          } catch {
+            // Not JSON, use message as-is
+            errorToDisplay = event.content || event.message;
+          }
+        }
+        
+        displayErrorToast(errorToDisplay);
       } else if (isAgentStateChangeObservation(event)) {
         // Handled by handleObservationMessage in handleAssistantMessage
       } else {

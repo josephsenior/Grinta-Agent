@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\agenthub\codeact_agent\tools\task_tracker.py
-# hypothesis_version: 6.147.0
-
-['Current task status', 'additionalProperties', 'array', 'command', 'description', 'done', 'enum', 'function', 'id', 'in_progress', 'items', 'notes', 'object', 'plan', 'properties', 'required', 'status', 'string', 'task_list', 'title', 'todo', 'type', 'view']

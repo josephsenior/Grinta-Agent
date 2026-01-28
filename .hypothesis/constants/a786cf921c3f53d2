@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\agenthub\codeact_agent\tools\ultimate_editor_tool.py
-# hypothesis_version: 6.147.0
-
-['class', 'command', 'description', 'edit_function', 'end_line', 'enum', 'file_path', 'find_symbol', 'function', 'function_name', 'integer', 'method', 'new_body', 'new_code', 'new_name', 'normalize_indent', 'object', 'old_name', 'properties', 'rename_symbol', 'replace_range', 'required', 'security_risk', 'size', 'spaces', 'start_line', 'string', 'style', 'symbol_name', 'symbol_type', 'tabs', 'type', 'ultimate_editor']

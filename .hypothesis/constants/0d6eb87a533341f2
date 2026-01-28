@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\routes\secrets.py
-# hypothesis_version: 6.147.0
-
-['/add-git-providers', '/api', '/secrets', '/secrets/{secret_id}', 'Git providers stored', 'default', 'error', 'host', 'message', 'provider_tokens', 'secrets_store', 'user_id']

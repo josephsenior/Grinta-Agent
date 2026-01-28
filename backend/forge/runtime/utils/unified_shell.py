@@ -65,7 +65,7 @@ class UnifiedShellSession(ABC):
 
 def create_shell_session(
     work_dir: str,
-    tools: ToolRegistry,
+    tools: ToolRegistry | None = None,
     username: str | None = None,
     no_change_timeout_seconds: int = 30,
     max_memory_mb: int | None = None,
@@ -74,7 +74,7 @@ def create_shell_session(
     
     Args:
         work_dir: Working directory for the session
-        tools: ToolRegistry with detected tools
+        tools: ToolRegistry with detected tools (optional)
         username: Optional username for the session
         no_change_timeout_seconds: Timeout for no output change
         max_memory_mb: Optional memory limit
@@ -82,6 +82,10 @@ def create_shell_session(
     Returns:
         Appropriate shell session implementation
     """
+    if tools is None:
+        from forge.runtime.utils.tool_registry import ToolRegistry
+        tools = ToolRegistry()
+    
     logger.info(f"Creating shell session for platform: {sys.platform}")
     logger.info(f"Detected shell: {tools.shell_type}")
     logger.info(f"Has tmux: {tools.has_tmux}")
@@ -91,12 +95,14 @@ def create_shell_session(
         from forge.runtime.utils.windows_bash import WindowsPowershellSession
         
         logger.info("Using WindowsPowershellSession")
-        return WindowsPowershellSession(
+        session = WindowsPowershellSession(
             work_dir=work_dir,
             username=username,
             no_change_timeout_seconds=no_change_timeout_seconds,
             max_memory_mb=max_memory_mb,
         )
+        # Type cast for mypy - WindowsPowershellSession implements UnifiedShellSession interface
+        return session  # type: ignore[return-value]
     
     # Unix with tmux: Use full BashSession
     elif tools.has_tmux and tools.has_bash:

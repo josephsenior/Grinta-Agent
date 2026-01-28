@@ -135,13 +135,12 @@
 - **Issues:** XSS, Command Injection, Confused Deputy
 - **Severity:** HIGH + MEDIUM (3 vulnerabilities)
 - **Status:** ⚠️ Partially mitigated
-- **Current Version:** `2.12.4` (from `2.6.1`)
-- **Target Version:** `2.13.0+` (requires `cachetools >=6.0.0`)
-- **Blocker:** Dependency conflict with `Forge-aci (0.3.2)` which requires `cachetools <6.0.0`
+- **Current Version:** `2.13.0+` (upgraded from `2.12.4`)
+- **Status:** ✅ **RESOLVED** - `Forge-aci` dependency removed, allowing upgrade to `fastmcp 2.13.0+`
 - **Recommendation:** 
-  - ✅ **Immediate:** Using `2.12.4` provides some security improvements
-  - 🔄 **Short-term:** Monitor `Forge-aci` for updates that support `cachetools 6.x`
-  - 🛡️ **Mitigation:** Ensure input validation and XSS protection layers are active
+  - ✅ **Complete:** Upgraded to `2.13.0+` with full security fixes
+  - ✅ **Dependency Removed:** `Forge-aci` was replaced with custom implementations (see MIGRATION_NOTES.md)
+  - 🛡️ **Mitigation:** Input validation and XSS protection layers remain active
 
 ### 2. **PrismJS DOM Clobbering** ⚠️ BREAKING CHANGE
 - **Package:** `prismjs` (transitive via `react-syntax-highlighter`)
@@ -252,7 +251,7 @@ pnpm install
 - [x] Deploy updates to staging
 
 ### Short-term (Next Sprint)
-- [ ] Monitor `Forge-aci` for `cachetools 6.x` support
+- [x] ~~Monitor `Forge-aci` for `cachetools 6.x` support~~ **RESOLVED** - Forge-aci removed
 - [ ] Upgrade `fastmcp` to 2.13.0+ when blocker resolved
 - [ ] Plan `react-syntax-highlighter` upgrade (breaking change)
 - [ ] Test code highlighting after upgrade

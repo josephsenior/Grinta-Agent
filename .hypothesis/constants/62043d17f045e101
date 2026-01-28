@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\agenthub\codeact_agent\tools\llm_based_edit.py
-# hypothesis_version: 6.147.0
-
-['content', 'description', 'edit_file', 'end', 'enum', 'function', 'integer', 'object', 'path', 'properties', 'required', 'security_risk', 'start', 'string', 'type']

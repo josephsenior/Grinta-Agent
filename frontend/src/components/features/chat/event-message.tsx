@@ -414,15 +414,34 @@ const renderErrorDecision: DecisionHandler = ({
   extras,
 }) => {
   // Extract error details for user-friendly formatting
-  const errorMessage =
+  let errorMessage =
     event.message ||
     (isForgeObservation(event) && typeof event.content === "string"
       ? event.content
       : "");
-  const errorObject =
-    isForgeObservation(event) && typeof event.content === "object"
-      ? event.content
-      : { message: errorMessage, ...extras };
+  
+  let errorObject: unknown = null;
+  
+  // Try to parse JSON from content if it's a string
+  if (isForgeObservation(event) && typeof event.content === "string") {
+    try {
+      const parsed = JSON.parse(event.content);
+      if (parsed && typeof parsed === "object" && "title" in parsed) {
+        errorObject = parsed; // Use structured error
+        errorMessage = parsed.message || parsed.title || errorMessage;
+      }
+    } catch {
+      // Not JSON, use as string
+      errorMessage = event.content;
+    }
+  } else if (isForgeObservation(event) && typeof event.content === "object") {
+    errorObject = event.content;
+  }
+  
+  // Fallback to simple error object if no structured error found
+  if (!errorObject) {
+    errorObject = { message: errorMessage, ...extras };
+  }
 
   return (
     <div>

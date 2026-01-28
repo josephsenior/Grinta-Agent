@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\memory\condenser\impl\no_op_condenser.py
-# hypothesis_version: 6.147.0
-
-['LLMRegistry', 'NoOpCondenser', 'NoOpCondenserConfig']

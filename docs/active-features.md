@@ -97,7 +97,7 @@ Current production configuration for Forge.
 
 ### System Prompt
 **Active:** `system_prompt_forge.j2` (166 lines, optimized)  
-**Location:** `Forge/agenthub/codeact_agent/prompts/`
+**Location:** `backend/forge/agenthub/codeact_agent/prompts/`
 
 ---
 

@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\routes\templates.py
-# hypothesis_version: 6.147.0
-
-[201, 204, 404, 500, '*.json', '.', '/', '/api/templates', '/{template_id}', '/{template_id}/use', 'Template not found', 'templates', 'utf-8', 'w']

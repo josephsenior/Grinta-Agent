@@ -173,7 +173,7 @@ class ChromaDBBackend(VectorBackend):
 
         self.collection.add(
             ids=[step_id],
-            embeddings=[embedding],
+            embeddings=[embedding],  # type: ignore[arg-type]
             documents=[text[:2000]],
             metadatas=[doc_metadata],
         )
@@ -187,7 +187,7 @@ class ChromaDBBackend(VectorBackend):
 
         query_embedding = self.model.encode(query, show_progress_bar=False).tolist()
         results = self.collection.query(
-            query_embeddings=[query_embedding],
+            query_embeddings=[query_embedding],  # type: ignore[arg-type]
             n_results=min(k, self.collection.count()),
             where=filter_metadata,
             include=["documents", "metadatas", "distances"],
@@ -307,8 +307,11 @@ class QdrantCloudBackend(VectorBackend):
             try:
                 from qdrant_client import AsyncQdrantClient  # type: ignore
             except Exception:
-                AsyncQdrantClient = None  # type: ignore[assignment]
+                AsyncQdrantClient = None  # type: ignore[assignment,misc]
             from qdrant_client.http import models  # type: ignore
+            # Note: Cannot assign to type is a false positive - models is a module
+            # The assignment below is actually assigning the module, not a type
+            self.models = models  # type: ignore[misc,assignment,type-arg]
         except ImportError as e:
             msg = (
                 "Qdrant backend requires: pip install qdrant-client\n"
@@ -416,7 +419,7 @@ class QdrantCloudBackend(VectorBackend):
                 ],
             )
 
-        results = self.client.search(
+        results = self.client.search(  # type: ignore[attr-defined]
             collection_name=self.collection_name,
             query_vector=query_embedding,
             limit=k,
@@ -507,7 +510,7 @@ class QdrantCloudBackend(VectorBackend):
 
         # Execute search
         if self.async_client is not None:
-            results = await self.async_client.search(
+            results = await self.async_client.search(  # type: ignore[attr-defined]
                 collection_name=self.collection_name,
                 query_vector=query_embedding,
                 limit=k,
@@ -515,7 +518,7 @@ class QdrantCloudBackend(VectorBackend):
             )
         else:
             results = await asyncio.to_thread(
-                self.client.search,
+                self.client.search,  # type: ignore[attr-defined]
                 collection_name=self.collection_name,
                 query_vector=query_embedding,
                 limit=k,
@@ -566,7 +569,7 @@ class QdrantCloudBackend(VectorBackend):
             result = self.client.delete(
                 collection_name=self.collection_name,
                 points_selector=self.models.PointIdsList(
-                    points=point_ids,
+                    points=point_ids,  # type: ignore[arg-type]
                 ),
             )
             deleted_count = result.operation_id if hasattr(result, 'operation_id') else len(ids)

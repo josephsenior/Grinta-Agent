@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\agenthub\loc_agent\tools\explore_structure.py
-# hypothesis_version: 6.147.0
-
-['array', 'both', 'default', 'description', 'direction', 'downstream', 'entity_type_filter', 'enum', 'function', 'integer', 'items', 'null', 'object', 'properties', 'required', 'start_entities', 'string', 'traversal_depth', 'type', 'upstream']

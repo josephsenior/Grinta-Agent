@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\integrations\github\service\branches_prs.py
-# hypothesis_version: 6.147.0
-
-[100, 5000, '/', 'Commit', 'Link', '__typename', 'branchProtectionRule', 'commit', 'committedDate', 'committer', 'data', 'date', 'name', 'nodes', 'oid', 'owner', 'page', 'perPage', 'per_page', 'protected', 'query', 'refs', 'rel="next"', 'repository', 'sha', 'target']

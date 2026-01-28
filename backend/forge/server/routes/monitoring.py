@@ -56,7 +56,7 @@ async def get_health():
 def _get_manager():
     global conversation_manager
     if conversation_manager is not None:
-        return conversation_manager
+        return conversation_manager  # type: ignore[unreachable]
     return get_conversation_manager()
 
 @app.get("/metrics", response_model=MetricsResponse)

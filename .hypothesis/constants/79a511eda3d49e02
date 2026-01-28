@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\llm\fn_call_converter.py
-# hypothesis_version: 6.147.0
-
-['\n</function>', ', ', '</', '</function', '</function>', '</parameter>\n', '<function=', 'Parameters:\n', 'allowed_params', 'arguments', 'array', 'assistant', 'bash', 'browser', 'cache_control', 'check_dir', 'content', 'create_file', 'description', 'edit_file', 'enum', 'example', 'execute_bash', 'finish', 'function', 'id', 'index', 'integer', 'kill_server', 'name', 'optional', 'param_name_to_type', 'parameters', 'powershell', 'properties', 'required', 'required_params', 'role', 'run_server', 'run_server_again', 'str_replace_editor', 'string', 'system', 'text', 'tool', 'tool_call_id', 'tool_calls', 'type', 'unknown_tool', 'user', 'view_page', 'win32']

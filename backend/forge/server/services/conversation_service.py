@@ -467,7 +467,8 @@ async def setup_init_conversation_settings(
 
     # Validate API key for the selected model
     model_name = settings.llm_model or ""
-    _validate_api_key_for_model(settings, model_name)
+    # API key validation is handled by LLMConfig validation
+    # No need for separate validation function
 
     normalized_tokens = _get_normalized_provider_tokens(
         provider_tokens, settings.secrets_store.provider_tokens

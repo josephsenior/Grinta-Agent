@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\agenthub\codeact_agent\tools\str_replace_editor.py
-# hypothesis_version: 6.147.0
-
-['array', 'command', 'create', 'description', 'enum', 'file_text', 'function', 'insert', 'insert_line', 'integer', 'items', 'new_str', 'object', 'old_str', 'path', 'properties', 'required', 'security_risk', 'str_replace', 'string', 'type', 'undo_edit', 'view', 'view_range']

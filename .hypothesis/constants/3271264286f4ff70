@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\runtime\impl\docker\docker_runtime.py
-# hypothesis_version: 6.147.0
-
-[0.5, 1.0, 120, 1000, 30000, 34999, 35000, 39999, 40000, 44999, 45000, 49151, 49999, 50000, 54999, 55000, 59999, ' && ', ',', '-lc', '/Forge/code/', '/bin/bash', '/tcp', '/workspace', '0.0.0.0', '1', ':', 'APP_PORT_1', 'APP_PORT_2', 'Config', 'DEBUG', 'DOCKER_HOST_ADDR', 'Env', 'ExposedPorts', 'Forge-runtime-', 'IPAddress', 'NetworkSettings', 'Networks', 'PYTHONUNBUFFERED', 'VSCODE_PORT', 'VSCODE_PORT=', 'app', 'bind', 'bridge', 'container', 'debug', 'default', 'device', 'error', 'exited', 'forge', 'forge-network', 'gpu', 'host', 'info', 'last_attempt', 'local', 'localhost', 'mode', 'nt', 'o', 'overlay', 'port', 'port=', 'role', 'running', 'rw', 'true', 'type', 'unknown', 'upper', 'volume', 'volume:', 'warn', 'warning', 'work', 'worker']

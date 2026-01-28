@@ -100,7 +100,8 @@ class GraphRAG:
                 if len(parts) > 1:
                     imported_module = parts[1]
                     self.graph_store.add_node(imported_module, NodeType.FILE)
-                    self.graph_store.add_edge(file_path, imported_module, "imports")
+                    from forge.memory.graph_store import EdgeType
+                    self.graph_store.add_edge(file_path, imported_module, EdgeType.IMPORTS)
 
     def format_context(self, retrieval_result: dict) -> str:
         """Format retrieval results into a prompt-friendly string."""

@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\agenthub\codeact_agent\function_calling.py
-# hypothesis_version: 6.147.0
-
-[100, '"', "'", '...', 'BrowsingAgent', 'Untitled task', '\\"', "\\'", 'code', 'command', 'connection_name', 'content', 'database_connect', 'database_query', 'database_schema', 'db_type', 'edit_function', 'end', 'end_line', 'env_prefix', 'false', 'file_path', 'find_symbol', 'function', 'function_name', 'id', 'impl_source', 'is_input', 'limit', 'message', 'name', 'new_body', 'new_code', 'new_name', 'normalize_indent', 'notes', 'old_name', 'parameters', 'path', 'plan', 'properties', 'query', 'rename_symbol', 'replace_range', 'security_risk', 'size', 'start', 'start_line', 'status', 'style', 'symbol_name', 'symbol_type', 'task_list', 'text', 'thought', 'timeout', 'title', 'todo', 'tool_calls', 'true', 'type', 'view', 'view_range']

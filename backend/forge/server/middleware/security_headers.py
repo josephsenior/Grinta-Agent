@@ -134,10 +134,7 @@ class CSRFProtection:
     PROTECTED_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
     # Paths to skip CSRF check (e.g., webhooks with signature verification)
-    SKIP_PATHS = {
-        "/api/slack/events",  # Slack verifies its own signatures
-        "/api/slack/callback",  # OAuth callback
-    }
+    SKIP_PATHS: set[str] = set()
 
     def __init__(self, enabled: bool = True) -> None:
         """Initialize CSRF protection.

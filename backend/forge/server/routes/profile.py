@@ -13,7 +13,6 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from forge.core.logger import forge_logger as logger
-from forge.server.middleware.auth import get_current_user_id
 from forge.server.user_auth import get_user_id
 from forge.server.utils import get_conversation_store
 from forge.server.utils.responses import success, error

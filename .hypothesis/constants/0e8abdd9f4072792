@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\agenthub\browsing_agent\state_tracker.py
-# hypothesis_version: 6.147.0
-
-['duration_seconds', 'errors', 'forms_filled', 'pages_visited', 'unique_urls']

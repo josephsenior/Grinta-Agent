@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\runtime\plugins\jupyter\execute_server.py
-# hypothesis_version: 6.147.0
-
-[120, 400, 8890, 10000, '%colors nocolor', '/execute', '5.0', '8890', 'Content-Type', 'DEBUG', 'DELETE', 'Missing code', 'POST', '__main__', 'allow_stdin', 'application/json', 'buffers', 'channel', 'code', 'content', 'data', 'default', 'display_data', 'error', 'execute_reply', 'execute_request', 'execute_result', 'header', 'id', 'image', 'image/png', 'images', 'jupyter_kernel', 'kernel_id', 'metadata', 'msg_id', 'msg_type', 'name', 'parent_header', 'python', 'session', 'shell', 'silent', 'store_history', 'stream', 'text', 'text/plain', 'traceback', 'type', 'user_expressions', 'username', 'version']

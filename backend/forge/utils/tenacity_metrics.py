@@ -39,7 +39,7 @@ def call_tenacity_hooks(
 
 
 def _record_metrics_event_runtime(ev: dict) -> None:
-    """Record a metrics event. (Currently a no-op)"""
+    """Record a metrics event (currently a no-op)."""
     return
 
 

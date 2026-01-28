@@ -4,13 +4,13 @@ Honest assessment of Forge's code structure, organization, and technical debt.
 
 ## Overall Grade: A (Excellent - Production Ready)
 
-**Strengths:** Well-organized, modular, production-grade architecture, comprehensive middleware, 32 API route modules, 245K+ lines of production code  
-**Weaknesses:** Minor cleanup opportunities (backup files), but overall excellent
+**Strengths:** Well-organized, modular, production-grade architecture, comprehensive middleware, 32 API route modules, 192K+ lines of production code  
+**Weaknesses:** Clean codebase with organized structure
 
 **Current Codebase Stats:**
-- **245,527 lines of production code** (144K backend + 101K frontend)
-- **704 Python files** in backend
-- **983 frontend files** (584 TSX, 398 TS)
+- **191,955 lines of production code** (110K backend + 82K frontend)
+- **541 Python files** in backend
+- **763 frontend files** (TypeScript/TSX)
 - **32 API route modules**
 - **0% high-complexity functions** (industry-leading)
 
@@ -22,8 +22,13 @@ Honest assessment of Forge's code structure, organization, and technical debt.
 
 **Structure:**
 ```
-Forge/
-├── agenthub/        # All agents (codeact, browsing, readonly, etc.)
+backend/forge/
+├── agenthub/        # All agents unified (codeact, browsing, readonly, loc, dummy)
+│   ├── codeact_agent/    # Primary production agent
+│   ├── browsing_agent/   # Web browsing specialist
+│   ├── readonly_agent/   # Read-only code exploration
+│   ├── loc_agent/        # Lines of Code analysis
+│   └── dummy_agent/      # Testing/mock agent
 ├── runtime/         # Sandbox execution environment
 ├── server/          # FastAPI backend + WebSocket
 ├── controller/      # Agent orchestration & control
@@ -31,7 +36,14 @@ Forge/
 ├── llm/             # LLM providers & utilities
 ├── events/          # Event system (actions, observations)
 ├── core/            # Core utilities & config
-└── integrations/    # GitHub, VSCode
+└── integrations/    # GitHub, MCP integrations
+
+backend/scripts/     # Organized utility scripts
+├── database/        # Database operations
+├── setup/           # Installation & configuration
+├── dev/             # Development utilities
+├── verify/          # Verification scripts
+└── build/           # Build & code generation
 ```
 
 **Why it's good:**

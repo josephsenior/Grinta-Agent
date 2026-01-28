@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\events\observation\__init__.py
-# hypothesis_version: 6.147.0
-
-['CmdOutputMetadata', 'CmdOutputObservation', 'ErrorObservation', 'FileEditObservation', 'FileReadObservation', 'FileWriteObservation', 'MCPObservation', 'NullObservation', 'Observation', 'RecallObservation', 'RecallType', 'SuccessObservation']

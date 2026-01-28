@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\events\event.py
-# hypothesis_version: 6.147.0
-
-['_cause', '_hidden', '_id', '_llm_metrics', '_message', '_response_id', '_sequence', '_source', '_timeout', '_timestamp', '_tool_call_metadata', 'agent', 'blocking', 'default', 'environment', 'knowledge', 'llm_based_edit', 'oh_aci', 'user', 'workspace_context']

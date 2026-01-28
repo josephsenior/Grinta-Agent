@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\llm\async_llm.py
-# hypothesis_version: 6.147.0
-
-[0.1, 'api_key', 'api_version', 'base_url', 'choices', 'content', 'custom_llm_provider', 'drop_params', 'forge.llm.llm', 'max_tokens', 'message', 'messages', 'model', 'reasoning_effort', 'seed', 'temperature', 'timeout', 'top_p']

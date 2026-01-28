@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\routes\mcp.py
-# hypothesis_version: 6.147.0
-
-[0.0, 1.0, '/conversations/{}', '1', '1.0', 'MR description', 'OTEL_ENABLED', 'OTEL_INSTRUMENT_MCP', 'OTEL_SAMPLE_DEFAULT', 'OTEL_SAMPLE_MCP', 'PR Title', 'PR body', 'PR description', 'bitbucket/pr', 'conversation.id', 'create_bitbucket_pr', 'create_mr', 'create_pr', 'error', 'false', 'forge.mcp', 'forge.trace_id', 'github/pr', 'gitlab/mr', 'mcp', 'mcp.method', 'mcp.request', 'mcp.resource', 'mcp.server.name', 'merge_requests/(\\d+)', 'pull/(\\d+)', 'tool.kind', 'tool.name', 'trace_id', 'true', 'yes']

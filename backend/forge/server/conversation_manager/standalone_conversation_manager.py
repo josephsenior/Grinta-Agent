@@ -1007,7 +1007,7 @@ def _get_status_from_session(session: "Session") -> ConversationStatus:
     if agent_session.runtime and agent_session.runtime.runtime_initialized:
         return ConversationStatus.RUNNING
     if getattr(agent_session, "_startup_failed", False):
-        return ConversationStatus.ERROR
+        return ConversationStatus.STOPPED  # Use STOPPED instead of ERROR which doesn't exist
     return ConversationStatus.STARTING
 
 

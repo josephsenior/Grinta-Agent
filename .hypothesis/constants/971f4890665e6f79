@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\agenthub\browsing_agent\browsing_agent_ultimate.py
-# hypothesis_version: 6.147.0
-
-[0.0, 0.1, 100, 5000, ')\n```', ')```', '2.0', 'Browse web', 'ModelResponse', 'No active session', 'USE_CONCISE_ANSWER', 'USE_NAV', 'action_type', 'agent_message', 'auto', 'avg_action_time_ms', 'bid', 'chat', 'claude', 'click', 'click(', 'click\\("([^"]+)"\\)', 'content', 'cur_axtree_txt', 'cur_url', 'deepseek', 'element_id', 'error', 'error_prefix', 'errors', 'failed_actions', 'false', 'form_data', 'gemini', 'go_back()', 'goal', 'gpt-3.5', 'gpt-4', 'interactions', 'last_action', 'last_obs', 'messages', 'nav', 'noop()', 'performance', 'prev_actions', 'prompts', 'screenshot', 'screenshot_url', 'session_id', 'stop', 'success_rate', 'successful_actions', 'system', 'task', 'temperature', 'timestamp', 'tool_choice', 'total_actions', 'total_time_ms', 'true', 'type', 'type(', 'url', 'user', 'visited_pages']

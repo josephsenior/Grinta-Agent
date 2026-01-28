@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\core\config\sandbox_config.py
-# hypothesis_version: 6.147.0
-
-[120, 180, 1000, 3600, '0.0.0.0', 'after', 'forbid', 'getuid', 'http://localhost', 'sandbox']

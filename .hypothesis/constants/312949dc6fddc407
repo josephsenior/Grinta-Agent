@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\integrations\gitlab\service\base.py
-# hypothesis_version: 6.147.0
-
-['%2F', '.', '/', 'Authorization', 'Content-Type', 'Link', 'X-Total', 'application/json', 'avatar_url', 'data', 'email', 'errors', 'id', 'message', 'name', 'organization', 'query', 'username', 'variables']

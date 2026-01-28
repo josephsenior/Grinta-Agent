@@ -131,9 +131,9 @@ This document tracks the consolidation and cleanup of redundant documentation fi
 ## Current Statistics (Updated)
 
 ### Codebase
-- **Total Production Code:** 245,527 lines
-  - Backend: 144,110 lines (704 Python files)
-  - Frontend: 101,417 lines (983 files: 584 TSX, 398 TS)
+- **Total Production Code:** 191,955 lines
+  - Backend: 109,626 lines (541 Python files)
+  - Frontend: 82,329 lines (763 files: TypeScript/TSX)
 - **Backend Functions/Methods:** 8,100
 - **Backend Average Complexity:** 3.06 (A-rated)
 - **Frontend Average Complexity:** 2.21 (A-rated)

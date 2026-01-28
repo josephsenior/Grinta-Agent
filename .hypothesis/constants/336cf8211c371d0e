@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\agenthub\loc_agent\function_calling.py
-# hypothesis_version: 6.147.0
-
-['function', 'get_entity_contents', 'message', 'name', 'search_code_snippets', 'text', 'tool_calls', 'type']

@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\storage\data_models\conversation_template.py
-# hypothesis_version: 6.147.0
-
-['Icon identifier', 'Template description', 'Template title', 'Unique identifier', 'add_feature', 'custom', 'debug', 'document', 'explain', 'fix_bug', 'optimize', 'refactor', 'review', 'test']

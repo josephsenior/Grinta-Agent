@@ -52,7 +52,7 @@ VITE_SENTRY_TRACES_SAMPLE_RATE=0.1
 Run the verification script:
 
 ```bash
-python scripts/setup_sentry.py --check
+python backend/scripts/setup/setup_sentry.py --check
 ```
 
 Expected output:
@@ -72,7 +72,7 @@ Environment Variables:
 Test that errors are being sent to Sentry:
 
 ```bash
-python scripts/setup_sentry.py --test
+python backend/scripts/setup/setup_sentry.py --test
 ```
 
 This will send a test error to your Sentry dashboard. Check your Sentry project to verify it was received.

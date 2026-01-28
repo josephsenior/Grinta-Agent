@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\runtime\impl\kubernetes\kubernetes_runtime.py
-# hypothesis_version: 6.147.0
-
-[300, 404, 8080, 8081, 30082, 30083, '/', '/Forge/code/', '/alive', '1', 'ClusterIP', 'DEBUG', 'Deleted PVC %s', 'Deleted ingress %s', 'Deleted pod %s', 'Deleted service %s', 'Forge-runtime', 'Forge-runtime-', 'Never', 'PYTHONUNBUFFERED', 'Prefix', 'ReadWriteOnce', 'Ready', 'Running', 'Runtime is ready.', 'True', 'VSCODE_PORT', 'app', 'code', 'cpu', 'default', 'error', 'execution-server', 'http', 'https', 'info', 'memory', 'networking.k8s.io/v1', 'port', 'root', 'runtime', 'session', 'storage', 'true', 'v1', 'vscode', 'workspace-volume']

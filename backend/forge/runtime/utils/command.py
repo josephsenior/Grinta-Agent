@@ -180,4 +180,5 @@ def get_action_execution_server_startup_command(
         base_cmd.append("--no-enable-browser")
 
     logger.debug("get_action_execution_server_startup_command: %s", base_cmd)
-    return base_cmd
+    # Filter out None values to ensure return type is list[str]
+    return [item for item in base_cmd if item is not None]

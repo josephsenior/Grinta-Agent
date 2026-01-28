@@ -249,7 +249,7 @@ def _execute_file_editor(
             enable_linting=enable_linting,
         )
     except ToolError as e:
-        result = ToolResult(error=str(e))
+        result = ToolResult(output="", error=str(e))
     except TypeError as e:
         return (f"ERROR:\n{e!s}", (None, None))
     if result.error:
@@ -443,6 +443,11 @@ class ActionExecutor:
         from forge.runtime.utils.unified_shell import create_shell_session
         
         logger.info("Creating shell session using unified abstraction...")
+        
+        # Ensure tool_registry is not None
+        if self.tool_registry is None:
+            from forge.runtime.utils.tool_registry import ToolRegistry
+            self.tool_registry = ToolRegistry()
         
         shell_session = create_shell_session(
             work_dir=cwd or self._initial_cwd,

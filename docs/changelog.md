@@ -14,8 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Expanded code examples and recipes
 - **File Editing System Architecture:** Two-layer design separating agent-level (Ultimate Editor) and runtime-level (FileEditor) operations
 - **Production-Grade FileEditor:** Custom implementation replacing external dependencies with transaction support, atomic writes, and comprehensive error handling
+- **Organized Scripts Directory:** Scripts organized into logical subdirectories (database/, setup/, dev/, verify/, build/)
+- **Script Documentation:** README files for each script category
 
 ### Changed
+- **Agent Hub Unification:** All agents consolidated into `backend/forge/agenthub/` (previously split between `backend/agenthub/` and `backend/forge/agenthub/`)
+- **Scripts Reorganization:** Scripts moved from flat structure to organized subdirectories
+- **Codebase Statistics Updated:** 191,955 lines (110K backend + 82K frontend), 541 Python files, 763 frontend files
+- **Documentation Updated:** All references updated to reflect current project structure
 - **Migrated from `Forge_aci` to custom FileEditor implementation**
   - Removed external dependency on `Forge_aci` package
   - Implemented production-grade `FileEditor` for runtime file I/O

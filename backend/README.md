@@ -31,9 +31,19 @@ make test-unit
 
 ## Scripts
 
-Backend scripts are located in `backend/scripts/`. Run them from the project root:
+Backend scripts are organized in `backend/scripts/` subdirectories:
+
+- **`database/`** - Database setup, backup, and query scripts
+- **`setup/`** - Installation and configuration scripts
+- **`dev/`** - Development utilities and test helpers
+- **`verify/`** - Verification and check scripts
+- **`build/`** - Build and code generation scripts
+- **`mcp/`** - MCP-related scripts
+
+Run them from the project root:
 ```bash
-python backend/scripts/compile_protos.py
+python backend/scripts/build/compile_protos.py
+python backend/scripts/database/setup_database.py
 ```
 
 ## Development

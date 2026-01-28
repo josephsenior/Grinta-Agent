@@ -69,10 +69,10 @@ pnpm add @sentry/react
 
 ```bash
 # Check configuration
-python scripts/setup_sentry.py --check
+python backend/scripts/setup/setup_sentry.py --check
 
 # Test error reporting
-python scripts/setup_sentry.py --test
+python backend/scripts/setup/setup_sentry.py --test
 ```
 
 ## Backend Configuration

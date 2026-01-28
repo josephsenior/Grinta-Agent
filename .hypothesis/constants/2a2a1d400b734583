@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\events\observation\commands.py
-# hypothesis_version: 6.147.0
-
-[30000, '\n###PS1END###', '\n###PS1JSON###\n', '"', '$!', '$(pwd)', '$?', '\\"', '\\h', '\\u', 'command_id', 'exit_code', 'hostname', 'pid', 'py_interpreter_path', 'username', 'working_dir']

@@ -140,7 +140,7 @@ class CmdOutputObservation(Observation):
     command: str
     metadata: CmdOutputMetadata = field(default_factory=CmdOutputMetadata)
     hidden: bool = False
-    observation: ClassVar[str] = ObservationType.RUN
+    observation_type: ClassVar[str] = ObservationType.RUN
 
     def __init__(
         self,
@@ -157,7 +157,8 @@ class CmdOutputObservation(Observation):
             content = self._maybe_truncate(content)
         super().__init__(content)
         self.command = command
-        self.observation = observation
+        # Store observation value in a private attribute to avoid ClassVar conflict
+        object.__setattr__(self, 'observation', observation)
         self.hidden = hidden
         if isinstance(metadata, dict):
             self.metadata = CmdOutputMetadata(**metadata)

@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\conftest.py
-# hypothesis_version: 6.147.0
-
-['0', '1', 'ANTHROPIC_API_KEY', 'FORGE_RUN_TTY_TESTS', 'LITELLM_API_KEY', 'LLM_API_KEY', 'Mock response', 'OPENAI_API_KEY', '_close_test_runtime', '_fixtureinfo', '_load_runtime', 'acompletion', 'assistant', 'benchmark', 'benchmarks', 'chat.completion', 'choices', 'completion', 'completion_tokens', 'content', 'created', 'delta', 'docker', 'docker not available', 'e2e', 'evaluation', 'event_loop', 'external', 'finish_reason', 'heavy', 'id', 'index', 'info', 'integration', 'litellm_completion', 'markers', 'message', 'messages', 'mock-fingerprint', 'mock-model', 'mock-response-id', 'mock_litellm', 'model', 'object', 'optional', 'prompt_tokens', 'pytest_pyfunc_call', 'require_pkg', 'role', 'session', 'set_dummy_llm_env', 'stop', 'stream', 'streaming', 'system_fingerprint', 'test_key', 'tests', 'third_party', 'total_tokens', 'tty', 'usage', 'use_repo_root_cwd', 'win', 'windows']

@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\mcp_client\utils.py
-# hypothesis_version: 6.147.0
-
-['MCP action name: %s', 'MCP client tools: %s', 'MCP clients: %s', 'MCP response: %s', 'MCP tools: %s', 'Matching client: %s', 'No MCP clients found', 'SHTTP', 'SSE', 'content', 'conversion', 'error', 'fetch', 'function', 'general', 'isError', 'json', 'name', 'stdio', 'win32']

@@ -20,14 +20,12 @@ if TYPE_CHECKING:
 else:  # pragma: no cover - imports absent at runtime
     PromCounter = PromHistogram = Any
 
-_prometheus_client: ModuleType | None
 try:  # pragma: no cover - optional dependency
     import prometheus_client as _prometheus_client
+    _PROMETHEUS_AVAILABLE = True
 except Exception:  # pragma: no cover
     _PROMETHEUS_AVAILABLE = False
     _prometheus_client = None
-else:
-    _PROMETHEUS_AVAILABLE = True
 
 
 class RequestObservabilityMiddleware(BaseHTTPMiddleware):

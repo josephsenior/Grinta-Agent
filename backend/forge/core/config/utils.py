@@ -525,6 +525,17 @@ def _process_extended_section(
     if "extended" in toml_config:
         try:
             cfg.extended = ExtendedConfig(toml_config["extended"])
+            # Also populate direct attributes from extended config for backward compatibility
+            if hasattr(cfg.extended, "workspace_base"):
+                cfg.workspace_base = cfg.extended.workspace_base
+            if hasattr(cfg.extended, "workspace_mount_path_in_sandbox"):
+                cfg.workspace_mount_path_in_sandbox = cfg.extended.workspace_mount_path_in_sandbox
+            if hasattr(cfg.extended, "file_store_web_hook_url"):
+                cfg.file_store_web_hook_url = cfg.extended.file_store_web_hook_url
+            if hasattr(cfg.extended, "file_store_web_hook_headers"):
+                cfg.file_store_web_hook_headers = cfg.extended.file_store_web_hook_headers
+            if hasattr(cfg.extended, "file_store_web_hook_batch"):
+                cfg.file_store_web_hook_batch = cfg.extended.file_store_web_hook_batch
         except (TypeError, KeyError, ValidationError) as e:
             logger.FORGE_logger.warning(
                 "Cannot parse [extended] config from toml, values have not been applied.\nError: %s",

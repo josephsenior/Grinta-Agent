@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\routes\snippets.py
-# hypothesis_version: 6.147.0
-
-[100, '*.json', '.', '/', '/api/snippets', '/export', '/import', '/search', '/stats', '/{snippet_id}', '/{snippet_id}/use', '1.0.0', 'Content-Disposition', 'category', 'code', 'date', 'dependencies', 'description', 'exported_at', 'imported', 'is_favorite', 'language', 'license', 'ok', 'skipped', 'snippets', 'source_url', 'status', 'tags', 'timestamp', 'title', 'total', 'total_snippets', 'updated', 'usage', 'usage_count', 'usage_events.json', 'utf-8', 'w', 'workspace_base']

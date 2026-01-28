@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\session\session.py
-# hypothesis_version: 6.147.0
-
-[0.1, 120, '/', 'N/A', 'action', 'agent', 'agent_state_changed', 'agent_status_error', 'debug', 'dispatch_called', 'error', 'git_user_email', 'git_user_name', 'id', 'info', 'manager', 'mcp_config', 'message', 'metasop_completed', 'metasop_start', 'microagent', 'null', 'observation', 'oh_event', 'payload_sample', 'session_id', 'signal', 'sop:', 'source', 'status_update', 'type', 'unknown']

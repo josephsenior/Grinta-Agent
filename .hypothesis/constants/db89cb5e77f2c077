@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\integrations\gitlab\service\__init__.py
-# hypothesis_version: 6.147.0
-
-['GitLabBranchesMixin', 'GitLabFeaturesMixin', 'GitLabMixinBase', 'GitLabPRsMixin', 'GitLabReposMixin', 'GitLabResolverMixin']

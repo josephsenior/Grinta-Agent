@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\middleware\rate_limiter.py
-# hypothesis_version: 6.147.0
-
-[0.0, 1.0, 100, 429, 3600, ',', '/', '/api/conversations', '/api/database', '/api/health', '/api/memory', '/api/monitoring', '/api/prompts', '/api/slack/events', '/assets', '/health', '1', '1.0', '100', '1000', '60', 'OTEL_ENABLED', 'OTEL_SAMPLE_DEFAULT', 'OTEL_SAMPLE_REDIS', 'RATE_LIMIT_BURST', 'RATE_LIMIT_EXCEEDED', 'RATE_LIMIT_REQUESTS', 'Retry-After', 'X-Forwarded-For', 'X-RateLimit-Limit', 'X-RateLimit-Reset', 'db.system', 'default', 'error', 'false', 'forge.redis', 'forge.trace_id', 'rate_limit.check', 'ratelimit.allowed', 'ratelimit.hour.count', 'ratelimit.hour.limit', 'ratelimit.key', 'reason', 'redis', 'too_many_requests', 'trace_id', 'true', 'unknown', 'user_id', 'yes']

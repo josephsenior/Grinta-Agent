@@ -36,6 +36,7 @@ class CmdRunAction(Action):
     is_static: bool = False
     cwd: str | None = None
     hidden: bool = False
+    stdin: str | None = None
     action: ClassVar[str] = ActionType.RUN
     runnable: ClassVar[bool] = True
     confirmation_state: ActionConfirmationStatus = ActionConfirmationStatus.CONFIRMED

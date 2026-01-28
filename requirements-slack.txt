@@ -1,3 +1,0 @@
-# Optional dependencies for Slack integration
-slack-sdk>=3.27.0
-

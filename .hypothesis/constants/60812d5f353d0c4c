@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\utils\prompt.py
-# hypothesis_version: 6.147.0
-
-['additional_info.j2', 'microagent_info.j2', 'system_prompt.j2', 'user', 'user_prompt.j2']

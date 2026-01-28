@@ -50,6 +50,7 @@ from forge.server.shared import (
     get_conversation_manager_impl,
 )
 from forge.server.types import LLMAuthenticationError, MissingSettingsError
+from forge.server.utils.error_formatter import format_error_for_user
 from forge.server.user_auth import (
     get_auth_type,
     get_provider_tokens,
@@ -527,16 +528,27 @@ def _handle_conversation_errors(e: Exception) -> JSONResponse:
 
     """
     if isinstance(e, MissingSettingsError):
-        return error(
-            message=str(e),
+        # Format as user-friendly error
+        error_dict = format_error_for_user(
+            e,
+            context={"error_code": "CONFIGURATION$SETTINGS_NOT_FOUND"}
+        )
+        return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
-            error_code="CONFIGURATION$SETTINGS_NOT_FOUND",
+            content=error_dict,
         )
     if isinstance(e, LLMAuthenticationError):
-        return error(
-            message=str(e),
+        # Format as user-friendly error with helpful guidance
+        error_dict = format_error_for_user(
+            e,
+            context={
+                "error_code": RuntimeStatus.ERROR_LLM_AUTHENTICATION.value,
+                "category": "authentication",
+            }
+        )
+        return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
-            error_code=RuntimeStatus.ERROR_LLM_AUTHENTICATION.value,
+            content=error_dict,
         )
     raise e
 

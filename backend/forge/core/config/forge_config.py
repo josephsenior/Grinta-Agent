@@ -19,6 +19,7 @@ from forge.core.config.agent_config import AgentConfig
 from forge.core.config.mcp_config import MCPConfig
 from forge.core.config.sandbox_config import SandboxConfig
 from forge.core.config.security_config import SecurityConfig
+from forge.core.config.extended_config import ExtendedConfig
 
 
 class ForgeConfig(BaseModel, metaclass=CanonicalModelMetaclass):
@@ -79,6 +80,32 @@ class ForgeConfig(BaseModel, metaclass=CanonicalModelMetaclass):
         default="INFO",
         description="Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL",
     )
+    # Extended configuration for additional features
+    extended: ExtendedConfig | None = Field(
+        default=None,
+        description="Extended configuration for additional features"
+    )
+    # Optional attributes accessed via extended config or direct access
+    workspace_base: str | None = Field(default=None, description="Base workspace directory")
+    workspace_mount_path_in_sandbox: str | None = Field(default=None, description="Workspace mount path in sandbox")
+    file_store_web_hook_url: str | None = Field(default=None, description="File store webhook URL")
+    file_store_web_hook_headers: dict[str, str] | None = Field(default=None, description="File store webhook headers")
+    file_store_web_hook_batch: bool = Field(default=False, description="Enable file store webhook batching")
+    # Trajectory replay/save configuration
+    replay_trajectory_path: str | None = Field(default=None, description="Path to trajectory file for replay")
+    save_trajectory_path: str | None = Field(default=None, description="Path to save trajectory file")
+    save_screenshots_in_trajectory: bool = Field(default=False, description="Save screenshots in trajectory")
+    # CLI configuration
+    cli_multiline_input: bool = Field(default=False, description="Enable multiline input in CLI")
+    # MCP configuration
+    mcp_host: str | None = Field(default=None, description="MCP host address")
+    # Runtime configuration
+    init_git_in_empty_workspace: bool = Field(default=False, description="Initialize git in empty workspace")
+    run_as_Forge: bool = Field(default=False, description="Run commands as Forge user")
+    # File upload configuration
+    file_uploads_max_file_size_mb: int = Field(default=100, description="Maximum file upload size in MB")
+    file_uploads_restrict_file_types: bool = Field(default=False, description="Whether to restrict file types")
+    file_uploads_allowed_extensions: set[str] = Field(default_factory=set, description="Allowed file extensions")
     defaults_dict: ClassVar[dict] = {}
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 

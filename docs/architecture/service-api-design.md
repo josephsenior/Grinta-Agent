@@ -104,7 +104,7 @@ Protocol Buffer definitions are compiled to Python gRPC stubs using:
 ```bash
 make compile-protos
 # or
-python scripts/compile_protos.py
+python backend/scripts/build/compile_protos.py
 ```
 
 This generates Python service stubs and message classes in `forge/services/generated/`.
@@ -126,14 +126,14 @@ Contract tests in `tests/unit/services/` verify:
 - ✅ Contract/unit tests cover adapter behavior.
 
 **Phase 1 — Client Implementation:**
-- Generate Python gRPC client stubs (`grpc.aio`) alongside servers via `scripts/compile_protos.py`.
+- Generate Python gRPC client stubs (`grpc.aio`) alongside servers via `backend/scripts/build/compile_protos.py`.
 - Extend `EventServiceAdapter` / `RuntimeServiceAdapter` with gRPC client branches guarded by feature flags.
 - Add connection management (channel pool, timeouts, keepalive, TLS hooks) and metadata propagation (trace IDs, auth headers).
 - Instrument interceptors for logging/metrics to keep parity with in-process telemetry.
 
 **Phase 2 — Local & Integration Validation:**
 - Add adapter integration tests that stand up ephemeral gRPC servers (loopback) to exercise client paths.
-- Extend smoke test (`backend/scripts/test_dispatch.py`) to run once in gRPC mode.
+- Extend smoke test (`backend/scripts/dev/test_dispatch.py`) to run once in gRPC mode.
 - Verify load-shedding behavior: simulate server outages, ensure adapters fall back or surface clear errors.
 - Measure latency/throughput baselines with `pytest-benchmark` or k6 pointing at loopback servers.
 

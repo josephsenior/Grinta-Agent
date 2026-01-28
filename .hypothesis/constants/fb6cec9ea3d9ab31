@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\integrations\service_types.py
-# hypothesis_version: 6.147.0
-
-[500, '.Forge', '.Forge/microagents', '.cursorrules', '.md', '/', 'BITBUCKET_TOKEN', 'Bitbucket', 'Bitbucket API', 'Bitbucket Pipelines', 'CI pipelines', 'CREATE_MICROAGENT', 'FAILING_CHECKS', 'Forge-config', 'GITHUB_TOKEN', 'GITLAB_TOKEN', 'GitHub', 'GitHub API', 'GitHub Actions', 'GitLab', 'GitLab API', 'MERGE_CONFLICTS', 'MR', 'Merge Request', 'OPEN_ISSUE', 'OPEN_PR', 'PR', 'Pull Request', 'UNRESOLVED_COMMENTS', 'apiName', 'bitbucket', 'ciProvider', 'ciSystem', 'cursorrules', 'enterprise_sso', 'get', 'github', 'gitlab', 'merge request', 'microagents', 'name', 'nodes', 'open_issue_prompt.j2', 'organization', 'post', 'pull request', 'requestType', 'requestTypeShort', 'requestVerb', 'tokenEnvVar', 'unknown', 'user', 'values']

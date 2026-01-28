@@ -4,14 +4,16 @@ These are used to provide a consistent error interface regardless of the
 underlying provider SDK.
 """
 
+from typing import Optional
+
 class LLMError(Exception):
     """Base exception for all LLM-related errors."""
     def __init__(
         self,
         message: str,
-        llm_provider: str = None,
-        model: str = None,
-        status_code: int = None,
+        llm_provider: Optional[str] = None,
+        model: Optional[str] = None,
+        status_code: Optional[int] = None,
         *args,
         **kwargs
     ):

@@ -82,9 +82,12 @@ class EventServiceAdapter:
     def publish_event(self, session_id: str, event_dict: dict[str, Any]) -> None:
         """Publish an event to a session's stream."""
         stream = self.get_event_stream(session_id)
+        from forge.events import EventSource
         event = event_from_dict(event_dict)
         # EventStream.add_event requires (event, source)
-        stream.add_event(event, event.source)
+        # Handle case where event.source might be None
+        source = event.source if event.source is not None else EventSource.USER
+        stream.add_event(event, source)
 
     def get_session_info(self, session_id: str) -> dict[str, Any] | None:
         """Get metadata for a session."""

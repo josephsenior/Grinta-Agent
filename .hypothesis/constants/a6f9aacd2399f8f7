@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\core\schema\agent.py
-# hypothesis_version: 6.147.0
-
-['awaiting_user_input', 'error', 'finished', 'loading', 'paused', 'rate_limited', 'rejected', 'running', 'stopped', 'user_confirmed', 'user_rejected']

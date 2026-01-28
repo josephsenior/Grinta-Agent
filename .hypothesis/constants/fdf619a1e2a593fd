@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\agenthub\codeact_agent\tools\bash.py
-# hypothesis_version: 6.147.0
-
-['LOW', 'command', 'default', 'description', 'enum', 'false', 'function', 'is_input', 'number', 'object', 'properties', 'required', 'security_risk', 'string', 'timeout', 'true', 'type']

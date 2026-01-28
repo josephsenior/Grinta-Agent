@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\memory\condenser\impl\semantic_condenser.py
-# hypothesis_version: 6.147.0
-
-[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 1.0, 100, 1000, '?', 'action', 'build', 'command', 'completion', 'content', 'delegate', 'delegation', 'deploy', 'detailed_output', 'error', 'exit_code', 'file', 'file_operation', 'finish', 'install', 'normal_importance', 'question', 'setup', 'setup_command', 'source', 'success', 'user', 'user_message']

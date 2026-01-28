@@ -233,7 +233,6 @@ class EndpointRateLimiter:
             "/api/conversations": default_limits,  # Use env-configured limits
             "/api/database": default_limits,
             "/api/memory": default_limits,
-            "/api/slack/events": default_limits,
             "/api/monitoring": default_limits,  # ← Add monitoring endpoints
             "default": default_limits,  # Default limits from environment
         }

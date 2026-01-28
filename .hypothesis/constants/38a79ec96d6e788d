@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\core\config\arg_utils.py
-# hypothesis_version: 6.147.0
-
-['--agent-cls', '--agent-config', '--config-file', '--conversation', '--directory', '--eval-ids', '--eval-n-limit', '--eval-note', '--eval-num-workers', '--eval-output-dir', '--file', '--gpu', '--llm-config', '--log-level', '--max-iterations', '--mount-cwd', '--name', '--no-auto-continue', '--override-cli-mode', '--selected-repo', '--task', '--version', '-b', '-c', '-d', '-f', '-i', '-l', '-n', '-t', '-v', 'COMMAND', 'Session name', 'Set the log level', 'cli', 'command', 'commands', 'config.toml', 'forge', 'serve', 'store_true']

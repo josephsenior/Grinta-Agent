@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\storage\data_models\settings.py
-# hypothesis_version: 6.147.0
-
-[0.0, 0.7, 60.0, 'FORGE_API_KEY', 'api_key', 'before', 'condenser_max_size', 'custom_secrets', 'en', 'expose_secrets', 'hybrid', 'llm', 'llm_api_key', 'llms', 'mcp', 'provider_tokens', 'search_api_key', 'secret_store', 'secrets_store']

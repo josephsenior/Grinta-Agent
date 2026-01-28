@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\llm\retry_mixin.py
-# hypothesis_version: 6.147.0
-
-[1.0, 'kwargs', 'llm_completion', 'max_attempts', 'num_retries', 'retry_exceptions', 'retry_listener', 'retry_max_wait', 'retry_min_wait', 'retry_multiplier', 'retry_object', 'stop', 'stops', 'temperature']

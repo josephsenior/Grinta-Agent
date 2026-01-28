@@ -75,4 +75,5 @@ export interface StatusMessage {
   id?: string;
   message: string;
   conversation_title?: string;
+  errorData?: unknown; // Structured error data for user-friendly display
 }

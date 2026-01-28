@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\events\serialization\event.py
-# hypothesis_version: 6.147.0
-
-[0.0, 'accumulated_cost', 'action', 'active_page_index', 'amount', 'args', 'axtree_object', 'cause', 'content', 'cost', 'costs', 'dom_object', 'extras', 'fallback', 'focused_element_bid', 'id', 'last_browser_action', 'llm_metrics', 'max_budget_per_task', 'message', 'model', 'model_name', 'null', 'observation', 'prompt_tokens', 'recall_type', 'response_latencies', 'screenshot', 'security_risk', 'sequence', 'set_of_marks', 'source', 'success', 'task_completed', 'timeout', 'timestamp', 'token_usages', 'tool_call_metadata', 'value']

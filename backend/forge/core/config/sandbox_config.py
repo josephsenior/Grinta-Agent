@@ -29,6 +29,18 @@ class SandboxConfig(BaseModel, metaclass=CanonicalModelMetaclass):
         default=None,
         description="The BrowserGym environment to use for browser evaluation"
     )
+    selected_repo: str | None = Field(
+        default=None,
+        description="Selected repository for sandbox operations"
+    )
+    base_container_image: str | None = Field(default=None, description="Base container image for sandbox")
+    runtime_container_image: str | None = Field(default=None, description="Runtime container image for sandbox")
+    api_key: str | None = Field(default=None, description="API key for sandbox")
+    close_delay: int = Field(default=60, description="Delay in seconds before closing sandbox")
+    remote_runtime_resource_factor: float = Field(default=1.0, description="Resource factor for remote runtime")
+    keep_runtime_alive: bool = Field(default=False, description="Whether to keep runtime alive between requests")
+    use_host_network: bool = Field(default=False, description="Whether to use host network mode for Docker containers")
+    force_rebuild_runtime: bool = Field(default=False, description="Whether to force rebuild of runtime container image")
     model_config = ConfigDict(extra="forbid")
 
     @classmethod

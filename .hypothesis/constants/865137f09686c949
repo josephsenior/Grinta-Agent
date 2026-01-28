@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\llm\metrics.py
-# hypothesis_version: 6.147.0
-
-[0.0, '_response_latencies', '_token_usages', 'accumulated_cost', 'costs', 'default', 'max_budget_per_task', 'model', 'response_latencies', 'token_usages']

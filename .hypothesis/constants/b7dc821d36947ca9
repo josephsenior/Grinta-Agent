@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\events\action\__init__.py
-# hypothesis_version: 6.147.0
-
-['Action', 'ActionSecurityRisk', 'AgentDelegateAction', 'AgentFinishAction', 'AgentRejectAction', 'AgentThinkAction', 'BrowseURLAction', 'CmdRunAction', 'FileEditAction', 'FileReadAction', 'FileWriteAction', 'IPythonRunCellAction', 'MCPAction', 'MessageAction', 'NullAction', 'RecallAction', 'StreamingChunkAction', 'SystemMessageAction', 'TaskTrackingAction']

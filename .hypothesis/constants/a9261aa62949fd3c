@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\storage\s3.py
-# hypothesis_version: 6.147.0
-
-['/', 'AWS_ACCESS_KEY_ID', 'AWS_S3_BUCKET', 'AWS_S3_ENDPOINT', 'AWS_S3_SECURE', 'AccessDenied', 'Body', 'Code', 'Contents', 'Error', 'Key', 'NoSuchBucket', 'NoSuchKey', 'http://', 'https://', 's3', 'true', 'utf-8']

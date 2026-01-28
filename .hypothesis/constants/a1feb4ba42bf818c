@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\integrations\gitlab\service\repos.py
-# hypothesis_version: 6.147.0
-
-[100, 1000, '%2F', '/', '://', 'Link', 'created', 'created_at', 'default_branch', 'desc', 'full_name', 'group', 'id', 'kind', 'last_activity_at', 'membership', 'name', 'namespace', 'order_by', 'page', 'path_with_namespace', 'per_page', 'public', 'pushed', 'rel="next"', 'search', 'search_namespaces', 'sort', 'star_count', 'updated', 'visibility']

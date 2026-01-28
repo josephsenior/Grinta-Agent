@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\events\action\files.py
-# hypothesis_version: 6.147.0
-
-['**FileEditAction**\n', 'Undo Edit\n', 'create', 'insert', 'str_replace', 'undo_edit']

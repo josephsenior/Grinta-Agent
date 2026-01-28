@@ -75,7 +75,6 @@ pyarrow = { version = "21.0.0", optional = true }
 docker = "*"
 kubernetes = "^33.1.0"
 boto3 = "*"
-Forge-aci = { version = ">=0.3.2", python = "^3.12,<3.14" }
 
 # ============================================================================
 # Third-Party Runtime Providers (Optional)
@@ -137,7 +136,7 @@ opentelemetry-api = "^1.33.1"
 opentelemetry-exporter-otlp-proto-grpc = "^1.33.1"
 python-socketio = "^5.14.0"  # Security fix: CVE-2025-61765
 pygithub = "^2.5.0"
-fastmcp = "^2.12.0"  # Partial security fix - full fix (2.13.0) blocked by Forge-aci cachetools <6.0 constraint
+fastmcp = "^2.13.0"  # Security fix: Updated now that Forge-aci dependency removed
 
 # ============================================================================
 # Security Fixes for Transitive Dependencies

@@ -74,11 +74,30 @@ function handleAgentStateChange(message: ObservationMessage) {
 // Helper function to handle error observations
 function handleErrorObservation(message: ObservationMessage) {
   store.dispatch(setCurrentAgentState(AgentState.ERROR));
+  
+  // Try to parse structured error data from content
+  let errorMessage = message.content || message.message || "An error occurred";
+  let errorData: unknown = null;
+  
+  // Check if content is JSON with user-friendly error format
+  if (message.content) {
+    try {
+      const parsed = JSON.parse(message.content);
+      if (parsed && typeof parsed === "object" && "title" in parsed && "message" in parsed) {
+        errorData = parsed;
+        errorMessage = parsed.message || parsed.title || errorMessage;
+      }
+    } catch {
+      // Not JSON, use as-is
+    }
+  }
+  
   store.dispatch(
     setCurStatusMessage({
       type: "error",
-      message: message.content || message.message || "An error occurred",
+      message: errorMessage,
       status_update: true,
+      errorData: errorData, // Include structured error data if available
     }),
   );
 }

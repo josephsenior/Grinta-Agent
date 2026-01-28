@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\controller\state\state.py
-# hypothesis_version: 6.147.0
-
-[100, '_history_checksum', '_view', 'budget_flag', 'delegates', 'history', 'iteration', 'iteration_flag', 'local_iteration', 'local_metrics', 'max_iterations', 'normal', 'paused', 'session_id', 'tags', 'throttling', 'trace_user_id', 'trace_version', 'user', 'utf-8']

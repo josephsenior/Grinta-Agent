@@ -30,6 +30,7 @@ from forge.memory.memory import Memory
 from forge.runtime import RuntimeAcquireResult, get_runtime_cls, runtime_orchestrator
 from forge.runtime.runtime_status import RuntimeStatus
 from forge.server.types import LLMAuthenticationError
+from forge.server.utils.error_formatter import format_error_for_user
 from forge.storage.data_models.user_secrets import UserSecrets
 from forge.utils.async_utils import EXECUTOR, call_sync_from_async
 from forge.utils.shutdown_listener import should_continue
@@ -167,11 +168,33 @@ class AgentSession:
 
         self.config = config
         error_msg = None
+        error_exception = None
+        error_context = None
         try:
             # Validate API keys before starting anything slow
             if agent_to_llm_config:
-                for llm_config in agent_to_llm_config.values():
-                    self._validate_api_key_for_model(llm_config)
+                for agent_name, llm_config in agent_to_llm_config.items():
+                    try:
+                        self._validate_api_key_for_model(llm_config)
+                    except LLMAuthenticationError as e:
+                        # Add model/provider context to error
+                        error_context = {
+                            "model": llm_config.model or "unknown",
+                            "agent": agent_name,
+                            "session_id": self.sid,
+                        }
+                        # Try to extract provider from model name
+                        model_name = llm_config.model or ""
+                        if "/" in model_name:
+                            provider_name = model_name.split("/")[0].title()
+                            error_context["provider"] = provider_name
+                        elif "claude" in model_name.lower():
+                            error_context["provider"] = "Anthropic (Claude)"
+                        elif "gpt" in model_name.lower() or "openai" in model_name.lower():
+                            error_context["provider"] = "OpenAI"
+                        elif "gemini" in model_name.lower():
+                            error_context["provider"] = "Google (Gemini)"
+                        raise
 
             # Setup runtime and providers
             runtime_connected = await self._setup_runtime_and_providers(
@@ -219,9 +242,13 @@ class AgentSession:
 
         except Exception as e:
             error_msg = str(e)
+            error_exception = e
+            # Preserve error context if it was set
+            if error_context and hasattr(e, '__dict__'):
+                e.__dict__.update(error_context)
             raise
         finally:
-            self._finalize_session_startup(startup_state, runtime_connected, error_msg)
+            self._finalize_session_startup(startup_state, runtime_connected, error_msg, error_exception, error_context)
 
     def _validate_session_state(self) -> bool:
         """Validate that the session can be started."""
@@ -245,8 +272,20 @@ class AgentSession:
         """
         # Validate API key presence and non-emptiness
         if not llm_config.api_key or llm_config.api_key.get_secret_value().isspace():
+            model_name = llm_config.model or "the selected model"
+            # Extract provider name from model if possible
+            provider_name = "your AI provider"
+            if "/" in model_name:
+                provider_name = model_name.split("/")[0].title()
+            elif "claude" in model_name.lower():
+                provider_name = "Anthropic (Claude)"
+            elif "gpt" in model_name.lower() or "openai" in model_name.lower():
+                provider_name = "OpenAI"
+            elif "gemini" in model_name.lower():
+                provider_name = "Google (Gemini)"
+            
             raise LLMAuthenticationError(
-                "Error authenticating with the LLM provider. Please check your API key"
+                f"Error authenticating with the LLM provider. Please check your API key"
             )
 
     def _initialize_session_startup(self):
@@ -407,7 +446,7 @@ class AgentSession:
                 )
 
     def _finalize_session_startup(
-        self, startup_state, runtime_connected, error_msg=None
+        self, startup_state, runtime_connected, error_msg=None, error_exception=None, error_context=None
     ) -> None:
         """Finalize session startup and log results."""
         self._starting = False
@@ -430,22 +469,59 @@ class AgentSession:
             self.logger.error(
                 f"Agent session start failed in {duration}s", extra=log_metadata
             )
+            # Format error for user-friendly display
+            if error_exception:
+                try:
+                    # Merge error context with session context
+                    context = {"session_id": self.sid}
+                    if error_context:
+                        context.update(error_context)
+                    # Also try to extract model/provider from exception attributes
+                    if hasattr(error_exception, '__dict__'):
+                        for key in ["model", "provider", "agent"]:
+                            if key in error_exception.__dict__:
+                                context[key] = error_exception.__dict__[key]
+                    
+                    formatted_error = format_error_for_user(
+                        error_exception,
+                        context=context
+                    )
+                    # Include formatted error as JSON in content so frontend can parse it
+                    error_content = json.dumps(formatted_error)
+                except Exception as format_err:
+                    self.logger.warning(f"Failed to format error: {format_err}")
+                    error_content = error_msg or "Agent session failed to initialize"
+            else:
+                error_content = error_msg or "Agent session failed to initialize"
+            
             # Add error observation to the event stream so the UI can show it
             if self.event_stream:
                 self.event_stream.add_event(
                     ErrorObservation(
-                        content=error_msg or "Agent session failed to initialize",
+                        content=error_content,
                     ),
                     EventSource.ENVIRONMENT,
                 )
                 # Also send an agent state change to ERROR so the UI stops "Initializing..."
                 from forge.events.observation import AgentStateChangedObservation
 
+                # Use user-friendly message for state change
+                user_message = error_msg or "Agent session failed to initialize"
+                if error_exception:
+                    try:
+                        formatted = format_error_for_user(
+                            error_exception,
+                            context={"session_id": self.sid}
+                        )
+                        user_message = formatted.get("message", user_message)
+                    except Exception:
+                        pass
+
                 self.event_stream.add_event(
                     AgentStateChangedObservation(
-                        content=error_msg or "Agent session failed to initialize",
+                        content=user_message,
                         agent_state=AgentState.ERROR,
-                        reason=error_msg or "Agent session failed to initialize",
+                        reason=user_message,
                     ),
                     EventSource.ENVIRONMENT,
                 )

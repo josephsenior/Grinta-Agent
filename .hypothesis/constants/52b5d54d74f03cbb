@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\llm\model_features.py
-# hypothesis_version: 6.147.0
-
-['-gguf', '/', ':', 'claude-3-5-haiku*', 'claude-3-5-sonnet*', 'claude-3-7-sonnet*', 'claude-3.5-haiku*', 'claude-3.7-sonnet*', 'claude-4-5-*', 'claude-4.5-*', 'claude-haiku-4-5-*', 'claude-haiku-4.5*', 'claude-opus-4*', 'claude-sonnet-4*', 'claude-sonnet-4-5-*', 'claude-sonnet-4.5*', 'deepseek-chat', 'deepseek-r1-0528*', 'gemini-2.5-flash', 'gemini-2.5-flash*', 'gemini-2.5-pro', 'gemini-2.5-pro*', 'gemini/gemini-1.5-*', 'gemini/gemini-2.0-*', 'gemini/gemini-2.5-*', 'gpt-4.1', 'gpt-4o*', 'gpt-5*', 'grok-4*', 'grok-4-0709', 'grok-code-fast-1*', 'kimi-k2-0711-preview', 'kimi-k2-instruct', 'o1', 'o1*', 'o1-2024-12-17', 'o3', 'o3*', 'o3-2025-04-16', 'o3-mini', 'o3-mini-2025-01-31', 'o4-mini', 'o4-mini*', 'o4-mini-2025-04-16', 'qwen3-coder*']

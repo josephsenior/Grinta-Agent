@@ -31,14 +31,14 @@ def sanitize_filename(filename: str) -> str:
 
 def load_file_upload_config(
     config: ForgeConfig = shared_config,
-) -> tuple[int, bool, list[str]]:
+) -> tuple[int, bool, set[str]]:
     """Load file upload configuration from the config object.
 
     This function retrieves the file upload settings from the global config object.
     It handles the following settings:
     - Maximum file size for uploads
     - Whether to restrict file types
-    - List of allowed file extensions
+    - Set of allowed file extensions
 
     It also performs sanity checks on the values to ensure they are valid and safe.
 
@@ -61,14 +61,14 @@ def load_file_upload_config(
         logger.warning(
             'Invalid allowed_extensions: %s. Setting to [".*"].', allowed_extensions
         )
-        allowed_extensions = [".*"]
+        allowed_extensions = {".*"}
     else:
-        allowed_extensions = [
+        allowed_extensions = {
             ext.lower() if ext.startswith(".") else f".{ext.lower()}"
             for ext in allowed_extensions
-        ]
+        }
     if not restrict_file_types:
-        allowed_extensions = [".*"]
+        allowed_extensions = {".*"}
     logger.debug(
         "File upload config: max_size=%sMB, restrict_types=%s, allowed_extensions=%s",
         max_file_size_mb,

@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
 import forge
@@ -184,6 +185,8 @@ class LocalRuntimeInProcess(ActionExecutionClient):
             self._setup_workspace_directory()
         work_dir = self._temp_workspace
         # Ensure workspace directory exists
+        if work_dir is None:
+            raise ValueError("Workspace directory must be set")
         os.makedirs(work_dir, exist_ok=True)
         
         self._executor = ActionExecutor(

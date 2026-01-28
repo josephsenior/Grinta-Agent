@@ -370,6 +370,60 @@ def format_user_cancelled_error(error: UserCancelledError) -> UserFriendlyError:
     )
 
 
+def format_llm_authentication_error(
+    error: Exception, context: Optional[dict[str, Any]] = None
+) -> UserFriendlyError:
+    """Format LLM authentication/API key errors with helpful guidance."""
+    # Extract model/provider info if available
+    model_name = "the AI model"
+    provider_name = "your AI provider"
+    
+    if context:
+        model_name = context.get("model", model_name)
+        provider_name = context.get("provider", provider_name)
+    
+    # Try to extract from error message
+    error_str = str(error)
+    if "anthropic" in error_str.lower():
+        provider_name = "Anthropic (Claude)"
+    elif "openai" in error_str.lower() or "gpt" in error_str.lower():
+        provider_name = "OpenAI"
+    elif "gemini" in error_str.lower() or "google" in error_str.lower():
+        provider_name = "Google (Gemini)"
+    
+    return UserFriendlyError(
+        title="API Key Required",
+        message=(
+            f"To use {model_name}, you need to set up your API key.\n\n"
+            f"**How to fix this:**\n"
+            f"1. Get your API key from {provider_name}\n"
+            f"2. Go to Settings → API Keys\n"
+            f"3. Add your API key for {provider_name}\n"
+            f"4. Save and try again\n\n"
+            f"**Don't have an API key?**\n"
+            f"• Sign up at {provider_name}'s website\n"
+            f"• Create an API key in your account settings\n"
+            f"• Copy it and paste it here\n\n"
+            f"**Your conversations and work are safe** - this is just a setup step!"
+        ),
+        severity=ErrorSeverity.WARNING,
+        category=ErrorCategory.AUTHENTICATION,
+        icon="🔑",
+        suggestion="Add your API key in Settings",
+        actions=[
+            ErrorAction("Open Settings", "open_settings", url="/settings", highlight=True),
+            ErrorAction("Get API Key", "get_api_key", url=f"https://docs.forge.ai/setup/api-keys"),
+            ErrorAction("Learn More", "help", url="https://docs.forge.ai/getting-started"),
+        ],
+        technical_details=str(error),
+        error_code="LLM_AUTHENTICATION_ERROR",
+        can_retry=False,
+        help_url="https://docs.forge.ai/setup/api-keys",
+        reassurance="This is normal! Just add your API key to get started.",
+        metadata=context or {},
+    )
+
+
 # Comprehensive error mapping
 ERROR_FORMATTERS = {
     LLMNoResponseError: format_llm_no_response_error,
@@ -380,6 +434,7 @@ ERROR_FORMATTERS = {
     FunctionCallNotExistsError: format_function_call_error,
     LLMMalformedActionError: format_malformed_action_error,
     UserCancelledError: format_user_cancelled_error,
+    LLMAuthenticationError: format_llm_authentication_error,
 }
 
 
@@ -392,7 +447,14 @@ def _check_auth_pattern(error_message: str) -> bool:
     """Check if error message indicates authentication failure."""
     return any(
         keyword in error_message
-        for keyword in ["authentication", "unauthorized", "invalid token"]
+        for keyword in [
+            "authentication", 
+            "unauthorized", 
+            "invalid token",
+            "api key",
+            "check your api key",
+            "authentication with the llm provider"
+        ]
     )
 
 
@@ -431,7 +493,7 @@ def _format_by_pattern(
     # Define pattern checkers and their corresponding formatters
     pattern_handlers = [
         (_check_rate_limit_pattern, format_rate_limit_error),
-        (_check_auth_pattern, format_authentication_error),
+        (_check_auth_pattern, format_llm_authentication_error),  # Use LLM-specific formatter for API key errors
         (_check_network_pattern, format_network_error),
         (_check_file_not_found_pattern, format_file_not_found_error),
         (_check_permission_pattern, format_permission_error),

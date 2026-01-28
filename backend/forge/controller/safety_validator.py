@@ -104,7 +104,22 @@ class SafetyValidator:
 
         """
         # Analyze the action
-        assessment = self.analyzer.analyze_action(action)
+        # CommandAnalyzer.analyze takes a command string, not an action
+        command = action.command if hasattr(action, 'command') else str(action)
+        assessment = self.analyzer.analyze(command)
+
+        # assessment is a tuple: (RiskCategory, str, list[str])
+        risk_category, reason, matched_patterns = assessment
+        # Convert RiskCategory to ActionSecurityRisk
+        from forge.events.action import ActionSecurityRisk
+        risk_level_map = {
+            "none": ActionSecurityRisk.LOW,
+            "low": ActionSecurityRisk.LOW,
+            "medium": ActionSecurityRisk.MEDIUM,
+            "high": ActionSecurityRisk.HIGH,
+            "critical": ActionSecurityRisk.HIGH,
+        }
+        risk_level = risk_level_map.get(risk_category.value.lower(), ActionSecurityRisk.UNKNOWN)
 
         # Determine if action should be blocked
         should_block = self._should_block_action(assessment, context)
@@ -112,10 +127,10 @@ class SafetyValidator:
         # Create validation result
         result = ValidationResult(
             allowed=not should_block,
-            risk_level=assessment.risk_level,
-            risk_category=assessment.risk_category,
-            reason=assessment.reason,
-            matched_patterns=assessment.matched_patterns,
+            risk_level=risk_level,
+            risk_category=risk_category,
+            reason=reason,
+            matched_patterns=matched_patterns,
             requires_review=self._requires_human_review(assessment),
             blocked_reason=self._get_blocked_reason(assessment)
             if should_block

@@ -173,7 +173,7 @@ VERIFY: <execute_bash command="ls -la /workspace/auth.py && head -10 /workspace/
 
 The ultimate prompt is now the **default** CodeAct system prompt.
 
-**Location:** `Forge/Forge/agenthub/codeact_agent/prompts/system_prompt.j2`
+**Location:** `backend/forge/agenthub/codeact_agent/prompts/system_prompt.j2`
 
 **Backup:** `system_prompt_backup_original.j2` (414 lines, original version)
 

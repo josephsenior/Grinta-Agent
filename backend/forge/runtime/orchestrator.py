@@ -172,6 +172,13 @@ class RuntimeOrchestrator:
         for missing in set(cache) - set(latest_stats):
             cache.pop(missing, None)
 
+    def _policy_for_key(self, key: str) -> WarmPoolPolicy | None:
+        """Get the warm pool policy for a given runtime key."""
+        if self._pool_policy_snapshot is None:
+            return None
+        default_policy, key_policies = self._pool_policy_snapshot
+        return key_policies.get(key, default_policy)
+    
     def _handle_watchdog_saturation(
         self, pool_stats: dict[str, int], watched_counts: dict[str, int]
     ) -> None:

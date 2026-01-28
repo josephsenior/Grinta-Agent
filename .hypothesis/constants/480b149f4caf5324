@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\middleware\request_tracing.py
-# hypothesis_version: 6.147.0
-
-[1000, 'X-Request-ID', 'X-Response-Time', 'client_host', 'duration_ms', 'error', 'location', 'method', 'path', 'process_id', 'request_id', 'status_code', 'thread_name', 'threshold_ms', 'timestamp', 'user-agent', 'user_agent']

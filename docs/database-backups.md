@@ -8,7 +8,7 @@ Forge uses PostgreSQL for user storage in production. Regular backups are **crit
 
 ## Backup Script
 
-The backup script is located at `scripts/backup_database.py`.
+The backup script is located at `backend/scripts/database/backup_database.py`.
 
 ### Features
 
@@ -31,7 +31,7 @@ export DB_USER=postgres
 export DB_PASSWORD=your_password
 
 # Create backup
-python scripts/backup_database.py --backup
+python backend/scripts/database/backup_database.py --backup
 ```
 
 Backups are stored in `./backups/` by default (configurable via `BACKUP_DIR` env var).
@@ -43,17 +43,17 @@ Backups are stored in `./backups/` by default (configurable via `BACKUP_DIR` env
 python scripts/backup_database.py --list
 
 # Restore a specific backup
-python scripts/backup_database.py --restore backups/forge_backup_20250115_120000.sql
+python backend/scripts/database/backup_database.py --restore backups/forge_backup_20250115_120000.sql
 ```
 
 ### Cleanup Old Backups
 
 ```bash
 # Remove backups older than 30 days (default)
-python scripts/backup_database.py --cleanup
+python backend/scripts/database/backup_database.py --cleanup
 
 # Remove backups older than 7 days
-python scripts/backup_database.py --cleanup --days 7
+python backend/scripts/database/backup_database.py --cleanup --days 7
 ```
 
 ## Automated Backups
@@ -67,7 +67,7 @@ Add to crontab for daily backups at 2 AM:
 crontab -e
 
 # Add this line (adjust paths as needed)
-0 2 * * * cd /path/to/forge && /usr/bin/python3 scripts/backup_database.py --backup >> /var/log/forge_backup.log 2>&1
+0 2 * * * cd /path/to/forge && /usr/bin/python3 backend/scripts/database/backup_database.py --backup >> /var/log/forge_backup.log 2>&1
 ```
 
 ### Windows Task Scheduler
@@ -163,10 +163,10 @@ services:
 
 ```bash
 # Daily cleanup (keep 30 days)
-python scripts/backup_database.py --cleanup --days 30
+python backend/scripts/database/backup_database.py --cleanup --days 30
 
 # Weekly cleanup (keep 90 days) - run weekly
-python scripts/backup_database.py --cleanup --days 90
+python backend/scripts/database/backup_database.py --cleanup --days 90
 ```
 
 ## Backup Storage
@@ -227,7 +227,7 @@ gpg --decrypt backups/forge_backup_20250115_120000.sql.gpg > restore.sql
 2. **Verify backup file exists**
 3. **Restore from backup:**
    ```bash
-   python scripts/backup_database.py --restore backups/forge_backup_20250115_120000.sql
+   python backend/scripts/database/backup_database.py --restore backups/forge_backup_20250115_120000.sql
    ```
 4. **Verify data integrity**
 5. **Restart the application**
@@ -346,7 +346,7 @@ Stop the application before restoring:
 ```bash
 # Stop Forge application
 # Then restore
-python scripts/backup_database.py --restore backup.sql
+python backend/scripts/database/backup_database.py --restore backup.sql
 ```
 
 ## Additional Resources

@@ -23,7 +23,7 @@ from tenacity import (
 )
 
 from forge.llm.metrics import Metrics
-from forge.llm.model_features import get_features
+from forge.llm.model_features import get_features, ModelFeatures
 from forge.llm.llm_utils import get_token_count, create_pretrained_tokenizer
 from forge.utils.tenacity_stop import stop_if_should_exit
 from forge.llm.direct_clients import get_direct_client, LLMResponse
@@ -119,10 +119,22 @@ class LLM(RetryMixin, DebugMixin):
 
         # Initialize model info (limits, etc)
         self.init_model_info()
+        
+        # Cache model features for easy access
+        try:
+            self._cached_features = get_features(self.config.model)
+        except Exception:
+            from forge.llm.model_features import ModelFeatures
+            self._cached_features = ModelFeatures()  # Default features
 
         # Handle custom tokenizer
         if self.config.custom_tokenizer:
             self.config.custom_tokenizer = create_pretrained_tokenizer(self.config.custom_tokenizer)
+    
+    @property
+    def features(self) -> ModelFeatures:
+        """Get model features/capabilities."""
+        return self._cached_features
 
     def init_model_info(self) -> None:
         """Initialize model limits and capabilities.
@@ -257,14 +269,14 @@ class LLM(RetryMixin, DebugMixin):
                     
                     # Handle nested usage details (like from OpenAI/Anthropic mocks in tests)
                     if not cache_read and "prompt_tokens_details" in response.usage:
-                        details = response.usage["prompt_tokens_details"]
+                        details: Any = response.usage["prompt_tokens_details"]
                         if hasattr(details, "cached_tokens"):
                             cache_read = details.cached_tokens
                         elif isinstance(details, dict):
                             cache_read = details.get("cached_tokens", 0)
                             
                     if not cache_write and "model_extra" in response.usage:
-                        extra = response.usage["model_extra"]
+                        extra: Any = response.usage["model_extra"]
                         if isinstance(extra, dict):
                             cache_write = extra.get("cache_creation_input_tokens", 0)
 
@@ -328,14 +340,14 @@ class LLM(RetryMixin, DebugMixin):
                 
                 # Handle nested usage details
                 if not cache_read and "prompt_tokens_details" in response.usage:
-                    details = response.usage["prompt_tokens_details"]
+                    details: Any = response.usage["prompt_tokens_details"]
                     if hasattr(details, "cached_tokens"):
                         cache_read = details.cached_tokens
                     elif isinstance(details, dict):
                         cache_read = details.get("cached_tokens", 0)
                         
                 if not cache_write and "model_extra" in response.usage:
-                    extra = response.usage["model_extra"]
+                    extra: Any = response.usage["model_extra"]
                     if isinstance(extra, dict):
                         cache_write = extra.get("cache_creation_input_tokens", 0)
 
@@ -364,7 +376,10 @@ class LLM(RetryMixin, DebugMixin):
         self.log_prompt(messages)
         
         try:
-            async for chunk in self.client.astream(messages=messages, **call_kwargs):
+            # Type: ignore needed because mypy doesn't understand async generator return types
+            # astream returns an async iterator, not a coroutine
+            stream_iter = self.client.astream(messages=messages, **call_kwargs)
+            async for chunk in stream_iter:  # type: ignore[attr-defined]
                 # Check for cancellation during stream
                 if await self._check_cancelled():
                     logger.debug("LLM stream cancelled by user.")

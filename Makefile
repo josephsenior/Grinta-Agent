@@ -2,7 +2,7 @@ PYTHON ?= python
 
 .PHONY: pretest
 pretest:
-	@bash ./backend/scripts/clean_pycache.sh
+	@bash ./backend/scripts/dev/clean_pycache.sh
 
 .PHONY: test-unit
 test-unit: pretest
@@ -209,7 +209,7 @@ test:
 .PHONY: compile-protos
 compile-protos:
 	@echo "$(GREEN)Compiling Protocol Buffer definitions...$(RESET)"
-	@python backend/scripts/compile_protos.py
+	@python backend/scripts/build/compile_protos.py
 	@echo "$(GREEN)Proto compilation completed.$(RESET)"
 
 build-frontend:

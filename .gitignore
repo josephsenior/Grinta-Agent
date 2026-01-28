@@ -55,9 +55,20 @@ workspace/sessions/
 coverage/
 .coverage
 *.cover
+htmlcov/
 
 # Test framework caches
 .hypothesis/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
 # Debug/error logs
 *.out

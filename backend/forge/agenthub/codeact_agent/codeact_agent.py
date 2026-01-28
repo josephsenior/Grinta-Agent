@@ -16,16 +16,16 @@ from forge.events.event import EventSource
 from forge.events.observation.commands import CmdOutputObservation
 from forge.llm.llm_registry import LLMRegistry
 from forge.runtime.plugins import (
-    AgentSkillsRequirement,
     PluginRequirement,
 )
 from forge.utils.prompt import PromptManager
+
+from forge.runtime.plugins.agent_skills import AgentSkillsRequirement
 
 from .executor import CodeActExecutor
 from .memory_manager import CodeActMemoryManager
 from .planner import CodeActPlanner
 from .safety import CodeActSafetyManager
-from .types import AgentSkillsRequirement
 import forge.agenthub.codeact_agent.function_calling as codeact_function_calling
 
 if TYPE_CHECKING:
@@ -38,7 +38,7 @@ class CodeActAgent(Agent):
     
     VERSION = "2.2"
     sandbox_plugins: list[PluginRequirement] = [
-        AgentSkillsRequirement(),
+        AgentSkillsRequirement(name="agent_skills"),
     ]
 
     def __init__(

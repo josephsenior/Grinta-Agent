@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\llm\debug_mixin.py
-# hypothesis_version: 6.147.0
-
-['\n\n----------\n\n', 'choices', 'content', 'image_url', 'message', 'text', 'tool_calls', 'url']

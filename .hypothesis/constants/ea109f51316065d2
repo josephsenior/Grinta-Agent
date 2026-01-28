@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\agenthub\readonly_agent\tools\file_cache.py
-# hypothesis_version: 6.147.0
-
-[0.0, 100, 300, 'cached_files', 'cached_structures', 'cached_symbols', 'distributed (Redis)', 'distributed_hits', 'distributed_misses', 'evictions', 'forge:file_cache', 'hit_rate_percent', 'hits', 'invalidations', 'local', 'misses', 'total_requests']

@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\runtime\impl\local\local_runtime.py
-# hypothesis_version: 6.147.0
-
-[120, 1000, '--version', '-m', '-p', '/', '0', '1', 'APP_PORT_1', 'APP_PORT_2', 'Creating a server', 'FORGE_REPO_PATH', 'Jupyter output: %s', 'LOCAL_RUNTIME_MODE', 'PATH', 'PYTHONPATH', 'RUNTIME_ID', 'RUNTIME_URL', 'RUNTIME_URL_PATTERN', 'SESSION_API_KEY', 'Server process died', 'USER', 'USERNAME', 'Using a warm server', 'VSCODE_PORT', 'WORK_PORT_1', 'WORK_PORT_2', 'X-Session-API-Key', 'action', 'attempt_number', 'capture-pane', 'debug', 'default', 'echo "test"', 'error', 'getuid', 'info', 'jupyter', 'localhost', 'runtime_url is %s', 'server: %s', 'server_info', 'test', 'test-session', 'vscode', 'warm', 'win32']

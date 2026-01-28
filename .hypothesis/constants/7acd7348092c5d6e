@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\server\middleware\security_headers.py
-# hypothesis_version: 6.147.0
-
-[403, ', ', '/api/slack/callback', '/api/slack/events', '0', '1', '127.0.0.1', '1; mode=block', '; ', 'CSP_REPORT_ONLY', 'CSP_REPORT_URI', 'DELETE', 'DENY', 'Origin', 'PATCH', 'POST', 'PUT', 'Permissions-Policy', 'Referer', 'Referrer-Policy', 'X-Frame-Options', 'X-XSS-Protection', 'accelerometer=()', "base-uri 'self'", 'camera=()', "connect-src 'self'", "default-src 'self'", 'detail', "font-src 'self'", "form-action 'self'", "frame-src 'none'", "frame-src 'self'", 'geolocation=()', 'gyroscope=()', 'https', 'localhost', 'magnetometer=()', 'microphone=()', 'none', 'nosniff', "object-src 'none'", 'payment=()', 'permissive', 'require-corp', 'same-origin', "script-src 'self'", 'strict', "style-src 'self'", 'true', 'usb=()', "worker-src 'self'", 'yes']

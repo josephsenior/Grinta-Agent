@@ -20,7 +20,7 @@ This tells the backup script where to find `pg_dump.exe`.
 ### Step 2: Test Backup
 
 ```powershell
-python scripts/backup_database.py --backup
+python backend/scripts/database/backup_database.py --backup
 ```
 
 Expected output:
@@ -48,7 +48,7 @@ This will:
 
 ```powershell
 # List backups
-python scripts/backup_database.py --list
+python backend/scripts/database/backup_database.py --list
 
 # Check scheduled task
 # Open Task Scheduler → Task Scheduler Library → Forge-Database-Backup

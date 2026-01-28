@@ -99,12 +99,14 @@ class ServerConversation:
                     max_wait = 5  # Reduced wait time since in-process runtime initializes quickly
                     wait_interval = 0.1
                     waited = 0.0
+                    runtime_initialized = False
                     while waited < max_wait:
                         if self.runtime.runtime_initialized:
+                            runtime_initialized = True  # type: ignore[unreachable]
                             break
                         await asyncio.sleep(wait_interval)
                         waited += wait_interval
-                    if not self.runtime.runtime_initialized:
+                    if not runtime_initialized:
                         logger.warning(
                             f"Runtime for conversation {self.sid} did not initialize within {max_wait} seconds"
                         )

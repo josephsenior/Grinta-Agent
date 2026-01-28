@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\core\config\condenser_config.py
-# hypothesis_version: 6.147.0
-
-[0.0, 0.6, 1.0, 100, 200, 10000, 'CondenserConfig', 'LLMConfig', 'amortized', 'condenser', 'conversation_window', 'forbid', 'llm', 'llm_attention', 'llm_config', 'noop', 'observation_masking', 'pipeline', 'recent', 'smart', 'structured', 'type']

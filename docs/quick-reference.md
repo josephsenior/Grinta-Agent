@@ -21,19 +21,19 @@ cd frontend && pnpm run build && pnpm run preview
 
 ```bash
 # All unit tests
-poetry run pytest tests/unit/
+poetry run pytest backend/tests/unit/
 
 # Specific test file
-poetry run pytest tests/unit/test_agent.py
+poetry run pytest backend/tests/unit/test_agent.py
 
 # With coverage
-poetry run pytest --cov=forge tests/unit/
+poetry run pytest --cov=forge backend/tests/unit/
 
 # Integration tests
-poetry run pytest tests/integration/
+poetry run pytest backend/tests/integration/
 
 # E2E tests
-poetry run pytest tests/e2e/
+poetry run pytest backend/tests/e2e/
 ```
 
 ### Development

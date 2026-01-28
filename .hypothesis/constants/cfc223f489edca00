@@ -1,4 +1,0 @@
-# file: C:\Users\GIGABYTE\Desktop\Forge\forge\runtime\utils\system_stats.py
-# hypothesis_version: 6.147.0
-
-[b': ', 0.1, '/', 'ascii', 'cpu_percent', 'disk', 'free', 'idle_time', 'io', 'memory', 'percent', 'rb', 'read_bytes', 'resources', 'rss', 'total', 'uptime', 'used', 'vms', 'write_bytes']

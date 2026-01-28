@@ -72,6 +72,7 @@ from forge.runtime.runtime_status import RuntimeStatus
 from forge.runtime.utils.edit import FileEditRuntimeMixin
 from forge.runtime.utils.git_handler import CommandResult, GitHandler
 from forge.security import SecurityAnalyzer, options
+from forge.integrations.provider import ProviderHandler
 from forge.storage.locations import get_conversation_dir
 from forge.utils.async_utils import (
     GENERAL_TIMEOUT,
@@ -90,6 +91,11 @@ if TYPE_CHECKING:
     )
     from forge.microagent import BaseMicroagent
     from forge.llm.llm_registry import LLMRegistry
+else:
+    BaseMicroagent = Any
+
+# Import microagent loading function
+from forge.microagent import load_microagents_from_dir
 
 
 def _default_env_vars(sandbox_config: SandboxConfig) -> dict[str, str]:
@@ -236,7 +242,8 @@ class Runtime(FileEditRuntimeMixin):
         self.runtime_status = None
         self.security_analyzer = None
         if self.config.security.security_analyzer:
-            analyzer_cls = options.SecurityAnalyzers.get(
+            # SecurityAnalyzers is a dict-like object in options module
+            analyzer_cls = getattr(options, "SecurityAnalyzers", {}).get(  # type: ignore[attr-defined]
                 self.config.security.security_analyzer, SecurityAnalyzer
             )
             self.security_analyzer = analyzer_cls()
@@ -999,8 +1006,10 @@ class Runtime(FileEditRuntimeMixin):
                 GENERAL_TIMEOUT,
                 org_FORGE_repo,
             )
-        except AuthenticationError as e:
-            self.log(
+        except Exception as e:
+            from forge.integrations.service_types import AuthenticationError
+            if isinstance(e, AuthenticationError):
+                self.log(
                 "debug",
                 f"org-level microagent directory {org_FORGE_repo} not found: {e!s}",
             )
