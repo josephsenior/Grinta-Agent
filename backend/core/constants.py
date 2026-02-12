@@ -80,37 +80,55 @@ DEFAULT_LLM_TOP_P = 1.0
 DEFAULT_LLM_CORRECT_NUM = 5
 
 # Verified models for CLI and configuration
+# Verified models for CLI and configuration — derived from catalog.toml.
+# Uses lazy loading to avoid circular imports (constants ← config ← models).
 VERIFIED_PROVIDERS = ["anthropic", "openai", "mistral"]
-VERIFIED_OPENAI_MODELS = [
-    "o4-mini",
-    "gpt-4o",
-    "gpt-4o-mini",
-    "gpt-4-32k",
-    "gpt-4.1",
-    "gpt-4.1-2025-04-14",
-    "o1-mini",
-    "o3",
-    "codex-mini-latest",
-]
-VERIFIED_ANTHROPIC_MODELS = [
-    "claude-sonnet-4-20250514",
-    "claude-opus-4-20250514",
-    "claude-opus-4-1-20250805",
-    "claude-3-7-sonnet-20250219",
-    "claude-3-sonnet-20240229",
-    "claude-3-opus-20240229",
-    "claude-3-haiku-20240307",
-    "claude-3-5-haiku-20241022",
-    "claude-3-5-sonnet-20241022",
-    "claude-3-5-sonnet-20240620",
-    "claude-2.1",
-    "claude-2",
-]
-VERIFIED_MISTRAL_MODELS = [
-    "devstral-small-2505",
-    "devstral-small-2507",
-    "devstral-medium-2507",
-]
+
+
+def _get_verified(provider: str) -> list[str]:
+    """Lazily load verified models from the catalog."""
+    from backend.models.catalog_loader import get_verified_models
+    return get_verified_models(provider)
+
+
+class _LazyModelList:
+    """List-like wrapper that loads from catalog on first access."""
+
+    __slots__ = ("_provider", "_cached")
+
+    def __init__(self, provider: str) -> None:
+        self._provider = provider
+        self._cached: list[str] | None = None
+
+    def _ensure(self) -> list[str]:
+        if self._cached is None:
+            self._cached = _get_verified(self._provider)
+        return self._cached
+
+    def __iter__(self):
+        return iter(self._ensure())
+
+    def __contains__(self, item):
+        return item in self._ensure()
+
+    def __len__(self):
+        return len(self._ensure())
+
+    def __repr__(self):
+        return repr(self._ensure())
+
+    def __getitem__(self, idx):
+        return self._ensure()[idx]
+
+    def __eq__(self, other):
+        if isinstance(other, list):
+            return self._ensure() == other
+        return NotImplemented
+
+
+VERIFIED_OPENAI_MODELS: Any = _LazyModelList("openai")
+VERIFIED_ANTHROPIC_MODELS: Any = _LazyModelList("anthropic")
+VERIFIED_MISTRAL_MODELS: Any = _LazyModelList("mistral")
 
 # File upload configuration
 DEFAULT_MAX_FILE_UPLOAD_SIZE_MB = 100

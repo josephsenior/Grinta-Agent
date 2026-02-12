@@ -187,35 +187,42 @@ class AgentController:
             security_analyzer: Optional security analyzer for the agent
 
         """
+        # --- Service wiring (order matters) ---
+        # 1. Core services that take the raw controller
         self.lifecycle_service = LifecycleService(self)
         self.autonomy_service = AutonomyService(self)
+        # 2. Context bridge: narrows the controller surface for most services
         self._controller_context = ControllerContext(self)
+        # 3. Independent services (no sibling dependencies)
         self.iteration_service = IterationService(self._controller_context)
         self.iteration_guard = IterationGuardService(self._controller_context)
         self.step_guard = StepGuardService(self._controller_context)
         self.step_prerequisites = StepPrerequisiteService(self._controller_context)
         self.budget_guard = BudgetGuardService(self._controller_context)
         self.safety_service = SafetyService(self._controller_context)
-        self.observation_service = ObservationService(self._controller_context)
+        # 4. Action lifecycle services (order: pending → observation → confirmation → action)
         self.pending_action_service = PendingActionService(
             self._controller_context, self.PENDING_ACTION_TIMEOUT
+        )
+        self.observation_service = ObservationService(
+            self._controller_context, self.pending_action_service
         )
         self.confirmation_service = ConfirmationService(
             self._controller_context, self.safety_service
         )
         self.action_service = ActionService(
             self._controller_context,
-            self.observation_service,
             self.pending_action_service,
             self.confirmation_service,
         )
-        self.observation_service.set_action_service(self.action_service)
+        # 5. Remaining services (independent of action lifecycle)
         self.action_execution = ActionExecutionService(self._controller_context)
         self.state_service = StateTransitionService(self._controller_context)
         self.telemetry_service = TelemetryService(self._controller_context)
         self.retry_service = RetryService(self._controller_context)
         self.recovery_service = RecoveryService(self._controller_context, self.retry_service)
         self.circuit_breaker_service = CircuitBreakerService(self._controller_context)
+        # 6. Services that take the raw controller (need broad access)
         self.stuck_service = StuckDetectionService(self)
         self.task_validation_service = TaskValidationService(self._controller_context)
         self._step_task: asyncio.Task[None] | None = None

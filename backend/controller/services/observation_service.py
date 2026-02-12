@@ -4,17 +4,14 @@ import copy
 import os
 from typing import TYPE_CHECKING
 
-from backend.events import EventSource
 from backend.events.observation import Observation
 from backend.events.serialization.event import truncate_content
 from backend.core.schemas import AgentState
-from backend.models.metrics import Metrics
 
 if TYPE_CHECKING:
     from backend.controller.services.controller_context import ControllerContext
-    from backend.controller.services.action_service import ActionService
+    from backend.controller.services.pending_action_service import PendingActionService
     from backend.controller.tool_pipeline import ToolInvocationContext
-    from backend.events.action import Action
 
 
 class ObservationService:
@@ -23,13 +20,10 @@ class ObservationService:
     def __init__(
         self,
         context: "ControllerContext",
-        action_service: "ActionService | None" = None,
+        pending_action_service: "PendingActionService",
     ) -> None:
         self._context = context
-        self._action_service = action_service
-
-    def set_action_service(self, action_service: "ActionService") -> None:
-        self._action_service = action_service
+        self._pending_service = pending_action_service
 
     async def handle_observation(self, observation: Observation) -> None:
         controller = self._context.get_controller()
@@ -40,33 +34,10 @@ class ObservationService:
         )
         await self._handle_pending_action_observation(observation)
 
-    def prepare_metrics_for_action(self, action: "Action") -> None:
-        controller = self._context.get_controller()
-        metrics = controller.conversation_stats.get_combined_metrics()
-
-        clean_metrics = Metrics()
-        clean_metrics.accumulated_cost = metrics.accumulated_cost
-        clean_metrics._accumulated_token_usage = copy.deepcopy(
-            metrics.accumulated_token_usage
-        )
-        if controller.state.budget_flag:
-            clean_metrics.max_budget_per_task = controller.state.budget_flag.max_value
-        action.llm_metrics = clean_metrics
-        latest_usage = None
-        if controller.state.metrics.token_usages:
-            latest_usage = controller.state.metrics.token_usages[-1]
-        accumulated_usage = controller.state.metrics.accumulated_token_usage
-        controller.log(
-            "debug",
-            f"Action metrics - accumulated_cost: {metrics.accumulated_cost}, max_budget: {metrics.max_budget_per_task}, latest tokens (prompt/completion/cache_read/cache_write): {latest_usage.prompt_tokens if latest_usage else 0}/{latest_usage.completion_tokens if latest_usage else 0}/{latest_usage.cache_read_tokens if latest_usage else 0}/{latest_usage.cache_write_tokens if latest_usage else 0}, accumulated tokens (prompt/completion): {accumulated_usage.prompt_tokens}/{accumulated_usage.completion_tokens}",
-            extra={"msg_type": "METRICS"},
-        )
-
     async def _handle_pending_action_observation(
         self, observation: Observation
     ) -> None:
-        action_service = self._require_action_service()
-        pending_action = action_service.get_pending_action()
+        pending_action = self._pending_service.get()
         if not (pending_action and pending_action.id == observation.cause):
             return
 
@@ -78,7 +49,7 @@ class ObservationService:
         if observation.cause is not None:
             ctx = self._context.pop_action_context(observation.cause)
 
-        action_service.set_pending_action(None)
+        self._pending_service.set(None)
 
         # Delegate confirmation state transitions to confirmation service
         confirmation_service = getattr(controller, "confirmation_service", None)
@@ -112,10 +83,5 @@ class ObservationService:
 
     def _get_log_level(self) -> str:
         return "info" if os.getenv("LOG_ALL_EVENTS") in ("true", "1") else "debug"
-
-    def _require_action_service(self) -> "ActionService":
-        if not self._action_service:
-            raise RuntimeError("ActionService not bound to ObservationService")
-        return self._action_service
 
 

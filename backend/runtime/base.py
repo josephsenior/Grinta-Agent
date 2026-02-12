@@ -63,6 +63,8 @@ from backend.runtime.git_setup import GitSetupMixin
 from backend.runtime.playbook_loader import PlaybookLoaderMixin
 from backend.runtime.plugins import PluginRequirement
 from backend.runtime.runtime_status import RuntimeStatus
+from backend.runtime.command_timeout import CommandTimeoutMixin
+from backend.runtime.security_enforcement import SecurityEnforcementMixin
 from backend.runtime.task_tracking import TaskTrackingMixin
 from backend.runtime.utils.edit import FileEditRuntimeMixin
 from backend.runtime.utils.git_handler import CommandResult, GitHandler
@@ -87,6 +89,23 @@ if TYPE_CHECKING:
     from backend.models.llm_registry import LLMRegistry
 else:
     BasePlaybook = Any
+
+
+# Action types handled by the agent system, NOT the runtime.
+# Defined once here to avoid duplication across run_action/validate_action.
+AGENT_LEVEL_ACTIONS: frozenset[str] = frozenset({
+    "change_agent_state",
+    "message",
+    "recall",
+    "think",
+    "finish",
+    "reject",
+    "delegate",
+    "condensation",
+    "condensation_request",
+    "task_tracking",
+    "system",
+})
 
 
 def _default_env_vars(sandbox_config: SandboxConfig) -> dict[str, str]:
@@ -129,6 +148,8 @@ class Runtime(
     PlaybookLoaderMixin,
     TaskTrackingMixin,
     FileEditRuntimeMixin,
+    CommandTimeoutMixin,
+    SecurityEnforcementMixin,
 ):
     """Abstract base class for agent runtime environments.
 
@@ -421,80 +442,6 @@ class Runtime(
         except Exception as e:
             logger.warning("Failed to export latest provider tokens to runtime")
 
-    def _is_long_running_command(self, command: str) -> bool:
-        """Detect if a command is a long-running server/process.
-
-        Args:
-            command: The bash command to check
-
-        Returns:
-            True if command should run without timeout, False otherwise
-
-        """
-        # Normalize command for checking
-        cmd_lower = command.lower().strip()
-
-        # Server commands that should run indefinitely
-        server_patterns = [
-            "python -m http.server",
-            "python3 -m http.server",
-            "npm run dev",
-            "npm start",
-            "yarn dev",
-            "yarn start",
-            "pnpm dev",
-            "pnpm start",
-            "node server",
-            "nodemon",
-            "flask run",
-            "django-admin runserver",
-            "python manage.py runserver",
-            "uvicorn",
-            "gunicorn",
-            "hypercorn",
-            "daphne",
-            "streamlit run",
-            "gradio",
-            "rails server",
-            "bundle exec rails",
-            "php artisan serve",
-            "go run",
-            "./server",
-            "java -jar",
-            "docker run",
-            "docker-compose up",
-        ]
-
-        return any(pattern in cmd_lower for pattern in server_patterns)
-
-    def _set_action_timeout(self, event: Action) -> None:
-        """Set appropriate timeout for action based on type.
-
-        Args:
-            event: Action to set timeout for
-
-        """
-        if event.timeout is not None:
-            return
-
-        # Check if this is a long-running command (server, etc.)
-        if isinstance(event, CmdRunAction) and self._is_long_running_command(
-            event.command
-        ):
-            # No timeout for servers - they should run until explicitly stopped
-            logger.info(
-                f"🚀 Detected long-running command, removing timeout: {event.command[:100]}"
-            )
-            event.set_hard_timeout(None, blocking=False)
-
-            # Register long-running process for cleanup
-            if hasattr(self, "process_manager"):
-                command_id = f"{self.sid}_{event.id}_{int(time.time())}"
-                self.process_manager.register_process(event.command, command_id)
-        else:
-            # Normal commands get standard timeout
-            event.set_hard_timeout(self.config.sandbox.timeout, blocking=False)
-
     async def _execute_action(self, event: Action) -> Observation:
         """Execute action and return observation.
 
@@ -609,21 +556,8 @@ class Runtime(
 
         # Check if this is an agent-level action that should not be executed by runtime
         action_type = action.action
-        agent_level_actions = {
-            "change_agent_state",
-            "message",
-            "recall",
-            "think",
-            "finish",
-            "reject",
-            "delegate",
-            "condensation",
-            "condensation_request",
-            "task_tracking",
-            "system",
-        }
 
-        if action_type in agent_level_actions:
+        if action_type in AGENT_LEVEL_ACTIONS:
             # These actions are handled by the agent system, not the runtime
             return NullObservation(content="")
 
@@ -709,88 +643,6 @@ Please retry the file creation."""
             # Don't fail the action due to verification errors
             return None
 
-    def _check_action_confirmation(self, action: Action) -> Observation | None:
-        """Check action confirmation state and return appropriate observation."""
-        if (
-            hasattr(action, "confirmation_state")
-            and action.confirmation_state
-            == ActionConfirmationStatus.AWAITING_CONFIRMATION
-        ):
-            # Allow file edits to run in runtime preview mode (dry-run) so users can
-            # review diffs before confirming. Other actions remain blocked.
-            if isinstance(action, FileEditAction):
-                return None
-            return NullObservation("")
-
-        if (
-            getattr(action, "confirmation_state", None)
-            == ActionConfirmationStatus.REJECTED
-        ):
-            return UserRejectObservation(
-                "Action has been rejected by the user! Waiting for further user input."
-            )
-
-        return None
-
-    def _enforce_security(self, action: Action) -> Observation | None:
-        """Evaluate action risk via SecurityAnalyzer and enforce policy.
-
-        Returns:
-            * ``None`` — action may proceed.
-            * ``ErrorObservation`` — action is blocked (HIGH risk + ``block_high_risk``).
-            * ``NullObservation`` — action needs user confirmation (HIGH risk, not blocking).
-        """
-        if self.security_analyzer is None:
-            return None
-
-        sec_cfg = self.config.security
-        if not sec_cfg.enforce_security:
-            return None
-
-        import asyncio
-
-        try:
-            loop = asyncio.get_running_loop()
-            import concurrent.futures
-            # security_risk is async — run it in the current loop when possible
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                risk = loop.run_in_executor(pool, lambda: asyncio.run(self.security_analyzer.security_risk(action)))  # type: ignore[union-attr]
-                risk = asyncio.get_event_loop().run_until_complete(risk)  # type: ignore[assignment]
-        except RuntimeError:
-            risk = asyncio.run(self.security_analyzer.security_risk(action))  # type: ignore[union-attr]
-
-        if risk >= ActionSecurityRisk.HIGH:
-            action_desc = f"{action.action}: {str(action)[:120]}"
-            if sec_cfg.block_high_risk:
-                logger.warning(
-                    "Security BLOCKED high-risk action: %s (risk=%s)",
-                    action_desc,
-                    risk.name,
-                )
-                return ErrorObservation(
-                    f"Action blocked by security policy (risk={risk.name}). "
-                    f"Action: {action_desc}"
-                )
-            # Require user confirmation for HIGH-risk actions
-            if (
-                hasattr(action, "confirmation_state")
-                and action.confirmation_state != ActionConfirmationStatus.CONFIRMED
-            ):
-                logger.info(
-                    "Security: requiring confirmation for high-risk action: %s",
-                    action_desc,
-                )
-                action.confirmation_state = ActionConfirmationStatus.AWAITING_CONFIRMATION  # type: ignore[union-attr]
-                return NullObservation("")
-
-        elif risk >= ActionSecurityRisk.MEDIUM:
-            logger.info(
-                "Security: medium-risk action allowed: %s (risk=%s)",
-                action.action,
-                risk.name,
-            )
-
-        return None
 
     def _validate_action(self, action: Action) -> Observation | None:
         """Validate action type and runtime support."""
@@ -800,21 +652,7 @@ Please retry the file creation."""
             return ErrorObservation(f"Action {action_type} does not exist.")
 
         # Agent-level actions that should not be executed by runtime
-        agent_level_actions = {
-            "change_agent_state",
-            "message",
-            "recall",
-            "think",
-            "finish",
-            "reject",
-            "delegate",
-            "condensation",
-            "condensation_request",
-            "task_tracking",
-            "system",
-        }
-
-        if action_type in agent_level_actions:
+        if action_type in AGENT_LEVEL_ACTIONS:
             # These actions are handled by the agent system, not the runtime
             return None
 

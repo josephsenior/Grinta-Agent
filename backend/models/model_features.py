@@ -117,9 +117,19 @@ RESPONSE_SCHEMA_PATTERNS: list[str] = [
 
 
 def get_model_token_limits(model: str) -> tuple[int | None, int | None]:
-    """Get max input and output token limits for common models."""
+    """Get max input and output token limits for a model.
+
+    Checks the model catalog first; falls back to legacy substring matching.
+    """
+    from backend.models.catalog_loader import get_token_limits
+
+    max_in, max_out = get_token_limits(model)
+    if max_in is not None:
+        return max_in, max_out
+
+    # Legacy fallback for models not yet in catalog
     name = normalize_model_name(model)
-    
+
     if "gpt-4o" in name:
         return 128000, 4096
     if "gpt-4" in name:
@@ -140,7 +150,7 @@ def get_model_token_limits(model: str) -> tuple[int | None, int | None]:
         return 128000, 32768
     if "grok" in name:
         return 128000, 4096
-        
+
     return None, None
 
 

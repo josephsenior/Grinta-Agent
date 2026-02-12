@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+import copy
 from typing import TYPE_CHECKING
 
 from backend.core.logger import LOG_ALL_EVENTS
 from backend.events import EventSource
 from backend.events.action import Action, NullAction
 from backend.events.observation import ErrorObservation
+from backend.models.metrics import Metrics
 
 if TYPE_CHECKING:
     from backend.controller.services.controller_context import ControllerContext
-    from backend.controller.services.observation_service import ObservationService
     from backend.controller.services.confirmation_service import ConfirmationService
     from backend.controller.tool_pipeline import ToolInvocationContext
 
@@ -20,12 +21,10 @@ class ActionService:
     def __init__(
         self,
         context: "ControllerContext",
-        observation_service: "ObservationService",
         pending_action_service,
         confirmation_service: "ConfirmationService",
     ) -> None:
         self._context = context
-        self._observation_service = observation_service
         self._pending_service = pending_action_service
         self._confirmation_service = confirmation_service
 
@@ -76,7 +75,7 @@ class ActionService:
                 controller.telemetry_service.handle_blocked_invocation(action, ctx)
                 return
 
-        self._observation_service.prepare_metrics_for_action(action)
+        self._prepare_metrics_for_action(action)
         controller.event_stream.add_event(action, action.source or EventSource.AGENT)
 
         if ctx:
@@ -85,6 +84,38 @@ class ActionService:
 
         log_level = "info" if LOG_ALL_EVENTS else "debug"
         controller.log(log_level, str(action), extra={"msg_type": "ACTION"})
+
+    def _prepare_metrics_for_action(self, action: Action) -> None:
+        """Attach cost/token metrics to an action before it's emitted."""
+        controller = self._context.get_controller()
+        metrics = controller.conversation_stats.get_combined_metrics()
+
+        clean_metrics = Metrics()
+        clean_metrics.accumulated_cost = metrics.accumulated_cost
+        clean_metrics._accumulated_token_usage = copy.deepcopy(
+            metrics.accumulated_token_usage
+        )
+        if controller.state.budget_flag:
+            clean_metrics.max_budget_per_task = controller.state.budget_flag.max_value
+        action.llm_metrics = clean_metrics
+
+        latest_usage = None
+        if controller.state.metrics.token_usages:
+            latest_usage = controller.state.metrics.token_usages[-1]
+        accumulated_usage = controller.state.metrics.accumulated_token_usage
+        controller.log(
+            "debug",
+            f"Action metrics - accumulated_cost: {metrics.accumulated_cost}, "
+            f"max_budget: {metrics.max_budget_per_task}, "
+            f"latest tokens (prompt/completion/cache_read/cache_write): "
+            f"{latest_usage.prompt_tokens if latest_usage else 0}/"
+            f"{latest_usage.completion_tokens if latest_usage else 0}/"
+            f"{latest_usage.cache_read_tokens if latest_usage else 0}/"
+            f"{latest_usage.cache_write_tokens if latest_usage else 0}, "
+            f"accumulated tokens (prompt/completion): "
+            f"{accumulated_usage.prompt_tokens}/{accumulated_usage.completion_tokens}",
+            extra={"msg_type": "METRICS"},
+        )
 
     def set_pending_action(self, action: Action | None) -> None:
         """Track pending action with timestamp; emit logging changes."""
